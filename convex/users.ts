@@ -210,7 +210,7 @@ export const deleteFromClerk = internalMutation({
     args: {
         clerkUserId: v.string(),
     },
-    handler: async (ctx, args) => {
+    handler: async (_ctx, args) => {
         console.log(`User deletion requested for Clerk ID: ${args.clerkUserId}`);
     },
 });
