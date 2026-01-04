@@ -144,7 +144,7 @@ const Landing: React.FC = () => {
           <div className="w-4 h-4 bg-gradient-to-br from-orange-400 to-red-600 rounded blur-[0.5px]"></div>
           <span className="font-serif text-lg italic tracking-widest text-white uppercase">Chaos</span>
         </div>
-        <p className="text-[#333] text-xs tracking-widest uppercase">&copy; 2026 Chaos Systems.</p>
+        <p className="text-[#333] text-xs tracking-widest uppercase">&copy; 2026 Chaos.</p>
       </footer>
     </div>
   );
