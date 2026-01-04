@@ -18,7 +18,7 @@ const inter = Inter({
 
 export const metadata: Metadata = {
     title: 'Chaos',
-    description: 'Create stunning, interactive quizzes that feel like a social feed.',
+    description: 'Create quizzes that feel like a social feed.',
 };
 
 export default function RootLayout({
