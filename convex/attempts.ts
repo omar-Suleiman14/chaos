@@ -1,5 +1,6 @@
 import { mutation, query } from './_generated/server';
 import { v } from 'convex/values';
+import type { Id } from './_generated/dataModel';
 
 export const createAttempt = mutation({
     args: {
@@ -113,3 +114,109 @@ export const deleteAttemptsForQuiz = mutation({
         await Promise.all(attempts.map((a) => ctx.db.delete(a._id)));
     },
 });
+
+// Get detailed analytics for a specific quiz
+export const getQuizAnalytics = query({
+    args: { quizId: v.id('quizzes') },
+    handler: async (ctx, args) => {
+        // Get all attempts for this quiz
+        const attempts = await ctx.db
+            .query('attempts')
+            .withIndex('by_quiz', (q) => q.eq('quizId', args.quizId))
+            .collect();
+
+        if (attempts.length === 0) {
+            return {
+                totalAttempts: 0,
+                averageScore: 0,
+                leaderboard: [],
+                attemptsWithUsers: [],
+                questionAnalysis: [],
+            };
+        }
+
+        // Get quiz details for question count
+        const quiz = await ctx.db.get(args.quizId);
+        if (!quiz) return null;
+
+        // Get user details for each attempt
+        const attemptsWithUsers = await Promise.all(
+            attempts.map(async (attempt) => {
+                // userId is stored as string (Convex user ID), cast to proper type
+                let user: { email?: string; name?: string; avatar?: string } | null = null;
+                try {
+                    user = await ctx.db.get(attempt.userId as Id<"users">);
+                } catch (error) {
+                    console.error('Failed to fetch user:', error);
+                }
+
+                return {
+                    attemptId: attempt._id,
+                    userEmail: user?.email || 'Unknown',
+                    userName: user?.name || 'Anonymous',
+                    userAvatar: user?.avatar,
+                    score: attempt.score,
+                    maxScore: attempt.maxScore,
+                    percentage: Math.round((attempt.score / attempt.maxScore) * 100),
+                    timeTaken: attempt.timeTakenSeconds,
+                    completedAt: attempt.completedAt,
+                    questionBreakdown: attempt.questionBreakdown,
+                };
+            })
+        );
+
+        // Calculate average score
+        const averageScore = Math.round(
+            (attempts.reduce((acc, a) => acc + a.score / a.maxScore, 0) / attempts.length) * 100
+        );
+
+        // Create leaderboard (top scores)
+        const leaderboard = attemptsWithUsers
+            .sort((a, b) => {
+                if (b.percentage === a.percentage) {
+                    return a.timeTaken - b.timeTaken; // Faster time wins ties
+                }
+                return b.percentage - a.percentage;
+            })
+            .slice(0, 10);
+
+        // Per-question analysis
+        const questionMap = new Map<string, { correct: number; total: number; questionIndex: number }>();
+
+        attempts.forEach((attempt) => {
+            attempt.questionBreakdown.forEach((qb, index) => {
+                if (!questionMap.has(qb.questionId)) {
+                    questionMap.set(qb.questionId, { correct: 0, total: 0, questionIndex: index });
+                }
+                const stats = questionMap.get(qb.questionId)!;
+                stats.total++;
+                if (qb.isCorrect) stats.correct++;
+            });
+        });
+
+        const questionAnalysis = Array.from(questionMap.entries())
+            .map(([questionId, stats]) => {
+                const question = quiz.questions.find(q => q.id === questionId);
+                return {
+                    questionId,
+                    questionText: question?.text || 'Unknown question',
+                    questionIndex: stats.questionIndex,
+                    correctCount: stats.correct,
+                    totalAttempts: stats.total,
+                    successRate: Math.round((stats.correct / stats.total) * 100),
+                };
+            })
+            .sort((a, b) => a.questionIndex - b.questionIndex);
+
+        return {
+            totalAttempts: attempts.length,
+            averageScore,
+            leaderboard,
+            attemptsWithUsers: attemptsWithUsers.sort((a, b) =>
+                new Date(b.completedAt).getTime() - new Date(a.completedAt).getTime()
+            ),
+            questionAnalysis,
+        };
+    },
+});
+

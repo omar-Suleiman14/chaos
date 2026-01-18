@@ -6,7 +6,7 @@ import { useQuery, useMutation } from 'convex/react';
 import { api } from '@/convex/_generated/api';
 import { useUser, UserButton } from '@clerk/nextjs';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
-import { Plus, LayoutDashboard, Brain, Trash2, Check, Save, Copy, ExternalLink, Minus, History } from 'lucide-react';
+import { Plus, LayoutDashboard, Brain, Trash2, Check, Save, Copy, ExternalLink, Minus, History, TrendingUp, Users, Trophy, Target, CheckCircle, XCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -25,7 +25,8 @@ const Dashboard: React.FC = () => {
   console.log('Dashboard Render:', { isLoaded, user: !!user });
 
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'create' | 'history'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'content' | 'create' | 'history' | 'stats'>('overview');
+  const [selectedQuizId, setSelectedQuizId] = useState<Id<"quizzes"> | null>(null);
   const [editingQuizId, setEditingQuizId] = useState<Id<"quizzes"> | null>(null);
   const [syncingUser, setSyncingUser] = useState(false);
   const [convexUserId, setConvexUserId] = useState<Id<"users"> | null>(null);
@@ -62,6 +63,7 @@ const Dashboard: React.FC = () => {
   const quizzes = useQuery(api.quizzes.getUserQuizzes, userId ? { userId } : 'skip');
   const takenQuizzes = useQuery(api.attempts.getTakenQuizzes, userId ? { userId } : 'skip');
   const stats = useQuery(api.attempts.getCreatorStats, userId ? { userId } : 'skip');
+  const quizAnalytics = useQuery(api.attempts.getQuizAnalytics, selectedQuizId ? { quizId: selectedQuizId } : 'skip');
 
   const createQuizMutation = useMutation(api.quizzes.createQuiz);
   const updateQuizMutation = useMutation(api.quizzes.updateQuiz);
@@ -276,6 +278,15 @@ const Dashboard: React.FC = () => {
               <span className="hidden md:inline">History</span>
             </Button>
             <Button
+              onClick={() => setActiveTab('stats')}
+              variant={activeTab === 'stats' ? 'secondary' : 'ghost'}
+              size="sm"
+              className="text-xs px-2 sm:px-3 md:text-sm"
+            >
+              <TrendingUp className="mr-0 md:mr-2" size={16} />
+              <span className="hidden md:inline">Stats</span>
+            </Button>
+            <Button
               onClick={() => { setActiveTab('create'); setEditingQuizId(null); setQuizTitle(''); setCreatedQuestions([]); }}
               variant={activeTab === 'create' ? 'secondary' : 'ghost'}
               size="sm"
@@ -427,6 +438,267 @@ const Dashboard: React.FC = () => {
                     </div>
                   </Card>
                 ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Stats Tab - Quiz Analytics */}
+        {activeTab === 'stats' && (
+          <div className="space-y-6">
+            {!selectedQuizId ? (
+              <>
+                <p className="text-gray-400">Select a quiz to view detailed analytics.</p>
+                {!quizzes || quizzes.length === 0 ? (
+                  <Card className="p-20 text-center">
+                    <p className="text-gray-500">No quizzes yet. Create one first!</p>
+                  </Card>
+                ) : (
+                  <div className="grid gap-4">
+                    {quizzes.map((quiz) => (
+                      <Card key={quiz._id} className="p-6 hover:border-chaos-accent/50 transition cursor-pointer" onClick={() => setSelectedQuizId(quiz._id)}>
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <h3 className="font-bold text-lg">{quiz.title}</h3>
+                            <div className="flex gap-4 text-xs text-gray-500 mt-1">
+                              <span>{quiz.questions.length} Questions</span>
+                              <span>•</span>
+                              <span>{quiz.plays} Plays</span>
+                            </div>
+                          </div>
+                          <TrendingUp className="text-chaos-accent" size={24} />
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </>
+            ) : (
+              <div className="space-y-6">
+                <Button onClick={() => setSelectedQuizId(null)} variant="ghost" size="sm">
+                  ← Back to Quiz List
+                </Button>
+
+                {quizAnalytics === undefined ? (
+                  <div className="flex items-center justify-center py-20">
+                    <div className="w-8 h-8 border-2 border-chaos-accent border-t-transparent rounded-full animate-spin"></div>
+                  </div>
+                ) : quizAnalytics === null || quizAnalytics.totalAttempts === 0 ? (
+                  <Card className="p-20 text-center">
+                    <p className="text-gray-500">No one has taken this quiz yet.</p>
+                  </Card>
+                ) : (
+                  <>
+                    {/* Overview Stats */}
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                      <Card className="p-6">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Users className="text-chaos-accent" size={20} />
+                          <h3 className="text-gray-400 text-sm font-medium">Total Takers</h3>
+                        </div>
+                        <p className="text-3xl font-bold">{quizAnalytics.totalAttempts}</p>
+                      </Card>
+                      <Card className="p-6">
+                        <div className="flex items-center gap-3 mb-2">
+                          <TrendingUp className="text-green-400" size={20} />
+                          <h3 className="text-gray-400 text-sm font-medium">Average Score</h3>
+                        </div>
+                        <p className="text-3xl font-bold text-green-400">{quizAnalytics.averageScore}%</p>
+                      </Card>
+                      <Card className="p-6">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Trophy className="text-yellow-400" size={20} />
+                          <h3 className="text-gray-400 text-sm font-medium">Top Score</h3>
+                        </div>
+                        <p className="text-3xl font-bold text-yellow-400">{quizAnalytics.leaderboard[0]?.percentage || 0}%</p>
+                      </Card>
+                      <Card className="p-6">
+                        <div className="flex items-center gap-3 mb-2">
+                          <Target className="text-blue-400" size={20} />
+                          <h3 className="text-gray-400 text-sm font-medium">Hardest Question</h3>
+                        </div>
+                        <p className="text-3xl font-bold text-blue-400">Q{(quizAnalytics.questionAnalysis.sort((a, b) => a.successRate - b.successRate)[0]?.questionIndex || 0) + 1}</p>
+                      </Card>
+                    </div>
+
+                    {/* Leaderboard */}
+                    <Card className="p-6">
+                      <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                        <Trophy className="text-yellow-400" /> Leaderboard
+                      </h3>
+                      <div className="space-y-3 max-h-96 overflow-y-auto">
+                        {quizAnalytics.leaderboard.map((attempt, index) => (
+                          <div key={attempt.attemptId} className="flex items-center gap-4 p-3 bg-[#1a1a1a] rounded-lg border border-[#333]">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm ${index === 0 ? 'bg-yellow-500/20 text-yellow-400' :
+                              index === 1 ? 'bg-gray-400/20 text-gray-300' :
+                                index === 2 ? 'bg-orange-600/20 text-orange-400' :
+                                  'bg-[#252525] text-gray-500'
+                              }`}>
+                              {index + 1}
+                            </div>
+                            <div className="flex-1">
+                              <p className="font-medium">{attempt.userName}</p>
+                              <p className="text-xs text-gray-500">{attempt.userEmail}</p>
+                            </div>
+                            <div className="text-right">
+                              <p className="font-bold text-chaos-accent">{attempt.percentage}%</p>
+                              <p className="text-xs text-gray-500">{Math.floor(attempt.timeTaken / 60)}:{(attempt.timeTaken % 60).toString().padStart(2, '0')}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+
+                    {/* Question Analysis */}
+                    <Card className="p-6">
+                      <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                        <Target className="text-blue-400" /> Question Analysis
+                      </h3>
+                      <div className="space-y-3">
+                        {quizAnalytics.questionAnalysis.map((qa) => (
+                          <div key={qa.questionId} className="p-4 bg-[#1a1a1a] rounded-lg border border-[#333]">
+                            <div className="flex items-start gap-3">
+                              <div className="flex-1">
+                                <p className="font-medium mb-2">
+                                  <span className="text-chaos-accent mr-2">Q{qa.questionIndex + 1}.</span>
+                                  {qa.questionText}
+                                </p>
+                                <div className="flex gap-6 text-sm">
+                                  <div>
+                                    <span className="text-gray-500">Correct: </span>
+                                    <span className="text-green-400 font-medium">{qa.correctCount}/{qa.totalAttempts}</span>
+                                  </div>
+                                  <div>
+                                    <span className="text-gray-500">Success Rate: </span>
+                                    <span className={`font-medium ${qa.successRate >= 70 ? 'text-green-400' :
+                                      qa.successRate >= 40 ? 'text-yellow-400' :
+                                        'text-red-400'
+                                      }`}>{qa.successRate}%</span>
+                                  </div>
+                                </div>
+                              </div>
+                              <div className="w-16 h-16 rounded-full border-4 flex items-center justify-center font-bold ${
+                                qa.successRate >= 70 ? 'border-green-400 text-green-400' :
+                                qa.successRate >= 40 ? 'border-yellow-400 text-yellow-400' :
+                                'border-red-400 text-red-400'
+                              }">
+                                {qa.successRate}%
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+
+                    {/* All Attempts */}
+                    <Card className="p-6">
+                      <h3 className="text-lg font-medium mb-4 flex items-center gap-2">
+                        <History className="text-purple-400" /> All Attempts
+                      </h3>
+                      <div className="space-y-3 max-h-[500px] overflow-y-auto">
+                        {quizAnalytics.attemptsWithUsers.map((attempt) => (
+                          <div key={attempt.attemptId} className="p-4 bg-[#1a1a1a] rounded-lg border border-[#333]">
+                            <div className="flex items-start justify-between mb-3">
+                              <div>
+                                <p className="font-medium">{attempt.userName}</p>
+                                <p className="text-sm text-gray-500">{attempt.userEmail}</p>
+                                <p className="text-xs text-gray-600 mt-1">
+                                  {new Date(attempt.completedAt).toLocaleDateString()} at {new Date(attempt.completedAt).toLocaleTimeString()}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-2xl font-bold text-chaos-accent">{attempt.percentage}%</p>
+                                <p className="text-xs text-gray-500">{attempt.score}/{attempt.maxScore} correct</p>
+                              </div>
+                            </div>
+                            {/* Quick Overview */}
+                            <div className="flex flex-wrap gap-2 mb-4">
+                              {attempt.questionBreakdown.map((qb, index) => (
+                                <div
+                                  key={qb.questionId}
+                                  className={`px-3 py-1.5 rounded text-xs font-medium ${qb.isCorrect
+                                    ? 'bg-green-500/20 text-green-400 border border-green-500/30'
+                                    : 'bg-red-500/20 text-red-400 border border-red-500/30'
+                                    }`}
+                                >
+                                  Q{index + 1} {qb.isCorrect ? '✓' : '✗'}
+                                </div>
+                              ))}
+                            </div>
+
+                            {/* Wrong Answers Detail */}
+                            {(() => {
+                              const wrongQuestions = attempt.questionBreakdown.filter((qb) => !qb.isCorrect);
+                              if (wrongQuestions.length === 0) return null;
+
+                              // Get quiz from selected quiz
+                              const selectedQuiz = quizzes?.find(q => q._id === selectedQuizId);
+                              if (!selectedQuiz) return null;
+
+                              return (
+                                <div className="mt-4 pt-4 border-t border-[#333] space-y-4">
+                                  <h5 className="text-sm font-semibold text-gray-400">Wrong Answers ({wrongQuestions.length})</h5>
+                                  {wrongQuestions.map((qb) => {
+                                    const question = selectedQuiz.questions.find(q => q.id === qb.questionId);
+                                    if (!question) return null;
+
+                                    const questionIndex = attempt.questionBreakdown.findIndex(item => item.questionId === qb.questionId);
+
+                                    return (
+                                      <div key={qb.questionId} className="bg-[#252525] border border-red-500/20 rounded-xl p-4 space-y-3">
+                                        {/* Question Header */}
+                                        <div className="flex items-start gap-2">
+                                          <div className="w-6 h-6 rounded-full bg-red-500/20 text-red-400 flex items-center justify-center flex-shrink-0 font-bold text-xs">
+                                            Q{questionIndex + 1}
+                                          </div>
+                                          <p className="text-sm font-medium text-white flex-1">{question.text}</p>
+                                        </div>
+
+                                        {/* User's Answer */}
+                                        <div className="bg-red-500/10 border border-red-500/20 rounded-lg p-3">
+                                          <p className="text-xs text-red-400 uppercase tracking-wider mb-1.5 font-semibold">
+                                            Their Answer{qb.selectedOptions.length > 1 ? 's' : ''}:
+                                          </p>
+                                          <div className="space-y-1">
+                                            {qb.selectedOptions.length > 0 ? (
+                                              qb.selectedOptions.map((answerIdx) => (
+                                                <div key={answerIdx} className="flex items-center gap-1.5">
+                                                  <XCircle size={12} className="text-red-400 flex-shrink-0" />
+                                                  <span className="text-xs text-red-200">{question.options[answerIdx]}</span>
+                                                </div>
+                                              ))
+                                            ) : (
+                                              <p className="text-xs text-red-300 italic">No answer selected</p>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        {/* Correct Answer */}
+                                        <div className="bg-green-500/10 border border-green-500/20 rounded-lg p-3">
+                                          <p className="text-xs text-green-400 uppercase tracking-wider mb-1.5 font-semibold">
+                                            Correct Answer{question.correctAnswers.length > 1 ? 's' : ''}:
+                                          </p>
+                                          <div className="space-y-1">
+                                            {question.correctAnswers.map((answerIdx) => (
+                                              <div key={answerIdx} className="flex items-center gap-1.5">
+                                                <CheckCircle size={12} className="text-green-400 flex-shrink-0" />
+                                                <span className="text-xs text-green-200">{question.options[answerIdx]}</span>
+                                              </div>
+                                            ))}
+                                          </div>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              );
+                            })()}
+                          </div>
+                        ))}
+                      </div>
+                    </Card>
+                  </>
+                )}
               </div>
             )}
           </div>

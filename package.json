@@ -25,6 +25,7 @@
     "next": "^15.1.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "react-swipeable": "^7.0.2",
     "recharts": "^2.15.0",
     "svix": "^1.84.1",
     "tailwind-merge": "^2.5.5"
