@@ -21,13 +21,11 @@ export default function Icon() {
                     justifyContent: 'center',
                     background: 'linear-gradient(to bottom right, #FFA500, #FF0000)',
                     borderRadius: '50px',
-                    color: 'white',
                     fontFamily: 'serif',
                     fontStyle: 'italic',
                     fontSize: 20,
                 }}
             >
-                C
             </div>
         ),
         // ImageResponse options
