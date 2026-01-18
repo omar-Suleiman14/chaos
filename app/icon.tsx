@@ -20,7 +20,7 @@ export default function Icon() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     background: 'linear-gradient(to bottom right, #FFA500, #FF0000)',
-                    borderRadius: '12px',
+                    borderRadius: '8px',
                 }}
             >
             </div>
