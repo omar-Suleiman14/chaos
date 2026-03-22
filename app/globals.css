@@ -1,0 +1,474 @@
+/* ============================================================
+   CHAOS.UNIVERSITY — globals.css
+   Palette: lawn.video (off-white / near-black / natural green)
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Space+Mono:ital,wght@0,400;0,700;1,400;1,700&display=swap');
+
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ============================================================
+   TAILWIND @THEME
+   ============================================================ */
+@theme inline {
+  /* Surfaces */
+  --color-surface:                    var(--surface);
+  --color-surface-dim:                var(--surface-dim);
+  --color-surface-bright:             var(--surface-bright);
+  --color-surface-variant:            var(--surface-variant);
+  --color-surface-container-lowest:   var(--surface-container-lowest);
+  --color-surface-container-low:      var(--surface-container-low);
+  --color-surface-container:          var(--surface-container);
+  --color-surface-container-high:     var(--surface-container-high);
+  --color-surface-container-highest:  var(--surface-container-highest);
+  --color-surface-tint:               var(--surface-tint);
+
+  /* Primary */
+  --color-primary:                    var(--primary);
+  --color-primary-container:          var(--primary-container);
+  --color-primary-fixed:              var(--primary-fixed);
+  --color-primary-fixed-dim:          var(--primary-fixed-dim);
+  --color-primary-dim:                var(--primary-dim);
+  --color-on-primary:                 var(--on-primary);
+  --color-on-primary-container:       var(--on-primary-container);
+  --color-on-primary-fixed:           var(--on-primary-fixed);
+  --color-on-primary-fixed-variant:   var(--on-primary-fixed-variant);
+  --color-inverse-primary:            var(--inverse-primary);
+
+  /* Secondary */
+  --color-secondary:                  var(--secondary);
+  --color-secondary-container:        var(--secondary-container);
+  --color-secondary-fixed:            var(--secondary-fixed);
+  --color-secondary-fixed-dim:        var(--secondary-fixed-dim);
+  --color-secondary-dim:              var(--secondary-dim);
+  --color-on-secondary:               var(--on-secondary);
+  --color-on-secondary-container:     var(--on-secondary-container);
+  --color-on-secondary-fixed:         var(--on-secondary-fixed);
+  --color-on-secondary-fixed-variant: var(--on-secondary-fixed-variant);
+
+  /* Tertiary */
+  --color-tertiary:                   var(--tertiary);
+  --color-tertiary-container:         var(--tertiary-container);
+  --color-tertiary-fixed:             var(--tertiary-fixed);
+  --color-tertiary-fixed-dim:         var(--tertiary-fixed-dim);
+  --color-tertiary-dim:               var(--tertiary-dim);
+  --color-on-tertiary:                var(--on-tertiary);
+  --color-on-tertiary-container:      var(--on-tertiary-container);
+  --color-on-tertiary-fixed:          var(--on-tertiary-fixed);
+  --color-on-tertiary-fixed-variant:  var(--on-tertiary-fixed-variant);
+
+  /* Error */
+  --color-error:                      var(--error);
+  --color-error-container:            var(--error-container);
+  --color-error-dim:                  var(--error-dim);
+  --color-on-error:                   var(--on-error);
+  --color-on-error-container:         var(--on-error-container);
+
+  /* Background / Text */
+  --color-background:                 var(--background);
+  --color-on-background:              var(--on-background);
+  --color-on-surface:                 var(--on-surface);
+  --color-on-surface-variant:         var(--on-surface-variant);
+  --color-outline:                    var(--outline);
+  --color-outline-variant:            var(--outline-variant);
+  --color-inverse-surface:            var(--inverse-surface);
+  --color-inverse-on-surface:         var(--inverse-on-surface);
+
+  /* Shadcn aliases */
+  --color-foreground:                 var(--on-background);
+  --color-card:                       var(--surface-container-low);
+  --color-card-foreground:            var(--on-background);
+  --color-popover:                    var(--surface-container-lowest);
+  --color-popover-foreground:         var(--on-background);
+  --color-muted:                      var(--surface-container);
+  --color-muted-foreground:           var(--on-surface-variant);
+  --color-accent:                     var(--primary-container);
+  --color-accent-foreground:          var(--on-primary-container);
+  --color-destructive:                var(--error);
+  --color-border:                     var(--on-background);
+  --color-input:                      var(--surface-container-low);
+  --color-ring:                       var(--primary);
+  --color-chaos:                      var(--primary-container);
+  --color-chaos-foreground:           var(--on-primary-container);
+
+  /* Sidebar */
+  --color-sidebar:                    var(--surface-container-low);
+  --color-sidebar-foreground:         var(--on-background);
+  --color-sidebar-primary:            var(--primary);
+  --color-sidebar-primary-foreground: var(--on-primary);
+  --color-sidebar-accent:             var(--surface-container);
+  --color-sidebar-accent-foreground:  var(--on-background);
+  --color-sidebar-border:             var(--on-background);
+  --color-sidebar-ring:               var(--primary);
+
+  /* Charts */
+  --color-chart-1: var(--primary);
+  --color-chart-2: var(--secondary);
+  --color-chart-3: var(--tertiary);
+  --color-chart-4: var(--surface-container-highest);
+  --color-chart-5: var(--primary-dim);
+
+  /* Fonts */
+  --font-display:  var(--font-grotesk);
+  --font-sans:     var(--font-inter);
+  --font-mono:     var(--font-space-mono);
+
+  /* Radius — 0px, always */
+  --radius:     0rem;
+  --radius-sm:  0rem;
+  --radius-md:  0rem;
+  --radius-lg:  0rem;
+  --radius-xl:  0rem;
+  --radius-2xl: 0rem;
+  --radius-3xl: 0rem;
+  --radius-4xl: 0rem;
+}
+
+/* ============================================================
+   TOKENS — Light (lawn.video palette)
+   #F0EFEA off-white / #111111 near-black / #2F5333 forest green
+   ============================================================ */
+:root {
+  /* Surfaces — off-white tiered */
+  --surface:                   #F0EFEA;
+  --surface-dim:               #E2E1DC;
+  --surface-bright:            #FAFAF8;
+  --surface-variant:           #E8E7E2;
+  --surface-container-lowest:  #FFFFFF;
+  --surface-container-low:     #F5F4F0;
+  --surface-container:         #ECEAE5;
+  --surface-container-high:    #E2E1DC;
+  --surface-container-highest: #D8D7D2;
+  --surface-tint:              #2F5333;
+
+  /* Primary — lawn forest green */
+  --primary:                   #2F5333;
+  --primary-container:         #2F5333;
+  --primary-fixed:             #45B26B;
+  --primary-fixed-dim:         #3A9A5C;
+  --primary-dim:               #1E3820;
+  --on-primary:                #FFFFFF;
+  --on-primary-container:      #FFFFFF;
+  --on-primary-fixed:          #FFFFFF;
+  --on-primary-fixed-variant:  #2F5333;
+  --inverse-primary:           #45B26B;
+
+  /* Secondary — muted sage */
+  --secondary:                 #4A7C59;
+  --secondary-container:       #C8E6C9;
+  --secondary-fixed:           #C8E6C9;
+  --secondary-fixed-dim:       #A5D6A7;
+  --secondary-dim:             #2E5C3E;
+  --on-secondary:              #FFFFFF;
+  --on-secondary-container:    #1B4025;
+  --on-secondary-fixed:        #1B4025;
+  --on-secondary-fixed-variant:#4A7C59;
+
+  /* Tertiary — warm amber accent */
+  --tertiary:                  #8B6914;
+  --tertiary-container:        #FFD54F;
+  --tertiary-fixed:            #FFD54F;
+  --tertiary-fixed-dim:        #FFC107;
+  --tertiary-dim:              #5C4409;
+  --on-tertiary:               #FFFFFF;
+  --on-tertiary-container:     #3E2C00;
+  --on-tertiary-fixed:         #3E2C00;
+  --on-tertiary-fixed-variant: #8B6914;
+
+  /* Error — clean red */
+  --error:                     #C62828;
+  --error-container:           #FFCDD2;
+  --error-dim:                 #8E1C1C;
+  --on-error:                  #FFFFFF;
+  --on-error-container:        #7F0000;
+
+  /* Text / Neutrals */
+  --background:                #F0EFEA;
+  --on-background:             #111111;
+  --on-surface:                #111111;
+  --on-surface-variant:        #555550;
+  --outline:                   #888880;
+  --outline-variant:           rgba(17, 17, 17, 0.12);
+  --inverse-surface:           #111111;
+  --inverse-on-surface:        #F0EFEA;
+
+  /* Font stacks */
+  --font-grotesk:    'Space Grotesk', system-ui, sans-serif;
+  --font-inter:      'Inter', system-ui, sans-serif;
+  --font-space-mono: 'Space Mono', 'Courier New', monospace;
+}
+
+/* Dark mode — ink-black with green accents */
+.dark {
+  --surface:                   #0E0E0C;
+  --surface-dim:               #080806;
+  --surface-bright:            #1A1A18;
+  --surface-variant:           #1E1E1C;
+  --surface-container-lowest:  #060604;
+  --surface-container-low:     #141412;
+  --surface-container:         #1A1A18;
+  --surface-container-high:    #222220;
+  --surface-container-highest: #2A2A28;
+  --surface-tint:              #45B26B;
+
+  --primary:                   #2F5333;
+  --primary-container:         #2F5333;
+  --primary-fixed:             #45B26B;
+  --primary-fixed-dim:         #3A9A5C;
+  --primary-dim:               #1E3820;
+  --on-primary:                #FFFFFF;
+  --on-primary-container:      #B8F0CC;
+  --on-primary-fixed:          #FFFFFF;
+  --on-primary-fixed-variant:  #45B26B;
+  --inverse-primary:           #2F5333;
+
+  --secondary:                 #A5D6A7;
+  --secondary-container:       #2E5C3E;
+  --secondary-fixed:           #A5D6A7;
+  --secondary-fixed-dim:       #80C783;
+  --secondary-dim:             #1B4025;
+  --on-secondary:              #1B4025;
+  --on-secondary-container:    #C8E6C9;
+  --on-secondary-fixed:        #1B4025;
+  --on-secondary-fixed-variant:#4A7C59;
+
+  --tertiary:                  #FFD54F;
+  --tertiary-container:        #5C4409;
+  --tertiary-fixed:            #FFD54F;
+  --tertiary-fixed-dim:        #FFC107;
+  --tertiary-dim:              #8B6914;
+  --on-tertiary:               #3E2C00;
+  --on-tertiary-container:     #FFE082;
+  --on-tertiary-fixed:         #3E2C00;
+  --on-tertiary-fixed-variant: #8B6914;
+
+  --error:                     #EF9A9A;
+  --error-container:           #8E1C1C;
+  --error-dim:                 #C62828;
+  --on-error:                  #7F0000;
+  --on-error-container:        #FFCDD2;
+
+  --background:                #090909;
+  --on-background:             #EEEDE8;
+  --on-surface:                #EEEDE8;
+  --on-surface-variant:        #9A9990;
+  --outline:                   #666660;
+  --outline-variant:           rgba(238, 237, 232, 0.12);
+  --inverse-surface:           #F0EFEA;
+  --inverse-on-surface:        #090909;
+}
+
+/* ============================================================
+   BASE
+   ============================================================ */
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+    box-sizing: border-box;
+    border-radius: 0 !important;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-inter);
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+  html {
+    @apply scroll-smooth;
+    overflow-x: hidden;
+  }
+  img, video, svg { max-width: 100%; height: auto; }
+  ::-webkit-scrollbar { width: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--on-surface-variant); }
+  ::-webkit-scrollbar-thumb:hover { background: var(--on-surface); }
+}
+
+/* ============================================================
+   QUESTION ACCENT COLORS
+   Each question gets one of these backgrounds automatically
+   ============================================================ */
+.q-accent-0 { background-color: #2F5333; color: #fff; }
+.q-accent-1 { background-color: #3b82f6; color: #fff; }
+.q-accent-2 { background-color: #7c3aed; color: #fff; }
+.q-accent-3 { background-color: #b45309; color: #fff; }
+.q-accent-4 { background-color: #0891b2; color: #fff; }
+.q-accent-5 { background-color: #9333ea; color: #fff; }
+.q-accent-6 { background-color: #15803d; color: #fff; }
+.q-accent-7 { background-color: #b91c1c; color: #fff; }
+
+/* ============================================================
+   TYPOGRAPHY
+   ============================================================ */
+.kb-display    { font-family: var(--font-grotesk); font-weight: 900; font-size: 3.5rem;  line-height: 0.95; letter-spacing: -0.03em; text-transform: uppercase; }
+.kb-display-lg { font-family: var(--font-grotesk); font-weight: 900; font-size: clamp(3.5rem,8vw,7rem); line-height: 0.88; letter-spacing: -0.04em; text-transform: uppercase; }
+.kb-headline   { font-family: var(--font-grotesk); font-weight: 500; font-size: 1.75rem; line-height: 1.1; letter-spacing: 0.02em; text-transform: uppercase; }
+.kb-headline-sm{ font-family: var(--font-grotesk); font-weight: 600; font-size: 1.25rem; line-height: 1.15; letter-spacing: 0.02em; text-transform: uppercase; }
+.kb-body       { font-family: var(--font-inter);   font-weight: 400; font-size: 1rem; line-height: 1.55; }
+.kb-body-sm    { font-family: var(--font-inter);   font-weight: 400; font-size: 0.875rem; line-height: 1.5; color: var(--on-surface-variant); }
+.kb-label      { font-family: var(--font-inter);   font-weight: 700; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; }
+.kb-mono       { font-family: var(--font-space-mono); font-weight: 700; font-size: 0.875rem; }
+
+/* ============================================================
+   SHADOWS — hard offsets
+   ============================================================ */
+.kb-shadow        { box-shadow: 6px 6px 0px var(--on-surface); }
+.kb-shadow-lg     { box-shadow: 8px 8px 0px var(--on-surface); }
+.kb-shadow-accent { box-shadow: 6px 6px 0px var(--primary); }
+.kb-shadow-float  { box-shadow: 0 0 32px rgba(17,17,17,0.06); }
+.kb-outline-ghost { outline: 1px solid var(--outline-variant); }
+
+/* ============================================================
+   BUTTONS
+   ============================================================ */
+.kb-btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 0.5rem;
+  font-family: var(--font-grotesk); font-weight: 700; font-size: 0.875rem;
+  letter-spacing: 0.06em; text-transform: uppercase;
+  border-radius: 0; cursor: pointer; padding: 0.75rem 1.5rem;
+  border: 3px solid var(--on-background);
+  transition: box-shadow 0.1s ease, transform 0.1s ease;
+  user-select: none; text-decoration: none;
+}
+.kb-btn-primary   { background: var(--primary-container); color: var(--on-primary-container); box-shadow: 6px 6px 0px var(--on-background); }
+.kb-btn-primary:hover   { box-shadow: 8px 8px 0px var(--on-background); transform: translate(-2px,-2px); }
+.kb-btn-primary:active  { box-shadow: none; transform: translate(4px,4px); }
+
+.kb-btn-secondary { background: var(--secondary-container); color: var(--on-secondary-container); box-shadow: 6px 6px 0px var(--on-background); }
+.kb-btn-secondary:hover  { box-shadow: 8px 8px 0px var(--on-background); transform: translate(-2px,-2px); }
+.kb-btn-secondary:active { box-shadow: none; transform: translate(4px,4px); }
+
+.kb-btn-ghost     { background: transparent; color: var(--on-background); box-shadow: 6px 6px 0px var(--on-background); }
+.kb-btn-ghost:hover  { background: var(--surface-container-low); box-shadow: 8px 8px 0px var(--on-background); transform: translate(-2px,-2px); }
+.kb-btn-ghost:active { box-shadow: none; transform: translate(4px,4px); }
+
+.kb-btn-danger    { background: var(--error); color: var(--on-error); box-shadow: 6px 6px 0px var(--on-background); }
+.kb-btn-danger:hover  { box-shadow: 8px 8px 0px var(--on-background); transform: translate(-2px,-2px); }
+.kb-btn-danger:active { box-shadow: none; transform: translate(4px,4px); }
+
+/* ============================================================
+   INPUTS
+   ============================================================ */
+.kb-input {
+  display: block; width: 100%;
+  font-family: var(--font-inter); font-size: 1rem; font-weight: 500;
+  color: var(--on-background); background: var(--surface-container-lowest);
+  border: 3px solid var(--on-background); padding: 0.75rem 1rem; outline: none;
+  transition: background 0.15s ease;
+}
+.kb-input::placeholder { font-weight: 700; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; color: var(--on-surface-variant); }
+.kb-input:focus { background: var(--secondary-container); box-shadow: 4px 4px 0px var(--on-background); color: var(--on-secondary-container); }
+
+/* ============================================================
+   CARDS
+   ============================================================ */
+.kb-card         { background: var(--surface-container-highest); padding: 1.1rem; box-shadow: 6px 6px 0px var(--on-surface); }
+.kb-card-bordered{ background: var(--surface-container-low); padding: 1.1rem; border: 3px solid var(--on-background); box-shadow: 8px 8px 0px var(--on-background); transition: box-shadow 0.12s ease, transform 0.12s ease; }
+.kb-card-bordered:hover  { box-shadow: 12px 12px 0px var(--on-background); transform: translate(-4px,-4px); }
+.kb-card-bordered:active { box-shadow: 2px 2px 0px var(--on-background); transform: translate(4px,4px); }
+.kb-card-hint    { background: var(--surface-container-lowest); padding: 1.1rem; border: 3px dashed var(--on-surface-variant); }
+.kb-card-glass   { background: rgba(240,239,234,0.82); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 1.1rem; border: 3px solid var(--on-background); }
+.dark .kb-card-glass { background: rgba(14,14,12,0.82); }
+
+/* ============================================================
+   CHIPS
+   ============================================================ */
+.kb-chip         { display: inline-flex; align-items: center; gap: 0.4rem; font-family: var(--font-inter); font-weight: 700; font-size: 0.75rem; letter-spacing: 0.08em; text-transform: uppercase; padding: 0.35rem 0.85rem; border: 2px solid var(--on-background); background: var(--surface-container-low); color: var(--on-background); }
+.kb-chip-success { background: var(--primary-container); color: var(--on-primary-container); border-color: var(--primary); }
+.kb-chip-error   { background: var(--error-container); color: var(--on-error-container); border-color: var(--error-dim); }
+.kb-chip-info    { background: var(--secondary-container); color: var(--on-secondary-container); border-color: var(--secondary); }
+
+/* ============================================================
+   DIVIDERS
+   ============================================================ */
+.kb-divider        { height: 4px; background: var(--on-background); border: none; margin: 0; }
+.kb-divider-accent { height: 3px; background: var(--primary); border: none; }
+
+/* ============================================================
+   LEGACY CHAOS CLASSES (preserved for existing components)
+   ============================================================ */
+.chaos-heading  { font-family: var(--font-grotesk); font-weight: 700; text-transform: uppercase; letter-spacing: 0.02em; }
+.chaos-display  { font-family: var(--font-grotesk); font-weight: 900; text-transform: uppercase; letter-spacing: -0.04em; line-height: 0.8; }
+.chaos-badge    { display: inline-block; border: 2px solid var(--on-background); padding: 0.25rem 0.75rem; font-family: var(--font-space-mono); font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; background: var(--surface-container-lowest); }
+
+.chaos-card        { border: 3px solid var(--on-surface); box-shadow: 6px 6px 0px var(--on-surface); transition: box-shadow 0.12s ease, transform 0.12s ease; }
+.chaos-card:hover  { box-shadow: 8px 8px 0px var(--on-surface); transform: translate(-2px,-2px); }
+.chaos-card:active { box-shadow: 2px 2px 0px var(--on-surface); transform: translate(2px,2px); }
+
+.chaos-card-alt        { border: 3px solid var(--on-surface); box-shadow: 8px 8px 0px var(--primary); transition: all 0.15s ease; }
+.chaos-card-alt:hover  { box-shadow: 12px 12px 0px var(--primary); transform: translate(-3px,-3px); }
+
+.chaos-card-accent        { border: 3px solid var(--primary); box-shadow: 6px 6px 0px var(--primary); transition: all 0.15s ease; }
+.chaos-card-accent:hover  { box-shadow: 8px 8px 0px var(--primary); transform: translate(-2px,-2px); }
+
+.chaos-divider { height: 4px; background: var(--on-surface); border: none; }
+
+/* ============================================================
+   VERTICAL SNAP SCROLL
+   ============================================================ */
+.tiktok-container { height: 100dvh; width: 100%; overflow-y: scroll; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
+.tiktok-container::-webkit-scrollbar { display: none; }
+.tiktok-slide { height: 100dvh; width: 100%; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; box-sizing: border-box; }
+.scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
+.scrollbar-hide::-webkit-scrollbar { display: none; }
+
+/* ============================================================
+   ANIMATIONS
+   ============================================================ */
+@keyframes chaos-glitch {
+  0%   { transform: translate(0); text-shadow: none; }
+  20%  { transform: translate(-2px, 2px);  text-shadow:  2px 0 var(--error), -2px 0 var(--primary-container); }
+  40%  { transform: translate(-2px, -2px); text-shadow: -2px 0 var(--error),  2px 0 var(--primary-container); }
+  60%  { transform: translate(2px, 2px);   text-shadow:  2px 0 var(--error), -2px 0 var(--primary-container); }
+  80%  { transform: translate(2px, -2px);  text-shadow: -2px 0 var(--error),  2px 0 var(--primary-container); }
+  100% { transform: translate(0); text-shadow: none; }
+}
+.chaos-glitch { display: inline-block; }
+.chaos-glitch:hover { animation: chaos-glitch 0.3s cubic-bezier(.25,.46,.45,.94) both infinite; }
+
+@keyframes chaos-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
+.chaos-pulse { animation: chaos-pulse 2s ease-in-out infinite; }
+
+@keyframes timer-shrink { from { width: 100%; } to { width: 0%; } }
+
+@keyframes shake {
+  0%,100%             { transform: translateX(0); }
+  10%,30%,50%,70%,90% { transform: translateX(-4px); }
+  20%,40%,60%,80%     { transform: translateX(4px); }
+}
+.shake { animation: shake 0.5s ease-in-out; }
+
+@keyframes pop { 0%,100% { transform: scale(1); } 50% { transform: scale(1.05); } }
+.pop { animation: pop 0.3s ease-in-out; }
+
+@keyframes slide-up { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+.slide-up { animation: slide-up 0.4s ease-out forwards; }
+
+.stagger-children > * { opacity: 0; animation: slide-up 0.4s ease-out forwards; }
+.stagger-children > *:nth-child(1) { animation-delay:   0ms; }
+.stagger-children > *:nth-child(2) { animation-delay:  80ms; }
+.stagger-children > *:nth-child(3) { animation-delay: 160ms; }
+.stagger-children > *:nth-child(4) { animation-delay: 240ms; }
+.stagger-children > *:nth-child(5) { animation-delay: 320ms; }
+.stagger-children > *:nth-child(6) { animation-delay: 400ms; }
+.stagger-children > *:nth-child(7) { animation-delay: 480ms; }
+.stagger-children > *:nth-child(8) { animation-delay: 560ms; }
+
+.noise-bg::before {
+  content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+  opacity: 0.025;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)'/%3E%3C/svg%3E");
+  pointer-events: none; z-index: 50;
+}
+
+/* ============================================================
+   QUIZ OPTION STATES
+   ============================================================ */
+.quiz-option { transition: box-shadow 0.12s ease, transform 0.12s ease; cursor: pointer; border: 3px solid var(--on-background); }
+.quiz-option:hover { box-shadow: 4px 4px 0px var(--on-background); transform: translate(-2px,-2px); }
+.quiz-option.correct  { background: var(--primary-container); color: var(--on-primary-container); border-color: var(--primary); box-shadow: 6px 6px 0px var(--primary); }
+.quiz-option.incorrect{ background: var(--error); color: var(--on-error); border-color: var(--error-dim); box-shadow: 6px 6px 0px var(--error-dim); }
