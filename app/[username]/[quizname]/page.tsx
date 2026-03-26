@@ -32,16 +32,16 @@ export default function QuizPlayerPage() {
   const [gameState, setGameState] = useState<GameState>("entry");
   const [playerName, setPlayerName] = useState("");
   const [sessionId, setSessionId] = useState<Id<"quizSessions"> | null>(null);
-  
+
   const [currentQ, setCurrentQ] = useState(0);
   const [finalResults, setFinalResults] = useState<any>(null);
-  
-  // Per-question state
+
   const [selectedOptions, setSelectedOptions] = useState<Record<string, string>>({});
+  const [multiSelections, setMultiSelections] = useState<Record<string, string[]>>({});
   const [writtenAnswers, setWrittenAnswers] = useState<Record<string, string>>({});
   const [feedbacks, setFeedbacks] = useState<Record<string, any>>({});
   const [timeLeftMap, setTimeLeftMap] = useState<Record<string, number>>({});
-  
+
   const [mounted, setMounted] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -53,7 +53,6 @@ export default function QuizPlayerPage() {
 
   const questions = quizData?.questions || [];
 
-  // Update currentQ based on scroll position natively over snap points
   const handleScroll = () => {
     if (!containerRef.current) return;
     const scrollY = containerRef.current.scrollTop;
@@ -66,7 +65,6 @@ export default function QuizPlayerPage() {
     }
   };
 
-  // Timer logic for the currently active question
   useEffect(() => {
     if (gameState !== "playing" || currentQ === questions.length) {
       if (timerRef.current) clearInterval(timerRef.current);
@@ -75,13 +73,11 @@ export default function QuizPlayerPage() {
     const q = questions[currentQ];
     if (!q) return;
 
-    // If already answered, do not tick
     if (feedbacks[q._id]) {
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
 
-    // Initialize timer for this question if it doesn't exist
     if (timeLeftMap[q._id] === undefined) {
       setTimeLeftMap(prev => ({ ...prev, [q._id]: q.timeLimit || 60 }));
       qStartTimes.current[q._id] = Date.now();
@@ -161,18 +157,25 @@ export default function QuizPlayerPage() {
 
   if (quizMeta === undefined) {
     return (
-      <div className="h-[100dvh] bg-[#F0EFEA] flex items-center justify-center">
-        <p className="text-[#111111]/60 font-medium">Loading...</p>
+      <div className="h-[100dvh] bg-background flex items-center justify-center">
+        <p className="chaos-heading text-sm text-muted-foreground chaos-pulse">LOADING...</p>
       </div>
     );
   }
 
   if (quizMeta === null || (quizData && !quizData.isPublished)) {
     return (
-      <div className="h-[100dvh] bg-[#F0EFEA] flex flex-col items-center justify-center p-6 text-center text-[#111111]">
-        <h1 className="text-2xl font-semibold mb-2">Quiz Not Found</h1>
-        <p className="text-[#111111]/60 mb-8 max-w-sm">This quiz does not exist or is currently private.</p>
-        <button onClick={() => window.location.href = "/"} className="px-8 py-3 bg-[#2F5333] text-white rounded-full font-medium">Home</button>
+      <div className="h-[100dvh] bg-background flex flex-col items-center justify-center p-6 text-center">
+        <div className="chaos-card bg-card p-10 max-w-sm w-full text-center">
+          <h1 className="chaos-display text-4xl mb-3">NOT FOUND.</h1>
+          <p className="text-muted-foreground mb-8 text-sm">This quiz does not exist or is currently private.</p>
+          <button
+            onClick={() => window.location.href = "/"}
+            className="kb-btn kb-btn-primary w-full"
+          >
+            GO HOME
+          </button>
+        </div>
       </div>
     );
   }
@@ -180,30 +183,34 @@ export default function QuizPlayerPage() {
   // ── ENTRY SCREEN
   if (gameState === "entry") {
     return (
-      <div className="h-[100dvh] bg-[#F0EFEA] flex flex-col items-center justify-center p-6 text-[#111111]">
-        <div className="max-w-md w-full text-center">
-          <p className="text-[#2F5333] font-medium mb-3">{quizData?.totalPoints} Points • {questions.length} Questions</p>
-          <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight mb-8">
-            {quizData?.title || "Quiz"}
-          </h1>
-          
-          <div className="space-y-4 max-w-sm mx-auto">
-            <input
-              type="text"
-              value={playerName}
-              onChange={e => setPlayerName(e.target.value)}
-              onKeyDown={e => e.key === "Enter" && handleStart()}
-              placeholder="Enter your name"
-              autoFocus
-              className="w-full bg-white border border-[#111111]/20 rounded-xl px-5 py-4 font-medium text-lg placeholder:text-[#111111]/30 focus:outline-none focus:border-[#2F5333] transition-colors"
-            />
-            <button
-              onClick={handleStart}
-              disabled={!playerName.trim()}
-              className="w-full px-8 py-4 bg-[#2F5333] text-white rounded-xl font-medium text-lg hover:opacity-90 transition-opacity disabled:opacity-50"
-            >
-              Start Quiz
-            </button>
+      <div className="h-[100dvh] bg-background flex flex-col items-center justify-center p-6">
+        <div className="max-w-md w-full">
+          <div className="chaos-card bg-card p-8 sm:p-10">
+            <p className="chaos-heading text-xs text-primary mb-3">
+              {quizData?.totalPoints} PTS · {questions.length} QUESTIONS
+            </p>
+            <h1 className="chaos-display text-4xl sm:text-5xl mb-8 leading-none">
+              {quizData?.title || "QUIZ"}
+            </h1>
+
+            <div className="space-y-4">
+              <input
+                type="text"
+                value={playerName}
+                onChange={e => setPlayerName(e.target.value)}
+                onKeyDown={e => e.key === "Enter" && handleStart()}
+                placeholder="ENTER YOUR NAME"
+                autoFocus
+                className="kb-input text-base"
+              />
+              <button
+                onClick={handleStart}
+                disabled={!playerName.trim()}
+                className="kb-btn kb-btn-primary w-full disabled:opacity-50"
+              >
+                START QUIZ →
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -212,16 +219,16 @@ export default function QuizPlayerPage() {
 
   // ── PLAYING (SNAP SCROLL)
   return (
-    <div className="h-[100dvh] bg-[#F0EFEA] text-[#111111] font-sans relative">
+    <div className="h-[100dvh] bg-background text-foreground font-sans relative">
       {/* Progress bar */}
-      <div className="fixed top-0 left-0 w-full h-1 bg-[#111111]/10 z-50">
-        <div 
-          className="h-full bg-[#2F5333] transition-all duration-300"
+      <div className="fixed top-0 left-0 w-full h-1.5 bg-muted z-50">
+        <div
+          className="h-full bg-primary transition-all duration-300"
           style={{ width: `${(Math.min(currentQ, questions.length) / questions.length) * 100}%` }}
         />
       </div>
 
-      <div 
+      <div
         ref={containerRef}
         className="tiktok-container"
         onScroll={handleScroll}
@@ -232,120 +239,202 @@ export default function QuizPlayerPage() {
           const selOpt = selectedOptions[q._id];
           const tLeft = timeLeftMap[q._id] ?? (q.timeLimit || 60);
 
+          let slideBg = "bg-background";
+          let slideAnim = "";
+          if (isFeedback) {
+            if (feed.isCorrect) {
+              slideBg = "bg-[#d1ebd2] transition-colors duration-500";
+            } else {
+              slideBg = "bg-[#ebd2d2] transition-colors duration-500";
+              slideAnim = "shake";
+            }
+          }
+
           return (
-            <div key={q._id} className="tiktok-slide flex flex-col px-6 py-12 sm:px-12 sm:py-16">
+            <div key={q._id} className={`tiktok-slide flex flex-col px-4 py-12 sm:px-8 sm:py-16 ${slideBg} ${slideAnim}`}>
               <div className="flex-1 flex flex-col pt-8 max-w-2xl mx-auto w-full">
+                {/* Header */}
                 <div className="flex justify-between items-center mb-6">
-                   <span className="text-sm font-medium text-[#2F5333]">Question {i+1} of {questions.length}</span>
-                   <span className={`text-sm font-medium flex items-center gap-1 tabular-nums ${tLeft <= 10 ? 'text-red-600' : 'text-[#111111]/60'}`}>
-                     <Zap size={14} /> {String(tLeft).padStart(2, "0")}s
-                   </span>
+                  <span className="chaos-heading text-xs text-primary">
+                    QUESTION {i + 1} OF {questions.length}
+                  </span>
+                  <span className={`chaos-heading text-sm flex items-center gap-1.5 tabular-nums border-2 px-3 py-1 ${
+                    tLeft <= 10
+                      ? "border-destructive text-destructive bg-destructive/10"
+                      : "border-foreground/20 text-muted-foreground"
+                  }`}>
+                    <Zap size={13} /> {String(tLeft).padStart(2, "0")}S
+                  </span>
                 </div>
-                
-                <h2 className="text-2xl sm:text-3xl font-semibold mb-10 leading-snug">
+
+                <h2 className="text-2xl sm:text-3xl font-bold mb-8 leading-snug">
                   {q.questionText}
                 </h2>
 
-                <div className="space-y-4">
+                {/* Options */}
+                <div className="space-y-3">
                   {q.type === "mcq" && q.options?.map((opt, optIdx) => {
-                     const isSelected = selOpt === opt;
-                     const isCorrectAns = isFeedback && feed?.correctAnswer === opt;
-                     const isWrongSel = isFeedback && isSelected && !feed?.isCorrect;
-                     
-                     let optStyle = "border border-[#111111]/20 bg-white hover:border-[#2F5333]";
-                     if (isCorrectAns) optStyle = "border-[#2F5333] bg-[#2F5333] text-white";
-                     else if (isWrongSel) optStyle = "border-red-600 bg-red-600 text-white";
-                     else if (isFeedback) optStyle = "border-[#111111]/10 bg-[#111111]/5 text-[#111111]/40";
-                     
-                     return (
-                       <button
-                         key={optIdx}
-                         onClick={() => !isFeedback && handleSubmitAnswer(q._id, opt)}
-                         disabled={isFeedback || isSubmitting}
-                         className={`w-full text-left p-4 sm:p-5 rounded-xl font-medium transition-colors ${optStyle}`}
-                       >
-                         {opt}
-                       </button>
-                     )
+                    const isSelected = selOpt === opt;
+                    const isCorrectAns = isFeedback && feed?.correctAnswer === opt;
+                    const isWrongSel = isFeedback && isSelected && !feed?.isCorrect;
+
+                    let cls = "border-[3px] border-foreground/30 bg-card hover:border-foreground hover:shadow-[4px_4px_0px_var(--on-surface)] transition-all";
+                    if (isCorrectAns) cls = "border-[3px] border-primary bg-chaos text-chaos-foreground shadow-[6px_6px_0px_var(--primary)]";
+                    else if (isWrongSel) cls = "border-[3px] border-destructive bg-destructive text-on-error shadow-[6px_6px_0px_var(--error-dim)]";
+                    else if (isFeedback) cls = "border-[3px] border-foreground/10 bg-muted text-muted-foreground opacity-60";
+
+                    return (
+                      <button
+                        key={optIdx}
+                        onClick={() => !isFeedback && handleSubmitAnswer(q._id, opt)}
+                        disabled={isFeedback || isSubmitting}
+                        className={`w-full text-left p-4 font-medium transition-all ${cls}`}
+                      >
+                        <span className="chaos-heading text-xs mr-3 opacity-60">{String.fromCharCode(65 + optIdx)}.</span>
+                        {opt}
+                      </button>
+                    );
                   })}
+
                   {q.type === "true_false" && ["True", "False"].map((val) => {
-                     const isSelected = selOpt === val;
-                     const isCorrectAns = isFeedback && feed?.correctAnswer === val;
-                     const isWrongSel = isFeedback && isSelected && !feed?.isCorrect;
-                     
-                     let optStyle = "border border-[#111111]/20 bg-white hover:border-[#2F5333]";
-                     if (isCorrectAns) optStyle = "border-[#2F5333] bg-[#2F5333] text-white";
-                     else if (isWrongSel) optStyle = "border-red-600 bg-red-600 text-white";
-                     else if (isFeedback) optStyle = "border-[#111111]/10 bg-[#111111]/5 text-[#111111]/40";
-                     
-                     return (
-                       <button
-                         key={val}
-                         onClick={() => !isFeedback && handleSubmitAnswer(q._id, val)}
-                         disabled={isFeedback || isSubmitting}
-                         className={`w-full text-left p-4 sm:p-5 rounded-xl font-medium transition-colors ${optStyle}`}
-                       >
-                         {val}
-                       </button>
-                     )
+                    const isSelected = selOpt === val;
+                    const isCorrectAns = isFeedback && feed?.correctAnswer === val;
+                    const isWrongSel = isFeedback && isSelected && !feed?.isCorrect;
+
+                    let cls = "border-[3px] border-foreground/30 bg-card hover:border-foreground hover:shadow-[4px_4px_0px_var(--on-surface)] transition-all";
+                    if (isCorrectAns) cls = "border-[3px] border-primary bg-chaos text-chaos-foreground shadow-[6px_6px_0px_var(--primary)]";
+                    else if (isWrongSel) cls = "border-[3px] border-destructive bg-destructive text-on-error shadow-[6px_6px_0px_var(--error-dim)]";
+                    else if (isFeedback) cls = "border-[3px] border-foreground/10 bg-muted text-muted-foreground opacity-60";
+
+                    return (
+                      <button
+                        key={val}
+                        onClick={() => !isFeedback && handleSubmitAnswer(q._id, val)}
+                        disabled={isFeedback || isSubmitting}
+                        className={`w-full text-left p-4 font-bold chaos-heading transition-all ${cls}`}
+                      >
+                        {val.toUpperCase()}
+                      </button>
+                    );
                   })}
-                  
+
+                  {q.type === "multi_select" && (() => {
+                    const currentSel = multiSelections[q._id] || [];
+                    const correctList: string[] = feed?.correctAnswer
+                      ? feed.correctAnswer.split(",").map((s: string) => s.trim())
+                      : [];
+                    return (
+                      <div className="space-y-3">
+                        <p className="chaos-heading text-[10px] text-muted-foreground mb-1">SELECT ALL THAT APPLY</p>
+                        {q.options?.map((opt, optIdx) => {
+                          const isChecked = currentSel.includes(opt);
+                          const isCorrectAns = isFeedback && correctList.includes(opt);
+                          const isWrongSel = isFeedback && isChecked && !correctList.includes(opt);
+                          const isDimmed = isFeedback && !isChecked && !correctList.includes(opt);
+
+                          let cls = "border-[3px] border-foreground/30 bg-card hover:border-foreground transition-all";
+                          if (isCorrectAns) cls = "border-[3px] border-primary bg-chaos text-chaos-foreground shadow-[6px_6px_0px_var(--primary)]";
+                          else if (isWrongSel) cls = "border-[3px] border-destructive bg-destructive/20 text-destructive";
+                          else if (isDimmed) cls = "border-[3px] border-foreground/10 bg-muted text-muted-foreground opacity-50";
+                          else if (isChecked) cls = "border-[3px] border-primary bg-primary/10 text-foreground shadow-[4px_4px_0px_var(--primary)]";
+
+                          return (
+                            <button
+                              key={optIdx}
+                              onClick={() => {
+                                if (isFeedback) return;
+                                const prev = multiSelections[q._id] || [];
+                                const next = prev.includes(opt)
+                                  ? prev.filter(x => x !== opt)
+                                  : [...prev, opt];
+                                setMultiSelections(s => ({ ...s, [q._id]: next }));
+                                haptics.light();
+                              }}
+                              disabled={isFeedback || isSubmitting}
+                              className={`w-full text-left p-4 font-medium transition-all flex items-center gap-3 ${cls}`}
+                            >
+                              <span className={`w-5 h-5 border-[2px] shrink-0 flex items-center justify-center chaos-heading text-xs ${
+                                isCorrectAns ? "border-chaos-foreground bg-chaos-foreground/20" :
+                                isChecked ? "border-primary bg-primary/20" :
+                                "border-foreground/40"
+                              }`}>
+                                {(isChecked || isCorrectAns) ? "✓" : ""}
+                              </span>
+                              <span>
+                                <span className="chaos-heading text-xs mr-2 opacity-50">{String.fromCharCode(65 + optIdx)}.</span>
+                                {opt}
+                              </span>
+                            </button>
+                          );
+                        })}
+                        {!isFeedback && (
+                          <button
+                            onClick={() => {
+                              const sel = multiSelections[q._id] || [];
+                              if (sel.length === 0) return;
+                              handleSubmitAnswer(q._id, sel.join(","));
+                            }}
+                            disabled={isSubmitting || (multiSelections[q._id] || []).length === 0}
+                            className="kb-btn kb-btn-primary w-full mt-2 disabled:opacity-50"
+                          >
+                            SUBMIT SELECTION ({(multiSelections[q._id] || []).length} selected)
+                          </button>
+                        )}
+                      </div>
+                    );
+                  })()}
+
                   {q.type === "written" && (
-                    <div className="mt-4 flex flex-col gap-3 w-full animate-in fade-in duration-300">
+                    <div className="flex flex-col gap-3 w-full">
                       <textarea
                         value={writtenAnswers[q._id] || ""}
                         onChange={(e) => setWrittenAnswers({ ...writtenAnswers, [q._id]: e.target.value })}
                         disabled={isFeedback || isSubmitting}
-                        placeholder="Type your answer here..."
-                        className={`w-full bg-white border rounded-xl p-4 min-h-[120px] resize-y focus:outline-none transition-all ${
-                          isFeedback && feed?.isCorrect ? "border-[#2F5333] ring-1 ring-[#2F5333] bg-[#2F5333]/5" : 
-                          isFeedback && !feed?.isCorrect && feed?.pointsEarned > 0 ? "border-[#EAA015] ring-1 ring-[#EAA015] bg-[#EAA015]/5" : 
-                          isFeedback && !feed?.isCorrect ? "border-red-600 ring-1 ring-red-600 bg-red-50" : 
-                          "border-[#111111]/20 focus:border-[#2F5333] focus:ring-1 focus:ring-[#2F5333]"
+                        placeholder="TYPE YOUR ANSWER HERE..."
+                        className={`kb-input min-h-[120px] resize-y ${
+                          isFeedback && feed?.isCorrect ? "border-primary bg-chaos/10" :
+                          isFeedback && !feed?.isCorrect && feed?.pointsEarned > 0 ? "border-yellow-500 bg-yellow-500/10" :
+                          isFeedback ? "border-destructive bg-destructive/10" : ""
                         }`}
                       />
                       {!isFeedback && (
                         <button
                           onClick={() => handleSubmitAnswer(q._id, writtenAnswers[q._id] || "")}
                           disabled={isSubmitting || !(writtenAnswers[q._id]?.trim())}
-                          className="bg-[#2F5333] text-white py-4 rounded-xl font-medium w-full disabled:opacity-50 hover:bg-[#2F5333]/90 transition-colors"
+                          className="kb-btn kb-btn-primary w-full disabled:opacity-50"
                         >
-                          Submit Answer
+                          SUBMIT ANSWER
                         </button>
                       )}
                     </div>
                   )}
                 </div>
 
+                {/* Feedback */}
                 {isFeedback && (
-                  <div className="mt-8 p-5 rounded-xl bg-white border border-[#111111]/10 animate-in slide-in-from-bottom-4 shadow-sm">
-                    <p className={`font-semibold mb-2 ${
-                      feed.isCorrect ? 'text-[#2F5333]' : (!feed.isCorrect && feed.pointsEarned > 0) ? 'text-[#EAA015]' : 'text-red-600'
+                  <div className="mt-6 chaos-card bg-card p-5 animate-in slide-in-from-bottom-4 duration-300">
+                    <p className={`chaos-heading text-sm mb-2 ${
+                      feed.isCorrect ? "text-primary"
+                      : (!feed.isCorrect && feed.pointsEarned > 0) ? "text-yellow-500"
+                      : "text-destructive"
                     }`}>
-                       {feed.isCorrect ? "Correct" : (!feed.isCorrect && feed.pointsEarned > 0) ? "Partially Correct" : "Incorrect"} 
-                       <span className="text-[#111111]/40 ml-2">+{feed.pointsEarned} pts</span>
+                      {feed.isCorrect ? "✓ CORRECT" : (!feed.isCorrect && feed.pointsEarned > 0) ? "~ PARTIAL" : "✗ INCORRECT"}
+                      <span className="text-muted-foreground ml-3 font-normal text-xs">+{feed.pointsEarned} pts</span>
                     </p>
-                    {feed.explanation && <p className="text-sm text-[#111111]/70 mt-3">{feed.explanation}</p>}
-                    
-                    {i < questions.length - 1 ? (
-                      <div className="mt-6 flex flex-col items-center gap-2 text-[#2F5333] font-medium text-sm animate-bounce cursor-pointer"
-                           onClick={() => {
-                             if (containerRef.current) {
-                               containerRef.current.scrollBy({ top: window.innerHeight, behavior: "smooth" });
-                             }
-                           }}>
-                        Swipe up for next <ArrowDown size={14} />
-                      </div>
-                    ) : (
-                      <div className="mt-6 flex flex-col items-center gap-2 text-[#2F5333] font-medium text-sm animate-bounce cursor-pointer"
-                           onClick={() => {
-                             if (containerRef.current) {
-                               containerRef.current.scrollBy({ top: window.innerHeight, behavior: "smooth" });
-                             }
-                           }}>
-                        Swipe up to finish <ArrowDown size={14} />
-                      </div>
+                    {feed.explanation && (
+                      <p className="text-sm text-muted-foreground mt-2">{feed.explanation}</p>
                     )}
+                    <div
+                      className="mt-4 flex items-center gap-2 text-primary chaos-heading text-xs animate-bounce cursor-pointer"
+                      onClick={() => {
+                        if (containerRef.current) {
+                          containerRef.current.scrollBy({ top: window.innerHeight, behavior: "smooth" });
+                        }
+                      }}
+                    >
+                      {i < questions.length - 1 ? "SWIPE UP FOR NEXT" : "SWIPE UP TO FINISH"}
+                      <ArrowDown size={13} />
+                    </div>
                   </div>
                 )}
               </div>
@@ -356,31 +445,41 @@ export default function QuizPlayerPage() {
         {/* FINAL SLIDE */}
         <div className="tiktok-slide flex flex-col items-center justify-center p-6 text-center">
           {!finalResults ? (
-            <div className="max-w-sm w-full">
-              <h2 className="text-3xl font-semibold mb-2">Quiz Complete</h2>
-              <p className="text-[#111111]/60 mb-8">You've answered all questions. Submit to view your final results.</p>
-              <button 
+            <div className="chaos-card bg-card p-10 max-w-sm w-full text-center">
+              <h2 className="chaos-display text-4xl mb-3">QUIZ COMPLETE.</h2>
+              <p className="text-muted-foreground mb-8 text-sm">
+                You&apos;ve answered all questions. Submit to view your final results.
+              </p>
+              <button
                 onClick={handleFinish}
-                className="w-full py-4 bg-[#2F5333] text-white rounded-full font-medium hover:opacity-90 transition-opacity"
+                className="kb-btn kb-btn-primary w-full"
               >
-                Submit Quiz →
+                SUBMIT QUIZ →
               </button>
             </div>
           ) : (
-            <div className="max-w-md w-full animate-in zoom-in-95 duration-500">
-               <h2 className="text-6xl font-semibold tracking-tight mb-2 text-[#2F5333]">
-                 {Math.round((finalResults.score / finalResults.totalPoints) * 100)}%
-               </h2>
-               <p className="text-[#111111]/60 mb-10 text-lg">{finalResults.score} of {finalResults.totalPoints} points earned</p>
-               
-               <div className="flex flex-col sm:flex-row gap-4">
-                 <button onClick={() => window.location.reload()} className="flex-1 py-4 bg-[#2F5333] text-white rounded-full font-medium hover:opacity-90 transition-opacity">
-                   Play Again
-                 </button>
-                 <button onClick={() => window.location.href = '/'} className="flex-1 py-4 bg-white border border-[#111111]/20 text-[#111111] rounded-full font-medium hover:bg-[#111111]/5 transition-colors">
-                   Exit
-                 </button>
-               </div>
+            <div className="chaos-card bg-card p-10 max-w-md w-full animate-in zoom-in-95 duration-500">
+              <p className="chaos-heading text-sm text-muted-foreground mb-2">YOUR SCORE</p>
+              <p className="chaos-display text-7xl text-primary mb-2">
+                {Math.round((finalResults.score / finalResults.totalPoints) * 100)}%
+              </p>
+              <p className="text-muted-foreground mb-8 chaos-heading text-sm">
+                {finalResults.score} OF {finalResults.totalPoints} POINTS
+              </p>
+              <div className="flex flex-col sm:flex-row gap-4">
+                <button
+                  onClick={() => window.location.reload()}
+                  className="flex-1 kb-btn kb-btn-primary"
+                >
+                  PLAY AGAIN
+                </button>
+                <button
+                  onClick={() => window.location.href = "/"}
+                  className="flex-1 kb-btn kb-btn-ghost"
+                >
+                  EXIT
+                </button>
+              </div>
             </div>
           )}
         </div>

@@ -18,16 +18,16 @@ export default function LandingPage() {
   if (!mounted) return null;
 
   return (
-    <div className="min-h-screen bg-[#F0EFEA] text-[#111111] font-sans flex flex-col items-center justify-center p-6 selection:bg-[#2F5333] selection:text-white">
+    <div className="min-h-screen bg-background text-foreground font-sans flex flex-col items-center justify-center p-6 selection:bg-primary selection:text-on-primary">
       
       <div className="max-w-xl w-full text-center flex flex-col items-center gap-10">
         
-        <h1 className="font-sans font-medium tracking-tight text-5xl sm:text-6xl text-[#111111]">
-          chaos
+        <h1 className="chaos-display text-7xl sm:text-8xl">
+          CHAOS
         </h1>
         
-        <p className="text-lg sm:text-xl text-[#111111]/70 leading-relaxed max-w-md">
-          Create and share interactive quizzes. No accounts needed for players. Instant live results.
+        <p className="chaos-heading text-sm text-muted-foreground leading-relaxed max-w-md">
+          CREATE AND SHARE INTERACTIVE QUIZZES. NO ACCOUNTS NEEDED FOR PLAYERS. INSTANT LIVE RESULTS.
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-4">
@@ -35,26 +35,26 @@ export default function LandingPage() {
             <Link
               href="/dashboard"
               onClick={() => { trigger("success"); sfx.play("start"); }}
-              className="px-8 py-4 bg-[#2F5333] text-white rounded-full font-medium text-sm hover:opacity-90 transition-opacity whitespace-nowrap"
+              className="kb-btn kb-btn-primary w-full sm:w-auto px-8"
             >
-              Enter Dashboard
+              ENTER DASHBOARD
             </Link>
           ) : (
             <>
               <SignUpButton mode="modal">
                 <button
                   onClick={() => { trigger("success"); sfx.play("start"); }}
-                  className="px-8 py-4 bg-[#2F5333] text-white rounded-full font-medium text-sm hover:opacity-90 transition-opacity whitespace-nowrap"
+                  className="kb-btn kb-btn-primary w-full sm:w-auto px-8"
                 >
-                  Start Free
+                  START FREE
                 </button>
               </SignUpButton>
               <SignInButton mode="modal">
                 <button
                   onClick={() => { trigger("light"); sfx.play("select"); }}
-                  className="px-8 py-4 bg-transparent text-[#111111] border border-[#111111]/20 rounded-full font-medium text-sm hover:bg-[#111111]/5 transition-colors whitespace-nowrap"
+                  className="kb-btn kb-btn-ghost w-full sm:w-auto px-8"
                 >
-                  Log In
+                  LOG IN
                 </button>
               </SignInButton>
             </>
