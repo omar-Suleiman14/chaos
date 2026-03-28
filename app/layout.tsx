@@ -4,7 +4,7 @@ import "./globals.css";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import { ClerkProvider } from "@clerk/nextjs";
 
-
+export const runtime = "edge";
 
 /* ── Fonts ─────────────────────────────────────────────── */
 const spaceGrotesk = Space_Grotesk({
