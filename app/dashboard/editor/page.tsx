@@ -363,8 +363,8 @@ function EditorContent() {
                                   }`}>
                                   {index + 1}
                                 </span>
-                                <div className="min-w-0">
-                                  <p className={`font-bold truncate text-sm ${q.questionText ? "text-foreground" : "text-muted-foreground"}`}>
+                                <div className="min-w-0 pr-2">
+                                  <p className={`font-bold text-sm ${q.questionText ? "text-foreground" : "text-muted-foreground"}`}>
                                     {q.questionText || "Untitled question..."}
                                   </p>
                                   <div className="flex items-center gap-2 mt-1">
@@ -415,8 +415,12 @@ function EditorContent() {
                                 <textarea
                                   value={q.questionText}
                                   onChange={e => updateQ(index, { questionText: e.target.value })}
+                                  onInput={e => {
+                                    e.currentTarget.style.height = "auto";
+                                    e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                                  }}
                                   rows={2}
-                                  className="kb-input resize-none"
+                                  className="kb-input resize-none overflow-hidden min-h-[60px]"
                                   placeholder="TYPE YOUR QUESTION HERE..."
                                 />
                               </div>
@@ -531,8 +535,12 @@ function EditorContent() {
                                 <textarea
                                   value={q.explanation || ""}
                                   onChange={e => updateQ(index, { explanation: e.target.value })}
+                                  onInput={e => {
+                                    e.currentTarget.style.height = "auto";
+                                    e.currentTarget.style.height = `${e.currentTarget.scrollHeight}px`;
+                                  }}
                                   rows={2}
-                                  className="kb-input resize-none text-sm"
+                                  className="kb-input resize-none overflow-hidden min-h-[60px] text-sm"
                                   placeholder="EXPLAIN WHY THIS IS CORRECT..."
                                 />
                               </div>

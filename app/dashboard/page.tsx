@@ -11,7 +11,7 @@ import { haptics } from "@/lib/haptics";
 import {
   FileText, Plus, Trash2, Copy, ExternalLink, Edit3, MoreVertical,
   BarChart3, Globe, Lock, FolderPlus, ChevronDown, ChevronRight,
-  GripVertical, Folder, FolderOpen, Check, X, Pencil,
+  GripVertical, Folder, FolderOpen, Check, X, Pencil, Brain,
 } from "lucide-react";
 import {
   DragDropContext,
@@ -19,6 +19,7 @@ import {
   Draggable,
   DropResult,
 } from "@hello-pangea/dnd";
+import AIQuizModal from "@/components/AIQuizModal";
 
 export default function DashboardQuizzes() {
   const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
@@ -33,6 +34,7 @@ export default function DashboardQuizzes() {
   const [mounted, setMounted] = useState(false);
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
+  const [showAIModal, setShowAIModal] = useState(false);
 
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [newUsername, setNewUsername] = useState("");
@@ -215,6 +217,9 @@ export default function DashboardQuizzes() {
 
   return (
     <div className="space-y-8 font-sans">
+      {/* AI Quiz Modal */}
+      {showAIModal && <AIQuizModal onClose={() => setShowAIModal(false)} />}
+
       {/* Username Modal */}
       {showUsernameModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#111111]/80 backdrop-blur-sm animate-in fade-in duration-300">
@@ -254,6 +259,12 @@ export default function DashboardQuizzes() {
             className="kb-btn kb-btn-ghost flex items-center gap-2"
           >
             <FolderPlus size={16} /> NEW FOLDER
+          </button>
+          <button
+            onClick={() => { setShowAIModal(true); haptics.select(); }}
+            className="kb-btn kb-btn-ghost flex items-center gap-2 border-primary/40 text-primary hover:border-primary"
+          >
+            <Brain size={16} /> AI QUIZ
           </button>
           <button
             onClick={handleCreateNew}

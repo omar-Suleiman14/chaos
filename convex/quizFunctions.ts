@@ -243,6 +243,8 @@ export const createQuiz = mutation({
       isPublished: false,
       timePerQuestion: args.timePerQuestion || 30,
       coverColor: args.coverColor || "#22c55e",
+      randomizeQuestions: true,
+      randomizeOptions: true,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });

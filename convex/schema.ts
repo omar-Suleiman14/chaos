@@ -98,4 +98,22 @@ export default defineSchema({
   })
     .index("by_quiz", ["quizId"])
     .index("by_quiz_score", ["quizId", "score"]),
+
+  // ============ AI JOBS ============
+  aiJobs: defineTable({
+    clerkId: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("extracting"),
+      v.literal("categorizing"),
+      v.literal("generating"),
+      v.literal("saving"),
+      v.literal("done"),
+      v.literal("error")
+    ),
+    step: v.optional(v.string()),
+    quizId: v.optional(v.id("quizzes")),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_clerkId", ["clerkId"]),
 });
