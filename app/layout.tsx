@@ -30,7 +30,7 @@ const spaceMono = Space_Mono({
 
 /* ── Metadata ───────────────────────────────────────────── */
 export const metadata: Metadata = {
-  title: "chaos,
+  title: "chaos",
   description:
     "Create and share interactive quizzes. MCQ, true/false, multi-select, written — all with custom scoring. No sign-up needed to play.",
   icons: {
