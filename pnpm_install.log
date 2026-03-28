@@ -1,0 +1,9 @@
+Progress: resolved 0, reused 1, downloaded 0, added 0
+ WARN  deprecated @clerk/clerk-react@5.61.3: This package is no longer supported. Please use @clerk/react instead. See the upgrade guide for more info: https://clerk.com/docs/guides/development/upgrading/upgrade-guides/core-3
+Progress: resolved 94, reused 77, downloaded 0, added 0
+Progress: resolved 693, reused 596, downloaded 0, added 0
+ WARN  2 deprecated subdependencies found: @clerk/types@4.101.20, node-domexception@1.0.0
+Already up to date
+Progress: resolved 804, reused 711, downloaded 0, added 0, done
+
+Done in 3.4s using pnpm v10.32.1
