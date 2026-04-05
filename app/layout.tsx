@@ -4,8 +4,6 @@ import "./globals.css";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import { ClerkProvider } from "@clerk/nextjs";
 
-export const runtime = "edge";
-
 /* ── Fonts ─────────────────────────────────────────────── */
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
@@ -34,7 +32,7 @@ export const metadata: Metadata = {
   description:
     "Create and share interactive quizzes. MCQ, true/false, multi-select, written — all with custom scoring. No sign-up needed to play.",
   icons: {
-    icon: "/convex.svg",
+    icon: "/icon.svg",
   },
 };
 

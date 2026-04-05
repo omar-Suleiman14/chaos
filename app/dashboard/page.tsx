@@ -11,15 +11,15 @@ import { haptics } from "@/lib/haptics";
 import {
   FileText, Plus, Trash2, Copy, ExternalLink, Edit3, MoreVertical,
   BarChart3, Globe, Lock, FolderPlus, ChevronDown, ChevronRight,
-  GripVertical, Folder, FolderOpen, Check, X, Pencil, Brain,
+  GripVertical, Folder, FolderOpen, Check, X, Pencil, Brain, Printer,
 } from "lucide-react";
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  DropResult,
-} from "@hello-pangea/dnd";
-import AIQuizModal from "@/components/AIQuizModal";
+import dynamic from "next/dynamic";
+import type { DropResult } from "@hello-pangea/dnd";
+
+const DragDropContext = dynamic(() => import("@hello-pangea/dnd").then(m => m.DragDropContext as any), { ssr: false }) as any;
+const Droppable = dynamic(() => import("@hello-pangea/dnd").then(m => m.Droppable as any), { ssr: false }) as any;
+const Draggable = dynamic(() => import("@hello-pangea/dnd").then(m => m.Draggable as any), { ssr: false }) as any;
+const AIQuizModal = dynamic(() => import("@/components/AIQuizModal"), { ssr: false });
 
 export default function DashboardQuizzes() {
   const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
@@ -382,7 +382,7 @@ export default function DashboardQuizzes() {
                   {/* Quiz List */}
                   {isOpen && (
                     <Droppable droppableId={folderName}>
-                      {(provided, snapshot) => (
+                      {(provided: any, snapshot: any) => (
                         <div
                           ref={provided.innerRef}
                           {...provided.droppableProps}
@@ -396,7 +396,7 @@ export default function DashboardQuizzes() {
 
                           {folderQuizzes.map((quiz, index) => (
                             <Draggable key={quiz._id} draggableId={quiz._id} index={index}>
-                              {(provided, snapshot) => (
+                              {(provided: any, snapshot: any) => (
                                 <div
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
@@ -488,6 +488,13 @@ export default function DashboardQuizzes() {
                                               className="w-full text-left px-3 py-2 text-sm flex items-center gap-3 hover:bg-muted transition-colors"
                                             >
                                               <ExternalLink size={14} /> Open Live Page
+                                            </a>
+                                            <a
+                                              href={`/print/${quiz._id}`}
+                                              target="_blank" rel="noopener noreferrer"
+                                              className="w-full text-left px-3 py-2 text-sm flex items-center gap-3 hover:bg-muted transition-colors border-b-2 border-foreground/10 mb-1 pb-3"
+                                            >
+                                              <Printer size={14} /> Print / Save as PDF
                                             </a>
                                             <button
                                               onClick={() => handleTogglePublish(quiz._id, quiz.isPublished)}

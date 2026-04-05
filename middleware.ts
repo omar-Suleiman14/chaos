@@ -1,12 +1,9 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
 
-const isProtectedRoute = createRouteMatcher(["/server"]);
+const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/admin(.*)"]);
 
 export default clerkMiddleware(async (auth, req) => {
-  // Standard protected routes (dashboard auth is handled by the dashboard layout)
   if (isProtectedRoute(req)) await auth.protect();
-  // Note: /admin access control is handled client-side inside app/admin/page.tsx
-  // using useUser().primaryEmailAddress — no middleware redirect needed.
 });
 
 export const config = {

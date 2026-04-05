@@ -2,20 +2,11 @@
 
 import Link from "next/link";
 import { SignInButton, SignUpButton, useUser } from "@clerk/nextjs";
-import { useWebHaptics } from "web-haptics/react";
+import { haptics } from "@/lib/haptics";
 import { sfx } from "@/lib/sfx";
-import { useEffect, useState } from "react";
 
 export default function LandingPage() {
-  const { isSignedIn } = useUser();
-  const { trigger } = useWebHaptics();
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  if (!mounted) return null;
+  const { isSignedIn, isLoaded } = useUser();
 
   return (
     <div className="min-h-screen bg-background text-foreground font-sans flex flex-col items-center justify-center p-6 selection:bg-primary selection:text-on-primary">
@@ -31,10 +22,11 @@ export default function LandingPage() {
         </p>
         
         <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto mt-4">
-          {isSignedIn ? (
+          {/* Show buttons only once Clerk has loaded to avoid layout shift */}
+          {isLoaded && (isSignedIn ? (
             <Link
               href="/dashboard"
-              onClick={() => { trigger("success"); sfx.play("start"); }}
+              onClick={() => { haptics.success(); sfx.play("start"); }}
               className="kb-btn kb-btn-primary w-full sm:w-auto px-8"
             >
               ENTER DASHBOARD
@@ -43,7 +35,7 @@ export default function LandingPage() {
             <>
               <SignUpButton mode="modal">
                 <button
-                  onClick={() => { trigger("success"); sfx.play("start"); }}
+                  onClick={() => { haptics.success(); sfx.play("start"); }}
                   className="kb-btn kb-btn-primary w-full sm:w-auto px-8"
                 >
                   START FREE
@@ -51,13 +43,20 @@ export default function LandingPage() {
               </SignUpButton>
               <SignInButton mode="modal">
                 <button
-                  onClick={() => { trigger("light"); sfx.play("select"); }}
+                  onClick={() => { haptics.light(); sfx.play("select"); }}
                   className="kb-btn kb-btn-ghost w-full sm:w-auto px-8"
                 >
                   LOG IN
                 </button>
               </SignInButton>
             </>
+          ))}
+          {/* Placeholder while Clerk loads — prevents layout jump */}
+          {!isLoaded && (
+            <div className="flex flex-col sm:flex-row gap-4 w-full sm:w-auto opacity-0 pointer-events-none" aria-hidden>
+              <button className="kb-btn kb-btn-primary w-full sm:w-auto px-8">START FREE</button>
+              <button className="kb-btn kb-btn-ghost w-full sm:w-auto px-8">LOG IN</button>
+            </div>
           )}
         </div>
       </div>
@@ -65,3 +64,4 @@ export default function LandingPage() {
     </div>
   );
 }
+

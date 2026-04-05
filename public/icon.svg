@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <defs>
+    <linearGradient id="chaosOrange" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fca535" />
+      <stop offset="100%" stop-color="#e9482b" />
+    </linearGradient>
+    <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
+      <feGaussianBlur in="SourceGraphic" stdDeviation="40" result="blurRaw" />
+      <feComponentTransfer in="blurRaw" result="blurEnhanced">
+        <feFuncA type="linear" slope="1.05"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="blurEnhanced" />
+        <feMergeNode in="SourceGraphic" />
+      </feMerge>
+    </filter>
+  </defs>
+  
+  <rect x="64" y="64" width="384" height="384" rx="100" fill="url(#chaosOrange)" filter="url(#glow)"/>
+</svg>

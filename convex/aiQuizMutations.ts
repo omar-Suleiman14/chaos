@@ -23,8 +23,32 @@ export const createAIJob = mutation({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
+
+    const clerkId = identity.subject;
+
+    // Check elevation and monthly limit
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+      .first();
+
+    if (user && !user.isElevated) {
+      const thirtyDaysAgo = Date.now() - 30 * 24 * 60 * 60 * 1000;
+      const pastJobs = await ctx.db
+        .query("aiJobs")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+        .collect();
+      
+      const recentJobs = pastJobs.filter((j) => j.createdAt >= thirtyDaysAgo);
+      if (recentJobs.length >= 5) {
+        const globalConfig: any = await ctx.db.query("globalConfig").first();
+        const errorMessage = globalConfig?.aiLimitPopupText || "Monthly AI Quota Reached (5/5).\\n\\nPlease contact our team at support@chaos.fail to upgrade your account, unlock unlimited AI generations, and elevate your quizzes.";
+        throw new Error(`AI_LIMIT_REACHED|${errorMessage}`);
+      }
+    }
+
     return await ctx.db.insert("aiJobs", {
-      clerkId: identity.subject,
+      clerkId,
       status: "pending",
       step: "Queued...",
       createdAt: Date.now(),
@@ -121,6 +145,7 @@ export const saveGeneratedQuiz = internalMutation({
       coverColor: "#6366f1",
       randomizeQuestions: true,
       randomizeOptions: true,
+      isAiGenerated: true,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });

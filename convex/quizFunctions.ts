@@ -2,6 +2,18 @@ import { v } from "convex/values";
 import { query, mutation, action } from "./_generated/server";
 import { api } from "./_generated/api";
 
+// Server-side admin list — the ONLY source of truth for admin access
+const ADMIN_EMAILS = ["support@chaos.fail", "khomod14@gmail.com"];
+
+async function requireAdmin(ctx: any): Promise<void> {
+  const identity = await ctx.auth.getUserIdentity();
+  if (!identity) throw new Error("Not authenticated");
+  const email = (identity.email || "").toLowerCase();
+  if (!ADMIN_EMAILS.includes(email)) {
+    throw new Error("Forbidden: admin access required");
+  }
+}
+
 // ============================================================
 // USER FUNCTIONS
 // ============================================================
@@ -150,6 +162,8 @@ export const getTeacherSettings = query({
       randomizeOptions: settings?.randomizeOptions ?? false,
       showCorrectAnswers: settings?.showCorrectAnswers ?? true,
       showExplanations: settings?.showExplanations ?? true,
+      displayMode: settings?.displayMode ?? "score",
+      passingThreshold: settings?.passingThreshold ?? 50,
     };
   },
 });
@@ -164,6 +178,8 @@ export const updateTeacherSettings = mutation({
     randomizeOptions: v.optional(v.boolean()),
     showCorrectAnswers: v.optional(v.boolean()),
     showExplanations: v.optional(v.boolean()),
+    displayMode: v.optional(v.string()),
+    passingThreshold: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -213,12 +229,20 @@ export const createQuiz = mutation({
 
     const username = user?.username || identity.subject;
 
+    // Inherit teacher settings as defaults
+    const teacherSettings = await ctx.db
+      .query("teacherSettings")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
+      .first();
+
     const baseSlug = args.title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .replace(/^-|-$/g, "");
 
     // Check uniqueness of slug for this creator
+    const globalConfig = await ctx.db.query("globalConfig").first() || ({} as any);
+
     let slug = baseSlug;
     let counter = 0;
     while (true) {
@@ -241,10 +265,13 @@ export const createQuiz = mutation({
       creatorId: identity.subject,
       creatorUsername: username,
       isPublished: false,
-      timePerQuestion: args.timePerQuestion || 30,
+      timePerQuestion: args.timePerQuestion || globalConfig.defaultMcqTimer || 30,
       coverColor: args.coverColor || "#22c55e",
-      randomizeQuestions: true,
-      randomizeOptions: true,
+      randomizeQuestions: teacherSettings?.randomizeQuestions ?? globalConfig.randomizeQuestions ?? false,
+      randomizeOptions: teacherSettings?.randomizeOptions ?? globalConfig.randomizeOptions ?? false,
+      showCorrectAnswers: teacherSettings?.showCorrectAnswers ?? globalConfig.showCorrectAnswers ?? true,
+      showExplanations: teacherSettings?.showExplanations ?? globalConfig.showExplanations ?? true,
+      isElevated: user?.isElevated ?? false,
       createdAt: Date.now(),
       updatedAt: Date.now(),
     });
@@ -266,6 +293,8 @@ export const updateQuiz = mutation({
     randomizeOptions: v.optional(v.boolean()),
     showCorrectAnswers: v.optional(v.boolean()),
     showExplanations: v.optional(v.boolean()),
+    displayMode: v.optional(v.string()),
+    passingThreshold: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -341,31 +370,34 @@ export const getMyQuizzes = query({
       .withIndex("by_creator", (q) => q.eq("creatorId", identity.subject))
       .collect();
 
-    const enriched = await Promise.all(
-      quizzes.map(async (quiz) => {
-        const questions = await ctx.db
-          .query("questions")
-          .withIndex("by_quiz", (q) => q.eq("quizId", quiz._id))
-          .collect();
-        const sessions = await ctx.db
-          .query("quizSessions")
-          .withIndex("by_quiz", (q) => q.eq("quizId", quiz._id))
-          .collect();
-        const completedSessions = sessions.filter((s) => s.status === "completed");
-        const avgScore =
-          completedSessions.length > 0
-            ? completedSessions.reduce((sum, s) => sum + (s.totalPoints > 0 ? (s.score / s.totalPoints) * 100 : 0), 0) /
-              completedSessions.length
-            : 0;
+    if (quizzes.length === 0) return [];
 
-        return {
-          ...quiz,
-          questionCount: questions.length,
-          sessionCount: completedSessions.length,
-          avgScore: Math.round(avgScore),
-        };
-      })
-    );
+    // Batch-fetch all questions and sessions for this creator's quizzes
+    const [allQuestions, allSessions] = await Promise.all([
+      Promise.all(quizzes.map((quiz) =>
+        ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", quiz._id)).collect()
+      )),
+      Promise.all(quizzes.map((quiz) =>
+        ctx.db.query("quizSessions").withIndex("by_quiz", (q) => q.eq("quizId", quiz._id)).collect()
+      )),
+    ]);
+
+    const enriched = quizzes.map((quiz, i) => {
+      const questions = allQuestions[i];
+      const completedSessions = allSessions[i].filter((s) => s.status === "completed");
+      const avgScore =
+        completedSessions.length > 0
+          ? completedSessions.reduce((sum, s) => sum + (s.totalPoints > 0 ? (s.score / s.totalPoints) * 100 : 0), 0) /
+            completedSessions.length
+          : 0;
+
+      return {
+        ...quiz,
+        questionCount: questions.length,
+        sessionCount: completedSessions.length,
+        avgScore: Math.round(avgScore),
+      };
+    });
 
     return enriched.sort((a, b) => b.updatedAt - a.updatedAt);
   },
@@ -374,7 +406,20 @@ export const getMyQuizzes = query({
 export const getQuiz = query({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
-    return await ctx.db.get(args.quizId);
+    const quiz = await ctx.db.get(args.quizId);
+    if (!quiz) return null;
+
+    // Only the creator or an admin can see unpublished quizzes
+    if (!quiz.isPublished) {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) return null;
+      const email = (identity.email || "").toLowerCase();
+      const isOwner = quiz.creatorId === identity.subject;
+      const isAdmin = ADMIN_EMAILS.includes(email);
+      if (!isOwner && !isAdmin) return null;
+    }
+
+    return quiz;
   },
 });
 
@@ -560,16 +605,21 @@ export const getQuizForPlayer = query({
     const quiz = await ctx.db.get(args.quizId);
     if (!quiz) return null;
 
-    // Get creator name
-    const creator = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
-      .first();
+    // SECURITY CHECK: If unpublished, only the creator or an admin can access questions
+    if (!quiz.isPublished) {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) return null;
+      const email = (identity.email || "").toLowerCase();
+      const isOwner = quiz.creatorId === identity.subject;
+      const isAdmin = ADMIN_EMAILS.includes(email);
+      if (!isOwner && !isAdmin) return null;
+    }
 
-    const questions = await ctx.db
-      .query("questions")
-      .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-      .collect();
+    // Fetch creator and questions in parallel
+    const [creator, questions] = await Promise.all([
+      ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId)).first(),
+      ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
+    ]);
 
     // NEVER send answers/keywords to client
     const safeQuestions = questions
@@ -584,6 +634,30 @@ export const getQuizForPlayer = query({
         order: q.order,
       }));
 
+    // Short-circuit: only fetch fallback settings if quiz doesn't have all fields defined
+    const quizHasAllSettings = quiz.displayMode !== undefined &&
+      quiz.passingThreshold !== undefined &&
+      quiz.showCorrectAnswers !== undefined &&
+      quiz.showExplanations !== undefined &&
+      quiz.randomizeQuestions !== undefined &&
+      quiz.randomizeOptions !== undefined;
+
+    let teacherSettings: any = null;
+    let globalConfig: any = null;
+    if (!quizHasAllSettings) {
+      [teacherSettings, globalConfig] = await Promise.all([
+        ctx.db.query("teacherSettings").withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId)).first(),
+        ctx.db.query("globalConfig").first(),
+      ]);
+    }
+
+    const displayMode = quiz.displayMode ?? teacherSettings?.displayMode ?? globalConfig?.displayMode ?? "score";
+    const passingThreshold = quiz.passingThreshold ?? teacherSettings?.passingThreshold ?? globalConfig?.passingThreshold ?? 50;
+    const showCorrectAnswers = quiz.showCorrectAnswers ?? teacherSettings?.showCorrectAnswers ?? globalConfig?.showCorrectAnswers ?? true;
+    const showExplanations = quiz.showExplanations ?? teacherSettings?.showExplanations ?? globalConfig?.showExplanations ?? true;
+    const randomizeQuestions = quiz.randomizeQuestions ?? teacherSettings?.randomizeQuestions ?? globalConfig?.randomizeQuestions ?? false;
+    const randomizeOptions = quiz.randomizeOptions ?? teacherSettings?.randomizeOptions ?? globalConfig?.randomizeOptions ?? true;
+
     return {
       _id: quiz._id,
       title: quiz.title,
@@ -592,8 +666,12 @@ export const getQuizForPlayer = query({
       coverColor: quiz.coverColor,
       creatorName: creator?.name || "Unknown",
       creatorUsername: quiz.creatorUsername,
-      showCorrectAnswers: quiz.showCorrectAnswers ?? true,
-      showExplanations: quiz.showExplanations ?? true,
+      showCorrectAnswers,
+      showExplanations,
+      randomizeQuestions,
+      randomizeOptions,
+      displayMode,
+      passingThreshold,
       questions: safeQuestions,
       totalPoints: questions.reduce((sum, q) => sum + q.points, 0),
     };
@@ -613,6 +691,31 @@ export const startQuizSession = mutation({
 
     const quiz = await ctx.db.get(args.quizId);
     if (!quiz || !quiz.isPublished) throw new Error("Quiz not available");
+
+    // Enforce 100-play cap unless the quiz itself or the creator is elevated
+    const isQuizElevated = quiz.isElevated === true;
+    let isCreatorElevated = false;
+    if (!isQuizElevated) {
+      const creator = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
+        .first();
+      isCreatorElevated = creator?.isElevated === true;
+    }
+
+    if (!isQuizElevated && !isCreatorElevated) {
+      // Only fetch up to 101 sessions to check the cap — no need to load all
+      const sessions = await ctx.db
+        .query("quizSessions")
+        .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
+        .take(500);
+      const completedCount = sessions.filter((s) => s.status === "completed").length;
+      if (completedCount >= 100) {
+        const globalConfig = await ctx.db.query("globalConfig").first();
+        const errorMessage = globalConfig?.playerLimitErrorText || "This quiz has reached its maximum allocated session capacity. Please contact the quiz creator to allocate additional capacity.";
+        throw new Error(errorMessage);
+      }
+    }
 
     return await ctx.db.insert("quizSessions", {
       quizId: args.quizId,
@@ -746,6 +849,7 @@ export const completeQuizSession = mutation({
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Session not found");
+    if (session.status !== "in_progress") throw new Error("Session already completed");
 
     await ctx.db.patch(args.sessionId, {
       status: "completed",
@@ -777,6 +881,28 @@ export const submitQuizSession = mutation({
   handler: async (ctx, args) => {
     const quiz = await ctx.db.get(args.quizId);
     if (!quiz) throw new Error("Quiz not found");
+    if (!quiz.isPublished) throw new Error("Quiz not available");
+
+    // Enforce play cap (same logic as startQuizSession)
+    const isQuizElevated = quiz.isElevated === true;
+    let isCreatorElevated = false;
+    if (!isQuizElevated) {
+      const creator = await ctx.db
+        .query("users")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
+        .first();
+      isCreatorElevated = creator?.isElevated === true;
+    }
+    if (!isQuizElevated && !isCreatorElevated) {
+      const sessions = await ctx.db
+        .query("quizSessions")
+        .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
+        .take(500);
+      if (sessions.filter((s) => s.status === "completed").length >= 100) {
+        const globalConfig = await ctx.db.query("globalConfig").first();
+        throw new Error(globalConfig?.playerLimitErrorText || "This quiz has reached its maximum allocated session capacity.");
+      }
+    }
 
     let totalScore = 0;
     let totalPoints = 0;
@@ -885,8 +1011,19 @@ export const getQuizSessions = query({
 export const getSessionDetail = query({
   args: { sessionId: v.id("quizSessions") },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
     const session = await ctx.db.get(args.sessionId);
     if (!session) return null;
+
+    // Verify the caller owns the quiz this session belongs to
+    const quiz = await ctx.db.get(session.quizId);
+    if (!quiz || quiz.creatorId !== identity.subject) {
+      // Also allow admins
+      const email = (identity.email || "").toLowerCase();
+      if (!ADMIN_EMAILS.includes(email)) return null;
+    }
 
     // Get question details for the breakdown
     const questionDetails = await Promise.all(
@@ -948,6 +1085,19 @@ export const overrideScore = mutation({
 export const getQuizLeaderboard = query({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
+    const quiz = await ctx.db.get(args.quizId);
+    if (!quiz) return [];
+
+    // SECURITY CHECK: If unpublished, only creator or admin can view leaderboard
+    if (!quiz.isPublished) {
+      const identity = await ctx.auth.getUserIdentity();
+      if (!identity) return [];
+      const email = (identity.email || "").toLowerCase();
+      const isOwner = quiz.creatorId === identity.subject;
+      const isAdmin = ADMIN_EMAILS.includes(email);
+      if (!isOwner && !isAdmin) return [];
+    }
+
     const sessions = await ctx.db
       .query("quizSessions")
       .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
@@ -975,8 +1125,8 @@ export const getAdminStats = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return null;
-
-    // Admin check done client-side via env var
+    const email = (identity.email || "").toLowerCase();
+    if (!ADMIN_EMAILS.includes(email)) return null;
     const allUsers = await ctx.db.query("users").collect();
     const allQuizzes = await ctx.db.query("quizzes").collect();
     const allSessions = await ctx.db.query("quizSessions").collect();
@@ -1003,34 +1153,49 @@ export const getAdminUsers = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
+    const email = (identity.email || "").toLowerCase();
+    if (!ADMIN_EMAILS.includes(email)) return [];
 
-    const users = await ctx.db.query("users").collect();
+    // Batch-fetch all data once instead of N+1 per user
+    const [users, allQuizzes, allSessions] = await Promise.all([
+      ctx.db.query("users").collect(),
+      ctx.db.query("quizzes").collect(),
+      ctx.db.query("quizSessions").collect(),
+    ]);
 
-    const enriched = await Promise.all(
-      users.map(async (user) => {
-        const quizzes = await ctx.db
-          .query("quizzes")
-          .withIndex("by_creator", (q) => q.eq("creatorId", user.clerkId))
-          .collect();
+    // Build lookup maps
+    const quizzesByCreator = new Map<string, typeof allQuizzes>();
+    for (const quiz of allQuizzes) {
+      const arr = quizzesByCreator.get(quiz.creatorId) || [];
+      arr.push(quiz);
+      quizzesByCreator.set(quiz.creatorId, arr);
+    }
 
-        let totalSubmissions = 0;
-        for (const quiz of quizzes) {
-          const sessions = await ctx.db
-            .query("quizSessions")
-            .withIndex("by_quiz", (q) => q.eq("quizId", quiz._id))
-            .collect();
-          totalSubmissions += sessions.filter((s) => s.status === "completed").length;
-        }
+    const completedSessionsByQuiz = new Map<string, number>();
+    for (const session of allSessions) {
+      if (session.status === "completed") {
+        completedSessionsByQuiz.set(
+          session.quizId,
+          (completedSessionsByQuiz.get(session.quizId) || 0) + 1
+        );
+      }
+    }
 
-        return {
-          ...user,
-          quizCount: quizzes.length,
-          submissionCount: totalSubmissions,
-        };
-      })
-    );
+    return users.map((user) => {
+      const userQuizzes = quizzesByCreator.get(user.clerkId) || [];
+      let totalSubmissions = 0;
+      for (const quiz of userQuizzes) {
+        totalSubmissions += completedSessionsByQuiz.get(quiz._id) || 0;
+      }
 
-    return enriched;
+      return {
+        ...user,
+        quizCount: userQuizzes.length,
+        aiQuizCount: userQuizzes.filter(q => q.isAiGenerated).length,
+        submissionCount: totalSubmissions,
+        isElevated: user.isElevated ?? false,
+      };
+    });
   },
 });
 
@@ -1039,27 +1204,48 @@ export const getAdminQuizzes = query({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
+    const email = (identity.email || "").toLowerCase();
+    if (!ADMIN_EMAILS.includes(email)) return [];
 
-    const quizzes = await ctx.db.query("quizzes").collect();
+    // Batch-fetch all data once instead of N+1 per quiz
+    const [quizzes, allUsers, allSessions, allQuestions] = await Promise.all([
+      ctx.db.query("quizzes").collect(),
+      ctx.db.query("users").collect(),
+      ctx.db.query("quizSessions").collect(),
+      ctx.db.query("questions").collect(),
+    ]);
 
-    const enriched = await Promise.all(
-      quizzes.map(async (quiz) => {
-        const creator = await ctx.db
-          .query("users")
-          .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
-          .first();
-        const sessions = await ctx.db
-          .query("quizSessions")
-          .withIndex("by_quiz", (q) => q.eq("quizId", quiz._id))
-          .collect();
+    // Build lookup maps
+    const usersByClerkId = new Map<string, string>();
+    for (const user of allUsers) {
+      usersByClerkId.set(user.clerkId, user.name);
+    }
 
-        return {
-          ...quiz,
-          creatorName: creator?.name || "Unknown",
-          sessionCount: sessions.filter((s) => s.status === "completed").length,
-        };
-      })
-    );
+    const completedSessionsByQuiz = new Map<string, number>();
+    for (const session of allSessions) {
+      if (session.status === "completed") {
+        completedSessionsByQuiz.set(
+          session.quizId,
+          (completedSessionsByQuiz.get(session.quizId) || 0) + 1
+        );
+      }
+    }
+
+    const questionCountByQuiz = new Map<string, number>();
+    for (const question of allQuestions) {
+      questionCountByQuiz.set(
+        question.quizId,
+        (questionCountByQuiz.get(question.quizId) || 0) + 1
+      );
+    }
+
+    const enriched = quizzes.map((quiz) => ({
+      ...quiz,
+      creatorName: usersByClerkId.get(quiz.creatorId) || "Unknown",
+      sessionCount: completedSessionsByQuiz.get(quiz._id) || 0,
+      questionCount: questionCountByQuiz.get(quiz._id) || 0,
+      isElevated: quiz.isElevated ?? false,
+    }));
 
     return enriched.sort((a, b) => b.createdAt - a.createdAt);
   },
@@ -1068,8 +1254,7 @@ export const getAdminQuizzes = query({
 export const adminToggleUserBan = mutation({
   args: { clerkId: v.string(), ban: v.boolean() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    await requireAdmin(ctx);
 
     const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", args.clerkId)).first();
     if (user) {
@@ -1078,12 +1263,39 @@ export const adminToggleUserBan = mutation({
   },
 });
 
+export const adminToggleUserElevation = mutation({
+  args: { clerkId: v.string(), elevate: v.boolean() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+
+    const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", args.clerkId)).first();
+    if (user) {
+      await ctx.db.patch(user._id, { isElevated: args.elevate });
+
+      // Propagate to all their quizzes
+      const quizzes = await ctx.db
+        .query("quizzes")
+        .withIndex("by_creator", (q) => q.eq("creatorId", args.clerkId))
+        .collect();
+      for (const quiz of quizzes) {
+        await ctx.db.patch(quiz._id, { isElevated: args.elevate });
+      }
+    }
+  },
+});
+
+export const adminToggleQuizElevation = mutation({
+  args: { quizId: v.id("quizzes"), elevate: v.boolean() },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    await ctx.db.patch(args.quizId, { isElevated: args.elevate });
+  },
+});
+
 export const adminToggleQuizBan = mutation({
   args: { quizId: v.id("quizzes"), ban: v.boolean() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
+    await requireAdmin(ctx);
     await ctx.db.patch(args.quizId, { isBanned: args.ban });
   },
 });
@@ -1091,8 +1303,7 @@ export const adminToggleQuizBan = mutation({
 export const adminDeleteQuiz = mutation({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    await requireAdmin(ctx);
 
     const questions = await ctx.db
       .query("questions")
@@ -1111,5 +1322,43 @@ export const adminDeleteQuiz = mutation({
     }
 
     await ctx.db.delete(args.quizId);
+  },
+});
+
+// ============================================================
+// GLOBAL CONFIGURATION
+// ============================================================
+
+export const getGlobalConfig = query({
+  args: {},
+  handler: async (ctx) => {
+    return await ctx.db.query("globalConfig").first();
+  },
+});
+
+export const updateGlobalConfig = mutation({
+  args: {
+    aiLimitPopupText: v.optional(v.string()),
+    playerLimitErrorText: v.optional(v.string()),
+    defaultMcqTimer: v.optional(v.number()),
+    defaultWrittenTimer: v.optional(v.number()),
+    defaultPointsPerQuestion: v.optional(v.number()),
+    halfMarkThreshold: v.optional(v.number()),
+    randomizeQuestions: v.optional(v.boolean()),
+    randomizeOptions: v.optional(v.boolean()),
+    showCorrectAnswers: v.optional(v.boolean()),
+    showExplanations: v.optional(v.boolean()),
+    displayMode: v.optional(v.string()),
+    passingThreshold: v.optional(v.number()),
+  },
+  handler: async (ctx, args) => {
+    await requireAdmin(ctx);
+    
+    const existing = await ctx.db.query("globalConfig").first();
+    if (existing) {
+      await ctx.db.patch(existing._id, args);
+    } else {
+      await ctx.db.insert("globalConfig", args);
+    }
   },
 });

@@ -7,6 +7,7 @@ import { haptics } from "@/lib/haptics";
 import { Settings2, Clock, CheckSquare, Zap, Target } from "lucide-react";
 
 export default function SettingsPage() {
+  const globalConfig = useQuery(api.quizFunctions.getGlobalConfig);
   const settings = useQuery(api.quizFunctions.getTeacherSettings);
   const updateSettings = useMutation(api.quizFunctions.updateTeacherSettings);
 
@@ -16,9 +17,11 @@ export default function SettingsPage() {
     defaultPointsPerQuestion: 10,
     halfMarkThreshold: 50,
     randomizeQuestions: false,
-    randomizeOptions: false,
+    randomizeOptions: true,
     showCorrectAnswers: true,
     showExplanations: true,
+    displayMode: "score" as "score" | "pass_fail",
+    passingThreshold: 50,
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -29,19 +32,23 @@ export default function SettingsPage() {
   }, []);
 
   useEffect(() => {
-    if (settings) {
+    if (settings !== undefined && globalConfig !== undefined) {
+      const dbSettings: any = settings || {};
+      const fallback: any = globalConfig || {};
       setForm({
-        defaultMcqTimer: settings.defaultMcqTimer ?? 60,
-        defaultWrittenTimer: settings.defaultWrittenTimer ?? 300,
-        defaultPointsPerQuestion: settings.defaultPointsPerQuestion ?? 10,
-        halfMarkThreshold: settings.halfMarkThreshold ?? 50,
-        randomizeQuestions: settings.randomizeQuestions ?? false,
-        randomizeOptions: settings.randomizeOptions ?? false,
-        showCorrectAnswers: settings.showCorrectAnswers ?? true,
-        showExplanations: settings.showExplanations ?? true,
+        defaultMcqTimer: dbSettings.defaultMcqTimer ?? fallback.defaultMcqTimer ?? 60,
+        defaultWrittenTimer: dbSettings.defaultWrittenTimer ?? fallback.defaultWrittenTimer ?? 300,
+        defaultPointsPerQuestion: dbSettings.defaultPointsPerQuestion ?? fallback.defaultPointsPerQuestion ?? 10,
+        halfMarkThreshold: dbSettings.halfMarkThreshold ?? fallback.halfMarkThreshold ?? 50,
+        randomizeQuestions: dbSettings.randomizeQuestions ?? fallback.randomizeQuestions ?? false,
+        randomizeOptions: dbSettings.randomizeOptions ?? fallback.randomizeOptions ?? true,
+        showCorrectAnswers: dbSettings.showCorrectAnswers ?? fallback.showCorrectAnswers ?? true,
+        showExplanations: dbSettings.showExplanations ?? fallback.showExplanations ?? true,
+        displayMode: (dbSettings.displayMode as "score" | "pass_fail") ?? fallback.displayMode ?? "score",
+        passingThreshold: dbSettings.passingThreshold ?? fallback.passingThreshold ?? 50,
       });
     }
-  }, [settings]);
+  }, [settings, globalConfig]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -69,7 +76,7 @@ export default function SettingsPage() {
     }));
   };
 
-  if (!mounted || settings === undefined) {
+  if (!mounted || settings === undefined || globalConfig === undefined) {
     return (
       <div className="max-w-4xl mx-auto py-20 text-center chaos-pulse">
         <Settings2 size={48} className="mx-auto text-muted-foreground mb-4 opacity-50" />
@@ -151,7 +158,7 @@ export default function SettingsPage() {
                 name="defaultPointsPerQuestion"
                 value={form.defaultPointsPerQuestion}
                 onChange={handleChange}
-                min={1}
+                min={0}
                 max={100}
                 className="w-full bg-background border-2 border-foreground p-3 focus:outline-none focus:border-chaos transition-colors text-lg font-mono tabular-nums"
               />
@@ -232,6 +239,62 @@ export default function SettingsPage() {
               <div className={`w-12 h-6 rounded-full flex items-center px-1 transition-colors shrink-0 ${form.randomizeOptions ? 'bg-chaos' : 'bg-muted'}`}>
                 <div className={`w-4 h-4 rounded-full bg-background transition-transform ${form.randomizeOptions ? 'translate-x-6' : 'translate-x-0'}`} />
               </div>
+            </div>
+          </div>
+        </section>
+
+        {/* Display Mode Settings */}
+        <section>
+          <div className="flex items-center gap-2 mb-6">
+            <h2 className="chaos-heading text-xl">Result Display Mode</h2>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+            <div className="chaos-card bg-card p-6 space-y-3">
+              <label className="chaos-heading text-xs text-muted-foreground block">DEFAULT DISPLAY MODE</label>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, displayMode: "score" }))}
+                  className={`flex-1 py-2 chaos-heading text-xs border-2 transition-colors ${
+                    form.displayMode === "score"
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-transparent border-foreground/30 text-muted-foreground hover:border-foreground"
+                  }`}
+                >
+                  Show Score
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setForm(f => ({ ...f, displayMode: "pass_fail" }))}
+                  className={`flex-1 py-2 chaos-heading text-xs border-2 transition-colors ${
+                    form.displayMode === "pass_fail"
+                      ? "bg-foreground text-background border-foreground"
+                      : "bg-transparent border-foreground/30 text-muted-foreground hover:border-foreground"
+                  }`}
+                >
+                  Pass / Fail
+                </button>
+              </div>
+            </div>
+
+            <div className="chaos-card bg-card p-6 space-y-2">
+              <div className="flex justify-between items-center">
+                <label className="chaos-heading text-xs text-muted-foreground">PASSING THRESHOLD</label>
+                <span className="chaos-heading text-sm font-bold">{form.passingThreshold}%</span>
+              </div>
+              <input
+                type="range" min={0} max={100} step={5}
+                value={form.passingThreshold}
+                onChange={e => setForm(f => ({ ...f, passingThreshold: parseInt(e.target.value) }))}
+                className="w-full accent-foreground"
+              />
+              <div className="flex justify-between chaos-heading text-[9px] text-muted-foreground">
+                <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                Players scoring at or above this threshold will see <strong>PASSED</strong>.
+              </p>
             </div>
           </div>
         </section>

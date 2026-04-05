@@ -24,10 +24,12 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     if (isLoaded && user) {
       getOrCreateUser().catch(console.error);
     }
-  }, [isLoaded, user, getOrCreateUser]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation ref is stable in behavior
+  }, [isLoaded, user]);
 
+  const ADMIN_EMAILS = ["support@chaos.fail", "khomod14@gmail.com"];
   const isAdmin =
-    user?.primaryEmailAddress?.emailAddress?.toLowerCase() === "khomod14@gmail.com";
+    isLoaded && ADMIN_EMAILS.includes(user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "");
 
   const isEditor = pathname.startsWith("/dashboard/editor");
 
@@ -61,7 +63,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               className="flex items-center gap-2 text-sm bg-[#2F5333] text-white px-4 py-2 rounded-full font-medium hover:bg-[#2F5333]/90 transition-colors"
             >
               <Plus size={16} />
-              <span className="hidden sm:inline">New Quiz</span>
             </Link>
           )}
           <UserButton />
@@ -104,8 +105,21 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </nav>
       )}
 
-      <main className="flex-1 p-6 lg:p-10 w-full max-w-7xl mx-auto">
-        {children}
+      <main className="flex-1 p-6 lg:p-10 w-full max-w-7xl mx-auto flex flex-col">
+        <div className="flex-1">
+          {children}
+        </div>
+        
+        {/* Global Dashboard Footer */}
+        <div className="mt-16 pt-8 border-t border-[#111111]/10 flex flex-col items-center justify-center text-center space-y-4 pb-8">
+          <p className="text-sm font-medium text-[#111111]/60">NEED HELP OR HAVE FEEDBACK?</p>
+          <a
+            href="mailto:support@chaos.fail"
+            className="inline-flex items-center gap-2 text-sm font-mono font-medium text-[#111111]/70 hover:text-[#111111] border-2 border-dotted border-[#111111]/40 hover:border-[#111111] px-4 py-2 transition-colors rounded-sm"
+          >
+            CONTACT SUPPORT: support@chaos.fail
+          </a>
+        </div>
       </main>
     </div>
   );

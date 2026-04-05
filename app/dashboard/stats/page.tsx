@@ -241,7 +241,7 @@ function QuizDetailView({ quizId }: { quizId: Id<"quizzes"> }) {
                           {percent}%
                         </span>
                         <span className="text-[10px] text-muted-foreground mt-0.5">
-                          {session.score}/{session.totalPoints} pts
+                          {session.score}/{session.totalPoints} marks
                         </span>
                       </div>
                     </td>
@@ -331,7 +331,7 @@ function SubmissionDetailView({
           <div className="w-0.5 h-8 bg-background/20" />
           <div className="text-center">
             <p className="text-xl font-bold font-mono leading-none">{detail.score}/{detail.totalPoints}</p>
-            <p className="chaos-heading text-[10px] text-muted-foreground">POINTS</p>
+            <p className="chaos-heading text-[10px] text-muted-foreground">MARKS</p>
           </div>
         </div>
       </div>
@@ -380,7 +380,7 @@ function SubmissionDetailView({
                   ) : (
                     <div className="flex items-center justify-end gap-2 group">
                       <span className={`chaos-heading text-lg ${isCorrect ? 'text-chaos' : isPartial ? 'text-yellow-500' : 'text-destructive'}`}>
-                        {ans.pointsEarned} <span className="text-xs text-muted-foreground">/{ans.totalPoints} pts</span>
+                        {ans.pointsEarned} <span className="text-xs text-muted-foreground">/{ans.totalPoints} marks</span>
                       </span>
                       <button 
                          onClick={() => { setEditingId(ans.questionId); setEditVal(ans.pointsEarned.toString()); }}

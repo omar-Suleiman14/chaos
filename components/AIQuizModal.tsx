@@ -11,12 +11,6 @@ import {
   CheckCircle2, AlertCircle, ChevronRight, Brain, BookOpen,
 } from "lucide-react";
 
-// For client-side processing
-import * as pdfjsLib from "pdfjs-dist";
-import Tesseract from "tesseract.js";
-
-pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
-
 type Mode = "quiz" | "lecture";
 type Step = 1 | 2 | 3;
 
@@ -119,6 +113,8 @@ export default function AIQuizModal({ onClose }: Props) {
       let extractedText = "";
 
       if (file.type === "application/pdf") {
+        const pdfjsLib = await import("pdfjs-dist");
+        pdfjsLib.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjsLib.version}/pdf.worker.min.js`;
         const arrayBuffer = await file.arrayBuffer();
         const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
         const maxPages = Math.min(pdf.numPages, 40); // safety limit
@@ -130,9 +126,10 @@ export default function AIQuizModal({ onClose }: Props) {
           extractedText += pageText + "\n\n";
         }
       } else {
-        // Image Processing via Tesseract
-        const { data: { text } } = await Tesseract.recognize(file, "eng", {
-          logger: (m) => console.log(m),
+        // Image Processing via Tesseract (lazy loaded)
+        const Tesseract = await import("tesseract.js");
+        const { data: { text } } = await Tesseract.default.recognize(file, "eng", {
+          logger: (m: any) => console.log(m),
         });
         extractedText = text;
       }
@@ -155,7 +152,15 @@ export default function AIQuizModal({ onClose }: Props) {
         difficulty,
       });
     } catch (err: any) {
-      setStartError(err?.message || "Failed to start generation");
+      const errMsg = err?.message || "";
+      if (errMsg.includes("AI_LIMIT_REACHED")) {
+        const split = errMsg.split("AI_LIMIT_REACHED|");
+        const displayMsg = split.length > 1 ? split[1].replace(/\\n/g, "\n") : "Monthly AI Quota Reached.";
+        window.alert(displayMsg);
+        setIsStarting(false);
+        return;
+      }
+      setStartError(errMsg || "Failed to start generation");
       setIsStarting(false);
     }
   };

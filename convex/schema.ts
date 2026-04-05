@@ -10,6 +10,7 @@ export default defineSchema({
     username: v.string(),
     imageUrl: v.optional(v.string()),
     isBanned: v.optional(v.boolean()),
+    isElevated: v.optional(v.boolean()),
     createdAt: v.number(),
   })
     .index("by_clerkId", ["clerkId"])
@@ -26,6 +27,8 @@ export default defineSchema({
     randomizeOptions: v.optional(v.boolean()),       // default false
     showCorrectAnswers: v.optional(v.boolean()),     // default true
     showExplanations: v.optional(v.boolean()),       // default true
+    displayMode: v.optional(v.string()),             // "score" | "pass_fail"
+    passingThreshold: v.optional(v.number()),        // 0-100, default 50
   }).index("by_clerkId", ["clerkId"]),
 
   // ============ QUIZZES ============
@@ -44,7 +47,11 @@ export default defineSchema({
     randomizeOptions: v.optional(v.boolean()),
     showCorrectAnswers: v.optional(v.boolean()),
     showExplanations: v.optional(v.boolean()),
+    displayMode: v.optional(v.string()),             // "score" | "pass_fail"
+    passingThreshold: v.optional(v.number()),        // 0-100
     isBanned: v.optional(v.boolean()),
+    isElevated: v.optional(v.boolean()),
+    isAiGenerated: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
   })
@@ -116,4 +123,20 @@ export default defineSchema({
     error: v.optional(v.string()),
     createdAt: v.number(),
   }).index("by_clerkId", ["clerkId"]),
+
+  // ============ GLOBAL CONFIGURATION ============
+  globalConfig: defineTable({
+    aiLimitPopupText: v.optional(v.string()),
+    playerLimitErrorText: v.optional(v.string()),
+    defaultMcqTimer: v.optional(v.number()),
+    defaultWrittenTimer: v.optional(v.number()),
+    defaultPointsPerQuestion: v.optional(v.number()),
+    halfMarkThreshold: v.optional(v.number()),
+    randomizeQuestions: v.optional(v.boolean()),
+    randomizeOptions: v.optional(v.boolean()),
+    showCorrectAnswers: v.optional(v.boolean()),
+    showExplanations: v.optional(v.boolean()),
+    displayMode: v.optional(v.string()),             // "score" | "pass_fail"
+    passingThreshold: v.optional(v.number()),        // 0-100, default 50
+  }),
 });

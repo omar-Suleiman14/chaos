@@ -31,6 +31,7 @@ export default function QuizPlayerPage() {
 
   const [gameState, setGameState] = useState<GameState>("entry");
   const [playerName, setPlayerName] = useState("");
+  const [startError, setStartError] = useState("");
   const [sessionId, setSessionId] = useState<Id<"quizSessions"> | null>(null);
 
   const [currentQ, setCurrentQ] = useState(0);
@@ -144,13 +145,32 @@ export default function QuizPlayerPage() {
 
   const handleStart = async () => {
     if (!playerName.trim() || !quizMeta?._id) return;
+    setStartError("");
     haptics.heavy(); sfx.play("start");
     try {
       const sid = await startSession({ quizId: quizMeta._id, playerName: playerName.trim() });
       setSessionId(sid);
       setGameState("playing");
       setCurrentQ(0);
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      console.error(err);
+      setStartError(err?.message || "Failed to start session.");
+    }
+  };
+
+  const renderErrorWithLinks = (text: string) => {
+    // Split by email to make it a clickable link
+    const parts = text.split(/(support@chaos\.fail|[a-zA-Z0-9._-]+@[a-zA-Z0-9_-]+?\.[a-zA-Z]{2,})/gi);
+    return parts.map((part, i) => {
+      if (part.includes("@")) {
+        return (
+          <a key={i} href={`mailto:${part}`} className="underline text-primary hover:text-white transition-colors">
+            {part}
+          </a>
+        );
+      }
+      return <span key={i}>{part}</span>;
+    });
   };
 
   if (!mounted) return null;
@@ -187,7 +207,7 @@ export default function QuizPlayerPage() {
         <div className="max-w-md w-full">
           <div className="chaos-card bg-card p-8 sm:p-10">
             <p className="chaos-heading text-xs text-primary mb-3">
-              {quizData?.totalPoints} PTS · {questions.length} QUESTIONS
+              {quizData?.totalPoints} MARKS · {questions.length} QUESTIONS
             </p>
             <h1 className="chaos-display text-4xl sm:text-5xl mb-8 leading-none">
               {quizData?.title || "QUIZ"}
@@ -210,6 +230,11 @@ export default function QuizPlayerPage() {
               >
                 START QUIZ →
               </button>
+              {startError && (
+                <div className="mt-4 p-4 bg-destructive/10 border-2 border-destructive text-destructive text-sm font-semibold chaos-heading leading-relaxed">
+                  {renderErrorWithLinks(startError.replace("Uncaught Error: ", ""))}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -419,7 +444,7 @@ export default function QuizPlayerPage() {
                       : "text-destructive"
                     }`}>
                       {feed.isCorrect ? "✓ CORRECT" : (!feed.isCorrect && feed.pointsEarned > 0) ? "~ PARTIAL" : "✗ INCORRECT"}
-                      <span className="text-muted-foreground ml-3 font-normal text-xs">+{feed.pointsEarned} pts</span>
+                      <span className="text-muted-foreground ml-3 font-normal text-xs">+{feed.pointsEarned} marks</span>
                     </p>
                     {feed.explanation && (
                       <p className="text-sm text-muted-foreground mt-2">{feed.explanation}</p>
@@ -457,31 +482,53 @@ export default function QuizPlayerPage() {
                 SUBMIT QUIZ →
               </button>
             </div>
-          ) : (
-            <div className="chaos-card bg-card p-10 max-w-md w-full animate-in zoom-in-95 duration-500">
-              <p className="chaos-heading text-sm text-muted-foreground mb-2">YOUR SCORE</p>
-              <p className="chaos-display text-7xl text-primary mb-2">
-                {Math.round((finalResults.score / finalResults.totalPoints) * 100)}%
-              </p>
-              <p className="text-muted-foreground mb-8 chaos-heading text-sm">
-                {finalResults.score} OF {finalResults.totalPoints} POINTS
-              </p>
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={() => window.location.reload()}
-                  className="flex-1 kb-btn kb-btn-primary"
-                >
-                  PLAY AGAIN
-                </button>
-                <button
-                  onClick={() => window.location.href = "/"}
-                  className="flex-1 kb-btn kb-btn-ghost"
-                >
-                  EXIT
-                </button>
+          ) : (() => {
+            const pct = Math.round((finalResults.score / finalResults.totalPoints) * 100);
+            const displayMode = quizData?.displayMode ?? "score";
+            const passingThreshold = quizData?.passingThreshold ?? 50;
+            const passed = pct >= passingThreshold;
+            return (
+              <div className="chaos-card bg-card p-10 max-w-md w-full animate-in zoom-in-95 duration-500">
+                {displayMode === "pass_fail" ? (
+                  <>
+                    <p className={`chaos-display text-7xl mb-2 ${passed ? "text-primary" : "text-destructive"}`}>
+                      {passed ? "✓" : "✗"}
+                    </p>
+                    <p className={`chaos-heading text-3xl mb-3 ${passed ? "text-primary" : "text-destructive"}`}>
+                      {passed ? "PASSED" : "FAILED"}
+                    </p>
+                    <p className="text-muted-foreground chaos-heading text-sm mb-8">
+                      {finalResults.score} OF {finalResults.totalPoints} MARKS &nbsp;·&nbsp; {pct}%
+                      <br />
+                      <span className="text-xs opacity-70">Passing: {passingThreshold}%</span>
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="chaos-heading text-sm text-muted-foreground mb-2">YOUR SCORE</p>
+                    <p className="chaos-display text-7xl text-primary mb-2">{pct}%</p>
+                    <p className="text-muted-foreground mb-8 chaos-heading text-sm">
+                      {finalResults.score} OF {finalResults.totalPoints} MARKS
+                    </p>
+                  </>
+                )}
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <button
+                    onClick={() => window.location.reload()}
+                    className="flex-1 kb-btn kb-btn-primary"
+                  >
+                    PLAY AGAIN
+                  </button>
+                  <button
+                    onClick={() => window.location.href = "/"}
+                    className="flex-1 kb-btn kb-btn-ghost"
+                  >
+                    EXIT
+                  </button>
+                </div>
               </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
       </div>
     </div>

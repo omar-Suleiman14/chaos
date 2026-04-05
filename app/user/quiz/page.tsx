@@ -292,7 +292,7 @@ function QuizPlayerContent() {
                 <span className="chaos-badge">{questions.length} Q</span>
                 <span className="chaos-badge flex items-center gap-1">
                   <Zap size={12} />
-                  {questions.reduce((a, q) => a + q.points, 0)} PTS
+                  {questions.reduce((a, q) => a + q.points, 0)} MARKS
                 </span>
               </div>
             </div>
@@ -380,7 +380,7 @@ function QuizPlayerContent() {
           </div>
           <div className="flex items-center gap-3">
             <span className="chaos-heading text-xs text-chaos">
-              {currentQuestion.points} pts
+              {currentQuestion.points} marks
             </span>
             <span
               className={`chaos-heading text-lg flex items-center gap-1 ${isUrgent ? "text-destructive shake" : ""}`}
@@ -611,31 +611,47 @@ function QuizPlayerContent() {
             </p>
 
             <div className="flex items-center justify-center gap-4">
-              <div className="chaos-card-accent p-4 text-center">
-                <span
-                  className="text-4xl font-black text-chaos"
-                  style={{ fontFamily: "'Outfit', sans-serif" }}
-                >
-                  {totalScore}
-                </span>
-                <span className="text-lg text-muted-foreground">
-                  /{totalPoints}
-                </span>
-                <p className="text-xs text-muted-foreground mt-1 uppercase">
-                  Points
-                </p>
-              </div>
-              <div className="chaos-card p-4 text-center">
-                <span
-                  className="text-4xl font-black"
-                  style={{ fontFamily: "'Outfit', sans-serif" }}
-                >
-                  {Math.round(percentage)}%
-                </span>
-                <p className="text-xs text-muted-foreground mt-1 uppercase">
-                  Score
-                </p>
-              </div>
+              {(() => {
+                const displayMode = quizData?.displayMode ?? "score";
+                const passingThreshold = quizData?.passingThreshold ?? 50;
+                const passed = percentage >= passingThreshold;
+                if (displayMode === "pass_fail") {
+                  return (
+                    <div className="chaos-card-accent p-6 text-center">
+                      <span className={`text-5xl font-black ${passed ? "text-chaos" : "text-destructive"}`}
+                        style={{ fontFamily: "'Outfit', sans-serif" }}>
+                        {passed ? "✓" : "✗"}
+                      </span>
+                      <p className={`chaos-heading text-xl mt-1 ${passed ? "text-chaos" : "text-destructive"}`}>
+                        {passed ? "PASSED" : "FAILED"}
+                      </p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {totalScore}/{totalPoints} marks · {Math.round(percentage)}%
+                      </p>
+                      <p className="text-xs text-muted-foreground opacity-60">Passing: {passingThreshold}%</p>
+                    </div>
+                  );
+                }
+                return (
+                  <>
+                    <div className="chaos-card-accent p-4 text-center">
+                      <span className="text-4xl font-black text-chaos"
+                        style={{ fontFamily: "'Outfit', sans-serif" }}>
+                        {totalScore}
+                      </span>
+                      <span className="text-lg text-muted-foreground">/{totalPoints}</span>
+                      <p className="text-xs text-muted-foreground mt-1 uppercase">Marks</p>
+                    </div>
+                    <div className="chaos-card p-4 text-center">
+                      <span className="text-4xl font-black"
+                        style={{ fontFamily: "'Outfit', sans-serif" }}>
+                        {Math.round(percentage)}%
+                      </span>
+                      <p className="text-xs text-muted-foreground mt-1 uppercase">Score</p>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
 

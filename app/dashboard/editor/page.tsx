@@ -9,14 +9,15 @@ import { haptics } from "@/lib/haptics";
 import { useUser } from "@clerk/nextjs";
 import {
   Plus, Trash2, Save, ChevronDown, ChevronUp,
-  Globe, Lock, Loader2, RefreshCw, Check, X, ArrowLeft, GripVertical
+  Globe, Lock, Loader2, RefreshCw, Check, X, ArrowLeft, GripVertical,
+  MoreHorizontal, Shuffle, Eye, EyeOff, ListOrdered
 } from "lucide-react";
-import {
-  DragDropContext,
-  Droppable,
-  Draggable,
-  DropResult,
-} from "@hello-pangea/dnd";
+import dynamic from "next/dynamic";
+import type { DropResult } from "@hello-pangea/dnd";
+
+const DragDropContext = dynamic(() => import("@hello-pangea/dnd").then(m => m.DragDropContext as any), { ssr: false }) as any;
+const Droppable = dynamic(() => import("@hello-pangea/dnd").then(m => m.Droppable as any), { ssr: false }) as any;
+const Draggable = dynamic(() => import("@hello-pangea/dnd").then(m => m.Draggable as any), { ssr: false }) as any;
 
 type QuestionType = "mcq" | "true_false" | "multi_select" | "written";
 
@@ -49,6 +50,7 @@ function EditorContent() {
   const quiz = useQuery(api.quizFunctions.getQuiz, quizId ? { quizId } : "skip");
   const existingQuestions = useQuery(api.quizFunctions.getQuestions, quizId ? { quizId } : "skip");
   const teacherSettings = useQuery(api.quizFunctions.getTeacherSettings);
+  const globalConfig = useQuery(api.quizFunctions.getGlobalConfig);
   const myQuizzes = useQuery(api.quizFunctions.getMyQuizzes);
   const existingGroups = Array.from(new Set((myQuizzes || []).map(q => q.groupName).filter(Boolean)));
 
@@ -62,6 +64,16 @@ function EditorContent() {
   const [slug, setSlug] = useState("");
   const [groupName, setGroupName] = useState("");
   const [isPublished, setIsPublished] = useState(false);
+  const [quizSettings, setQuizSettings] = useState({
+    randomizeQuestions: false,
+    randomizeOptions: false,
+    showCorrectAnswers: true,
+    showExplanations: true,
+    displayMode: "score" as "score" | "pass_fail",
+    passingThreshold: 50,
+  });
+  const [quizSettingsOpen, setQuizSettingsOpen] = useState(false);
+  const quizSettingsRef = useRef<HTMLDivElement>(null);
 
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
   const [questions, setQuestions] = useState<QuestionDraft[]>([]);
@@ -87,8 +99,27 @@ function EditorContent() {
       setSlug(quiz.slug);
       setGroupName(quiz.groupName || "");
       setIsPublished(quiz.isPublished);
+      setQuizSettings({
+        randomizeQuestions: quiz.randomizeQuestions ?? teacherSettings?.randomizeQuestions ?? globalConfig?.randomizeQuestions ?? false,
+        randomizeOptions: quiz.randomizeOptions ?? teacherSettings?.randomizeOptions ?? globalConfig?.randomizeOptions ?? true,
+        showCorrectAnswers: quiz.showCorrectAnswers ?? teacherSettings?.showCorrectAnswers ?? globalConfig?.showCorrectAnswers ?? true,
+        showExplanations: quiz.showExplanations ?? teacherSettings?.showExplanations ?? globalConfig?.showExplanations ?? true,
+        displayMode: (quiz.displayMode as "score" | "pass_fail") ?? teacherSettings?.displayMode ?? globalConfig?.displayMode ?? "score",
+        passingThreshold: quiz.passingThreshold ?? teacherSettings?.passingThreshold ?? globalConfig?.passingThreshold ?? 50,
+      });
     }
-  }, [quiz, isInitializing]);
+  }, [quiz, isInitializing, teacherSettings, globalConfig]);
+
+  // Close quiz settings dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (quizSettingsRef.current && !quizSettingsRef.current.contains(e.target as Node)) {
+        setQuizSettingsOpen(false);
+      }
+    };
+    if (quizSettingsOpen) document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [quizSettingsOpen]);
 
   useEffect(() => {
     if (existingQuestions && existingQuestions.length > 0) {
@@ -113,6 +144,12 @@ function EditorContent() {
         slug: slug || undefined,
         groupName: groupName || undefined,
         isPublished: willPublish,
+        randomizeQuestions: quizSettings.randomizeQuestions,
+        randomizeOptions: quizSettings.randomizeOptions,
+        showCorrectAnswers: quizSettings.showCorrectAnswers,
+        showExplanations: quizSettings.showExplanations,
+        displayMode: quizSettings.displayMode,
+        passingThreshold: quizSettings.passingThreshold,
       });
 
       const updatedQs = [...questions];
@@ -141,7 +178,7 @@ function EditorContent() {
       setLastSaved(new Date());
     } catch (err) { console.error("Save error:", err); }
     finally { setSaving(false); }
-  }, [quizId, title, slug, groupName, isPublished, questions, updateQuiz, addQuestion, updateQuestion]);
+  }, [quizId, title, slug, groupName, isPublished, quizSettings, questions, updateQuiz, addQuestion, updateQuestion]);
 
   useEffect(() => {
     autoSaveTimer.current = setInterval(() => handleSave(), 30000);
@@ -251,6 +288,92 @@ function EditorContent() {
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto">
+          {/* Quiz-level settings 3-dots menu */}
+          <div className="relative" ref={quizSettingsRef}>
+            <button
+              onClick={() => setQuizSettingsOpen(o => !o)}
+              title="Quiz options"
+              className="kb-btn kb-btn-ghost p-2"
+            >
+              <MoreHorizontal size={18} />
+            </button>
+
+            {quizSettingsOpen && (
+              <div className="absolute right-0 top-full mt-2 z-50 bg-card border-[3px] border-foreground shadow-[6px_6px_0px_var(--foreground)] min-w-[260px] p-4 space-y-3">
+                <p className="chaos-heading text-[10px] text-muted-foreground mb-3">THIS QUIZ ONLY</p>
+
+                {([
+                  { key: "randomizeQuestions" as const, label: "Randomize Question Order", icon: <Shuffle size={13} /> },
+                  { key: "randomizeOptions" as const, label: "Randomize MCQ Options", icon: <ListOrdered size={13} /> },
+                  { key: "showCorrectAnswers" as const, label: "Show Correct Answers", icon: <Eye size={13} /> },
+                  { key: "showExplanations" as const, label: "Show Explanations", icon: <Eye size={13} /> },
+                ] as const).map(({ key, label, icon }) => (
+                  <button
+                    key={key}
+                    onClick={() => setQuizSettings(s => ({ ...s, [key]: !s[key] }))}
+                    className="w-full flex items-center justify-between gap-3 px-2 py-1.5 hover:bg-muted/50 transition-colors rounded-sm"
+                  >
+                    <span className="flex items-center gap-2 text-xs chaos-heading text-left">
+                      <span className="text-muted-foreground">{icon}</span>
+                      {label}
+                    </span>
+                    <div className={`w-9 h-5 rounded-full flex items-center px-0.5 transition-colors shrink-0 ${
+                      quizSettings[key] ? 'bg-chaos' : 'bg-muted'
+                    }`}>
+                      <div className={`w-4 h-4 rounded-full bg-background transition-transform ${
+                        quizSettings[key] ? 'translate-x-4' : 'translate-x-0'
+                      }`} />
+                    </div>
+                  </button>
+                ))}
+
+                {/* Score display mode */}
+                <div className="border-t border-foreground/10 pt-3 space-y-2">
+                  <p className="chaos-heading text-[10px] text-muted-foreground">RESULT DISPLAY</p>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => setQuizSettings(s => ({ ...s, displayMode: "score" }))}
+                      className={`flex-1 py-1.5 chaos-heading text-xs border-2 transition-colors ${
+                        quizSettings.displayMode === "score"
+                          ? "bg-foreground text-background border-foreground"
+                          : "bg-transparent border-foreground/30 text-muted-foreground hover:border-foreground"
+                      }`}
+                    >
+                      Show Score
+                    </button>
+                    <button
+                      onClick={() => setQuizSettings(s => ({ ...s, displayMode: "pass_fail" }))}
+                      className={`flex-1 py-1.5 chaos-heading text-xs border-2 transition-colors ${
+                        quizSettings.displayMode === "pass_fail"
+                          ? "bg-foreground text-background border-foreground"
+                          : "bg-transparent border-foreground/30 text-muted-foreground hover:border-foreground"
+                      }`}
+                    >
+                      Pass / Fail
+                    </button>
+                  </div>
+
+                  <div>
+                    <div className="flex justify-between items-center mb-1">
+                      <span className="chaos-heading text-[10px] text-muted-foreground">PASSING THRESHOLD</span>
+                      <span className="chaos-heading text-xs font-bold">{quizSettings.passingThreshold}%</span>
+                    </div>
+                    <input
+                      type="range"
+                      min={0} max={100} step={5}
+                      value={quizSettings.passingThreshold}
+                      onChange={e => setQuizSettings(s => ({ ...s, passingThreshold: parseInt(e.target.value) }))}
+                      className="w-full accent-foreground"
+                    />
+                    <div className="flex justify-between chaos-heading text-[9px] text-muted-foreground mt-0.5">
+                      <span>0%</span><span>50%</span><span>100%</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+
           <button
             onClick={() => {
               const willPublish = !isPublished;
@@ -325,7 +448,7 @@ function EditorContent() {
 
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="questions">
-            {(provided) => (
+            {(provided: any) => (
               <div
                 ref={provided.innerRef}
                 {...provided.droppableProps}
@@ -335,7 +458,7 @@ function EditorContent() {
                   const isExpanded = expandedQ === index;
                   return (
                     <Draggable key={index} draggableId={`q-${index}`} index={index}>
-                      {(provided, snapshot) => (
+                      {(provided: any, snapshot: any) => (
                         <div
                           ref={provided.innerRef}
                           {...provided.draggableProps}
@@ -372,7 +495,7 @@ function EditorContent() {
                                       {typeLabels[q.type]}
                                     </span>
                                     <span className="chaos-heading text-[10px] text-primary">
-                                      {q.points} PTS
+                                      {q.points} Marks
                                     </span>
                                   </div>
                                 </div>
@@ -547,10 +670,13 @@ function EditorContent() {
 
                               <div className="grid grid-cols-2 gap-4 pt-2">
                                 <div>
-                                  <label className="block chaos-heading text-xs text-muted-foreground mb-2">POINTS</label>
+                                  <label className="block chaos-heading text-xs text-muted-foreground mb-2">Marks</label>
                                   <input
-                                    type="number" value={q.points} min={1}
-                                    onChange={e => updateQ(index, { points: parseInt(e.target.value) || 1 })}
+                                    type="number" value={q.points} min={0}
+                                    onChange={e => {
+                                      const val = parseInt(e.target.value);
+                                      updateQ(index, { points: isNaN(val) ? 0 : val });
+                                    }}
                                     className="kb-input"
                                   />
                                 </div>
