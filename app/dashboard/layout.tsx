@@ -1,12 +1,12 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 
 import { UserButton, useUser } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Sun, Moon, Plus, FileText, BarChart3, Settings, Shield } from "lucide-react";
 
 const navItems = [
@@ -30,6 +30,23 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const ADMIN_EMAILS = ["support@chaos.fail", "khomod14@gmail.com"];
   const isAdmin =
     isLoaded && ADMIN_EMAILS.includes(user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "");
+
+  const router = useRouter();
+  const createQuiz = useMutation(api.quizFunctions.createQuiz);
+  const [isCreating, setIsCreating] = useState(false);
+
+  const handleCreateNew = async () => {
+    if (isCreating) return;
+    setIsCreating(true);
+    try {
+      const newId = await createQuiz({ title: "Untitled Quiz" });
+      router.push(`/dashboard/editor?id=${newId}`);
+    } catch (e) {
+      console.error(e);
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   const isEditor = pathname.startsWith("/dashboard/editor");
 
@@ -58,12 +75,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
 
         <div className="flex items-center gap-4">
           {!isEditor && (
-            <Link
-              href="/dashboard/editor"
-              className="flex items-center gap-2 text-sm bg-[#2F5333] text-white px-4 py-2 rounded-full font-medium hover:bg-[#2F5333]/90 transition-colors"
+            <button
+              onClick={handleCreateNew}
+              disabled={isCreating}
+              className="flex items-center gap-2 text-sm bg-[#2F5333] text-white px-4 py-2 rounded-full font-medium hover:bg-[#2F5333]/90 transition-colors disabled:opacity-50"
             >
               <Plus size={16} />
-            </Link>
+            </button>
           )}
           <UserButton />
         </div>
