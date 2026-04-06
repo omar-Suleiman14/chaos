@@ -7,21 +7,21 @@ import { ClerkProvider } from "@clerk/nextjs";
 /* ── Fonts ─────────────────────────────────────────────── */
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: ["500", "600", "700"],
   variable: "--font-grotesk",
   display: "swap",
 });
 
 const inter = Inter({
   subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
+  weight: ["400", "500", "700"],
   variable: "--font-inter",
   display: "swap",
 });
 
 const spaceMono = Space_Mono({
   subsets: ["latin"],
-  weight: ["400", "700"],
+  weight: ["700"],
   variable: "--font-space-mono",
   display: "swap",
 });
