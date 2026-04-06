@@ -1356,6 +1356,7 @@ export const updateGlobalConfig = mutation({
     showExplanations: v.optional(v.boolean()),
     displayMode: v.optional(v.string()),
     passingThreshold: v.optional(v.number()),
+    disableAnimations: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);

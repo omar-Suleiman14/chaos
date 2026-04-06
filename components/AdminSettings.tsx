@@ -19,6 +19,7 @@ export default function AdminSettings({ globalConfig }: { globalConfig: any }) {
   const [showExplanations, setShowExplanations] = useState(true);
   const [displayMode, setDisplayMode] = useState<"score" | "pass_fail">("score");
   const [passingThreshold, setPassingThreshold] = useState(50);
+  const [disableAnimations, setDisableAnimations] = useState(false);
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
@@ -43,6 +44,7 @@ export default function AdminSettings({ globalConfig }: { globalConfig: any }) {
       setShowExplanations(globalConfig.showExplanations ?? true);
       setDisplayMode((globalConfig.displayMode as "score" | "pass_fail") ?? "score");
       setPassingThreshold(globalConfig.passingThreshold ?? 50);
+      setDisableAnimations(globalConfig.disableAnimations ?? false);
     }
   }, [globalConfig]);
 
@@ -62,6 +64,7 @@ export default function AdminSettings({ globalConfig }: { globalConfig: any }) {
       showExplanations,
       displayMode,
       passingThreshold,
+      disableAnimations,
     });
     setSaving(false);
     setSaved(true);
@@ -157,6 +160,7 @@ export default function AdminSettings({ globalConfig }: { globalConfig: any }) {
               { label: "Randomize MCQ Options", val: randomizeOptions, set: setRandomizeOptions },
               { label: "Show Correct Answers", val: showCorrectAnswers, set: setShowCorrectAnswers },
               { label: "Show Explanations", val: showExplanations, set: setShowExplanations },
+              { label: "Disable Animations Globally", val: disableAnimations, set: setDisableAnimations },
             ].map(({ label, val, set }) => (
               <label key={label} className="flex items-center justify-between cursor-pointer group">
                 <span className="font-bold text-sm group-hover:text-primary transition-colors">{label}</span>

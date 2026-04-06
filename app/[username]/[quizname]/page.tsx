@@ -278,7 +278,7 @@ export default function QuizPlayerPage() {
 
           return (
             <div key={q._id} className={`tiktok-slide flex flex-col px-4 py-12 sm:px-8 sm:py-16 ${slideBg} ${slideAnim}`}>
-              <div className="flex-1 flex flex-col pt-8 max-w-2xl mx-auto w-full">
+              <div className="flex-1 flex flex-col pt-6 sm:pt-8 pb-4 max-w-2xl mx-auto w-full overflow-y-auto overscroll-contain custom-scrollbar pr-1 sm:pr-4">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6">
                   <span className="chaos-heading text-xs text-primary">
@@ -293,7 +293,7 @@ export default function QuizPlayerPage() {
                   </span>
                 </div>
 
-                <h2 className="text-2xl sm:text-3xl font-bold mb-8 leading-snug">
+                <h2 className="text-xl sm:text-3xl font-bold mb-6 sm:mb-8 leading-snug text-balance">
                   {q.questionText}
                 </h2>
 
@@ -314,7 +314,7 @@ export default function QuizPlayerPage() {
                         key={optIdx}
                         onClick={() => !isFeedback && handleSubmitAnswer(q._id, opt)}
                         disabled={isFeedback || isSubmitting}
-                        className={`w-full text-left p-4 font-medium transition-all ${cls}`}
+                        className={`w-full text-left p-3 sm:p-4 text-sm sm:text-base font-medium transition-all ${cls}`}
                       >
                         <span className="chaos-heading text-xs mr-3 opacity-60">{String.fromCharCode(65 + optIdx)}.</span>
                         {opt}
@@ -337,7 +337,7 @@ export default function QuizPlayerPage() {
                         key={val}
                         onClick={() => !isFeedback && handleSubmitAnswer(q._id, val)}
                         disabled={isFeedback || isSubmitting}
-                        className={`w-full text-left p-4 font-bold chaos-heading transition-all ${cls}`}
+                        className={`w-full text-left p-3 sm:p-4 text-sm sm:text-base font-bold chaos-heading transition-all ${cls}`}
                       >
                         {val.toUpperCase()}
                       </button>
@@ -377,7 +377,7 @@ export default function QuizPlayerPage() {
                                 haptics.light();
                               }}
                               disabled={isFeedback || isSubmitting}
-                              className={`w-full text-left p-4 font-medium transition-all flex items-center gap-3 ${cls}`}
+                              className={`w-full text-left p-3 sm:p-4 text-sm sm:text-base font-medium transition-all flex items-center gap-3 ${cls}`}
                             >
                               <span className={`w-5 h-5 border-[2px] shrink-0 flex items-center justify-center chaos-heading text-xs ${
                                 isCorrectAns ? "border-chaos-foreground bg-chaos-foreground/20" :
