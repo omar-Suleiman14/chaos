@@ -151,7 +151,7 @@ export default function SettingsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="chaos-card bg-card p-6">
               <label className="block mb-2 chaos-heading text-sm">
-                Default Points Per Question
+                Default Marks Per Question
               </label>
               <input
                 type="number"
