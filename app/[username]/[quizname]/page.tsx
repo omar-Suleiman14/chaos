@@ -62,7 +62,7 @@ export default function QuizPlayerPage() {
     if (index !== currentQ && index <= questions.length) {
       setCurrentQ(index);
       haptics.light();
-      sfx.play("next");
+      if (!quizData?.disableAnimations) sfx.play("next");
     }
   };
 
@@ -94,7 +94,7 @@ export default function QuizPlayerPage() {
           handleSubmitAnswer(q._id, "", true);
           return { ...prev, [q._id]: 0 };
         }
-        if (current <= 11) { haptics.warning(); sfx.play("tap"); }
+        if (current <= 11) { haptics.warning(); if (!quizData?.disableAnimations) sfx.play("tap"); }
         return { ...prev, [q._id]: current - 1 };
       });
     }, 1000);
@@ -120,9 +120,9 @@ export default function QuizPlayerPage() {
       setSelectedOptions(prev => ({ ...prev, [qId]: isTimeout ? "" : answer }));
 
       const isPartiallyCorrect = !result.isCorrect && result.pointsEarned > 0;
-      if (result.isCorrect) { haptics.success(); sfx.play("correct"); }
-      else if (isPartiallyCorrect) { haptics.light(); sfx.play("correct"); }
-      else { haptics.error(); sfx.play("wrong"); }
+      if (result.isCorrect) { haptics.success(); if (!quizData?.disableAnimations) sfx.play("correct"); }
+      else if (isPartiallyCorrect) { haptics.light(); if (!quizData?.disableAnimations) sfx.play("correct"); }
+      else { haptics.error(); if (!quizData?.disableAnimations) sfx.play("wrong"); }
 
     } catch (err) { console.error(err); }
     setIsSubmitting(false);
@@ -130,7 +130,7 @@ export default function QuizPlayerPage() {
 
   const handleFinish = async () => {
     if (!sessionId) return;
-    haptics.success(); sfx.play("finish");
+    haptics.success(); if (!quizData?.disableAnimations) sfx.play("finish");
     try {
       const result = await completeSession({ sessionId });
       setFinalResults(result);
@@ -146,7 +146,7 @@ export default function QuizPlayerPage() {
   const handleStart = async () => {
     if (!playerName.trim() || !quizMeta?._id) return;
     setStartError("");
-    haptics.heavy(); sfx.play("start");
+    haptics.heavy(); if (!quizData?.disableAnimations) sfx.play("start");
     try {
       const sid = await startSession({ quizId: quizMeta._id, playerName: playerName.trim() });
       setSessionId(sid);
