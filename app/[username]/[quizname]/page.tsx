@@ -134,7 +134,7 @@ export default function QuizPlayerPage() {
     try {
       const result = await completeSession({ sessionId });
       setFinalResults(result);
-      if (result.score / result.totalPoints >= 0.9) {
+      if (result.score / result.totalPoints >= 0.9 && !quizData?.disableAnimations) {
         try {
           const confetti = (await import("canvas-confetti")).default;
           confetti({ particleCount: 200, spread: 90, origin: { y: 0.5 }, colors: ["#2F5333", "#F0EFEA", "#111111"] });
@@ -267,11 +267,12 @@ export default function QuizPlayerPage() {
           let slideBg = "bg-background";
           let slideAnim = "";
           if (isFeedback) {
+            const noAnim = !!quizData?.disableAnimations;
             if (feed.isCorrect) {
-              slideBg = "bg-[#d1ebd2] transition-colors duration-500";
+              slideBg = noAnim ? "bg-[#d1ebd2]" : "bg-[#d1ebd2] transition-colors duration-500";
             } else {
-              slideBg = "bg-[#ebd2d2] transition-colors duration-500";
-              slideAnim = "shake";
+              slideBg = noAnim ? "bg-[#ebd2d2]" : "bg-[#ebd2d2] transition-colors duration-500";
+              slideAnim = noAnim ? "" : "shake";
             }
           }
 
@@ -437,7 +438,7 @@ export default function QuizPlayerPage() {
 
                 {/* Feedback */}
                 {isFeedback && (
-                  <div className="mt-6 chaos-card bg-card p-5 animate-in slide-in-from-bottom-4 duration-300">
+                  <div className={`mt-6 chaos-card bg-card p-5 ${quizData?.disableAnimations ? '' : 'animate-in slide-in-from-bottom-4 duration-300'}`}>
                     <p className={`chaos-heading text-sm mb-2 ${
                       feed.isCorrect ? "text-primary"
                       : (!feed.isCorrect && feed.pointsEarned > 0) ? "text-yellow-500"
@@ -488,7 +489,7 @@ export default function QuizPlayerPage() {
             const passingThreshold = quizData?.passingThreshold ?? 50;
             const passed = pct >= passingThreshold;
             return (
-              <div className="chaos-card bg-card p-10 max-w-md w-full animate-in zoom-in-95 duration-500">
+              <div className={`chaos-card bg-card p-10 max-w-md w-full ${quizData?.disableAnimations ? '' : 'animate-in zoom-in-95 duration-500'}`}>
                 {displayMode === "pass_fail" ? (
                   <>
                     <p className={`chaos-display text-7xl mb-2 ${passed ? "text-primary" : "text-destructive"}`}>

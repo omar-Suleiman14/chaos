@@ -164,6 +164,7 @@ export const getTeacherSettings = query({
       showExplanations: settings?.showExplanations ?? true,
       displayMode: settings?.displayMode ?? "score",
       passingThreshold: settings?.passingThreshold ?? 50,
+      disableAnimations: settings?.disableAnimations ?? false,
     };
   },
 });
@@ -180,6 +181,7 @@ export const updateTeacherSettings = mutation({
     showExplanations: v.optional(v.boolean()),
     displayMode: v.optional(v.string()),
     passingThreshold: v.optional(v.number()),
+    disableAnimations: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -271,6 +273,7 @@ export const createQuiz = mutation({
       randomizeOptions: teacherSettings?.randomizeOptions ?? globalConfig.randomizeOptions ?? false,
       showCorrectAnswers: teacherSettings?.showCorrectAnswers ?? globalConfig.showCorrectAnswers ?? true,
       showExplanations: teacherSettings?.showExplanations ?? globalConfig.showExplanations ?? true,
+      disableAnimations: teacherSettings?.disableAnimations ?? globalConfig.disableAnimations ?? false,
       isElevated: user?.isElevated ?? false,
       createdAt: Date.now(),
       updatedAt: Date.now(),
@@ -295,6 +298,7 @@ export const updateQuiz = mutation({
     showExplanations: v.optional(v.boolean()),
     displayMode: v.optional(v.string()),
     passingThreshold: v.optional(v.number()),
+    disableAnimations: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
     const identity = await ctx.auth.getUserIdentity();
@@ -657,6 +661,7 @@ export const getQuizForPlayer = query({
     const showExplanations = quiz.showExplanations ?? teacherSettings?.showExplanations ?? globalConfig?.showExplanations ?? true;
     const randomizeQuestions = quiz.randomizeQuestions ?? teacherSettings?.randomizeQuestions ?? globalConfig?.randomizeQuestions ?? false;
     const randomizeOptions = quiz.randomizeOptions ?? teacherSettings?.randomizeOptions ?? globalConfig?.randomizeOptions ?? true;
+    const disableAnimations = quiz.disableAnimations ?? teacherSettings?.disableAnimations ?? globalConfig?.disableAnimations ?? false;
 
     return {
       _id: quiz._id,
@@ -672,6 +677,7 @@ export const getQuizForPlayer = query({
       randomizeOptions,
       displayMode,
       passingThreshold,
+      disableAnimations,
       questions: safeQuestions,
       totalPoints: questions.reduce((sum, q) => sum + q.points, 0),
     };

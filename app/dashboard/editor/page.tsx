@@ -71,6 +71,7 @@ function EditorContent() {
     showExplanations: true,
     displayMode: "score" as "score" | "pass_fail",
     passingThreshold: 50,
+    disableAnimations: false,
   });
   const [quizSettingsOpen, setQuizSettingsOpen] = useState(false);
   const quizSettingsRef = useRef<HTMLDivElement>(null);
@@ -106,6 +107,7 @@ function EditorContent() {
         showExplanations: quiz.showExplanations ?? teacherSettings?.showExplanations ?? globalConfig?.showExplanations ?? true,
         displayMode: (quiz.displayMode as "score" | "pass_fail") ?? teacherSettings?.displayMode ?? globalConfig?.displayMode ?? "score",
         passingThreshold: quiz.passingThreshold ?? teacherSettings?.passingThreshold ?? globalConfig?.passingThreshold ?? 50,
+        disableAnimations: quiz.disableAnimations ?? teacherSettings?.disableAnimations ?? globalConfig?.disableAnimations ?? false,
       });
     }
   }, [quiz, isInitializing, teacherSettings, globalConfig]);
@@ -150,6 +152,7 @@ function EditorContent() {
         showExplanations: quizSettings.showExplanations,
         displayMode: quizSettings.displayMode,
         passingThreshold: quizSettings.passingThreshold,
+        disableAnimations: quizSettings.disableAnimations,
       });
 
       const updatedQs = [...questions];
@@ -307,6 +310,7 @@ function EditorContent() {
                   { key: "randomizeOptions" as const, label: "Randomize MCQ Options", icon: <ListOrdered size={13} /> },
                   { key: "showCorrectAnswers" as const, label: "Show Correct Answers", icon: <Eye size={13} /> },
                   { key: "showExplanations" as const, label: "Show Explanations", icon: <Eye size={13} /> },
+                  { key: "disableAnimations" as const, label: "Disable Animations", icon: <EyeOff size={13} /> },
                 ] as const).map(({ key, label, icon }) => (
                   <button
                     key={key}

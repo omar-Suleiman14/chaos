@@ -29,6 +29,7 @@ export default defineSchema({
     showExplanations: v.optional(v.boolean()),       // default true
     displayMode: v.optional(v.string()),             // "score" | "pass_fail"
     passingThreshold: v.optional(v.number()),        // 0-100, default 50
+    disableAnimations: v.optional(v.boolean()),      // default false
   }).index("by_clerkId", ["clerkId"]),
 
   // ============ QUIZZES ============
@@ -49,6 +50,7 @@ export default defineSchema({
     showExplanations: v.optional(v.boolean()),
     displayMode: v.optional(v.string()),             // "score" | "pass_fail"
     passingThreshold: v.optional(v.number()),        // 0-100
+    disableAnimations: v.optional(v.boolean()),
     isBanned: v.optional(v.boolean()),
     isElevated: v.optional(v.boolean()),
     isAiGenerated: v.optional(v.boolean()),
@@ -138,5 +140,6 @@ export default defineSchema({
     showExplanations: v.optional(v.boolean()),
     displayMode: v.optional(v.string()),             // "score" | "pass_fail"
     passingThreshold: v.optional(v.number()),        // 0-100, default 50
+    disableAnimations: v.optional(v.boolean()),
   }),
 });

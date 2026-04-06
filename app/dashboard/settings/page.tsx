@@ -22,6 +22,7 @@ export default function SettingsPage() {
     showExplanations: true,
     displayMode: "score" as "score" | "pass_fail",
     passingThreshold: 50,
+    disableAnimations: false,
   });
 
   const [isSaving, setIsSaving] = useState(false);
@@ -46,6 +47,7 @@ export default function SettingsPage() {
         showExplanations: dbSettings.showExplanations ?? fallback.showExplanations ?? true,
         displayMode: (dbSettings.displayMode as "score" | "pass_fail") ?? fallback.displayMode ?? "score",
         passingThreshold: dbSettings.passingThreshold ?? fallback.passingThreshold ?? 50,
+        disableAnimations: dbSettings.disableAnimations ?? fallback.disableAnimations ?? false,
       });
     }
   }, [settings, globalConfig]);
@@ -238,6 +240,18 @@ export default function SettingsPage() {
               </div>
               <div className={`w-12 h-6 rounded-full flex items-center px-1 transition-colors shrink-0 ${form.randomizeOptions ? 'bg-chaos' : 'bg-muted'}`}>
                 <div className={`w-4 h-4 rounded-full bg-background transition-transform ${form.randomizeOptions ? 'translate-x-6' : 'translate-x-0'}`} />
+              </div>
+            </div>
+
+            <div className="chaos-card bg-card p-4 sm:p-6 flex items-center justify-between gap-4 cursor-pointer hover:bg-muted/50 transition-colors" onClick={() => setForm(f => ({ ...f, disableAnimations: !f.disableAnimations }))}>
+              <div>
+                <h3 className="chaos-heading text-sm mb-1">Disable Animations</h3>
+                <p className="text-xs text-muted-foreground">
+                  Remove complex particle effects and transitions. Just simple CORRECT / INCORRECT.
+                </p>
+              </div>
+              <div className={`w-12 h-6 rounded-full flex items-center px-1 transition-colors shrink-0 ${form.disableAnimations ? 'bg-chaos' : 'bg-muted'}`}>
+                <div className={`w-4 h-4 rounded-full bg-background transition-transform ${form.disableAnimations ? 'translate-x-6' : 'translate-x-0'}`} />
               </div>
             </div>
           </div>
