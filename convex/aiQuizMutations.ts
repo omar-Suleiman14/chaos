@@ -145,6 +145,7 @@ export const saveGeneratedQuiz = internalMutation({
       coverColor: "#6366f1",
       randomizeQuestions: true,
       randomizeOptions: true,
+      isElevated: user.isElevated ?? false,
       isAiGenerated: true,
       createdAt: Date.now(),
       updatedAt: Date.now(),
