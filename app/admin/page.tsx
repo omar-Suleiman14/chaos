@@ -7,7 +7,6 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { haptics } from "@/lib/haptics";
-import AdminSettings from "@/components/AdminSettings";
 import {
   ShieldAlert,
   Users,
@@ -19,7 +18,6 @@ import {
   Trash2,
   Home,
   Zap,
-  Settings,
   Eye,
   X as XIcon,
   ChevronRight,
@@ -35,7 +33,6 @@ export default function AdminDashboard() {
   const stats = useQuery(api.quizFunctions.getAdminStats, isAdmin ? undefined : "skip");
   const usersList = useQuery(api.quizFunctions.getAdminUsers, isAdmin ? undefined : "skip");
   const quizzesList = useQuery(api.quizFunctions.getAdminQuizzes, isAdmin ? undefined : "skip");
-  const globalConfig = useQuery(api.quizFunctions.getGlobalConfig, isAdmin ? undefined : "skip");
 
   const toggleUserBan = useMutation(api.quizFunctions.adminToggleUserBan);
   const toggleQuizBan = useMutation(api.quizFunctions.adminToggleQuizBan);
@@ -44,7 +41,7 @@ export default function AdminDashboard() {
   const deleteQuiz = useMutation(api.quizFunctions.adminDeleteQuiz);
 
   const [search, setSearch] = useState("");
-  const [tab, setTab] = useState<"users" | "quizzes" | "settings">("users");
+  const [tab, setTab] = useState<"users" | "quizzes">("users");
   const [mounted, setMounted] = useState(false);
   const [previewQuizId, setPreviewQuizId] = useState<string | null>(null);
 
@@ -175,34 +172,23 @@ export default function AdminDashboard() {
           >
             <FileText className="inline-block mr-1.5" size={16} /> QUIZZES
           </button>
-          <button
-            onClick={() => setTab("settings")}
-            className={`pb-3 chaos-heading text-sm px-2 border-b-2 ${tab === "settings" ? "border-primary text-primary" : "border-transparent text-muted-foreground hover:text-foreground"}`}
-          >
-            <Settings className="inline-block mr-1.5" size={16} /> SETTINGS
-          </button>
         </div>
 
-        {/* SEARCH (Only for users and quizzes) */}
-        {tab !== "settings" && (
-          <div className="relative max-w-md">
-            <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
-            <input
-              type="text"
-              value={search}
-              onChange={e => setSearch(e.target.value)}
-              className="w-full bg-background border-2 border-foreground p-3 pl-10 focus:outline-none focus:border-destructive text-sm"
-              placeholder={tab === "users" ? "Search by username or name..." : "Search by quiz title or creator..."}
-            />
-          </div>
-        )}
+        {/* SEARCH */}
+        <div className="relative max-w-md">
+          <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
+          <input
+            type="text"
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            className="w-full bg-background border-2 border-foreground p-3 pl-10 focus:outline-none focus:border-destructive text-sm"
+            placeholder={tab === "users" ? "Search by username or name..." : "Search by quiz title or creator..."}
+          />
+        </div>
 
         {/* CONTENT */}
-        {tab === "settings" ? (
-          <AdminSettings globalConfig={globalConfig} />
-        ) : (
-          <div className="chaos-card bg-card p-0 overflow-x-auto">
-            <table className="w-full text-left border-collapse">
+        <div className="chaos-card bg-card p-0 overflow-x-auto">
+          <table className="w-full text-left border-collapse">
             <thead>
               <tr className="border-b-[3px] border-foreground">
                 {tab === "users" ? (
@@ -378,7 +364,6 @@ export default function AdminDashboard() {
             </tbody>
           </table>
         </div>
-        )}
       </main>
 
       {/* Draft Quiz Preview Modal */}

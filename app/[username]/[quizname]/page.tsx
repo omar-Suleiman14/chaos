@@ -33,6 +33,10 @@ export default function QuizPlayerPage() {
   const [playerName, setPlayerName] = useState("");
   const [startError, setStartError] = useState("");
   const [sessionId, setSessionId] = useState<Id<"quizSessions"> | null>(null);
+  const percentile = useQuery(
+    api.quizFunctions.getPlayerPercentile,
+    sessionId ? { sessionId } : "skip"
+  );
 
   const [currentQ, setCurrentQ] = useState(0);
   const [finalResults, setFinalResults] = useState<any>(null);
@@ -278,7 +282,7 @@ export default function QuizPlayerPage() {
 
           return (
             <div key={q._id} className={`tiktok-slide flex flex-col px-4 py-12 sm:px-8 sm:py-16 ${slideBg} ${slideAnim}`}>
-              <div className="flex-1 flex flex-col pt-6 sm:pt-8 pb-4 max-w-2xl mx-auto w-full overflow-y-auto overscroll-contain custom-scrollbar pr-1 sm:pr-4">
+              <div className="flex-1 flex flex-col pt-6 sm:pt-8 pb-4 max-w-2xl mx-auto w-full pr-1 sm:pr-4">
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6">
                   <span className="chaos-heading text-xs text-primary">
@@ -508,9 +512,14 @@ export default function QuizPlayerPage() {
                   <>
                     <p className="chaos-heading text-sm text-muted-foreground mb-2">YOUR SCORE</p>
                     <p className="chaos-display text-7xl text-primary mb-2">{pct}%</p>
-                    <p className="text-muted-foreground mb-8 chaos-heading text-sm">
+                    <p className="text-muted-foreground mb-4 chaos-heading text-sm">
                       {finalResults.score} OF {finalResults.totalPoints} MARKS
                     </p>
+                    {typeof percentile === "number" && (
+                      <p className="text-sm text-muted-foreground mb-6 italic border border-foreground/10 rounded px-3 py-2 bg-muted/30">
+                        You did better than <span className="font-bold text-foreground not-italic">{percentile}%</span> of people who took this quiz
+                      </p>
+                    )}
                   </>
                 )}
                 <div className="flex flex-col sm:flex-row gap-4">

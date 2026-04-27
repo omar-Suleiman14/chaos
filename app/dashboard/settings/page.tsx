@@ -14,7 +14,7 @@ export default function SettingsPage() {
   const [form, setForm] = useState({
     defaultMcqTimer: 60,
     defaultWrittenTimer: 300,
-    defaultPointsPerQuestion: 10,
+    defaultPointsPerQuestion: 1,
     halfMarkThreshold: 50,
     randomizeQuestions: false,
     randomizeOptions: true,
@@ -39,7 +39,7 @@ export default function SettingsPage() {
       setForm({
         defaultMcqTimer: dbSettings.defaultMcqTimer ?? fallback.defaultMcqTimer ?? 60,
         defaultWrittenTimer: dbSettings.defaultWrittenTimer ?? fallback.defaultWrittenTimer ?? 300,
-        defaultPointsPerQuestion: dbSettings.defaultPointsPerQuestion ?? fallback.defaultPointsPerQuestion ?? 10,
+        defaultPointsPerQuestion: dbSettings.defaultPointsPerQuestion ?? fallback.defaultPointsPerQuestion ?? 1,
         halfMarkThreshold: dbSettings.halfMarkThreshold ?? fallback.halfMarkThreshold ?? 50,
         randomizeQuestions: dbSettings.randomizeQuestions ?? fallback.randomizeQuestions ?? false,
         randomizeOptions: dbSettings.randomizeOptions ?? fallback.randomizeOptions ?? true,
@@ -123,69 +123,8 @@ export default function SettingsPage() {
                 For multiple choice and true/false.
               </p>
             </div>
-
-            <div className="chaos-card bg-card p-6">
-              <label className="block mb-2 chaos-heading text-sm">
-                Default Written Timer (seconds)
-              </label>
-              <input
-                type="number"
-                name="defaultWrittenTimer"
-                value={form.defaultWrittenTimer}
-                onChange={handleChange}
-                min={30}
-                max={3600}
-                className="w-full bg-background border-2 border-foreground p-3 focus:outline-none focus:border-chaos transition-colors text-lg font-mono tabular-nums"
-              />
-              <p className="mt-2 text-xs text-muted-foreground">
-                Longer timer for paragraph answers.
-              </p>
-            </div>
-          </div>
-        </section>
-
-        {/* Scoring Settings */}
-        <section>
-          <div className="flex items-center gap-2 mb-6">
-            <h2 className="chaos-heading text-xl">Scoring Defaults</h2>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="chaos-card bg-card p-6">
-              <label className="block mb-2 chaos-heading text-sm">
-                Default Marks Per Question
-              </label>
-              <input
-                type="number"
-                name="defaultPointsPerQuestion"
-                value={form.defaultPointsPerQuestion}
-                onChange={handleChange}
-                min={0}
-                max={100}
-                className="w-full bg-background border-2 border-foreground p-3 focus:outline-none focus:border-chaos transition-colors text-lg font-mono tabular-nums"
-              />
-            </div>
-
-            <div className="chaos-card bg-card p-6">
-              <label className="block mb-2 chaos-heading text-sm flex items-center justify-between">
-                <span>Written: Half-Mark Threshold (%)</span>
-                <span className="text-chaos tabular-nums">{form.halfMarkThreshold}%</span>
-              </label>
-              <input
-                type="range"
-                name="halfMarkThreshold"
-                value={form.halfMarkThreshold}
-                onChange={handleChange}
-                min={10}
-                max={90}
-                step={5}
-                className="w-full h-2 bg-muted appearance-none cursor-pointer mt-4"
-              />
-              <p className="mt-4 text-xs text-muted-foreground">
-                If a student includes {form.halfMarkThreshold}% of required keywords, they get 50% partial credit.
-              </p>
-            </div>
-          </div>
         </section>
 
         {/* Player Experience Settings */}
@@ -256,63 +195,6 @@ export default function SettingsPage() {
             </div>
           </div>
         </section>
-
-        {/* Display Mode Settings */}
-        <section>
-          <div className="flex items-center gap-2 mb-6">
-            <h2 className="chaos-heading text-xl">Result Display Mode</h2>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
-            <div className="chaos-card bg-card p-6 space-y-3">
-              <label className="chaos-heading text-xs text-muted-foreground block">DEFAULT DISPLAY MODE</label>
-              <div className="flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setForm(f => ({ ...f, displayMode: "score" }))}
-                  className={`flex-1 py-2 chaos-heading text-xs border-2 transition-colors ${
-                    form.displayMode === "score"
-                      ? "bg-foreground text-background border-foreground"
-                      : "bg-transparent border-foreground/30 text-muted-foreground hover:border-foreground"
-                  }`}
-                >
-                  Show Score
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setForm(f => ({ ...f, displayMode: "pass_fail" }))}
-                  className={`flex-1 py-2 chaos-heading text-xs border-2 transition-colors ${
-                    form.displayMode === "pass_fail"
-                      ? "bg-foreground text-background border-foreground"
-                      : "bg-transparent border-foreground/30 text-muted-foreground hover:border-foreground"
-                  }`}
-                >
-                  Pass / Fail
-                </button>
-              </div>
-            </div>
-
-            <div className="chaos-card bg-card p-6 space-y-2">
-              <div className="flex justify-between items-center">
-                <label className="chaos-heading text-xs text-muted-foreground">PASSING THRESHOLD</label>
-                <span className="chaos-heading text-sm font-bold">{form.passingThreshold}%</span>
-              </div>
-              <input
-                type="range" min={0} max={100} step={5}
-                value={form.passingThreshold}
-                onChange={e => setForm(f => ({ ...f, passingThreshold: parseInt(e.target.value) }))}
-                className="w-full accent-foreground"
-              />
-              <div className="flex justify-between chaos-heading text-[9px] text-muted-foreground">
-                <span>0%</span><span>25%</span><span>50%</span><span>75%</span><span>100%</span>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2">
-                Players scoring at or above this threshold will see <strong>PASSED</strong>.
-              </p>
-            </div>
-          </div>
-        </section>
-
         {/* Action Buttons */}
         <div className="sticky bottom-4 z-10 pt-4">
           <button

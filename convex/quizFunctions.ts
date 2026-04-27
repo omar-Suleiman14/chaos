@@ -72,6 +72,7 @@ export const getOrCreateUser = mutation({
       email: identity.email || "",
       username,
       imageUrl: identity.pictureUrl,
+      isElevated: true,
       createdAt: Date.now(),
     });
   },
@@ -155,8 +156,8 @@ export const getTeacherSettings = query({
     // Return defaults if no settings exist
     return {
       defaultMcqTimer: settings?.defaultMcqTimer ?? 60,
-      defaultWrittenTimer: settings?.defaultWrittenTimer ?? 300,
-      defaultPointsPerQuestion: settings?.defaultPointsPerQuestion ?? 10,
+      defaultWrittenTimer: settings?.defaultWrittenTimer ?? 180,
+      defaultPointsPerQuestion: settings?.defaultPointsPerQuestion ?? 1,
       halfMarkThreshold: settings?.halfMarkThreshold ?? 50,
       randomizeQuestions: settings?.randomizeQuestions ?? false,
       randomizeOptions: settings?.randomizeOptions ?? false,
@@ -266,8 +267,8 @@ export const createQuiz = mutation({
       slug,
       creatorId: identity.subject,
       creatorUsername: username,
-      isPublished: false,
-      timePerQuestion: args.timePerQuestion || globalConfig.defaultMcqTimer || 30,
+      isPublished: true,
+      timePerQuestion: args.timePerQuestion || globalConfig.defaultMcqTimer || 60,
       coverColor: args.coverColor || "#22c55e",
       randomizeQuestions: teacherSettings?.randomizeQuestions ?? globalConfig.randomizeQuestions ?? false,
       randomizeOptions: teacherSettings?.randomizeOptions ?? globalConfig.randomizeOptions ?? false,
@@ -508,6 +509,13 @@ export const addQuestion = mutation({
       throw new Error("Quiz not found or unauthorized");
     }
 
+    // Enforce minimum 1 point
+    if (args.points < 1) throw new Error("Questions must be worth at least 1 mark.");
+    // Enforce MCQ/true_false must have a correct answer
+    if ((args.type === "mcq" || args.type === "true_false") && !args.correctAnswer) {
+      throw new Error("MCQ and True/False questions must have a correct answer selected.");
+    }
+
     return await ctx.db.insert("questions", {
       quizId: args.quizId,
       type: args.type,
@@ -563,6 +571,11 @@ export const updateQuestion = mutation({
     const cleanUpdates: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(updates)) {
       if (value !== undefined) cleanUpdates[key] = value;
+    }
+
+    // Enforce minimum 1 point
+    if (cleanUpdates.points !== undefined && (cleanUpdates.points as number) < 1) {
+      throw new Error("Questions must be worth at least 1 mark.");
     }
 
     await ctx.db.patch(args.questionId, cleanUpdates);
@@ -697,31 +710,6 @@ export const startQuizSession = mutation({
 
     const quiz = await ctx.db.get(args.quizId);
     if (!quiz || !quiz.isPublished) throw new Error("Quiz not available");
-
-    // Enforce 100-play cap unless the quiz itself or the creator is elevated
-    const isQuizElevated = quiz.isElevated === true;
-    let isCreatorElevated = false;
-    if (!isQuizElevated) {
-      const creator = await ctx.db
-        .query("users")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
-        .first();
-      isCreatorElevated = creator?.isElevated === true;
-    }
-
-    if (!isQuizElevated && !isCreatorElevated) {
-      // Only fetch up to 101 sessions to check the cap — no need to load all
-      const sessions = await ctx.db
-        .query("quizSessions")
-        .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-        .take(500);
-      const completedCount = sessions.filter((s) => s.status === "completed").length;
-      if (completedCount >= 100) {
-        const globalConfig = await ctx.db.query("globalConfig").first();
-        const errorMessage = globalConfig?.playerLimitErrorText || "This quiz has reached its maximum allocated session capacity. Please contact the quiz creator to allocate additional capacity.";
-        throw new Error(errorMessage);
-      }
-    }
 
     return await ctx.db.insert("quizSessions", {
       quizId: args.quizId,
@@ -888,27 +876,6 @@ export const submitQuizSession = mutation({
     const quiz = await ctx.db.get(args.quizId);
     if (!quiz) throw new Error("Quiz not found");
     if (!quiz.isPublished) throw new Error("Quiz not available");
-
-    // Enforce play cap (same logic as startQuizSession)
-    const isQuizElevated = quiz.isElevated === true;
-    let isCreatorElevated = false;
-    if (!isQuizElevated) {
-      const creator = await ctx.db
-        .query("users")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
-        .first();
-      isCreatorElevated = creator?.isElevated === true;
-    }
-    if (!isQuizElevated && !isCreatorElevated) {
-      const sessions = await ctx.db
-        .query("quizSessions")
-        .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-        .take(500);
-      if (sessions.filter((s) => s.status === "completed").length >= 100) {
-        const globalConfig = await ctx.db.query("globalConfig").first();
-        throw new Error(globalConfig?.playerLimitErrorText || "This quiz has reached its maximum allocated session capacity.");
-      }
-    }
 
     let totalScore = 0;
     let totalPoints = 0;
@@ -1367,5 +1334,100 @@ export const updateGlobalConfig = mutation({
     } else {
       await ctx.db.insert("globalConfig", args);
     }
+  },
+});
+
+// ============================================================
+// ANALYTICS — PERCENTILE & ENHANCED STATS
+// ============================================================
+
+export const getPlayerPercentile = query({
+  args: { sessionId: v.id("quizSessions") },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get(args.sessionId);
+    if (!session || session.status !== "completed") return null;
+
+    const allSessions = await ctx.db
+      .query("quizSessions")
+      .withIndex("by_quiz", (q) => q.eq("quizId", session.quizId))
+      .collect();
+
+    const completed = allSessions.filter((s) => s.status === "completed");
+    if (completed.length <= 1) return null;
+
+    const myPct = session.totalPoints > 0 ? session.score / session.totalPoints : 0;
+    const beatCount = completed.filter((s) => {
+      const theirPct = s.totalPoints > 0 ? s.score / s.totalPoints : 0;
+      return myPct > theirPct;
+    }).length;
+
+    // Exclude self from the "others" count
+    const others = completed.length - 1;
+    if (others === 0) return null;
+    return Math.round((beatCount / others) * 100);
+  },
+});
+
+export const getQuizStatsEnhanced = query({
+  args: { quizId: v.id("quizzes") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return null;
+
+    const quiz = await ctx.db.get(args.quizId);
+    if (!quiz || quiz.creatorId !== identity.subject) return null;
+
+    const [sessions, questions] = await Promise.all([
+      ctx.db.query("quizSessions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
+      ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
+    ]);
+
+    const completed = sessions.filter((s) => s.status === "completed");
+
+    // Top 3
+    const top3 = [...completed]
+      .sort((a, b) => {
+        const aPct = a.totalPoints > 0 ? a.score / a.totalPoints : 0;
+        const bPct = b.totalPoints > 0 ? b.score / b.totalPoints : 0;
+        return bPct - aPct;
+      })
+      .slice(0, 3)
+      .map((s) => ({
+        playerName: s.playerName,
+        score: s.score,
+        totalPoints: s.totalPoints,
+        completedAt: s.completedAt,
+      }));
+
+    // Per-question stats
+    const questionMap = new Map(questions.map((q) => [q._id as string, { questionText: q.questionText, type: q.type, correct: 0, incorrect: 0 }]));
+
+    for (const session of completed) {
+      for (const ans of session.answers) {
+        const qId = ans.questionId as string;
+        const stat = questionMap.get(qId);
+        if (stat) {
+          if (ans.isCorrect) stat.correct++;
+          else stat.incorrect++;
+        }
+      }
+    }
+
+    const questionStats = questions
+      .sort((a, b) => a.order - b.order)
+      .map((q) => {
+        const stat = questionMap.get(q._id as string) || { correct: 0, incorrect: 0 };
+        const total = stat.correct + stat.incorrect;
+        return {
+          questionId: q._id,
+          questionText: q.questionText,
+          type: q.type,
+          correct: stat.correct,
+          incorrect: stat.incorrect,
+          correctRate: total > 0 ? Math.round((stat.correct / total) * 100) : null,
+        };
+      });
+
+    return { top3, questionStats };
   },
 });

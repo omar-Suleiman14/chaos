@@ -3,6 +3,7 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
+import { Id } from "@/convex/_generated/dataModel";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -12,6 +13,7 @@ import {
   FileText, Plus, Trash2, Copy, ExternalLink, Edit3, MoreVertical,
   BarChart3, Globe, Lock, FolderPlus, ChevronDown, ChevronRight,
   GripVertical, Folder, FolderOpen, Check, X, Pencil, Brain, Printer,
+  Loader2, FlaskConical, AlertTriangle,
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { DropResult } from "@hello-pangea/dnd";
@@ -48,7 +50,37 @@ export default function DashboardQuizzes() {
   const [showNewFolder, setShowNewFolder] = useState(false);
   const [newFolderName, setNewFolderName] = useState("");
 
+  // AI Job tracking
+  const [activeJobId, setActiveJobId] = useState<Id<"aiJobs"> | null>(null);
+  const activeJob = useQuery(
+    api.aiQuizMutations.getAIJob,
+    activeJobId ? { jobId: activeJobId } : "skip"
+  );
+
   useEffect(() => { setMounted(true); }, []);
+
+  // Restore activeJobId from localStorage on mount
+  useEffect(() => {
+    const saved = localStorage.getItem("chaos_ai_job_id");
+    if (saved) setActiveJobId(saved as Id<"aiJobs">);
+  }, []);
+
+  // Clear job from localStorage when done or error
+  useEffect(() => {
+    if (activeJob?.status === "done" || activeJob?.status === "error") {
+      // keep in state to show banner, but user can dismiss
+    }
+  }, [activeJob?.status]);
+
+  const handleJobStarted = (jobId: Id<"aiJobs">) => {
+    setActiveJobId(jobId);
+    localStorage.setItem("chaos_ai_job_id", jobId);
+  };
+
+  const dismissJobBanner = () => {
+    setActiveJobId(null);
+    localStorage.removeItem("chaos_ai_job_id");
+  };
 
   useEffect(() => {
     if (quizzes) setLocalQuizzes(quizzes);
@@ -122,6 +154,22 @@ export default function DashboardQuizzes() {
     if (confirm("Delete this quiz, all its questions, and all player scores? This cannot be undone.")) {
       haptics.heavy();
       await deleteQuiz({ quizId });
+    }
+  };
+
+  const handleDeleteFolder = async (folderName: string) => {
+    const quizzesInFolder = localQuizzes.filter(q => (q.groupName || "Ungrouped") === folderName);
+    if (quizzesInFolder.length === 0) {
+      // Just remove the custom folder entry
+      setCustomFolders(prev => prev.filter(f => f !== folderName));
+      return;
+    }
+    if (confirm(`Delete the folder "${folderName}" and all ${quizzesInFolder.length} quiz${quizzesInFolder.length > 1 ? "es" : ""} inside it? This cannot be undone.`)) {
+      haptics.heavy();
+      for (const quiz of quizzesInFolder) {
+        await deleteQuiz({ quizId: quiz._id });
+      }
+      setCustomFolders(prev => prev.filter(f => f !== folderName));
     }
   };
 
@@ -218,7 +266,59 @@ export default function DashboardQuizzes() {
   return (
     <div className="space-y-8 font-sans">
       {/* AI Quiz Modal */}
-      {showAIModal && <AIQuizModal onClose={() => setShowAIModal(false)} />}
+      {showAIModal && <AIQuizModal onClose={() => setShowAIModal(false)} onJobStarted={handleJobStarted} />}
+
+      {/* AI Progress Banner */}
+      {activeJobId && activeJob && (
+        <div className={`p-4 border-[3px] flex items-center gap-4 animate-in slide-in-from-top-2 duration-300 ${
+          activeJob.status === "done"
+            ? "border-primary bg-primary/5"
+            : activeJob.status === "error"
+            ? "border-destructive bg-destructive/5"
+            : "border-yellow-500/60 bg-yellow-500/5"
+        }`}>
+          <div className="shrink-0">
+            {activeJob.status === "done"
+              ? <Check size={20} className="text-primary" />
+              : activeJob.status === "error"
+              ? <AlertTriangle size={20} className="text-destructive" />
+              : <Loader2 size={20} className="text-yellow-600 animate-spin" />
+            }
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-0.5">
+              <FlaskConical size={12} className="text-yellow-600" />
+              <span className="chaos-heading text-xs text-muted-foreground">AI GENERATION</span>
+            </div>
+            {activeJob.status === "done" ? (
+              <p className="text-sm font-semibold">
+                Quiz ready!{" "}
+                {activeJob.quizId && (
+                  <Link href={`/dashboard/editor?id=${activeJob.quizId}`} className="text-primary underline underline-offset-2">
+                    Open in editor →
+                  </Link>
+                )}
+              </p>
+            ) : activeJob.status === "error" ? (
+              <p className="text-sm font-semibold text-destructive">
+                Generation failed: {activeJob.error || "Unknown error"}
+              </p>
+            ) : (
+              <>
+                <p className="text-sm font-medium">{activeJob.step || "Processing..."}</p>
+                <div className="mt-1 h-1 w-full bg-muted overflow-hidden">
+                  <div className="h-full bg-yellow-500 animate-pulse" style={{ width: "60%" }} />
+                </div>
+              </>
+            )}
+          </div>
+          {(activeJob.status === "done" || activeJob.status === "error") && (
+            <button onClick={dismissJobBanner} className="shrink-0 p-1 text-muted-foreground hover:text-foreground">
+              <X size={16} />
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Username Modal */}
       {showUsernameModal && (
@@ -360,13 +460,22 @@ export default function DashboardQuizzes() {
                             {folderQuizzes.length}
                           </span>
                           {folderName !== "Ungrouped" && (
-                            <button
-                              onClick={() => { setEditingFolder(folderName); setEditingFolderName(folderName); }}
-                              className="p-1 text-muted-foreground hover:text-foreground transition-colors"
-                              title="Rename folder"
-                            >
-                              <Pencil size={13} />
-                            </button>
+                            <>
+                              <button
+                                onClick={() => { setEditingFolder(folderName); setEditingFolderName(folderName); }}
+                                className="p-1 text-muted-foreground transition-colors"
+                                title="Rename folder"
+                              >
+                                <Pencil size={13} />
+                              </button>
+                              <button
+                                onClick={() => handleDeleteFolder(folderName)}
+                                className="p-1 text-destructive/60 transition-colors"
+                                title="Delete folder and all quizzes"
+                              >
+                                <Trash2 size={13} />
+                              </button>
+                            </>
                           )}
                           <button
                             onClick={() => setFolderOpen(prev => ({ ...prev, [folderName]: !isOpen }))}
@@ -403,7 +512,7 @@ export default function DashboardQuizzes() {
                                   className={`flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 px-3 py-3 transition-all group ${
                                     snapshot.isDragging
                                       ? "chaos-card bg-card z-50 opacity-95"
-                                      : "hover:bg-muted/30"
+                                      : ""
                                   }`}
                                 >
                                   <div className="flex items-center gap-3 w-full sm:w-auto flex-1 min-w-0">
@@ -445,23 +554,23 @@ export default function DashboardQuizzes() {
                                   <div className="flex items-center w-full sm:w-auto gap-1.5 mt-1 sm:mt-0 sm:ml-auto sm:shrink-0">
                                     <Link
                                       href={`/dashboard/editor?id=${quiz._id}`}
-                                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-2 sm:py-1.5 border border-foreground/15 bg-muted/30 text-muted-foreground text-xs font-semibold hover:bg-muted hover:text-foreground hover:border-foreground/30 transition-all"
+                                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-2 sm:py-1.5 border border-foreground/15 bg-muted/30 text-muted-foreground text-xs font-semibold transition-all"
                                       title="Edit"
                                     >
                                       <Edit3 size={13} />
                                       Edit
                                     </Link>
                                     <Link
-                                      href={`/dashboard/stats?id=${quiz._id}`}
-                                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-2 sm:py-1.5 border border-foreground/15 bg-muted/30 text-muted-foreground text-xs font-semibold hover:bg-muted hover:text-foreground hover:border-foreground/30 transition-all"
-                                      title="Stats"
+                                      href={`/dashboard/results?id=${quiz._id}`}
+                                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-2 sm:py-1.5 border border-foreground/15 bg-muted/30 text-muted-foreground text-xs font-semibold transition-all"
+                                      title="results"
                                     >
                                       <BarChart3 size={13} />
                                       Stats
                                     </Link>
                                     <button
                                       onClick={() => handleCopyLink(quiz.creatorUsername, quiz.slug)}
-                                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-2 sm:py-1.5 border border-foreground/15 bg-muted/30 text-muted-foreground text-xs font-semibold hover:bg-muted hover:text-foreground hover:border-foreground/30 transition-all"
+                                      className="flex-1 sm:flex-initial inline-flex items-center justify-center gap-1.5 px-2.5 py-2 sm:py-1.5 border border-foreground/15 bg-muted/30 text-muted-foreground text-xs font-semibold transition-all"
                                       title="Copy Link"
                                     >
                                       {copiedId === quiz.slug
@@ -474,7 +583,7 @@ export default function DashboardQuizzes() {
                                     <div className="relative">
                                       <button
                                         onClick={e => { e.stopPropagation(); setOpenMenuId(openMenuId === quiz._id ? null : quiz._id); }}
-                                        className="inline-flex items-center justify-center px-2 py-2 sm:py-1.5 border border-foreground/15 bg-muted/30 text-muted-foreground hover:bg-muted hover:text-foreground hover:border-foreground/30 transition-all"
+                                        className="inline-flex items-center justify-center px-2 py-2 sm:py-1.5 border border-foreground/15 bg-muted/30 text-muted-foreground transition-all"
                                       >
                                         <MoreVertical size={13} />
                                       </button>
@@ -485,20 +594,20 @@ export default function DashboardQuizzes() {
                                             <a
                                               href={`/${quiz.creatorUsername}/${quiz.slug}`}
                                               target="_blank" rel="noopener noreferrer"
-                                              className="w-full text-left px-3 py-2 text-sm flex items-center gap-3 hover:bg-muted transition-colors"
+                                              className="w-full text-left px-3 py-2 text-sm flex items-center gap-3 transition-colors"
                                             >
                                               <ExternalLink size={14} /> Open Live Page
                                             </a>
                                             <a
                                               href={`/print/${quiz._id}`}
                                               target="_blank" rel="noopener noreferrer"
-                                              className="w-full text-left px-3 py-2 text-sm flex items-center gap-3 hover:bg-muted transition-colors border-b-2 border-foreground/10 mb-1 pb-3"
+                                              className="w-full text-left px-3 py-2 text-sm flex items-center gap-3 transition-colors border-b-2 border-foreground/10 mb-1 pb-3"
                                             >
                                               <Printer size={14} /> Print / Save as PDF
                                             </a>
                                             <button
                                               onClick={() => handleTogglePublish(quiz._id, quiz.isPublished)}
-                                              className="w-full text-left px-3 py-2 text-sm flex items-center gap-3 hover:bg-muted transition-colors"
+                                              className="w-full text-left px-3 py-2 text-sm flex items-center gap-3 transition-colors"
                                             >
                                               {quiz.isPublished ? <Lock size={14} /> : <Globe size={14} />}
                                               {quiz.isPublished ? "Unpublish" : "Publish"}
@@ -506,7 +615,7 @@ export default function DashboardQuizzes() {
                                             <div className="h-px bg-foreground/10 my-1" />
                                             <button
                                               onClick={() => handleDelete(quiz._id)}
-                                              className="w-full text-left px-3 py-2 text-sm text-destructive flex items-center gap-3 hover:bg-destructive/10 transition-colors"
+                                              className="w-full text-left px-3 py-2 text-sm text-destructive flex items-center gap-3 transition-colors"
                                             >
                                               <Trash2 size={14} /> Delete Quiz
                                             </button>

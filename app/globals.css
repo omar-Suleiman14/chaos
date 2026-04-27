@@ -333,19 +333,19 @@
   user-select: none; text-decoration: none;
 }
 .kb-btn-primary   { background: var(--primary-container); color: var(--on-primary-container); box-shadow: 6px 6px 0px var(--on-background); }
-.kb-btn-primary:hover   { box-shadow: 8px 8px 0px var(--on-background); transform: translate(-2px,-2px); }
+/* .kb-btn-primary:hover   { box-shadow: 8px 8px 0px var(--on-background); transform: translate(-2px,-2px); } */
 .kb-btn-primary:active  { box-shadow: none; transform: translate(4px,4px); }
 
 .kb-btn-secondary { background: var(--secondary-container); color: var(--on-secondary-container); box-shadow: 6px 6px 0px var(--on-background); }
-.kb-btn-secondary:hover  { box-shadow: 8px 8px 0px var(--on-background); transform: translate(-2px,-2px); }
+/* .kb-btn-secondary:hover  { box-shadow: 8px 8px 0px var(--on-background); transform: translate(-2px,-2px); } */
 .kb-btn-secondary:active { box-shadow: none; transform: translate(4px,4px); }
 
 .kb-btn-ghost     { background: transparent; color: var(--on-background); box-shadow: 6px 6px 0px var(--on-background); }
-.kb-btn-ghost:hover  { background: var(--surface-container-low); box-shadow: 8px 8px 0px var(--on-background); transform: translate(-2px,-2px); }
+/* .kb-btn-ghost:hover  { background: var(--surface-container-low); box-shadow: 8px 8px 0px var(--on-background); transform: translate(-2px,-2px); } */
 .kb-btn-ghost:active { box-shadow: none; transform: translate(4px,4px); }
 
 .kb-btn-danger    { background: var(--error); color: var(--on-error); box-shadow: 6px 6px 0px var(--on-background); }
-.kb-btn-danger:hover  { box-shadow: 8px 8px 0px var(--on-background); transform: translate(-2px,-2px); }
+/* .kb-btn-danger:hover  { box-shadow: 8px 8px 0px var(--on-background); transform: translate(-2px,-2px); } */
 .kb-btn-danger:active { box-shadow: none; transform: translate(4px,4px); }
 
 /* ============================================================
@@ -366,7 +366,7 @@
    ============================================================ */
 .kb-card         { background: var(--surface-container-highest); padding: 1.1rem; box-shadow: 6px 6px 0px var(--on-surface); }
 .kb-card-bordered{ background: var(--surface-container-low); padding: 1.1rem; border: 3px solid var(--on-background); box-shadow: 8px 8px 0px var(--on-background); transition: box-shadow 0.12s ease, transform 0.12s ease; }
-.kb-card-bordered:hover  { box-shadow: 12px 12px 0px var(--on-background); transform: translate(-4px,-4px); }
+/* .kb-card-bordered:hover  { box-shadow: 12px 12px 0px var(--on-background); transform: translate(-4px,-4px); } */
 .kb-card-bordered:active { box-shadow: 2px 2px 0px var(--on-background); transform: translate(4px,4px); }
 .kb-card-hint    { background: var(--surface-container-lowest); padding: 1.1rem; border: 3px dashed var(--on-surface-variant); }
 .kb-card-glass   { background: rgba(240,239,234,0.82); backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px); padding: 1.1rem; border: 3px solid var(--on-background); }
@@ -394,14 +394,14 @@
 .chaos-badge    { display: inline-block; border: 2px solid var(--on-background); padding: 0.25rem 0.75rem; font-family: var(--font-space-mono); font-size: 0.75rem; text-transform: uppercase; font-weight: 700; letter-spacing: 0.05em; background: var(--surface-container-lowest); }
 
 .chaos-card        { border: 3px solid var(--on-surface); box-shadow: 6px 6px 0px var(--on-surface); transition: box-shadow 0.12s ease, transform 0.12s ease; }
-.chaos-card:hover  { box-shadow: 8px 8px 0px var(--on-surface); transform: translate(-2px,-2px); }
+/* .chaos-card:hover  { box-shadow: 8px 8px 0px var(--on-surface); transform: translate(-2px,-2px); } */
 .chaos-card:active { box-shadow: 2px 2px 0px var(--on-surface); transform: translate(2px,2px); }
 
 .chaos-card-alt        { border: 3px solid var(--on-surface); box-shadow: 8px 8px 0px var(--primary); transition: all 0.15s ease; }
-.chaos-card-alt:hover  { box-shadow: 12px 12px 0px var(--primary); transform: translate(-3px,-3px); }
+/* .chaos-card-alt:hover  { box-shadow: 12px 12px 0px var(--primary); transform: translate(-3px,-3px); } */
 
 .chaos-card-accent        { border: 3px solid var(--primary); box-shadow: 6px 6px 0px var(--primary); transition: all 0.15s ease; }
-.chaos-card-accent:hover  { box-shadow: 8px 8px 0px var(--primary); transform: translate(-2px,-2px); }
+/* .chaos-card-accent:hover  { box-shadow: 8px 8px 0px var(--primary); transform: translate(-2px,-2px); } */
 
 .chaos-divider { height: 4px; background: var(--on-surface); border: none; }
 
@@ -410,7 +410,7 @@
    ============================================================ */
 .tiktok-container { height: 100dvh; width: 100%; overflow-y: scroll; overflow-x: hidden; scroll-snap-type: y mandatory; scroll-behavior: smooth; scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .tiktok-container::-webkit-scrollbar { display: none; }
-.tiktok-slide { height: 100dvh; width: 100%; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow: hidden; box-sizing: border-box; }
+.tiktok-slide { height: 100dvh; width: 100%; scroll-snap-align: start; scroll-snap-stop: always; position: relative; overflow-y: auto; overflow-x: hidden; box-sizing: border-box; }
 .scrollbar-hide { scrollbar-width: none; -ms-overflow-style: none; }
 .scrollbar-hide::-webkit-scrollbar { display: none; }
 
@@ -426,7 +426,7 @@
   100% { transform: translate(0); text-shadow: none; }
 }
 .chaos-glitch { display: inline-block; }
-.chaos-glitch:hover { animation: chaos-glitch 0.3s cubic-bezier(.25,.46,.45,.94) both infinite; }
+/* .chaos-glitch:hover { animation: chaos-glitch 0.3s cubic-bezier(.25,.46,.45,.94) both infinite; } */
 
 @keyframes chaos-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 .chaos-pulse { animation: chaos-pulse 2s ease-in-out infinite; }
@@ -467,6 +467,6 @@
    QUIZ OPTION STATES
    ============================================================ */
 .quiz-option { transition: box-shadow 0.12s ease, transform 0.12s ease; cursor: pointer; border: 3px solid var(--on-background); }
-.quiz-option:hover { box-shadow: 4px 4px 0px var(--on-background); transform: translate(-2px,-2px); }
+/* .quiz-option:hover { box-shadow: 4px 4px 0px var(--on-background); transform: translate(-2px,-2px); } */
 .quiz-option.correct  { background: var(--primary-container); color: var(--on-primary-container); border-color: var(--primary); box-shadow: 6px 6px 0px var(--primary); }
 .quiz-option.incorrect{ background: var(--error); color: var(--on-error); border-color: var(--error-dim); box-shadow: 6px 6px 0px var(--error-dim); }

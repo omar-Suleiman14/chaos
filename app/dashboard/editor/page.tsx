@@ -19,7 +19,7 @@ const DragDropContext = dynamic(() => import("@hello-pangea/dnd").then(m => m.Dr
 const Droppable = dynamic(() => import("@hello-pangea/dnd").then(m => m.Droppable as any), { ssr: false }) as any;
 const Draggable = dynamic(() => import("@hello-pangea/dnd").then(m => m.Draggable as any), { ssr: false }) as any;
 
-type QuestionType = "mcq" | "true_false" | "multi_select" | "written";
+type QuestionType = "mcq" | "true_false";
 
 interface QuestionDraft {
   id?: Id<"questions">;
@@ -69,7 +69,6 @@ function EditorContent() {
     randomizeOptions: false,
     showCorrectAnswers: true,
     showExplanations: true,
-    displayMode: "score" as "score" | "pass_fail",
     passingThreshold: 50,
     disableAnimations: false,
   });
@@ -80,6 +79,7 @@ function EditorContent() {
   const [questions, setQuestions] = useState<QuestionDraft[]>([]);
   const [expandedQ, setExpandedQ] = useState<number | null>(0);
   const [saving, setSaving] = useState(false);
+  const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [mounted, setMounted] = useState(false);
   const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
@@ -105,7 +105,6 @@ function EditorContent() {
         randomizeOptions: quiz.randomizeOptions ?? teacherSettings?.randomizeOptions ?? globalConfig?.randomizeOptions ?? true,
         showCorrectAnswers: quiz.showCorrectAnswers ?? teacherSettings?.showCorrectAnswers ?? globalConfig?.showCorrectAnswers ?? true,
         showExplanations: quiz.showExplanations ?? teacherSettings?.showExplanations ?? globalConfig?.showExplanations ?? true,
-        displayMode: (quiz.displayMode as "score" | "pass_fail") ?? teacherSettings?.displayMode ?? globalConfig?.displayMode ?? "score",
         passingThreshold: quiz.passingThreshold ?? teacherSettings?.passingThreshold ?? globalConfig?.passingThreshold ?? 50,
         disableAnimations: quiz.disableAnimations ?? teacherSettings?.disableAnimations ?? globalConfig?.disableAnimations ?? false,
       });
@@ -126,10 +125,12 @@ function EditorContent() {
   useEffect(() => {
     if (existingQuestions && existingQuestions.length > 0) {
       setQuestions(existingQuestions.map((q) => ({
-        id: q._id, type: q.type, questionText: q.questionText,
+        id: q._id,
+        type: (q.type === "multi_select" || q.type === "written") ? "mcq" : q.type as QuestionType,
+        questionText: q.questionText,
         options: q.options || [], correctAnswer: q.correctAnswer || "",
         correctAnswers: q.correctAnswers || [], keywords: q.keywords || [],
-        points: q.points, timeLimit: q.timeLimit || 30,
+        points: Math.max(1, q.points), timeLimit: q.timeLimit || 60,
         hint: q.hint || "", explanation: q.explanation || "",
         order: q.order, isNew: false, isDirty: false,
       })));
@@ -138,6 +139,32 @@ function EditorContent() {
 
   const handleSave = useCallback(async (publishChange?: boolean) => {
     if (!quizId) return;
+    setSaveError(null);
+
+    // Hard block: validate all questions before saving
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      if (q.points < 1) {
+        setSaveError(`Question ${i + 1}: marks must be at least 1.`);
+        return;
+      }
+      if (q.type === "mcq") {
+        const opts = q.options.filter(Boolean);
+        if (opts.length < 2) {
+          setSaveError(`Question ${i + 1}: MCQ needs at least 2 options.`);
+          return;
+        }
+        if (!q.correctAnswer || !opts.includes(q.correctAnswer)) {
+          setSaveError(`Question ${i + 1}: Select a correct answer before saving.`);
+          return;
+        }
+      }
+      if (q.type === "true_false" && !q.correctAnswer) {
+        setSaveError(`Question ${i + 1}: Select True or False as the correct answer.`);
+        return;
+      }
+    }
+
     setSaving(true);
     try {
       const willPublish = publishChange !== undefined ? publishChange : isPublished;
@@ -150,7 +177,6 @@ function EditorContent() {
         randomizeOptions: quizSettings.randomizeOptions,
         showCorrectAnswers: quizSettings.showCorrectAnswers,
         showExplanations: quizSettings.showExplanations,
-        displayMode: quizSettings.displayMode,
         passingThreshold: quizSettings.passingThreshold,
         disableAnimations: quizSettings.disableAnimations,
       });
@@ -161,10 +187,10 @@ function EditorContent() {
         if (!q.isDirty) continue;
         const qData = {
           quizId, type: q.type, questionText: q.questionText,
-          options: (q.type === "mcq" || q.type === "multi_select") ? q.options.filter(Boolean) : undefined,
+          options: q.type === "mcq" ? q.options.filter(Boolean) : undefined,
           correctAnswer: (q.type === "mcq" || q.type === "true_false") ? q.correctAnswer : undefined,
-          correctAnswers: q.type === "multi_select" ? q.correctAnswers : undefined,
-          keywords: q.type === "written" ? q.keywords.filter(Boolean) : undefined,
+          correctAnswers: undefined,
+          keywords: undefined,
           points: q.points, timeLimit: q.timeLimit,
           hint: q.hint || undefined, explanation: q.explanation || undefined, order: q.order,
         };
@@ -179,7 +205,10 @@ function EditorContent() {
       }
       setQuestions(updatedQs);
       setLastSaved(new Date());
-    } catch (err) { console.error("Save error:", err); }
+    } catch (err: any) {
+      setSaveError(err?.message || "Save failed.");
+      console.error("Save error:", err);
+    }
     finally { setSaving(false); }
   }, [quizId, title, slug, groupName, isPublished, quizSettings, questions, updateQuiz, addQuestion, updateQuestion]);
 
@@ -206,13 +235,17 @@ function EditorContent() {
     router.push("/dashboard");
   };
 
-  const addNewQuestion = () => {
+  const addNewQuestion = (type: QuestionType = "mcq") => {
     haptics.light();
+    const defaultTimer = type === "true_false"
+      ? (teacherSettings?.defaultMcqTimer || 60)
+      : (teacherSettings?.defaultMcqTimer || 60);
     const newQ: QuestionDraft = {
-      type: "mcq", questionText: "", options: ["", "", "", ""],
+      type, questionText: "",
+      options: type === "true_false" ? ["True", "False"] : ["", "", "", ""],
       correctAnswer: "", correctAnswers: [], keywords: [],
-      points: teacherSettings?.defaultPointsPerQuestion || 10,
-      timeLimit: teacherSettings?.defaultMcqTimer || 60,
+      points: 1,
+      timeLimit: defaultTimer,
       hint: "", explanation: "", order: questions.length, isNew: true, isDirty: true,
     };
     setQuestions([...questions, newQ]);
@@ -256,7 +289,7 @@ function EditorContent() {
   };
 
   const typeLabels: Record<QuestionType, string> = {
-    mcq: "MCQ", true_false: "True / False", multi_select: "Multi Select", written: "Written",
+    mcq: "MCQ", true_false: "True / False",
   };
 
   if (!mounted || isInitializing) {
@@ -284,6 +317,11 @@ function EditorContent() {
               {isPublished ? "PUBLISHED" : "DRAFT"}
             </span>
           </div>
+          {saveError && (
+            <p className="text-destructive text-xs font-semibold mt-1 flex items-center gap-1">
+              ⚠ {saveError}
+            </p>
+          )}
           <div className="text-xs text-muted-foreground chaos-heading flex items-center gap-2">
             {saving ? <RefreshCw size={12} className="animate-spin text-primary" /> : <Save size={12} />}
             {saving ? "SAVING..." : lastSaved ? `SAVED ${lastSaved.toLocaleTimeString()}` : "NOT SAVED YET"}
@@ -291,93 +329,6 @@ function EditorContent() {
         </div>
 
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          {/* Quiz-level settings 3-dots menu */}
-          <div className="relative" ref={quizSettingsRef}>
-            <button
-              onClick={() => setQuizSettingsOpen(o => !o)}
-              title="Quiz options"
-              className="kb-btn kb-btn-ghost p-2"
-            >
-              <MoreHorizontal size={18} />
-            </button>
-
-            {quizSettingsOpen && (
-              <div className="absolute right-0 top-full mt-2 z-50 bg-card border-[3px] border-foreground shadow-[6px_6px_0px_var(--foreground)] min-w-[260px] p-4 space-y-3">
-                <p className="chaos-heading text-[10px] text-muted-foreground mb-3">THIS QUIZ ONLY</p>
-
-                {([
-                  { key: "randomizeQuestions" as const, label: "Randomize Question Order", icon: <Shuffle size={13} /> },
-                  { key: "randomizeOptions" as const, label: "Randomize MCQ Options", icon: <ListOrdered size={13} /> },
-                  { key: "showCorrectAnswers" as const, label: "Show Correct Answers", icon: <Eye size={13} /> },
-                  { key: "showExplanations" as const, label: "Show Explanations", icon: <Eye size={13} /> },
-                  { key: "disableAnimations" as const, label: "Disable Animations", icon: <EyeOff size={13} /> },
-                ] as const).map(({ key, label, icon }) => (
-                  <button
-                    key={key}
-                    onClick={() => setQuizSettings(s => ({ ...s, [key]: !s[key] }))}
-                    className="w-full flex items-center justify-between gap-3 px-2 py-1.5 hover:bg-muted/50 transition-colors rounded-sm"
-                  >
-                    <span className="flex items-center gap-2 text-xs chaos-heading text-left">
-                      <span className="text-muted-foreground">{icon}</span>
-                      {label}
-                    </span>
-                    <div className={`w-9 h-5 rounded-full flex items-center px-0.5 transition-colors shrink-0 ${
-                      quizSettings[key] ? 'bg-chaos' : 'bg-muted'
-                    }`}>
-                      <div className={`w-4 h-4 rounded-full bg-background transition-transform ${
-                        quizSettings[key] ? 'translate-x-4' : 'translate-x-0'
-                      }`} />
-                    </div>
-                  </button>
-                ))}
-
-                {/* Score display mode */}
-                <div className="border-t border-foreground/10 pt-3 space-y-2">
-                  <p className="chaos-heading text-[10px] text-muted-foreground">RESULT DISPLAY</p>
-                  <div className="flex gap-2">
-                    <button
-                      onClick={() => setQuizSettings(s => ({ ...s, displayMode: "score" }))}
-                      className={`flex-1 py-1.5 chaos-heading text-xs border-2 transition-colors ${
-                        quizSettings.displayMode === "score"
-                          ? "bg-foreground text-background border-foreground"
-                          : "bg-transparent border-foreground/30 text-muted-foreground hover:border-foreground"
-                      }`}
-                    >
-                      Show Score
-                    </button>
-                    <button
-                      onClick={() => setQuizSettings(s => ({ ...s, displayMode: "pass_fail" }))}
-                      className={`flex-1 py-1.5 chaos-heading text-xs border-2 transition-colors ${
-                        quizSettings.displayMode === "pass_fail"
-                          ? "bg-foreground text-background border-foreground"
-                          : "bg-transparent border-foreground/30 text-muted-foreground hover:border-foreground"
-                      }`}
-                    >
-                      Pass / Fail
-                    </button>
-                  </div>
-
-                  <div>
-                    <div className="flex justify-between items-center mb-1">
-                      <span className="chaos-heading text-[10px] text-muted-foreground">PASSING THRESHOLD</span>
-                      <span className="chaos-heading text-xs font-bold">{quizSettings.passingThreshold}%</span>
-                    </div>
-                    <input
-                      type="range"
-                      min={0} max={100} step={5}
-                      value={quizSettings.passingThreshold}
-                      onChange={e => setQuizSettings(s => ({ ...s, passingThreshold: parseInt(e.target.value) }))}
-                      className="w-full accent-foreground"
-                    />
-                    <div className="flex justify-between chaos-heading text-[9px] text-muted-foreground mt-0.5">
-                      <span>0%</span><span>50%</span><span>100%</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
-
           <button
             onClick={() => {
               const willPublish = !isPublished;
@@ -440,6 +391,38 @@ function EditorContent() {
             <datalist id="quiz-groups">
               {existingGroups.map(g => <option key={g} value={g} />)}
             </datalist>
+          </div>
+        </div>
+
+        {/* Inline quiz option toggles */}
+        <div className="border-t border-foreground/10 pt-4">
+          <p className="chaos-heading text-[10px] text-muted-foreground mb-3">QUIZ OPTIONS</p>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            {([
+              { key: "randomizeQuestions" as const, label: "Randomize Question Order", icon: <Shuffle size={13} /> },
+              { key: "randomizeOptions" as const, label: "Randomize MCQ Options", icon: <ListOrdered size={13} /> },
+              { key: "showCorrectAnswers" as const, label: "Show Correct Answers", icon: <Eye size={13} /> },
+              { key: "showExplanations" as const, label: "Show Explanations", icon: <Eye size={13} /> },
+              { key: "disableAnimations" as const, label: "Disable Animations", icon: <EyeOff size={13} /> },
+            ] as const).map(({ key, label, icon }) => (
+              <button
+                key={key}
+                onClick={() => setQuizSettings(s => ({ ...s, [key]: !s[key] }))}
+                className="flex items-center justify-between gap-3 px-3 py-2 border-2 border-foreground/10 hover:border-foreground/30 transition-colors"
+              >
+                <span className="flex items-center gap-2 text-xs chaos-heading text-left">
+                  <span className="text-muted-foreground">{icon}</span>
+                  {label}
+                </span>
+                <div className={`w-9 h-5 rounded-full flex items-center px-0.5 transition-colors shrink-0 ${
+                  quizSettings[key] ? 'bg-chaos' : 'bg-muted'
+                }`}>
+                  <div className={`w-4 h-4 rounded-full bg-background transition-transform ${
+                    quizSettings[key] ? 'translate-x-4' : 'translate-x-0'
+                  }`} />
+                </div>
+              </button>
+            ))}
           </div>
         </div>
       </div>
@@ -517,14 +500,14 @@ function EditorContent() {
                               <div>
                                 <label className="block chaos-heading text-xs text-muted-foreground mb-2">QUESTION TYPE</label>
                                 <div className="flex flex-wrap gap-2">
-                                  {(["mcq", "true_false", "multi_select", "written"] as QuestionType[]).map((type) => (
+                                  {(["mcq", "true_false"] as QuestionType[]).map((type) => (
                                     <button
                                       key={type}
                                       onClick={() => {
                                         haptics.select();
                                         const upd: Partial<QuestionDraft> = { type };
-                                        if (type === "true_false") { upd.options = ["True", "False"]; upd.correctAnswer = ""; }
-                                        else if (type === "mcq" || type === "multi_select") upd.options = q.options.length >= 2 ? q.options : ["", "", "", ""];
+                                        if (type === "true_false") { upd.options = ["True", "False"]; upd.correctAnswer = ""; upd.timeLimit = teacherSettings?.defaultMcqTimer || 60; }
+                                        else if (type === "mcq") { upd.options = q.options.length >= 2 ? q.options : ["", "", "", ""]; upd.timeLimit = teacherSettings?.defaultMcqTimer || 60; }
                                         updateQ(index, upd);
                                       }}
                                       className={`kb-btn text-xs px-4 py-2 ${q.type === type ? "kb-btn-primary" : "kb-btn-ghost"
@@ -553,25 +536,20 @@ function EditorContent() {
                               </div>
 
                               {/* Options */}
-                              {(q.type === "mcq" || q.type === "multi_select") && (
+                              {q.type === "mcq" && (
                                 <div>
-                                  <label className="block chaos-heading text-xs text-muted-foreground mb-2">OPTIONS (SELECT CORRECT)</label>
+                                  <label className="block chaos-heading text-xs text-muted-foreground mb-2">OPTIONS (SELECT CORRECT) <span className="text-destructive">*</span></label>
                                   <div className="space-y-2">
                                     {q.options.map((opt, oi) => {
-                                      const isCorrect = q.type === "mcq"
-                                        ? q.correctAnswer === opt && !!opt
-                                        : q.correctAnswers?.includes(opt) && !!opt;
+                                      const isCorrect = q.correctAnswer === opt && !!opt;
                                       return (
                                         <div key={oi} className="flex items-center gap-3">
                                           <button
                                             onClick={() => {
                                               haptics.select();
-                                              if (q.type === "mcq") { updateQ(index, { correctAnswer: opt }); }
-                                              else {
-                                                const cur = q.correctAnswers || [];
-                                                updateQ(index, { correctAnswers: cur.includes(opt) ? cur.filter(a => a !== opt) : [...cur, opt] });
-                                              }
+                                              updateQ(index, { correctAnswer: opt });
                                             }}
+                                            title="Set as correct answer"
                                             className={`w-9 h-9 shrink-0 border-[3px] flex items-center justify-center chaos-heading text-sm transition-colors ${isCorrect
                                                 ? "bg-primary text-on-primary border-primary"
                                                 : "bg-background text-muted-foreground border-foreground/30 hover:border-primary"
@@ -581,13 +559,26 @@ function EditorContent() {
                                           </button>
                                           <input
                                             type="text" value={opt}
-                                            onChange={e => { const o = [...q.options]; o[oi] = e.target.value; updateQ(index, { options: o }); }}
+                                            onChange={e => {
+                                              const o = [...q.options];
+                                              const oldVal = o[oi];
+                                              o[oi] = e.target.value;
+                                              // keep correctAnswer in sync if it was this option
+                                              const upd: Partial<QuestionDraft> = { options: o };
+                                              if (q.correctAnswer === oldVal) upd.correctAnswer = e.target.value;
+                                              updateQ(index, upd);
+                                            }}
                                             className="kb-input flex-1 py-2 text-sm"
                                             placeholder={`Option ${String.fromCharCode(65 + oi)}...`}
                                           />
                                           {q.options.length > 2 && (
                                             <button
-                                              onClick={() => updateQ(index, { options: q.options.filter((_, i) => i !== oi) })}
+                                              onClick={() => {
+                                                const newOpts = q.options.filter((_, i) => i !== oi);
+                                                const upd: Partial<QuestionDraft> = { options: newOpts };
+                                                if (q.correctAnswer === opt) upd.correctAnswer = "";
+                                                updateQ(index, upd);
+                                              }}
                                               className="p-2 text-muted-foreground hover:text-destructive transition-colors"
                                             >
                                               <X size={16} />
@@ -596,7 +587,7 @@ function EditorContent() {
                                         </div>
                                       );
                                     })}
-                                    {q.options.length < 6 && (
+                                    {q.options.length < 5 && (
                                       <button
                                         onClick={() => updateQ(index, { options: [...q.options, ""] })}
                                         className="chaos-heading text-xs text-primary hover:opacity-80 mt-2 px-1"
@@ -626,37 +617,6 @@ function EditorContent() {
                                 </div>
                               )}
 
-                              {q.type === "written" && (
-                                <div>
-                                  <label className="block chaos-heading text-xs text-muted-foreground mb-2">KEYWORDS FOR AUTO-GRADING</label>
-                                  <div className="flex flex-wrap gap-2 mb-3">
-                                    {q.keywords.map((kw, ki) => (
-                                      <span key={ki} className="kb-chip kb-chip-success flex items-center gap-2">
-                                        {kw}
-                                        <button onClick={() => updateQ(index, { keywords: q.keywords.filter((_, i) => i !== ki) })} className="hover:text-destructive">
-                                          <X size={12} />
-                                        </button>
-                                      </span>
-                                    ))}
-                                  </div>
-                                  <input
-                                    type="text"
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter" || e.key === ",") {
-                                        e.preventDefault();
-                                        const val = e.currentTarget.value.trim();
-                                        if (val && !q.keywords.includes(val)) {
-                                          updateQ(index, { keywords: [...q.keywords, val] });
-                                        }
-                                        e.currentTarget.value = "";
-                                      }
-                                    }}
-                                    className="kb-input text-sm"
-                                    placeholder="TYPE KEYWORD AND PRESS ENTER..."
-                                  />
-                                </div>
-                              )}
-
                               <div>
                                 <label className="block chaos-heading text-xs text-muted-foreground mb-2">EXPLANATION (OPTIONAL)</label>
                                 <textarea
@@ -674,12 +634,12 @@ function EditorContent() {
 
                               <div className="grid grid-cols-2 gap-4 pt-2">
                                 <div>
-                                  <label className="block chaos-heading text-xs text-muted-foreground mb-2">Marks</label>
+                                  <label className="block chaos-heading text-xs text-muted-foreground mb-2">Marks <span className="text-destructive">*</span></label>
                                   <input
-                                    type="number" value={q.points} min={0}
+                                    type="number" value={q.points} min={1}
                                     onChange={e => {
                                       const val = parseInt(e.target.value);
-                                      updateQ(index, { points: isNaN(val) ? 0 : val });
+                                      updateQ(index, { points: isNaN(val) || val < 1 ? 1 : val });
                                     }}
                                     className="kb-input"
                                   />
@@ -716,10 +676,10 @@ function EditorContent() {
         </DragDropContext>
 
         <button
-          onClick={addNewQuestion}
-          className="kb-card-hint w-full py-6 chaos-heading text-sm text-muted-foreground hover:text-primary hover:border-primary flex items-center justify-center gap-2 transition-colors mt-4"
+          onClick={() => addNewQuestion()}
+          className="w-full kb-card-hint py-6 chaos-heading text-sm text-muted-foreground hover:text-primary hover:border-primary flex items-center justify-center gap-2 transition-colors mt-4"
         >
-          <Plus size={20} /> ADD NEW QUESTION
+          <Plus size={20} /> ADD QUESTION
         </button>
       </div>
 

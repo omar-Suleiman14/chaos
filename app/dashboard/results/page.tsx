@@ -19,7 +19,9 @@ import {
   Clock,
   Edit2,
   Minus,
-  Check
+  Check,
+  Download,
+  Medal,
 } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 
@@ -66,7 +68,7 @@ function QuizzesListView() {
             ANALYTICS.
           </h1>
           <p className="text-sm text-muted-foreground">
-            View performance data and player stats across all your quizzes.
+            View performance data and player results across all your quizzes.
           </p>
         </div>
 
@@ -104,7 +106,7 @@ function QuizzesListView() {
               filteredQuizzes.map((quiz) => (
                 <tr key={quiz._id} className="hover:bg-muted/50 transition-colors group">
                   <td className="p-4">
-                    <Link href={`/dashboard/stats?id=${quiz._id}`} className="font-bold text-base hover:text-chaos transition-colors block">
+                    <Link href={`/dashboard/results?id=${quiz._id}`} className="font-bold text-base hover:text-chaos transition-colors block">
                       {quiz.title}
                     </Link>
                     <div className="text-xs text-muted-foreground mt-1">/{quiz.creatorUsername}/{quiz.slug}</div>
@@ -140,6 +142,7 @@ function QuizzesListView() {
 function QuizDetailView({ quizId }: { quizId: Id<"quizzes"> }) {
   const quiz = useQuery(api.quizFunctions.getQuiz, { quizId });
   const sessions = useQuery(api.quizFunctions.getQuizSessions, { quizId });
+  const enhanced = useQuery(api.quizFunctions.getQuizStatsEnhanced, { quizId });
   const [selectedSessionId, setSelectedSessionId] = useState<Id<"quizSessions"> | null>(null);
 
   if (quiz === undefined || sessions === undefined) {
@@ -159,16 +162,64 @@ function QuizDetailView({ quizId }: { quizId: Id<"quizzes"> }) {
     );
   }
 
-  const completed = sessions.filter((s) => s.status === "completed");
-  const avgScore = completed.length > 0 
-    ? completed.reduce((sum, s) => sum + (s.totalPoints > 0 ? (s.score / s.totalPoints) * 100 : 0), 0) / completed.length 
+  const completed = sessions?.filter((s) => s.status === "completed") ?? [];
+  const avgScore = completed.length > 0
+    ? completed.reduce((sum, s) => sum + (s.totalPoints > 0 ? (s.score / s.totalPoints) * 100 : 0), 0) / completed.length
     : 0;
+
+  const handleExportCSV = () => {
+    // Build ordered question list from enhanced stats (or fall back to answer order)
+    const qList = enhanced?.questionStats ?? [];
+
+    // Header row: summary columns + one column per question
+    const header = [
+      "Player Name", "Score", "Total Marks", "Percentage", "Completed At",
+      ...qList.map((q, i) => `Q${i + 1}: ${q.questionText.slice(0, 40)}`),
+    ];
+
+    // Build a map from questionId -> index for fast lookup
+    const qIndexMap = new Map(qList.map((q, i) => [String(q.questionId), i]));
+
+    const dataRows = completed.map((s) => {
+      const pct = s.totalPoints > 0 ? Math.round((s.score / s.totalPoints) * 100) : 0;
+      // Fill per-question cells
+      const qCells = new Array(qList.length).fill("");
+      for (const ans of s.answers) {
+        const idx = qIndexMap.get(String(ans.questionId));
+        if (idx !== undefined) {
+          qCells[idx] = ans.isCorrect ? "Correct" : "Incorrect";
+        }
+      }
+      return [
+        s.playerName,
+        s.score,
+        s.totalPoints,
+        `${pct}%`,
+        s.completedAt ? format(s.completedAt, "yyyy-MM-dd HH:mm") : "",
+        ...qCells,
+      ];
+    });
+
+    const rows = [header, ...dataRows];
+    const csv = rows
+      .map((r) => r.map(String).map((v) => `"${v.replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${quiz?.title || "quiz"}-results.csv`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  };
 
   return (
     <>
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b-2 border-foreground pb-6">
         <div>
-          <Link href="/dashboard/stats" className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2 chaos-heading">
+          <Link href="/dashboard/results" className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2 chaos-heading">
             <ArrowLeft size={12} /> BACK TO ALL
           </Link>
           <h1 className="chaos-display text-4xl mb-1 flex items-center gap-3">
@@ -179,12 +230,22 @@ function QuizDetailView({ quizId }: { quizId: Id<"quizzes"> }) {
           </p>
         </div>
 
-        <Link
-          href={`/dashboard/editor?id=${quizId}`}
-          className="chaos-heading text-xs border-2 border-foreground px-4 py-2 hover:bg-foreground hover:text-background transition-colors"
-        >
-          EDIT SETTINGS
-        </Link>
+        <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          <Link
+            href={`/dashboard/editor?id=${quizId}`}
+            className="chaos-heading text-xs border-2 border-foreground px-4 py-2 hover:bg-foreground hover:text-background transition-colors"
+          >
+            EDIT SETTINGS
+          </Link>
+          {completed.length > 0 && (
+            <button
+              onClick={handleExportCSV}
+              className="chaos-heading text-xs border-2 border-foreground/40 px-4 py-2 hover:bg-foreground hover:text-background transition-colors flex items-center gap-2"
+            >
+              <Download size={13} /> EXPORT TO EXCEL
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6">
@@ -212,6 +273,63 @@ function QuizDetailView({ quizId }: { quizId: Id<"quizzes"> }) {
         </div>
       </div>
 
+      {/* Top 3 Performers */}
+      {enhanced?.top3 && enhanced.top3.length > 0 && (
+        <div className="chaos-card bg-card p-6">
+          <h2 className="chaos-heading text-xs text-muted-foreground mb-4 flex items-center gap-2">
+            <Trophy size={14} /> TOP PERFORMERS
+          </h2>
+          <div className="flex flex-col sm:flex-row gap-4">
+            {enhanced.top3.map((entry, i) => {
+              const pct = entry.totalPoints > 0 ? Math.round((entry.score / entry.totalPoints) * 100) : 0;
+              const medals = ["🥇", "🥈", "🥉"];
+              return (
+                <div key={i} className={`flex-1 p-4 border-[3px] flex flex-col items-center text-center ${
+                  i === 0 ? "border-yellow-400 bg-yellow-400/5" : "border-foreground/20"
+                }`}>
+                  <span className="text-2xl mb-1">{medals[i]}</span>
+                  <p className="font-bold text-sm truncate w-full text-center">{entry.playerName}</p>
+                  <p className={`chaos-heading text-xl mt-1 ${i === 0 ? "text-yellow-500" : "text-muted-foreground"}`}>{pct}%</p>
+                  <p className="text-[10px] text-muted-foreground">{entry.score}/{entry.totalPoints} marks</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Question Breakdown */}
+      {enhanced?.questionStats && enhanced.questionStats.length > 0 && (
+        <div className="chaos-card bg-card p-6">
+          <h2 className="chaos-heading text-xs text-muted-foreground mb-4 flex items-center gap-2">
+            <BarChart3 size={14} /> QUESTION BREAKDOWN
+          </h2>
+          <div className="space-y-3">
+            {enhanced.questionStats.map((q, i) => (
+              <div key={String(q.questionId)} className="flex items-center gap-4">
+                <span className="chaos-heading text-xs text-muted-foreground w-6 shrink-0 text-right">{i + 1}</span>
+                <p className="text-sm flex-1 truncate" title={q.questionText}>{q.questionText}</p>
+                <div className="flex items-center gap-3 shrink-0">
+                  <span className="text-xs text-primary flex items-center gap-1"><CheckCircle2 size={11} /> {q.correct}</span>
+                  <span className="text-xs text-destructive flex items-center gap-1"><XCircle size={11} /> {q.incorrect}</span>
+                  {q.correctRate !== null && (
+                    <div className="w-16 h-1.5 bg-muted overflow-hidden">
+                      <div className={`h-full ${
+                        q.correctRate >= 70 ? 'bg-primary' : q.correctRate >= 40 ? 'bg-yellow-500' : 'bg-destructive'
+                      }`} style={{ width: `${q.correctRate}%` }} />
+                    </div>
+                  )}
+                  <span className="chaos-heading text-[10px] w-8 text-right text-muted-foreground">
+                    {q.correctRate !== null ? `${q.correctRate}%` : "—"}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* Submissions Table */}
       <div className="chaos-card bg-card p-0 overflow-hidden">
         <table className="w-full text-left border-collapse">
           <thead>
@@ -403,7 +521,7 @@ function SubmissionDetailView({
 
 export default function StatsPage() {
   return (
-    <Suspense fallback={<div className="p-8 chaos-pulse">Loading stats...</div>}>
+    <Suspense fallback={<div className="p-8 chaos-pulse">Loading resultls...</div>}>
       <StatsContent />
     </Suspense>
   );
