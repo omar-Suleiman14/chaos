@@ -322,9 +322,9 @@ export default function DashboardQuizzes() {
               </p>
             ) : (
               <>
-                <p className="text-sm font-medium">{activeJob.step || "Processing..."}</p>
+                <p className="text-sm font-medium">Generating quiz…</p>
                 <div className="mt-1 h-1 w-full bg-muted overflow-hidden">
-                  <div className="h-full bg-yellow-500 animate-pulse" style={{ width: "60%" }} />
+                  <div className="h-full bg-yellow-500 transition-all duration-700 ease-out" style={{ width: `${activeJob.status === "pending" ? 10 : activeJob.status === "categorizing" ? 30 : activeJob.status === "generating" ? 60 : activeJob.status === "saving" ? 85 : 5}%` }} />
                 </div>
               </>
             )}
@@ -332,7 +332,7 @@ export default function DashboardQuizzes() {
           <button
             onClick={handleCancelJob}
             disabled={isCancellingJob}
-            className="shrink-0 p-1 text-muted-foreground hover:text-foreground disabled:opacity-40"
+            className="shrink-0 p-1 cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-40"
             title={activeJob.status === "done" || activeJob.status === "error" ? "Dismiss" : "Cancel generation"}
           >
             {isCancellingJob ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}

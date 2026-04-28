@@ -711,6 +711,22 @@ export const startQuizSession = mutation({
     const quiz = await ctx.db.get(args.quizId);
     if (!quiz || !quiz.isPublished) throw new Error("Quiz not available");
 
+    // Enforce 100-player limit for non-elevated quizzes
+    if (!quiz.isElevated) {
+      const PLAYER_LIMIT = 100;
+      const completedCount = await ctx.db
+        .query("quizSessions")
+        .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
+        .collect()
+        .then((sessions) => sessions.filter((s) => s.status === "completed").length);
+
+      if (completedCount >= PLAYER_LIMIT) {
+        throw new Error(
+          "Access limited. This quiz has reached its maximum number of players. Contact the quiz creator to resolve the issue."
+        );
+      }
+    }
+
     return await ctx.db.insert("quizSessions", {
       quizId: args.quizId,
       playerName: name,
@@ -843,7 +859,15 @@ export const completeQuizSession = mutation({
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
     if (!session) throw new Error("Session not found");
-    if (session.status !== "in_progress") throw new Error("Session already completed");
+
+    // Idempotent: if already completed, just return the stored result
+    if (session.status !== "in_progress") {
+      return {
+        score: session.score,
+        totalPoints: session.totalPoints,
+        answers: session.answers,
+      };
+    }
 
     await ctx.db.patch(args.sessionId, {
       status: "completed",

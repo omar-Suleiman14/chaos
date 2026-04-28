@@ -31,6 +31,14 @@ export default function PrintQuizPage() {
   const isOwner = currentUser && quiz && quiz.creatorId === currentUser.clerkId;
   const isAuthorized = isAdmin || isOwner;
 
+  // Set document title to quiz name so "Save as PDF" uses it as filename
+  useEffect(() => {
+    if (quiz?.title) {
+      document.title = quiz.title;
+    }
+    return () => { document.title = "Chaos"; };
+  }, [quiz?.title]);
+
   useEffect(() => {
     if (quiz && questions && isAuthorized) {
       const timer = setTimeout(() => window.print(), 600);
@@ -368,10 +376,7 @@ export default function PrintQuizPage() {
                 </>
               )}
 
-              {/* Explanation */}
-              {q.explanation && (
-                <div className="q-explanation">{q.explanation}</div>
-              )}
+              {/* Explanation removed from print */}
             </div>
           </div>
         ))}
@@ -410,7 +415,7 @@ export default function PrintQuizPage() {
                     <span className="answer-val">{answer}</span>
                     <span className="answer-marks">[{q.points} mark{q.points !== 1 ? "s" : ""}]</span>
                   </div>
-                  {q.explanation && <div className="answer-exp">{q.explanation}</div>}
+
                 </div>
               </div>
             );

@@ -10,7 +10,7 @@ import { useUser } from "@clerk/nextjs";
 import {
   Plus, Trash2, Save, ChevronDown, ChevronUp,
   Globe, Lock, Loader2, RefreshCw, Check, X, ArrowLeft, GripVertical,
-  MoreHorizontal, Shuffle, Eye, EyeOff, ListOrdered
+  MoreHorizontal, Shuffle, Eye, EyeOff, ListOrdered, ChevronsUpDown, ChevronsDownUp
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { DropResult } from "@hello-pangea/dnd";
@@ -77,7 +77,7 @@ function EditorContent() {
 
   const [slugStatus, setSlugStatus] = useState<"idle" | "checking" | "valid" | "invalid">("idle");
   const [questions, setQuestions] = useState<QuestionDraft[]>([]);
-  const [expandedQ, setExpandedQ] = useState<number | null>(0);
+  const [expandedQs, setExpandedQs] = useState<Set<number>>(new Set([0]));
   const [saving, setSaving] = useState(false);
   const [saveError, setSaveError] = useState<string | null>(null);
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
@@ -249,7 +249,7 @@ function EditorContent() {
       hint: "", explanation: "", order: questions.length, isNew: true, isDirty: true,
     };
     setQuestions([...questions, newQ]);
-    setExpandedQ(questions.length);
+    setExpandedQs(new Set([questions.length]));
   };
 
   const updateQ = (i: number, updates: Partial<QuestionDraft>) => {
@@ -265,8 +265,18 @@ function EditorContent() {
     const upd = questions.filter((_, j) => j !== i);
     upd.forEach((q, j) => { q.order = j; q.isDirty = true; });
     setQuestions(upd);
-    if (expandedQ === i) setExpandedQ(null);
-    else if (expandedQ !== null && expandedQ > i) setExpandedQ(expandedQ - 1);
+    if (expandedQs.has(i)) {
+      setExpandedQs(prev => { const n = new Set(prev); n.delete(i); return n; });
+    }
+    // Shift any expanded indices above the removed index down by 1
+    setExpandedQs(prev => {
+      const n = new Set<number>();
+      for (const idx of prev) {
+        if (idx < i) n.add(idx);
+        else if (idx > i) n.add(idx - 1);
+      }
+      return n;
+    });
   };
 
   const onDragEnd = (result: DropResult) => {
@@ -279,13 +289,21 @@ function EditorContent() {
     reordered.forEach((q, i) => { q.order = i; q.isDirty = true; });
     setQuestions(reordered);
 
-    // Adjust expanded index
-    if (expandedQ === source.index) {
-      setExpandedQ(destination.index);
-    } else if (expandedQ !== null) {
-      if (source.index < expandedQ && destination.index >= expandedQ) setExpandedQ(expandedQ - 1);
-      else if (source.index > expandedQ && destination.index <= expandedQ) setExpandedQ(expandedQ + 1);
-    }
+    // Adjust expanded indices
+    setExpandedQs(prev => {
+      const n = new Set<number>();
+      for (const idx of prev) {
+        if (idx === source.index) {
+          n.add(destination.index);
+        } else {
+          let adj = idx;
+          if (source.index < idx && destination.index >= idx) adj = idx - 1;
+          else if (source.index > idx && destination.index <= idx) adj = idx + 1;
+          n.add(adj);
+        }
+      }
+      return n;
+    });
   };
 
   const typeLabels: Record<QuestionType, string> = {
@@ -429,9 +447,30 @@ function EditorContent() {
 
       {/* ── QUESTIONS */}
       <div className="space-y-4">
-        <h2 className="chaos-heading text-sm text-muted-foreground mb-2 px-1">
-          QUESTIONS ({questions.length})
-        </h2>
+        <div className="flex items-center justify-between mb-2 px-1">
+          <h2 className="chaos-heading text-sm text-muted-foreground">
+            QUESTIONS ({questions.length})
+          </h2>
+          {questions.length > 0 && (
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setExpandedQs(new Set(questions.map((_, i) => i)))}
+                className="flex items-center gap-1 text-xs chaos-heading text-muted-foreground hover:text-primary cursor-pointer transition-colors"
+                title="Expand all"
+              >
+                <ChevronsUpDown size={14} /> EXPAND ALL
+              </button>
+              <span className="text-muted-foreground/30">|</span>
+              <button
+                onClick={() => setExpandedQs(new Set())}
+                className="flex items-center gap-1 text-xs chaos-heading text-muted-foreground hover:text-primary cursor-pointer transition-colors"
+                title="Collapse all"
+              >
+                <ChevronsDownUp size={14} /> COLLAPSE ALL
+              </button>
+            </div>
+          )}
+        </div>
 
         <DragDropContext onDragEnd={onDragEnd}>
           <Droppable droppableId="questions">
@@ -442,7 +481,7 @@ function EditorContent() {
                 className="space-y-4"
               >
                 {questions.map((q, index) => {
-                  const isExpanded = expandedQ === index;
+                  const isExpanded = expandedQs.has(index);
                   return (
                     <Draggable key={index} draggableId={`q-${index}`} index={index}>
                       {(provided: any, snapshot: any) => (
@@ -463,8 +502,12 @@ function EditorContent() {
 
                             {/* Expand Button */}
                             <button
-                              onClick={() => setExpandedQ(isExpanded ? null : index)}
-                              className="flex-1 flex items-center justify-between p-4 sm:p-5 text-left"
+                              onClick={() => setExpandedQs(prev => {
+                                const n = new Set(prev);
+                                if (n.has(index)) n.delete(index); else n.add(index);
+                                return n;
+                              })}
+                              className="flex-1 flex items-center justify-between p-4 sm:p-5 text-left cursor-pointer"
                             >
                               <div className="flex items-center gap-4 min-w-0 pr-4">
                                 <span className={`w-8 h-8 border-[3px] flex items-center justify-center shrink-0 text-sm chaos-heading ${isExpanded

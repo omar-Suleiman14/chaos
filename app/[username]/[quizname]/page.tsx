@@ -9,6 +9,16 @@ import { haptics } from "@/lib/haptics";
 import { sfx } from "@/lib/sfx";
 import { Zap, ArrowDown } from "lucide-react";
 
+// Fisher-Yates shuffle (creates a new array)
+function shuffleArray<T>(arr: T[]): T[] {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
+}
+
 type GameState = "entry" | "playing";
 
 export default function QuizPlayerPage() {
@@ -53,10 +63,21 @@ export default function QuizPlayerPage() {
   const containerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const qStartTimes = useRef<Record<string, number>>({});
+  const isFinishing = useRef(false);
 
   useEffect(() => { setMounted(true); }, []);
 
-  const questions = quizData?.questions || [];
+  const rawQuestions = quizData?.questions || [];
+  const [shuffledQuestions, setShuffledQuestions] = useState<typeof rawQuestions>([]);
+
+  // When quizData loads (and we haven't started playing yet), prepare questions
+  useEffect(() => {
+    if (rawQuestions.length > 0 && gameState === "entry" && shuffledQuestions.length === 0) {
+      setShuffledQuestions(rawQuestions);
+    }
+  }, [rawQuestions, gameState, shuffledQuestions.length]);
+
+  const questions = shuffledQuestions;
 
   const handleScroll = () => {
     if (!containerRef.current) return;
@@ -133,7 +154,8 @@ export default function QuizPlayerPage() {
   };
 
   const handleFinish = async () => {
-    if (!sessionId) return;
+    if (!sessionId || isFinishing.current) return;
+    isFinishing.current = true;
     haptics.success(); if (!quizData?.disableAnimations) sfx.play("finish");
     try {
       const result = await completeSession({ sessionId });
@@ -154,6 +176,18 @@ export default function QuizPlayerPage() {
     try {
       const sid = await startSession({ quizId: quizMeta._id, playerName: playerName.trim() });
       setSessionId(sid);
+
+      // Shuffle questions and/or options on each play
+      let qs = [...rawQuestions];
+      if (quizData?.randomizeQuestions) qs = shuffleArray(qs);
+      if (quizData?.randomizeOptions) {
+        qs = qs.map(q => ({
+          ...q,
+          options: q.options ? shuffleArray(q.options) : q.options,
+        }));
+      }
+      setShuffledQuestions(qs);
+
       setGameState("playing");
       setCurrentQ(0);
     } catch (err: any) {
@@ -211,7 +245,7 @@ export default function QuizPlayerPage() {
         <div className="max-w-md w-full">
           <div className="chaos-card bg-card p-8 sm:p-10">
             <p className="chaos-heading text-xs text-primary mb-3">
-              {quizData?.totalPoints} MARKS · {questions.length} QUESTIONS
+              {quizData?.totalPoints} MARKS · {rawQuestions.length} QUESTIONS
             </p>
             <h1 className="chaos-display text-4xl sm:text-5xl mb-8 leading-none">
               {quizData?.title || "QUIZ"}
@@ -524,7 +558,23 @@ export default function QuizPlayerPage() {
                 )}
                 <div className="flex flex-col sm:flex-row gap-4">
                   <button
-                    onClick={() => window.location.reload()}
+                    onClick={() => {
+                      // Full state reset for replay
+                      setGameState("entry");
+                      setPlayerName("");
+                      setSessionId(null);
+                      setCurrentQ(0);
+                      setFinalResults(null);
+                      setSelectedOptions({});
+                      setMultiSelections({});
+                      setWrittenAnswers({});
+                      setFeedbacks({});
+                      setTimeLeftMap({});
+                      qStartTimes.current = {};
+                      isFinishing.current = false;
+                      setShuffledQuestions(rawQuestions);
+                      if (containerRef.current) containerRef.current.scrollTop = 0;
+                    }}
                     className="flex-1 kb-btn kb-btn-primary"
                   >
                     PLAY AGAIN

@@ -26,6 +26,35 @@ export const createAIJob = mutation({
 
     const clerkId = identity.subject;
 
+    // Check elevation status
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
+      .first();
+
+    if (!user?.isElevated) {
+      // Count AI quizzes created this calendar month
+      const now = new Date();
+      const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+
+      const thisMonthJobs = await ctx.db
+        .query("aiJobs")
+        .filter((q) =>
+          q.and(
+            q.eq(q.field("clerkId"), clerkId),
+            q.eq(q.field("status"), "done"),
+            q.gte(q.field("createdAt"), startOfMonth)
+          )
+        )
+        .collect();
+
+      if (thisMonthJobs.length >= 5) {
+        throw new Error(
+          "Monthly limit reached. You can generate up to 5 AI quizzes per month. Upgrade to an elevated account for unlimited access."
+        );
+      }
+    }
+
     return await ctx.db.insert("aiJobs", {
       clerkId,
       status: "pending",

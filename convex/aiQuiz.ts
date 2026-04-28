@@ -60,7 +60,7 @@ export const runAIQuizGeneration = action({
       }
 
       if (!questions || questions.length === 0) {
-        throw new Error("Failed to generate any valid questions from the document.");
+        throw new Error("AI failed to generate valid questions. Try again or use a different document.");
       }
 
       // ── Step 2: Save ─────────────────────────────────────
@@ -122,6 +122,7 @@ async function callOpenRouterText(
     },
     body: JSON.stringify({
       model: "nvidia/nemotron-nano-12b-v2-vl:free",
+      temperature: 0.7,
       messages: [
         { role: "system", content: systemPrompt },
         { role: "user", content: userText },
@@ -143,57 +144,52 @@ async function generateQuestionsFromText(
   params: { total: number; mcq: number; multiSelect: number; trueFalse: number; written: number; difficulty: string },
   apiKey: string
 ): Promise<GeneratedQuestion[]> {
-  // Build a precise breakdown — only mention types the caller actually wants
-  const typeLines: string[] = [];
-  const exampleObjects: string[] = [];
+  const truncatedText = text.slice(0, 40000);
+  const results: GeneratedQuestion[] = [];
 
+  // ── MCQ batch ──────────────────────────────────────────────
   if (params.mcq > 0) {
-    typeLines.push(`- Multiple Choice (type "mcq"): exactly ${params.mcq} questions. Provide 4 options; set "answer" to the exact text of the correct option.`);
-    exampleObjects.push(`{ "type": "mcq", "question": "...", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "..." }`);
+    const systemPrompt = `You are an expert exam creator. Generate EXACTLY ${params.mcq} multiple-choice questions from the provided document text.
+
+RULES:
+- Difficulty: ${params.difficulty}
+- Every question MUST have type "mcq"
+- Every question MUST have exactly 4 options
+- "answer" MUST be the EXACT text of one of the 4 options (the correct one)
+- Every question must be unique and cover different parts of the document
+- Base questions ONLY on the provided document
+
+OUTPUT: valid JSON only, no markdown, no extra text.
+FORMAT:
+{ "questions": [{ "type": "mcq", "question": "...", "options": ["A","B","C","D"], "answer": "A", "explanation": "..." }] }`;
+
+    const raw = await callOpenRouterText(apiKey, systemPrompt, "DOCUMENT TEXT:\n" + truncatedText);
+    const parsed = parseQuestionsFromAI(raw).filter(q => q.type === "mcq");
+    results.push(...parsed);
   }
+
+  // ── True/False batch ───────────────────────────────────────
   if (params.trueFalse > 0) {
-    typeLines.push(`- True/False (type "true_false"): exactly ${params.trueFalse} questions. Set "answer" to a JSON boolean (true or false).`);
-    exampleObjects.push(`{ "type": "true_false", "question": "...", "answer": true, "explanation": "..." }`);
+    const systemPrompt = `You are an expert exam creator. Generate EXACTLY ${params.trueFalse} true/false questions from the provided document text.
+
+RULES:
+- Difficulty: ${params.difficulty}
+- Every question MUST have type "true_false"
+- "answer" MUST be a JSON boolean: true or false (NOT the string "true" or "false")
+- Every question must be unique and cover different parts of the document
+- Base questions ONLY on the provided document
+
+OUTPUT: valid JSON only, no markdown, no extra text.
+FORMAT:
+{ "questions": [{ "type": "true_false", "question": "...", "answer": true, "explanation": "..." }] }`;
+
+    const raw = await callOpenRouterText(apiKey, systemPrompt, "DOCUMENT TEXT:\n" + truncatedText);
+    const parsed = parseQuestionsFromAI(raw).filter(q => q.type === "true_false");
+    results.push(...parsed);
   }
-  const forbiddenTypes = (["mcq", "true_false"] as const).filter(t => {
-    if (t === "mcq") return params.mcq === 0;
-    if (t === "true_false") return params.trueFalse === 0;
-    return false;
-  });
 
-  const systemPrompt = `You are an expert exam creator. Generate a quiz from the provided document text.
-
-REQUIRED QUESTION BREAKDOWN (total: ${params.total}):
-${typeLines.join("\n")}
-
-DIFFICULTY: ${params.difficulty}
-
-CONTENT RULES:
-- Base every question ONLY on the provided document — do not use outside knowledge.
-- Questions must require understanding or application, not just rote recall.
-- No repeated or vague questions.
-
-STRICT OUTPUT RULES:
-- Total questions MUST be exactly ${params.total}.
-${forbiddenTypes.length > 0 ? `- DO NOT produce questions of type: ${forbiddenTypes.map(t => `"${t}"`).join(", ")}. These types are forbidden — including even one will break the parser.` : ""}
-- Every question object MUST have the "type" field set to one of the allowed types only.
-- Output ONLY valid JSON with no markdown, no comments, no trailing text.
-
-OUTPUT FORMAT:
-{
-  "questions": [
-    ${exampleObjects.join(",\n    ")}
-  ]
-}`;
-
-  const allowedTypes = new Set<string>();
-  if (params.mcq > 0) allowedTypes.add("mcq");
-  if (params.trueFalse > 0) allowedTypes.add("true_false");
-
-  const raw = await callOpenRouterText(apiKey, systemPrompt, "DOCUMENT TEXT:\n" + text.slice(0, 40000));
-  const parsed = parseQuestionsFromAI(raw);
-  // Safety net: drop any question types the caller did not request
-  return parsed.filter(q => allowedTypes.has(q.type));
+  // Validate and deduplicate across all batches
+  return validateQuestions(results);
 }
 
 async function parseExistingQuizFromText(
@@ -249,11 +245,47 @@ function parseQuestionsFromAI(raw: string): GeneratedQuestion[] {
           type: "mcq",
           questionText,
           options: (q.options || []).filter(Boolean),
-          answer: q.answer || "",
+          answer: typeof q.answer === "string" ? q.answer : "",
           explanation: q.explanation || "",
         };
       });
   } catch {
     return [];
   }
+}
+
+/**
+ * Post-parse validation: deduplicate, drop MCQs with missing/invalid answers,
+ * drop T/F without a boolean answer.
+ */
+function validateQuestions(questions: GeneratedQuestion[]): GeneratedQuestion[] {
+  const seen = new Set<string>();
+  const valid: GeneratedQuestion[] = [];
+
+  for (const q of questions) {
+    // Deduplicate by normalised question text
+    const key = q.questionText.toLowerCase().replace(/\s+/g, " ").trim();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+
+    if (q.type === "mcq") {
+      // Must have options and the answer must be one of the options
+      if (!q.options || q.options.length < 2) continue;
+      if (!q.answer) continue;
+      const ansLower = q.answer.toLowerCase().trim();
+      const optMatch = q.options.find(o => o.toLowerCase().trim() === ansLower);
+      if (!optMatch) continue;
+      // Normalise answer to exact option text
+      q.answer = optMatch;
+    }
+
+    if (q.type === "true_false") {
+      // answerBool must have been resolved
+      if (q.answerBool === undefined || q.answerBool === null) continue;
+    }
+
+    valid.push(q);
+  }
+
+  return valid;
 }
