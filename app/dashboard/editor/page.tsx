@@ -11,7 +11,7 @@ import {
   Plus, Trash2, Save, ChevronDown, ChevronUp,
   Globe, Lock, Loader2, RefreshCw, Check, X, GripVertical,
   Shuffle, Eye, EyeOff, ListOrdered, ChevronsUpDown, ChevronsDownUp,
-  Sparkles, ArrowRight
+  Sparkles, ArrowRight, Upload, FileText, Image as ImageIcon
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { DropResult } from "@hello-pangea/dnd";
@@ -98,7 +98,31 @@ function EditorContent() {
   const [aiPending, setAiPending] = useState(false);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const chatInputRef = useRef<HTMLTextAreaElement>(null);
+  const chatFileInputRef = useRef<HTMLInputElement>(null);
   const currentAiRequestId = useRef<number>(0);
+  const [chatFile, setChatFile] = useState<File | null>(null);
+  const [chatIsDragging, setChatIsDragging] = useState(false);
+
+  const handleChatFileSelect = useCallback((selectedFile: File) => {
+    const allowed = ["application/pdf", "image/png", "image/jpeg", "image/webp", "image/jpg"];
+    if (!allowed.includes(selectedFile.type)) {
+      alert("Please upload a PDF, PNG, JPG, or WEBP file.");
+      return;
+    }
+    if (selectedFile.size > 20 * 1024 * 1024) {
+      alert("File must be under 20MB.");
+      return;
+    }
+    setChatFile(selectedFile);
+    haptics.light();
+  }, []);
+
+  const onChatDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setChatIsDragging(false);
+    const f = e.dataTransfer.files[0];
+    if (f) handleChatFileSelect(f);
+  }, [handleChatFileSelect]);
 
   // Load persisted chat history for this quiz
   useEffect(() => {
@@ -326,15 +350,45 @@ function EditorContent() {
 
   const handleChatSend = async (msg?: string) => {
     const text = (msg ?? chatInput).trim();
-    if (!text || aiPending) return;
+    if ((!text && !chatFile) || aiPending) return;
+    
+    const submittedFile = chatFile;
     setChatInput("");
-    setChatHistory(h => [...h, { role: "user", text }]);
+    setChatFile(null);
+    setChatHistory(h => [...h, { role: "user", text: (text + (submittedFile ? ` [Attached: ${submittedFile.name}]` : "")).trim() }]);
     setAiPending(true);
     haptics.light();
     
     const reqId = ++currentAiRequestId.current;
     
     try {
+      let finalMessage = text;
+      
+      if (submittedFile) {
+        let extractedText = "";
+        if (submittedFile.type === "application/pdf") {
+          const pdfjsLib = await import("pdfjs-dist");
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
+          const arrayBuffer = await submittedFile.arrayBuffer();
+          const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+          const maxPages = Math.min(pdf.numPages, 40);
+
+          for (let i = 1; i <= maxPages; i++) {
+            const page = await pdf.getPage(i);
+            const textContent = await page.getTextContent();
+            const pageText = textContent.items.map((item: any) => item.str).join(" ");
+            extractedText += pageText + "\n\n";
+          }
+        } else {
+          const Tesseract = await import("tesseract.js");
+          const { data: { text: ocrText } } = await Tesseract.default.recognize(submittedFile, "eng", {
+            logger: (m: any) => console.log(m),
+          });
+          extractedText = ocrText;
+        }
+        finalMessage = `${text ? text + "\n\n" : ""}User provided the following reference material:\n${extractedText}`;
+      }
+
       const questionsPayload = questions.map(q => ({
         type: q.type,
         questionText: q.questionText,
@@ -347,7 +401,7 @@ function EditorContent() {
       const result = await editQuizWithAI({
         quizTitle: title || "Untitled Quiz",
         questions: questionsPayload,
-        message: text,
+        message: finalMessage,
       });
       if (currentAiRequestId.current !== reqId) return; // cancelled
       
@@ -601,33 +655,74 @@ function EditorContent() {
 
               {/* Input */}
               <div className="px-4 py-3 border-t-[3px] border-foreground shrink-0">
-                <div className="relative flex items-center">
-                  <textarea
-                    ref={chatInputRef}
-                    value={chatInput}
-                    onChange={e => setChatInput(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend(); }
-                    }}
-                    rows={1}
-                    placeholder="ASK AI TO EDIT YOUR QUIZ…"
-                    disabled={aiPending}
-                    className="kb-input w-full resize-none text-sm min-h-[48px] max-h-[80px] disabled:opacity-50 !py-3 !pr-14"
-                    onInput={e => {
-                      const el = e.currentTarget;
-                      el.style.height = "auto";
-                      el.style.height = `${Math.min(el.scrollHeight, 80)}px`;
-                    }}
-                  />
-                  <button
-                    onClick={() => aiPending ? cancelAiRequest() : handleChatSend()}
-                    disabled={!aiPending && !chatInput.trim()}
-                    className={`absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-on-primary force-circle transition-all active:scale-95 disabled:scale-100 ${
-                      aiPending ? "bg-destructive hover:bg-destructive/90" : "bg-primary hover:bg-primary/90 disabled:opacity-30"
-                    }`}
-                  >
-                    {aiPending ? <X size={16} /> : <ArrowRight size={16} />}
-                  </button>
+                <div
+                  onDragOver={(e) => { e.preventDefault(); setChatIsDragging(true); }}
+                  onDragLeave={() => setChatIsDragging(false)}
+                  onDrop={onChatDrop}
+                  className={`relative flex flex-col items-stretch border-[3px] transition-all bg-background ${
+                    chatIsDragging ? "border-primary bg-primary/5" : "border-foreground"
+                  }`}
+                >
+                  <div className="relative flex items-center w-full">
+                    <textarea
+                      ref={chatInputRef}
+                      value={chatInput}
+                      onChange={e => setChatInput(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend(); }
+                      }}
+                      rows={1}
+                      placeholder={chatFile ? "ADD INSTRUCTIONS (OPTIONAL)…" : "ASK AI TO EDIT QUIZ… OR DROP A FILE"}
+                      disabled={aiPending}
+                      className="kb-input w-full border-none resize-none text-sm min-h-[48px] max-h-[80px] disabled:opacity-50 !py-3 !pl-10 !pr-14"
+                      onInput={e => {
+                        const el = e.currentTarget;
+                        el.style.height = "auto";
+                        el.style.height = `${Math.min(el.scrollHeight, 80)}px`;
+                      }}
+                    />
+                    
+                    {/* Attach button inside input on the left */}
+                    <button
+                      onClick={() => chatFileInputRef.current?.click()}
+                      disabled={aiPending}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
+                      title="Attach File"
+                    >
+                      <Upload size={14} />
+                    </button>
+                    <input
+                      ref={chatFileInputRef}
+                      type="file"
+                      accept=".pdf,.png,.jpg,.jpeg,.webp"
+                      className="hidden"
+                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleChatFileSelect(f); }}
+                    />
+                    
+                    {/* Submit button inside input on the right */}
+                    <button
+                      onClick={() => aiPending ? cancelAiRequest() : handleChatSend()}
+                      disabled={(!aiPending && !chatInput.trim() && !chatFile)}
+                      className={`absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-on-primary force-circle transition-all active:scale-95 disabled:scale-100 ${
+                        aiPending ? "bg-destructive hover:bg-destructive/90" : "bg-primary hover:bg-primary/90 disabled:opacity-30"
+                      }`}
+                    >
+                      {aiPending ? <X size={16} /> : <ArrowRight size={16} />}
+                    </button>
+                  </div>
+                  
+                  {/* File Preview */}
+                  {chatFile && (
+                    <div className="flex items-center justify-between border-t-2 border-foreground/10 px-3 py-2 bg-muted/20">
+                      <div className="flex items-center gap-2 min-w-0">
+                        {chatFile.type === "application/pdf" ? <FileText size={14} className="text-primary shrink-0" /> : <ImageIcon size={14} className="text-primary shrink-0" />}
+                        <span className="text-[11px] font-bold truncate chaos-heading">{chatFile.name}</span>
+                      </div>
+                      <button onClick={() => setChatFile(null)} disabled={aiPending} className="p-1 text-muted-foreground hover:text-destructive shrink-0 disabled:opacity-50">
+                        <X size={14} />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
             </DrawerContent>

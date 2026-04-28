@@ -10,7 +10,7 @@ import {
   ChevronRight, Brain, BookOpen, FlaskConical, MessageSquare,
 } from "lucide-react";
 
-type Mode = "quiz" | "lecture" | "prompt";
+type Mode = "quiz" | "lecture";
 type Step = 1 | 2;
 
 interface Props {
@@ -69,9 +69,9 @@ export default function AIQuizModal({ onClose, onJobStarted }: Props) {
   // ── Param validation ──────────────────────────────────────
 
   const total = mcq + trueFalse;
-  const step1Valid = mode === "prompt"
-    ? promptText.trim().length >= 10
-    : file !== null;
+  const step1Valid = mode === "quiz"
+    ? file !== null
+    : (file !== null || promptText.trim().length >= 10);
   const paramsValid = mode === "quiz"
     ? quizTitle.trim().length >= 2
     : (total >= 1 && total <= 50 && quizTitle.trim().length >= 2);
@@ -79,8 +79,8 @@ export default function AIQuizModal({ onClose, onJobStarted }: Props) {
   // ── Start Generation ──────────────────────────────────────
 
   const handleGenerate = async () => {
-    if (mode !== "prompt" && !file) return;
-    if (mode === "prompt" && promptText.trim().length < 10) return;
+    if (mode === "quiz" && !file) return;
+    if (mode === "lecture" && !file && promptText.trim().length < 10) return;
     setIsStarting(true);
     setStartError("");
     haptics.heavy();
@@ -95,10 +95,7 @@ export default function AIQuizModal({ onClose, onJobStarted }: Props) {
 
       let extractedText = "";
 
-      if (mode === "prompt") {
-        // Prompt mode — use the typed text directly
-        extractedText = promptText.trim();
-      } else if (file) {
+      if (file) {
         // File modes — extract text from file
         if (file.type === "application/pdf") {
           const pdfjsLib = await import("pdfjs-dist");
@@ -122,6 +119,11 @@ export default function AIQuizModal({ onClose, onJobStarted }: Props) {
         }
       }
 
+      // Append custom prompt if provided
+      if (promptText.trim()) {
+        extractedText += (extractedText ? "\n\nAdditional User Instructions:\n" : "") + promptText.trim();
+      }
+
       if (!extractedText || extractedText.trim().length < 10) {
         throw new Error("Not enough text to generate a quiz. Please provide more detail.");
       }
@@ -130,7 +132,7 @@ export default function AIQuizModal({ onClose, onJobStarted }: Props) {
       runAIQuizGeneration({
         jobId: newJobId,
         extractedText,
-        mode: mode === "prompt" ? "lecture" : mode,
+        mode: mode,
         quizTitle: quizTitle.trim() || (file ? file.name : "AI Quiz"),
         totalQuestions: total,
         mcq,
@@ -146,7 +148,7 @@ export default function AIQuizModal({ onClose, onJobStarted }: Props) {
     }
   };
 
-  const stepLabels = mode === "prompt" ? ["Prompt", "Settings"] : ["Upload", "Settings"];
+  const stepLabels = ["Input", "Settings"];
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-in fade-in duration-200">
@@ -188,92 +190,91 @@ export default function AIQuizModal({ onClose, onJobStarted }: Props) {
           {/* ── STEP 1: Upload / Prompt + Mode ── */}
           {step === 1 && (
             <div className="space-y-6">
-              {/* Mode selection */}
+              {/* Mode selection wrapper to keep existing extraction vs generation flow */}
               <div>
                 <p className="chaos-heading text-xs text-muted-foreground mb-3">CREATE FROM</p>
-                <div className="grid grid-cols-3 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={() => { setMode("lecture"); haptics.select(); }}
-                    className={`p-3 border-[3px] text-left transition-all ${mode === "lecture" ? "border-primary bg-primary/5" : "border-foreground/20"}`}
+                    className={`p-3 border-[3px] text-left transition-all flex flex-col items-start ${mode !== "quiz" ? "border-primary bg-primary/5" : "border-foreground/20"}`}
                   >
-                    <BookOpen size={18} className={`mb-1.5 ${mode === "lecture" ? "text-primary" : "text-muted-foreground"}`} />
-                    <p className="font-bold text-xs">Lecture</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Upload notes</p>
+                    <BookOpen size={18} className={`mb-1.5 ${mode !== "quiz" ? "text-primary" : "text-muted-foreground"}`} />
+                    <p className="font-bold text-xs">Generate New Quiz</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">From file or topic description</p>
                   </button>
                   <button
                     onClick={() => { setMode("quiz"); haptics.select(); }}
-                    className={`p-3 border-[3px] text-left transition-all ${mode === "quiz" ? "border-primary bg-primary/5" : "border-foreground/20"}`}
+                    className={`p-3 border-[3px] text-left transition-all flex flex-col items-start ${mode === "quiz" ? "border-primary bg-primary/5" : "border-foreground/20"}`}
                   >
                     <FileText size={18} className={`mb-1.5 ${mode === "quiz" ? "text-primary" : "text-muted-foreground"}`} />
-                    <p className="font-bold text-xs">Existing Quiz</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Extract from file</p>
-                  </button>
-                  <button
-                    onClick={() => { setMode("prompt"); haptics.select(); }}
-                    className={`p-3 border-[3px] text-left transition-all ${mode === "prompt" ? "border-primary bg-primary/5" : "border-foreground/20"}`}
-                  >
-                    <MessageSquare size={18} className={`mb-1.5 ${mode === "prompt" ? "text-primary" : "text-muted-foreground"}`} />
-                    <p className="font-bold text-xs">Prompt</p>
-                    <p className="text-[10px] text-muted-foreground mt-0.5">Describe a topic</p>
+                    <p className="font-bold text-xs">Digitize Existing Quiz</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5">Extract identical questions from file</p>
                   </button>
                 </div>
               </div>
 
-              {/* Prompt input OR file upload */}
-              {mode === "prompt" ? (
-                <div>
-                  <label className="chaos-heading text-xs text-muted-foreground mb-2 block">DESCRIBE YOUR QUIZ TOPIC</label>
-                  <textarea
-                    value={promptText}
-                    onChange={(e) => setPromptText(e.target.value)}
-                    rows={4}
-                    className="kb-input resize-none text-sm"
-                    placeholder="e.g. Create a quiz about the French Revolution, covering causes, key events, and major figures..."
-                    autoFocus
-                  />
-                  <p className="text-[10px] text-muted-foreground mt-1">At least 10 characters. Be as specific as you want.</p>
-                </div>
-              ) : (
+              {/* Unified Prompt & File Input box */}
+              <div>
+                <label className="chaos-heading text-xs text-muted-foreground mb-2 flex justify-between items-end">
+                  <span>INPUT MATERIAL</span>
+                  {mode === "quiz" && <span className="text-[9px] text-primary">FILE REQUIRED</span>}
+                </label>
+                
                 <div
                   onDragOver={(e) => { e.preventDefault(); setIsDragging(true); }}
                   onDragLeave={() => setIsDragging(false)}
                   onDrop={onDrop}
-                  onClick={() => fileInputRef.current?.click()}
-                  className={`border-[3px] border-dashed p-8 text-center cursor-pointer transition-all ${
+                  className={`relative border-[3px] transition-all flex flex-col ${
                     isDragging
                       ? "border-primary bg-primary/5"
-                      : file
-                      ? "border-primary/50 bg-primary/5"
-                      : "border-foreground/20"
+                      : "border-foreground/20 bg-background"
                   }`}
                 >
-                  <input
-                    ref={fileInputRef}
-                    type="file"
-                    accept=".pdf,.png,.jpg,.jpeg,.webp"
-                    className="hidden"
-                    onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }}
+                  <textarea
+                    value={promptText}
+                    onChange={(e) => setPromptText(e.target.value)}
+                    rows={4}
+                    className="w-full bg-transparent px-4 py-3 outline-none resize-none text-sm placeholder:text-muted-foreground/60"
+                    placeholder={mode === "quiz" ? "Add any specific instructions for the extraction (optional)... or DRAG & DROP your quiz file here." : "Describe a topic... or DRAG & DROP a PDF or Image here..."}
+                    autoFocus
                   />
-                  {file ? (
-                    <div className="flex items-center justify-center gap-3">
-                      {file.type === "application/pdf"
-                        ? <FileText size={28} className="text-primary shrink-0" />
-                        : <ImageIcon size={28} className="text-primary shrink-0" />
-                      }
-                      <div className="text-left">
-                        <p className="font-bold text-sm truncate max-w-[260px]">{file.name}</p>
-                        <p className="text-xs text-muted-foreground">{(file.size / 1024).toFixed(0)} KB — click to change</p>
-                      </div>
+                  
+                  <div className="flex items-center justify-between px-3 py-2 border-t-2 border-foreground/10 bg-muted/20">
+                    <div className="flex items-center gap-3 w-full">
+                      <button
+                        onClick={() => fileInputRef.current?.click()}
+                        className="w-8 h-8 shrink-0 flex items-center justify-center bg-foreground text-background hover:bg-primary hover:text-on-primary transition-colors cursor-pointer"
+                        title="Attach File"
+                      >
+                        <Upload size={14} />
+                      </button>
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept=".pdf,.png,.jpg,.jpeg,.webp"
+                        className="hidden"
+                        onChange={(e) => { const f = e.target.files?.[0]; if (f) handleFileSelect(f); }}
+                      />
+                      
+                      {file ? (
+                        <div className="flex items-center justify-between bg-background border-2 border-foreground/20 px-2 py-1 flex-1 min-w-0">
+                           <div className="flex items-center gap-2 min-w-0">
+                             {file.type === "application/pdf" ? <FileText size={14} className="text-primary shrink-0" /> : <ImageIcon size={14} className="text-primary shrink-0" />}
+                             <span className="text-xs font-semibold truncate">{file.name}</span>
+                           </div>
+                           <button onClick={() => setFile(null)} className="p-1 hover:text-destructive shrink-0">
+                             <X size={14} />
+                           </button>
+                        </div>
+                      ) : (
+                        <span className="text-[10px] chaos-heading text-muted-foreground truncate">
+                          ATTACH PDF / IMAGE (MAX 20MB)
+                        </span>
+                      )}
                     </div>
-                  ) : (
-                    <>
-                      <Upload size={32} className="mx-auto text-muted-foreground mb-3 opacity-50" />
-                      <p className="chaos-heading text-sm">DRAG & DROP OR CLICK TO UPLOAD</p>
-                      <p className="text-xs text-muted-foreground mt-1">PDF, PNG, JPG, WEBP · Max 20MB</p>
-                    </>
-                  )}
+                  </div>
                 </div>
-              )}
+              </div>
 
               <button
                 onClick={() => { if (step1Valid) setStep(2); }}
