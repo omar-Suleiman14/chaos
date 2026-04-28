@@ -1,6 +1,6 @@
 "use client";
 
-import { useQuery, useMutation } from "convex/react";
+import { useQuery, useMutation, useAction } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -9,11 +9,15 @@ import { haptics } from "@/lib/haptics";
 import { useUser } from "@clerk/nextjs";
 import {
   Plus, Trash2, Save, ChevronDown, ChevronUp,
-  Globe, Lock, Loader2, RefreshCw, Check, X, ArrowLeft, GripVertical,
-  MoreHorizontal, Shuffle, Eye, EyeOff, ListOrdered, ChevronsUpDown, ChevronsDownUp
+  Globe, Lock, Loader2, RefreshCw, Check, X, GripVertical,
+  Shuffle, Eye, EyeOff, ListOrdered, ChevronsUpDown, ChevronsDownUp,
+  Sparkles, ArrowRight
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { DropResult } from "@hello-pangea/dnd";
+import {
+  Drawer, DrawerContent, DrawerTitle, DrawerTrigger
+} from "@/components/ui/drawer";
 
 const DragDropContext = dynamic(() => import("@hello-pangea/dnd").then(m => m.DragDropContext as any), { ssr: false }) as any;
 const Droppable = dynamic(() => import("@hello-pangea/dnd").then(m => m.Droppable as any), { ssr: false }) as any;
@@ -83,6 +87,35 @@ function EditorContent() {
   const [lastSaved, setLastSaved] = useState<Date | null>(null);
   const [mounted, setMounted] = useState(false);
   const autoSaveTimer = useRef<NodeJS.Timeout | null>(null);
+
+  // ── AI Chat state
+  const editQuizWithAI = useAction(api.aiEditorChat.editQuizWithAI);
+  const [chatInput, setChatInput] = useState("");
+  const [chatHistory, setChatHistory] = useState<Array<{
+    role: "user" | "ai";
+    text: string;
+  }>>([]);
+  const [aiPending, setAiPending] = useState(false);
+  const chatEndRef = useRef<HTMLDivElement>(null);
+  const chatInputRef = useRef<HTMLTextAreaElement>(null);
+  const currentAiRequestId = useRef<number>(0);
+
+  // Load persisted chat history for this quiz
+  useEffect(() => {
+    if (!quizId) return;
+    try {
+      const stored = localStorage.getItem(`ai-chat-${quizId}`);
+      if (stored) setChatHistory(JSON.parse(stored));
+    } catch {}
+  }, [quizId]);
+
+  // Persist chat history on every change
+  useEffect(() => {
+    if (!quizId) return;
+    try {
+      localStorage.setItem(`ai-chat-${quizId}`, JSON.stringify(chatHistory));
+    } catch {}
+  }, [chatHistory, quizId]);
 
   useEffect(() => {
     if (quizIdParam) {
@@ -235,6 +268,121 @@ function EditorContent() {
     router.push("/dashboard");
   };
 
+  // ── AI Chat: apply patch from AI ────────────────────────────
+  const applyAIPatch = useCallback((changes: any[]) => {
+    setQuestions(prev => {
+      let updated = [...prev];
+      // Process deletes first (high to low index so indices stay valid)
+      const deletes = changes
+        .filter(c => c.op === "delete" && typeof c.index === "number")
+        .map(c => c.index as number)
+        .sort((a, b) => b - a);
+      for (const idx of deletes) {
+        updated.splice(idx, 1);
+      }
+      // Process updates
+      for (const c of changes.filter(c => c.op === "update")) {
+        if (typeof c.index !== "number" || !c.question) continue;
+        const idx = c.index;
+        if (idx < 0 || idx >= updated.length) continue;
+        const q = c.question;
+        updated[idx] = {
+          ...updated[idx],
+          type: q.type ?? updated[idx].type,
+          questionText: q.questionText ?? updated[idx].questionText,
+          options: q.type === "true_false" ? ["True", "False"] : (q.options ?? updated[idx].options),
+          correctAnswer: q.correctAnswer ?? updated[idx].correctAnswer,
+          explanation: q.explanation ?? updated[idx].explanation,
+          points: q.points ?? updated[idx].points,
+          timeLimit: q.timeLimit ?? updated[idx].timeLimit,
+          isDirty: true,
+        };
+      }
+      // Process adds
+      for (const c of changes.filter(c => c.op === "add")) {
+        if (!c.question) continue;
+        const q = c.question;
+        updated.push({
+          type: q.type ?? "mcq",
+          questionText: q.questionText ?? "",
+          options: q.type === "true_false" ? ["True", "False"] : (q.options ?? ["", "", "", ""]),
+          correctAnswer: q.correctAnswer ?? "",
+          correctAnswers: [],
+          keywords: [],
+          explanation: q.explanation ?? "",
+          points: q.points ?? 1,
+          timeLimit: q.timeLimit ?? 30,
+          hint: "",
+          order: updated.length,
+          isNew: true,
+          isDirty: true,
+        });
+      }
+      // Re-assign order
+      updated.forEach((q, i) => { q.order = i; });
+      return updated;
+    });
+  }, []);
+
+  const handleChatSend = async (msg?: string) => {
+    const text = (msg ?? chatInput).trim();
+    if (!text || aiPending) return;
+    setChatInput("");
+    setChatHistory(h => [...h, { role: "user", text }]);
+    setAiPending(true);
+    haptics.light();
+    
+    const reqId = ++currentAiRequestId.current;
+    
+    try {
+      const questionsPayload = questions.map(q => ({
+        type: q.type,
+        questionText: q.questionText,
+        options: q.options,
+        correctAnswer: q.correctAnswer,
+        explanation: q.explanation,
+        points: q.points,
+        timeLimit: q.timeLimit,
+      }));
+      const result = await editQuizWithAI({
+        quizTitle: title || "Untitled Quiz",
+        questions: questionsPayload,
+        message: text,
+      });
+      if (currentAiRequestId.current !== reqId) return; // cancelled
+      
+      applyAIPatch(result.changes);
+      setChatHistory(h => [...h, { role: "ai", text: result.summary }]);
+      haptics.success();
+    } catch (err: any) {
+      if (currentAiRequestId.current !== reqId) return; // cancelled
+      setChatHistory(h => [...h, { role: "ai", text: `Error: ${err?.message || "Something went wrong."}` }]);
+      haptics.error();
+    }
+    setAiPending(false);
+  };
+
+  const cancelAiRequest = () => {
+    currentAiRequestId.current++;
+    setAiPending(false);
+    setChatHistory(h => [...h, { role: "ai", text: "Request cancelled." }]);
+    haptics.light();
+  };
+
+  // Scroll chat to bottom on new messages
+  useEffect(() => {
+    chatEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  }, [chatHistory]);
+
+  const SUGGESTIONS = [
+    "Improve the wording of all questions",
+    "Add 3 more MCQ questions",
+    "Add 2 True/False questions",
+    "Make the explanations more detailed",
+    "Make questions harder",
+    "Fix any grammar mistakes",
+  ];
+
   const addNewQuestion = (type: QuestionType = "mcq") => {
     haptics.light();
     const defaultTimer = type === "true_false"
@@ -320,7 +468,7 @@ function EditorContent() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto pb-32 space-y-8 font-sans">
+    <div className="max-w-4xl mx-auto pb-36 space-y-8 font-sans">
 
       {/* ── HEADER */}
       <div className="chaos-card bg-background p-5 sticky top-20 z-30 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -363,6 +511,127 @@ function EditorContent() {
           >
             <Check size={15} />Save
           </button>
+                    {/* AI Edit Drawer */}
+          <Drawer>
+            <DrawerTrigger asChild>
+              <button className="kb-btn kb-btn-ghost text-xs flex items-center justify-center gap-1.5">
+                <Sparkles size={14} />
+                <span>AI</span>
+              </button>
+            </DrawerTrigger>
+            <DrawerContent className="border-t-[3px] border-foreground bg-background flex flex-col" style={{ maxHeight: "70vh" }}>
+              <DrawerTitle className="sr-only">Lola</DrawerTitle>
+              {/* Header */}
+              <div className="px-5 py-4 border-b-[3px] border-foreground shrink-0">
+                <div className="w-12 h-1 bg-foreground/20 mx-auto mb-4" />
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-primary flex items-center justify-center">
+                    <Sparkles size={14} className="text-on-primary" />
+                  </div>
+                  <div>
+                    <p className="chaos-heading text-sm leading-none">Lola</p>
+                    <p className="text-[10px] text-muted-foreground chaos-heading mt-1">CHANGES APPLY INSTANTLY</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chat body */}
+              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 min-h-0">
+                {chatHistory.length === 0 && (
+                  <div className="py-4">
+                    <p className="chaos-heading text-[10px] text-muted-foreground mb-3">SUGGESTIONS</p>
+                    <div className="flex flex-wrap gap-2">
+                      {SUGGESTIONS.map(s => (
+                        <button
+                          key={s}
+                          onClick={() => handleChatSend(s)}
+                          disabled={aiPending}
+                          className="text-xs px-3 py-2 border-2 border-foreground/20 hover:border-primary hover:text-primary chaos-heading transition-colors disabled:opacity-40 cursor-pointer"
+                        >
+                          {s}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                {chatHistory.map((msg, i) => (
+                  <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
+                    {msg.role === "ai" && (
+                      <div className="w-7 h-7 shrink-0 bg-primary flex items-center justify-center mt-0.5">
+                        <Sparkles size={12} className="text-on-primary" />
+                      </div>
+                    )}
+                    <div className={`max-w-[85%] text-sm px-3 py-2 leading-relaxed ${
+                      msg.role === "user"
+                        ? "bg-foreground text-background chaos-heading text-xs border-3 border-foreground"
+                        : "bg-card border-2 border-foreground/15"
+                    }`}>
+                      {msg.text}
+                    </div>
+                  </div>
+                ))}
+                {aiPending && (
+                  <div className="flex gap-2.5 justify-start">
+                    <div className="w-7 h-7 shrink-0 bg-primary flex items-center justify-center">
+                      <Sparkles size={12} className="text-on-primary" />
+                    </div>
+                    <div className="bg-card border-2 border-foreground/15 px-3 py-2 flex items-center gap-2 text-sm text-muted-foreground">
+                      <Loader2 size={13} className="animate-spin" /> Working on it…
+                    </div>
+                  </div>
+                )}
+                <div ref={chatEndRef} />
+              </div>
+
+              {/* Quick chips after first message */}
+              {chatHistory.length > 0 && (
+                <div className="px-5 py-2 border-t-2 border-foreground/10 flex gap-2 overflow-x-auto shrink-0">
+                  {SUGGESTIONS.slice(0, 4).map(s => (
+                    <button
+                      key={s}
+                      onClick={() => handleChatSend(s)}
+                      disabled={aiPending}
+                      className="shrink-0 text-[10px] px-2.5 py-1 border-2 border-foreground/15 hover:border-primary hover:text-primary chaos-heading transition-colors disabled:opacity-40 cursor-pointer"
+                    >
+                      {s}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              {/* Input */}
+              <div className="px-4 py-3 border-t-[3px] border-foreground shrink-0">
+                <div className="relative flex items-center">
+                  <textarea
+                    ref={chatInputRef}
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend(); }
+                    }}
+                    rows={1}
+                    placeholder="ASK AI TO EDIT YOUR QUIZ…"
+                    disabled={aiPending}
+                    className="kb-input w-full resize-none text-sm min-h-[48px] max-h-[80px] disabled:opacity-50 !py-3 !pr-14"
+                    onInput={e => {
+                      const el = e.currentTarget;
+                      el.style.height = "auto";
+                      el.style.height = `${Math.min(el.scrollHeight, 80)}px`;
+                    }}
+                  />
+                  <button
+                    onClick={() => aiPending ? cancelAiRequest() : handleChatSend()}
+                    disabled={!aiPending && !chatInput.trim()}
+                    className={`absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-on-primary force-circle transition-all active:scale-95 disabled:scale-100 ${
+                      aiPending ? "bg-destructive hover:bg-destructive/90" : "bg-primary hover:bg-primary/90 disabled:opacity-30"
+                    }`}
+                  >
+                    {aiPending ? <X size={16} /> : <ArrowRight size={16} />}
+                  </button>
+                </div>
+              </div>
+            </DrawerContent>
+          </Drawer>
         </div>
       </div>
 
@@ -722,7 +991,7 @@ function EditorContent() {
           onClick={() => addNewQuestion()}
           className="w-full kb-card-hint py-6 chaos-heading text-sm text-muted-foreground hover:text-primary hover:border-primary flex items-center justify-center gap-2 transition-colors mt-4"
         >
-          <Plus size={20} /> ADD QUESTION
+        <Plus size={20} /> ADD QUESTION
         </button>
       </div>
 

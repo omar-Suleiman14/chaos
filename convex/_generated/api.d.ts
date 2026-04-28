@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as aiEditorChat from "../aiEditorChat.js";
 import type * as aiQuiz from "../aiQuiz.js";
 import type * as aiQuizMutations from "../aiQuizMutations.js";
 import type * as quizFunctions from "../quizFunctions.js";
@@ -19,6 +20,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  aiEditorChat: typeof aiEditorChat;
   aiQuiz: typeof aiQuiz;
   aiQuizMutations: typeof aiQuizMutations;
   quizFunctions: typeof quizFunctions;

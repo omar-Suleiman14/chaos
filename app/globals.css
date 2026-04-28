@@ -470,3 +470,4 @@
 /* .quiz-option:hover { box-shadow: 4px 4px 0px var(--on-background); transform: translate(-2px,-2px); } */
 .quiz-option.correct  { background: var(--primary-container); color: var(--on-primary-container); border-color: var(--primary); box-shadow: 6px 6px 0px var(--primary); }
 .quiz-option.incorrect{ background: var(--error); color: var(--on-error); border-color: var(--error-dim); box-shadow: 6px 6px 0px var(--error-dim); }
+
