@@ -35,6 +35,24 @@ export const createAIJob = mutation({
   },
 });
 
+export const cancelAIJob = mutation({
+  args: { jobId: v.id("aiJobs") },
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+    const job = await ctx.db.get(args.jobId);
+    if (!job || job.clerkId !== identity.subject) throw new Error("Not found");
+    // Only cancel if still in progress
+    if (job.status !== "done" && job.status !== "error") {
+      await ctx.db.patch(args.jobId, {
+        status: "error",
+        step: "Cancelled",
+        error: "Cancelled by user.",
+      });
+    }
+  },
+});
+
 export const getAIJob = query({
   args: { jobId: v.id("aiJobs") },
   handler: async (ctx, args) => {

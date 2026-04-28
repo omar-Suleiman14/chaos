@@ -30,6 +30,7 @@ export default function DashboardQuizzes() {
   const createQuiz = useMutation(api.quizFunctions.createQuiz);
   const currentUser = useQuery(api.quizFunctions.getCurrentUser);
   const setUsername = useMutation(api.quizFunctions.setUsername);
+  const cancelAIJob = useMutation(api.aiQuizMutations.cancelAIJob);
 
   const router = useRouter();
   const [copiedId, setCopiedId] = useState<string | null>(null);
@@ -37,6 +38,7 @@ export default function DashboardQuizzes() {
   const [openMenuId, setOpenMenuId] = useState<string | null>(null);
   const [isCreating, setIsCreating] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
+  const [isCancellingJob, setIsCancellingJob] = useState(false);
 
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [newUsername, setNewUsername] = useState("");
@@ -79,7 +81,22 @@ export default function DashboardQuizzes() {
 
   const dismissJobBanner = () => {
     setActiveJobId(null);
+    setIsCancellingJob(false);
     localStorage.removeItem("chaos_ai_job_id");
+  };
+
+  const handleCancelJob = async () => {
+    if (!activeJobId) return;
+    const isRunning = activeJob?.status !== "done" && activeJob?.status !== "error";
+    if (isRunning) {
+      setIsCancellingJob(true);
+      try {
+        await cancelAIJob({ jobId: activeJobId });
+      } catch (e) {
+        console.error(e);
+      }
+    }
+    dismissJobBanner();
   };
 
   useEffect(() => {
@@ -312,11 +329,14 @@ export default function DashboardQuizzes() {
               </>
             )}
           </div>
-          {(activeJob.status === "done" || activeJob.status === "error") && (
-            <button onClick={dismissJobBanner} className="shrink-0 p-1 text-muted-foreground hover:text-foreground">
-              <X size={16} />
-            </button>
-          )}
+          <button
+            onClick={handleCancelJob}
+            disabled={isCancellingJob}
+            className="shrink-0 p-1 text-muted-foreground hover:text-foreground disabled:opacity-40"
+            title={activeJob.status === "done" || activeJob.status === "error" ? "Dismiss" : "Cancel generation"}
+          >
+            {isCancellingJob ? <Loader2 size={16} className="animate-spin" /> : <X size={16} />}
+          </button>
         </div>
       )}
 
@@ -566,7 +586,7 @@ export default function DashboardQuizzes() {
                                       title="results"
                                     >
                                       <BarChart3 size={13} />
-                                      Stats
+                                      Results
                                     </Link>
                                     <button
                                       onClick={() => handleCopyLink(quiz.creatorUsername, quiz.slug)}

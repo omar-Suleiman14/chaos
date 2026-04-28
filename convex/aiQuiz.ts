@@ -143,42 +143,57 @@ async function generateQuestionsFromText(
   params: { total: number; mcq: number; multiSelect: number; trueFalse: number; written: number; difficulty: string },
   apiKey: string
 ): Promise<GeneratedQuestion[]> {
-  const systemPrompt = `You are an expert exam creator and educational analyst.
-You have been provided with the extracted text of a document (lecture notes, slides, or reading material).
+  // Build a precise breakdown — only mention types the caller actually wants
+  const typeLines: string[] = [];
+  const exampleObjects: string[] = [];
 
-Your task is to comprehensively analyze the text and generate a high-quality quiz based ONLY on the provided content.
+  if (params.mcq > 0) {
+    typeLines.push(`- Multiple Choice (type "mcq"): exactly ${params.mcq} questions. Provide 4 options; set "answer" to the exact text of the correct option.`);
+    exampleObjects.push(`{ "type": "mcq", "question": "...", "options": ["A", "B", "C", "D"], "answer": "A", "explanation": "..." }`);
+  }
+  if (params.trueFalse > 0) {
+    typeLines.push(`- True/False (type "true_false"): exactly ${params.trueFalse} questions. Set "answer" to a JSON boolean (true or false).`);
+    exampleObjects.push(`{ "type": "true_false", "question": "...", "answer": true, "explanation": "..." }`);
+  }
+  const forbiddenTypes = (["mcq", "true_false"] as const).filter(t => {
+    if (t === "mcq") return params.mcq === 0;
+    if (t === "true_false") return params.trueFalse === 0;
+    return false;
+  });
 
-Requirements:
-- Total questions: ${params.total} (MAX 50)
-- MCQ: ${params.mcq}
-- Multi-select: ${params.multiSelect}
-- True/False: ${params.trueFalse}
-- Written: ${params.written}
-- Difficulty: ${params.difficulty}
+  const systemPrompt = `You are an expert exam creator. Generate a quiz from the provided document text.
 
-General Rules:
-- Questions MUST be reasoning-based, not direct recall
-- Avoid simple definitions
-- Each question should require understanding, application, or analysis
+REQUIRED QUESTION BREAKDOWN (total: ${params.total}):
+${typeLines.join("\n")}
 
-Quality Rules:
-- No repetition, no vague questions
-- Each question must be clearly answerable from the content within the document
-- Do NOT use external knowledge
-- For written questions, include a keywords array of 3-6 key terms that a correct answer must contain
+DIFFICULTY: ${params.difficulty}
 
-Output format (JSON):
+CONTENT RULES:
+- Base every question ONLY on the provided document — do not use outside knowledge.
+- Questions must require understanding or application, not just rote recall.
+- No repeated or vague questions.
+
+STRICT OUTPUT RULES:
+- Total questions MUST be exactly ${params.total}.
+${forbiddenTypes.length > 0 ? `- DO NOT produce questions of type: ${forbiddenTypes.map(t => `"${t}"`).join(", ")}. These types are forbidden — including even one will break the parser.` : ""}
+- Every question object MUST have the "type" field set to one of the allowed types only.
+- Output ONLY valid JSON with no markdown, no comments, no trailing text.
+
+OUTPUT FORMAT:
 {
   "questions": [
-    { "type": "mcq", "question": "", "options": ["", "", "", ""], "answer": "", "explanation": "" },
-    { "type": "multi_select", "question": "", "options": ["", "", "", ""], "answers": [], "explanation": "" },
-    { "type": "true_false", "question": "", "answer": true, "explanation": "" },
-    { "type": "written", "question": "", "answer": "", "keywords": [], "explanation": "" }
+    ${exampleObjects.join(",\n    ")}
   ]
 }`;
 
+  const allowedTypes = new Set<string>();
+  if (params.mcq > 0) allowedTypes.add("mcq");
+  if (params.trueFalse > 0) allowedTypes.add("true_false");
+
   const raw = await callOpenRouterText(apiKey, systemPrompt, "DOCUMENT TEXT:\n" + text.slice(0, 40000));
-  return parseQuestionsFromAI(raw);
+  const parsed = parseQuestionsFromAI(raw);
+  // Safety net: drop any question types the caller did not request
+  return parsed.filter(q => allowedTypes.has(q.type));
 }
 
 async function parseExistingQuizFromText(
@@ -190,19 +205,16 @@ async function parseExistingQuizFromText(
 Extract the questions exactly as they appear in the text.
 
 For each question found:
-- Determine its type (mcq, true_false, multi_select, written)
+- Determine its type (mcq, true_false)
 - Extract all answer options
 - Mark the correct answer if visible (e.g. circled, checked, or in an answer key), otherwise leave it completely blank
 - Extract explanation if present, otherwise leave blank
-- For written questions, extract 3-5 keywords from the expected answer (or question context) for autograding
 
 Output format (JSON):
 {
   "questions": [
     { "type": "mcq", "question": "", "options": ["", "", "", ""], "answer": "", "explanation": "" },
     { "type": "true_false", "question": "", "answer": true, "explanation": "" },
-    { "type": "multi_select", "question": "", "options": ["", "", "", ""], "answers": [], "explanation": "" },
-    { "type": "written", "question": "", "answer": "", "keywords": [], "explanation": "" }
   ]
 }
 
@@ -230,24 +242,6 @@ function parseQuestionsFromAI(raw: string): GeneratedQuestion[] {
             type: "true_false",
             questionText,
             answerBool: q.answer === true || q.answer === "true" || q.answer === "True" || q.answer === "T",
-            explanation: q.explanation || "",
-          };
-        }
-        if (type === "multi_select") {
-          return {
-            type: "multi_select",
-            questionText,
-            options: (q.options || []).filter(Boolean),
-            answers: Array.isArray(q.answers) ? q.answers : [],
-            explanation: q.explanation || "",
-          };
-        }
-        if (type === "written") {
-          return {
-            type: "written",
-            questionText,
-            answer: q.answer || "",
-            keywords: Array.isArray(q.keywords) ? q.keywords : [],
             explanation: q.explanation || "",
           };
         }
