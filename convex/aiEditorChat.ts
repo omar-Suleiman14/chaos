@@ -60,8 +60,8 @@ ALLOWED QUESTION TYPES: "mcq" (4 options, correctAnswer = exact option text) | "
 RESPONSE FORMAT (output valid JSON only, no markdown):
 {
   "changes": [
-    { "op": "update", "index": 0, "question": { "type": "mcq", "questionText": "...", "options": ["A","B","C","D"], "correctAnswer": "A", "explanation": "...", "points": 1, "timeLimit": 30 } },
-    { "op": "add", "question": { "type": "true_false", "questionText": "...", "options": ["True","False"], "correctAnswer": "True", "explanation": "...", "points": 1, "timeLimit": 30 } },
+    { "op": "update", "index": 0, "question": { "type": "mcq", "questionText": "What is the capital of France?", "options": ["Paris","London","Berlin","Madrid"], "correctAnswer": "Paris", "explanation": "Paris is the capital.", "points": 1, "timeLimit": 30 } },
+    { "op": "add", "question": { "type": "true_false", "questionText": "The sky is blue.", "options": ["True","False"], "correctAnswer": "True", "explanation": "Rayleigh scattering", "points": 1, "timeLimit": 30 } },
     { "op": "delete", "index": 2 }
   ],
   "summary": "Short human-readable description of what was changed"
@@ -105,13 +105,34 @@ RULES:
     const json = await response.json();
     const raw = json.choices?.[0]?.message?.content || "{}";
 
+    let parsed: any;
     try {
       const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-      const parsed = JSON.parse(cleaned);
-      const changes: QuestionPatch[] = (parsed.changes || []).filter((c: any) =>
-        c.op === "add" || c.op === "update" || c.op === "delete"
+      parsed = JSON.parse(cleaned);
+    } catch {
+      let fixedRaw = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+      if (!fixedRaw.endsWith("}")) {
+        fixedRaw += "]}"; 
+      }
+      try {
+        parsed = JSON.parse(fixedRaw);
+      } catch {
+        parsed = { changes: [], summary: "Parsed partially. Some questions may be missing." };
+        const cMatches = raw.match(/{\s*"op"\s*:\s*"[^"]+".*?(?=},\s*{|\]\s*})/gs);
+        if (cMatches) {
+          for (const match of cMatches) {
+            try { parsed.changes.push(JSON.parse(match + "}")); } catch {}
+            try { parsed.changes.push(JSON.parse(match)); } catch {}
+          }
+        }
+      }
+    }
+
+    try {
+      const changes: QuestionPatch[] = (parsed?.changes || []).filter((c: any) =>
+        c && (c.op === "add" || c.op === "update" || c.op === "delete")
       );
-      const summary: string = parsed.summary || "Changes applied.";
+      const summary: string = parsed?.summary || "Changes applied.";
       return { changes, summary };
     } catch {
       return { changes: [], summary: "Could not parse AI response. Try rephrasing." };

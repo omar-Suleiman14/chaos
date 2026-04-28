@@ -161,7 +161,7 @@ RULES:
 
 OUTPUT: valid JSON only, no markdown, no extra text.
 FORMAT:
-{ "questions": [{ "type": "mcq", "question": "...", "options": ["A","B","C","D"], "answer": "A", "explanation": "..." }] }`;
+{ "questions": [{ "type": "mcq", "question": "What is the capital of France?", "options": ["Paris","London","Berlin","Madrid"], "answer": "Paris", "explanation": "Paris is the capital of France." }] }`;
 
     const raw = await callOpenRouterText(apiKey, systemPrompt, "DOCUMENT TEXT:\n" + truncatedText);
     const parsed = parseQuestionsFromAI(raw).filter(q => q.type === "mcq");
@@ -221,37 +221,56 @@ Only extract what is present in the document. Do not invent questions.`;
 }
 
 function parseQuestionsFromAI(raw: string): GeneratedQuestion[] {
+  let parsed: any;
   try {
     const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
-    const parsed = JSON.parse(cleaned);
-    const qs = parsed.questions || [];
-
-    return qs
-      .filter((q: any) => q.question || q.questionText)
-      .slice(0, 50)
-      .map((q: any): GeneratedQuestion => {
-        const type = q.type as GeneratedQuestion["type"];
-        const questionText = (q.question || q.questionText || "").trim();
-
-        if (type === "true_false") {
-          return {
-            type: "true_false",
-            questionText,
-            answerBool: q.answer === true || q.answer === "true" || q.answer === "True" || q.answer === "T",
-            explanation: q.explanation || "",
-          };
+    parsed = JSON.parse(cleaned);
+  } catch {
+    // Fallback if JSON is truncated or malformed
+    let fixedRaw = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
+    if (!fixedRaw.endsWith("}")) {
+      fixedRaw += "]}"; // rough attempt to close it
+    }
+    try {
+      parsed = JSON.parse(fixedRaw);
+    } catch {
+      // Last resort: regex extracting objects that look like questions
+      parsed = { questions: [] };
+      const qMatches = raw.match(/{\s*"type"\s*:\s*"[^"]+".*?(?=},\s*{|\]\s*})/gs);
+      if (qMatches) {
+        for (const match of qMatches) {
+          try { parsed.questions.push(JSON.parse(match + "}")); } catch {}
+          try { parsed.questions.push(JSON.parse(match)); } catch {}
         }
+      }
+    }
+  }
+
+  const qs = parsed?.questions || [];
+
+  return qs
+    .filter((q: any) => q && (q.question || q.questionText))
+    .slice(0, 50)
+    .map((q: any): GeneratedQuestion => {
+      const type = q.type as GeneratedQuestion["type"];
+      const questionText = (q.question || q.questionText || "").trim();
+
+      if (type === "true_false") {
         return {
-          type: "mcq",
+          type: "true_false",
           questionText,
-          options: (q.options || []).filter(Boolean),
-          answer: typeof q.answer === "string" ? q.answer : "",
+          answerBool: q.answer === true || q.answer === "true" || q.answer === "True" || q.answer === "T",
           explanation: q.explanation || "",
         };
-      });
-  } catch {
-    return [];
-  }
+      }
+      return {
+        type: "mcq",
+        questionText,
+        options: (q.options || []).filter(Boolean),
+        answer: typeof q.answer === "string" ? q.answer : "",
+        explanation: q.explanation || "",
+      };
+    });
 }
 
 /**
