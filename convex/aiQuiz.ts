@@ -236,7 +236,7 @@ function parseQuestionsFromAI(raw: string): GeneratedQuestion[] {
     } catch {
       // Last resort: regex extracting objects that look like questions
       parsed = { questions: [] };
-      const qMatches = raw.match(/{\s*"type"\s*:\s*"[^"]+".*?(?=},\s*{|\]\s*})/gs);
+      const qMatches = raw.match(/{\s*"type"\s*:\s*"[^"]+"[\s\S]*?(?=},\s*{|\]\s*})/g);
       if (qMatches) {
         for (const match of qMatches) {
           try { parsed.questions.push(JSON.parse(match + "}")); } catch {}

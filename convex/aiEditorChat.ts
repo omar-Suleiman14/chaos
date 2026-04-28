@@ -118,7 +118,7 @@ RULES:
         parsed = JSON.parse(fixedRaw);
       } catch {
         parsed = { changes: [], summary: "Parsed partially. Some questions may be missing." };
-        const cMatches = raw.match(/{\s*"op"\s*:\s*"[^"]+".*?(?=},\s*{|\]\s*})/gs);
+        const cMatches = raw.match(/{\s*"op"\s*:\s*"[^"]+"[\s\S]*?(?=},\s*{|\]\s*})/g);
         if (cMatches) {
           for (const match of cMatches) {
             try { parsed.changes.push(JSON.parse(match + "}")); } catch {}
