@@ -95,12 +95,33 @@ export default function AIQuizModal({ onClose, onJobStarted }: Props) {
 
       let extractedText = "";
 
+      const typeofWindow = typeof window !== "undefined" ? window : globalThis;
+      if (typeof (typeofWindow as any).Promise.withResolvers === "undefined") {
+        (typeofWindow as any).Promise.withResolvers = function () {
+          let resolve, reject;
+          const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+          return { promise, resolve, reject };
+        };
+      }
+
       if (file) {
         // File modes — extract text from file
         if (file.type === "application/pdf") {
-          const pdfjsLib = await import("pdfjs-dist");
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-          const arrayBuffer = await file.arrayBuffer();
+          const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/legacy/build/pdf.worker.min.mjs`;
+          
+          let arrayBuffer: ArrayBuffer;
+          if (typeof file.arrayBuffer === "function") {
+            arrayBuffer = await file.arrayBuffer();
+          } else {
+            arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as ArrayBuffer);
+              reader.onerror = reject;
+              reader.readAsArrayBuffer(file);
+            });
+          }
+          
           const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
           const maxPages = Math.min(pdf.numPages, 40);
 

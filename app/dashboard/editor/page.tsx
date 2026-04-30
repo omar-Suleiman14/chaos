@@ -130,7 +130,7 @@ function EditorContent() {
     try {
       const stored = localStorage.getItem(`ai-chat-${quizId}`);
       if (stored) setChatHistory(JSON.parse(stored));
-    } catch {}
+    } catch { }
   }, [quizId]);
 
   // Persist chat history on every change
@@ -138,7 +138,7 @@ function EditorContent() {
     if (!quizId) return;
     try {
       localStorage.setItem(`ai-chat-${quizId}`, JSON.stringify(chatHistory));
-    } catch {}
+    } catch { }
   }, [chatHistory, quizId]);
 
   useEffect(() => {
@@ -351,25 +351,47 @@ function EditorContent() {
   const handleChatSend = async (msg?: string) => {
     const text = (msg ?? chatInput).trim();
     if ((!text && !chatFile) || aiPending) return;
-    
+
     const submittedFile = chatFile;
     setChatInput("");
     setChatFile(null);
     setChatHistory(h => [...h, { role: "user", text: (text + (submittedFile ? ` [Attached: ${submittedFile.name}]` : "")).trim() }]);
     setAiPending(true);
     haptics.light();
-    
+
     const reqId = ++currentAiRequestId.current;
-    
+
     try {
       let finalMessage = text;
-      
+
       if (submittedFile) {
         let extractedText = "";
+
+        const typeofWindow = typeof window !== "undefined" ? window : globalThis;
+        if (typeof (typeofWindow as any).Promise.withResolvers === "undefined") {
+          (typeofWindow as any).Promise.withResolvers = function () {
+            let resolve, reject;
+            const promise = new Promise((res, rej) => { resolve = res; reject = rej; });
+            return { promise, resolve, reject };
+          };
+        }
+
         if (submittedFile.type === "application/pdf") {
-          const pdfjsLib = await import("pdfjs-dist");
-          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/build/pdf.worker.min.mjs`;
-          const arrayBuffer = await submittedFile.arrayBuffer();
+          const pdfjsLib = await import("pdfjs-dist/legacy/build/pdf.mjs");
+          pdfjsLib.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjsLib.version}/legacy/build/pdf.worker.min.mjs`;
+
+          let arrayBuffer: ArrayBuffer;
+          if (typeof submittedFile.arrayBuffer === "function") {
+            arrayBuffer = await submittedFile.arrayBuffer();
+          } else {
+            arrayBuffer = await new Promise<ArrayBuffer>((resolve, reject) => {
+              const reader = new FileReader();
+              reader.onload = () => resolve(reader.result as ArrayBuffer);
+              reader.onerror = reject;
+              reader.readAsArrayBuffer(submittedFile);
+            });
+          }
+
           const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
           const maxPages = Math.min(pdf.numPages, 40);
 
@@ -404,7 +426,7 @@ function EditorContent() {
         message: finalMessage,
       });
       if (currentAiRequestId.current !== reqId) return; // cancelled
-      
+
       applyAIPatch(result.changes);
       setChatHistory(h => [...h, { role: "ai", text: result.summary }]);
       haptics.success();
@@ -530,8 +552,8 @@ function EditorContent() {
           <div className="flex items-center gap-3 mb-1">
             <h1 className="chaos-heading text-2xl">EDITOR</h1>
             <span className={`chaos-heading text-xs px-2 py-1 border-2 flex items-center gap-1.5 ${isPublished
-                ? "border-primary bg-chaos text-chaos-foreground"
-                : "border-foreground/30 text-muted-foreground"
+              ? "border-primary bg-chaos text-chaos-foreground"
+              : "border-foreground/30 text-muted-foreground"
               }`}>
               {isPublished ? <Globe size={11} /> : <Lock size={11} />}
               {isPublished ? "PUBLISHED" : "DRAFT"}
@@ -546,187 +568,6 @@ function EditorContent() {
             {saving ? <RefreshCw size={12} className="animate-spin text-primary" /> : <Save size={12} />}
             {saving ? "SAVING..." : lastSaved ? `SAVED ${lastSaved.toLocaleTimeString()}` : "NOT SAVED YET"}
           </div>
-        </div>
-
-        <div className="flex items-center gap-3 w-full sm:w-auto">
-          <button
-            onClick={() => {
-              const willPublish = !isPublished;
-              setIsPublished(willPublish);
-              handleSave(willPublish);
-            }}
-            className="flex-1 sm:flex-none kb-btn kb-btn-ghost text-xs"
-          >
-            {isPublished ? "UNPUBLISH" : "PUBLISH"}
-          </button>
-          <button
-            onClick={handleSaveAndExit}
-            className="flex-1 sm:flex-none kb-btn kb-btn-primary text-xs flex items-center justify-center gap-2"
-          >
-            <Check size={15} />Save
-          </button>
-                    {/* AI Edit Drawer */}
-          <Drawer>
-            <DrawerTrigger asChild>
-              <button className="kb-btn kb-btn-ghost text-xs flex items-center justify-center gap-1.5">
-                <Sparkles size={14} />
-                <span>AI</span>
-              </button>
-            </DrawerTrigger>
-            <DrawerContent className="border-t-[3px] border-foreground bg-background flex flex-col" style={{ maxHeight: "70vh" }}>
-              <DrawerTitle className="sr-only">Lola</DrawerTitle>
-              {/* Header */}
-              <div className="px-5 py-4 border-b-[3px] border-foreground shrink-0">
-                <div className="w-12 h-1 bg-foreground/20 mx-auto mb-4" />
-                <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-primary flex items-center justify-center">
-                    <Sparkles size={14} className="text-on-primary" />
-                  </div>
-                  <div>
-                    <p className="chaos-heading text-sm leading-none">Lola</p>
-                    <p className="text-[10px] text-muted-foreground chaos-heading mt-1">CHANGES APPLY INSTANTLY</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Chat body */}
-              <div className="flex-1 overflow-y-auto px-5 py-4 space-y-3 min-h-0">
-                {chatHistory.length === 0 && (
-                  <div className="py-4">
-                    <p className="chaos-heading text-[10px] text-muted-foreground mb-3">SUGGESTIONS</p>
-                    <div className="flex flex-wrap gap-2">
-                      {SUGGESTIONS.map(s => (
-                        <button
-                          key={s}
-                          onClick={() => handleChatSend(s)}
-                          disabled={aiPending}
-                          className="text-xs px-3 py-2 border-2 border-foreground/20 hover:border-primary hover:text-primary chaos-heading transition-colors disabled:opacity-40 cursor-pointer"
-                        >
-                          {s}
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                )}
-                {chatHistory.map((msg, i) => (
-                  <div key={i} className={`flex gap-2.5 ${msg.role === "user" ? "justify-end" : "justify-start"}`}>
-                    {msg.role === "ai" && (
-                      <div className="w-7 h-7 shrink-0 bg-primary flex items-center justify-center mt-0.5">
-                        <Sparkles size={12} className="text-on-primary" />
-                      </div>
-                    )}
-                    <div className={`max-w-[85%] text-sm px-3 py-2 leading-relaxed ${
-                      msg.role === "user"
-                        ? "bg-foreground text-background chaos-heading text-xs border-3 border-foreground"
-                        : "bg-card border-2 border-foreground/15"
-                    }`}>
-                      {msg.text}
-                    </div>
-                  </div>
-                ))}
-                {aiPending && (
-                  <div className="flex gap-2.5 justify-start">
-                    <div className="w-7 h-7 shrink-0 bg-primary flex items-center justify-center">
-                      <Sparkles size={12} className="text-on-primary" />
-                    </div>
-                    <div className="bg-card border-2 border-foreground/15 px-3 py-2 flex items-center gap-2 text-sm text-muted-foreground">
-                      <Loader2 size={13} className="animate-spin" /> Working on it…
-                    </div>
-                  </div>
-                )}
-                <div ref={chatEndRef} />
-              </div>
-
-              {/* Quick chips after first message */}
-              {chatHistory.length > 0 && (
-                <div className="px-5 py-2 border-t-2 border-foreground/10 flex gap-2 overflow-x-auto shrink-0">
-                  {SUGGESTIONS.slice(0, 4).map(s => (
-                    <button
-                      key={s}
-                      onClick={() => handleChatSend(s)}
-                      disabled={aiPending}
-                      className="shrink-0 text-[10px] px-2.5 py-1 border-2 border-foreground/15 hover:border-primary hover:text-primary chaos-heading transition-colors disabled:opacity-40 cursor-pointer"
-                    >
-                      {s}
-                    </button>
-                  ))}
-                </div>
-              )}
-
-              {/* Input */}
-              <div className="px-4 py-3 border-t-[3px] border-foreground shrink-0">
-                <div
-                  onDragOver={(e) => { e.preventDefault(); setChatIsDragging(true); }}
-                  onDragLeave={() => setChatIsDragging(false)}
-                  onDrop={onChatDrop}
-                  className={`relative flex flex-col items-stretch border-[3px] transition-all bg-background ${
-                    chatIsDragging ? "border-primary bg-primary/5" : "border-foreground"
-                  }`}
-                >
-                  <div className="relative flex items-center w-full">
-                    <textarea
-                      ref={chatInputRef}
-                      value={chatInput}
-                      onChange={e => setChatInput(e.target.value)}
-                      onKeyDown={e => {
-                        if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleChatSend(); }
-                      }}
-                      rows={1}
-                      placeholder={chatFile ? "ADD INSTRUCTIONS (OPTIONAL)…" : "ASK AI TO EDIT QUIZ… OR DROP A FILE"}
-                      disabled={aiPending}
-                      className="kb-input w-full border-none resize-none text-sm min-h-[48px] max-h-[80px] disabled:opacity-50 !py-3 !pl-10 !pr-14"
-                      onInput={e => {
-                        const el = e.currentTarget;
-                        el.style.height = "auto";
-                        el.style.height = `${Math.min(el.scrollHeight, 80)}px`;
-                      }}
-                    />
-                    
-                    {/* Attach button inside input on the left */}
-                    <button
-                      onClick={() => chatFileInputRef.current?.click()}
-                      disabled={aiPending}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-7 h-7 flex items-center justify-center text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50"
-                      title="Attach File"
-                    >
-                      <Upload size={14} />
-                    </button>
-                    <input
-                      ref={chatFileInputRef}
-                      type="file"
-                      accept=".pdf,.png,.jpg,.jpeg,.webp"
-                      className="hidden"
-                      onChange={(e) => { const f = e.target.files?.[0]; if (f) handleChatFileSelect(f); }}
-                    />
-                    
-                    {/* Submit button inside input on the right */}
-                    <button
-                      onClick={() => aiPending ? cancelAiRequest() : handleChatSend()}
-                      disabled={(!aiPending && !chatInput.trim() && !chatFile)}
-                      className={`absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 flex items-center justify-center text-on-primary force-circle transition-all active:scale-95 disabled:scale-100 ${
-                        aiPending ? "bg-destructive hover:bg-destructive/90" : "bg-primary hover:bg-primary/90 disabled:opacity-30"
-                      }`}
-                    >
-                      {aiPending ? <X size={16} /> : <ArrowRight size={16} />}
-                    </button>
-                  </div>
-                  
-                  {/* File Preview */}
-                  {chatFile && (
-                    <div className="flex items-center justify-between border-t-2 border-foreground/10 px-3 py-2 bg-muted/20">
-                      <div className="flex items-center gap-2 min-w-0">
-                        {chatFile.type === "application/pdf" ? <FileText size={14} className="text-primary shrink-0" /> : <ImageIcon size={14} className="text-primary shrink-0" />}
-                        <span className="text-[11px] font-bold truncate chaos-heading">{chatFile.name}</span>
-                      </div>
-                      <button onClick={() => setChatFile(null)} disabled={aiPending} className="p-1 text-muted-foreground hover:text-destructive shrink-0 disabled:opacity-50">
-                        <X size={14} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </DrawerContent>
-          </Drawer>
         </div>
       </div>
 
@@ -796,12 +637,10 @@ function EditorContent() {
                   <span className="text-muted-foreground">{icon}</span>
                   {label}
                 </span>
-                <div className={`w-9 h-5 rounded-full flex items-center px-0.5 transition-colors shrink-0 ${
-                  quizSettings[key] ? 'bg-chaos' : 'bg-muted'
-                }`}>
-                  <div className={`w-4 h-4 rounded-full bg-background transition-transform ${
-                    quizSettings[key] ? 'translate-x-4' : 'translate-x-0'
-                  }`} />
+                <div className={`w-9 h-5 rounded-full flex items-center px-0.5 transition-colors shrink-0 ${quizSettings[key] ? 'bg-chaos' : 'bg-muted'
+                  }`}>
+                  <div className={`w-4 h-4 rounded-full bg-background transition-transform ${quizSettings[key] ? 'translate-x-4' : 'translate-x-0'
+                    }`} />
                 </div>
               </button>
             ))}
@@ -875,8 +714,8 @@ function EditorContent() {
                             >
                               <div className="flex items-center gap-4 min-w-0 pr-4">
                                 <span className={`w-8 h-8 border-[3px] flex items-center justify-center shrink-0 text-sm chaos-heading ${isExpanded
-                                    ? "bg-primary text-on-primary border-primary"
-                                    : "border-foreground/30 text-foreground"
+                                  ? "bg-primary text-on-primary border-primary"
+                                  : "border-foreground/30 text-foreground"
                                   }`}>
                                   {index + 1}
                                 </span>
@@ -958,8 +797,8 @@ function EditorContent() {
                                             }}
                                             title="Set as correct answer"
                                             className={`w-9 h-9 shrink-0 border-[3px] flex items-center justify-center chaos-heading text-sm transition-colors ${isCorrect
-                                                ? "bg-primary text-on-primary border-primary"
-                                                : "bg-background text-muted-foreground border-foreground/30 hover:border-primary"
+                                              ? "bg-primary text-on-primary border-primary"
+                                              : "bg-background text-muted-foreground border-foreground/30 hover:border-primary"
                                               }`}
                                           >
                                             {isCorrect ? <Check size={16} /> : String.fromCharCode(65 + oi)}
@@ -1086,7 +925,7 @@ function EditorContent() {
           onClick={() => addNewQuestion()}
           className="w-full kb-card-hint py-6 chaos-heading text-sm text-muted-foreground hover:text-primary hover:border-primary flex items-center justify-center gap-2 transition-colors mt-4"
         >
-        <Plus size={20} /> ADD QUESTION
+          <Plus size={20} /> ADD QUESTION
         </button>
       </div>
 
