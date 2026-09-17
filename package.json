@@ -2,6 +2,7 @@
   "name": "chaos",
   "version": "0.1.0",
   "private": true,
+  "license": "AGPL-3.0-or-later",
   "scripts": {
     "dev": "npm-run-all --parallel dev:frontend dev:backend",
     "dev:frontend": "next dev",

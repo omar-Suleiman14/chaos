@@ -156,9 +156,9 @@ Known gaps, tracked as issues rather than restated in detail here:
 
 See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for how to propose changes.
 
-## License status
+## License
 
-**Undecided.** Chaos does not yet have a license. Do not assume any specific
-license applies until this is resolved; see
-[#7](https://github.com/omar-Suleiman14/chaos/issues/7) for the open
-decision.
+Chaos is licensed under the [GNU Affero General Public License v3.0 or
+later](./LICENSE) (AGPL-3.0-or-later). See
+[#7](https://github.com/omar-Suleiman14/chaos/issues/7) for the comparison
+and the owner's approval of this license.
