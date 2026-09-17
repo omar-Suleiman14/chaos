@@ -9,7 +9,11 @@
     "predev": "convex dev --until-success && convex dashboard",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint ."
+    "lint": "eslint .",
+    "test": "npm-run-all --sequential test:unit test:integration",
+    "test:unit": "vitest run --config vitest.unit.config.ts",
+    "test:integration": "vitest run --config vitest.integration.config.ts",
+    "test:e2e": "playwright test"
   },
   "dependencies": {
     "@clerk/clerk-react": "^5.61.3",
@@ -39,18 +43,28 @@
   },
   "devDependencies": {
     "@convex-dev/eslint-plugin": "^1.2.2",
+    "@edge-runtime/vm": "^5.0.0",
+    "@playwright/test": "^1.63.0",
     "@tailwindcss/postcss": "^4.2.2",
+    "@testing-library/jest-dom": "^7.0.1",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.7",
     "@types/canvas-confetti": "^1.9.0",
     "@types/howler": "^2.2.12",
     "@types/node": "^25.5.2",
     "@types/react": "^19.2.14",
     "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.1.1",
+    "convex-test": "^0.0.50",
     "eslint": "^10.2.0",
     "eslint-config-next": "^16.2.2",
+    "jsdom": "^30.0.1",
     "npm-run-all2": "^8.0.4",
     "prettier": "^3.8.1",
     "tailwindcss": "^4.2.2",
-    "typescript": "^6.0.2"
+    "typescript": "^6.0.2",
+    "vite": "^8.3.0",
+    "vitest": "^5.0.1"
   },
   "pnpm": {
     "onlyBuiltDependencies": [

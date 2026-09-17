@@ -220,7 +220,7 @@ Only extract what is present in the document. Do not invent questions.`;
   return parseQuestionsFromAI(raw);
 }
 
-function parseQuestionsFromAI(raw: string): GeneratedQuestion[] {
+export function parseQuestionsFromAI(raw: string): GeneratedQuestion[] {
   let parsed: any;
   try {
     const cleaned = raw.replace(/```json\s*/gi, "").replace(/```\s*/g, "").trim();
@@ -277,7 +277,7 @@ function parseQuestionsFromAI(raw: string): GeneratedQuestion[] {
  * Post-parse validation: deduplicate, drop MCQs with missing/invalid answers,
  * drop T/F without a boolean answer.
  */
-function validateQuestions(questions: GeneratedQuestion[]): GeneratedQuestion[] {
+export function validateQuestions(questions: GeneratedQuestion[]): GeneratedQuestion[] {
   const seen = new Set<string>();
   const valid: GeneratedQuestion[] = [];
 
