@@ -131,7 +131,7 @@ export default function AdminSettings({ globalConfig }: { globalConfig: any }) {
         <div className="flex items-center gap-3 mb-6 pb-4 border-b-2 border-foreground/10">
           <Server className="text-primary" size={24} />
           <h2 className="chaos-heading text-xl">Global Website Defaults</h2>
-          <p className="text-xs text-muted-foreground mt-1 ml-auto">These apply if a user hasn't set custom defaults.</p>
+          <p className="text-xs text-muted-foreground mt-1 ml-auto">These apply if a user hasn&apos;t set custom defaults.</p>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
