@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from "react";
 import { haptics } from "@/lib/haptics";
 import { sfx } from "@/lib/sfx";
 import { Zap, ArrowDown } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Fisher-Yates shuffle (creates a new array)
 function shuffleArray<T>(arr: T[]): T[] {
@@ -241,7 +242,8 @@ export default function QuizPlayerPage() {
   // ── ENTRY SCREEN
   if (gameState === "entry") {
     return (
-      <div className="h-[100dvh] bg-background flex flex-col items-center justify-center p-6">
+      <div className="h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center p-6 relative">
+        <ThemeToggle className="absolute top-5 right-5" />
         <div className="max-w-md w-full">
           <div className="chaos-card bg-card p-8 sm:p-10">
             <p className="chaos-heading text-xs text-primary mb-3">
@@ -283,6 +285,7 @@ export default function QuizPlayerPage() {
   // ── PLAYING (SNAP SCROLL)
   return (
     <div className="h-[100dvh] bg-background text-foreground font-sans relative">
+      <ThemeToggle className="fixed top-4 right-4 z-[60]" />
       {/* Progress bar */}
       <div className="fixed top-0 left-0 w-full h-1.5 bg-muted z-50">
         <div
@@ -307,9 +310,9 @@ export default function QuizPlayerPage() {
           if (isFeedback) {
             const noAnim = !!quizData?.disableAnimations;
             if (feed.isCorrect) {
-              slideBg = noAnim ? "bg-[#d1ebd2]" : "bg-[#d1ebd2] transition-colors duration-500";
+              slideBg = noAnim ? "bg-primary/10" : "bg-primary/10 transition-colors duration-500";
             } else {
-              slideBg = noAnim ? "bg-[#ebd2d2]" : "bg-[#ebd2d2] transition-colors duration-500";
+              slideBg = noAnim ? "bg-destructive/10" : "bg-destructive/10 transition-colors duration-500";
               slideAnim = noAnim ? "" : "shake";
             }
           }

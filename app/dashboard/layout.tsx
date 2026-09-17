@@ -7,7 +7,8 @@ import { UserButton, useUser } from "@clerk/nextjs";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useState } from "react";
-import { Sun, Moon, Plus, FileText, BarChart3, Settings, Shield } from "lucide-react";
+import { Plus, FileText, BarChart3, Settings, Shield } from "lucide-react";
+import { ThemeToggle } from "@/components/ThemeToggle";
 
 const navItems = [
   { href: "/dashboard", label: "Quizzes", icon: FileText },
@@ -51,15 +52,15 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const isEditor = pathname.startsWith("/dashboard/editor");
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#F0EFEA] text-[#111111] font-sans">
-      <header className="sticky top-0 z-40 h-16 border-b border-[#111111]/10 bg-white flex items-center justify-between px-6 shrink-0 shadow-sm">
+    <div className="min-h-screen flex flex-col bg-background text-foreground font-sans">
+      <header className="sticky top-0 z-40 h-16 border-b border-border/10 bg-card flex items-center justify-between px-6 shrink-0 shadow-sm">
         <div className="flex items-center gap-6">
-          <Link href="/" className="font-medium tracking-tight text-2xl text-[#111111] transition-opacity">
+          <Link href="/" className="font-medium tracking-tight text-2xl text-foreground transition-opacity">
             chaos
           </Link>
-          <div className="hidden sm:flex items-center gap-2 text-sm text-[#111111]/50 font-medium">
+          <div className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground font-medium">
             <span>/</span>
-            <span className="text-[#111111]">
+            <span className="text-foreground">
               {pathname === "/dashboard"
                 ? "Quizzes"
                 : pathname === "/dashboard/results"
@@ -78,17 +79,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             <button
               onClick={handleCreateNew}
               disabled={isCreating}
-              className="flex items-center gap-2 text-sm bg-[#2F5333] text-white px-4 py-2 rounded-full font-medium transition-colors disabled:opacity-50"
+              className="flex items-center gap-2 text-sm bg-primary text-on-primary px-4 py-2 rounded-full font-medium transition-colors disabled:opacity-50"
             >
               <Plus size={16} />
             </button>
           )}
+          <ThemeToggle />
           <UserButton />
         </div>
       </header>
 
       {!isEditor && (
-        <nav className="sticky top-16 z-30 border-b border-[#111111]/10 bg-[#F0EFEA]/80 backdrop-blur-md flex overflow-x-auto shrink-0 scrollbar-hide px-4 sm:px-6 py-2 gap-2">
+        <nav className="sticky top-16 z-30 border-b border-border/10 bg-background/80 backdrop-blur-md flex overflow-x-auto shrink-0 scrollbar-hide px-4 sm:px-6 py-2 gap-2">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             const Icon = item.icon;
@@ -98,8 +100,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                 href={item.href}
                 className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-colors ${
                   isActive
-                    ? "bg-white text-[#2F5333] shadow-sm border border-[#111111]/5"
-                    : "text-[#111111]/60"
+                    ? "bg-card text-primary shadow-sm border border-border/5"
+                    : "text-muted-foreground"
                 }`}
               >
                 <Icon size={16} />
@@ -112,8 +114,8 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               href="/admin"
               className={`flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-full transition-colors ${
                 pathname === "/admin"
-                  ? "bg-white text-red-600 shadow-sm border border-[#111111]/5"
-                  : "text-red-600/60"
+                  ? "bg-card text-destructive shadow-sm border border-border/5"
+                  : "text-destructive/60"
               }`}
             >
               <Shield size={16} />
@@ -129,11 +131,11 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         </div>
         
         {/* Global Dashboard Footer */}
-        <div className="mt-16 pt-8 border-t border-[#111111]/10 flex flex-col items-center justify-center text-center space-y-4 pb-8">
-          <p className="text-sm font-medium text-[#111111]/60">NEED HELP OR HAVE FEEDBACK?</p>
+        <div className="mt-16 pt-8 border-t border-border/10 flex flex-col items-center justify-center text-center space-y-4 pb-8">
+          <p className="text-sm font-medium text-muted-foreground">NEED HELP OR HAVE FEEDBACK?</p>
           <a
             href="mailto:support@chaos.fail"
-            className="inline-flex items-center gap-2 text-sm font-mono font-medium text-[#111111]/70 border-2 border-dotted border-[#111111]/40 px-4 py-2 transition-colors rounded-sm"
+            className="inline-flex items-center gap-2 text-sm font-mono font-medium text-muted-foreground border-2 border-dotted border-outline px-4 py-2 transition-colors rounded-sm"
           >
             CONTACT SUPPORT: support@chaos.fail
           </a>
