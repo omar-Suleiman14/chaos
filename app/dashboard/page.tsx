@@ -1,6 +1,4 @@
 "use client";
-// Ban check: isBanned users see a quota-exceeded screen
-
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -17,6 +15,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { DropResult } from "@hello-pangea/dnd";
+import LoadingState from "@/components/LoadingState";
 
 const DragDropContext = dynamic(() => import("@hello-pangea/dnd").then(m => m.DragDropContext as any), { ssr: false }) as any;
 const Droppable = dynamic(() => import("@hello-pangea/dnd").then(m => m.Droppable as any), { ssr: false }) as any;
@@ -39,6 +38,7 @@ export default function DashboardQuizzes() {
   const [isCreating, setIsCreating] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
   const [isCancellingJob, setIsCancellingJob] = useState(false);
+  const [pageError, setPageError] = useState("");
 
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [newUsername, setNewUsername] = useState("");
@@ -90,10 +90,14 @@ export default function DashboardQuizzes() {
     const isRunning = activeJob?.status !== "done" && activeJob?.status !== "error";
     if (isRunning) {
       setIsCancellingJob(true);
+      setPageError("");
       try {
         await cancelAIJob({ jobId: activeJobId });
-      } catch (e) {
-        console.error(e);
+      } catch (e: any) {
+        setPageError(e?.message || "Could not cancel AI generation. Please try again.");
+        setIsCancellingJob(false);
+        haptics.error();
+        return;
       }
     }
     dismissJobBanner();
@@ -104,7 +108,7 @@ export default function DashboardQuizzes() {
   }, [quizzes]);
 
   useEffect(() => {
-    if (currentUser?.username && /^user\d+$/.test(currentUser.username)) {
+    if (currentUser?.username && !currentUser.isBanned && /^user\d+$/.test(currentUser.username)) {
       setShowUsernameModal(true);
     }
   }, [currentUser]);
@@ -133,13 +137,15 @@ export default function DashboardQuizzes() {
   const handleCreateNew = async () => {
     if (isCreating) return;
     setIsCreating(true);
+    setPageError("");
     haptics.heavy();
     try {
       const newId = await createQuiz({ title: "Untitled Quiz" });
       router.push(`/dashboard/editor?id=${newId}`);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      setPageError(e?.message || "Could not create the quiz. Please try again.");
       setIsCreating(false);
+      haptics.error();
     }
   };
 
@@ -168,7 +174,12 @@ export default function DashboardQuizzes() {
   };
 
   const handleDelete = async (quizId: any) => {
-    if (confirm("Delete this quiz, all its questions, and all player scores? This cannot be undone.")) {
+    const target = localQuizzes.find((q) => q._id === quizId);
+    const responseCount = target?.sessionCount ?? 0;
+    const responseWarning = responseCount > 0
+      ? ` This permanently destroys ${responseCount} recorded response${responseCount === 1 ? "" : "s"}.`
+      : "";
+    if (confirm(`Delete "${target?.title ?? "this quiz"}", all its questions, and all player scores?${responseWarning} This cannot be undone.`)) {
       haptics.heavy();
       await deleteQuiz({ quizId });
     }
@@ -181,7 +192,12 @@ export default function DashboardQuizzes() {
       setCustomFolders(prev => prev.filter(f => f !== folderName));
       return;
     }
-    if (confirm(`Delete the folder "${folderName}" and all ${quizzesInFolder.length} quiz${quizzesInFolder.length > 1 ? "es" : ""} inside it? This cannot be undone.`)) {
+    const totalResponses = quizzesInFolder.reduce((sum, quiz) => sum + (quiz.sessionCount ?? 0), 0);
+    const quizNames = quizzesInFolder.map((quiz) => `- ${quiz.title}`).join("\n");
+    const responseWarning = totalResponses > 0
+      ? ` This permanently destroys ${totalResponses} recorded response${totalResponses === 1 ? "" : "s"}.`
+      : "";
+    if (confirm(`Delete the folder "${folderName}" and all ${quizzesInFolder.length} quiz${quizzesInFolder.length > 1 ? "es" : ""} inside it?${responseWarning} This cannot be undone.\n\n${quizNames}`)) {
       haptics.heavy();
       for (const quiz of quizzesInFolder) {
         await deleteQuiz({ quizId: quiz._id });
@@ -254,38 +270,46 @@ export default function DashboardQuizzes() {
 
   if (!mounted) return null;
 
-  // Banned user — show quota exceeded message, no dashboard access
-  if (currentUser && currentUser.isBanned) {
-    return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center">
-        <div className="chaos-card bg-card p-10 max-w-md w-full">
-          <div className="w-14 h-14 border-[3px] border-destructive mx-auto flex items-center justify-center mb-6">
-            <span className="text-2xl">X</span>
-          </div>
-          <h2 className="chaos-heading text-2xl text-destructive mb-3">FREE QUOTA EXCEEDED.</h2>
-          <p className="text-muted-foreground text-sm mb-6">
-            Your free plan quota has been exceeded. Contact us to renew your subscription and regain full access.
-          </p>
-          <a
-            href="https://wa.me/201012756994"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="kb-btn kb-btn-primary w-full"
-          >
-            📞 +20 101 275 6994
-          </a>
-          <p className="text-xs text-muted-foreground mt-4">&ldquo;Free quote exceeded contact +201012756994 to renew your subscription&rdquo;</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8 font-sans">
+      {currentUser?.isBanned && (
+        <div className="chaos-card border-destructive bg-destructive/5 p-5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle size={20} className="mt-0.5 shrink-0 text-destructive" />
+            <div>
+              <h2 className="chaos-heading text-sm text-destructive">ACCOUNT RESTRICTED</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                This account is read-only due to moderation. You can still view your quizzes and results, but editing, deletion, publishing, and AI generation are disabled.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AI Quiz Modal */}
       {showAIModal && <AIQuizModal onClose={() => setShowAIModal(false)} onJobStarted={handleJobStarted} />}
 
+      {pageError && (
+        <div className="chaos-card border-destructive bg-destructive/5 p-4 flex items-center justify-between gap-4">
+          <p className="text-sm font-semibold text-destructive">{pageError}</p>
+          <button type="button" onClick={() => setPageError("")} className="text-destructive hover:text-foreground" aria-label="Dismiss error">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* AI Progress Banner */}
+      {activeJobId && activeJob === undefined && (
+        <LoadingState label="Loading AI generation status..." className="py-8" />
+      )}
+      {activeJobId && activeJob === null && (
+        <div className="chaos-card border-destructive bg-destructive/5 p-4 flex items-center justify-between gap-4">
+          <p className="text-sm font-semibold text-destructive">This AI generation job is no longer available.</p>
+          <button type="button" onClick={dismissJobBanner} className="text-destructive hover:text-foreground" aria-label="Dismiss AI job error">
+            <X size={16} />
+          </button>
+        </div>
+      )}
       {activeJobId && activeJob && (
         <div className={`p-4 border-[3px] flex items-center gap-4 animate-in slide-in-from-top-2 duration-300 ${
           activeJob.status === "done"
@@ -416,10 +440,7 @@ export default function DashboardQuizzes() {
 
       {/* Loading */}
       {quizzes === undefined ? (
-        <div className="py-20 text-center chaos-pulse">
-          <FileText size={48} className="mx-auto text-muted-foreground mb-4 opacity-50" />
-          <p className="chaos-heading text-sm text-muted-foreground">Loading quizzes...</p>
-        </div>
+        <LoadingState label="Loading quizzes..." />
       ) : localQuizzes.length === 0 && customFolders.length === 0 ? (
         <div className="chaos-card bg-card p-12 text-center">
           <div className="w-16 h-16 border-[3px] border-foreground mx-auto flex items-center justify-center mb-6">

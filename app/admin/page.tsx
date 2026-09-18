@@ -2,11 +2,12 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useUser, UserButton } from "@clerk/nextjs";
+import { UserButton } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { haptics } from "@/lib/haptics";
+import LoadingState from "@/components/LoadingState";
 import {
   ShieldAlert,
   Users,
@@ -24,15 +25,36 @@ import {
   Printer,
 } from "lucide-react";
 
-const ADMIN_EMAILS = ["support@chaos.fail", "khomod14@gmail.com"];
+const hasConvexBackend = Boolean(process.env.NEXT_PUBLIC_CONVEX_URL);
 
-export default function AdminDashboard() {
-  const { user, isLoaded } = useUser();
-  const isAdmin = isLoaded && ADMIN_EMAILS.includes(user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "");
+export default function AdminPage() {
+  if (!hasConvexBackend) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 text-center">
+        <ShieldAlert size={64} className="text-muted-foreground mb-6" />
+        <h1 className="chaos-display text-4xl mb-2 uppercase">Admin unavailable</h1>
+        <p className="text-sm text-muted-foreground mb-8 max-w-md">
+          This deployment does not have a Convex backend configured.
+        </p>
+        <Link
+          href="/"
+          className="chaos-heading text-sm bg-foreground text-background px-6 py-3 border-2 border-foreground hover:bg-chaos hover:text-chaos-foreground transition-colors"
+        >
+          Return home
+        </Link>
+      </div>
+    );
+  }
 
-  const stats = useQuery(api.quizFunctions.getAdminStats, isAdmin ? undefined : "skip");
-  const usersList = useQuery(api.quizFunctions.getAdminUsers, isAdmin ? undefined : "skip");
-  const quizzesList = useQuery(api.quizFunctions.getAdminQuizzes, isAdmin ? undefined : "skip");
+  return <AdminDashboard />;
+}
+
+function AdminDashboard() {
+  const isAdmin = useQuery(api.quizFunctions.getIsAdmin);
+
+  const stats = useQuery(api.quizFunctions.getAdminStats, isAdmin === true ? undefined : "skip");
+  const usersList = useQuery(api.quizFunctions.getAdminUsers, isAdmin === true ? undefined : "skip");
+  const quizzesList = useQuery(api.quizFunctions.getAdminQuizzes, isAdmin === true ? undefined : "skip");
 
   const toggleUserBan = useMutation(api.quizFunctions.adminToggleUserBan);
   const toggleQuizBan = useMutation(api.quizFunctions.adminToggleQuizBan);
@@ -46,7 +68,7 @@ export default function AdminDashboard() {
   const [previewQuizId, setPreviewQuizId] = useState<string | null>(null);
 
   const previewQuestions = useQuery(
-    api.quizFunctions.getQuestions,
+    api.quizFunctions.getQuestionsForOwner,
     previewQuizId ? { quizId: previewQuizId as any } : "skip"
   );
 
@@ -54,7 +76,7 @@ export default function AdminDashboard() {
     setMounted(true);
   }, []);
 
-  if (!mounted || !isLoaded) return null;
+  if (!mounted || isAdmin === undefined) return null;
 
   if (!isAdmin) {
     return (
@@ -225,7 +247,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-base">{u.name}</span>
                           {u.isElevated && (
-                            <span title="Elevated — unlimited plays" className="text-yellow-500"><Zap size={13} /></span>
+                            <span title="Elevated — unlimited AI generations and respondent sessions" className="text-yellow-500"><Zap size={13} /></span>
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground">@{u.username}</div>
@@ -249,7 +271,7 @@ export default function AdminDashboard() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleToggleUserElevation(u.clerkId, !!u.isElevated)}
-                            title={u.isElevated ? "Demote user" : "Elevate user (unlimited plays)"}
+                            title={u.isElevated ? "Remove elevation" : "Grant elevation: unlimited AI generations and respondent sessions"}
                             className={`chaos-heading text-[10px] border-2 px-2 py-1.5 transition-colors flex items-center gap-1 ${
                               u.isElevated
                                 ? "border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-background"
@@ -391,7 +413,7 @@ export default function AdminDashboard() {
               {/* Questions */}
               <div className="p-6 space-y-4">
                 {!previewQuestions ? (
-                  <p className="text-sm text-muted-foreground chaos-pulse">Loading questions...</p>
+                  <LoadingState label="Loading questions..." className="py-6" />
                 ) : previewQuestions.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No questions added yet.</p>
                 ) : (

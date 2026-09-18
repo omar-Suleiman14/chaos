@@ -2,12 +2,10 @@
 
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useUser } from "@clerk/nextjs";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Id } from "@/convex/_generated/dataModel";
-
-const ADMIN_EMAILS = ["support@chaos.fail", "khomod14@gmail.com"];
+import LoadingState from "@/components/LoadingState";
 
 const TYPE_LABELS: Record<string, string> = {
   mcq: "MCQ",
@@ -21,15 +19,8 @@ export default function PrintQuizPage() {
   const router = useRouter();
   const quizId = params.quizId as Id<"quizzes">;
 
-  const { user, isLoaded } = useUser();
   const quiz = useQuery(api.quizFunctions.getQuiz, quizId ? { quizId } : "skip");
-  const questions = useQuery(api.quizFunctions.getQuestions, quizId ? { quizId } : "skip");
-  const currentUser = useQuery(api.quizFunctions.getCurrentUser);
-
-  const userEmail = user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "";
-  const isAdmin = ADMIN_EMAILS.includes(userEmail);
-  const isOwner = currentUser && quiz && quiz.creatorId === currentUser.clerkId;
-  const isAuthorized = isAdmin || isOwner;
+  const questions = useQuery(api.quizFunctions.getQuestionsForOwner, quizId ? { quizId } : "skip");
 
   // Set document title to quiz name so "Save as PDF" uses it as filename
   useEffect(() => {
@@ -40,22 +31,22 @@ export default function PrintQuizPage() {
   }, [quiz?.title]);
 
   useEffect(() => {
-    if (quiz && questions && isAuthorized) {
+    if (quiz && questions) {
       const timer = setTimeout(() => window.print(), 600);
       return () => clearTimeout(timer);
     }
-  }, [quiz, questions, isAuthorized]);
+  }, [quiz, questions]);
 
   useEffect(() => {
-    if (isLoaded && quiz !== undefined && currentUser !== undefined && !isAuthorized) {
+    if (quiz === null) {
       router.replace("/dashboard");
     }
-  }, [isLoaded, quiz, currentUser, isAuthorized, router]);
+  }, [quiz, router]);
 
-  if (!quiz || !questions || !isAuthorized) {
+  if (!quiz || !questions) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-sm opacity-50">Preparing PDF...</p>
+        <LoadingState label="Preparing PDF..." className="py-8" />
       </div>
     );
   }

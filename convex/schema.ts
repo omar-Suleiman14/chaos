@@ -10,6 +10,7 @@ export default defineSchema({
     username: v.string(),
     imageUrl: v.optional(v.string()),
     isBanned: v.optional(v.boolean()),
+    // Admin-granted entitlement: bypasses monthly AI and respondent limits.
     isElevated: v.optional(v.boolean()),
     createdAt: v.number(),
   })
@@ -52,6 +53,7 @@ export default defineSchema({
     passingThreshold: v.optional(v.number()),        // 0-100
     disableAnimations: v.optional(v.boolean()),
     isBanned: v.optional(v.boolean()),
+    // Snapshot/override used to bypass the respondent cap for this quiz.
     isElevated: v.optional(v.boolean()),
     isAiGenerated: v.optional(v.boolean()),
     createdAt: v.number(),
@@ -81,6 +83,7 @@ export default defineSchema({
     timeLimit: v.optional(v.number()),
     hint: v.optional(v.string()),
     order: v.number(),
+    deletedAt: v.optional(v.number()),
   }).index("by_quiz", ["quizId"]),
 
   // ============ QUIZ SUBMISSIONS ============
@@ -106,6 +109,7 @@ export default defineSchema({
     startedAt: v.number(),
   })
     .index("by_quiz", ["quizId"])
+    .index("by_quiz_started", ["quizId", "startedAt"])
     .index("by_quiz_score", ["quizId", "score"]),
 
   // ============ AI JOBS ============

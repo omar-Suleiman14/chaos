@@ -4,7 +4,8 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { haptics } from "@/lib/haptics";
-import { Settings2, Clock, CheckSquare, Zap, Target } from "lucide-react";
+import { Clock, CheckSquare, Zap, Target } from "lucide-react";
+import LoadingState from "@/components/LoadingState";
 
 export default function SettingsPage() {
   const globalConfig = useQuery(api.quizFunctions.getGlobalConfig);
@@ -26,6 +27,7 @@ export default function SettingsPage() {
   });
 
   const [isSaving, setIsSaving] = useState(false);
+  const [settingsError, setSettingsError] = useState("");
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
@@ -57,13 +59,14 @@ export default function SettingsPage() {
     if (isSaving) return;
 
     setIsSaving(true);
+    setSettingsError("");
     haptics.heavy();
     
     try {
       await updateSettings(form);
       haptics.success();
-    } catch (err) {
-      console.error("Failed to update settings", err);
+    } catch (err: any) {
+      setSettingsError(err?.message || "Settings could not be saved. Please try again.");
       haptics.error();
     }
     
@@ -79,12 +82,7 @@ export default function SettingsPage() {
   };
 
   if (!mounted || settings === undefined || globalConfig === undefined) {
-    return (
-      <div className="max-w-4xl mx-auto py-20 text-center chaos-pulse">
-        <Settings2 size={48} className="mx-auto text-muted-foreground mb-4 opacity-50" />
-        <p className="chaos-heading text-sm text-muted-foreground">Loading settings...</p>
-      </div>
-    );
+    return <LoadingState label="Loading settings..." className="max-w-4xl mx-auto py-20" />;
   }
 
   return (
@@ -99,6 +97,11 @@ export default function SettingsPage() {
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-12">
+        {settingsError && (
+          <div role="alert" className="border-2 border-destructive bg-destructive/10 p-4 text-sm font-semibold text-destructive">
+            {settingsError}
+          </div>
+        )}
         {/* Timing Settings */}
         <section>
           <div className="flex items-center gap-2 mb-6">

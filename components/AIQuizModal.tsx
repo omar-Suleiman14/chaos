@@ -20,6 +20,7 @@ interface Props {
 
 export default function AIQuizModal({ onClose, onJobStarted }: Props) {
   const createAIJob = useMutation(api.aiQuizMutations.createAIJob);
+  const failAIJob = useMutation(api.aiQuizMutations.failAIJob);
   const runAIQuizGeneration = useAction(api.aiQuiz.runAIQuizGeneration);
 
   const [step, setStep] = useState<Step>(1);
@@ -45,13 +46,14 @@ export default function AIQuizModal({ onClose, onJobStarted }: Props) {
   const handleFileSelect = useCallback((selectedFile: File) => {
     const allowed = ["application/pdf", "image/png", "image/jpeg", "image/webp", "image/jpg"];
     if (!allowed.includes(selectedFile.type)) {
-      alert("Please upload a PDF, PNG, JPG, or WEBP file.");
+      setStartError("Please upload a PDF, PNG, JPG, or WEBP file.");
       return;
     }
     if (selectedFile.size > 20 * 1024 * 1024) {
-      alert("File must be under 20MB.");
+      setStartError("File must be under 20MB.");
       return;
     }
+    setStartError("");
     setFile(selectedFile);
     if (!quizTitle) {
       setQuizTitle(selectedFile.name.replace(/\.[^/.]+$/, "").replace(/[-_]/g, " "));
@@ -86,13 +88,6 @@ export default function AIQuizModal({ onClose, onJobStarted }: Props) {
     haptics.heavy();
 
     try {
-      // 1. Create AI job record
-      const newJobId = await createAIJob();
-
-      // 2. Close the modal and notify parent immediately
-      onJobStarted(newJobId);
-      onClose();
-
       let extractedText = "";
 
       const typeofWindow = typeof window !== "undefined" ? window : globalThis;
@@ -149,7 +144,11 @@ export default function AIQuizModal({ onClose, onJobStarted }: Props) {
         throw new Error("Not enough text to generate a quiz. Please provide more detail.");
       }
 
-      // Fire-and-forget: send to Convex action
+      const newJobId = await createAIJob();
+      onJobStarted(newJobId);
+      onClose();
+
+      // Job progress and failures are reflected by the backend job record.
       runAIQuizGeneration({
         jobId: newJobId,
         extractedText,
@@ -161,10 +160,18 @@ export default function AIQuizModal({ onClose, onJobStarted }: Props) {
         trueFalse,
         written: 0,
         difficulty,
-      }).catch(console.error);
+      }).catch(async (err: any) => {
+        const message = err?.message || "AI generation could not start. Please try again.";
+        try {
+          await failAIJob({ jobId: newJobId, error: message });
+        } catch {
+          // The global connectivity state will surface a disconnected Convex client.
+        }
+      });
 
     } catch (err: any) {
       setStartError(err?.message || "Failed to start generation");
+    } finally {
       setIsStarting(false);
     }
   };

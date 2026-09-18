@@ -1,5 +1,6 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getAIJobIfOwner, requireActiveUser, requireAIJobOwner } from "./authz";
 
 // ─────────────────────────────────────────────────────────────
 // FILE UPLOAD URL
@@ -8,8 +9,7 @@ import { v } from "convex/values";
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    await requireActiveUser(ctx);
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -21,16 +21,8 @@ export const generateUploadUrl = mutation({
 export const createAIJob = mutation({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
+    const { identity, user } = await requireActiveUser(ctx);
     const clerkId = identity.subject;
-
-    // Check elevation status
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
-      .first();
 
     if (!user?.isElevated) {
       // Count AI quizzes created this calendar month
@@ -49,8 +41,10 @@ export const createAIJob = mutation({
         .collect();
 
       if (thisMonthJobs.length >= 5) {
+        const config = await ctx.db.query("globalConfig").first();
         throw new Error(
-          "Monthly limit reached. You can generate up to 5 AI quizzes per month. Upgrade to an elevated account for unlimited access."
+          config?.aiLimitPopupText?.trim() ||
+            "Monthly limit reached. You can generate up to 5 AI quizzes per month. Upgrade to an elevated account for unlimited access."
         );
       }
     }
@@ -67,10 +61,7 @@ export const createAIJob = mutation({
 export const cancelAIJob = mutation({
   args: { jobId: v.id("aiJobs") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const job = await ctx.db.get(args.jobId);
-    if (!job || job.clerkId !== identity.subject) throw new Error("Not found");
+    const job = await requireAIJobOwner(ctx, args.jobId);
     // Only cancel if still in progress
     if (job.status !== "done" && job.status !== "error") {
       await ctx.db.patch(args.jobId, {
@@ -82,14 +73,27 @@ export const cancelAIJob = mutation({
   },
 });
 
+export const failAIJob = mutation({
+  args: {
+    jobId: v.id("aiJobs"),
+    error: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const job = await requireAIJobOwner(ctx, args.jobId);
+    if (job.status !== "done" && job.status !== "error") {
+      await ctx.db.patch(args.jobId, {
+        status: "error",
+        step: "Generation failed",
+        error: args.error,
+      });
+    }
+  },
+});
+
 export const getAIJob = query({
   args: { jobId: v.id("aiJobs") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-    const job = await ctx.db.get(args.jobId);
-    if (!job || job.clerkId !== identity.subject) return null;
-    return job;
+    return await getAIJobIfOwner(ctx, args.jobId);
   },
 });
 
@@ -140,6 +144,9 @@ export const saveGeneratedQuiz = internalMutation({
       .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
     if (!user) throw new Error("User not found");
+    if (user.isBanned) {
+      throw new Error("ACCOUNT_BANNED: AI generation is unavailable for this account.");
+    }
 
     const username = user.username;
     const baseSlug = args.title

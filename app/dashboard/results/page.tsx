@@ -24,6 +24,7 @@ import {
   Medal,
 } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
+import LoadingState from "@/components/LoadingState";
 
 function StatsContent() {
   const searchParams = useSearchParams();
@@ -48,12 +49,7 @@ function QuizzesListView() {
   const [search, setSearch] = useState("");
 
   if (quizzes === undefined) {
-    return (
-      <div className="py-20 text-center chaos-pulse">
-        <BarChart3 size={48} className="mx-auto text-muted-foreground mb-4 opacity-50" />
-        <p className="chaos-heading text-sm text-muted-foreground">Loading analytics...</p>
-      </div>
-    );
+    return <LoadingState label="Loading analytics..." />;
   }
 
   const filteredQuizzes = quizzes.filter(
@@ -146,11 +142,7 @@ function QuizDetailView({ quizId }: { quizId: Id<"quizzes"> }) {
   const [selectedSessionId, setSelectedSessionId] = useState<Id<"quizSessions"> | null>(null);
 
   if (quiz === undefined || sessions === undefined) {
-    return (
-      <div className="py-20 text-center chaos-pulse">
-        <p className="chaos-heading text-sm text-muted-foreground">Loading dashboard...</p>
-      </div>
-    );
+    return <LoadingState label="Loading dashboard..." />;
   }
 
   if (selectedSessionId) {
@@ -397,13 +389,10 @@ function SubmissionDetailView({
   
   const [editingId, setEditingId] = useState<Id<"questions"> | null>(null);
   const [editVal, setEditVal] = useState("");
+  const [overrideError, setOverrideError] = useState("");
 
   if (detail === undefined) {
-    return (
-      <div className="py-20 text-center chaos-pulse">
-        <p className="chaos-heading text-sm text-muted-foreground">Loading details...</p>
-      </div>
-    );
+    return <LoadingState label="Loading submission details..." />;
   }
 
   if (detail === null) {
@@ -421,9 +410,15 @@ function SubmissionDetailView({
     const val = parseInt(editVal);
     if (!isNaN(val) && val >= 0) {
       haptics.select();
-      await overrideScore({ sessionId, questionId, newPoints: val });
+      setOverrideError("");
+      try {
+        await overrideScore({ sessionId, questionId, newPoints: val });
+        setEditingId(null);
+      } catch (err: any) {
+        setOverrideError(err?.message || "Score override could not be saved. Please try again.");
+        haptics.error();
+      }
     }
-    setEditingId(null);
   };
 
   return (
@@ -455,6 +450,11 @@ function SubmissionDetailView({
       </div>
 
       <div className="space-y-4">
+        {overrideError && (
+          <div role="alert" className="border-2 border-destructive bg-destructive/10 p-4 text-sm font-semibold text-destructive">
+            {overrideError}
+          </div>
+        )}
         {detail.answerDetails?.map((ans, i) => {
           const isCorrect = ans.isCorrect;
           const isPartial = !isCorrect && ans.pointsEarned > 0;
@@ -521,7 +521,7 @@ function SubmissionDetailView({
 
 export default function StatsPage() {
   return (
-    <Suspense fallback={<div className="p-8 chaos-pulse">Loading resultls...</div>}>
+    <Suspense fallback={<LoadingState label="Loading results..." className="p-8" />}>
       <StatsContent />
     </Suspense>
   );

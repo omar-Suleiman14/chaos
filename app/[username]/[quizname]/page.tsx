@@ -7,7 +7,8 @@ import { useParams } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { haptics } from "@/lib/haptics";
 import { sfx } from "@/lib/sfx";
-import { Zap, ArrowDown } from "lucide-react";
+import { Zap, ArrowDown, Volume2, VolumeX } from "lucide-react";
+import LoadingState from "@/components/LoadingState";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Fisher-Yates shuffle (creates a new array)
@@ -43,6 +44,13 @@ export default function QuizPlayerPage() {
   const [gameState, setGameState] = useState<GameState>("entry");
   const [playerName, setPlayerName] = useState("");
   const [startError, setStartError] = useState("");
+  const [answerError, setAnswerError] = useState<{
+    qId: Id<"questions">;
+    answer: string;
+    isTimeout: boolean;
+    message: string;
+  } | null>(null);
+  const [finishError, setFinishError] = useState("");
   const [sessionId, setSessionId] = useState<Id<"quizSessions"> | null>(null);
   const percentile = useQuery(
     api.quizFunctions.getPlayerPercentile,
@@ -59,14 +67,26 @@ export default function QuizPlayerPage() {
   const [timeLeftMap, setTimeLeftMap] = useState<Record<string, number>>({});
 
   const [mounted, setMounted] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const qStartTimes = useRef<Record<string, number>>({});
   const isFinishing = useRef(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    setSoundEnabled(sfx.isEnabled());
+  }, []);
+
+  const toggleSound = () => {
+    const next = !soundEnabled;
+    sfx.setEnabled(next);
+    setSoundEnabled(next);
+    if (next) sfx.play("select");
+  };
 
   const rawQuestions = quizData?.questions || [];
   const [shuffledQuestions, setShuffledQuestions] = useState<typeof rawQuestions>([]);
@@ -88,7 +108,7 @@ export default function QuizPlayerPage() {
     if (index !== currentQ && index <= questions.length) {
       setCurrentQ(index);
       haptics.light();
-      if (!quizData?.disableAnimations) sfx.play("next");
+      sfx.play("next");
     }
   };
 
@@ -120,7 +140,7 @@ export default function QuizPlayerPage() {
           handleSubmitAnswer(q._id, "", true);
           return { ...prev, [q._id]: 0 };
         }
-        if (current <= 11) { haptics.warning(); if (!quizData?.disableAnimations) sfx.play("tap"); }
+        if (current <= 11) { haptics.warning(); sfx.play("tap"); }
         return { ...prev, [q._id]: current - 1 };
       });
     }, 1000);
@@ -131,6 +151,10 @@ export default function QuizPlayerPage() {
   const handleSubmitAnswer = async (qId: Id<"questions">, answer: string, isTimeout = false) => {
     if (!sessionId || isSubmitting || feedbacks[qId]) return;
     setIsSubmitting(true);
+    setAnswerError(null);
+    if (!isTimeout) {
+      setSelectedOptions(prev => ({ ...prev, [qId]: answer }));
+    }
     haptics.medium();
 
     const tTaken = (Date.now() - (qStartTimes.current[qId] || Date.now())) / 1000;
@@ -146,18 +170,28 @@ export default function QuizPlayerPage() {
       setSelectedOptions(prev => ({ ...prev, [qId]: isTimeout ? "" : answer }));
 
       const isPartiallyCorrect = !result.isCorrect && result.pointsEarned > 0;
-      if (result.isCorrect) { haptics.success(); if (!quizData?.disableAnimations) sfx.play("correct"); }
-      else if (isPartiallyCorrect) { haptics.light(); if (!quizData?.disableAnimations) sfx.play("correct"); }
-      else { haptics.error(); if (!quizData?.disableAnimations) sfx.play("wrong"); }
+      if (result.isCorrect) { haptics.success(); sfx.play("correct"); }
+      else if (isPartiallyCorrect) { haptics.light(); sfx.play("correct"); }
+      else { haptics.error(); sfx.play("wrong"); }
 
-    } catch (err) { console.error(err); }
-    setIsSubmitting(false);
+    } catch (err: any) {
+      setAnswerError({
+        qId,
+        answer,
+        isTimeout,
+        message: err?.message || "Your answer could not be submitted. Please try again.",
+      });
+      haptics.error();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFinish = async () => {
     if (!sessionId || isFinishing.current) return;
     isFinishing.current = true;
-    haptics.success(); if (!quizData?.disableAnimations) sfx.play("finish");
+    setFinishError("");
+    haptics.success(); sfx.play("finish");
     try {
       const result = await completeSession({ sessionId });
       setFinalResults(result);
@@ -167,13 +201,18 @@ export default function QuizPlayerPage() {
           confetti({ particleCount: 200, spread: 90, origin: { y: 0.5 }, colors: ["#2F5333", "#F0EFEA", "#111111"] });
         } catch { /* ok */ }
       }
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      setFinishError(err?.message || "Your quiz could not be submitted. Please try again.");
+      isFinishing.current = false;
+      haptics.error();
+    }
   };
 
   const handleStart = async () => {
-    if (!playerName.trim() || !quizMeta?._id) return;
+    if (isStarting || !playerName.trim() || !quizMeta?._id) return;
+    setIsStarting(true);
     setStartError("");
-    haptics.heavy(); if (!quizData?.disableAnimations) sfx.play("start");
+    haptics.heavy(); sfx.play("start");
     try {
       const sid = await startSession({ quizId: quizMeta._id, playerName: playerName.trim() });
       setSessionId(sid);
@@ -194,6 +233,8 @@ export default function QuizPlayerPage() {
     } catch (err: any) {
       console.error(err);
       setStartError(err?.message || "Failed to start session.");
+    } finally {
+      setIsStarting(false);
     }
   };
 
@@ -214,10 +255,10 @@ export default function QuizPlayerPage() {
 
   if (!mounted) return null;
 
-  if (quizMeta === undefined) {
+  if (quizMeta === undefined || (quizMeta && quizData === undefined)) {
     return (
       <div className="h-[100dvh] bg-background flex items-center justify-center">
-        <p className="chaos-heading text-sm text-muted-foreground chaos-pulse">LOADING...</p>
+        <LoadingState label="Loading quiz..." className="py-8" />
       </div>
     );
   }
@@ -260,15 +301,25 @@ export default function QuizPlayerPage() {
                 onChange={e => setPlayerName(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleStart()}
                 placeholder="ENTER YOUR NAME"
+                maxLength={100}
                 autoFocus
                 className="kb-input text-base"
               />
               <button
                 onClick={handleStart}
-                disabled={!playerName.trim()}
+                disabled={isStarting || !playerName.trim()}
                 className="kb-btn kb-btn-primary w-full disabled:opacity-50"
               >
-                START QUIZ →
+                {isStarting ? "STARTING…" : "START QUIZ →"}
+              </button>
+              <button
+                type="button"
+                onClick={toggleSound}
+                className="kb-btn kb-btn-ghost w-full flex items-center justify-center gap-2"
+                aria-pressed={soundEnabled}
+              >
+                {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                SOUND {soundEnabled ? "ON" : "OFF"}
               </button>
               {startError && (
                 <div className="mt-4 p-4 bg-destructive/10 border-2 border-destructive text-destructive text-sm font-semibold chaos-heading leading-relaxed">
@@ -285,7 +336,18 @@ export default function QuizPlayerPage() {
   // ── PLAYING (SNAP SCROLL)
   return (
     <div className="h-[100dvh] bg-background text-foreground font-sans relative">
-      <ThemeToggle className="fixed top-4 right-4 z-[60]" />
+      <div className="fixed top-4 right-4 z-[60] flex items-center gap-2">
+        <button
+          type="button"
+          onClick={toggleSound}
+          className="kb-btn kb-btn-ghost p-2"
+          aria-label={soundEnabled ? "Turn sound off" : "Turn sound on"}
+          aria-pressed={soundEnabled}
+        >
+          {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+        </button>
+        <ThemeToggle />
+      </div>
       {/* Progress bar */}
       <div className="fixed top-0 left-0 w-full h-1.5 bg-muted z-50">
         <div
@@ -477,6 +539,22 @@ export default function QuizPlayerPage() {
                   )}
                 </div>
 
+                {answerError?.qId === q._id && !isFeedback && (
+                  <div className="mt-4 border-2 border-destructive bg-destructive/10 p-4 text-left">
+                    <p className="text-sm font-semibold text-destructive mb-3">
+                      {answerError.message}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleSubmitAnswer(q._id, answerError.answer, answerError.isTimeout)}
+                      disabled={isSubmitting}
+                      className="kb-btn kb-btn-ghost text-xs disabled:opacity-50"
+                    >
+                      RETRY ANSWER
+                    </button>
+                  </div>
+                )}
+
                 {/* Feedback */}
                 {isFeedback && (
                   <div className={`mt-6 chaos-card bg-card p-5 ${quizData?.disableAnimations ? '' : 'animate-in slide-in-from-bottom-4 duration-300'}`}>
@@ -523,6 +601,11 @@ export default function QuizPlayerPage() {
               >
                 SUBMIT QUIZ →
               </button>
+              {finishError && (
+                <p className="mt-4 text-sm font-semibold text-destructive" role="alert">
+                  {finishError}
+                </p>
+              )}
             </div>
           ) : (() => {
             const pct = Math.round((finalResults.score / finalResults.totalPoints) * 100);

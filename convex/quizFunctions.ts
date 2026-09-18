@@ -1,19 +1,21 @@
 import { v } from "convex/values";
-import { query, mutation, action } from "./_generated/server";
-import { api } from "./_generated/api";
+import { query, mutation } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import {
+  canViewQuizAsRespondent,
+  getQuizIfOwner,
+  getQuizIfOwnerOrAdmin,
+  getSessionIfOwnerOrAdmin,
+  isAdmin,
+  requireActiveUser,
+  requireAdmin,
+  requireQuestionOwner,
+  requireQuizOwner,
+  requireSessionOwner,
+} from "./authz";
 
 // Server-side admin list — the ONLY source of truth for admin access
-const ADMIN_EMAILS = ["support@chaos.fail", "khomod14@gmail.com"];
-
-async function requireAdmin(ctx: any): Promise<void> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Not authenticated");
-  const email = (identity.email || "").toLowerCase();
-  if (!ADMIN_EMAILS.includes(email)) {
-    throw new Error("Forbidden: admin access required");
-  }
-}
-
 // ============================================================
 // USER FUNCTIONS
 // ============================================================
@@ -30,6 +32,10 @@ export const getOrCreateUser = mutation({
       .first();
 
     if (existing) {
+      // Authentication profile sync must not become a write bypass for a
+      // moderated account. Banned creators keep read access to their data.
+      if (existing.isBanned) return existing._id;
+
       // Update fields if changed
       const updates: Record<string, unknown> = {};
       if (identity.name && identity.name !== existing.name) updates.name = identity.name;
@@ -72,7 +78,10 @@ export const getOrCreateUser = mutation({
       email: identity.email || "",
       username,
       imageUrl: identity.pictureUrl,
-      isElevated: true,
+      // Elevation is an explicit admin grant. It bypasses the monthly AI
+      // generation limit and the respondent cap on quizzes owned by the user.
+      isElevated: false,
+      isBanned: false,
       createdAt: Date.now(),
     });
   },
@@ -94,13 +103,7 @@ export const getCurrentUser = query({
 export const setUsername = mutation({
   args: { username: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .first();
+    const { identity, user } = await requireActiveUser(ctx);
     if (!user) throw new Error("User not found");
 
     const newUsername = args.username.trim().toLowerCase().replace(/[^a-z0-9_.-]+/g, "");
@@ -185,8 +188,7 @@ export const updateTeacherSettings = mutation({
     disableAnimations: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const { identity } = await requireActiveUser(ctx);
 
     const existing = await ctx.db
       .query("teacherSettings")
@@ -221,14 +223,7 @@ export const createQuiz = mutation({
     coverColor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    // Get user for username
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .first();
+    const { identity, user } = await requireActiveUser(ctx);
 
     const username = user?.username || identity.subject;
 
@@ -302,13 +297,7 @@ export const updateQuiz = mutation({
     disableAnimations: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const quiz = await ctx.db.get(args.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) {
-      throw new Error("Quiz not found or unauthorized");
-    }
+    const quiz = await requireQuizOwner(ctx, args.quizId);
 
     const { quizId, ...rest } = args;
     const updates: Record<string, unknown> = { updatedAt: Date.now() };
@@ -333,34 +322,69 @@ export const updateQuiz = mutation({
   },
 });
 
+/**
+ * Permanently delete a quiz and everything whose lifetime is the quiz's.
+ * Questions and sessions are removed, AI jobs are retained for generation
+ * history/quota accounting but detached so no job points at a missing quiz.
+ * Callers authorize the operation before entering this helper.
+ */
+async function cascadeDeleteQuiz(ctx: MutationCtx, quizId: Id<"quizzes">) {
+  const quiz = await ctx.db.get(quizId);
+  if (!quiz) return;
+
+  const questions = await ctx.db
+    .query("questions")
+    .withIndex("by_quiz", (q) => q.eq("quizId", quizId))
+    .collect();
+  for (const question of questions) {
+    await ctx.db.delete(question._id);
+  }
+
+  const sessions = await ctx.db
+    .query("quizSessions")
+    .withIndex("by_quiz", (q) => q.eq("quizId", quizId))
+    .collect();
+  for (const session of sessions) {
+    await ctx.db.delete(session._id);
+  }
+
+  const aiJobs = await ctx.db
+    .query("aiJobs")
+    .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
+    .collect();
+  for (const job of aiJobs) {
+    if (job.quizId === quizId) {
+      await ctx.db.patch(job._id, { quizId: undefined });
+    }
+  }
+
+  await ctx.db.delete(quizId);
+}
+
+export const getQuizDeletionImpact = query({
+  args: { quizId: v.id("quizzes") },
+  handler: async (ctx, args) => {
+    const quiz = await getQuizIfOwner(ctx, args.quizId);
+    if (!quiz) return null;
+
+    const [questions, sessions] = await Promise.all([
+      ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
+      ctx.db.query("quizSessions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
+    ]);
+
+    return {
+      title: quiz.title,
+      questionCount: questions.filter((q) => q.deletedAt === undefined).length,
+      responseCount: sessions.filter((s) => s.status === "completed").length,
+    };
+  },
+});
+
 export const deleteQuiz = mutation({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const quiz = await ctx.db.get(args.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) {
-      throw new Error("Quiz not found or unauthorized");
-    }
-
-    const questions = await ctx.db
-      .query("questions")
-      .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-      .collect();
-    for (const question of questions) {
-      await ctx.db.delete(question._id);
-    }
-
-    const sessions = await ctx.db
-      .query("quizSessions")
-      .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-      .collect();
-    for (const session of sessions) {
-      await ctx.db.delete(session._id);
-    }
-
-    await ctx.db.delete(args.quizId);
+    await requireQuizOwner(ctx, args.quizId);
+    await cascadeDeleteQuiz(ctx, args.quizId);
   },
 });
 
@@ -388,7 +412,7 @@ export const getMyQuizzes = query({
     ]);
 
     const enriched = quizzes.map((quiz, i) => {
-      const questions = allQuestions[i];
+      const questions = allQuestions[i].filter((q) => q.deletedAt === undefined);
       const completedSessions = allSessions[i].filter((s) => s.status === "completed");
       const avgScore =
         completedSessions.length > 0
@@ -411,55 +435,41 @@ export const getMyQuizzes = query({
 export const getQuiz = query({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
-    const quiz = await ctx.db.get(args.quizId);
-    if (!quiz) return null;
-
-    // Only the creator or an admin can see unpublished quizzes
-    if (!quiz.isPublished) {
-      const identity = await ctx.auth.getUserIdentity();
-      if (!identity) return null;
-      const email = (identity.email || "").toLowerCase();
-      const isOwner = quiz.creatorId === identity.subject;
-      const isAdmin = ADMIN_EMAILS.includes(email);
-      if (!isOwner && !isAdmin) return null;
-    }
-
-    return quiz;
+    return await getQuizIfOwnerOrAdmin(ctx, args.quizId);
   },
 });
 
-export const getQuizBySlug = query({
-  args: { slug: v.string() },
+export const getQuizForOwner = query({
+  args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
-    return await ctx.db
-      .query("quizzes")
-      .withIndex("by_slug", (q) => q.eq("slug", args.slug))
-      .first();
+    return await getQuizIfOwner(ctx, args.quizId);
   },
 });
 
 export const getQuizByUsernameSlug = query({
   args: { username: v.string(), slug: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const quiz = await ctx.db
       .query("quizzes")
       .withIndex("by_creator_slug", (q) =>
         q.eq("creatorUsername", args.username).eq("slug", args.slug)
       )
       .first();
+    if (!quiz || !(await canViewQuizAsRespondent(ctx, quiz))) return null;
+    return {
+      _id: quiz._id,
+      title: quiz.title,
+      slug: quiz.slug,
+      creatorUsername: quiz.creatorUsername,
+      isPublished: quiz.isPublished,
+    };
   },
 });
 
 export const validateSlug = mutation({
   args: { slug: v.string(), quizId: v.optional(v.id("quizzes")) },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return false;
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .first();
+    const { user } = await requireActiveUser(ctx);
 
     if (!user) return false;
 
@@ -501,13 +511,7 @@ export const addQuestion = mutation({
     order: v.number(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const quiz = await ctx.db.get(args.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) {
-      throw new Error("Quiz not found or unauthorized");
-    }
+    await requireQuizOwner(ctx, args.quizId);
 
     // Enforce minimum 1 point
     if (args.points < 1) throw new Error("Questions must be worth at least 1 mark.");
@@ -556,16 +560,7 @@ export const updateQuestion = mutation({
     order: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const question = await ctx.db.get(args.questionId);
-    if (!question) throw new Error("Question not found");
-
-    const quiz = await ctx.db.get(question.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) {
-      throw new Error("Unauthorized");
-    }
+    await requireQuestionOwner(ctx, args.questionId);
 
     const { questionId, ...updates } = args;
     const cleanUpdates: Record<string, unknown> = {};
@@ -585,30 +580,34 @@ export const updateQuestion = mutation({
 export const deleteQuestion = mutation({
   args: { questionId: v.id("questions") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const question = await ctx.db.get(args.questionId);
-    if (!question) throw new Error("Question not found");
-
-    const quiz = await ctx.db.get(question.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) {
-      throw new Error("Unauthorized");
-    }
-
-    await ctx.db.delete(args.questionId);
+    await requireQuestionOwner(ctx, args.questionId);
+    // Questions are soft-deleted so historical session answers can still
+    // resolve the original prompt and grading data. The row is hard-deleted
+    // only when its entire quiz (and those sessions) is deleted.
+    await ctx.db.patch(args.questionId, { deletedAt: Date.now() });
   },
 });
 
-export const getQuestions = query({
+/**
+ * Full question documents for creator tooling.
+ *
+ * These rows contain grading data (correctAnswer, correctAnswers, keywords,
+ * hint, and explanation) and must never be used by respondent clients. The
+ * editor, print view, and admin UI are the intended consumers.
+ */
+export const getQuestionsForOwner = query({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
+    const quiz = await getQuizIfOwnerOrAdmin(ctx, args.quizId);
+    if (!quiz) return [];
     const questions = await ctx.db
       .query("questions")
       .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
       .collect();
 
-    return questions.sort((a, b) => a.order - b.order);
+    return questions
+      .filter((q) => q.deletedAt === undefined)
+      .sort((a, b) => a.order - b.order);
   },
 });
 
@@ -621,24 +620,19 @@ export const getQuizForPlayer = query({
   handler: async (ctx, args) => {
     const quiz = await ctx.db.get(args.quizId);
     if (!quiz) return null;
-
-    // SECURITY CHECK: If unpublished, only the creator or an admin can access questions
-    if (!quiz.isPublished) {
-      const identity = await ctx.auth.getUserIdentity();
-      if (!identity) return null;
-      const email = (identity.email || "").toLowerCase();
-      const isOwner = quiz.creatorId === identity.subject;
-      const isAdmin = ADMIN_EMAILS.includes(email);
-      if (!isOwner && !isAdmin) return null;
-    }
+    if (!(await canViewQuizAsRespondent(ctx, quiz))) return null;
 
     // Fetch creator and questions in parallel
-    const [creator, questions] = await Promise.all([
+    const [creator, allQuestions] = await Promise.all([
       ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId)).first(),
       ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
     ]);
 
-    // NEVER send answers/keywords to client
+    const questions = allQuestions.filter((q) => q.deletedAt === undefined);
+
+    // SECURITY BOUNDARY: respondents receive an allow-list projection.
+    // New question fields stay private by default unless they are deliberately
+    // added here. Never spread the stored question document into this object.
     const safeQuestions = questions
       .sort((a, b) => a.order - b.order)
       .map((q) => ({
@@ -697,6 +691,34 @@ export const getQuizForPlayer = query({
   },
 });
 
+// ============================================================
+// RESPONDENT SESSION LIMITS
+// ============================================================
+
+const SESSION_RATE_LIMIT = 30;
+const SESSION_RATE_WINDOW_MS = 60_000;
+const DUPLICATE_START_WINDOW_MS = 30_000;
+const MAX_ANSWER_LENGTH = 5_000;
+const MAX_ANSWERS_PER_SESSION = 200;
+const MAX_NAME_LENGTH = 100;
+
+function normalizePlayerName(raw: string): string {
+  const withoutMarkup = raw.replace(/<[^>]*>/g, "");
+  const printable = Array.from(withoutMarkup)
+    .filter((ch) => {
+      const code = ch.codePointAt(0) ?? 0;
+      if (code <= 0x1f) return false;
+      if (code >= 0x7f && code <= 0x9f) return false;
+      if (code >= 0x200b && code <= 0x200f) return false;
+      if (code >= 0x202a && code <= 0x202e) return false;
+      if (code === 0xfeff) return false;
+      return true;
+    })
+    .join("");
+
+  return printable.replace(/\s+/g, " ").trim().substring(0, MAX_NAME_LENGTH);
+}
+
 // Start a quiz session
 export const startQuizSession = mutation({
   args: {
@@ -704,12 +726,15 @@ export const startQuizSession = mutation({
     playerName: v.string(),
   },
   handler: async (ctx, args) => {
-    // Sanitize name
-    const name = args.playerName.trim().replace(/<[^>]*>/g, "").substring(0, 100);
-    if (!name) throw new Error("Name is required");
+    const name = normalizePlayerName(args.playerName);
+    if (!name) throw new Error("NAME_REQUIRED: Enter a name to start.");
 
     const quiz = await ctx.db.get(args.quizId);
-    if (!quiz || !quiz.isPublished) throw new Error("Quiz not available");
+    if (!quiz) throw new Error("QUIZ_NOT_FOUND: This quiz no longer exists.");
+    if (quiz.isBanned) throw new Error("QUIZ_BANNED: This quiz is unavailable.");
+    if (!quiz.isPublished) {
+      throw new Error("QUIZ_UNPUBLISHED: This quiz is not accepting responses right now.");
+    }
 
     // Enforce 100-player limit for non-elevated quizzes
     if (!quiz.isElevated) {
@@ -721,10 +746,34 @@ export const startQuizSession = mutation({
         .then((sessions) => sessions.filter((s) => s.status === "completed").length);
 
       if (completedCount >= PLAYER_LIMIT) {
+        const config = await ctx.db.query("globalConfig").first();
         throw new Error(
-          "Access limited. This quiz has reached its maximum number of players. Contact the quiz creator to resolve the issue."
+          `RESPONDENT_LIMIT: ${config?.playerLimitErrorText?.trim() || "This quiz has reached its maximum number of players."}`
         );
       }
+    }
+
+    const now = Date.now();
+    const recent = await ctx.db
+      .query("quizSessions")
+      .withIndex("by_quiz_started", (q) =>
+        q.eq("quizId", args.quizId).gte("startedAt", now - SESSION_RATE_WINDOW_MS)
+      )
+      .collect();
+
+    const duplicate = recent.find(
+      (session) =>
+        session.status === "in_progress" &&
+        session.playerName === name &&
+        session.answers.length === 0 &&
+        now - session.startedAt < DUPLICATE_START_WINDOW_MS
+    );
+    if (duplicate) return duplicate._id;
+
+    if (recent.length >= SESSION_RATE_LIMIT) {
+      throw new Error(
+        "RATE_LIMITED: Too many people are starting this quiz at once. Wait a moment and try again."
+      );
     }
 
     return await ctx.db.insert("quizSessions", {
@@ -734,7 +783,7 @@ export const startQuizSession = mutation({
       score: 0,
       totalPoints: 0,
       answers: [],
-      startedAt: Date.now(),
+      startedAt: now,
     });
   },
 });
@@ -749,25 +798,64 @@ export const gradeAnswer = mutation({
   },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
-    if (!session || session.status !== "in_progress") {
-      throw new Error("Session not found or already completed");
+    if (!session) throw new Error("SESSION_NOT_FOUND: This attempt no longer exists.");
+    if (session.status !== "in_progress") {
+      throw new Error("SESSION_CLOSED: This attempt is already completed.");
     }
 
     const question = await ctx.db.get(args.questionId);
-    if (!question) throw new Error("Question not found");
+    if (!question) throw new Error("QUESTION_NOT_FOUND: That question no longer exists.");
+    if (question.quizId !== session.quizId) {
+      throw new Error("QUESTION_NOT_IN_QUIZ: That question is not part of this quiz.");
+    }
 
-    // Get teacher settings for half mark threshold
+    const existingAnswer = session.answers.find((answer) => answer.questionId === args.questionId);
+    if (existingAnswer) {
+      return {
+        isCorrect: existingAnswer.isCorrect,
+        pointsEarned: existingAnswer.pointsEarned,
+        totalPointsPossible: question.points,
+        alreadyAnswered: true,
+        correctAnswer: undefined,
+        explanation: undefined,
+      };
+    }
+
+    if (args.answer.length > MAX_ANSWER_LENGTH) {
+      throw new Error("ANSWER_TOO_LONG: That answer is too long to submit.");
+    }
+    if (session.answers.length >= MAX_ANSWERS_PER_SESSION) {
+      throw new Error("TOO_MANY_ANSWERS: This attempt has submitted too many answers.");
+    }
+
+    // Resolve creator/global settings for grading and post-answer reveal rules.
     const quiz = await ctx.db.get(session.quizId);
     let halfMarkThreshold = 50;
+    let teacherSettings = null;
+    let globalConfig = null;
     if (quiz) {
-      const settings = await ctx.db
-        .query("teacherSettings")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
-        .first();
-      if (settings?.halfMarkThreshold) {
-        halfMarkThreshold = settings.halfMarkThreshold;
+      [teacherSettings, globalConfig] = await Promise.all([
+        ctx.db
+          .query("teacherSettings")
+          .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
+          .first(),
+        ctx.db.query("globalConfig").first(),
+      ]);
+      if (teacherSettings?.halfMarkThreshold) {
+        halfMarkThreshold = teacherSettings.halfMarkThreshold;
       }
     }
+
+    const showCorrectAnswers =
+      quiz?.showCorrectAnswers ??
+      teacherSettings?.showCorrectAnswers ??
+      globalConfig?.showCorrectAnswers ??
+      true;
+    const showExplanations =
+      quiz?.showExplanations ??
+      teacherSettings?.showExplanations ??
+      globalConfig?.showExplanations ??
+      true;
 
     let isCorrect = false;
     let pointsEarned = 0;
@@ -841,14 +929,15 @@ export const gradeAnswer = mutation({
       pointsEarned,
       totalPointsPossible: question.points,
       // Only reveal correct answer if quiz settings allow
-      correctAnswer: quiz?.showCorrectAnswers !== false
+      correctAnswer: showCorrectAnswers
         ? (question.type === "mcq" || question.type === "true_false"
           ? question.correctAnswer
           : question.type === "multi_select"
             ? question.correctAnswers?.join(", ")
             : undefined)
         : undefined,
-      explanation: quiz?.showExplanations !== false ? question.explanation : undefined,
+      explanation: showExplanations ? question.explanation : undefined,
+      alreadyAnswered: false,
     };
   },
 });
@@ -882,105 +971,6 @@ export const completeQuizSession = mutation({
   },
 });
 
-// Legacy bulk submit (kept for compatibility)
-export const submitQuizSession = mutation({
-  args: {
-    quizId: v.id("quizzes"),
-    playerName: v.string(),
-    answers: v.array(
-      v.object({
-        questionId: v.id("questions"),
-        answer: v.string(),
-        timeTaken: v.optional(v.number()),
-      })
-    ),
-    startedAt: v.number(),
-  },
-  handler: async (ctx, args) => {
-    const quiz = await ctx.db.get(args.quizId);
-    if (!quiz) throw new Error("Quiz not found");
-    if (!quiz.isPublished) throw new Error("Quiz not available");
-
-    let totalScore = 0;
-    let totalPoints = 0;
-
-    const gradedAnswers = await Promise.all(
-      args.answers.map(async (ans) => {
-        const question = await ctx.db.get(ans.questionId);
-        if (!question)
-          return {
-            questionId: ans.questionId,
-            answer: ans.answer,
-            isCorrect: false,
-            pointsEarned: 0,
-            timeTaken: ans.timeTaken,
-          };
-
-        totalPoints += question.points;
-        let isCorrect = false;
-        let pointsEarned = 0;
-
-        switch (question.type) {
-          case "mcq":
-          case "true_false":
-            isCorrect =
-              ans.answer.toLowerCase().trim() ===
-              (question.correctAnswer || "").toLowerCase().trim();
-            pointsEarned = isCorrect ? question.points : 0;
-            break;
-          case "multi_select": {
-            const selected = ans.answer
-              .split(",")
-              .map((s) => s.trim().toLowerCase())
-              .sort();
-            const correct = (question.correctAnswers || [])
-              .map((s) => s.toLowerCase())
-              .sort();
-            isCorrect = JSON.stringify(selected) === JSON.stringify(correct);
-            pointsEarned = isCorrect ? question.points : 0;
-            break;
-          }
-          case "written": {
-            const userAnswer = ans.answer.toLowerCase().trim();
-            const keywords = question.keywords || [];
-            const matched = keywords.filter((kw) =>
-              userAnswer.includes(kw.toLowerCase())
-            );
-            const ratio = keywords.length > 0 ? matched.length / keywords.length : 0;
-            pointsEarned = Math.round(question.points * ratio);
-            isCorrect = ratio >= 1;
-            break;
-          }
-        }
-
-        totalScore += pointsEarned;
-        return {
-          questionId: ans.questionId,
-          answer: ans.answer,
-          isCorrect,
-          pointsEarned,
-          timeTaken: ans.timeTaken,
-        };
-      })
-    );
-
-    const name = args.playerName.trim().replace(/<[^>]*>/g, "").substring(0, 100);
-
-    const sessionId = await ctx.db.insert("quizSessions", {
-      quizId: args.quizId,
-      playerName: name,
-      status: "completed",
-      score: totalScore,
-      totalPoints,
-      answers: gradedAnswers,
-      startedAt: args.startedAt,
-      completedAt: Date.now(),
-    });
-
-    return { sessionId, score: totalScore, totalPoints, answers: gradedAnswers };
-  },
-});
-
 // ============================================================
 // STATS & SESSIONS
 // ============================================================
@@ -988,11 +978,8 @@ export const submitQuizSession = mutation({
 export const getQuizSessions = query({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-
-    const quiz = await ctx.db.get(args.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) return [];
+    const quiz = await getQuizIfOwner(ctx, args.quizId);
+    if (!quiz) return [];
 
     const sessions = await ctx.db
       .query("quizSessions")
@@ -1008,19 +995,9 @@ export const getQuizSessions = query({
 export const getSessionDetail = query({
   args: { sessionId: v.id("quizSessions") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const session = await ctx.db.get(args.sessionId);
-    if (!session) return null;
-
-    // Verify the caller owns the quiz this session belongs to
-    const quiz = await ctx.db.get(session.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) {
-      // Also allow admins
-      const email = (identity.email || "").toLowerCase();
-      if (!ADMIN_EMAILS.includes(email)) return null;
-    }
+    const owned = await getSessionIfOwnerOrAdmin(ctx, args.sessionId);
+    if (!owned) return null;
+    const { session } = owned;
 
     // Get question details for the breakdown
     const questionDetails = await Promise.all(
@@ -1052,16 +1029,7 @@ export const overrideScore = mutation({
     newPoints: v.number(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const session = await ctx.db.get(args.sessionId);
-    if (!session) throw new Error("Session not found");
-
-    const quiz = await ctx.db.get(session.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) {
-      throw new Error("Unauthorized");
-    }
+    const { session } = await requireSessionOwner(ctx, args.sessionId);
 
     const updatedAnswers = session.answers.map((ans) => {
       if (ans.questionId === args.questionId) {
@@ -1085,15 +1053,7 @@ export const getQuizLeaderboard = query({
     const quiz = await ctx.db.get(args.quizId);
     if (!quiz) return [];
 
-    // SECURITY CHECK: If unpublished, only creator or admin can view leaderboard
-    if (!quiz.isPublished) {
-      const identity = await ctx.auth.getUserIdentity();
-      if (!identity) return [];
-      const email = (identity.email || "").toLowerCase();
-      const isOwner = quiz.creatorId === identity.subject;
-      const isAdmin = ADMIN_EMAILS.includes(email);
-      if (!isOwner && !isAdmin) return [];
-    }
+    if (!(await canViewQuizAsRespondent(ctx, quiz))) return [];
 
     const sessions = await ctx.db
       .query("quizSessions")
@@ -1117,13 +1077,18 @@ export const getQuizLeaderboard = query({
 // ADMIN FUNCTIONS
 // ============================================================
 
+export const getIsAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    // Presentation helper only. Every privileged operation still calls requireAdmin.
+    return await isAdmin(ctx);
+  },
+});
+
 export const getAdminStats = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-    const email = (identity.email || "").toLowerCase();
-    if (!ADMIN_EMAILS.includes(email)) return null;
+    await requireAdmin(ctx);
     const allUsers = await ctx.db.query("users").collect();
     const allQuizzes = await ctx.db.query("quizzes").collect();
     const allSessions = await ctx.db.query("quizSessions").collect();
@@ -1148,10 +1113,7 @@ export const getAdminStats = query({
 export const getAdminUsers = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-    const email = (identity.email || "").toLowerCase();
-    if (!ADMIN_EMAILS.includes(email)) return [];
+    await requireAdmin(ctx);
 
     // Batch-fetch all data once instead of N+1 per user
     const [users, allQuizzes, allSessions] = await Promise.all([
@@ -1199,10 +1161,7 @@ export const getAdminUsers = query({
 export const getAdminQuizzes = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-    const email = (identity.email || "").toLowerCase();
-    if (!ADMIN_EMAILS.includes(email)) return [];
+    await requireAdmin(ctx);
 
     // Batch-fetch all data once instead of N+1 per quiz
     const [quizzes, allUsers, allSessions, allQuestions] = await Promise.all([
@@ -1230,6 +1189,7 @@ export const getAdminQuizzes = query({
 
     const questionCountByQuiz = new Map<string, number>();
     for (const question of allQuestions) {
+      if (question.deletedAt !== undefined) continue;
       questionCountByQuiz.set(
         question.quizId,
         (questionCountByQuiz.get(question.quizId) || 0) + 1
@@ -1267,6 +1227,8 @@ export const adminToggleUserElevation = mutation({
 
     const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", args.clerkId)).first();
     if (user) {
+      // User elevation is manually granted by an administrator and means:
+      // unlimited AI generations plus no respondent cap on the user's quizzes.
       await ctx.db.patch(user._id, { isElevated: args.elevate });
 
       // Propagate to all their quizzes
@@ -1301,24 +1263,7 @@ export const adminDeleteQuiz = mutation({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-
-    const questions = await ctx.db
-      .query("questions")
-      .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-      .collect();
-    for (const question of questions) {
-      await ctx.db.delete(question._id);
-    }
-
-    const sessions = await ctx.db
-      .query("quizSessions")
-      .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-      .collect();
-    for (const session of sessions) {
-      await ctx.db.delete(session._id);
-    }
-
-    await ctx.db.delete(args.quizId);
+    await cascadeDeleteQuiz(ctx, args.quizId);
   },
 });
 
@@ -1395,16 +1340,15 @@ export const getPlayerPercentile = query({
 export const getQuizStatsEnhanced = query({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
+    const quiz = await getQuizIfOwner(ctx, args.quizId);
+    if (!quiz) return null;
 
-    const quiz = await ctx.db.get(args.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) return null;
-
-    const [sessions, questions] = await Promise.all([
+    const [sessions, allQuestions] = await Promise.all([
       ctx.db.query("quizSessions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
       ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
     ]);
+
+    const questions = allQuestions.filter((q) => q.deletedAt === undefined);
 
     const completed = sessions.filter((s) => s.status === "completed");
 
@@ -1427,8 +1371,11 @@ export const getQuizStatsEnhanced = query({
     const questionMap = new Map(questions.map((q) => [q._id as string, { questionText: q.questionText, type: q.type, correct: 0, incorrect: 0 }]));
 
     for (const session of completed) {
+      const countedQuestionIds = new Set<string>();
       for (const ans of session.answers) {
         const qId = ans.questionId as string;
+        if (countedQuestionIds.has(qId)) continue;
+        countedQuestionIds.add(qId);
         const stat = questionMap.get(qId);
         if (stat) {
           if (ans.isCorrect) stat.correct++;
