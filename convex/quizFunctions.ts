@@ -781,8 +781,27 @@ export const gradeAnswer = mutation({
   },
   handler: async (ctx, args) => {
     const session = await ctx.db.get(args.sessionId);
-    if (!session || session.status !== "in_progress") {
-      throw new Error("Session not found or already completed");
+    if (!session) throw new Error("SESSION_NOT_FOUND: This attempt no longer exists.");
+    if (session.status !== "in_progress") {
+      throw new Error("SESSION_CLOSED: This attempt is already completed.");
+    }
+
+    const question = await ctx.db.get(args.questionId);
+    if (!question) throw new Error("QUESTION_NOT_FOUND: That question no longer exists.");
+    if (question.quizId !== session.quizId) {
+      throw new Error("QUESTION_NOT_IN_QUIZ: That question is not part of this quiz.");
+    }
+
+    const existingAnswer = session.answers.find((answer) => answer.questionId === args.questionId);
+    if (existingAnswer) {
+      return {
+        isCorrect: existingAnswer.isCorrect,
+        pointsEarned: existingAnswer.pointsEarned,
+        totalPointsPossible: question.points,
+        alreadyAnswered: true,
+        correctAnswer: undefined,
+        explanation: undefined,
+      };
     }
 
     if (args.answer.length > MAX_ANSWER_LENGTH) {
@@ -790,12 +809,6 @@ export const gradeAnswer = mutation({
     }
     if (session.answers.length >= MAX_ANSWERS_PER_SESSION) {
       throw new Error("TOO_MANY_ANSWERS: This attempt has submitted too many answers.");
-    }
-
-    const question = await ctx.db.get(args.questionId);
-    if (!question) throw new Error("Question not found");
-    if (question.quizId !== session.quizId) {
-      throw new Error("Question does not belong to this quiz");
     }
 
     // Resolve creator/global settings for grading and post-answer reveal rules.
@@ -907,6 +920,7 @@ export const gradeAnswer = mutation({
             : undefined)
         : undefined,
       explanation: showExplanations ? question.explanation : undefined,
+      alreadyAnswered: false,
     };
   },
 });
@@ -959,20 +973,38 @@ export const submitQuizSession = mutation({
     if (!quiz) throw new Error("Quiz not found");
     if (!quiz.isPublished) throw new Error("Quiz not available");
 
+    if (args.answers.length > MAX_ANSWERS_PER_SESSION) {
+      throw new Error("TOO_MANY_ANSWERS: This submission contains too many answers.");
+    }
+
+    const seenQuestionIds = new Set<string>();
+    for (const answer of args.answers) {
+      if (answer.answer.length > MAX_ANSWER_LENGTH) {
+        throw new Error("ANSWER_TOO_LONG: One answer is too long.");
+      }
+
+      const questionId = answer.questionId as string;
+      if (seenQuestionIds.has(questionId)) {
+        throw new Error("DUPLICATE_ANSWER: A question may only be submitted once.");
+      }
+      seenQuestionIds.add(questionId);
+
+      const question = await ctx.db.get(answer.questionId);
+      if (!question) throw new Error("QUESTION_NOT_FOUND: A submitted question no longer exists.");
+      if (question.quizId !== args.quizId) {
+        throw new Error("QUESTION_NOT_IN_QUIZ: A submitted question is not part of this quiz.");
+      }
+    }
+
     let totalScore = 0;
     let totalPoints = 0;
 
     const gradedAnswers = await Promise.all(
       args.answers.map(async (ans) => {
         const question = await ctx.db.get(ans.questionId);
-        if (!question || question.quizId !== args.quizId)
-          return {
-            questionId: ans.questionId,
-            answer: ans.answer,
-            isCorrect: false,
-            pointsEarned: 0,
-            timeTaken: ans.timeTaken,
-          };
+        if (!question || question.quizId !== args.quizId) {
+          throw new Error("QUESTION_NOT_IN_QUIZ: A submitted question is invalid.");
+        }
 
         totalPoints += question.points;
         let isCorrect = false;
@@ -1001,12 +1033,17 @@ export const submitQuizSession = mutation({
           case "written": {
             const userAnswer = ans.answer.toLowerCase().trim();
             const keywords = question.keywords || [];
-            const matched = keywords.filter((kw) =>
-              userAnswer.includes(kw.toLowerCase())
-            );
-            const ratio = keywords.length > 0 ? matched.length / keywords.length : 0;
-            pointsEarned = Math.round(question.points * ratio);
-            isCorrect = ratio >= 1;
+            if (keywords.length === 0) {
+              pointsEarned = question.points;
+              isCorrect = true;
+            } else {
+              const matched = keywords.filter((kw) =>
+                userAnswer.includes(kw.toLowerCase())
+              );
+              const ratio = matched.length / keywords.length;
+              pointsEarned = Math.round(question.points * ratio);
+              isCorrect = ratio >= 1;
+            }
             break;
           }
         }
@@ -1022,7 +1059,8 @@ export const submitQuizSession = mutation({
       })
     );
 
-    const name = args.playerName.trim().replace(/<[^>]*>/g, "").substring(0, 100);
+    const name = normalizePlayerName(args.playerName);
+    if (!name) throw new Error("NAME_REQUIRED: Enter a name to submit.");
 
     const sessionId = await ctx.db.insert("quizSessions", {
       quizId: args.quizId,
@@ -1453,8 +1491,11 @@ export const getQuizStatsEnhanced = query({
     const questionMap = new Map(questions.map((q) => [q._id as string, { questionText: q.questionText, type: q.type, correct: 0, incorrect: 0 }]));
 
     for (const session of completed) {
+      const countedQuestionIds = new Set<string>();
       for (const ans of session.answers) {
         const qId = ans.questionId as string;
+        if (countedQuestionIds.has(qId)) continue;
+        countedQuestionIds.add(qId);
         const stat = questionMap.get(qId);
         if (stat) {
           if (ans.isCorrect) stat.correct++;
