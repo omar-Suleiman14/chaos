@@ -674,6 +674,34 @@ export const getQuizForPlayer = query({
   },
 });
 
+// ============================================================
+// RESPONDENT SESSION LIMITS
+// ============================================================
+
+const SESSION_RATE_LIMIT = 30;
+const SESSION_RATE_WINDOW_MS = 60_000;
+const DUPLICATE_START_WINDOW_MS = 30_000;
+const MAX_ANSWER_LENGTH = 5_000;
+const MAX_ANSWERS_PER_SESSION = 200;
+const MAX_NAME_LENGTH = 100;
+
+function normalizePlayerName(raw: string): string {
+  const withoutMarkup = raw.replace(/<[^>]*>/g, "");
+  const printable = Array.from(withoutMarkup)
+    .filter((ch) => {
+      const code = ch.codePointAt(0) ?? 0;
+      if (code <= 0x1f) return false;
+      if (code >= 0x7f && code <= 0x9f) return false;
+      if (code >= 0x200b && code <= 0x200f) return false;
+      if (code >= 0x202a && code <= 0x202e) return false;
+      if (code === 0xfeff) return false;
+      return true;
+    })
+    .join("");
+
+  return printable.replace(/\s+/g, " ").trim().substring(0, MAX_NAME_LENGTH);
+}
+
 // Start a quiz session
 export const startQuizSession = mutation({
   args: {
@@ -681,12 +709,15 @@ export const startQuizSession = mutation({
     playerName: v.string(),
   },
   handler: async (ctx, args) => {
-    // Sanitize name
-    const name = args.playerName.trim().replace(/<[^>]*>/g, "").substring(0, 100);
-    if (!name) throw new Error("Name is required");
+    const name = normalizePlayerName(args.playerName);
+    if (!name) throw new Error("NAME_REQUIRED: Enter a name to start.");
 
     const quiz = await ctx.db.get(args.quizId);
-    if (!quiz || !quiz.isPublished) throw new Error("Quiz not available");
+    if (!quiz) throw new Error("QUIZ_NOT_FOUND: This quiz no longer exists.");
+    if (quiz.isBanned) throw new Error("QUIZ_BANNED: This quiz is unavailable.");
+    if (!quiz.isPublished) {
+      throw new Error("QUIZ_UNPUBLISHED: This quiz is not accepting responses right now.");
+    }
 
     // Enforce 100-player limit for non-elevated quizzes
     if (!quiz.isElevated) {
@@ -700,10 +731,32 @@ export const startQuizSession = mutation({
       if (completedCount >= PLAYER_LIMIT) {
         const config = await ctx.db.query("globalConfig").first();
         throw new Error(
-          config?.playerLimitErrorText?.trim() ||
-            "Access limited. This quiz has reached its maximum number of players. Contact the quiz creator to resolve the issue."
+          `RESPONDENT_LIMIT: ${config?.playerLimitErrorText?.trim() || "This quiz has reached its maximum number of players."}`
         );
       }
+    }
+
+    const now = Date.now();
+    const recent = await ctx.db
+      .query("quizSessions")
+      .withIndex("by_quiz_started", (q) =>
+        q.eq("quizId", args.quizId).gte("startedAt", now - SESSION_RATE_WINDOW_MS)
+      )
+      .collect();
+
+    const duplicate = recent.find(
+      (session) =>
+        session.status === "in_progress" &&
+        session.playerName === name &&
+        session.answers.length === 0 &&
+        now - session.startedAt < DUPLICATE_START_WINDOW_MS
+    );
+    if (duplicate) return duplicate._id;
+
+    if (recent.length >= SESSION_RATE_LIMIT) {
+      throw new Error(
+        "RATE_LIMITED: Too many people are starting this quiz at once. Wait a moment and try again."
+      );
     }
 
     return await ctx.db.insert("quizSessions", {
@@ -713,7 +766,7 @@ export const startQuizSession = mutation({
       score: 0,
       totalPoints: 0,
       answers: [],
-      startedAt: Date.now(),
+      startedAt: now,
     });
   },
 });
@@ -730,6 +783,13 @@ export const gradeAnswer = mutation({
     const session = await ctx.db.get(args.sessionId);
     if (!session || session.status !== "in_progress") {
       throw new Error("Session not found or already completed");
+    }
+
+    if (args.answer.length > MAX_ANSWER_LENGTH) {
+      throw new Error("ANSWER_TOO_LONG: That answer is too long to submit.");
+    }
+    if (session.answers.length >= MAX_ANSWERS_PER_SESSION) {
+      throw new Error("TOO_MANY_ANSWERS: This attempt has submitted too many answers.");
     }
 
     const question = await ctx.db.get(args.questionId);

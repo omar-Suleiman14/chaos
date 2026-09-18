@@ -58,6 +58,7 @@ export default function QuizPlayerPage() {
   const [timeLeftMap, setTimeLeftMap] = useState<Record<string, number>>({});
 
   const [mounted, setMounted] = useState(false);
+  const [isStarting, setIsStarting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
@@ -170,7 +171,8 @@ export default function QuizPlayerPage() {
   };
 
   const handleStart = async () => {
-    if (!playerName.trim() || !quizMeta?._id) return;
+    if (isStarting || !playerName.trim() || !quizMeta?._id) return;
+    setIsStarting(true);
     setStartError("");
     haptics.heavy(); if (!quizData?.disableAnimations) sfx.play("start");
     try {
@@ -193,6 +195,8 @@ export default function QuizPlayerPage() {
     } catch (err: any) {
       console.error(err);
       setStartError(err?.message || "Failed to start session.");
+    } finally {
+      setIsStarting(false);
     }
   };
 
@@ -258,15 +262,16 @@ export default function QuizPlayerPage() {
                 onChange={e => setPlayerName(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleStart()}
                 placeholder="ENTER YOUR NAME"
+                maxLength={100}
                 autoFocus
                 className="kb-input text-base"
               />
               <button
                 onClick={handleStart}
-                disabled={!playerName.trim()}
+                disabled={isStarting || !playerName.trim()}
                 className="kb-btn kb-btn-primary w-full disabled:opacity-50"
               >
-                START QUIZ →
+                {isStarting ? "STARTING…" : "START QUIZ →"}
               </button>
               {startError && (
                 <div className="mt-4 p-4 bg-destructive/10 border-2 border-destructive text-destructive text-sm font-semibold chaos-heading leading-relaxed">

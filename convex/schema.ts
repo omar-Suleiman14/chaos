@@ -108,6 +108,7 @@ export default defineSchema({
     startedAt: v.number(),
   })
     .index("by_quiz", ["quizId"])
+    .index("by_quiz_started", ["quizId", "startedAt"])
     .index("by_quiz_score", ["quizId", "score"]),
 
   // ============ AI JOBS ============
