@@ -15,7 +15,9 @@ export default function ConvexClientProvider({
   children: ReactNode;
 }) {
   if (!convex) {
-    return <>{children}</>;
+    throw new Error(
+      "Missing NEXT_PUBLIC_CONVEX_URL. Configure the Convex deployment URL before rendering the app.",
+    );
   }
 
   return (
