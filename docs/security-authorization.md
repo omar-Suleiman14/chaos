@@ -18,7 +18,7 @@ Unauthorized read operations intentionally return `null` or `[]` where the exist
 | `updateQuiz` | Quiz owner via `requireQuizOwner` | Throws not found/unauthorized |
 | `deleteQuiz` | Quiz owner via `requireQuizOwner` | Throws not found/unauthorized |
 | `getMyQuizzes` | Authenticated caller; index is scoped to caller's `creatorId` | Returns `[]` |
-| `getQuiz` | Quiz owner or hard-coded admin via `getQuizIfOwnerOrAdmin` | Returns `null` |
+| `getQuiz` | Quiz owner or configured admin via `getQuizIfOwnerOrAdmin` | Returns `null` |
 | `getQuizForOwner` | Quiz owner via `getQuizIfOwner`; used by server actions | Returns `null` |
 | `getQuizBySlug` | Public only for published quizzes; unpublished visible only to owner/admin via `canViewQuizAsRespondent` | Returns `null` |
 | `getQuizByUsernameSlug` | Same as `getQuizBySlug`; returns safe routing metadata only | Returns `null` |
@@ -26,26 +26,27 @@ Unauthorized read operations intentionally return `null` or `[]` where the exist
 | `addQuestion` | Parent quiz owner via `requireQuizOwner` | Throws not found/unauthorized |
 | `updateQuestion` | Parent quiz owner via `requireQuestionOwner` | Throws not found/unauthorized |
 | `deleteQuestion` | Parent quiz owner via `requireQuestionOwner` | Throws not found/unauthorized |
-| `getQuestions` | Quiz owner or hard-coded admin via `getQuizIfOwnerOrAdmin`; may include answers | Returns `[]` |
+| `getQuestions` | Quiz owner or configured admin via `getQuizIfOwnerOrAdmin`; may include answers | Returns `[]` |
 | `getQuizForPlayer` | Anonymous for published quiz; owner/admin may preview unpublished quiz | Returns `null`; answer fields are never returned |
 | `startQuizSession` | Anonymous respondent capability for published quiz | Throws if quiz is missing/unpublished |
 | `gradeAnswer` | Anonymous respondent capability using an in-progress session ID; question must belong to that session's quiz | Throws for invalid session/question or cross-quiz question |
 | `completeQuizSession` | Anonymous respondent capability using a session ID | Throws if session is missing |
 | `submitQuizSession` | Legacy anonymous respondent submission for published quiz; foreign question IDs are ignored and score zero | Throws if quiz is missing/unpublished |
 | `getQuizSessions` | Quiz owner via `getQuizIfOwner` | Returns `[]` |
-| `getSessionDetail` | Parent quiz owner or hard-coded admin via `getSessionIfOwnerOrAdmin` | Returns `null` |
+| `getSessionDetail` | Parent quiz owner or configured admin via `getSessionIfOwnerOrAdmin` | Returns `null` |
 | `overrideScore` | Parent quiz owner via `requireSessionOwner` | Throws not found/unauthorized |
 | `getQuizLeaderboard` | Anonymous for published quiz; owner/admin for unpublished preview | Returns `[]` |
-| `getAdminStats` | Existing hard-coded admin email mechanism via `isAdmin` | Returns `null` |
-| `getAdminUsers` | Existing hard-coded admin email mechanism via `isAdmin` | Returns `[]` |
-| `getAdminQuizzes` | Existing hard-coded admin email mechanism via `isAdmin` | Returns `[]` |
-| `adminToggleUserBan` | Hard-coded admin via `requireAdmin` | Throws |
-| `adminToggleUserElevation` | Hard-coded admin via `requireAdmin` | Throws |
-| `adminToggleQuizElevation` | Hard-coded admin via `requireAdmin` | Throws |
-| `adminToggleQuizBan` | Hard-coded admin via `requireAdmin` | Throws |
-| `adminDeleteQuiz` | Hard-coded admin via `requireAdmin` | Throws |
+| `getIsAdmin` | Authenticated identity checked against `CHAOS_ADMIN_USER_IDS`; returns a derived boolean only | Returns `false` |
+| `getAdminStats` | Configured admin via `requireAdmin` | Throws |
+| `getAdminUsers` | Configured admin via `requireAdmin` | Throws |
+| `getAdminQuizzes` | Configured admin via `requireAdmin` | Throws |
+| `adminToggleUserBan` | Configured admin via `requireAdmin` | Throws |
+| `adminToggleUserElevation` | Configured admin via `requireAdmin` | Throws |
+| `adminToggleQuizElevation` | Configured admin via `requireAdmin` | Throws |
+| `adminToggleQuizBan` | Configured admin via `requireAdmin` | Throws |
+| `adminDeleteQuiz` | Configured admin via `requireAdmin` | Throws |
 | `getGlobalConfig` | Public application configuration | Public result or `null` |
-| `updateGlobalConfig` | Hard-coded admin via `requireAdmin` | Throws |
+| `updateGlobalConfig` | Configured admin via `requireAdmin` | Throws |
 | `getPlayerPercentile` | Anonymous respondent capability using a completed session ID; returns aggregate percentile only | Returns `null` for missing/incomplete/insufficient data |
 | `getQuizStatsEnhanced` | Quiz owner via `getQuizIfOwner` | Returns `null` |
 
@@ -76,4 +77,4 @@ The anonymous session functions intentionally remain callable without creator au
 
 ## Shared authorization helpers
 
-`convex/authz.ts` is the only place that compares creator/job ownership IDs with the authenticated identity. It exports identity, admin, quiz-owner, question-owner, session-owner, AI-job-owner, and respondent-visibility helpers. The unit authorization guard verifies that creator ownership comparisons remain centralized and that every creator-scoped entry point continues to call the expected helper.
+`convex/authz.ts` is the only place that compares creator/job ownership IDs or the configured admin user IDs with the authenticated identity. Admin membership comes from the Convex `CHAOS_ADMIN_USER_IDS` environment variable and is compared to Clerk `identity.subject`. It exports identity, admin, quiz-owner, question-owner, session-owner, AI-job-owner, and respondent-visibility helpers. The unit authorization guard verifies that creator ownership comparisons remain centralized and that every creator-scoped entry point continues to call the expected helper.

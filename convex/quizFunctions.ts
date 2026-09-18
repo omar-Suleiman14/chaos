@@ -1055,10 +1055,18 @@ export const getQuizLeaderboard = query({
 // ADMIN FUNCTIONS
 // ============================================================
 
+export const getIsAdmin = query({
+  args: {},
+  handler: async (ctx) => {
+    // Presentation helper only. Every privileged operation still calls requireAdmin.
+    return await isAdmin(ctx);
+  },
+});
+
 export const getAdminStats = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await isAdmin(ctx))) return null;
+    await requireAdmin(ctx);
     const allUsers = await ctx.db.query("users").collect();
     const allQuizzes = await ctx.db.query("quizzes").collect();
     const allSessions = await ctx.db.query("quizSessions").collect();
@@ -1083,7 +1091,7 @@ export const getAdminStats = query({
 export const getAdminUsers = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await isAdmin(ctx))) return [];
+    await requireAdmin(ctx);
 
     // Batch-fetch all data once instead of N+1 per user
     const [users, allQuizzes, allSessions] = await Promise.all([
@@ -1131,7 +1139,7 @@ export const getAdminUsers = query({
 export const getAdminQuizzes = query({
   args: {},
   handler: async (ctx) => {
-    if (!(await isAdmin(ctx))) return [];
+    await requireAdmin(ctx);
 
     // Batch-fetch all data once instead of N+1 per quiz
     const [quizzes, allUsers, allSessions, allQuestions] = await Promise.all([

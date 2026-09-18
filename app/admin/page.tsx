@@ -2,7 +2,7 @@
 
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useUser, UserButton } from "@clerk/nextjs";
+import { UserButton } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
@@ -24,15 +24,12 @@ import {
   Printer,
 } from "lucide-react";
 
-const ADMIN_EMAILS = ["support@chaos.fail", "khomod14@gmail.com"];
-
 export default function AdminDashboard() {
-  const { user, isLoaded } = useUser();
-  const isAdmin = isLoaded && ADMIN_EMAILS.includes(user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "");
+  const isAdmin = useQuery(api.quizFunctions.getIsAdmin);
 
-  const stats = useQuery(api.quizFunctions.getAdminStats, isAdmin ? undefined : "skip");
-  const usersList = useQuery(api.quizFunctions.getAdminUsers, isAdmin ? undefined : "skip");
-  const quizzesList = useQuery(api.quizFunctions.getAdminQuizzes, isAdmin ? undefined : "skip");
+  const stats = useQuery(api.quizFunctions.getAdminStats, isAdmin === true ? undefined : "skip");
+  const usersList = useQuery(api.quizFunctions.getAdminUsers, isAdmin === true ? undefined : "skip");
+  const quizzesList = useQuery(api.quizFunctions.getAdminQuizzes, isAdmin === true ? undefined : "skip");
 
   const toggleUserBan = useMutation(api.quizFunctions.adminToggleUserBan);
   const toggleQuizBan = useMutation(api.quizFunctions.adminToggleQuizBan);
@@ -54,7 +51,7 @@ export default function AdminDashboard() {
     setMounted(true);
   }, []);
 
-  if (!mounted || !isLoaded) return null;
+  if (!mounted || isAdmin === undefined) return null;
 
   if (!isAdmin) {
     return (

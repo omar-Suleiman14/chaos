@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter, usePathname } from "next/navigation";
 
 import { UserButton, useUser } from "@clerk/nextjs";
-import { useMutation } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useState } from "react";
 import { Sun, Moon, Plus, FileText, BarChart3, Settings, Shield } from "lucide-react";
@@ -19,6 +19,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const { user, isLoaded } = useUser();
   const pathname = usePathname();
   const getOrCreateUser = useMutation(api.quizFunctions.getOrCreateUser);
+  const isAdmin = useQuery(api.quizFunctions.getIsAdmin) === true;
 
   useEffect(() => {
     if (isLoaded && user) {
@@ -26,10 +27,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation ref is stable in behavior
   }, [isLoaded, user]);
-
-  const ADMIN_EMAILS = ["support@chaos.fail", "khomod14@gmail.com"];
-  const isAdmin =
-    isLoaded && ADMIN_EMAILS.includes(user?.primaryEmailAddress?.emailAddress?.toLowerCase() ?? "");
 
   const router = useRouter();
   const createQuiz = useMutation(api.quizFunctions.createQuiz);

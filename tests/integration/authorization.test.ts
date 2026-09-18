@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { api } from "@/convex/_generated/api";
 import { createTestConvex } from "./setup";
 import {
@@ -12,9 +12,23 @@ const adminIdentity = {
   ...creatorIdentity,
   subject: "user_admin",
   tokenIdentifier: "https://chaos.test.clerk.accounts.dev|user_admin",
-  email: "support@chaos.fail",
+  email: "admin@example.com",
   nickname: "admin",
 };
+
+const originalAdminUserIds = process.env.CHAOS_ADMIN_USER_IDS;
+
+beforeAll(() => {
+  process.env.CHAOS_ADMIN_USER_IDS = adminIdentity.subject;
+});
+
+afterAll(() => {
+  if (originalAdminUserIds === undefined) {
+    delete process.env.CHAOS_ADMIN_USER_IDS;
+  } else {
+    process.env.CHAOS_ADMIN_USER_IDS = originalAdminUserIds;
+  }
+});
 
 async function seedCreatorData(
   t: ReturnType<typeof createTestConvex>,

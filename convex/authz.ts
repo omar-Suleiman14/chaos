@@ -3,8 +3,16 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 type DbCtx = QueryCtx | MutationCtx;
 
-// Preserve the existing server-side admin identity mechanism.
-const ADMIN_EMAILS = ["support@chaos.fail", "khomod14@gmail.com"];
+const ADMIN_USER_IDS_ENV = "CHAOS_ADMIN_USER_IDS";
+
+function configuredAdminUserIds(): Set<string> {
+  return new Set(
+    (process.env[ADMIN_USER_IDS_ENV] ?? "")
+      .split(",")
+      .map((value) => value.trim())
+      .filter(Boolean)
+  );
+}
 
 export async function requireIdentity(ctx: DbCtx) {
   const identity = await ctx.auth.getUserIdentity();
@@ -15,7 +23,7 @@ export async function requireIdentity(ctx: DbCtx) {
 export async function isAdmin(ctx: DbCtx): Promise<boolean> {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return false;
-  return ADMIN_EMAILS.includes((identity.email || "").toLowerCase());
+  return configuredAdminUserIds().has(identity.subject);
 }
 
 export async function requireAdmin(ctx: DbCtx): Promise<void> {

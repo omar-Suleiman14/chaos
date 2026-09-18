@@ -84,12 +84,15 @@ Once both are configured, `pnpm dev` serves the app at
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | `.env.local` (Next.js) | `ClerkProvider` (`app/layout.tsx`), implicitly | Clerk's publishable key, used client-side. |
 | `CLERK_SECRET_KEY` | `.env.local` (Next.js) | `clerkMiddleware` (`middleware.ts`), implicitly | Clerk's secret key, used server-side. |
 | `CLERK_JWT_ISSUER_DOMAIN` | Convex dashboard/CLI environment | `convex/auth.config.ts` | Clerk JWT issuer domain Convex validates session tokens against. Falls back to `https://clerk.chaos.fail` if unset. |
+| `CHAOS_ADMIN_USER_IDS` | Convex dashboard/CLI environment | `convex/authz.ts` | Comma-separated Clerk user IDs (`identity.subject`) allowed to use admin operations. Update the Convex environment to add or remove admins without deploying code. |
 | `OPENROUTER_API_KEY` | Convex dashboard/CLI environment, **not** `.env.local` | `convex/aiQuiz.ts`, `convex/aiEditorChat.ts` | Used for AI quiz generation and AI editing. Without it, those two features fail; everything else works. |
 
-The Convex-side variables (`CLERK_JWT_ISSUER_DOMAIN`, `OPENROUTER_API_KEY`)
+The Convex-side variables (`CLERK_JWT_ISSUER_DOMAIN`, `CHAOS_ADMIN_USER_IDS`, `OPENROUTER_API_KEY`)
 are set against your Convex deployment (`npx convex env set NAME value`),
 not in `.env.local` — they run on Convex's servers, not in the Next.js
 process.
+
+Admin authorization uses Clerk's stable authenticated user ID rather than an email claim because the current Convex Clerk configuration validates the issuer/application and does not define a role claim. The browser only receives the derived `isAdmin` boolean; every privileged query and mutation authorizes again on the server.
 
 ### Tests
 
@@ -117,9 +120,7 @@ without real credentials). Deploying Convex functions is a separate step
 Known gaps, tracked as issues rather than restated in detail here:
 
 - Authorization has not yet been audited end-to-end on every server
-  operation ([#9](https://github.com/omar-Suleiman14/chaos/issues/9)), admin
-  access is a hardcoded email list rather than a configurable source
-  ([#10](https://github.com/omar-Suleiman14/chaos/issues/10)), new users get
+  operation ([#9](https://github.com/omar-Suleiman14/chaos/issues/9)), new users get
   elevated privileges by default
   ([#11](https://github.com/omar-Suleiman14/chaos/issues/11)), public queries
   may over-expose correct answers/explanations
