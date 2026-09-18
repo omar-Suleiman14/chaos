@@ -231,6 +231,6 @@ describe("creator-owned data authorization", () => {
         questionId: foreignQuestionId,
         answer: "4",
       })
-    ).rejects.toThrow(/does not belong/i);
+    ).rejects.toThrow(/QUESTION_NOT_IN_QUIZ/);
   });
 });
