@@ -170,7 +170,10 @@ describe("creator-owned data authorization", () => {
     const { quizId: privateQuizId } = await seedCreatorData(privateTest, { published: false });
 
     await expect(
-      privateTest.query(api.quizFunctions.getQuizBySlug, { slug: quizFixture.slug })
+      privateTest.query(api.quizFunctions.getQuizByUsernameSlug, {
+        username: creatorIdentity.nickname,
+        slug: quizFixture.slug,
+      })
     ).resolves.toBeNull();
     await expect(
       privateTest
@@ -183,7 +186,10 @@ describe("creator-owned data authorization", () => {
 
     const ownerPrivate = await privateTest
       .withIdentity(creatorIdentity)
-      .query(api.quizFunctions.getQuizBySlug, { slug: quizFixture.slug });
+      .query(api.quizFunctions.getQuizByUsernameSlug, {
+        username: creatorIdentity.nickname,
+        slug: quizFixture.slug,
+      });
     expect(ownerPrivate?._id).toBe(privateQuizId);
 
     const publishedTest = createTestConvex();
