@@ -5,6 +5,7 @@ import { api } from "@/convex/_generated/api";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { Id } from "@/convex/_generated/dataModel";
+import LoadingState from "@/components/LoadingState";
 
 const TYPE_LABELS: Record<string, string> = {
   mcq: "MCQ",
@@ -45,7 +46,7 @@ export default function PrintQuizPage() {
   if (!quiz || !questions) {
     return (
       <div className="min-h-screen flex items-center justify-center">
-        <p className="text-sm opacity-50">Preparing PDF...</p>
+        <LoadingState label="Preparing PDF..." className="py-8" />
       </div>
     );
   }

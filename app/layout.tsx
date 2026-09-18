@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Inter, Space_Mono } from "next/font/google";
 import "./globals.css";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
+import ConnectivityBanner from "@/components/ConnectivityBanner";
 import { ClerkProvider } from "@clerk/nextjs";
 
 /* ── Fonts ─────────────────────────────────────────────── */
@@ -50,7 +51,8 @@ export default function RootLayout({
       <body className="antialiased noise-bg">
         <ClerkProvider dynamic>
           <ConvexClientProvider>
-              {children}
+            <ConnectivityBanner />
+            {children}
           </ConvexClientProvider>
         </ClerkProvider>
       </body>

@@ -73,6 +73,23 @@ export const cancelAIJob = mutation({
   },
 });
 
+export const failAIJob = mutation({
+  args: {
+    jobId: v.id("aiJobs"),
+    error: v.string(),
+  },
+  handler: async (ctx, args) => {
+    const job = await requireAIJobOwner(ctx, args.jobId);
+    if (job.status !== "done" && job.status !== "error") {
+      await ctx.db.patch(args.jobId, {
+        status: "error",
+        step: "Generation failed",
+        error: args.error,
+      });
+    }
+  },
+});
+
 export const getAIJob = query({
   args: { jobId: v.id("aiJobs") },
   handler: async (ctx, args) => {

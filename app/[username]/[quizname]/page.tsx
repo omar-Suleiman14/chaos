@@ -8,6 +8,7 @@ import { useState, useEffect, useRef } from "react";
 import { haptics } from "@/lib/haptics";
 import { sfx } from "@/lib/sfx";
 import { Zap, ArrowDown, Volume2, VolumeX } from "lucide-react";
+import LoadingState from "@/components/LoadingState";
 
 // Fisher-Yates shuffle (creates a new array)
 function shuffleArray<T>(arr: T[]): T[] {
@@ -42,6 +43,13 @@ export default function QuizPlayerPage() {
   const [gameState, setGameState] = useState<GameState>("entry");
   const [playerName, setPlayerName] = useState("");
   const [startError, setStartError] = useState("");
+  const [answerError, setAnswerError] = useState<{
+    qId: Id<"questions">;
+    answer: string;
+    isTimeout: boolean;
+    message: string;
+  } | null>(null);
+  const [finishError, setFinishError] = useState("");
   const [sessionId, setSessionId] = useState<Id<"quizSessions"> | null>(null);
   const percentile = useQuery(
     api.quizFunctions.getPlayerPercentile,
@@ -142,6 +150,10 @@ export default function QuizPlayerPage() {
   const handleSubmitAnswer = async (qId: Id<"questions">, answer: string, isTimeout = false) => {
     if (!sessionId || isSubmitting || feedbacks[qId]) return;
     setIsSubmitting(true);
+    setAnswerError(null);
+    if (!isTimeout) {
+      setSelectedOptions(prev => ({ ...prev, [qId]: answer }));
+    }
     haptics.medium();
 
     const tTaken = (Date.now() - (qStartTimes.current[qId] || Date.now())) / 1000;
@@ -161,13 +173,23 @@ export default function QuizPlayerPage() {
       else if (isPartiallyCorrect) { haptics.light(); sfx.play("correct"); }
       else { haptics.error(); sfx.play("wrong"); }
 
-    } catch (err) { console.error(err); }
-    setIsSubmitting(false);
+    } catch (err: any) {
+      setAnswerError({
+        qId,
+        answer,
+        isTimeout,
+        message: err?.message || "Your answer could not be submitted. Please try again.",
+      });
+      haptics.error();
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleFinish = async () => {
     if (!sessionId || isFinishing.current) return;
     isFinishing.current = true;
+    setFinishError("");
     haptics.success(); sfx.play("finish");
     try {
       const result = await completeSession({ sessionId });
@@ -178,7 +200,11 @@ export default function QuizPlayerPage() {
           confetti({ particleCount: 200, spread: 90, origin: { y: 0.5 }, colors: ["#2F5333", "#F0EFEA", "#111111"] });
         } catch { /* ok */ }
       }
-    } catch (err) { console.error(err); }
+    } catch (err: any) {
+      setFinishError(err?.message || "Your quiz could not be submitted. Please try again.");
+      isFinishing.current = false;
+      haptics.error();
+    }
   };
 
   const handleStart = async () => {
@@ -228,10 +254,10 @@ export default function QuizPlayerPage() {
 
   if (!mounted) return null;
 
-  if (quizMeta === undefined) {
+  if (quizMeta === undefined || (quizMeta && quizData === undefined)) {
     return (
       <div className="h-[100dvh] bg-background flex items-center justify-center">
-        <p className="chaos-heading text-sm text-muted-foreground chaos-pulse">LOADING...</p>
+        <LoadingState label="Loading quiz..." className="py-8" />
       </div>
     );
   }
@@ -508,6 +534,22 @@ export default function QuizPlayerPage() {
                   )}
                 </div>
 
+                {answerError?.qId === q._id && !isFeedback && (
+                  <div className="mt-4 border-2 border-destructive bg-destructive/10 p-4 text-left">
+                    <p className="text-sm font-semibold text-destructive mb-3">
+                      {answerError.message}
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => handleSubmitAnswer(q._id, answerError.answer, answerError.isTimeout)}
+                      disabled={isSubmitting}
+                      className="kb-btn kb-btn-ghost text-xs disabled:opacity-50"
+                    >
+                      RETRY ANSWER
+                    </button>
+                  </div>
+                )}
+
                 {/* Feedback */}
                 {isFeedback && (
                   <div className={`mt-6 chaos-card bg-card p-5 ${quizData?.disableAnimations ? '' : 'animate-in slide-in-from-bottom-4 duration-300'}`}>
@@ -554,6 +596,11 @@ export default function QuizPlayerPage() {
               >
                 SUBMIT QUIZ →
               </button>
+              {finishError && (
+                <p className="mt-4 text-sm font-semibold text-destructive" role="alert">
+                  {finishError}
+                </p>
+              )}
             </div>
           ) : (() => {
             const pct = Math.round((finalResults.score / finalResults.totalPoints) * 100);

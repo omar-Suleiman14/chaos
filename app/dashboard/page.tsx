@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 import dynamic from "next/dynamic";
 import type { DropResult } from "@hello-pangea/dnd";
+import LoadingState from "@/components/LoadingState";
 
 const DragDropContext = dynamic(() => import("@hello-pangea/dnd").then(m => m.DragDropContext as any), { ssr: false }) as any;
 const Droppable = dynamic(() => import("@hello-pangea/dnd").then(m => m.Droppable as any), { ssr: false }) as any;
@@ -37,6 +38,7 @@ export default function DashboardQuizzes() {
   const [isCreating, setIsCreating] = useState(false);
   const [showAIModal, setShowAIModal] = useState(false);
   const [isCancellingJob, setIsCancellingJob] = useState(false);
+  const [pageError, setPageError] = useState("");
 
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [newUsername, setNewUsername] = useState("");
@@ -88,10 +90,14 @@ export default function DashboardQuizzes() {
     const isRunning = activeJob?.status !== "done" && activeJob?.status !== "error";
     if (isRunning) {
       setIsCancellingJob(true);
+      setPageError("");
       try {
         await cancelAIJob({ jobId: activeJobId });
-      } catch (e) {
-        console.error(e);
+      } catch (e: any) {
+        setPageError(e?.message || "Could not cancel AI generation. Please try again.");
+        setIsCancellingJob(false);
+        haptics.error();
+        return;
       }
     }
     dismissJobBanner();
@@ -131,13 +137,15 @@ export default function DashboardQuizzes() {
   const handleCreateNew = async () => {
     if (isCreating) return;
     setIsCreating(true);
+    setPageError("");
     haptics.heavy();
     try {
       const newId = await createQuiz({ title: "Untitled Quiz" });
       router.push(`/dashboard/editor?id=${newId}`);
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      setPageError(e?.message || "Could not create the quiz. Please try again.");
       setIsCreating(false);
+      haptics.error();
     }
   };
 
@@ -281,7 +289,27 @@ export default function DashboardQuizzes() {
       {/* AI Quiz Modal */}
       {showAIModal && <AIQuizModal onClose={() => setShowAIModal(false)} onJobStarted={handleJobStarted} />}
 
+      {pageError && (
+        <div className="chaos-card border-destructive bg-destructive/5 p-4 flex items-center justify-between gap-4">
+          <p className="text-sm font-semibold text-destructive">{pageError}</p>
+          <button type="button" onClick={() => setPageError("")} className="text-destructive hover:text-foreground" aria-label="Dismiss error">
+            <X size={16} />
+          </button>
+        </div>
+      )}
+
       {/* AI Progress Banner */}
+      {activeJobId && activeJob === undefined && (
+        <LoadingState label="Loading AI generation status..." className="py-8" />
+      )}
+      {activeJobId && activeJob === null && (
+        <div className="chaos-card border-destructive bg-destructive/5 p-4 flex items-center justify-between gap-4">
+          <p className="text-sm font-semibold text-destructive">This AI generation job is no longer available.</p>
+          <button type="button" onClick={dismissJobBanner} className="text-destructive hover:text-foreground" aria-label="Dismiss AI job error">
+            <X size={16} />
+          </button>
+        </div>
+      )}
       {activeJobId && activeJob && (
         <div className={`p-4 border-[3px] flex items-center gap-4 animate-in slide-in-from-top-2 duration-300 ${
           activeJob.status === "done"
@@ -412,10 +440,7 @@ export default function DashboardQuizzes() {
 
       {/* Loading */}
       {quizzes === undefined ? (
-        <div className="py-20 text-center chaos-pulse">
-          <FileText size={48} className="mx-auto text-muted-foreground mb-4 opacity-50" />
-          <p className="chaos-heading text-sm text-muted-foreground">Loading quizzes...</p>
-        </div>
+        <LoadingState label="Loading quizzes..." />
       ) : localQuizzes.length === 0 && customFolders.length === 0 ? (
         <div className="chaos-card bg-card p-12 text-center">
           <div className="w-16 h-16 border-[3px] border-foreground mx-auto flex items-center justify-center mb-6">

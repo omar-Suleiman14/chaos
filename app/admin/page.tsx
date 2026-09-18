@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import Link from "next/link";
 import { formatDistanceToNow } from "date-fns";
 import { haptics } from "@/lib/haptics";
+import LoadingState from "@/components/LoadingState";
 import {
   ShieldAlert,
   Users,
@@ -412,7 +413,7 @@ function AdminDashboard() {
               {/* Questions */}
               <div className="p-6 space-y-4">
                 {!previewQuestions ? (
-                  <p className="text-sm text-muted-foreground chaos-pulse">Loading questions...</p>
+                  <LoadingState label="Loading questions..." className="py-6" />
                 ) : previewQuestions.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No questions added yet.</p>
                 ) : (

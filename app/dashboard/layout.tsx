@@ -7,7 +7,7 @@ import { UserButton, useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useEffect, useState } from "react";
-import { Sun, Moon, Plus, FileText, BarChart3, Settings, Shield } from "lucide-react";
+import { Sun, Moon, Plus, FileText, BarChart3, Settings, Shield, X } from "lucide-react";
 
 const navItems = [
   { href: "/dashboard", label: "Quizzes", icon: FileText },
@@ -20,10 +20,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const pathname = usePathname();
   const getOrCreateUser = useMutation(api.quizFunctions.getOrCreateUser);
   const isAdmin = useQuery(api.quizFunctions.getIsAdmin) === true;
+  const [actionError, setActionError] = useState("");
 
   useEffect(() => {
     if (isLoaded && user) {
-      getOrCreateUser().catch(console.error);
+      getOrCreateUser().catch((err: any) => {
+        setActionError(err?.message || "Your account could not be initialized. Please retry.");
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation ref is stable in behavior
   }, [isLoaded, user]);
@@ -35,11 +38,13 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
   const handleCreateNew = async () => {
     if (isCreating) return;
     setIsCreating(true);
+    setActionError("");
     try {
       const newId = await createQuiz({ title: "Untitled Quiz" });
       router.push(`/dashboard/editor?id=${newId}`);
     } catch (e) {
-      console.error(e);
+      const err = e as any;
+      setActionError(err?.message || "The quiz could not be created. Please try again.");
     } finally {
       setIsCreating(false);
     }
@@ -121,6 +126,14 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
       )}
 
       <main className="flex-1 p-6 lg:p-10 w-full max-w-7xl mx-auto flex flex-col">
+        {actionError && (
+          <div role="alert" className="mb-6 flex items-start justify-between gap-4 border-2 border-red-600 bg-red-50 p-4 text-sm text-red-800">
+            <span>{actionError}</span>
+            <button type="button" onClick={() => setActionError("")} aria-label="Dismiss error" className="shrink-0">
+              <X size={16} />
+            </button>
+          </div>
+        )}
         <div className="flex-1">
           {children}
         </div>

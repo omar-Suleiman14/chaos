@@ -18,6 +18,7 @@ import type { DropResult } from "@hello-pangea/dnd";
 import {
   Drawer, DrawerContent, DrawerTitle, DrawerTrigger
 } from "@/components/ui/drawer";
+import LoadingState from "@/components/LoadingState";
 
 const DragDropContext = dynamic(() => import("@hello-pangea/dnd").then(m => m.DragDropContext as any), { ssr: false }) as any;
 const Droppable = dynamic(() => import("@hello-pangea/dnd").then(m => m.Droppable as any), { ssr: false }) as any;
@@ -102,17 +103,19 @@ function EditorContent() {
   const currentAiRequestId = useRef<number>(0);
   const [chatFile, setChatFile] = useState<File | null>(null);
   const [chatIsDragging, setChatIsDragging] = useState(false);
+  const [chatFileError, setChatFileError] = useState("");
 
   const handleChatFileSelect = useCallback((selectedFile: File) => {
     const allowed = ["application/pdf", "image/png", "image/jpeg", "image/webp", "image/jpg"];
     if (!allowed.includes(selectedFile.type)) {
-      alert("Please upload a PDF, PNG, JPG, or WEBP file.");
+      setChatFileError("Please upload a PDF, PNG, JPG, or WEBP file.");
       return;
     }
     if (selectedFile.size > 20 * 1024 * 1024) {
-      alert("File must be under 20MB.");
+      setChatFileError("File must be under 20MB.");
       return;
     }
+    setChatFileError("");
     setChatFile(selectedFile);
     haptics.light();
   }, []);
@@ -195,7 +198,7 @@ function EditorContent() {
   }, [existingQuestions]);
 
   const handleSave = useCallback(async (publishChange?: boolean) => {
-    if (!quizId) return;
+    if (!quizId) return false;
     setSaveError(null);
 
     // Hard block: validate all questions before saving
@@ -203,22 +206,22 @@ function EditorContent() {
       const q = questions[i];
       if (q.points < 1) {
         setSaveError(`Question ${i + 1}: marks must be at least 1.`);
-        return;
+        return false;
       }
       if (q.type === "mcq") {
         const opts = q.options.filter(Boolean);
         if (opts.length < 2) {
           setSaveError(`Question ${i + 1}: MCQ needs at least 2 options.`);
-          return;
+          return false;
         }
         if (!q.correctAnswer || !opts.includes(q.correctAnswer)) {
           setSaveError(`Question ${i + 1}: Select a correct answer before saving.`);
-          return;
+          return false;
         }
       }
       if (q.type === "true_false" && !q.correctAnswer) {
         setSaveError(`Question ${i + 1}: Select True or False as the correct answer.`);
-        return;
+        return false;
       }
     }
 
@@ -262,9 +265,11 @@ function EditorContent() {
       }
       setQuestions(updatedQs);
       setLastSaved(new Date());
+      return true;
     } catch (err: any) {
       setSaveError(err?.message || "Save failed.");
       console.error("Save error:", err);
+      return false;
     }
     finally { setSaving(false); }
   }, [quizId, title, slug, groupName, isPublished, quizSettings, questions, updateQuiz, addQuestion, updateQuestion]);
@@ -288,8 +293,8 @@ function EditorContent() {
 
   const handleSaveAndExit = async () => {
     haptics.heavy();
-    await handleSave();
-    router.push("/dashboard");
+    const saved = await handleSave();
+    if (saved) router.push("/dashboard");
   };
 
   // ── AI Chat: apply patch from AI ────────────────────────────
@@ -540,12 +545,7 @@ function EditorContent() {
   };
 
   if (!mounted || isInitializing) {
-    return (
-      <div className="py-20 flex flex-col items-center justify-center h-full text-muted-foreground">
-        <Loader2 size={32} className="animate-spin mb-4 text-primary" />
-        <p className="chaos-heading text-sm">INITIALIZING EDITOR...</p>
-      </div>
-    );
+    return <LoadingState label="Initializing editor..." className="py-20 h-full" />;
   }
 
   return (
@@ -739,6 +739,11 @@ function EditorContent() {
                       <button onClick={() => setChatFile(null)} disabled={aiPending} className="p-1 text-muted-foreground hover:text-destructive shrink-0 disabled:opacity-50">
                         <X size={14} />
                       </button>
+                    </div>
+                  )}
+                  {chatFileError && (
+                    <div role="alert" className="border-t-2 border-destructive/30 bg-destructive/10 px-3 py-2 text-[11px] font-semibold text-destructive">
+                      {chatFileError}
                     </div>
                   )}
                 </div>
@@ -1114,7 +1119,7 @@ function EditorContent() {
 
 export default function EditorPage() {
   return (
-    <Suspense fallback={<div className="py-20 flex justify-center text-primary"><Loader2 className="animate-spin" size={32} /></div>}>
+    <Suspense fallback={<LoadingState label="Loading editor..." />}>
       <EditorContent />
     </Suspense>
   );

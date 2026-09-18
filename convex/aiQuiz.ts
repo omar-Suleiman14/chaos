@@ -30,10 +30,10 @@ export const runAIQuizGeneration = action({
     });
     if (!job) throw new Error("AI job not found or unauthorized");
 
-    const apiKey = process.env.OPENROUTER_API_KEY;
-    if (!apiKey) throw new Error("OPENROUTER_API_KEY not set in Convex environment variables");
-
     try {
+      const apiKey = process.env.OPENROUTER_API_KEY;
+      if (!apiKey) throw new Error("OPENROUTER_API_KEY not set in Convex environment variables");
+
       if (!args.extractedText || args.extractedText.trim().length < 20) {
         throw new Error("Extracted text is too short or empty. Please ensure the document is readable.");
       }
