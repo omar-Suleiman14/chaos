@@ -40,9 +40,11 @@ export const editQuizWithAI = action({
     message: v.string(),
   },
   handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) throw new Error("Not authenticated");
+
     const user = await ctx.runQuery(api.quizFunctions.getCurrentUser, {});
-    if (!user) throw new Error("Not authenticated");
-    if (user.isBanned) {
+    if (user?.isBanned) {
       throw new Error("ACCOUNT_BANNED: AI editing is unavailable for this account.");
     }
 
