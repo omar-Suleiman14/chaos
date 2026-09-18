@@ -50,8 +50,10 @@ export const createAIJob = mutation({
         .collect();
 
       if (thisMonthJobs.length >= 5) {
+        const config = await ctx.db.query("globalConfig").first();
         throw new Error(
-          "Monthly limit reached. You can generate up to 5 AI quizzes per month. Upgrade to an elevated account for unlimited access."
+          config?.aiLimitPopupText?.trim() ||
+            "Monthly limit reached. You can generate up to 5 AI quizzes per month. Upgrade to an elevated account for unlimited access."
         );
       }
     }

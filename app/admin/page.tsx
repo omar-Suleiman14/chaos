@@ -246,7 +246,7 @@ function AdminDashboard() {
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-base">{u.name}</span>
                           {u.isElevated && (
-                            <span title="Elevated — unlimited plays" className="text-yellow-500"><Zap size={13} /></span>
+                            <span title="Elevated — unlimited AI generations and respondent sessions" className="text-yellow-500"><Zap size={13} /></span>
                           )}
                         </div>
                         <div className="text-xs text-muted-foreground">@{u.username}</div>
@@ -270,7 +270,7 @@ function AdminDashboard() {
                         <div className="flex items-center justify-end gap-2">
                           <button
                             onClick={() => handleToggleUserElevation(u.clerkId, !!u.isElevated)}
-                            title={u.isElevated ? "Demote user" : "Elevate user (unlimited plays)"}
+                            title={u.isElevated ? "Remove elevation" : "Grant elevation: unlimited AI generations and respondent sessions"}
                             className={`chaos-heading text-[10px] border-2 px-2 py-1.5 transition-colors flex items-center gap-1 ${
                               u.isElevated
                                 ? "border-yellow-500 text-yellow-500 hover:bg-yellow-500 hover:text-background"

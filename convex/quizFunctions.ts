@@ -71,7 +71,10 @@ export const getOrCreateUser = mutation({
       email: identity.email || "",
       username,
       imageUrl: identity.pictureUrl,
-      isElevated: true,
+      // Elevation is an explicit admin grant. It bypasses the monthly AI
+      // generation limit and the respondent cap on quizzes owned by the user.
+      isElevated: false,
+      isBanned: false,
       createdAt: Date.now(),
     });
   },
@@ -686,8 +689,10 @@ export const startQuizSession = mutation({
         .then((sessions) => sessions.filter((s) => s.status === "completed").length);
 
       if (completedCount >= PLAYER_LIMIT) {
+        const config = await ctx.db.query("globalConfig").first();
         throw new Error(
-          "Access limited. This quiz has reached its maximum number of players. Contact the quiz creator to resolve the issue."
+          config?.playerLimitErrorText?.trim() ||
+            "Access limited. This quiz has reached its maximum number of players. Contact the quiz creator to resolve the issue."
         );
       }
     }
@@ -1204,6 +1209,8 @@ export const adminToggleUserElevation = mutation({
 
     const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", args.clerkId)).first();
     if (user) {
+      // User elevation is manually granted by an administrator and means:
+      // unlimited AI generations plus no respondent cap on the user's quizzes.
       await ctx.db.patch(user._id, { isElevated: args.elevate });
 
       // Propagate to all their quizzes
