@@ -295,7 +295,7 @@ function EditorContent() {
   // ── AI Chat: apply patch from AI ────────────────────────────
   const applyAIPatch = useCallback((changes: any[]) => {
     setQuestions(prev => {
-      let updated = [...prev];
+      const updated = [...prev];
       // Process deletes first (high to low index so indices stay valid)
       const deletes = changes
         .filter(c => c.op === "delete" && typeof c.index === "number")

@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { Space_Grotesk, Inter, Space_Mono } from "next/font/google";
 import "./globals.css";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import { ClerkProvider } from "@clerk/nextjs";
+import { themeInitScript } from "@/lib/theme";
 
 /* ── Fonts ─────────────────────────────────────────────── */
 const spaceGrotesk = Space_Grotesk({
@@ -45,14 +47,20 @@ export default function RootLayout({
   return (
     <html
       lang="en"
+      suppressHydrationWarning
       className={`${spaceGrotesk.variable} ${inter.variable} ${spaceMono.variable}`}
     >
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
+      </head>
       <body className="antialiased noise-bg">
-        <ClerkProvider dynamic>
-          <ConvexClientProvider>
+        <ThemeProvider>
+          <ClerkProvider dynamic>
+            <ConvexClientProvider>
               {children}
-          </ConvexClientProvider>
-        </ClerkProvider>
+            </ConvexClientProvider>
+          </ClerkProvider>
+        </ThemeProvider>
       </body>
     </html>
   );
