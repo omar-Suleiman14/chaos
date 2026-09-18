@@ -1,6 +1,6 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
-import { internal } from "./_generated/api";
+import { api, internal } from "./_generated/api";
 
 export const runAIQuizGeneration = action({
   args: {
@@ -20,6 +20,11 @@ export const runAIQuizGeneration = action({
     if (!identity) throw new Error("Not authenticated");
 
     const clerkId = identity.subject;
+    const job = await ctx.runQuery(api.aiQuizMutations.getAIJob, {
+      jobId: args.jobId,
+    });
+    if (!job) throw new Error("AI job not found or unauthorized");
+
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error("OPENROUTER_API_KEY not set in Convex environment variables");
 

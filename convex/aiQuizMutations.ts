@@ -1,5 +1,6 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
+import { getAIJobIfOwner, requireAIJobOwner } from "./authz";
 
 // ─────────────────────────────────────────────────────────────
 // FILE UPLOAD URL
@@ -67,10 +68,7 @@ export const createAIJob = mutation({
 export const cancelAIJob = mutation({
   args: { jobId: v.id("aiJobs") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-    const job = await ctx.db.get(args.jobId);
-    if (!job || job.clerkId !== identity.subject) throw new Error("Not found");
+    const job = await requireAIJobOwner(ctx, args.jobId);
     // Only cancel if still in progress
     if (job.status !== "done" && job.status !== "error") {
       await ctx.db.patch(args.jobId, {
@@ -85,11 +83,7 @@ export const cancelAIJob = mutation({
 export const getAIJob = query({
   args: { jobId: v.id("aiJobs") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-    const job = await ctx.db.get(args.jobId);
-    if (!job || job.clerkId !== identity.subject) return null;
-    return job;
+    return await getAIJobIfOwner(ctx, args.jobId);
   },
 });
 

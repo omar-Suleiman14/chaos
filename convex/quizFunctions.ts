@@ -1,19 +1,18 @@
 import { v } from "convex/values";
-import { query, mutation, action } from "./_generated/server";
-import { api } from "./_generated/api";
+import { query, mutation } from "./_generated/server";
+import {
+  canViewQuizAsRespondent,
+  getQuizIfOwner,
+  getQuizIfOwnerOrAdmin,
+  getSessionIfOwnerOrAdmin,
+  isAdmin,
+  requireAdmin,
+  requireQuestionOwner,
+  requireQuizOwner,
+  requireSessionOwner,
+} from "./authz";
 
 // Server-side admin list — the ONLY source of truth for admin access
-const ADMIN_EMAILS = ["support@chaos.fail", "khomod14@gmail.com"];
-
-async function requireAdmin(ctx: any): Promise<void> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) throw new Error("Not authenticated");
-  const email = (identity.email || "").toLowerCase();
-  if (!ADMIN_EMAILS.includes(email)) {
-    throw new Error("Forbidden: admin access required");
-  }
-}
-
 // ============================================================
 // USER FUNCTIONS
 // ============================================================
@@ -302,13 +301,7 @@ export const updateQuiz = mutation({
     disableAnimations: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const quiz = await ctx.db.get(args.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) {
-      throw new Error("Quiz not found or unauthorized");
-    }
+    const quiz = await requireQuizOwner(ctx, args.quizId);
 
     const { quizId, ...rest } = args;
     const updates: Record<string, unknown> = { updatedAt: Date.now() };
@@ -336,13 +329,7 @@ export const updateQuiz = mutation({
 export const deleteQuiz = mutation({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const quiz = await ctx.db.get(args.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) {
-      throw new Error("Quiz not found or unauthorized");
-    }
+    await requireQuizOwner(ctx, args.quizId);
 
     const questions = await ctx.db
       .query("questions")
@@ -411,42 +398,52 @@ export const getMyQuizzes = query({
 export const getQuiz = query({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
-    const quiz = await ctx.db.get(args.quizId);
-    if (!quiz) return null;
+    return await getQuizIfOwnerOrAdmin(ctx, args.quizId);
+  },
+});
 
-    // Only the creator or an admin can see unpublished quizzes
-    if (!quiz.isPublished) {
-      const identity = await ctx.auth.getUserIdentity();
-      if (!identity) return null;
-      const email = (identity.email || "").toLowerCase();
-      const isOwner = quiz.creatorId === identity.subject;
-      const isAdmin = ADMIN_EMAILS.includes(email);
-      if (!isOwner && !isAdmin) return null;
-    }
-
-    return quiz;
+export const getQuizForOwner = query({
+  args: { quizId: v.id("quizzes") },
+  handler: async (ctx, args) => {
+    return await getQuizIfOwner(ctx, args.quizId);
   },
 });
 
 export const getQuizBySlug = query({
   args: { slug: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const quiz = await ctx.db
       .query("quizzes")
       .withIndex("by_slug", (q) => q.eq("slug", args.slug))
       .first();
+    if (!quiz || !(await canViewQuizAsRespondent(ctx, quiz))) return null;
+    return {
+      _id: quiz._id,
+      title: quiz.title,
+      slug: quiz.slug,
+      creatorUsername: quiz.creatorUsername,
+      isPublished: quiz.isPublished,
+    };
   },
 });
 
 export const getQuizByUsernameSlug = query({
   args: { username: v.string(), slug: v.string() },
   handler: async (ctx, args) => {
-    return await ctx.db
+    const quiz = await ctx.db
       .query("quizzes")
       .withIndex("by_creator_slug", (q) =>
         q.eq("creatorUsername", args.username).eq("slug", args.slug)
       )
       .first();
+    if (!quiz || !(await canViewQuizAsRespondent(ctx, quiz))) return null;
+    return {
+      _id: quiz._id,
+      title: quiz.title,
+      slug: quiz.slug,
+      creatorUsername: quiz.creatorUsername,
+      isPublished: quiz.isPublished,
+    };
   },
 });
 
@@ -501,13 +498,7 @@ export const addQuestion = mutation({
     order: v.number(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const quiz = await ctx.db.get(args.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) {
-      throw new Error("Quiz not found or unauthorized");
-    }
+    await requireQuizOwner(ctx, args.quizId);
 
     // Enforce minimum 1 point
     if (args.points < 1) throw new Error("Questions must be worth at least 1 mark.");
@@ -556,16 +547,7 @@ export const updateQuestion = mutation({
     order: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const question = await ctx.db.get(args.questionId);
-    if (!question) throw new Error("Question not found");
-
-    const quiz = await ctx.db.get(question.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) {
-      throw new Error("Unauthorized");
-    }
+    await requireQuestionOwner(ctx, args.questionId);
 
     const { questionId, ...updates } = args;
     const cleanUpdates: Record<string, unknown> = {};
@@ -585,17 +567,7 @@ export const updateQuestion = mutation({
 export const deleteQuestion = mutation({
   args: { questionId: v.id("questions") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const question = await ctx.db.get(args.questionId);
-    if (!question) throw new Error("Question not found");
-
-    const quiz = await ctx.db.get(question.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) {
-      throw new Error("Unauthorized");
-    }
-
+    await requireQuestionOwner(ctx, args.questionId);
     await ctx.db.delete(args.questionId);
   },
 });
@@ -603,6 +575,8 @@ export const deleteQuestion = mutation({
 export const getQuestions = query({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
+    const quiz = await getQuizIfOwnerOrAdmin(ctx, args.quizId);
+    if (!quiz) return [];
     const questions = await ctx.db
       .query("questions")
       .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
@@ -621,16 +595,7 @@ export const getQuizForPlayer = query({
   handler: async (ctx, args) => {
     const quiz = await ctx.db.get(args.quizId);
     if (!quiz) return null;
-
-    // SECURITY CHECK: If unpublished, only the creator or an admin can access questions
-    if (!quiz.isPublished) {
-      const identity = await ctx.auth.getUserIdentity();
-      if (!identity) return null;
-      const email = (identity.email || "").toLowerCase();
-      const isOwner = quiz.creatorId === identity.subject;
-      const isAdmin = ADMIN_EMAILS.includes(email);
-      if (!isOwner && !isAdmin) return null;
-    }
+    if (!(await canViewQuizAsRespondent(ctx, quiz))) return null;
 
     // Fetch creator and questions in parallel
     const [creator, questions] = await Promise.all([
@@ -755,6 +720,9 @@ export const gradeAnswer = mutation({
 
     const question = await ctx.db.get(args.questionId);
     if (!question) throw new Error("Question not found");
+    if (question.quizId !== session.quizId) {
+      throw new Error("Question does not belong to this quiz");
+    }
 
     // Get teacher settings for half mark threshold
     const quiz = await ctx.db.get(session.quizId);
@@ -907,7 +875,7 @@ export const submitQuizSession = mutation({
     const gradedAnswers = await Promise.all(
       args.answers.map(async (ans) => {
         const question = await ctx.db.get(ans.questionId);
-        if (!question)
+        if (!question || question.quizId !== args.quizId)
           return {
             questionId: ans.questionId,
             answer: ans.answer,
@@ -988,11 +956,8 @@ export const submitQuizSession = mutation({
 export const getQuizSessions = query({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-
-    const quiz = await ctx.db.get(args.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) return [];
+    const quiz = await getQuizIfOwner(ctx, args.quizId);
+    if (!quiz) return [];
 
     const sessions = await ctx.db
       .query("quizSessions")
@@ -1008,19 +973,9 @@ export const getQuizSessions = query({
 export const getSessionDetail = query({
   args: { sessionId: v.id("quizSessions") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const session = await ctx.db.get(args.sessionId);
-    if (!session) return null;
-
-    // Verify the caller owns the quiz this session belongs to
-    const quiz = await ctx.db.get(session.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) {
-      // Also allow admins
-      const email = (identity.email || "").toLowerCase();
-      if (!ADMIN_EMAILS.includes(email)) return null;
-    }
+    const owned = await getSessionIfOwnerOrAdmin(ctx, args.sessionId);
+    if (!owned) return null;
+    const { session } = owned;
 
     // Get question details for the breakdown
     const questionDetails = await Promise.all(
@@ -1052,16 +1007,7 @@ export const overrideScore = mutation({
     newPoints: v.number(),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const session = await ctx.db.get(args.sessionId);
-    if (!session) throw new Error("Session not found");
-
-    const quiz = await ctx.db.get(session.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) {
-      throw new Error("Unauthorized");
-    }
+    const { session } = await requireSessionOwner(ctx, args.sessionId);
 
     const updatedAnswers = session.answers.map((ans) => {
       if (ans.questionId === args.questionId) {
@@ -1085,15 +1031,7 @@ export const getQuizLeaderboard = query({
     const quiz = await ctx.db.get(args.quizId);
     if (!quiz) return [];
 
-    // SECURITY CHECK: If unpublished, only creator or admin can view leaderboard
-    if (!quiz.isPublished) {
-      const identity = await ctx.auth.getUserIdentity();
-      if (!identity) return [];
-      const email = (identity.email || "").toLowerCase();
-      const isOwner = quiz.creatorId === identity.subject;
-      const isAdmin = ADMIN_EMAILS.includes(email);
-      if (!isOwner && !isAdmin) return [];
-    }
+    if (!(await canViewQuizAsRespondent(ctx, quiz))) return [];
 
     const sessions = await ctx.db
       .query("quizSessions")
@@ -1120,10 +1058,7 @@ export const getQuizLeaderboard = query({
 export const getAdminStats = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-    const email = (identity.email || "").toLowerCase();
-    if (!ADMIN_EMAILS.includes(email)) return null;
+    if (!(await isAdmin(ctx))) return null;
     const allUsers = await ctx.db.query("users").collect();
     const allQuizzes = await ctx.db.query("quizzes").collect();
     const allSessions = await ctx.db.query("quizSessions").collect();
@@ -1148,10 +1083,7 @@ export const getAdminStats = query({
 export const getAdminUsers = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-    const email = (identity.email || "").toLowerCase();
-    if (!ADMIN_EMAILS.includes(email)) return [];
+    if (!(await isAdmin(ctx))) return [];
 
     // Batch-fetch all data once instead of N+1 per user
     const [users, allQuizzes, allSessions] = await Promise.all([
@@ -1199,10 +1131,7 @@ export const getAdminUsers = query({
 export const getAdminQuizzes = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return [];
-    const email = (identity.email || "").toLowerCase();
-    if (!ADMIN_EMAILS.includes(email)) return [];
+    if (!(await isAdmin(ctx))) return [];
 
     // Batch-fetch all data once instead of N+1 per quiz
     const [quizzes, allUsers, allSessions, allQuestions] = await Promise.all([
@@ -1395,11 +1324,8 @@ export const getPlayerPercentile = query({
 export const getQuizStatsEnhanced = query({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return null;
-
-    const quiz = await ctx.db.get(args.quizId);
-    if (!quiz || quiz.creatorId !== identity.subject) return null;
+    const quiz = await getQuizIfOwner(ctx, args.quizId);
+    if (!quiz) return null;
 
     const [sessions, questions] = await Promise.all([
       ctx.db.query("quizSessions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),

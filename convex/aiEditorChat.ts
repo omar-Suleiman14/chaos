@@ -1,5 +1,6 @@
 import { action } from "./_generated/server";
 import { v } from "convex/values";
+import { api } from "./_generated/api";
 
 // ─────────────────────────────────────────────────────────────
 // TYPES
@@ -25,6 +26,7 @@ type QuestionPatch = {
 
 export const editQuizWithAI = action({
   args: {
+    quizId: v.id("quizzes"),
     quizTitle: v.string(),
     questions: v.array(v.object({
       type: v.union(v.literal("mcq"), v.literal("true_false")),
@@ -37,7 +39,12 @@ export const editQuizWithAI = action({
     })),
     message: v.string(),
   },
-  handler: async (_ctx, args) => {
+  handler: async (ctx, args) => {
+    const quiz = await ctx.runQuery(api.quizFunctions.getQuizForOwner, {
+      quizId: args.quizId,
+    });
+    if (!quiz) throw new Error("Quiz not found or unauthorized");
+
     const apiKey = process.env.OPENROUTER_API_KEY;
     if (!apiKey) throw new Error("OPENROUTER_API_KEY not set");
 

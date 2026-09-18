@@ -351,6 +351,10 @@ function EditorContent() {
   const handleChatSend = async (msg?: string) => {
     const text = (msg ?? chatInput).trim();
     if ((!text && !chatFile) || aiPending) return;
+    if (!quizId) {
+      setChatHistory(h => [...h, { role: "ai", text: "Save the quiz before using AI editing." }]);
+      return;
+    }
     
     const submittedFile = chatFile;
     setChatInput("");
@@ -421,6 +425,7 @@ function EditorContent() {
         timeLimit: q.timeLimit,
       }));
       const result = await editQuizWithAI({
+        quizId,
         quizTitle: title || "Untitled Quiz",
         questions: questionsPayload,
         message: finalMessage,
