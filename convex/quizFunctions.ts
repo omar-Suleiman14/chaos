@@ -575,7 +575,14 @@ export const deleteQuestion = mutation({
   },
 });
 
-export const getQuestions = query({
+/**
+ * Full question documents for creator tooling.
+ *
+ * These rows contain grading data (correctAnswer, correctAnswers, keywords,
+ * hint, and explanation) and must never be used by respondent clients. The
+ * editor, print view, and admin UI are the intended consumers.
+ */
+export const getQuestionsForOwner = query({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
     const quiz = await getQuizIfOwnerOrAdmin(ctx, args.quizId);
@@ -606,7 +613,9 @@ export const getQuizForPlayer = query({
       ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
     ]);
 
-    // NEVER send answers/keywords to client
+    // SECURITY BOUNDARY: respondents receive an allow-list projection.
+    // New question fields stay private by default unless they are deliberately
+    // added here. Never spread the stored question document into this object.
     const safeQuestions = questions
       .sort((a, b) => a.order - b.order)
       .map((q) => ({
@@ -729,18 +738,34 @@ export const gradeAnswer = mutation({
       throw new Error("Question does not belong to this quiz");
     }
 
-    // Get teacher settings for half mark threshold
+    // Resolve creator/global settings for grading and post-answer reveal rules.
     const quiz = await ctx.db.get(session.quizId);
     let halfMarkThreshold = 50;
+    let teacherSettings = null;
+    let globalConfig = null;
     if (quiz) {
-      const settings = await ctx.db
-        .query("teacherSettings")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
-        .first();
-      if (settings?.halfMarkThreshold) {
-        halfMarkThreshold = settings.halfMarkThreshold;
+      [teacherSettings, globalConfig] = await Promise.all([
+        ctx.db
+          .query("teacherSettings")
+          .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
+          .first(),
+        ctx.db.query("globalConfig").first(),
+      ]);
+      if (teacherSettings?.halfMarkThreshold) {
+        halfMarkThreshold = teacherSettings.halfMarkThreshold;
       }
     }
+
+    const showCorrectAnswers =
+      quiz?.showCorrectAnswers ??
+      teacherSettings?.showCorrectAnswers ??
+      globalConfig?.showCorrectAnswers ??
+      true;
+    const showExplanations =
+      quiz?.showExplanations ??
+      teacherSettings?.showExplanations ??
+      globalConfig?.showExplanations ??
+      true;
 
     let isCorrect = false;
     let pointsEarned = 0;
@@ -814,14 +839,14 @@ export const gradeAnswer = mutation({
       pointsEarned,
       totalPointsPossible: question.points,
       // Only reveal correct answer if quiz settings allow
-      correctAnswer: quiz?.showCorrectAnswers !== false
+      correctAnswer: showCorrectAnswers
         ? (question.type === "mcq" || question.type === "true_false"
           ? question.correctAnswer
           : question.type === "multi_select"
             ? question.correctAnswers?.join(", ")
             : undefined)
         : undefined,
-      explanation: quiz?.showExplanations !== false ? question.explanation : undefined,
+      explanation: showExplanations ? question.explanation : undefined,
     };
   },
 });

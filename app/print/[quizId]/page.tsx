@@ -19,7 +19,7 @@ export default function PrintQuizPage() {
   const quizId = params.quizId as Id<"quizzes">;
 
   const quiz = useQuery(api.quizFunctions.getQuiz, quizId ? { quizId } : "skip");
-  const questions = useQuery(api.quizFunctions.getQuestions, quizId ? { quizId } : "skip");
+  const questions = useQuery(api.quizFunctions.getQuestionsForOwner, quizId ? { quizId } : "skip");
 
   // Set document title to quiz name so "Save as PDF" uses it as filename
   useEffect(() => {

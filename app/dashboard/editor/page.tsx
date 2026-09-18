@@ -52,7 +52,7 @@ function EditorContent() {
   const [isInitializing, setIsInitializing] = useState(!quizIdParam);
 
   const quiz = useQuery(api.quizFunctions.getQuiz, quizId ? { quizId } : "skip");
-  const existingQuestions = useQuery(api.quizFunctions.getQuestions, quizId ? { quizId } : "skip");
+  const existingQuestions = useQuery(api.quizFunctions.getQuestionsForOwner, quizId ? { quizId } : "skip");
   const teacherSettings = useQuery(api.quizFunctions.getTeacherSettings);
   const globalConfig = useQuery(api.quizFunctions.getGlobalConfig);
   const myQuizzes = useQuery(api.quizFunctions.getMyQuizzes);

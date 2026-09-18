@@ -36,7 +36,7 @@ describe("authorization helper guard", () => {
     ["deleteQuestion", "requireQuestionOwner"],
     ["getQuiz", "getQuizIfOwnerOrAdmin"],
     ["getQuizForOwner", "getQuizIfOwner"],
-    ["getQuestions", "getQuizIfOwnerOrAdmin"],
+    ["getQuestionsForOwner", "getQuizIfOwnerOrAdmin"],
     ["getQuizSessions", "getQuizIfOwner"],
     ["getSessionDetail", "getSessionIfOwnerOrAdmin"],
     ["overrideScore", "requireSessionOwner"],

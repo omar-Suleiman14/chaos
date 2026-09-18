@@ -67,7 +67,7 @@ function AdminDashboard() {
   const [previewQuizId, setPreviewQuizId] = useState<string | null>(null);
 
   const previewQuestions = useQuery(
-    api.quizFunctions.getQuestions,
+    api.quizFunctions.getQuestionsForOwner,
     previewQuizId ? { quizId: previewQuizId as any } : "skip"
   );
 

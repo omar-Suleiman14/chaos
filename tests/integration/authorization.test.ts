@@ -79,7 +79,7 @@ describe("creator-owned data authorization", () => {
 
     await expect(other.query(api.quizFunctions.getQuiz, { quizId })).resolves.toBeNull();
     await expect(other.query(api.quizFunctions.getQuizForOwner, { quizId })).resolves.toBeNull();
-    await expect(other.query(api.quizFunctions.getQuestions, { quizId })).resolves.toEqual([]);
+    await expect(other.query(api.quizFunctions.getQuestionsForOwner, { quizId })).resolves.toEqual([]);
     await expect(other.query(api.quizFunctions.getQuizSessions, { quizId })).resolves.toEqual([]);
     await expect(other.query(api.quizFunctions.getSessionDetail, { sessionId })).resolves.toBeNull();
     await expect(other.query(api.quizFunctions.getQuizStatsEnhanced, { quizId })).resolves.toBeNull();
@@ -154,10 +154,10 @@ describe("creator-owned data authorization", () => {
 
     const ownerQuestions = await t
       .withIdentity(creatorIdentity)
-      .query(api.quizFunctions.getQuestions, { quizId });
+      .query(api.quizFunctions.getQuestionsForOwner, { quizId });
     const adminQuestions = await t
       .withIdentity(adminIdentity)
-      .query(api.quizFunctions.getQuestions, { quizId });
+      .query(api.quizFunctions.getQuestionsForOwner, { quizId });
 
     expect(ownerQuestions).toHaveLength(1);
     expect(ownerQuestions[0].correctAnswer).toBe("4");
