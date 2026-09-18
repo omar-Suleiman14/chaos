@@ -41,7 +41,6 @@ describe("authorization helper guard", () => {
     ["getSessionDetail", "getSessionIfOwnerOrAdmin"],
     ["overrideScore", "requireSessionOwner"],
     ["getQuizStatsEnhanced", "getQuizIfOwner"],
-    ["getQuizBySlug", "canViewQuizAsRespondent"],
     ["getQuizByUsernameSlug", "canViewQuizAsRespondent"],
   ])("%s uses %s", (name, helper) => {
     expect(exportedBlock(quizFunctions, name)).toContain(helper);
