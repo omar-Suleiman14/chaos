@@ -24,7 +24,31 @@ import {
   Printer,
 } from "lucide-react";
 
-export default function AdminDashboard() {
+const hasConvexBackend = Boolean(process.env.NEXT_PUBLIC_CONVEX_URL);
+
+export default function AdminPage() {
+  if (!hasConvexBackend) {
+    return (
+      <div className="min-h-screen bg-background flex flex-col items-center justify-center p-4 text-center">
+        <ShieldAlert size={64} className="text-muted-foreground mb-6" />
+        <h1 className="chaos-display text-4xl mb-2 uppercase">Admin unavailable</h1>
+        <p className="text-sm text-muted-foreground mb-8 max-w-md">
+          This deployment does not have a Convex backend configured.
+        </p>
+        <Link
+          href="/"
+          className="chaos-heading text-sm bg-foreground text-background px-6 py-3 border-2 border-foreground hover:bg-chaos hover:text-chaos-foreground transition-colors"
+        >
+          Return home
+        </Link>
+      </div>
+    );
+  }
+
+  return <AdminDashboard />;
+}
+
+function AdminDashboard() {
   const isAdmin = useQuery(api.quizFunctions.getIsAdmin);
 
   const stats = useQuery(api.quizFunctions.getAdminStats, isAdmin === true ? undefined : "skip");
