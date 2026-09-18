@@ -1,6 +1,4 @@
 "use client";
-// Ban check: isBanned users see a quota-exceeded screen
-
 import { useQuery, useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Id } from "@/convex/_generated/dataModel";
@@ -104,7 +102,7 @@ export default function DashboardQuizzes() {
   }, [quizzes]);
 
   useEffect(() => {
-    if (currentUser?.username && /^user\d+$/.test(currentUser.username)) {
+    if (currentUser?.username && !currentUser.isBanned && /^user\d+$/.test(currentUser.username)) {
       setShowUsernameModal(true);
     }
   }, [currentUser]);
@@ -254,34 +252,22 @@ export default function DashboardQuizzes() {
 
   if (!mounted) return null;
 
-  // Banned user — show quota exceeded message, no dashboard access
-  if (currentUser && currentUser.isBanned) {
-    return (
-      <div className="min-h-[70vh] flex flex-col items-center justify-center p-6 text-center">
-        <div className="chaos-card bg-card p-10 max-w-md w-full">
-          <div className="w-14 h-14 border-[3px] border-destructive mx-auto flex items-center justify-center mb-6">
-            <span className="text-2xl">X</span>
-          </div>
-          <h2 className="chaos-heading text-2xl text-destructive mb-3">FREE QUOTA EXCEEDED.</h2>
-          <p className="text-muted-foreground text-sm mb-6">
-            Your free plan quota has been exceeded. Contact us to renew your subscription and regain full access.
-          </p>
-          <a
-            href="https://wa.me/201012756994"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="kb-btn kb-btn-primary w-full"
-          >
-            📞 +20 101 275 6994
-          </a>
-          <p className="text-xs text-muted-foreground mt-4">&ldquo;Free quote exceeded contact +201012756994 to renew your subscription&rdquo;</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className="space-y-8 font-sans">
+      {currentUser?.isBanned && (
+        <div className="chaos-card border-destructive bg-destructive/5 p-5">
+          <div className="flex items-start gap-3">
+            <AlertTriangle size={20} className="mt-0.5 shrink-0 text-destructive" />
+            <div>
+              <h2 className="chaos-heading text-sm text-destructive">ACCOUNT RESTRICTED</h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                This account is read-only due to moderation. You can still view your quizzes and results, but editing, deletion, publishing, and AI generation are disabled.
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* AI Quiz Modal */}
       {showAIModal && <AIQuizModal onClose={() => setShowAIModal(false)} onJobStarted={handleJobStarted} />}
 

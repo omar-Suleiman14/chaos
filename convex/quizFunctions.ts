@@ -6,6 +6,7 @@ import {
   getQuizIfOwnerOrAdmin,
   getSessionIfOwnerOrAdmin,
   isAdmin,
+  requireActiveUser,
   requireAdmin,
   requireQuestionOwner,
   requireQuizOwner,
@@ -29,6 +30,10 @@ export const getOrCreateUser = mutation({
       .first();
 
     if (existing) {
+      // Authentication profile sync must not become a write bypass for a
+      // moderated account. Banned creators keep read access to their data.
+      if (existing.isBanned) return existing._id;
+
       // Update fields if changed
       const updates: Record<string, unknown> = {};
       if (identity.name && identity.name !== existing.name) updates.name = identity.name;
@@ -96,13 +101,7 @@ export const getCurrentUser = query({
 export const setUsername = mutation({
   args: { username: v.string() },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .first();
+    const { identity, user } = await requireActiveUser(ctx);
     if (!user) throw new Error("User not found");
 
     const newUsername = args.username.trim().toLowerCase().replace(/[^a-z0-9_.-]+/g, "");
@@ -187,8 +186,7 @@ export const updateTeacherSettings = mutation({
     disableAnimations: v.optional(v.boolean()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    const { identity } = await requireActiveUser(ctx);
 
     const existing = await ctx.db
       .query("teacherSettings")
@@ -223,14 +221,7 @@ export const createQuiz = mutation({
     coverColor: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
-    // Get user for username
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .first();
+    const { identity, user } = await requireActiveUser(ctx);
 
     const username = user?.username || identity.subject;
 
@@ -453,13 +444,7 @@ export const getQuizByUsernameSlug = query({
 export const validateSlug = mutation({
   args: { slug: v.string(), quizId: v.optional(v.id("quizzes")) },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) return false;
-
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject))
-      .first();
+    const { user } = await requireActiveUser(ctx);
 
     if (!user) return false;
 

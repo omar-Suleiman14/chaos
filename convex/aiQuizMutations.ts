@@ -1,6 +1,6 @@
 import { mutation, query, internalMutation } from "./_generated/server";
 import { v } from "convex/values";
-import { getAIJobIfOwner, requireAIJobOwner } from "./authz";
+import { getAIJobIfOwner, requireActiveUser, requireAIJobOwner } from "./authz";
 
 // ─────────────────────────────────────────────────────────────
 // FILE UPLOAD URL
@@ -9,8 +9,7 @@ import { getAIJobIfOwner, requireAIJobOwner } from "./authz";
 export const generateUploadUrl = mutation({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
+    await requireActiveUser(ctx);
     return await ctx.storage.generateUploadUrl();
   },
 });
@@ -22,16 +21,8 @@ export const generateUploadUrl = mutation({
 export const createAIJob = mutation({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
-    if (!identity) throw new Error("Not authenticated");
-
+    const { identity, user } = await requireActiveUser(ctx);
     const clerkId = identity.subject;
-
-    // Check elevation status
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", clerkId))
-      .first();
 
     if (!user?.isElevated) {
       // Count AI quizzes created this calendar month
@@ -136,6 +127,9 @@ export const saveGeneratedQuiz = internalMutation({
       .withIndex("by_clerkId", (q) => q.eq("clerkId", args.clerkId))
       .first();
     if (!user) throw new Error("User not found");
+    if (user.isBanned) {
+      throw new Error("ACCOUNT_BANNED: AI generation is unavailable for this account.");
+    }
 
     const username = user.username;
     const baseSlug = args.title

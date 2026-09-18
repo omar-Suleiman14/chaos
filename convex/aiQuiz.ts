@@ -19,6 +19,11 @@ export const runAIQuizGeneration = action({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
 
+    const user = await ctx.runQuery(api.quizFunctions.getCurrentUser, {});
+    if (user?.isBanned) {
+      throw new Error("ACCOUNT_BANNED: AI generation is unavailable for this account.");
+    }
+
     const clerkId = identity.subject;
     const job = await ctx.runQuery(api.aiQuizMutations.getAIJob, {
       jobId: args.jobId,
