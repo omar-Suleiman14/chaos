@@ -7,7 +7,7 @@ import { useParams } from "next/navigation";
 import { useState, useEffect, useRef } from "react";
 import { haptics } from "@/lib/haptics";
 import { sfx } from "@/lib/sfx";
-import { Zap, ArrowDown } from "lucide-react";
+import { Zap, ArrowDown, Volume2, VolumeX } from "lucide-react";
 
 // Fisher-Yates shuffle (creates a new array)
 function shuffleArray<T>(arr: T[]): T[] {
@@ -60,13 +60,24 @@ export default function QuizPlayerPage() {
   const [mounted, setMounted] = useState(false);
   const [isStarting, setIsStarting] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [soundEnabled, setSoundEnabled] = useState(true);
 
   const containerRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const qStartTimes = useRef<Record<string, number>>({});
   const isFinishing = useRef(false);
 
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    setMounted(true);
+    setSoundEnabled(sfx.isEnabled());
+  }, []);
+
+  const toggleSound = () => {
+    const next = !soundEnabled;
+    sfx.setEnabled(next);
+    setSoundEnabled(next);
+    if (next) sfx.play("select");
+  };
 
   const rawQuestions = quizData?.questions || [];
   const [shuffledQuestions, setShuffledQuestions] = useState<typeof rawQuestions>([]);
@@ -88,7 +99,7 @@ export default function QuizPlayerPage() {
     if (index !== currentQ && index <= questions.length) {
       setCurrentQ(index);
       haptics.light();
-      if (!quizData?.disableAnimations) sfx.play("next");
+      sfx.play("next");
     }
   };
 
@@ -120,7 +131,7 @@ export default function QuizPlayerPage() {
           handleSubmitAnswer(q._id, "", true);
           return { ...prev, [q._id]: 0 };
         }
-        if (current <= 11) { haptics.warning(); if (!quizData?.disableAnimations) sfx.play("tap"); }
+        if (current <= 11) { haptics.warning(); sfx.play("tap"); }
         return { ...prev, [q._id]: current - 1 };
       });
     }, 1000);
@@ -146,9 +157,9 @@ export default function QuizPlayerPage() {
       setSelectedOptions(prev => ({ ...prev, [qId]: isTimeout ? "" : answer }));
 
       const isPartiallyCorrect = !result.isCorrect && result.pointsEarned > 0;
-      if (result.isCorrect) { haptics.success(); if (!quizData?.disableAnimations) sfx.play("correct"); }
-      else if (isPartiallyCorrect) { haptics.light(); if (!quizData?.disableAnimations) sfx.play("correct"); }
-      else { haptics.error(); if (!quizData?.disableAnimations) sfx.play("wrong"); }
+      if (result.isCorrect) { haptics.success(); sfx.play("correct"); }
+      else if (isPartiallyCorrect) { haptics.light(); sfx.play("correct"); }
+      else { haptics.error(); sfx.play("wrong"); }
 
     } catch (err) { console.error(err); }
     setIsSubmitting(false);
@@ -157,7 +168,7 @@ export default function QuizPlayerPage() {
   const handleFinish = async () => {
     if (!sessionId || isFinishing.current) return;
     isFinishing.current = true;
-    haptics.success(); if (!quizData?.disableAnimations) sfx.play("finish");
+    haptics.success(); sfx.play("finish");
     try {
       const result = await completeSession({ sessionId });
       setFinalResults(result);
@@ -174,7 +185,7 @@ export default function QuizPlayerPage() {
     if (isStarting || !playerName.trim() || !quizMeta?._id) return;
     setIsStarting(true);
     setStartError("");
-    haptics.heavy(); if (!quizData?.disableAnimations) sfx.play("start");
+    haptics.heavy(); sfx.play("start");
     try {
       const sid = await startSession({ quizId: quizMeta._id, playerName: playerName.trim() });
       setSessionId(sid);
@@ -273,6 +284,15 @@ export default function QuizPlayerPage() {
               >
                 {isStarting ? "STARTING…" : "START QUIZ →"}
               </button>
+              <button
+                type="button"
+                onClick={toggleSound}
+                className="kb-btn kb-btn-ghost w-full flex items-center justify-center gap-2"
+                aria-pressed={soundEnabled}
+              >
+                {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+                SOUND {soundEnabled ? "ON" : "OFF"}
+              </button>
               {startError && (
                 <div className="mt-4 p-4 bg-destructive/10 border-2 border-destructive text-destructive text-sm font-semibold chaos-heading leading-relaxed">
                   {renderErrorWithLinks(startError.replace("Uncaught Error: ", ""))}
@@ -288,6 +308,15 @@ export default function QuizPlayerPage() {
   // ── PLAYING (SNAP SCROLL)
   return (
     <div className="h-[100dvh] bg-background text-foreground font-sans relative">
+      <button
+        type="button"
+        onClick={toggleSound}
+        className="fixed top-4 right-4 z-[60] kb-btn kb-btn-ghost p-2"
+        aria-label={soundEnabled ? "Turn sound off" : "Turn sound on"}
+        aria-pressed={soundEnabled}
+      >
+        {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
+      </button>
       {/* Progress bar */}
       <div className="fixed top-0 left-0 w-full h-1.5 bg-muted z-50">
         <div

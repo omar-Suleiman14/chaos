@@ -1,5 +1,9 @@
 type SfxName = "tap" | "select" | "correct" | "wrong" | "next" | "start" | "finish";
 
+// Chaos intentionally synthesizes short UI tones with Web Audio instead of
+// shipping recorded assets. This keeps playback instant/offline, avoids dead
+// media downloads, and gives the product one small sound implementation.
+
 type Tone = {
   freq: number;
   ms: number;
