@@ -27,7 +27,8 @@ the long-term roadmap.
   order, show/hide correct answers, show/hide explanations, and a result
   display mode (raw score or pass/fail with a passing threshold).
 - **Anonymous respondents** — no account needed to take a quiz. A published
-  quiz is playable at `/{creatorUsername}/{quizSlug}`.
+  quiz is playable at `/{creatorUsername}/{quizSlug}`, the canonical respondent
+  route.
 - **Results and per-question analytics** in the creator dashboard, plus CSV
   export of responses.
 - **Printing** a quiz (`/print/{quizId}`).
@@ -129,10 +130,6 @@ Known gaps, tracked as issues rather than restated in detail here:
   ([#15](https://github.com/omar-Suleiman14/chaos/issues/15)).
 - Quiz deletion and data lifecycle are undefined
   ([#16](https://github.com/omar-Suleiman14/chaos/issues/16)).
-- There are two competing sound implementations and a duplicate,
-  unreachable respondent player at `/user/quiz`
-  ([#17](https://github.com/omar-Suleiman14/chaos/issues/17),
-  [#18](https://github.com/omar-Suleiman14/chaos/issues/18)).
 - Dark mode is not fully wired up
   ([#19](https://github.com/omar-Suleiman14/chaos/issues/19)), and the app
   lacks consistent failure/error states
