@@ -1,5 +1,7 @@
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import {
   canViewQuizAsRespondent,
   getQuizIfOwner,
@@ -320,28 +322,69 @@ export const updateQuiz = mutation({
   },
 });
 
+/**
+ * Permanently delete a quiz and everything whose lifetime is the quiz's.
+ * Questions and sessions are removed, AI jobs are retained for generation
+ * history/quota accounting but detached so no job points at a missing quiz.
+ * Callers authorize the operation before entering this helper.
+ */
+async function cascadeDeleteQuiz(ctx: MutationCtx, quizId: Id<"quizzes">) {
+  const quiz = await ctx.db.get(quizId);
+  if (!quiz) return;
+
+  const questions = await ctx.db
+    .query("questions")
+    .withIndex("by_quiz", (q) => q.eq("quizId", quizId))
+    .collect();
+  for (const question of questions) {
+    await ctx.db.delete(question._id);
+  }
+
+  const sessions = await ctx.db
+    .query("quizSessions")
+    .withIndex("by_quiz", (q) => q.eq("quizId", quizId))
+    .collect();
+  for (const session of sessions) {
+    await ctx.db.delete(session._id);
+  }
+
+  const aiJobs = await ctx.db
+    .query("aiJobs")
+    .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
+    .collect();
+  for (const job of aiJobs) {
+    if (job.quizId === quizId) {
+      await ctx.db.patch(job._id, { quizId: undefined });
+    }
+  }
+
+  await ctx.db.delete(quizId);
+}
+
+export const getQuizDeletionImpact = query({
+  args: { quizId: v.id("quizzes") },
+  handler: async (ctx, args) => {
+    const quiz = await getQuizIfOwner(ctx, args.quizId);
+    if (!quiz) return null;
+
+    const [questions, sessions] = await Promise.all([
+      ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
+      ctx.db.query("quizSessions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
+    ]);
+
+    return {
+      title: quiz.title,
+      questionCount: questions.filter((q) => q.deletedAt === undefined).length,
+      responseCount: sessions.filter((s) => s.status === "completed").length,
+    };
+  },
+});
+
 export const deleteQuiz = mutation({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
     await requireQuizOwner(ctx, args.quizId);
-
-    const questions = await ctx.db
-      .query("questions")
-      .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-      .collect();
-    for (const question of questions) {
-      await ctx.db.delete(question._id);
-    }
-
-    const sessions = await ctx.db
-      .query("quizSessions")
-      .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-      .collect();
-    for (const session of sessions) {
-      await ctx.db.delete(session._id);
-    }
-
-    await ctx.db.delete(args.quizId);
+    await cascadeDeleteQuiz(ctx, args.quizId);
   },
 });
 
@@ -369,7 +412,7 @@ export const getMyQuizzes = query({
     ]);
 
     const enriched = quizzes.map((quiz, i) => {
-      const questions = allQuestions[i];
+      const questions = allQuestions[i].filter((q) => q.deletedAt === undefined);
       const completedSessions = allSessions[i].filter((s) => s.status === "completed");
       const avgScore =
         completedSessions.length > 0
@@ -556,7 +599,10 @@ export const deleteQuestion = mutation({
   args: { questionId: v.id("questions") },
   handler: async (ctx, args) => {
     await requireQuestionOwner(ctx, args.questionId);
-    await ctx.db.delete(args.questionId);
+    // Questions are soft-deleted so historical session answers can still
+    // resolve the original prompt and grading data. The row is hard-deleted
+    // only when its entire quiz (and those sessions) is deleted.
+    await ctx.db.patch(args.questionId, { deletedAt: Date.now() });
   },
 });
 
@@ -577,7 +623,9 @@ export const getQuestionsForOwner = query({
       .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
       .collect();
 
-    return questions.sort((a, b) => a.order - b.order);
+    return questions
+      .filter((q) => q.deletedAt === undefined)
+      .sort((a, b) => a.order - b.order);
   },
 });
 
@@ -593,10 +641,12 @@ export const getQuizForPlayer = query({
     if (!(await canViewQuizAsRespondent(ctx, quiz))) return null;
 
     // Fetch creator and questions in parallel
-    const [creator, questions] = await Promise.all([
+    const [creator, allQuestions] = await Promise.all([
       ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId)).first(),
       ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
     ]);
+
+    const questions = allQuestions.filter((q) => q.deletedAt === undefined);
 
     // SECURITY BOUNDARY: respondents receive an allow-list projection.
     // New question fields stay private by default unless they are deliberately
@@ -1280,6 +1330,7 @@ export const getAdminQuizzes = query({
 
     const questionCountByQuiz = new Map<string, number>();
     for (const question of allQuestions) {
+      if (question.deletedAt !== undefined) continue;
       questionCountByQuiz.set(
         question.quizId,
         (questionCountByQuiz.get(question.quizId) || 0) + 1
@@ -1353,24 +1404,7 @@ export const adminDeleteQuiz = mutation({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-
-    const questions = await ctx.db
-      .query("questions")
-      .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-      .collect();
-    for (const question of questions) {
-      await ctx.db.delete(question._id);
-    }
-
-    const sessions = await ctx.db
-      .query("quizSessions")
-      .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-      .collect();
-    for (const session of sessions) {
-      await ctx.db.delete(session._id);
-    }
-
-    await ctx.db.delete(args.quizId);
+    await cascadeDeleteQuiz(ctx, args.quizId);
   },
 });
 
@@ -1450,10 +1484,12 @@ export const getQuizStatsEnhanced = query({
     const quiz = await getQuizIfOwner(ctx, args.quizId);
     if (!quiz) return null;
 
-    const [sessions, questions] = await Promise.all([
+    const [sessions, allQuestions] = await Promise.all([
       ctx.db.query("quizSessions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
       ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
     ]);
+
+    const questions = allQuestions.filter((q) => q.deletedAt === undefined);
 
     const completed = sessions.filter((s) => s.status === "completed");
 

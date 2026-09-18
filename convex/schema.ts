@@ -83,6 +83,7 @@ export default defineSchema({
     timeLimit: v.optional(v.number()),
     hint: v.optional(v.string()),
     order: v.number(),
+    deletedAt: v.optional(v.number()),
   }).index("by_quiz", ["quizId"]),
 
   // ============ QUIZ SUBMISSIONS ============

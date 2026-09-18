@@ -166,7 +166,12 @@ export default function DashboardQuizzes() {
   };
 
   const handleDelete = async (quizId: any) => {
-    if (confirm("Delete this quiz, all its questions, and all player scores? This cannot be undone.")) {
+    const target = localQuizzes.find((q) => q._id === quizId);
+    const responseCount = target?.sessionCount ?? 0;
+    const responseWarning = responseCount > 0
+      ? ` This permanently destroys ${responseCount} recorded response${responseCount === 1 ? "" : "s"}.`
+      : "";
+    if (confirm(`Delete "${target?.title ?? "this quiz"}", all its questions, and all player scores?${responseWarning} This cannot be undone.`)) {
       haptics.heavy();
       await deleteQuiz({ quizId });
     }
@@ -179,7 +184,12 @@ export default function DashboardQuizzes() {
       setCustomFolders(prev => prev.filter(f => f !== folderName));
       return;
     }
-    if (confirm(`Delete the folder "${folderName}" and all ${quizzesInFolder.length} quiz${quizzesInFolder.length > 1 ? "es" : ""} inside it? This cannot be undone.`)) {
+    const totalResponses = quizzesInFolder.reduce((sum, quiz) => sum + (quiz.sessionCount ?? 0), 0);
+    const quizNames = quizzesInFolder.map((quiz) => `- ${quiz.title}`).join("\n");
+    const responseWarning = totalResponses > 0
+      ? ` This permanently destroys ${totalResponses} recorded response${totalResponses === 1 ? "" : "s"}.`
+      : "";
+    if (confirm(`Delete the folder "${folderName}" and all ${quizzesInFolder.length} quiz${quizzesInFolder.length > 1 ? "es" : ""} inside it?${responseWarning} This cannot be undone.\n\n${quizNames}`)) {
       haptics.heavy();
       for (const quiz of quizzesInFolder) {
         await deleteQuiz({ quizId: quiz._id });
