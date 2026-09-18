@@ -47,6 +47,7 @@ async function seedQuizWithCompletedSessions(
   options: { creatorId: string; isElevated: boolean; count?: number }
 ) {
   return await t.run(async (ctx) => {
+    const historicalSessionTime = Date.now() - 120_000;
     const quizId = await ctx.db.insert("quizzes", {
       ...quizFixture,
       creatorId: options.creatorId,
@@ -62,8 +63,8 @@ async function seedQuizWithCompletedSessions(
         score: 0,
         totalPoints: 0,
         answers: [],
-        startedAt: Date.now(),
-        completedAt: Date.now(),
+        startedAt: historicalSessionTime,
+        completedAt: historicalSessionTime,
       });
     }
 
