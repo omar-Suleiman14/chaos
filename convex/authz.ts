@@ -3,11 +3,9 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 type DbCtx = QueryCtx | MutationCtx;
 
-const ADMIN_USER_IDS_ENV = "CHAOS_ADMIN_USER_IDS";
-
 function configuredAdminUserIds(): Set<string> {
   return new Set(
-    (process.env[ADMIN_USER_IDS_ENV] ?? "")
+    (process.env.CHAOS_ADMIN_USER_IDS ?? "")
       .split(",")
       .map((value) => value.trim())
       .filter(Boolean)
