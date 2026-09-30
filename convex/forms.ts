@@ -7,7 +7,8 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
-import { getFormIfRole, ownsRecord, requireActiveUser, requireFormRole } from "./authz";
+import { getFormIfRole, hasPro, ownsRecord, requireActiveUser, requireFormRole } from "./authz";
+import { checkHiddenFieldNames, normalizeEmailRules } from "./formRespondent";
 import { checkDefinition, emptyDefinition, FORM_SCHEMA_VERSION, LIMITS } from "./formLogic";
 import type { FormDefinition } from "./formLogic";
 import { isValidTimeZone } from "./formSchedule";
@@ -17,6 +18,12 @@ import { builtInTemplates } from "./formTemplates";
 import { emitFormStatusChange, emitWebhookEvent, formItem } from "./webhookEvents";
 
 type Definition = Infer<typeof definitionValidator>;
+
+/** Pro (or an active trial) on the form owner's account. */
+export async function ownerHasPro(ctx: QueryCtx | MutationCtx, ownerId: string): Promise<boolean> {
+  const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", ownerId)).first();
+  return hasPro(owner, Date.now());
+}
 
 const MAX_DEFINITION_BYTES = 600_000;
 
@@ -229,6 +236,8 @@ export const getFormForEditor = query({
       slug: form.slug ?? null,
       draft: form.draft,
       settings: { ...form.settings, accessCodeHash: undefined, hasAccessCode: !!form.settings.accessCodeHash },
+      /** The owner's plan allows hiding Chaos branding (respondents only see it hidden while this holds). */
+      canHideBranding: await ownerHasPro(ctx, form.ownerId),
       approval: form.approval ? { ...form.approval, requestedByName: await displayName(ctx, form.approval.requestedBy) } : null,
       versions: await withPublisherNames(ctx, versions),
     };
@@ -324,8 +333,19 @@ export const updateFormSettings = mutation({
       accessCodeHash = code ? await sha256Hex(`${form._id}:${code}`) : undefined;
     }
     if (s.access === "code" && !accessCodeHash) throw new Error("INVALID_SETTINGS: Set an access code.");
+    const hiddenFields = s.hiddenFields ? checkHiddenFieldNames(s.hiddenFields) : undefined;
+    const rules = normalizeEmailRules(s.allowedEmails, s.allowedDomains);
+    if ((rules.emails.length || rules.domains.length) && s.access !== "signed_in") throw new Error("INVALID_SETTINGS: Email and domain limits only work when respondents sign in.");
+    // Eligibility is the owner's plan, read here; the client flag alone never hides branding.
+    if (s.hideBranding && !form.settings.hideBranding && !(await ownerHasPro(ctx, form.ownerId))) throw new Error("PRO_REQUIRED: Removing Chaos branding needs Pro.");
     await ctx.db.patch("forms", form._id, {
-      settings: { ...s, accessCodeHash },
+      settings: {
+        ...s, accessCodeHash,
+        hiddenFields: hiddenFields?.length ? hiddenFields : undefined,
+        hideBranding: s.hideBranding || undefined,
+        allowedEmails: rules.emails.length ? rules.emails : undefined,
+        allowedDomains: rules.domains.length ? rules.domains : undefined,
+      },
       groupName: args.groupName === undefined ? form.groupName : args.groupName.trim() || undefined,
       updatedAt: Date.now(),
     });

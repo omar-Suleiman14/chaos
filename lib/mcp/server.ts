@@ -9,6 +9,8 @@ import {
   MCP_APPEARANCES, MCP_BACKDROPS, MCP_BUTTONS, MCP_COVERS, MCP_FONTS, MCP_GAME_STATES, MCP_GAME_STEPS, MCP_LAYOUTS, MCP_PRESENTATIONS, MCP_QUESTION_TYPES, MCP_RADII, MCP_SOUNDS, normalizeSound,
 } from "@/convex/mcpContract";
 import { buildThemePatch, themeCatalog } from "./themes";
+import { registerLearnTools } from "./learn";
+import { registerOrganizationTools } from "./organization";
 
 export type McpCaller = (tool: string, input: Record<string, unknown>) => Promise<unknown>;
 
@@ -134,7 +136,7 @@ export class McpToolError extends Error {
 function ok(summary: string, data: unknown): CallToolResult {
   return {
     content: [{ type: "text", text: `${summary}\n\n${JSON.stringify(data)}` }],
-    structuredContent: data as Record<string, unknown>,
+    structuredContent: data === null ? { ok: true } : typeof data === "string" ? { id: data } : data as Record<string, unknown>,
   };
 }
 
@@ -418,5 +420,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
     _meta: meta("Updating status…", "Status updated"),
   }, (input) => run("set_form_status", input, (d) => `“${d.title}” is now ${d.status}.`));
 
+  registerLearnTools(server, run, securitySchemes);
+  registerOrganizationTools(server, run, securitySchemes);
   return server;
 }

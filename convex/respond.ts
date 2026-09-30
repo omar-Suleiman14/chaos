@@ -14,6 +14,7 @@ import { consumeRate, notify, randomCode, randomHex, sha256Hex } from "./serverU
 import { ruleHolds, visibleFieldIds } from "./formLogic";
 import { gradeQuiz, publicQuizDefinition } from "./formQuiz";
 import { emitWebhookEvent, formResponseData } from "./webhookEvents";
+import { captureHidden, checkEmailRules } from "./formRespondent";
 
 export const DEFAULT_FORM_RESPONSE_LIMIT = 1000;
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -58,8 +59,12 @@ export async function responseCap(ctx: Ctx, form: Doc<"forms">, now?: number): P
   return own === null ? platform : Math.min(own, platform);
 }
 
+async function ownerOf(ctx: Ctx, form: Doc<"forms">) {
+  return await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", form.ownerId)).first();
+}
+
 export async function ownerBanned(ctx: Ctx, form: Doc<"forms">) {
-  const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", form.ownerId)).first();
+  const owner = await ownerOf(ctx, form);
   return !!(form.isBanned || owner?.isBanned || owner?.suspendedUntil);
 }
 
@@ -92,7 +97,9 @@ export const getPublicForm = query({
     if (!version) return { state: "unavailable" as const };
     const def = version.definition;
     const schedule = { opensAt: form.settings.opensAt ?? null, closesAt: form.settings.closesAt ?? null, timezone: form.settings.timezone ?? null };
-    const base = { title: def.title, translations: def.translations, defaultLanguage: def.defaultLanguage, languages: def.languages, theme: def.theme, allowIndexing: form.settings.allowIndexing };
+    // Branding is hidden only while the owner still has Pro; a lapsed plan brings it back.
+    const hideBranding = !!form.settings.hideBranding && hasPro(await ownerOf(ctx, form), Date.now());
+    const base = { title: def.title, translations: def.translations, defaultLanguage: def.defaultLanguage, languages: def.languages, theme: def.theme, allowIndexing: form.settings.allowIndexing, hideBranding };
     // A valid edit link may keep working after closing when the creator allowed it; new responses stay blocked.
     const editingClosed = !!args.editToken && form.settings.allowEditAfterSubmit && !!form.settings.allowEditAfterClose && !!(await responseForEditToken(ctx, form, args.editToken));
     const now = Date.now();
@@ -106,6 +113,11 @@ export const getPublicForm = query({
     if (!editingClosed && cap !== null && form.responseCount >= cap) return { state: "full" as const, ...base, message: form.settings.closedMessage ?? null };
     const identity = await ctx.auth.getUserIdentity();
     if (form.settings.access === "signed_in" && !identity) return { state: "sign_in" as const, ...base };
+    if (form.settings.access === "signed_in") {
+      const check = checkEmailRules(form.settings, identity);
+      // The allow-list stays private; the respondent only learns which account they used.
+      if (check !== "ok") return { state: "restricted" as const, ...base, reason: check, email: identity?.email ?? null };
+    }
     if (form.settings.access === "code" && !(await accessCodeMatches(ctx, form, args.accessCode))) {
       return { state: "code" as const, ...base, invalidCode: !!args.accessCode };
     }
@@ -130,6 +142,7 @@ export const getPublicForm = query({
       allowResumeLink: form.settings.allowResumeLink,
       allowEditAfterSubmit: form.settings.allowEditAfterSubmit,
       showReceipt: form.settings.showReceipt,
+      hiddenFields: form.settings.hiddenFields ?? [],
       signedIn: !!identity,
       alreadyResponded,
     };
@@ -183,6 +196,11 @@ async function assertCanCollect(ctx: MutationCtx, form: Doc<"forms"> | null, acc
   if (when === "closed" && !skipClosing) throw new Error("FORM_CLOSED: This form closed and is no longer accepting responses.");
   const identity = await ctx.auth.getUserIdentity();
   if (form.settings.access === "signed_in" && !identity) throw new Error("SIGN_IN_REQUIRED: Sign in to respond to this form.");
+  if (form.settings.access === "signed_in") {
+    const check = checkEmailRules(form.settings, identity);
+    if (check === "unverified") throw new Error("EMAIL_UNVERIFIED: Sign in with a verified email address to respond to this form.");
+    if (check === "not_allowed") throw new Error("EMAIL_NOT_ALLOWED: This form only accepts responses from certain email addresses.");
+  }
   if (form.settings.access === "code" && !(await accessCodeMatches(ctx, form, accessCode))) throw new Error("ACCESS_CODE_REQUIRED: Enter the access code for this form.");
   return { form, identity };
 }
@@ -273,6 +291,8 @@ export const submitResponse = mutation({
     resumeToken: v.optional(v.string()),
     lastFieldId: v.optional(v.string()),
     honeypot: v.optional(v.string()),
+    /** Hidden-field values read from the link; undeclared names are dropped on the server. */
+    hidden: v.optional(v.record(v.string(), v.string())),
   },
   returns: v.object({
     responseId: v.id("formResponses"),
@@ -287,6 +307,7 @@ export const submitResponse = mutation({
     if (!/^[A-Za-z0-9-]{8,100}$/.test(args.submissionKey)) throw new Error("INVALID_SUBMISSION: Missing submission key.");
     if (args.editToken !== undefined && !/^[a-f0-9]{32,128}$/.test(args.editToken)) throw new Error("INVALID_SUBMISSION: Invalid edit token.");
     if (JSON.stringify(args.answers).length > 400_000) throw new Error("PAYLOAD_TOO_LARGE: These answers are too large.");
+    if (args.hidden && JSON.stringify(args.hidden).length > 50_000) throw new Error("PAYLOAD_TOO_LARGE: These link parameters are too large.");
     const form = await formByShareId(ctx, args.shareId);
     if (!form) throw new Error("FORM_UNAVAILABLE: This form is not available.");
 
@@ -353,6 +374,8 @@ export const submitResponse = mutation({
       editTokenHash: args.editToken ? await sha256Hex(args.editToken) : existing?.editTokenHash,
       quizScore: grade?.score,
       quizMaxScore: grade?.maxScore,
+      // Stored beside answers, so a parameter named like a question never replaces its answer.
+      hidden: captureHidden(form.settings.hiddenFields, args.hidden) ?? existing?.hidden,
     };
 
     let responseId: Id<"formResponses">;

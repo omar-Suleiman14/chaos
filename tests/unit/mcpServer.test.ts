@@ -19,6 +19,7 @@ describe("Chaos MCP server", () => {
     expect(tools.map((t) => t.name).sort()).toEqual([
       "create_form", "get_form", "get_results", "list_responses", "list_themes", "publish_form", "search_forms", "set_form_sound", "set_form_status", "set_form_theme", "update_form",
       "create_game_draft", "list_games", "get_game", "host_game", "set_game_settings", "advance_game", "end_game",
+      "add_folder_member", "add_lesson_blocks", "create_folder", "create_lesson", "create_lesson_curriculum_mapping", "delete_lesson_blocks", "edit_lesson_blocks", "fork_lesson", "get_learn_source_metadata", "get_lesson", "get_lesson_outline", "get_lesson_sources", "list_curriculum_institutions", "list_curriculum_nodes", "list_curriculum_programs", "list_curriculum_versions", "list_folder_contents", "list_folders", "list_lessons", "move_folder", "move_lesson_blocks", "publish_lesson", "restore_lesson_version", "save_lesson_draft", "search_lessons", "set_lesson_lifecycle", "update_lesson_blocks",
     ].sort());
     for (const tool of tools) {
       expect(tool.description?.length).toBeGreaterThan(20);

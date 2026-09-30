@@ -135,6 +135,7 @@ export const listResponses = query({
         quizScore: r.quizScore ?? null,
         quizMaxScore: r.quizMaxScore ?? null,
         preview: preview(await definition(r.version), r.answers as Answers),
+        hidden: r.hidden ?? null,
       });
     }
     return { ...result, page };
@@ -213,6 +214,8 @@ export const getResponse = query({
       live: response.live ? { gameId: response.live.gameId, rank: response.live.rank, points: response.live.points } : null,
       ending: ending ? ending.title || ending.message.slice(0, 80) : null,
       lastFieldId: response.lastFieldId,
+      /** Hidden-field values captured from the link, e.g. { source: "instagram" }. */
+      hidden: response.hidden ?? null,
       items,
       canEdit: access.role !== "viewer",
       canDelete: access.role === "owner",
@@ -583,6 +586,8 @@ export const getAnalysis = query({
       completionRate: form.settings.collectPartial && started > 0 ? form.responseCount / started : null,
       averageDurationMs: aggRow && aggRow.timedCount > 0 ? aggRow.totalDurationMs / aggRow.timedCount : null,
       medianDurationMs: medianDuration,
+      /** Completion times in seconds (from the sample), for the time distribution. */
+      durationBins: histogram(durations.map((ms) => Math.round(ms / 1000)), 8),
       sampled,
       editedResponses: edited,
       quiz: quizOn ? scoreSummary(scores) : null,
@@ -656,6 +661,7 @@ export const exportResponses = query({
         spam: r.spam,
         cells,
         answers: r.answers,
+        hidden: r.hidden ?? {},
       });
     }
     // Columns come from the live definition first, then any question that only older versions had,
@@ -672,6 +678,8 @@ export const exportResponses = query({
     addColumns(def);
     const olderVersions = await ctx.db.query("formVersions").withIndex("by_formId_and_version", (q) => q.eq("formId", args.formId)).order("desc").take(100);
     for (const row of olderVersions) addColumns(row.definition as FormDefinition);
-    return { title: access.form.title, columns, rows, isDone: result.isDone, continueCursor: result.continueCursor };
+    // Hidden fields get their own columns after the questions; the current list first, then any a page's rows still carry.
+    const hiddenColumns = [...new Set([...(access.form.settings.hiddenFields ?? []), ...rows.flatMap((r) => Object.keys(r.hidden))])];
+    return { title: access.form.title, columns, hiddenColumns, rows, isDone: result.isDone, continueCursor: result.continueCursor };
   },
 });

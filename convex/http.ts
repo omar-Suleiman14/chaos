@@ -1,4 +1,7 @@
-import { httpRouter } from "convex/server";
+import { httpRouter, makeFunctionReference } from "convex/server";
+import { registerLearnIntegrationRoutes } from "./learnIntegrations";
+import { registerSourceRoutes } from "./learnSources";
+import { ConvexError } from "convex/values";
 import { env, httpAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -279,6 +282,36 @@ const mcpHandler = httpAction(async (ctx, request) => {
     });
     let result: unknown;
     switch (b.tool) {
+      case "create_folder": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:createFolder"), { ...input, userId }); break;
+      case "list_folders": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listFolders"), { ...input, userId }); break;
+      case "move_folder": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:moveFolder"), { ...input, userId }); break;
+      case "list_folder_contents": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listFolderContents"), { ...input, userId }); break;
+      case "add_folder_member": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:addFolderMember"), { ...input, userId }); break;
+      case "list_curriculum_institutions": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listInstitutions"), { ...input, userId }); break;
+      case "list_curriculum_programs": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listPrograms"), { ...input, userId }); break;
+      case "list_curriculum_versions": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listVersions"), { ...input, userId }); break;
+      case "list_curriculum_nodes": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listNodes"), { ...input, userId }); break;
+      case "create_lesson_curriculum_mapping": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:createLessonMapping"), { ...input, userId }); break;
+      case "search_lessons": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:listLessons"), { ...input, userId }); break;
+      case "get_lesson_outline": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getLessonOutline"), { ...input, userId }); break;
+      case "get_lesson_sources": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getLessonSources"), { ...input, userId }); break;
+      case "add_lesson_blocks": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:addBlocks"), { ...input, userId }); break;
+      case "update_lesson_blocks": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:updateBlocks"), { ...input, userId }); break;
+      case "move_lesson_blocks": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:moveBlocks"), { ...input, userId }); break;
+      case "delete_lesson_blocks": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:deleteBlocks"), { ...input, userId }); break;
+      case "list_lessons": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:listLessons"), { ...input, userId }); break;
+      case "get_lesson": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getLesson"), { ...input, userId }); break;
+      case "create_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:createLesson"), { ...input, userId }); break;
+      case "save_lesson_draft": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:saveLesson"), { ...input, userId }); break;
+      case "edit_lesson_blocks": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:editBlocks"), { ...input, userId }); break;
+      case "publish_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:publishLesson"), { ...input, userId }); break;
+      case "restore_lesson_version": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:restoreLesson"), { ...input, userId }); break;
+      case "set_lesson_lifecycle": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:lifecycle"), { ...input, userId }); break;
+      case "fork_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:forkLesson"), { ...input, userId }); break;
+      case "get_learn_source_metadata": {
+        const source = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getSourceMetadata"), { ...input, userId });
+        result = { available: source !== null, source }; break;
+      }
       case "search_forms": {
         const status = str(input.status);
         const allowed = ["live", "draft", "closed", "archived", "any"] as const;
@@ -329,6 +362,19 @@ const mcpHandler = httpAction(async (ctx, request) => {
     }
     return respond({ status: 200, body: { result } });
   } catch (caught) {
+    const learnTool = ["search_lessons", "get_lesson_outline", "get_lesson_sources", "add_lesson_blocks", "update_lesson_blocks", "move_lesson_blocks", "delete_lesson_blocks", "list_lessons", "get_lesson", "create_lesson", "save_lesson_draft", "edit_lesson_blocks", "publish_lesson", "restore_lesson_version", "set_lesson_lifecycle", "fork_lesson", "get_learn_source_metadata"].includes(b.tool);
+    if (learnTool) {
+      if (caught instanceof ConvexError && caught.data && typeof caught.data === "object" && !Array.isArray(caught.data)) {
+        const data = caught.data as Record<string, unknown>;
+        if (data.code === "REVISION_CONFLICT") return error(409, "REVISION_CONFLICT", "The lesson changed; reload before editing.", { currentRevision: data.currentRevision });
+        if (data.code === "VALIDATION") return error(400, "VALIDATION_FAILED", "Invalid lesson document.", { problems: data.problems });
+      }
+      const message = caught instanceof Error ? caught.message : String(caught);
+      if (/Lesson not found or unauthorized|Version not accessible|Destination block not found|Block not found/.test(message)) return error(404, "NOT_FOUND", "Lesson or block not found or unauthorized.");
+      if (/Only (the )?owner/.test(message)) return error(403, "FORBIDDEN", "Only the owner may perform this action.");
+      if (/Resolve moderation or archive state/.test(message)) return error(409, "INVALID_STATUS", "Resolve moderation or archive state before publishing.");
+      if (/ArgumentValidationError|Validator error|Invalid lesson metadata|Version does not belong/.test(message)) return error(400, "VALIDATION_FAILED", "Invalid Learn tool arguments.");
+    }
     const { code, message } = errorCode(caught);
     const status = MCP_STATUS[code] ?? (code === "ERROR" ? 500 : 400);
     if (status === 500) console.error("mcp tool failed", b.tool, caught);
@@ -383,6 +429,8 @@ const uploadHandler = httpAction(async (ctx, request) => {
 });
 
 const http = httpRouter();
+registerLearnIntegrationRoutes(http);
+registerSourceRoutes(http);
 http.route({ path: UPLOAD_PATH, method: "POST", handler: uploadHandler });
 http.route({ path: UPLOAD_PATH, method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: UPLOAD_CORS })) });
 http.route({ path: "/api/mcp/v1", method: "POST", handler: mcpHandler });

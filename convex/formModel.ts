@@ -143,6 +143,13 @@ export const formSettingsValidator = v.object({
   notifyOnResponse: v.boolean(),
   notifyRules: v.optional(v.array(v.object({ id: v.string(), rule: ruleValidator, message: v.string() }))),
   requireApproval: v.boolean(),
+  /** URL parameters captured with each response (e.g. ?source=instagram). Kept apart from answers. */
+  hiddenFields: v.optional(v.array(v.string())),
+  /** Hide "chaos" branding for respondents. Honoured only while the owner has Pro; checked on every load. */
+  hideBranding: v.optional(v.boolean()),
+  /** With signed-in access: only these verified emails / exact email domains may respond. */
+  allowedEmails: v.optional(v.array(v.string())),
+  allowedDomains: v.optional(v.array(v.string())),
 });
 
 export const defaultFormSettings: Infer<typeof formSettingsValidator> = {
@@ -247,6 +254,8 @@ export const formTables = {
     /** Responses saved from a live game (convex/live.ts): the game and the player's nickname and final rank. */
     source: v.optional(v.literal("live")),
     live: v.optional(v.object({ gameId: v.id("liveGames"), nickname: v.string(), rank: v.number(), points: v.number() })),
+    /** Hidden-field values from the link (settings.hiddenFields), never part of `answers`. */
+    hidden: v.optional(v.record(v.string(), v.string())),
   })
     .index("by_formId_and_submittedAt", ["formId", "submittedAt"])
     .index("by_formId_and_submissionKey", ["formId", "submissionKey"])

@@ -274,3 +274,31 @@ Outcome: admin-only user/content controls, operational analytics, 30-day Pro gra
 - [x] components/workspace/Select.tsx replaces every native select in the workspace and builder; FormRenderer keeps the native select for respondents.
 - [x] Thank-you screen centred on phones; "More" tab button uses one chevron; workspace hides the body grain layer that caused scroll seams.
 - [ ] Manual check in a signed-in browser: scroll the results page on Chrome/Safari to confirm the seams are gone; print a response.
+
+## Sol Learn backend and contract delivery (2026-09-30)
+Outcome: Chaos owns durable assets, permissions, versions, sources, learning evidence and versioned client contracts. Work in Documents/chaos on main; preserve Opus UI/lib/learn changes and existing APIs/data.
+Completion checks: validated Chaos block schema; immutable publication and recoverable revision-checked drafts; negative ownership/source-access tests; safe generic folders and versioned curricula; existing backend regression checks; explicit accounting of remaining roadmap work.
+- [ ] Implement lesson/source schema and lifecycle, publication/reference validation, restore, forks and bounded reads.
+- [ ] Implement generic folder membership and cycle-safe nesting (parallel bounded worker).
+- [ ] Implement canonical versioned curriculum graph and coverage mappings (parallel bounded worker).
+- [ ] Add source permission separation, provenance and secure content access.
+- [ ] Verify backend lifecycle/security tests, typechecks, existing integration tests and final diff.
+- [ ] Continue community/learning/MCP/API layers and record remaining roadmap phases accurately; do not present all 170 items as complete.
+### Learn MCP and v2 integration delivery
+- [x] Extract shared actor-based lesson create/save/publish/restore/lifecycle/fork/read/block helpers; preserve existing public handlers and API semantics.
+- [x] Add Learn MCP tools and secret-protected internal dispatch with active account validation, stable IDs, bounded reads/search, metadata-only sources and explicit publication.
+- [x] Validate publication metadata, source/media/quiz access, stable concept IDs and bounded curriculum mappings; freeze curriculum mappings and audience in immutable versions.
+- [x] Mount v2 Learn integration routes before v1 fallback and mount authenticated source upload and guarded content download handlers.
+- [x] API worker delivered v2 scoped lesson reads/draft writes/block edits/link-only unlink and native owner setLessonSelection; explicit selections remain required even for legacy access:all.
+- [x] Verify 97 tests in eight targeted integration suites, including 14 Learn MCP tests; scoped ESLint and diff whitespace checks passed. No deployment or commit.
+- [x] Add exact roadmap MCP names for search, outline, selected lesson source metadata and separate add/update/move/delete block tools.
+- [ ] Folder/curriculum MCP tools remain pending.
+- [ ] Complete parent-wide verification and remaining roadmap phases; an earlier Convex typecheck passed, but the latest run encountered concurrent circular-inference errors in mcpOrganization.ts:17-20. Full-project typecheck has errors outside this worker's owned files; see delivery report.
+
+### e2e delivery update
+- [x] Durable lesson/source lifecycle, validation, immutable versions/recovery/forks, independent source access, generic folders and curriculum versions/mappings.
+- [x] Community/moderation, concept evidence/adaptive question references, bounded permitted context, BlockNote translation, MCP lessons/folders/curricula and draft-only integration v2.
+- [x] Official development codegen and app/backend typechecks; integration regression 478 passed, one todo (two workers). MCP registration regression fixed.
+- [ ] Nine concurrent Learn UI lint errors; UI backend wiring and live acceptance remain unverified.
+- [ ] Complete later/external roadmap phases; do not claim all 170 complete.
+- [ ] Push scoped backend/contracts snapshot to e2e before main; keep shared main checkout and Opus changes intact.

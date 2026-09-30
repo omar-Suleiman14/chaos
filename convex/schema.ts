@@ -1,3 +1,10 @@
+import { sourceModerationTables } from "./learnSourceModerationModel";
+import { practiceTables } from "./learnPracticeModel";
+import { communityTables } from "./learnCommunityModel";
+import { assetTables } from "./learnAssetModel";
+import { curriculumTables } from "./curriculumModel";
+import { folderTables } from "./folderModel";
+import { learnTables } from "./learnModel";
 import { metricsValidator } from "./adminModel";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
@@ -8,6 +15,13 @@ import { webhookTables } from "./webhookModel";
 import { liveTables } from "./liveModel";
 
 export default defineSchema({
+  ...learnTables,
+  ...sourceModerationTables,
+  ...practiceTables,
+  ...communityTables,
+  ...assetTables,
+  ...curriculumTables,
+  ...folderTables,
   ...formTables,
   ...integrationTables,
   ...webhookTables,
