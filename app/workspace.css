@@ -995,3 +995,12 @@ html.dark:has(.workspace-ui), html.dark:has(.workspace-ui) body { background: #1
    arrive late show as pale horizontal bands across the sidebar and content. Drop it in the workspace. */
 body.noise-bg:has(.workspace-ui)::before { display: none; }
 .workspace-ui .ws-select[aria-expanded="true"]:focus-visible { outline: none; }
+
+/* Create | Learn: the two surfaces of the workspace. */
+.workspace-ui .ws-surface-switch { display: grid; grid-template-columns: 1fr 1fr; gap: 2px; padding: 2px; margin: 6px 0 8px; border-radius: 8px; background: var(--ws-hover); }
+.workspace-ui .ws-surface-switch a { display: flex; align-items: center; justify-content: center; gap: 6px; min-height: 32px; border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--on-surface-variant); text-decoration: none; }
+.workspace-ui .ws-surface-switch a:hover { color: var(--on-surface); }
+.workspace-ui .ws-surface-switch a[aria-current="true"] { background: var(--ws-card); color: var(--on-surface); box-shadow: var(--ws-shadow-sm); }
+.workspace-ui .ws-surface-switch a:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.workspace-ui .ws-sidebar[data-collapsed="true"] .ws-surface-switch { grid-template-columns: 1fr; }
+.workspace-ui .ws-sidebar[data-collapsed="true"] .ws-surface-switch span { display: none; }

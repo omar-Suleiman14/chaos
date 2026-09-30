@@ -2,13 +2,13 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 import { UserButton, useClerk, useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, BarChart3, BookOpen, ChevronUp, Library, Link2, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, X } from "lucide-react";
+import { Archive, BarChart3, BookOpen, Bookmark, ChevronUp, Compass, Folder, GraduationCap, Home, Layers, Library, Link2, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import NotificationBell from "@/components/NotificationBell";
 import Logo from "@/components/Logo";
@@ -23,6 +23,7 @@ import { formIntentHandlers } from "@/lib/convexCache";
 import { usePreferences } from "@/lib/preferences";
 import { dateLocale, useCopy, useLocale } from "@/lib/i18n";
 import { supportEmail } from "@/lib/site";
+import { useFolders, useLearnActions, useMyLessons, usePinnedFolders, useRecentLessons } from "@/lib/learn/data";
 
 /**
  * The palette carries the docs and settings search indexes (~150 KB of text), so it loads on
@@ -54,6 +55,8 @@ const copy = {
     dismiss: "Dismiss error",
     banned: "Your account is banned.", suspended: (until: string) => `Your account is suspended until ${until}.`,
     paused: "Editing and response collection are paused. Your existing data is preserved.", contact: "Contact support",
+    create: "Create", learn: "Learn", surface: "Workspace", learnHome: "Home", explore: "Explore", courses: "My courses", learnLibrary: "Library", saved: "Saved", flashcards: "Flashcards",
+    newLesson: "New lesson", folders: "Folders", lessons: "Recent lessons", untitledLesson: "Untitled lesson", lesson: "Lesson",
   },
   ar: {
     games: "الألعاب", library: "المكتبة", legacyResults: "نتائج الاختبارات القديمة", archive: "الأرشيف", connections: "الاتصالات", settings: "الإعدادات",
@@ -72,10 +75,12 @@ const copy = {
     dismiss: "إخفاء الخطأ",
     banned: "حسابك محظور.", suspended: (until: string) => `حسابك معلّق حتى ${until}.`,
     paused: "التعديل وجمع الردود متوقفان. بياناتك الحالية محفوظة.", contact: "تواصل مع الدعم",
+    create: "إنشاء", learn: "تعلّم", surface: "مساحة العمل", learnHome: "الرئيسية", explore: "استكشف", courses: "مقرراتي", learnLibrary: "المكتبة", saved: "المحفوظات", flashcards: "البطاقات",
+    newLesson: "درس جديد", folders: "المجلدات", lessons: "دروس حديثة", untitledLesson: "درس بلا عنوان", lesson: "الدرس",
   },
 };
 type Copy = typeof copy.en;
-type NavKey = "library" | "games" | "legacyResults" | "archive" | "connections" | "settings";
+type NavKey = "library" | "games" | "legacyResults" | "archive" | "connections" | "settings" | "learnHome" | "explore" | "courses" | "learnLibrary" | "saved" | "flashcards";
 
 const libraryItem = { href: "/dashboard", key: "library", icon: Library } as const;
 const gamesItem = { href: "/dashboard/games", key: "games", icon: Trophy } as const;
@@ -87,7 +92,22 @@ const workspaceItems = [
   { href: "/dashboard/settings", key: "settings", icon: Settings },
 ] as const;
 
+/** Learn is a second surface beside Create: its own routes and navigation inside the same shell. */
+const learnItems = [
+  { href: "/dashboard/learn", key: "learnHome", icon: Home },
+  { href: "/dashboard/learn/explore", key: "explore", icon: Compass },
+  { href: "/dashboard/learn/courses", key: "courses", icon: GraduationCap },
+  { href: "/dashboard/learn/library", key: "learnLibrary", icon: Library },
+  { href: "/dashboard/learn/saved", key: "saved", icon: Bookmark },
+  { href: "/dashboard/learn/flashcards", key: "flashcards", icon: Layers },
+] as const;
+
 function pageLabel(pathname: string, t: Copy): string {
+  if (/^\/dashboard\/learn\/lessons\/[^/]+/.test(pathname)) return t.lesson;
+  if (pathname.startsWith("/dashboard/learn")) {
+    const match = [...learnItems].reverse().find((i) => pathname === i.href || (i.href !== "/dashboard/learn" && pathname.startsWith(i.href)));
+    return match && match.key !== "learnHome" ? t[match.key] : t.learn;
+  }
   if (pathname.startsWith("/dashboard/editor")) return t.legacyEditor;
   if (/^\/dashboard\/forms\/[^/]+\/responses/.test(pathname)) return t.results;
   if (/^\/dashboard\/forms\/[^/]+$/.test(pathname)) return t.builder;
@@ -125,6 +145,19 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   }, []);
   const [scrolled, setScrolled] = useState(false);
   const { create, busy } = useCreateForm(setActionError);
+  const router = useRouter();
+  const learnMode = pathname.startsWith("/dashboard/learn");
+  const learn = useLearnActions();
+  const myLessons = useMyLessons();
+  const learnFolders = useFolders();
+  const pinnedFolderIds = usePinnedFolders();
+  const recentLessons = useRecentLessons(8);
+  // New → Lesson opens a blank document at once; nothing about creating one needs AI.
+  const createLesson = useCallback(() => {
+    try { router.push(`/dashboard/learn/lessons/${learn.createLesson({ language: locale })}`); }
+    catch (err) { setActionError(errorMessage(err)); }
+  }, [learn, locale, router]);
+  const createNew = learnMode ? createLesson : () => void create();
   // As in Max: Ctrl/Cmd+B folds the sidebar into a slim rail, and its edge can be dragged to resize.
   const [collapsed, setCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
@@ -186,7 +219,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     ...(forms?.owned ?? []).map((f) => ({ id: f._id, title: f.title, kind: f.quizMode ? "quiz" as const : "form" as const, href: f.status === "archived" ? "/dashboard/archive" : `/dashboard/forms/${f._id}`, archived: f.status === "archived" })),
     ...(forms?.shared ?? []).map((f) => ({ id: f._id, title: f.title, kind: f.quizMode ? "quiz" as const : "form" as const, href: f.status === "archived" ? "/dashboard/archive" : `/dashboard/forms/${f._id}`, archived: f.status === "archived" })),
     ...(quizzes ?? []).map((q) => ({ id: q._id, title: q.title, kind: "legacy" as const, href: `/dashboard/editor?id=${q._id}` })),
-  ], [forms, quizzes]);
+    ...(myLessons ?? []).map((l) => ({ id: l.id, title: l.draft.meta.title, kind: "lesson" as const, href: `/dashboard/learn/lessons/${l.id}`, body: [l.draft.meta.description, l.draft.meta.tags.join(" ")].join(" ") })),
+    ...(learnFolders ?? []).filter((f) => !f.archived).map((f) => ({ id: f.id, title: f.name, kind: "folder" as const, href: `/dashboard/learn/library?folder=${f.id}` })),
+  ], [forms, quizzes, myLessons, learnFolders]);
   const { pinned: pinnedIds, toggle: togglePin } = usePinned();
   const { preferences } = usePreferences();
   // Settings → Reduce motion applies across the workspace.
@@ -207,8 +242,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     return next;
   });
 
-  const wide = pathname.startsWith("/dashboard/forms/") || pathname.startsWith("/dashboard/editor");
-  const isActive = (href: string) => (href === "/dashboard" ? pathname === href || pathname === "/dashboard/forms" : pathname.startsWith(href));
+  const wide = pathname.startsWith("/dashboard/forms/") || pathname.startsWith("/dashboard/editor") || pathname.startsWith("/dashboard/learn/lessons/");
+  const isActive = (href: string) => (href === "/dashboard" ? pathname === href || pathname === "/dashboard/forms" : href === "/dashboard/learn" ? pathname === href : pathname.startsWith(href));
 
   const rail = collapsed && !mobile;
   const shortcut = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘ B" : "Ctrl B";
@@ -253,11 +288,55 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           <button type="button" className="ws-nav-item ws-reveal-host" onClick={() => setPaletteOpen(true)} title={rail ? `${t.search} (Ctrl K)` : undefined}>
             <Search size={18} aria-hidden="true" /> <span>{t.search}</span> <kbd className="ws-reveal">Ctrl K</kbd>
           </button>
-          <button type="button" className="ws-nav-item ws-nav-item--new" onClick={() => create()} disabled={busy} title={rail ? t.new : undefined}>
-            <span className="ws-plus" aria-hidden="true"><Plus size={14} strokeWidth={2.6} /></span> <span>{busy ? t.creating : t.new}</span>
+          <nav className="ws-surface-switch" aria-label={t.surface}>
+            <IntentLink href="/dashboard" aria-current={!learnMode ? "true" : undefined} title={rail ? t.create : undefined}><Library size={15} aria-hidden="true" /><span>{t.create}</span></IntentLink>
+            <IntentLink href="/dashboard/learn" aria-current={learnMode ? "true" : undefined} title={rail ? t.learn : undefined}><GraduationCap size={15} aria-hidden="true" /><span>{t.learn}</span></IntentLink>
+          </nav>
+          <button type="button" className="ws-nav-item ws-nav-item--new" onClick={createNew} disabled={!learnMode && busy} title={rail ? (learnMode ? t.newLesson : t.new) : undefined}>
+            <span className="ws-plus" aria-hidden="true"><Plus size={14} strokeWidth={2.6} /></span> <span>{learnMode ? t.newLesson : busy ? t.creating : t.new}</span>
           </button>
 
           <div className="ws-sidebar__scroll">
+            {learnMode ? (
+              <>
+                <nav aria-label={t.learn} className="grid gap-px mt-4">{learnItems.map(link)}</nav>
+                {(() => {
+                  const pinnedFolders = (learnFolders ?? []).filter((f) => (pinnedFolderIds ?? []).includes(f.id) && !f.archived);
+                  const lessons = recentLessons ?? [];
+                  return (
+                    <>
+                      {pinnedFolders.length > 0 && (
+                        <div className="ws-sidebar-section">
+                          <span className="ws-section-toggle" role="heading" aria-level={2}><span>{t.folders}</span></span>
+                          <nav aria-label={t.folders} className="grid gap-px">
+                            {pinnedFolders.map((f) => (
+                              <IntentLink key={f.id} href={`/dashboard/learn/library?folder=${f.id}`} className="ws-nav-item"><Folder size={16} aria-hidden="true" /><span>{f.name}</span></IntentLink>
+                            ))}
+                          </nav>
+                        </div>
+                      )}
+                      {lessons.length > 0 && (
+                        <div className="ws-sidebar-section">
+                          <span className="ws-section-toggle" role="heading" aria-level={2}><span>{t.lessons}</span></span>
+                          <nav aria-label={t.lessons} className="grid gap-px">
+                            {lessons.map(({ lesson }) => {
+                              const title = (lesson.published ?? lesson.draft).meta.title || t.untitledLesson;
+                              const href = lesson.ownerId === user?.id ? `/dashboard/learn/lessons/${lesson.id}` : `/learn/${lesson.id}`;
+                              return (
+                                <IntentLink key={lesson.id} href={href} className="ws-nav-item" aria-current={pathname === href ? "page" : undefined}>
+                                  <span className="ws-recent-icon" aria-hidden="true" style={{ background: "var(--primary)" }}>{title.trim().charAt(0).toUpperCase()}</span>
+                                  <span>{title}</span>
+                                </IntentLink>
+                              );
+                            })}
+                          </nav>
+                        </div>
+                      )}
+                    </>
+                  );
+                })()}
+              </>
+            ) : <>
             <nav aria-label={t.library} className="grid gap-px mt-4">
               {link(libraryItem)}
               {link(gamesItem)}
@@ -318,7 +397,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 </>
               );
             })()}
-
+            </>}
           </div>
 
           <div className="ws-sidebar__footer">
@@ -371,7 +450,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               <button ref={menuTrigger} type="button" className="ws-icon-button ws-menu-button" onClick={() => setMenuOpen(true)} aria-label={t.openMenu} aria-controls="workspace-navigation" aria-expanded={menuOpen}>
                 <Menu size={18} />
               </button>
-              <Link href="/dashboard">Chaos</Link>
+              <Link href={learnMode ? "/dashboard/learn" : "/dashboard"}>{learnMode ? `Chaos ${t.learn}` : "Chaos"}</Link>
               <span aria-hidden="true">/</span>
               <strong className="truncate">{pageLabel(pathname, t)}</strong>
             </div>
@@ -394,7 +473,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </main>
         </div>
       </div>
-      {paletteUsed && <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} items={paletteItems} onNew={() => create()} />}
+      {paletteUsed && <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} items={paletteItems} onNew={createNew} />}
     </div>
   );
 }
