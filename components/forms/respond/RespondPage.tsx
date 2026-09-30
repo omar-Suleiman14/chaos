@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import posthog from "@/lib/analytics";
-import { SignInButton } from "@clerk/nextjs";
+import { SignInButton, SignOutButton } from "@clerk/nextjs";
 import { Copy, Download, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import FormRenderer, { EndingView, formUi, themeClass, themeStyle } from "@/components/forms/FormRenderer";
@@ -41,6 +41,9 @@ const text = {
     saved: "Saved", update: "Update response", notOpen: "Not open yet",
     notOpenYet: (d: string) => `This form is not open yet. It opens ${d}.`, closedOn: (d: string) => `This form closed ${d}.`,
     inFlight: "Answers sent after the closing time are not accepted.",
+    restricted: "This form only accepts certain email addresses.", signedInAs: (email: string) => `You're signed in as ${email}.`,
+    unverified: "Sign in with a verified email address to respond. Verify your email in your account, then try again.",
+    otherAccount: "Use another account",
   },
   ar: {
     unavailable: "هذا النموذج غير متاح.", closed: "هذا النموذج مغلق.", full: "وصل هذا النموذج إلى الحد الأقصى من الردود.",
@@ -53,10 +56,22 @@ const text = {
     saved: "تم الحفظ", update: "تحديث الرد", notOpen: "لم يفتح بعد",
     notOpenYet: (d: string) => `لم يفتح هذا النموذج بعد. يفتح ${d}.`, closedOn: (d: string) => `أُغلق هذا النموذج ${d}.`,
     inFlight: "لا تُقبل الإجابات المرسلة بعد وقت الإغلاق.",
+    restricted: "يقبل هذا النموذج عناوين بريد محددة فقط.", signedInAs: (email: string) => `أنت مسجّل الدخول باسم ${email}.`,
+    unverified: "سجّل الدخول ببريد موثّق للإجابة. وثّق بريدك من حسابك ثم حاول مجددًا.",
+    otherAccount: "استخدم حسابًا آخر",
   },
 };
 
-interface LocalProgress { answers: Answers; language: Language; startedAt: number; submissionKey: string; editToken?: string; lastFieldId?: string; version: number }
+interface LocalProgress { answers: Answers; language: Language; startedAt: number; submissionKey: string; editToken?: string; lastFieldId?: string; version: number; hidden?: Record<string, string> }
+
+/** Declared hidden fields present in the page URL; the server trims, caps and filters them again. */
+function readHidden(names: string[]): Record<string, string> | undefined {
+  if (!names.length || typeof window === "undefined") return undefined;
+  const params = new URLSearchParams(window.location.search);
+  const out: Record<string, string> = {};
+  for (const name of names) { const value = params.get(name); if (value?.trim()) out[name] = value.slice(0, 500); }
+  return Object.keys(out).length ? out : undefined;
+}
 interface Receipt { receiptCode: string; endingId: string | null; editToken?: string; submittedAt: number; answers: Answers; language: Language; quizScore?: number | null; quizMaxScore?: number | null }
 
 /** The respondent experience for one form; also served at custom links (chaos.fail/<username>/<slug>). */
@@ -108,10 +123,20 @@ function RespondPage({ shareId }: { shareId: string }) {
   const gateDef: FormDefinition | undefined = form.state !== "unavailable" ? { ...emptyDefinition(form.title), theme: form.theme as FormDefinition["theme"] } : undefined;
   const t = text[lang];
   if (form.state === "unavailable") return <Shell embed={embed}><Message title={t.unavailable} /></Shell>;
+  const plain = form.hideBranding;
+  if (form.state === "restricted") {
+    return (
+      <Shell embed={embed} def={gateDef} plain={plain}>
+        <Message title={form.title} body={[form.reason === "unverified" ? t.unverified : t.restricted, form.email ? t.signedInAs(form.email) : ""].filter(Boolean).join(" ")} lang={lang}>
+          <SignOutButton><button className="form-btn form-btn-ghost">{t.otherAccount}</button></SignOutButton>
+        </Message>
+      </Shell>
+    );
+  }
   if (form.state === "not_open") {
     const opensAt = form.opensAt!;
     return (
-      <Shell embed={embed} def={gateDef}>
+      <Shell embed={embed} def={gateDef} plain={plain}>
         <ReloadAt at={opensAt} />
         <Message title={form.title} body={t.notOpenYet(formatScheduleTime(opensAt, form.timezone ?? undefined, lang))} lang={lang} />
       </Shell>
@@ -120,11 +145,11 @@ function RespondPage({ shareId }: { shareId: string }) {
   if (form.state === "closed" || form.state === "full") {
     const closedAt = form.state === "closed" && form.reason === "scheduled" && form.closesAt !== null ? t.closedOn(formatScheduleTime(form.closesAt, form.timezone ?? undefined, lang)) : "";
     const body = [form.message || (form.state === "full" ? t.full : t.closed), closedAt].filter(Boolean).join(" ");
-    return <Shell embed={embed} def={gateDef}><Message title={form.title} body={body} lang={lang} /></Shell>;
+    return <Shell embed={embed} def={gateDef} plain={plain}><Message title={form.title} body={body} lang={lang} /></Shell>;
   }
   if (form.state === "sign_in") {
     return (
-      <Shell embed={embed} def={gateDef}>
+      <Shell embed={embed} def={gateDef} plain={plain}>
         <Message title={form.title} body={t.signInHelp} lang={lang}>
           <SignInButton mode="modal"><button className="form-btn">{t.signIn}</button></SignInButton>
         </Message>
@@ -132,10 +157,10 @@ function RespondPage({ shareId }: { shareId: string }) {
     );
   }
   if (form.state === "code") {
-    return <Shell embed={embed} def={gateDef}><CodeGate title={form.title} lang={lang} error={codeError ?? (form.invalidCode ? "wrong" : null)} onSubmit={(code) => void tryCode(code)} /></Shell>;
+    return <Shell embed={embed} def={gateDef} plain={plain}><CodeGate title={form.title} lang={lang} error={codeError ?? (form.invalidCode ? "wrong" : null)} onSubmit={(code) => void tryCode(code)} /></Shell>;
   }
-  if (editToken && editing === null) return <Shell embed={embed} def={gateDef}><Message title={form.title} body="This edit link is no longer valid." /></Shell>;
-  if (resumeToken && resumed === null) return <Shell embed={embed} def={gateDef}><Message title={form.title} body="This resume link is no longer valid." /></Shell>;
+  if (editToken && editing === null) return <Shell embed={embed} def={gateDef} plain={plain}><Message title={form.title} body="This edit link is no longer valid." /></Shell>;
+  if (resumeToken && resumed === null) return <Shell embed={embed} def={gateDef} plain={plain}><Message title={form.title} body="This resume link is no longer valid." /></Shell>;
   return (
     <Respondent
       key={JSON.stringify([shareId, form.version, editToken, resumeToken])}
@@ -225,7 +250,10 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
     } else if (local && Object.keys(local.answers ?? {}).length) {
       setRestored(true);
     }
-    setProgress(local ?? { answers: {}, language, startedAt: Date.now(), submissionKey: randomHex(16), version: form.version });
+    // Link values win over stored ones, so reopening a tagged link keeps its latest source.
+    const fromLink = readHidden(form.hiddenFields ?? []);
+    const base = local ?? { answers: {}, language, startedAt: Date.now(), submissionKey: randomHex(16), version: form.version };
+    setProgress(fromLink ? { ...base, hidden: { ...base.hidden, ...fromLink } } : base);
     setReady(true);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per version
   }, []);
@@ -242,7 +270,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
     if (!form.collectPartial || editing) return;
     if (partialTimer.current) clearTimeout(partialTimer.current);
     partialTimer.current = setTimeout(() => {
-      submit({ shareId, submissionKey: next.submissionKey, answers: next.answers, language: next.language, final: false, startedAt: next.startedAt, accessCode, lastFieldId: next.lastFieldId })
+      submit({ shareId, submissionKey: next.submissionKey, answers: next.answers, language: next.language, final: false, startedAt: next.startedAt, accessCode, lastFieldId: next.lastFieldId, hidden: next.hidden })
         .catch(() => { /* partial saves are best effort; local copy remains */ });
     }, 3000);
   }, [form.collectPartial, editing, submit, shareId, accessCode]);
@@ -304,7 +332,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
       const result = await submit({
         shareId, submissionKey: progress.submissionKey, answers: progress.answers, language: progress.language, final: true,
         startedAt: progress.startedAt, accessCode, editToken: token, resumeToken: resumeToken ?? undefined, lastFieldId: progress.lastFieldId,
-        honeypot: honeypot || undefined,
+        honeypot: honeypot || undefined, hidden: progress.hidden,
       });
       const r: Receipt = { receiptCode: result.receiptCode, endingId: result.endingId, editToken: token, submittedAt: Date.now(), answers: progress.answers, language: progress.language, quizScore: result.quizScore, quizMaxScore: result.quizMaxScore };
       posthog.capture("form_response_submitted", { language: progress.language, form_type: def.quiz?.enabled ? "quiz" : "form" });
@@ -315,7 +343,9 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
       } catch { /* storage unavailable */ }
     } catch (err) {
       const { code, message } = parseError(err);
-      if (code === "VALIDATION_FAILED") {
+      if (code === "EMAIL_NOT_ALLOWED" || code === "EMAIL_UNVERIFIED") {
+        setError(code === "EMAIL_UNVERIFIED" ? t.unverified : t.restricted);
+      } else if (code === "VALIDATION_FAILED") {
         try { setServerErrors(JSON.parse(message)); } catch { setError(message); }
       } else if (code === "NETWORK" || code === "ERROR") {
         // The submission key makes retrying safe: a response is never recorded twice.
@@ -343,7 +373,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
     responseEditToken.current = undefined;
     setResumeLink("");
     setCopied(false);
-    const fresh = { answers: {}, language, startedAt: Date.now(), submissionKey: randomHex(16), version: form.version };
+    const fresh = { answers: {}, language, startedAt: Date.now(), submissionKey: randomHex(16), version: form.version, hidden: progress?.hidden };
     setProgress(fresh);
     setReceipt(null);
     setRestored(false);
@@ -355,7 +385,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   const ending = useMemo(() => (receipt ? (def.endings.find((e) => e.id === receipt.endingId) ?? selectEnding(def, receipt.answers)) : null), [receipt, def]);
 
 
-  if (!ready || !progress) return <Shell embed={embed} def={def}><FormLoading /></Shell>;
+  if (!ready || !progress) return <Shell embed={embed} def={def} plain={form.hideBranding}><FormLoading /></Shell>;
 
   const languageSwitch = def.languages.length > 1 && (
     <div className="form-lang" role="group" aria-label="Language">
@@ -371,7 +401,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
     ? { value: receipt.quizScore, max: receipt.quizMaxScore ?? 0 } : null;
 
   return (
-    <Shell embed={embed} def={def} languageSwitch={languageSwitch} immersive={receipt ? def.presentation === "conversational" || def.presentation === "swipe" : !(form.alreadyResponded && !editing) && !notOpen}>
+    <Shell embed={embed} def={def} plain={form.hideBranding} languageSwitch={languageSwitch} immersive={receipt ? def.presentation === "conversational" || def.presentation === "swipe" : !(form.alreadyResponded && !editing) && !notOpen}>
       {receipt ? (
         <EndingView ending={ending} def={def} language={receipt.language} answers={receipt.answers} score={score}>
           {form.showReceipt && receipt.editToken && form.allowEditAfterSubmit && (
@@ -514,7 +544,8 @@ function FormLoading() {
   return <div className="grid place-items-center py-24 form-muted" role="status" aria-label="Loading"><span className="form-spinner" /></div>;
 }
 
-function Shell({ children, embed, def, languageSwitch, immersive }: { children: React.ReactNode; embed: boolean; def?: FormDefinition; languageSwitch?: React.ReactNode; immersive?: boolean }) {
+/** `plain` hides the Chaos brand (Pro, enforced by the server); Privacy and Terms links stay. */
+function Shell({ children, embed, def, languageSwitch, immersive, plain }: { children: React.ReactNode; embed: boolean; def?: FormDefinition; languageSwitch?: React.ReactNode; immersive?: boolean; plain?: boolean }) {
   const initialTheme = useInitialTheme();
   const themed = useMemo(() => def ?? (initialTheme ? { ...fallbackDefinition, theme: initialTheme } : fallbackDefinition), [def, initialTheme]);
   const fullBleed = !!def && !!immersive;
@@ -559,7 +590,7 @@ function Shell({ children, embed, def, languageSwitch, immersive }: { children: 
   return (
     <div ref={shell} className={`form-shell ${embed ? "form-shell--embed" : "min-h-[100dvh]"} ${themeClass(themed)}`} style={themeStyle(themed)}>
       <div className={`form-chrome ${embed ? "form-chrome--embed" : ""}`}>
-        {!embed ? <Link href="/" className="form-chrome-brand form-heading"><Logo size={22} /> chaos</Link> : <span />}
+        {!embed && !plain ? <Link href="/" className="form-chrome-brand form-heading"><Logo size={22} /> chaos</Link> : <span />}
         <div className="flex items-center gap-1.5">
           {languageSwitch}
           <SoundToggle def={themed} />

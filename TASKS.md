@@ -302,3 +302,5 @@ Completion checks: validated Chaos block schema; immutable publication and recov
 - [ ] Nine concurrent Learn UI lint errors; UI backend wiring and live acceptance remain unverified.
 - [ ] Complete later/external roadmap phases; do not claim all 170 complete.
 - [ ] Push scoped backend/contracts snapshot to e2e before main; keep shared main checkout and Opus changes intact.
+
+- [x] Exact scoped e2e snapshot: typechecks, ESLint zero errors, unit 522 and integration 478 (one todo). Includes compatible respondent restriction handling.
