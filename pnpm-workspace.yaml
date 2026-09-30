@@ -1,0 +1,9 @@
+allowBuilds:
+  '@clerk/shared': true
+  core-js: false
+  esbuild: true
+  msw: true
+  sharp: true
+  unrs-resolver: true
+minimumReleaseAgeExclude:
+  - '@modelcontextprotocol/sdk@1.31.0'

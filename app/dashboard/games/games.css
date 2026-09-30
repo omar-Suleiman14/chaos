@@ -1,0 +1,35 @@
+.games-hub { display: grid; gap: 28px; max-width: 1120px; width: 100%; margin: auto; }
+.games-header { margin-bottom: 0; align-items: flex-start; }
+.games-header > div:first-child { flex: 1; min-width: 220px; }
+.games-help { color: var(--on-surface-variant); font-size: 14px; line-height: 1.6; margin-top: 6px; }
+.games-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.games-hub h2 { font-size: 18px; font-weight: 650; }
+.games-hub h3 { font-size: 14px; font-weight: 600; }
+.games-session { border: 1px solid var(--ws-line); border-radius: 12px; padding: 22px; min-width: 0; }
+.games-session__fields { display: grid; grid-template-columns: minmax(0, 1.6fr) minmax(220px, 1fr); align-items: start; gap: 28px; margin-top: 24px; }
+.games-session__theme { min-width: 0; }
+.games-session__theme .theme-picker { margin-top: 14px; }
+.games-session__controls { display: grid; gap: 24px; }
+.games-time { display: grid; gap: 10px; font-size: 14px; font-weight: 600; }
+.games-time [role="combobox"] { width: 100%; font-weight: 400; }
+.games-labels .ws-switch { max-width: 100%; }
+.games-quiz-list { display: grid; margin-top: 14px; }
+.games-quiz-list article { display: flex; align-items: center; gap: 16px; border-bottom: 1px solid var(--ws-line); padding: 16px 0; }
+.games-quiz-list__title { flex: 1; min-width: 0; }
+.games-quiz-list h3 { font-size: 16px; overflow-wrap: anywhere; }
+.games-quiz-list__title a:focus-visible { outline: 2px solid var(--primary); outline-offset: 3px; }
+.games-quiz-list article p { color: var(--on-surface-variant); font-size: 12px; margin-top: 4px; }
+.games-quiz-list__actions { display: flex; flex-shrink: 0; flex-wrap: wrap; gap: 8px; }
+.games-empty { color: var(--on-surface-variant); font-size: 14px; padding-block: 20px; }
+@media (max-width: 760px) {
+  .games-session__fields { grid-template-columns: minmax(0, 1fr); gap: 20px; }
+  .games-session__controls { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 480px) {
+  .games-hub { gap: 24px; }
+  .games-header .games-actions { width: 100%; }
+  .games-session { padding: 16px; }
+  .games-session__controls { grid-template-columns: minmax(0, 1fr); }
+  .games-quiz-list article { flex-direction: column; align-items: stretch; gap: 12px; }
+  .games-quiz-list__actions .ws-btn { flex: 1; }
+}

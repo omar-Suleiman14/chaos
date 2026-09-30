@@ -1,0 +1,542 @@
+import type { FormDefinition, FormField, FormTheme } from "./formLogic";
+import { googleFormsTheme, microsoftFormsTheme, FORM_SCHEMA_VERSION } from "./formLogic";
+
+// Built-in, bilingual starting points. Identifiers are fixed so templates are
+// deterministic; forms created from them are independent copies.
+
+type Ar = { label?: string; description?: string; placeholder?: string; options?: string[]; rows?: string[]; minLabel?: string; maxLabel?: string };
+
+function field(base: Omit<FormField, "translations" | "required"> & { required?: boolean }, ar?: Ar): FormField {
+  const f: FormField = { required: false, ...base };
+  if (ar) {
+    f.translations = {
+      ar: {
+        label: ar.label,
+        description: ar.description,
+        placeholder: ar.placeholder,
+        minLabel: ar.minLabel,
+        maxLabel: ar.maxLabel,
+        options: ar.options && base.options ? Object.fromEntries(base.options.map((o, i) => [o.id, ar.options![i]])) : undefined,
+        rows: ar.rows && base.rows ? Object.fromEntries(base.rows.map((r, i) => [r.id, ar.rows![i]])) : undefined,
+      },
+    };
+  }
+  return f;
+}
+
+const opts = (prefix: string, labels: string[], scores?: number[]) =>
+  labels.map((label, i) => ({ id: `${prefix}${i + 1}`, label, ...(scores ? { score: scores[i] } : {}) }));
+
+function definition(title: string, titleAr: string, description: string, descriptionAr: string, fields: FormField[], extra: Partial<FormDefinition> = {}): FormDefinition {
+  return {
+    schemaVersion: FORM_SCHEMA_VERSION,
+    title,
+    description,
+    defaultLanguage: "en",
+    languages: ["en", "ar"],
+    presentation: "page",
+    fields,
+    endings: [],
+    theme: { ...googleFormsTheme },
+    translations: { ar: { title: titleAr, description: descriptionAr } },
+    ...extra,
+  };
+}
+
+
+// Palettes of built-in presets that live in components/forms/formThemes.ts, which Convex cannot import.
+// tests/unit/templates.test.ts checks that they stay equal to the presets.
+const OCEAN: FormTheme = { version: 1, preset: "ocean", accent: "#126e79", background: "plain", font: "sans", radius: "large", pageColor: "#e9f5f4", surfaceColor: "#ffffff", textColor: "#183a40", layout: "card", cover: "classic", backdrop: "gradient", buttons: "pill", appearance: "auto", sound: "off" };
+const GARDEN: FormTheme = { version: 1, preset: "garden", accent: "#366b4a", background: "plain", font: "serif", radius: "small", pageColor: "#eef2e8", surfaceColor: "#fbfcf6", textColor: "#263629", layout: "flat", cover: "minimal", backdrop: "dots", buttons: "outline", appearance: "auto", sound: "off" };
+const TERRACOTTA: FormTheme = { version: 1, preset: "terracotta", accent: "#a94e39", background: "plain", font: "serif", radius: "small", pageColor: "#f5e9df", surfaceColor: "#fffaf4", textColor: "#3b2923", layout: "card", cover: "editorial", backdrop: "noise", buttons: "outline", appearance: "fixed", sound: "off" };
+
+const agreement = ["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"];
+const agreementAr = ["أعارض بشدة", "أعارض", "محايد", "أوافق", "أوافق بشدة"];
+
+export const builtInTemplates: { id: string; name: string; category: string; description: string; definition: FormDefinition }[] = [
+  {
+    id: "feedback",
+    name: "Event or service feedback",
+    category: "Feedback",
+    description: "Satisfaction rating, what worked, what to improve, with a follow-up branch.",
+    definition: definition(
+      "Tell us how we did", "أخبرنا عن تجربتك",
+      "This takes about two minutes. Your answers help us improve.", "يستغرق هذا دقيقتين تقريبًا. تساعدنا إجاباتك على التحسين.",
+      [
+        field({ id: "satisfaction", type: "rating", label: "Overall, how satisfied were you?", required: true, max: 5 }, { label: "ما مدى رضاك بشكل عام؟" }),
+        field({ id: "recommend", type: "scale", label: "How likely are you to recommend us to a friend?", min: 0, max: 10, minLabel: "Not at all likely", maxLabel: "Extremely likely", required: true },
+          { label: "ما مدى احتمال أن توصي بنا لصديق؟", minLabel: "غير محتمل إطلاقًا", maxLabel: "محتمل جدًا" }),
+        field({ id: "liked", type: "textarea", label: "What worked well?" }, { label: "ما الذي نجح بشكل جيد؟" }),
+        field({ id: "improve", type: "textarea", label: "What should we improve?" }, { label: "ما الذي يجب أن نحسّنه؟" }),
+        field({ id: "contact_ok", type: "choice", label: "May we contact you about your feedback?", options: opts("c", ["Yes", "No"]), required: true },
+          { label: "هل يمكننا التواصل معك بخصوص ملاحظاتك؟", options: ["نعم", "لا"] }),
+        field({ id: "contact_email", type: "email", label: "Email address", required: true, showIf: { match: "all", conditions: [{ fieldId: "contact_ok", op: "equals", value: "c1" }] } },
+          { label: "البريد الإلكتروني" }),
+      ],
+      { endings: [{ id: "thanks", title: "Thank you", message: "We read every response.", translations: { ar: { title: "شكرًا لك", message: "نقرأ كل إجابة." } } }] },
+    ),
+  },
+  {
+    id: "registration",
+    name: "Event registration",
+    category: "Registration",
+    description: "Attendee details, session choice, dietary needs and consent.",
+    definition: definition(
+      "Event registration", "التسجيل في الفعالية",
+      "Reserve your place. We will confirm by email.", "احجز مكانك. سنؤكد التسجيل عبر البريد الإلكتروني.",
+      [
+        field({ id: "full_name", type: "text", label: "Full name", required: true }, { label: "الاسم الكامل" }),
+        field({ id: "email", type: "email", label: "Email address", required: true }, { label: "البريد الإلكتروني" }),
+        field({ id: "phone", type: "phone", label: "Phone number" }, { label: "رقم الهاتف" }),
+        field({ id: "session", type: "choice", label: "Which session will you attend?", required: true, options: opts("s", ["Morning", "Afternoon", "Both"]) },
+          { label: "أي جلسة ستحضر؟", options: ["الصباحية", "المسائية", "كلتاهما"] }),
+        field({ id: "diet", type: "multi_choice", label: "Dietary requirements", options: opts("d", ["Vegetarian", "Vegan", "Gluten-free", "None"]) },
+          { label: "المتطلبات الغذائية", options: ["نباتي", "نباتي صرف", "خالٍ من الغلوتين", "لا يوجد"] }),
+        field({ id: "access_needs", type: "textarea", label: "Accessibility needs we should know about" }, { label: "احتياجات إمكانية الوصول التي يجب أن نعرفها" }),
+        field({ id: "consent", type: "multi_choice", label: "I agree that my details are used to organise this event.", required: true, options: opts("a", ["I agree"]) },
+          { label: "أوافق على استخدام بياناتي لتنظيم هذه الفعالية.", options: ["أوافق"] }),
+      ],
+    ),
+  },
+  {
+    id: "research",
+    name: "Research survey",
+    category: "Research",
+    description: "Consent, demographics, a Likert matrix and open reflection, section by section.",
+    definition: definition(
+      "Research participation survey", "استبيان المشاركة في البحث",
+      "Participation is voluntary. You may stop at any time.", "المشاركة طوعية. يمكنك التوقف في أي وقت.",
+      [
+        field({ id: "consent", type: "choice", label: "Do you consent to take part in this study?", required: true, options: opts("y", ["Yes, I consent", "No"]) },
+          { label: "هل توافق على المشاركة في هذه الدراسة؟", options: ["نعم، أوافق", "لا"] }),
+        field({ id: "s_about", type: "section", label: "About you", showIf: { match: "all", conditions: [{ fieldId: "consent", op: "equals", value: "y1" }] } }, { label: "معلومات عنك" }),
+        field({ id: "age", type: "dropdown", label: "Age group", required: true, options: opts("g", ["18–24", "25–34", "35–44", "45–54", "55+"]) },
+          { label: "الفئة العمرية", options: ["18–24", "25–34", "35–44", "45–54", "+55"] }),
+        field({ id: "s_views", type: "section", label: "Your views", showIf: { match: "all", conditions: [{ fieldId: "consent", op: "equals", value: "y1" }] } }, { label: "آراؤك" }),
+        field({ id: "attitudes", type: "matrix", label: "How much do you agree with each statement?", required: true, rows: opts("r", ["The service is easy to use", "I trust the information provided", "I would use it again"]), options: opts("l", agreement) },
+          { label: "ما مدى موافقتك على كل عبارة؟", rows: ["الخدمة سهلة الاستخدام", "أثق بالمعلومات المقدمة", "سأستخدمها مرة أخرى"], options: agreementAr }),
+        field({ id: "priorities", type: "ranking", label: "Rank these priorities", options: opts("p", ["Cost", "Speed", "Quality"]) },
+          { label: "رتّب هذه الأولويات", options: ["التكلفة", "السرعة", "الجودة"] }),
+        field({ id: "reflection", type: "textarea", label: "Anything else you would like to share?" }, { label: "هل هناك أي شيء آخر تود مشاركته؟" }),
+      ],
+      {
+        presentation: "sections",
+        endings: [
+          { id: "declined", title: "Thank you", message: "You chose not to take part. No answers were recorded beyond your choice.", showIf: { match: "all", conditions: [{ fieldId: "consent", op: "equals", value: "y2" }] }, translations: { ar: { title: "شكرًا لك", message: "اخترت عدم المشاركة. لم تُسجل أي إجابات سوى اختيارك." } } },
+          { id: "done", title: "Thank you for taking part", message: "Your responses have been recorded.", translations: { ar: { title: "شكرًا لمشاركتك", message: "تم تسجيل إجاباتك." } } },
+        ],
+      },
+    ),
+  },
+  {
+    id: "application",
+    name: "Job or programme application",
+    category: "Applications",
+    description: "Applicant details, experience, portfolio link and CV upload.",
+    definition: definition(
+      "Application form", "نموذج التقديم",
+      "Complete every required question. You can save and continue later.", "أكمل جميع الأسئلة المطلوبة. يمكنك الحفظ والمتابعة لاحقًا.",
+      [
+        field({ id: "full_name", type: "text", label: "Full name", required: true }, { label: "الاسم الكامل" }),
+        field({ id: "email", type: "email", label: "Email address", required: true }, { label: "البريد الإلكتروني" }),
+        field({ id: "role", type: "dropdown", label: "Position or track", required: true, options: opts("t", ["Design", "Engineering", "Operations"]) },
+          { label: "المنصب أو المسار", options: ["التصميم", "الهندسة", "العمليات"] }),
+        field({ id: "years", type: "number", label: "Years of relevant experience", required: true, min: 0, max: 60 }, { label: "سنوات الخبرة ذات الصلة" }),
+        field({ id: "portfolio", type: "url", label: "Portfolio or profile link" }, { label: "رابط الأعمال أو الملف الشخصي" }),
+        field({ id: "motivation", type: "textarea", label: "Why are you applying?", required: true, max: 3000 }, { label: "لماذا تتقدم؟" }),
+        field({ id: "cv", type: "file", label: "CV (PDF)", max: 1 }, { label: "السيرة الذاتية (PDF)" }),
+        field({ id: "start", type: "date", label: "Earliest start date" }, { label: "أقرب تاريخ للبدء" }),
+      ],
+    ),
+  },
+  {
+    id: "intake",
+    name: "Customer intake",
+    category: "Customers",
+    description: "Contact details and request type with branching follow-up questions.",
+    definition: definition(
+      "How can we help?", "كيف يمكننا مساعدتك؟",
+      "Tell us about your request and we will get back to you.", "أخبرنا عن طلبك وسنعاود التواصل معك.",
+      [
+        field({ id: "name", type: "text", label: "Your name", required: true }, { label: "اسمك" }),
+        field({ id: "email", type: "email", label: "Email address", required: true }, { label: "البريد الإلكتروني" }),
+        field({ id: "request", type: "choice", label: "What do you need?", required: true, options: opts("r", ["A quote", "Support with an order", "Something else"]) },
+          { label: "ما الذي تحتاجه؟", options: ["عرض سعر", "دعم بخصوص طلب", "شيء آخر"] }),
+        field({ id: "budget", type: "number", label: "Approximate budget", min: 0, showIf: { match: "all", conditions: [{ fieldId: "request", op: "equals", value: "r1" }] } }, { label: "الميزانية التقريبية" }),
+        field({ id: "order_ref", type: "text", label: "Order reference", required: true, showIf: { match: "all", conditions: [{ fieldId: "request", op: "equals", value: "r2" }] } }, { label: "رقم الطلب" }),
+        field({ id: "details", type: "textarea", label: "Details", required: true }, { label: "التفاصيل" }),
+        field({ id: "urgency", type: "scale", label: "How urgent is this?", min: 1, max: 5, minLabel: "Not urgent", maxLabel: "Very urgent" }, { label: "ما مدى الاستعجال؟", minLabel: "غير عاجل", maxLabel: "عاجل جدًا" }),
+      ],
+      { presentation: "conversational" },
+    ),
+  },
+  {
+    id: "assessment",
+    name: "Self-assessment (scored)",
+    category: "Assessments",
+    description: "Option scores add up to a total; different endings by score.",
+    definition: definition(
+      "Readiness self-assessment", "تقييم ذاتي للجاهزية",
+      "Answer honestly. Your score is shown at the end.", "أجب بصدق. ستظهر نتيجتك في النهاية.",
+      [
+        field({ id: "q1", type: "choice", label: "I have a clear plan for the next three months.", required: true, options: opts("a", agreement, [0, 1, 2, 3, 4]) }, { label: "لدي خطة واضحة للأشهر الثلاثة القادمة.", options: agreementAr }),
+        field({ id: "q2", type: "choice", label: "I know who to ask when I am stuck.", required: true, options: opts("b", agreement, [0, 1, 2, 3, 4]) }, { label: "أعرف من أسأل عندما أواجه صعوبة.", options: agreementAr }),
+        field({ id: "q3", type: "choice", label: "I review my progress regularly.", required: true, options: opts("c", agreement, [0, 1, 2, 3, 4]) }, { label: "أراجع تقدمي بانتظام.", options: agreementAr }),
+      ],
+      {
+        endings: [
+          { id: "high", title: "Well prepared", message: "Your score is {{score}} of 12. You are well prepared.", showIf: { match: "all", conditions: [{ fieldId: "calc:score", op: "gte", value: 9 }] }, translations: { ar: { title: "مستعد جيدًا", message: "نتيجتك {{score}} من 12. أنت مستعد جيدًا." } } },
+          { id: "mid", title: "Getting there", message: "Your score is {{score}} of 12. A few habits would help.", showIf: { match: "all", conditions: [{ fieldId: "calc:score", op: "gte", value: 5 }] }, translations: { ar: { title: "في الطريق", message: "نتيجتك {{score}} من 12. بعض العادات ستساعدك." } } },
+          { id: "low", title: "Time to plan", message: "Your score is {{score}} of 12. Start with a simple plan.", translations: { ar: { title: "حان وقت التخطيط", message: "نتيجتك {{score}} من 12. ابدأ بخطة بسيطة." } } },
+        ],
+      },
+    ),
+  },
+
+  // ── Added templates ─────────────────────────────────────────────────────
+  {
+    id: "event-rsvp",
+    name: "Event RSVP",
+    category: "Events",
+    description: "Yes, no or maybe, number of guests, food needs and a note to the host.",
+    definition: definition(
+      "You are invited", "أنت مدعو",
+      "Let us know if you can come by the reply date so we can plan seating and food.", "أخبرنا إن كنت ستحضر قبل موعد الرد حتى نجهّز المقاعد والطعام.",
+      [
+        field({ id: "name", type: "text", label: "Your name", required: true }, { label: "الاسم" }),
+        field({ id: "email", type: "email", label: "Email address", required: true, description: "We send the details and any changes here." }, { label: "البريد الإلكتروني", description: "نرسل إليه التفاصيل وأي تغيير." }),
+        field({ id: "attending", type: "choice", label: "Will you be there?", required: true, options: opts("a", ["Yes, count me in", "Maybe", "No, I cannot make it"]) },
+          { label: "هل ستحضر؟", options: ["نعم، سأحضر", "ربما", "للأسف لن أستطيع"] }),
+        field({ id: "guests", type: "number", label: "How many people are coming, including you?", required: true, min: 1, max: 10, showIf: { match: "any", conditions: [{ fieldId: "attending", op: "equals", value: "a1" }, { fieldId: "attending", op: "equals", value: "a2" }] } },
+          { label: "كم عدد الحضور بمن فيهم أنت؟" }),
+        field({ id: "diet", type: "multi_choice", label: "Any food requirements?", options: opts("d", ["Vegetarian", "Vegan", "Halal", "Gluten-free", "Nut allergy"]), showIf: { match: "all", conditions: [{ fieldId: "attending", op: "equals", value: "a1" }] } },
+          { label: "هل لديك متطلبات غذائية؟", options: ["نباتي", "نباتي صرف", "حلال", "خالٍ من الغلوتين", "حساسية من المكسرات"] }),
+        field({ id: "note", type: "textarea", label: "A message for the host (optional)", max: 1000 }, { label: "رسالة إلى المضيف (اختياري)" }),
+      ],
+      {
+        endings: [
+          { id: "no", title: "We will miss you", message: "Thanks for letting us know.", showIf: { match: "all", conditions: [{ fieldId: "attending", op: "equals", value: "a3" }] }, translations: { ar: { title: "سنفتقدك", message: "شكرًا لإعلامنا." } } },
+          { id: "yes", title: "See you there", message: "Your reply is saved. Check your email for the details.", translations: { ar: { title: "نراك قريبًا", message: "تم تسجيل ردك. ستصلك التفاصيل على بريدك." } } },
+        ],
+      },
+    ),
+  },
+  {
+    id: "csat-nps",
+    name: "Customer satisfaction (CSAT and NPS)",
+    category: "Feedback",
+    description: "A 5-star satisfaction score, a 0–10 recommendation score and the reasons behind them.",
+    definition: definition(
+      "How was your experience?", "كيف كانت تجربتك؟",
+      "Three quick questions. It takes under a minute.", "ثلاثة أسئلة سريعة. لن تستغرق أكثر من دقيقة.",
+      [
+        field({ id: "csat", type: "rating", label: "How satisfied are you with our service?", required: true, max: 5 }, { label: "ما مدى رضاك عن خدمتنا؟" }),
+        field({ id: "reasons", type: "multi_choice", label: "What shaped your score?", options: opts("r", ["Speed", "Friendliness of the team", "Quality of the result", "Price", "Ease of getting help"]), max: 3 },
+          { label: "ما الذي أثّر في تقييمك؟", options: ["السرعة", "لطف الفريق", "جودة النتيجة", "السعر", "سهولة الحصول على المساعدة"] }),
+        field({ id: "nps", type: "scale", label: "How likely are you to recommend us to a friend or colleague?", required: true, min: 0, max: 10, minLabel: "Not likely", maxLabel: "Very likely" },
+          { label: "ما احتمال أن تنصح صديقًا أو زميلًا بالتعامل معنا؟", minLabel: "مستبعد", maxLabel: "مؤكد" }),
+        field({ id: "why", type: "textarea", label: "What is the main reason for your score?", max: 2000 }, { label: "ما السبب الرئيسي لتقييمك؟" }),
+        field({ id: "callback", type: "choice", label: "Would you like someone to follow up with you?", options: opts("f", ["Yes, please", "No, thanks"]) },
+          { label: "هل تود أن يتواصل معك أحدنا؟", options: ["نعم، من فضلكم", "لا، شكرًا"] }),
+        field({ id: "email", type: "email", label: "Email address", required: true, showIf: { match: "all", conditions: [{ fieldId: "callback", op: "equals", value: "f1" }] } }, { label: "البريد الإلكتروني" }),
+      ],
+      { endings: [{ id: "thanks", title: "Thank you", message: "Your feedback goes straight to the team.", translations: { ar: { title: "شكرًا لك", message: "تصل ملاحظاتك مباشرة إلى الفريق." } } }] },
+    ),
+  },
+  {
+    id: "job-application",
+    name: "Job application",
+    category: "Applications",
+    description: "Contact details, role, work authorisation, CV upload, links and earliest start date.",
+    definition: definition(
+      "Apply for a role", "التقدّم لوظيفة",
+      "We read every application. If you are shortlisted we will contact you within two weeks.", "نقرأ كل طلب. إذا تم ترشيحك سنتواصل معك خلال أسبوعين.",
+      [
+        field({ id: "name", type: "text", label: "Full name", required: true }, { label: "الاسم الكامل" }),
+        field({ id: "email", type: "email", label: "Email address", required: true }, { label: "البريد الإلكتروني" }),
+        field({ id: "phone", type: "phone", label: "Phone number" }, { label: "رقم الهاتف" }),
+        field({ id: "city", type: "text", label: "City and country you live in", required: true }, { label: "المدينة والبلد الذي تقيم فيه" }),
+        field({ id: "role", type: "dropdown", label: "Role you are applying for", required: true, options: opts("j", ["Product designer", "Software engineer", "Customer support", "Marketing", "Other"]) },
+          { label: "الوظيفة المتقدَّم لها", options: ["مصمم منتجات", "مهندس برمجيات", "دعم العملاء", "التسويق", "أخرى"] }),
+        field({ id: "experience", type: "choice", label: "Years of experience in this field", required: true, options: opts("x", ["Less than 1", "1–3", "3–5", "5–10", "More than 10"]) },
+          { label: "سنوات الخبرة في هذا المجال", options: ["أقل من سنة", "1–3", "3–5", "5–10", "أكثر من 10"] }),
+        field({ id: "authorised", type: "choice", label: "Are you legally allowed to work in the country where the job is based?", required: true, options: opts("w", ["Yes", "No, I would need sponsorship"]) },
+          { label: "هل يحق لك قانونًا العمل في البلد الذي تقع فيه الوظيفة؟", options: ["نعم", "لا، أحتاج إلى كفالة"] }),
+        field({ id: "cv", type: "file", label: "CV or résumé (PDF)", required: true, max: 1 }, { label: "السيرة الذاتية (PDF)" }),
+        field({ id: "link", type: "url", label: "Portfolio, LinkedIn or GitHub link" }, { label: "رابط الأعمال أو LinkedIn أو GitHub" }),
+        field({ id: "why", type: "textarea", label: "Why do you want this role? Keep it to a few sentences.", required: true, max: 1500 }, { label: "لماذا تريد هذه الوظيفة؟ يكفي بضع جمل." }),
+        field({ id: "start", type: "date", label: "Earliest date you could start" }, { label: "أقرب تاريخ يمكنك المباشرة فيه" }),
+      ],
+      { theme: { ...microsoftFormsTheme }, endings: [{ id: "received", title: "Application received", message: "Thank you for applying. We will be in touch.", translations: { ar: { title: "استلمنا طلبك", message: "شكرًا لتقدمك. سنتواصل معك." } } }] },
+    ),
+  },
+  {
+    id: "contact",
+    name: "Contact form",
+    category: "Customers",
+    description: "Name, email, topic and message, with a phone field only when a call is preferred.",
+    definition: definition(
+      "Get in touch", "تواصل معنا",
+      "Send us a message and we will reply within one working day.", "أرسل لنا رسالتك وسنردّ خلال يوم عمل واحد.",
+      [
+        field({ id: "name", type: "text", label: "Your name", required: true }, { label: "الاسم" }),
+        field({ id: "email", type: "email", label: "Email address", required: true }, { label: "البريد الإلكتروني" }),
+        field({ id: "topic", type: "dropdown", label: "What is your message about?", required: true, options: opts("t", ["A question about a product", "Pricing or a quote", "Partnership", "Press", "Something else"]) },
+          { label: "ما موضوع رسالتك؟", options: ["سؤال عن منتج", "الأسعار أو عرض سعر", "شراكة", "إعلام وصحافة", "موضوع آخر"] }),
+        field({ id: "message", type: "textarea", label: "Your message", required: true, max: 3000 }, { label: "رسالتك" }),
+        field({ id: "reply", type: "choice", label: "How should we reply?", required: true, options: opts("p", ["By email", "By phone"]) },
+          { label: "كيف نردّ عليك؟", options: ["بالبريد الإلكتروني", "بالهاتف"] }),
+        field({ id: "phone", type: "phone", label: "Phone number", required: true, showIf: { match: "all", conditions: [{ fieldId: "reply", op: "equals", value: "p2" }] } }, { label: "رقم الهاتف" }),
+      ],
+      { endings: [{ id: "sent", title: "Message sent", message: "Thanks for writing. We will reply within one working day.", translations: { ar: { title: "وصلتنا رسالتك", message: "شكرًا لتواصلك. سنردّ خلال يوم عمل واحد." } } }] },
+    ),
+  },
+  {
+    id: "course-evaluation",
+    name: "Course evaluation",
+    category: "Education",
+    description: "Ratings for content, teaching and pace, a Likert grid and open comments.",
+    definition: definition(
+      "Course evaluation", "تقييم المقرر",
+      "Your answers are anonymous and are read by the course team only.", "إجاباتك مجهولة الهوية ولا يطّلع عليها إلا فريق المقرر.",
+      [
+        field({ id: "overall", type: "rating", label: "Overall, how would you rate this course?", required: true, max: 5 }, { label: "كيف تقيّم المقرر بشكل عام؟" }),
+        field({ id: "grid", type: "matrix", label: "How much do you agree with each statement?", required: true,
+          rows: opts("r", ["The goals of the course were clear", "The materials helped me learn", "The instructor explained things well", "The assessments matched what was taught", "I received feedback in time to use it"]), options: opts("l", agreement) },
+          { label: "ما مدى موافقتك على كل عبارة؟", rows: ["كانت أهداف المقرر واضحة", "ساعدتني المواد على التعلّم", "كان شرح المحاضر مفهومًا", "جاءت التقييمات متوافقة مع ما دُرّس", "وصلتني الملاحظات في وقت أستفيد منه"], options: agreementAr }),
+        field({ id: "pace", type: "choice", label: "How was the pace?", required: true, options: opts("p", ["Too slow", "About right", "Too fast"]) }, { label: "كيف كانت وتيرة المقرر؟", options: ["بطيئة جدًا", "مناسبة", "سريعة جدًا"] }),
+        field({ id: "hours", type: "number", label: "About how many hours a week did you spend on this course outside class?", min: 0, max: 80 }, { label: "كم ساعة أسبوعيًا قضيتها في المقرر خارج القاعة تقريبًا؟" }),
+        field({ id: "best", type: "textarea", label: "What was the most useful part of the course?" }, { label: "ما أكثر جزء أفادك في المقرر؟" }),
+        field({ id: "change", type: "textarea", label: "What one thing would you change?" }, { label: "ما الشيء الوحيد الذي تودّ تغييره؟" }),
+        field({ id: "recommend", type: "choice", label: "Would you recommend this course to another student?", required: true, options: opts("y", ["Yes", "Not sure", "No"]) }, { label: "هل تنصح طالبًا آخر بهذا المقرر؟", options: ["نعم", "لست متأكدًا", "لا"] }),
+      ],
+      { theme: { ...microsoftFormsTheme } },
+    ),
+  },
+  {
+    id: "workshop-feedback",
+    name: "Workshop feedback",
+    category: "Feedback",
+    description: "Short feedback after a training or workshop: usefulness, speaker, pace and next topics.",
+    definition: definition(
+      "How was the workshop?", "كيف وجدت ورشة العمل؟",
+      "Two minutes of feedback helps us run the next one better.", "دقيقتان من ملاحظاتك تساعدانا على تحسين الورشة القادمة.",
+      [
+        field({ id: "useful", type: "rating", label: "How useful was the workshop for your work?", required: true, max: 5 }, { label: "ما مدى فائدة الورشة لعملك؟" }),
+        field({ id: "speaker", type: "rating", label: "How clear and engaging was the facilitator?", required: true, max: 5 }, { label: "ما مدى وضوح المُيسِّر وقدرته على إشراك الحضور؟" }),
+        field({ id: "length", type: "choice", label: "The length of the session was", required: true, options: opts("l", ["Too short", "Just right", "Too long"]) }, { label: "كانت مدة الجلسة", options: ["قصيرة", "مناسبة", "طويلة"] }),
+        field({ id: "apply", type: "textarea", label: "What will you try at work after today?" }, { label: "ما الذي ستجرّبه في عملك بعد اليوم؟" }),
+        field({ id: "topics", type: "multi_choice", label: "Which topics would you like next?", options: opts("t", ["Facilitation skills", "Data and reporting", "Project planning", "Writing clearly", "Managing a team"]) },
+          { label: "ما المواضيع التي تودّ أن نقدّمها لاحقًا؟", options: ["مهارات التيسير", "البيانات والتقارير", "تخطيط المشاريع", "الكتابة الواضحة", "إدارة الفريق"] }),
+        field({ id: "more", type: "textarea", label: "Anything else?" }, { label: "أي ملاحظة أخرى؟" }),
+      ],
+      { theme: { ...OCEAN } },
+    ),
+  },
+  {
+    id: "volunteer-signup",
+    name: "Volunteer sign-up",
+    category: "Registration",
+    description: "Contact details, availability, areas of interest and a safety consent.",
+    definition: definition(
+      "Volunteer with us", "تطوّع معنا",
+      "Tell us when you are free and what you enjoy. A coordinator will get in touch.", "أخبرنا متى تكون متفرغًا وما الذي تحب فعله. سيتواصل معك منسّق المتطوعين.",
+      [
+        field({ id: "name", type: "text", label: "Full name", required: true }, { label: "الاسم الكامل" }),
+        field({ id: "email", type: "email", label: "Email address", required: true }, { label: "البريد الإلكتروني" }),
+        field({ id: "phone", type: "phone", label: "Phone number", required: true }, { label: "رقم الهاتف" }),
+        field({ id: "age", type: "choice", label: "Are you 18 or older?", required: true, options: opts("g", ["Yes", "No"]) }, { label: "هل عمرك 18 سنة فأكثر؟", options: ["نعم", "لا"] }),
+        field({ id: "days", type: "multi_choice", label: "Which days can you help?", required: true, options: opts("d", ["Weekday mornings", "Weekday evenings", "Saturday", "Sunday"]) },
+          { label: "في أي الأيام يمكنك المساعدة؟", options: ["صباح أيام الأسبوع", "مساء أيام الأسبوع", "السبت", "الأحد"] }),
+        field({ id: "areas", type: "multi_choice", label: "What would you like to do?", required: true, options: opts("a", ["Welcoming people", "Setting up and packing down", "Cooking or serving", "Driving or deliveries", "Teaching or tutoring"]) },
+          { label: "ما الذي تحب أن تقوم به؟", options: ["استقبال الناس", "التجهيز والترتيب", "الطبخ أو التقديم", "التوصيل والنقل", "التعليم والتدريب"] }),
+        field({ id: "hours", type: "number", label: "Hours per month you can give", min: 1, max: 100 }, { label: "عدد الساعات التي يمكنك تقديمها شهريًا" }),
+        field({ id: "skills", type: "textarea", label: "Skills, languages or experience we should know about" }, { label: "مهارات أو لغات أو خبرات تودّ أن نعرفها" }),
+        field({ id: "consent", type: "multi_choice", label: "I agree to a short background check and to follow the safeguarding rules.", required: true, options: opts("c", ["I agree"]) },
+          { label: "أوافق على فحص خلفية مختصر وعلى الالتزام بقواعد السلامة وحماية الأطفال.", options: ["أوافق"] }),
+      ],
+      { theme: { ...GARDEN } },
+    ),
+  },
+  {
+    id: "order-form",
+    name: "Order form",
+    category: "Orders",
+    description: "Item, size, quantity, extras and delivery, with an address only for delivery orders.",
+    definition: definition(
+      "Place your order", "اطلب الآن",
+      "We confirm every order by email before we start.", "نؤكد كل طلب عبر البريد الإلكتروني قبل البدء بالتجهيز.",
+      [
+        field({ id: "name", type: "text", label: "Name", required: true }, { label: "الاسم" }),
+        field({ id: "email", type: "email", label: "Email address", required: true }, { label: "البريد الإلكتروني" }),
+        field({ id: "phone", type: "phone", label: "Phone number", required: true }, { label: "رقم الهاتف" }),
+        field({ id: "item", type: "choice", label: "What would you like?", required: true, options: opts("i", ["Classic box", "Family box", "Office box"]) }, { label: "ماذا تريد؟", options: ["الصندوق الكلاسيكي", "صندوق العائلة", "صندوق المكتب"] }),
+        field({ id: "size", type: "dropdown", label: "Size", required: true, options: opts("z", ["Small", "Medium", "Large"]) }, { label: "الحجم", options: ["صغير", "وسط", "كبير"] }),
+        field({ id: "qty", type: "number", label: "Quantity", required: true, min: 1, max: 50 }, { label: "الكمية" }),
+        field({ id: "extras", type: "multi_choice", label: "Extras", options: opts("e", ["Gift wrapping", "Handwritten card", "Extra napkins and cutlery"]) }, { label: "إضافات", options: ["تغليف هدية", "بطاقة مكتوبة بخط اليد", "مناديل وأدوات مائدة إضافية"] }),
+        field({ id: "delivery", type: "choice", label: "How do you want to receive it?", required: true, options: opts("m", ["Delivery", "Pick up"]) }, { label: "كيف تريد استلام الطلب؟", options: ["توصيل", "استلام بنفسي"] }),
+        field({ id: "address", type: "textarea", label: "Delivery address", required: true, max: 500, showIf: { match: "all", conditions: [{ fieldId: "delivery", op: "equals", value: "m1" }] } }, { label: "عنوان التوصيل" }),
+        field({ id: "date", type: "date", label: "Date you need it", required: true }, { label: "التاريخ الذي تحتاج الطلب فيه" }),
+        field({ id: "notes", type: "textarea", label: "Notes (allergies, door code, anything else)" }, { label: "ملاحظات (حساسية، رمز الباب، أو غير ذلك)" }),
+      ],
+      { endings: [{ id: "placed", title: "Order received", message: "Thank you. Look for our confirmation email.", translations: { ar: { title: "وصلنا طلبك", message: "شكرًا لك. ستصلك رسالة تأكيد على بريدك." } } }] },
+    ),
+  },
+  {
+    id: "bug-report",
+    name: "Bug report",
+    category: "Support",
+    description: "What happened, steps to reproduce, expected result, severity, version and a screenshot.",
+    definition: definition(
+      "Report a problem", "الإبلاغ عن مشكلة",
+      "The more exact you are, the faster we can fix it.", "كلما كنت دقيقًا أكثر، أسرعنا في إصلاح المشكلة.",
+      [
+        field({ id: "summary", type: "text", label: "Short summary", required: true, placeholder: "For example: Save button does nothing on the profile page" }, { label: "ملخص قصير", placeholder: "مثال: زر الحفظ لا يعمل في صفحة الملف الشخصي" }),
+        field({ id: "steps", type: "textarea", label: "Steps to reproduce", required: true, description: "One step per line, starting from where you opened the app.", max: 3000 }, { label: "خطوات تكرار المشكلة", description: "خطوة في كل سطر، بدءًا من لحظة فتح التطبيق." }),
+        field({ id: "expected", type: "textarea", label: "What did you expect to happen?", required: true }, { label: "ماذا كنت تتوقع أن يحدث؟" }),
+        field({ id: "actual", type: "textarea", label: "What happened instead?", required: true }, { label: "ماذا حدث بدلًا من ذلك؟" }),
+        field({ id: "severity", type: "choice", label: "How bad is it?", required: true, options: opts("s", ["Blocks my work", "Big problem, there is a workaround", "Minor annoyance", "Cosmetic"]) },
+          { label: "ما مدى خطورتها؟", options: ["توقف عملي", "مشكلة كبيرة لكن يوجد حل بديل", "إزعاج بسيط", "شكلية فقط"] }),
+        field({ id: "platform", type: "dropdown", label: "Where did it happen?", required: true, options: opts("p", ["Web browser", "iPhone or iPad", "Android", "Desktop app"]) },
+          { label: "أين حدثت المشكلة؟", options: ["متصفح الويب", "آيفون أو آيباد", "أندرويد", "تطبيق سطح المكتب"] }),
+        field({ id: "version", type: "text", label: "App version or browser (if you know it)" }, { label: "إصدار التطبيق أو المتصفح (إن كنت تعرفه)" }),
+        field({ id: "shot", type: "file", label: "Screenshot or screen recording", max: 3 }, { label: "لقطة شاشة أو تسجيل للشاشة" }),
+        field({ id: "email", type: "email", label: "Email, if we may ask you questions" }, { label: "البريد الإلكتروني، إذا سمحت لنا بالتواصل معك" }),
+      ],
+      { theme: { ...microsoftFormsTheme, accent: "#a4262c" } },
+    ),
+  },
+  {
+    id: "pulse-survey",
+    name: "Employee pulse survey",
+    category: "Workplace",
+    description: "Anonymous check-in: agreement grid, a 0–10 recommend score and one open question.",
+    definition: definition(
+      "Team pulse check", "استطلاع نبض الفريق",
+      "Anonymous. Results are only shown in groups of five or more people.", "الاستطلاع مجهول الهوية. لا تُعرض النتائج إلا لمجموعات من خمسة أشخاص فأكثر.",
+      [
+        field({ id: "team", type: "dropdown", label: "Which team are you in?", required: true, options: opts("t", ["Product", "Engineering", "Sales", "Operations", "Other"]) }, { label: "في أي فريق تعمل؟", options: ["المنتج", "الهندسة", "المبيعات", "العمليات", "أخرى"] }),
+        field({ id: "grid", type: "matrix", label: "This month, how much do you agree?", required: true,
+          rows: opts("r", ["I know what is expected of me", "I have the time and tools to do my job well", "My manager supports me", "My workload is sustainable", "I feel able to say what I think"]), options: opts("l", agreement) },
+          { label: "خلال هذا الشهر، ما مدى موافقتك؟", rows: ["أعرف ما هو متوقع مني", "لدي الوقت والأدوات لأؤدي عملي جيدًا", "يدعمني مديري", "حجم عملي مناسب ويمكن الاستمرار عليه", "أستطيع التعبير عن رأيي بحرية"], options: agreementAr }),
+        field({ id: "mood", type: "scale", label: "How was your week overall?", required: true, min: 1, max: 5, minLabel: "Draining", maxLabel: "Energising" }, { label: "كيف كان أسبوعك عمومًا؟", minLabel: "مرهق", maxLabel: "محفّز" }),
+        field({ id: "enps", type: "scale", label: "How likely are you to recommend working here to a friend?", required: true, min: 0, max: 10, minLabel: "Not likely", maxLabel: "Very likely" }, { label: "ما احتمال أن تنصح صديقًا بالعمل هنا؟", minLabel: "مستبعد", maxLabel: "مؤكد" }),
+        field({ id: "change", type: "textarea", label: "If you could change one thing about work right now, what would it be?", max: 2000 }, { label: "لو استطعت تغيير شيء واحد في العمل الآن، فما هو؟" }),
+      ],
+      { theme: { ...googleFormsTheme, accent: "#00796b" } },
+    ),
+  },
+  {
+    id: "parent-teacher",
+    name: "Parent–teacher conference booking",
+    category: "Education",
+    description: "Pick a time slot and meeting type, and say what you want to talk about.",
+    definition: definition(
+      "Book a parent–teacher meeting", "حجز موعد لقاء أولياء الأمور",
+      "Each meeting lasts 15 minutes. We confirm your slot by email.", "مدة كل لقاء 15 دقيقة. نؤكد لك الموعد عبر البريد الإلكتروني.",
+      [
+        field({ id: "parent", type: "text", label: "Parent or guardian name", required: true }, { label: "اسم ولي الأمر" }),
+        field({ id: "email", type: "email", label: "Email address", required: true }, { label: "البريد الإلكتروني" }),
+        field({ id: "student", type: "text", label: "Student's full name", required: true }, { label: "الاسم الكامل للطالب" }),
+        field({ id: "grade", type: "dropdown", label: "Grade or class", required: true, options: opts("g", ["Grade 1", "Grade 2", "Grade 3", "Grade 4", "Grade 5", "Grade 6"]) }, { label: "الصف", options: ["الأول", "الثاني", "الثالث", "الرابع", "الخامس", "السادس"] }),
+        field({ id: "slot", type: "choice", label: "Preferred time slot", required: true, options: opts("s", ["Tue 3:00 pm", "Tue 3:30 pm", "Wed 4:00 pm", "Wed 4:30 pm", "Thu 3:00 pm"]) },
+          { label: "الموعد المفضل", options: ["الثلاثاء 3:00 م", "الثلاثاء 3:30 م", "الأربعاء 4:00 م", "الأربعاء 4:30 م", "الخميس 3:00 م"] }),
+        field({ id: "backup", type: "choice", label: "Second choice, in case it is taken", options: opts("b", ["Tue 3:00 pm", "Tue 3:30 pm", "Wed 4:00 pm", "Wed 4:30 pm", "Thu 3:00 pm"]) },
+          { label: "خيار ثانٍ في حال كان الأول محجوزًا", options: ["الثلاثاء 3:00 م", "الثلاثاء 3:30 م", "الأربعاء 4:00 م", "الأربعاء 4:30 م", "الخميس 3:00 م"] }),
+        field({ id: "mode", type: "choice", label: "How would you like to meet?", required: true, options: opts("m", ["In person", "Phone call", "Video call"]) }, { label: "كيف تفضل اللقاء؟", options: ["حضوريًا", "اتصال هاتفي", "اتصال مرئي"] }),
+        field({ id: "topics", type: "multi_choice", label: "What would you like to talk about?", options: opts("t", ["Progress in class", "Reading and writing", "Maths", "Friends and behaviour", "Homework", "Something else"]) },
+          { label: "ما الذي تودّ مناقشته؟", options: ["المستوى الدراسي", "القراءة والكتابة", "الرياضيات", "الأصدقاء والسلوك", "الواجبات", "أمر آخر"] }),
+        field({ id: "notes", type: "textarea", label: "Anything the teacher should know beforehand?" }, { label: "هل هناك ما يجب أن يعرفه المعلم قبل اللقاء؟" }),
+      ],
+      { theme: { ...TERRACOTTA } },
+    ),
+  },
+  {
+    id: "general-knowledge-quiz",
+    name: "General knowledge quiz (10 questions)",
+    category: "Quizzes",
+    description: "Ten multiple-choice questions with an answer key, one point each.",
+    definition: definition(
+      "General knowledge quiz", "اختبار ثقافة عامة",
+      "Ten questions, one point each. Pick the best answer.", "عشرة أسئلة، ودرجة لكل سؤال. اختر أفضل إجابة.",
+      [
+        field({ id: "q1", type: "choice", label: "What is the capital of Australia?", required: true, options: opts("a", ["Sydney", "Canberra", "Melbourne", "Perth"]), quiz: { correctOptionIds: ["a2"], points: 1 } }, { label: "ما عاصمة أستراليا؟", options: ["سيدني", "كانبرا", "ملبورن", "بيرث"] }),
+        field({ id: "q2", type: "choice", label: "Which planet is the largest in our solar system?", required: true, options: opts("b", ["Saturn", "Earth", "Jupiter", "Neptune"]), quiz: { correctOptionIds: ["b3"], points: 1 } }, { label: "ما أكبر كواكب المجموعة الشمسية؟", options: ["زحل", "الأرض", "المشتري", "نبتون"] }),
+        field({ id: "q3", type: "choice", label: "What is the chemical symbol for gold?", required: true, options: opts("c", ["Ag", "Au", "Gd", "Go"]), quiz: { correctOptionIds: ["c2"], points: 1 } }, { label: "ما الرمز الكيميائي للذهب؟", options: ["Ag", "Au", "Gd", "Go"] }),
+        field({ id: "q4", type: "choice", label: "Who painted the Mona Lisa?", required: true, options: opts("d", ["Michelangelo", "Vincent van Gogh", "Leonardo da Vinci", "Pablo Picasso"]), quiz: { correctOptionIds: ["d3"], points: 1 } }, { label: "من رسم لوحة الموناليزا؟", options: ["مايكل أنجلو", "فان غوغ", "ليوناردو دا فينشي", "بيكاسو"] }),
+        field({ id: "q5", type: "choice", label: "Which river flows through Cairo?", required: true, options: opts("e", ["The Tigris", "The Nile", "The Euphrates", "The Congo"]), quiz: { correctOptionIds: ["e2"], points: 1 } }, { label: "أي نهر يمر بمدينة القاهرة؟", options: ["دجلة", "النيل", "الفرات", "الكونغو"] }),
+        field({ id: "q6", type: "choice", label: "How many continents are there?", required: true, options: opts("f", ["5", "6", "7", "8"]), quiz: { correctOptionIds: ["f3"], points: 1 } }, { label: "كم عدد قارات العالم؟", options: ["5", "6", "7", "8"] }),
+        field({ id: "q7", type: "choice", label: "Which gas makes up most of Earth's atmosphere?", required: true, options: opts("g", ["Oxygen", "Carbon dioxide", "Nitrogen", "Hydrogen"]), quiz: { correctOptionIds: ["g3"], points: 1 } }, { label: "أي غاز يشكّل معظم الغلاف الجوي للأرض؟", options: ["الأكسجين", "ثاني أكسيد الكربون", "النيتروجين", "الهيدروجين"] }),
+        field({ id: "q8", type: "choice", label: "In which year did the Second World War end?", required: true, options: opts("h", ["1918", "1939", "1945", "1950"]), quiz: { correctOptionIds: ["h3"], points: 1 } }, { label: "في أي عام انتهت الحرب العالمية الثانية؟", options: ["1918", "1939", "1945", "1950"] }),
+        field({ id: "q9", type: "choice", label: "What is the smallest prime number?", required: true, options: opts("i", ["0", "1", "2", "3"]), quiz: { correctOptionIds: ["i3"], points: 1 } }, { label: "ما أصغر عدد أولي؟", options: ["0", "1", "2", "3"] }),
+        field({ id: "q10", type: "choice", label: "Which is the largest ocean?", required: true, options: opts("j", ["Atlantic", "Indian", "Arctic", "Pacific"]), quiz: { correctOptionIds: ["j4"], points: 1 } }, { label: "ما أكبر محيطات العالم؟", options: ["الأطلسي", "الهندي", "المتجمد الشمالي", "الهادئ"] }),
+      ],
+      { quiz: { enabled: true }, theme: { ...googleFormsTheme, accent: "#1a73e8" } },
+    ),
+  },
+  {
+    id: "vocabulary-quiz",
+    name: "Vocabulary quiz",
+    category: "Quizzes",
+    description: "Ten English words: pick the closest meaning. Scored, with an answer key.",
+    definition: definition(
+      "English vocabulary quiz", "اختبار مفردات اللغة الإنجليزية",
+      "Choose the meaning closest to each word.", "اختر المعنى الأقرب لكل كلمة.",
+      [
+        field({ id: "v1", type: "choice", label: "abundant", required: true, options: opts("a", ["rare", "plentiful", "expensive", "quiet"]), quiz: { correctOptionIds: ["a2"], points: 1 } }, { label: "ما معنى كلمة abundant؟", options: ["نادر", "وفير", "غالٍ", "هادئ"] }),
+        field({ id: "v2", type: "choice", label: "reluctant", required: true, options: opts("b", ["eager", "unwilling", "tired", "polite"]), quiz: { correctOptionIds: ["b2"], points: 1 } }, { label: "ما معنى كلمة reluctant؟", options: ["متحمس", "متردد وغير راغب", "متعب", "مهذب"] }),
+        field({ id: "v3", type: "choice", label: "brief", required: true, options: opts("c", ["short", "bright", "broken", "brave"]), quiz: { correctOptionIds: ["c1"], points: 1 } }, { label: "ما معنى كلمة brief؟", options: ["موجز وقصير", "ساطع", "مكسور", "شجاع"] }),
+        field({ id: "v4", type: "choice", label: "ancient", required: true, options: opts("d", ["very old", "very large", "very clean", "very fast"]), quiz: { correctOptionIds: ["d1"], points: 1 } }, { label: "ما معنى كلمة ancient؟", options: ["قديم جدًا", "ضخم جدًا", "نظيف جدًا", "سريع جدًا"] }),
+        field({ id: "v5", type: "choice", label: "fragile", required: true, options: opts("e", ["heavy", "easily broken", "very old", "shiny"]), quiz: { correctOptionIds: ["e2"], points: 1 } }, { label: "ما معنى كلمة fragile؟", options: ["ثقيل", "سهل الكسر", "قديم جدًا", "لامع"] }),
+        field({ id: "v6", type: "choice", label: "generous", required: true, options: opts("f", ["giving freely", "very clever", "always late", "hard to find"]), quiz: { correctOptionIds: ["f1"], points: 1 } }, { label: "ما معنى كلمة generous؟", options: ["كريم", "شديد الذكاء", "دائم التأخر", "صعب المنال"] }),
+        field({ id: "v7", type: "choice", label: "hesitate", required: true, options: opts("g", ["hurry", "pause before acting", "shout", "forget"]), quiz: { correctOptionIds: ["g2"], points: 1 } }, { label: "ما معنى كلمة hesitate؟", options: ["يتعجّل", "يتردد قبل أن يتصرف", "يصرخ", "ينسى"] }),
+        field({ id: "v8", type: "choice", label: "essential", required: true, options: opts("h", ["optional", "harmful", "absolutely necessary", "unusual"]), quiz: { correctOptionIds: ["h3"], points: 1 } }, { label: "ما معنى كلمة essential؟", options: ["اختياري", "ضار", "ضروري جدًا", "غير مألوف"] }),
+        field({ id: "v9", type: "choice", label: "rapid", required: true, options: opts("i", ["slow", "fast", "narrow", "silent"]), quiz: { correctOptionIds: ["i2"], points: 1 } }, { label: "ما معنى كلمة rapid؟", options: ["بطيء", "سريع", "ضيق", "صامت"] }),
+        field({ id: "v10", type: "choice", label: "conceal", required: true, options: opts("j", ["hide", "repair", "explain", "borrow"]), quiz: { correctOptionIds: ["j1"], points: 1 } }, { label: "ما معنى كلمة conceal؟", options: ["يُخفي", "يُصلح", "يشرح", "يستعير"] }),
+      ],
+      { quiz: { enabled: true }, theme: { ...googleFormsTheme, accent: "#b45309" } },
+    ),
+  },
+  {
+    id: "team-retrospective",
+    name: "Team retrospective",
+    category: "Workplace",
+    description: "What went well, what did not, what to try next, and a vote on the top action.",
+    definition: definition(
+      "Sprint retrospective", "مراجعة نهاية الدورة",
+      "Be specific and kind. We pick the top actions together at the meeting.", "كن محددًا ولطيفًا. سنختار أهم الإجراءات معًا في الاجتماع.",
+      [
+        field({ id: "mood", type: "scale", label: "How did this sprint feel overall?", required: true, min: 1, max: 5, minLabel: "Rough", maxLabel: "Great" }, { label: "كيف كان شعورك تجاه هذه الدورة عمومًا؟", minLabel: "صعبة", maxLabel: "ممتازة" }),
+        field({ id: "well", type: "textarea", label: "What went well? Keep doing it.", required: true }, { label: "ما الذي سار جيدًا؟ لنواصل فعله." }),
+        field({ id: "poor", type: "textarea", label: "What slowed us down or frustrated you?", required: true }, { label: "ما الذي أبطأنا أو أزعجك؟" }),
+        field({ id: "try", type: "textarea", label: "What should we try next sprint?" }, { label: "ما الذي نجرّبه في الدورة القادمة؟" }),
+        field({ id: "focus", type: "choice", label: "Which area needs the most attention?", required: true, options: opts("f", ["Planning and estimates", "Code review and quality", "Communication", "Meetings", "Tooling and releases"]) },
+          { label: "أي مجال يحتاج أكبر اهتمام؟", options: ["التخطيط والتقدير", "مراجعة الشيفرة والجودة", "التواصل", "الاجتماعات", "الأدوات والإصدارات"] }),
+        field({ id: "kudos", type: "textarea", label: "Shout-out to a teammate (optional)" }, { label: "كلمة شكر لأحد الزملاء (اختياري)" }),
+      ],
+      { theme: { ...microsoftFormsTheme, accent: "#5c2d91" } },
+    ),
+  },
+  {
+    id: "feature-request",
+    name: "Product feature request",
+    category: "Product",
+    description: "The problem, who has it, how often, what people do today, and how important it is.",
+    definition: definition(
+      "Suggest a feature", "اقتراح ميزة جديدة",
+      "Describe the problem first. We look for what many people need, not only the loudest request.", "صِف المشكلة أولًا. نبحث عمّا يحتاجه كثيرون، وليس عمّا يُطلب بصوت أعلى فحسب.",
+      [
+        field({ id: "title", type: "text", label: "Feature in one line", required: true, max: 120 }, { label: "الميزة في سطر واحد" }),
+        field({ id: "problem", type: "textarea", label: "What problem are you trying to solve?", required: true, max: 2000 }, { label: "ما المشكلة التي تحاول حلّها؟" }),
+        field({ id: "who", type: "choice", label: "Who has this problem?", required: true, options: opts("w", ["Just me", "My team", "My whole organisation", "My customers"]) },
+          { label: "من يواجه هذه المشكلة؟", options: ["أنا فقط", "فريقي", "مؤسستي كلها", "عملائي"] }),
+        field({ id: "often", type: "choice", label: "How often does it come up?", required: true, options: opts("o", ["Every day", "Every week", "Every month", "Rarely"]) },
+          { label: "كم مرة تظهر؟", options: ["كل يوم", "كل أسبوع", "كل شهر", "نادرًا"] }),
+        field({ id: "today", type: "textarea", label: "How do you handle it today?" }, { label: "كيف تتعامل معها اليوم؟" }),
+        field({ id: "importance", type: "scale", label: "How important is this to you?", required: true, min: 1, max: 5, minLabel: "Nice to have", maxLabel: "Cannot do without" }, { label: "ما أهمية هذه الميزة بالنسبة لك؟", minLabel: "إضافة جيدة", maxLabel: "لا غنى عنها" }),
+        field({ id: "email", type: "email", label: "Email, if you would like updates on this request" }, { label: "البريد الإلكتروني، إن رغبت في متابعة الطلب" }),
+      ],
+      { endings: [{ id: "thanks", title: "Thanks for the idea", message: "We review every request each month.", translations: { ar: { title: "شكرًا على الفكرة", message: "نراجع كل الطلبات شهريًا." } } }] },
+    ),
+  },
+];

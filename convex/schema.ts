@@ -1,0 +1,207 @@
+import { metricsValidator } from "./adminModel";
+import { defineSchema, defineTable } from "convex/server";
+import { v } from "convex/values";
+import { quizSnapshot, savedQuestion } from "./quizModel";
+import { formTables } from "./formModel";
+import { integrationTables } from "./integrationModel";
+import { webhookTables } from "./webhookModel";
+import { liveTables } from "./liveModel";
+
+export default defineSchema({
+  ...formTables,
+  ...integrationTables,
+  ...webhookTables,
+  ...liveTables,
+
+  adminMetrics: defineTable({ key: v.string(), counts: metricsValidator, pending: metricsValidator, running: v.boolean(), startedAt: v.number(), completedAt: v.optional(v.number()), phase: v.union(v.literal("users"), v.literal("forms"), v.literal("quizzes"), v.literal("quizSessions")), cursor: v.union(v.string(), v.null()) }).index("by_key", ["key"]),
+  adminBulkJobs: defineTable({ actorId: v.string(), plan: v.union(v.literal("free"), v.literal("pro")), reason: v.string(), cutoff: v.number(), processed: v.number(), done: v.boolean() }),
+  /** Admin accounts. Managed only with `npx convex run admin:grantAdmin` / `admin:revokeAdmin`. */
+  admins: defineTable({
+    clerkId: v.string(),
+    /** For people reading the table; access is decided by clerkId only. */
+    email: v.string(),
+    grantedAt: v.number(),
+  }).index("by_clerkId", ["clerkId"]),
+  adminAudit: defineTable({
+    actorId: v.string(), action: v.string(), target: v.string(), reason: v.string(), createdAt: v.number(),
+  }),
+  // ============ USERS ============
+  users: defineTable({
+    clerkId: v.string(),
+    name: v.string(),
+    email: v.string(),
+    username: v.string(),
+    /** True once the person picks a username; sign-in sync then stops overwriting it. */
+    usernameChosen: v.optional(v.boolean()),
+    imageUrl: v.optional(v.string()),
+    isBanned: v.optional(v.boolean()),
+    creationMonth: v.optional(v.string()),
+    monthlyCreations: v.optional(v.number()),
+    suspendedUntil: v.optional(v.number()),
+    moderationReason: v.optional(v.string()),
+    plan: v.optional(v.union(v.literal("free"), v.literal("pro"))),
+    planExpiresAt: v.optional(v.number()),
+    // Legacy entitlement retained until an explicit plan is assigned.
+    isElevated: v.optional(v.boolean()),
+    createdAt: v.number(),
+  })
+    .index("by_clerkId", ["clerkId"])
+    .index("by_username", ["username"])
+    .index("by_email", ["email"])
+    .index("by_planExpiresAt", ["planExpiresAt"])
+    .index("by_suspendedUntil", ["suspendedUntil"]),
+
+  // ============ TEACHER SETTINGS (Auto Settings) ============
+  teacherSettings: defineTable({
+    clerkId: v.string(),
+    defaultMcqTimer: v.optional(v.number()),       // seconds, default 60
+    defaultWrittenTimer: v.optional(v.number()),    // seconds, default 300
+    defaultPointsPerQuestion: v.optional(v.number()), // default 10
+    halfMarkThreshold: v.optional(v.number()),      // percentage, default 50
+    randomizeQuestions: v.optional(v.boolean()),     // default false
+    randomizeOptions: v.optional(v.boolean()),       // default false
+    showCorrectAnswers: v.optional(v.boolean()),     // default true
+    showExplanations: v.optional(v.boolean()),       // default true
+    displayMode: v.optional(v.string()),             // "score" | "pass_fail"
+    passingThreshold: v.optional(v.number()),        // 0-100, default 50
+    disableAnimations: v.optional(v.boolean()),      // default false
+  }).index("by_clerkId", ["clerkId"]),
+
+  // ============ QUIZZES ============
+  quizzes: defineTable({
+    title: v.string(),
+    description: v.optional(v.string()),
+    slug: v.string(),             // URL-safe slug (unique per creator)
+    creatorId: v.string(),        // clerkId
+    creatorUsername: v.string(),   // cached for URL routing
+    isPublished: v.boolean(),
+    publishedSnapshot: v.optional(quizSnapshot),
+    // Draft revision (updatedAt) last published; later edits are unpublished changes.
+    publishedAt: v.optional(v.number()),
+    tags: v.optional(v.array(v.string())),
+    groupName: v.optional(v.string()),
+    timePerQuestion: v.optional(v.number()),
+    coverColor: v.optional(v.string()),
+    randomizeQuestions: v.optional(v.boolean()),
+    randomizeOptions: v.optional(v.boolean()),
+    showCorrectAnswers: v.optional(v.boolean()),
+    showExplanations: v.optional(v.boolean()),
+    displayMode: v.optional(v.string()),             // "score" | "pass_fail"
+    passingThreshold: v.optional(v.number()),        // 0-100
+    disableAnimations: v.optional(v.boolean()),
+    // Question pool: each attempt draws this many questions from the published set.
+    poolSize: v.optional(v.number()),
+    // "manual" withholds scores and correctness until the creator releases results.
+    resultRelease: v.optional(v.union(v.literal("immediate"), v.literal("manual"))),
+    resultsReleasedAt: v.optional(v.number()),
+    isBanned: v.optional(v.boolean()),
+    // Snapshot/override used to bypass the respondent cap for this quiz.
+    isElevated: v.optional(v.boolean()),
+    isAiGenerated: v.optional(v.boolean()),
+    createdAt: v.number(),
+    updatedAt: v.number(),
+  })
+    // eslint-disable-next-line @convex-dev/no-duplicate-indexes -- sorted by _creationTime; removing it needs a migration
+    .index("by_creator", ["creatorId"])
+    .index("by_creator_createdAt", ["creatorId", "createdAt"])
+    .index("by_slug", ["slug"])
+    .index("by_creator_slug", ["creatorUsername", "slug"]),
+
+  // ============ QUESTIONS ============
+  questions: defineTable({
+    quizId: v.id("quizzes"),
+    type: v.union(
+      v.literal("mcq"),
+      v.literal("true_false"),
+      v.literal("multi_select"),
+      v.literal("written")
+    ),
+    questionText: v.string(),
+    options: v.optional(v.array(v.string())),
+    // Answers stored server-side only — never sent to client
+    correctAnswer: v.optional(v.string()),
+    correctAnswers: v.optional(v.array(v.string())),
+    keywords: v.optional(v.array(v.string())),
+    explanation: v.optional(v.string()),
+    points: v.number(),
+    timeLimit: v.optional(v.number()),
+    hint: v.optional(v.string()),
+    order: v.number(),
+    deletedAt: v.optional(v.number()),
+  }).index("by_quiz", ["quizId"]),
+
+  // ============ QUIZ SUBMISSIONS ============
+  quizSessions: defineTable({
+    quizId: v.id("quizzes"),
+    playerName: v.string(),
+    status: v.optional(v.union(
+      v.literal("in_progress"),
+      v.literal("completed")
+    )),
+    score: v.number(),
+    questionSnapshot: v.optional(v.array(savedQuestion)),
+    totalPoints: v.number(),
+    answers: v.array(
+      v.object({
+        questionId: v.id("questions"),
+        answer: v.string(),
+        isCorrect: v.boolean(),
+        pointsEarned: v.number(),
+        originalPointsEarned: v.optional(v.number()),
+        reviewedAt: v.optional(v.number()),
+        reviewedBy: v.optional(v.string()),
+        timeTaken: v.optional(v.number()),
+      })
+    ),
+    completedAt: v.optional(v.number()),
+    startedAt: v.number(),
+    /** Attempts saved from a live game (convex/live.ts). */
+    source: v.optional(v.literal("live")),
+    liveGameId: v.optional(v.id("liveGames")),
+  })
+    // eslint-disable-next-line @convex-dev/no-duplicate-indexes -- sorted by _creationTime; removing it needs a migration
+    .index("by_quiz", ["quizId"])
+    .index("by_quiz_started", ["quizId", "startedAt"])
+    .index("by_quiz_score", ["quizId", "score"])
+    // Completed attempts only: counts, averages, leaderboards and results read this range, so
+    // answers landing on in-progress attempts neither get read nor re-run those subscriptions.
+    .index("by_quizId_and_status_and_score", ["quizId", "status", "score"]),
+
+  // ============ AI JOBS ============
+  aiJobs: defineTable({
+    clerkId: v.string(),
+    status: v.union(
+      v.literal("pending"),
+      v.literal("extracting"),
+      v.literal("categorizing"),
+      v.literal("generating"),
+      v.literal("saving"),
+      v.literal("done"),
+      v.literal("error")
+    ),
+    step: v.optional(v.string()),
+    quizId: v.optional(v.id("quizzes")),
+    error: v.optional(v.string()),
+    createdAt: v.number(),
+  }).index("by_clerkId", ["clerkId"]),
+
+  // ============ GLOBAL CONFIGURATION ============
+  globalConfig: defineTable({
+    aiLimitPopupText: v.optional(v.string()),
+    playerLimitErrorText: v.optional(v.string()),
+    defaultMcqTimer: v.optional(v.number()),
+    defaultWrittenTimer: v.optional(v.number()),
+    defaultPointsPerQuestion: v.optional(v.number()),
+    halfMarkThreshold: v.optional(v.number()),
+    randomizeQuestions: v.optional(v.boolean()),
+    randomizeOptions: v.optional(v.boolean()),
+    showCorrectAnswers: v.optional(v.boolean()),
+    showExplanations: v.optional(v.boolean()),
+    displayMode: v.optional(v.string()),             // "score" | "pass_fail"
+    passingThreshold: v.optional(v.number()),        // 0-100, default 50
+    disableAnimations: v.optional(v.boolean()),
+    formResponseLimit: v.optional(v.number()),       // per-form cap for non-elevated owners
+    integrationReadRatePerMinute: v.optional(v.number()),  // per connection; overrides CHAOS_API_READ_RATE_PER_MINUTE
+    integrationWriteRatePerMinute: v.optional(v.number()), // per connection; overrides CHAOS_API_WRITE_RATE_PER_MINUTE
+  }),
+});

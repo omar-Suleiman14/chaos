@@ -1,0 +1,306 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import { useClerk, useUser } from "@clerk/nextjs";
+import { useMutation, useQuery } from "convex/react";
+import { ChevronRight, CircleUser, Keyboard, Library, LifeBuoy, Palette, SunMoon, Timer } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import { api } from "@/convex/_generated/api";
+import { presentationLabels } from "@/convex/formLogic";
+import { useBuilderLabels } from "@/components/forms/formThemeLabels";
+import type { Language, Presentation } from "@/convex/formLogic";
+import { useTheme } from "@/components/ThemeProvider";
+import { ThemeModeSwitch } from "@/components/ThemeModeSwitch";
+import { ThemePicker } from "@/components/ThemePicker";
+import { defaultPreferences, popupOpacityRange, usePreferences } from "@/lib/preferences";
+import type { Preferences } from "@/lib/preferences";
+import { WsSwitch } from "@/components/workspace/primitives";
+import { errorMessage } from "@/lib/errors";
+import { useCopy } from "@/lib/i18n";
+import { supportEmail } from "@/lib/site";
+
+/* Account controls and device preferences have separate, explicit saving behaviour. */
+
+const copy = {
+  en: {
+    title: "Settings", loading: "Loading…", saving: "Saving…", saved: "Saved", savedDot: "Saved.", save: "Save", open: "Open", read: "Read", reset: "Reset",
+    preferencesHelp: "Appearance and new-form defaults save on this device as you change them.",
+    resetTheme: "Reset theme", layoutHelp: "Choose whether people see all questions, one at a time, or in steps.",
+    account: "Account", accountAbout: "Who you are in Chaos, and the name in your links.", yourAccount: "Your account", manage: "Manage account",
+    username: "Username", usernameHelp: (url: string) => `Used in custom links, like ${url}.`, chooseOne: "Choose one", yourname: "yourname",
+    security: "Password and security", securityHelp: "Password, sign-in methods and devices.",
+    appearanceSection: "Appearance", appearanceAbout: "How Chaos looks for you. Forms keep their own look for the people answering.",
+    appearance: "Appearance", appearanceHelp: "System follows your device.",
+    glass: "Glass", glassHelp: "How see-through menus and popups are. 100% is solid.", glassLabel: "Menu transparency", opaque: (n: number) => `${n}% opaque`,
+    motion: "Reduce motion", motionHelp: "Fewer animations across the workspace.",
+    newForms: "New form defaults", newFormsAbout: "Used for new blank forms.",
+    theme: "Default theme", themeLabel: "Theme for new forms", layout: "Layout", layoutLabel: "Layout for new forms", language: "Language", languageLabel: "Language for new forms",
+    sounds: "Sounds", soundsHelp: "Gentle taps and chimes while people answer. They can always mute.", soundsLabel: "Sounds for new forms",
+    library: "Library", libraryAbout: "How your forms and quizzes are shown when you open Chaos.",
+    view: "View", viewLabel: "Library view", gallery: "Gallery", list: "List",
+    sortBy: "Sort by", sortHelp: "In the list, you can also sort by clicking a column name.", sortLabel: "Sort library by",
+    sortNames: { edited: "Last edited", name: "Name", responses: "Responses", status: "Status" } as Record<Preferences["librarySort"], string>,
+    archive: "Archive", archiveHelp: "Archived forms, ready to restore or delete for good.",
+    connections: "Connections", connectionsHelp: "Max and other apps that can create drafts and read summaries.",
+    shortcuts: "Keyboard shortcuts", shortcutsMac: "On a Mac, use ⌘ where it says Ctrl.", shortcutsAbout: "Faster ways to do the everyday things.",
+    shortcutRows: [
+      ["Search and commands", "Ctrl K"], ["Show or hide the sidebar", "Ctrl B"], ["Undo", "Ctrl Z"], ["Redo", "Ctrl Y"],
+      ["Choose an answer (one question at a time)", "A – Z"], ["Next question", "Enter"], ["Submit a long answer", "Ctrl Enter"], ["Close a dialog or menu", "Esc"],
+    ] as [string, string][],
+    oldQuiz: "Old quiz editor", oldQuizAbout: "Only for the old quiz editor.",
+    mcqTimer: "Multiple-choice timer", writtenTimer: "Written-answer timer", points: "Points per question", sec: "sec", pts: "pts",
+    shuffleQuestions: "Shuffle questions", shuffleOptions: "Shuffle answer options", showCorrect: "Show correct answers", showExplanations: "Show explanations",
+    resultsAs: "Show results as", score: "Score", passFail: "Pass or fail", passMark: "Pass mark", halfMarks: "Half marks from", halfMarksHelp: "For written answers: if this share of keywords match, the answer gets half the points.",
+    help: "Help", helpAbout: "Questions, feedback and the fine print.", feedback: "Help and feedback", email: "Email us", docs: "Docs", docsHelp: "Step-by-step guides for everything in Chaos.",
+    privacy: "Privacy policy", terms: "Terms", signOut: "Sign out", signOutHelp: "You can sign back in any time.",
+  },
+  ar: {
+    title: "الإعدادات", loading: "جارٍ التحميل…", saving: "جارٍ الحفظ…", saved: "تم الحفظ", savedDot: "تم الحفظ.", save: "احفظ", open: "افتح", read: "اقرأ", reset: "إعادة الضبط",
+    preferencesHelp: "يُحفظ المظهر وإعدادات النماذج الجديدة على هذا الجهاز عند تعديلها.",
+    resetTheme: "أعد ضبط المظهر", layoutHelp: "اختر عرض كل الأسئلة أو سؤال واحد في كل مرة أو تقسيمها إلى خطوات.",
+    account: "الحساب", accountAbout: "من أنت في Chaos، والاسم الذي يظهر في روابطك.", yourAccount: "حسابك", manage: "إدارة الحساب",
+    username: "اسم المستخدم", usernameHelp: (url: string) => `يُستخدم في الروابط المخصصة، مثل ${url}.`, chooseOne: "اختر اسمًا", yourname: "yourname",
+    security: "كلمة المرور والأمان", securityHelp: "كلمة المرور وطرق تسجيل الدخول والأجهزة.",
+    appearanceSection: "المظهر", appearanceAbout: "كيف يبدو Chaos لك. النماذج تحتفظ بمظهرها الخاص لمن يجيب عنها.",
+    appearance: "الوضع", appearanceHelp: "وضع النظام يتبع جهازك.",
+    glass: "الزجاج", glassHelp: "مدى شفافية القوائم والنوافذ المنبثقة. 100% تعني معتمة تمامًا.", glassLabel: "شفافية القوائم", opaque: (n: number) => `معتمة بنسبة ${n}%`,
+    motion: "تقليل الحركة", motionHelp: "رسوم متحركة أقل في مساحة العمل.",
+    newForms: "إعدادات النماذج الجديدة", newFormsAbout: "تُستخدم للنماذج الفارغة الجديدة.",
+    theme: "المظهر الافتراضي", themeLabel: "مظهر النماذج الجديدة", layout: "طريقة العرض", layoutLabel: "طريقة عرض النماذج الجديدة", language: "اللغة", languageLabel: "لغة النماذج الجديدة",
+    sounds: "الأصوات", soundsHelp: "نقرات ونغمات خفيفة أثناء الإجابة. يمكن للمجيب كتمها دائمًا.", soundsLabel: "أصوات النماذج الجديدة",
+    library: "المكتبة", libraryAbout: "كيف تظهر نماذجك واختباراتك حين تفتح Chaos.",
+    view: "العرض", viewLabel: "عرض المكتبة", gallery: "بطاقات", list: "قائمة",
+    sortBy: "الترتيب حسب", sortHelp: "في القائمة يمكنك أيضًا الترتيب بالضغط على اسم العمود.", sortLabel: "ترتيب المكتبة حسب",
+    sortNames: { edited: "آخر تعديل", name: "الاسم", responses: "الردود", status: "الحالة" } as Record<Preferences["librarySort"], string>,
+    archive: "الأرشيف", archiveHelp: "النماذج المؤرشفة، جاهزة للاستعادة أو للحذف النهائي.",
+    connections: "الاتصالات", connectionsHelp: "Max وتطبيقات أخرى يمكنها إنشاء مسودات وقراءة الملخصات.",
+    shortcuts: "اختصارات لوحة المفاتيح", shortcutsMac: "على Mac استخدم ⌘ مكان Ctrl.", shortcutsAbout: "طرق أسرع للأعمال اليومية.",
+    shortcutRows: [
+      ["البحث والأوامر", "Ctrl K"], ["إظهار الشريط الجانبي أو إخفاؤه", "Ctrl B"], ["تراجع", "Ctrl Z"], ["إعادة", "Ctrl Y"],
+      ["اختيار إجابة (سؤال واحد في كل مرة)", "A – Z"], ["السؤال التالي", "Enter"], ["إرسال إجابة طويلة", "Ctrl Enter"], ["إغلاق نافذة أو قائمة", "Esc"],
+    ] as [string, string][],
+    oldQuiz: "محرر الاختبارات القديم", oldQuizAbout: "لمحرر الاختبارات القديم فقط.",
+    mcqTimer: "مؤقت الاختيار من متعدد", writtenTimer: "مؤقت الإجابة المكتوبة", points: "النقاط لكل سؤال", sec: "ث", pts: "نقطة",
+    shuffleQuestions: "خلط الأسئلة", shuffleOptions: "خلط الخيارات", showCorrect: "إظهار الإجابات الصحيحة", showExplanations: "إظهار الشروح",
+    resultsAs: "عرض النتيجة", score: "الدرجة", passFail: "ناجح أو راسب", passMark: "درجة النجاح", halfMarks: "نصف الدرجة من", halfMarksHelp: "للإجابات الكتابية: إذا وردت هذه النسبة من الكلمات المفتاحية نالت الإجابة نصف الدرجة.",
+    help: "المساعدة", helpAbout: "الأسئلة والملاحظات والشروط.", feedback: "المساعدة والملاحظات", email: "راسلنا", docs: "الدليل", docsHelp: "أدلة خطوة بخطوة لكل ما في Chaos.",
+    privacy: "سياسة الخصوصية", terms: "الشروط", signOut: "تسجيل الخروج", signOutHelp: "يمكنك تسجيل الدخول مجددًا في أي وقت.",
+  },
+};
+type Copy = typeof copy.en;
+
+function Section({ id, icon: Icon, title, description, children }: { id: string; icon: LucideIcon; title: string; description: string; children: React.ReactNode }) {
+  return (
+    <section className="ws-settings-section" aria-labelledby={`section-${id}`}>
+      <div className="ws-settings-section__intro">
+        <Icon size={20} aria-hidden="true" />
+        <div><h2 id={`section-${id}`}>{title}</h2><p>{description}</p></div>
+      </div>
+      {children}
+    </section>
+  );
+}
+
+function Row({ id, label, help, isDefault, children, stack }: { id?: string; label: string; help?: React.ReactNode; isDefault?: boolean; children: React.ReactNode; stack?: boolean }) {
+  return (
+    <div id={id} className={`ws-row ${stack ? "ws-row--stack" : ""}`} data-default={isDefault ? "true" : "false"}>
+      <div className="ws-row__text"><span className="ws-row__label">{label}</span>{help && <span className="ws-row__help">{help}</span>}</div>
+      <div className="ws-row__control">{children}</div>
+    </div>
+  );
+}
+
+function Segmented<T extends string>({ label, options, value, onChange }: { label: string; options: { id: T; label: string }[]; value: T; onChange: (v: T) => void }) {
+  return (
+    <div className="ws-segmented" role="group" aria-label={label}>
+      {options.map((o) => <button key={o.id} type="button" aria-pressed={value === o.id} onClick={() => onChange(o.id)}>{o.label}</button>)}
+    </div>
+  );
+}
+
+function UsernameRow({ current, t }: { current: string; t: Copy }) {
+  const setUsername = useMutation(api.quizFunctions.setUsername);
+  const generated = /^user\d{5}$/.test(current);
+  const [value, setValue] = useState(generated ? "" : current);
+  const [message, setMessage] = useState("");
+  const clean = value.trim().toLowerCase().replace(/[^a-z0-9_.-]+/g, "");
+  const host = typeof window === "undefined" ? "chaos.fail" : window.location.host;
+  return (
+    <Row id="settings-username" label={t.username} isDefault={generated} help={message || <span dir="auto">{t.usernameHelp(`${host}/${clean || "yourname"}/my-form`)}</span>}>
+      <span className="ws-link-field w-64 max-w-full" dir="ltr">
+        <span className="ws-link-field__prefix">{host}/</span>
+        <input value={value} onChange={(e) => { setValue(e.target.value); setMessage(""); }} placeholder={generated ? t.chooseOne : t.yourname} aria-label={t.username} autoComplete="username" />
+      </span>
+      <button type="button" className="ws-btn ws-btn--sm" disabled={clean.length < 3 || clean === current}
+        onClick={() => setUsername({ username: clean }).then(() => setMessage(t.savedDot)).catch((e) => setMessage(errorMessage(e)))}>{t.save}</button>
+    </Row>
+  );
+}
+
+function QuizDefaults({ t }: { t: Copy }) {
+  const settings = useQuery(api.quizFunctions.getTeacherSettings);
+  const update = useMutation(api.quizFunctions.updateTeacherSettings);
+  const [local, setLocal] = useState<NonNullable<typeof settings> | null>(null);
+  const [state, setState] = useState("");
+  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(() => { if (settings && !local) setLocal(settings); }, [settings, local]);
+  if (!local) return <p className="ws-row__help py-3">{t.loading}</p>;
+  const change = <K extends keyof typeof local>(key: K, value: (typeof local)[K]) => {
+    const next = { ...local, [key]: value };
+    setLocal(next);
+    if (timer.current) clearTimeout(timer.current);
+    setState(t.saving);
+    timer.current = setTimeout(() => { update(next).then(() => setState(t.saved)).catch((e) => setState(errorMessage(e))); }, 500);
+  };
+  const number = (key: "defaultMcqTimer" | "defaultWrittenTimer" | "defaultPointsPerQuestion" | "passingThreshold" | "halfMarkThreshold", label: string, suffix: string, min: number, max: number, help?: string) => (
+    <Row label={label} help={help}>
+      <input type="number" inputMode="numeric" min={min} max={max} value={local[key]} aria-label={label} className="kb-input w-24 text-end tabular-nums"
+        onChange={(e) => change(key, Math.min(max, Math.max(min, Number(e.target.value) || min)))} />
+      <span className="ws-row__value">{suffix}</span>
+    </Row>
+  );
+  const toggle = (key: "randomizeQuestions" | "randomizeOptions" | "showCorrectAnswers" | "showExplanations", label: string) => (
+    <Row label={label}><WsSwitch label={label} hideLabel checked={local[key]} onChange={(v) => change(key, v)} /></Row>
+  );
+  return (
+    <>
+      {number("defaultMcqTimer", t.mcqTimer, t.sec, 5, 3600)}
+      {number("defaultWrittenTimer", t.writtenTimer, t.sec, 10, 7200)}
+      {number("defaultPointsPerQuestion", t.points, t.pts, 0, 1000)}
+      {toggle("randomizeQuestions", t.shuffleQuestions)}
+      {toggle("randomizeOptions", t.shuffleOptions)}
+      {toggle("showCorrectAnswers", t.showCorrect)}
+      {toggle("showExplanations", t.showExplanations)}
+      <Row label={t.resultsAs}>
+        <Segmented label={t.resultsAs} value={local.displayMode as "score" | "pass_fail"} onChange={(v) => change("displayMode", v)} options={[{ id: "score", label: t.score }, { id: "pass_fail", label: t.passFail }]} />
+      </Row>
+      {local.displayMode === "pass_fail" && number("passingThreshold", t.passMark, "%", 0, 100)}
+      {number("halfMarkThreshold", t.halfMarks, "%", 0, 100, t.halfMarksHelp)}
+      <p className="ws-row__help py-2" role="status">{state}</p>
+    </>
+  );
+}
+
+/** Scrolls to the row named in the address (#settings-glass) and marks it for a moment. Rows can appear after data loads, so it retries briefly. */
+function useScrollToHash(ready: boolean) {
+  useEffect(() => {
+    let tries = 0;
+    let timer: ReturnType<typeof setTimeout>;
+    const go = () => {
+      const id = decodeURIComponent(window.location.hash.slice(1));
+      if (!id) return;
+      const row = document.getElementById(id);
+      if (!row) { if (tries++ < 20) timer = setTimeout(go, 100); return; }
+      row.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+      row.setAttribute("data-flash", "true");
+      timer = setTimeout(() => row.removeAttribute("data-flash"), 1600);
+    };
+    go();
+    window.addEventListener("hashchange", go);
+    return () => { clearTimeout(timer); window.removeEventListener("hashchange", go); };
+  }, [ready]);
+}
+
+export default function SettingsPage() {
+  const t = useCopy(copy);
+  const labels = useBuilderLabels();
+  const { user } = useUser();
+  const clerk = useClerk();
+  const me = useQuery(api.quizFunctions.getCurrentUser);
+  const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
+  const { mode } = useTheme();
+  const { preferences: p, set } = usePreferences();
+  const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
+  useScrollToHash(me !== undefined && quizzes !== undefined);
+
+  return (
+    <div className="max-w-3xl w-full mx-auto pb-16 font-sans">
+      <div className="ws-page-header"><div><h1 className="ws-page-title">{t.title}</h1><p className="ws-row__help mt-2">{t.preferencesHelp}</p></div></div>
+
+      <Section id="account" icon={CircleUser} title={t.account} description={t.accountAbout}>
+        <Row id="settings-account" label={user?.fullName || me?.name || t.yourAccount} help={user?.primaryEmailAddress?.emailAddress ?? me?.email}>
+          <button type="button" className="ws-btn ws-btn--sm" onClick={() => clerk.openUserProfile()}>{t.manage}</button>
+        </Row>
+        {me && <UsernameRow current={me.username} t={t} />}
+        <Row id="settings-password" label={t.security} help={t.securityHelp}>
+          <button type="button" className="ws-btn ws-btn--sm" onClick={() => clerk.openUserProfile()} aria-label={t.security}>{t.open} <ChevronRight size={14} className="rtl:-scale-x-100" /></button>
+        </Row>
+      </Section>
+
+      <Section id="appearance" icon={SunMoon} title={t.appearanceSection} description={t.appearanceAbout}>
+        <Row id="settings-appearance" label={t.appearance} help={t.appearanceHelp} isDefault={mode === "system"}>
+          <ThemeModeSwitch showLabels />
+        </Row>
+        <Row id="settings-glass" label={t.glass} help={t.glassHelp} isDefault={p.popupOpacity === defaultPreferences.popupOpacity}>
+          <div className="ws-slider">
+            <input type="range" aria-label={t.glassLabel} min={popupOpacityRange.min} max={popupOpacityRange.max} step={5} value={p.popupOpacity}
+              aria-valuetext={t.opaque(p.popupOpacity)} onChange={(e) => set("popupOpacity", Number(e.target.value))} />
+            <output>{p.popupOpacity}%</output>
+            {p.popupOpacity !== defaultPreferences.popupOpacity && <button type="button" className="ws-btn ws-btn--sm" onClick={() => set("popupOpacity", defaultPreferences.popupOpacity)}>{t.reset}</button>}
+          </div>
+        </Row>
+        <Row id="settings-reduce-motion" label={t.motion} help={t.motionHelp} isDefault={!p.reduceMotion}>
+          <WsSwitch label={t.motion} hideLabel checked={p.reduceMotion} onChange={(v) => set("reduceMotion", v)} />
+        </Row>
+      </Section>
+
+      <Section id="new-forms" icon={Palette} title={t.newForms} description={t.newFormsAbout}>
+        <Row id="settings-new-theme" label={t.theme} help={labels.themeName(p.newFormPreset)} isDefault={p.newFormPreset === "google-forms"} stack>
+          <ThemePicker label={t.themeLabel} value={p.newFormPreset} onChange={(id) => set("newFormPreset", id)} />
+          {p.newFormPreset !== defaultPreferences.newFormPreset && <button type="button" className="ws-btn ws-btn--sm mt-3" onClick={() => set("newFormPreset", defaultPreferences.newFormPreset)}>{t.resetTheme}</button>}
+        </Row>
+        <Row id="settings-new-layout" label={t.layout} help={t.layoutHelp} isDefault={p.newFormMode === "page"}>
+          <Segmented<Presentation> label={t.layoutLabel} value={p.newFormMode} onChange={(v) => set("newFormMode", v)}
+            options={(Object.keys(presentationLabels) as Presentation[]).map((id) => ({ id, label: labels.presentation(id) }))} />
+        </Row>
+        <Row id="settings-new-language" label={t.language} isDefault={p.newFormLanguage === "en"}>
+          <Segmented<Language> label={t.languageLabel} value={p.newFormLanguage} onChange={(v) => set("newFormLanguage", v)} options={[{ id: "en", label: "English" }, { id: "ar", label: "العربية" }]} />
+        </Row>
+        <Row id="settings-new-sounds" label={t.sounds} help={t.soundsHelp} isDefault={!p.newFormSound}>
+          <WsSwitch label={t.soundsLabel} hideLabel checked={p.newFormSound} onChange={(v) => set("newFormSound", v)} />
+        </Row>
+      </Section>
+
+      <Section id="library" icon={Library} title={t.library} description={t.libraryAbout}>
+        <Row id="settings-library-view" label={t.view} isDefault={p.libraryView === "gallery"}>
+          <Segmented label={t.viewLabel} value={p.libraryView} onChange={(v) => set("libraryView", v)} options={[{ id: "gallery", label: t.gallery }, { id: "list", label: t.list }]} />
+        </Row>
+        <Row id="settings-library-sort" label={t.sortBy} help={t.sortHelp} isDefault={p.librarySort === "edited"}>
+          <Segmented label={t.sortLabel} value={p.librarySort} onChange={(v) => set("librarySort", v)}
+            options={(Object.keys(t.sortNames) as Preferences["librarySort"][]).map((id) => ({ id, label: t.sortNames[id] }))} />
+        </Row>
+        <Row id="settings-archive" label={t.archive} help={t.archiveHelp}>
+          <Link href="/dashboard/archive" className="ws-btn ws-btn--sm">{t.open} <ChevronRight size={14} className="rtl:-scale-x-100" /></Link>
+        </Row>
+        <Row id="settings-connections" label={t.connections} help={t.connectionsHelp}>
+          <Link href="/dashboard/connections" className="ws-btn ws-btn--sm">{t.open} <ChevronRight size={14} className="rtl:-scale-x-100" /></Link>
+        </Row>
+      </Section>
+
+      <Section id="shortcuts" icon={Keyboard} title={t.shortcuts} description={mac ? t.shortcutsMac : t.shortcutsAbout}>
+        <div id="settings-shortcuts">
+          {t.shortcutRows.map(([label, keys]) => (
+            <Row key={keys} label={label}><kbd className="ws-kbd-lg" dir="ltr">{mac ? keys.replace("Ctrl", "⌘") : keys}</kbd></Row>
+          ))}
+        </div>
+      </Section>
+
+      {(quizzes?.length ?? 0) > 0 && (
+        <Section id="old-quiz" icon={Timer} title={t.oldQuiz} description={t.oldQuizAbout}>
+          <div id="settings-quiz-timers"><QuizDefaults t={t} /></div>
+        </Section>
+      )}
+
+      <Section id="help" icon={LifeBuoy} title={t.help} description={t.helpAbout}>
+        <Row id="settings-docs" label={t.docs} help={t.docsHelp}><Link href="/docs" className="ws-btn ws-btn--sm">{t.open} <ChevronRight size={14} className="rtl:-scale-x-100" /></Link></Row>
+        <Row id="settings-help" label={t.feedback}><a href={`mailto:${supportEmail}`} className="ws-btn ws-btn--sm">{t.email}</a></Row>
+        <Row id="settings-privacy" label={t.privacy}><Link href="/privacy" className="ws-btn ws-btn--sm ws-btn--ghost">{t.read}</Link></Row>
+        <Row id="settings-terms" label={t.terms}><Link href="/terms" className="ws-btn ws-btn--sm ws-btn--ghost">{t.read}</Link></Row>
+        <Row id="settings-sign-out" label={t.signOut} help={t.signOutHelp}>
+          <button type="button" className="ws-btn ws-btn--sm ws-btn--danger" onClick={() => void clerk.signOut({ redirectUrl: "/" })}>{t.signOut}</button>
+        </Row>
+      </Section>
+    </div>
+  );
+}
