@@ -1,7 +1,20 @@
 import { ConvexError } from "convex/values";
-import { LEARN_LIMITS, type LessonDocument } from "./learnModel";
+import { LEARN_LIMITS, type LessonDocument, type lessonMeta } from "./learnModel";
+import type { Infer } from "convex/values";
 
 export interface LessonProblem { path: string; code: string; message: string }
+export function safeLessonLink(value: string): boolean {
+  if (!value || value.length > 2048 || /[\s\u0000-\u001f\u007f\\]/.test(value)) return false;
+  try { const url = new URL(value); return ["https:", "http:", "mailto:"].includes(url.protocol) && !url.username && !url.password && (url.protocol === "mailto:" ? !!url.pathname : !!url.hostname); } catch { return false; }
+}
+const safeColor = (value: string) => /^(default|red|orange|yellow|green|blue|purple|pink|brown|gray|grey|black|white|#[0-9a-fA-F]{3,8})$/.test(value);
+/** Parent lifecycle service can append these to its existing metadata checks. */
+export function validateMetadataPresentation(metadata: Infer<typeof lessonMeta>): LessonProblem[] {
+  const problems: LessonProblem[] = [];
+  if (metadata.coverUrl !== undefined && metadata.coverUrl !== "" && (!safeLessonLink(metadata.coverUrl) || !/^https?:/.test(metadata.coverUrl))) problems.push({ path: "metadata.coverUrl", code: "LINK", message: "Use an absolute HTTP or HTTPS cover URL without credentials." });
+  if (metadata.authorDisplay !== undefined && (metadata.authorDisplay.length > 200 || /[\u0000-\u001f\u007f]/.test(metadata.authorDisplay))) problems.push({ path: "metadata.authorDisplay", code: "LIMIT", message: "Use an author display name of at most 200 characters without control characters." });
+  return problems;
+}
 export function validateDocument(document: LessonDocument): LessonProblem[] {
   const errors: LessonProblem[] = [];
   const problem = (path: string, code: string, message: string) => errors.push({ path, code, message });
@@ -22,6 +35,23 @@ export function validateDocument(document: LessonDocument): LessonProblem[] {
       parent = parents.get(parent);
     }
     if ("text" in block && block.text.length > LEARN_LIMITS.text) problem(`${path}.text`, "LIMIT", "Split oversized text into smaller blocks.");
+    if ("inline" in block && block.inline) {
+      if (block.inline.length > 1000 || block.inline.map(r => r.text).join("") !== block.text) problem(`${path}.inline`, "INLINE", "Use at most 1000 runs whose text matches the text fallback.");
+      for (const run of block.inline) {
+        if (run.href !== undefined && !safeLessonLink(run.href)) problem(`${path}.inline`, "LINK", "Use an absolute HTTP, HTTPS or mailto link without credentials or control characters.");
+        for (const color of [run.marks?.textColor, run.marks?.backgroundColor]) if (color !== undefined && !safeColor(color)) problem(`${path}.inline`, "COLOR", "Use a named editor color or hex color.");
+      }
+    }
+    for (const color of [block.presentation?.textColor, block.presentation?.backgroundColor]) if (color !== undefined && !safeColor(color)) problem(`${path}.presentation`, "COLOR", "Use a named editor color or hex color.");
+    if (block.type === "code" && (block.language.length > 100 || !/^[A-Za-z0-9_+.#-]*$/.test(block.language))) problem(path, "LANGUAGE", "Use a short language identifier.");
+    if (block.type === "image") {
+      if ((block.name?.length ?? 0) > 2000 || (block.previewWidth !== undefined && (!Number.isFinite(block.previewWidth) || block.previewWidth <= 0 || block.previewWidth > 10000))) problem(path, "IMAGE", "Use a short image name and a preview width from 1 to 10000.");
+      if ((block.credit?.length ?? 0) > 2000 || (block.creditUrl !== undefined && block.creditUrl !== "" && !safeLessonLink(block.creditUrl))) problem(path, "CREDIT", "Use a short credit and a safe absolute link.");
+      if (block.annotations) {
+        const items = block.annotations.items;
+        if (items.length > 100 || new Set(items.map(a => a.id)).size !== items.length || items.some(a => !/^[A-Za-z0-9_-]{1,100}$/.test(a.id) || !a.label.trim() || a.label.length > 500 || (a.body?.length ?? 0) > 2000 || [a.x, a.y, a.w ?? 0, a.h ?? 0].some(n => !Number.isFinite(n) || n < 0 || n > 1) || a.x + (a.w ?? 0) > 1 || a.y + (a.h ?? 0) > 1)) problem(path, "ANNOTATIONS", "Use at most 100 uniquely identified hotspots within 0–1 image coordinates.");
+      }
+    }
     if (block.citations.length > 20 || block.conceptIds.length > 20) problem(path, "LIMIT", "At most 20 citations and concepts per block.");
     if (new Set(block.conceptIds).size !== block.conceptIds.length || block.conceptIds.some(id => !id || id.length > 200)) problem(`${path}.conceptIds`, "CONCEPT", "Use distinct stable concept IDs.");
     for (const [j, c] of block.citations.entries()) {

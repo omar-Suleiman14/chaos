@@ -1,11 +1,13 @@
+import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 import { v, ConvexError } from "convex/values";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
 import type { Id, Doc } from "./_generated/dataModel";
 import schema from "./schema";
 import { requireActiveUser, creatorRestricted } from "./authz";
-import { lessonBlock, lessonDocument, lessonMeta, visibility, LEARN_LIMITS } from "./learnModel";
-import { assertDocument, validateDocument, type LessonProblem } from "./learnValidation";
+import { lessonBlock, lessonDocument, lessonMeta, visibility, LEARN_LIMITS, LEARN_WRITE_LIMITS } from "./learnModel";
+import { consumeRate } from "./serverUtils";
+import { assertDocument, validateDocument, validateMetadataPresentation, type LessonProblem } from "./learnValidation";
 
 export async function lessonAccess(ctx: QueryCtx | MutationCtx, id: Id<"lessons">, edit = false) {
   const identity = await ctx.auth.getUserIdentity();
@@ -26,6 +28,8 @@ function revisionCheck(lesson: Doc<"lessons">, expected: number) {
   if (!Number.isSafeInteger(expected) || expected !== lesson.revision) throw new ConvexError({ code: "REVISION_CONFLICT", expectedRevision: expected, currentRevision: lesson.revision, draft: lesson.draft, metadata: lesson.metadata });
 }
 function metadataCheck(metadata: Doc<"lessons">["metadata"]) {
+  const presentationProblems = validateMetadataPresentation(metadata);
+  if (presentationProblems.length) throw new ConvexError({ code: "VALIDATION", problems: presentationProblems.map(problem => ({ ...problem })) });
   if (!metadata.title.trim() || metadata.title.length > LEARN_LIMITS.title || metadata.description.length > 4000 || metadata.language.length > 35 || metadata.tags.length > LEARN_LIMITS.tags || metadata.tags.some(t => !t.trim() || t.length > 80) || (metadata.license?.length ?? 0) > 300) throw new Error("Invalid lesson metadata: title, description, language, tags or license exceeds limits");
 }
 async function recovery(ctx: MutationCtx, lesson: Doc<"lessons">) {
@@ -41,6 +45,7 @@ export async function createLessonForActor(ctx: MutationCtx, actor: string, args
   metadataCheck(args.metadata);
   const draft = args.document ?? { schemaVersion: 1 as const, blocks: [] };
   assertDocument(draft);
+  await consumeRate(ctx, `learn:create:${actor}`, LEARN_WRITE_LIMITS.creationsPerHour, 3_600_000);
   const now = Date.now();
   return ctx.db.insert("lessons", { ownerId: actor, metadata: args.metadata, draft, revision: 0, status: "active", visibility: "private", communityState: "ok", createdAt: now, updatedAt: now, searchText: "" });
 }
@@ -53,8 +58,10 @@ export async function saveLessonDraftForActor(ctx: MutationCtx, actor: string, a
   const lesson = await lessonAccessForActor(ctx, actor, args.lessonId, true);
   revisionCheck(lesson, args.expectedRevision); assertDocument(args.document);
   if (args.metadata) metadataCheck(args.metadata);
+  await consumeRate(ctx, `learn:write:${actor}`, LEARN_WRITE_LIMITS.draftWritesPerMinute, 60_000);
   await recovery(ctx, lesson);
   await ctx.db.patch("lessons", lesson._id, { draft: args.document, metadata: args.metadata ?? lesson.metadata, revision: lesson.revision + 1, updatedAt: Date.now() });
+  await enqueueLearnWebhookEvent(ctx, { event: "lesson.updated", lessonId: lesson._id, operationId: `revision:${lesson.revision + 1}`, revision: lesson.revision + 1 });
   return lesson.revision + 1;
 }
 
@@ -127,11 +134,13 @@ export async function publishLessonForActor(ctx: MutationCtx, actor: string, arg
   if (lesson.communityState !== "ok" || lesson.status !== "active") throw new Error("Resolve moderation or archive state before publishing");
   const problems = await publicationProblems(ctx, lesson);
   if (problems.length) return { ok: false as const, problems };
+  await consumeRate(ctx, `learn:publish:${actor}`, LEARN_WRITE_LIMITS.publicationsPerHour, 3_600_000);
   const last = await ctx.db.query("lessonVersions").withIndex("by_lessonId_and_number", q => q.eq("lessonId", lesson._id)).order("desc").first();
   const curriculumMappings = (await ctx.db.query("lessonCurriculumMappings").withIndex("by_lessonId_and_nodeId", q => q.eq("lessonId", lesson._id)).take(100)).map(({ versionId, nodeId, conceptKeys, blockIds }) => ({ versionId, nodeId, conceptKeys, blockIds }));
   const versionId = await ctx.db.insert("lessonVersions", { visibility: args.visibility, curriculumMappings, lessonId: lesson._id, number: (last?.number ?? 0) + 1, metadata: lesson.metadata, document: lesson.draft, authorId: actor, publishedAt: Date.now() });
   const searchText = [lesson.metadata.title, lesson.metadata.description, ...lesson.metadata.tags, ...lesson.draft.blocks.map(b => "text" in b ? b.text : "")].join("\n");
   await ctx.db.patch("lessons", lesson._id, { publishedVersionId: versionId, visibility: args.visibility, searchText, revision: lesson.revision + 1, updatedAt: Date.now() });
+  await enqueueLearnWebhookEvent(ctx, { event: "lesson.published", lessonId: lesson._id, versionId, operationId: `version:${versionId}`, revision: lesson.revision + 1 });
   return { ok: true as const, versionId, revision: lesson.revision + 1 };
 }
 
@@ -185,7 +194,10 @@ export async function forkLessonForActor(ctx: MutationCtx, actor: string, args: 
   const version = await ctx.db.get("lessonVersions", args.versionId);
   if (!version || version.lessonId !== parent._id || (actor !== parent.ownerId && version._id !== parent.publishedVersionId)) throw new Error("Version not accessible");
   // Content is copied by value; source IDs remain citations with independent access.
-  return ctx.db.insert("lessons", { ownerId: actor, metadata: version.metadata, draft: version.document, revision: 0, status: "active", visibility: "private", communityState: "ok", parentLessonId: parent._id, parentVersionId: version._id, originLessonId: parent.originLessonId ?? parent._id, createdAt: Date.now(), updatedAt: Date.now(), searchText: "" });
+  await consumeRate(ctx, `learn:create:${actor}`, LEARN_WRITE_LIMITS.creationsPerHour, 3_600_000);
+  const lessonId = await ctx.db.insert("lessons", { ownerId: actor, metadata: version.metadata, draft: version.document, revision: 0, status: "active", visibility: "private", communityState: "ok", parentLessonId: parent._id, parentVersionId: version._id, originLessonId: parent.originLessonId ?? parent._id, createdAt: Date.now(), updatedAt: Date.now(), searchText: "" });
+  await enqueueLearnWebhookEvent(ctx, { event: "lesson.forked", lessonId, operationId: "fork:0", revision: 0 });
+  return lessonId;
 }
 
 

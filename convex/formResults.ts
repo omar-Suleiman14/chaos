@@ -453,7 +453,27 @@ export const getAnalysis = query({
   handler: async (ctx, args) => {
     const access = await getFormIfRole(ctx, args.formId, "viewer");
     if (!access) return null;
-    const { form } = access;
+    return getAnalysisForActor(ctx, access.form);
+  },
+});
+
+// ── Export ──────────────────────────────────────────────────────────────────
+
+/**
+ * One page of responses for CSV/XLSX/JSON export. The client requests pages
+ * until `isDone`, so exports of any size stay within query limits.
+ */
+export const exportResponses = query({
+  args: { formId: v.id("forms"), includePartial: v.boolean(), includeSpam: v.boolean(), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, args) => {
+    const access = await getFormIfRole(ctx, args.formId, "viewer");
+    if (!access) return null;
+    return exportResponsesForActor(ctx, access, args);
+  },
+});
+
+
+export async function getAnalysisForActor(ctx: QueryCtx, form: Doc<"forms">) {
     const def = await reportingDefinition(ctx, form);
     const aggRow = await ctx.db.query("formAggregates").withIndex("by_formId", (q) => q.eq("formId", form._id)).unique();
     const agg = (aggRow?.counts ?? {}) as Aggregates;
@@ -602,20 +622,10 @@ export const getAnalysis = query({
       languages,
       definition: def,
     };
-  },
-});
+}
 
-// ── Export ──────────────────────────────────────────────────────────────────
 
-/**
- * One page of responses for CSV/XLSX/JSON export. The client requests pages
- * until `isDone`, so exports of any size stay within query limits.
- */
-export const exportResponses = query({
-  args: { formId: v.id("forms"), includePartial: v.boolean(), includeSpam: v.boolean(), paginationOpts: paginationOptsValidator },
-  handler: async (ctx, args) => {
-    const access = await getFormIfRole(ctx, args.formId, "viewer");
-    if (!access) return null;
+export async function exportResponsesForActor(ctx: QueryCtx, access: { form: Doc<"forms"> }, args: { formId: Id<"forms">; includePartial: boolean; includeSpam: boolean; paginationOpts: import("convex/server").PaginationOptions }) {
     const def = await reportingDefinition(ctx, access.form);
     const result = await ctx.db
       .query("formResponses")
@@ -681,5 +691,4 @@ export const exportResponses = query({
     // Hidden fields get their own columns after the questions; the current list first, then any a page's rows still carry.
     const hiddenColumns = [...new Set([...(access.form.settings.hiddenFields ?? []), ...rows.flatMap((r) => Object.keys(r.hidden))])];
     return { title: access.form.title, columns, hiddenColumns, rows, isDone: result.isDone, continueCursor: result.continueCursor };
-  },
-});
+}

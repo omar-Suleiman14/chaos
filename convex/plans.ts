@@ -1,6 +1,7 @@
 ﻿import type { MutationCtx } from "./_generated/server";
 import { supportEmail } from "./support";
 import { hasPro } from "./authz";
+import { planLimits } from "../lib/planCatalog";
 
 /** Count creations, not surviving records: deleting content does not refund quota. */
 export async function consumeCreation(ctx: MutationCtx, ownerId: string) {
@@ -16,9 +17,11 @@ export async function consumeCreation(ctx: MutationCtx, ownerId: string) {
     throw new Error(`ACCOUNT_RESTRICTED: Contact ${supportEmail()}.`);
   const now = Date.now();
   const month = new Date(now).toISOString().slice(0, 7);
+  const tier = hasPro(user, now) ? "pro" : "free";
+  const limit = planLimits[tier].creationsPerMonth;
   let count = user.creationMonth === month ? (user.monthlyCreations ?? 0) : 0;
   if (user.creationMonth !== month) {
-    // Bootstrap pre-existing records once; six rows are enough to prove the cap.
+    // Bootstrap once, bounded to enough records to prove the active tier's cap.
     const start = Date.parse(`${month}-01T00:00:00Z`);
     const [forms, quizzes] = await Promise.all([
       ctx.db
@@ -26,19 +29,19 @@ export async function consumeCreation(ctx: MutationCtx, ownerId: string) {
         .withIndex("by_ownerId_and_createdAt", (q) =>
           q.eq("ownerId", ownerId).gte("createdAt", start),
         )
-        .take(6),
+        .take(limit + 1),
       ctx.db
         .query("quizzes")
         .withIndex("by_creator_createdAt", (q) =>
           q.eq("creatorId", ownerId).gte("createdAt", start),
         )
-        .take(6),
+        .take(limit + 1),
     ]);
     count = forms.length + quizzes.length;
   }
-  if (!hasPro(user, now) && count >= 5)
+  if (count >= limit)
     throw new Error(
-      `MONTHLY_CREATION_LIMIT: Free includes 5 forms or quizzes per calendar month (UTC). Contact ${supportEmail()} for Pro.`,
+      `MONTHLY_CREATION_LIMIT: ${tier === "pro" ? "Pro" : "Free"} includes ${limit} forms or quizzes per calendar month (UTC). Contact ${supportEmail()} for help.`,
     );
   await ctx.db.patch("users", user._id, {
     creationMonth: month,

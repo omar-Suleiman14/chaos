@@ -1086,11 +1086,11 @@ export const sectionsEn: DocSection[] = [
         title: "Plans",
         summary: "What is free, and what Pro adds.",
         blocks: [
-          { type: "p", text: "Chaos is free for now. Pro costs 20 EGP a month. See [Pricing](/pricing) for the current details." },
+          { type: "p", text: "Free is for personal use with limits. Pro / Business is proposed at 20 EGP per active creator seat per month; respondents do not need paid seats. Checkout is not live and nobody is automatically charged. Both plans allow up to 10 MiB per form upload and 25 MiB per teaching source file; these are not total storage allowances. See [Pricing](/pricing)." },
           { type: "heading", id: "free", text: "Free" },
           { type: "p", text: "Build, publish and collect responses. The Free plan includes 5 new forms or quizzes each calendar month." },
           { type: "heading", id: "pro", text: "Pro" },
-          { type: "list", items: ["The Chaos app in ChatGPT.", "No monthly limit on new forms and quizzes."] },
+          { type: "list", items: ["The Chaos app in ChatGPT.", "Pro allowances: 100 new forms or quizzes per UTC calendar month, 10,000 responses per form and 500 Live players. Rate and platform limits still apply."] },
           { type: "p", text: "New accounts start with a 30-day Pro trial." },
           { type: "tip", text: "Questions about a plan? Use the Contact link at the bottom of any page." },
         ],

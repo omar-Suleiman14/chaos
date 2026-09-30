@@ -3,9 +3,10 @@ import { paginationOptsValidator, paginationResultValidator } from "convex/serve
 import { query } from "./_generated/server";
 import { creatorRestricted } from "./authz";
 import { lessonMeta } from "./learnModel";
-const searchHit = v.object({ lessonId: v.id("lessons"), versionId: v.id("lessonVersions"), metadata: lessonMeta, matchingBlocks: v.array(v.object({ id: v.string(), text: v.string() })) });
+export const searchHit = v.object({ lessonId: v.id("lessons"), versionId: v.id("lessonVersions"), metadata: lessonMeta, matchingBlocks: v.array(v.object({ id: v.string(), text: v.string() })) });
 export const searchPublic = query({ args: { text: v.string(), paginationOpts: paginationOptsValidator }, returns: paginationResultValidator(searchHit), handler: async (ctx, args) => {
-  const text = args.text.trim(); if (!text || text.length > 200) throw new Error("Search text must contain 1–200 characters");
+  if (!Number.isSafeInteger(args.paginationOpts.numItems) || args.paginationOpts.numItems < 1 || args.paginationOpts.numItems > 100) throw new Error("Search page size must be 1â€“100");
+  const text = args.text.trim(); if (!text || text.length > 200) throw new Error("Search text must contain 1ï¿½200 characters");
   const result = await ctx.db.query("lessons").withSearchIndex("search_text", q => q.search("searchText", text).eq("visibility", "public").eq("communityState", "ok").eq("status", "active")).paginate(args.paginationOpts);
   const page = [];
   for (const lesson of result.page) {

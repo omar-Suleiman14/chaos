@@ -233,3 +233,42 @@ describe("Learn roadmap tools", () => {
     expect(outline.outline.map((b: { id: string }) => b.id)).toEqual(["a"]); expect(outline.document).toBeNull();
   });
 });
+
+it("inspects immutable history with bounded reads and hides historical private material", async () => {
+  const { t, lessonId } = await setup();
+  const first = await t.mutation(publish, { userId, lessonId, expectedRevision: 0, visibility: "private" });
+  await t.mutation(save, { userId, lessonId, expectedRevision: 1, document: { schemaVersion: 1, blocks: [block("a", "Public")] } });
+  await t.mutation(publish, { userId, lessonId, expectedRevision: 2, visibility: "public" });
+  const versions = makeFunctionReference<"query">("mcpLearn:listLessonVersions");
+  const version = makeFunctionReference<"query">("mcpLearn:getLessonVersion");
+  const history = await t.query(versions, { userId, lessonId, limit: 1 });
+  expect(history.versions).toHaveLength(1);
+  expect(history.nextBeforeNumber).toBe(2);
+  expect((await t.query(version, { userId, lessonId, versionId: first.versionId, limit: 1 })).nextOffset).toBe(1);
+  await expect(t.query(version, { userId: otherId, lessonId, versionId: first.versionId })).rejects.toThrow("Version not accessible");
+  await expect(t.query(versions, { userId: otherId, lessonId })).rejects.toThrow("unauthorized");
+  expect(await t.query(makeFunctionReference<"query">("mcpLearn:getCapabilities"), { userId })).toMatchObject({ schemaVersion: 1, limits: { folderDepth: 8, fileBytes: 26214400 } });
+});
+
+it("links quizzes idempotently and reuses normal Live eligibility", async () => {
+  const { t, lessonId } = await setup();
+  const formId = await t.run(async ctx => {
+    const definition = { ...emptyDefinition("Assessment"), quiz: { enabled: true } };
+    const id = await ctx.db.insert("forms", { ownerId: userId, title: "Assessment", shareId: "linked", status: "live", draft: definition, draftRevision: 0, settings: defaultFormSettings, publishedVersion: 1, responseCount: 0, partialCount: 0, createdAt: 0, updatedAt: 0 });
+    await ctx.db.insert("formVersions", { formId: id, version: 1, definition, publishedAt: 0, publishedBy: userId, draftRevision: 0 });
+    return id;
+  });
+  const asset = { kind: "form", id: formId };
+  const attach = makeFunctionReference<"mutation">("mcpAssessments:attach"), live = makeFunctionReference<"mutation">("mcpAssessments:createLive");
+  await expect(t.mutation(live, { userId, lessonId, asset })).rejects.toThrow("Linked assessment not found");
+  await expect(t.mutation(attach, { userId: otherId, lessonId, asset, label: "Quiz", order: 0 })).rejects.toThrow("unauthorized");
+  const link = await t.mutation(attach, { userId, lessonId, asset, label: "Quiz", order: 0 });
+  expect(await t.mutation(attach, { userId, lessonId, asset, label: "Quiz renamed", order: 1 })).toEqual(link);
+  await expect(t.mutation(live, { userId, lessonId, asset })).rejects.toThrow("LIVE_NO_QUESTIONS");
+  await t.run(async ctx => {
+    const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", formId).eq("version", 1)).unique();
+    await ctx.db.patch("formVersions", version!._id, { definition: { ...version!.definition, fields: [{ id: "q", type: "choice", label: "Choose", required: true, options: [{ id: "a", label: "A" }, { id: "b", label: "B" }], quiz: { correctOptionIds: ["a"], points: 1 } }] } });
+  });
+  const room = await t.mutation(live, { userId, lessonId, asset });
+  expect(await t.run(ctx => ctx.db.get("liveGames", room.gameId))).toMatchObject({ formId, state: "lobby" });
+});

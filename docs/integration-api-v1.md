@@ -106,7 +106,8 @@ text or any respondent data; managing collaborators; theme, image and file
 assets; authoring branching logic, translations, endings or calculations
 (PATCH preserves them); rich text and math (plain text only); file-upload
 questions; bulk endpoints; OAuth or any sign-in other than connection tokens;
-AI generation of any kind.
+AI generation of any kind. Lessons, collections and curricula are not in v1
+yet; see [Learn (proposed, pending backend)](#learn-proposed-pending-backend).
 
 | Status | Code | Meaning |
 | --- | --- | --- |
@@ -528,3 +529,152 @@ now**: it is never returned again. Replaying the same key and body returns
 - Webhooks are a hint to refresh, not a replacement for reading: on an event,
   fetch the item or summary again. Keep polling on open so a missed or late
   delivery never leaves stale data.
+
+## Learn (proposed, pending backend)
+
+> **Status: proposed. Not implemented.** Nothing in this section is live. Today
+> new paths such as `/folders` return `404 NOT_FOUND` ("Unknown endpoint"),
+> `kind: "lesson"` and `?kind=lesson` return `400 VALIDATION_FAILED`,
+> `lesson_…` ids return `404 NOT_FOUND`, the
+> `supportedKinds` in `GET /capabilities` stay `["form", "quiz"]`, and
+> connections cannot store lesson or collection grants. The Connections screen
+> already lets the owner pick lessons, collections and curricula, but marks
+> those picks "Not saved yet" and shares nothing. This section is the draft
+> contract for review; field names may change before it ships. The end-to-end
+> user flow is in [learn-integration.md](learn-integration.md).
+
+The same principles apply as for forms and quizzes: the owner selects what a
+connection can reach, everything a connection writes arrives as a **draft**,
+nothing is published through the API, and private material (personal notes,
+highlights, other people's progress, respondent data) is never returned.
+
+### Proposed references and grants
+
+| Reference | Meaning |
+| --- | --- |
+| `lesson_<id>` | One lesson. Only its draft and published details, blocks and attached quizzes are reachable. |
+| `folder_<id>` | A folder or collection. Granting it grants its lessons; new lessons added later are included. |
+| Curriculum module | Not a grant of its own. Picking a module in Chaos selects the lessons mapped to it, stored as `lesson_<id>` grants. |
+
+`integrationTokens.itemRefs` would accept these references next to `form_…`
+and `quiz_…`. `access: "all"` would keep meaning forms and quizzes only until
+the owner opts in to "all lessons" separately, so existing connections do not
+gain access to Learn when it ships.
+
+### Proposed scopes
+
+Existing scopes extend to lessons; one new scope is added.
+
+| Scope | For lessons and collections |
+| --- | --- |
+| `items:read` | `GET /items?kind=lesson`, `GET /items/lesson_…`, `GET /folders`, `GET /curriculum/modules/{id}` |
+| `drafts:create` | `POST /drafts` with `kind: "lesson"`, `POST /folders` (creates a private folder) |
+| `drafts:update` | `PATCH /items/lesson_…` replaces the lesson **draft** only |
+| `definitions:read` | `GET /items/lesson_…/definition` returns the draft blocks for reuse |
+| `progress:read` (new) | `GET /items/lesson_…/progress`: the owner's own study progress and quiz scores on that lesson |
+
+A token without `drafts:update` can never change a lesson. No scope allows
+publishing, changing visibility, deleting, or reading personal notes and
+highlights.
+
+### Proposed lesson resource
+
+```json
+{
+  "id": "lesson_…",
+  "kind": "lesson",
+  "title": "Portal Hypertension",
+  "status": "draft" | "published" | "archived",
+  "hasUnpublishedChanges": true,
+  "revision": "string",
+  "updatedAt": 1790000000000,
+  "folderId": "folder_…" | null,
+  "curricula": [{ "moduleId": "string", "path": ["University", "Program", "GIT-401"], "versionLabel": "2025" }],
+  "quizzes": [{ "id": "form_…", "label": "Quick review" }],
+  "editUrl": "https://chaos.example/…" | null,
+  "readUrl": "https://chaos.example/…" | null,
+  "createdByThisConnection": true,
+  "source": Source | null
+}
+```
+
+Blocks are plain text with a stable id, so updates can be previewed block by
+block:
+
+```json
+{ "id": "b_1", "type": "heading" | "paragraph" | "bullet" | "numbered" | "quote" | "code", "text": "string", "level": 1 }
+```
+
+### Example: create a lesson draft from notes
+
+```http
+POST /api/integrations/v1/drafts
+Authorization: Bearer chaos_…
+Idempotency-Key: 6f0c…
+Content-Type: application/json
+
+{
+  "kind": "lesson",
+  "title": "Portal Hypertension",
+  "description": "GIT block, week 4",
+  "blocks": [
+    { "id": "b_1", "type": "heading", "text": "Causes", "level": 2 },
+    { "id": "b_2", "type": "bullet", "text": "Pre-hepatic: portal vein thrombosis" }
+  ],
+  "folderId": "folder_…",
+  "source": { "type": "page", "id": "pg_8f2c1a", "title": "GIT Notes", "url": "https://max.example/p/pg_8f2c1a" }
+}
+```
+
+Proposed response: `201 { "item": Lesson, "warnings": string[] }`. The lesson
+is a private draft. `source` is shown to the owner as "Created from Max page:
+GIT Notes" with an "Open in Max" link (the app name comes from the connection
+label), and returned only to the connection that sent it.
+
+### Example: update a lesson draft
+
+```http
+PATCH /api/integrations/v1/items/lesson_…
+Idempotency-Key: 91ab…
+If-Match: r_17
+
+{ "title": "Portal Hypertension", "blocks": [ … ] }
+```
+
+The owner sees a change preview (details and block-level added / changed /
+removed) before the draft changes, unless they have turned on automatic updates
+for that lesson. If the lesson changed in Chaos since `r_17`, the response is
+`409 REVISION_CONFLICT` with the current item; Chaos shows the owner "Keep mine",
+"Load their version" or "Merge by hand". The published lesson never changes.
+
+### Example: list collections and curriculum
+
+```http
+GET /api/integrations/v1/folders
+GET /api/integrations/v1/items?kind=lesson&folderId=folder_…
+GET /api/integrations/v1/curriculum/modules/{moduleId}
+```
+
+`GET /folders` returns `{ "folders": [{ "id": "folder_…", "name": "string", "isCollection": true, "lessonCount": 12 }] }`
+for granted folders only. The curriculum endpoint returns the module path and
+the ids of granted lessons mapped to it, never lessons the connection cannot reach.
+
+### Example: study progress
+
+```http
+GET /api/integrations/v1/items/lesson_…/progress
+```
+
+```json
+{ "state": "in_progress", "percent": 60, "updatedAt": 1790000000000, "quizzes": [{ "id": "form_…", "bestScore": 8, "maxScore": 10, "attempts": 2 }] }
+```
+
+Only the token owner's own progress. Other readers' progress and quiz answers
+are never returned.
+
+### Proposed activity and errors
+
+Activity lines shown to the owner: `lesson.draft_created`,
+`lesson.draft_updated`, `folder.created`, plus the existing read actions.
+Errors reuse the table above; `NOT_A_DRAFT` does not apply because lesson
+updates always target the draft.

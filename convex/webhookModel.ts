@@ -5,13 +5,16 @@ import { v } from "convex/values";
 export const WEBHOOK_SCHEMA_VERSION = "1";
 
 /** Events a subscription can choose. `webhook.test` is sent only on request and cannot be subscribed to. */
-export const webhookEventTypes = ["response.completed", "response.graded", "form.published", "form.closed", "form.reopened"] as const;
+export const learnWebhookEventTypes = ["lesson.updated", "lesson.published", "lesson.forked", "lesson.archived", "lesson.unpublished", "collection.updated", "collection.published", "curriculum.mapping_changed"] as const;
+export type LearnWebhookEventType = (typeof learnWebhookEventTypes)[number];
+export const webhookEventTypes = ["response.completed", "response.graded", "form.published", "form.closed", "form.reopened", ...learnWebhookEventTypes] as const;
 export type WebhookEventType = (typeof webhookEventTypes)[number];
 export type WebhookSentEvent = WebhookEventType | "webhook.test";
 
 export const eventTypeValidator = v.union(
   v.literal("response.completed"), v.literal("response.graded"), v.literal("form.published"),
   v.literal("form.closed"), v.literal("form.reopened"),
+  ...learnWebhookEventTypes.map((event) => v.literal(event)),
 );
 export const sentEventValidator = v.union(eventTypeValidator, v.literal("webhook.test"));
 
@@ -123,6 +126,7 @@ export const webhookTables = {
     updatedAt: v.number(),
   })
     .index("by_subscriptionId_and_createdAt", ["subscriptionId", "createdAt"])
+    .index("by_subscriptionId_and_eventId", ["subscriptionId", "eventId"])
     .index("by_payloadExpiresAt", ["payloadExpiresAt"])
     .index("by_createdAt", ["createdAt"]),
 

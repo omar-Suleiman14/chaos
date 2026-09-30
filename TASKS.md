@@ -303,10 +303,20 @@ Completion checks: validated Chaos block schema; immutable publication and recov
 - [ ] Complete later/external roadmap phases; do not claim all 170 complete.
 - [ ] Push scoped backend/contracts snapshot to e2e before main; keep shared main checkout and Opus changes intact.
 
-- [x] Exact scoped e2e snapshot: typechecks, ESLint zero errors, unit 522 and integration 478 (one todo). Includes compatible respondent restriction handling.
+- [x] Scoped backend/contracts pushed to e2e; main remains unchanged remotely. Exact snapshot: typechecks, ESLint zero errors, 522 unit and 478 integration tests (one todo). Development backend superb-zebra-196 live probes: search 200, unauthenticated v2 401, source preflight 204. Production unchanged.
 
-- [x] Pushed e2e before main; development live probes confirm search 200, scoped API rejects unauthenticated calls (401), source OPTIONS 204. Windows CLI exit error followed successful deployment; direct probes confirmed availability.
+## Remaining 170-item implementation (2026-09-30 continuation)
+Outcome: satisfy individual completion checks, with provider-account setup/live provider verification skipped by user and tracked as GitHub issues after implementation. e2e delivery precedes main; preserve Opus UI.
+- [x] Added all170 status inventory in docs/learn-roadmap-status.md.
+- [x] Added immutable version inspection MCP, explicit source metadata selection/read API and discoverable limits; review scheduling based on server-graded evidence.
+- [x] Added quiz fork provenance/root lineage, MCP assessment linking/Live preparation, folder/curriculum/community API, Save MCP.
+- [ ] Integrate progress/context client routes, telemetry, Live teams, homework and advanced form MCP; test whole backend.
+- [ ] Complete remaining later/conditional/platform requirements without substituting source inspection for runtime/operational evidence.
+- [ ] Create GitHub issues for skipped provider-account work after implementation.
 
+- [x] Continuation whole-backend checks: app/backend typechecking, scoped lint, 528 integration tests passed (one TODO) before latest import/retention/analytics additions.
+- [x] Added source retention, advanced MCP analytics/export/collaboration, question imports, cross-tabs/funnels and migration safety; focused checks passed. Full final verification and development delivery remain pending.
+- [x] Real development Learn search baseline: 100/100 successful requests, concurrency 5, p95 201 ms. Representative capacity/load limits remain unverified.
 ## Opus Learn frontend (roadmap items 1–62, 99–100) (2026-10-01)
 Outcome: Learn as a second surface beside Create, fully usable through the `lib/learn/data.ts` hook boundary; Sol's backend replaces hook bodies, not screens. Contract and gaps: `docs/learn-frontend-contract.md`.
 - [x] Shell: Create | Learn switch in the sidebar, Learn nav (Home, Explore, My courses, Library, Saved, Flashcards), pinned folders, recent lessons, New → blank lesson, loading/error boundaries, palette search over lessons and folders.
@@ -319,3 +329,10 @@ Outcome: Learn as a second surface beside Create, fully usable through the `lib/
 - [ ] Not verified in a browser (no Clerk keys locally); signed-in journeys, mobile/RTL visuals and keyboard paths need the Vercel e2e environment.
 - [ ] Data is device-local until wired to Sol's functions. Blocking: rich text and block types missing from LessonDocument v1 (see contract doc). Gated until backend: shared publishing, device sync, tutor answers, quiz forks, weak areas, verification review.
 - [ ] Items 63–98 (forms, site, Connections) are in progress in the main working tree and not in this push.
+
+## Sol handoff and plan update (2026-10-01)
+- [x] Reader-safe quizzes/profiles/SEO, private annotations/module follows, rich stable blocks and image attribution/hotspots. UI hook wiring remains Opus work; unsupported conversions fail explicitly.
+- [x] Enforced shared Free 5 creations/1000 responses and Pro 100 creations/10000 responses; planned20EGP activecreatorseat pricing, no live checkout or inferred charges.
+- [x] Added preview crawler exclusion, fixed Learn webhook labels and recorded performance/security verification boundaries.
+- [x] Created provider follow-ups #1, #2, #3 per user instruction.
+- [ ] Final exact snapshot typecheck, tests, lint, development verification and e2e push.

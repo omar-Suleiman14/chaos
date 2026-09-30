@@ -39,7 +39,7 @@ describe("Learn integration v2", () => {
     expect(integrationScopes).toContain("lessons:update");
     expect(learnIntegrationScopes).not.toContain("lessons:publish");
     expect(await t.query(learnIntegrationApi.capabilities, { tokenId, now: Date.now() })).toMatchObject({ status: 200, body: { apiVersion: "2", supportedVersions: ["1", "2"], selection: "explicit" } });
-    expect(await t.query(learnIntegrationApi.capabilities, { tokenId, now: Date.now() })).toMatchObject({ body: { scopes: ["lessons:read"], availableScopes: ["lessons:read", "lessons:create", "lessons:update"] } });
+    expect(await t.query(learnIntegrationApi.capabilities, { tokenId, now: Date.now() })).toMatchObject({ body: { scopes: ["lessons:read"], availableScopes: ["lessons:read", "lessons:create", "lessons:update", "sources:read", "folders:read", "folders:update", "curricula:read", "curricula:map", "community:read", "community:save", "community:fork", "progress:read", "progress:write", "tutor:context"] } });
     expect(await t.query(internal.integrations.capabilities, { tokenId, now: Date.now() })).toMatchObject({ status: 200, body: { apiVersion: "1", supportedKinds: ["form", "quiz"] } });
     const router = httpRouter(); registerLearnIntegrationRoutes(router);
     expect(router.lookup("/api/integrations/v2/capabilities", "GET")).not.toBeNull();
@@ -231,4 +231,21 @@ describe("Learn integration v2", () => {
     expect((await send(" ".repeat(350_001), "large")).status).toBe(400);
     expect((await t.run(ctx => ctx.db.query("lessons").take(10)))).toHaveLength(1);
   });
+});
+
+it("allows explicit source metadata selection without granting bytes or crossing owners", async () => {
+  const { t, owner, other, tokenId } = await setup(["sources:read"]);
+  await other.mutation(api.quizFunctions.getOrCreateUser, {});
+  const sourceId = await owner.mutation(api.learnSources.create, { metadata: { title: "Reference", kind: "reference", origin: "Library" }, metadataVisibility: "private", contentVisibility: "private" });
+  const otherId = await other.mutation(api.learnSources.create, { metadata: { title: "Other", kind: "reference", origin: "Library" }, metadataVisibility: "public", contentVisibility: "public" });
+  const ref = `source_${sourceId}`;
+  expect((await t.query(learnIntegrationApi.getSource, { tokenId, now: Date.now(), ref })).status).toBe(404);
+  await expect(owner.mutation(api.learnIntegrations.setSourceSelection, { tokenId, sourceIds: [otherId] })).rejects.toThrow("NOT_FOUND");
+  await expect(other.mutation(api.learnIntegrations.setSourceSelection, { tokenId, sourceIds: [sourceId] })).rejects.toThrow("NOT_FOUND");
+  await owner.mutation(api.learnIntegrations.setSourceSelection, { tokenId, sourceIds: [sourceId, sourceId] });
+  const result = await t.query(learnIntegrationApi.getSource, { tokenId, now: Date.now(), ref });
+  expect(result).toMatchObject({ status: 200, body: { contentAccess: "not_granted", source: { sourceId, metadata: { title: "Reference" } } } });
+  expect(JSON.stringify(result)).not.toContain("storageId");
+  await owner.mutation(api.learnIntegrations.setSourceSelection, { tokenId, sourceIds: [] });
+  expect((await t.query(learnIntegrationApi.getSource, { tokenId, now: Date.now(), ref })).status).toBe(404);
 });

@@ -60,3 +60,27 @@ describe("Learn lesson lifecycle", () => {
     expect((await owner.query(api.lessons.getDraft, { lessonId })).publishedVersionId).toBeUndefined();
   });
 });
+
+it("enforces native publication limits without rewriting public history", async () => {
+  const { t, owner, lessonId } = await setup();
+  const { LEARN_WRITE_LIMITS } = await import("@/convex/learnModel");
+  await t.run(async ctx => { const now = Date.now(); await ctx.db.insert("rateWindows", { key: `learn:publish:${creatorIdentity.subject}`, windowStart: now - now % 3600000, count: LEARN_WRITE_LIMITS.publicationsPerHour }); });
+  await expect(owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 0, visibility: "public" })).rejects.toThrow("RATE_LIMITED");
+  expect((await owner.query(api.lessons.getDraft, { lessonId })).revision).toBe(0);
+  expect(await t.run(ctx => ctx.db.query("lessonVersions").withIndex("by_lessonId_and_number", q => q.eq("lessonId", lessonId)).take(1))).toHaveLength(0);
+});
+
+it("publishes 500 blocks and reads bounded pages without losing the immutable snapshot", async () => {
+  const { t, owner, lessonId } = await setup();
+  const document: LessonDocument = { schemaVersion: 1, blocks: Array.from({ length: 500 }, (_, i) => ({ id: `b${i}`, type: "paragraph", text: `Section ${i}: shared concept`, citations: [], conceptIds: [] })) };
+  await owner.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: 0, document });
+  expect(await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 1, visibility: "public" })).toMatchObject({ ok: true });
+  const { readLessonForActor } = await import("@/convex/lessons");
+  const bounded = await t.run(ctx => readLessonForActor(ctx, creatorIdentity.subject, { lessonId, view: "published", limit: 100 }));
+  expect(bounded.document?.blocks).toHaveLength(100);
+  expect(bounded.nextOffset).toBe(100);
+  const snapshot = await owner.query(api.lessons.getPublished, { lessonId });
+  expect(snapshot?.document.blocks).toHaveLength(500);
+  await owner.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: 2, document: { schemaVersion: 1, blocks: document.blocks.slice(0, 1) } });
+  expect((await owner.query(api.lessons.getPublished, { lessonId }))?.document.blocks).toHaveLength(500);
+});

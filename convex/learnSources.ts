@@ -1,3 +1,4 @@
+import { observeHttp } from "../lib/backendTelemetry";
 import { v, type Infer } from "convex/values";
 import { makeFunctionReference, type HttpRouter } from "convex/server";
 import {
@@ -370,7 +371,7 @@ const contentStorage = makeFunctionReference<
   Id<"_storage"> | null
 >("learnSources:readContentStorage");
 /** Mount GET at SOURCE_CONTENT_PATH. Never redirects to a bearer storage URL. */
-export const downloadContent = httpAction(async (ctx, request) => {
+export const downloadContent = httpAction(async (ctx, request) => observeHttp(ctx, "source-files", async () => {
   const headers = {
     ...SOURCE_CORS,
     "X-Content-Type-Options": "nosniff",
@@ -395,7 +396,7 @@ export const downloadContent = httpAction(async (ctx, request) => {
       "Content-Length": String(blob.size),
     },
   });
-});
+}));
 async function ownedSource(ctx: MutationCtx, sourceId: Id<"learnSources">) {
   const { identity } = await requireActiveUser(ctx);
   const source = await ctx.db.get("learnSources", sourceId);
@@ -557,7 +558,7 @@ const registration = makeFunctionReference<
 /** Mount as POST. Raw file body; title/origin query parameters; uploads begin private.
  * Bearer authentication is validated by Convex, never by a caller-supplied owner ID.
  */
-export const upload = httpAction(async (ctx, request) => {
+export const upload = httpAction(async (ctx, request) => observeHttp(ctx, "source-files", async () => {
   const headers = SOURCE_CORS;
   if (!(await ctx.auth.getUserIdentity()))
     return new Response("Not authenticated", { status: 401, headers });
@@ -610,6 +611,7 @@ export const upload = httpAction(async (ctx, request) => {
         headers,
       });
     storageId = await ctx.storage.store(blob);
+    await ctx.runMutation(makeFunctionReference<"mutation", { storageId: Id<"_storage"> }, null>("learnSourceRetention:trackUpload"), { storageId });
     const result: { sourceId: Id<"learnSources">; duplicate: boolean } =
       await ctx.runMutation(registration, {
         metadata,
@@ -627,4 +629,4 @@ export const upload = httpAction(async (ctx, request) => {
   } finally {
     reader.releaseLock();
   }
-});
+}));

@@ -146,6 +146,10 @@ export const communityTables = {
     role: claimRole,
     institution: v.string(),
     status: identityStatus,
+    verifiedAt: v.optional(v.number()),
+    expiresAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.string()),
+    method: v.optional(v.literal("manual_review")),
     createdAt: v.number(),
     reason: v.optional(v.string()),
   })

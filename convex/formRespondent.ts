@@ -38,7 +38,6 @@ export function captureHidden(declared: readonly string[] | undefined, input: Re
   for (const name of declared) {
     const value = input[name];
     if (typeof value !== "string") continue;
-    // eslint-disable-next-line no-control-regex -- stripping control characters is the point
     const clean = value.replace(/[\u0000-\u001f\u007f]/g, " ").trim().slice(0, HIDDEN_FIELD_LIMITS.value);
     if (clean) out[name] = clean;
   }

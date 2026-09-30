@@ -237,6 +237,7 @@ export const getFormForEditor = query({
       draft: form.draft,
       settings: { ...form.settings, accessCodeHash: undefined, hasAccessCode: !!form.settings.accessCodeHash },
       /** The owner's plan allows hiding Chaos branding (respondents only see it hidden while this holds). */
+      settingsRevision: form.settingsRevision ?? 0,
       canHideBranding: await ownerHasPro(ctx, form.ownerId),
       approval: form.approval ? { ...form.approval, requestedByName: await displayName(ctx, form.approval.requestedBy) } : null,
       versions: await withPublisherNames(ctx, versions),
@@ -317,6 +318,14 @@ export const updateFormSettings = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const { form, identity } = await requireFormRole(ctx, args.formId, "owner");
+    return applyFormSettingsForActor(ctx, form, identity.subject, args);
+  },
+});
+
+/** Shared owner-only settings policy for native and trusted client transports. */
+const editableSettingsValidator = formSettingsValidator.omit("accessCodeHash");
+export async function applyFormSettingsForActor(ctx: MutationCtx, form: Doc<"forms">, actorId: string, args: { settings: Infer<typeof editableSettingsValidator>; accessCode?: string; groupName?: string }) {
+  if (form.ownerId !== actorId || form.isBanned) throw new Error("FORBIDDEN: Form owner required");
     const s = args.settings;
     if (s.responseLimit !== undefined && (!Number.isInteger(s.responseLimit) || s.responseLimit < 1)) throw new Error("INVALID_SETTINGS: The response limit must be a whole number.");
     if (s.retentionDays !== undefined && (!Number.isInteger(s.retentionDays) || s.retentionDays < 1 || s.retentionDays > 3650)) throw new Error("INVALID_SETTINGS: Retention must be 1–3650 days.");
@@ -339,6 +348,7 @@ export const updateFormSettings = mutation({
     // Eligibility is the owner's plan, read here; the client flag alone never hides branding.
     if (s.hideBranding && !form.settings.hideBranding && !(await ownerHasPro(ctx, form.ownerId))) throw new Error("PRO_REQUIRED: Removing Chaos branding needs Pro.");
     await ctx.db.patch("forms", form._id, {
+      settingsRevision: (form.settingsRevision ?? 0) + 1,
       settings: {
         ...s, accessCodeHash,
         hiddenFields: hiddenFields?.length ? hiddenFields : undefined,
@@ -349,10 +359,9 @@ export const updateFormSettings = mutation({
       groupName: args.groupName === undefined ? form.groupName : args.groupName.trim() || undefined,
       updatedAt: Date.now(),
     });
-    await logActivity(ctx, form._id, identity.subject, "changed settings");
+    await logActivity(ctx, form._id, actorId, "changed settings");
     return null;
-  },
-});
+}
 
 export async function publishNow(ctx: MutationCtx, form: Doc<"forms">, actorId: string) {
   if (form.isBanned) throw new Error(`CONTENT_HELD: Contact ${supportEmail()} before republishing.`);

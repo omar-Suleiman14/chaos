@@ -1,5 +1,9 @@
+import { observeHttp } from "../lib/backendTelemetry";
 import { httpRouter, makeFunctionReference } from "convex/server";
 import { registerLearnIntegrationRoutes } from "./learnIntegrations";
+import { registerLearnStudyIntegrationRoutes } from "./learnStudyIntegrations";
+import { registerCommunityIntegrationRoutes } from "./learnCommunityHttp";
+import { registerOrganizationIntegrationRoutes } from "./learnOrganizationIntegrations";
 import { registerSourceRoutes } from "./learnSources";
 import { ConvexError } from "convex/values";
 import { env, httpAction } from "./_generated/server";
@@ -120,12 +124,12 @@ async function authenticate(ctx: ActionCtx, request: Request, state: RequestStat
   return result.tokenId;
 }
 
-const handle = httpAction(async (ctx, request) => {
+const handle = httpAction(async (ctx, request) => observeHttp(ctx, "integration-api", async () => {
   const state: RequestState = { headers: {} };
   const response = await route(ctx, request, state);
   for (const [name, value] of Object.entries(state.headers)) response.headers.set(name, value);
   return response;
-});
+}));
 
 async function route(ctx: ActionCtx, request: Request, state: RequestState): Promise<Response> {
   const url = new URL(request.url);
@@ -243,7 +247,7 @@ const MCP_STATUS: Record<string, number> = {
   MONTHLY_CREATION_LIMIT: 402, PRO_REQUIRED: 402,
 };
 
-const mcpHandler = httpAction(async (ctx, request) => {
+const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", async () => {
   const secret = env.CHAOS_MCP_SECRET;
   const presented = /^Bearer (.+)$/.exec(request.headers.get("Authorization") ?? "")?.[1] ?? "";
   if (!secret || secret.length < 32 || !(await sameSecret(presented, secret))) return error(401, "UNAUTHORIZED", "Unknown caller.");
@@ -282,6 +286,23 @@ const mcpHandler = httpAction(async (ctx, request) => {
     });
     let result: unknown;
     switch (b.tool) {
+      case "set_form_branching": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdvancedForms:setBranching"), { ...input, userId }); break;
+      case "get_form_advanced_analytics": result = await ctx.runQuery(makeFunctionReference<"query">("mcpFormManagement:analytics"), { ...input, userId }); break;
+      case "export_form_responses": result = await ctx.runAction(makeFunctionReference<"action">("mcpFormManagement:exportArtifact"), { ...input, userId }); break;
+      case "list_form_collaborators": result = await ctx.runQuery(makeFunctionReference<"query">("mcpFormManagement:collaborators"), { ...input, userId }); break;
+      case "change_form_collaborator": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpFormManagement:changeCollaborator"), { ...input, userId }); break;
+      case "upsert_form_file_question": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdvancedForms:upsertFileQuestion"), { ...input, userId }); break;
+      case "get_form_response_controls": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdvancedForms:getResponseControls"), { ...input, userId }); break;
+      case "set_form_response_controls": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdvancedForms:setResponseControls"), { ...input, userId }); break;
+      case "save_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("learnCommunityIntegrations:saveLesson"), { ...input, userId }); break;
+      case "fork_quiz": result = await ctx.runMutation(makeFunctionReference<"mutation">("quizForks:mcpFork"), { ...input, userId }); break;
+      case "get_quiz_fork_lineage": result = await ctx.runQuery(makeFunctionReference<"query">("quizForks:mcpLineage"), { ...input, userId }); break;
+      case "attach_lesson_quiz": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAssessments:attach"), { ...input, userId }); break;
+      case "get_lesson_quizzes": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAssessments:list"), { ...input, userId }); break;
+      case "create_lesson_live_game": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAssessments:createLive"), { ...input, userId }); break;
+      case "get_learn_capabilities": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getCapabilities"), { ...input, userId }); break;
+      case "list_lesson_versions": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:listLessonVersions"), { ...input, userId }); break;
+      case "get_lesson_version": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getLessonVersion"), { ...input, userId }); break;
       case "create_folder": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:createFolder"), { ...input, userId }); break;
       case "list_folders": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listFolders"), { ...input, userId }); break;
       case "move_folder": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:moveFolder"), { ...input, userId }); break;
@@ -362,6 +383,12 @@ const mcpHandler = httpAction(async (ctx, request) => {
     }
     return respond({ status: 200, body: { result } });
   } catch (caught) {
+    if (caught instanceof ConvexError && caught.data && typeof caught.data === "object" && !Array.isArray(caught.data)) {
+      const data = caught.data as Record<string, unknown>;
+      if (data.code === "SETTINGS_CONFLICT" || data.code === "MEMBERSHIP_CONFLICT" || data.code === "DRAFT_CONFLICT") {
+        return error(409, data.code, "The asset changed; reload its current state before editing.", typeof data.currentRevision === "number" ? { currentRevision: data.currentRevision } : undefined);
+      }
+    }
     const learnTool = ["search_lessons", "get_lesson_outline", "get_lesson_sources", "add_lesson_blocks", "update_lesson_blocks", "move_lesson_blocks", "delete_lesson_blocks", "list_lessons", "get_lesson", "create_lesson", "save_lesson_draft", "edit_lesson_blocks", "publish_lesson", "restore_lesson_version", "set_lesson_lifecycle", "fork_lesson", "get_learn_source_metadata"].includes(b.tool);
     if (learnTool) {
       if (caught instanceof ConvexError && caught.data && typeof caught.data === "object" && !Array.isArray(caught.data)) {
@@ -380,7 +407,7 @@ const mcpHandler = httpAction(async (ctx, request) => {
     if (status === 500) console.error("mcp tool failed", b.tool, caught);
     return error(status, code, status === 500 ? "Something went wrong in Chaos. Try again." : message);
   }
-});
+}));
 
 // The single-use ticket is the credential, so any origin (including embeds) may upload.
 const UPLOAD_CORS = {
@@ -395,7 +422,7 @@ function uploadError(status: number, code: string, message: string): Response {
 }
 
 /** Respondent file upload: checks the ticket, stores the body, then records it in one step. */
-const uploadHandler = httpAction(async (ctx, request) => {
+const uploadHandler = httpAction(async (ctx, request) => observeHttp(ctx, "submissions", async () => {
   const url = new URL(request.url);
   const token = url.searchParams.get("ticket") ?? "";
   const name = url.searchParams.get("name") ?? "upload";
@@ -426,10 +453,14 @@ const uploadHandler = httpAction(async (ctx, request) => {
     const { code, message } = errorCode(caught);
     return uploadError(code === "UPLOAD_TICKET_INVALID" ? 403 : 400, code, message);
   }
-});
+}));
 
 const http = httpRouter();
+http.route({ path: "/api/status/v1", method: "GET", handler: httpAction(async ctx => Response.json(await ctx.runQuery(makeFunctionReference<"query">("observability:publicStatus"), {}), { headers: { "Cache-Control": "public, max-age=30" } })) });
 registerLearnIntegrationRoutes(http);
+registerOrganizationIntegrationRoutes(http);
+registerCommunityIntegrationRoutes(http);
+registerLearnStudyIntegrationRoutes(http);
 registerSourceRoutes(http);
 http.route({ path: UPLOAD_PATH, method: "POST", handler: uploadHandler });
 http.route({ path: UPLOAD_PATH, method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: UPLOAD_CORS })) });

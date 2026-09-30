@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
-export const learnIntegrationScopes = ["lessons:read", "lessons:create", "lessons:update", "sources:read", "folders:read", "folders:update", "curricula:read", "curricula:map", "community:read", "community:save", "progress:read", "progress:write"] as const;
+export const learnIntegrationScopes = ["lessons:read", "lessons:create", "lessons:update", "sources:read", "folders:read", "folders:update", "curricula:read", "curricula:map", "community:read", "community:save", "community:fork", "progress:read", "progress:write", "tutor:context"] as const;
 export const legacyIntegrationScopes = ["items:read", "drafts:create", "drafts:update", "summaries:read", "definitions:read", "webhooks:manage"] as const;
 export type LegacyIntegrationScope = (typeof legacyIntegrationScopes)[number];
 export const integrationScopes = [...legacyIntegrationScopes, ...learnIntegrationScopes] as const;

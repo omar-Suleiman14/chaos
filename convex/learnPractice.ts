@@ -375,3 +375,26 @@ export const selectPractice = query({
       .slice(0, limit);
   },
 });
+
+/** Explainable review suggestions, computed from server-graded independent attempts.
+ * No confidence label establishes mastery. Suggestions never grant quiz access.
+ */
+export const reviewSchedule = query({
+  args: { conceptIds: v.array(v.id("learnConcepts")) },
+  returns: v.array(v.object({ conceptId: v.id("learnConcepts"), dueAt: v.union(v.number(), v.null()), due: v.boolean(), intervalDays: v.number(), attempts: v.number(), accuracy: v.union(v.number(), v.null()), reason: v.string() })),
+  handler: async (ctx, args) => {
+    const { identity } = await requireActiveUser(ctx);
+    validateConcepts(args.conceptIds);
+    const now = Date.now();
+    const suggestions = [];
+    for (const conceptId of args.conceptIds) {
+      if (!(await ctx.db.get("learnConcepts", conceptId))) throw new Error("Concept not found");
+      const rows = await recentEvidence(ctx, identity.tokenIdentifier, conceptId, now);
+      const state = summarizeEvidence(conceptId, rows, now);
+      const intervalDays = state.attempts < 3 || (state.accuracy ?? 0) < .7 ? 1 : state.accuracy! < .85 ? 3 : 7;
+      const dueAt = state.lastAnsweredAt === null ? null : state.lastAnsweredAt + intervalDays * DAY;
+      suggestions.push({ conceptId, dueAt, due: dueAt !== null && dueAt <= now, intervalDays, attempts: state.attempts, accuracy: state.accuracy, reason: state.lastAnsweredAt === null ? "No recent server-graded evidence; start practice before scheduling review." : `${intervalDays}-day review interval from ${state.attempts} independent attempts and ${Math.round(state.accuracy! * 100)}% average accuracy. This is a review heuristic, not mastery.` });
+    }
+    return suggestions.sort((a, b) => Number(b.due) - Number(a.due) || (a.dueAt ?? Number.MAX_SAFE_INTEGER) - (b.dueAt ?? Number.MAX_SAFE_INTEGER));
+  },
+});

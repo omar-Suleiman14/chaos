@@ -1,4 +1,6 @@
+import { consumeRate } from "./serverUtils";
 import { v } from "convex/values";
+import { resolveStudyTarget, readStudyProgress, startStudySession, completeStudyBlocks } from "./learnProgressServices";
 import { docValidator } from "convex/server";
 import {
   mutation,
@@ -6,7 +8,7 @@ import {
   type QueryCtx as ReadCtx,
   type MutationCtx as WriteCtx,
 } from "./_generated/server";
-import { lessonAccess } from "./lessons";
+import { lessonAccess, lessonAccessForActor } from "./lessons";
 import { requireActiveUser, requireAdmin, creatorRestricted } from "./authz";
 import {
   communityTables,
@@ -17,7 +19,7 @@ import {
   claimRole,
   qualityStatus,
 } from "./learnCommunityModel";
-import { lessonDocument, lessonMeta, LEARN_LIMITS } from "./learnModel";
+import { lessonDocument, lessonMeta, LEARN_WRITE_LIMITS } from "./learnModel";
 import type { Id } from "./_generated/dataModel";
 
 const lessonArg = { lessonId: v.id("lessons") };
@@ -102,18 +104,18 @@ export const get = query({
     };
   },
 });
-export const setSignals = mutation({
-  args: {
-    ...lessonArg,
-    saved: v.optional(v.boolean()),
-    helpful: v.optional(v.boolean()),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const identity = await actor(ctx);
+export async function requirePublicCommunityLesson(ctx: ReadCtx | WriteCtx, subject: string, lessonId: Id<"lessons">) {
+  const lesson = await lessonAccessForActor(ctx, subject, lessonId);
+  if (lesson.status !== "active" || lesson.visibility !== "public" || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) throw new Error("Lesson is not public");
+  const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
+  if (!version || version.lessonId !== lessonId) throw new Error("Published version unavailable");
+  return { lesson, version };
+}
+/** Actor must come from native auth or a trusted internal transport, never client input. */
+export async function setSignalsForActor(ctx: WriteCtx, identity: { subject: string; tokenIdentifier: string }, args: { lessonId: Id<"lessons">; saved?: boolean; helpful?: boolean }) {
     // Withdrawal remains possible after unpublication/moderation without revealing content.
     if (args.saved === true || args.helpful === true)
-      await publicLesson(ctx, args.lessonId);
+      await requirePublicCommunityLesson(ctx, identity.subject, args.lessonId);
     const old = await ctx.db
       .query("learnCommunitySignals")
       .withIndex("by_lessonId_and_userKey", (q) =>
@@ -127,6 +129,8 @@ export const setSignals = mutation({
       helpful: Number(helpful) - Number(old?.helpful ?? false),
     };
     if (!old && !saved && !helpful) return null;
+    if (old && old.saved === saved && old.helpful === helpful) return null;
+    await consumeRate(ctx, `learn:signals:${identity.tokenIdentifier}`, LEARN_WRITE_LIMITS.signalsPerMinute, 60000);
     if (old)
       await ctx.db.patch("learnCommunitySignals", old._id, { saved, helpful });
     else
@@ -139,7 +143,12 @@ export const setSignals = mutation({
     if (delta.saves || delta.helpful)
       await countDelta(ctx, args.lessonId, delta);
     return null;
-  },
+
+}
+export const setSignals = mutation({
+  args: { ...lessonArg, saved: v.optional(v.boolean()), helpful: v.optional(v.boolean()) },
+  returns: v.null(),
+  handler: async (ctx, args) => setSignalsForActor(ctx, await actor(ctx), args),
 });
 export const recordView = mutation({
   args: {
@@ -186,136 +195,26 @@ export const recordView = mutation({
   },
 });
 
-async function progressTarget(
-  ctx: ReadCtx | WriteCtx,
-  args: {
-    lessonId: Id<"lessons">;
-    versionId?: Id<"lessonVersions">;
-    revision?: number;
-  },
-) {
-  const lesson = await lessonAccess(ctx, args.lessonId);
-  if ((args.versionId !== undefined) === (args.revision !== undefined))
-    throw new Error("Choose exactly one version or draft revision");
-  if (args.versionId) {
-    const version = await ctx.db.get("lessonVersions", args.versionId);
-    // Historical published material only for editors; readers use current publication.
-    if (lesson.publishedVersionId !== args.versionId)
-      await lessonAccess(ctx, args.lessonId, true);
-    if (!version || version.lessonId !== args.lessonId)
-      throw new Error("Version not accessible");
-    return { key: `v:${args.versionId}`, document: version.document };
-  }
-  integer(args.revision!);
-  await lessonAccess(ctx, args.lessonId, true);
-  if (lesson.revision !== args.revision)
-    throw new Error("Stale draft revision");
-  return { key: `r:${args.revision}`, document: lesson.draft };
+async function progressTarget(ctx: ReadCtx | WriteCtx, args: { lessonId: Id<"lessons">; versionId?: Id<"lessonVersions">; revision?: number }) {
+  const identity = await ctx.auth.getUserIdentity();
+  return resolveStudyTarget(ctx, { subject: identity?.subject ?? null }, args);
 }
 const progressDoc = docValidator(
   "learnProgress",
   communityTables.learnProgress,
 );
 export const startSession = mutation({
-  args: progressKey,
-  returns: v.number(),
-  handler: async (ctx, args) => {
-    const identity = await actor(ctx),
-      target = await progressTarget(ctx, args);
-    const old = await ctx.db
-      .query("learnProgress")
-      .withIndex("by_userKey_and_lessonId_and_key", (q) =>
-        q
-          .eq("userKey", identity.tokenIdentifier)
-          .eq("lessonId", args.lessonId)
-          .eq("key", target.key),
-      )
-      .unique();
-    const sessionSeq = (old?.sessionSeq ?? 0) + 1;
-    integer(sessionSeq, 1);
-    if (old)
-      await ctx.db.patch("learnProgress", old._id, {
-        sessionSeq,
-        writeSeq: 0,
-        updatedAt: Date.now(),
-      });
-    else
-      await ctx.db.insert("learnProgress", {
-        ...args,
-        userKey: identity.tokenIdentifier,
-        key: target.key,
-        sessionSeq,
-        writeSeq: 0,
-        completedBlocks: [],
-        updatedAt: Date.now(),
-      });
-    return sessionSeq;
-  },
+  args: progressKey, returns: v.number(),
+  handler: async (ctx, args) => startStudySession(ctx, await actor(ctx), args),
 });
 export const completeBlocks = mutation({
-  args: {
-    ...progressKey,
-    sessionSeq: v.number(),
-    writeSeq: v.number(),
-    blockIds: v.array(v.string()),
-  },
+  args: { ...progressKey, sessionSeq: v.number(), writeSeq: v.number(), blockIds: v.array(v.string()) },
   returns: v.boolean(),
-  handler: async (ctx, args) => {
-    const identity = await actor(ctx),
-      target = await progressTarget(ctx, args);
-    integer(args.sessionSeq, 1);
-    integer(args.writeSeq, 1);
-    if (
-      args.blockIds.length > LEARN_LIMITS.blocks ||
-      args.blockIds.some(
-        (id) => !target.document.blocks.some((b) => b.id === id),
-      )
-    )
-      throw new Error("Invalid or excessive block completion");
-    const old = await ctx.db
-      .query("learnProgress")
-      .withIndex("by_userKey_and_lessonId_and_key", (q) =>
-        q
-          .eq("userKey", identity.tokenIdentifier)
-          .eq("lessonId", args.lessonId)
-          .eq("key", target.key),
-      )
-      .unique();
-    if (
-      !old ||
-      old.sessionSeq !== args.sessionSeq ||
-      old.writeSeq >= args.writeSeq
-    )
-      return false;
-    const completedBlocks = [
-      ...new Set([...old.completedBlocks, ...args.blockIds]),
-    ];
-    if (completedBlocks.length > LEARN_LIMITS.blocks)
-      throw new Error("Completion bound exceeded");
-    await ctx.db.patch("learnProgress", old._id, {
-      completedBlocks,
-      writeSeq: args.writeSeq,
-      updatedAt: Date.now(),
-    });
-    return true;
-  },
+  handler: async (ctx, args) => (await completeStudyBlocks(ctx, await actor(ctx), args, "false")) !== false,
 });
 export const getProgress = query({
-  args: progressKey,
-  returns: v.union(progressDoc, v.null()),
-  handler: async (ctx, args) => {
-    const identity = await actor(ctx),
-      target = await progressTarget(ctx, args);
-    return ctx.db
-      .query("learnProgress")
-      .withIndex("by_userKey_and_lessonId_and_key", (q) =>
-        q
-          .eq("userKey", identity.tokenIdentifier)
-          .eq("lessonId", args.lessonId)
-          .eq("key", target.key),
-      )
-      .unique();
-  },
+  args: progressKey, returns: v.union(progressDoc, v.null()),
+  handler: async (ctx, args) => readStudyProgress(ctx, await actor(ctx), args),
 });
 export const createConcept = mutation({
   args: { slug: v.string(), title: v.string(), description: v.string() },
@@ -694,11 +593,16 @@ export const reviewIdentity = mutation({
     const identity = await actor(ctx);
     await requireAdmin(ctx);
     const reason = text(args.reason);
-    if (!(await ctx.db.get("learnIdentityClaims", args.claimId)))
+    const claim = await ctx.db.get("learnIdentityClaims", args.claimId);
+    if (!claim)
       throw new Error("Claim not found");
     await ctx.db.patch("learnIdentityClaims", args.claimId, {
       status: args.status,
       reason,
+      reviewedBy: identity.tokenIdentifier,
+      method: "manual_review",
+      verifiedAt: args.status === "verified" ? Date.now() : undefined,
+      expiresAt: args.status === "verified" ? Date.now() + (claim.role === "student" ? 180 : 365) * 86400000 : undefined,
     });
     await ctx.db.insert("learnIdentityAudit", {
       claimId: args.claimId,

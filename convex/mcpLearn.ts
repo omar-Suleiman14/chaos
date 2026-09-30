@@ -1,7 +1,7 @@
 // userId is supplied only by the secret-protected OAuth transport.
 import { v } from "convex/values";
 import { internalMutation, internalQuery, type QueryCtx, type MutationCtx } from "./_generated/server";
-import { lessonBlock, lessonDocument, lessonMeta, sourceMetadata, visibility } from "./learnModel";
+import { LEARN_WRITE_LIMITS, LEARN_LIMITS, lessonBlock, lessonDocument, lessonMeta, sourceMetadata, visibility } from "./learnModel";
 import { creatorRestricted } from "./authz";
 import { lessonAccessForActor, createLessonForActor, saveLessonDraftForActor, publishLessonForActor, restoreLessonVersionForActor, setLessonLifecycleForActor, forkLessonForActor, editLessonBlocksForActor, readLessonForActor, summarizeLesson, lessonSummary, lessonReadResult, lessonBlockOperation } from "./lessons";
 
@@ -76,3 +76,28 @@ export const addBlocks = internalMutation({ args: { ...edit, blocks: v.array(les
 export const updateBlocks = internalMutation({ args: { ...edit, blocks: v.array(lessonBlock) }, returns: v.object({ revision: v.number() }), handler: async (ctx, args) => ({ revision: await editLessonBlocksForActor(ctx, await requireLearnActor(ctx, args.userId), { ...args, operations: args.blocks.map(block => ({ action: "update" as const, blockId: block.id, block })) }) }) });
 export const moveBlocks = internalMutation({ args: { ...edit, moves: v.array(v.object({ blockId: v.string(), beforeId: v.union(v.string(), v.null()) })) }, returns: v.object({ revision: v.number() }), handler: async (ctx, args) => ({ revision: await editLessonBlocksForActor(ctx, await requireLearnActor(ctx, args.userId), { ...args, operations: args.moves.map(move => ({ ...move, action: "move" as const })) }) }) });
 export const deleteBlocks = internalMutation({ args: { ...edit, blockIds: v.array(v.string()) }, returns: v.object({ revision: v.number() }), handler: async (ctx, args) => ({ revision: await editLessonBlocksForActor(ctx, await requireLearnActor(ctx, args.userId), { ...args, operations: args.blockIds.map(blockId => ({ action: "delete" as const, blockId })) }) }) });
+
+export const getCapabilities = internalQuery({ args: actor, returns: v.object({ schemaVersion: v.number(), limits: v.record(v.string(), v.number()) }), handler: async (ctx, args) => {
+  await requireLearnActor(ctx, args.userId);
+  return { schemaVersion: 1, limits: { ...LEARN_LIMITS, ...LEARN_WRITE_LIMITS, readBlocks: 100, blockOperations: 100, citationsPerBlock: 20, conceptsPerBlock: 20, folderMoveNodes: 256, selectedAssets: 500 } };
+} });
+const versionSummary = v.object({ versionId: v.id("lessonVersions"), number: v.number(), metadata: lessonMeta, publishedAt: v.number(), current: v.boolean() });
+export const listLessonVersions = internalQuery({ args: { ...actor, lessonId: v.id("lessons"), beforeNumber: v.optional(v.number()), limit: v.optional(v.number()) }, returns: v.object({ versions: v.array(versionSummary), nextBeforeNumber: v.union(v.number(), v.null()) }), handler: async (ctx, args) => {
+  const userId = await requireLearnActor(ctx, args.userId);
+  const lesson = await lessonAccessForActor(ctx, userId, args.lessonId, true);
+  const limit = args.limit ?? 20;
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 50 || (args.beforeNumber !== undefined && (!Number.isSafeInteger(args.beforeNumber) || args.beforeNumber < 1))) throw new Error("VALIDATION_FAILED: Invalid version pagination.");
+  const rows = await ctx.db.query("lessonVersions").withIndex("by_lessonId_and_number", q => args.beforeNumber === undefined ? q.eq("lessonId", lesson._id) : q.eq("lessonId", lesson._id).lt("number", args.beforeNumber)).order("desc").take(limit + 1);
+  const page = rows.slice(0, limit);
+  return { versions: page.map(version => ({ versionId: version._id, number: version.number, metadata: version.metadata, publishedAt: version.publishedAt, current: lesson.publishedVersionId === version._id })), nextBeforeNumber: rows.length > limit ? page[page.length - 1].number : null };
+} });
+export const getLessonVersion = internalQuery({ args: { ...actor, lessonId: v.id("lessons"), versionId: v.id("lessonVersions"), offset: v.optional(v.number()), limit: v.optional(v.number()) }, returns: v.object({ versionId: v.id("lessonVersions"), metadata: lessonMeta, document: lessonDocument, totalBlocks: v.number(), nextOffset: v.union(v.number(), v.null()) }), handler: async (ctx, args) => {
+  const userId = await requireLearnActor(ctx, args.userId);
+  const lesson = await lessonAccessForActor(ctx, userId, args.lessonId);
+  const version = await ctx.db.get("lessonVersions", args.versionId);
+  if (!version || version.lessonId !== lesson._id || (userId !== lesson.ownerId && version._id !== lesson.publishedVersionId && (lesson.visibility !== "public" || version.visibility !== "public"))) throw new Error("NOT_FOUND: Version not accessible.");
+  const offset = args.offset ?? 0, limit = args.limit ?? 50;
+  if (!Number.isSafeInteger(offset) || offset < 0 || offset > LEARN_LIMITS.blocks || !Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new Error("VALIDATION_FAILED: Invalid block pagination.");
+  const blocks = version.document.blocks.slice(offset, offset + limit);
+  return { versionId: version._id, metadata: version.metadata, document: { schemaVersion: 1 as const, blocks }, totalBlocks: version.document.blocks.length, nextOffset: offset + blocks.length < version.document.blocks.length ? offset + blocks.length : null };
+} });

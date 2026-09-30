@@ -1,3 +1,4 @@
+import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 import {
   docValidator,
   paginationOptsValidator,
@@ -341,7 +342,9 @@ export async function createLessonMappingForActor(ctx: MutationCtx, actorId: str
         .unique()
     )
       throw new Error("Mapping already exists");
-    return ctx.db.insert("lessonCurriculumMappings", args);
+    const mappingId = await ctx.db.insert("lessonCurriculumMappings", args);
+    await enqueueLearnWebhookEvent(ctx, { event: "curriculum.mapping_changed", lessonId: lesson._id, curriculumVersionId: args.versionId, nodeId: args.nodeId, operationId: `mapping:${mappingId}:created`, revision: lesson.revision });
+    return mappingId;
 }
 export const removeLessonMapping = mutation({
   args: { mappingId: v.id("lessonCurriculumMappings") },
@@ -355,6 +358,8 @@ export const removeLessonMapping = mutation({
     if (!mapping) throw new Error("Mapping not found or unauthorized");
     await ownedLesson(ctx, mapping.lessonId, true);
     await ctx.db.delete("lessonCurriculumMappings", args.mappingId);
+    const lesson = await ctx.db.get("lessons", mapping.lessonId);
+    if (lesson) await enqueueLearnWebhookEvent(ctx, { event: "curriculum.mapping_changed", lessonId: lesson._id, curriculumVersionId: mapping.versionId, nodeId: mapping.nodeId, operationId: `mapping:${mapping._id}:removed`, revision: lesson.revision });
     return null;
   },
 });

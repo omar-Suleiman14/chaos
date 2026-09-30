@@ -1,3 +1,4 @@
+import { observeHttp } from "../lib/backendTelemetry";
 import type { HttpRouter } from "convex/server";
 import { v, ConvexError, type Infer, type GenericValidator } from "convex/values";
 import { internal } from "./_generated/api";
@@ -5,7 +6,7 @@ import { httpAction, internalMutation, internalQuery, mutation, type MutationCtx
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
 import { activeIntegrationToken, externalSourceValidator, findIdempotent, logConnectionActivity, type IntegrationScope } from "./integrationModel";
 import { requireActiveUser } from "./authz";
-import { LEARN_LIMITS, lessonDocument, lessonMeta, type LessonDocument } from "./learnModel";
+import { LEARN_WRITE_LIMITS, LEARN_LIMITS, lessonDocument, lessonMeta, type LessonDocument } from "./learnModel";
 import { assertDocument } from "./learnValidation";
 import { createLessonForActor, saveLessonDraftForActor, editLessonBlocksForActor, lessonBlockOperation, readLessonForActor, summarizeLesson } from "./lessons";
 import { errorCode, sha256Hex } from "./serverUtils";
@@ -20,7 +21,7 @@ const ok = (body: unknown, status = 200): LearnApiResult => ({ status, body });
 const fail = (status: number, code: string, message: string): LearnApiResult => ({ status, body: { error: { code, message } } });
 const missing = () => fail(404, "NOT_FOUND", "This asset does not exist or is not selected for this connection.");
 const base = { tokenId: v.id("integrationTokens"), now: v.number() };
-const IMPLEMENTED_SCOPES = ["lessons:read", "lessons:create", "lessons:update"] as const;
+const IMPLEMENTED_SCOPES = ["lessons:read", "lessons:create", "lessons:update", "sources:read", "folders:read", "folders:update", "curricula:read", "curricula:map", "community:read", "community:save", "community:fork", "progress:read", "progress:write", "tutor:context"] as const;
 
 /** Native owner selection, separate from bearer API access. Non-lesson grants are preserved. */
 export const setLessonSelection = mutation({
@@ -52,6 +53,40 @@ async function authorize(ctx: Ctx, tokenId: Id<"integrationTokens">, now: number
   if (scope && !token.scopes.includes(scope)) return fail(403, "INSUFFICIENT_SCOPE", `This connection needs ${scope}.`);
   return token;
 }
+
+/** Explicit owner selection grants metadata references, never file bytes. */
+export const setSourceSelection = mutation({
+  args: { tokenId: v.id("integrationTokens"), sourceIds: v.array(v.id("learnSources")) },
+  returns: v.object({ sourceRefs: v.array(v.string()) }),
+  handler: async (ctx, args) => {
+    const { identity } = await requireActiveUser(ctx);
+    const token = await activeIntegrationToken(ctx, args.tokenId, Date.now());
+    if (!token || token.ownerId !== identity.subject) throw new Error("NOT_FOUND: Active connection not found or unauthorized.");
+    if (!token.scopes.includes("sources:read")) throw new Error("INSUFFICIENT_SCOPE: Source selection requires sources:read.");
+    if (args.sourceIds.length > 500) throw new Error("VALIDATION_FAILED: Select at most 500 sources.");
+    const sourceRefs = [];
+    for (const id of new Set(args.sourceIds)) {
+      const source = await ctx.db.get("learnSources", id);
+      if (!source || source.ownerId !== identity.subject || source.status !== "active") throw new Error("NOT_FOUND: Source not found or unauthorized.");
+      sourceRefs.push(`source_${id}`);
+    }
+    const itemRefs = [...token.itemRefs.filter(ref => !ref.startsWith("source_")), ...sourceRefs];
+    if (itemRefs.length > 500) throw new Error("VALIDATION_FAILED: Share at most 500 assets.");
+    await ctx.db.patch("integrationTokens", token._id, { itemRefs });
+    await logConnectionActivity(ctx, token._id, "source.selection_updated");
+    return { sourceRefs };
+  },
+});
+
+export const getSource = internalQuery({ args: { ...base, ref: v.string() }, returns: resultValidator, handler: async (ctx, args): Promise<LearnApiResult> => {
+  const token = await authorize(ctx, args.tokenId, args.now, "sources:read");
+  if ("status" in token) return token;
+  if (!args.ref.startsWith("source_") || !(await selected(ctx, token, args.ref))) return missing();
+  const id = ctx.db.normalizeId("learnSources", args.ref.slice(7));
+  const source = id ? await ctx.db.get("learnSources", id) : null;
+  if (!source || source.ownerId !== token.ownerId || source.status !== "active") return missing();
+  return ok({ source: { sourceId: source._id, metadata: source.metadata, metadataVisibility: source.metadataVisibility, contentVisibility: source.contentVisibility, createdAt: source.createdAt }, contentAccess: "not_granted" });
+} });
 
 /** Learn never inherits the v1 all-forms-and-quizzes grant. */
 async function selected(ctx: Ctx, token: Token, ref: string) {
@@ -150,9 +185,9 @@ function caught(error: unknown): LearnApiResult {
 export const capabilities = internalQuery({ args: base, returns: resultValidator, handler: async (ctx, args): Promise<LearnApiResult> => {
   const token = await authorize(ctx, args.tokenId, args.now);
   if ("status" in token) return token;
-  return ok({ apiVersion: "2", supportedVersions: ["1", "2"], supportedKinds: ["lesson"], scopes: token.scopes.filter(scope => IMPLEMENTED_SCOPES.some(implemented => implemented === scope)),
-    availableScopes: IMPLEMENTED_SCOPES, operations: ["lesson.read", "lesson.definition", "lesson.outline", "lesson.draft_create", "lesson.draft_update", "lesson.blocks_update", "lesson.unlink"],
-    limits: { maxBlocks: LEARN_LIMITS.blocks, documentBytes: LEARN_LIMITS.documentBytes, maxSources: LEARN_LIMITS.sources },
+  return ok({ apiVersion: "2", supportedVersions: ["1", "2"], supportedKinds: ["lesson", "source", "folder", "curriculum"], scopes: token.scopes.filter(scope => IMPLEMENTED_SCOPES.some(implemented => implemented === scope)),
+    availableScopes: IMPLEMENTED_SCOPES, operations: ["lesson.read", "lesson.definition", "lesson.outline", "lesson.draft_create", "lesson.draft_update", "lesson.blocks_update", "lesson.unlink", "source.metadata", "folder.list", "folder.create", "folder.move", "folder.members", "curriculum.browse", "curriculum.map", "community.search", "community.save", "community.fork", "progress.read", "progress.write", "context.assemble"],
+    lessonSchemaVersion: 1, writeLimits: LEARN_WRITE_LIMITS, limits: { maxBlocks: LEARN_LIMITS.blocks, documentBytes: LEARN_LIMITS.documentBytes, maxSources: LEARN_LIMITS.sources, maxTextCharacters: LEARN_LIMITS.text, maxTitleCharacters: LEARN_LIMITS.title, maxTags: LEARN_LIMITS.tags, maxSourceFileBytes: LEARN_LIMITS.fileBytes, maxFolderDepth: LEARN_LIMITS.folderDepth, maxSelectedAssets: 500, maxReadBlocks: 100 },
     selection: "explicit", connection: { id: token._id, label: token.label } });
 } });
 
@@ -254,7 +289,7 @@ async function jsonBody(request: Request): Promise<unknown> {
   try { return JSON.parse(new TextDecoder().decode(bytes)); } catch { throw new Error("VALIDATION_FAILED: Send valid JSON."); }
 }
 
-export const learnIntegrationHandler = httpAction(async (ctx, request) => {
+export const learnIntegrationHandler = httpAction(async (ctx, request) => observeHttp(ctx, "integration-api", async () => {
   const url = new URL(request.url), method = request.method;
   if (request.headers.has("Chaos-Api-Version") && request.headers.get("Chaos-Api-Version")?.trim() !== "2") return respond(fail(400, "UNSUPPORTED_VERSION", "Use Chaos API version 2."));
   let segments: string[];
@@ -264,6 +299,7 @@ export const learnIntegrationHandler = httpAction(async (ctx, request) => {
   let scope: IntegrationScope | undefined;
   if (method === "GET" && ["capabilities", "connection"].includes(resource) && !ref) scope = undefined;
   else if (method === "GET" && ["lessons", "items"].includes(resource) && ref && (!sub || ["definition", "outline"].includes(sub)) && !extra.length) scope = "lessons:read";
+  else if (method === "GET" && resource === "sources" && ref && !sub && !extra.length) scope = "sources:read";
   else if (method === "POST" && resource === "drafts" && !ref) scope = "lessons:create";
   else if (method === "PATCH" && ["lessons", "items"].includes(resource) && ref && (!sub || sub === "blocks") && !extra.length) scope = "lessons:update";
   else if (method === "DELETE" && ["lessons", "items"].includes(resource) && ref && sub === "link" && !extra.length) scope = "lessons:update";
@@ -278,7 +314,9 @@ export const learnIntegrationHandler = httpAction(async (ctx, request) => {
   let result: LearnApiResult;
   try {
     if (method === "GET" && !ref) result = await ctx.runQuery(internal.learnIntegrations.capabilities, { tokenId: auth.tokenId, now: Date.now() });
-    else if (method === "GET") {
+    else if (method === "GET" && resource === "sources") {
+      result = url.search ? fail(400, "VALIDATION_FAILED", "Source metadata does not accept query parameters.") : await ctx.runQuery(internal.learnIntegrations.getSource, { tokenId: auth.tokenId, now: Date.now(), ref });
+    } else if (method === "GET") {
       if ([...url.searchParams.keys()].some(k => !["offset", "limit"].includes(k)) || ["offset", "limit"].some(k => url.searchParams.getAll(k).length > 1)) result = fail(400, "VALIDATION_FAILED", "Unknown or duplicate query parameter.");
       else result = await ctx.runQuery(internal.learnIntegrations.getLesson, { tokenId: auth.tokenId, now: Date.now(), ref, view: sub as "definition" | "outline" | undefined, offset: url.searchParams.has("offset") ? Number(url.searchParams.get("offset")) : undefined, limit: url.searchParams.has("limit") ? Number(url.searchParams.get("limit")) : undefined });
     } else if (method === "DELETE") result = await ctx.runMutation(internal.learnIntegrations.unlinkLesson, { tokenId: auth.tokenId, ref });
@@ -294,7 +332,7 @@ export const learnIntegrationHandler = httpAction(async (ctx, request) => {
     }
   } catch (e) { result = caught(e); }
   return respond({ ...result, headers: { ...headers, ...result.headers } });
-});
+}));
 
 /** Parent mounts this independently of the unchanged v1 handler. */
 export function registerLearnIntegrationRoutes(http: HttpRouter) {

@@ -728,3 +728,21 @@ describe("version-stable private practice", () => {
     ).rejects.toThrow("ACCOUNT_SUSPENDED");
   });
 });
+
+it("schedules private evidence-based review using the server clock", async () => {
+  const { t, owner, other, conceptId, mapping, response } = await setup();
+  const { vi } = await import("vitest");
+  vi.setSystemTime(now);
+  await owner.mutation(mapField, mapping);
+  try {
+    for (let i = 0; i < 3; i++) {
+      const formResponseId = await response({ submittedAt: now - 2 * DAY + i });
+      await owner.mutation(ingestResponse, { formResponseId });
+    }
+    const schedule = await owner.query(api.learnPractice.reviewSchedule, { conceptIds: [conceptId] });
+    expect(schedule[0].attempts).toBe(3);
+    expect(schedule[0].dueAt).not.toBeNull();
+    expect(schedule[0].reason).toContain("independent attempts");
+    expect((await other.query(api.learnPractice.reviewSchedule, { conceptIds: [conceptId] }))[0]).toMatchObject({ attempts: 0, dueAt: null, due: false });
+  } finally { vi.useRealTimers(); }
+});

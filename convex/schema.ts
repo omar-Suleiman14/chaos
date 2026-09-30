@@ -1,3 +1,8 @@
+import { quizForkTables } from "./quizForkModel";
+import { personalTables } from "./learnPersonalModel";
+import { observabilityTables } from "./observabilityModel";
+import { liveTeamTables } from "./liveTeamModel";
+import { homeworkTables } from "./homeworkModel";
 import { sourceModerationTables } from "./learnSourceModerationModel";
 import { practiceTables } from "./learnPracticeModel";
 import { communityTables } from "./learnCommunityModel";
@@ -16,6 +21,11 @@ import { liveTables } from "./liveModel";
 
 export default defineSchema({
   ...learnTables,
+  ...personalTables,
+  ...quizForkTables,
+  ...observabilityTables,
+  ...liveTeamTables,
+  ...homeworkTables,
   ...sourceModerationTables,
   ...practiceTables,
   ...communityTables,

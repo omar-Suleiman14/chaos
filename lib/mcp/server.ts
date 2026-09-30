@@ -10,6 +10,11 @@ import {
 } from "@/convex/mcpContract";
 import { buildThemePatch, themeCatalog } from "./themes";
 import { registerLearnTools } from "./learn";
+import { registerTools as registerAdvancedFormTools } from "./advancedForms";
+import { registerTools as registerFormManagementTools } from "./formManagement";
+import { registerCommunityTools } from "./community";
+import { registerQuizForkTools } from "./quizForks";
+import { registerAssessmentTools } from "./assessments";
 import { registerOrganizationTools } from "./organization";
 
 export type McpCaller = (tool: string, input: Record<string, unknown>) => Promise<unknown>;
@@ -422,5 +427,10 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
 
   registerLearnTools(server, run, securitySchemes);
   registerOrganizationTools(server, run, securitySchemes);
+  registerQuizForkTools(server, run, securitySchemes);
+  registerCommunityTools(server, run, securitySchemes);
+  registerAdvancedFormTools(server, run, securitySchemes);
+  registerFormManagementTools(server, run, securitySchemes);
+  registerAssessmentTools(server, run, securitySchemes);
   return server;
 }

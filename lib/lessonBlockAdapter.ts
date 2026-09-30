@@ -12,12 +12,14 @@ export const LESSON_CUSTOM_BLOCK_TYPES = [
   "lessonEquation",
   "lessonTable",
   "lessonQuiz",
+  "image", "source", "diagram", "youtube", "equation", "table", "quiz",
 ] as const;
+export type LessonEditorInline = { type: "text"; text: string; styles?: Record<string, string | boolean> } | { type: "link"; href: string; content: { type: "text"; text: string; styles?: Record<string, string | boolean> }[] };
 export interface LessonEditorBlock {
   id: string;
   type: string;
   props: Record<string, string | number | boolean>;
-  content?: string;
+  content?: string | LessonEditorInline[];
   children: LessonEditorBlock[];
 }
 export interface LessonAdapterProblem {
@@ -53,14 +55,24 @@ const citation = z.strictObject({
     z.strictObject({ kind: z.literal("section"), label: str }),
   ]),
 });
+const marks = z.strictObject({ bold: z.boolean().optional(), italic: z.boolean().optional(), underline: z.boolean().optional(), strike: z.boolean().optional(), code: z.boolean().optional(), textColor: str.optional(), backgroundColor: str.optional() });
+const inline = z.array(z.strictObject({ text: str, marks: marks.optional(), href: str.optional() })).max(1000);
+const presentation = z.strictObject({ alignment: z.enum(["left", "center", "right", "justify"]).optional(), textColor: str.optional(), backgroundColor: str.optional() });
+const annotations = z.strictObject({ v: z.literal(1), items: z.array(z.strictObject({ id, x: z.number(), y: z.number(), w: z.number().optional(), h: z.number().optional(), label: str, body: str.optional() })).max(100) });
 const common = {
   id,
   parentId: id.optional(),
+  presentation: presentation.optional(),
   citations: z.array(citation).max(50),
   conceptIds: z.array(id).max(500),
 };
-const text = { ...common, text: str };
+const text = { ...common, text: str, inline: inline.optional() };
 const blockSchema = z.discriminatedUnion("type", [
+  z.strictObject({ ...text, type: z.literal("callout"), tone: z.enum(["info", "tip", "warning", "clinical", "key"]) }),
+  z.strictObject({ ...text, type: z.literal("code"), language: str }),
+  z.strictObject({ ...text, type: z.literal("quote") }),
+  z.strictObject({ ...text, type: z.literal("toggle") }),
+  z.strictObject({ ...common, type: z.literal("divider") }),
   z.strictObject({ ...text, type: z.literal("paragraph") }),
   z.strictObject({
     ...text,
@@ -78,6 +90,7 @@ const blockSchema = z.discriminatedUnion("type", [
     type: z.literal("image"),
     sourceId,
     alt: str,
+    name: str.optional(), previewWidth: z.number().finite().positive().max(10000).optional(), showPreview: z.boolean().optional(), credit: str.optional(), creditUrl: str.optional(), figureKind: z.enum(["photo", "diagram"]).optional(), annotations: annotations.optional(),
     caption: str,
   }),
   z.strictObject({
@@ -144,7 +157,14 @@ const nativeTypes = {
   bulletListItem: "bullet",
   numberedListItem: "number",
   checkListItem: "check",
+  callout: "callout", codeBlock: "code", quote: "quote", toggleListItem: "toggle", divider: "divider",
 } as const;
+const customFields: Record<string, string[]> = {
+  image: ["sourceId", "alt", "caption", "credit", "creditUrl", "figureKind", "annotations", "name", "showPreview", "previewWidth"],
+  youtube: ["videoId", "start", "end", "caption"],
+  equation: ["text", "display"], source: ["sourceId", "label"],
+  diagram: ["format", "text"], table: ["headerRows"], quiz: [],
+};
 const customTypes: Record<string, string> = {
   lessonImage: "image",
   lessonSource: "source",
@@ -153,6 +173,7 @@ const customTypes: Record<string, string> = {
   lessonEquation: "equation",
   lessonTable: "table",
   lessonQuiz: "quiz",
+  image: "image", source: "source", diagram: "diagram", youtube: "youtube", equation: "equation", table: "table", quiz: "quiz",
 };
 function problem(
   path: string,
@@ -168,7 +189,7 @@ function bounded(value: unknown): boolean {
     return false;
   }
 }
-function validate(value: unknown): LessonAdapterResult<LessonDocument> {
+export function validateLessonDocument(value: unknown): LessonAdapterResult<LessonDocument> {
   if (!bounded(value))
     return {
       ok: false,
@@ -217,7 +238,7 @@ function validate(value: unknown): LessonAdapterResult<LessonDocument> {
 export function lessonDocumentToEditorBlocks(
   document: LessonDocument,
 ): LessonAdapterResult<LessonEditorBlock[]> {
-  const result = validate(document);
+  const result = validateLessonDocument(document);
   if (!result.ok) return result;
   const nodes = new Map<string, LessonEditorBlock>();
   result.value.blocks.forEach((block, index) => {
@@ -227,6 +248,7 @@ export function lessonDocumentToEditorBlocks(
       citations,
       conceptIds,
       type,
+      presentation,
       ...data
     } = block;
     const props: LessonEditorBlock["props"] = {
@@ -235,9 +257,19 @@ export function lessonDocumentToEditorBlocks(
       lessonOrder: index,
     };
     let editorType: string = type;
-    let content: string | undefined;
-    if (type === "paragraph" || type === "heading" || type === "list") {
-      content = block.text;
+    if (presentation) {
+      props.lessonPresentation = JSON.stringify(presentation);
+      if (presentation.alignment) props.textAlignment = presentation.alignment;
+      if (presentation.textColor) props.textColor = presentation.textColor;
+      if (presentation.backgroundColor) props.backgroundColor = presentation.backgroundColor;
+    }
+    if ("inline" in block && block.inline !== undefined) props.lessonInline = true;
+    let content: LessonEditorBlock["content"];
+    if (type === "paragraph" || type === "heading" || type === "list" || type === "callout" || type === "code" || type === "quote" || type === "toggle") {
+      content = block.inline ? block.inline.map(run => run.href ? { type: "link" as const, href: run.href, content: [{ type: "text" as const, text: run.text, ...(run.marks ? { styles: run.marks } : {}) }] } : { type: "text" as const, text: run.text, ...(run.marks ? { styles: run.marks } : {}) }) : block.text;
+      if (block.type === "callout") props.tone = block.tone;
+      if (block.type === "code") { editorType = "codeBlock"; props.language = block.language; }
+      if (block.type === "toggle") editorType = "toggleListItem";
       if (block.type === "heading") props.level = block.level;
       if (block.type === "list") {
         editorType = {
@@ -247,11 +279,14 @@ export function lessonDocumentToEditorBlocks(
         }[block.style];
         if (block.checked !== undefined) props.checked = block.checked;
       }
+    } else if (type === "divider") {
+      editorType = "divider";
     } else {
-      editorType = Object.keys(customTypes).find(
-        (key) => customTypes[key] === type,
-      )!;
+      editorType = type;
       props.lessonData = JSON.stringify(data);
+      for (const [key, value] of Object.entries(data)) if (typeof value === "string" || typeof value === "number" || typeof value === "boolean") props[key] = value;
+      if (block.type === "image" && block.annotations) props.annotations = JSON.stringify(block.annotations);
+      if (block.type === "equation") content = block.inline ? block.inline.map(r => ({ type: "text" as const, text: r.text, ...(r.marks ? { styles: r.marks } : {}) })) : block.text;
     }
     nodes.set(id, {
       id,
@@ -274,6 +309,7 @@ const record = (v: unknown): v is Record<string, unknown> =>
 /** Accepts untrusted editor JSON; never returns a partial document when data would be lost. */
 export function editorBlocksToLessonDocument(
   input: unknown,
+  options: { imageSourceId?: (url: string) => string | undefined } = {},
 ): LessonAdapterResult<LessonDocument> {
   const problems: LessonAdapterProblem[] = [];
   if (!bounded(input) || !Array.isArray(input))
@@ -296,37 +332,27 @@ export function editorBlocksToLessonDocument(
       throw new Error("Metadata props must be JSON strings.");
     return JSON.parse(value);
   }
-  function plain(content: unknown, path: string): string {
-    if (typeof content === "string") return content;
-    if (content === undefined) return "";
-    if (Array.isArray(content)) {
-      let output = "";
-      for (const item of content) {
-        if (
-          !record(item) ||
-          item.type !== "text" ||
-          typeof item.text !== "string" ||
-          Object.keys(item).some(
-            (k) => !["type", "text", "styles"].includes(k),
-          ) ||
-          (item.styles !== undefined &&
-            (!record(item.styles) || Object.keys(item.styles).length > 0))
-        ) {
-          problems.push(
-            problem(
-              path,
-              "Remove inline styles, links or custom inline content, or extend the lesson schema to preserve them.",
-              "formatting",
-            ),
-          );
-        } else output += item.text;
+  function rich(content: unknown, path: string): { text: string; inline?: { text: string; marks?: z.infer<typeof marks>; href?: string }[] } {
+    if (typeof content === "string") return { text: content };
+    if (content === undefined) return { text: "" };
+    const runs: { text: string; marks?: z.infer<typeof marks>; href?: string }[] = [];
+    if (!Array.isArray(content)) { problems.push(problem(path, "Unsupported inline content.", "formatting")); return { text: "" }; }
+    for (const item of content) {
+      const linked = record(item) && item.type === "link";
+      const children = linked ? item.content : [item];
+      if (!record(item) || (linked && (typeof item.href !== "string" || Object.keys(item).some(k => !["type", "href", "content"].includes(k)))) || !Array.isArray(children)) {
+        problems.push(problem(path, "Unsupported inline content.", "formatting")); continue;
       }
-      return output;
+      for (const child of children) {
+        const parsed = record(child) ? marks.safeParse(child.styles ?? {}) : null;
+        if (!record(child) || child.type !== "text" || typeof child.text !== "string" || Object.keys(child).some(k => !["type", "text", "styles"].includes(k)) || !parsed?.success) {
+          problems.push(problem(path, "Unsupported inline marks or content.", "formatting")); continue;
+        }
+        runs.push({ text: child.text, ...(Object.keys(parsed.data).length ? { marks: parsed.data } : {}), ...(linked ? { href: item.href as string } : {}) });
+      }
     }
-    problems.push(
-      problem(path, "Use plain text or unstyled text runs.", "formatting"),
-    );
-    return "";
+    const text = runs.map(r => r.text).join("");
+    return { text, ...(runs.some(r => r.marks || r.href) ? { inline: runs } : {}) };
   }
   function walk(items: unknown[], parentId?: string, depth = 0) {
     if (depth > 100) {
@@ -391,9 +417,10 @@ export function editorBlocksToLessonDocument(
         "backgroundColor",
         "lessonCitations",
         "lessonConceptIds",
-        "lessonOrder",
+        "lessonOrder", "lessonPresentation", "lessonInline",
+        ...(item.type === "callout" ? ["tone"] : item.type === "codeBlock" ? ["language"] : []),
         ...(custom
-          ? ["lessonData"]
+          ? ["lessonData", ...customFields[customTypes[item.type]], ...(item.type === "image" ? ["url"] : item.type === "source" ? ["locator"] : [])]
           : item.type === "heading"
             ? ["level"]
             : item.type.endsWith("ListItem")
@@ -409,28 +436,26 @@ export function editorBlocksToLessonDocument(
               "unsupported",
             ),
           );
-      for (const [key, neutral] of [
-        ["textAlignment", "left"],
-        ["textColor", "default"],
-        ["backgroundColor", "default"],
-      ])
-        if (props[key] !== undefined && props[key] !== neutral)
-          problems.push(
-            problem(
-              `${path}.props.${key}`,
-              "Remove block formatting or extend the lesson schema to preserve it.",
-              "formatting",
-            ),
-          );
       try {
+        const formatting = { ...(props.textAlignment !== undefined && props.textAlignment !== "left" ? { alignment: props.textAlignment } : {}), ...(props.textColor !== undefined && props.textColor !== "default" ? { textColor: props.textColor } : {}), ...(props.backgroundColor !== undefined && props.backgroundColor !== "default" ? { backgroundColor: props.backgroundColor } : {}) };
         const base = {
+          ...(props.lessonPresentation !== undefined ? { presentation: { ...json(props.lessonPresentation, {} ) as object, ...formatting } } : Object.keys(formatting).length ? { presentation: formatting } : {}),
           id: item.id,
           ...(parentId === undefined ? {} : { parentId }),
           citations: json(props.lessonCitations, []),
           conceptIds: json(props.lessonConceptIds, []),
         };
         if (custom) {
-          const data = json(props.lessonData, undefined);
+          let data = json(props.lessonData, undefined);
+          if (data === undefined) {
+            switch (item.type) {
+              case "image": data = { sourceId: props.sourceId ?? options.imageSourceId?.(String(props.url ?? "")), alt: props.alt ?? "", caption: props.caption ?? "", ...(props.credit === undefined ? {} : { credit: props.credit }), ...(props.creditUrl === undefined ? {} : { creditUrl: props.creditUrl }), ...(props.figureKind === undefined ? {} : { figureKind: props.figureKind }), ...(props.annotations ? { annotations: json(props.annotations, undefined) } : {}) }; break;
+              case "youtube": data = { videoId: props.videoId, caption: props.caption ?? "", ...(props.start === undefined ? {} : { start: props.start }), ...(props.end ? { end: props.end } : {}) }; break;
+              case "equation": data = { ...rich(item.content, path), display: props.display ?? true }; break;
+              case "source": data = { sourceId: props.sourceId, label: props.label ?? props.locator ?? "" }; break;
+              default: throw new Error("Structured block requires lessonData.");
+            }
+          }
           if (
             !record(data) ||
             ["id", "parentId", "type", "citations", "conceptIds"].some(
@@ -440,7 +465,7 @@ export function editorBlocksToLessonDocument(
             throw new Error(
               "Custom block requires lessonData containing only its variant fields.",
             );
-          if (item.content !== undefined)
+          if (item.content !== undefined && item.type !== "equation")
             problems.push(
               problem(
                 path,
@@ -448,23 +473,40 @@ export function editorBlocksToLessonDocument(
                 "unsupported",
               ),
             );
+          if (item.type === "image" && props.url && !options.imageSourceId) throw new Error("Image URLs require an authorized source resolver.");
+          if (item.type === "image" && props.url && options.imageSourceId) {
+            const resolved = options.imageSourceId(String(props.url));
+            if (!resolved) throw new Error("Upload or select an authorized image source.");
+            data.sourceId = resolved;
+          }
+          if (!item.type.startsWith("lesson")) {
+            for (const key of customFields[customTypes[item.type]]) if (props[key] !== undefined && key !== "annotations") data[key] = props[key];
+            if (item.type === "image" && props.annotations !== undefined) data.annotations = props.annotations === "" ? undefined : json(props.annotations, undefined);
+            if (item.type === "equation" && item.content !== undefined) Object.assign(data, rich(item.content, path));
+          }
           blocks.push({ ...data, ...base, type: customTypes[item.type] });
         } else {
-          const content = plain(item.content, `${path}.content`);
+          const content = rich(item.content, `${path}.content`);
+          if (props.lessonInline && !content.inline) content.inline = Array.isArray(item.content) ? item.content.filter(record).map(r => ({ text: String(r.text ?? "") })) : [{ text: content.text }];
+          if (item.type === "divider" && content.text) problems.push(problem(path, "Divider cannot hold content.", "unsupported"));
           blocks.push(
-            item.type === "paragraph"
-              ? { ...base, type: "paragraph", text: content }
+            item.type === "divider" ? { ...base, type: "divider" }
+              : item.type === "callout" ? { ...base, type: "callout", ...content, tone: props.tone ?? "info" }
+              : item.type === "codeBlock" ? { ...base, type: "code", ...content, language: props.language ?? "" }
+              : item.type === "quote" || item.type === "toggleListItem" ? { ...base, type: item.type === "quote" ? "quote" : "toggle", ...content }
+              : item.type === "paragraph"
+              ? { ...base, type: "paragraph", ...content }
               : item.type === "heading"
                 ? {
                     ...base,
                     type: "heading",
-                    text: content,
+                    ...content,
                     level: props.level ?? 1,
                   }
                 : {
                     ...base,
                     type: "list",
-                    text: content,
+                    ...content,
                     style: nativeTypes[item.type as keyof typeof nativeTypes],
                     ...(props.checked === undefined
                       ? {}
@@ -507,7 +549,7 @@ export function editorBlocksToLessonDocument(
     const sorted = blocks
       .map((block, i) => ({ block, order: orders[i]! }))
       .sort((a, b) => a.order - b.order);
-    return validate({ schemaVersion: 1, blocks: sorted.map((v) => v.block) });
+    return validateLessonDocument({ schemaVersion: 1, blocks: sorted.map((v) => v.block) });
   }
-  return validate({ schemaVersion: 1, blocks });
+  return validateLessonDocument({ schemaVersion: 1, blocks });
 }

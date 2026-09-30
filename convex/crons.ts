@@ -1,4 +1,4 @@
-import { cronJobs } from "convex/server";
+import { cronJobs, makeFunctionReference } from "convex/server";
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -82,4 +82,6 @@ crons.interval("expire admin grants and suspensions", { minutes: 5 }, internal.a
 crons.interval("refresh platform analytics", { hours: 1 }, internal.adminAnalytics.refreshScheduled, {});
 crons.interval("prune webhook history", { hours: 1 }, internal.webhooks.pruneHistory, {});
 crons.interval("end idle live games", { minutes: 15 }, internal.live.expireIdle, {});
+crons.interval("prune service metrics", { hours: 1 }, makeFunctionReference<"mutation">("observability:prune"), {});
+crons.interval("clean up retained Learn source files", { hours: 1 }, makeFunctionReference<"mutation">("learnSourceRetention:cleanup"), {});
 export default crons;

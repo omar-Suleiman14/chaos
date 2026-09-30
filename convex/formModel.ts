@@ -43,6 +43,7 @@ export const fieldValidator = v.object({
   label: v.string(),
   description: v.optional(v.string()),
   required: v.boolean(),
+  releasesAt: v.optional(v.number()),
   placeholder: v.optional(v.string()),
   options: v.optional(v.array(choiceValidator)),
   rows: v.optional(v.array(choiceValidator)),
@@ -188,6 +189,7 @@ export const formTables = {
     /** Increments on every draft change from any source. */
     draftRevision: v.number(),
     settings: formSettingsValidator,
+    settingsRevision: v.optional(v.number()),
     publishedVersion: v.optional(v.number()),
     /** draftRevision at the last publication; later revisions are unpublished changes. */
     publishedRevision: v.optional(v.number()),

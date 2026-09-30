@@ -127,6 +127,15 @@ Webhooks created by a connected app can never include answers.
 `previousStatus` is sent for `form.closed` and `form.reopened`.
 `sharePath` is relative to the Chaos app origin.
 
+**Proposed, not sent yet.** When lessons join the integration API (see
+"Learn (proposed, pending backend)" in integration-api-v1.md), item events
+would carry lessons the connection can reach in the same shape, with no lesson
+content, notes or reader data:
+
+```json
+{ "item": { "id": "lesson_…", "kind": "lesson", "title": "Portal Hypertension", "status": "published", "version": 2, "readPath": "/…" }, "previousStatus": "draft" }
+```
+
 ## Request
 
 ```
