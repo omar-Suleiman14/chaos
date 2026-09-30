@@ -58,3 +58,5 @@ This supersedes stale pending statements above: folder/curriculum MCP registrati
 Delivery uses e2e before main, as requested. The backend/contract snapshot excludes concurrent UI and marketing changes. Provider integrations, AI-related roadmap items, Live team/homework, billing/domains, operational compliance and load testing remain outstanding or explicitly later. This is a foundation delivery, not completion of all 170 items.
 
 Exact e2e snapshot verification: 522 unit tests, 478 integration tests (one todo), app/backend typechecks and full ESLint with zero errors. Includes respondent handling required by verified-email restriction backend. Concurrent Learn UI is excluded. Live Vercel acceptance and production rollout remain unverified.
+
+Development deployment verification: superb-zebra-196 reported functions ready; CLI then exited 1 with a Windows path error. Independent live HTTP checks confirmed public search 200, unauthenticated v2 capabilities 401, and source CORS preflight 204. Production was not changed; Vercel build and signed-in journeys remain unverified.

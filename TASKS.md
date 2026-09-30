@@ -304,3 +304,5 @@ Completion checks: validated Chaos block schema; immutable publication and recov
 - [ ] Push scoped backend/contracts snapshot to e2e before main; keep shared main checkout and Opus changes intact.
 
 - [x] Exact scoped e2e snapshot: typechecks, ESLint zero errors, unit 522 and integration 478 (one todo). Includes compatible respondent restriction handling.
+
+- [x] Pushed e2e before main; development live probes confirm search 200, scoped API rejects unauthenticated calls (401), source OPTIONS 204. Windows CLI exit error followed successful deployment; direct probes confirmed availability.
