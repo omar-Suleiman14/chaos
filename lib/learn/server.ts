@@ -52,3 +52,17 @@ export async function listIndexableLessons(): Promise<{ id: string; publishedAt:
   }
   return result;
 }
+
+/** Server read of a published public course for the course page, metadata and sitemap. */
+export async function fetchPublicCourse(id: string) {
+  const backend = client();
+  if (!backend) return undefined;
+  try { return await backend.query(api.courses.getPublic, { courseId: id }); } catch { return null; }
+}
+
+/** Public courses for the sitemap; empty on preview deployments or when the backend is unreachable. */
+export async function listPublicCourses(): Promise<{ id: string; updatedAt: number }[]> {
+  const backend = client();
+  if (!backend || (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production")) return [];
+  try { return (await backend.query(api.courses.listPublic, { limit: 100 })).map(c => ({ id: c.id, updatedAt: c.updatedAt })); } catch { return []; }
+}

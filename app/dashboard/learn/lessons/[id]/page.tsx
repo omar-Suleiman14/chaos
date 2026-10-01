@@ -3,7 +3,7 @@
 import { useStableQueries } from "@/lib/stableQueries";
 import dynamic from "next/dynamic";
 import Link from "next/link";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { useConvex, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
@@ -44,7 +44,7 @@ const copy = {
     loading: "Opening lesson…", back: "Learn library", titlePh: "Lesson title", descPh: "A one-line summary readers see first (optional)",
     saving: "Saving…", saved: "Saved on this device", savedCloud: "Saved", preview: "Preview", history: "History", publish: "Publish", publishChanges: "Publish changes", published: "Published",
     more: "Lesson actions", discard: "Discard unpublished changes", unpublish: "Unpublish", duplicate: "Duplicate", archive: "Archive", delete: "Delete permanently", move: "Move to folder", noFolder: "No folder",
-    panel: "Lesson panel", panelToggle: "Show or hide the lesson panel", tabs: { details: "Details", sources: "Sources", practice: "Practice" },
+    panel: "Lesson settings", panelToggle: "Show or hide lesson settings", settingsLabel: "Settings", backCourse: "Course", courses: "Courses", tabs: { details: "Details", sources: "Sources", practice: "Practice" },
     discardTitle: "Discard unpublished changes?", discardBody: "Your draft goes back to the published version. This can’t be undone.",
     deleteTitle: "Delete this lesson?", deleteBody: "The lesson, its versions and its discussion are deleted. Saved copies in other people’s libraries stop working. This can’t be undone.",
     unpublishTitle: "Unpublish this lesson?", unpublishBody: "Readers lose access and it leaves Explore. Your draft and version history stay.",
@@ -58,7 +58,7 @@ const copy = {
     loading: "جارٍ فتح الدرس…", back: "مكتبة Learn", titlePh: "عنوان الدرس", descPh: "ملخص من سطر يراه القرّاء أولًا (اختياري)",
     saving: "جارٍ الحفظ…", saved: "محفوظ على هذا الجهاز", savedCloud: "محفوظ", preview: "معاينة", history: "السجل", publish: "انشر", publishChanges: "انشر التعديلات", published: "منشور",
     more: "إجراءات الدرس", discard: "تجاهل التعديلات غير المنشورة", unpublish: "إلغاء النشر", duplicate: "تكرار", archive: "أرشفة", delete: "حذف نهائي", move: "انقل إلى مجلد", noFolder: "بلا مجلد",
-    panel: "لوحة الدرس", panelToggle: "أظهر لوحة الدرس أو أخفها", tabs: { details: "التفاصيل", sources: "المصادر", practice: "التدريب" },
+    panel: "إعدادات الدرس", panelToggle: "أظهر إعدادات الدرس أو أخفها", settingsLabel: "الإعدادات", backCourse: "الدورة", courses: "الدورات", tabs: { details: "التفاصيل", sources: "المصادر", practice: "التدريب" },
     discardTitle: "تجاهل التعديلات غير المنشورة؟", discardBody: "تعود مسودتك إلى النسخة المنشورة. لا يمكن التراجع.",
     deleteTitle: "حذف هذا الدرس؟", deleteBody: "يُحذف الدرس وإصداراته ونقاشه. تتوقف النسخ المحفوظة في مكتبات الآخرين. لا يمكن التراجع.",
     unpublishTitle: "إلغاء نشر هذا الدرس؟", unpublishBody: "يفقد القرّاء الوصول ويخرج من الاستكشاف. تبقى مسودتك وسجل الإصدارات.",
@@ -107,7 +107,9 @@ function LessonEditorSession({ id }: { id: string }) {
   const folders = useFolders() ?? [];
   const [editorKey, setEditorKey] = useState(0);
   const [saving, setSaving] = useState(false);
-  const [panelOpen, setPanelOpen] = useState(true);
+  // Settings live in a drawer so the writing area keeps the full width.
+  const [panelOpen, setPanelOpen] = useState(false);
+  const courseId = useSearchParams().get("course");
   const [tab, setTab] = useState<Tab>("details");
   const [dialog, setDialog] = useState<null | "publish" | "history" | "discard" | "delete" | "unpublish">(null);
   const [toast, setToast] = useState<UndoToast | null>(null);
@@ -260,7 +262,7 @@ function LessonEditorSession({ id }: { id: string }) {
   return (
     <div className="lx-edit">
       <div className="lx-edit__bar">
-        <Link href={lesson.folderId ? `/dashboard/learn/library?folder=${lesson.folderId}` : "/dashboard/learn/library"} className="ws-icon-button" aria-label={t.back}><ArrowLeft size={18} className="lx-flip" /></Link>
+        <Link href={courseId && /^[a-z0-9]+$/i.test(courseId) ? `/dashboard/courses/${courseId}` : "/dashboard/courses"} className="ws-btn ws-btn--sm ws-btn--ghost" aria-label={t.back}><ArrowLeft size={16} className="lx-flip" aria-hidden /><span className="lx-phone-label">{courseId ? t.backCourse : t.courses}</span></Link>
         <LessonStatus lesson={lesson} />
         <span className="lx-save" role="status">{saving ? t.saving : error || pending.current.content || pending.current.meta ? "Unsaved changes" : <><Check size={13} aria-hidden />{caps.sharedPublishing ? t.savedCloud : t.saved}</>}</span>
         <span style={{ flex: 1 }} />
@@ -269,7 +271,7 @@ function LessonEditorSession({ id }: { id: string }) {
         <button type="button" className="ws-btn ws-btn--sm ws-btn--primary" disabled={!isOwner || conflict || mediaBusy || uploadCount > 0} onClick={() => void run(async () => { await flush(); setDialog("publish"); })}>
           <Rocket size={15} aria-hidden />{!lesson.published ? t.publish : changes ? t.publishChanges : t.published}
         </button>
-        <button type="button" className="ws-icon-button" aria-pressed={panelOpen} aria-label={t.panelToggle} onClick={() => setPanelOpen((o) => !o)}><PanelRight size={17} className="lx-flip" /></button>
+        <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={panelOpen} aria-label={t.panelToggle} onClick={() => setPanelOpen((o) => !o)}><PanelRight size={15} className="lx-flip" aria-hidden /><span className="lx-phone-label">{t.settingsLabel}</span></button>
         <WsMenu label={t.more} trigger={<MoreHorizontal size={18} />}>
           {(close) => (
             <>
@@ -301,7 +303,7 @@ function LessonEditorSession({ id }: { id: string }) {
         setEditorKey(k => k + 1);
       })}>Reload server draft; keep retained copy</button>}
       {retained && <details className="lx-notice"><summary>Retained unsaved draft</summary><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => { try { const saved = JSON.parse(retained); if (Array.isArray(saved.content)) { setRecoveredContent(saved.content); setEditorContent(saved.content); pending.current.content = saved.content; setEditorKey(k => k + 1); } if (saved.meta) { pending.current.meta = saved.meta; if (saved.meta.title !== undefined) setTitle(saved.meta.title); if (saved.meta.description !== undefined) setDescription(saved.meta.description); } } catch (err) { setError(errorMessage(err)); } }}>Open retained draft for review</button><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => void run(flush)}>Save reviewed draft</button><pre style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap" }}>{retained}</pre></details>}
-      {recovery && recovery.length > 0 && <details className="lx-notice"><summary>Server recovery revisions</summary>{recovery?.map(row => <details key={row._id}><summary>Revision {row.revision} ? {row.metadata.title}</summary><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => void run(async () => { await flush(); const restored = await actions.recoverDraft(lesson.id, row._id); setRecoveredContent(restored.draft.content); setEditorContent(restored.draft.content); setTitle(restored.draft.meta.title); setDescription(restored.draft.meta.description); setEditorKey(k => k + 1); })}>Restore this revision to draft</button><pre style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap" }}>{JSON.stringify({ metadata: row.metadata, document: row.document }, null, 2)}</pre></details>)}</details>}
+      {(conflict || !!error) && recovery && recovery.length > 0 && <details className="lx-notice"><summary>Server recovery revisions</summary>{recovery?.map(row => <details key={row._id}><summary>Revision {row.revision} ? {row.metadata.title}</summary><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => void run(async () => { await flush(); const restored = await actions.recoverDraft(lesson.id, row._id); setRecoveredContent(restored.draft.content); setEditorContent(restored.draft.content); setTitle(restored.draft.meta.title); setDescription(restored.draft.meta.description); setEditorKey(k => k + 1); })}>Restore this revision to draft</button><pre style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap" }}>{JSON.stringify({ metadata: row.metadata, document: row.document }, null, 2)}</pre></details>)}</details>}
 
       <div className="lx-edit__body" data-panel={panelOpen ? "open" : "closed"}>
         <div className="lx-edit__doc" dir={lesson.draft.meta.language === "ar" ? "rtl" : "ltr"} lang={lesson.draft.meta.language}>
@@ -340,7 +342,8 @@ function LessonEditorSession({ id }: { id: string }) {
         </div>
 
         {panelOpen && (
-          <aside className="lx-edit__side" aria-label={t.panel}>
+          <aside className="lx-edit__side" aria-label={t.panel} onKeyDown={(e) => { if (e.key === "Escape") setPanelOpen(false); }}>
+            <div className="lx-edit__side-head"><strong>{t.panel}</strong><button type="button" className="ws-icon-button" aria-label={t.panelToggle} onClick={() => setPanelOpen(false)}>×</button></div>
             <WsTabs tabs={["details", "sources", "practice"] as const} value={tab} onChange={setTab} label={t.panel} labels={{ details: t.tabs.details, sources: `${t.tabs.sources}${lesson.sources.length ? ` (${lesson.sources.length})` : ""}`, practice: `${t.tabs.practice}${lesson.quizzes.length ? ` (${lesson.quizzes.length})` : ""}` }} />
             {tab === "details" && (
               <>

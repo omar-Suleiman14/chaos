@@ -108,7 +108,7 @@ export class DurableLessonClient {
   }
   publish(id: string, note?: string) {
     return this.enqueue(id, async row => {
-      const result = await this.client.mutation(api.lessons.publish, { lessonId: row._id, expectedRevision: row.revision, ...(note?.trim() ? { note: note.trim() } : {}), visibility: this.visibility.get(id) ?? (row.visibility === "public" ? "public" : "private") });
+      const result = await this.client.mutation(api.lessons.publish, { lessonId: row._id, expectedRevision: row.revision, ...(note?.trim() ? { note: note.trim() } : {}), visibility: this.visibility.get(id) ?? (row.publishedVersionId && row.visibility === "private" ? "private" : "public") });
       if (!result.ok) throw new PreflightError(result.problems.map(p => p.path + ": " + p.message).join("\n"));
       this.rows.set(id, { ...row, revision: result.revision, publishedVersionId: result.versionId });
       const version = await this.client.query(api.lessons.getPublished, { lessonId: row._id });

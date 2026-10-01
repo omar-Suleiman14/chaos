@@ -21,6 +21,7 @@ describe("Learn collections and reusable cards", () => {
   });
   it("requires public lesson versions in public collections", async () => {
     const t = createTestConvex(); const owner = t.withIdentity(creatorIdentity);
+    await owner.mutation(api.quizFunctions.getOrCreateUser, {}); // New accounts get the Business trial, which allows private lessons.
     const lessonId = await owner.mutation(api.lessons.create, { metadata, document });
     const published = await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 0, visibility: "private" });
     if (!published.ok) throw new Error("publish failed");

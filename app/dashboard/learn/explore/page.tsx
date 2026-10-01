@@ -5,6 +5,7 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo } from "react";
 import { Compass, FolderOpen, Search, X } from "lucide-react";
 import { EmptyState, LessonCard } from "@/components/learn/ui";
+import PublicCourses from "@/components/courses/PublicCourses";
 import { Select } from "@/components/workspace/Select";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { isListed, useCurriculumNodes, useProgress, usePublicCollections, usePublicLessons } from "@/lib/learn/data";
@@ -65,6 +66,7 @@ function Explore() {
   return (
     <div className="lx-page">
       <header className="lx-hero"><div><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></div></header>
+      <PublicCourses />
       <search className="lx-form" aria-label={t.search}>
         <div className="lx-toolbar">
           <label className="ws-search" style={{ flex: 1, minWidth: 220 }}>

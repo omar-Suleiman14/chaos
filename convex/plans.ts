@@ -1,6 +1,6 @@
 import type { MutationCtx } from "./_generated/server";
 import { supportEmail } from "./support";
-import { hasPro } from "./authz";
+import { hasPro, isPaidPlan } from "./authz";
 import { planLimits } from "../lib/planCatalog";
 
 /** Count creations, not surviving records: deleting content does not refund quota. */
@@ -48,4 +48,11 @@ export async function consumeCreation(ctx: MutationCtx, ownerId: string) {
     creationMonth: month,
     monthlyCreations: count + 1,
   });
+}
+
+/** Public courses and lessons are free for everyone; private or restricted ones need a Business seat (or trial). */
+export async function requireVisibilityAllowed(ctx: { db: MutationCtx["db"] }, ownerId: string, visibility: "private" | "public" | "restricted") {
+  if (visibility === "public") return;
+  const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", ownerId)).unique();
+  if (!isPaidPlan(user, Date.now())) throw new Error(`BUSINESS_REQUIRED: Private courses and lessons are part of Chaos Business. Publish publicly, or contact ${supportEmail()} for Business seats.`);
 }

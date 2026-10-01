@@ -1,4 +1,5 @@
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
+import { requireVisibilityAllowed } from "./plans";
 import { recordPublicationAction } from "./learnPublicationAudit";
 import { v, ConvexError } from "convex/values";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
@@ -136,6 +137,7 @@ export async function publishLessonForActor(ctx: MutationCtx, actor: string, arg
   revisionCheck(lesson, args.expectedRevision);
   if (lesson.communityState !== "ok" || lesson.status !== "active") throw new Error("Resolve moderation or archive state before publishing");
   if (args.note !== undefined && args.note.length > 2000) throw new Error("Version note must contain at most 2000 characters");
+  await requireVisibilityAllowed(ctx, lesson.ownerId, args.visibility);
   const problems = await publicationProblems(ctx, lesson);
   if (problems.length) return { ok: false as const, problems };
   await consumeRate(ctx, `learn:publish:${actor}`, LEARN_WRITE_LIMITS.publicationsPerHour, 3_600_000);

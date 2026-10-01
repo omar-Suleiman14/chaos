@@ -15,6 +15,7 @@ import type * as aiEditorChat from "../aiEditorChat.js";
 import type * as aiQuiz from "../aiQuiz.js";
 import type * as aiQuizMutations from "../aiQuizMutations.js";
 import type * as authz from "../authz.js";
+import type * as courses from "../courses.js";
 import type * as crons from "../crons.js";
 import type * as curricula from "../curricula.js";
 import type * as curriculumModel from "../curriculumModel.js";
@@ -133,6 +134,7 @@ declare const fullApi: ApiFromModules<{
   aiQuiz: typeof aiQuiz;
   aiQuizMutations: typeof aiQuizMutations;
   authz: typeof authz;
+  courses: typeof courses;
   crons: typeof crons;
   curricula: typeof curricula;
   curriculumModel: typeof curriculumModel;

@@ -3,6 +3,7 @@ import { recordAssetPublicationAction } from "./learnPublicationAudit";
 import { v, ConvexError } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { requireActiveUser } from "./authz";
+import { requireVisibilityAllowed } from "./plans";
 import { collectionItem } from "./learnAssetModel";
 import { lessonMeta, visibility } from "./learnModel";
 import { lessonAccess, lessonAccessForActor } from "./lessons";
@@ -39,6 +40,7 @@ export const replaceItems = mutation({ args: { collectionId: v.id("learnCollecti
 } });
 export const publish = mutation({ args: { collectionId: v.id("learnCollections"), expectedRevision: v.number(), visibility }, returns: v.id("collectionVersions"), handler: async (ctx, args) => {
   const row = await owned(ctx, args.collectionId); revision(row, args.expectedRevision);
+  await requireVisibilityAllowed(ctx, row.ownerId, args.visibility);
   if (!row.items.length || row.communityState !== "ok") throw new Error("Collection is empty or moderated");
   for (const item of row.items) {
     if (item.kind === "lesson") { const lesson = await ctx.db.get("lessons", item.id); if (!lesson || lesson.visibility !== "public" || lesson.status !== "active" || lesson.communityState !== "ok" || lesson.publishedVersionId !== item.versionId) throw new Error("Collection references an unavailable lesson version"); }

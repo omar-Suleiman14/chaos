@@ -1007,3 +1007,12 @@ body.noise-bg:has(.workspace-ui)::before { display: none; }
 .workspace-ui .ws-surface-switch a:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
 .workspace-ui .ws-sidebar[data-collapsed="true"] .ws-surface-switch { grid-template-columns: 1fr; }
 .workspace-ui .ws-sidebar[data-collapsed="true"] .ws-surface-switch span { display: none; }
+
+/* Sidebar "New" menu: form/quiz or course. */
+.ws-new-menu { position: relative; }
+.ws-new-menu__list { position: absolute; z-index: 40; inset-inline: 0; top: calc(100% + 4px); display: grid; gap: 2px; padding: 6px; border-radius: 12px; background: var(--surface-container, #1d1d1f); border: 1px solid var(--ws-line, rgba(127,127,127,.25)); box-shadow: 0 16px 40px -12px rgba(0,0,0,.5); }
+.ws-new-menu__item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; border-radius: 8px; background: transparent; border: 0; color: inherit; text-align: start; cursor: pointer; font: inherit; }
+.ws-new-menu__item:hover, .ws-new-menu__item:focus-visible { background: var(--ws-active, rgba(127,127,127,.15)); outline: none; }
+.ws-new-menu__item svg { margin-top: 2px; flex: none; }
+.ws-new-menu__item strong { display: block; font-size: 14px; font-weight: 600; }
+.ws-new-menu__item small { display: block; font-size: 12px; color: var(--on-surface-variant); }

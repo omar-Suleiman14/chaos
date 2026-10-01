@@ -29,6 +29,7 @@ vi.mock("@/convex/_generated/api", () => ({
     forms: { getFormForEditor: "editor", listMyForms: "forms", listTemplates: "templates" },
     quizFunctions: { getMyQuizzes: "quizzes" },
     live: { createGame: "createGame" },
+    courses: { create: "createCourse", listMine: "courses" },
   },
 }));
 vi.mock("convex/react", () => ({
@@ -36,6 +37,7 @@ vi.mock("convex/react", () => ({
     if (query === "editor") return fixtures.editor;
     if (query === "forms") return { owned: [fixtures.form], shared: [] };
     if (query === "quizzes") return [];
+    if (query === "courses") return [];
     return { builtIn: [], own: [] };
   },
   useMutation: () => vi.fn(),
