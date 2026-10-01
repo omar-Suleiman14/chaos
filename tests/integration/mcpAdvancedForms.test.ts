@@ -45,7 +45,6 @@ it("updates settings through one policy and refuses stale writes and secret disc
   const { t, formId } = await setup();
   const set = makeFunctionReference<"mutation">("mcpAdvancedForms:setResponseControls"), get = makeFunctionReference<"query">("mcpAdvancedForms:getResponseControls");
   await expect(t.mutation(set, { userId: "other", formId, expectedSettingsRevision: 0, patch: { collectPartial: true } })).rejects.toThrow("FORBIDDEN");
-  await expect(t.mutation(set, { userId: "owner", formId, expectedSettingsRevision: 0, patch: { hideBranding: true } })).rejects.toThrow("PRO_REQUIRED");
   expect(await t.mutation(set, { userId: "owner", formId, expectedSettingsRevision: 0, patch: { access: "code", retentionDays: 30 }, accessCode: "private-code" })).toEqual({ settingsRevision: 1 });
   await expect(t.mutation(set, { userId: "owner", formId, expectedSettingsRevision: 0, patch: { collectPartial: true } })).rejects.toThrow("SETTINGS_CONFLICT");
   const controls = await t.query(get, { userId: "owner", formId });

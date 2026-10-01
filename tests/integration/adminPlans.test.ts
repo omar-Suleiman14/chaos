@@ -89,7 +89,7 @@ describe("admin plans and moderation", () => {
     await t.finishAllScheduledFunctions(() => vi.runAllTimers());
     expect((await t.run((ctx) => ctx.db.get(userId)))?.plan).toBe("free");
   });
-  it("shares Free's five-item quota across forms and quizzes, does not refund deletion, and resets next month", async () => {
+  it("does not cap Personal creations across forms and quizzes", async () => {
     const { t, admin, owner, userId } = await setup();
     await admin.mutation(api.admin.setPlan, {
       userId,
@@ -109,18 +109,13 @@ describe("admin plans and moderation", () => {
       });
     await expect(
       owner.mutation(api.forms.createForm, { definition: definition() }),
-    ).rejects.toThrow("MONTHLY_CREATION_LIMIT");
+    ).resolves.toBeTruthy();
     await t.run((ctx) => ctx.db.delete(ids[0]));
-    await expect(
-      owner.mutation(api.forms.createForm, { definition: definition() }),
-    ).rejects.toThrow("MONTHLY_CREATION_LIMIT");
-    const now = new Date();
-    vi.setSystemTime(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1));
     await expect(
       owner.mutation(api.forms.createForm, { definition: definition() }),
     ).resolves.toBeTruthy();
   });
-  it("enforces expiry before the scheduled job runs and blocks copies", async () => {
+  it("keeps copies working after a paid plan expires", async () => {
     const { t, owner, userId } = await setup();
     const formId = await owner.mutation(api.forms.createForm, {
       definition: definition(),
@@ -132,7 +127,7 @@ describe("admin plans and moderation", () => {
     );
     await expect(
       owner.mutation(api.forms.duplicateForm, { formId }),
-    ).rejects.toThrow("MONTHLY_CREATION_LIMIT");
+    ).resolves.toBeTruthy();
   });
   it("suspends writes and collection, then restores automatically; bans do not expire", async () => {
     const { t, admin, owner, userId } = await setup();

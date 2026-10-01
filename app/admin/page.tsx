@@ -298,10 +298,9 @@ function Overview() {
       <div className="rounded-xl border p-5 space-y-2">
         <h3 className="font-semibold">Plans</h3>
         <p className="text-sm text-muted-foreground">
-          New accounts receive Pro for 30 days. Free includes five new forms or
-          quizzes per calendar month (UTC). Copies and imports count. Pro
-          removes that creation cap and the platform response caps. Existing
-          content is kept when a plan ends.
+          Every account has every feature with no creation or response caps.
+          Personal is free; a Pro grant here marks a paid Business seat for
+          reporting only. Existing content is kept when a plan ends.
         </p>
       </div>
       <div className="rounded-xl border p-5">

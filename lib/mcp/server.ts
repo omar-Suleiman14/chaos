@@ -27,7 +27,7 @@ export const MCP_SCOPES = ["openid", "profile", "email"];
 const securitySchemes = [{ type: "oauth2", scopes: MCP_SCOPES }];
 
 const instructions = `Chaos (chaos.fail) is where this person builds forms, surveys and quizzes and reads the answers.
-- The Chaos app needs a Chaos Pro plan (new accounts get a 30-day trial). If a tool returns PRO_REQUIRED, say so plainly and point them to chaos.fail.
+- The Chaos app is free on every plan.
 - Everything created here starts as a draft in their Chaos library. Publish only when they ask, and share the returned shareUrl.
 - A quiz is a form with quizMode on. For "make a quiz about what we discussed", write the questions from the conversation yourself: mostly single_choice with 3–4 options, set correctAnswers to the exact option label, and give points.
 - Write like a real teacher or organiser, not a brochure. Each question is one short, direct sentence (usually under 15 words) that tests one fact or asks one thing. Options are 1–5 words, parallel in form, and every wrong option is plausible; no "All of the above", joke options or filler. Leave question descriptions empty unless a hint is truly needed. A quiz explanation, if any, is one plain sentence saying why the answer is right. Titles are 2–6 words; the intro is one sentence or empty. No emojis, exclamation marks, hype ("ultimate", "fun-filled", "dive into", "journey", "test your knowledge") or restating the question in the options.

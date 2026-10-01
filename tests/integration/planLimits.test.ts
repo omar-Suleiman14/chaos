@@ -15,21 +15,21 @@ async function fixture(plan: "free" | "pro", count: number) {
   });
   return { t, ...ids };
 }
-describe("bounded plan entitlements", () => {
-  it.each(["free", "pro"] as const)("enforces the %s creation boundary atomically", async plan => {
-    const limit = planLimits[plan].creationsPerMonth;
-    const { t, userId } = await fixture(plan, limit - 1);
+describe("plan entitlements", () => {
+  it.each(["free", "pro"] as const)("does not cap %s creations, but still refuses restricted accounts", async plan => {
+    expect(planLimits[plan].creationsPerMonth).toBeNull();
+    const { t, userId } = await fixture(plan, 10_000);
     await t.run(ctx => consumeCreation(ctx, "owner"));
-    await expect(t.run(ctx => consumeCreation(ctx, "owner"))).rejects.toThrow("MONTHLY_CREATION_LIMIT");
-    expect((await t.run(ctx => ctx.db.get("users", userId)))?.monthlyCreations).toBe(limit);
+    await t.run(ctx => ctx.db.patch("users", userId, { isBanned: true }));
+    await expect(t.run(ctx => consumeCreation(ctx, "owner"))).rejects.toThrow("ACCOUNT_RESTRICTED");
   });
-  it("applies the lower creator cap and returns to Free when Pro expires", async () => {
+  it("only applies the form's own response limit, on any plan", async () => {
     const { t, formId, userId } = await fixture("pro", 0);
     const cap = () => t.run(async ctx => responseCap(ctx, (await ctx.db.get("forms", formId))!, Date.now()));
-    expect(await cap()).toBe(10_000);
+    expect(await cap()).toBeNull();
     await t.run(ctx => ctx.db.patch("forms", formId, { settings: { ...defaultFormSettings, responseLimit: 50 } }));
     expect(await cap()).toBe(50);
     await t.run(async ctx => { await ctx.db.patch("forms", formId, { settings: defaultFormSettings }); await ctx.db.patch("users", userId, { planExpiresAt: Date.now() - 1 }); });
-    expect(await cap()).toBe(1_000);
+    expect(await cap()).toBeNull();
   });
 });

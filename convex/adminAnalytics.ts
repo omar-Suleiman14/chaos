@@ -2,7 +2,7 @@
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { creatorRestricted, hasPro, requireAdmin } from "./authz";
+import { creatorRestricted, isPaidPlan, requireAdmin } from "./authz";
 import { emptyMetrics, metricsValidator } from "./adminModel";
 
 async function start(ctx: MutationCtx) {
@@ -93,7 +93,7 @@ export const scan = internalMutation({
       const page = await ctx.db.query("users").paginate(options);
       for (const user of page.page) {
         pending.users++;
-        if (hasPro(user, Date.now())) pending.pro++;
+        if (isPaidPlan(user, Date.now())) pending.pro++;
         if (user.isBanned || user.suspendedUntil) pending.restricted++;
       }
       cursor = page.isDone ? null : page.continueCursor;

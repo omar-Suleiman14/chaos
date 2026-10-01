@@ -1,4 +1,4 @@
-﻿import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
 import { supportEmail } from "./support";
 import { hasPro } from "./authz";
 import { planLimits } from "../lib/planCatalog";
@@ -19,6 +19,7 @@ export async function consumeCreation(ctx: MutationCtx, ownerId: string) {
   const month = new Date(now).toISOString().slice(0, 7);
   const tier = hasPro(user, now) ? "pro" : "free";
   const limit = planLimits[tier].creationsPerMonth;
+  if (limit === null) return;
   let count = user.creationMonth === month ? (user.monthlyCreations ?? 0) : 0;
   if (user.creationMonth !== month) {
     // Bootstrap once, bounded to enough records to prove the active tier's cap.

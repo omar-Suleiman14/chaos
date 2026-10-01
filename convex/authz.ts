@@ -188,8 +188,12 @@ export async function creatorRestricted(ctx: DbCtx, clerkId: string): Promise<bo
   const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", clerkId)).first();
   return !!(user?.isBanned || user?.suspendedUntil);
 }
-/** Mutations pass now for exact enforcement if an expiry job is delayed. */
-export function hasPro(user: Doc<"users"> | null, now?: number): boolean {
+/** A paid Business seat or admin grant (reporting only). Mutations pass now for exact expiry. */
+export function isPaidPlan(user: Doc<"users"> | null, now?: number): boolean {
   if (user?.plan !== undefined) return user.plan === "pro" && !!user.planExpiresAt && (now === undefined || user.planExpiresAt > now);
   return !!user?.isElevated;
+}
+/** Every account has every feature: Personal is free, Business pays per seat for business use. Bans are checked separately. */
+export function hasPro(user: Doc<"users"> | null, _now?: number): boolean {
+  return !!user;
 }

@@ -3,11 +3,13 @@ import { LEARN_LIMITS } from "../../convex/learnModel";
 import { planCatalog, planLimits } from "../../lib/planCatalog";
 
 describe("public plan catalog", () => {
-  it("keeps paid allowances finite and above personal allowances", () => {
-    for (const key of ["creationsPerMonth", "responsesPerForm", "livePlayers"] as const) {
-      expect(Number.isFinite(planLimits.pro[key])).toBe(true);
-      expect(planLimits.pro[key]).toBeGreaterThan(planLimits.free[key]);
+  it("gives Personal and Business the same uncapped allowances and prices Business per seat", () => {
+    for (const plan of [planLimits.free, planLimits.pro]) {
+      expect(plan.creationsPerMonth).toBeNull();
+      expect(plan.responsesPerForm).toBeNull();
+      expect(plan.livePlayers).toBe(500);
     }
+    expect(planCatalog.free.priceEgp).toBe(0);
     expect(planCatalog.pro.billingUnit).toBe("active-seat-month");
     expect(planCatalog.pro.proposedPriceEgp).toBe(20);
   });

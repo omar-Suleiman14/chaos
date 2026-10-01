@@ -1026,9 +1026,9 @@ export const sectionsEn: DocSection[] = [
       {
         slug: "chatgpt-app",
         title: "The Chaos app in ChatGPT",
-        summary: "Make and manage forms by talking to ChatGPT. Pro only.",
+        summary: "Make and manage forms by talking to ChatGPT. Free on every plan.",
         blocks: [
-          { type: "p", text: "With the Chaos app, ChatGPT can work in your Chaos account. It is part of Chaos Pro. New accounts get a 30-day Pro trial. On the Free plan, ChatGPT tells you the app needs Pro." },
+          { type: "p", text: "With the Chaos app, ChatGPT can work in your Chaos account. It is included on every plan, including free Personal accounts." },
           { type: "heading", id: "connect", text: "Connect it" },
           { type: "p", text: "Chaos is not in the ChatGPT app directory yet. Until it is, add it yourself as a custom app. This takes about two minutes on ChatGPT's web version with a paid plan. In Business and Enterprise workspaces, an admin has to allow developer mode first." },
           {
@@ -1195,14 +1195,14 @@ export const sectionsEn: DocSection[] = [
       {
         slug: "plans",
         title: "Plans",
-        summary: "What is free, and what Pro adds.",
+        summary: "Personal is free; Business pays per seat.",
         blocks: [
-          { type: "p", text: "Free is for personal use with limits. Pro / Business is proposed at 20 EGP per active creator seat per month; respondents do not need paid seats. Checkout is not live and nobody is automatically charged. Both plans allow up to 10 MiB per form upload and 25 MiB per teaching source file; these are not total storage allowances. See [Pricing](/pricing)." },
-          { type: "heading", id: "free", text: "Free" },
-          { type: "p", text: "Build, publish and collect responses. The Free plan includes 5 new forms or quizzes each calendar month." },
-          { type: "heading", id: "pro", text: "Pro" },
-          { type: "list", items: ["The Chaos app in ChatGPT.", "Pro allowances: 100 new forms or quizzes per UTC calendar month, 10,000 responses per form and 500 Live players. Rate and platform limits still apply."] },
-          { type: "p", text: "New accounts start with a 30-day Pro trial." },
+          { type: "p", text: "Personal use is free, with every feature and no monthly caps. Business is planned at 20 EGP per active creator seat per month; respondents, students and Live players never need seats. Checkout is not live and nobody is automatically charged. Every account allows up to 10 MiB per form upload and 25 MiB per teaching source file; these are not total storage allowances. See [Pricing](/pricing)." },
+          { type: "heading", id: "free", text: "Personal" },
+          { type: "p", text: "Unlimited forms, surveys, quizzes and responses, Live games with up to 500 players, the Chaos app in ChatGPT and branding removal. Rate limits and security checks still apply." },
+          { type: "heading", id: "pro", text: "Business" },
+          { type: "list", items: ["The same product, licensed for business use.", "20 EGP per active creator seat per month: only people who create or manage content."] },
+          { type: "p", text: "Businesses can request seats through Support until checkout is available." },
           { type: "tip", text: "Questions about a plan? See [Support](/support)." },
         ],
       },

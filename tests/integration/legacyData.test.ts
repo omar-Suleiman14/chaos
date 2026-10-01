@@ -178,19 +178,21 @@ describe("legacy data: read paths return correct values", () => {
     const me = await teacher.query(api.quizFunctions.getCurrentUser, {});
     expect(me).toMatchObject({ username: "legacyteacher" });
     expect(me!.plan).toBeUndefined();
-    const { hasPro } = await import("@/convex/authz");
+    const { hasPro, isPaidPlan } = await import("@/convex/authz");
     const users = await t.run(async (ctx) => ({
       elevated: await ctx.db.get("users", ds.users.elevated), planless: await ctx.db.get("users", ds.users.planless),
       pro: await ctx.db.get("users", ds.users.pro), teacher: await ctx.db.get("users", ds.users.teacher),
     }));
-    expect(hasPro(users.elevated, ds.now)).toBe(true);
-    expect(hasPro(users.planless, ds.now)).toBe(false);
-    expect(hasPro(users.teacher, ds.now)).toBe(false);
-    expect(hasPro(users.pro, ds.now)).toBe(true);
-    // A pro plan that has expired stops counting, even without isElevated.
-    expect(hasPro({ ...users.pro!, planExpiresAt: ds.now - 1 }, ds.now)).toBe(false);
+    // Every account has every feature; isPaidPlan still reports paid or admin-granted plans.
+    for (const user of Object.values(users)) expect(hasPro(user, ds.now)).toBe(true);
+    expect(isPaidPlan(users.elevated, ds.now)).toBe(true);
+    expect(isPaidPlan(users.planless, ds.now)).toBe(false);
+    expect(isPaidPlan(users.teacher, ds.now)).toBe(false);
+    expect(isPaidPlan(users.pro, ds.now)).toBe(true);
+    // A paid plan that has expired stops counting, even without isElevated.
+    expect(isPaidPlan({ ...users.pro!, planExpiresAt: ds.now - 1 }, ds.now)).toBe(false);
     // An explicit plan overrides a legacy isElevated flag.
-    expect(hasPro({ ...users.elevated!, plan: "free" }, ds.now)).toBe(false);
+    expect(isPaidPlan({ ...users.elevated!, plan: "free" }, ds.now)).toBe(false);
   });
 
   it("MCP reads classic quizzes: search, get_form and results", async () => {

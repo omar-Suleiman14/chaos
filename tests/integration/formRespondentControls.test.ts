@@ -61,25 +61,13 @@ describe("hidden fields", () => {
 });
 
 describe("branding", () => {
-  it("lets only Pro owners hide branding and brings it back when the plan lapses", async () => {
+  it("lets any owner hide branding, including on the free Personal plan", async () => {
     const t = createTestConvex();
     const { owner, formId, shareId } = await publish(t);
-    // New accounts start with a Pro trial; end it to test a free owner.
     await setPro(t, undefined);
-    await expect(owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, hideBranding: true } })).rejects.toThrow(/PRO_REQUIRED/);
-    expect((await owner.query(api.forms.getFormForEditor, { formId }))!.canHideBranding).toBe(false);
-
-    const until = Date.now() + 86_400_000;
-    await setPro(t, until);
     expect((await owner.query(api.forms.getFormForEditor, { formId }))!.canHideBranding).toBe(true);
     await owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, hideBranding: true } });
     expect(await t.query(api.respond.getPublicForm, { shareId })).toMatchObject({ state: "open", hideBranding: true });
-
-    // A stored flag is not trusted on its own: the plan is checked on every load.
-    await setPro(t, undefined);
-    expect(await t.query(api.respond.getPublicForm, { shareId })).toMatchObject({ state: "open", hideBranding: false });
-    // Re-saving other settings keeps working after the plan lapses.
-    await owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, hideBranding: true, showReceipt: false } });
   });
 
   it("does not let collaborators or other people change it", async () => {
