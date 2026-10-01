@@ -1,7 +1,8 @@
 "use client";
 
+import { useStableQueries } from "@/lib/stableQueries";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { useConvex, useConvexAuth, usePaginatedQuery, useQueries, useQuery } from "convex/react";
+import { useConvex, useConvexAuth, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { DurableLibraryClient, useLibraryAnnotations, useLibraryFolders, useLibraryMembers, useLibraryFolderItems, useLibraryCurriculum, useLibraryCourses, useLibraryFlashcards, useLibraryFlashcardRows, annotationSave, annotationHighlight, annotationNote, flashcardUi } from "./libraryClient";
@@ -100,7 +101,7 @@ function useOwnedLessons(archived: boolean): Lesson[] | undefined {
   const members = useLibraryMembers();
   const viewer = useLearnViewer();
   const queries = useMemo(() => Object.fromEntries((rows ?? []).filter(r => r.publishedVersionId).map(row => [row._id, { query: api.lessons.getPublished, args: { lessonId: row._id } }])), [rows]);
-  const versions = useQueries(queries);
+  const versions = useStableQueries(queries);
   useEffect(() => { if (viewer?.signedIn) for (const row of rows ?? []) { const version = versions[row._id]; if (version && !(version instanceof Error)) rememberProgress(viewer.id, { lessonId: row._id, version }); } }, [rows, versions, viewer?.id, viewer?.signedIn]);
   if (rows === undefined || rows.some(r => r.publishedVersionId && versions[r._id] === undefined)) return undefined;
   return rows.filter(r => (r.status === "archived") === archived).map(row => { const version = versions[row._id]; if (version instanceof Error) throw version; return { ...uiLesson(row, version as Doc<"lessonVersions"> | undefined), folderId: members?.find(m => m.asset.kind === "lesson" && m.asset.id === row._id)?.folderId }; });
@@ -134,7 +135,7 @@ export function usePublicLessons(filters: SearchFilters = {}): Lesson[] | undefi
   const search = usePaginatedQuery(api.learnSearch.searchPublic, filters.q?.trim() ? { text: filters.q.trim().slice(0, 200) } : "skip", { initialNumItems: 20 });
   const ids = filters.q?.trim() ? search.results.map(r => r.lessonId) : rank?.map(r => r.lessonId);
   const queries = Object.fromEntries((ids ?? []).map(id => [id, { query: api.learnFrontend.publicLesson, args: { id } }]));
-  const results = useQueries(queries);
+  const results = useStableQueries(queries);
   if (ids === undefined || ids.some(id => results[id] === undefined)) return undefined;
   const lessons = ids.flatMap(id => { const result = results[id]; if (result instanceof Error) throw result; return result ? [publicUiLesson(result)] : []; });
   return searchLessons(lessons, {}, filters);
@@ -207,7 +208,7 @@ export function useProgress(): Record<string, LessonProgress> | undefined {
   useSyncExternalStore(fn => { listeners.add(fn); return () => { listeners.delete(fn); }; }, () => targetGeneration, () => 0);
   const targets = [...progressTargets.entries()].filter(([key]) => key.startsWith((viewer?.id ?? "guest") + ":")).map(([, value]) => value);
   const queries = Object.fromEntries(auth.isAuthenticated ? targets.map(target => [target.lessonId, { query: api.learnCommunity.getProgress, args: { lessonId: target.lessonId, versionId: target.versionId } }]) : []);
-  const rows = useQueries(queries);
+  const rows = useStableQueries(queries);
   if (!viewer || auth.isLoading) return undefined;
   const result: Record<string, LessonProgress> = {};
   if (auth.isAuthenticated && targets.some(target => rows[target.lessonId] === undefined)) return undefined;
@@ -275,7 +276,7 @@ export function useFlashcardSet(id: string | undefined): FlashcardSet | null | u
 
 export function useLessonFlashcards(lessonId: string): FlashcardSet[] | undefined {
   const attachments = useQuery(api.flashcardStudy.listAttached, { lessonId: lessonId as Id<"lessons"> });
-  const rows = useQueries(Object.fromEntries((attachments ?? []).map(r => [r.setId, { query: api.learnLibrary.flashcard, args: { id: r.setId } }])));
+  const rows = useStableQueries(Object.fromEntries((attachments ?? []).map(r => [r.setId, { query: api.learnLibrary.flashcard, args: { id: r.setId } }])));
   if (!attachments || attachments.some(r => rows[r.setId] === undefined)) return undefined;
   return attachments.flatMap(a => { const row = rows[a.setId]; if (row instanceof Error) throw row; return row ? [{ ...flashcardUi(row), lessonId }] : []; });
 }
@@ -571,7 +572,7 @@ export function useAllHighlights(): Highlight[] | undefined { return useLibraryA
 /** Titles for lesson ids, for lists that reference lessons (saved items, notes). */
 export function useLessonTitles(): ((id: string) => string | undefined) | undefined {
   const annotations = useLibraryAnnotations();
-  const results = useQueries(Object.fromEntries([...new Set(annotations?.map(a => a.lessonId) ?? [])].map(id => [id, { query: api.learnFrontend.publicLesson, args: { id } }])));
+  const results = useStableQueries(Object.fromEntries([...new Set(annotations?.map(a => a.lessonId) ?? [])].map(id => [id, { query: api.learnFrontend.publicLesson, args: { id } }])));
   return annotations === undefined ? undefined : id => { const row = results[id]; return row && !(row instanceof Error) ? row.version.metadata.title : undefined; };
 }
 
@@ -586,7 +587,7 @@ export function usePublishedCollection(id: string) { return useQuery(api.learnLi
 export function useCollectionSnapshotLessons(id: string): Lesson[] | undefined {
   const snapshot = usePublishedCollection(id);
   const items = snapshot?.items.filter(i => i.kind === "lesson") ?? [];
-  const versions = useQueries(Object.fromEntries(items.map(i => [i.id, { query: api.lessonVersionReads.get, args: { lessonId: i.id, versionId: i.versionId } }])));
+  const versions = useStableQueries(Object.fromEntries(items.map(i => [i.id, { query: api.lessonVersionReads.get, args: { lessonId: i.id, versionId: i.versionId } }])));
   if (snapshot === undefined || items.some(i => versions[i.id] === undefined)) return undefined;
   return items.flatMap(i => { const version = versions[i.id]; if (!version || version instanceof Error) return []; return [publicUiLesson({ lessonId: i.id, ownerId: "", ownerName: version.metadata.authorDisplay ?? "Chaos creator", createdAt: version.publishedAt, version })]; });
 }

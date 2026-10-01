@@ -1,9 +1,10 @@
 "use client";
 
+import { useStableQueries } from "@/lib/stableQueries";
 import { useMemo, useState } from "react";
 import { GraduationCap, Tags, X } from "lucide-react";
 import { Select } from "@/components/workspace/Select";
-import { usePaginatedQuery, useConvex, useQueries } from "convex/react";
+import { usePaginatedQuery, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { asBlocks, blockText, walk } from "@/lib/learn/doc";
@@ -96,7 +97,7 @@ function CurriculumAssociations({ lessonId, content, beforeMapping, disabled }: 
   const versions = usePaginatedQuery(api.curricula.listVersions, programId ? { programId: programId as Id<"curriculumPrograms"> } : "skip", { initialNumItems: 20 });
   const nodes = usePaginatedQuery(api.curricula.listNodes, versionId ? { versionId: versionId as Id<"curriculumVersions"> } : "skip", { initialNumItems: 30 });
   const mappings = usePaginatedQuery(api.curricula.listLessonMappings, { lessonId: lessonId as Id<"lessons"> }, { initialNumItems: 20 });
-  const mappingNodes = useQueries(Object.fromEntries([...new Set(mappings.results.map(mapping => mapping.versionId))].map(id => [id, { query: api.curricula.listNodes, args: { versionId: id, paginationOpts: { cursor: null, numItems: 100 } } }])));
+  const mappingNodes = useStableQueries(Object.fromEntries([...new Set(mappings.results.map(mapping => mapping.versionId))].map(id => [id, { query: api.curricula.listNodes, args: { versionId: id, paginationOpts: { cursor: null, numItems: 100 } } }])));
   const blocks = useMemo(() => [...walk(asBlocks(content))].map(({ block }) => ({ id: block.id, label: blockText(block).slice(0, 90) || block.type })), [content]);
   const path = (id: string) => {
     const chain: string[] = [], seen = new Set<string>();

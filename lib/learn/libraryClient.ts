@@ -1,7 +1,8 @@
 "use client";
 
+import { useStableQueries } from "@/lib/stableQueries";
 import { useEffect, useState } from "react";
-import { useConvexAuth, usePaginatedQuery, useQueries, useQuery, type ConvexReactClient } from "convex/react";
+import { useConvexAuth, usePaginatedQuery, useQuery, type ConvexReactClient } from "convex/react";
 import type { FunctionReference } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
@@ -37,7 +38,7 @@ function useBranches<T>(query: FunctionReference<"query">, parents: string[] | u
   const roots = parents ?? [];
   const [cursors, setCursors] = useState<Record<string, string[]>>({});
   const requests = Object.fromEntries(roots.flatMap(id => [null, ...(cursors[id] ?? [])].map((cursor, i) => [`${id}:${i}`, { query, args: { ...(field ? { [field]: id } : {}), paginationOpts: { cursor, numItems: 25 } } }])));
-  const results = useQueries(requests);
+  const results = useStableQueries(requests);
   const next: Record<string, string[]> = {};
   let ready = parents !== undefined;
   const rows: T[] = [];

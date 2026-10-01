@@ -1,10 +1,11 @@
 "use client";
 
+import { useStableQueries } from "@/lib/stableQueries";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
-import { useConvex, useQuery, useQueries } from "convex/react";
+import { useConvex, useQuery } from "convex/react";
 import { ConvexError } from "convex/values";
 import { api } from "@/convex/_generated/api";
 import type { Id, Doc } from "@/convex/_generated/dataModel";
@@ -88,7 +89,7 @@ function LessonEditorSession({ id }: { id: string }) {
   const native = useQuery(api.learnFrontend.editableLesson, canEdit ? { id } : "skip");
   const [editorContent, setEditorContent] = useState<unknown[]>();
   const ids = sourceIds(native?.draft, editorContent);
-  const sourceRows = useQueries(Object.fromEntries(ids.map(sourceId => [sourceId, { query: api.learnSources.getMetadata, args: { sourceId: sourceId as Id<"learnSources"> } }])));
+  const sourceRows = useStableQueries(Object.fromEntries(ids.map(sourceId => [sourceId, { query: api.learnSources.getMetadata, args: { sourceId: sourceId as Id<"learnSources"> } }])));
   const sources = ids.flatMap(sourceId => { const row = sourceRows[sourceId]; return row && !(row instanceof Error) ? [sourceView(row)] : []; });
   const sourceError = ids.find(sourceId => sourceRows[sourceId] === null || sourceRows[sourceId] instanceof Error);
   const [mediaBusy, setMediaBusy] = useState(false);

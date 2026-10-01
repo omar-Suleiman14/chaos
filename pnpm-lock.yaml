@@ -166,6 +166,9 @@ importers:
 
   .:
     dependencies:
+      '@blobatar/react':
+        specifier: ^2.7.0
+        version: 2.7.0(blobatar@2.7.0(react@19.3.0))(react@19.3.0)
       '@blocknote/code-block':
         specifier: 0.55.0
         version: 0.55.0(@blocknote/core@0.55.0(@types/hast@3.0.5))
@@ -193,6 +196,9 @@ importers:
       '@modelcontextprotocol/sdk':
         specifier: ^1.31.0
         version: 1.31.0(supports-color@7.2.0)(zod@4.3.6)
+      blobatar:
+        specifier: ^2.7.0
+        version: 2.7.0(react@19.3.0)
       canvas-confetti:
         specifier: ^1.9.4
         version: 1.9.4
@@ -561,6 +567,12 @@ packages:
     peerDependenciesMeta:
       '@types/react':
         optional: true
+
+  '@blobatar/react@2.7.0':
+    resolution: {integrity: sha512-rysDM1+2qoeIwIezVw/em+ZxOMyqqjqJOGNEvtOOU1nFp0jmzyEjlXtJTDM6xPKamq59pq6wcG9+mHIUZV572A==}
+    peerDependencies:
+      blobatar: 2.x
+      react: '>=18'
 
   '@blocknote/code-block@0.55.0':
     resolution: {integrity: sha512-ctdD9YUEuK9nWbLkNcEd8jGdtmUpuSkJ2VP6iXTJm33ryMd1VnsWwaj/I1VNST1s/rMF3QvFq5Z1paIvsi4+zQ==}
@@ -2792,6 +2804,17 @@ packages:
 
   bidi-js@1.1.0:
     resolution: {integrity: sha512-fX1Onk0tdVPC7obPWB5EbJ1z7NVhLq4m2xZLq2YXBkxzMXIGRpNMU88n0EPgWseKl12J7zXs7qrDxPK4sRs2fg==}
+
+  blobatar@2.7.0:
+    resolution: {integrity: sha512-tL1p2J3dXE/Z9U/ITwHqU7HBHmTH+Am+hif1J1hWAhvFT1VYC2HG+eXtN7081yuY+L2lrp9bs/VaF7dVH3S2jw==}
+    peerDependencies:
+      react: '>=18'
+      vue: '>=3'
+    peerDependenciesMeta:
+      react:
+        optional: true
+      vue:
+        optional: true
 
   body-parser@2.3.0:
     resolution: {integrity: sha512-2cGmJupaNgg+QUwVLAucDuWuoMZ6EX9iHDRswZ5lsNYEmwPaRknMPCLZz07yTzVq/83p4o/wzbDZbBrTvGGTIw==}
@@ -5912,6 +5935,11 @@ snapshots:
     optionalDependencies:
       '@types/react': 19.3.0
 
+  '@blobatar/react@2.7.0(blobatar@2.7.0(react@19.3.0))(react@19.3.0)':
+    dependencies:
+      blobatar: 2.7.0(react@19.3.0)
+      react: 19.3.0
+
   '@blocknote/code-block@0.55.0(@blocknote/core@0.55.0(@types/hast@3.0.5))':
     dependencies:
       '@blocknote/core': 0.55.0(@types/hast@3.0.5)
@@ -8084,6 +8112,10 @@ snapshots:
   bidi-js@1.1.0:
     dependencies:
       require-from-string: 2.0.2
+
+  blobatar@2.7.0(react@19.3.0):
+    optionalDependencies:
+      react: 19.3.0
 
   body-parser@2.3.0(supports-color@7.2.0):
     dependencies:

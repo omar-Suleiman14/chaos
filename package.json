@@ -21,6 +21,7 @@
     "test:e2e": "playwright test"
   },
   "dependencies": {
+    "@blobatar/react": "^2.7.0",
     "@blocknote/code-block": "0.55.0",
     "@blocknote/core": "0.55.0",
     "@blocknote/react": "0.55.0",
@@ -30,6 +31,7 @@
     "@clerk/nextjs": "^7.9.7",
     "@hello-pangea/dnd": "^18.0.1",
     "@modelcontextprotocol/sdk": "^1.31.0",
+    "blobatar": "^2.7.0",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
