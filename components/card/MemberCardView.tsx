@@ -56,7 +56,7 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
     const el = tilt.current; if (!el || e.pointerType === "touch") return;
     const r = el.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
-    el.style.setProperty("--rx", `${(-y * 14).toFixed(2)}deg`); el.style.setProperty("--ry", `${(x * 18).toFixed(2)}deg`);
+    el.style.setProperty("--rx", `${(-y * 6).toFixed(2)}deg`); el.style.setProperty("--ry", `${(x * 8).toFixed(2)}deg`);
     el.style.setProperty("--gx", `${(x + 0.5) * 100}%`); el.style.setProperty("--gy", `${(y + 0.5) * 100}%`);
   };
   const leave = () => { const el = tilt.current; if (el) { el.style.setProperty("--rx", "0deg"); el.style.setProperty("--ry", "0deg"); } };

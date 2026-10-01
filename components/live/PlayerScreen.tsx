@@ -3,6 +3,7 @@
 import TeamPanel from "./TeamPanel";
 
 import "./live.css";
+import "./apple.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useConvexConnectionState, useMutation, useQuery } from "convex/react";
 import { Check, Trophy, Volume2, VolumeX, X } from "lucide-react";
@@ -18,7 +19,7 @@ import type { Locale } from "@/lib/locale";
 import { AnswerTile } from "./tiles";
 import { Announcer, Countdown, StartCountdown, usePrefersReducedMotion, useServerClock } from "./clock";
 import Link from "next/link";
-import { gameSound, gameThemeProps } from "./GameTheme";
+import { gameSound } from "./GameTheme";
 import Logo from "@/components/Logo";
 
 const SESSION_KEY = "chaos-live-session";
@@ -124,10 +125,10 @@ function PlayerSession({ initialPin }: { initialPin?: string }) {
   const toggleSound = () => { const next = !sound; sfx.setEnabled(next); setSound(next); };
   const offline = loaded && !connection.isWebSocketConnected && connection.hasEverConnected;
   const activeView = useQuery(api.live.playerView, session ? { gameId: session.gameId, token: session.token } : "skip");
-  const theme = activeView && "theme" in activeView ? activeView.theme : null;
+  // Phones always use the system-native look (apple.css); the quiz theme only picks the sound pack.
 
   return (
-    <div {...gameThemeProps(theme)} data-calm={calm} data-joining={!session}>
+    <div className="live-root live-apple" data-calm={calm} data-joining={!session}>
       <Announcer text={announce} />
       <header className="live-bar">
         <Link href="/" className="live-bar__title live-brand"><Logo size={28} />Chaos<span>live</span></Link>

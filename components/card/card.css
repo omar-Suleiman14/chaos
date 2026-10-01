@@ -1,28 +1,22 @@
-/* Inherit native Chaos workspace/site materials. */
-.mc-page { max-width:1120px; margin-inline:auto; padding:clamp(20px,4vw,48px); color:var(--on-background); }
-.mc-page--public { min-height:100dvh; display:grid; align-content:center; background:var(--background); }
-.mc-panel { display:grid; grid-template-columns:minmax(0,1fr) minmax(280px,380px); gap:clamp(24px,5vw,64px); align-items:start; }
-.mc-panel > .mc { order:2; }
-.mc-panel h1 { font-size:clamp(28px,4vw,38px); font-weight:700; line-height:1.2; letter-spacing:-.025em; margin:0 0 12px; overflow-wrap:anywhere; }
-.mc-panel p { color:var(--on-surface-variant); line-height:1.6; margin:0 0 16px; }
+/* Member card: the card itself, the profile page (/dashboard/card) and the public page (/card/<username>). */
 .mc { display:grid; justify-items:center; gap:16px; min-width:0; }
 .mc-frame { width:100%; padding:20px; border:1px solid var(--ws-line,var(--outline-variant)); border-radius:12px; background:var(--ws-card,var(--surface-container-low)); }
 .mc-frame__label { display:block; margin-block-end:16px; font-size:12px; font-weight:600; color:var(--on-surface-variant); }
-/* The stage owns perspective and shadow; .mc-tilt follows the pointer; .mc-card only flips.
-   A filter on a 3D element flattens it, so the shadow must stay outside the 3D context. */
-.mc-stage { perspective:1100px; --rx:0deg; --ry:0deg; --gx:50%; --gy:50%; filter:drop-shadow(0 24px 32px rgba(0,0,0,.22)) drop-shadow(0 4px 8px rgba(0,0,0,.12)); }
-.mc-tilt { width:min(340px,100%); margin-inline:auto; transform-style:preserve-3d; transform:rotateX(var(--rx)) rotateY(var(--ry)); transition:transform .6s cubic-bezier(.2,.8,.2,1); animation:mc-in .9s cubic-bezier(.2,.9,.2,1) backwards; }
-.mc-stage:hover .mc-tilt { transition-duration:.12s; }
-.mc-card { position:relative; display:block; width:100%; aspect-ratio:340/500; border:0; padding:0; background:none; cursor:pointer; transform-style:preserve-3d; transform:rotateY(var(--flip,0deg)); transition:transform .6s cubic-bezier(.2,.8,.2,1); border-radius:18px; }
+/* The stage owns size, perspective and shadow; .mc-tilt follows the pointer; .mc-card only flips.
+   A filter on a 3D element flattens it, so the shadow must stay outside the 3D context.
+   The stage needs its own width: inside a centred grid a percentage width would collapse to zero. */
+.mc-stage { width:min(340px,100%); margin-inline:auto; perspective:1400px; --rx:0deg; --ry:0deg; --gx:50%; --gy:50%; filter:drop-shadow(0 24px 32px rgba(0,0,0,.2)) drop-shadow(0 4px 8px rgba(0,0,0,.1)); }
+/* Slow, heavy easing so the card drifts toward the pointer instead of snapping to it. */
+.mc-tilt { width:100%; transform-style:preserve-3d; transform:rotateX(var(--rx)) rotateY(var(--ry)); transition:transform .9s cubic-bezier(.22,.61,.36,1); animation:mc-in .9s cubic-bezier(.2,.9,.2,1) backwards; }
+.mc-card { position:relative; display:block; width:100%; aspect-ratio:340/500; border:0; padding:0; background:none; cursor:pointer; transform-style:preserve-3d; transform:rotateY(var(--flip,0deg)); transition:transform .7s cubic-bezier(.2,.8,.2,1); border-radius:18px; }
 .mc-card[data-flipped="true"] { --flip:180deg; }
 .mc-face { position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:18px; overflow:hidden; }
 .mc-face svg { display:block; width:100%; height:100%; }
 .mc-face--back { transform:rotateY(180deg); }
-.mc-glare { position:absolute; inset:0; border-radius:18px; pointer-events:none; mix-blend-mode:soft-light; opacity:0; transition:opacity .3s; background:radial-gradient(circle at var(--gx) var(--gy),rgba(255,255,255,.55),transparent 55%); }
+.mc-glare { position:absolute; inset:0; border-radius:18px; pointer-events:none; mix-blend-mode:soft-light; opacity:0; transform:translateZ(1px); transition:opacity .8s ease; background:radial-gradient(circle at var(--gx) var(--gy),rgba(255,255,255,.35),transparent 60%); }
 .mc-stage:hover .mc-glare { opacity:1; }
-.mc-glare { transform:translateZ(1px); }
 .mc-card[data-flipped="true"] .mc-glare { display:none; }
-@keyframes mc-in { from { opacity:0; transform:translateY(24px) rotateX(18deg) rotateY(-24deg) scale(.92); } }
+@keyframes mc-in { from { opacity:0; transform:translateY(24px) rotateX(12deg) rotateY(-16deg) scale(.94); } }
 .mc-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
 .mc-gap { display:none; }
 .mc-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-width:44px; min-height:44px; padding:8px 12px; border-radius:8px; cursor:pointer; color:var(--on-background); background:var(--ws-card,var(--surface-container-low)); border:1px solid var(--ws-line,var(--outline-variant)); font-size:13px; }
@@ -31,13 +25,35 @@
 .mc-btn:disabled { opacity:.5; cursor:wait; }
 .mc-card:focus-visible,.mc-btn:focus-visible,.mc-cta:focus-visible,.mc-input:focus-visible { outline:2px solid var(--primary); outline-offset:4px; }
 .mc .mc-status { min-height:20px; margin:0; font-size:13px; color:var(--on-surface-variant); }
-.mc-cta { display:inline-flex; align-items:center; gap:8px; color:var(--primary); font-size:14px; font-weight:600; text-decoration:none; margin-block:12px; }
-.mc-cta:hover { text-decoration:underline; }
-.mc-settings { margin-block:28px; padding-block:24px; border-block:1px solid var(--ws-line,var(--outline-variant)); }
+.mc-settings { margin-block:20px 12px; }
 .mc-settings label { display:block; font-size:14px; font-weight:600; margin-block-end:8px; }
-.mc-settings .mc-help { font-size:13px; }
+.mc-help { color:var(--on-surface-variant); font-size:13px; line-height:1.55; margin:0 0 8px; }
 .mc-field { display:flex; flex-wrap:wrap; gap:8px; }
 .mc-input { min-width:0; flex:1; min-height:44px; border:1px solid var(--ws-line,var(--outline-variant)); border-radius:8px; background:var(--ws-card,var(--surface-container-low)); color:var(--on-background); padding:8px 12px; font:inherit; }
 .mc-url { display:block; overflow-wrap:anywhere; font-size:13px; color:var(--primary); }
-@media(max-width:760px) { .mc-panel { grid-template-columns:minmax(0,1fr); } .mc-panel > .mc { order:0; } .mc { width:min(380px,100%); justify-self:center; } }
+
+/* Profile: card beside who you are; stacks when the column is narrow. */
+.mc-profile { display:grid; grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); gap:clamp(24px,5vw,48px); align-items:start; padding-block:8px 32px; }
+.mc-profile__about { min-width:0; }
+.mc-profile__about h2 { font-size:clamp(24px,3vw,30px); font-weight:700; line-height:1.2; letter-spacing:-.02em; margin:0; overflow-wrap:anywhere; }
+.mc-profile__title { font-family:"JetBrains Mono",ui-monospace,Menlo,Consolas,monospace; font-size:13px; color:var(--on-surface-variant); margin:6px 0 16px; }
+
+/* Public card: its own light, quiet page (not the app theme), lit by the card's colours. */
+.mc-public { --a:#fb923c; --b:#fdba74; --c:#f472b6; position:relative; isolation:isolate; overflow:hidden; min-height:100dvh; display:grid; place-items:center; padding:clamp(24px,6vw,64px) 20px;
+  color-scheme:light; color:#1d1d1f; background:#f5f5f7; font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,"Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
+.mc-public::before { content:""; position:absolute; inset:-25%; z-index:-1; opacity:.5; filter:blur(80px);
+  background:radial-gradient(38% 38% at 28% 30%,var(--a),transparent 70%),radial-gradient(34% 34% at 74% 70%,var(--c),transparent 70%),radial-gradient(28% 28% at 72% 22%,var(--b),transparent 70%); }
+.mc-public__inner { display:grid; justify-items:center; gap:28px; width:min(440px,100%); text-align:center; }
+.mc-public__head h1 { font-size:clamp(30px,6vw,44px); font-weight:700; line-height:1.08; letter-spacing:-.035em; margin:0; overflow-wrap:anywhere; }
+.mc-public__head p { font-size:17px; line-height:1.45; color:#6e6e73; margin:10px 0 0; }
+.mc-public .mc-stage { width:min(360px,84vw); filter:drop-shadow(0 40px 50px rgba(0,0,0,.18)) drop-shadow(0 8px 14px rgba(0,0,0,.08)); }
+.mc-public .mc-btn { border-radius:999px; padding:10px 18px; font-size:14px; font-weight:500; color:#1d1d1f; background:rgba(255,255,255,.72); border:1px solid rgba(0,0,0,.06); -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px); }
+.mc-public .mc-btn:hover { background:rgba(255,255,255,.92); }
+.mc-public .mc-status { color:#6e6e73; }
+.mc-public .mc-card:focus-visible,.mc-public .mc-btn:focus-visible,.mc-public .mc-cta:focus-visible { outline-color:#0071e3; }
+.mc-cta { display:inline-flex; align-items:center; gap:8px; font-size:15px; font-weight:600; text-decoration:none; }
+.mc-public .mc-cta { padding:12px 22px; border-radius:999px; color:#fff; background:#1d1d1f; transition:transform .2s ease,background .2s ease; }
+.mc-public .mc-cta:hover { background:#000; transform:translateY(-1px); }
+.mc-public__brand { font-size:13px; color:#86868b; text-decoration:none; }
+
 @media(prefers-reduced-motion:reduce) { .mc-tilt { animation:none; transition:none; transform:none; } .mc-card { transition:none; } .mc-glare { display:none; } }

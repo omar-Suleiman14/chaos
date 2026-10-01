@@ -2,30 +2,28 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useClerk, useUser } from "@clerk/nextjs";
 import { useMutation, useQuery } from "convex/react";
-import { ChevronRight, CircleUser, Keyboard, Library, LifeBuoy, Palette, SunMoon, Timer } from "lucide-react";
-import type { LucideIcon } from "lucide-react";
+import { ChevronRight, Keyboard, Library, LifeBuoy, Palette, Timer, UserRound } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { presentationLabels } from "@/convex/formLogic";
 import { useBuilderLabels } from "@/components/forms/formThemeLabels";
 import type { Language, Presentation } from "@/convex/formLogic";
-import { useTheme } from "@/components/ThemeProvider";
-import { ThemeModeSwitch } from "@/components/ThemeModeSwitch";
 import { ThemePicker } from "@/components/ThemePicker";
-import { defaultPreferences, popupOpacityRange, usePreferences } from "@/lib/preferences";
+import { defaultPreferences, usePreferences } from "@/lib/preferences";
 import type { Preferences } from "@/lib/preferences";
 import { WsSwitch } from "@/components/workspace/primitives";
 import { errorMessage } from "@/lib/errors";
 import { useCopy } from "@/lib/i18n";
 import { supportEmail } from "@/lib/site";
+import { Row, Section, Segmented, useScrollToHash } from "@/components/workspace/settingsUi";
 
-/* Account controls and device preferences have separate, explicit saving behaviour. */
+/* Content settings: new forms, library, shortcuts, old quizzes and help. Account and app appearance live on the profile page (/dashboard/card). */
 
 const copy = {
   en: {
     title: "Settings", loading: "Loading…", saving: "Saving…", saved: "Saved", savedDot: "Saved.", save: "Save", open: "Open", read: "Read", reset: "Reset",
-    preferencesHelp: "Appearance and new-form defaults save on this device as you change them.",
+    preferencesHelp: "Settings for your forms, quizzes and library. They save on this device as you change them.",
+    profile: "Profile and app", profileAbout: "Your card, username, account and how Chaos looks.", profileRow: "Profile", profileHelp: "Account, appearance, glass and motion.",
     resetTheme: "Reset theme", layoutHelp: "Choose whether people see all questions, one at a time, or in steps.",
     account: "Account", accountAbout: "Who you are in Chaos, and the name in your links.", yourAccount: "Your account", manage: "Manage account",
     username: "Username", usernameHelp: (url: string) => `Used in custom links, like ${url}.`, chooseOne: "Choose one", yourname: "yourname",
@@ -57,7 +55,8 @@ const copy = {
   },
   ar: {
     title: "الإعدادات", loading: "جارٍ التحميل…", saving: "جارٍ الحفظ…", saved: "تم الحفظ", savedDot: "تم الحفظ.", save: "احفظ", open: "افتح", read: "اقرأ", reset: "إعادة الضبط",
-    preferencesHelp: "يُحفظ المظهر وإعدادات النماذج الجديدة على هذا الجهاز عند تعديلها.",
+    preferencesHelp: "إعدادات نماذجك واختباراتك ومكتبتك. تُحفظ على هذا الجهاز عند تعديلها.",
+    profile: "الملف والتطبيق", profileAbout: "بطاقتك واسم المستخدم والحساب وشكل Chaos.", profileRow: "الملف الشخصي", profileHelp: "الحساب والمظهر والزجاج والحركة.",
     resetTheme: "أعد ضبط المظهر", layoutHelp: "اختر عرض كل الأسئلة أو سؤال واحد في كل مرة أو تقسيمها إلى خطوات.",
     account: "الحساب", accountAbout: "من أنت في Chaos، والاسم الذي يظهر في روابطك.", yourAccount: "حسابك", manage: "إدارة الحساب",
     username: "اسم المستخدم", usernameHelp: (url: string) => `يُستخدم في الروابط المخصصة، مثل ${url}.`, chooseOne: "اختر اسمًا", yourname: "yourname",
@@ -89,54 +88,6 @@ const copy = {
   },
 };
 type Copy = typeof copy.en;
-
-function Section({ id, icon: Icon, title, description, children }: { id: string; icon: LucideIcon; title: string; description: string; children: React.ReactNode }) {
-  return (
-    <section className="ws-settings-section" aria-labelledby={`section-${id}`}>
-      <div className="ws-settings-section__intro">
-        <Icon size={20} aria-hidden="true" />
-        <div><h2 id={`section-${id}`}>{title}</h2><p>{description}</p></div>
-      </div>
-      {children}
-    </section>
-  );
-}
-
-function Row({ id, label, help, isDefault, children, stack }: { id?: string; label: string; help?: React.ReactNode; isDefault?: boolean; children: React.ReactNode; stack?: boolean }) {
-  return (
-    <div id={id} className={`ws-row ${stack ? "ws-row--stack" : ""}`} data-default={isDefault ? "true" : "false"}>
-      <div className="ws-row__text"><span className="ws-row__label">{label}</span>{help && <span className="ws-row__help">{help}</span>}</div>
-      <div className="ws-row__control">{children}</div>
-    </div>
-  );
-}
-
-function Segmented<T extends string>({ label, options, value, onChange }: { label: string; options: { id: T; label: string }[]; value: T; onChange: (v: T) => void }) {
-  return (
-    <div className="ws-segmented" role="group" aria-label={label}>
-      {options.map((o) => <button key={o.id} type="button" aria-pressed={value === o.id} onClick={() => onChange(o.id)}>{o.label}</button>)}
-    </div>
-  );
-}
-
-function UsernameRow({ current, t }: { current: string; t: Copy }) {
-  const setUsername = useMutation(api.quizFunctions.setUsername);
-  const generated = /^user\d{5}$/.test(current);
-  const [value, setValue] = useState(generated ? "" : current);
-  const [message, setMessage] = useState("");
-  const clean = value.trim().toLowerCase().replace(/[^a-z0-9_.-]+/g, "");
-  const host = typeof window === "undefined" ? "chaos.fail" : window.location.host;
-  return (
-    <Row id="settings-username" label={t.username} isDefault={generated} help={message || <span dir="auto">{t.usernameHelp(`${host}/${clean || "yourname"}/my-form`)}</span>}>
-      <span className="ws-link-field w-64 max-w-full" dir="ltr">
-        <span className="ws-link-field__prefix">{host}/</span>
-        <input value={value} onChange={(e) => { setValue(e.target.value); setMessage(""); }} placeholder={generated ? t.chooseOne : t.yourname} aria-label={t.username} autoComplete="username" />
-      </span>
-      <button type="button" className="ws-btn ws-btn--sm" disabled={clean.length < 3 || clean === current}
-        onClick={() => setUsername({ username: clean }).then(() => setMessage(t.savedDot)).catch((e) => setMessage(errorMessage(e)))}>{t.save}</button>
-    </Row>
-  );
-}
 
 function QuizDefaults({ t }: { t: Copy }) {
   const settings = useQuery(api.quizFunctions.getTeacherSettings);
@@ -182,34 +133,11 @@ function QuizDefaults({ t }: { t: Copy }) {
   );
 }
 
-/** Scrolls to the row named in the address (#settings-glass) and marks it for a moment. Rows can appear after data loads, so it retries briefly. */
-function useScrollToHash(ready: boolean) {
-  useEffect(() => {
-    let tries = 0;
-    let timer: ReturnType<typeof setTimeout>;
-    const go = () => {
-      const id = decodeURIComponent(window.location.hash.slice(1));
-      if (!id) return;
-      const row = document.getElementById(id);
-      if (!row) { if (tries++ < 20) timer = setTimeout(go, 100); return; }
-      row.scrollIntoView({ block: "center", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
-      row.setAttribute("data-flash", "true");
-      timer = setTimeout(() => row.removeAttribute("data-flash"), 1600);
-    };
-    go();
-    window.addEventListener("hashchange", go);
-    return () => { clearTimeout(timer); window.removeEventListener("hashchange", go); };
-  }, [ready]);
-}
-
 export default function SettingsPage() {
   const t = useCopy(copy);
   const labels = useBuilderLabels();
-  const { user } = useUser();
-  const clerk = useClerk();
   const me = useQuery(api.quizFunctions.getCurrentUser);
   const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
-  const { mode } = useTheme();
   const { preferences: p, set } = usePreferences();
   const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   useScrollToHash(me !== undefined && quizzes !== undefined);
@@ -218,32 +146,12 @@ export default function SettingsPage() {
     <div className="max-w-3xl w-full mx-auto pb-16 font-sans">
       <div className="ws-page-header"><div><h1 className="ws-page-title">{t.title}</h1><p className="ws-row__help mt-2">{t.preferencesHelp}</p></div></div>
 
-      <Section id="account" icon={CircleUser} title={t.account} description={t.accountAbout}>
-        <Row id="settings-account" label={user?.fullName || me?.name || t.yourAccount} help={user?.primaryEmailAddress?.emailAddress ?? me?.email}>
-          <button type="button" className="ws-btn ws-btn--sm" onClick={() => clerk.openUserProfile()}>{t.manage}</button>
-        </Row>
-        {me && <UsernameRow current={me.username} t={t} />}
-        <Row id="settings-password" label={t.security} help={t.securityHelp}>
-          <button type="button" className="ws-btn ws-btn--sm" onClick={() => clerk.openUserProfile()} aria-label={t.security}>{t.open} <ChevronRight size={14} className="rtl:-scale-x-100" /></button>
+      <Section id="profile" icon={UserRound} title={t.profile} description={t.profileAbout}>
+        <Row id="settings-profile" label={t.profileRow} help={t.profileHelp}>
+          <Link href="/dashboard/card" className="ws-btn ws-btn--sm">{t.open} <ChevronRight size={14} className="rtl:-scale-x-100" /></Link>
         </Row>
       </Section>
 
-      <Section id="appearance" icon={SunMoon} title={t.appearanceSection} description={t.appearanceAbout}>
-        <Row id="settings-appearance" label={t.appearance} help={t.appearanceHelp} isDefault={mode === "system"}>
-          <ThemeModeSwitch showLabels />
-        </Row>
-        <Row id="settings-glass" label={t.glass} help={t.glassHelp} isDefault={p.popupOpacity === defaultPreferences.popupOpacity}>
-          <div className="ws-slider">
-            <input type="range" aria-label={t.glassLabel} min={popupOpacityRange.min} max={popupOpacityRange.max} step={5} value={p.popupOpacity}
-              aria-valuetext={t.opaque(p.popupOpacity)} onChange={(e) => set("popupOpacity", Number(e.target.value))} />
-            <output>{p.popupOpacity}%</output>
-            {p.popupOpacity !== defaultPreferences.popupOpacity && <button type="button" className="ws-btn ws-btn--sm" onClick={() => set("popupOpacity", defaultPreferences.popupOpacity)}>{t.reset}</button>}
-          </div>
-        </Row>
-        <Row id="settings-reduce-motion" label={t.motion} help={t.motionHelp} isDefault={!p.reduceMotion}>
-          <WsSwitch label={t.motion} hideLabel checked={p.reduceMotion} onChange={(v) => set("reduceMotion", v)} />
-        </Row>
-      </Section>
 
       <Section id="new-forms" icon={Palette} title={t.newForms} description={t.newFormsAbout}>
         <Row id="settings-new-theme" label={t.theme} help={labels.themeName(p.newFormPreset)} isDefault={p.newFormPreset === "google-forms"} stack>
@@ -297,9 +205,6 @@ export default function SettingsPage() {
         <Row id="settings-help" label={t.feedback}><a href={`mailto:${supportEmail}`} className="ws-btn ws-btn--sm">{t.email}</a></Row>
         <Row id="settings-privacy" label={t.privacy}><Link href="/privacy" className="ws-btn ws-btn--sm ws-btn--ghost">{t.read}</Link></Row>
         <Row id="settings-terms" label={t.terms}><Link href="/terms" className="ws-btn ws-btn--sm ws-btn--ghost">{t.read}</Link></Row>
-        <Row id="settings-sign-out" label={t.signOut} help={t.signOutHelp}>
-          <button type="button" className="ws-btn ws-btn--sm ws-btn--danger" onClick={() => void clerk.signOut({ redirectUrl: "/" })}>{t.signOut}</button>
-        </Row>
       </Section>
     </div>
   );

@@ -534,3 +534,10 @@ Outcome: expose existing owner course helpers through trusted MCP transport; dra
 - [x] Avatars are seeded from the username: the card previews the typed username and avatar live; the sidebar and Learn profiles use the same seed. Member number and title stay account-seeded.
 - [x] Unit 688/688 (new history test), live + memberCards integration 40/40, tsc (app and convex) clean, scoped lint 0 errors. Flip verified by computed styles in a browser; pixel screenshot unavailable (preview renderer error).
 - [ ] Needs a Convex deploy for `live.myGames`. Not checked signed-in in a real browser.
+## Profile page, calmer card, public card and Apple-style player (2026-10-01, late night)
+- [x] /dashboard/card is now Profile: card beside name/title/username, then Account (manage, security, sign out) and Appearance (mode, glass, reduce motion). Settings keeps content settings (new forms, library, shortcuts, old quiz, help) and links to Profile. Ctrl+K entries for moved rows point to /dashboard/card. Shared Section/Row/Segmented/useScrollToHash in components/workspace/settingsUi.tsx.
+- [x] Card tilt calmer: 6°/8° max (was 14°/18°), one slow 0.9s ease, softer glare.
+- [x] Public /card/<username> was blank: the unframed card's percentage width collapsed to zero; .mc-stage now sizes itself. Page redesigned on a fixed light backdrop lit by the card's colours (not the app theme), with capsule buttons.
+- [x] /play uses a fixed Apple-style look (components/live/apple.css): iOS system colours following device light/dark, system font, grouped inset join form, capsule buttons, frosted bar, answer colours matching host shapes. Quiz theme now only picks the sound pack on phones; host screen unchanged.
+- [x] Unit 691/691, tsc clean, scoped lint 0 errors.
+- [ ] Not visually checked in a browser (preview renderer unavailable here).

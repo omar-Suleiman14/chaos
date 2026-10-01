@@ -1,5 +1,5 @@
 /**
- * Every row of App Settings (app/dashboard/settings/page.tsx), for the Ctrl+K palette.
+ * Every row of Settings (app/dashboard/settings/page.tsx) and Profile (app/dashboard/card/page.tsx), for the Ctrl+K palette.
  * Each `id` is the id of that row on the page, so the link scrolls to it.
  */
 export interface SettingsEntry {
@@ -11,8 +11,11 @@ export interface SettingsEntry {
   href: string;
 }
 
+/** Account and appearance rows live on the profile page; everything else is in Settings. */
+const PROFILE_ROWS = new Set(["settings-account", "settings-username", "settings-password", "settings-appearance", "settings-glass", "settings-reduce-motion", "settings-sign-out"]);
+
 const entry = (id: string, section: string, label: string, keywords: string): SettingsEntry => ({
-  id, section, label, keywords, href: `/dashboard/settings#${id}`,
+  id, section, label, keywords, href: `${PROFILE_ROWS.has(id) ? "/dashboard/card" : "/dashboard/settings"}#${id}`,
 });
 
 const english: SettingsEntry[] = [
