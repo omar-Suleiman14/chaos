@@ -23,7 +23,9 @@ export default function HomeworkManager({ formId }: { formId: Id<"forms"> }) {
   const version = useQuery(api.forms.getVersion, versionNumber ? { formId, version: versionNumber } : "skip");
   const create = useMutation(api.homework.create), enroll = useMutation(api.homework.enroll), setClosed = useMutation(api.homework.setClosed);
   const [assignmentId, setAssignment] = useState<Id<"homeworkAssignments"> | null>(null);
-  const [studentId, setStudent] = useState("");
+  const [email, setEmail] = useState("");
+  const assignments = useQuery(api.homework.listForForm, { formId });
+  const roster = useQuery(api.homework.roster, assignmentId ? { assignmentId } : "skip");
   const [reportStudent, setReportStudent] = useState("");
   const [error, setError] = useState(""), [status, setStatus] = useState(""), [busy, setBusy] = useState(false);
   const pending = useRef(false);
@@ -54,15 +56,31 @@ export default function HomeworkManager({ formId }: { formId: Id<"forms"> }) {
       <button className="ws-btn w-fit" disabled={busy || !version?.definition.quiz?.enabled}>{busy ? t.creating : t.create}</button>
       {version && !version.definition.quiz?.enabled && <p className="ws-muted">{t.quiz}</p>}
     </form>}
-    <form className="flex gap-3 flex-wrap items-end" onSubmit={e => { e.preventDefault(); const id = String(new FormData(e.currentTarget).get("assignmentId")).trim(); if (!/^[A-Za-z0-9]{10,64}$/.test(id)) { setError(t.invalidId); return; } setAssignment(id as Id<"homeworkAssignments">); setReportStudent(""); setError(""); setStatus(""); }}><label className="grid gap-1 flex-1">{t.existing}<input aria-label={t.assignmentId} name="assignmentId" className="kb-input" required /></label><button className="ws-btn">{t.manage}</button></form>
+    {assignments && assignments.length > 0 && <label className="grid gap-1 max-w-md">{t.yours}<select className="kb-input" value={assignmentId ?? ""} onChange={e => { setAssignment((e.target.value || null) as Id<"homeworkAssignments"> | null); setReportStudent(""); setError(""); setStatus(""); }}>
+      <option value="">{t.choose}</option>
+      {assignments.map(a => <option key={a.id} value={a.id}>{a.title} · v{a.version} · {new Date(a.deadline).toLocaleDateString()}{a.closed ? ` · ${t.closedTag}` : ""}</option>)}
+    </select></label>}
     {assignmentId && <section className="kb-card-bordered grid gap-4 p-5" aria-label={t.manage}>
-      <p className="ws-muted">{t.assignmentId}: <span className="break-all" dir="ltr">{assignmentId}</span></p>
       <div className="flex gap-3 flex-wrap"><Link className="ws-link" href={`/homework/${assignmentId}`}>{t.link}</Link><button className="ws-btn" type="button" disabled={busy} onClick={() => void run(() => navigator.clipboard.writeText(`${window.location.origin}/homework/${assignmentId}`), t.copied)}>{t.copy}</button></div>
-      <label className="grid gap-1">{t.student}<input className="kb-input" value={studentId} onChange={e => setStudent(e.target.value)} maxLength={200} aria-describedby="homework-student-hint" /></label><p id="homework-student-hint" className="ws-muted">{t.studentHint}</p>
+      <form className="flex gap-2 flex-wrap items-end" onSubmit={e => { e.preventDefault(); if (email.trim()) void run(async () => { await enroll({ assignmentId, email: email.trim(), active: true }); setEmail(""); }, t.enrolled); }}>
+        <label className="grid gap-1 flex-1 min-w-56">{t.student}<input className="kb-input" type="email" value={email} onChange={e => setEmail(e.target.value)} maxLength={200} aria-describedby="homework-student-hint" /></label>
+        <button className="ws-btn" disabled={busy || !email.trim()}>{t.enroll}</button>
+      </form>
+      <p id="homework-student-hint" className="ws-muted">{t.studentHint}</p>
+      <h2 className="text-base font-semibold">{t.roster}</h2>
+      {roster === undefined ? <p role="status">{t.loading}</p> : roster.length === 0 ? <p className="ws-muted">{t.noStudents}</p> : <div className="overflow-x-auto"><table className="w-full text-sm">
+        <thead><tr className="text-start"><th className="text-start p-2">{t.student}</th><th className="text-start p-2">{t.submitted}</th><th className="text-start p-2">{t.best}</th><th className="p-2"><span className="sr-only">{t.manage}</span></th></tr></thead>
+        <tbody>{roster.map(r => <tr key={r.studentId} className="border-t">
+          <td className="p-2"><span className="block">{r.name || r.email}</span><span className="block ws-muted" dir="ltr">{r.email}</span>{!r.active && <span className="ws-muted"> · {t.inactive}</span>}</td>
+          <td className="p-2">{r.submitted}/{r.attempts}{r.lastSubmittedAt ? <span className="block ws-muted">{new Date(r.lastSubmittedAt).toLocaleString()}</span> : null}</td>
+          <td className="p-2">{r.bestScore === null ? "—" : `${r.bestScore}/${r.maxScore ?? "?"}`}</td>
+          <td className="p-2"><div className="flex gap-2 justify-end flex-wrap">
+            <button className="ws-btn ws-btn--sm" type="button" onClick={() => setReportStudent(r.studentId)}>{t.report}</button>
+            <button className="ws-btn ws-btn--sm" type="button" disabled={busy} onClick={() => void run(() => enroll({ assignmentId, studentId: r.studentId, active: !r.active }), t.enrolled)}>{r.active ? t.revoke : t.reenroll}</button>
+          </div></td>
+        </tr>)}</tbody>
+      </table></div>}
       <div className="flex flex-wrap gap-2">
-        <button className="ws-btn" type="button" disabled={busy || !studentId.trim()} onClick={() => void run(() => enroll({ assignmentId, studentId: studentId.trim(), active: true }), t.enrolled)}>{t.enroll}</button>
-        <button className="ws-btn" type="button" disabled={busy || !studentId.trim()} onClick={() => void run(() => enroll({ assignmentId, studentId: studentId.trim(), active: false }), t.enrolled)}>{t.revoke}</button>
-        <button className="ws-btn" type="button" disabled={busy || !studentId.trim()} onClick={() => setReportStudent(studentId.trim())}>{t.report}</button>
         <button className="ws-btn" type="button" disabled={busy} onClick={() => void run(() => setClosed({ assignmentId, closed: true }), t.updated)}>{t.close}</button>
         <button className="ws-btn" type="button" disabled={busy} onClick={() => void run(() => setClosed({ assignmentId, closed: false }), t.updated)}>{t.reopen}</button>
       </div>

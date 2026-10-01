@@ -105,8 +105,8 @@ describe("native homework delivery", () => {
     fireEvent.click(screen.getByRole("button", { name: "Create assignment" })); await screen.findByText("Assignment created. Enroll students before sharing the link.");
     expect(m.create).toHaveBeenCalledWith(expect.objectContaining({ formId, versionId: "version123", title: "Quiz", maxAttempts: 1 }));
     expect(screen.getByRole("link", { name: "Student link" })).toHaveAttribute("href", `/homework/${assignmentId}`);
-    fireEvent.change(screen.getByLabelText("Student account ID"), { target: { value: "student_registered" } }); fireEvent.click(screen.getByRole("button", { name: "Enroll student" }));
-    await waitFor(() => expect(m.enroll).toHaveBeenCalledWith({ assignmentId, studentId: "student_registered", active: true }));
+    fireEvent.change(screen.getByLabelText("Student email"), { target: { value: "student@example.com" } }); fireEvent.click(screen.getByRole("button", { name: "Enroll student" }));
+    await waitFor(() => expect(m.enroll).toHaveBeenCalledWith({ assignmentId, email: "student@example.com", active: true }));
   });
 });
 

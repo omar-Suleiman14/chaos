@@ -41,10 +41,10 @@ export default function DiscussionPanel({ lesson, draftAnchor, onClearAnchor, on
   const shown = threads.filter((th) => filter === "all" || (filter === "resolved") === th.resolved);
   const signedIn = !!viewer?.signedIn;
 
-  const post = () => {
+  const post = async () => {
     setError("");
     try {
-      actions.startThread({ lessonId: lesson.id, blockId: draftAnchor?.blockId, anchorExcerpt: draftAnchor?.excerpt, body });
+      await actions.startThread({ lessonId: lesson.id, blockId: draftAnchor?.blockId, anchorExcerpt: draftAnchor?.excerpt, body });
       setBody("");
       onClearAnchor();
       setFilter("open");
@@ -65,7 +65,7 @@ export default function DiscussionPanel({ lesson, draftAnchor, onClearAnchor, on
         {!shown.length && <p className="lx-muted">{t.empty}</p>}
         {shown.map((th) => <Thread key={th.id} thread={th} lesson={lesson} viewerId={viewer?.id} signedIn={signedIn} locale={locale} t={t} blockExists={blockExists} onReport={(id, title) => setReporting({ id, title })} />)}
       </div>
-      <form className="lx-sidepanel__foot" onSubmit={(e) => { e.preventDefault(); post(); }}>
+      <form className="lx-sidepanel__foot" onSubmit={(e) => { e.preventDefault(); void post(); }}>
         {signedIn ? (
           <>
             {draftAnchor ? (
@@ -91,6 +91,8 @@ function Thread({ thread, lesson, viewerId, signedIn, locale, t, blockExists, on
 }) {
   const actions = useLearnActions();
   const [reply, setReply] = useState("");
+  const [failed, setFailed] = useState("");
+  const run = (work: Promise<unknown>) => { setFailed(""); work.catch((err) => setFailed(err instanceof Error ? err.message : String(err))); };
   const canResolve = viewerId === lesson.ownerId || viewerId === thread.comments[0]?.authorId;
   return (
     <article className="lx-thread" data-resolved={thread.resolved}>
@@ -111,7 +113,7 @@ function Thread({ thread, lesson, viewerId, signedIn, locale, t, blockExists, on
             <span>{timeAgo(locale, c.createdAt)}</span>
             <span style={{ marginInlineStart: "auto", display: "flex", gap: 2 }}>
               {signedIn && c.moderation !== "removed" && c.authorId !== viewerId && <button type="button" className="ws-icon-button" onClick={() => onReport(c.id, c.body.slice(0, 40))} aria-label={t.report}><Flag size={13} /></button>}
-              {c.authorId === viewerId && c.moderation !== "removed" && <button type="button" className="ws-icon-button" onClick={() => actions.deleteComment(thread.id, c.id)} aria-label={t.delete}><Trash2 size={13} /></button>}
+              {c.authorId === viewerId && c.moderation !== "removed" && <button type="button" className="ws-icon-button" onClick={() => run(actions.deleteComment(thread.id, c.id))} aria-label={t.delete}><Trash2 size={13} /></button>}
             </span>
           </header>
           {c.moderation === "removed" ? <em className="lx-muted">{t.removed}</em> : <p style={{ whiteSpace: "pre-wrap" }}>{c.body}</p>}
@@ -119,17 +121,18 @@ function Thread({ thread, lesson, viewerId, signedIn, locale, t, blockExists, on
       ))}
       <div className="lx-actions">
         {signedIn && !thread.resolved && (
-          <form style={{ display: "flex", gap: 6, flex: 1 }} onSubmit={(e) => { e.preventDefault(); if (reply.trim()) { actions.reply(thread.id, reply); setReply(""); } }}>
+          <form style={{ display: "flex", gap: 6, flex: 1 }} onSubmit={(e) => { e.preventDefault(); if (reply.trim()) { run(actions.reply(thread.id, reply)); setReply(""); } }}>
             <input className="lx-input" style={{ minHeight: 32, padding: "4px 8px" }} value={reply} onChange={(e) => setReply(e.target.value)} placeholder={t.replyPh} aria-label={t.reply} maxLength={4000} />
             <button type="submit" className="ws-btn ws-btn--sm" disabled={!reply.trim()}>{t.reply}</button>
           </form>
         )}
         {canResolve && (
-          <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" onClick={() => actions.resolveThread(thread.id, !thread.resolved)}>
+          <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" onClick={() => run(actions.resolveThread(thread.id, !thread.resolved))}>
             {thread.resolved ? <RotateCcw size={14} aria-hidden /> : <CheckCircle2 size={14} aria-hidden />}{thread.resolved ? t.reopen : t.resolve}
           </button>
         )}
       </div>
+      {failed && <p className="lx-error" role="alert">{failed}</p>}
     </article>
   );
 }

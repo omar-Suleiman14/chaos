@@ -18,9 +18,9 @@ Status labels used below (2026-10-01):
 | # | Step | Status |
 | --- | --- | --- |
 | 1 | Connect Max to Chaos | Live |
-| 2 | Choose what Max may reach | Live for forms, quizzes and lessons; collection and curriculum picks are not saved yet |
+| 2 | Choose what Max may reach | Live for forms, quizzes, lessons and collections; curriculum modules resolve to their lessons |
 | 3 | Max notes become a Chaos lesson draft | Live (`POST /drafts`) |
-| 4 | Review the draft and later updates in Chaos | Connecting; no approval queue for updates |
+| 4 | Review the draft and later updates in Chaos | Live (optional approval queue per connection) |
 | 5 | Publish the lesson | Owner only, in Chaos (never through the API) |
 | 6 | Attach a quiz | Backend live; Connecting in the lesson editor |
 | 7 | Study in Chaos | Backend live; Connecting in the reader |
@@ -38,12 +38,11 @@ the connection's name; nothing says "Max" unless the connection is named so.
 ### 2. Choose what to share
 
 The share picker has tabs for **Forms & quizzes**, **Lessons**,
-**Collections** and **Curricula**. Forms, quizzes and lessons are saved with
-the connection (lessons as `lesson_<id>` references). An existing connection
-with access to "all" forms and quizzes does not gain any lessons. Collection
-and curriculum picks are marked **Not saved yet**: the backend has no grant
-for them, so they share nothing. To share a module's lessons today, pick them on
-the Lessons tab.
+**Collections** and **Curricula**. Forms, quizzes, lessons and collections are saved with
+the connection (`lesson_<id>`, `collection_<id>`). A collection shares only its
+title and lesson order; its lessons need their own selection. Picking a
+curriculum module selects the concrete lessons mapped to it. An existing
+connection with access to "all" forms and quizzes does not gain any lessons.
 
 With `folders:read` a connection sees the names and layout of all folders,
 but a folder's contents list only assets the connection may already reach.
@@ -71,11 +70,11 @@ editor renders this from the lesson's external reference
 
 When Max sends an update (`PATCH /lessons/{ref}` or `/blocks`), it must name
 the revision it last read. If the owner changed the lesson since, the update is
-refused with `409` and nothing is overwritten. Accepted updates go straight to
-the draft, which the owner can inspect, restore from history or discard before
-publishing. There is no queue that holds updates for approval yet;
-`components/connections/ChangePreview.tsx` (block-level "Keep mine / Take
-theirs / Merge") is built and tested for when one exists.
+refused with `409` and nothing is overwritten. By default accepted updates go
+straight to the draft. With **Ask before applying lesson changes** on, each
+update waits on the Connections screen as a block-by-block preview with
+**Take theirs** and **Keep mine**. If the owner edited the lesson meanwhile,
+the preview says so and accepting re-applies block edits on top.
 
 The Connections screen's activity list turns events into sentences such as
 "Max created draft “Portal Hypertension”" and collapses repeats ("Max updated
@@ -113,7 +112,5 @@ returned; other readers' progress, notes and highlights are never shared.
 
 ## Still missing
 
-1. Grants for collections and curriculum modules (picks are shown as not saved).
-2. An approval queue for connected-app updates, feeding `ChangePreview`.
-3. Listing a connection's reachable lessons (today Max reads by reference).
-4. A live Max client run of steps 1–8.
+1. Listing a connection's reachable lessons (today Max reads by reference).
+2. A live Max client run of steps 1–8.

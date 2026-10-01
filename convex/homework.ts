@@ -84,21 +84,24 @@ export const create = mutation({
   },
 });
 export const enroll = mutation({
-  args: { ...assignmentArg, studentId: v.string(), active: v.boolean() },
+  args: { ...assignmentArg, studentId: v.optional(v.string()), email: v.optional(v.string()), active: v.boolean() },
   returns: v.null(),
   handler: async (ctx, args) => {
     const assignment = await owned(ctx, args.assignmentId);
-    // Host selects a registered account; authorization never derives from this argument.
-    const student = await ctx.db
-      .query("users")
-      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.studentId))
-      .first();
+    // Host selects a registered account by ID or email; authorization never derives from this argument.
+    const email = args.email?.trim();
+    const student = args.studentId
+      ? await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.studentId!)).first()
+      : email
+        ? (await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email)).first()) ?? (await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email.toLowerCase())).first())
+        : null;
     if (!student || student.isBanned || student.suspendedUntil)
-      throw new Error("Active registered student required");
+      throw new Error("NOT_FOUND: No active Chaos account uses that email. Ask the student to sign in once first.");
+    const studentId = student.clerkId;
     const existing = await ctx.db
       .query("homeworkEnrollments")
       .withIndex("by_assignmentId_and_studentId", (q) =>
-        q.eq("assignmentId", assignment._id).eq("studentId", args.studentId),
+        q.eq("assignmentId", assignment._id).eq("studentId", studentId),
       )
       .unique();
     if (existing) {
@@ -111,7 +114,7 @@ export const enroll = mutation({
       throw new Error("Enrollment limit reached");
     await ctx.db.insert("homeworkEnrollments", {
       assignmentId: assignment._id,
-      studentId: args.studentId,
+      studentId: studentId,
       active: args.active,
       enrolledAt: Date.now(),
       attempts: 0,
@@ -412,5 +415,42 @@ export const report = query({
       score: a.score ?? null,
       maxScore: a.maxScore ?? null,
     }));
+  },
+});
+
+/** The caller's assignments for one form, newest first, so hosts never paste IDs. */
+export const listForForm = query({
+  args: { formId: v.id("forms") },
+  returns: v.array(v.object({ id: v.id("homeworkAssignments"), title: v.string(), version: v.number(), opensAt: v.number(), deadline: v.number(), maxAttempts: v.number(), closed: v.boolean(), enrollmentCount: v.number(), createdAt: v.number() })),
+  handler: async (ctx, args) => {
+    const identity = await actor(ctx);
+    const rows = await ctx.db.query("homeworkAssignments").withIndex("by_formId", (q) => q.eq("formId", args.formId)).order("desc").take(100);
+    const out = [];
+    for (const a of rows) {
+      if (a.ownerId !== identity.tokenIdentifier) continue;
+      const version = await ctx.db.get("formVersions", a.versionId);
+      out.push({ id: a._id, title: a.title, version: version?.version ?? 0, opensAt: a.opensAt, deadline: a.deadline, maxAttempts: a.maxAttempts, closed: a.closed, enrollmentCount: a.enrollmentCount, createdAt: a.createdAt });
+    }
+    return out;
+  },
+});
+
+/** Enrolled students with names and their best submitted attempt (owner only, at most 200). */
+export const roster = query({
+  args: assignmentArg,
+  returns: v.array(v.object({ studentId: v.string(), name: v.string(), email: v.string(), active: v.boolean(), attempts: v.number(), submitted: v.number(), bestScore: v.union(v.number(), v.null()), maxScore: v.union(v.number(), v.null()), lastSubmittedAt: v.union(v.number(), v.null()) })),
+  handler: async (ctx, args) => {
+    await owned(ctx, args.assignmentId);
+    const identity = await actor(ctx);
+    const rows = await ctx.db.query("homeworkEnrollments").withIndex("by_assignmentId_and_studentId", (q) => q.eq("assignmentId", args.assignmentId)).take(200);
+    const out = [];
+    for (const e of rows) {
+      const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", e.studentId)).first();
+      const attempts = await ctx.db.query("homeworkAttempts").withIndex("by_assignmentId_and_studentId", (q) => q.eq("assignmentId", args.assignmentId).eq("studentId", `${identity.issuer}|${e.studentId}`)).take(10);
+      const done = attempts.filter((a) => a.submittedAt !== undefined);
+      const best = done.reduce<(typeof done)[number] | null>((b, a) => (a.score ?? -1) > (b?.score ?? -1) ? a : b, null);
+      out.push({ studentId: e.studentId, name: user?.name ?? "", email: user?.email ?? "", active: e.active, attempts: attempts.length, submitted: done.length, bestScore: best?.score ?? null, maxScore: best?.maxScore ?? null, lastSubmittedAt: done.length ? Math.max(...done.map((a) => a.submittedAt!)) : null });
+    }
+    return out.sort((a, b) => a.name.localeCompare(b.name));
   },
 });

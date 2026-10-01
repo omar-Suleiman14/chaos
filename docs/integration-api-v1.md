@@ -559,6 +559,7 @@ exercised by a live Max client.
 | `curricula:read` / `curricula:map` | Browse the curriculum directory; map reachable lessons to curriculum nodes. |
 | `progress:read` / `progress:write` | The owner's own study progress on selected lessons. |
 | `tutor:context` | Assemble bounded text of a selected lesson for studying elsewhere. |
+| `collections:read` | Read the title and ordered lesson references of selected, published collections. Lessons still need their own selection. |
 | `community:read` / `community:save` / `community:fork` | Search public lessons; save one to the owner's library; fork one as a private copy. |
 
 Lessons are selected one by one in **Connections** (stored as `lesson_<id>`
@@ -592,6 +593,7 @@ sources must be selected for the connection and need `sources:read`. Limits:
 | `PATCH /lessons/{ref}/blocks` | `lessons:update` | Body `{ operations: [...] }`, 1–100 of `append`, `update`, `move`, `delete`. Same headers. |
 | `DELETE /lessons/{ref}/link` | `lessons:update` | Removes the connection's access and link. The lesson and its versions stay. |
 | `GET /sources/{ref}` | `sources:read` | Metadata only. |
+| `GET /collections/{ref}` | `collections:read` | Published snapshot: title, description, language, tags and ordered `lesson_…`/`source_…` references. |
 | `GET /folders?parentId=…`, `GET /folders/contents?folderId=…` | `folders:read` | `cursor`, `limit` (1–100). |
 | `POST /folders`, `/folders/move`, `/folders/members` | `folders:update` | Requires `Idempotency-Key`. |
 | `GET /curricula/{institutions,programs,versions,nodes,mappings}` | `curricula:read` | Filter by the parent id (`institutionId`, `programId`, `versionId`, `lessonId`). |
@@ -642,6 +644,12 @@ Content-Type: application/json
 ] }
 ```
 
+If the owner turned on **Ask before applying lesson changes** for the connection,
+the response is `202` with `{ "proposal": { "id": "proposal_…", "status": "pending" } }`
+and nothing changes until the owner accepts it in Connections (block edits are
+re-applied on top if the owner edited in between). Otherwise the draft is
+updated directly.
+
 If the lesson changed since revision 4, the request fails with `409` and
 nothing is written; read the lesson again and resend. Archived or moderated
 lessons return `409 NOT_A_DRAFT`.
@@ -657,6 +665,4 @@ updated draft “Portal hypertension” (3 times)". Logged actions include
 ### Not in v2 yet
 
 Listing all lessons (only selected ones are reachable), publishing, changing
-visibility, deleting, collections, held proposals that wait for the owner's
-approval (updates save to the draft directly, with revision checks and draft
-recovery in Chaos), raw editor JSON and anchored discussions.
+visibility, deleting, writing collections, raw editor JSON and discussions.

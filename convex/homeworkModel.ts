@@ -13,7 +13,7 @@ export const homeworkTables = {
     closed: v.boolean(),
     enrollmentCount: v.number(),
     createdAt: v.number(),
-  }).index("by_ownerId", ["ownerId"]),
+  }).index("by_ownerId", ["ownerId"]).index("by_formId", ["formId"]),
   homeworkEnrollments: defineTable({
     assignmentId: v.id("homeworkAssignments"),
     studentId: v.string(),

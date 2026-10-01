@@ -90,6 +90,7 @@ const en: Words = {
     "progress:read": (app, lessons) => `${app} can see your own study progress on ${lessons}.`,
     "progress:write": (app, lessons) => `${app} can record your study progress on ${lessons}.`,
     "tutor:context": (app, lessons) => `${app} can collect the text of ${lessons} to help you study elsewhere.`,
+    "collections:read": (app) => `${app} can see the title and lesson order of collections you select, not the lessons themselves.`,
   },
   cannot: {
     publish: (app) => `${app} cannot publish, close or share anything for you.`,
@@ -139,6 +140,7 @@ const ar: Words = {
     "progress:read": (app, lessons) => `يستطيع ${app} رؤية تقدمك الدراسي في ${lessons}.`,
     "progress:write": (app, lessons) => `يستطيع ${app} تسجيل تقدمك الدراسي في ${lessons}.`,
     "tutor:context": (app, lessons) => `يستطيع ${app} جمع نص ${lessons} لمساعدتك على الدراسة في مكان آخر.`,
+    "collections:read": (app) => `يستطيع ${app} رؤية عنوان المجموعات التي تحددها وترتيب دروسها، لا الدروس نفسها.`,
   },
   cannot: {
     publish: (app) => `لا يستطيع ${app} نشر أي شيء أو إغلاقه أو مشاركته نيابةً عنك.`,
@@ -163,7 +165,7 @@ const words: Record<Locale, Words> = { en, ar };
 
 const LEGACY_ORDER: LegacyIntegrationScope[] = ["items:read", "summaries:read", "drafts:create", "drafts:update", "definitions:read", "webhooks:manage"];
 const LEARN_ORDER: LearnScope[] = [
-  "lessons:read", "lessons:create", "lessons:update", "sources:read", "folders:read", "folders:update", "curricula:read", "curricula:map",
+  "lessons:read", "lessons:create", "lessons:update", "sources:read", "folders:read", "folders:update", "collections:read", "curricula:read", "curricula:map",
   "progress:read", "progress:write", "tutor:context", "community:read", "community:save", "community:fork",
 ];
 

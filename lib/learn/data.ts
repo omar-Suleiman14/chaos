@@ -12,6 +12,7 @@ import { documentText, excerpt as makeExcerpt } from "./doc";
 import { emptyPersonal, newId, personal, readState, serverState, subscribe, updatePersonal, writeState } from "./localStore";
 import type { LearnState, PersonalState } from "./localStore";
 import { searchLessons } from "./search";
+import { StudyClient, studyReads, useStudyCapabilities } from "./studyClient";
 import type {
   AttachedQuiz, ContentReport, CurriculumNode, DiscussionThread, Flashcard, FlashcardSet, Folder, FolderItem, Highlight, HighlightColor,
   LearnCapabilities, Lesson, LessonMeta, LessonProgress, LessonSource, LessonVersion, LibraryItemKind, MyCourse, PersonalNote, Person,
@@ -26,12 +27,13 @@ import type {
 
 /** Durable library/student flows; discussions, folder pins and tutor history remain local-only. */
 export const localCapabilities: LearnCapabilities = {
-  sharedPublishing: true, versionRestore: true, ai: false, verification: false, discussions: false, reports: true,
+  sharedPublishing: true, versionRestore: true, ai: false, verification: false, discussions: true, reports: true,
   deviceSync: true, weakAreas: false, curriculumDirectory: true, quizForks: false,
 };
 
 export function useLearnCapabilities(): LearnCapabilities {
-  return localCapabilities;
+  const study = useStudyCapabilities();
+  return useMemo(() => ({ ...localCapabilities, quizForks: study.quizForks, verification: study.verification, weakAreas: study.weakAreas }), [study.quizForks, study.verification, study.weakAreas]);
 }
 
 function useLearnState(): LearnState | undefined {
@@ -241,8 +243,8 @@ export function useRecentLessons(limit = 12): { lesson: Lesson; openedAt: number
 }
 
 export function useThreads(lessonId: string): DiscussionThread[] | undefined {
-  const state = useLearnState();
-  return useMemo(() => state?.threads.filter((t) => t.lessonId === lessonId).sort((a, b) => a.createdAt - b.createdAt), [state, lessonId]);
+  const rows = useQuery(api.learnDiscussions.listThreads, lessonId ? { lessonId: lessonId as Id<"lessons"> } : "skip");
+  return useMemo(() => rows?.map(t => ({ ...t, comments: t.comments.map(c => ({ ...c, moderation: c.moderation as DiscussionThread["comments"][number]["moderation"] })) })).sort((a, b) => a.createdAt - b.createdAt), [rows]);
 }
 
 export function useMyReports(): ContentReport[] | undefined {
@@ -296,11 +298,17 @@ export function usePinnedFolders(): string[] | undefined {
   return usePersonal()?.pinnedFolders;
 }
 
-/** Filled by the learning-state backend; empty until then (`capabilities.weakAreas`). */
+/** Concepts the reader keeps missing in graded quizzes, with a lesson block to reread. */
 export function useWeakAreas(): WeakArea[] | undefined {
-  return EMPTY_WEAK;
+  const auth = useConvexAuth();
+  const [now] = useState(() => Date.now());
+  const rows = useQuery(studyReads.weakAreas, auth.isAuthenticated ? { now } : "skip");
+  return useMemo(() => {
+    if (auth.isLoading) return undefined;
+    if (!auth.isAuthenticated) return [];
+    return rows?.filter(r => r.lessonId).map(r => ({ concept: r.title, lessonId: r.lessonId!, blockId: r.blockId, quizFormId: r.formId, confidence: 0, lastSeenAt: r.lastSeenAt }));
+  }, [auth.isLoading, auth.isAuthenticated, rows]);
 }
-const EMPTY_WEAK: WeakArea[] = [];
 
 /* ── Actions ─────────────────────────────────────────────────────────────── */
 
@@ -456,36 +464,24 @@ export function useLearnActions() {
       followCourse(moduleId: string, _versionId: string) { requireSignIn(); return library.follow(moduleId, true); },
       unfollowCourse(moduleId: string) { requireSignIn(); return library.follow(moduleId, false); },
       openCourse(_moduleId: string) { /* The backend does not record course-open timestamps. */ },
-      startThread(input: { lessonId: string; blockId?: string; anchorExcerpt?: string; body: string }): string {
+      async startThread(input: { lessonId: string; blockId?: string; anchorExcerpt?: string; body: string }): Promise<string> {
         requireSignIn();
-        const id = newId("thread");
-        const now = Date.now();
-        const body = input.body.trim().slice(0, 4000);
-        if (!body) throw new LearnError("EMPTY");
-        writeState((s) => ({ ...s, threads: [...s.threads, { id, lessonId: input.lessonId, blockId: input.blockId, anchorExcerpt: input.anchorExcerpt && makeExcerpt(input.anchorExcerpt, 140), resolved: false, createdAt: now, comments: [{ id: newId("c"), authorId: me, authorName: myName, body, createdAt: now, moderation: "ok" }] }] }));
-        return id;
+        if (!input.body.trim()) throw new LearnError("EMPTY");
+        return client.mutation(api.learnDiscussions.startThread, { lessonId: input.lessonId as Id<"lessons">, blockId: input.blockId, anchorExcerpt: input.anchorExcerpt && makeExcerpt(input.anchorExcerpt, 140), body: input.body });
       },
-      reply(threadId: string, body: string) {
+      async reply(threadId: string, body: string) {
         requireSignIn();
-        const text = body.trim().slice(0, 4000);
-        if (!text) throw new LearnError("EMPTY");
-        writeState((s) => ({ ...s, threads: s.threads.map((t) => t.id === threadId ? { ...t, comments: [...t.comments, { id: newId("c"), authorId: me, authorName: myName, body: text, createdAt: Date.now(), moderation: "ok" as const }] } : t) }));
+        if (!body.trim()) throw new LearnError("EMPTY");
+        await client.mutation(api.learnDiscussions.reply, { threadId: threadId as Id<"learnThreads">, body });
       },
       /** Thread starter or lesson owner can resolve. */
-      resolveThread(threadId: string, resolved: boolean) {
-        writeState((s) => ({
-          ...s, threads: s.threads.map((t) => {
-            if (t.id !== threadId) return t;
-            const owner = s.lessons[t.lessonId]?.ownerId === me;
-            if (!owner && t.comments[0]?.authorId !== me) throw new LearnError("FORBIDDEN");
-            return { ...t, resolved };
-          }),
-        }));
+      async resolveThread(threadId: string, resolved: boolean) {
+        requireSignIn();
+        await client.mutation(api.learnDiscussions.resolve, { threadId: threadId as Id<"learnThreads">, resolved });
       },
-      deleteComment(threadId: string, commentId: string) {
-        writeState((s) => ({
-          ...s, threads: s.threads.map((t) => t.id !== threadId ? t : { ...t, comments: t.comments.map((c) => c.id === commentId && c.authorId === me ? { ...c, body: "", moderation: "removed" as const } : c) }),
-        }));
+      async deleteComment(_threadId: string, commentId: string) {
+        requireSignIn();
+        await client.mutation(api.learnDiscussions.removeComment, { commentId: commentId as Id<"learnComments"> });
       },
       async report(target: ReportTarget, reason: ReportReason, details: string) {
         requireSignIn();
@@ -501,14 +497,10 @@ export function useLearnActions() {
           return { ...s, people: { ...s.people, [me]: { ...current, ...patch, bio: patch.bio?.slice(0, 600) ?? current.bio } } };
         });
       },
-      /** Records a pending request locally; review needs the backend (`capabilities.verification`). */
-      requestVerification(kind: VerificationKind, institution: string) {
+      /** Submits a claim for manual review; badges appear only after an admin verifies it. */
+      async requestVerification(kind: VerificationKind, institution: string) {
         requireSignIn();
-        writeState((s) => {
-          const current = s.people[me] ?? { id: me, name: myName, affiliations: [], verifications: [] };
-          const verifications = [...current.verifications.filter((v) => v.kind !== kind), { kind, status: "pending" as const, institution: institution.trim().slice(0, 160), submittedAt: Date.now() }];
-          return { ...s, people: { ...s.people, [me]: { ...current, verifications } } };
-        });
+        await new StudyClient(client).claimIdentity(kind, institution);
       },
 
       /* Flashcards. */
@@ -542,8 +534,8 @@ export function useLearnActions() {
        */
       async forkQuiz(formId: string, from: { lessonId: string }): Promise<string> {
         requireSignIn();
-        void formId; void from;
-        throw new LearnError("BACKEND_REQUIRED");
+        void from; // Provenance is recorded server-side from the published source quiz.
+        return new StudyClient(client).forkQuiz(formId);
       },
 
       /* Tutor conversation history (answers come from the backend when `capabilities.ai`). */

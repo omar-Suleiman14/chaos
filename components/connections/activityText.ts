@@ -30,7 +30,7 @@ export function refKind(ref: string | null | undefined): RefKind {
   return prefix === "form" ? "form" : prefix === "quiz" ? "quiz" : prefix === "lesson" ? "lesson" : prefix === "folder" ? "collection" : "item";
 }
 
-const CHANGES = new Set(["draft.created", "draft.updated", "lesson.draft_created", "lesson.draft_updated", "lesson.unlinked", "folder.created"]);
+const CHANGES = new Set(["draft.created", "draft.updated", "lesson.draft_created", "lesson.draft_updated", "lesson.update_proposed", "lesson.unlinked", "folder.created"]);
 const SECURITY = new Set(["token.rotated", "token.previous_revoked", "webhook.created", "webhook.deleted", "webhook.rotated", "lesson.selection_updated", "source.selection_updated"]);
 
 /** v2 read operations are logged as "v2.<resource>.<method>" or "v2.<scope>" (convex/learn*Integrations.ts). */
@@ -68,6 +68,7 @@ const en: Words = {
     "draft.updated": (app, item) => `${app} updated draft ${item}`,
     "lesson.draft_created": (app, item) => `${app} created lesson draft ${item}`,
     "lesson.draft_updated": (app, item) => `${app} updated lesson draft ${item}`,
+    "lesson.update_proposed": (app, item) => `${app} sent changes to ${item} for your review`,
     "folder.created": (app, item) => `${app} created collection ${item}`,
     "lesson.unlinked": (app, item) => `${app} unlinked lesson ${item}. The lesson stays in Chaos`,
     "lesson.selection_updated": (app) => `The lessons ${app} can reach were changed`,
@@ -106,6 +107,7 @@ const ar: Words = {
     "draft.updated": (app, item) => `حدّث ${app} المسودة ${item}`,
     "lesson.draft_created": (app, item) => `أنشأ ${app} مسودة الدرس ${item}`,
     "lesson.draft_updated": (app, item) => `حدّث ${app} مسودة الدرس ${item}`,
+    "lesson.update_proposed": (app, item) => `أرسل ${app} تغييرات على ${item} لمراجعتك`,
     "folder.created": (app, item) => `أنشأ ${app} المجموعة ${item}`,
     "lesson.unlinked": (app, item) => `ألغى ${app} ربط الدرس ${item}. يبقى الدرس في Chaos`,
     "lesson.selection_updated": (app) => `تغيّرت الدروس التي يصل إليها ${app}`,

@@ -23,7 +23,7 @@ function validateConcepts(conceptIds: Id<"learnConcepts">[]) {
   )
     throw new Error(`Use 1-${PRACTICE_LIMITS.concepts} unique concepts`);
 }
-async function recentEvidence(
+export async function recentEvidence(
   ctx: ReadCtx,
   userId: string,
   conceptId: Id<"learnConcepts">,

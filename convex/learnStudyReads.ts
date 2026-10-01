@@ -2,7 +2,10 @@ import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { creatorRestricted, requireActiveUser } from "./authz";
 import { assessmentRef } from "./quizForkModel";
-import { lessonAccess } from "./lessons";
+import { lessonAccess, lessonAccessForActor } from "./lessons";
+import { recentEvidence } from "./learnPractice";
+import { summarizeEvidence } from "./learnPracticeModel";
+import type { Id } from "./_generated/dataModel";
 import { attachAssessmentForActor } from "./learnCollections";
 import { canonicalCommunityActor } from "./learnCommunityIntegrations";
 
@@ -85,5 +88,34 @@ export const practiceLink = query({
     if (!form || form.ownerId !== identity.subject || form.status !== "live" || form.isBanned || form.publishedVersion !== args.version || await creatorRestricted(ctx, form.ownerId)) return null;
     const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", form._id).eq("version", args.version)).unique();
     return version?.definition.quiz?.enabled ? { title: version.definition.title, href: `/f/${encodeURIComponent(form.shareId)}` } : null;
+  },
+});
+
+/**
+ * The caller's weak concepts (server-graded quiz evidence) with a readable lesson block to
+ * revisit. Bounded: 20 concepts from the newest 200 evidence rows, 10 mappings each.
+ */
+export const weakAreas = query({
+  args: { now: v.number() },
+  returns: v.array(v.object({ conceptId: v.id("learnConcepts"), title: v.string(), lessonId: v.optional(v.id("lessons")), blockId: v.optional(v.string()), formId: v.id("forms"), lastSeenAt: v.number() })),
+  handler: async (ctx, args) => {
+    const { identity } = await requireActiveUser(ctx);
+    if (!Number.isFinite(args.now) || args.now < 0) throw new Error("Invalid clock");
+    const rows = await ctx.db.query("learnPracticeEvidence").withIndex("by_userId_and_formResponseId_and_fieldId_and_conceptId", q => q.eq("userId", identity.tokenIdentifier)).order("desc").take(200);
+    const conceptIds = [...new Set(rows.map(row => row.conceptId))].slice(0, 20);
+    const out = [];
+    for (const conceptId of conceptIds) {
+      const evidence = await recentEvidence(ctx, identity.tokenIdentifier, conceptId, args.now);
+      if (!evidence.length || summarizeEvidence(conceptId, evidence, args.now).state !== "weak") continue;
+      const concept = await ctx.db.get("learnConcepts", conceptId);
+      if (!concept) continue;
+      let place: { lessonId: Id<"lessons">; blockId: string } | undefined;
+      for (const mapping of await ctx.db.query("learnConceptMappings").withIndex("by_conceptId", q => q.eq("conceptId", conceptId)).take(10)) {
+        // Only point at lessons this reader may open.
+        try { await lessonAccessForActor(ctx, identity.subject, mapping.lessonId); place = { lessonId: mapping.lessonId, blockId: mapping.blockId }; break; } catch { /* not readable */ }
+      }
+      out.push({ conceptId, title: concept.title, ...(place ?? {}), formId: evidence[0].formId, lastSeenAt: evidence[0].answeredAt });
+    }
+    return out;
   },
 });

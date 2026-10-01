@@ -9,7 +9,7 @@ import { activeIntegrationToken, externalSourceValidator, findIdempotent, logCon
 import { requireActiveUser } from "./authz";
 import { LEARN_WRITE_LIMITS, LEARN_LIMITS, lessonDocument, lessonMeta, type LessonDocument } from "./learnModel";
 import { assertDocument } from "./learnValidation";
-import { createLessonForActor, saveLessonDraftForActor, editLessonBlocksForActor, lessonBlockOperation, readLessonForActor, summarizeLesson } from "./lessons";
+import { applyBlockOperations, createLessonForActor, saveLessonDraftForActor, editLessonBlocksForActor, lessonBlockOperation, readLessonForActor, summarizeLesson } from "./lessons";
 import { errorCode, sha256Hex } from "./serverUtils";
 
 const PREFIX = "/api/integrations/v2/";
@@ -22,7 +22,7 @@ const ok = (body: unknown, status = 200): LearnApiResult => ({ status, body });
 const fail = (status: number, code: string, message: string): LearnApiResult => ({ status, body: { error: { code, message } } });
 const missing = () => fail(404, "NOT_FOUND", "This asset does not exist or is not selected for this connection.");
 const base = { tokenId: v.id("integrationTokens"), now: v.number() };
-const IMPLEMENTED_SCOPES = ["lessons:read", "lessons:create", "lessons:update", "sources:read", "folders:read", "folders:update", "curricula:read", "curricula:map", "community:read", "community:save", "community:fork", "progress:read", "progress:write", "tutor:context"] as const;
+const IMPLEMENTED_SCOPES = ["lessons:read", "lessons:create", "lessons:update", "sources:read", "folders:read", "folders:update", "curricula:read", "curricula:map", "community:read", "community:save", "community:fork", "progress:read", "progress:write", "tutor:context", "collections:read"] as const;
 
 /** Native owner selection, separate from bearer API access. Non-lesson grants are preserved. */
 export const setLessonSelection = mutation({
@@ -47,6 +47,45 @@ export const setLessonSelection = mutation({
     return { lessonRefs };
   },
 });
+
+/** Native owner selection of published collections. Grants the collection's ordered list only; lessons keep their own grants. */
+export const setCollectionSelection = mutation({
+  args: { tokenId: v.id("integrationTokens"), collectionIds: v.array(v.id("learnCollections")) },
+  returns: v.object({ collectionRefs: v.array(v.string()) }),
+  handler: async (ctx, args) => {
+    const { identity } = await requireActiveUser(ctx);
+    const token = await activeIntegrationToken(ctx, args.tokenId, Date.now());
+    if (!token || token.ownerId !== identity.subject) throw new Error("NOT_FOUND: Active connection not found or unauthorized.");
+    if (!token.scopes.includes("collections:read")) throw new Error("INSUFFICIENT_SCOPE: Select collections only for a connection with collections:read.");
+    const ids = [...new Set(args.collectionIds)];
+    if (ids.length > 100) throw new Error("VALIDATION_FAILED: Select at most 100 collections.");
+    for (const id of ids) {
+      const row = await ctx.db.get("learnCollections", id);
+      if (!row || row.ownerId !== identity.subject) throw new Error("NOT_FOUND: Selected collection not found or unauthorized.");
+    }
+    const collectionRefs = ids.map(id => `collection_${id}`);
+    const itemRefs = [...token.itemRefs.filter(ref => !ref.startsWith("collection_")), ...collectionRefs];
+    if (itemRefs.length > 500) throw new Error("VALIDATION_FAILED: Share at most 500 assets with one connection.");
+    await ctx.db.patch("integrationTokens", token._id, { itemRefs });
+    await logConnectionActivity(ctx, token._id, "collection.selection_updated");
+    return { collectionRefs };
+  },
+});
+
+/** A selected collection's published snapshot: metadata and ordered references, never member content. */
+export const getCollection = internalQuery({ args: { ...base, ref: v.string() }, returns: resultValidator, handler: async (ctx, args): Promise<LearnApiResult> => {
+  const token = await authorize(ctx, args.tokenId, args.now, "collections:read");
+  if ("status" in token) return token;
+  const id = /^collection_([A-Za-z0-9]+)$/.exec(args.ref)?.[1];
+  const collectionId = id ? ctx.db.normalizeId("learnCollections", id) : null;
+  if (!collectionId || !token.itemRefs.includes(args.ref)) return missing();
+  const row = await ctx.db.get("learnCollections", collectionId);
+  if (!row || row.ownerId !== token.ownerId || row.communityState === "removed" || row.communityState === "hidden") return missing();
+  const version = row.publishedVersionId ? await ctx.db.get("collectionVersions", row.publishedVersionId) : null;
+  if (!version) return fail(409, "NOT_PUBLISHED", "Publish this collection in Chaos first.");
+  return ok({ collection: { ref: args.ref, version: version.number, publishedAt: version.publishedAt, title: version.metadata.title, description: version.metadata.description, language: version.metadata.language, tags: version.metadata.tags,
+    items: version.items.map(item => item.kind === "lesson" ? { ref: `lesson_${item.id}`, versionId: item.versionId } : { ref: `source_${item.id}` }) } });
+} });
 
 async function authorize(ctx: Ctx, tokenId: Id<"integrationTokens">, now: number, scope?: IntegrationScope): Promise<Token | LearnApiResult> {
   const token = await activeIntegrationToken(ctx, tokenId, now);
@@ -247,6 +286,17 @@ export const updateDraft = internalMutation({ args: { tokenId: base.tokenId, ref
   for (const document of documents) { const problem = await referenceProblem(ctx, token, document); if (problem) return problem; }
   const prior = await replay(ctx, token, args.idempotencyKey, hash);
   if (prior) return prior;
+  if (token.reviewLessonUpdates) {
+    // Held for the owner: nothing changes until they accept it in Connections.
+    if (Number(revisionText) !== lesson.revision) return fail(409, "REVISION_CONFLICT", "The lesson changed. Read it again and resend.");
+    let document: LessonDocument;
+    try { document = args.blocks ? { schemaVersion: 1, blocks: applyBlockOperations(lesson.draft.blocks, body.operations) } : body.document; assertDocument(document); } catch (e) { return caught(e); }
+    const proposalId = await ctx.db.insert("lessonProposals", { ownerId: token.ownerId, tokenId: token._id, lessonId: lesson._id, baseRevision: lesson.revision, document, ...(!args.blocks && body.metadata ? { metadata: body.metadata } : {}), ...(args.blocks ? { operations: body.operations } : {}), status: "pending", createdAt: Date.now() });
+    await logConnectionActivity(ctx, token._id, "lesson.update_proposed", args.ref);
+    const staged: LearnApiResult = { status: 202, body: { proposal: { id: `proposal_${proposalId}`, status: "pending" }, item: await itemView(ctx, token, lesson) } };
+    await remember(ctx, token, args.idempotencyKey, hash, staged);
+    return staged;
+  }
   try {
     if (args.blocks) await editLessonBlocksForActor(ctx, token.ownerId, { lessonId: lesson._id, expectedRevision: Number(revisionText), operations: body.operations });
     else await saveLessonDraftForActor(ctx, token.ownerId, { lessonId: lesson._id, expectedRevision: Number(revisionText), document: body.document, metadata: body.metadata });
@@ -301,6 +351,7 @@ export const learnIntegrationHandler = httpAction(async (ctx, request) => observ
   if (method === "GET" && ["capabilities", "connection"].includes(resource) && !ref) scope = undefined;
   else if (method === "GET" && ["lessons", "items"].includes(resource) && ref && (!sub || ["definition", "outline"].includes(sub)) && !extra.length) scope = "lessons:read";
   else if (method === "GET" && resource === "sources" && ref && !sub && !extra.length) scope = "sources:read";
+  else if (method === "GET" && resource === "collections" && ref && !sub && !extra.length) scope = "collections:read";
   else if (method === "POST" && resource === "drafts" && !ref) scope = "lessons:create";
   else if (method === "PATCH" && ["lessons", "items"].includes(resource) && ref && (!sub || sub === "blocks") && !extra.length) scope = "lessons:update";
   else if (method === "DELETE" && ["lessons", "items"].includes(resource) && ref && sub === "link" && !extra.length) scope = "lessons:update";
@@ -315,6 +366,7 @@ export const learnIntegrationHandler = httpAction(async (ctx, request) => observ
   let result: LearnApiResult;
   try {
     if (method === "GET" && !ref) result = await ctx.runQuery(internal.learnIntegrations.capabilities, { tokenId: auth.tokenId, now: Date.now() });
+    else if (method === "GET" && resource === "collections") result = url.search ? fail(400, "VALIDATION_FAILED", "Collections do not accept query parameters.") : await ctx.runQuery(internal.learnIntegrations.getCollection, { tokenId: auth.tokenId, now: Date.now(), ref });
     else if (method === "GET" && resource === "sources") {
       result = url.search ? fail(400, "VALIDATION_FAILED", "Source metadata does not accept query parameters.") : await ctx.runQuery(internal.learnIntegrations.getSource, { tokenId: auth.tokenId, now: Date.now(), ref });
     } else if (method === "GET") {

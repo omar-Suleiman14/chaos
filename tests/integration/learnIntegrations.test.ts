@@ -39,7 +39,7 @@ describe("Learn integration v2", () => {
     expect(integrationScopes).toContain("lessons:update");
     expect(learnIntegrationScopes).not.toContain("lessons:publish");
     expect(await t.query(learnIntegrationApi.capabilities, { tokenId, now: Date.now() })).toMatchObject({ status: 200, body: { apiVersion: "2", supportedVersions: ["1", "2"], selection: "explicit" } });
-    expect(await t.query(learnIntegrationApi.capabilities, { tokenId, now: Date.now() })).toMatchObject({ body: { scopes: ["lessons:read"], availableScopes: ["lessons:read", "lessons:create", "lessons:update", "sources:read", "folders:read", "folders:update", "curricula:read", "curricula:map", "community:read", "community:save", "community:fork", "progress:read", "progress:write", "tutor:context"] } });
+    expect(await t.query(learnIntegrationApi.capabilities, { tokenId, now: Date.now() })).toMatchObject({ body: { scopes: ["lessons:read"], availableScopes: ["lessons:read", "lessons:create", "lessons:update", "sources:read", "folders:read", "folders:update", "curricula:read", "curricula:map", "community:read", "community:save", "community:fork", "progress:read", "progress:write", "tutor:context", "collections:read"] } });
     expect(await t.query(internal.integrations.capabilities, { tokenId, now: Date.now() })).toMatchObject({ status: 200, body: { apiVersion: "1", supportedKinds: ["form", "quiz"] } });
     const router = httpRouter(); registerLearnIntegrationRoutes(router);
     expect(router.lookup("/api/integrations/v2/capabilities", "GET")).not.toBeNull();

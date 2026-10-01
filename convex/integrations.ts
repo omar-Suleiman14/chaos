@@ -72,6 +72,7 @@ export const listConnections = query({
         _id: t._id, label: t.label, tokenHint: t.tokenHint, scopes: t.scopes, access: t.access, items,
         createdAt: t.createdAt, expiresAt: t.expiresAt ?? null, lastUsedAt: t.lastUsedAt ?? null, revokedAt: t.revokedAt ?? null,
         rotatedAt: t.rotatedAt ?? null,
+        reviewLessonUpdates: t.reviewLessonUpdates ?? false,
         // The old token after a rotation; null once its grace period is over.
         previousTokenExpiresAt: t.previousTokenExpiresAt !== undefined && t.previousTokenExpiresAt > now ? t.previousTokenExpiresAt : null,
         activity: activity.map((a) => ({ at: a.at, action: a.action, itemRef: a.itemRef ?? null })),

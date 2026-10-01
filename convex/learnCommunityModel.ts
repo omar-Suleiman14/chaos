@@ -89,7 +89,8 @@ export const communityTables = {
       "lessonId",
       "versionId",
       "conceptId",
-    ]),
+    ])
+    .index("by_conceptId", ["conceptId"]),
   learnReports: defineTable({
     lessonId: v.id("lessons"),
     reporterKey: v.string(),

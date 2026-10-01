@@ -19,6 +19,7 @@ import { WsConfirm } from "@/components/workspace/primitives";
 import ConnectionAccessList from "@/components/connections/ConnectionAccessList";
 import ConnectionActivity from "@/components/connections/ConnectionActivity";
 import ConnectedLessonComparison from "@/components/connections/ConnectedLessonComparison";
+import PendingLessonChanges, { ReviewModeSwitch } from "@/components/connections/PendingLessonChanges";
 import SharePicker from "@/components/connections/SharePicker";
 import { isItemRef, lessonIdsFromRefs, lessonRef, sourceIdsFromRefs } from "@/components/connections/learnShare";
 import { canSelectLessons, connectionAppName, describeConnectionAccess } from "@/components/connections/permissionText";
@@ -148,6 +149,8 @@ export default function ConnectionsPage() {
   const create = useMutation(api.integrations.createConnection);
   const updateConnection = useMutation(api.integrations.updateConnection);
   const setLessonSelection = useMutation(api.learnIntegrations.setLessonSelection);
+  const setCollectionSelection = useMutation(api.learnIntegrations.setCollectionSelection);
+  const collectionIds = (refs: string[]) => refs.filter(r => r.startsWith("collection_")).map(r => r.slice(11) as Id<"learnCollections">);
   const setSourceSelection = useMutation(api.learnIntegrations.setSourceSelection);
   const revoke = useMutation(api.integrations.revokeConnection);
   const rotate = useMutation(api.integrations.rotateConnection);
@@ -202,6 +205,9 @@ export default function ConnectionsPage() {
     if (lessonRefs.length && canSelectLessons(scopes)) {
       try { await setLessonSelection({ tokenId: result.tokenId, lessonIds: lessonIds(lessonRefs) }); } catch (err) { setError(t.lessonsNotSaved(errorMessage(err))); }
     }
+    if (scopes.includes("collections:read") && collectionIds(lessonRefs).length) {
+      try { await setCollectionSelection({ tokenId: result.tokenId, collectionIds: collectionIds(lessonRefs) }); } catch (err) { setError(t.lessonsNotSaved(errorMessage(err))); }
+    }
     setLessonRefs([]);
     setSaving(false);
   };
@@ -215,6 +221,7 @@ export default function ConnectionsPage() {
       // updateConnection replaces itemRefs with forms and quizzes only, so lesson and source grants are written again right after.
       if (c.access === "selected") await updateConnection({ tokenId: c._id, itemRefs: editRefs });
       if (canSelectLessons(c.scopes)) await setLessonSelection({ tokenId: c._id, lessonIds: lessonIds(editLessonRefs) });
+      if (c.scopes.includes("collections:read")) await setCollectionSelection({ tokenId: c._id, collectionIds: collectionIds(editLessonRefs) });
       const sourceIds = sourceIdsFromRefs(c.items.map((i) => i.ref));
       if (c.access === "selected" && sourceIds.length && c.scopes.includes("sources:read")) {
         await setSourceSelection({ tokenId: c._id, sourceIds: sourceIds as Id<"learnSources">[] });
@@ -306,7 +313,7 @@ export default function ConnectionsPage() {
             <label className="flex items-center gap-2 text-sm"><input type="radio" checked={access === "selected"} onChange={() => setAccess("selected")} /> {t.onlyChosen}</label>
             <label className="flex items-center gap-2 text-sm"><input type="radio" checked={access === "all"} onChange={() => setAccess("all")} /> {t.allItems}</label>
             <SharePicker value={refs} onChange={setRefs} allItems={access === "all"}
-              lessonValue={lessonRefs} onLessonChange={setLessonRefs} lessonsAllowed={canSelectLessons(scopes)} />
+              lessonValue={lessonRefs} onLessonChange={setLessonRefs} lessonsAllowed={canSelectLessons(scopes)} collectionsAllowed={scopes.includes("collections:read")} />
           </fieldset>
           <div className="space-y-2">
             <h3 className="text-sm font-medium">{t.willAllow(draftApp)}</h3>
@@ -319,6 +326,7 @@ export default function ConnectionsPage() {
         </section>
       )}
 
+      <FallbackBoundary fallback={null}><PendingLessonChanges /></FallbackBoundary>
       {connections === undefined ? <LoadingState label={t.loadingConnections} /> : connections.length === 0 ? (
         <p className="chaos-card bg-card p-8 text-sm text-muted-foreground text-center">{t.none}</p>
       ) : (
@@ -374,7 +382,7 @@ export default function ConnectionsPage() {
                 {editable && (editing === c._id ? (
                   <div className="space-y-2">
                     <SharePicker value={editRefs} onChange={setEditRefs} allItems={c.access === "all"}
-                      lessonValue={editLessonRefs} onLessonChange={setEditLessonRefs} lessonsAllowed={canSelectLessons(c.scopes)} />
+                      lessonValue={editLessonRefs} onLessonChange={setEditLessonRefs} lessonsAllowed={canSelectLessons(c.scopes)} collectionsAllowed={c.scopes.includes("collections:read")} />
                     <div className="flex gap-2">
                       <button type="button" className="ws-btn ws-btn--primary ws-btn--sm" disabled={saving} onClick={() => void saveEdit(c)}>{t.save}</button>
                       <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={saving} onClick={() => setEditing(null)}>{t.cancel}</button>
@@ -387,6 +395,7 @@ export default function ConnectionsPage() {
                     setEditLessonRefs(sharedLessons.map((i) => i.ref));
                   }}>{t.change}</button>
                 ))}
+                {!c.revokedAt && c.scopes.includes("lessons:update") && <ReviewModeSwitch tokenId={c._id} value={c.reviewLessonUpdates} />}
                 {sharedLessons.length > 0 && <FallbackBoundary fallback={null}><ConnectedLessonComparison lessons={sharedLessons.map(item => ({ id: item.ref.slice(7) as Id<"lessons">, title: titles.get(item.ref) ?? t.missingLesson }))} /></FallbackBoundary>}
                 {!c.revokedAt && <ConnectionActivity rows={c.activity} appName={app} titles={titles} />}
               </li>

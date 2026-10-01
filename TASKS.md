@@ -449,3 +449,13 @@ Outcome: secure native source/image upload, block citation locators and explicit
 - [x] Immutable collection snapshots and flashcard draft/publication/study operations; unsupported backend actions fail explicitly.
 - [ ] Batch type/lint/integration verification and parent signed-in browser acceptance.
 - API coordination: data.ts exports useSaved/useHighlights/useNotes/useAllHighlights/useFolders/useFolderItems/useCurriculumNodes/useMyCourses/useFlashcardSets/useFlashcardSet/useCardReviews/useLibraryCollections/usePublishedCollection/useCollectionSnapshotLessons and DurableLibraryClient. All writes return promises; callers must await. Profile/Practice/HandoffDialog/Connections/media editor untouched. New convex/learnLibrary.ts is a read-only adapter using existing indexes; generated api.d.ts includes it, parent must run codegen/deploy. No deploy/commit/push.
+
+## Takeover after Sol's usage limit (2026-10-01)
+- [x] Verified and fixed Sol's unverified batch (flashcard study query, unlisted visibility, render-time clock, homework route protection/reservation, test mocks, sitemap fallback); pushed e2e 2be10fc and updated dev Convex.
+- [x] Learn: quiz forks, verification claims and weak areas switched on through the study client; new `learnStudyReads.weakAreas`.
+- [x] Anchored discussions backend (`learnDiscussions`: list/start/reply/resolve/remove; lesson read access; rate limits) wired into the reader.
+- [x] 92/93: optional per-connection approval queue (`lessonProposals`, v2 PATCH returns 202) with ChangePreview accept/reject and conflict re-apply.
+- [x] 87/94: `collections:read` scope, owner selection and `GET /api/integrations/v2/collections/{ref}`; Connections picker saves collections.
+- [x] Homework: assignment list per form, roster with best scores, enroll by email.
+- [x] Checks: typecheck, lint 0 errors, 669 unit, 644 integration.
+- [ ] Not verified in a signed-in browser. Still local by design: recent lessons, pinned folders, tutor history (AI off). Reports for non-lesson targets unsupported.

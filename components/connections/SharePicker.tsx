@@ -34,6 +34,8 @@ const copy = {
     lessonsNeedScope: "Turn on “Read selected lessons” or “Edit lesson drafts” above to share lessons.",
     noLessons: "No lessons saved to your Chaos account yet. Lessons kept only on this device cannot be shared.",
     draft: "Draft", published: "Published", archived: "Archived",
+    collectionsNeedScope: "Turn on “See collections” for this connection to share collections.",
+    collectionsHint: "The app sees each collection's title and lesson order. Share the lessons too if it should read them.",
     pendingTitle: "Not saved yet",
     pending: "Chaos cannot save collection or curriculum sharing yet. You can pick them to see what the app would reach, but nothing here is shared. To share now, select their lessons in the Lessons tab.",
     pendingSelected: (n: number) => `${n} picked (not shared).`,
@@ -52,6 +54,8 @@ const copy = {
     lessonsNeedScope: "فعّل «قراءة الدروس المحددة» أو «تعديل مسودات الدروس» أعلاه لمشاركة الدروس.",
     noLessons: "لا دروس محفوظة في حسابك على Chaos بعد. لا يمكن مشاركة الدروس المحفوظة على هذا الجهاز فقط.",
     draft: "مسودة", published: "منشور", archived: "مؤرشف",
+    collectionsNeedScope: "فعّل «رؤية المجموعات» لهذا الاتصال لمشاركة المجموعات.",
+    collectionsHint: "يرى التطبيق عنوان كل مجموعة وترتيب دروسها. شارك الدروس أيضًا إن كان يجب أن يقرأها.",
     pendingTitle: "لا يُحفظ بعد",
     pending: "لا يستطيع Chaos حفظ مشاركة المجموعات والمناهج بعد. يمكنك تحديدها لترى ما سيصل إليه التطبيق، لكن لا يُشارَك شيء هنا. للمشاركة الآن، حدد دروسها في تبويب الدروس.",
     pendingSelected: (n: number) => `${n} محدد (غير مشارَك).`,
@@ -80,7 +84,7 @@ function Row({ checked, onChange, title, meta, disabled }: { checked: boolean; o
  * - Modules: resolve native owned lessons, persisted as explicit lesson grants.
  * - Collections: disabled until a scoped selected-content API exists.
  */
-export default function SharePicker({ value, onChange, allItems, lessonValue, onLessonChange, lessonsAllowed }: {
+export default function SharePicker({ value, onChange, allItems, lessonValue, onLessonChange, lessonsAllowed, collectionsAllowed = false }: {
   value: string[];
   onChange: (refs: string[]) => void;
   /** access: "all" covers every form and quiz; the forms tab then only explains that. */
@@ -88,6 +92,8 @@ export default function SharePicker({ value, onChange, allItems, lessonValue, on
   lessonValue: string[];
   onLessonChange: (refs: string[]) => void;
   lessonsAllowed: boolean;
+  /** Collections are saved with the connection when it has collections:read. */
+  collectionsAllowed?: boolean;
   pendingValue?: string[];
   onPendingChange?: (refs: string[]) => void;
   learn?: LearnAssets;
@@ -97,6 +103,7 @@ export default function SharePicker({ value, onChange, allItems, lessonValue, on
   const [lessonCursor, setLessonCursor] = useState<string | null>(null);
   const lessonPage = useQuery(api.lessons.listOwned, { paginationOpts: { ...LESSON_PAGE, cursor: lessonCursor } });
   const [tab, setTab] = useState<Tab>("items");
+  const collectionPage = useQuery(api.learnLibrary.collections, tab === "collections" ? { paginationOpts: { numItems: 50, cursor: null } } : "skip");
   const [filter, setFilter] = useState("");
   const match = (title: string) => title.toLowerCase().includes(filter.trim().toLowerCase());
   const list = "max-h-56 overflow-y-auto border border-foreground/15 rounded divide-y divide-foreground/5";
@@ -141,6 +148,28 @@ export default function SharePicker({ value, onChange, allItems, lessonValue, on
           )}
           {lessonsAllowed && <p className="text-[11px] text-muted-foreground">{t.lessonsSelected(lessonValue.length)}</p>}
           {!lessonPage.isDone && <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => setLessonCursor(lessonPage.continueCursor)}>{t.tabs.lessons} →</button>}
+        </>
+      );
+    }
+  } else if (tab === "collections") {
+    if (collectionPage === undefined) body = <LoadingState label={t.loading} />;
+    else {
+      const all = collectionPage.page;
+      const shown = all.filter((c) => match(c.metadata.title));
+      const ref = (id: string) => `collection_${id}`;
+      body = (
+        <>
+          {!collectionsAllowed && <p role="note" className="text-xs text-muted-foreground">{t.collectionsNeedScope}</p>}
+          {all.length === 0 ? <p className="text-sm text-muted-foreground">{t.nothing}</p> : (
+            <ul className={list}>
+              {shown.map((c) => (
+                <Row key={c._id} title={c.metadata.title} disabled={!collectionsAllowed} meta={c.publishedVersionId ? t.published : t.draft}
+                  checked={lessonValue.includes(ref(c._id))} onChange={(on) => onLessonChange(toggleRefs(lessonValue, [ref(c._id)], on))} />
+              ))}
+              {shown.length === 0 && empty(all.length)}
+            </ul>
+          )}
+          <p className="text-[11px] text-muted-foreground">{t.collectionsHint}</p>
         </>
       );
     }

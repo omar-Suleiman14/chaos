@@ -6,7 +6,7 @@ import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/s
 import type { Id, Doc } from "./_generated/dataModel";
 import schema from "./schema";
 import { requireActiveUser, creatorRestricted } from "./authz";
-import { lessonBlock, lessonDocument, lessonMeta, visibility, LEARN_LIMITS, LEARN_WRITE_LIMITS } from "./learnModel";
+import { lessonBlock, lessonDocument, lessonMeta, visibility, LEARN_LIMITS, LEARN_WRITE_LIMITS, type LessonDocument } from "./learnModel";
 import { consumeRate } from "./serverUtils";
 import { assertDocument, validateDocument, validateMetadataPresentation, type LessonProblem } from "./learnValidation";
 
@@ -218,14 +218,10 @@ export const lessonBlockOperation = v.union(
   v.object({ action: v.literal("delete"), blockId: v.string() })
 );
 export type LessonBlockOperation = import("convex/values").Infer<typeof lessonBlockOperation>;
-export async function editLessonBlocksForActor(ctx: MutationCtx, actor: string, args: {
-  lessonId: Id<"lessons">; expectedRevision: number; operations: LessonBlockOperation[];
-}) {
-  const lesson = await lessonAccessForActor(ctx, actor, args.lessonId, true);
-  revisionCheck(lesson, args.expectedRevision);
-  if (!args.operations.length || args.operations.length > 100) throw new Error("VALIDATION_FAILED: Send 1?100 block operations.");
-  const blocks = [...lesson.draft.blocks];
-  for (const op of args.operations) {
+/** Pure: the draft blocks after a batch of operations; throws on invalid operations. */
+export function applyBlockOperations(current: LessonDocument["blocks"], operations: LessonBlockOperation[]): LessonDocument["blocks"] {
+  const blocks = [...current];
+  for (const op of operations) {
     if (op.action === "append") { if (!op.blocks.length) throw new Error("VALIDATION_FAILED: Append needs blocks."); blocks.push(...op.blocks); continue; }
     const index = blocks.findIndex(b => b.id === op.blockId);
     if (index < 0) throw new Error("NOT_FOUND: Block not found.");
@@ -244,6 +240,15 @@ export async function editLessonBlocksForActor(ctx: MutationCtx, actor: string, 
       blocks.splice(target, 0, block);
     }
   }
+  return blocks;
+}
+export async function editLessonBlocksForActor(ctx: MutationCtx, actor: string, args: {
+  lessonId: Id<"lessons">; expectedRevision: number; operations: LessonBlockOperation[];
+}) {
+  const lesson = await lessonAccessForActor(ctx, actor, args.lessonId, true);
+  revisionCheck(lesson, args.expectedRevision);
+  if (!args.operations.length || args.operations.length > 100) throw new Error("VALIDATION_FAILED: Send 1?100 block operations.");
+  const blocks = applyBlockOperations(lesson.draft.blocks, args.operations);
   return saveLessonDraftForActor(ctx, actor, { lessonId: args.lessonId, expectedRevision: args.expectedRevision, document: { schemaVersion: 1, blocks } });
 }
 export const lessonSummary = v.object({ lessonId: v.id("lessons"), metadata: lessonMeta, revision: v.number(), status: v.union(v.literal("active"), v.literal("archived")), visibility, communityState: v.union(v.literal("ok"), v.literal("review"), v.literal("hidden"), v.literal("removed")), publishedVersionId: v.union(v.id("lessonVersions"), v.null()), updatedAt: v.number() });

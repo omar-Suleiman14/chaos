@@ -1,4 +1,6 @@
 import { quizForkTables } from "./quizForkModel";
+import { discussionTables } from "./learnDiscussionModel";
+import { proposalTables } from "./lessonProposalModel";
 import { publicationAuditTables } from "./learnPublicationAuditModel";
 import { personalTables } from "./learnPersonalModel";
 import { observabilityTables } from "./observabilityModel";
@@ -22,6 +24,8 @@ import { liveTables } from "./liveModel";
 
 export default defineSchema({
   ...learnTables,
+  ...discussionTables,
+  ...proposalTables,
   ...publicationAuditTables,
   ...personalTables,
   ...quizForkTables,

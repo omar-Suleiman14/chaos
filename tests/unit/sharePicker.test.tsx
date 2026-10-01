@@ -16,6 +16,7 @@ vi.mock("@/lib/convexCache", () => ({
     const name = getFunctionName(ref);
     if (name === "integrations:listShareableItems") return [{ ref: "form_1", kind: "form", title: "Survey", updatedAt: 1 }];
     if (name === "lessons:listOwned") return { page: [{ _id: "k1", metadata: { title: "Portal Hypertension" }, status: "active" }], isDone: true, continueCursor: "" };
+    if (name === "learnLibrary:collections") return { page: [{ _id: "c1", metadata: { title: "GIT pack" }, publishedVersionId: "cv1" }], isDone: true, continueCursor: "" };
     if (name === "curricula:listInstitutions") return { page: [{ _id: "i1", name: "University" }], isDone: true, continueCursor: "" };
     if (name === "curricula:listPrograms") return { page: [{ _id: "p1", name: "Medicine" }], isDone: true, continueCursor: "" };
     if (name === "curricula:listVersions") return { page: [{ _id: "v1", name: "2026" }], isDone: true, continueCursor: "" };
@@ -27,14 +28,14 @@ vi.mock("@/lib/convexCache", () => ({
 const localLesson = { id: "l1", archived: false, draft: { meta: { title: "Local", description: "", tags: [], language: "en", curricula: [{ moduleId: "m", versionId: "v", path: ["Uni", "GIT"], versionLabel: "2025" }], indexing: "noindex" }, content: [], updatedAt: 0 } } as unknown as Lesson;
 const folder = { id: "f1", ownerId: "u", name: "Gastro pack", collection: { description: "", visibility: "private" }, createdAt: 0, updatedAt: 0 } as Folder;
 
-function setup(lessonsAllowed = true) {
+function setup(lessonsAllowed = true, collectionsAllowed = false) {
   const fns = { onChange: vi.fn(), onLessonChange: vi.fn(), onPendingChange: vi.fn() };
-  render(<SharePicker value={[]} lessonValue={[]} pendingValue={[]} lessonsAllowed={lessonsAllowed} learn={{ lessons: [localLesson], folders: [folder], nodes: [] }} {...fns} />);
+  render(<SharePicker value={[]} lessonValue={[]} pendingValue={[]} lessonsAllowed={lessonsAllowed} collectionsAllowed={collectionsAllowed} learn={{ lessons: [localLesson], folders: [folder], nodes: [] }} {...fns} />);
   return fns;
 }
 
 describe("SharePicker", () => {
-  it("keeps collections disabled and resolves modules into explicit lesson selections", async () => {
+  it("needs collections:read for collections and resolves modules into explicit lesson selections", async () => {
     const fns = setup();
     fireEvent.click(screen.getByRole("checkbox"));
     expect(fns.onChange).toHaveBeenCalledWith(["form_1"]);
@@ -45,8 +46,8 @@ describe("SharePicker", () => {
     expect(fns.onLessonChange).toHaveBeenCalledWith(["lesson_k1"]);
 
     fireEvent.click(screen.getByRole("tab", { name: "Collections" }));
-    expect(screen.getByRole("note")).toHaveTextContent("Collection content sharing is not available");
-    expect(screen.getByRole("button", { name: "Collection sharing unavailable" })).toBeDisabled();
+    expect(screen.getByRole("note")).toHaveTextContent("See collections");
+    expect(screen.getByRole("checkbox", { name: /GIT pack/ })).toBeDisabled();
     expect(fns.onPendingChange).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("tab", { name: "Curricula" }));
@@ -66,5 +67,11 @@ describe("SharePicker", () => {
     fireEvent.click(screen.getByRole("tab", { name: "Lessons" }));
     expect(screen.getByRole("note")).toHaveTextContent("Turn on “Read selected lessons”");
     expect(screen.getByRole("checkbox", { name: /Portal Hypertension/ })).toBeDisabled();
+  });
+  it("saves picked collections as collection references when allowed", () => {
+    const fns = setup(true, true);
+    fireEvent.click(screen.getByRole("tab", { name: "Collections" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /GIT pack/ }));
+    expect(fns.onLessonChange).toHaveBeenCalledWith(["collection_c1"]);
   });
 });

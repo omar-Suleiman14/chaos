@@ -15,6 +15,7 @@ export const studyReads = {
   myConcepts: makeFunctionReference<"query", FunctionArgs<ReadApi["myConcepts"]>, FunctionReturnType<ReadApi["myConcepts"]>>("learnStudyReads:myConcepts"),
   practiceLink: makeFunctionReference<"query", FunctionArgs<ReadApi["practiceLink"]>, FunctionReturnType<ReadApi["practiceLink"]>>("learnStudyReads:practiceLink"),
   saveFormAttachments: makeFunctionReference<"mutation", FunctionArgs<ReadApi["saveFormAttachments"]>, FunctionReturnType<ReadApi["saveFormAttachments"]>>("learnStudyReads:saveFormAttachments"),
+  weakAreas: makeFunctionReference<"query", FunctionArgs<ReadApi["weakAreas"]>, FunctionReturnType<ReadApi["weakAreas"]>>("learnStudyReads:weakAreas"),
   publicIdentity: makeFunctionReference<"query", FunctionArgs<ReadApi["publicIdentity"]>, FunctionReturnType<ReadApi["publicIdentity"]>>("learnStudyReads:publicIdentity"),
 };
 type Client = Pick<ConvexReactClient, "query" | "mutation">;
