@@ -1,0 +1,85 @@
+"use client";
+
+import { useRef, useState } from "react";
+import { Download, RefreshCw, Repeat2, Send } from "lucide-react";
+import { useCopy, useLocale } from "@/lib/i18n";
+import { CARD_THEMES, memberCardPng, memberCardSvg, type MemberCardData } from "@/lib/memberCard";
+import "./card.css";
+
+const copy = {
+  en: {
+    label: "Your Chaos member card", flip: "Flip card", flipBack: "Show front", shuffle: "Change colours", download: "Download card",
+    share: "Share card", copied: "Link copied", shared: "Shared", failed: "Couldn't do that. Try again.", cardOf: (n: string) => `${n}'s Chaos member card`,
+  },
+  ar: {
+    label: "بطاقة عضويتك في Chaos", flip: "اقلب البطاقة", flipBack: "اعرض الوجه", shuffle: "غيّر الألوان", download: "نزّل البطاقة",
+    share: "شارك البطاقة", copied: "نُسخ الرابط", shared: "تمت المشاركة", failed: "تعذر ذلك. حاول مجددًا.", cardOf: (n: string) => `بطاقة عضوية ${n} في Chaos`,
+  },
+};
+
+/**
+ * Arc-style member card: tilts toward the pointer, flips to a scannable QR code, and
+ * downloads as a crisp PNG. `onStyle` (owner only) cycles the colour theme.
+ */
+export default function MemberCardView({ data, onStyle, framed = true }: { data: MemberCardData; onStyle?: (style: number) => unknown; framed?: boolean }) {
+  const t = useCopy(copy);
+  const { locale } = useLocale();
+  const card = { ...data, locale };
+  const [flipped, setFlipped] = useState(false);
+  const [status, setStatus] = useState("");
+  const tilt = useRef<HTMLDivElement>(null);
+  // Cheap to build; the card only re-renders on flip, theme or status changes (tilt uses CSS variables).
+  const front = memberCardSvg(card, "front");
+  const back = memberCardSvg(card, "back");
+
+  const say = (text: string) => { setStatus(text); window.setTimeout(() => setStatus(""), 2500); };
+  const fileName = `chaos-card-${data.username}-${flipped ? "back" : "front"}.png`;
+  const download = async () => {
+    try {
+      const blob = await memberCardPng(card, flipped ? "back" : "front");
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
+      window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    } catch { say(t.failed); }
+  };
+  const share = async () => {
+    try {
+      const blob = await memberCardPng(card, "front");
+      const file = new File([blob], `chaos-card-${data.username}.png`, { type: "image/png" });
+      if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: t.cardOf(data.name), url: data.url }); say(t.shared); return; }
+      if (navigator.share) { await navigator.share({ title: t.cardOf(data.name), url: data.url }); say(t.shared); return; }
+      await navigator.clipboard.writeText(data.url); say(t.copied);
+    } catch (err) { if (!(err instanceof DOMException && err.name === "AbortError")) say(t.failed); }
+  };
+  const move = (e: React.PointerEvent) => {
+    const el = tilt.current; if (!el || e.pointerType === "touch") return;
+    const r = el.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+    el.style.setProperty("--rx", `${(-y * 14).toFixed(2)}deg`); el.style.setProperty("--ry", `${(x * 18).toFixed(2)}deg`);
+    el.style.setProperty("--gx", `${(x + 0.5) * 100}%`); el.style.setProperty("--gy", `${(y + 0.5) * 100}%`);
+  };
+  const leave = () => { const el = tilt.current; if (el) { el.style.setProperty("--rx", "0deg"); el.style.setProperty("--ry", "0deg"); } };
+
+  return (
+    <div className="mc">
+      <div className={framed ? "mc-frame" : undefined}>
+        {framed && <span className="mc-frame__label">{t.label}</span>}
+        <div className="mc-stage" ref={tilt} onPointerMove={move} onPointerLeave={leave}>
+          <button type="button" className="mc-card" data-flipped={flipped} onClick={() => setFlipped((f) => !f)} aria-label={`${t.cardOf(data.name)}. ${flipped ? t.flipBack : t.flip}`}>
+            <span className="mc-face mc-face--front" dangerouslySetInnerHTML={{ __html: front }} />
+            <span className="mc-face mc-face--back" dangerouslySetInnerHTML={{ __html: back }} />
+            <span className="mc-glare" aria-hidden />
+          </button>
+        </div>
+      </div>
+      <div className="mc-actions" role="toolbar" aria-label={t.label}>
+        {onStyle && <button type="button" className="mc-btn" title={t.shuffle} aria-label={t.shuffle} onClick={() => void onStyle((data.style + 1) % CARD_THEMES.length)}><RefreshCw size={18} aria-hidden /></button>}
+        <button type="button" className="mc-btn" title={flipped ? t.flipBack : t.flip} aria-label={flipped ? t.flipBack : t.flip} aria-pressed={flipped} onClick={() => setFlipped((f) => !f)}><Repeat2 size={18} aria-hidden /></button>
+        <span className="mc-gap" />
+        <button type="button" className="mc-btn" title={t.download} aria-label={t.download} onClick={() => void download()}><Download size={18} aria-hidden /></button>
+        <button type="button" className="mc-btn" title={t.share} aria-label={t.share} onClick={() => void share()}><Send size={18} aria-hidden /></button>
+      </div>
+      <p className="mc-status" role="status">{status}</p>
+    </div>
+  );
+}

@@ -1,5 +1,7 @@
 "use client";
 
+import MemberAvatar from "@/components/MemberAvatar";
+import { avatarSeed } from "@/lib/avatarSeed";
 import Link from "next/link";
 import { AlertTriangle, Award, BadgeCheck, BookOpen, Bookmark, CheckCircle2, Circle, CircleDot, Clock, Eye, GitFork, GraduationCap, Info, Layers, ShieldAlert, ThumbsUp } from "lucide-react";
 import { formatNumber, pluralForm, useCopy, useLocale } from "@/lib/i18n";
@@ -228,10 +230,12 @@ export function initials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join("") || "?";
 }
 
-export function Avatar({ person, size = 72 }: { person: Pick<Person, "name" | "avatarUrl">; size?: number }) {
+/** People are drawn as their blobatar (seeded from their account), never an uploaded photo. */
+export function Avatar({ person, size = 72 }: { person: Pick<Person, "name" | "avatarUrl"> & { id?: string }; size?: number }) {
+  if (person.id) return <MemberAvatar seed={avatarSeed(person.id)} size={size} />;
   return (
     <span className="lx-avatar" style={{ width: size, height: size, fontSize: size * 0.38 }} aria-hidden>
-      {person.avatarUrl ? <img src={person.avatarUrl} alt="" /> : initials(person.name)}
+      {initials(person.name)}
     </span>
   );
 }

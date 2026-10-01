@@ -4,11 +4,13 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 
-import { UserButton, useClerk, useUser } from "@clerk/nextjs";
+import { useClerk, useUser } from "@clerk/nextjs";
+import MemberAvatar from "@/components/MemberAvatar";
+import { avatarSeed } from "@/lib/avatarSeed";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, BarChart3, BookOpen, Bookmark, ChevronUp, Compass, Folder, GraduationCap, Home, Layers, Library, Link2, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, X } from "lucide-react";
+import { Archive, BarChart3, BookOpen, Bookmark, ChevronUp, Compass, Folder, GraduationCap, Home, Layers, Library, Link2, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, UserCog, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import NotificationBell from "@/components/NotificationBell";
 import Logo from "@/components/Logo";
@@ -51,7 +53,7 @@ const copy = {
     showMore: (n: number) => `Show ${n} more`,
     pinLabel: (title: string, pinned: boolean) => `${pinned ? "Unpin" : "Pin"} ${title}`,
     unpin: "Unpin", pin: "Pin to sidebar",
-    admin: "Admin", docs: "Docs", signOut: "Sign out", resize: "Resize sidebar",
+    admin: "Admin", docs: "Docs", signOut: "Sign out", myCard: "Your member card", account: "Account", resize: "Resize sidebar",
     dismiss: "Dismiss error",
     banned: "Your account is banned.", suspended: (until: string) => `Your account is suspended until ${until}.`,
     paused: "Editing and response collection are paused. Your existing data is preserved.", contact: "Contact support",
@@ -71,7 +73,7 @@ const copy = {
     showMore: (n: number) => `عرض المزيد (${n})`,
     pinLabel: (title: string, pinned: boolean) => `${pinned ? "إلغاء تثبيت" : "تثبيت"} ${title}`,
     unpin: "إلغاء التثبيت", pin: "تثبيت في الشريط الجانبي",
-    admin: "الإدارة", docs: "الدليل", signOut: "تسجيل الخروج", resize: "تغيير عرض الشريط الجانبي",
+    admin: "الإدارة", docs: "الدليل", signOut: "تسجيل الخروج", myCard: "بطاقة عضويتك", account: "الحساب", resize: "تغيير عرض الشريط الجانبي",
     dismiss: "إخفاء الخطأ",
     banned: "حسابك محظور.", suspended: (until: string) => `حسابك معلّق حتى ${until}.`,
     paused: "التعديل وجمع الردود متوقفان. بياناتك الحالية محفوظة.", contact: "تواصل مع الدعم",
@@ -418,8 +420,12 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               </button>
             ) : (
               <div className="ws-user">
-                <UserButton />
-                <span className="truncate text-[13px] text-muted-foreground">{user?.fullName || user?.username || ""}</span>
+                <IntentLink href="/dashboard/card" className="ws-user__card" title={t.myCard} aria-label={t.myCard}>
+                  {user && <MemberAvatar seed={avatarSeed(user.id)} size={28} />}
+                  <span className="truncate text-[13px] text-muted-foreground">{user?.fullName || user?.username || ""}</span>
+                </IntentLink>
+                <button type="button" className="ws-icon-button" title={t.account} aria-label={t.account} onClick={() => clerk.openUserProfile()}><UserCog size={16} aria-hidden="true" /></button>
+                <button type="button" className="ws-icon-button" title={t.signOut} aria-label={t.signOut} onClick={() => void clerk.signOut({ redirectUrl: "/" })}><LogOut size={16} aria-hidden="true" /></button>
               </div>
             )}
           </div>

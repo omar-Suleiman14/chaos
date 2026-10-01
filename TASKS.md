@@ -459,3 +459,14 @@ Outcome: secure native source/image upload, block citation locators and explicit
 - [x] Homework: assignment list per form, roster with best scores, enroll by email.
 - [x] Checks: typecheck, lint 0 errors, 669 unit, 644 integration.
 - [ ] Not verified in a signed-in browser. Still local by design: recent lessons, pinned folders, tutor history (AI off). Reports for non-lesson targets unsupported.
+
+## Courses, one workspace, member cards and the remaining list (2026-10-01, evening)
+Outcome: one workspace (no Create/Learn split); courses created like forms, public and free for everyone, private courses and curricula Business-only; usable lesson editor; Blobatar avatars and Arc-style member cards; every remaining list item implemented or explicitly blocked; self-hosting without Clerk; SEO and ChatGPT app cover courses.
+- [x] Fix React #301 crash on Learn home/Explore (useStableQueries) — e2e 616f812.
+- [ ] Member card + Blobatar avatars (sidebar, Learn people), public /card/<username>, PNG download, QR, share.
+- [ ] One workspace sidebar; New → Form / Quiz / Course; courses in the library.
+- [ ] Course builder (title, description, cover, ordered lessons, publish); public course page; private = Business only (server-enforced).
+- [ ] Lesson editor layout cleanup (settings drawer, no recovery bar unless needed, wider writing area).
+- [ ] Audit the quick/medium/long list against code; build what is missing.
+- [ ] Self-hosting without Clerk (auth provider abstraction).
+- [ ] SEO for courses; ChatGPT app (MCP) course tools.

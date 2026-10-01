@@ -64,6 +64,8 @@ export default defineSchema({
     /** True once the person picks a username; sign-in sync then stops overwriting it. */
     usernameChosen: v.optional(v.boolean()),
     imageUrl: v.optional(v.string()),
+    /** Member card colour theme index (lib/memberCard.ts CARD_THEMES). */
+    cardStyle: v.optional(v.number()),
     isBanned: v.optional(v.boolean()),
     creationMonth: v.optional(v.string()),
     monthlyCreations: v.optional(v.number()),

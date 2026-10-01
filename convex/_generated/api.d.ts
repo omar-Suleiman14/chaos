@@ -97,6 +97,7 @@ import type * as mcpFormManagement from "../mcpFormManagement.js";
 import type * as mcpGames from "../mcpGames.js";
 import type * as mcpLearn from "../mcpLearn.js";
 import type * as mcpOrganization from "../mcpOrganization.js";
+import type * as memberCards from "../memberCards.js";
 import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
 import type * as observability from "../observability.js";
@@ -214,6 +215,7 @@ declare const fullApi: ApiFromModules<{
   mcpGames: typeof mcpGames;
   mcpLearn: typeof mcpLearn;
   mcpOrganization: typeof mcpOrganization;
+  memberCards: typeof memberCards;
   migrations: typeof migrations;
   notifications: typeof notifications;
   observability: typeof observability;
