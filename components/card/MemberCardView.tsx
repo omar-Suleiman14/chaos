@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { Download, RefreshCw, Repeat2, Send } from "lucide-react";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { CARD_THEMES, memberCardPng, memberCardSvg, type MemberCardData } from "@/lib/memberCard";
@@ -18,7 +18,7 @@ const copy = {
 };
 
 /**
- * Arc-style member card: tilts toward the pointer, flips to a scannable QR code, and
+ * Chaos member card: flips to a scannable QR code and
  * downloads as a crisp PNG. `onStyle` (owner only) cycles the colour theme.
  */
 export default function MemberCardView({ data, onStyle, framed = true }: { data: MemberCardData; onStyle?: (style: number) => unknown; framed?: boolean }) {
@@ -27,8 +27,6 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
   const card = { ...data, locale };
   const [flipped, setFlipped] = useState(false);
   const [status, setStatus] = useState("");
-  const tilt = useRef<HTMLDivElement>(null);
-  // Cheap to build; the card only re-renders on flip, theme or status changes (tilt uses CSS variables).
   const front = memberCardSvg(card, "front");
   const back = memberCardSvg(card, "back");
 
@@ -51,33 +49,24 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
       await navigator.clipboard.writeText(data.url); say(t.copied);
     } catch (err) { if (!(err instanceof DOMException && err.name === "AbortError")) say(t.failed); }
   };
-  const move = (e: React.PointerEvent) => {
-    const el = tilt.current; if (!el || e.pointerType === "touch") return;
-    const r = el.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
-    el.style.setProperty("--rx", `${(-y * 14).toFixed(2)}deg`); el.style.setProperty("--ry", `${(x * 18).toFixed(2)}deg`);
-    el.style.setProperty("--gx", `${(x + 0.5) * 100}%`); el.style.setProperty("--gy", `${(y + 0.5) * 100}%`);
-  };
-  const leave = () => { const el = tilt.current; if (el) { el.style.setProperty("--rx", "0deg"); el.style.setProperty("--ry", "0deg"); } };
 
   return (
     <div className="mc">
       <div className={framed ? "mc-frame" : undefined}>
         {framed && <span className="mc-frame__label">{t.label}</span>}
-        <div className="mc-stage" ref={tilt} onPointerMove={move} onPointerLeave={leave}>
+        <div className="mc-stage">
           <button type="button" className="mc-card" data-flipped={flipped} onClick={() => setFlipped((f) => !f)} aria-label={`${t.cardOf(data.name)}. ${flipped ? t.flipBack : t.flip}`}>
-            <span className="mc-face mc-face--front" dangerouslySetInnerHTML={{ __html: front }} />
-            <span className="mc-face mc-face--back" dangerouslySetInnerHTML={{ __html: back }} />
-            <span className="mc-glare" aria-hidden />
+            <span aria-hidden={flipped} className="mc-face mc-face--front" dangerouslySetInnerHTML={{ __html: front }} />
+            <span aria-hidden={!flipped} className="mc-face mc-face--back" dangerouslySetInnerHTML={{ __html: back }} />
           </button>
         </div>
       </div>
-      <div className="mc-actions" role="toolbar" aria-label={t.label}>
-        {onStyle && <button type="button" className="mc-btn" title={t.shuffle} aria-label={t.shuffle} onClick={() => void onStyle((data.style + 1) % CARD_THEMES.length)}><RefreshCw size={18} aria-hidden /></button>}
-        <button type="button" className="mc-btn" title={flipped ? t.flipBack : t.flip} aria-label={flipped ? t.flipBack : t.flip} aria-pressed={flipped} onClick={() => setFlipped((f) => !f)}><Repeat2 size={18} aria-hidden /></button>
+      <div className="mc-actions" role="group" aria-label={t.label}>
+        {onStyle && <button type="button" className="mc-btn" title={t.shuffle} aria-label={t.shuffle} onClick={() => void Promise.resolve().then(() => onStyle((data.style + 1) % CARD_THEMES.length)).catch(() => say(t.failed))}><RefreshCw size={18} aria-hidden /><span>{t.shuffle}</span></button>}
+        <button type="button" className="mc-btn" title={flipped ? t.flipBack : t.flip} aria-label={flipped ? t.flipBack : t.flip} aria-pressed={flipped} onClick={() => setFlipped((f) => !f)}><Repeat2 size={18} aria-hidden /><span>{flipped ? t.flipBack : t.flip}</span></button>
         <span className="mc-gap" />
-        <button type="button" className="mc-btn" title={t.download} aria-label={t.download} onClick={() => void download()}><Download size={18} aria-hidden /></button>
-        <button type="button" className="mc-btn" title={t.share} aria-label={t.share} onClick={() => void share()}><Send size={18} aria-hidden /></button>
+        <button type="button" className="mc-btn" title={t.download} aria-label={t.download} onClick={() => void download()}><Download size={18} aria-hidden /><span>{t.download}</span></button>
+        <button type="button" className="mc-btn" title={t.share} aria-label={t.share} onClick={() => void share()}><Send size={18} aria-hidden /><span>{t.share}</span></button>
       </div>
       <p className="mc-status" role="status">{status}</p>
     </div>

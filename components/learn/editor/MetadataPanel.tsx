@@ -14,7 +14,7 @@ import { useCopy } from "@/lib/i18n";
 
 const copy = {
   en: {
-    details: "Details", tags: "Tags", tagsHelp: "Press Enter to add. Up to 12.", tagPh: "e.g. hepatology", removeTag: (t: string) => `Remove tag ${t}`,
+    details: "Details", appearance: "Cover and attribution", tags: "Tags", tagsHelp: "Press Enter to add. Up to 12.", tagPh: "e.g. hepatology", removeTag: (t: string) => `Remove tag ${t}`,
     language: "Lesson language", languageHelp: "Sets reading direction and search language.", langs: { en: "English", ar: "العربية (Arabic)", other: "Other" },
     cover: "Cover image link", coverHelp: "An https image link. Used on cards and when the lesson is shared.", coverInvalid: "Use a full https:// link.",
     author: "Author name shown", authorHelp: "Leave empty to use your account name.", license: "Licence", licenses: { "": "Not specified", "CC BY 4.0": "CC BY 4.0 (others can reuse with credit)", "CC BY-SA 4.0": "CC BY-SA 4.0", "CC BY-NC 4.0": "CC BY-NC 4.0 (no commercial use)", "All rights reserved": "All rights reserved" } as Record<string, string>,
@@ -23,7 +23,7 @@ const copy = {
     otherLang: "Language code (e.g. fr)",
   },
   ar: {
-    details: "التفاصيل", tags: "الوسوم", tagsHelp: "اضغط Enter للإضافة. حتى 12 وسمًا.", tagPh: "مثل: أمراض الكبد", removeTag: (t: string) => `أزل الوسم ${t}`,
+    details: "التفاصيل", appearance: "الغلاف ونسبة المحتوى", tags: "الوسوم", tagsHelp: "اضغط Enter للإضافة. حتى 12 وسمًا.", tagPh: "مثل: أمراض الكبد", removeTag: (t: string) => `أزل الوسم ${t}`,
     language: "لغة الدرس", languageHelp: "تحدد اتجاه القراءة ولغة البحث.", langs: { en: "English (الإنجليزية)", ar: "العربية", other: "لغة أخرى" },
     cover: "رابط صورة الغلاف", coverHelp: "رابط صورة https. يُستخدم في البطاقات وعند مشاركة الدرس.", coverInvalid: "استخدم رابطًا كاملًا يبدأ بـ https://.",
     author: "اسم الكاتب الظاهر", authorHelp: "اتركه فارغًا لاستخدام اسم حسابك.", license: "الترخيص", licenses: { "": "غير محدد", "CC BY 4.0": "CC BY 4.0 (يمكن إعادة الاستخدام مع النسبة)", "CC BY-SA 4.0": "CC BY-SA 4.0", "CC BY-NC 4.0": "CC BY-NC 4.0 (دون استخدام تجاري)", "All rights reserved": "جميع الحقوق محفوظة" } as Record<string, string>,
@@ -60,24 +60,35 @@ export function MetadataPanel({ meta, onChange, lessonId, content, isOwner = fal
         <small>{t.tagsHelp}</small>
       </div>
 
-      {lessonId && isOwner ? <CurriculumAssociations lessonId={lessonId} content={content} beforeMapping={beforeMapping} disabled={disabled} /> : <small>{t.curriculaHelp}</small>}
+      <details className="lx-editor-settings-group">
+        <summary>{t.curricula}</summary>
+        <div className="lx-form">
+          {lessonId && isOwner ? <CurriculumAssociations lessonId={lessonId} content={content} beforeMapping={beforeMapping} disabled={disabled} /> : <small>{t.curriculaHelp}</small>}
 
-      <label className="lx-field">{t.cover}
-        <input className="lx-input" type="url" inputMode="url" value={cover} placeholder="https://…" aria-invalid={!!coverError}
-          onChange={(e) => { setCover(e.target.value); setCoverError(""); }}
-          onBlur={() => {
-            const v = cover.trim();
-            if (!v) { onChange({ coverUrl: undefined }); return; }
-            try { if (new URL(v).protocol !== "https:") throw new Error(); onChange({ coverUrl: v }); } catch { setCoverError(t.coverInvalid); }
-          }} />
-        {coverError ? <small className="lx-error" role="alert">{coverError}</small> : <small>{t.coverHelp}</small>}
-      </label>
+        </div>
+      </details>
 
-      <label className="lx-field">{t.author}<input className="lx-input" value={meta.authorDisplay ?? ""} maxLength={120} onChange={(e) => onChange({ authorDisplay: e.target.value || undefined })} /><small>{t.authorHelp}</small></label>
+      <details className="lx-editor-settings-group" open={!!coverError || undefined}>
+        <summary>{t.appearance}</summary>
+        <div className="lx-form">
+          <label className="lx-field">{t.cover}
+            <input className="lx-input" type="url" inputMode="url" value={cover} placeholder="https://…" aria-invalid={!!coverError}
+              onChange={(e) => { setCover(e.target.value); setCoverError(""); }}
+              onBlur={() => {
+                const v = cover.trim();
+                if (!v) { onChange({ coverUrl: undefined }); return; }
+                try { if (new URL(v).protocol !== "https:") throw new Error(); onChange({ coverUrl: v }); } catch { setCoverError(t.coverInvalid); }
+              }} />
+            {coverError ? <small className="lx-error" role="alert">{coverError}</small> : <small>{t.coverHelp}</small>}
+          </label>
 
-      <label className="lx-field">{t.license}
-        <Select label={t.license} value={meta.license ?? ""} onChange={(v) => onChange({ license: v || undefined })} options={Object.entries(t.licenses).map(([value, label]) => ({ value, label }))} />
-      </label>
+          <label className="lx-field">{t.author}<input className="lx-input" value={meta.authorDisplay ?? ""} maxLength={120} onChange={(e) => onChange({ authorDisplay: e.target.value || undefined })} /><small>{t.authorHelp}</small></label>
+
+          <label className="lx-field">{t.license}
+            <Select label={t.license} value={meta.license ?? ""} onChange={(v) => onChange({ license: v || undefined })} options={Object.entries(t.licenses).map(([value, label]) => ({ value, label }))} />
+          </label>
+        </div>
+      </details>
     </fieldset>
   );
 }

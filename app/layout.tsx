@@ -59,7 +59,7 @@ const instrumentSerif = Instrument_Serif({ subsets: ["latin"], weight: "400", va
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   applicationName: "Chaos",
-  title: { default: "Chaos · Forms, surveys and live quizzes", template: "%s · Chaos" },
+  title: { default: "Chaos · Forms, quizzes, live games and Learn", template: "%s · Chaos" },
   description: siteDescription,
   // "./" resolves to each page's own path, so no page points its canonical at the home page.
   alternates: { canonical: "./" },

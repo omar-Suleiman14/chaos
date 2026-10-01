@@ -15,6 +15,7 @@ import { registerTools as registerFormManagementTools } from "./formManagement";
 import { registerCommunityTools } from "./community";
 import { registerQuizForkTools } from "./quizForks";
 import { registerAssessmentTools } from "./assessments";
+import { registerCourseTools } from "./courses";
 import { registerOrganizationTools } from "./organization";
 
 export type McpCaller = (tool: string, input: Record<string, unknown>) => Promise<unknown>;
@@ -26,9 +27,14 @@ export const MCP_SERVER_VERSION = "1.1.0";
 export const MCP_SCOPES = ["openid", "profile", "email"];
 const securitySchemes = [{ type: "oauth2", scopes: MCP_SCOPES }];
 
-const instructions = `Chaos (chaos.fail) is where this person builds forms, surveys and quizzes and reads the answers.
+const instructions = `Chaos (chaos.fail) is where this person builds forms, surveys, quizzes, Learn lessons and courses, organises owned content in folders, and reads authorized published material and requested answers.
 - The Chaos app is free on every plan.
-- Everything created here starts as a draft in their Chaos library. Publish only when they ask, and share the returned shareUrl.
+- Forms, quizzes, lessons and courses are created as drafts. Draft edits never publish. Folders are private organisation, not publishable content. Publish only on explicit request after review, using publish_form, publish_lesson or publish_course for the selected content.
+- Work only on content the person selected or asked to find. Authorization is enforced for the connected account; never supply an actor/userId or infer permission from a reference. Folder membership and source metadata do not grant content access. Only request source metadata through the supported tools; no source file bytes are exposed here.
+- Forms return shareUrl: share it only when returned and published. Lesson and course tools do not return shareUrl. After publish_lesson returns ok true, use the lessonId from a verified create/get response to construct https://chaos.fail/learn/<lessonId>. After publish_course returns ok true, use courseId from verified create_course (or id from get_course) to construct https://chaos.fail/learn/courses/<courseId>. Never invent IDs, claim draft links are public, or imply private/restricted links grant access. Visibility values are public, restricted and private; restricted/private require Business.
+- Courses: create_course creates a draft; add_course_lesson creates a blank lesson draft; use lesson tools to write it. get_course reads the owner's outline and metadata. update_course edits draft metadata. set_course_outline replaces the full ordered list, so read get_course first and preserve wanted lessons. publish_course publishes the outlined lessons too. Inspect per-lesson problems when ok is false; other lessons may already have published. Do not automatically retry course/lesson creation or publication after uncertain success.
+- Lessons: search_lessons/list_lessons use scope owned for drafts or public for published discovery. get_lesson draft and get_lesson_outline with outlineFrom draft require edit permission; outlines default to published. get_lesson and get_lesson_outline return bounded pages: offset 0?500, limit 1?100; follow nextOffset until null instead of claiming the first page is complete. Keep stable block IDs and use the current expectedRevision for edits; on conflict reload before making a reviewed change.
+- Folders: list_folders and list_folder_contents use paginationOpts and continueCursor, including empty partial pages. create_folder creates an owned private folder; add_folder_member requires ownership of both folder and asset; move_folder needs explicit relocation intent. Folder changes never publish content.
 - A quiz is a form with quizMode on. For "make a quiz about what we discussed", write the questions from the conversation yourself: mostly single_choice with 3–4 options, set correctAnswers to the exact option label, and give points.
 - Write like a real teacher or organiser, not a brochure. Each question is one short, direct sentence (usually under 15 words) that tests one fact or asks one thing. Options are 1–5 words, parallel in form, and every wrong option is plausible; no "All of the above", joke options or filler. Leave question descriptions empty unless a hint is truly needed. A quiz explanation, if any, is one plain sentence saying why the answer is right. Titles are 2–6 words; the intro is one sentence or empty. No emojis, exclamation marks, hype ("ultimate", "fun-filled", "dive into", "journey", "test your knowledge") or restating the question in the options.
 - Keep chat replies short: one or two sentences on what you made, then the link. Do not list the questions back unless the person asks.
@@ -427,6 +433,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
 
   registerLearnTools(server, run, securitySchemes);
   registerOrganizationTools(server, run, securitySchemes);
+  registerCourseTools(server, run, securitySchemes);
   registerQuizForkTools(server, run, securitySchemes);
   registerCommunityTools(server, run, securitySchemes);
   registerAdvancedFormTools(server, run, securitySchemes);

@@ -55,6 +55,12 @@ export default defineSchema({
   adminAudit: defineTable({
     actorId: v.string(), action: v.string(), target: v.string(), reason: v.string(), createdAt: v.number(),
   }),
+  /** Permanent namespace reservations; retain these even when an account is removed. */
+  usernameAliases: defineTable({
+    username: v.string(),
+    ownerId: v.string(),
+    createdAt: v.number(),
+  }).index("by_username", ["username"]),
   // ============ USERS ============
   users: defineTable({
     clerkId: v.string(),

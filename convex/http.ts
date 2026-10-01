@@ -304,6 +304,12 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "get_learn_capabilities": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getCapabilities"), { ...input, userId }); break;
       case "list_lesson_versions": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:listLessonVersions"), { ...input, userId }); break;
       case "get_lesson_version": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getLessonVersion"), { ...input, userId }); break;
+      case "create_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:create"), { ...input, userId }); break;
+      case "get_course": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCourses:read"), { ...input, userId }); break;
+      case "update_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:update"), { ...input, userId }); break;
+      case "set_course_outline": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:setOutline"), { ...input, userId }); break;
+      case "add_course_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:addLesson"), { ...input, userId }); break;
+      case "publish_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:publish"), { ...input, userId }); break;
       case "create_folder": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:createFolder"), { ...input, userId }); break;
       case "list_folders": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listFolders"), { ...input, userId }); break;
       case "move_folder": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:moveFolder"), { ...input, userId }); break;

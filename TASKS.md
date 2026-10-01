@@ -470,3 +470,42 @@ Outcome: one workspace (no Create/Learn split); courses created like forms, publ
 - [ ] Audit the quick/medium/long list against code; build what is missing.
 - [ ] Self-hosting without Clerk (auth provider abstraction).
 - [ ] SEO for courses; ChatGPT app (MCP) course tools.
+
+## Latest Opus continuation: public discovery and native profile (2026-10-01)
+Outcome: Explore on the landing page; accurate Learn/course marketing, SEO and ChatGPT tools; a Chaos-native member card with editable username and safe indexed public profile; cleaner durable editor. Preserve independent product contracts and AI-free direction.
+- [ ] Course MCP adapters and explicit publication tools.
+- [ ] Landing Explore, Learn/course navigation/marketing and crawl metadata.
+- [ ] Native member-card design and username editing/link continuity.
+- [ ] Editor settings layout and async flashcard creation fix.
+- [x] Fix public course discovery leaking unpublished metadata; recheck linked lesson visibility and creator/moderation restrictions.
+- [ ] Combined verification and scoped e2e delivery after the batch; no production/main change.
+
+## Course MCP gap (Documents checkout, 2026-10-01)
+Outcome: expose existing owner course helpers through trusted MCP transport; draft creation and explicit publication, current scopes and ownership preserved. Baseline 04e386f; no deployment/commit/push.
+- [x] Add six internal wrappers, tool schemas/annotations, registration and HTTP dispatch.
+- [x] Add targeted ownership, draft/publication, actor injection and SDK contract tests; document inherited semantics.
+- [x] Final targeted batch: 6 unit tests and 4 integration tests passed; exact-path ESLint and diff whitespace checks passed. Scoped registration/dispatch reviewed.
+- [ ] Parent combined typecheck/codegen and live deployment acceptance remain unverified; no deployment, commit or push. Marketing examples/names coordinated in docs/course-mcp.md.
+
+## Public Explore and marketing alignment (2026-10-01)
+- [x] Add /learn public course directory and lesson search; landing Explore section and hero/nav/footer links.
+- [x] Align bilingual ChatGPT messaging with optional external connections and native manual creation; include courses.
+- [x] Add Explore metadata/sitemap and marketing positioning documentation.
+- [ ] End-of-batch scoped lint, metadata/server/route tests and frontend typecheck.
+- Parent owns course snapshot/privacy backend fixes; no courses.ts, card or lib/mcp changes in this scope.
+
+## Public courses native design handoff (2026-10-01)
+- [x] Native site/workspace tokens for public cards; site palette, cover panel and SiteNav/Footer for course page.
+- [x] Keyboard focus, reduced motion, small-screen wrapping and Arabic course labels; honest directory loading/empty states.
+- [x] Chaos Learn discoverability and broader root default title; provider components unchanged.
+- [x] Batch scoped ESLint, 28 unit tests, frontend tsc --noEmit and scoped diff check passed.
+- [ ] Browser visual acceptance: no local frontend available at localhost:3000 during this handoff.
+- No backend, card, lib/mcp, commit or push changes in this batch.
+
+## Member card and durable usernames (2026-10-01)
+- [x] Native Chaos card materials, responsive labeled controls, RTL/light/dark inheritance, PNG and QR sharing preserved.
+- [x] Add usernameAliases with an indexed permanent owner reservation; both setters and provisioning reserve atomically; provider sync does not rename.
+- [x] Old form links resolve through aliases; old card URLs canonical-redirect; historical quiz routing rows remain untouched.
+- [x] Server-filtered metadata/404, outage retry boundary, alias ownership/privacy and paginated legacy backfill regression tests.
+- [ ] Final build/type/lint and scoped regressions; no deploy/commit/push. Marketing: no sitemap changes or new listing endpoint.
+- Release action: after parent deploy, run internal links:backfillUsernameAliases with phase users, then quizzes, cursor null; repeat each phase using returned cursor until done. Conflicting pre-existing owners abort rather than reassign a namespace. Previously erased names cannot be recovered from current records.

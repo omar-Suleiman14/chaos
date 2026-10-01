@@ -11,7 +11,7 @@ const email = supportEmail;
 const copy = {
   en: {
     title: "Chaos in ChatGPT",
-    intro: "The Chaos app lets ChatGPT work in your Chaos account. Ask it to turn a conversation into a quiz, draft a survey, check how a form is doing, or publish it when you’re ready. It’s included with Chaos Pro.",
+    intro: "The Chaos app lets ChatGPT work in your Chaos account. Ask it to turn a conversation into a quiz, draft a survey, check how a form is doing, or publish it when you’re ready. You can also draft lessons and courses. The connection is optional and available on every Chaos plan. Create and edit manually in Chaos without connecting ChatGPT.",
     tryTitle: "Things to try",
     tries: [
       "“Make a 10-question quiz about what we just discussed, using Chaos.”",
@@ -19,12 +19,14 @@ const copy = {
       "“How is my Chaos form ‘Team lunch’ doing? Summarize the results.”",
       "“Add a question about dietary needs to my Team lunch form, then publish it.”",
       "“Close my Chaos quiz ‘Chapter 3 review’.”",
+      "“Create a Chaos course draft called Introduction to biology and add a lesson draft about cells. Leave it unpublished.”",
     ],
     howTitle: "How it works",
     how: [
       "You connect once by signing in with your Chaos account. If you’re new, the account is created for you.",
       "Everything ChatGPT creates starts as a draft in your library. Nothing is shared until you ask it to publish.",
-      "ChatGPT can read your forms, results and responses, but only when you ask. It can close, reopen and archive forms, but it cannot delete anything.",
+      "ChatGPT can read your forms, results and responses, but only when you ask. It can close, reopen and archive forms, and edit lesson draft blocks. Review changes before publishing.",
+      "Public courses are free to read. Publishing a course also publishes its outlined lessons; request this only after reviewing their drafts.",
       "Quizzes use Chaos’s quiz mode: right answers, points and a short explanation for each question.",
     ],
     plan: ["Chaos in ChatGPT is included on ", "every plan", ", including free Personal accounts. See ", "pricing", "."],
@@ -35,7 +37,7 @@ const copy = {
   },
   ar: {
     title: "Chaos في ChatGPT",
-    intro: "يتيح تطبيق Chaos لـ ChatGPT أن يعمل داخل حسابك في Chaos. اطلب منه تحويل محادثة إلى اختبار، أو صياغة استطلاع، أو معرفة حال نموذج، أو نشره حين تكون جاهزًا. التطبيق مضمَّن في باقة Chaos Pro.",
+    intro: "يتيح تطبيق Chaos لـ ChatGPT أن يعمل داخل حسابك في Chaos. اطلب منه تحويل محادثة إلى اختبار، أو صياغة استطلاع، أو معرفة حال نموذج، أو نشره حين تكون جاهزًا. يمكنك أيضًا إنشاء مسودات دروس ودورات. الربط اختياري ومتاح في كل خطط Chaos. يمكنك الإنشاء والتعديل يدويًا في Chaos دون ربط ChatGPT.",
     tryTitle: "جرّب هذه الطلبات",
     tries: [
       "«اصنع اختبارًا من 10 أسئلة عمّا ناقشناه للتو، باستخدام Chaos.»",
@@ -43,12 +45,14 @@ const copy = {
       "«كيف حال نموذج ‹غداء الفريق› في Chaos؟ لخّص لي النتائج.»",
       "«أضف سؤالًا عن الاحتياجات الغذائية إلى نموذج غداء الفريق، ثم انشره.»",
       "«أغلق اختبار ‹مراجعة الفصل الثالث› في Chaos.»",
+      "«أنشئ مسودة دورة في Chaos بعنوان مقدمة في الأحياء وأضف مسودة درس عن الخلايا. لا تنشرها.»",
     ],
     howTitle: "كيف يعمل",
     how: [
       "تربط حسابك مرة واحدة بتسجيل الدخول إلى حسابك في Chaos. وإن كنت جديدًا يُنشأ لك حساب تلقائيًا.",
       "كل ما ينشئه ChatGPT يبدأ مسودة في مكتبتك، ولا يُشارَك شيء حتى تطلب منه النشر.",
-      "يستطيع ChatGPT قراءة نماذجك ونتائجها وإجاباتها، لكن عند طلبك فقط. ويستطيع إغلاق النماذج وإعادة فتحها وأرشفتها، لكنه لا يستطيع حذف أي شيء.",
+      "يستطيع ChatGPT قراءة نماذجك ونتائجها وإجاباتها، لكن عند طلبك فقط. ويستطيع إغلاق النماذج وإعادة فتحها وأرشفتها، وتعديل كتل مسودة الدرس. راجع التغييرات قبل النشر.",
+      "الدورات العامة مجانية للقراءة. نشر الدورة ينشر دروسها المدرجة أيضًا؛ اطلب ذلك بعد مراجعة مسوداتها.",
       "الاختبارات تستخدم وضع الاختبار في Chaos: إجابات صحيحة ودرجات وشرح قصير لكل سؤال.",
     ],
     plan: ["Chaos في ChatGPT متاح في ", "كل الخطط", "، ومنها الحسابات الشخصية المجانية. راجع ", "الأسعار", "."],

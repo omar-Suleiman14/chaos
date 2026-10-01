@@ -14,9 +14,9 @@ import { repoIssuesUrl, repoUrl, statusPageUrl } from "@/lib/site";
 const copy = {
   en: {
     getFree: "Get Chaos free", open: "Open Chaos", logIn: "Log in", skip: "Skip to content", main: "Main", footer: "Footer",
-    modes: "Modes", themes: "Themes", features: "Features", docs: "Docs", pricing: "Pricing", play: "Join a game",
+    explore: "Explore", modes: "Modes", themes: "Themes", features: "Features", docs: "Docs", pricing: "Pricing", play: "Join a game",
     menu: "Menu", closeMenu: "Close menu", language: "Language",
-    tagline: "Forms, surveys, quizzes and live games. Open source.",
+    tagline: "Forms, quizzes, live games and Learn. One open-source workspace.",
     product: "Product", ways: "Ways to answer", chatgpt: "Chaos in ChatGPT", compare: "Compare",
     openSource: "Open source", source: "Source code", selfHost: "Self-hosting", api: "API and connections", webhooks: "Webhooks",
     start: "Get started", help: "Support", status: "Status", issues: "Report an issue",
@@ -24,9 +24,9 @@ const copy = {
   },
   ar: {
     getFree: "ابدأ مجانًا", open: "افتح Chaos", logIn: "تسجيل الدخول", skip: "انتقل إلى المحتوى", main: "التنقل الرئيسي", footer: "التذييل",
-    modes: "طرق العرض", themes: "المظاهر", features: "المزايا", docs: "الدليل", pricing: "الأسعار", play: "انضم إلى لعبة",
+    explore: "استكشف", modes: "طرق العرض", themes: "المظاهر", features: "المزايا", docs: "الدليل", pricing: "الأسعار", play: "انضم إلى لعبة",
     menu: "القائمة", closeMenu: "إغلاق القائمة", language: "اللغة",
-    tagline: "نماذج واستطلاعات واختبارات وألعاب مباشرة. مفتوح المصدر.",
+    tagline: "نماذج واختبارات وألعاب مباشرة وLearn. مساحة عمل واحدة مفتوحة المصدر.",
     product: "المنتج", ways: "طرق الإجابة", chatgpt: "Chaos في ChatGPT", compare: "المقارنة",
     openSource: "مفتوح المصدر", source: "الشيفرة المصدرية", selfHost: "الاستضافة الذاتية", api: "API والاتصالات", webhooks: "Webhooks",
     start: "ابدأ الآن", help: "الدعم", status: "حالة الخدمة", issues: "أبلغ عن مشكلة",
@@ -88,6 +88,7 @@ export function SiteNav({ links: _links = true }: { links?: boolean }) {
   }, [open]);
 
   const items = [
+    { href: "/learn", label: t.explore },
     { href: "/docs", label: t.docs },
     { href: "/pricing", label: t.pricing },
     { href: "/play", label: t.play },
@@ -147,6 +148,7 @@ export function SiteFooter() {
             <Link href="/#modes">{t.ways}</Link>
             <Link href="/#themes">{t.themes}</Link>
             <Link href="/#features">{t.features}</Link>
+            <Link href="/learn">{t.explore}</Link>
             <Link href="/compare">{t.compare}</Link>
             <Link href="/chatgpt">{t.chatgpt}</Link>
             <Link href="/pricing">{t.pricing}</Link>

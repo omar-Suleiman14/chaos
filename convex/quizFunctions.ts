@@ -1,3 +1,5 @@
+import { setOwnedUsername } from "./links";
+import { reserveUsername, usernameOwner } from "./usernameModel";
 import { consumeCreation } from "./plans";
 import { DEFAULT_HALF_MARK_THRESHOLD, clampThreshold, gradeMulti, gradeSingle, gradeWritten, parseMultiAnswer } from "./grading";
 import { internal } from "./_generated/api";
@@ -77,26 +79,9 @@ export const getOrCreateUser = mutation({
       if (identity.email && identity.email !== existing.email) updates.email = identity.email;
       if (identity.pictureUrl && identity.pictureUrl !== existing.imageUrl) updates.imageUrl = identity.pictureUrl;
 
-      // A username chosen in Chaos wins over the sign-in provider's nickname.
-      const newUsername = existing.usernameChosen ? undefined : identity.nickname?.toLowerCase().replace(/[^a-z0-9_.-]+/g, "");
-      if (newUsername && newUsername !== existing.username) {
-        updates.username = newUsername;
-      }
-
-      if (Object.keys(updates).length > 0) {
-        await ctx.db.patch("users", existing._id, updates);
-
-        // Update all quizzes to reflect the new username url
-        if (updates.username) {
-          const quizzes = await ctx.db
-            .query("quizzes")
-            .withIndex("by_creator", (q) => q.eq("creatorId", identity.subject))
-            .collect();
-          for (const quiz of quizzes) {
-            await ctx.db.patch("quizzes", quiz._id, { creatorUsername: newUsername });
-          }
-        }
-      }
+      // Identity-provider sync must not rename public URLs or rewrite historical quizzes.
+      await reserveUsername(ctx, existing.username, existing.clerkId);
+      if (Object.keys(updates).length > 0) await ctx.db.patch("users", existing._id, updates);
       return existing._id;
     }
 
@@ -112,11 +97,19 @@ export const getOrCreateUser = mutation({
 /** First sign-in, from the web app or from a connected app such as ChatGPT. */
 export async function insertNewUser(ctx: MutationCtx, profile: { clerkId: string; name: string; email: string; imageUrl?: string }) {
   const planExpiresAt = Date.now() + 30 * 86_400_000;
+  let username = "";
+  // Bounded retry; indexed reads participate in the transaction's uniqueness checks.
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const candidate = "user" + Math.floor(10000 + Math.random() * 90000);
+    if (await usernameOwner(ctx, candidate) === null) { username = candidate; break; }
+  }
+  if (!username) throw new Error("USERNAME_UNAVAILABLE: Please retry account setup.");
+  await reserveUsername(ctx, username, profile.clerkId);
   const userId = await ctx.db.insert("users", {
     clerkId: profile.clerkId,
     name: profile.name,
     email: profile.email,
-    username: "user" + Math.floor(10000 + Math.random() * 90000),
+    username,
     imageUrl: profile.imageUrl,
     // Every new account receives one 30-day Pro trial.
     plan: "pro",
@@ -144,31 +137,9 @@ export const getCurrentUser = query({
 
 export const setUsername = mutation({
   args: { username: v.string() },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
-    const { identity, user } = await requireActiveUser(ctx);
-    if (!user) throw new Error("User not found");
-
-    const newUsername = args.username.trim().toLowerCase().replace(/[^a-z0-9_.-]+/g, "");
-    if (newUsername.length < 3) throw new Error("Username too short");
-
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", newUsername))
-      .first();
-    if (existing && existing._id !== user._id) {
-      throw new Error("Username already taken");
-    }
-
-    await ctx.db.patch("users", user._id, { username: newUsername, usernameChosen: true });
-
-    const quizzes = await ctx.db
-      .query("quizzes")
-      .withIndex("by_creator", (q) => q.eq("creatorId", identity.subject))
-      .collect();
-    for (const quiz of quizzes) {
-      await ctx.db.patch("quizzes", quiz._id, { creatorUsername: newUsername });
-    }
-
+    await setOwnedUsername(ctx, args);
     return true;
   },
 });

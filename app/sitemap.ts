@@ -9,7 +9,7 @@ export const revalidate = 3600;
 /** Public pages and opted-in lessons; people's forms are never listed. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // A backend outage (or a build without one) keeps the static pages instead of failing.
-  const [lessons, courses] = await Promise.all([listIndexableLessons().catch(() => []), listPublicCourses()]);
+  const [lessons, courses] = await Promise.all([listIndexableLessons().catch(() => []), listPublicCourses().catch(() => [])]);
   return [
     { url: `${siteUrl}/` },
     { url: `${siteUrl}/pricing` },
@@ -17,6 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${siteUrl}/docs` },
     ...docSlugs.map((slug) => ({ url: `${siteUrl}/docs/${slug}` })),
     { url: `${siteUrl}/chatgpt` },
+    { url: `${siteUrl}/learn` },
     { url: `${siteUrl}/support` },
     { url: `${siteUrl}/privacy` },
     { url: `${siteUrl}/terms` },

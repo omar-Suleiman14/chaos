@@ -1,20 +1,20 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
-import type { QueryCtx } from "./_generated/server";
+import { internalMutation, mutation, query } from "./_generated/server";
+import type { MutationCtx } from "./_generated/server";
+import { userByUsername, reserveUsername } from "./usernameModel";
 import { requireActiveUser, requireFormRole } from "./authz";
 
 /**
  * Custom links: chaos.fail/<username>/<slug>. Every form keeps its /f/<shareId>
  * link; a custom link is an optional second address the owner chooses. Links
- * resolve through the owner's current username, so renaming yourself moves
- * every custom link with you and nothing needs rewriting.
+ * resolve through permanent username reservations to the same owner after renames.
  */
 
 /** First path segments the app already uses, so no username can shadow a page. */
 const RESERVED = new Set([
   "admin", "api", "app", "compare", "dashboard", "f", "help", "login", "logout", "privacy", "settings", "sign-in", "sign-up",
   "signin", "signup", "static", "support", "terms", "_next", "favicon.ico", "icon.svg", "robots.txt", "sitemap.xml",
-  "mcp", "print", "opengraph-image", "chatgpt", "play", "learn", "homework", "card",
+  "mcp", "print", "opengraph-image", "chatgpt", "play", "learn", "homework", "card", "docs", "pricing", "courses",
 ]);
 const USERNAME = /^[a-z0-9][a-z0-9_.-]{2,29}$/;
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;
@@ -31,10 +31,6 @@ export function usernameProblem(username: string): string | null {
   if (!USERNAME.test(username)) return "Use 3–30 letters, numbers, dots, dashes or underscores, starting with a letter or number.";
   if (RESERVED.has(username) || GENERATED.test(username)) return "That username is reserved. Try another.";
   return null;
-}
-
-async function userByUsername(ctx: QueryCtx, username: string) {
-  return await ctx.db.query("users").withIndex("by_username", (q) => q.eq("username", username)).first();
 }
 
 /** The signed-in person's username, and whether they have chosen it yet. */
@@ -54,21 +50,24 @@ export const getMyLinkIdentity = query({
 export const chooseUsername = mutation({
   args: { username: v.string() },
   returns: v.string(),
-  handler: async (ctx, args) => {
+  handler: setOwnedUsername,
+});
+
+/** Shared by both native username mutations; no caller-supplied owner identity. */
+export async function setOwnedUsername(ctx: MutationCtx, args: { username: string }): Promise<string> {
     const { identity, user } = await requireActiveUser(ctx);
     if (!user) throw new Error("USER_NOT_FOUND: Sign in again and retry.");
-    const username = normalizeUsername(args.username);
+    // Reject invalid input rather than silently stripping characters.
+    const username = args.username.trim().toLowerCase();
     const problem = usernameProblem(username);
     if (problem) throw new Error(`INVALID_USERNAME: ${problem}`);
-    const taken = await userByUsername(ctx, username);
-    if (taken && taken._id !== user._id) throw new Error("USERNAME_TAKEN: Someone already has that username.");
+    // Both reservations and the profile change commit in the same transaction.
+    await reserveUsername(ctx, user.username, identity.subject);
+    await reserveUsername(ctx, username, identity.subject);
     await ctx.db.patch("users", user._id, { username, usernameChosen: true });
-    // Old quizzes store the username in their link; keep them working.
-    const quizzes = await ctx.db.query("quizzes").withIndex("by_creator", (q) => q.eq("creatorId", identity.subject)).collect();
-    for (const quiz of quizzes) await ctx.db.patch("quizzes", quiz._id, { creatorUsername: username });
+    // Legacy quizzes keep their original routing username and creator ID.
     return username;
-  },
-});
+}
 
 /** Set or clear a form's custom link. Owner only; needs a chosen username. */
 export const setFormSlug = mutation({
@@ -104,7 +103,26 @@ export const resolveLink = query({
   handler: async (ctx, args) => {
     const user = await userByUsername(ctx, args.username.toLowerCase());
     if (!user) return null;
+    // A form created later must never shadow an existing classic quiz URL.
+    const quiz = await ctx.db.query("quizzes").withIndex("by_creator_slug", (q) => q.eq("creatorUsername", args.username.toLowerCase()).eq("slug", args.slug.toLowerCase())).first();
+    if (quiz) return null;
     const form = await ctx.db.query("forms").withIndex("by_ownerId_and_slug", (q) => q.eq("ownerId", user.clerkId).eq("slug", args.slug.toLowerCase())).first();
     return form ? { shareId: form.shareId } : null;
+  },
+});
+
+/** Release migration: call each phase with the returned cursor until done. No deployment side effects. */
+export const backfillUsernameAliases = internalMutation({
+  args: { phase: v.union(v.literal("users"), v.literal("quizzes")), cursor: v.union(v.string(), v.null()) },
+  returns: v.object({ cursor: v.string(), done: v.boolean(), processed: v.number() }),
+  handler: async (ctx, args) => {
+    const page = args.phase === "users"
+      ? await ctx.db.query("users").withIndex("by_username").paginate({ cursor: args.cursor, numItems: 100 })
+      : await ctx.db.query("quizzes").withIndex("by_creator_slug").paginate({ cursor: args.cursor, numItems: 100 });
+    for (const row of page.page) {
+      if ("clerkId" in row) await reserveUsername(ctx, row.username, row.clerkId);
+      else await reserveUsername(ctx, row.creatorUsername, row.creatorId);
+    }
+    return { cursor: page.continueCursor, done: page.isDone, processed: page.page.length };
   },
 });

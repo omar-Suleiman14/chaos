@@ -2,6 +2,7 @@
 
 import { useStableQueries } from "@/lib/stableQueries";
 import dynamic from "next/dynamic";
+import styles from "@/components/learn/editor/EditorLayout.module.css";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -12,7 +13,7 @@ import type { Id, Doc } from "@/convex/_generated/dataModel";
 import type { LessonDocument } from "@/convex/learnModel";
 import { detachSource, parseCitationLocator, replaceBlockCitation, sourceIds, sourceView, useLearnMediaClient, type NativeSource, type NativeCitation } from "@/lib/learn/mediaClient";
 import { formatLocator } from "@/lib/learn/chaosDocument";
-import { ArrowLeft, Archive, Check, Copy, Eye, FolderInput, History, Info, Layers, MoreHorizontal, PanelRight, Rocket, RotateCcw, Trash2, Undo2 } from "lucide-react";
+import { ArrowLeft, Archive, Check, Copy, Eye, FolderInput, History, Info, Layers, MoreHorizontal, PanelRight, Rocket, RotateCcw, Trash2, Undo2, X } from "lucide-react";
 import { WsConfirm, WsMenu, WsTabs, WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { Select } from "@/components/workspace/Select";
@@ -254,13 +255,13 @@ function LessonEditorSession({ id }: { id: string }) {
       if (block.type === "heading") { current = { id: newId("card"), front: blockText(block), back: "", blockId: block.id }; cards.push(current); }
       else if (current && current.back.length < 600) { const text = blockText(block); if (text) current.back = `${current.back}\n${text}`.trim(); }
     }
-    const id = actions.createFlashcardSet({ title: t.cardsTitle(lesson.draft.meta.title || "Lesson"), lessonId: lesson.id, cards: cards.filter((c) => c.front && c.back) });
+    const id = await actions.createFlashcardSet({ title: t.cardsTitle(lesson.draft.meta.title || "Lesson"), lessonId: lesson.id, cards: cards.filter((c) => c.front && c.back) });
     say(t.cardsCreated);
     router.push(`/dashboard/learn/flashcards/${id}`);
   });
 
   return (
-    <div className="lx-edit">
+    <div className={`lx-edit ${styles.layout}`}>
       <div className="lx-edit__bar">
         <Link href={courseId && /^[a-z0-9]+$/i.test(courseId) ? `/dashboard/courses/${courseId}` : "/dashboard/courses"} className="ws-btn ws-btn--sm ws-btn--ghost" aria-label={t.back}><ArrowLeft size={16} className="lx-flip" aria-hidden /><span className="lx-phone-label">{courseId ? t.backCourse : t.courses}</span></Link>
         <LessonStatus lesson={lesson} />
@@ -271,7 +272,7 @@ function LessonEditorSession({ id }: { id: string }) {
         <button type="button" className="ws-btn ws-btn--sm ws-btn--primary" disabled={!isOwner || conflict || mediaBusy || uploadCount > 0} onClick={() => void run(async () => { await flush(); setDialog("publish"); })}>
           <Rocket size={15} aria-hidden />{!lesson.published ? t.publish : changes ? t.publishChanges : t.published}
         </button>
-        <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={panelOpen} aria-label={t.panelToggle} onClick={() => setPanelOpen((o) => !o)}><PanelRight size={15} className="lx-flip" aria-hidden /><span className="lx-phone-label">{t.settingsLabel}</span></button>
+        <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={panelOpen} aria-expanded={panelOpen} aria-controls="lesson-settings" aria-label={t.panelToggle} onClick={() => setPanelOpen((o) => !o)}><PanelRight size={15} className="lx-flip" aria-hidden /><span className="lx-phone-label">{t.settingsLabel}</span></button>
         <WsMenu label={t.more} trigger={<MoreHorizontal size={18} />}>
           {(close) => (
             <>
@@ -285,25 +286,28 @@ function LessonEditorSession({ id }: { id: string }) {
           )}
         </WsMenu>
       </div>
-      {error && <p className="lx-error" role="alert" style={{ marginTop: 10 }}>{error}</p>}
+      {(error || conflict || retained) && <section className={styles.recovery} aria-label="Draft recovery">
+        {error && <p className="lx-error" role="alert" style={{ marginTop: 10 }}>{error}</p>}
+        {error && <button type="button" className="ws-btn ws-btn--sm" onClick={() => void run(async () => {
+          if (pending.current.timer) clearTimeout(pending.current.timer);
+          await flushTail.current.catch(() => undefined);
+          retain();
+          const latest = await actions.reloadDraft(lesson.id);
+          pending.current = {};
+          setRecoveredContent(latest.draft.content); setEditorContent(latest.draft.content);
+          setTitle(latest.draft.meta.title);
+          setDescription(latest.draft.meta.description);
+          setConflict(false);
+          setSaving(false);
+          try { setRetained(localStorage.getItem(recoveryKey)); } catch { /* In-memory recovery remains available. */ }
+          setEditorKey(k => k + 1);
+        })}>Reload server draft; keep retained copy</button>}
+        {retained && <details className="lx-notice"><summary>Retained unsaved draft</summary><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => { try { const saved = JSON.parse(retained); if (Array.isArray(saved.content)) { setRecoveredContent(saved.content); setEditorContent(saved.content); pending.current.content = saved.content; setEditorKey(k => k + 1); } if (saved.meta) { pending.current.meta = saved.meta; if (saved.meta.title !== undefined) setTitle(saved.meta.title); if (saved.meta.description !== undefined) setDescription(saved.meta.description); } } catch (err) { setError(errorMessage(err)); } }}>Open retained draft for review</button><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => void run(flush)}>Save reviewed draft</button><pre style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap" }}>{retained}</pre></details>}
+        {(conflict || !!error) && recovery && recovery.length > 0 && <details className="lx-notice"><summary>Server recovery revisions</summary>{recovery?.map(row => <details key={row._id}><summary>Revision {row.revision} ? {row.metadata.title}</summary><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => void run(async () => { await flush(); const restored = await actions.recoverDraft(lesson.id, row._id); setRecoveredContent(restored.draft.content); setEditorContent(restored.draft.content); setTitle(restored.draft.meta.title); setDescription(restored.draft.meta.description); setEditorKey(k => k + 1); })}>Restore this revision to draft</button><pre style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap" }}>{JSON.stringify({ metadata: row.metadata, document: row.document }, null, 2)}</pre></details>)}</details>}
+
+      </section>}
       {sourceError && <p className="lx-error" role="alert">Source {sourceError} is unavailable or its metadata access was revoked. Its stable reference remains in the draft.</p>}
       {uploadCount > 0 && <p className="lx-help" role="status">Uploading {uploadCount} image(s) to private Chaos sources…</p>}
-      {error && <button type="button" className="ws-btn ws-btn--sm" onClick={() => void run(async () => {
-        if (pending.current.timer) clearTimeout(pending.current.timer);
-        await flushTail.current.catch(() => undefined);
-        retain();
-        const latest = await actions.reloadDraft(lesson.id);
-        pending.current = {};
-        setRecoveredContent(latest.draft.content); setEditorContent(latest.draft.content);
-        setTitle(latest.draft.meta.title);
-        setDescription(latest.draft.meta.description);
-        setConflict(false);
-        setSaving(false);
-        try { setRetained(localStorage.getItem(recoveryKey)); } catch { /* In-memory recovery remains available. */ }
-        setEditorKey(k => k + 1);
-      })}>Reload server draft; keep retained copy</button>}
-      {retained && <details className="lx-notice"><summary>Retained unsaved draft</summary><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => { try { const saved = JSON.parse(retained); if (Array.isArray(saved.content)) { setRecoveredContent(saved.content); setEditorContent(saved.content); pending.current.content = saved.content; setEditorKey(k => k + 1); } if (saved.meta) { pending.current.meta = saved.meta; if (saved.meta.title !== undefined) setTitle(saved.meta.title); if (saved.meta.description !== undefined) setDescription(saved.meta.description); } } catch (err) { setError(errorMessage(err)); } }}>Open retained draft for review</button><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => void run(flush)}>Save reviewed draft</button><pre style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap" }}>{retained}</pre></details>}
-      {(conflict || !!error) && recovery && recovery.length > 0 && <details className="lx-notice"><summary>Server recovery revisions</summary>{recovery?.map(row => <details key={row._id}><summary>Revision {row.revision} ? {row.metadata.title}</summary><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => void run(async () => { await flush(); const restored = await actions.recoverDraft(lesson.id, row._id); setRecoveredContent(restored.draft.content); setEditorContent(restored.draft.content); setTitle(restored.draft.meta.title); setDescription(restored.draft.meta.description); setEditorKey(k => k + 1); })}>Restore this revision to draft</button><pre style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap" }}>{JSON.stringify({ metadata: row.metadata, document: row.document }, null, 2)}</pre></details>)}</details>}
 
       <div className="lx-edit__body" data-panel={panelOpen ? "open" : "closed"}>
         <div className="lx-edit__doc" dir={lesson.draft.meta.language === "ar" ? "rtl" : "ltr"} lang={lesson.draft.meta.language}>
@@ -342,8 +346,8 @@ function LessonEditorSession({ id }: { id: string }) {
         </div>
 
         {panelOpen && (
-          <aside className="lx-edit__side" aria-label={t.panel} onKeyDown={(e) => { if (e.key === "Escape") setPanelOpen(false); }}>
-            <div className="lx-edit__side-head"><strong>{t.panel}</strong><button type="button" className="ws-icon-button" aria-label={t.panelToggle} onClick={() => setPanelOpen(false)}>×</button></div>
+          <aside id="lesson-settings" className="lx-edit__side" aria-label={t.panel} onKeyDown={(e) => { if (e.key === "Escape") setPanelOpen(false); }}>
+            <div className="lx-edit__side-head"><strong>{t.panel}</strong><button type="button" className="ws-icon-button" aria-label={t.panelToggle} onClick={() => setPanelOpen(false)}><X size={16} aria-hidden /></button></div>
             <WsTabs tabs={["details", "sources", "practice"] as const} value={tab} onChange={setTab} label={t.panel} labels={{ details: t.tabs.details, sources: `${t.tabs.sources}${lesson.sources.length ? ` (${lesson.sources.length})` : ""}`, practice: `${t.tabs.practice}${lesson.quizzes.length ? ` (${lesson.quizzes.length})` : ""}` }} />
             {tab === "details" && (
               <>

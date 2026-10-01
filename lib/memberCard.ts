@@ -13,7 +13,7 @@ const NOUN = ["Big Shot", "Quiz Wrangler", "Note Taker", "Question Asker", "Stud
 const ADJ_AR = ["المجتهد", "الفضولي", "الجريء", "المثابر", "الهادئ", "اللامع", "النشيط", "الذي لا يتوقف", "الصبور", "شديد التنظيم", "المغامر", "المتأمل", "الواثق", "الدؤوب", "اللطيف", "المتّقد"];
 const NOUN_AR = ["النجم", "صائد الاختبارات", "كاتب الملاحظات", "صاحب الأسئلة", "قائد المذاكرة", "صانع النماذج", "جامع الأفكار", "ساهر الليل", "مروّض الفوضى", "الغوّاص", "باحث الحقائق", "المستكشف", "حلّال الألغاز", "عاشق الكتب", "مضيف الألعاب", "راسم الخرائط"];
 
-/** A playful, deterministic title like Arc's ("Industrious Big Shot"). */
+/** A playful, deterministic title for a Chaos member. */
 export function memberTitle(seed: string, locale: "en" | "ar" = "en"): string {
   const h = hash(seed + ":title");
   return locale === "ar" ? `${NOUN_AR[(h >>> 4) % NOUN_AR.length]} ${ADJ_AR[h % ADJ_AR.length]}` : `${ADJ[h % ADJ.length]} ${NOUN[(h >>> 4) % NOUN.length]}`;
@@ -46,7 +46,7 @@ export interface MemberCardData {
 }
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
-const W = 340, H = 500;
+const W = 340, H = 440;
 const SANS = "Inter, 'Segoe UI', system-ui, -apple-system, sans-serif";
 const MONO = "'JetBrains Mono', ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace";
 
@@ -78,52 +78,23 @@ export function memberCardSvg(data: MemberCardData, side: "front" | "back" = "fr
 function renderCard(data: MemberCardData, side: "front" | "back"): string {
   const theme = CARD_THEMES[((data.style % CARD_THEMES.length) + CARD_THEMES.length) % CARD_THEMES.length];
   const ar = data.locale === "ar";
-  const dark = theme.paper.startsWith("#1");
-  const muted = dark ? "rgba(199,210,254,.6)" : "rgba(0,0,0,.45)";
-  const since = new Date(data.memberSince).toLocaleDateString(ar ? "ar-EG" : "en-GB", { day: "numeric", month: "short", year: "numeric" });
-  const no = memberNumber(data.seed);
-  const [a, b, c] = theme.art;
-  const defs = `<defs>
-    <radialGradient id="@@g1" cx="25%" cy="20%" r="90%"><stop offset="0" stop-color="${b}"/><stop offset=".55" stop-color="${a}"/><stop offset="1" stop-color="${c}"/></radialGradient>
-    <radialGradient id="@@g2" cx="80%" cy="90%" r="90%"><stop offset="0" stop-color="${c}"/><stop offset=".6" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></radialGradient>
-    <filter id="@@grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .09 0"/></filter>
-    <clipPath id="@@art"><rect x="22" y="22" width="${W - 44}" height="270" rx="10"/></clipPath>
-    <linearGradient id="@@sheen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".0"/><stop offset=".5" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
-  </defs>`;
-  const frame = `<rect width="${W}" height="${H}" rx="18" fill="${theme.paper}"/>`;
-  const footer = `<g font-family="${MONO}" font-size="10" font-weight="700" fill="${theme.ink}">
-      <rect x="22" y="${H - 44}" width="168" height="22" rx="4" fill="none" stroke="${theme.ink}" stroke-width="1.4"/>
-      <text x="32" y="${H - 29}">CHAOS</text>
-      <rect x="72" y="${H - 44}" width="14" height="22" fill="${theme.ink}" opacity=".25"/>
-      <text x="94" y="${H - 29}">No. ${no}</text>
-      <text x="${W - 22}" y="${H - 36}" text-anchor="end" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-weight="400">${ar ? "عضو منذ" : "MEMBER SINCE"}</text>
-      <text x="${W - 22}" y="${H - 23}" text-anchor="end" font-family="Georgia, 'Times New Roman', serif" font-size="11" font-weight="400">${esc(since)}</text>
-    </g>`;
-  if (side === "back") {
-    return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${defs}${frame}
-      <g clip-path="url(#@@art)"><rect x="22" y="22" width="${W - 44}" height="270" fill="url(#@@g2)"/><rect x="22" y="22" width="${W - 44}" height="270" filter="url(#@@grain)"/></g>
-      ${qr(data.url, W / 2 - 92, 65, 184, "#111827", "#ffffff")}
-      <text x="${W / 2}" y="330" text-anchor="middle" font-family="${SANS}" font-size="16" font-weight="800" fill="${theme.ink}">${ar ? "امسح لترى البطاقة" : "Scan to see this card"}</text>
-      <text x="${W / 2}" y="352" text-anchor="middle" font-family="${MONO}" font-size="11" fill="${muted}">${esc(data.url.replace(/^https?:\/\//, ""))}</text>
-      ${blob(data.seed, W / 2 - 26, 372, 52, theme.hue)}
-      ${footer}</svg>`;
-  }
-  const name = fitName(data.name);
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${defs}${frame}
-    <g clip-path="url(#@@art)">
-      <rect x="22" y="22" width="${W - 44}" height="270" fill="url(#@@g1)"/>
-      <path d="M22 168 Q ${W / 2} 108 ${W - 22} 168 L ${W - 22} 186 Q ${W / 2} 128 22 186 Z" fill="${theme.paper}"/>
-      <rect x="22" y="186" width="${W - 44}" height="106" fill="url(#@@g2)" opacity=".9"/>
-      <path d="M22 186 Q ${W / 2} 128 ${W - 22} 186 L ${W - 22} 292 L 22 292 Z" fill="url(#@@g2)"/>
-      <rect x="22" y="22" width="${W - 44}" height="270" filter="url(#@@grain)"/>
-      <rect x="22" y="22" width="${W - 44}" height="270" fill="url(#@@sheen)"/>
-    </g>
-    <circle cx="${W / 2}" cy="${157}" r="72" fill="${theme.paper}" opacity=".22"/>
-    ${blob(data.seed, W / 2 - 66, 91, 132)}
-    <text x="22" y="${H - 156}" font-family="${SANS}" font-size="${name.size}" font-weight="800" letter-spacing="-.5" fill="${theme.accent}">${esc(name.text)}</text>
-    <text x="22" y="${H - 132}" font-family="${MONO}" font-size="12.5" fill="${theme.ink}">${esc(memberTitle(data.seed, data.locale))}</text>
-    <text x="22" y="${H - 110}" font-family="${MONO}" font-size="11" fill="${muted}">@${esc(data.username)}</text>
-    ${footer}</svg>`;
+  const since = new Date(data.memberSince).toLocaleDateString(ar ? "ar-EG" : "en-GB", { month: "short", year: "numeric", timeZone: "UTC" });
+  const edge = ar ? W - 28 : 28;
+  const anchor = ar ? "end" : "start";
+  const base = `<rect width="${W}" height="${H}" rx="12" fill="${theme.paper}"/><rect x=".5" y=".5" width="${W - 1}" height="${H - 1}" rx="12" fill="none" stroke="${theme.ink}" stroke-opacity=".2"/>
+    <text x="28" y="42" font-family="${SANS}" font-size="18" font-weight="800" fill="${theme.ink}">Chaos</text>
+    <text x="312" y="42" text-anchor="end" font-family="${MONO}" font-size="10" fill="${theme.ink}">#${memberNumber(data.seed)}</text>
+    <path d="M28 62H312 M28 374H312" stroke="${theme.ink}" stroke-opacity=".18"/>
+    <text x="${edge}" y="402" text-anchor="${anchor}" font-family="${SANS}" font-size="11" fill="${theme.ink}">${ar ? "??? ???" : "Member since"} ${esc(since)}</text>`;
+  const content = side === "back"
+    ? `${qr(data.url, 78, 88, 184, "#111827", "#ffffff")}
+       <text x="170" y="308" text-anchor="middle" font-family="${SANS}" font-size="16" font-weight="600" fill="${theme.ink}">${ar ? "???? ???? ???????" : "Scan to view card"}</text>
+       <text x="170" y="336" text-anchor="middle" font-family="${MONO}" font-size="11" fill="${theme.ink}">/card/${esc(data.username)}</text>`
+    : `<rect x="28" y="86" width="112" height="112" rx="16" fill="${theme.accent}" fill-opacity=".1"/>${blob(data.seed, 36, 94, 96)}
+       <text x="${edge}" y="246" text-anchor="${anchor}" direction="${ar ? "rtl" : "ltr"}" font-family="${SANS}" font-size="${fitName(data.name).size}" font-weight="700" fill="${theme.ink}">${esc(fitName(data.name).text)}</text>
+       <text x="${edge}" y="276" text-anchor="${anchor}" font-family="${MONO}" font-size="13" fill="${theme.ink}">@${esc(data.username)}</text>
+       <text x="${edge}" y="326" text-anchor="${anchor}" direction="${ar ? "rtl" : "ltr"}" font-family="${SANS}" font-size="12" fill="${theme.ink}">${esc(memberTitle(data.seed, data.locale))}</text>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${base}${content}</svg>`;
 }
 
 /** PNG blob of one card side, rendered at `scale`× for crisp sharing. Browser only. */
