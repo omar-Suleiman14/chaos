@@ -6,10 +6,44 @@ import { lessonAccess, lessonSummary } from "./lessons";
 import { lessonMeta } from "./learnModel";
 import { questionsFromForm, questionsFromLegacy } from "./liveLogic";
 import { canonicalCommunityActor } from "./learnCommunityIntegrations";
+import schema from "./schema";
 
 function pageCheck(count: number) {
   if (!Number.isSafeInteger(count) || count < 1 || count > 50) throw new Error("Page size must be 1–50");
 }
+
+/** An anonymous, fail-closed metadata read. Owner/editor grants cannot make a private asset indexable. */
+export const publicLesson = query({
+  args: { id: v.string() },
+  returns: v.union(v.null(), v.object({ lessonId: v.id("lessons"), ownerId: v.string(), ownerName: v.string(), createdAt: v.number(), version: schema.doc("lessonVersions") })),
+  handler: async (ctx, args) => {
+    if (!args.id || args.id.length > 100) return null;
+    const id = ctx.db.normalizeId("lessons", args.id);
+    if (!id) return null;
+    const lesson = await ctx.db.get("lessons", id);
+    if (!lesson || lesson.status !== "active" || lesson.visibility !== "public" || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) return null;
+    const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
+    if (!version || version.lessonId !== id || (version.visibility !== undefined && version.visibility !== "public")) return null;
+    const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
+    return { lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", createdAt: lesson.createdAt, version };
+  },
+});
+
+/** Direct editor lookup does not depend on a bounded dashboard page containing this asset. */
+export const editableLesson = query({
+  args: { id: v.string() }, returns: v.union(v.null(), schema.doc("lessons")),
+  handler: async (ctx, args) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity || !args.id || args.id.length > 100) return null;
+    const id = ctx.db.normalizeId("lessons", args.id);
+    if (!id) return null;
+    const lesson = await ctx.db.get("lessons", id);
+    if (!lesson) return null;
+    if (lesson.ownerId === identity.subject) return lesson;
+    const grant = await ctx.db.query("lessonPermissions").withIndex("by_lessonId_and_userId", q => q.eq("lessonId", id).eq("userId", identity.subject)).unique();
+    return grant?.role === "editor" ? lesson : null;
+  },
+});
 
 /** Dashboard cards deliberately omit the potentially large draft document. */
 export const listOwned = query({

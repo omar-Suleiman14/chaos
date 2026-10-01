@@ -1,3 +1,4 @@
+import { homeworkUploadAccess } from "./homeworkUploadAccess";
 import { hasPro } from "./authz";
 import { planLimits } from "../lib/planCatalog";
 import { v } from "convex/values";
@@ -16,7 +17,7 @@ import { ruleHolds, visibleFieldIds } from "./formLogic";
 import { gradeQuiz, publicQuizDefinition } from "./formQuiz";
 import { emitWebhookEvent, formResponseData } from "./webhookEvents";
 import { releasedDefinition, releasedFieldIds, nextFieldReleaseAt, releasedAnswers, assertReleasedAnswers } from "./formRelease";
-import { captureHidden, checkEmailRules } from "./formRespondent";
+import { captureHidden, captureTypedHidden, checkEmailRules } from "./formRespondent";
 
 export const DEFAULT_FORM_RESPONSE_LIMIT = planLimits.free.responsesPerForm;
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -146,7 +147,7 @@ export const getPublicForm = query({
       allowResumeLink: form.settings.allowResumeLink,
       allowEditAfterSubmit: form.settings.allowEditAfterSubmit,
       showReceipt: form.settings.showReceipt,
-      hiddenFields: form.settings.hiddenFields ?? [],
+      hiddenFields: [...(form.settings.hiddenFields ?? []), ...(form.settings.hiddenParameters ?? []).map(d => d.name)],
       signedIn: !!identity,
       alreadyResponded,
     };
@@ -219,7 +220,7 @@ async function resolveUploads(ctx: MutationCtx, formId: Id<"forms">, answers: An
     for (const raw of value) {
       const id = ctx.db.normalizeId("formUploads", raw);
       const upload = id ? await ctx.db.get("formUploads", id) : null;
-      if (upload && upload.formId === formId && upload.fieldId === f.id && (!upload.responseId || upload.responseId === responseId)) {
+      if (upload && !upload.homeworkAttemptId && upload.formId === formId && upload.fieldId === f.id && (!upload.responseId || upload.responseId === responseId)) {
         ids.add(raw);
         docs.push(upload);
       }
@@ -381,6 +382,7 @@ export const submitResponse = mutation({
       quizMaxScore: grade?.maxScore,
       // Stored beside answers, so a parameter named like a question never replaces its answer.
       hidden: captureHidden(form.settings.hiddenFields, args.hidden) ?? existing?.hidden,
+      typedHidden: captureTypedHidden(form.settings.hiddenParameters, args.hidden ?? (existing?.typedHidden ? Object.fromEntries(Object.entries(existing.typedHidden).map(([k, value]) => [k, String(value)])) : undefined), !args.final) ?? existing?.typedHidden,
     };
 
     let responseId: Id<"formResponses">;
@@ -581,6 +583,13 @@ async function liveTicket(ctx: Ctx, token: string, now: number) {
   const tokenHash = await sha256Hex(token);
   const ticket = await ctx.db.query("formUploadTickets").withIndex("by_tokenHash", (q) => q.eq("tokenHash", tokenHash)).unique();
   if (!Number.isFinite(now) || !ticket || ticket.expiresAt <= now) return null;
+  if (ticket.homeworkAttemptId) {
+    try {
+      const { form, version } = await homeworkUploadAccess(ctx, ticket.homeworkAttemptId, now);
+      if (form._id !== ticket.formId || !releasedDefinition(version.definition, now).fields.some(f => f.id === ticket.fieldId && f.type === "file")) return null;
+      return ticket;
+    } catch { return null; }
+  }
   const form = await ctx.db.get("forms", ticket.formId);
   if (!form || form.status !== "live" || await ownerBanned(ctx, form) || scheduleState(form.settings, now) !== "open") return null;
   const version = await currentVersion(ctx, form);
@@ -606,9 +615,12 @@ export const recordUpload = internalMutation({
     await ctx.db.delete("formUploadTickets", ticket._id);
     const form = await ctx.db.get("forms", ticket.formId);
     if (!form || form.status === "archived") throw new Error("FORM_UNAVAILABLE: This form is not available.");
+    const metadata = await ctx.db.system.get("_storage", args.storageId);
+    if (!metadata || metadata.size !== args.size || (metadata.contentType !== undefined && metadata.contentType !== args.contentType) || uploadRejection(args.contentType, args.size)) throw new Error("UPLOAD_INVALID: Invalid stored file");
     const name = args.name.replace(/[\\/\u0000-\u001f]/g, "_").slice(0, 200) || "upload";
     const uploadId = await ctx.db.insert("formUploads", {
       formId: ticket.formId, storageId: args.storageId, uploadKey: ticket.uploadKey, fieldId: ticket.fieldId,
+      ...(ticket.homeworkAttemptId ? { homeworkAttemptId: ticket.homeworkAttemptId } : {}),
       name, contentType: args.contentType, size: args.size, createdAt: Date.now(),
     });
     return { uploadId, name, size: args.size };
@@ -618,7 +630,7 @@ export const recordUpload = internalMutation({
 /** Shared limits for the HTTP endpoint. */
 export function uploadRejection(contentType: string, size: number): string | null {
   if (size > MAX_UPLOAD_BYTES) return "UPLOAD_TOO_LARGE: Files can be at most 10 MB.";
-  if (size === 0) return "UPLOAD_MISSING: The file is empty.";
+  if (!Number.isFinite(size) || !Number.isInteger(size) || size <= 0) return "UPLOAD_MISSING: The file is empty.";
   if (!ALLOWED_UPLOAD_TYPES.includes(contentType)) return "UPLOAD_TYPE: Upload a PDF, image, text, CSV, Word or Excel file.";
   return null;
 }

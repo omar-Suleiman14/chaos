@@ -4,7 +4,7 @@ This is an instrumentation and status policy, not an availability certification.
 
 ## Parent integration
 
-Spread `observabilityTables` from `convex/observabilityModel.ts` into the application schema. Run normal codegen after integration. Wrap trusted HTTP handlers with `observeHttp(ctx, "integration-api", () => handler(ctx, request))` from `lib/backendTelemetry.ts`; keep the service name server-selected. The callback is plain code, not a registered HTTP action invoked as a function. Mount a public GET status route that calls `observability:publicStatus` and returns only its validated result. Add an internal cron for `observability:prune`; repeat on `more: true` in bounded invocations. No schema, HTTP router or cron is changed by this module.
+Spread `observabilityTables` from `convex/observabilityModel.ts` into the application schema. Run normal codegen after integration. Wrap trusted HTTP handlers with `observeHttp(ctx, "integration-api", () => handler(ctx, request))` from `lib/backendTelemetry.ts`; keep the service name server-selected. The callback is plain code, not a registered HTTP action invoked as a function. Mount a public GET status route that calls `observability:publicStatus` and returns only its validated result. Add an internal cron for `observability:prune`; repeat on `more: true` in bounded invocations. The application now spreads these tables, mounts GET /api/status/v1, instruments HTTP handlers and schedules bounded pruning. These are development/source-verified integrations; production SLO attainment and paging remain unverified.
 
 ## Measurement policy
 

@@ -1,4 +1,4 @@
-# Quiz data lifecycle
+# Data lifecycle
 
 ## Question deletion
 
@@ -8,13 +8,13 @@ The question row is permanently removed only when its entire quiz is deleted.
 
 ## Quiz deletion
 
-Deletion is permanent. The confirmation names the form or quiz and states how many recorded responses will be destroyed (for old quizzes it is counted on the server by `getQuizDeletionImpact`). Folders no longer exist, so there is no folder deletion.
+Deletion is permanent. The confirmation names the form or quiz and states how many recorded responses will be destroyed (for old quizzes it is counted on the server by `getQuizDeletionImpact`). Native Learn folders exist. Folder deletion has separate nonempty-folder checks and does not cascade into assets (see below).
 
 Deleting a quiz:
 
 - permanently deletes all of its questions, including soft-deleted questions;
 - permanently deletes all quiz sessions and therefore the results and analytics derived from them;
-- clears that quiz's `quizId` from related AI jobs while retaining the jobs for historical compatibility (AI generation and quotas are retired);
+- clears that quiz's `quizId` from related AI jobs while retaining the jobs for historical compatibility (legacy AI records remain; the AI-free migration is planned and must preserve historical data);
 - permanently deletes the quiz document;
 - immediately retires `/{username}/{slug}`. There is no tombstone, and the slug can later be reused by the creator.
 
@@ -29,3 +29,33 @@ Banning or elevating an account does not delete content. Changing a username upd
 - Create a quiz with active and soft-deleted questions, completed/in-progress sessions, and an AI job linked by `quizId`; delete it and verify the quiz/questions/sessions are gone while the AI job remains with `quizId` cleared.
 - Delete one answered question and verify it disappears from live creator/player/count/stat views while the existing session detail still shows the original question.
 - Delete a form and an old quiz from the library and confirm the warnings show the correct response counts.
+
+## Native Learn lifecycle (2026-10-01 source snapshot)
+
+Lesson archive/unpublish/reactivate change lifecycle or visibility while retaining immutable versions, lineage and study records. Restoring a version writes an editable draft and does not silently republish it. Current durable client actions reject permanent lesson deletion. Collection and flashcard publication similarly keeps version snapshots; flashcard lifecycle and fork actions retain history. These source behaviors are not a general account-wide erasure or recovery guarantee.
+
+Publication metadata audit entries are written in the state-change transaction and read through learnPublicationAudit.list/listAsset by owners/admins. Audit entries contain identifiers, revisions, transitions and reasons; they are not stored copies of all lesson/source bytes or proof of tamper-proof compliance.
+
+### Folders and membership
+
+folders.remove requires an owned folder with no child folder and no member; otherwise it throws FOLDER_NOT_EMPTY. folders.removeMember deletes the membership row, not the referenced lesson, quiz, source or other asset. Moving/removing folders must not be described as asset deletion.
+
+### Sources, moderation and file retention
+
+learnSources.remove marks the source removed; it does not immediately erase file bytes or published citation provenance. Metadata grants and content grants remain independent; citation presence never grants download. Source takedown/restore/report/appeal records have a separate moderation path.
+
+learnSourceRetention.requestPurge is explicit owner consent for an already removed source. It schedules a 30-day grace period; any source moderation audit creates a preservation hold. Cleanup checks ownership/status/storage linkage and scans immutable lesson and collection versions in bounded steps before deleting unreferenced bytes. The source row remains, with storageId cleared after successful purge. Restricted creators and referenced/ambiguous/moderated files can be held; this is not a promised universal deletion deadline. Tracked unlinked uploads have a one-day grace period; the worker does not sweep all storage. The hourly cron is source-registered, not evidence of production execution.
+
+Source fingerprints support bounded owner-scoped near-byte-duplicate checks. They are a similarity heuristic, not a cryptographic identity guarantee or justification to remove another person's source.
+
+### Private study and respondent data
+
+learnPersonal stores revision-checked private saves/highlights/notes and followed modules independently of lesson publication. Progress and flashcard reviews are version/session or card-keyed study records, not inferred mastery. Homework pins a form version and maintains enrollment/attempt/progress records; its evolving submission/upload paths need final acceptance validation. Archiving a lesson is not evidence that these records are deleted.
+
+Declared typed hidden URL parameters are validated as string/number/boolean and stored separately from answers as typedHidden; legacy hidden strings remain a separate compatible representation. Link metadata is respondent data, not trusted identity. Do not mirror it or raw attempts/responses into another product without explicit authorization.
+
+Context assembly is a selected export, not an automatic external transfer: bounded blocks, source metadata, optional independently authorized stored excerpts/curriculum and the caller's progress. Private notes/raw source files are excluded, and owner-supplied excerpts are marked unverified. Revocation and deletion semantics must be checked independently by each consumer.
+
+## Evidence and remaining acceptance
+
+This documentation refresh inspected source and related test files; it did not run deletion/purge journeys, deploy crons or certify compliance. Existing quiz cascade verification items above remain required, as do held/reference purge cases, membership-versus-asset deletion, and preservation of versions/attempts/scores under final migrations. Audit/fingerprint/typed hidden/homework/context/discovery/durableclient work remains ongoing; use the final source snapshot for acceptance.

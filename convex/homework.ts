@@ -1,3 +1,7 @@
+import { homeworkUploadAccess } from "./homeworkUploadAccess";
+import { env } from "./_generated/server";
+import { UPLOAD_PATH, uploadRejection } from "./respond";
+import { randomHex, sha256Hex } from "./serverUtils";
 import { v } from "convex/values";
 import {
   mutation,
@@ -6,7 +10,14 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import { HOMEWORK_LIMITS } from "./homeworkModel";
-import { gradeQuiz } from "./formQuiz";
+import { gradeQuiz, publicQuizDefinition } from "./formQuiz";
+import { definitionValidator, answersValidator, languageValidator } from "./formModel";
+import { releasedDefinition, nextFieldReleaseAt, assertReleasedAnswers } from "./formRelease";
+import { creatorRestricted } from "./authz";
+import { checkAnswers, searchTextFor, selectEnding } from "./formLogic";
+import { countResponse, responseCap } from "./respond";
+import { consumeRate, randomCode } from "./serverUtils";
+import { emitWebhookEvent, formResponseData } from "./webhookEvents";
 type Ctx = MutationCtx | QueryCtx;
 async function actor(ctx: Ctx) {
   const id = await ctx.auth.getUserIdentity();
@@ -147,6 +158,9 @@ export const startAttempt = mutation({
       .unique();
     if (!enrollment?.active || now < enrollment.enrolledAt)
       throw new Error("Active enrollment required");
+    const form = await ctx.db.get("forms", assignment.formId);
+    if (!form || form.status === "archived" || form.isBanned || await creatorRestricted(ctx, form.ownerId))
+      throw new Error("Assignment content unavailable");
     const attempts = await ctx.db
       .query("homeworkAttempts")
       .withIndex("by_assignmentId_and_studentId", (q) =>
@@ -168,6 +182,101 @@ export const startAttempt = mutation({
       number: enrollment.attempts + 1,
       startedAt: now,
     });
+  },
+});
+/** Delivery is tied to an owned pending attempt, never the form's latest version.
+ * Enrollment authorizes private pinned content; normal public form access is not
+ * broadened. Completed attempts cannot retrieve new assessment material.
+ */
+export const getAttemptDefinition = query({
+  args: { attemptId: v.id("homeworkAttempts") },
+  returns: v.object({ assignmentId: v.id("homeworkAssignments"), attemptId: v.id("homeworkAttempts"), title: v.string(), formId: v.id("forms"), versionId: v.id("formVersions"), version: v.number(), definition: definitionValidator, deadline: v.number(), attemptNumber: v.number(), attemptsRemaining: v.number(), serverTime: v.number(), nextFieldReleaseAt: v.union(v.number(), v.null()) }),
+  handler: async (ctx, args) => {
+    const identity = await actor(ctx);
+    const attempt = await ctx.db.get("homeworkAttempts", args.attemptId);
+    if (!attempt || attempt.studentId !== identity.tokenIdentifier) throw new Error("Own attempt required");
+    const assignment = await ctx.db.get("homeworkAssignments", attempt.assignmentId);
+    const now = Date.now();
+    if (!assignment || assignment.closed || now < assignment.opensAt || now > assignment.deadline) throw new Error("Assignment not open");
+    const enrollment = await ctx.db.query("homeworkEnrollments").withIndex("by_assignmentId_and_studentId", q => q.eq("assignmentId", assignment._id).eq("studentId", identity.subject)).unique();
+    if (!enrollment?.active || now < enrollment.enrolledAt) throw new Error("Active enrollment required");
+    if (attempt.responseId || attempt.number < 1 || attempt.number > assignment.maxAttempts || enrollment.attempts > assignment.maxAttempts) throw new Error("Attempt unavailable or limit reached");
+    const form = await ctx.db.get("forms", assignment.formId);
+    const version = await ctx.db.get("formVersions", assignment.versionId);
+    if (!form || form.status === "archived" || form.isBanned || await creatorRestricted(ctx, form.ownerId) || !version || version.formId !== form._id || !version.definition.quiz?.enabled) throw new Error("Assignment content unavailable");
+    return { assignmentId: assignment._id, attemptId: attempt._id, title: assignment.title, formId: form._id, versionId: version._id, version: version.version, definition: publicQuizDefinition(releasedDefinition(version.definition, now)), deadline: assignment.deadline, attemptNumber: attempt.number, attemptsRemaining: Math.max(0, assignment.maxAttempts - enrollment.attempts), serverTime: now, nextFieldReleaseAt: nextFieldReleaseAt(version.definition, now) };
+  },
+});
+export const generateUploadUrl = mutation({
+ args: { attemptId: v.id("homeworkAttempts"), fieldId: v.string() }, returns: v.string(),
+ handler: async (ctx, args) => {
+ const now = Date.now();
+ const { form, version, assignment } = await homeworkUploadAccess(ctx, args.attemptId, now);
+ const field = releasedDefinition(version.definition, now).fields.find(f => f.id === args.fieldId && f.type === "file");
+ if (!field) throw new Error("INVALID_FIELD: Released file question required");
+ await consumeRate(ctx, `homework-upload:${args.attemptId}`, 60, 60000);
+ const token = randomHex(24);
+ await ctx.db.insert("formUploadTickets", { formId: form._id, fieldId: field.id, homeworkAttemptId: args.attemptId, uploadKey: randomHex(12), tokenHash: await sha256Hex(token), expiresAt: Math.min(now + 600000, assignment.deadline) });
+ return `${env.CONVEX_SITE_URL}${UPLOAD_PATH}?ticket=${token}`;
+ }});
+/** Atomic pinned submission. The attempt ID is the server-owned idempotency key.
+ * Retries return immutable evidence even after closure; they never regrade.
+ * File answers require validated receipts owned by this attempt.
+ */
+export const submitAttempt = mutation({
+  args: { attemptId: v.id("homeworkAttempts"), answers: answersValidator, language: languageValidator },
+  returns: v.object({ responseId: v.id("formResponses"), score: v.number(), maxScore: v.number(), duplicate: v.boolean() }),
+  handler: async (ctx, args) => {
+    const identity = await actor(ctx);
+    const attempt = await ctx.db.get("homeworkAttempts", args.attemptId);
+    if (!attempt || attempt.studentId !== identity.tokenIdentifier) throw new Error("Own attempt required");
+    if (attempt.responseId) {
+      if (attempt.score === undefined || attempt.maxScore === undefined) throw new Error("Attempt evidence unavailable");
+      return { responseId: attempt.responseId, score: attempt.score, maxScore: attempt.maxScore, duplicate: true };
+    }
+    if (JSON.stringify(args.answers).length > 400000) throw new Error("PAYLOAD_TOO_LARGE");
+    const now = Date.now();
+    const assignment = await ctx.db.get("homeworkAssignments", attempt.assignmentId);
+    if (!assignment || assignment.closed || now < assignment.opensAt || now > assignment.deadline) throw new Error("Assignment not open");
+    const enrollment = await ctx.db.query("homeworkEnrollments").withIndex("by_assignmentId_and_studentId", q => q.eq("assignmentId", assignment._id).eq("studentId", identity.subject)).unique();
+    if (!enrollment?.active || attempt.startedAt < enrollment.enrolledAt) throw new Error("Active enrollment required");
+    if (attempt.number < 1 || attempt.number > assignment.maxAttempts || enrollment.attempts > assignment.maxAttempts) throw new Error("Attempt limit reached");
+    const form = await ctx.db.get("forms", assignment.formId);
+    const version = await ctx.db.get("formVersions", assignment.versionId);
+    if (!form || form.status === "archived" || form.isBanned || await creatorRestricted(ctx, form.ownerId) || !version || version.formId !== form._id || !version.definition.quiz?.enabled) throw new Error("Assignment content unavailable");
+    if (!version.definition.languages.includes(args.language)) throw new Error("Unsupported assignment language");
+    const cap = await responseCap(ctx, form, now);
+    if (cap !== null && form.responseCount >= cap) throw new Error("FORM_FULL: Response limit reached");
+    await consumeRate(ctx, `homework-submit:${identity.tokenIdentifier}`, 60, 60000);
+    assertReleasedAnswers(version.definition, args.answers, now);
+    const definition = releasedDefinition(version.definition, now);
+    const fileIds = new Set<string>();
+    const uploads: import("./_generated/dataModel").Doc<"formUploads">[] = [];
+    for (const field of definition.fields) {
+      const value = args.answers[field.id];
+      if (field.type !== "file" || !Array.isArray(value)) continue;
+      if (value.length > Math.min(field.max ?? 1, 5) || new Set(value).size !== value.length) throw new Error("VALIDATION_FAILED: Invalid file count");
+      for (const raw of value) {
+        const id = ctx.db.normalizeId("formUploads", raw);
+        const upload = id ? await ctx.db.get("formUploads", id) : null;
+        if (!upload || upload.homeworkAttemptId !== attempt._id || upload.formId !== form._id || upload.fieldId !== field.id || upload.responseId) throw new Error("VALIDATION_FAILED: Own attempt file receipt required");
+        const metadata = await ctx.db.system.get("_storage", upload.storageId);
+        if (!metadata || metadata.size !== upload.size || (metadata.contentType !== undefined && metadata.contentType !== upload.contentType) || uploadRejection(upload.contentType, upload.size)) throw new Error("VALIDATION_FAILED: File unavailable or invalid");
+        fileIds.add(raw); uploads.push(upload);
+      }
+    }
+    const checked = checkAnswers(definition, args.answers, { fileIds });
+    if (Object.keys(checked.errors).length) throw new Error("VALIDATION_FAILED: " + JSON.stringify(checked.errors));
+    const grade = gradeQuiz(definition, checked.answers);
+    if (!grade || !Number.isFinite(grade.score) || !Number.isFinite(grade.maxScore) || grade.maxScore <= 0) throw new Error("Valid graded quiz required");
+    const ending = selectEnding(definition, checked.answers);
+    const responseId = await ctx.db.insert("formResponses", { formId: form._id, version: version.version, status: "completed", answers: checked.answers, language: args.language, submissionKey: `homework-${attempt._id}`, respondentId: identity.subject, receiptCode: randomCode(8).toUpperCase(), startedAt: attempt.startedAt, submittedAt: now, updatedAt: now, durationMs: now - attempt.startedAt, ...(ending ? { endingId: ending.id } : {}), reviewed: false, tags: [], spam: false, searchText: searchTextFor(definition, checked.answers), quizScore: grade.score, quizMaxScore: grade.maxScore });
+    for (const upload of uploads) if (Object.values(checked.answers).some(value => Array.isArray(value) && value.includes(upload._id))) await ctx.db.patch("formUploads", upload._id, { responseId });
+    await ctx.db.patch("homeworkAttempts", attempt._id, { responseId, submittedAt: now, score: grade.score, maxScore: grade.maxScore });
+    const response = (await ctx.db.get("formResponses", responseId))!;
+    await countResponse(ctx, form, response, definition, 1);
+    await emitWebhookEvent(ctx, form.ownerId, "response.completed", `form_${form._id}`, () => formResponseData(form, response, definition));
+    return { responseId, score: grade.score, maxScore: grade.maxScore, duplicate: false };
   },
 });
 export const recordAttempt = mutation({

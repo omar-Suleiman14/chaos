@@ -832,3 +832,15 @@ describe("Bounded community discovery and review reads", () => {
     ).rejects.toThrow("ACCOUNT_BANNED");
   });
 });
+
+it("keeps owner grants out of public community snapshot access", async () => {
+  const { t, owner, lessonId, versionId } = await setup();
+  await t.run(ctx => ctx.db.patch("lessonVersions", versionId!, { visibility: "restricted" }));
+  await expect(owner.query(api.learnCommunity.get, { lessonId })).rejects.toThrow("Published version unavailable");
+  await expect(owner.mutation(api.learnCommunity.setSignals, { lessonId, saved: true })).rejects.toThrow("Published version unavailable");
+  await t.run(async ctx => {
+    await ctx.db.patch("lessonVersions", versionId!, { visibility: "public" });
+    await ctx.db.insert("users", { clerkId: creatorIdentity.subject, username: "restricted", name: "Restricted", email: "private@example.com", createdAt: 0, isBanned: true });
+  });
+  await expect(owner.query(api.learnCommunity.get, { lessonId })).rejects.toThrow("Lesson is not public");
+});

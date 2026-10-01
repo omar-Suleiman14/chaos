@@ -172,6 +172,32 @@ async function seeded(t = createTestConvex()) {
   return { t, sourceId };
 }
 describe("learn source boundaries", () => {
+  it("accepts exactly 25 MiB and cancels dishonest streamed overflow before storing bytes", async () => {
+    const t = createProxyConvex(), owner = t.withIdentity(ownerIdentity);
+    const limit = 25 * 1024 * 1024;
+    const body = new Uint8Array(limit).fill(65);
+    const accepted = await owner.fetch(`${SOURCE_UPLOAD_PATH}?title=Large&origin=Library`, { method: "POST", headers: { "Content-Type": "text/plain" }, body: body.buffer });
+    expect(accepted.status).toBe(201);
+    const { sourceId } = await accepted.json();
+    const source = await t.run(ctx => ctx.db.get("learnSources", sourceId));
+    expect(source?.size).toBe(limit);
+    expect(source?.fingerprint?.chunks.length).toBeLessThanOrEqual(1024);
+    const stored = await t.run(ctx => ctx.db.system.query("_storage").collect());
+    expect(stored).toHaveLength(1);
+    let cancelled = false;
+    const stream = new ReadableStream<Uint8Array>({
+      start(controller) { controller.enqueue(body); controller.enqueue(new Uint8Array([65])); },
+      cancel() { cancelled = true; },
+    });
+    const streamed = new Request("https://test.convex.site/learn/sources/upload?title=Large&origin=Library", { method: "POST", headers: { "Content-Type": "text/plain", "Content-Length": "1" }, body: stream, duplex: "half" } as RequestInit);
+    expect((await owner.action(ctx => serialResponse(ctx, streamed))).status).toBe(413);
+    expect(cancelled).toBe(true);
+    const oversized = request(body.buffer);
+    oversized.headers.set("Content-Length", String(limit + 1));
+    expect((await owner.action(ctx => serialResponse(ctx, oversized))).status).toBe(413);
+    expect(await t.run(ctx => ctx.db.system.query("_storage").collect())).toHaveLength(1);
+    expect(await t.run(ctx => ctx.db.query("learnSources").collect())).toHaveLength(1);
+  });
   it("returns safe uploader attribution, immutable upload time/origin and an opaque fallback", async () => {
     const { t, sourceId } = await seeded();
     expect((await t.query(metadata, { sourceId })).provenance).toEqual({

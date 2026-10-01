@@ -1,8 +1,13 @@
 "use client";
 
-import { useCallback, useMemo, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
+import { useConvex, useConvexAuth, usePaginatedQuery, useQueries, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import type { Doc, Id } from "../../convex/_generated/dataModel";
+import { DurableLessonClient, DurableProgressClient, durableMetadata } from "./durableClient";
+import { fromDurableDocument, toDurableDocument } from "./chaosDocument";
 import { useUser } from "@clerk/nextjs";
-import { cloneWithNewIds, documentText, excerpt as makeExcerpt } from "./doc";
+import { documentText, excerpt as makeExcerpt } from "./doc";
 import { emptyPersonal, newId, personal, readState, serverState, subscribe, updatePersonal, writeState } from "./localStore";
 import type { LearnState, PersonalState } from "./localStore";
 import { searchLessons } from "./search";
@@ -20,7 +25,7 @@ import type {
 
 /** Local store: publishing is device-only; AI, verification and weak areas wait for the backend. */
 export const localCapabilities: LearnCapabilities = {
-  sharedPublishing: false, versionRestore: true, ai: false, verification: false, discussions: true, reports: true,
+  sharedPublishing: true, versionRestore: true, ai: false, verification: false, discussions: false, reports: false,
   deviceSync: false, weakAreas: false, curriculumDirectory: false, quizForks: false,
 };
 
@@ -55,52 +60,92 @@ function usePersonal(): PersonalState | undefined {
 
 /* ── Queries ─────────────────────────────────────────────────────────────── */
 
-export function useMyLessons(): Lesson[] | undefined {
-  const state = useLearnState();
-  const viewer = useLearnViewer();
-  return useMemo(() => state && viewer
-    ? Object.values(state.lessons).filter((l) => l.ownerId === viewer.id && !l.archived).sort((a, b) => b.updatedAt - a.updatedAt)
-    : undefined, [state, viewer]);
-}
 
-export function useArchivedLessons(): Lesson[] | undefined {
-  const state = useLearnState();
-  const viewer = useLearnViewer();
-  return useMemo(() => state && viewer ? Object.values(state.lessons).filter((l) => l.ownerId === viewer.id && l.archived) : undefined, [state, viewer]);
+const durableRows = new Map<string, Doc<"lessons">>();
+const progressTargets = new Map<string, { lessonId: Id<"lessons">; versionId: Id<"lessonVersions">; blockIds: string[] }>();
+const listeners = new Set<() => void>();
+let targetGeneration = 0;
+function rememberProgress(userId: string, row: { lessonId: Id<"lessons">; version: Doc<"lessonVersions"> }) {
+  const key = userId + ":" + row.lessonId;
+  const old = progressTargets.get(key);
+  if (old?.versionId === row.version._id) return;
+  progressTargets.set(key, { lessonId: row.lessonId, versionId: row.version._id, blockIds: row.version.document.blocks.map(b => b.id) });
+  targetGeneration++; listeners.forEach(fn => fn());
 }
-
-/** `null` when missing or not readable by this person. Owners always see their own lessons. */
+function useOwnedRows() {
+  const auth = useConvexAuth();
+  const page = usePaginatedQuery(api.lessons.listOwned, auth.isAuthenticated ? {} : "skip", { initialNumItems: 10 });
+  useEffect(() => { if (page.status === "CanLoadMore" && page.results.length < 250) page.loadMore(10); }, [page.status, page.results.length, page.loadMore]);
+  return auth.isLoading || (auth.isAuthenticated && page.status === "LoadingFirstPage") ? undefined : auth.isAuthenticated ? page.results : [];
+}
+function uiMeta(metadata: Doc<"lessons">["metadata"]): LessonMeta { return { ...metadata, curricula: [], indexing: metadata.indexing ?? "noindex" }; }
+function uiLesson(row: Doc<"lessons">, version?: Doc<"lessonVersions"> | null): Lesson {
+  const draft = { meta: uiMeta(row.metadata), content: fromDurableDocument(row.draft), updatedAt: row.updatedAt };
+  return { id: row._id, ownerId: row.ownerId, ownerName: row.metadata.authorDisplay ?? "Chaos creator", draft,
+    ...(version ? { published: { version: version.number, meta: uiMeta(version.metadata), content: fromDurableDocument(version.document), publishedAt: version.publishedAt }, publishedDraftAt: JSON.stringify(row.draft) === JSON.stringify(version.document) && JSON.stringify(row.metadata) === JSON.stringify(version.metadata) ? row.updatedAt : version.publishedAt } : {}),
+    visibility: row.visibility === "public" ? "public" : "private", sources: [], quizzes: [],
+    moderation: row.communityState === "review" ? "under_review" : row.communityState === "hidden" ? "restricted" : row.communityState === "removed" ? "removed" : "ok",
+    quality: "none", stats: { views: 0, saves: 0, helpful: 0, notHelpful: 0, forks: 0 }, archived: row.status === "archived", createdAt: row.createdAt, updatedAt: row.updatedAt,
+    ...(row.parentLessonId ? { forkedFrom: { kind: "lesson" as const, sourceId: row.parentLessonId, sourceTitle: "Original lesson", authorId: "", authorName: "Chaos creator", forkedAt: row.createdAt, originId: row.originLessonId } } : {}),
+  };
+}
+function publicUiLesson(result: { lessonId: Id<"lessons">; ownerId: string; ownerName: string; createdAt: number; version: Doc<"lessonVersions"> }): Lesson {
+  return { ...uiLesson({ _id: result.lessonId, _creationTime: result.createdAt, ownerId: result.ownerId, metadata: result.version.metadata, draft: result.version.document, revision: 0, status: "active", visibility: "public", communityState: "ok", createdAt: result.createdAt, updatedAt: result.version.publishedAt, searchText: "", publishedVersionId: result.version._id }, result.version), ownerName: result.ownerName };
+}
+function useOwnedLessons(archived: boolean): Lesson[] | undefined {
+  const rows = useOwnedRows();
+  const viewer = useLearnViewer();
+  const queries = useMemo(() => Object.fromEntries((rows ?? []).filter(r => r.publishedVersionId).map(row => [row._id, { query: api.lessons.getPublished, args: { lessonId: row._id } }])), [rows]);
+  const versions = useQueries(queries);
+  useEffect(() => { if (viewer?.signedIn) for (const row of rows ?? []) { const version = versions[row._id]; if (version && !(version instanceof Error)) rememberProgress(viewer.id, { lessonId: row._id, version }); } }, [rows, versions, viewer?.id, viewer?.signedIn]);
+  if (rows === undefined || rows.some(r => r.publishedVersionId && versions[r._id] === undefined)) return undefined;
+  return rows.filter(r => (r.status === "archived") === archived).map(row => { const version = versions[row._id]; if (version instanceof Error) throw version; return uiLesson(row, version as Doc<"lessonVersions"> | undefined); });
+}
+export function useMyLessons(): Lesson[] | undefined { return useOwnedLessons(false); }
+export function useArchivedLessons(): Lesson[] | undefined { return useOwnedLessons(true); }
+export function useCanEditLesson(id: string | undefined): boolean | undefined {
+  const auth = useConvexAuth();
+  const row = useQuery(api.learnFrontend.editableLesson, auth.isAuthenticated && id ? { id } : "skip");
+  return auth.isLoading || (auth.isAuthenticated && row === undefined) ? undefined : !!row;
+}
 export function useLesson(id: string | undefined): Lesson | null | undefined {
-  const state = useLearnState();
+  const auth = useConvexAuth();
   const viewer = useLearnViewer();
-  if (!state || !viewer) return undefined;
-  const lesson = id ? state.lessons[id] : undefined;
-  if (!lesson) return null;
-  if (lesson.ownerId === viewer.id) return lesson;
-  if (!lesson.published || lesson.visibility === "private" || lesson.archived) return null;
-  return lesson;
+  const editable = useQuery(api.learnFrontend.editableLesson, auth.isAuthenticated && id ? { id } : "skip");
+  const published = useQuery(api.lessons.getPublished, editable ? { lessonId: editable._id } : "skip");
+  const result = useQuery(api.learnFrontend.publicLesson, id ? { id } : "skip");
+  useEffect(() => {
+    if (editable && viewer?.signedIn) durableRows.set(viewer.id + ":" + editable._id, editable);
+    const version = editable && published ? { lessonId: editable._id, version: published } : result;
+    if (version && viewer?.signedIn) rememberProgress(viewer.id, version);
+  }, [editable, published, result, viewer?.id, viewer?.signedIn]);
+  if (!id) return null;
+  if (!viewer || auth.isLoading || (auth.isAuthenticated && editable === undefined) || (editable ? published === undefined : result === undefined)) return undefined;
+  return editable ? uiLesson(editable, published) : result ? publicUiLesson(result) : null;
 }
-
-/** Published, public, not removed. Unlisted lessons are readable by link but never listed. */
-export function isListed(lesson: Lesson): boolean {
-  return !!lesson.published && lesson.visibility === "public" && !lesson.archived && (lesson.moderation === "ok" || lesson.moderation === "under_review");
-}
-
+export function isListed(lesson: Lesson): boolean { return !!lesson.published && lesson.visibility === "public" && !lesson.archived && lesson.moderation === "ok"; }
 export function usePublicLessons(filters: SearchFilters = {}): Lesson[] | undefined {
-  const state = useLearnState();
-  const key = JSON.stringify(filters);
-  return useMemo(() => {
-    if (!state) return undefined;
-    // eslint-disable-next-line @typescript-eslint/no-unused-expressions -- key tracks filter identity
-    key;
-    return searchLessons(Object.values(state.lessons).filter(isListed), state.curriculum, filters);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- filters are compared by value through key
-  }, [state, key]);
+  const [asOf] = useState(() => Date.now());
+  const rank = useQuery(api.learnCommunity.rank, { asOf, limit: 20 });
+  const search = usePaginatedQuery(api.learnSearch.searchPublic, filters.q?.trim() ? { text: filters.q.trim().slice(0, 200) } : "skip", { initialNumItems: 20 });
+  const ids = filters.q?.trim() ? search.results.map(r => r.lessonId) : rank?.map(r => r.lessonId);
+  const queries = Object.fromEntries((ids ?? []).map(id => [id, { query: api.learnFrontend.publicLesson, args: { id } }]));
+  const results = useQueries(queries);
+  if (ids === undefined || ids.some(id => results[id] === undefined)) return undefined;
+  const lessons = ids.flatMap(id => { const result = results[id]; if (result instanceof Error) throw result; return result ? [publicUiLesson(result)] : []; });
+  return searchLessons(lessons, {}, filters);
 }
-
 export function useLessonVersions(lessonId: string | undefined): LessonVersion[] | undefined {
-  const state = useLearnState();
-  return useMemo(() => state ? state.versions.filter((v) => v.lessonId === lessonId).sort((a, b) => b.version - a.version) : undefined, [state, lessonId]);
+  const auth = useConvexAuth();
+  const own = useQuery(api.learnFrontend.editableLesson, auth.isAuthenticated && lessonId ? { id: lessonId } : "skip");
+  const result = usePaginatedQuery(api.lessons.listVersions, own ? { lessonId: own._id } : "skip", { initialNumItems: 10 });
+  useEffect(() => { if (result.status === "CanLoadMore" && result.results.length < 100) result.loadMore(10); }, [result.status, result.results.length, result.loadMore]);
+  if (auth.isLoading || (auth.isAuthenticated && own === undefined) || (own && result.status === "LoadingFirstPage")) return undefined;
+  return result.results.map(v => ({ lessonId: v.lessonId, version: v.number, meta: uiMeta(v.metadata), content: fromDurableDocument(v.document), publishedAt: v.publishedAt, publishedBy: v.authorId, note: v.note }));
+}
+export function useLessonRecovery(lessonId: string | undefined) {
+  const auth = useConvexAuth(); const own = useQuery(api.learnFrontend.editableLesson, auth.isAuthenticated && lessonId ? { id: lessonId } : "skip");
+  return useQuery(api.lessons.listRecovery, own ? { lessonId: own._id } : "skip");
 }
 
 export function useFolders(): Folder[] | undefined {
@@ -122,7 +167,7 @@ export function useFolderItems(): FolderItem[] | undefined {
 /** Published collections anyone can open. */
 export function usePublicCollections(): Folder[] | undefined {
   const state = useLearnState();
-  return useMemo(() => state ? Object.values(state.folders).filter((f) => f.collection?.visibility === "public" && f.collection.publishedAt && !f.archived) : undefined, [state]);
+  return useMemo(() => state ? [] : undefined, [state]);
 }
 
 export function useFolder(id: string | undefined): Folder | null | undefined {
@@ -179,7 +224,22 @@ export function useNotes(lessonId?: string): PersonalNote[] | undefined {
 }
 
 export function useProgress(): Record<string, LessonProgress> | undefined {
-  return usePersonal()?.progress;
+  const viewer = useLearnViewer(); const auth = useConvexAuth();
+  useSyncExternalStore(fn => { listeners.add(fn); return () => { listeners.delete(fn); }; }, () => targetGeneration, () => 0);
+  const targets = [...progressTargets.entries()].filter(([key]) => key.startsWith((viewer?.id ?? "guest") + ":")).map(([, value]) => value);
+  const queries = Object.fromEntries(auth.isAuthenticated ? targets.map(target => [target.lessonId, { query: api.learnCommunity.getProgress, args: { lessonId: target.lessonId, versionId: target.versionId } }]) : []);
+  const rows = useQueries(queries);
+  if (!viewer || auth.isLoading) return undefined;
+  const result: Record<string, LessonProgress> = {};
+  if (auth.isAuthenticated && targets.some(target => rows[target.lessonId] === undefined)) return undefined;
+  for (const target of targets) {
+    const row = rows[target.lessonId];
+    if (row instanceof Error) throw row;
+    if (!row) continue;
+    const count = row.completedBlocks.length, total = target.blockIds.length;
+    result[target.lessonId] = { lessonId: target.lessonId, state: total > 0 && count >= total ? "completed" : "in_progress", percent: total ? Math.round(count * 100 / total) : 0, lastBlockId: row.completedBlocks.at(-1), updatedAt: row.updatedAt };
+  }
+  return result;
 }
 
 export function useVote(lessonId: string): "helpful" | "not_helpful" | null | undefined {
@@ -291,123 +351,48 @@ export class LearnError extends Error {}
  */
 export function useLearnActions() {
   const viewer = useLearnViewer();
+  const client = useConvex();
+  const service = useMemo(() => { void viewer?.id; return new DurableLessonClient(client); }, [client, viewer?.id]);
+  for (const [key, row] of durableRows) if (key.startsWith((viewer?.id ?? "guest") + ":")) service.observe(row);
+  const progressService = useMemo(() => { void viewer?.id; return new DurableProgressClient(client); }, [client, viewer?.id]);
+  useEffect(() => { for (const [key, row] of durableRows) if (key.startsWith((viewer?.id ?? "guest") + ":")) service.observe(row); });
+  useEffect(() => {
+    for (const key of durableRows.keys()) if (!key.startsWith((viewer?.id ?? "guest") + ":")) durableRows.delete(key);
+    for (const key of progressTargets.keys()) if (!key.startsWith((viewer?.id ?? "guest") + ":")) progressTargets.delete(key);
+  }, [viewer?.id]);
   const me = viewer?.id ?? "guest";
   const myName = viewer?.name ?? "";
   const requireSignIn = useCallback(() => { if (!viewer?.signedIn) throw new LearnError("SIGN_IN_REQUIRED"); }, [viewer]);
 
   return useMemo(() => {
-    const editLesson = (id: string, recipe: (lesson: Lesson, now: number) => Lesson) => {
-      requireSignIn();
-      writeState((s) => { const now = Date.now(); return putLesson(s, { ...recipe(requireOwned(s, id, me), now), updatedAt: now }); });
-    };
-
     return {
-      createLesson(input: { language: string; folderId?: string; title?: string; content?: unknown[] } = { language: "en" }): string {
+      async createLesson(input: { language: string; folderId?: string; title?: string; content?: unknown[] } = { language: "en" }): Promise<string> {
         requireSignIn();
-        const id = newId("lesson");
-        const now = Date.now();
-        writeState((s) => putLesson(s, {
-          id, ownerId: me, ownerName: myName, draft: { meta: blankMeta(input.language, input.title), content: input.content ?? [], updatedAt: now },
-          visibility: "private", folderId: input.folderId, sources: [], quizzes: [],
-          stats: { views: 0, saves: 0, helpful: 0, notHelpful: 0, forks: 0 }, moderation: "ok", quality: "none", createdAt: now, updatedAt: now,
-        }));
-        return id;
+        if (input.folderId) throw new LearnError("Folder membership is not wired to durable Learn yet. Create at the library root.");
+        return client.mutation(api.lessons.create, { metadata: durableMetadata(blankMeta(input.language, input.title || "Untitled lesson")), document: toDurableDocument(input.content ?? []) });
       },
-      saveDraftContent(id: string, content: unknown[]) {
-        editLesson(id, (l, now) => ({ ...l, draft: { ...l.draft, content, updatedAt: now } }));
-      },
-      saveDraftMeta(id: string, patch: Partial<LessonMeta>) {
-        editLesson(id, (l, now) => ({ ...l, draft: { ...l.draft, meta: { ...l.draft.meta, ...patch, ...(patch.tags ? { tags: cleanTags(patch.tags) } : {}) }, updatedAt: now } }));
-      },
-      setVisibility(id: string, visibility: Visibility) {
-        editLesson(id, (l) => ({ ...l, visibility }));
-      },
-      setSources(id: string, sources: LessonSource[]) {
-        editLesson(id, (l) => ({ ...l, sources }));
-      },
-      setQuizzes(id: string, quizzes: AttachedQuiz[]) {
-        editLesson(id, (l) => ({ ...l, quizzes: quizzes.map((q, order) => ({ ...q, order })) }));
-      },
-      /** Publishes the current draft as a new version. Moderated-away lessons cannot republish until reviewed. */
-      publish(id: string, note?: string): number {
+      saveDraftContent(id: string, content: unknown[]) { requireSignIn(); return service.saveContent(id, content); },
+      async reloadDraft(id: string) { requireSignIn(); const row = await service.reload(id); return uiLesson(row); },
+      async recoverDraft(id: string, recoveryId: string) { requireSignIn(); return uiLesson(await service.recover(id, recoveryId as Id<"lessonDraftRecovery">)); },
+      saveDraftMeta(id: string, patch: Partial<LessonMeta>) { requireSignIn(); return service.saveMeta(id, { ...patch, ...(patch.tags ? { tags: cleanTags(patch.tags) } : {}) }); },
+      setVisibility(id: string, visibility: Visibility) { requireSignIn(); service.setVisibility(id, visibility); },
+      setSources(_id: string, _sources: LessonSource[]) { void _id; void _sources; throw new LearnError("Source editing must use the durable source API. No device-local sources were saved."); },
+      setQuizzes(_id: string, _quizzes: AttachedQuiz[]) { void _id; void _quizzes; throw new LearnError("Assessment attachment editing is not wired yet. Existing server relationships are unchanged."); },
+      publish(id: string, note?: string) { requireSignIn(); return service.publish(id, note); },
+      unpublish(id: string) { requireSignIn(); return service.lifecycle(id, "unpublish"); },
+      discardDraft(id: string) { requireSignIn(); return service.restore(id); },
+      restoreVersion(id: string, version: number) { requireSignIn(); return service.restore(id, version); },
+      archiveLesson(id: string, archived = true) { requireSignIn(); return service.lifecycle(id, archived ? "archive" : "reactivate"); },
+      deleteLesson(_id: string) { void _id; throw new LearnError("Permanent deletion is unavailable. Archive this lesson to preserve its history."); },
+      async duplicateLesson(id: string): Promise<string> {
         requireSignIn();
-        let version = 0;
-        writeState((s) => {
-          const l = requireOwned(s, id, me);
-          if (l.moderation === "removed") throw new LearnError("REMOVED");
-          if (!l.draft.meta.title.trim()) throw new LearnError("TITLE_REQUIRED");
-          const now = Date.now();
-          version = (l.published?.version ?? 0) + 1;
-          const published = { version, meta: l.draft.meta, content: l.draft.content, publishedAt: now };
-          return {
-            ...putLesson(s, { ...l, published, publishedDraftAt: l.draft.updatedAt, updatedAt: now }),
-            versions: [...s.versions, { lessonId: id, version, meta: l.draft.meta, content: l.draft.content, publishedAt: now, publishedBy: myName, note: note?.trim() || undefined }],
-          };
-        });
-        return version;
+        const row = await client.query(api.lessons.getDraft, { lessonId: id as Id<"lessons"> });
+        return client.mutation(api.lessons.create, { metadata: { ...row.metadata, title: (row.metadata.title + " (copy)").slice(0, 200), indexing: "noindex" }, document: row.draft });
       },
-      unpublish(id: string) {
-        editLesson(id, (l) => ({ ...l, published: undefined, publishedDraftAt: undefined }));
-      },
-      discardDraft(id: string) {
-        editLesson(id, (l, now) => l.published ? { ...l, draft: { meta: l.published.meta, content: l.published.content, updatedAt: now }, publishedDraftAt: now } : l);
-      },
-      /** Copies an old version into the draft. Publishing it is a separate, visible step. */
-      restoreVersion(id: string, version: number) {
-        requireSignIn();
-        writeState((s) => {
-          const l = requireOwned(s, id, me);
-          const v = s.versions.find((x) => x.lessonId === id && x.version === version);
-          if (!v) throw new LearnError("NOT_FOUND");
-          const now = Date.now();
-          return putLesson(s, { ...l, draft: { meta: v.meta, content: v.content, updatedAt: now }, updatedAt: now });
-        });
-      },
-      archiveLesson(id: string, archived = true) {
-        editLesson(id, (l) => ({ ...l, archived }));
-      },
-      deleteLesson(id: string) {
-        requireSignIn();
-        writeState((s) => {
-          requireOwned(s, id, me);
-          const lessons = { ...s.lessons };
-          delete lessons[id];
-          return { ...s, lessons, versions: s.versions.filter((v) => v.lessonId !== id), threads: s.threads.filter((t) => t.lessonId !== id) };
-        });
-      },
-      duplicateLesson(id: string): string {
-        requireSignIn();
-        const copyId = newId("lesson");
-        writeState((s) => {
-          const l = requireOwned(s, id, me);
-          const now = Date.now();
-          return putLesson(s, {
-            ...l, id: copyId, draft: { meta: { ...l.draft.meta, title: `${l.draft.meta.title} (copy)`.trim() }, content: cloneWithNewIds(l.draft.content, () => newId("b")), updatedAt: now },
-            published: undefined, publishedDraftAt: undefined, visibility: "private", stats: { views: 0, saves: 0, helpful: 0, notHelpful: 0, forks: 0 },
-            moderation: "ok", quality: "none", externalRef: undefined, createdAt: now, updatedAt: now,
-          });
-        });
-        return copyId;
-      },
-      /** Fork: an editable private copy of the published version, keeping visible attribution. */
-      forkLesson(id: string): string {
-        requireSignIn();
-        const forkId = newId("lesson");
-        writeState((s) => {
-          const src = s.lessons[id];
-          if (!src?.published || src.visibility === "private" || src.moderation === "removed") throw new LearnError("NOT_FOUND");
-          const now = Date.now();
-          const origin = src.forkedFrom ? { originId: src.forkedFrom.originId ?? src.forkedFrom.sourceId, originTitle: src.forkedFrom.originTitle ?? src.forkedFrom.sourceTitle } : {};
-          const fork: Lesson = {
-            id: forkId, ownerId: me, ownerName: myName,
-            draft: { meta: { ...src.published.meta, indexing: "noindex" }, content: cloneWithNewIds(src.published.content, () => newId("b")), updatedAt: now },
-            visibility: "private", sources: src.sources, quizzes: [],
-            forkedFrom: { kind: "lesson", sourceId: src.id, sourceVersion: src.published.version, sourceTitle: src.published.meta.title, authorId: src.ownerId, authorName: src.ownerName, forkedAt: now, ...origin },
-            stats: { views: 0, saves: 0, helpful: 0, notHelpful: 0, forks: 0 }, moderation: "ok", quality: "none", createdAt: now, updatedAt: now,
-          };
-          return { ...s, lessons: { ...s.lessons, [forkId]: fork, [src.id]: { ...src, stats: { ...src.stats, forks: src.stats.forks + 1 } } } };
-        });
-        return forkId;
+      async forkLesson(id: string): Promise<string> {
+        requireSignIn(); const source = await client.query(api.learnFrontend.publicLesson, { id });
+        if (!source) throw new LearnError("NOT_FOUND");
+        return client.mutation(api.lessons.fork, { lessonId: source.lessonId, versionId: source.version._id });
       },
       recordView(id: string) {
         writeState((s) => {
@@ -484,16 +469,13 @@ export function useLearnActions() {
       deleteNote(id: string) {
         updatePersonal(me, (mine) => ({ ...mine, notes: mine.notes.filter((n) => n.id !== id) }));
       },
-      setProgress(lessonId: string, patch: { state?: ProgressState; lastBlockId?: string; percent?: number }) {
-        updatePersonal(me, (mine) => {
-          const current = mine.progress[lessonId] ?? { lessonId, state: "not_started" as const, percent: 0, updatedAt: 0 };
-          const percent = Math.max(current.percent, Math.min(100, Math.round(patch.percent ?? current.percent)));
-          // Completed stays completed until the reader resets it on purpose.
-          const state = patch.state ?? (current.state === "completed" ? "completed" : percent > 0 || patch.lastBlockId ? "in_progress" : current.state);
-          const next = { ...current, ...patch, state, percent: state === "not_started" ? 0 : percent, updatedAt: Date.now() };
-          if (patch.state === "not_started") { next.percent = 0; next.lastBlockId = undefined; }
-          return { ...mine, progress: { ...mine.progress, [lessonId]: next } };
-        });
+      setProgress(lessonId: string, patch: { state?: ProgressState; lastBlockId?: string; percent?: number }): Promise<void> {
+        requireSignIn();
+        const key = me + ":" + lessonId;
+        const target = progressTargets.get(key);
+        if (!target) return Promise.reject(new LearnError("Open the published lesson before recording progress."));
+        if (patch.state === "not_started") return Promise.reject(new LearnError("Progress reset is not supported by the durable backend; existing evidence is preserved."));
+        return progressService.save(target, patch);
       },
 
       /* Library folders and collections. */
@@ -731,7 +713,7 @@ export function useLearnActions() {
         updatePersonal(me, (mine) => { const tutor = { ...mine.tutor }; delete tutor[lessonId]; return { ...mine, tutor }; });
       },
     };
-  }, [me, myName, requireSignIn]);
+  }, [me, myName, requireSignIn, client, service, progressService]);
 }
 
 export type LearnActions = ReturnType<typeof useLearnActions>;

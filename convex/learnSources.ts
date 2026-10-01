@@ -14,6 +14,7 @@ import {
 import type { Doc, Id } from "./_generated/dataModel";
 import { LEARN_LIMITS, sourceMetadata, visibility } from "./learnModel";
 import { creatorRestricted, requireActiveUser } from "./authz";
+import { fingerprintBytes, nearByteDuplicate, sourceFingerprint, SOURCE_SIMILARITY_LIMITS } from "./sourceFingerprint";
 
 type Metadata = Infer<typeof sourceMetadata>;
 export const SOURCE_UPLOAD_PATH = "/learn/sources/upload";
@@ -493,8 +494,9 @@ export const registerUpload = internalMutation({
     ...visibilityArgs,
     storageId: v.id("_storage"),
     contentType: v.string(),
+    fingerprint: v.optional(sourceFingerprint),
   },
-  returns: v.object({ sourceId: v.id("learnSources"), duplicate: v.boolean() }),
+  returns: v.object({ sourceId: v.id("learnSources"), duplicate: v.boolean(), nearDuplicateOf: v.optional(v.id("learnSources")) }),
   handler: async (ctx, args) => {
     const { identity } = await requireActiveUser(ctx);
     validateMetadata(args.metadata);
@@ -531,8 +533,12 @@ export const registerUpload = internalMutation({
       (await ctx.db.system.get("_storage", duplicate.storageId))
     )
       return { sourceId: duplicate._id, duplicate: true };
+    if (args.fingerprint && (args.fingerprint.chunks.length > SOURCE_SIMILARITY_LIMITS.sampledChunks || args.fingerprint.chunks.some(chunk => !/^[0-9a-f]{16}$/.test(chunk)))) throw new Error("Invalid source fingerprint");
+    const nearCandidates = args.fingerprint ? await ctx.db.query("learnSources").withIndex("by_ownerId_and_contentType_and_status", q => q.eq("ownerId", identity.subject).eq("contentType", args.contentType).eq("status", "active")).order("desc").take(SOURCE_SIMILARITY_LIMITS.candidates) : [];
+    const near = nearCandidates.find(source => source.fingerprint && source.size !== undefined && source.sha256 !== file.sha256 && nearByteDuplicate(args.fingerprint!, file.size, source.fingerprint, source.size));
     const sourceId = await ctx.db.insert("learnSources", {
       ...args,
+      ...(near ? { nearDuplicateOf: near._id } : {}),
       ownerId: identity.subject,
       uploadedBy: identity.subject,
       sha256: file.sha256,
@@ -541,7 +547,7 @@ export const registerUpload = internalMutation({
       createdAt: Date.now(),
       status: "active",
     });
-    return { sourceId, duplicate: false };
+    return { sourceId, duplicate: false, ...(near ? { nearDuplicateOf: near._id } : {}) };
   },
 });
 const registration = makeFunctionReference<
@@ -552,8 +558,9 @@ const registration = makeFunctionReference<
     contentVisibility: Infer<typeof visibility>;
     storageId: Id<"_storage">;
     contentType: string;
+    fingerprint?: Infer<typeof sourceFingerprint>;
   },
-  { sourceId: Id<"learnSources">; duplicate: boolean }
+  { sourceId: Id<"learnSources">; duplicate: boolean; nearDuplicateOf?: Id<"learnSources"> }
 >("learnSources:registerUpload");
 /** Mount as POST. Raw file body; title/origin query parameters; uploads begin private.
  * Bearer authentication is validated by Convex, never by a caller-supplied owner ID.
@@ -619,6 +626,7 @@ export const upload = httpAction(async (ctx, request) => observeHttp(ctx, "sourc
         contentVisibility: "private",
         storageId,
         contentType,
+        fingerprint: fingerprintBytes(new Uint8Array(await blob.arrayBuffer())),
       });
     if (result.duplicate) await ctx.storage.delete(storageId);
     storageId = undefined;

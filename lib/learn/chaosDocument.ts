@@ -1,4 +1,4 @@
-import { asBlocks, blockText, cellInlines, inlineText, type Block, type CitationContent, type Inline, type TableContent } from "./doc";
+import { asBlocks, blockText, parseYouTube, cellInlines, inlineText, type Block, type CitationContent, type Inline, type TableContent } from "./doc";
 
 /**
  * Converts between the editor's BlockNote JSON and the backend's normalized
@@ -168,4 +168,106 @@ export function fromChaosDocument(document: ChaosDocument, imageUrl: (sourceId: 
     if (parent) parent.children.push(block); else roots.push(block);
   }
   return roots;
+}
+import type { LessonDocument } from "../../convex/learnModel";
+import { editorBlocksToLessonDocument, lessonDocumentToEditorBlocks } from "../lessonBlockAdapter";
+
+/** Exact conversion for durable saves. Unsupported editor state is an error, never a partial save. */
+export function toDurableDocument(input: unknown, original?: LessonDocument): LessonDocument {
+  if (!Array.isArray(input)) throw new Error("Lesson content must be a block array.");
+  const old = new Map(original?.blocks.map(b => [b.id, b]) ?? []);
+  const visit = (items: unknown[]): unknown[] => items.map(value => {
+    if (!value || typeof value !== "object" || Array.isArray(value)) throw new Error("Invalid editor block.");
+    const b = value as Record<string, unknown>;
+    if (Object.keys(b).some(k => !["id", "type", "props", "content", "children"].includes(k))) throw new Error("Unknown editor fields cannot be saved losslessly.");
+    if (b.children !== undefined && !Array.isArray(b.children)) throw new Error("Invalid editor children cannot be saved losslessly.");
+    if (b.props !== undefined && (!b.props || typeof b.props !== "object" || Array.isArray(b.props))) throw new Error("Invalid editor props.");
+    const props = { ...(b.props as Record<string, unknown> ?? {}) };
+    const previous = old.get(String(b.id));
+    if (previous?.presentation) props.lessonPresentation = JSON.stringify({ ...previous.presentation, ...(props.textAlignment !== undefined ? { alignment: props.textAlignment } : {}), ...(props.textColor !== undefined ? { textColor: props.textColor } : {}), ...(props.backgroundColor !== undefined ? { backgroundColor: props.backgroundColor } : {}) });
+    props.lessonConceptIds = JSON.stringify(previous?.conceptIds ?? []);
+    props.lessonCitations = JSON.stringify(previous?.citations ?? []);
+    // BlockNote supplies neutral default props even when an editor type does not declare them.
+    for (const key of ["isToggleable"]) {
+      if (props[key] === false) delete props[key];
+      else if (props[key] !== undefined) throw new Error("Unsupported toggleable heading formatting.");
+    }
+    let type = b.type;
+    let content = b.content;
+    if (type === "table") {
+      const table = content as { type?: string; rows?: { cells: unknown[] }[]; headerRows?: number; headerCols?: number; columnWidths?: unknown[] };
+      if (table?.type !== "tableContent" || !Array.isArray(table.rows)) throw new Error("Invalid lesson table.");
+      if (Object.keys(table).some(k => !["type", "rows", "headerRows", "headerCols", "columnWidths"].includes(k)) || table.rows.some(row => Object.keys(row).some(k => k !== "cells"))) throw new Error("Unknown table fields cannot be saved losslessly.");
+      if ((table.headerCols ?? 0) !== 0 || table.columnWidths?.some(w => w !== undefined && w !== null)) throw new Error("Table column formatting cannot yet be saved losslessly.");
+      const rows = table.rows.map(row => row.cells.map(cell => {
+        if (!Array.isArray(cell)) throw new Error("Merged or styled table cells cannot yet be saved losslessly.");
+        return cell.map(run => {
+          if (!run || run.type !== "text" || typeof run.text !== "string" || Object.keys(run.styles ?? {}).length || Object.keys(run).some(k => !["type", "text", "styles"].includes(k))) throw new Error("Rich table cells cannot yet be saved losslessly.");
+          return run.text;
+        }).join("");
+      }));
+      props.lessonData = JSON.stringify({ rows, headerRows: table.headerRows ?? 0 });
+      content = undefined;
+    }
+    if (type === "image") {
+      const url = String(props.url ?? "");
+      if (url.startsWith("chaos-source:")) props.sourceId = url.slice("chaos-source:".length);
+      else if (url) throw new Error("Upload this image to durable Chaos sources before saving. Device-local files cannot be shared.");
+      delete props.url;
+    }
+    if (type === "youtube") {
+      if (props.url) {
+        const parsed = parseYouTube(String(props.url));
+        if (!parsed || parsed.id !== props.videoId) throw new Error("YouTube URL and video ID disagree.");
+      }
+      delete props.url;
+      if (props.title) throw new Error("YouTube title annotations cannot yet be saved losslessly.");
+      delete props.title;
+      if (props.end === 0) delete props.end;
+    }
+    if (type === "source") {
+      props.label = props.locator ?? props.label ?? "";
+      delete props.locator;
+    }
+    if (type === "equation") props.display = previous?.type === "equation" ? previous.display : true;
+    if (type === "codeBlock" && previous?.type === "diagram" && props.language === "mermaid") {
+      type = "diagram";
+      props.lessonData = JSON.stringify({ format: "mermaid", text: Array.isArray(content) ? inlineText(content as Inline[]) : "" });
+      delete props.language;
+      content = undefined;
+    }
+    return { id: b.id, type, props, ...(content === undefined ? {} : { content }), children: visit(Array.isArray(b.children) ? b.children : []) };
+  });
+  const converted = editorBlocksToLessonDocument(visit(input));
+  if (!converted.ok) throw new Error(converted.problems.map(p => p.path + ": " + p.message).join("\n"));
+  return converted.value;
+}
+
+/** Stable content to real editor names; metadata without editor support survives in the save baseline. */
+export function fromDurableDocument(document: LessonDocument): Block[] {
+  const result = lessonDocumentToEditorBlocks(document);
+  if (!result.ok) throw new Error(result.problems.map(p => p.message).join("\n"));
+  const stable = new Map(document.blocks.map(b => [b.id, b]));
+  const visit = (items: typeof result.value): Block[] => items.map(item => {
+    const b = stable.get(item.id)!;
+    const props: Record<string, unknown> = {};
+    if (b.presentation?.alignment) props.textAlignment = b.presentation.alignment;
+    if (b.presentation?.textColor) props.textColor = b.presentation.textColor;
+    if (b.presentation?.backgroundColor) props.backgroundColor = b.presentation.backgroundColor;
+    let type = item.type, content: Block["content"] = Array.isArray(item.content) ? item.content : item.content === undefined ? undefined : [{ type: "text", text: item.content, styles: {} }];
+    if (b.type === "heading") props.level = b.level;
+    if (b.type === "list" && b.checked !== undefined) props.checked = b.checked;
+    if (b.type === "callout") props.tone = b.tone;
+    if (b.type === "code") props.language = b.language;
+    if (b.type === "image") Object.assign(props, { url: "chaos-source:" + b.sourceId, alt: b.alt, caption: b.caption, credit: b.credit ?? "", creditUrl: b.creditUrl ?? "", figureKind: b.figureKind ?? "photo", annotations: b.annotations ? JSON.stringify(b.annotations) : "", name: b.name ?? "", showPreview: b.showPreview ?? true, ...(b.previewWidth ? { previewWidth: b.previewWidth } : {}) });
+    if (b.type === "youtube") Object.assign(props, { videoId: b.videoId, start: b.start ?? 0, end: b.end ?? 0, caption: b.caption, url: "", title: "" });
+    if (b.type === "source") Object.assign(props, { sourceId: b.sourceId, locator: b.label });
+    if (b.type === "equation" && b.inline?.some(r => r.href)) throw new Error("Equation links cannot be represented by this editor without data loss.");
+    if (b.type === "equation") content = b.inline ? b.inline.map(r => ({ type: "text", text: r.text, styles: r.marks ?? {} })) : [{ type: "text", text: b.text, styles: {} }];
+    if (b.type === "diagram") { type = "codeBlock"; props.language = "mermaid"; content = [{ type: "text", text: b.text, styles: {} }]; }
+    if (b.type === "table") content = { type: "tableContent", headerRows: b.headerRows, rows: b.rows.map(row => ({ cells: row.map(text => [{ type: "text", text, styles: {} }]) })) };
+    if (b.type === "quiz") throw new Error("Embedded quiz blocks are not supported by this editor yet; this lesson remains safely stored on the server.");
+    return { id: b.id, type, props, ...(content === undefined ? {} : { content }), children: visit(item.children) };
+  });
+  return visit(result.value);
 }

@@ -81,7 +81,7 @@ function Library() {
   const [error, setError] = useState("");
   const byId = useMemo(() => new Map((folders ?? []).map((f) => [f.id, f])), [folders]);
   const say = (text: string, undo?: () => void) => setToast({ id: nextToastId(), text, undo });
-  const run = (fn: () => void) => { setError(""); try { fn(); } catch (err) { setError(errorMessage(err)); } };
+  const run = async (fn: () => unknown | Promise<unknown>) => { setError(""); try { await fn(); } catch (err) { setError(errorMessage(err)); } };
 
   if (!folders || !items || !lessons) return <PageSkeleton label={t.loading} />;
   const folder = folderId ? byId.get(folderId) : undefined;
@@ -144,7 +144,7 @@ function Library() {
         <div className="lx-actions">
           <button type="button" className="ws-btn" onClick={() => setDialog({ kind: "new" })}><FolderPlus size={16} aria-hidden />{t.newFolder}</button>
           {folder && <button type="button" className="ws-btn" onClick={() => setDialog({ kind: "add" })}><Plus size={16} aria-hidden />{t.addExisting}</button>}
-          <button type="button" className="ws-btn ws-btn--primary" onClick={() => run(() => router.push(`/dashboard/learn/lessons/${actions.createLesson({ language: locale, folderId })}`))}><Plus size={16} aria-hidden />{t.newLesson}</button>
+          <button type="button" className="ws-btn ws-btn--primary" onClick={() => run(async () => { const id = await actions.createLesson({ language: locale, folderId }); router.push(`/dashboard/learn/lessons/${id}`); })}><Plus size={16} aria-hidden />{t.newLesson}</button>
           {folder && folderMenu(folder)}
         </div>
       </header>
@@ -173,7 +173,7 @@ function Library() {
           )}
         </section>
       ) : empty ? (
-        folder ? <EmptyState icon={FolderOpen} title={t.empty} body={t.emptyBody} /> : <EmptyState icon={Folder} title={t.rootEmpty} body={t.rootEmptyBody}><button type="button" className="ws-btn" onClick={() => setDialog({ kind: "new" })}><FolderPlus size={16} aria-hidden />{t.newFolder}</button></EmptyState>
+        folder ? <EmptyState level={2} icon={FolderOpen} title={t.empty} body={t.emptyBody} /> : <EmptyState level={2} icon={Folder} title={t.rootEmpty} body={t.rootEmptyBody}><button type="button" className="ws-btn" onClick={() => setDialog({ kind: "new" })}><FolderPlus size={16} aria-hidden />{t.newFolder}</button></EmptyState>
       ) : (
         <>
           {visibleFolders.length > 0 && (
@@ -213,10 +213,10 @@ function Library() {
                       {(close) => (
                         <>
                           <button role="menuitem" className="ws-menu__row" onClick={() => { close(); setDialog({ kind: "move", id: l.id, name: l.draft.meta.title, type: "lesson" }); }}><FolderInput size={15} />{t.move}</button>
-                          <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(() => { const id = actions.duplicateLesson(l.id); router.push(`/dashboard/learn/lessons/${id}`); }); }}><Copy size={15} />{t.duplicate}</button>
+                          <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(async () => { const id = await actions.duplicateLesson(l.id); router.push(`/dashboard/learn/lessons/${id}`); }); }}><Copy size={15} />{t.duplicate}</button>
                           {l.archived
-                            ? <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(() => actions.archiveLesson(l.id, false)); }}><ArchiveRestore size={15} />{t.restore}</button>
-                            : <button role="menuitem" className="ws-menu__row ws-menu__danger" onClick={() => { close(); run(() => { actions.archiveLesson(l.id); say(t.archivedToast(l.draft.meta.title), () => actions.archiveLesson(l.id, false)); }); }}><Archive size={15} />{t.archive}</button>}
+                            ? <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(() => { void run(() => actions.archiveLesson(l.id, false)); }); }}><ArchiveRestore size={15} />{t.restore}</button>
+                            : <button role="menuitem" className="ws-menu__row ws-menu__danger" onClick={() => { close(); run(async () => { await actions.archiveLesson(l.id); say(t.archivedToast(l.draft.meta.title), () => actions.archiveLesson(l.id, false)); }); }}><Archive size={15} />{t.archive}</button>}
                         </>
                       )}
                     </WsMenu>
@@ -258,7 +258,7 @@ function Library() {
             ...decks.filter((d) => !items.some((i) => i.folderId === folderId && i.refId === d.id)).map((d) => ({ value: `flashcards:${d.id}:${d.title}`, label: `${d.title} · ${t.kinds.flashcards}` }))]}
           onClose={() => setDialog(null)} onSubmit={(value) => run(() => { if (!value) return; const [kind, refId, ...title] = value.split(":"); actions.addToFolder({ folderId, kind: kind as "form", refId, title: title.join(":") }); setDialog(null); })} />
       )}
-      {dialog?.kind === "collection" && <CollectionDialog folder={dialog.folder} device={!caps.sharedPublishing} t={t} onClose={() => setDialog(null)} onSave={(collection) => run(() => { actions.setCollection(dialog.folder.id, collection); setDialog(null); })} />}
+      {dialog?.kind === "collection" && <CollectionDialog folder={dialog.folder} device={true} t={t} onClose={() => setDialog(null)} onSave={(collection) => run(() => { actions.setCollection(dialog.folder.id, collection); setDialog(null); })} />}
       <WsUndoToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );

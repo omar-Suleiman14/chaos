@@ -1,4 +1,5 @@
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
+import { recordPublicationAction } from "./learnPublicationAudit";
 import { v, ConvexError } from "convex/values";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
@@ -47,7 +48,9 @@ export async function createLessonForActor(ctx: MutationCtx, actor: string, args
   assertDocument(draft);
   await consumeRate(ctx, `learn:create:${actor}`, LEARN_WRITE_LIMITS.creationsPerHour, 3_600_000);
   const now = Date.now();
-  return ctx.db.insert("lessons", { ownerId: actor, metadata: args.metadata, draft, revision: 0, status: "active", visibility: "private", communityState: "ok", createdAt: now, updatedAt: now, searchText: "" });
+  const lessonId = await ctx.db.insert("lessons", { ownerId: actor, metadata: args.metadata, draft, revision: 0, status: "active", visibility: "private", communityState: "ok", createdAt: now, updatedAt: now, searchText: "" });
+  await recordPublicationAction(ctx, { lessonId, actorId: actor, action: "create", revision: 0, afterVisibility: "private", reason: "Created an editable private draft." });
+  return lessonId;
 }
 
 export const saveDraft = mutation({ args: { lessonId: v.id("lessons"), expectedRevision: v.number(), document: lessonDocument, metadata: v.optional(lessonMeta) }, returns: v.number(), handler: async (ctx, args) => {
@@ -123,24 +126,26 @@ export async function publicationProblems(ctx: MutationCtx, lesson: Doc<"lessons
   return errors;
 }
 const problemValidator = v.object({ path: v.string(), code: v.string(), message: v.string() });
-export const publish = mutation({ args: { lessonId: v.id("lessons"), expectedRevision: v.number(), visibility }, returns: v.union(v.object({ ok: v.literal(false), problems: v.array(problemValidator) }), v.object({ ok: v.literal(true), versionId: v.id("lessonVersions"), revision: v.number() })), handler: async (ctx, args) => {
+export const publish = mutation({ args: { lessonId: v.id("lessons"), expectedRevision: v.number(), visibility, note: v.optional(v.string()) }, returns: v.union(v.object({ ok: v.literal(false), problems: v.array(problemValidator) }), v.object({ ok: v.literal(true), versionId: v.id("lessonVersions"), revision: v.number() })), handler: async (ctx, args) => {
   const { identity } = await requireActiveUser(ctx);
   return publishLessonForActor(ctx, identity.subject, args);
 } });
-export async function publishLessonForActor(ctx: MutationCtx, actor: string, args: { lessonId: Id<"lessons">; expectedRevision: number; visibility: Doc<"lessons">["visibility"] }) {
+export async function publishLessonForActor(ctx: MutationCtx, actor: string, args: { lessonId: Id<"lessons">; expectedRevision: number; visibility: Doc<"lessons">["visibility"]; note?: string }) {
   const lesson = await lessonAccessForActor(ctx, actor, args.lessonId, true);
   if (actor !== lesson.ownerId) throw new Error("Only the owner can publish");
   revisionCheck(lesson, args.expectedRevision);
   if (lesson.communityState !== "ok" || lesson.status !== "active") throw new Error("Resolve moderation or archive state before publishing");
+  if (args.note !== undefined && args.note.length > 2000) throw new Error("Version note must contain at most 2000 characters");
   const problems = await publicationProblems(ctx, lesson);
   if (problems.length) return { ok: false as const, problems };
   await consumeRate(ctx, `learn:publish:${actor}`, LEARN_WRITE_LIMITS.publicationsPerHour, 3_600_000);
   const last = await ctx.db.query("lessonVersions").withIndex("by_lessonId_and_number", q => q.eq("lessonId", lesson._id)).order("desc").first();
   const curriculumMappings = (await ctx.db.query("lessonCurriculumMappings").withIndex("by_lessonId_and_nodeId", q => q.eq("lessonId", lesson._id)).take(100)).map(({ versionId, nodeId, conceptKeys, blockIds }) => ({ versionId, nodeId, conceptKeys, blockIds }));
-  const versionId = await ctx.db.insert("lessonVersions", { visibility: args.visibility, curriculumMappings, lessonId: lesson._id, number: (last?.number ?? 0) + 1, metadata: lesson.metadata, document: lesson.draft, authorId: actor, publishedAt: Date.now() });
+  const versionId = await ctx.db.insert("lessonVersions", { ...(args.note?.trim() ? { note: args.note.trim() } : {}), visibility: args.visibility, curriculumMappings, lessonId: lesson._id, number: (last?.number ?? 0) + 1, metadata: lesson.metadata, document: lesson.draft, authorId: actor, publishedAt: Date.now() });
   const searchText = [lesson.metadata.title, lesson.metadata.description, ...lesson.metadata.tags, ...lesson.draft.blocks.map(b => "text" in b ? b.text : "")].join("\n");
   await ctx.db.patch("lessons", lesson._id, { publishedVersionId: versionId, visibility: args.visibility, searchText, revision: lesson.revision + 1, updatedAt: Date.now() });
   await enqueueLearnWebhookEvent(ctx, { event: "lesson.published", lessonId: lesson._id, versionId, operationId: `version:${versionId}`, revision: lesson.revision + 1 });
+  await recordPublicationAction(ctx, { lessonId: lesson._id, actorId: actor, action: "publish", revision: lesson.revision + 1, versionId, beforeVisibility: lesson.visibility, afterVisibility: args.visibility, reason: args.note?.trim() || "Explicitly published an immutable lesson version." });
   return { ok: true as const, versionId, revision: lesson.revision + 1 };
 }
 
@@ -167,6 +172,7 @@ export async function restoreLessonVersionForActor(ctx: MutationCtx, actor: stri
   if (!version || version.lessonId !== lesson._id) throw new Error("Version does not belong to this lesson");
   await recovery(ctx, lesson);
   await ctx.db.patch("lessons", lesson._id, { draft: version.document, metadata: version.metadata, revision: lesson.revision + 1, updatedAt: Date.now() });
+  await recordPublicationAction(ctx, { lessonId: lesson._id, actorId: actor, action: "restore_draft", revision: lesson.revision + 1, versionId: version._id, beforeVisibility: lesson.visibility, afterVisibility: lesson.visibility, reason: "Restored a historical version into the draft; publication is unchanged." });
   return lesson.revision + 1;
 }
 
@@ -182,6 +188,7 @@ export async function setLessonLifecycleForActor(ctx: MutationCtx, actor: string
   const lesson = await lessonAccessForActor(ctx, actor, args.lessonId, true);
   if (lesson.ownerId !== actor) throw new Error("Only owner can change lifecycle"); revisionCheck(lesson, args.expectedRevision);
   await ctx.db.patch("lessons", lesson._id, { status: args.action === "archive" ? "archived" : "active", ...(args.action === "unpublish" ? { publishedVersionId: undefined, visibility: "private" as const } : {}), revision: lesson.revision + 1, updatedAt: Date.now() });
+  await recordPublicationAction(ctx, { lessonId: lesson._id, actorId: actor, action: args.action, revision: lesson.revision + 1, ...(lesson.publishedVersionId ? { versionId: lesson.publishedVersionId } : {}), beforeVisibility: lesson.visibility, afterVisibility: args.action === "unpublish" ? "private" : lesson.visibility, reason: `Owner requested ${args.action}. Version history remains intact.` });
   return lesson.revision + 1;
 }
 
@@ -197,6 +204,7 @@ export async function forkLessonForActor(ctx: MutationCtx, actor: string, args: 
   await consumeRate(ctx, `learn:create:${actor}`, LEARN_WRITE_LIMITS.creationsPerHour, 3_600_000);
   const lessonId = await ctx.db.insert("lessons", { ownerId: actor, metadata: version.metadata, draft: version.document, revision: 0, status: "active", visibility: "private", communityState: "ok", parentLessonId: parent._id, parentVersionId: version._id, originLessonId: parent.originLessonId ?? parent._id, createdAt: Date.now(), updatedAt: Date.now(), searchText: "" });
   await enqueueLearnWebhookEvent(ctx, { event: "lesson.forked", lessonId, operationId: "fork:0", revision: 0 });
+  await recordPublicationAction(ctx, { lessonId, actorId: actor, action: "fork", revision: 0, versionId: version._id, parentLessonId: parent._id, afterVisibility: "private", reason: "Created a private copy from an immutable parent version, retaining lineage." });
   return lessonId;
 }
 

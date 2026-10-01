@@ -6,7 +6,7 @@ import { sha256Hex } from "./serverUtils";
 const response = (status: number, body: unknown) => Response.json(body, { status, headers: { "Cache-Control": "no-store", "Chaos-Api-Version": "2" } });
 export const handler = httpAction(async (ctx, request) => observeHttp(ctx, "integration-api", async () => {
   const url = new URL(request.url), op = url.pathname.slice("/api/integrations/v2/community/".length);
-  const read = request.method === "GET" && op === "search";
+  const read = request.method === "GET" && ["search", "directory"].includes(op);
   if (!read && !(request.method === "POST" && ["save", "fork"].includes(op))) return response(404, { error: { code: "NOT_FOUND" } });
   const bearer = /^Bearer (chaos_[a-f0-9]{64})$/.exec(request.headers.get("Authorization") ?? "");
   if (!bearer) return response(401, { error: { code: "UNAUTHORIZED" } });
@@ -14,6 +14,13 @@ export const handler = httpAction(async (ctx, request) => observeHttp(ctx, "inte
   if (!auth.ok) return response(auth.status, { error: { code: auth.code } });
   try {
     if (read) {
+      if (op === "directory") {
+        const allowed = ["kind", "text", "creatorMatch", "institutionId", "versionId", "limit", "cursor"];
+        if ([...url.searchParams.keys()].some(k => !allowed.includes(k) || url.searchParams.getAll(k).length > 1)) throw new Error("VALIDATION_FAILED");
+        const optional = Object.fromEntries(["creatorMatch", "institutionId", "versionId"].filter(k => url.searchParams.has(k)).map(k => [k, url.searchParams.get(k)]));
+        const result = await ctx.runQuery(makeFunctionReference<"query">("learnCommunityIntegrations:directoryForToken"), { tokenId: auth.tokenId, kind: url.searchParams.get("kind"), text: url.searchParams.get("text") ?? "", ...optional, paginationOpts: { numItems: Number(url.searchParams.get("limit") ?? 20), cursor: url.searchParams.get("cursor") } });
+        return response(200, result);
+      }
       if ([...url.searchParams.keys()].some(k => !["text", "limit", "cursor"].includes(k)) || [...url.searchParams.keys()].some(k => url.searchParams.getAll(k).length > 1)) throw new Error("VALIDATION_FAILED");
       const result = await ctx.runQuery(makeFunctionReference<"query">("learnCommunityIntegrations:searchPublic"), { tokenId: auth.tokenId, text: url.searchParams.get("text") ?? "", paginationOpts: { numItems: Number(url.searchParams.get("limit") ?? 20), cursor: url.searchParams.get("cursor") } });
       return response(200, result);

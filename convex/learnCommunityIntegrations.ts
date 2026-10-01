@@ -1,4 +1,5 @@
 import { searchHit } from "./learnSearch";
+import { directoryHit } from "./learnDiscovery";
 import { v } from "convex/values";
 import { paginationOptsValidator, paginationResultValidator, makeFunctionReference } from "convex/server";
 import { internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -25,6 +26,28 @@ async function authorize(ctx: QueryCtx | MutationCtx, tokenId: Id<"integrationTo
   if (!token.scopes.some(value => value === scope)) throw new Error(`INSUFFICIENT_SCOPE: ${scope} required`);
   return token;
 }
+
+const directoryArgs = {
+  kind: v.union(v.literal("institution"), v.literal("program"), v.literal("module"), v.literal("creator"), v.literal("tag")),
+  creatorMatch: v.optional(v.union(v.literal("username"), v.literal("name"))),
+  text: v.string(), institutionId: v.optional(v.id("curriculumInstitutions")), versionId: v.optional(v.id("curriculumVersions")), paginationOpts: paginationOptsValidator,
+};
+export const directory = internalQuery({
+  args: { userId: v.string(), ...directoryArgs }, returns: paginationResultValidator(directoryHit),
+  handler: async (ctx, args) => {
+    await requireLearnActor(ctx, args.userId);
+    const { userId: _actor, ...input } = args;
+    return ctx.runQuery(makeFunctionReference<"query">("learnDiscovery:search"), input);
+  },
+});
+export const directoryForToken = internalQuery({
+  args: { tokenId: v.id("integrationTokens"), ...directoryArgs }, returns: paginationResultValidator(directoryHit),
+  handler: async (ctx, args) => {
+    await authorize(ctx, args.tokenId, "community:read");
+    const { tokenId: _token, ...input } = args;
+    return ctx.runQuery(makeFunctionReference<"query">("learnDiscovery:search"), input);
+  },
+});
 
 /** OAuth transport must supply userId from its authenticated envelope. */
 export const saveLesson = internalMutation({

@@ -1,4 +1,5 @@
 import { quizForkTables } from "./quizForkModel";
+import { publicationAuditTables } from "./learnPublicationAuditModel";
 import { personalTables } from "./learnPersonalModel";
 import { observabilityTables } from "./observabilityModel";
 import { liveTeamTables } from "./liveTeamModel";
@@ -21,6 +22,7 @@ import { liveTables } from "./liveModel";
 
 export default defineSchema({
   ...learnTables,
+  ...publicationAuditTables,
   ...personalTables,
   ...quizForkTables,
   ...observabilityTables,
@@ -73,7 +75,7 @@ export default defineSchema({
     .index("by_username", ["username"])
     .index("by_email", ["email"])
     .index("by_planExpiresAt", ["planExpiresAt"])
-    .index("by_suspendedUntil", ["suspendedUntil"]),
+    .index("by_suspendedUntil", ["suspendedUntil"]).searchIndex("search_name", { searchField: "name", filterFields: [] }),
 
   // ============ TEACHER SETTINGS (Auto Settings) ============
   teacherSettings: defineTable({

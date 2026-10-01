@@ -20,7 +20,7 @@ import HandoffDialog, { type HandoffContext } from "@/components/learn/reader/Ha
 import { UnavailableLesson } from "@/components/learn/reader/LessonReader";
 import { ExternalRefLine, LessonStatus, ModerationNotice, ProvenanceLine } from "@/components/learn/ui";
 import { AiUnavailableError, learnAi } from "@/lib/learn/ai";
-import { hasUnpublishedChanges, useFolders, useLearnActions, useLearnCapabilities, useLearnViewer, useLesson, nextToastId } from "@/lib/learn/data";
+import { hasUnpublishedChanges, useFolders, useLearnActions, useLearnCapabilities, useLearnViewer, useLesson, useCanEditLesson, useLessonRecovery, nextToastId } from "@/lib/learn/data";
 import { asBlocks, blockText, walk } from "@/lib/learn/doc";
 import { newId } from "@/lib/learn/data";
 import { lessonPath } from "@/lib/learn/seo";
@@ -66,10 +66,20 @@ type Tab = "details" | "sources" | "practice";
 const assistToHandoff: Record<string, HandoffAction> = { explain: "explain", simplify: "simplify", expand: "ask", rewrite: "ask", organize: "ask", example: "example", quiz: "quiz" };
 
 export default function LessonEditorPage() {
-  const t = useCopy(copy);
   const { id } = useParams<{ id: string }>();
+  const viewer = useLearnViewer();
+  return <LessonEditorSession key={`${id}:${viewer?.id ?? "loading"}`} id={id} />;
+}
+
+function LessonEditorSession({ id }: { id: string }) {
+  const t = useCopy(copy);
   const router = useRouter();
   const lesson = useLesson(id);
+  const canEdit = useCanEditLesson(id);
+  const recovery = useLessonRecovery(id);
+  const [retained, setRetained] = useState<string | null>(null);
+  const [conflict, setConflict] = useState(false);
+  const [recoveredContent, setRecoveredContent] = useState<unknown[] | null>(null);
   const viewer = useLearnViewer();
   const caps = useLearnCapabilities();
   const actions = useLearnActions();
@@ -87,39 +97,77 @@ export default function LessonEditorPage() {
   const [handoff, setHandoff] = useState<HandoffContext | null>(null);
   const [title, setTitle] = useState<string>();
   const [description, setDescription] = useState<string>();
-  const pending = useRef<{ content?: unknown[]; timer?: ReturnType<typeof setTimeout> }>({});
+  const pending = useRef<{ content?: unknown[]; meta?: Partial<LessonMeta>; timer?: ReturnType<typeof setTimeout> }>({});
+  const actionRef = useRef(actions);
+  useEffect(() => { actionRef.current = actions; }, [actions]);
+  const flushTail = useRef<Promise<void>>(Promise.resolve());
   const say = (text: string, undo?: () => void) => setToast({ id: nextToastId(), text, undo });
 
   useEffect(() => {
     if (lesson && title === undefined) { setTitle(lesson.draft.meta.title); setDescription(lesson.draft.meta.description); }
   }, [lesson, title]);
+  useEffect(() => {
+    if (!viewer?.signedIn) return;
+    try { setRetained(localStorage.getItem("chaos-learn-unsaved:" + viewer.id + ":" + id)); } catch { /* Browser recovery can be unavailable. */ }
+  }, [viewer?.id, viewer?.signedIn, id]);
   // Flush a pending save when leaving the page.
   useEffect(() => () => {
     const p = pending.current;
-    if (p.timer) { clearTimeout(p.timer); if (p.content) try { actions.saveDraftContent(id, p.content); } catch { /* lesson gone */ } }
-  }, [id, actions]);
+    if (p.timer) clearTimeout(p.timer);
+    // Retained browser content is the fallback if navigation interrupts these writes.
+    const content = p.content, meta = p.meta;
+    const leavingActions = actionRef.current;
+    void flushTail.current.catch(() => undefined).then(async () => {
+      if (content) await leavingActions.saveDraftContent(id, content);
+      if (meta) await leavingActions.saveDraftMeta(id, meta);
+    }).catch(() => undefined);
+  }, [id]);
 
-  if (lesson === undefined || viewer === undefined) return <PageSkeleton label={t.loading} />;
+  if (lesson === undefined || viewer === undefined || canEdit === undefined) return <PageSkeleton label={t.loading} />;
   if (lesson === null) return <UnavailableLesson backHref="/dashboard/learn/library" />;
-  if (lesson.ownerId !== viewer.id) {
+  if (!canEdit) {
     return <div className="lx-page lx-page--narrow"><p className="lx-notice">{t.notOwner}</p><Link className="ws-btn" href={lessonPath(lesson.id)}>{t.preview}</Link></div>;
   }
 
-  const run = (fn: () => void) => { setError(""); try { fn(); } catch (err) { setError(errorMessage(err)); } };
-  const saveMeta = (patch: Partial<LessonMeta>) => run(() => actions.saveDraftMeta(lesson.id, patch));
-  const onContent = (content: unknown[]) => {
-    setSaving(true);
-    const p = pending.current;
-    p.content = content;
-    if (p.timer) clearTimeout(p.timer);
-    p.timer = setTimeout(() => {
-      p.timer = undefined;
-      run(() => actions.saveDraftContent(lesson.id, p.content!));
-      p.content = undefined;
-      setSaving(false);
-    }, 600);
+  const isOwner = lesson.ownerId === viewer.id;
+  const recoveryKey = "chaos-learn-unsaved:" + viewer.id + ":" + id;
+  const run = async (fn: () => unknown | Promise<unknown>) => {
+    setError("");
+    try { await fn(); } catch (err) {
+      const data = err && typeof err === "object" && "data" in err ? err.data as { code?: string; currentRevision?: number } : undefined;
+      const stale = data?.code === "REVISION_CONFLICT";
+      setConflict(stale);
+      setError(stale ? "Another device saved a newer revision (" + data?.currentRevision + "). This editor has stopped writes. Compare your retained draft with server recovery before reloading." : errorMessage(err));
+      try { setRetained(localStorage.getItem(recoveryKey) ?? JSON.stringify({ content: pending.current.content, meta: pending.current.meta })); } catch { setRetained(JSON.stringify(pending.current)); }
+    }
   };
-  const flush = () => { const p = pending.current; if (p.timer && p.content) { clearTimeout(p.timer); p.timer = undefined; actions.saveDraftContent(lesson.id, p.content); p.content = undefined; setSaving(false); } };
+  const retain = () => { if (!pending.current.content && !pending.current.meta) return; try { localStorage.setItem(recoveryKey, JSON.stringify({ content: pending.current.content, meta: pending.current.meta, savedAt: Date.now() })); } catch { /* Keep the pending in-memory copy when browser storage is unavailable. */ } };
+  const flush = () => {
+    const next = flushTail.current.catch(() => undefined).then(async () => {
+    const p = pending.current;
+    if (p.timer) { clearTimeout(p.timer); p.timer = undefined; }
+    const content = p.content, meta = p.meta;
+    if (!content && !meta) return;
+    setSaving(true); retain();
+    try {
+      if (content) await actions.saveDraftContent(lesson.id, content);
+      if (meta) await actions.saveDraftMeta(lesson.id, meta);
+      if (p.content === content) p.content = undefined;
+      if (p.meta === meta) p.meta = undefined;
+      if (!p.content && !p.meta) { try { localStorage.removeItem(recoveryKey); } catch { /* Successful server writes do not depend on browser storage. */ } setRetained(null); }
+    } finally { setSaving(false); }
+    });
+    flushTail.current = next;
+    return next;
+  };
+  const schedule = () => {
+    const p = pending.current;
+    if (p.timer) clearTimeout(p.timer);
+    setSaving(true); retain();
+    if (!conflict) p.timer = setTimeout(() => { p.timer = undefined; void run(flush); }, 600);
+  };
+  const saveMeta = (patch: Partial<LessonMeta>) => { pending.current.meta = { ...pending.current.meta, ...patch }; schedule(); };
+  const onContent = (content: unknown[]) => { pending.current.content = structuredClone(content); schedule(); };
   const changes = hasUnpublishedChanges(lesson);
 
   const runAssist = async (request: AssistRequest, editor: LessonEditorType) => {
@@ -141,8 +189,8 @@ export default function LessonEditorPage() {
     for (const { block } of walk(asBlocks(lesson.draft.content))) { if (block.type === "heading") heading = blockText(block); if (block.id === blockId) break; }
     return heading;
   };
-  const makeFlashcards = () => run(() => {
-    flush();
+  const makeFlashcards = () => run(async () => {
+    await flush();
     // Plain, predictable: each heading becomes a card whose back is the text under it.
     const cards: { id: string; front: string; back: string; blockId?: string }[] = [];
     let current: { id: string; front: string; back: string; blockId?: string } | null = null;
@@ -160,11 +208,11 @@ export default function LessonEditorPage() {
       <div className="lx-edit__bar">
         <Link href={lesson.folderId ? `/dashboard/learn/library?folder=${lesson.folderId}` : "/dashboard/learn/library"} className="ws-icon-button" aria-label={t.back}><ArrowLeft size={18} className="lx-flip" /></Link>
         <LessonStatus lesson={lesson} />
-        <span className="lx-save" role="status">{saving ? t.saving : <><Check size={13} aria-hidden />{caps.sharedPublishing ? t.savedCloud : t.saved}</>}</span>
+        <span className="lx-save" role="status">{saving ? t.saving : error || pending.current.content || pending.current.meta ? "Unsaved changes" : <><Check size={13} aria-hidden />{caps.sharedPublishing ? t.savedCloud : t.saved}</>}</span>
         <span style={{ flex: 1 }} />
-        <Link href={`${lessonPath(lesson.id)}?preview=draft`} className="ws-btn ws-btn--sm ws-btn--ghost" onClick={flush}><Eye size={15} aria-hidden /><span className="ws-phone-hide">{t.preview}</span></Link>
-        <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" onClick={() => { flush(); setDialog("history"); }}><History size={15} aria-hidden /><span className="ws-phone-hide">{t.history}</span></button>
-        <button type="button" className="ws-btn ws-btn--sm ws-btn--primary" disabled={!!lesson.published && !changes} onClick={() => { flush(); setDialog("publish"); }}>
+        <Link href={`${lessonPath(lesson.id)}?preview=draft`} className="ws-btn ws-btn--sm ws-btn--ghost" onClick={(e) => { e.preventDefault(); void run(async () => { await flush(); router.push(`${lessonPath(lesson.id)}?preview=draft`); }); }}><Eye size={15} aria-hidden /><span className="lx-phone-label">{t.preview}</span></Link>
+        <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" onClick={() => void run(async () => { await flush(); setDialog("history"); })}><History size={15} aria-hidden /><span className="lx-phone-label">{t.history}</span></button>
+        <button type="button" className="ws-btn ws-btn--sm ws-btn--primary" disabled={!isOwner || (!!lesson.published && !changes)} onClick={() => void run(async () => { await flush(); setDialog("publish"); })}>
           <Rocket size={15} aria-hidden />{!lesson.published ? t.publish : changes ? t.publishChanges : t.published}
         </button>
         <button type="button" className="ws-icon-button" aria-pressed={panelOpen} aria-label={t.panelToggle} onClick={() => setPanelOpen((o) => !o)}><PanelRight size={17} className="lx-flip" /></button>
@@ -173,15 +221,31 @@ export default function LessonEditorPage() {
             <>
               {lesson.published && changes && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); setDialog("discard"); }}><Undo2 size={15} />{t.discard}</button>}
               {lesson.published && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); setDialog("unpublish"); }}><RotateCcw size={15} />{t.unpublish}</button>}
-              <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(() => { flush(); const copyId = actions.duplicateLesson(lesson.id); say(t.duplicated); router.push(`/dashboard/learn/lessons/${copyId}`); }); }}><Copy size={15} />{t.duplicate}</button>
+              <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(async () => { await flush(); const copyId = await actions.duplicateLesson(lesson.id); say(t.duplicated); router.push(`/dashboard/learn/lessons/${copyId}`); }); }}><Copy size={15} />{t.duplicate}</button>
               <button role="menuitem" className="ws-menu__row" onClick={() => { close(); makeFlashcards(); }}><Layers size={15} />{t.makeCards}</button>
-              <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(() => { actions.archiveLesson(lesson.id); say(t.archivedToast, () => actions.archiveLesson(lesson.id, false)); router.push("/dashboard/learn/library"); }); }}><Archive size={15} />{t.archive}</button>
+              <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(async () => { await flush(); await actions.archiveLesson(lesson.id); say(t.archivedToast, () => { void run(() => actions.archiveLesson(lesson.id, false)); }); router.push("/dashboard/learn/library"); }); }}><Archive size={15} />{t.archive}</button>
               <button role="menuitem" className="ws-menu__row ws-menu__danger" onClick={() => { close(); setDialog("delete"); }}><Trash2 size={15} />{t.delete}</button>
             </>
           )}
         </WsMenu>
       </div>
       {error && <p className="lx-error" role="alert" style={{ marginTop: 10 }}>{error}</p>}
+      {error && <button type="button" className="ws-btn ws-btn--sm" onClick={() => void run(async () => {
+        if (pending.current.timer) clearTimeout(pending.current.timer);
+        await flushTail.current.catch(() => undefined);
+        retain();
+        const latest = await actions.reloadDraft(lesson.id);
+        pending.current = {};
+        setRecoveredContent(latest.draft.content);
+        setTitle(latest.draft.meta.title);
+        setDescription(latest.draft.meta.description);
+        setConflict(false);
+        setSaving(false);
+        try { setRetained(localStorage.getItem(recoveryKey)); } catch { /* In-memory recovery remains available. */ }
+        setEditorKey(k => k + 1);
+      })}>Reload server draft; keep retained copy</button>}
+      {retained && <details className="lx-notice"><summary>Retained unsaved draft</summary><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => { try { const saved = JSON.parse(retained); if (Array.isArray(saved.content)) { setRecoveredContent(saved.content); pending.current.content = saved.content; setEditorKey(k => k + 1); } if (saved.meta) { pending.current.meta = saved.meta; if (saved.meta.title !== undefined) setTitle(saved.meta.title); if (saved.meta.description !== undefined) setDescription(saved.meta.description); } } catch (err) { setError(errorMessage(err)); } }}>Open retained draft for review</button><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => void run(flush)}>Save reviewed draft</button><pre style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap" }}>{retained}</pre></details>}
+      {recovery && recovery.length > 0 && <details className="lx-notice"><summary>Server recovery revisions</summary>{recovery?.map(row => <details key={row._id}><summary>Revision {row.revision} ? {row.metadata.title}</summary><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => void run(async () => { await flush(); const restored = await actions.recoverDraft(lesson.id, row._id); setRecoveredContent(restored.draft.content); setTitle(restored.draft.meta.title); setDescription(restored.draft.meta.description); setEditorKey(k => k + 1); })}>Restore this revision to draft</button><pre style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap" }}>{JSON.stringify({ metadata: row.metadata, document: row.document }, null, 2)}</pre></details>)}</details>}
 
       <div className="lx-edit__body" data-panel={panelOpen ? "open" : "closed"}>
         <div className="lx-edit__doc" dir={lesson.draft.meta.language === "ar" ? "rtl" : "ltr"} lang={lesson.draft.meta.language}>
@@ -198,7 +262,7 @@ export default function LessonEditorPage() {
           <textarea className="lx-desc-input" rows={1} value={description ?? ""} placeholder={t.descPh} aria-label={t.descPh} maxLength={400}
             onChange={(e) => { setDescription(e.target.value); saveMeta({ description: e.target.value }); }}
             onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }} />
-          <LessonEditor key={`${lesson.id}-${editorKey}`} initialContent={asBlocks(lesson.draft.content)} language={lesson.draft.meta.language} sources={lesson.sources}
+          <LessonEditor key={`${lesson.id}-${editorKey}`} initialContent={asBlocks(recoveredContent ?? lesson.draft.content)} language={lesson.draft.meta.language} sources={lesson.sources}
             onChange={onContent}
             onManageSources={() => { setPanelOpen(true); setTab("sources"); }}
             onEditImage={(blockId, editor) => {
@@ -231,17 +295,19 @@ export default function LessonEditorPage() {
         )}
       </div>
 
-      {dialog === "publish" && <PublishDialog lesson={lesson} onClose={() => setDialog(null)} onPublish={({ visibility, indexing, note }) => run(() => {
-        actions.saveDraftMeta(lesson.id, { indexing });
+      {dialog === "publish" && <PublishDialog lesson={lesson} onClose={() => setDialog(null)} onPublish={({ visibility, indexing, note }) => run(async () => {
+        await flush();
         actions.setVisibility(lesson.id, visibility);
-        const v = actions.publish(lesson.id, note);
+        await actions.saveDraftMeta(lesson.id, { indexing });
+        actions.setVisibility(lesson.id, visibility);
+        const v = await actions.publish(lesson.id, note);
         setDialog(null);
         say(t.publishedToast(v));
       })} />}
-      {dialog === "history" && <VersionHistory lesson={lesson} onClose={() => setDialog(null)} onRestore={(v) => run(() => { actions.restoreVersion(lesson.id, v); setTitle(undefined); setEditorKey((k) => k + 1); say(t.restoredToast(v)); })} />}
-      {dialog === "discard" && <WsConfirm title={t.discardTitle} body={t.discardBody} confirmLabel={t.discard} onClose={() => setDialog(null)} onConfirm={() => run(() => { actions.discardDraft(lesson.id); setTitle(undefined); setEditorKey((k) => k + 1); })} />}
+      {dialog === "history" && <VersionHistory lesson={lesson} onClose={() => setDialog(null)} onRestore={(v) => run(async () => { await flush(); await actions.restoreVersion(lesson.id, v); const restored = await actions.reloadDraft(lesson.id); setRecoveredContent(restored.draft.content); setTitle(restored.draft.meta.title); setDescription(restored.draft.meta.description); setDialog(null); setEditorKey((k) => k + 1); say(t.restoredToast(v)); })} />}
+      {dialog === "discard" && <WsConfirm title={t.discardTitle} body={t.discardBody} confirmLabel={t.discard} onClose={() => setDialog(null)} onConfirm={() => run(async () => { await flush(); await actions.discardDraft(lesson.id); const restored = await actions.reloadDraft(lesson.id); setRecoveredContent(restored.draft.content); setTitle(restored.draft.meta.title); setDescription(restored.draft.meta.description); setEditorKey((k) => k + 1); })} />}
       {dialog === "unpublish" && <WsConfirm title={t.unpublishTitle} body={t.unpublishBody} confirmLabel={t.unpublish} onClose={() => setDialog(null)} onConfirm={() => run(() => actions.unpublish(lesson.id))} />}
-      {dialog === "delete" && <WsConfirm title={t.deleteTitle} body={t.deleteBody} confirmLabel={t.delete} onClose={() => setDialog(null)} onConfirm={() => run(() => { actions.deleteLesson(lesson.id); router.push("/dashboard/learn/library"); })} />}
+      {dialog === "delete" && <WsConfirm title={t.deleteTitle} body={t.deleteBody} confirmLabel={t.delete} onClose={() => setDialog(null)} onConfirm={() => run(async () => { await actions.deleteLesson(lesson.id); router.push("/dashboard/learn/library"); })} />}
       {image && <ImageDetailsDialog initial={image.initial} onClose={() => setImage(null)} onSave={(value) => { image.editor.updateBlock(image.blockId, { props: value }); setImage(null); }} />}
       {cite && <CitationDialog sources={lesson.sources} initial={cite.initial} onClose={() => { cite.done?.(null); setCite(null); }} onManageSources={() => { setPanelOpen(true); setTab("sources"); }} onDone={(value) => { cite.done?.(value); setCite(null); }} />}
       {assist && (

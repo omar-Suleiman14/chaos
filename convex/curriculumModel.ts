@@ -12,12 +12,12 @@ export const curriculumTables = {
   curriculumInstitutions: defineTable({
     key: v.string(),
     name: v.string(),
-  }).index("by_key", ["key"]),
+  }).index("by_key", ["key"]).searchIndex("search_name", { searchField: "name", filterFields: [] }),
   curriculumPrograms: defineTable({
     institutionId: v.id("curriculumInstitutions"),
     key: v.string(),
     name: v.string(),
-  }).index("by_institutionId_and_key", ["institutionId", "key"]),
+  }).index("by_institutionId_and_key", ["institutionId", "key"]).searchIndex("search_name", { searchField: "name", filterFields: ["institutionId"] }),
   curriculumVersions: defineTable({
     programId: v.id("curriculumPrograms"),
     key: v.string(),
@@ -32,7 +32,7 @@ export const curriculumTables = {
     conceptKeys: v.array(v.string()),
   })
     .index("by_versionId_and_key", ["versionId", "key"])
-    .index("by_versionId_and_parentId", ["versionId", "parentId"]),
+    .index("by_versionId_and_parentId", ["versionId", "parentId"]).searchIndex("search_name", { searchField: "name", filterFields: ["versionId", "kind"] }),
   curriculumAliases: defineTable({
     scope: v.string(),
     alias: v.string(),

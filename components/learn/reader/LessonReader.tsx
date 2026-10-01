@@ -156,13 +156,13 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
       setScrolled(pct);
       if (Date.now() - lastSaved.current > 4000 && pct > 3) {
         lastSaved.current = Date.now();
-        actions.setProgress(lesson.id, { percent: pct, lastBlockId: active });
+        if (signedIn) void actions.setProgress(lesson.id, { percent: pct, lastBlockId: active }).catch(err => say(errorMessage(err)));
       }
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [lesson.id, active, previewDraft, actions]);
+  }, [lesson.id, active, previewDraft, actions, signedIn]);
 
   const resumeHeading = progress?.state === "in_progress" && progress.lastBlockId ? items.find((i) => i.id === progress.lastBlockId) : undefined;
   const lessonSaved = saved.find((s) => s.kind === "lesson" && s.lessonId === lesson.id);
@@ -192,7 +192,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
     setHandoff({ lessonTitle: meta.title || t.untitled, selection: text, section: sectionOf(blockId), context: contextOf(blockId), sources: citationsIn(blockId), publicUrl, target, action, imageAlt });
   };
 
-  const guard = (fn: () => void) => { if (!signedIn) { say(t.signIn); return; } try { fn(); } catch (err) { say(errorMessage(err)); } };
+  const guard = async (fn: () => unknown | Promise<unknown>) => { if (!signedIn) { say(t.signIn); return; } try { await fn(); } catch (err) { say(errorMessage(err)); } };
 
   const onSelectionAction = (action: SelectionAction) => {
     if (!selection) return;
@@ -316,20 +316,20 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
         <Link href={backHref} className="ws-icon-button" aria-label={t.back}><ArrowLeft size={18} className="lx-flip" /></Link>
         <span className="lx-reader-top__title" aria-hidden={scrolled <= 4}>{meta.title || t.untitled}</span>
         <div className="lx-actions" style={{ gap: 2 }}>
-          {isOwner && <Link href={`/dashboard/learn/lessons/${lesson.id}`} className="ws-btn ws-btn--sm ws-btn--ghost"><PenLine size={15} aria-hidden /><span className="ws-phone-hide">{t.edit}</span></Link>}
+          {isOwner && <Link href={`/dashboard/learn/lessons/${lesson.id}`} className="ws-btn ws-btn--sm ws-btn--ghost"><PenLine size={15} aria-hidden /><span className="lx-phone-label">{t.edit}</span></Link>}
           {!isOwner && (
             <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={!!lessonSaved}
               onClick={() => guard(() => { if (lessonSaved) actions.removeSave(lessonSaved.id); else { actions.saveLesson(lesson); say(t.savedToast); } })}>
-              {lessonSaved ? <BookmarkCheck size={15} aria-hidden /> : <Bookmark size={15} aria-hidden />}<span className="ws-phone-hide">{lessonSaved ? t.saved : t.save}</span>
+              {lessonSaved ? <BookmarkCheck size={15} aria-hidden /> : <Bookmark size={15} aria-hidden />}<span className="lx-phone-label">{lessonSaved ? t.saved : t.save}</span>
             </button>
           )}
-          <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={panel === "tutor"} onClick={() => setPanel(panel === "tutor" ? null : "tutor")}><GraduationCap size={15} aria-hidden /><span className="ws-phone-hide">{t.tutor}</span></button>
-          {caps.discussions && <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={panel === "discussion"} onClick={() => setPanel(panel === "discussion" ? null : "discussion")}><MessageSquare size={15} aria-hidden /><span className="ws-phone-hide">{t.discussion}{threads.filter((th) => !th.resolved).length ? ` (${threads.filter((th) => !th.resolved).length})` : ""}</span></button>}
+          <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={panel === "tutor"} onClick={() => setPanel(panel === "tutor" ? null : "tutor")}><GraduationCap size={15} aria-hidden /><span className="lx-phone-label">{t.tutor}</span></button>
+          {caps.discussions && <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={panel === "discussion"} onClick={() => setPanel(panel === "discussion" ? null : "discussion")}><MessageSquare size={15} aria-hidden /><span className="lx-phone-label">{t.discussion}{threads.filter((th) => !th.resolved).length ? ` (${threads.filter((th) => !th.resolved).length})` : ""}</span></button>}
           {readingMenu}
           <WsMenu label={t.more}>
             {(close) => (
               <>
-                {!isOwner && lesson.published && <button role="menuitem" className="ws-menu__row" title={t.forkHelp} onClick={() => { close(); guard(() => { const id = actions.forkLesson(lesson.id); say(t.forked); router.push(`/dashboard/learn/lessons/${id}`); }); }}><GitFork size={15} />{t.fork}</button>}
+                {!isOwner && lesson.published && <button role="menuitem" className="ws-menu__row" title={t.forkHelp} onClick={() => { close(); guard(async () => { const id = await actions.forkLesson(lesson.id); say(t.forked); router.push(`/dashboard/learn/lessons/${id}`); }); }}><GitFork size={15} />{t.fork}</button>}
                 <button role="menuitem" className="ws-menu__row" onClick={() => { close(); void copyLink(); }}><Share2 size={15} />{t.copyLink}</button>
                 <button role="menuitem" className="ws-menu__row" onClick={() => { close(); setHandoff({ lessonTitle: meta.title, selection: "", publicUrl, target: "chatgpt", action: "ask" }); }}><ExternalLink size={15} />{t.askChatgpt}</button>
                 <button role="menuitem" className="ws-menu__row" onClick={() => { close(); setHandoff({ lessonTitle: meta.title, selection: "", publicUrl, target: "claude", action: "ask" }); }}><ExternalLink size={15} />{t.askClaude}</button>
@@ -402,9 +402,9 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                     <footer className="lx-section" style={{ marginTop: 40, paddingTop: 20, borderTop: "1px solid var(--ws-line)" }}>
                       <div className="lx-actions" style={{ justifyContent: "space-between" }}>
                         {progress?.state === "completed" ? (
-                          <span className="lx-actions"><span className="lx-badge" data-tone="green"><CheckCircle2 size={13} aria-hidden />{t.completed}</span><button type="button" className="lx-link" onClick={() => actions.setProgress(lesson.id, { state: "not_started" })}>{t.reset}</button></span>
+                          <span className="lx-actions"><span className="lx-badge" data-tone="green"><CheckCircle2 size={13} aria-hidden />{t.completed}</span><button type="button" className="lx-link" onClick={() => guard(() => actions.setProgress(lesson.id, { state: "not_started" }))}>{t.reset}</button></span>
                         ) : (
-                          <button type="button" className="ws-btn" onClick={() => actions.setProgress(lesson.id, { state: "completed", percent: 100 })}><CheckCircle2 size={16} aria-hidden />{t.complete}</button>
+                          <button type="button" className="ws-btn" onClick={() => guard(() => actions.setProgress(lesson.id, { state: "completed", percent: 100 }))}><CheckCircle2 size={16} aria-hidden />{t.complete}</button>
                         )}
                         {!isOwner && (
                           <span className="lx-actions" role="group" aria-label={t.helpful}>

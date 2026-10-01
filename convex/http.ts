@@ -294,6 +294,7 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "upsert_form_file_question": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdvancedForms:upsertFileQuestion"), { ...input, userId }); break;
       case "get_form_response_controls": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdvancedForms:getResponseControls"), { ...input, userId }); break;
       case "set_form_response_controls": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdvancedForms:setResponseControls"), { ...input, userId }); break;
+      case "search_learn_directory": result = await ctx.runQuery(makeFunctionReference<"query">("learnCommunityIntegrations:directory"), { ...input, userId }); break;
       case "save_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("learnCommunityIntegrations:saveLesson"), { ...input, userId }); break;
       case "fork_quiz": result = await ctx.runMutation(makeFunctionReference<"mutation">("quizForks:mcpFork"), { ...input, userId }); break;
       case "get_quiz_fork_lineage": result = await ctx.runQuery(makeFunctionReference<"query">("quizForks:mcpLineage"), { ...input, userId }); break;
@@ -383,6 +384,7 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
     }
     return respond({ status: 200, body: { result } });
   } catch (caught) {
+    if (b.tool === "search_learn_directory" && caught instanceof Error && /ArgumentValidationError|Validator error|Page size|Search text|Filter does not apply|creatorMatch applies|Discovery does not support/.test(caught.message)) return error(400, "VALIDATION_FAILED", "Invalid directory search arguments.");
     if (caught instanceof ConvexError && caught.data && typeof caught.data === "object" && !Array.isArray(caught.data)) {
       const data = caught.data as Record<string, unknown>;
       if (data.code === "SETTINGS_CONFLICT" || data.code === "MEMBERSHIP_CONFLICT" || data.code === "DRAFT_CONFLICT") {
@@ -413,7 +415,7 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
 const UPLOAD_CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
   "Access-Control-Max-Age": "86400",
 };
 

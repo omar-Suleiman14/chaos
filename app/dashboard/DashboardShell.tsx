@@ -153,8 +153,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const pinnedFolderIds = usePinnedFolders();
   const recentLessons = useRecentLessons(8);
   // New → Lesson opens a blank document at once; nothing about creating one needs AI.
-  const createLesson = useCallback(() => {
-    try { router.push(`/dashboard/learn/lessons/${learn.createLesson({ language: locale })}`); }
+  const createLesson = useCallback(async () => {
+    try { const id = await learn.createLesson({ language: locale }); router.push(`/dashboard/learn/lessons/${id}`); }
     catch (err) { setActionError(errorMessage(err)); }
   }, [learn, locale, router]);
   const createNew = learnMode ? createLesson : () => void create();

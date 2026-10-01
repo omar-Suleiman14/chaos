@@ -1,7 +1,8 @@
 // userId is supplied only by the secret-protected OAuth transport.
 import { v } from "convex/values";
+import { learnCapabilityLimits } from "./learnCapabilityModel";
 import { internalMutation, internalQuery, type QueryCtx, type MutationCtx } from "./_generated/server";
-import { LEARN_WRITE_LIMITS, LEARN_LIMITS, lessonBlock, lessonDocument, lessonMeta, sourceMetadata, visibility } from "./learnModel";
+import { LEARN_LIMITS, lessonBlock, lessonDocument, lessonMeta, sourceMetadata, visibility } from "./learnModel";
 import { creatorRestricted } from "./authz";
 import { lessonAccessForActor, createLessonForActor, saveLessonDraftForActor, publishLessonForActor, restoreLessonVersionForActor, setLessonLifecycleForActor, forkLessonForActor, editLessonBlocksForActor, readLessonForActor, summarizeLesson, lessonSummary, lessonReadResult, lessonBlockOperation } from "./lessons";
 
@@ -17,7 +18,7 @@ const problem = v.object({ path: v.string(), code: v.string(), message: v.string
 export const createLesson = internalMutation({ args: { ...actor, metadata: lessonMeta, document: v.optional(lessonDocument) }, returns: v.object({ lessonId: v.id("lessons"), revision: v.number() }), handler: async (ctx, args) => ({ lessonId: await createLessonForActor(ctx, await requireLearnActor(ctx, args.userId), args), revision: 0 }) });
 export const saveLesson = internalMutation({ args: { ...edit, document: lessonDocument, metadata: v.optional(lessonMeta) }, returns: v.object({ revision: v.number() }), handler: async (ctx, args) => ({ revision: await saveLessonDraftForActor(ctx, await requireLearnActor(ctx, args.userId), args) }) });
 export const editBlocks = internalMutation({ args: { ...edit, operations: v.array(lessonBlockOperation) }, returns: v.object({ revision: v.number() }), handler: async (ctx, args) => ({ revision: await editLessonBlocksForActor(ctx, await requireLearnActor(ctx, args.userId), args) }) });
-export const publishLesson = internalMutation({ args: { ...edit, visibility }, returns: v.union(v.object({ ok: v.literal(false), problems: v.array(problem) }), v.object({ ok: v.literal(true), versionId: v.id("lessonVersions"), revision: v.number() })), handler: async (ctx, args) => publishLessonForActor(ctx, await requireLearnActor(ctx, args.userId), args) });
+export const publishLesson = internalMutation({ args: { ...edit, visibility, note: v.optional(v.string()) }, returns: v.union(v.object({ ok: v.literal(false), problems: v.array(problem) }), v.object({ ok: v.literal(true), versionId: v.id("lessonVersions"), revision: v.number() })), handler: async (ctx, args) => publishLessonForActor(ctx, await requireLearnActor(ctx, args.userId), args) });
 export const restoreLesson = internalMutation({ args: { ...edit, versionId: v.id("lessonVersions") }, returns: v.object({ revision: v.number() }), handler: async (ctx, args) => ({ revision: await restoreLessonVersionForActor(ctx, await requireLearnActor(ctx, args.userId), args) }) });
 export const lifecycle = internalMutation({ args: { ...edit, action: v.union(v.literal("archive"), v.literal("unpublish"), v.literal("reactivate")) }, returns: v.object({ revision: v.number() }), handler: async (ctx, args) => ({ revision: await setLessonLifecycleForActor(ctx, await requireLearnActor(ctx, args.userId), args) }) });
 export const forkLesson = internalMutation({ args: { ...actor, lessonId: v.id("lessons"), versionId: v.id("lessonVersions") }, returns: v.object({ lessonId: v.id("lessons"), revision: v.number() }), handler: async (ctx, args) => ({ lessonId: await forkLessonForActor(ctx, await requireLearnActor(ctx, args.userId), args), revision: 0 }) });
@@ -79,7 +80,7 @@ export const deleteBlocks = internalMutation({ args: { ...edit, blockIds: v.arra
 
 export const getCapabilities = internalQuery({ args: actor, returns: v.object({ schemaVersion: v.number(), limits: v.record(v.string(), v.number()) }), handler: async (ctx, args) => {
   await requireLearnActor(ctx, args.userId);
-  return { schemaVersion: 1, limits: { ...LEARN_LIMITS, ...LEARN_WRITE_LIMITS, readBlocks: 100, blockOperations: 100, citationsPerBlock: 20, conceptsPerBlock: 20, folderMoveNodes: 256, selectedAssets: 500 } };
+  return { schemaVersion: 1, limits: learnCapabilityLimits };
 } });
 const versionSummary = v.object({ versionId: v.id("lessonVersions"), number: v.number(), metadata: lessonMeta, publishedAt: v.number(), current: v.boolean() });
 export const listLessonVersions = internalQuery({ args: { ...actor, lessonId: v.id("lessons"), beforeNumber: v.optional(v.number()), limit: v.optional(v.number()) }, returns: v.object({ versions: v.array(versionSummary), nextBeforeNumber: v.union(v.number(), v.null()) }), handler: async (ctx, args) => {

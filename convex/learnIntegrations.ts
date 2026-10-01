@@ -1,4 +1,5 @@
 import { observeHttp } from "../lib/backendTelemetry";
+import { learnCapabilityLimits } from "./learnCapabilityModel";
 import type { HttpRouter } from "convex/server";
 import { v, ConvexError, type Infer, type GenericValidator } from "convex/values";
 import { internal } from "./_generated/api";
@@ -186,9 +187,9 @@ export const capabilities = internalQuery({ args: base, returns: resultValidator
   const token = await authorize(ctx, args.tokenId, args.now);
   if ("status" in token) return token;
   return ok({ apiVersion: "2", supportedVersions: ["1", "2"], supportedKinds: ["lesson", "source", "folder", "curriculum"], scopes: token.scopes.filter(scope => IMPLEMENTED_SCOPES.some(implemented => implemented === scope)),
-    availableScopes: IMPLEMENTED_SCOPES, operations: ["lesson.read", "lesson.definition", "lesson.outline", "lesson.draft_create", "lesson.draft_update", "lesson.blocks_update", "lesson.unlink", "source.metadata", "folder.list", "folder.create", "folder.move", "folder.members", "curriculum.browse", "curriculum.map", "community.search", "community.save", "community.fork", "progress.read", "progress.write", "context.assemble"],
+    availableScopes: IMPLEMENTED_SCOPES, operations: ["lesson.read", "lesson.definition", "lesson.outline", "lesson.draft_create", "lesson.draft_update", "lesson.blocks_update", "lesson.unlink", "source.metadata", "folder.list", "folder.create", "folder.move", "folder.members", "curriculum.browse", "curriculum.map", "community.search", "community.directory", "community.save", "community.fork", "progress.read", "progress.write", "context.assemble"],
     lessonSchemaVersion: 1, writeLimits: LEARN_WRITE_LIMITS, limits: { maxBlocks: LEARN_LIMITS.blocks, documentBytes: LEARN_LIMITS.documentBytes, maxSources: LEARN_LIMITS.sources, maxTextCharacters: LEARN_LIMITS.text, maxTitleCharacters: LEARN_LIMITS.title, maxTags: LEARN_LIMITS.tags, maxSourceFileBytes: LEARN_LIMITS.fileBytes, maxFolderDepth: LEARN_LIMITS.folderDepth, maxSelectedAssets: 500, maxReadBlocks: 100 },
-    selection: "explicit", connection: { id: token._id, label: token.label } });
+    platformLimits: learnCapabilityLimits, selection: "explicit", connection: { id: token._id, label: token.label } });
 } });
 
 export const getLesson = internalQuery({ args: { ...base, ref: v.string(), view: v.optional(v.union(v.literal("definition"), v.literal("outline"))), offset: v.optional(v.number()), limit: v.optional(v.number()) }, returns: resultValidator, handler: async (ctx, args): Promise<LearnApiResult> => {

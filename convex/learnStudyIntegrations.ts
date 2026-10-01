@@ -72,6 +72,7 @@ export const writeProgress = internalMutation({ args: { ...base, idempotencyKey:
 } });
 export const getContext = internalQuery({ args: { tokenId: v.id("integrationTokens"), ...contextSelection.fields }, returns: resultValidator, handler: async (ctx, args): Promise<Result> => {
   const token = await authorize(ctx, args.tokenId, args.lessonId, "tutor:context"); if ("status" in token) return token;
+  if (args.includeCurriculum && !token.scopes.includes("curricula:read")) return fail(403, "INSUFFICIENT_SCOPE", "Curriculum inclusion requires curricula:read");
   if (args.includeMyProgress && !token.scopes.includes("progress:read")) return fail(403, "INSUFFICIENT_SCOPE", "Progress inclusion requires progress:read");
   if (args.sourceIds.length && !token.scopes.includes("sources:read")) return fail(403, "INSUFFICIENT_SCOPE", "Sources require sources:read");
   for (const id of args.sourceIds) if (!await selected(ctx, token, `source_${id}`)) return fail(404, "NOT_FOUND", "Source is not selected");

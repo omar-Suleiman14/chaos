@@ -7,6 +7,8 @@ import { externalSourceValidator } from "./integrationModel";
 // semantic checks (references, limits, publishability) live in formLogic.
 
 export const languageValidator = v.union(v.literal("en"), v.literal("ar"));
+export const hiddenParameterValidator = v.object({ name: v.string(), type: v.union(v.literal("string"), v.literal("number"), v.literal("boolean")), required: v.optional(v.boolean()) });
+export const typedHiddenValidator = v.record(v.string(), v.union(v.string(), v.number(), v.boolean()));
 
 export const fieldTypeValidator = v.union(
   v.literal("text"), v.literal("textarea"), v.literal("email"), v.literal("phone"), v.literal("url"),
@@ -146,6 +148,7 @@ export const formSettingsValidator = v.object({
   requireApproval: v.boolean(),
   /** URL parameters captured with each response (e.g. ?source=instagram). Kept apart from answers. */
   hiddenFields: v.optional(v.array(v.string())),
+  hiddenParameters: v.optional(v.array(hiddenParameterValidator)),
   /** Hide "chaos" branding for respondents. Honoured only while the owner has Pro; checked on every load. */
   hideBranding: v.optional(v.boolean()),
   /** With signed-in access: only these verified emails / exact email domains may respond. */
@@ -258,6 +261,7 @@ export const formTables = {
     live: v.optional(v.object({ gameId: v.id("liveGames"), nickname: v.string(), rank: v.number(), points: v.number() })),
     /** Hidden-field values from the link (settings.hiddenFields), never part of `answers`. */
     hidden: v.optional(v.record(v.string(), v.string())),
+    typedHidden: v.optional(typedHiddenValidator),
   })
     .index("by_formId_and_submittedAt", ["formId", "submittedAt"])
     .index("by_formId_and_submissionKey", ["formId", "submissionKey"])
@@ -318,6 +322,7 @@ export const formTables = {
     .index("by_expiresAt", ["expiresAt"]),
 
   formUploads: defineTable({
+    homeworkAttemptId: v.optional(v.id("homeworkAttempts")),
     formId: v.id("forms"),
     storageId: v.id("_storage"),
     uploadKey: v.string(),
@@ -335,6 +340,7 @@ export const formTables = {
 
   /** Single-use permission to upload one file through the controlled HTTP endpoint. */
   formUploadTickets: defineTable({
+    homeworkAttemptId: v.optional(v.id("homeworkAttempts")),
     formId: v.id("forms"),
     fieldId: v.string(),
     uploadKey: v.string(),

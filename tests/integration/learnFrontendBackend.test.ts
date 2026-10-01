@@ -10,6 +10,31 @@ async function setup() {
   return { t, owner, lessonId };
 }
 describe("native Learn frontend reads", () => {
+  it("direct editor lookup is independent of dashboard paging and never grants public draft access", async () => {
+    const { t, owner, lessonId } = await setup();
+    expect((await owner.query(api.learnFrontend.editableLesson, { id: lessonId }))?._id).toBe(lessonId);
+    expect(await t.query(api.learnFrontend.editableLesson, { id: lessonId })).toBeNull();
+    expect(await owner.query(api.learnFrontend.editableLesson, { id: "invalid" })).toBeNull();
+    const other = t.withIdentity(otherCreatorIdentity);
+    expect(await other.query(api.learnFrontend.editableLesson, { id: lessonId })).toBeNull();
+    await t.run(ctx => ctx.db.insert("lessonPermissions", { lessonId, userId: otherCreatorIdentity.subject, role: "reader" }));
+    expect(await other.query(api.learnFrontend.editableLesson, { id: lessonId })).toBeNull();
+    await t.run(async ctx => { const grant = await ctx.db.query("lessonPermissions").withIndex("by_lessonId_and_userId", q => q.eq("lessonId", lessonId).eq("userId", otherCreatorIdentity.subject)).unique(); await ctx.db.patch("lessonPermissions", grant!._id, { role: "editor" }); });
+    expect((await other.query(api.learnFrontend.editableLesson, { id: lessonId }))?._id).toBe(lessonId);
+  });
+  it("public metadata never reveals draft edits or owner-only private material", async () => {
+    const { t, owner, lessonId } = await setup();
+    expect(await owner.query(api.learnFrontend.publicLesson, { id: lessonId })).toBeNull();
+    expect(await t.query(api.learnFrontend.publicLesson, { id: "invalid" })).toBeNull();
+    await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 0, visibility: "public" });
+    const draft = await owner.query(api.lessons.getDraft, { lessonId });
+    await owner.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: 1, document: draft.draft, metadata: { ...metadata, title: "Private edited title" } });
+    const read = await t.query(api.learnFrontend.publicLesson, { id: lessonId });
+    expect(read?.version.metadata.title).toBe("Published title");
+    expect(read).not.toHaveProperty("draft");
+    await owner.mutation(api.lessons.setLifecycle, { lessonId, expectedRevision: 2, action: "archive" });
+    expect(await t.query(api.learnFrontend.publicLesson, { id: lessonId })).toBeNull();
+  });
   it("bounds owned cards and excludes documents and other owners", async () => {
     const { t, owner, lessonId } = await setup();
     await expect(t.query(owned, { paginationOpts: { numItems: 1, cursor: null } })).rejects.toThrow();

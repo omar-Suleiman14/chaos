@@ -11,6 +11,7 @@ const forms = {
   shared: [],
 };
 const intent = vi.hoisted(() => ({ warmForm: vi.fn() }));
+const learnBackend = vi.hoisted(() => ({ query: vi.fn(), mutation: vi.fn(), loadMore: vi.fn() }));
 vi.mock("next/link", () => ({ default: ({ prefetch, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { prefetch?: boolean | null }) => <a {...props} data-prefetch={prefetch === null ? "auto" : String(prefetch)} /> }));
 vi.mock("@/lib/convexCache", () => ({
   formIntentHandlers: (id: string) => ({ onFocus: () => intent.warmForm(id), onPointerEnter: () => intent.warmForm(id), onTouchStart: () => intent.warmForm(id) }),
@@ -20,6 +21,10 @@ vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePat
 vi.mock("@/components/ThemeProvider", () => ({ useTheme: () => ({ toggleTheme: vi.fn() }) }));
 vi.mock("@clerk/nextjs", () => ({ useUser: () => ({ isLoaded: false }), useClerk: () => ({ signOut: async () => {} }), UserButton: () => null }));
 vi.mock("convex/react", () => ({
+  useConvex: () => learnBackend,
+  useConvexAuth: () => ({ isAuthenticated: false, isLoading: true }),
+  usePaginatedQuery: () => ({ results: [], status: "Exhausted", loadMore: learnBackend.loadMore }),
+  useQueries: () => ({}),
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? forms : getFunctionName(ref) === "quizFunctions:getMyQuizzes" ? [] : undefined),
   useMutation: () => vi.fn(),
 }));
@@ -48,6 +53,7 @@ describe("sidebar sections", () => {
     expect(form).toHaveAttribute("data-prefetch", "auto");
     expect(form).toHaveAttribute("href", "/dashboard/forms/f2");
     expect(intent.warmForm).toHaveBeenCalledExactlyOnceWith("f2");
+    expect(learnBackend.mutation).not.toHaveBeenCalled();
     for (const link of links.filter((link) => link !== docs && link !== form)) expect(link).toHaveAttribute("data-prefetch", "false");
     const current = links.find((link) => link.getAttribute("aria-current") === "page")!;
     fireEvent.focus(current);

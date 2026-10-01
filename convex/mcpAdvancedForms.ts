@@ -6,7 +6,7 @@ import { requireLearnActor } from "./mcpLearn";
 import { formRoleFor } from "./authz";
 import { applyFormSettingsForActor, replaceDraft } from "./forms";
 import { checkDefinition } from "./formLogic";
-import { formSettingsValidator, ruleValidator } from "./formModel";
+import { formSettingsValidator, ruleValidator, hiddenParameterValidator } from "./formModel";
 
 async function editable(ctx: MutationCtx, userId: string, formId: Id<"forms">, expectedRevision: number) {
   await requireLearnActor(ctx, userId);
@@ -64,7 +64,7 @@ const responseControls = v.object({
   responseLimit: v.optional(v.union(v.number(), v.null())), retentionDays: v.optional(v.union(v.number(), v.null())),
   onePerPerson: v.optional(v.boolean()), allowEditAfterSubmit: v.optional(v.boolean()), allowEditAfterClose: v.optional(v.boolean()),
   collectPartial: v.optional(v.boolean()), allowResumeLink: v.optional(v.boolean()), hideBranding: v.optional(v.boolean()),
-  hiddenFields: v.optional(v.array(v.string())), allowedEmails: v.optional(v.array(v.string())), allowedDomains: v.optional(v.array(v.string())),
+  hiddenFields: v.optional(v.array(v.string())), hiddenParameters: v.optional(v.array(hiddenParameterValidator)), allowedEmails: v.optional(v.array(v.string())), allowedDomains: v.optional(v.array(v.string())),
 });
 export const getResponseControls = internalQuery({ args: { userId: v.string(), formId: v.id("forms") }, returns: v.object({ settings: formSettingsValidator.omit("accessCodeHash"), hasAccessCode: v.boolean(), settingsRevision: v.number() }), handler: async (ctx, args) => {
   await requireLearnActor(ctx, args.userId);

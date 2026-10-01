@@ -11,7 +11,7 @@ export const searchPublic = query({ args: { text: v.string(), paginationOpts: pa
   const page = [];
   for (const lesson of result.page) {
     if (!lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) continue;
-    const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId); if (!version) continue;
+    const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId); if (!version || version.lessonId !== lesson._id || (version.visibility !== undefined && version.visibility !== "public")) continue;
     const words = text.toLocaleLowerCase().split(/\s+/);
     const matchingBlocks = version.document.blocks.filter(b => "text" in b && words.some(w => b.text.toLocaleLowerCase().includes(w))).slice(0, 5).map(b => ({ id: b.id, text: "text" in b ? b.text.slice(0, 300) : "" }));
     page.push({ lessonId: lesson._id, versionId: version._id, metadata: version.metadata, matchingBlocks });

@@ -320,6 +320,8 @@ export const listResponses = internalQuery({
         submittedAt: new Date(r.submittedAt).toISOString(),
         receipt: r.receiptCode,
         ...(r.quizScore !== undefined ? { score: r.quizScore, maxScore: r.quizMaxScore ?? null } : {}),
+        ...(r.hidden !== undefined ? { hidden: r.hidden } : {}),
+        ...(r.typedHidden !== undefined ? { typedHidden: r.typedHidden } : {}),
         tags: r.tags,
         answers,
       });

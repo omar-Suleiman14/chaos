@@ -57,7 +57,7 @@ export default function LearnHome() {
   const hrefFor = (id: string, ownerId: string) => mine.some((l) => l.id === id && l.ownerId === ownerId) ? `/dashboard/learn/lessons/${id}` : `/learn/${id}`;
   const inProgress = recent.filter(({ lesson }) => progress[lesson.id]?.state === "in_progress").slice(0, 3);
   const recentOther = recent.filter(({ lesson }) => !inProgress.some((r) => r.lesson.id === lesson.id)).slice(0, 6);
-  const newLesson = () => { try { router.push(`/dashboard/learn/lessons/${actions.createLesson({ language: locale })}`); } catch (err) { setError(errorMessage(err)); } };
+  const newLesson = async () => { try { const id = await actions.createLesson({ language: locale }); router.push(`/dashboard/learn/lessons/${id}`); } catch (err) { setError(errorMessage(err)); } };
 
   return (
     <div className="lx-page">

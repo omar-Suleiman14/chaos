@@ -299,7 +299,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
       limit: z.number().int().min(1).max(25).optional().describe("Default 10."),
       cursor: z.string().max(2000).optional().describe("nextCursor from the previous page."),
     },
-    outputSchema: { ...itemShape, responses: z.array(z.looseObject({})), nextCursor: z.string().nullable() },
+    outputSchema: { ...itemShape, responses: z.array(z.looseObject({ hidden: z.record(z.string(), z.string()).optional(), typedHidden: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional() })), nextCursor: z.string().nullable() },
     annotations: { ...read, title: "Read responses" },
     _meta: meta("Reading responses…", "Responses loaded"),
   }, (input) => run("list_responses", input, (d) => `${(d.responses as unknown[]).length} response(s) from “${d.title}”.`));

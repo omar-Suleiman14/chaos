@@ -13,6 +13,7 @@ const dimension = v.union(
   v.object({ kind: v.literal("number"), fieldId: v.string(), boundaries: v.array(v.number()) }),
   v.object({ kind: v.literal("status") }),
   v.object({ kind: v.literal("language") }),
+  v.object({ kind: v.literal("hidden_parameter"), name: v.string(), values: v.array(v.union(v.string(), v.number(), v.boolean())) }),
 );
 type Dimension = Infer<typeof dimension>;
 const evidence = v.object({ windowLimit: v.number(), windowLimited: v.boolean(), minimumCell: v.number(), version: v.number() });
@@ -28,6 +29,10 @@ async function load(ctx: QueryCtx, formId: Id<"forms">, version: number) {
 }
 
 function buckets(def: FormDefinition, d: Dimension) {
+  if (d.kind === "hidden_parameter") {
+    if (!/^[A-Za-z][A-Za-z0-9_-]{0,39}$/.test(d.name) || d.values.length < 1 || d.values.length > 20 || d.values.some(v => typeof v === "string" && v.length > 500 || typeof v === "number" && !Number.isFinite(v)) || new Set(d.values.map(v => JSON.stringify(v))).size !== d.values.length) throw new Error("INVALID_DIMENSION: Use 1–20 distinct parameter values");
+    return d.values.map(value => JSON.stringify(value));
+  }
   if (d.kind === "status") return ["completed", "partial"];
   if (d.kind === "language") return ["en", "ar"];
   const field = def.fields.find(f => f.id === d.fieldId);
@@ -40,7 +45,11 @@ function buckets(def: FormDefinition, d: Dimension) {
   return Array.from({ length: d.boundaries.length + 1 }, (_, i) => `bin:${i}`);
 }
 
-function bucket(d: Dimension, r: { status: string; language: string; answers: Answers }, visible: Set<string>): string {
+function bucket(d: Dimension, r: { status: string; language: string; answers: Answers; hidden?: Record<string, string>; typedHidden?: Record<string, string | number | boolean> }, visible: Set<string>): string {
+  if (d.kind === "hidden_parameter") {
+    const value = r.typedHidden?.[d.name] ?? r.hidden?.[d.name];
+    return value === undefined ? "missing" : JSON.stringify(value);
+  }
   if (d.kind === "status") return r.status;
   if (d.kind === "language") return r.language;
   if (!visible.has(d.fieldId)) return "not_applicable";

@@ -3,9 +3,18 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 import { LocaleProvider } from "@/lib/i18n";
 import type { Lesson } from "@/lib/learn/types";
+import { getFunctionName } from "convex/server";
 
 vi.mock("@clerk/nextjs", () => ({ useUser: () => ({ isLoaded: true, user: { id: "reader", fullName: "Reader One", username: "reader", imageUrl: "" } }) }));
-vi.mock("convex/react", () => ({ useQuery: () => ({ owned: [], shared: [] }), useMutation: () => vi.fn() }));
+const backend = vi.hoisted(() => ({ mutation: vi.fn(), query: vi.fn(), loadMore: vi.fn(), page: { results: [], status: "Exhausted" } }));
+vi.mock("convex/react", () => ({
+  useConvex: () => backend,
+  useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
+  usePaginatedQuery: () => ({ ...backend.page, loadMore: backend.loadMore }),
+  useQueries: () => ({}),
+  useQuery: (ref: Parameters<typeof getFunctionName>[0], args: unknown) => args === "skip" ? undefined : getFunctionName(ref) === "learnCommunity:rank" ? [] : getFunctionName(ref) === "forms:list" ? { owned: [], shared: [] } : null,
+  useMutation: () => backend.mutation,
+}));
 const push = vi.fn();
 vi.mock("next/navigation", () => ({
   useRouter: () => ({ push, replace: vi.fn(), prefetch: vi.fn() }),
@@ -52,7 +61,7 @@ const inWorkspace = (ui: React.ReactNode, locale: "en" | "ar" = "en") => render(
 // jsdom has no matchMedia; the reader asks for phone and reduced-motion media queries.
 window.matchMedia ??= ((query: string) => ({ matches: false, media: query, onchange: null, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false })) as typeof window.matchMedia;
 
-beforeEach(() => { localStorage.clear(); push.mockReset(); });
+beforeEach(() => { localStorage.clear(); push.mockReset(); backend.mutation.mockReset().mockResolvedValue("lesson_created"); backend.query.mockReset().mockResolvedValue(null); });
 
 describe("lesson reader", () => {
   it("has a labelled article, outline and tabs, and no axe violations", async () => {
@@ -118,11 +127,9 @@ describe("Learn home", () => {
   it("New lesson opens a blank lesson in the editor", async () => {
     inWorkspace(<LearnHome />);
     fireEvent.click((await screen.findAllByRole("button", { name: "New lesson" }))[0]);
-    expect(push).toHaveBeenCalledWith(expect.stringMatching(/^\/dashboard\/learn\/lessons\/lesson_/));
-    const stored = JSON.parse(localStorage.getItem("chaos.learn.v1")!);
-    const created = Object.values(stored.lessons)[0] as Lesson;
-    expect(created).toMatchObject({ ownerId: "reader", visibility: "private" });
-    expect(created.draft.content).toEqual([]);
+    await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard/learn/lessons/lesson_created"));
+    expect(getFunctionName(backend.mutation.mock.calls[0][0])).toBe("lessons:create");
+    expect(backend.mutation.mock.calls[0][1]).toMatchObject({ document: { schemaVersion: 1, blocks: [] }, metadata: { language: "en", indexing: "noindex" } });
   });
 });
 

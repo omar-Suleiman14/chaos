@@ -335,7 +335,59 @@ Outcome: Learn as a second surface beside Create, fully usable through the `lib/
 - [x] Enforced shared Free 5 creations/1000 responses and Pro 100 creations/10000 responses; planned20EGP activecreatorseat pricing, no live checkout or inferred charges.
 - [x] Added preview crawler exclusion, fixed Learn webhook labels and recorded performance/security verification boundaries.
 - [x] Created provider follow-ups #1, #2, #3 per user instruction.
-- [ ] Final exact snapshot typecheck, tests, lint, development verification and e2e push.
+- [x] Handoff snapshot: app/backend typechecks, 581 unit tests, 577 integration tests (1 TODO), whole-tree lint and webpack production build passed. Development deployment superb-zebra-196 succeeded; pushed e2e 7f01e17. Main/production unchanged.
+
+## Controlled context continuation (item 56)
+- [x] Added opt-in published curriculum mapping context and explicit owner-supplied source excerpts with independent content authorization, revision checks and bounded payloads.
+- [x] Backend typecheck passed; 13 context/study integration tests passed; scoped ESLint passed.
+- [ ] Deployment/codegen and UI excerpt selection wiring remain unverified; no commit or push in this phase.
+
+## Remaining-roadmap continuation (2026-10-01)
+Outcome: close each remaining completion condition with durable shared behavior, verified permission boundaries and e2e delivery. Provider-account verification remains tracked in #1–#3; AI services remain excluded by current product direction.
+- [x] Anonymous published lesson metadata and opt-in bounded sitemap bridge; publication audit owner/admin history and conflict rollback tests.
+- [ ] Review and combine flashcard study, multi-entity discovery, source/curriculum context and pinned homework submission.
+- [ ] Replace local lesson editing/progress hooks with backend writes and explicit revision-conflict handling; preserve rich editor content.
+- [ ] Regenerate API, run typechecks/lint/lifecycle tests, inspect scoped diff, deploy development and push e2e before main.
+- [ ] Re-audit the 170-item status inventory against tested implementations; do not count deferred/operational/external acceptance as complete.
+
+## Source similarity continuation (item 32)
+- [x] Added server-computed aligned-byte chunk fingerprints and same-owner indexed near-duplicate review links; exact SHA dedup unchanged; no automatic access or merging.
+- [x] Backend typecheck passed; 25 source integration tests and scoped ESLint passed. Documented byte-level detection thresholds and limitations in docs/source-near-duplicates.md.
+- [ ] Development deployment and real PDF/slide similarity evaluation remain unverified. No commit or push in this phase.
+
+### Native Learn discovery/ranking final source review ? 2026-10-01
+
+- [x] Read Convex guidelines; inspect discovery, ranking, community directory MCP/API and existing tests.
+- [x] Fix public community snapshot/creator checks and redundant ranking permission lookup; bound creator fallback to five snapshots.
+- [x] Verify focused integration (28 tests), MCP units (6 tests) and scoped ESLint; update conditions 43/45/85 and discovery semantics/evidence.
+- [ ] Deployment/index availability and production scale acceptance: coordinating owner; no deployment, commit or push performed. Backend typecheck passed; evidence recorded in discovery contract.
+
+## Scoped source/context security review (2026-10-01)
+Outcome: verify metadata/content/byte separation, context grants and revocation/replay, fingerprint disclosure and the 25 MiB upload boundary in the Documents checkout.
+- [x] Read generated Convex guidelines first; inspected source, excerpt, context, MCP and integration access paths.
+- [x] Reproduced and fixed context export through a reader grant after the lesson creator is banned/suspended; regression failed before the fix.
+- [x] Added repeated-request source selection/scope/expiry/token revocation tests, excerpt grant/replacement/removal tests, and MCP/API/default-context fingerprint and excerpt redaction checks.
+- [x] Verified exactly 25 MiB uploads and pre-storage cancellation of streamed overflow with a dishonest Content-Length; declared overflow also rejected.
+- [x] 87 integration tests in 9 focused suites passed; Convex typecheck and scoped ESLint passed.
+- [ ] Live deployment/JWT acceptance and production upload resource limits remain unverified; no deployment, commit or push authorized in this review.
+- [x] Final scoped lint and whitespace checks passed. Full app typecheck ran and failed outside this scope at lib/learn/durableClient.ts:32 (TS18047: row possibly null); preserved concurrent UI/client work.
+
+## Homework file submissions (123) and typed hidden verification (116)
+- [x] Reuse controlled form upload endpoint, validation and retention with optional attempt-bound tickets/receipts; recheck pinned content, ownership, enrollment and deadline.
+- [x] Validate owned storage receipts at atomic submission; retain typed-hidden and legacy compatibility.
+- [x] Focused homework, typed-hidden, upload security and field-release integration checks (35 tests).
+- [ ] Deployment and browser delivery were not exercised; no commit or push.
+- [x] Scoped ESLint and backend TypeScript pass; full-project typecheck blocked by existing TS18047 in lib/learn/durableClient.ts:32 (excluded scope).
+
+## Durable Learn UI continuation (2026-10-01)
+Outcome: finish revision-safe Learn editor/recovery and published progress through existing backend APIs, preserving Opus visuals and AI-free behavior. No deployment, commit or push.
+- [x] Direct owner/editor lookup for lesson, history, recovery and lazy write/reload baselines; no owned-list dependency in actions.
+- [x] Snapshot and serialize draft content/metadata; freeze conflicts; explicit server reload retains browser drafts for review and explicit save.
+- [x] Exact revision-checked recovery snapshot restore; published history unchanged; history/discard reload editor content explicitly.
+- [x] Queue version-specific progress with client-owned sessions, percentage/block evidence and stale-session refusal; async archive undo errors handled.
+- [x] Reject malformed children and unknown table fields before lossless conversion.
+- [x] Final verification: full unit suite 82 files / 641 tests passed; four focused integration suites / 32 tests passed; scoped ESLint zero errors (four warnings); scoped whitespace inspection clean. Final app/backend typecheck (`pnpm run typecheck`) passed after all code and test-mock changes.
+- [ ] Signed-in live browser acceptance, mobile/RTL visuals and deployment remain unverified in this phase.
 
 ## Opus items 63–98 and Learn accessibility (2026-10-01)
 Outcome: finish the non-Sol roadmap items (forms 63–78, site 79–85, Connections 86–98, Learn accessibility 99) and push them to e2e without Sol's in-progress backend/wiring.
@@ -347,3 +399,11 @@ Outcome: finish the non-Sol roadmap items (forms 63–78, site 79–85, Connecti
 - [ ] Not in this push (Sol's active files): lib/learn/** wiring, lesson editor/reader/library page edits, Convex changes after 7f01e17.
 - [ ] Unverified in a browser: signed-in forms/Connections journeys, phone/RTL visuals. Email restriction needs the Clerk `convex` token to carry `email_verified`.
 - [ ] ChangePreview has no caller until Sol adds an approval queue for connected-app lesson updates.
+
+## Sol combined release verification (2026-10-01)
+- [x] Durable autosave/revision recovery and progress wiring; source excerpts/context permissions; flashcard study; directory/ranking; asset publication audits; near-duplicate hints; pinned homework files; typed URL metadata through MCP.
+- [x] Isolated combined snapshot: 641 unit tests; 630 integration tests plus 1 TODO; app/backend typechecks; whole-tree lint; clean diff check.
+- [x] Webpack production build passed before final async caller/MCP expectation fixes; final caller regressions and app/backend typechecks passed afterward. Build used placeholder Clerk keys and is not signed-in acceptance.
+- [x] Development superb-zebra-196 deployment succeeded; anonymous invalid lesson read returned null.
+- [x] Source inventory 105/170 implemented, 65 unfinished. This is not complete production acceptance.
+- [ ] Signed-in browser acceptance: Vercel preview redirects to login. Production/main unchanged; external provider follow-ups remain issues #1–#3.

@@ -8,7 +8,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
 import { getFormIfRole, hasPro, ownsRecord, requireActiveUser, requireFormRole } from "./authz";
-import { checkHiddenFieldNames, normalizeEmailRules } from "./formRespondent";
+import { checkHiddenFieldNames, checkHiddenParameters, normalizeEmailRules } from "./formRespondent";
 import { checkDefinition, emptyDefinition, FORM_SCHEMA_VERSION, LIMITS } from "./formLogic";
 import type { FormDefinition } from "./formLogic";
 import { isValidTimeZone } from "./formSchedule";
@@ -343,6 +343,8 @@ export async function applyFormSettingsForActor(ctx: MutationCtx, form: Doc<"for
     }
     if (s.access === "code" && !accessCodeHash) throw new Error("INVALID_SETTINGS: Set an access code.");
     const hiddenFields = s.hiddenFields ? checkHiddenFieldNames(s.hiddenFields) : undefined;
+    const hiddenParameters = s.hiddenParameters ?? form.settings.hiddenParameters;
+    checkHiddenParameters(hiddenParameters ?? [], hiddenFields ?? []);
     const rules = normalizeEmailRules(s.allowedEmails, s.allowedDomains);
     if ((rules.emails.length || rules.domains.length) && s.access !== "signed_in") throw new Error("INVALID_SETTINGS: Email and domain limits only work when respondents sign in.");
     // Eligibility is the owner's plan, read here; the client flag alone never hides branding.
@@ -352,6 +354,7 @@ export async function applyFormSettingsForActor(ctx: MutationCtx, form: Doc<"for
       settings: {
         ...s, accessCodeHash,
         hiddenFields: hiddenFields?.length ? hiddenFields : undefined,
+        hiddenParameters,
         hideBranding: s.hideBranding || undefined,
         allowedEmails: rules.emails.length ? rules.emails : undefined,
         allowedDomains: rules.domains.length ? rules.domains : undefined,

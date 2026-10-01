@@ -103,7 +103,7 @@ export const communityTables = {
       "reporterKey",
       "category",
     ])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"]).index("by_lessonId_and_status", ["lessonId", "status"]),
   learnModerationAudit: defineTable({
     lessonId: v.id("lessons"),
     actorKey: v.string(),

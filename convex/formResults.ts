@@ -135,7 +135,7 @@ export const listResponses = query({
         quizScore: r.quizScore ?? null,
         quizMaxScore: r.quizMaxScore ?? null,
         preview: preview(await definition(r.version), r.answers as Answers),
-        hidden: r.hidden ?? null,
+        hidden: r.hidden ?? null, typedHidden: r.typedHidden ?? null,
       });
     }
     return { ...result, page };
@@ -215,7 +215,7 @@ export const getResponse = query({
       ending: ending ? ending.title || ending.message.slice(0, 80) : null,
       lastFieldId: response.lastFieldId,
       /** Hidden-field values captured from the link, e.g. { source: "instagram" }. */
-      hidden: response.hidden ?? null,
+      hidden: response.hidden ?? null, typedHidden: response.typedHidden ?? null,
       items,
       canEdit: access.role !== "viewer",
       canDelete: access.role === "owner",
@@ -671,7 +671,7 @@ export async function exportResponsesForActor(ctx: QueryCtx, access: { form: Doc
         spam: r.spam,
         cells,
         answers: r.answers,
-        hidden: r.hidden ?? {},
+        hidden: { ...(r.hidden ?? {}), ...(r.typedHidden ?? {}) },
       });
     }
     // Columns come from the live definition first, then any question that only older versions had,
@@ -689,6 +689,6 @@ export async function exportResponsesForActor(ctx: QueryCtx, access: { form: Doc
     const olderVersions = await ctx.db.query("formVersions").withIndex("by_formId_and_version", (q) => q.eq("formId", args.formId)).order("desc").take(100);
     for (const row of olderVersions) addColumns(row.definition as FormDefinition);
     // Hidden fields get their own columns after the questions; the current list first, then any a page's rows still carry.
-    const hiddenColumns = [...new Set([...(access.form.settings.hiddenFields ?? []), ...rows.flatMap((r) => Object.keys(r.hidden))])];
+    const hiddenColumns = [...new Set([...(access.form.settings.hiddenFields ?? []), ...(access.form.settings.hiddenParameters ?? []).map(d => d.name), ...rows.flatMap((r) => Object.keys(r.hidden))])];
     return { title: access.form.title, columns, hiddenColumns, rows, isDone: result.isDone, continueCursor: result.continueCursor };
 }

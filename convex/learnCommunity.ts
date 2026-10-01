@@ -41,11 +41,12 @@ async function publicLesson(ctx: ReadCtx | WriteCtx, lessonId: Id<"lessons">) {
     lesson.status !== "active" ||
     lesson.visibility !== "public" ||
     lesson.communityState !== "ok" ||
-    !lesson.publishedVersionId
+    !lesson.publishedVersionId ||
+    await creatorRestricted(ctx, lesson.ownerId)
   )
     throw new Error("Lesson is not public");
   const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
-  if (!version || version.lessonId !== lessonId)
+  if (!version || version.lessonId !== lessonId || (version.visibility !== undefined && version.visibility !== "public"))
     throw new Error("Published version unavailable");
   return { lesson, version };
 }
@@ -108,7 +109,7 @@ export async function requirePublicCommunityLesson(ctx: ReadCtx | WriteCtx, subj
   const lesson = await lessonAccessForActor(ctx, subject, lessonId);
   if (lesson.status !== "active" || lesson.visibility !== "public" || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) throw new Error("Lesson is not public");
   const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
-  if (!version || version.lessonId !== lessonId) throw new Error("Published version unavailable");
+  if (!version || version.lessonId !== lessonId || (version.visibility !== undefined && version.visibility !== "public")) throw new Error("Published version unavailable");
   return { lesson, version };
 }
 /** Actor must come from native auth or a trusted internal transport, never client input. */
@@ -750,6 +751,9 @@ const rankedLesson = v.object({
     engagement: v.number(),
     freshness: v.number(),
     exploration: v.number(),
+    curriculum: v.number(),
+    quality: v.number(),
+    reports: v.number(),
   }),
 });
 /** Deterministic discovery within the newest 100 public/ok lesson candidates.
@@ -759,12 +763,16 @@ const rankedLesson = v.object({
  * `asOf` is caller-supplied display time, never an authorization/expiry input.
  */
 export const rank = query({
-  args: { asOf: v.number(), limit: v.number() },
+  args: { asOf: v.number(), limit: v.number(), curriculumVersionId: v.optional(v.id("curriculumVersions")), nodeId: v.optional(v.id("curriculumNodes")) },
   returns: v.array(rankedLesson),
   handler: async (ctx, args) => {
     integer(args.asOf);
     integer(args.limit, 1);
     if (args.limit > 20) throw new Error("Ranking limit is 20");
+    if (args.nodeId) {
+      const node = await ctx.db.get("curriculumNodes", args.nodeId);
+      if (!node || (args.curriculumVersionId && node.versionId !== args.curriculumVersionId)) throw new Error("Invalid curriculum node/version pair");
+    }
     const candidates = await ctx.db
       .query("lessons")
       .withIndex("by_visibility_and_communityState", (q) =>
@@ -780,7 +788,11 @@ export const rank = query({
         lesson.publishedVersionId,
       );
       if (!version || version.lessonId !== lesson._id) continue;
-      await lessonAccess(ctx, lesson._id);
+      if (version.visibility !== undefined && version.visibility !== "public") continue;
+      const matchesCurriculum = (version.curriculumMappings ?? []).some(mapping => (!args.curriculumVersionId || mapping.versionId === args.curriculumVersionId) && (!args.nodeId || mapping.nodeId === args.nodeId));
+      if ((args.curriculumVersionId || args.nodeId) && !matchesCurriculum) continue;
+      const quality = await ctx.db.query("learnQuality").withIndex("by_lessonId_and_versionId", q => q.eq("lessonId", lesson._id).eq("versionId", version._id)).unique();
+      const reports = await ctx.db.query("learnReports").withIndex("by_lessonId_and_status", q => q.eq("lessonId", lesson._id).eq("status", "open")).take(5);
       const row = await stats(ctx, lesson._id);
       const counts = {
         saves: row?.saves ?? 0,
@@ -797,13 +809,16 @@ export const rank = query({
         freshness:
           2 / (1 + Math.max(0, args.asOf - version.publishedAt) / 604_800_000),
         exploration: 1 / (1 + counts.views),
+        curriculum: (args.curriculumVersionId || args.nodeId) && matchesCurriculum ? 2 : 0,
+        quality: quality?.status === "reviewed" ? 1 : quality?.status === "needs_changes" ? -2 : 0,
+        reports: -0.25 * reports.length,
       };
       ranked.push({
         lessonId: lesson._id,
         versionId: version._id,
         metadata: version.metadata,
         counts,
-        score: signals.engagement + signals.freshness + signals.exploration,
+        score: signals.engagement + signals.freshness + signals.exploration + signals.curriculum + signals.quality + signals.reports,
         signals,
       });
     }
