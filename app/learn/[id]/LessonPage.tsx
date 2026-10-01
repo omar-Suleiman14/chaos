@@ -21,5 +21,5 @@ export default function LessonPage({ id }: { id: string }) {
   // Removed lessons stay visible to their owner (with the moderation notice) and nobody else.
   if (lesson === null || (!isOwner && (lesson.moderation === "removed" || lesson.moderation === "unavailable"))) return <UnavailableLesson backHref={viewer?.signedIn ? "/dashboard/learn" : "/"} />;
   if (!isOwner && !lesson.published) return <UnavailableLesson backHref={viewer?.signedIn ? "/dashboard/learn" : "/"} />;
-  return <LessonReader lesson={lesson} previewDraft={preview && isOwner} backHref={isOwner ? `/dashboard/learn/lessons/${lesson.id}` : viewer?.signedIn ? "/dashboard/learn/explore" : "/"} />;
+  return <LessonReader lesson={lesson} previewDraft={preview && isOwner} backHref={isOwner ? `/dashboard/learn/lessons/${lesson.id}` : "/learn"} />;
 }

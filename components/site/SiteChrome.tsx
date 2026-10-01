@@ -91,7 +91,6 @@ export function SiteNav({ links: _links = true }: { links?: boolean }) {
     { href: "/learn", label: t.explore },
     { href: "/docs", label: t.docs },
     { href: "/pricing", label: t.pricing },
-    { href: "/play", label: t.play },
   ];
 
   return (

@@ -64,7 +64,7 @@ export default function LearnHome() {
       <header className="lx-hero">
         <div><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></div>
         <div className="lx-actions">
-          <Link href="/dashboard/learn/explore" className="ws-btn"><Compass size={16} aria-hidden />{t.explore}</Link>
+          <Link href="/learn" className="ws-btn"><Compass size={16} aria-hidden />{t.explore}</Link>
           <button type="button" className="ws-btn ws-btn--primary" onClick={newLesson}><Plus size={16} aria-hidden />{t.newLesson}</button>
         </div>
       </header>
@@ -143,7 +143,7 @@ export default function LearnHome() {
       )}
 
       <section className="lx-section" aria-labelledby="learn-discover">
-        <header><h2 id="learn-discover">{t.discover}</h2><Link className="lx-link" href="/dashboard/learn/explore">{t.explore}</Link></header>
+        <header><h2 id="learn-discover">{t.discover}</h2><Link className="lx-link" href="/learn">{t.explore}</Link></header>
         {discover.length ? (
           <div className="lx-grid">{discover.slice(0, 6).map((l) => <LessonCard key={l.id} lesson={l} href={`/learn/${l.id}`} progress={progress[l.id]} />)}</div>
         ) : <EmptyState icon={Layers} title={t.discover} body={t.discoverEmpty} />}

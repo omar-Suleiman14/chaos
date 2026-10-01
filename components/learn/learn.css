@@ -117,7 +117,7 @@ button.lx-badge { cursor: pointer; font-family: inherit; }
 .lx-panel__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
 
 /* BlockNote inside Chaos: our typeface, our surface, generous reading rhythm. */
-.lx-editor { --bn-font-family: var(--ws-font); min-height: 50vh; }
+.lx-editor { --bn-font-family: var(--ws-font); min-height: 60vh; cursor: text; }
 .lx-editor .bn-container, .lx-editor .bn-editor { background: transparent !important; font-family: var(--ws-font); }
 .lx-editor .bn-editor { padding-inline: 44px 8px; font-size: 16px; line-height: 1.7; color: var(--on-surface); }
 .lx-editor[dir="rtl"] .bn-editor { padding-inline: 44px 8px; }

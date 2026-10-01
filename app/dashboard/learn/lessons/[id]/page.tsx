@@ -20,6 +20,7 @@ import { Select } from "@/components/workspace/Select";
 import { AssistDialog, CitationDialog, ImageDetailsDialog, type ImageDetails } from "@/components/learn/editor/EditorDialogs";
 import type { AssistRequest } from "@/components/learn/editor/LessonEditor";
 import type { LessonEditorType } from "@/components/learn/editor/blocks";
+import { focusLessonEnd } from "@/components/learn/editor/focusEnd";
 import { MetadataPanel } from "@/components/learn/editor/MetadataPanel";
 import PracticePanel from "@/components/learn/editor/PracticePanel";
 import PublishDialog from "@/components/learn/editor/PublishDialog";
@@ -309,8 +310,10 @@ function LessonEditorSession({ id }: { id: string }) {
       {sourceError && <p className="lx-error" role="alert">Source {sourceError} is unavailable or its metadata access was revoked. Its stable reference remains in the draft.</p>}
       {uploadCount > 0 && <p className="lx-help" role="status">Uploading {uploadCount} image(s) to private Chaos sources…</p>}
 
-      <div className="lx-edit__body" data-panel={panelOpen ? "open" : "closed"}>
-        <div className="lx-edit__doc" dir={lesson.draft.meta.language === "ar" ? "rtl" : "ltr"} lang={lesson.draft.meta.language}>
+      <div className="lx-edit__body" data-panel={panelOpen ? "open" : "closed"}
+        onPointerDown={event => { if (event.button === 0 && event.target === event.currentTarget && editorRef.current) { event.preventDefault(); focusLessonEnd(editorRef.current); } }}>
+        <div className="lx-edit__doc" dir={lesson.draft.meta.language === "ar" ? "rtl" : "ltr"} lang={lesson.draft.meta.language}
+          onPointerDown={event => { if (event.button === 0 && event.target === event.currentTarget && editorRef.current) { event.preventDefault(); focusLessonEnd(editorRef.current); } }}>
           <ModerationNotice state={lesson.moderation} note={lesson.moderationNote} owner />
           {(lesson.forkedFrom || lesson.externalRef) && (
             <div style={{ display: "grid", gap: 4, marginTop: 8 }}>

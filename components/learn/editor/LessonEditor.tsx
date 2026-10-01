@@ -18,6 +18,7 @@ import type { Block } from "@/lib/learn/doc";
 import type { AiAction, LessonSource } from "@/lib/learn/types";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { EditorBridge, lessonSchema, type LessonEditorBridge, type LessonEditorType } from "./blocks";
+import { focusLessonEnd, isBlankEditorTarget } from "./focusEnd";
 
 const copy = {
   en: {
@@ -126,7 +127,12 @@ export default function LessonEditor(props: LessonEditorProps) {
 
   return (
     <EditorBridge.Provider value={bridge}>
-      <div className="lx-editor" dir={props.language === "ar" ? "rtl" : "ltr"} lang={props.language}>
+      <div className="lx-editor" dir={props.language === "ar" ? "rtl" : "ltr"} lang={props.language}
+        onPointerDown={event => {
+          if (props.editable === false || event.button !== 0 || !isBlankEditorTarget(event.target)) return;
+          event.preventDefault();
+          focusLessonEnd(editor);
+        }}>
         <BlockNoteView editor={editor} editable={props.editable !== false} theme={dark ? "dark" : "light"} slashMenu={false} formattingToolbar={false} sideMenu={false}
           onChange={() => propsRef.current.onChange(editor.document as unknown[])}>
           <SuggestionMenuController triggerCharacter="/" getItems={async (query) => filterSuggestionItems(slashItems(), query)} />

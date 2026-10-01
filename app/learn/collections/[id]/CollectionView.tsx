@@ -4,7 +4,7 @@ import Link from "next/link";
 import { ArrowLeft, FolderOpen } from "lucide-react";
 import { EmptyState, LessonCard } from "@/components/learn/ui";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
-import { useCollectionSnapshotLessons, usePublishedCollection, useLearnViewer, useProgress } from "@/lib/learn/data";
+import { useCollectionSnapshotLessons, usePublishedCollection, useProgress } from "@/lib/learn/data";
 import { useCopy } from "@/lib/i18n";
 
 const copy = {
@@ -17,13 +17,12 @@ export default function CollectionView({ id }: { id: string }) {
   const snapshot = usePublishedCollection(id);
   const lessons = useCollectionSnapshotLessons(id);
   const progress = useProgress() ?? {};
-  const viewer = useLearnViewer();
   if (snapshot === undefined || !lessons) return <PageSkeleton label={t.loading} />;
   if (snapshot === null) return <div className="lx-page lx-page--narrow" style={{ padding: "48px 16px" }}><EmptyState title={t.missing} body={t.missingBody} /></div>;
   const shown = lessons;
   return (
     <div className="lx-page" style={{ padding: "32px 16px 64px" }}>
-      <Link href={viewer?.signedIn ? "/dashboard/learn/explore" : "/"} className="lx-link" style={{ display: "inline-flex", gap: 4, alignItems: "center" }}><ArrowLeft size={14} className="lx-flip" aria-hidden />{t.back}</Link>
+      <Link href="/learn" className="lx-link" style={{ display: "inline-flex", gap: 4, alignItems: "center" }}><ArrowLeft size={14} className="lx-flip" aria-hidden />{t.back}</Link>
       <header className="lx-hero">
         <div>
           <span className="lx-badge"><FolderOpen size={12} aria-hidden />{t.collection}</span>

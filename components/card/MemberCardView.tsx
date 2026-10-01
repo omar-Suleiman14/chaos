@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Download, RefreshCw, Repeat2, Send } from "lucide-react";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { CARD_THEMES, memberCardPng, memberCardSvg, type MemberCardData } from "@/lib/memberCard";
@@ -18,7 +18,7 @@ const copy = {
 };
 
 /**
- * Chaos member card: flips to a scannable QR code and
+ * Chaos member card: tilts toward the pointer, flips to a scannable QR code, and
  * downloads as a crisp PNG. `onStyle` (owner only) cycles the colour theme.
  */
 export default function MemberCardView({ data, onStyle, framed = true }: { data: MemberCardData; onStyle?: (style: number) => unknown; framed?: boolean }) {
@@ -27,6 +27,8 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
   const card = { ...data, locale };
   const [flipped, setFlipped] = useState(false);
   const [status, setStatus] = useState("");
+  const tilt = useRef<HTMLDivElement>(null);
+  // Tilt uses CSS variables, so pointer moves never re-render the card.
   const front = memberCardSvg(card, "front");
   const back = memberCardSvg(card, "back");
 
@@ -50,14 +52,24 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
     } catch (err) { if (!(err instanceof DOMException && err.name === "AbortError")) say(t.failed); }
   };
 
+  const move = (e: React.PointerEvent) => {
+    const el = tilt.current; if (!el || e.pointerType === "touch") return;
+    const r = el.getBoundingClientRect();
+    const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
+    el.style.setProperty("--rx", `${(-y * 14).toFixed(2)}deg`); el.style.setProperty("--ry", `${(x * 18).toFixed(2)}deg`);
+    el.style.setProperty("--gx", `${(x + 0.5) * 100}%`); el.style.setProperty("--gy", `${(y + 0.5) * 100}%`);
+  };
+  const leave = () => { const el = tilt.current; if (el) { el.style.setProperty("--rx", "0deg"); el.style.setProperty("--ry", "0deg"); } };
+
   return (
     <div className="mc">
       <div className={framed ? "mc-frame" : undefined}>
         {framed && <span className="mc-frame__label">{t.label}</span>}
-        <div className="mc-stage">
+        <div className="mc-stage" ref={tilt} onPointerMove={move} onPointerLeave={leave}>
           <button type="button" className="mc-card" data-flipped={flipped} onClick={() => setFlipped((f) => !f)} aria-label={`${t.cardOf(data.name)}. ${flipped ? t.flipBack : t.flip}`}>
             <span aria-hidden={flipped} className="mc-face mc-face--front" dangerouslySetInnerHTML={{ __html: front }} />
             <span aria-hidden={!flipped} className="mc-face mc-face--back" dangerouslySetInnerHTML={{ __html: back }} />
+            <span className="mc-glare" aria-hidden />
           </button>
         </div>
       </div>

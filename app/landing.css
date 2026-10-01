@@ -12,10 +12,10 @@
 .site-ui :where(button, a, input, select):focus-visible { outline: 2px solid var(--s-accent); outline-offset: 4px; }
 .site-ui section, #demo { scroll-margin-top: 96px; }
 .site-nav-wrap { position: sticky; top: 0; z-index: 40; background: color-mix(in srgb, var(--s-bg) 94%, transparent); backdrop-filter: blur(16px); border-bottom: 1px solid var(--s-line); }
-.site-nav { display: flex; align-items: center; gap: 32px; max-width: 1184px; margin: auto; padding: 12px 32px; }
-.site-brand { display: inline-flex; align-items: center; gap: 9px; font-size: 21px; font-weight: 650; letter-spacing: -.04em; }
-.site-nav__links { display: flex; gap: 24px; margin-inline: auto; }
-.site-nav__links a { display: inline-flex; align-items: center; min-height: 44px; color: var(--s-soft); font-size: 14px; }
+.site-nav { display: flex; align-items: center; gap: 24px; max-width: 1184px; margin: auto; padding: 12px 32px; }
+.site-brand { flex-shrink: 0; display: inline-flex; align-items: center; gap: 9px; font-size: 21px; font-weight: 650; letter-spacing: -.04em; }
+.site-nav__links { display: flex; align-items: center; gap: 20px; margin-inline-start: 12px; }
+.site-nav__links a { white-space: nowrap; display: inline-flex; align-items: center; min-height: 44px; color: var(--s-soft); font-size: 14px; }
 .site-nav__links a:hover, .site-text-link:hover { color: var(--s-accent); }
 .site-nav__actions { display: flex; align-items: center; gap: 8px; margin-inline-start: auto; }
 .site-icon-btn { width: 44px !important; height: 44px !important; border: 0 !important; border-radius: 9px !important; background: transparent !important; color: var(--s-soft) !important; }
@@ -266,3 +266,7 @@ html[lang="ar"] .site-ui :is(h1, h2, h3, .site-brand) { letter-spacing: 0; }
 .site-compare-more { margin-top: 4px; }
 @media (max-width: 900px) { .site-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .site-also--wide, .site-controls { grid-template-columns: 1fr; } }
+
+/* Public Explore reuses workspace filters/cards without a sidebar. */
+.site-explore { padding: 40px 28px 64px; }
+@media (max-width: 640px) { .site-explore { padding: 28px 20px 48px; } }

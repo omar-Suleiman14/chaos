@@ -151,7 +151,7 @@ export default function LandingPage() {
         <section className="site-hero">
           <h1 className="site-title">{t.title[0]}<br /><span>{t.title[1]}</span></h1>
           <p className="site-lead">{t.lead}</p>
-          <div className="site-hero__actions"><Link href="/learn" className="site-btn site-btn--ghost site-btn--lg">{t.explore}</Link><PrimaryCta large label={t.create} /><PrimaryCta large href="/dashboard/games" label={t.createGame} className="site-btn--game" /></div>
+          <div className="site-hero__actions"><PrimaryCta large label={t.create} /><Link href="/learn" className="site-btn site-btn--game site-btn--lg">{t.explore}</Link></div>
         </section>
         <div id="demo" className="site-demo-wrap"><ProductDemo /></div>
 

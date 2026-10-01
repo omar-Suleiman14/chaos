@@ -10,7 +10,7 @@ import { avatarSeed } from "@/lib/avatarSeed";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, BarChart3, BookOpen, Bookmark, ChevronUp, Compass, FileText, GraduationCap, Home, Layers, Library, Link2, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, UserCog, X } from "lucide-react";
+import { Archive, BarChart3, BookOpen, Bookmark, ChevronUp, FileText, GraduationCap, Home, Layers, Library, Link2, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, UserCog, X } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import NotificationBell from "@/components/NotificationBell";
 import Logo from "@/components/Logo";
@@ -57,7 +57,7 @@ const copy = {
     dismiss: "Dismiss error",
     banned: "Your account is banned.", suspended: (until: string) => `Your account is suspended until ${until}.`,
     paused: "Editing and response collection are paused. Your existing data is preserved.", contact: "Contact support",
-    create: "Create", learn: "Learn", surface: "Workspace", learnHome: "Home", explore: "Explore", courses: "Courses", newForm: "Form or quiz", newFormHelp: "Surveys, quizzes and live games", newCourse: "Course", newCourseHelp: "Lessons people can take, free", learnLibrary: "Library", saved: "Saved", flashcards: "Flashcards",
+    create: "Create", learn: "Learn", surface: "Workspace", learnHome: "Home", courses: "Courses", newForm: "Form or quiz", newFormHelp: "Surveys, quizzes and live games", newCourse: "Course", newCourseHelp: "Lessons people can take, free", learnLibrary: "Library", saved: "Saved", flashcards: "Flashcards",
     newLesson: "New lesson", folders: "Folders", lessons: "Recent lessons", untitledLesson: "Untitled lesson", lesson: "Lesson",
   },
   ar: {
@@ -77,19 +77,18 @@ const copy = {
     dismiss: "إخفاء الخطأ",
     banned: "حسابك محظور.", suspended: (until: string) => `حسابك معلّق حتى ${until}.`,
     paused: "التعديل وجمع الردود متوقفان. بياناتك الحالية محفوظة.", contact: "تواصل مع الدعم",
-    create: "إنشاء", learn: "تعلّم", surface: "مساحة العمل", learnHome: "الرئيسية", explore: "استكشف", courses: "الدورات", newForm: "نموذج أو اختبار", newFormHelp: "استبيانات واختبارات وألعاب مباشرة", newCourse: "دورة", newCourseHelp: "دروس يأخذها الناس مجانًا", learnLibrary: "المكتبة", saved: "المحفوظات", flashcards: "البطاقات",
+    create: "إنشاء", learn: "تعلّم", surface: "مساحة العمل", learnHome: "الرئيسية", courses: "الدورات", newForm: "نموذج أو اختبار", newFormHelp: "استبيانات واختبارات وألعاب مباشرة", newCourse: "دورة", newCourseHelp: "دروس يأخذها الناس مجانًا", learnLibrary: "المكتبة", saved: "المحفوظات", flashcards: "البطاقات",
     newLesson: "درس جديد", folders: "المجلدات", lessons: "دروس حديثة", untitledLesson: "درس بلا عنوان", lesson: "الدرس",
   },
 };
 type Copy = typeof copy.en;
-type NavKey = "library" | "games" | "legacyResults" | "archive" | "connections" | "settings" | "learnHome" | "explore" | "courses" | "learnLibrary" | "saved" | "flashcards";
+type NavKey = "library" | "games" | "legacyResults" | "archive" | "connections" | "settings" | "learnHome" | "courses" | "learnLibrary" | "saved" | "flashcards";
 
 const libraryItem = { href: "/dashboard", key: "library", icon: Library } as const;
 const gamesItem = { href: "/dashboard/games", key: "games", icon: Trophy } as const;
 /** Only shown to people who still have quizzes from the old quiz editor. */
 const legacyResultsItem = { href: "/dashboard/results", key: "legacyResults", icon: BarChart3 } as const;
 const coursesItem = { href: "/dashboard/courses", key: "courses", icon: GraduationCap } as const;
-const exploreItem = { href: "/dashboard/learn/explore", key: "explore", icon: Compass } as const;
 const savedItem = { href: "/dashboard/learn/saved", key: "saved", icon: Bookmark } as const;
 const workspaceItems = [
   { href: "/dashboard/archive", key: "archive", icon: Archive },
@@ -97,10 +96,9 @@ const workspaceItems = [
   { href: "/dashboard/settings", key: "settings", icon: Settings },
 ] as const;
 
-/** Learn is a second surface beside Create: its own routes and navigation inside the same shell. */
+/** Personal learning routes share the workspace shell; Explore is public. */
 const learnItems = [
   { href: "/dashboard/learn", key: "learnHome", icon: Home },
-  { href: "/dashboard/learn/explore", key: "explore", icon: Compass },
   { href: "/dashboard/learn/courses", key: "courses", icon: GraduationCap },
   { href: "/dashboard/learn/library", key: "learnLibrary", icon: Library },
   { href: "/dashboard/learn/saved", key: "saved", icon: Bookmark },
@@ -315,7 +313,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               {link(libraryItem)}
               {link(coursesItem)}
               {link(gamesItem)}
-              {link(exploreItem)}
               {link(savedItem)}
               {(quizzes?.length ?? 0) > 0 && link(legacyResultsItem)}
             </nav>

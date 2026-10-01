@@ -31,7 +31,7 @@ export default function CoursesPage() {
       <header className="ws-page-header">
         <div><h1 className="ws-page-title">{t.title}</h1><p className="ws-page-subtitle">{t.subtitle}</p></div>
         <div className="flex gap-2">
-          <Link className="ws-btn ws-btn--ghost" href="/dashboard/learn/explore">{t.explore}</Link>
+          <Link className="ws-btn ws-btn--ghost" href="/learn">{t.explore}</Link>
           <button type="button" className="ws-btn ws-btn--primary" onClick={() => void newCourse()} disabled={busy}><Plus size={16} aria-hidden /> {busy ? t.creating : t.new}</button>
         </div>
       </header>

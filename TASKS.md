@@ -519,3 +519,10 @@ Outcome: expose existing owner course helpers through trusted MCP transport; dra
 - [x] Local browser /learn renders signed-out search and course/lesson empty states with native navigation.
 - [ ] Signed-in browser, real phone/screen-reader and ChatGPT marketplace acceptance unverified. Placeholder local Clerk credentials prevent auth verification. Existing health-route package JSON import build warning remains.
 - [ ] Run paginated username alias backfill on each deployment before production rollout; production has not been modified.
+## Card, Explore, hero and nav fixes (2026-10-01, late)
+- [x] Member card restored to the illustrated 340×500 design (same art as 1d62814), including pointer tilt, glare, drop shadow, 18px corners and the entrance animation; reduced motion disables the animation.
+- [x] Explore is public only: /dashboard/learn/explore redirects to /learn with its filters kept; sidebar Explore removed; /learn reuses the workspace filters and lesson cards; course, learn-home, collection and lesson back links point to /learn.
+- [x] Clicking blank lesson space focuses the end of the last writing line (adds a paragraph after media/tables).
+- [x] Hero trimmed to two actions (Create, Explore); Play removed from the public nav and the nav links no longer float centred.
+- [x] Unit suite 687/687 and memberCards integration 9/9 passed; tsc clean; scoped lint 0 errors.
+- [ ] Not visually checked in a signed-in browser (local Clerk credentials are placeholders).
