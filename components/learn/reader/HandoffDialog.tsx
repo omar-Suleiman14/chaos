@@ -89,9 +89,22 @@ export default function HandoffDialog({ input, onClose }: { input: HandoffContex
       <div className="lx-form">
         <div className="lx-field">
           <span>{t.action}</span>
-          <div className="lx-chips" role="radiogroup" aria-label={t.action}>
+          <div className="lx-chips" role="radiogroup" aria-label={t.action} onKeyDown={e => {
+            const choices = Object.keys(t.actions) as HandoffAction[];
+            const index = choices.indexOf(action);
+            const rtl = getComputedStyle(e.currentTarget).direction === "rtl";
+            let next = index;
+            if (e.key === "ArrowRight" || e.key === "ArrowLeft") next = (index + ((e.key === "ArrowRight") !== rtl ? 1 : -1) + choices.length) % choices.length;
+            else if (e.key === "ArrowDown") next = (index + 1) % choices.length;
+            else if (e.key === "ArrowUp") next = (index + choices.length - 1) % choices.length;
+            else if (e.key === "Home") next = 0;
+            else if (e.key === "End") next = choices.length - 1;
+            else return;
+            e.preventDefault(); setAction(choices[next]);
+            e.currentTarget.querySelectorAll<HTMLButtonElement>('[role="radio"]')[next]?.focus();
+          }}>
             {(Object.keys(t.actions) as HandoffAction[]).map((a) => (
-              <button key={a} type="button" role="radio" aria-checked={action === a} className="lx-chip" onClick={() => setAction(a)}>{t.actions[a]}</button>
+              <button key={a} type="button" role="radio" aria-checked={action === a} tabIndex={action === a ? 0 : -1} className="lx-chip" onClick={() => setAction(a)}>{t.actions[a]}</button>
             ))}
           </div>
         </div>

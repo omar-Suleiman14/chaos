@@ -407,3 +407,45 @@ Outcome: finish the non-Sol roadmap items (forms 63–78, site 79–85, Connecti
 - [x] Development superb-zebra-196 deployment succeeded; anonymous invalid lesson read returned null.
 - [x] Source inventory 105/170 implemented, 65 unfinished. This is not complete production acceptance.
 - [ ] Signed-in browser acceptance: Vercel preview redirects to login. Production/main unchanged; external provider follow-ups remain issues #1–#3.
+
+## Continue Opus Learn UI roadmap (2026-10-01)
+Outcome: finish UI integration against Chaos durable contracts, with AI editor/Tutor off and explicit external handoff. Preserve concurrent Sol work and deliver to e2e before main.
+- [ ] Wire backend-supported quiz forks, weak-concept evidence, affiliation claims and study actions.
+- [ ] Wire library folders/courses/collections, private saves/annotations and flashcard study to durable APIs.
+- [ ] Wire secure sources, image media, citations, curriculum mappings and assessment attachment in the editor.
+- [ ] Complete Connections selection/permissions and review previews where contracts support them; record missing backend contracts honestly.
+- [ ] Complete backend-supported Homework/Live/analytics UI gaps.
+- [ ] Run combined typechecks, regression tests, lint/build, browser accessibility checks and scoped e2e delivery after implementation.
+
+## Plans: Personal free and uncapped, Business 20 EGP/seat (2026-10-01)
+- [x] `hasPro` grants every feature to every account; `isPaidPlan` for admin reporting; no creation/platform response caps; 500 Live players for all. Copy, docs (EN/AR), MCP text and tests updated. Pushed e2e e93fb3f (typecheck, lint 0 errors, 641 unit, 630 integration).
+- [ ] Convex development/production backends not deployed with this change.
+
+## Native Learn media editor (2026-10-01)
+Outcome: secure native source/image upload, block citation locators and explicit curriculum coverage while preserving durable draft conflicts and Opus visuals. data.ts belongs to Beauvoir; Practice/Profile belong to Raman. AI remains off; no commit/push.
+- [ ] Wire authenticated raw source uploads and authorized ephemeral previews; persist stable source IDs only.
+- [ ] Wire native source metadata/access controls, block-level citations and curriculum associations with explicit coverage.
+- [ ] Preserve async publication/history errors and revision conflicts; inline citation positions remain unsupported by the public schema.
+- [ ] Run meaningful tests and type/lint checks at batch end; parent owns final accessibility/build and live acceptance.
+
+## Durable study UI (Opus 46/52/55, 2026-10-01)
+- [x] Own isolated study client, published form/classic draft forks and existing builder navigation; schema unchanged, shared data.ts untouched.
+- [x] Private concept evidence and eligible practice links; claim submission and expiry-aware identity badges, no document collection or AI.
+- [x] Atomic owner-only PracticePanel attachment changes; stale panel protection.
+- [x] Unit UI/client and backend regression tests created; combined run pending.
+- [ ] Combined final verification and signed-in browser acceptance; backend deploy left to parent.
+
+
+## Scoped Live/Homework/segments UI batch (67/68/70)
+- [x] Extend existing live host and /play screens with native team creation, assignment, player selection and standings; freeze changes during countdown/play.
+- [x] Add form-specific homework setup/management and authenticated /homework/[assignmentId] pinned delivery using existing FormRenderer, authorized upload receipts, submitAttempt and history/report APIs.
+- [x] Add version-specific cross-tabs (choice, numeric, language, status, typed/legacy URL parameters), suppression and sample-window explanations to Results; existing advanced Summary left intact.
+- [ ] Parent combined verification and signed-in browser acceptance after batch. Scoped regression tests are provided in tests/unit/homeworkLiveSegments.test.tsx.
+- [ ] Assignment browsing/roster, student-account picker and live team membership roster require missing native read contracts; no backend edits in this batch.
+
+## Durable library/student flow (2026-10-01, Beauvoir)
+- [x] Durable private saves/highlights/notes, owner-wide recovery reads, nested folders/members, public canonical course directory and module follows.
+- [x] Async Reader/ReportDialog/Saved/Library callers acknowledge server success; engagement-qualified views, Helpful and lesson reports.
+- [x] Immutable collection snapshots and flashcard draft/publication/study operations; unsupported backend actions fail explicitly.
+- [ ] Batch type/lint/integration verification and parent signed-in browser acceptance.
+- API coordination: data.ts exports useSaved/useHighlights/useNotes/useAllHighlights/useFolders/useFolderItems/useCurriculumNodes/useMyCourses/useFlashcardSets/useFlashcardSet/useCardReviews/useLibraryCollections/usePublishedCollection/useCollectionSnapshotLessons and DurableLibraryClient. All writes return promises; callers must await. Profile/Practice/HandoffDialog/Connections/media editor untouched. New convex/learnLibrary.ts is a read-only adapter using existing indexes; generated api.d.ts includes it, parent must run codegen/deploy. No deploy/commit/push.

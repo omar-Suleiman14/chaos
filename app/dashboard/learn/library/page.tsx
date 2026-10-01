@@ -14,7 +14,7 @@ import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { EmptyState, LessonStatus } from "@/components/learn/ui";
 import { search } from "@/lib/search";
 import {
-  useArchivedLessons, useFlashcardSets, useFolderItems, useFolders, useLearnActions, useLearnCapabilities, useMyLessons, usePinnedFolders, nextToastId } from "@/lib/learn/data";
+  useLibraryCollections, useArchivedLessons, useFlashcardSets, useFolderItems, useFolders, useLearnActions, useLearnCapabilities, useMyLessons, usePinnedFolders, nextToastId } from "@/lib/learn/data";
 import type { Folder as FolderT, LibraryItemKind, Visibility } from "@/lib/learn/types";
 import { errorMessage } from "@/lib/errors";
 import { useCopy, useLocale } from "@/lib/i18n";
@@ -68,6 +68,7 @@ function Library() {
   const caps = useLearnCapabilities();
   const actions = useLearnActions();
   const folders = useFolders();
+  const collections = useLibraryCollections();
   const items = useFolderItems();
   const lessons = useMyLessons();
   const archivedLessons = useArchivedLessons() ?? [];
@@ -112,12 +113,10 @@ function Library() {
         <>
           <button role="menuitem" className="ws-menu__row" onClick={() => { close(); setDialog({ kind: "rename", folder: f }); }}><Pencil size={15} />{t.rename}</button>
           <button role="menuitem" className="ws-menu__row" onClick={() => { close(); setDialog({ kind: "move", id: f.id, name: f.name, type: "folder" }); }}><FolderInput size={15} />{t.move}</button>
-          <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(() => { actions.duplicateFolder(f.id); say(t.duplicatedToast); }); }}><Copy size={15} />{t.duplicate}</button>
-          <button role="menuitem" className="ws-menu__row" onClick={() => { close(); actions.togglePinnedFolder(f.id); }}>{pinned.includes(f.id) ? <PinOff size={15} /> : <Pin size={15} />}{pinned.includes(f.id) ? t.unpin : t.pin}</button>
+
+
           <button role="menuitem" className="ws-menu__row" onClick={() => { close(); setDialog({ kind: "collection", folder: f }); }}><Globe size={15} />{f.collection?.publishedAt ? t.collection : t.publishCollection}</button>
-          {f.archived
-            ? <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(() => { actions.archiveFolder(f.id, false); say(t.restoredToast(f.name)); }); }}><ArchiveRestore size={15} />{t.restore}</button>
-            : <button role="menuitem" className="ws-menu__row ws-menu__danger" onClick={() => { close(); run(() => { actions.archiveFolder(f.id); say(t.archivedToast(f.name), () => actions.archiveFolder(f.id, false)); }); }}><Archive size={15} />{t.archive}</button>}
+
         </>
       )}
     </WsMenu>
@@ -215,7 +214,7 @@ function Library() {
                           <button role="menuitem" className="ws-menu__row" onClick={() => { close(); setDialog({ kind: "move", id: l.id, name: l.draft.meta.title, type: "lesson" }); }}><FolderInput size={15} />{t.move}</button>
                           <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(async () => { const id = await actions.duplicateLesson(l.id); router.push(`/dashboard/learn/lessons/${id}`); }); }}><Copy size={15} />{t.duplicate}</button>
                           {l.archived
-                            ? <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(() => { void run(() => actions.archiveLesson(l.id, false)); }); }}><ArchiveRestore size={15} />{t.restore}</button>
+                            ? <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(() => actions.archiveLesson(l.id, false)); }}><ArchiveRestore size={15} />{t.restore}</button>
                             : <button role="menuitem" className="ws-menu__row ws-menu__danger" onClick={() => { close(); run(async () => { await actions.archiveLesson(l.id); say(t.archivedToast(l.draft.meta.title), () => actions.archiveLesson(l.id, false)); }); }}><Archive size={15} />{t.archive}</button>}
                         </>
                       )}
@@ -231,7 +230,7 @@ function Library() {
                         <span className="lx-row__title">{form?.title ?? i.title}</span>
                         <span className="lx-row__sub">{t.kinds[i.kind]}</span>
                       </Link>
-                      <button type="button" className="ws-icon-button" aria-label={`${t.remove}: ${form?.title ?? i.title}`} onClick={() => actions.removeFromFolder(i.kind, i.refId)}><X size={15} /></button>
+                      <button type="button" className="ws-icon-button" aria-label={`${t.remove}: ${form?.title ?? i.title}`} onClick={() => run(() => actions.removeFromFolder(i.kind, i.refId))}><X size={15} /></button>
                     </div>
                   );
                 })}
@@ -241,24 +240,25 @@ function Library() {
         </>
       )}
 
-      {dialog?.kind === "new" && <NameDialog title={t.newFolder} label={t.name} submit={t.create} cancel={t.cancel} onClose={() => setDialog(null)} onSubmit={(name) => run(() => { actions.createFolder(name, folderId); setDialog(null); })} />}
-      {dialog?.kind === "rename" && <NameDialog title={t.rename} label={t.name} submit={t.save} cancel={t.cancel} initial={dialog.folder.name} onClose={() => setDialog(null)} onSubmit={(name) => run(() => { actions.renameFolder(dialog.folder.id, name); setDialog(null); })} />}
+      {!folderId && !!collections?.length && <section className="lx-section"><h2>{t.collection}</h2>{collections.map(c => <Link key={c._id} className="lx-link" href={c.publishedVersionId ? `/learn/collections/${c._id}` : "/dashboard/learn/library"}>{c.metadata.title}{!c.publishedVersionId ? " (draft)" : ""}</Link>)}</section>}
+      {dialog?.kind === "new" && <NameDialog title={t.newFolder} label={t.name} submit={t.create} cancel={t.cancel} onClose={() => setDialog(null)} onSubmit={(name) => run(async () => { await actions.createFolder(name, folderId); setDialog(null); })} />}
+      {dialog?.kind === "rename" && <NameDialog title={t.rename} label={t.name} submit={t.save} cancel={t.cancel} initial={dialog.folder.name} onClose={() => setDialog(null)} onSubmit={(name) => run(async () => { await actions.renameFolder(dialog.folder.id, name); setDialog(null); })} />}
       {dialog?.kind === "move" && (() => {
         const blocked = new Set<string>();
         if (dialog.type === "folder") { blocked.add(dialog.id); let grew = true; while (grew) { grew = false; for (const f of folders) if (f.parentId && blocked.has(f.parentId) && !blocked.has(f.id)) { blocked.add(f.id); grew = true; } } }
         return (
           <MoveDialog title={t.moveTo(dialog.name)} label={t.destination} topLevel={t.topLevel} submit={t.move} cancel={t.cancel}
             options={folders.filter((f) => !f.archived && !blocked.has(f.id)).map((f) => ({ value: f.id, label: pathOf(f.id) })).sort((a, b) => a.label.localeCompare(b.label))}
-            onClose={() => setDialog(null)} onSubmit={(dest) => run(() => { if (dialog.type === "folder") actions.moveFolder(dialog.id, dest); else actions.moveLesson(dialog.id, dest); setDialog(null); })} />
+            onClose={() => setDialog(null)} onSubmit={(dest) => run(async () => { if (dialog.type === "folder") await actions.moveFolder(dialog.id, dest); else await actions.moveLesson(dialog.id, dest); setDialog(null); })} />
         );
       })()}
       {dialog?.kind === "add" && folderId && (
         <MoveDialog title={t.addExisting} label={t.pick} submit={t.add} cancel={t.cancel} empty={t.noForms}
           options={[...allForms.filter((f) => !items.some((i) => i.folderId === folderId && i.refId === f._id)).map((f) => ({ value: `${f.quizMode ? "quiz" : "form"}:${f._id}:${f.title}`, label: `${f.title || "Untitled"} · ${f.quizMode ? t.kinds.quiz : t.kinds.form}` })),
             ...decks.filter((d) => !items.some((i) => i.folderId === folderId && i.refId === d.id)).map((d) => ({ value: `flashcards:${d.id}:${d.title}`, label: `${d.title} · ${t.kinds.flashcards}` }))]}
-          onClose={() => setDialog(null)} onSubmit={(value) => run(() => { if (!value) return; const [kind, refId, ...title] = value.split(":"); actions.addToFolder({ folderId, kind: kind as "form", refId, title: title.join(":") }); setDialog(null); })} />
+          onClose={() => setDialog(null)} onSubmit={(value) => run(async () => { if (!value) return; const [kind, refId, ...title] = value.split(":"); await actions.addToFolder({ folderId, kind: kind as "form", refId, title: title.join(":") }); setDialog(null); })} />
       )}
-      {dialog?.kind === "collection" && <CollectionDialog folder={dialog.folder} device={true} t={t} onClose={() => setDialog(null)} onSave={(collection) => run(() => { actions.setCollection(dialog.folder.id, collection); setDialog(null); })} />}
+      {dialog?.kind === "collection" && <CollectionDialog folder={dialog.folder} device={false} t={t} onClose={() => setDialog(null)} onSave={(collection) => run(async () => { if (!collection) return; const id = await actions.createLibraryCollection({ title: dialog.folder.name, description: collection.description, language: locale, folderId: dialog.folder.id, visibility: collection.visibility }); setDialog(null); router.push(`/learn/collections/${id}`); })} />}
       <WsUndoToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
@@ -298,7 +298,7 @@ function CollectionDialog({ folder, device, t, onSave, onClose }: { folder: Fold
     <WsDialog title={`${t.collection}: ${folder.name}`} description={t.collectionLead} onClose={onClose}>
       <form className="lx-form" onSubmit={(e) => { e.preventDefault(); onSave({ description: description.trim().slice(0, 500), visibility, publishedAt: folder.collection?.publishedAt ?? Date.now() }); }}>
         <label className="lx-field">{t.description}<textarea className="lx-textarea" rows={3} value={description} maxLength={500} onChange={(e) => setDescription(e.target.value)} /></label>
-        <label className="lx-field">{t.visibility}<Select label={t.visibility} value={visibility} onChange={(v) => setVisibility(v as Visibility)} options={(["private", "unlisted", "public"] as const).map((v) => ({ value: v, label: t.vis[v] }))} /></label>
+        <label className="lx-field">{t.visibility}<Select label={t.visibility} value={visibility} onChange={(v) => setVisibility(v as Visibility)} options={(["private", "public"] as const).map((v) => ({ value: v, label: t.vis[v] }))} /></label>
         {device && visibility !== "private" && <p className="lx-notice" data-tone="warn">{t.collectionDevice}</p>}
         <div className="lx-actions" style={{ justifyContent: "flex-end" }}>
           {published && <Link className="ws-btn ws-btn--ghost" href={`/learn/collections/${folder.id}`}>{t.viewCol}</Link>}

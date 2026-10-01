@@ -55,7 +55,7 @@ const copy = {
 
 export interface ChangePreviewProps {
   /** "preview": a connected app proposes changes. "conflict": both sides changed the lesson. */
-  mode?: "preview" | "conflict";
+  mode?: "preview" | "conflict" | "comparison";
   /** Connection label. Leave empty for a neutral "the connected app". */
   appName?: string;
   /** Current lesson details; null when the app proposes a new lesson. */
@@ -84,13 +84,15 @@ export default function ChangePreview({ mode = "preview", appName, before, after
   const counts = countBlockChanges(changes);
   const shown = showAll ? changes : changes.slice(0, PREVIEW_LIMIT);
   const labels = mode === "conflict" ? t.conflict : t.preview;
+  const comparisonTitle = locale === "ar" ? "مقارنة المسودة الحالية بالنسخة المنشورة" : "Current draft compared with published version";
+  const comparisonIntro = locale === "ar" ? "هذه التغييرات موجودة بالفعل في المسودة. المقارنة للقراءة فقط ولا تمثل طلب موافقة. لا تتغير النسخة المنشورة." : "These changes are already applied to the draft. This is a read-only comparison, not a pending approval. The published version is unchanged.";
   const summary = t.counts(counts.added, counts.changed, counts.removed, locale);
 
   return (
-    <section className={`chaos-card bg-card p-4 space-y-4 text-sm ${mode === "conflict" ? "border-destructive" : ""}`} aria-label={mode === "conflict" ? t.conflictTitle : t.previewTitle(app)} role={mode === "conflict" ? "alert" : undefined}>
+    <section className={`chaos-card bg-card p-4 space-y-4 text-sm ${mode === "conflict" ? "border-destructive" : ""}`} aria-label={mode === "comparison" ? comparisonTitle : mode === "conflict" ? t.conflictTitle : t.previewTitle(app)} role={mode === "conflict" ? "alert" : undefined}>
       <header className="space-y-1">
-        <h2 className="font-bold text-base">{mode === "conflict" ? t.conflictTitle : before ? t.previewTitle(app) : t.newLesson}</h2>
-        <p className="ws-row__help">{mode === "conflict" ? t.conflictIntro(app) : t.previewIntro}</p>
+        <h2 className="font-bold text-base">{mode === "comparison" ? comparisonTitle : mode === "conflict" ? t.conflictTitle : before ? t.previewTitle(app) : t.newLesson}</h2>
+        <p className="ws-row__help">{mode === "comparison" ? comparisonIntro : mode === "conflict" ? t.conflictIntro(app) : t.previewIntro}</p>
         {summary && <p className="text-xs text-muted-foreground">{summary}</p>}
       </header>
 
@@ -133,7 +135,7 @@ export default function ChangePreview({ mode = "preview", appName, before, after
         )}
       </div>
 
-      {(onKeepMine || onTakeTheirs || onMerge) && (
+      {mode !== "comparison" && (onKeepMine || onTakeTheirs || onMerge) && (
         <div className="flex flex-wrap justify-end gap-2">
           {onMerge && <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={busy} onClick={onMerge}>{labels.merge}</button>}
           {onKeepMine && <button type="button" className={`ws-btn ws-btn--sm ${mode === "conflict" ? "ws-btn--danger" : ""}`} disabled={busy} onClick={onKeepMine}>{labels.mine}</button>}

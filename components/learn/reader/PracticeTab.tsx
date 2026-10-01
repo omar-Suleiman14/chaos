@@ -1,12 +1,14 @@
 "use client";
 
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { ArrowRight, GitFork, Layers, PenLine, Radio, Target } from "lucide-react";
 import { useHostLive } from "@/components/live/HostLiveButton";
 import { useLessonFlashcards } from "@/lib/learn/data";
+import { useStudyActions, useStudyCapabilities } from "@/lib/learn/studyClient";
 import type { AttachedQuiz, Lesson, QuizKind } from "@/lib/learn/types";
 import { useCopy } from "@/lib/i18n";
 import { useState } from "react";
@@ -33,17 +35,27 @@ const copy = {
 export const quizKindLabel = (t: (typeof copy)["en"], quiz: AttachedQuiz) => quiz.label.trim() || t.kinds[quiz.kind];
 export const usePracticeCopy = () => useCopy(copy);
 
-export default function PracticeTab({ lesson, isOwner, onForkQuiz }: { lesson: Lesson; isOwner: boolean; onForkQuiz?: (quiz: AttachedQuiz) => void }) {
+export default function PracticeTab({ lesson, isOwner }: { lesson: Lesson; isOwner: boolean; onForkQuiz?: (quiz: AttachedQuiz) => void }) {
   const t = useCopy(copy);
   const host = useHostLive();
+  const router = useRouter();
+  const study = useStudyActions();
+  const capabilities = useStudyCapabilities();
+  const [copying, setCopying] = useState<string | null>(null);
   const [error, setError] = useState("");
   const decks = useLessonFlashcards(lesson.id) ?? [];
   // Owners can host live and edit only quizzes they still own or edit.
   const mine = useQuery(api.forms.listMyForms, isOwner ? {} : "skip");
   const editable = new Set([...(mine?.owned ?? []), ...(mine?.shared ?? []).filter((f) => f.role === "editor")].map((f) => f._id as string));
-  const quizzes = [...lesson.quizzes].sort((a, b) => a.order - b.order);
+  const attachments = useQuery(api.learnFrontend.attachedQuizzes, { lessonId: lesson.id as Id<"lessons"> });
+  const quizzes = (attachments === undefined ? lesson.quizzes : (attachments ?? []).filter(q => q.kind === "form").map((q, order) => {
+    const prior = lesson.quizzes.find(x => x.formId === q.id);
+    return { formId: q.id, shareId: q.shareId ?? "", title: q.title, label: prior?.label ?? "", kind: prior?.kind ?? "custom" as QuizKind, order, questionCount: q.questionCount };
+  })).sort((a, b) => a.order - b.order);
 
-  if (!quizzes.length && !decks.length) {
+  const classic = (attachments ?? []).filter(q => q.kind === "quiz");
+  if (attachments === undefined && !quizzes.length && !decks.length) return <p className="lx-muted" role="status">{t.lead}</p>;
+  if (!quizzes.length && !classic.length && !decks.length) {
     return <div className="lx-empty"><Target size={26} aria-hidden /><h3>{t.empty}</h3>{isOwner && <p>{t.emptyOwner}</p>}</div>;
   }
   return (
@@ -68,11 +80,29 @@ export default function PracticeTab({ lesson, isOwner, onForkQuiz }: { lesson: L
                 </button>
               </>
             )}
-            {!isOwner && onForkQuiz && <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" title={t.forkHelp} onClick={() => onForkQuiz(quiz)}><GitFork size={14} aria-hidden />{t.copyQuiz}</button>}
+            <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" title={t.forkHelp} disabled={!capabilities.quizForks || copying !== null} onClick={async () => {
+              setError(""); setCopying(quiz.formId);
+              try { const id = await study.forkQuiz(quiz.formId); router.push(`/dashboard/forms/${encodeURIComponent(id)}`); }
+              catch (err) { setError(err instanceof Error ? err.message : "Could not copy quiz."); }
+              finally { setCopying(null); }
+            }}><GitFork size={14} aria-hidden />{t.copyQuiz}</button>
             <a className="ws-btn ws-btn--sm ws-btn--primary" href={`/f/${encodeURIComponent(quiz.shareId)}`} target="_blank" rel="noopener">{t.take}<ArrowRight size={14} aria-hidden className="lx-flip" /></a>
           </div>
         </article>
       ))}
+      {classic.map(quiz => <article key={quiz.id} className="lx-quiz-card">
+        <span className="lx-row__icon" data-kind="quiz" aria-hidden><Target size={16} /></span>
+        <div className="lx-quiz-card__main"><strong>{quiz.title}</strong><span className="lx-muted">{t.questions(quiz.questionCount)}</span></div>
+        <div className="lx-actions">
+          <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" title={t.forkHelp} disabled={!capabilities.quizForks || copying !== null} onClick={async () => {
+            setError(""); setCopying(quiz.id);
+            try { const result = await study.forkAssessment({ kind: "quiz", id: quiz.id as Id<"quizzes"> }); router.push(result.href); }
+            catch (err) { setError(err instanceof Error ? err.message : "Could not copy quiz."); }
+            finally { setCopying(null); }
+          }}><GitFork size={14} aria-hidden />{t.copyQuiz}</button>
+          <a className="ws-btn ws-btn--sm ws-btn--primary" href={quiz.href} target="_blank" rel="noopener">{t.take}<ArrowRight size={14} aria-hidden className="lx-flip" /></a>
+        </div>
+      </article>)}
       {decks.map((deck) => (
         <article key={deck.id} className="lx-quiz-card">
           <span className="lx-row__icon" data-kind="flashcards" aria-hidden><Layers size={16} /></span>

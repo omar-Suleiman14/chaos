@@ -13,7 +13,6 @@ import {
 import { SideMenuExtension } from "@blocknote/core/extensions";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { BookMarked, Copy, Image as ImageIcon, Info, MoveDown, MoveUp, PlayCircle, Quote, Sigma, Sparkles } from "lucide-react";
-import { resolveLearnFileUrl as resolveFileUrl, uploadLearnFile as putFile } from "@/lib/learn/data";
 import { blockText } from "@/lib/learn/doc";
 import type { Block } from "@/lib/learn/doc";
 import type { AiAction, LessonSource } from "@/lib/learn/types";
@@ -58,6 +57,9 @@ export interface LessonEditorProps {
   onAssist: (request: AssistRequest, editor: LessonEditorType) => void;
   onUploadError: (message: string) => void;
   onReady?: (editor: LessonEditorType) => void;
+  uploadFile: (file: File) => Promise<string>;
+  resolveFileUrl: (reference: string) => Promise<string>;
+  editable?: boolean;
 }
 
 function useDarkMode() {
@@ -86,14 +88,15 @@ export default function LessonEditor(props: LessonEditorProps) {
     dictionary: locale === "ar" ? locales.ar : locales.en,
     uploadFile: async (file: File) => {
       try {
-        return await putFile(file);
+        if (!file.type.startsWith("image/")) throw new Error("Only durable PNG, JPEG and WebP images can be inserted into the lesson.");
+        return await propsRef.current.uploadFile(file);
       } catch (err) {
-        propsRef.current.onUploadError(err instanceof Error && err.message === "FILE_TOO_LARGE" ? t.fileTooLarge : t.uploadFailed);
+        propsRef.current.onUploadError(err instanceof Error ? err.message : t.uploadFailed);
         throw err;
       }
     },
-    resolveFileUrl,
-    tables: { splitCells: true, cellBackgroundColor: true, cellTextColor: true, headers: true },
+    resolveFileUrl: reference => propsRef.current.resolveFileUrl(reference),
+    tables: { splitCells: false, cellBackgroundColor: false, cellTextColor: false, headers: true },
   }, [locale]);
 
   useEffect(() => { props.onReady?.(editor); }, [editor]); // eslint-disable-line react-hooks/exhaustive-deps -- once per editor
@@ -116,7 +119,7 @@ export default function LessonEditor(props: LessonEditorProps) {
       { key: "source", title: t.source, subtext: t.sourceHint, group, icon: <BookMarked size={18} />, aliases: ["reference", "pdf", "slides", "مرجع"], onItemClick: () => { insertOrUpdateBlockForSlashMenu(editor, { type: "source" }); } },
       {
         key: "citation", title: t.cite, subtext: t.citeHint, group, icon: <Quote size={18} />, aliases: ["cite", "ref", "page", "استشهاد"],
-        onItemClick: () => propsRef.current.onEditCitation(null, undefined, (value) => { if (value) editor.insertInlineContent([{ type: "citation", props: value }, " "]); }),
+        onItemClick: () => propsRef.current.onEditCitation(editor.getTextCursorPosition().block.id),
       },
     ] as DefaultReactSuggestionItem[];
   };
@@ -124,7 +127,7 @@ export default function LessonEditor(props: LessonEditorProps) {
   return (
     <EditorBridge.Provider value={bridge}>
       <div className="lx-editor" dir={props.language === "ar" ? "rtl" : "ltr"} lang={props.language}>
-        <BlockNoteView editor={editor} theme={dark ? "dark" : "light"} slashMenu={false} formattingToolbar={false} sideMenu={false}
+        <BlockNoteView editor={editor} editable={props.editable !== false} theme={dark ? "dark" : "light"} slashMenu={false} formattingToolbar={false} sideMenu={false}
           onChange={() => propsRef.current.onChange(editor.document as unknown[])}>
           <SuggestionMenuController triggerCharacter="/" getItems={async (query) => filterSuggestionItems(slashItems(), query)} />
           <FormattingToolbarController formattingToolbar={() => (

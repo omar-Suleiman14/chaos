@@ -1,12 +1,14 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Globe, Link2, Lock, Search, SearchX } from "lucide-react";
+import { Globe, Lock, Search, SearchX } from "lucide-react";
 import { WsDialog } from "@/components/workspace/primitives";
 import { diffDocuments } from "@/lib/learn/doc";
 import { hasUnpublishedChanges, useLearnCapabilities } from "@/lib/learn/data";
 import type { IndexingChoice, Lesson, Visibility } from "@/lib/learn/types";
 import { useCopy } from "@/lib/i18n";
+import type { NativeSource } from "@/lib/learn/mediaClient";
+import { errorMessage } from "@/lib/errors";
 
 const copy = {
   en: {
@@ -49,16 +51,19 @@ const copy = {
   },
 };
 
-const visIcon = { private: Lock, unlisted: Link2, public: Globe } as const;
+const visIcon = { private: Lock, public: Globe } as const;
 
-export default function PublishDialog({ lesson, onClose, onPublish }: {
-  lesson: Lesson; onClose: () => void; onPublish: (input: { visibility: Visibility; indexing: IndexingChoice; note: string }) => void;
+export default function PublishDialog({ lesson, onClose, onPublish, sources = [], error, disabled = false }: {
+  lesson: Lesson; onClose: () => void; onPublish: (input: { visibility: Visibility; indexing: IndexingChoice; note: string }) => void | Promise<unknown>;
+  sources?: NativeSource[]; error?: string; disabled?: boolean;
 }) {
   const t = useCopy(copy);
   const caps = useLearnCapabilities();
   const [visibility, setVisibility] = useState<Visibility>(lesson.published ? lesson.visibility : "public");
   const [indexing, setIndexing] = useState<IndexingChoice>(lesson.draft.meta.indexing);
   const [note, setNote] = useState("");
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState("");
   const changes = useMemo(() => lesson.published ? diffDocuments(lesson.published.content, lesson.draft.content) : [], [lesson]);
   const count = (k: string) => changes.filter((c) => c.kind === k).length;
   const first = !lesson.published;
@@ -73,12 +78,12 @@ export default function PublishDialog({ lesson, onClose, onPublish }: {
   );
 
   return (
-    <WsDialog title={first ? t.first : t.changes} description={t.lead} onClose={onClose}>
-      <form className="lx-form" onSubmit={(e) => { e.preventDefault(); if (!noTitle) onPublish({ visibility, indexing: visibility === "public" ? indexing : "noindex", note }); }}>
+    <WsDialog title={first ? t.first : t.changes} description={t.lead} onClose={() => { if (!busy) onClose(); }}>
+      <form className="lx-form" onSubmit={async (e) => { e.preventDefault(); if (noTitle || busy || disabled) return; setBusy(true); setFailure(""); try { await onPublish({ visibility, indexing: visibility === "public" ? indexing : "noindex", note }); } catch (err) { setFailure(errorMessage(err)); } finally { setBusy(false); } }}>
         {!first && <p className="lx-muted">{hasUnpublishedChanges(lesson) ? t.summary(count("added"), count("changed"), count("removed")) : t.noChanges}</p>}
         <fieldset className="lx-field" style={{ border: 0, padding: 0, margin: 0, gap: 6 }}>
           <legend style={{ marginBottom: 6 }}>{t.who}</legend>
-          {(["private", "unlisted", "public"] as const).map((v) => option("visibility", v, visibility, setVisibility, t.vis[v], visIcon[v]))}
+          {(["private", "public"] as const).map((v) => option("visibility", v, visibility, setVisibility, t.vis[v], visIcon[v], busy))}
         </fieldset>
         <fieldset className="lx-field" style={{ border: 0, padding: 0, margin: 0, gap: 6 }}>
           <legend style={{ marginBottom: 6 }}>{t.search}</legend>
@@ -86,13 +91,15 @@ export default function PublishDialog({ lesson, onClose, onPublish }: {
           {option("indexing", "noindex", indexing, setIndexing, t.idx.noindex, SearchX, visibility !== "public")}
           {visibility !== "public" && <small>{t.indexOnlyPublic}</small>}
         </fieldset>
-        <label className="lx-field">{t.note}<input className="lx-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t.notePh} maxLength={200} /><small>{t.noteHelp}</small></label>
+        <label className="lx-field">{t.note}<input className="lx-input" value={note} onChange={(e) => setNote(e.target.value)} placeholder={t.notePh} maxLength={2000} /><small>{t.noteHelp}</small></label>
         {visibility !== "private" && <p className="lx-muted">{t.rights}</p>}
+        {sources.filter(source => source.metadataVisibility !== "public" || (source.nativeKind === "image" && source.contentVisibility !== "public")).map(source => <p className="lx-notice" data-tone="warn" key={source.id}>{source.title}: share attribution in Sources before publishing{source.nativeKind === "image" ? ", and explicitly allow readers to load this image" : "; its original file can stay private"}.</p>)}
         {!caps.sharedPublishing && visibility !== "private" && <p className="lx-notice" data-tone="warn">{t.device}</p>}
         {noTitle && <p className="lx-error" role="alert">{t.titleNeeded}</p>}
+        {(failure || error) && <p className="lx-error" role="alert">{failure || error}</p>}
         <div className="lx-actions" style={{ justifyContent: "flex-end" }}>
-          <button type="button" className="ws-btn ws-btn--ghost" onClick={onClose}>{t.cancel}</button>
-          <button type="submit" className="ws-btn ws-btn--primary" disabled={noTitle}>{first ? t.publish : t.publishChanges}</button>
+          <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={onClose}>{t.cancel}</button>
+          <button type="submit" className="ws-btn ws-btn--primary" disabled={noTitle || busy || disabled}>{first ? t.publish : t.publishChanges}</button>
         </div>
       </form>
     </WsDialog>

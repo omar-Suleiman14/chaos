@@ -8,7 +8,7 @@ import type { EmbedPolicy, EmbedTarget } from "@/lib/embed";
 
 // /print shows a quiz with its answer key; the queries already check ownership, and
 // signing in first keeps anonymous visitors off the page entirely.
-const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/admin(.*)", "/print(.*)"]);
+const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/admin(.*)", "/print(.*)", "/homework(.*)"]);
 
 /** Past this the frame is denied rather than holding up the page. */
 const POLICY_TIMEOUT_MS = 2500;
@@ -51,6 +51,6 @@ export const config = {
     // Every path that could be a public form address, even one that looks like a file
     // (a username may contain dots). Must equal EMBED_PROXY_MATCHER in lib/embed.ts;
     // next.config.ts leaves exactly these paths to this proxy.
-    "/((?!(?:admin|api|app|compare|chatgpt|dashboard|docs|help|learn|login|logout|mcp|play|pricing|print|privacy|settings|sign\\-in|sign\\-up|signin|signup|static|support|terms|trpc|_next|\\.well\\-known|opengraph\\-image)/)[A-Za-z0-9_.\\-]{1,64}/[A-Za-z0-9_\\-]{1,64})",
+    "/((?!(?:admin|api|app|compare|chatgpt|dashboard|docs|help|homework|learn|login|logout|mcp|play|pricing|print|privacy|settings|sign\\-in|sign\\-up|signin|signup|static|support|terms|trpc|_next|\\.well\\-known|opengraph\\-image)/)[A-Za-z0-9_.\\-]{1,64}/[A-Za-z0-9_\\-]{1,64})",
   ],
 };

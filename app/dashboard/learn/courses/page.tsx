@@ -1,12 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo } from "react";
+import { useMemo, useState } from "react";
 import { AlertTriangle, ArrowRight, BookmarkMinus, GraduationCap, Search } from "lucide-react";
 import { EmptyState } from "@/components/learn/ui";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { useCurriculumNodes, useLearnActions, useMyCourses, usePublicLessons } from "@/lib/learn/data";
 import { ancestors } from "@/lib/learn/search";
+import { errorMessage } from "@/lib/errors";
 import { useCopy } from "@/lib/i18n";
 
 const copy = {
@@ -28,6 +29,7 @@ export default function MyCoursesPage() {
   const nodes = useCurriculumNodes();
   const lessons = usePublicLessons({});
   const actions = useLearnActions();
+  const [error, setError] = useState("");
   const byId = useMemo(() => Object.fromEntries((nodes ?? []).map((n) => [n.id, n])), [nodes]);
   if (!courses || !nodes || !lessons) return <PageSkeleton label={t.loading} />;
   const sorted = [...courses].sort((a, b) => (b.lastOpenedAt ?? b.addedAt) - (a.lastOpenedAt ?? a.addedAt));
@@ -37,6 +39,7 @@ export default function MyCoursesPage() {
         <div><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></div>
         <div className="lx-actions"><Link href="/dashboard/learn/courses/browse" className="ws-btn ws-btn--primary"><Search size={16} aria-hidden />{t.browse}</Link></div>
       </header>
+      {error && <p className="lx-error" role="alert">{error}</p>}
       {!sorted.length ? <EmptyState level={2} icon={GraduationCap} title={t.empty} body={t.emptyBody}><Link href="/dashboard/learn/courses/browse" className="ws-btn">{t.browse}</Link></EmptyState> : (
         <div className="lx-list">
           {sorted.map((c) => {
@@ -54,7 +57,7 @@ export default function MyCoursesPage() {
                 </div>
                 {older && <span className="lx-badge" data-tone="amber"><AlertTriangle size={12} aria-hidden />{t.older}</span>}
                 {mod && <Link className="ws-btn ws-btn--sm" href={`/dashboard/learn/courses/browse?node=${mod.id}`} onClick={() => actions.openCourse(c.moduleId)}>{t.open}<ArrowRight size={14} aria-hidden className="lx-flip" /></Link>}
-                <button type="button" className="ws-icon-button" aria-label={`${t.remove}: ${mod?.name ?? ""}`} onClick={() => actions.unfollowCourse(c.moduleId)}><BookmarkMinus size={15} /></button>
+                <button type="button" className="ws-icon-button" aria-label={`${t.remove}: ${mod?.name ?? ""}`} onClick={async () => { setError(""); try { await actions.unfollowCourse(c.moduleId); } catch (err) { setError(errorMessage(err)); } }}><BookmarkMinus size={15} /></button>
               </div>
             );
           })}

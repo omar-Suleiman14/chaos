@@ -141,8 +141,22 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const [selection, clearSelection] = useTextSelection(article);
   const say = (text: string, undo?: () => void) => setToast({ id: nextToastId(), text, undo });
 
-  // Views count once per half hour, and only published reading (not previews).
-  useEffect(() => { if (!previewDraft) actions.recordView(lesson.id); }, [lesson.id, previewDraft]); // eslint-disable-line react-hooks/exhaustive-deps -- once per lesson
+  // Only visible published-block engagement is eligible for a server view.
+  useEffect(() => {
+    if (previewDraft || !signedIn) return;
+    const blockId = active ?? asBlocks(view.content)[0]?.id;
+    if (!blockId) return;
+    let seconds = 0;
+    const timer = window.setInterval(() => {
+      if (document.visibilityState !== "visible" || !article.current) return;
+      const rect = article.current.getBoundingClientRect();
+      if (rect.bottom <= 0 || rect.top >= window.innerHeight) return;
+      if (++seconds < 15) return;
+      window.clearInterval(timer);
+      void actions.recordView(lesson.id, { blockId, engagedSeconds: seconds }).catch(err => say(errorMessage(err)));
+    }, 1000);
+    return () => window.clearInterval(timer);
+  }, [lesson.id, active, previewDraft, signedIn]); // eslint-disable-line react-hooks/exhaustive-deps -- timer belongs to the engagement target
 
   // Reading progress: percent scrolled and the heading being read, saved as the reader goes.
   const lastSaved = useRef(0);
@@ -198,8 +212,8 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
     if (!selection) return;
     const { text, blockId, offset } = selection;
     if (action.startsWith("highlight:")) {
-      guard(() => { actions.addHighlight({ lessonId: lesson.id, blockId, quote: text, offset, color: action.slice(10) as "yellow" }); say(t.highlightSaved); });
-    } else if (action === "save") guard(() => { actions.saveBlock(lesson, blockId, text); say(t.savedToast); });
+      guard(async () => { await actions.addHighlight({ lessonId: lesson.id, blockId, quote: text, offset, color: action.slice(10) as "yellow" }); say(t.highlightSaved); });
+    } else if (action === "save") guard(async () => { await actions.saveBlock(lesson, blockId, text); say(t.savedToast); });
     else if (action === "note") guard(() => setEditingNote({ blockId, body: `“${excerpt(text, 120)}” ` }));
     else if (action === "discuss") { setDiscussAnchor({ blockId, excerpt: excerpt(text, 140) }); setPanel("discussion"); }
     else if (action === "chatgpt" || action === "claude") openHandoff(action, text, blockId, "ask");
@@ -259,17 +273,17 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
             <header><span><NotebookPen size={12} aria-hidden /> {t.noteTitle}</span>
               <span className="lx-actions" style={{ gap: 2 }}>
                 <button type="button" className="ws-icon-button" aria-label={t.edit} onClick={() => setEditingNote({ id: n.id, blockId: n.blockId, body: n.body })}><PenLine size={13} /></button>
-                <button type="button" className="ws-icon-button" aria-label={t.noteDelete} onClick={() => { const copyOf = n; actions.deleteNote(n.id); say(t.noteDelete, () => actions.upsertNote({ lessonId: copyOf.lessonId, blockId: copyOf.blockId, body: copyOf.body })); }}><X size={13} /></button>
+                <button type="button" className="ws-icon-button" aria-label={t.noteDelete} onClick={() => guard(async () => { const copyOf = n; await actions.deleteNote(n.id); say(t.noteDelete, () => { void guard(() => actions.upsertNote({ lessonId: copyOf.lessonId, blockId: copyOf.blockId, body: copyOf.body })); }); })}><X size={13} /></button>
               </span>
             </header>
             <p style={{ whiteSpace: "pre-wrap" }}>{n.body}</p>
           </div>
         ))}
         {editing && (
-          <form className="lx-note-inline" onSubmit={(e) => { e.preventDefault(); if (editingNote.body.trim()) { actions.upsertNote({ id: editingNote.id, lessonId: lesson.id, blockId: block.id, body: editingNote.body }); say(t.noteSaved); } setEditingNote(null); }}>
+          <form className="lx-note-inline" onSubmit={(e) => { e.preventDefault(); if (editingNote.body.trim()) void guard(async () => { await actions.upsertNote({ id: editingNote.id, lessonId: lesson.id, blockId: block.id, body: editingNote.body }); say(t.noteSaved); setEditingNote(null); }); }}>
             <header><span><NotebookPen size={12} aria-hidden /> {t.noteTitle}</span></header>
             { }
-            <textarea autoFocus className="lx-textarea" rows={3} value={editingNote.body} placeholder={t.notePh} aria-label={t.noteTitle} maxLength={5000} onChange={(e) => setEditingNote({ ...editingNote, body: e.target.value })}
+            <textarea autoFocus className="lx-textarea" rows={3} value={editingNote.body} placeholder={t.notePh} aria-label={t.noteTitle} maxLength={4000} onChange={(e) => setEditingNote({ ...editingNote, body: e.target.value })}
               onKeyDown={(e) => { if (e.key === "Escape") setEditingNote(null); }} />
             <div className="lx-actions" style={{ justifyContent: "flex-end", marginTop: 6 }}>
               <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" onClick={() => setEditingNote(null)}>{t.noteCancel}</button>
@@ -319,7 +333,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
           {isOwner && <Link href={`/dashboard/learn/lessons/${lesson.id}`} className="ws-btn ws-btn--sm ws-btn--ghost"><PenLine size={15} aria-hidden /><span className="lx-phone-label">{t.edit}</span></Link>}
           {!isOwner && (
             <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={!!lessonSaved}
-              onClick={() => guard(() => { if (lessonSaved) actions.removeSave(lessonSaved.id); else { actions.saveLesson(lesson); say(t.savedToast); } })}>
+              onClick={() => guard(async () => { if (lessonSaved) await actions.removeSave(lessonSaved.id); else { await actions.saveLesson(lesson); say(t.savedToast); } })}>
               {lessonSaved ? <BookmarkCheck size={15} aria-hidden /> : <Bookmark size={15} aria-hidden />}<span className="lx-phone-label">{lessonSaved ? t.saved : t.save}</span>
             </button>
           )}
@@ -410,7 +424,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                           <span className="lx-actions" role="group" aria-label={t.helpful}>
                             <span className="lx-muted">{vote ? t.thanks : t.helpful}</span>
                             <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={vote === "helpful"} onClick={() => guard(() => actions.vote(lesson.id, vote === "helpful" ? null : "helpful"))}><ThumbsUp size={14} aria-hidden />{t.yes}</button>
-                            <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={vote === "not_helpful"} onClick={() => guard(() => actions.vote(lesson.id, vote === "not_helpful" ? null : "not_helpful"))}><ThumbsDown size={14} aria-hidden />{t.no}</button>
+
                           </span>
                         )}
                       </div>

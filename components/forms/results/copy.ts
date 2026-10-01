@@ -7,7 +7,7 @@ export const resultsCopy = {
     notFound: "This form was not found, or you do not have access to it.",
     backToForm: "Back to form",
     tabsLabel: "Results",
-    tabs: { summary: "Summary", responses: "Responses", export: "Export" },
+    tabs: { summary: "Summary", responses: "Responses", segments: "Segments", export: "Export" },
     responses: { one: "response", other: "responses" } as PluralForms,
     // Summary header
     statResponses: "Responses",
@@ -188,7 +188,7 @@ export const resultsCopy = {
     notFound: "لم يُعثر على هذا النموذج، أو ليس لديك صلاحية الوصول إليه.",
     backToForm: "العودة إلى النموذج",
     tabsLabel: "النتائج",
-    tabs: { summary: "الملخص", responses: "الردود", export: "التصدير" },
+    tabs: { summary: "الملخص", responses: "الردود", segments: "الشرائح ومسار الإجابة", export: "التصدير" },
     responses: { zero: "رد", one: "رد", two: "ردّان", few: "ردود", many: "ردًا", other: "رد" } as PluralForms,
     statResponses: "الردود",
     statCompletion: "نسبة الإكمال",

@@ -3,9 +3,12 @@
 import { useMemo, useState } from "react";
 import { GraduationCap, Tags, X } from "lucide-react";
 import { Select } from "@/components/workspace/Select";
-import { useCurriculumNodes } from "@/lib/learn/data";
-import { ancestors } from "@/lib/learn/search";
-import type { CurriculumRef, LessonMeta } from "@/lib/learn/types";
+import { usePaginatedQuery, useConvex, useQueries } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import { asBlocks, blockText, walk } from "@/lib/learn/doc";
+import { errorMessage } from "@/lib/errors";
+import type { LessonMeta } from "@/lib/learn/types";
 import { useCopy } from "@/lib/i18n";
 
 const copy = {
@@ -29,27 +32,16 @@ const copy = {
   },
 };
 
-export function MetadataPanel({ meta, onChange }: { meta: LessonMeta; onChange: (patch: Partial<LessonMeta>) => void }) {
+export function MetadataPanel({ meta, onChange, lessonId, content, isOwner = false, beforeMapping, disabled = false }: { meta: LessonMeta; onChange: (patch: Partial<LessonMeta>) => void; lessonId?: string; content?: unknown; isOwner?: boolean; beforeMapping?: () => Promise<unknown>; disabled?: boolean }) {
   const t = useCopy(copy);
-  const loaded = useCurriculumNodes();
-  const nodes = useMemo(() => loaded ?? [], [loaded]);
   const [tag, setTag] = useState("");
   const [cover, setCover] = useState(meta.coverUrl ?? "");
   const [coverError, setCoverError] = useState("");
-  const byId = useMemo(() => Object.fromEntries(nodes.map((n) => [n.id, n])), [nodes]);
-  const modules = nodes.filter((n) => n.kind === "module");
   const langChoice = meta.language === "en" || meta.language === "ar" ? meta.language : "other";
 
-  const addModule = (moduleId: string) => {
-    const chain = ancestors(byId, moduleId).reverse();
-    const version = chain.find((n) => n.kind === "version");
-    if (!version || meta.curricula.some((c) => c.moduleId === moduleId)) return;
-    const ref: CurriculumRef = { moduleId, versionId: version.id, versionLabel: version.name, path: chain.filter((n) => n.kind !== "version").map((n) => n.name) };
-    onChange({ curricula: [...meta.curricula, ref] });
-  };
 
   return (
-    <div className="lx-form">
+    <fieldset className="lx-form" disabled={disabled} style={{ border: 0, padding: 0, margin: 0, minWidth: 0 }}>
       <label className="lx-field">{t.language}
         <Select label={t.language} value={langChoice} onChange={(v) => onChange({ language: v === "other" ? "" : v })} options={(["en", "ar", "other"] as const).map((v) => ({ value: v, label: t.langs[v] }))} />
         {langChoice === "other" && <input className="lx-input" value={meta.language} placeholder={t.otherLang} aria-label={t.otherLang} maxLength={12} onChange={(e) => onChange({ language: e.target.value.trim().toLowerCase() })} />}
@@ -67,23 +59,7 @@ export function MetadataPanel({ meta, onChange }: { meta: LessonMeta; onChange: 
         <small>{t.tagsHelp}</small>
       </div>
 
-      <div className="lx-field">
-        <span><GraduationCap size={13} aria-hidden /> {t.curricula}</span>
-        {meta.curricula.map((c) => (
-          <div key={c.moduleId} className="lx-panel__row lx-badge" data-tone="blue" style={{ borderRadius: 8, padding: "6px 8px", whiteSpace: "normal" }}>
-            <span>{c.path.join(" › ")} · {c.versionLabel}</span>
-            <button type="button" className="ws-icon-button" aria-label={`${t.remove}: ${c.path.at(-1)}`} onClick={() => onChange({ curricula: meta.curricula.filter((x) => x.moduleId !== c.moduleId) })}><X size={12} /></button>
-          </div>
-        ))}
-        {modules.length ? (
-          <Select label={t.pickModule} value="" placeholder={t.pickModule} onChange={(v) => addModule(v)}
-            options={modules.filter((m) => !meta.curricula.some((c) => c.moduleId === m.id)).map((m) => {
-              const chain = ancestors(byId, m.id).reverse();
-              return { value: m.id, label: chain.map((n) => n.name).join(" › ") };
-            })} />
-        ) : <small>{t.noCurricula}</small>}
-        <small>{t.curriculaHelp}</small>
-      </div>
+      {lessonId && isOwner ? <CurriculumAssociations lessonId={lessonId} content={content} beforeMapping={beforeMapping} disabled={disabled} /> : <small>{t.curriculaHelp}</small>}
 
       <label className="lx-field">{t.cover}
         <input className="lx-input" type="url" inputMode="url" value={cover} placeholder="https://…" aria-invalid={!!coverError}
@@ -101,7 +77,65 @@ export function MetadataPanel({ meta, onChange }: { meta: LessonMeta; onChange: 
       <label className="lx-field">{t.license}
         <Select label={t.license} value={meta.license ?? ""} onChange={(v) => onChange({ license: v || undefined })} options={Object.entries(t.licenses).map(([value, label]) => ({ value, label }))} />
       </label>
-    </div>
+    </fieldset>
   );
 }
 
+function CurriculumAssociations({ lessonId, content, beforeMapping, disabled }: { lessonId: string; content: unknown; beforeMapping?: () => Promise<unknown>; disabled: boolean }) {
+  const t = useCopy(copy);
+  const client = useConvex();
+  const [institutionId, setInstitution] = useState("");
+  const [programId, setProgram] = useState("");
+  const [versionId, setVersion] = useState("");
+  const [nodeId, setNode] = useState("");
+  const [coverage, setCoverage] = useState<string[]>([]);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const institutions = usePaginatedQuery(api.curricula.listInstitutions, {}, { initialNumItems: 20 });
+  const programs = usePaginatedQuery(api.curricula.listPrograms, institutionId ? { institutionId: institutionId as Id<"curriculumInstitutions"> } : "skip", { initialNumItems: 20 });
+  const versions = usePaginatedQuery(api.curricula.listVersions, programId ? { programId: programId as Id<"curriculumPrograms"> } : "skip", { initialNumItems: 20 });
+  const nodes = usePaginatedQuery(api.curricula.listNodes, versionId ? { versionId: versionId as Id<"curriculumVersions"> } : "skip", { initialNumItems: 30 });
+  const mappings = usePaginatedQuery(api.curricula.listLessonMappings, { lessonId: lessonId as Id<"lessons"> }, { initialNumItems: 20 });
+  const mappingNodes = useQueries(Object.fromEntries([...new Set(mappings.results.map(mapping => mapping.versionId))].map(id => [id, { query: api.curricula.listNodes, args: { versionId: id, paginationOpts: { cursor: null, numItems: 100 } } }])));
+  const blocks = useMemo(() => [...walk(asBlocks(content))].map(({ block }) => ({ id: block.id, label: blockText(block).slice(0, 90) || block.type })), [content]);
+  const path = (id: string) => {
+    const chain: string[] = [], seen = new Set<string>();
+    let node = nodes.results.find(value => value._id === id);
+    while (node && !seen.has(node._id)) { seen.add(node._id); chain.unshift(node.name); node = nodes.results.find(value => value._id === node?.parentId); }
+    return chain.join(" › ");
+  };
+  const perform = async (operation: () => Promise<unknown>) => {
+    setBusy(true); setError("");
+    try { await beforeMapping?.(); await operation(); } catch (err) { setError(errorMessage(err)); } finally { setBusy(false); }
+  };
+  const more = (page: { status: string; loadMore: (count: number) => void }) => page.status === "CanLoadMore" && <button type="button" className="lx-link" disabled={busy || disabled} onClick={() => page.loadMore(20)}>Load more</button>;
+  return <div className="lx-field">
+    <span><GraduationCap size={13} aria-hidden /> {t.curricula}</span>
+    {mappings.results.map(mapping => {
+      const directory = mappingNodes[mapping.versionId];
+      const label = directory && !(directory instanceof Error) ? directory.page.find((node: { _id: string; name: string }) => node._id === mapping.nodeId)?.name : undefined;
+      return <div className="lx-panel__row lx-badge" data-tone="blue" key={mapping._id} style={{ borderRadius: 8, padding: "6px 8px", whiteSpace: "normal" }}>
+        <span>{label ?? mapping.nodeId} · {mapping.blockIds.length} blocks · {mapping.conceptKeys.length} concepts</span>
+        <button type="button" className="ws-icon-button" disabled={busy || disabled} aria-label={`${t.remove}: ${label ?? mapping.nodeId}`} onClick={() => void perform(() => client.mutation(api.curricula.removeLessonMapping, { mappingId: mapping._id }))}><X size={12} /></button>
+      </div>;
+    })}
+    {more(mappings)}
+    <Select label="Institution" value={institutionId} placeholder="Institution" disabled={busy || disabled} onChange={value => { setInstitution(value); setProgram(""); setVersion(""); setNode(""); }} options={institutions.results.map(value => ({ value: value._id, label: value.name }))} />
+    {more(institutions)}
+    {institutionId && <><Select label="Program" value={programId} placeholder="Program" disabled={busy || disabled} onChange={value => { setProgram(value); setVersion(""); setNode(""); }} options={programs.results.map(value => ({ value: value._id, label: value.name }))} />{more(programs)}</>}
+    {programId && <><Select label="Syllabus version" value={versionId} placeholder="Syllabus version" disabled={busy || disabled} onChange={value => { setVersion(value); setNode(""); }} options={versions.results.map(value => ({ value: value._id, label: value.name }))} />{more(versions)}</>}
+    {versionId && <><Select label={t.pickModule} value={nodeId} placeholder={t.pickModule} disabled={busy || disabled} onChange={setNode} options={nodes.results.filter(value => !mappings.results.some(mapping => mapping.nodeId === value._id)).map(value => ({ value: value._id, label: path(value._id) }))} />{more(nodes)}</>}
+    {nodeId && <fieldset className="lx-field" style={{ border: 0, margin: 0, padding: 0 }} disabled={busy || disabled}>
+      <legend>Blocks covered by this association</legend>
+      <small>Choose the exact blocks. Up to 100 per association. Published versions keep their own immutable mapping snapshot.</small>
+      <div style={{ maxHeight: 220, overflow: "auto" }}>{blocks.map(block => <label className="lx-panel__row" key={block.id}><input type="checkbox" checked={coverage.includes(block.id)} disabled={!coverage.includes(block.id) && coverage.length >= 100} onChange={e => setCoverage(previous => e.target.checked ? [...previous, block.id] : previous.filter(id => id !== block.id))} /> {block.label}</label>)}</div>
+      <button type="button" className="ws-btn ws-btn--sm" disabled={!coverage.length || busy || disabled} onClick={() => void perform(async () => {
+        if (coverage.some(id => !blocks.some(block => block.id === id))) throw new Error("A selected block was removed. Review the coverage again.");
+        await client.mutation(api.curricula.createLessonMapping, { lessonId: lessonId as Id<"lessons">, versionId: versionId as Id<"curriculumVersions">, nodeId: nodeId as Id<"curriculumNodes">, blockIds: coverage, conceptKeys: [] });
+        setCoverage([]); setNode("");
+      })}>Save association</button>
+    </fieldset>}
+    {error && <p className="lx-error" role="alert">{error}</p>}
+    <small>{t.curriculaHelp}</small>
+  </div>;
+}

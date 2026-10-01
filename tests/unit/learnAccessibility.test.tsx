@@ -11,8 +11,8 @@ vi.mock("convex/react", () => ({
   useConvex: () => backend,
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
   usePaginatedQuery: () => ({ ...backend.page, loadMore: backend.loadMore }),
-  useQueries: () => ({}),
-  useQuery: (ref: Parameters<typeof getFunctionName>[0], args: unknown) => args === "skip" ? undefined : getFunctionName(ref) === "learnCommunity:rank" ? [] : getFunctionName(ref) === "forms:list" ? { owned: [], shared: [] } : null,
+  useQueries: (requests: Record<string, unknown>) => Object.fromEntries(Object.keys(requests).map(key => [key, { page: [], isDone: true, continueCursor: "" }])),
+  useQuery: (ref: Parameters<typeof getFunctionName>[0], args: unknown) => args === "skip" ? undefined : ["learnCommunity:rank", "learnPersonal:listModuleFollows"].includes(getFunctionName(ref)) ? [] : getFunctionName(ref) === "forms:list" ? { owned: [], shared: [] } : null,
   useMutation: () => backend.mutation,
 }));
 const push = vi.fn();

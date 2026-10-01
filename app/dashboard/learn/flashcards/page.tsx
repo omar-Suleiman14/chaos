@@ -1,5 +1,7 @@
 "use client";
 
+import { useState } from "react";
+import { errorMessage } from "@/lib/errors";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { Layers, Plus } from "lucide-react";
@@ -28,14 +30,17 @@ export default function FlashcardsPage() {
   const router = useRouter();
   const sets = useFlashcardSets();
   const actions = useLearnActions();
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
   if (!sets) return <PageSkeleton label={t.loading} />;
-  const create = () => router.push(`/dashboard/learn/flashcards/${actions.createFlashcardSet({ title: t.untitled })}?mode=edit`);
+  const create = async () => { setPending(true); setError(""); try { const id = await actions.createFlashcardSet({ title: t.untitled }); router.push(`/dashboard/learn/flashcards/${id}?mode=edit`); } catch (err) { setError(errorMessage(err)); } finally { setPending(false); } };
   return (
     <div className="lx-page">
       <header className="lx-hero">
         <div><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></div>
-        <div className="lx-actions"><button type="button" className="ws-btn ws-btn--primary" onClick={create}><Plus size={16} aria-hidden />{t.create}</button></div>
+        <div className="lx-actions"><button type="button" className="ws-btn ws-btn--primary" disabled={pending} onClick={create}><Plus size={16} aria-hidden />{t.create}</button></div>
       </header>
+      {error && <p className="lx-error" role="alert">{error}</p>}
       {!sets.length ? <EmptyState level={2} icon={Layers} title={t.empty} body={t.emptyBody}><button type="button" className="ws-btn" onClick={create}><Plus size={16} aria-hidden />{t.create}</button></EmptyState> : (
         <div className="lx-grid">
           {sets.map((s) => (

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { usePublicIdentity } from "@/lib/learn/studyClient";
 import { BadgeCheck, Flag, Layers, PenLine } from "lucide-react";
 import { Avatar, EmptyState, LessonCard, VerificationBadges } from "@/components/learn/ui";
 import ReportDialog from "@/components/learn/reader/ReportDialog";
@@ -28,6 +29,7 @@ export default function ProfileView({ id }: { id: string }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
   const person = usePerson(id);
+  const verified = usePublicIdentity(person?.username);
   const viewer = useLearnViewer();
   const caps = useLearnCapabilities();
   const progress = useProgress() ?? {};
@@ -36,6 +38,7 @@ export default function ProfileView({ id }: { id: string }) {
   if (person === null) return <div className="lx-page lx-page--narrow" style={{ padding: "48px 16px" }}><EmptyState title={t.missing} body={t.missingBody} /></div>;
   const totals = person.lessons.reduce((a, l) => ({ views: a.views + l.stats.views, saves: a.saves + l.stats.saves, helpful: a.helpful + l.stats.helpful }), { views: 0, saves: 0, helpful: 0 });
   const self = viewer?.id === id;
+  // Only the server's current public roles establish badges. Local claims do not.
   return (
     <div className="lx-page" style={{ padding: "32px 16px 64px" }}>
       <header className="lx-profile">
@@ -44,10 +47,9 @@ export default function ProfileView({ id }: { id: string }) {
           <h1 className="ws-page-title">{person.name}</h1>
           {person.username && <span className="lx-muted">@{person.username}</span>}
           {person.bio && <p className="lx-help" style={{ whiteSpace: "pre-wrap" }}>{person.bio}</p>}
-          <div className="lx-badges"><VerificationBadges verifications={person.verifications} />
-            {person.affiliations.filter((a) => !a.verified).map((a) => <span key={a.institution} className="lx-badge">{a.institution}</span>)}
+          <div className="lx-badges"><VerificationBadges verifications={verified} />
           </div>
-          {person.verifications.some((v) => v.status === "verified") && <small className="lx-muted"><BadgeCheck size={12} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} /> {t.verifyNote}</small>}
+          {verified.length > 0 && <small className="lx-muted"><BadgeCheck size={12} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} /> {t.verifyNote}</small>}
         </div>
         <div className="lx-actions">
           {self && <Link className="ws-btn" href="/dashboard/learn/profile"><PenLine size={15} aria-hidden />{t.edit}</Link>}

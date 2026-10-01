@@ -1,4 +1,4 @@
-import { fireEvent, render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
 import ConnectionsPage from "@/app/dashboard/connections/page";
@@ -15,9 +15,11 @@ const m = vi.hoisted(() => ({
   rotate: vi.fn(async () => ({ token: "chaos_" + "b".repeat(64), previousTokenExpiresAt: Date.now() + 86_400_000 })),
   revoke: vi.fn(async () => null),
   other: vi.fn(async () => null),
+  selection: vi.fn(async () => ({ lessonRefs: ["lesson_k1"] })),
 }));
 const query = (ref: Parameters<typeof getFunctionName>[0]) => {
   const name = getFunctionName(ref);
+  if (name === "lessons:listOwned") return { page: [{ _id: "k1", metadata: { title: "Owned lesson" }, status: "active" }], isDone: true, continueCursor: "" };
   return name === "integrations:listConnections" ? connections : name === "integrations:apiLimits" ? { read: 300, write: 60 } : undefined;
 };
 vi.mock("@/lib/convexCache", () => ({ useQuery: (ref: Parameters<typeof getFunctionName>[0]) => query(ref) }));
@@ -28,7 +30,7 @@ vi.mock("convex/react", () => ({
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => query(ref),
   useMutation: (ref: Parameters<typeof getFunctionName>[0]) => {
     const name = getFunctionName(ref);
-    return name === "integrations:rotateConnection" ? m.rotate : name === "integrations:revokeConnection" ? m.revoke : m.other;
+    return name === "learnIntegrations:setLessonSelection" ? m.selection : name === "integrations:rotateConnection" ? m.rotate : name === "integrations:revokeConnection" ? m.revoke : m.other;
   },
 }));
 
@@ -68,4 +70,18 @@ describe("connections page", () => {
     expect(m.revoke).toHaveBeenCalledWith({ tokenId: "c1" });
     confirm.mockRestore();
   });
+});
+
+it("persists explicit selected lessons through the existing owner mutation", async () => {
+  const original = connections[0].scopes;
+  connections[0].scopes = ["items:read", "lessons:read"];
+  m.selection.mockClear();
+  try {
+    render(<ConnectionsPage />);
+    fireEvent.click(screen.getByRole("button", { name: "Change what it can reach" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Lessons" }));
+    fireEvent.click(screen.getByRole("checkbox", { name: /Owned lesson/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(m.selection).toHaveBeenCalledWith({ tokenId: "c1", lessonIds: ["k1"] }));
+  } finally { connections[0].scopes = original; }
 });

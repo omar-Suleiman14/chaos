@@ -8,6 +8,7 @@ import { useLearnCapabilities, useLessonVersions } from "@/lib/learn/data";
 import type { Lesson } from "@/lib/learn/types";
 import { formatDateTime, useCopy, useLocale } from "@/lib/i18n";
 import BlockRenderer from "../reader/BlockRenderer";
+import { errorMessage } from "@/lib/errors";
 
 const copy = {
   en: {
@@ -30,11 +31,14 @@ const copy = {
   },
 };
 
-export default function VersionHistory({ lesson, onClose, onRestore }: { lesson: Lesson; onClose: () => void; onRestore: (version: number) => void }) {
+export default function VersionHistory({ lesson, onClose, onRestore, disabled = false, error }: { lesson: Lesson; onClose: () => void; onRestore: (version: number) => void | Promise<unknown>; disabled?: boolean; error?: string }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
   const caps = useLearnCapabilities();
-  const versions = useLessonVersions(lesson.id) ?? [];
+  const loaded = useLessonVersions(lesson.id);
+  const versions = loaded ?? [];
+  const [busy, setBusy] = useState(false);
+  const [failure, setFailure] = useState("");
   const [selected, setSelected] = useState<number | undefined>(versions[0]?.version);
   const [mode, setMode] = useState<"changes" | "read">("changes");
   const [confirm, setConfirm] = useState(false);
@@ -44,7 +48,7 @@ export default function VersionHistory({ lesson, onClose, onRestore }: { lesson:
 
   return (
     <WsDialog title={t.title} description={t.lead} onClose={onClose} wide>
-      {!versions.length ? <p className="lx-muted">{t.empty}</p> : (
+      {loaded === undefined ? <div className="ws-skeleton ws-skeleton--panel" aria-busy="true" /> : !versions.length ? <p className="lx-muted">{t.empty}</p> : (
         <div style={{ display: "grid", gridTemplateColumns: "minmax(160px, 220px) minmax(0, 1fr)", gap: 16, minHeight: 320 }} className="lx-history">
           <div className="lx-versions" role="listbox" aria-label={t.title}>
             {versions.map((v) => (
@@ -62,7 +66,7 @@ export default function VersionHistory({ lesson, onClose, onRestore }: { lesson:
                   {(["changes", "read"] as const).map((m) => <button key={m} type="button" role="radio" aria-checked={mode === m} className="lx-chip" onClick={() => setMode(m)}>{t.view[m]}</button>)}
                 </div>
                 {lesson.published?.version !== current.version || lesson.draft.updatedAt !== lesson.publishedDraftAt ? (
-                  <button type="button" className="ws-btn ws-btn--sm" disabled={!caps.versionRestore} title={caps.versionRestore ? undefined : t.restoreUnavailable} onClick={() => setConfirm(true)}><RotateCcw size={14} aria-hidden />{t.restore(current.version)}</button>
+                  <button type="button" className="ws-btn ws-btn--sm" disabled={!caps.versionRestore || disabled || busy} title={caps.versionRestore ? undefined : t.restoreUnavailable} onClick={() => setConfirm(true)}><RotateCcw size={14} aria-hidden />{t.restore(current.version)}</button>
                 ) : null}
               </div>
               {mode === "changes" ? (
@@ -87,7 +91,8 @@ export default function VersionHistory({ lesson, onClose, onRestore }: { lesson:
           )}
         </div>
       )}
-      {confirm && current && <WsConfirm title={t.restoreTitle(current.version)} body={t.restoreBody} confirmLabel={t.restore(current.version)} danger={false} onClose={() => setConfirm(false)} onConfirm={() => { onRestore(current.version); onClose(); }} />}
+      {(failure || error) && <p className="lx-error" role="alert">{failure || error}</p>}
+      {confirm && current && <WsConfirm title={t.restoreTitle(current.version)} body={t.restoreBody} confirmLabel={t.restore(current.version)} danger={false} onClose={() => setConfirm(false)} onConfirm={() => { if (busy || disabled) return; setBusy(true); setFailure(""); void Promise.resolve().then(() => onRestore(current.version)).catch(err => setFailure(errorMessage(err))).finally(() => setBusy(false)); }} />}
     </WsDialog>
   );
 }

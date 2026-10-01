@@ -41,6 +41,7 @@ export default function ReportDialog({ target, title, onClose }: { target: Repor
   const [details, setDetails] = useState("");
   const [error, setError] = useState("");
   const [sent, setSent] = useState(false);
+  const [pending, setPending] = useState(false);
   const needsDetails = reason === "incorrect" || reason === "copyright" || reason === "other";
   return (
     <WsDialog title={`${t.title}: ${title}`} description={t.lead} onClose={onClose}>
@@ -50,15 +51,16 @@ export default function ReportDialog({ target, title, onClose }: { target: Repor
           <div className="lx-actions" style={{ justifyContent: "flex-end" }}><button type="button" className="ws-btn ws-btn--primary" onClick={onClose}>{t.close}</button></div>
         </div>
       ) : (
-        <form className="lx-form" onSubmit={(e) => {
+        <form className="lx-form" onSubmit={async (e) => {
           e.preventDefault();
-          if (!reason) return;
+          if (!reason || pending) return;
           if (needsDetails && details.trim().length < 5) { setError(t.required); return; }
-          try { actions.report(target, reason, details); setSent(true); } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+          setPending(true); setError("");
+          try { await actions.report(target, reason, details); setSent(true); } catch (err) { setError(err instanceof Error ? err.message : String(err)); } finally { setPending(false); }
         }}>
           <fieldset className="lx-field" style={{ border: 0, padding: 0, margin: 0, gap: 8 }}>
             <legend className="sr-only">{t.title}</legend>
-            {(Object.keys(t.reasons) as ReportReason[]).map((r) => (
+            {(Object.keys(t.reasons) as ReportReason[]).filter(r => r !== "other").map((r) => (
               <label key={r} className="lx-panel" style={{ display: "flex", gap: 10, cursor: "pointer", padding: 10, borderColor: reason === r ? "var(--primary)" : undefined }}>
                 <input type="radio" name="reason" checked={reason === r} onChange={() => { setReason(r); setError(""); }} />
                 <span style={{ display: "grid", gap: 2 }}><strong style={{ fontSize: 14 }}>{t.reasons[r][0]}</strong><span className="lx-muted" style={{ fontWeight: 400 }}>{t.reasons[r][1]}</span></span>
@@ -74,7 +76,7 @@ export default function ReportDialog({ target, title, onClose }: { target: Repor
           {error && <p className="lx-error" role="alert">{error}</p>}
           <div className="lx-actions" style={{ justifyContent: "flex-end" }}>
             <button type="button" className="ws-btn ws-btn--ghost" onClick={onClose}>{t.cancel}</button>
-            <button type="submit" className="ws-btn ws-btn--primary" disabled={!reason}>{t.send}</button>
+            <button type="submit" className="ws-btn ws-btn--primary" disabled={!reason || pending}>{t.send}</button>
           </div>
         </form>
       )}

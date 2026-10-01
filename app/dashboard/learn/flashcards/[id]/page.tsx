@@ -1,5 +1,8 @@
 "use client";
 
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useEffect, useState } from "react";
@@ -54,7 +57,7 @@ function FlashcardSetPage() {
 
   if (set === undefined) return <PageSkeleton label={t.loading} />;
   if (set === null) return <UnavailableLesson backHref="/dashboard/learn/flashcards" />;
-  const run = (fn: () => void) => { setError(""); try { fn(); } catch (err) { setError(errorMessage(err)); } };
+  const run = async (fn: () => unknown | Promise<unknown>) => { setError(""); try { await fn(); } catch (err) { setError(errorMessage(err)); } };
 
   return (
     <div className="lx-page lx-page--narrow">
@@ -67,7 +70,7 @@ function FlashcardSetPage() {
           {set.lessonId && <Link className="lx-link" href={`/learn/${set.lessonId}`}><BookOpen size={13} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} /> {t.fromLesson}</Link>}
         </div>
         <div className="lx-actions">
-          {!owner && viewer?.signedIn && <button type="button" className="ws-btn" onClick={() => run(() => router.push(`/dashboard/learn/flashcards/${actions.forkFlashcardSet(set.id)}`))}><GitFork size={16} aria-hidden />{t.fork}</button>}
+          {!owner && viewer?.signedIn && <button type="button" className="ws-btn" onClick={() => run(async () => { const id = await actions.forkFlashcardSet(set.id); router.push(`/dashboard/learn/flashcards/${id}`); })}><GitFork size={16} aria-hidden />{t.fork}</button>}
           {owner && <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setConfirm(true)}><Trash2 size={16} aria-hidden />{t.deleteSet}</button>}
         </div>
       </header>
@@ -75,14 +78,16 @@ function FlashcardSetPage() {
       {owner && <WsTabs tabs={["study", "edit"] as const} value={mode} onChange={setMode} label={set.title} labels={t.modes} />}
       {mode === "edit" && owner ? <EditCards setId={set.id} title={set.title} description={set.description} cards={set.cards} visibility={set.visibility} onError={setError} />
         : <Study setId={set.id} cards={set.cards} reviews={reviews ?? []} onEdit={owner ? () => setMode("edit") : undefined} />}
-      {confirm && <WsConfirm title={t.deleteTitle} body={t.deleteBody} confirmLabel={t.deleteSet} onClose={() => setConfirm(false)} onConfirm={() => run(() => { actions.deleteFlashcardSet(set.id); router.push("/dashboard/learn/flashcards"); })} />}
+      {confirm && <WsConfirm title={t.deleteTitle} body={t.deleteBody} confirmLabel={t.deleteSet} onClose={() => setConfirm(false)} onConfirm={() => run(async () => { await actions.deleteFlashcardSet(set.id); router.push("/dashboard/learn/flashcards"); })} />}
     </div>
   );
 }
 
-function Study({ setId, cards, reviews, onEdit }: { setId: string; cards: Flashcard[]; reviews: { cardId: string; box: number; reviewedAt: number }[]; onEdit?: () => void }) {
+function Study({ setId, cards: draftCards, reviews, onEdit }: { setId: string; cards: Flashcard[]; reviews: { cardId: string; box: number; reviewedAt: number }[]; onEdit?: () => void }) {
   const t = useCopy(copy);
   const actions = useLearnActions();
+  const version = useQuery(api.flashcards.getPublished, { setId: setId as Id<"flashcardSets"> });
+  const cards = version?.cards ?? draftCards;
   const boxOf = (cardId: string) => reviews.find((r) => r.cardId === cardId)?.box ?? 0;
   // Lowest box first: new and missed cards come back before the ones you know.
   const order = () => [...cards].sort((a, b) => boxOf(a.id) - boxOf(b.id)).map((c) => c.id);
@@ -91,7 +96,9 @@ function Study({ setId, cards, reviews, onEdit }: { setId: string; cards: Flashc
   const [flipped, setFlipped] = useState(false);
   const card = cards.find((c) => c.id === queue[index]);
   const known = cards.filter((c) => boxOf(c.id) >= 3).length;
-  const answer = (knewIt: boolean) => { if (!card) return; actions.reviewCard(setId, card.id, knewIt); setFlipped(false); setIndex((i) => i + 1); };
+  const [pending, setPending] = useState(false);
+  const [error, setError] = useState("");
+  const answer = async (knewIt: boolean) => { if (!card || pending) return; setPending(true); setError(""); try { await actions.reviewCard(setId, card.id, knewIt); setFlipped(false); setIndex(i => i + 1); } catch (err) { setError(errorMessage(err)); } finally { setPending(false); } };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement).closest("input, textarea, [contenteditable=true], button")) return;
@@ -102,11 +109,14 @@ function Study({ setId, cards, reviews, onEdit }: { setId: string; cards: Flashc
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
+  if (version === undefined) return <PageSkeleton label={t.loading} />;
+  if (!version) return <div className="lx-empty"><p>Publish a study snapshot to record reviews. Your editable draft stays private unless you choose public visibility.</p>{onEdit && <button type="button" className="ws-btn" onClick={async () => { try { await actions.publishFlashcardStudy(setId); } catch (err) { setError(errorMessage(err)); } }}>Publish study snapshot</button>}{error && <p role="alert">{error}</p>}</div>;
   if (!cards.length) return <div className="lx-empty"><p>{t.noCards}</p>{onEdit && <button type="button" className="ws-btn" onClick={onEdit}>{t.addFirst}</button>}</div>;
   return (
     <div className="lx-section" style={{ gap: 16 }}>
+      {error && <p className="lx-error" role="alert">{error}</p>}
       <div className="lx-panel__row"><span className="lx-muted" role="status">{t.progress(known, cards.length)}</span>
-        <button type="button" className="lx-link" onClick={() => { actions.resetReviews(setId); setIndex(0); setQueue(order()); }}><RotateCcw size={12} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} /> {t.reset}</button>
+        <button type="button" className="lx-link" onClick={() => { setIndex(0); setQueue(order()); }}><RotateCcw size={12} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} /> {t.reset}</button>
       </div>
       {card ? (
         <>
@@ -122,8 +132,8 @@ function Study({ setId, cards, reviews, onEdit }: { setId: string; cards: Flashc
           <div className="lx-actions" style={{ justifyContent: "center" }}>
             {!flipped ? <button type="button" className="ws-btn ws-btn--primary" onClick={() => setFlipped(true)}>{t.flip}</button> : (
               <>
-                <button type="button" className="ws-btn" onClick={() => answer(false)}><X size={16} aria-hidden />{t.again}</button>
-                <button type="button" className="ws-btn ws-btn--primary" onClick={() => answer(true)}><Check size={16} aria-hidden />{t.knew}</button>
+                <button type="button" className="ws-btn" disabled={pending} onClick={() => answer(false)}><X size={16} aria-hidden />{t.again}</button>
+                <button type="button" className="ws-btn ws-btn--primary" disabled={pending} onClick={() => answer(true)}><Check size={16} aria-hidden />{t.knew}</button>
               </>
             )}
           </div>
@@ -135,36 +145,32 @@ function Study({ setId, cards, reviews, onEdit }: { setId: string; cards: Flashc
   );
 }
 
-function EditCards({ setId, title, description, cards, visibility, onError }: { setId: string; title: string; description: string; cards: Flashcard[]; visibility: Visibility; onError: (m: string) => void }) {
+function EditCards({ setId, title, cards, visibility, onError }: { setId: string; title: string; description: string; cards: Flashcard[]; visibility: Visibility; onError: (m: string) => void }) {
   const t = useCopy(copy);
   const actions = useLearnActions();
-  const save = (patch: Parameters<typeof actions.updateFlashcardSet>[1]) => { try { actions.updateFlashcardSet(setId, patch); } catch (err) { onError(errorMessage(err)); } };
-  const setCards = (next: Flashcard[]) => save({ cards: next });
-  const move = (i: number, d: number) => { const next = [...cards]; [next[i], next[i + d]] = [next[i + d], next[i]]; setCards(next); };
-  return (
-    <div className="lx-form">
-      <div className="lx-form__row">
-        <label className="lx-field">{t.title}<input className="lx-input" defaultValue={title} maxLength={160} onBlur={(e) => e.target.value !== title && save({ title: e.target.value })} /></label>
-        <label className="lx-field">{t.visibility}<Select label={t.visibility} value={visibility} onChange={(v) => save({ visibility: v as Visibility })} options={(["private", "unlisted", "public"] as const).map((v) => ({ value: v, label: t.vis[v] }))} /></label>
-      </div>
-      <label className="lx-field">{t.description}<textarea className="lx-textarea" rows={2} defaultValue={description} maxLength={500} onBlur={(e) => e.target.value !== description && save({ description: e.target.value })} /></label>
-      <div className="lx-cards-edit">
-        {cards.map((c, i) => (
-          <div key={c.id} className="lx-cards-edit__row">
-            <span className="lx-muted" style={{ paddingTop: 10 }}>{i + 1}</span>
-            <textarea className="lx-textarea" style={{ minHeight: 64 }} defaultValue={c.front} placeholder={t.front} aria-label={`${t.front} ${i + 1}`} maxLength={1000} onBlur={(e) => e.target.value !== c.front && setCards(cards.map((x) => x.id === c.id ? { ...x, front: e.target.value } : x))} />
-            <textarea className="lx-textarea" style={{ minHeight: 64 }} defaultValue={c.back} placeholder={t.back2} aria-label={`${t.back2} ${i + 1}`} maxLength={2000} onBlur={(e) => e.target.value !== c.back && setCards(cards.map((x) => x.id === c.id ? { ...x, back: e.target.value } : x))} />
-            <span style={{ display: "grid" }}>
-              <button type="button" className="ws-icon-button" disabled={i === 0} aria-label={t.up} onClick={() => move(i, -1)}><ArrowUp size={13} /></button>
-              <button type="button" className="ws-icon-button" disabled={i === cards.length - 1} aria-label={t.down} onClick={() => move(i, 1)}><ArrowDown size={13} /></button>
-              <button type="button" className="ws-icon-button" aria-label={t.remove} onClick={() => setCards(cards.filter((x) => x.id !== c.id))}><Trash2 size={13} /></button>
-            </span>
-          </div>
-        ))}
-      </div>
-      <button type="button" className="ws-btn" style={{ justifySelf: "start" }} onClick={() => setCards([...cards, { id: newId("card"), front: "", back: "" }])}><Plus size={15} aria-hidden />{t.add}</button>
-    </div>
-  );
+  const [draftTitle, setTitle] = useState(title);
+  const [draftCards, setCards] = useState(cards);
+  const [draftVisibility, setVisibility] = useState(visibility);
+  const [pending, setPending] = useState(false);
+  const move = (i: number, d: number) => { const next = [...draftCards]; [next[i], next[i+d]] = [next[i+d],next[i]]; setCards(next); };
+  return <form className="lx-form" onSubmit={async e => {
+    e.preventDefault(); if (pending) return;
+    setPending(true); onError("");
+    try { await actions.updateFlashcardSet(setId, { title: draftTitle, cards: draftCards, visibility: draftVisibility }); }
+    catch (err) { onError(errorMessage(err)); }
+    finally { setPending(false); }
+  }}><fieldset disabled={pending} style={{ border: 0, padding: 0, display: "grid", gap: 16 }}>
+    <label className="lx-field">{t.title}<input className="lx-input" value={draftTitle} maxLength={160} onChange={e => setTitle(e.target.value)} /></label>
+    <label className="lx-field">{t.visibility}<Select label={t.visibility} value={draftVisibility} onChange={v => setVisibility(v as Visibility)} options={(["private", "public"] as const).map(v => ({ value: v, label: t.vis[v] }))} /></label>
+    <div className="lx-cards-edit">{draftCards.map((c,i) => <div key={c.id} className="lx-cards-edit__row">
+      <span className="lx-muted">{i+1}</span>
+      <textarea className="lx-textarea" value={c.front} aria-label={t.front} placeholder={t.front} maxLength={1000} onChange={e => setCards(draftCards.map(x => x.id === c.id ? {...x,front:e.target.value} : x))} />
+      <textarea className="lx-textarea" value={c.back} aria-label={t.back2} placeholder={t.back2} maxLength={2000} onChange={e => setCards(draftCards.map(x => x.id === c.id ? {...x,back:e.target.value} : x))} />
+      <span><button type="button" className="ws-icon-button" disabled={i===0} aria-label={t.up} onClick={() => move(i,-1)}><ArrowUp size={13} /></button><button type="button" className="ws-icon-button" disabled={i===draftCards.length-1} aria-label={t.down} onClick={() => move(i,1)}><ArrowDown size={13} /></button><button type="button" className="ws-icon-button" aria-label={t.remove} onClick={() => setCards(draftCards.filter(x=>x.id!==c.id))}><Trash2 size={13} /></button></span>
+    </div>)}</div>
+    <button type="button" className="ws-btn" onClick={() => setCards([...draftCards,{id:newId("card"),front:"",back:""}])}><Plus size={15} />{t.add}</button>
+    <button type="submit" className="ws-btn ws-btn--primary" disabled={!draftTitle.trim() || draftCards.some(c => !c.front.trim() || !c.back.trim())}>{draftVisibility === "public" ? "Save and publish" : "Save draft"}</button>
+  </fieldset></form>;
 }
 
 export default function Page() {

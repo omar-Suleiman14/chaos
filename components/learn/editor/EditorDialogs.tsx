@@ -6,6 +6,9 @@ import { WsDialog } from "@/components/workspace/primitives";
 import { Select } from "@/components/workspace/Select";
 import type { AiAction, LessonSource } from "@/lib/learn/types";
 import { useCopy } from "@/lib/i18n";
+import { parseCitationLocator } from "@/lib/learn/mediaClient";
+import { formatLocator } from "@/lib/learn/chaosDocument";
+import { errorMessage } from "@/lib/errors";
 
 const copy = {
   en: {
@@ -66,23 +69,26 @@ export function ImageDetailsDialog({ initial, onSave, onClose }: { initial: Imag
 }
 
 export function CitationDialog({ sources, initial, onDone, onManageSources, onClose }: {
-  sources: LessonSource[]; initial?: { sourceId: string; locator: string }; onDone: (value: { sourceId: string; locator: string }) => void; onManageSources: () => void; onClose: () => void;
+  sources: LessonSource[]; initial?: { sourceId: string; locator: string }; onDone: (value: { sourceId: string; locator: string }) => void | Promise<unknown>; onManageSources: () => void; onClose: () => void;
 }) {
   const t = useCopy(copy);
   const [sourceId, setSourceId] = useState(initial?.sourceId || sources[0]?.id || "");
   const [locator, setLocator] = useState(initial?.locator ?? "");
+  const [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   return (
     <WsDialog title={t.cite} description={t.citeLead} onClose={onClose}>
       {!sources.length ? (
         <div className="lx-form"><p className="lx-muted">{t.noSources}</p><div className="lx-actions" style={{ justifyContent: "flex-end" }}><button type="button" className="ws-btn ws-btn--primary" onClick={() => { onClose(); onManageSources(); }}>{t.manage}</button></div></div>
       ) : (
-        <form className="lx-form" onSubmit={(e) => { e.preventDefault(); if (sourceId) onDone({ sourceId, locator: locator.trim().slice(0, 80) }); }}>
+        <form className="lx-form" onSubmit={async (e) => { e.preventDefault(); if (!sourceId || busy) return; setBusy(true); setError(""); try { await onDone({ sourceId, locator: formatLocator(parseCitationLocator(locator)) }); } catch (err) { setError(errorMessage(err)); } finally { setBusy(false); } }}>
           <label className="lx-field">{t.source}<Select label={t.source} value={sourceId} onChange={setSourceId} options={sources.map((s) => ({ value: s.id, label: s.shortLabel ? `${s.shortLabel} — ${s.title}` : s.title }))} /></label>
           { }
-          <label className="lx-field">{t.locator}<input autoFocus className="lx-input" value={locator} placeholder={t.locatorPh} onChange={(e) => setLocator(e.target.value)} /></label>
+          <label className="lx-field">{t.locator}<input autoFocus className="lx-input" value={locator} placeholder={t.locatorPh} maxLength={300} required disabled={busy} onChange={(e) => setLocator(e.target.value)} /><small>Saved against this stable block. Exact inline citation positions are not supported.</small></label>
+          {error && <p className="lx-error" role="alert">{error}</p>}
           <div className="lx-actions" style={{ justifyContent: "flex-end" }}>
             <button type="button" className="ws-btn ws-btn--ghost" onClick={onClose}>{t.cancel}</button>
-            <button type="submit" className="ws-btn ws-btn--primary" disabled={!sourceId}>{initial ? t.update : t.insert}</button>
+            <button type="submit" className="ws-btn ws-btn--primary" disabled={!sourceId || busy}>{initial ? t.update : t.insert}</button>
           </div>
         </form>
       )}

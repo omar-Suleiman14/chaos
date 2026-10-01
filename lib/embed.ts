@@ -21,7 +21,7 @@ export type { EmbedPolicy, EmbedSettings } from "../convex/embedPolicy";
  * path starting with one is never a custom link and never framable.
  */
 export const APP_SEGMENTS = [
-  "admin", "api", "app", "compare", "chatgpt", "dashboard", "docs", "help", "learn", "login", "logout", "mcp", "play", "pricing", "print",
+  "admin", "api", "app", "compare", "chatgpt", "dashboard", "docs", "help", "homework", "learn", "login", "logout", "mcp", "play", "pricing", "print",
   "privacy", "settings", "sign-in", "sign-up", "signin", "signup", "static", "support", "terms", "trpc",
   "_next", ".well-known", "opengraph-image",
 ];

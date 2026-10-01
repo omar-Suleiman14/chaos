@@ -7,9 +7,10 @@ import type { CurriculumNode, Folder, Lesson } from "@/lib/learn/types";
 import LoadingState from "@/components/LoadingState";
 import { WsTabs } from "@/components/workspace/primitives";
 import { useCopy } from "@/lib/i18n";
-import { curriculumGroups, curriculumRef, folderRef, lessonRef, shareableFolders, toggleRefs } from "./learnShare";
+import { lessonRef, toggleRefs } from "./learnShare";
+import GroupLessonPicker from "./GroupLessonPicker";
 
-/** Learn data from lib/learn/data.ts, used for the collection and curriculum tabs (not stored as grants). */
+/** Legacy input retained for callers during migration; group resolution uses native queries. */
 export interface LearnAssets {
   lessons: Lesson[] | undefined;
   folders: Folder[] | undefined;
@@ -76,9 +77,10 @@ function Row({ checked, onChange, title, meta, disabled }: { checked: boolean; o
  * Chooses what a connection may reach.
  * - Forms and quizzes: stored with the connection (integrations.createConnection/updateConnection).
  * - Lessons: stored with learnIntegrations.setLessonSelection; needs a lesson scope.
- * - Collections and curricula: selectable but marked "Not saved yet"; no backend grant exists.
+ * - Modules: resolve native owned lessons, persisted as explicit lesson grants.
+ * - Collections: disabled until a scoped selected-content API exists.
  */
-export default function SharePicker({ value, onChange, allItems, lessonValue, onLessonChange, lessonsAllowed, pendingValue, onPendingChange, learn }: {
+export default function SharePicker({ value, onChange, allItems, lessonValue, onLessonChange, lessonsAllowed }: {
   value: string[];
   onChange: (refs: string[]) => void;
   /** access: "all" covers every form and quiz; the forms tab then only explains that. */
@@ -86,23 +88,20 @@ export default function SharePicker({ value, onChange, allItems, lessonValue, on
   lessonValue: string[];
   onLessonChange: (refs: string[]) => void;
   lessonsAllowed: boolean;
-  pendingValue: string[];
-  onPendingChange: (refs: string[]) => void;
-  learn: LearnAssets;
+  pendingValue?: string[];
+  onPendingChange?: (refs: string[]) => void;
+  learn?: LearnAssets;
 }) {
   const t = useCopy(copy);
   const items = useQuery(api.integrations.listShareableItems);
-  const lessonPage = useQuery(api.lessons.listOwned, { paginationOpts: LESSON_PAGE });
+  const [lessonCursor, setLessonCursor] = useState<string | null>(null);
+  const lessonPage = useQuery(api.lessons.listOwned, { paginationOpts: { ...LESSON_PAGE, cursor: lessonCursor } });
   const [tab, setTab] = useState<Tab>("items");
   const [filter, setFilter] = useState("");
   const match = (title: string) => title.toLowerCase().includes(filter.trim().toLowerCase());
   const list = "max-h-56 overflow-y-auto border border-foreground/15 rounded divide-y divide-foreground/5";
   const empty = (n: number) => <li className="px-3 py-2 text-sm text-muted-foreground">{n === 0 ? t.nothing : t.noMatch}</li>;
-  const pendingNote = (
-    <div role="note" className="border border-dashed border-foreground/25 rounded px-3 py-2 text-xs">
-      <span className="ws-pill ws-pill--purple me-2">{t.pendingTitle}</span>{t.pending}
-    </div>
-  );
+
 
   let body: React.ReactNode;
   if (tab === "items") {
@@ -141,54 +140,12 @@ export default function SharePicker({ value, onChange, allItems, lessonValue, on
             </ul>
           )}
           {lessonsAllowed && <p className="text-[11px] text-muted-foreground">{t.lessonsSelected(lessonValue.length)}</p>}
+          {!lessonPage.isDone && <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => setLessonCursor(lessonPage.continueCursor)}>{t.tabs.lessons} →</button>}
         </>
       );
     }
   } else {
-    let inner: React.ReactNode;
-    if (tab === "collections") {
-      if (!learn.folders) inner = <LoadingState label={t.loading} />;
-      else {
-        const all = shareableFolders(learn.folders);
-        const shown = all.filter((f) => match(f.name));
-        inner = (
-          <ul className={list}>
-            {shown.map((f) => (
-              <Row key={f.id} title={f.name} meta={f.collection ? t.collection : t.folder} checked={pendingValue.includes(folderRef(f.id))} onChange={(on) => onPendingChange(toggleRefs(pendingValue, [folderRef(f.id)], on))} />
-            ))}
-            {shown.length === 0 && empty(all.length)}
-          </ul>
-        );
-      }
-    } else if (!learn.lessons) inner = <LoadingState label={t.loading} />;
-    else {
-      const groups = curriculumGroups(learn.lessons, learn.nodes);
-      const shown = groups.filter((g) => match(g.label));
-      inner = groups.length === 0 ? <p className="text-sm text-muted-foreground">{t.unmapped}</p> : (
-        <ul className={list}>
-          {shown.map((g) => {
-            const ref = curriculumRef(g.moduleId);
-            return (
-              <li key={`${g.versionLabel}-${g.moduleId}`}>
-                <label className="flex items-center gap-2 px-3 py-2 text-sm">
-                  <input type="checkbox" checked={pendingValue.includes(ref)} onChange={(e) => onPendingChange(toggleRefs(pendingValue, [ref], e.target.checked))} />
-                  <span className="flex-1 min-w-0"><span className="block truncate">{g.label}</span><span className="block text-[11px] text-muted-foreground">{g.versionLabel}</span></span>
-                  <span className="text-[11px] text-muted-foreground shrink-0">{t.moduleLessons(g.lessonRefs.length)}</span>
-                </label>
-              </li>
-            );
-          })}
-          {shown.length === 0 && empty(groups.length)}
-        </ul>
-      );
-    }
-    body = (
-      <>
-        {pendingNote}
-        {inner}
-        {pendingValue.length > 0 && <p className="text-[11px] text-muted-foreground">{t.pendingSelected(pendingValue.length)}</p>}
-      </>
-    );
+    body = <GroupLessonPicker key={tab} kind={tab} value={lessonValue} onChange={onLessonChange} allowed={lessonsAllowed} />;
   }
 
   return (

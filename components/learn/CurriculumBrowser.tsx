@@ -78,7 +78,7 @@ export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
   const siblingsOfVersion = version ? nodes.filter((n) => n.kind === "version" && n.parentId === version.parentId) : [];
   const currentVersion = siblingsOfVersion.find((v) => v.current);
   const onOldVersion = version && currentVersion && currentVersion.id !== version.id;
-  const canBuild = !caps.curriculumDirectory && !!viewer?.signedIn;
+  const canBuild = false;
 
   // The same module in another syllabus version: matched by name, since versions are separate trees.
   const equivalentIn = (target: CurriculumNode) => {
@@ -104,6 +104,7 @@ export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
   return (
     <div className="lx-page">
       <Breadcrumbs trail={trail} rootLabel={t.all} />
+      {error && <p className="lx-error" role="alert">{error}</p>}
       {node && (
         <header className="lx-hero">
           <div>
@@ -112,7 +113,7 @@ export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
           </div>
           {node.kind === "module" && version && viewer?.signedIn && (
             <div className="lx-actions">
-              <button type="button" className={`ws-btn ${followed ? "" : "ws-btn--primary"}`} aria-pressed={followed} onClick={() => (followed ? actions.unfollowCourse(node.id) : actions.followCourse(node.id, version.id))}>
+              <button type="button" className={`ws-btn ${followed ? "" : "ws-btn--primary"}`} aria-pressed={followed} onClick={async () => { setError(""); try { await (followed ? actions.unfollowCourse(node.id) : actions.followCourse(node.id, version.id)); } catch (err) { setError(errorMessage(err)); } }}>
                 {followed ? <BookmarkMinus size={16} aria-hidden /> : <BookmarkPlus size={16} aria-hidden />}{followed ? t.unfollow : t.follow}
               </button>
             </div>
@@ -157,7 +158,7 @@ export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
                   <div key={c.id} style={{ display: "grid", gap: 4 }}>
                     <Link className="lx-node" href={`/dashboard/learn/courses/browse?node=${c.id}`}>
                       <Icon size={18} aria-hidden />
-                      <span>{c.name}{c.code ? ` · ${c.code}` : ""}{c.kind === "version" && <small>{c.current ? t.current : t.older}</small>}{c.kind === "module" && lessonCount > 0 && <small>{t.count(lessonCount)}</small>}</span>
+                      <span>{c.name}{c.code ? ` · ${c.code}` : ""}{c.kind === "version" && <small>{c.current === undefined ? t.one.version : c.current ? t.current : t.older}</small>}{c.kind === "module" && lessonCount > 0 && <small>{t.count(lessonCount)}</small>}</span>
                       <ChevronRight size={15} aria-hidden className="lx-flip" style={{ marginInlineStart: "auto" }} />
                     </Link>
                     {c.kind === "version" && !c.current && canBuild && <button type="button" className="lx-link" style={{ justifySelf: "start" }} onClick={() => actions.setCurrentVersion(c.id)}>{t.makeCurrent}</button>}

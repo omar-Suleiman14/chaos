@@ -1,5 +1,7 @@
 "use client";
 
+import TeamPanel from "./TeamPanel";
+
 import "./live.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useConvexConnectionState, useMutation, useQuery } from "convex/react";
@@ -294,6 +296,7 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
           {view.startsAt ? <StartCountdown startsAt={view.startsAt} offset={offset} onTick={() => sfx.play("tap", pack)} /> : <p className="text-4xl font-bold live-pop">{t.youreIn}</p>}
           <p className="text-2xl font-semibold">{view.nickname}</p>
           {!view.startsAt && <p className="live-muted live-pulse">{t.waitStart}</p>}
+          <TeamPanel gameId={session.gameId} token={session.token} frozen={view.startsAt != null} />
         </div>
       );
     case "question": {
@@ -344,7 +347,7 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
           {view.bonus > 0 && <p className="text-lg font-semibold">{t.streak(view.streak, fmt(view.bonus))}</p>}
           {view.rank !== null && <p className="text-2xl font-bold">{t.rank(fmt(view.rank))}</p>}
           <p className="live-muted">{t.score(fmt(view.score))}</p>
-          {view.state === "leaderboard" && <p className="live-muted">{t.lookUp}</p>}
+          {view.state === "leaderboard" && <><p className="live-muted">{t.lookUp}</p><TeamPanel gameId={session.gameId} token={session.token} frozen /></>}
         </div>
       );
     }
@@ -354,6 +357,7 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
           <Trophy size={56} aria-hidden="true" />
           <p className="text-3xl font-bold" role="status">{view.rank !== null ? t.finalRank(fmt(view.rank)) : t.ended}</p>
           <p className="text-xl">{t.score(fmt(view.score))} · {t.correctCount(view.correctCount, view.questionCount)}</p>
+          <TeamPanel gameId={session.gameId} token={session.token} frozen />
           {view.podium.length > 0 && (
             <section className="live-card w-full" aria-label={t.podium}>
               <h2 className="font-bold mb-2">{t.podium}</h2>

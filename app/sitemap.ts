@@ -3,9 +3,13 @@ import { siteUrl } from "@/lib/site";
 import { docSlugs } from "@/lib/docs";
 import { listIndexableLessons } from "@/lib/learn/server";
 
-/** Static public pages only; people's forms are never listed. */
+/** Refreshed hourly, so newly indexable lessons appear without a redeploy. */
+export const revalidate = 3600;
+
+/** Public pages and opted-in lessons; people's forms are never listed. */
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const lessons = await listIndexableLessons();
+  // A backend outage (or a build without one) keeps the static pages instead of failing.
+  const lessons = await listIndexableLessons().catch(() => []);
   return [
     { url: `${siteUrl}/` },
     { url: `${siteUrl}/pricing` },

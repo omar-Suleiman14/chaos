@@ -44,7 +44,9 @@ export function useTextSelection(root: React.RefObject<HTMLElement | null>): [Te
       if (!sel || sel.isCollapsed || !sel.rangeCount || !root.current) { setSelection(null); return; }
       const range = sel.getRangeAt(0);
       if (!root.current.contains(range.commonAncestorContainer)) { setSelection(null); return; }
-      const text = sel.toString().replace(/\s+/g, " ").trim();
+      // Annotation offsets refer to the original UTF-16 text, including whitespace.
+      const text = sel.toString();
+      if (!text.trim()) { setSelection(null); return; }
       const start = (range.startContainer instanceof Element ? range.startContainer : range.startContainer.parentElement)?.closest<HTMLElement>("[data-block-id]");
       if (!text || !start) { setSelection(null); return; }
       setSelection({ text, blockId: start.dataset.blockId!, offset: offsetWithin(start, range.startContainer, range.startOffset), rect: range.getBoundingClientRect() });

@@ -56,6 +56,7 @@ import type * as learnContextModel from "../learnContextModel.js";
 import type * as learnDiscovery from "../learnDiscovery.js";
 import type * as learnFrontend from "../learnFrontend.js";
 import type * as learnIntegrations from "../learnIntegrations.js";
+import type * as learnLibrary from "../learnLibrary.js";
 import type * as learnModel from "../learnModel.js";
 import type * as learnOrganizationIntegrations from "../learnOrganizationIntegrations.js";
 import type * as learnPersonal from "../learnPersonal.js";
@@ -72,6 +73,7 @@ import type * as learnSourceModerationModel from "../learnSourceModerationModel.
 import type * as learnSourceRetention from "../learnSourceRetention.js";
 import type * as learnSources from "../learnSources.js";
 import type * as learnStudyIntegrations from "../learnStudyIntegrations.js";
+import type * as learnStudyReads from "../learnStudyReads.js";
 import type * as learnValidation from "../learnValidation.js";
 import type * as learnWebhookEvents from "../learnWebhookEvents.js";
 import type * as lessonPermissions from "../lessonPermissions.js";
@@ -167,6 +169,7 @@ declare const fullApi: ApiFromModules<{
   learnDiscovery: typeof learnDiscovery;
   learnFrontend: typeof learnFrontend;
   learnIntegrations: typeof learnIntegrations;
+  learnLibrary: typeof learnLibrary;
   learnModel: typeof learnModel;
   learnOrganizationIntegrations: typeof learnOrganizationIntegrations;
   learnPersonal: typeof learnPersonal;
@@ -183,6 +186,7 @@ declare const fullApi: ApiFromModules<{
   learnSourceRetention: typeof learnSourceRetention;
   learnSources: typeof learnSources;
   learnStudyIntegrations: typeof learnStudyIntegrations;
+  learnStudyReads: typeof learnStudyReads;
   learnValidation: typeof learnValidation;
   learnWebhookEvents: typeof learnWebhookEvents;
   lessonPermissions: typeof lessonPermissions;

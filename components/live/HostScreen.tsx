@@ -19,6 +19,7 @@ import { Announcer, Countdown, StartCountdown, usePrefersReducedMotion, useSecon
 import { gameSound, gameThemeProps } from "./GameTheme";
 import { ThemePicker } from "@/components/ThemePicker";
 import { themeFromPreset } from "@/components/forms/formThemes";
+import TeamPanel from "./TeamPanel";
 
 const copy = {
   en: {
@@ -189,6 +190,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
 
       <main className="live-main" id="live-main">
         {error && <p className="live-error" role="alert">{error}</p>}
+        <TeamPanel gameId={gameId} frozen={game.state !== "lobby" || game.startsAt != null} maxPlayers={game.settings.maxPlayers} players={game.players} />
 
         {game.state === "lobby" && game.startsAt && (
           <div className="live-center">

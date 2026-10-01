@@ -9,6 +9,7 @@ import { EmptyState } from "@/components/learn/ui";
 import { useAllHighlights, useLearnActions, useLearnCapabilities, useLessonTitles, useNotes, useSaved, nextToastId } from "@/lib/learn/data";
 import { excerpt } from "@/lib/learn/doc";
 import { useCopy, useLocale } from "@/lib/i18n";
+import { errorMessage } from "@/lib/errors";
 import { timeAgo } from "@/lib/timeAgo";
 
 const copy = {
@@ -41,6 +42,8 @@ export default function SavedPage() {
   const saved = useSaved();
   const notes = useNotes();
   const actions = useLearnActions();
+  const [error, setError] = useState("");
+  const [pending, setPending] = useState(false);
   const [tab, setTab] = useState<Tab>("lessons");
   const [toast, setToast] = useState<UndoToast | null>(null);
   const highlights = useAllHighlights() ?? [];
@@ -52,14 +55,14 @@ export default function SavedPage() {
   const parts = saved.filter((s) => s.kind === "block");
   const counts = { lessons: lessons.length, parts: parts.length, highlights: highlights.length, notes: notes.length };
   const icons = { lessons: BookOpen, parts: Bookmark, highlights: Highlighter, notes: NotebookPen };
-  const removeRow = (label: string, onRemove: () => void) => (
-    <button type="button" className="ws-icon-button" aria-label={`${t.remove}: ${label}`} onClick={() => { onRemove(); setToast({ id: nextToastId(), text: t.removed }); }}><X size={15} /></button>
+  const removeRow = (label: string, onRemove: () => unknown | Promise<unknown>) => (
+    <button type="button" className="ws-icon-button" aria-label={`${t.remove}: ${label}`} disabled={pending} onClick={async () => { setPending(true); setError(""); try { await onRemove(); setToast({ id: nextToastId(), text: t.removed }); } catch (err) { setError(errorMessage(err)); } finally { setPending(false); } }}><X size={15} /></button>
   );
 
   const list = tab === "lessons" ? lessons.map((s) => (
     <div key={s.id} className="lx-row">
       <span className="lx-row__icon" data-kind="lesson" aria-hidden><BookOpen size={16} /></span>
-      <Link className="lx-row__main" href={`/learn/${s.lessonId}`} style={{ color: "inherit", textDecoration: "none" }}><span className="lx-row__title">{s.lessonTitle || t.untitled}</span><span className="lx-row__sub">{timeAgo(locale, s.createdAt)}</span></Link>
+      <Link className="lx-row__main" href={`/learn/${s.lessonId}`} style={{ color: "inherit", textDecoration: "none" }}><span className="lx-row__title">{s.lessonTitle || titleOf(s.lessonId)}</span><span className="lx-row__sub">{timeAgo(locale, s.createdAt)}</span></Link>
       {removeRow(s.lessonTitle, () => actions.removeSave(s.id))}
     </div>
   )) : tab === "parts" ? parts.map((s) => (
@@ -94,6 +97,7 @@ export default function SavedPage() {
   return (
     <div className="lx-page lx-page--narrow">
       <header className="lx-hero"><div><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></div></header>
+      {error && <p className="lx-error" role="alert">{error}</p>}
       <p className="lx-notice"><Lock size={15} aria-hidden /><span>{t.private}{caps.deviceSync ? "" : ` ${t.device}`}</span></p>
       <WsTabs tabs={["lessons", "parts", "highlights", "notes"] as const} value={tab} onChange={setTab} label={t.title} icons={icons}
         labels={{ lessons: `${t.tabs.lessons} (${counts.lessons})`, parts: `${t.tabs.parts} (${counts.parts})`, highlights: `${t.tabs.highlights} (${counts.highlights})`, notes: `${t.tabs.notes} (${counts.notes})` }} />

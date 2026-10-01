@@ -15,13 +15,12 @@ import { errorMessage } from "@/lib/errors";
 import { useCopy, useLocale } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
-import { useCurriculumNodes, useFolders, useMyLessons } from "@/lib/learn/data";
 import { WsConfirm } from "@/components/workspace/primitives";
 import ConnectionAccessList from "@/components/connections/ConnectionAccessList";
 import ConnectionActivity from "@/components/connections/ConnectionActivity";
+import ConnectedLessonComparison from "@/components/connections/ConnectedLessonComparison";
 import SharePicker from "@/components/connections/SharePicker";
-import type { LearnAssets } from "@/components/connections/SharePicker";
-import { folderRef, isItemRef, learnSelectionCounts, lessonIdsFromRefs, lessonRef, sourceIdsFromRefs } from "@/components/connections/learnShare";
+import { isItemRef, lessonIdsFromRefs, lessonRef, sourceIdsFromRefs } from "@/components/connections/learnShare";
 import { canSelectLessons, connectionAppName, describeConnectionAccess } from "@/components/connections/permissionText";
 import WebhooksSection from "./WebhooksSection";
 import FallbackBoundary from "@/components/FallbackBoundary";
@@ -46,7 +45,7 @@ const copy = {
     how3a: "It creates and updates ", how3b: "drafts", how3c: ". You review and publish in Chaos.",
     how4: "Responses keep arriving while the app is closed. It refreshes when opened. Webhooks are optional: with the webhook permission it can also be told about changes.",
     how5: "Unlinking in the app never deletes anything here. Revoke the connection below to cut access immediately.",
-    howLearn: "Lessons are shared one by one and never through “all my forms and quizzes”. Sharing a whole collection or curriculum is not available yet.",
+    howLearn: "Select current lessons individually or from a curriculum module. Collection sharing is not available yet. Save to share those lessons only; future members are never included automatically.",
     apiAddress: "API address for the app:",
     rateLimits: (read: number, write: number) => `Each connection can make up to ${read} reads and ${write} changes a minute.`,
     tokenLabel: "New connection token", copyNow: "Copy this token now",
@@ -54,7 +53,7 @@ const copy = {
     tokenField: "Connection token", copied: "Copied", copy: "Copy", saved: "I have saved it",
     cancel: "Cancel", name: "Name of the app", namePlaceholder: "For example, the app you are connecting",
     permissions: "Permissions", formPermissions: "Forms and quizzes", learnPermissions: "Lessons and study",
-    whichItems: "Which forms and quizzes", onlyChosen: "Only what I choose",
+    whichItems: "Which items", onlyChosen: "Only what I choose",
     allItems: "All my forms and quizzes, including future ones", expires: "Expires after (days, optional)", createConnection: "Create connection",
     willAllow: (app: string) => `In plain words: what ${app} will be able to do`,
     whatItCanDo: (app: string) => `What ${app} can and cannot do`,
@@ -90,7 +89,7 @@ const copy = {
     how3a: "ينشئ ", how3b: "المسودات", how3c: " ويحدّثها. تراجعها وتنشرها أنت في Chaos.",
     how4: "تستمر الردود بالوصول والتطبيق مغلق. يتحدث عند فتحه. الـ webhooks اختيارية: بصلاحية webhooks يمكن إبلاغه بالتغييرات أيضًا.",
     how5: "إلغاء الربط داخل التطبيق لا يحذف شيئًا هنا. اسحب الاتصال أدناه لقطع الوصول فورًا.",
-    howLearn: "تُشارَك الدروس واحدًا واحدًا ولا تدخل أبدًا ضمن «كل نماذجي واختباراتي». مشاركة مجموعة كاملة أو منهج كامل غير متاحة بعد.",
+    howLearn: "اختر دروسك الحالية بشكل فردي أو من وحدة منهج، ثم احفظ. مشاركة المجموعات غير متاحة بعد. لا تُضاف الدروس المستقبلية تلقائياً.",
     apiAddress: "عنوان API للتطبيق:",
     rateLimits: (read: number, write: number) => `يستطيع كل اتصال إجراء ما يصل إلى ${read} قراءة و${write} تغييرًا في الدقيقة.`,
     tokenLabel: "رمز الاتصال الجديد", copyNow: "انسخ هذا الرمز الآن",
@@ -130,16 +129,14 @@ function scopeLabel(scope: IntegrationScope, labels: ScopeText, locale: Locale):
 type ConnectionItems = { items: { ref: string; title: string | null }[] };
 
 /** Titles for activity lines and shared-lesson lists. */
-function useItemTitles(connections: ConnectionItems[] | undefined, learn: LearnAssets, lessonTitles: Map<string, string>): Map<string, string> {
+function useItemTitles(connections: ConnectionItems[] | undefined, lessonTitles: Map<string, string>): Map<string, string> {
   const shareable = useQuery(api.integrations.listShareableItems);
-  const { folders } = learn;
   return useMemo(() => {
     const map = new Map<string, string>(lessonTitles);
     for (const i of shareable ?? []) map.set(i.ref, i.title);
     for (const c of connections ?? []) for (const i of c.items) if (i.title !== null) map.set(i.ref, i.title);
-    for (const f of folders ?? []) map.set(folderRef(f.id), f.name);
     return map;
-  }, [shareable, connections, folders, lessonTitles]);
+  }, [shareable, connections, lessonTitles]);
 }
 
 export default function ConnectionsPage() {
@@ -155,30 +152,24 @@ export default function ConnectionsPage() {
   const revoke = useMutation(api.integrations.revokeConnection);
   const rotate = useMutation(api.integrations.rotateConnection);
   const stopOld = useMutation(api.integrations.endRotationGrace);
-  const lessons = useMyLessons();
-  const folders = useFolders();
-  const nodes = useCurriculumNodes();
-  const learn = useMemo<LearnAssets>(() => ({ lessons, folders, nodes }), [lessons, folders, nodes]);
   const lessonTitles = useMemo(() => new Map((ownedLessons?.page ?? []).map((l) => [lessonRef(l._id), l.metadata.title])), [ownedLessons]);
-  const titles = useItemTitles(connections, learn, lessonTitles);
+  const titles = useItemTitles(connections, lessonTitles);
   const [secretNote, setSecretNote] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [label, setLabel] = useState("");
-  const [scopes, setScopes] = useState<IntegrationScope[]>(["items:read", "summaries:read", "drafts:create", "drafts:update"]);
+  const [scopes, setScopes] = useState<IntegrationScope[]>(["items:read"]);
   const [access, setAccess] = useState<"selected" | "all">("selected");
   const [refs, setRefs] = useState<string[]>([]);
   const [lessonRefs, setLessonRefs] = useState<string[]>([]);
-  // Collection and curriculum picks stay on this screen: the backend has no grant for them yet.
-  const [pendingRefs, setPendingRefs] = useState<string[]>([]);
   const [expires, setExpires] = useState("");
   const [secret, setSecret] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState<Id<"integrationTokens"> | null>(null);
   const [editRefs, setEditRefs] = useState<string[]>([]);
   const [editLessonRefs, setEditLessonRefs] = useState<string[]>([]);
-  const [editPendingRefs, setEditPendingRefs] = useState<string[]>([]);
   const [revoking, setRevoking] = useState<{ id: Id<"integrationTokens">; label: string } | null>(null);
   const [error, setError] = useState("");
+  const [saving, setSaving] = useState(false);
   const [apiBase, setApiBase] = useState("");
   const [now] = useState(() => Date.now());
   useEffect(() => {
@@ -190,30 +181,37 @@ export default function ConnectionsPage() {
   const lessonIds = (refs: string[]) => lessonIdsFromRefs(refs) as Id<"lessons">[];
 
   const submit = async () => {
+    if (saving) return;
     setError("");
+    if ((access === "selected" ? refs.length : 0) + (canSelectLessons(scopes) ? lessonRefs.length : 0) > 500) { setError(locale === "ar" ? "\u0627\u062e\u062a\u0631 500 \u0639\u0646\u0635\u0631 \u0639\u0644\u0649 \u0627\u0644\u0623\u0643\u062b\u0631." : "Select at most 500 items."); return; }
+    setSaving(true);
     let result: { tokenId: Id<"integrationTokens">; token: string };
     try {
       result = await create({ label: label.trim(), scopes, access, itemRefs: access === "selected" ? refs : [], expiresInDays: expires ? Number(expires) : undefined });
       posthog.capture("integration_connection_created", { access, scope_count: scopes.length, has_expiration: Boolean(expires), lesson_count: lessonRefs.length });
     } catch (err) {
       setError(errorMessage(err));
+      setSaving(false);
       return;
     }
     setSecret(result.token);
     setSecretNote(null);
     setCreating(false);
     setRefs([]);
-    setPendingRefs([]);
     // Lessons are a separate, explicit grant (convex/learnIntegrations.ts). The token already exists, so a failure here is reported, not rolled back.
     if (lessonRefs.length && canSelectLessons(scopes)) {
       try { await setLessonSelection({ tokenId: result.tokenId, lessonIds: lessonIds(lessonRefs) }); } catch (err) { setError(t.lessonsNotSaved(errorMessage(err))); }
     }
     setLessonRefs([]);
+    setSaving(false);
   };
 
   const saveEdit = async (c: { _id: Id<"integrationTokens">; access: "all" | "selected"; scopes: IntegrationScope[]; items: { ref: string }[] }) => {
+    if (saving) return;
+    setSaving(true);
     setError("");
     try {
+      if (editRefs.length + editLessonRefs.length + sourceIdsFromRefs(c.items.map(item => item.ref)).length > 500) throw new Error("Select at most 500 items.");
       // updateConnection replaces itemRefs with forms and quizzes only, so lesson and source grants are written again right after.
       if (c.access === "selected") await updateConnection({ tokenId: c._id, itemRefs: editRefs });
       if (canSelectLessons(c.scopes)) await setLessonSelection({ tokenId: c._id, lessonIds: lessonIds(editLessonRefs) });
@@ -224,7 +222,7 @@ export default function ConnectionsPage() {
       setEditing(null);
     } catch (err) {
       setError(errorMessage(err));
-    }
+    } finally { setSaving(false); }
   };
 
   // One in-app confirm for rotate and stop-old-token (revoke has its own dialog below).
@@ -295,7 +293,7 @@ export default function ConnectionsPage() {
             <button type="button" className="ws-icon-button" onClick={() => setCreating(false)} aria-label={t.cancel}><X size={16} /></button>
           </div>
           <label className="block text-sm">{t.name}<input value={label} onChange={(e) => setLabel(e.target.value)} placeholder={t.namePlaceholder} className="kb-input mt-1" maxLength={80} /></label>
-          <fieldset className="space-y-2">
+          <fieldset disabled={saving} className="space-y-2">
             <legend className="text-sm font-medium mb-1">{t.permissions}: {t.formPermissions}</legend>
             {legacyIntegrationScopes.map((s) => scopeRow(s, t.scopes[s].help))}
           </fieldset>
@@ -308,17 +306,16 @@ export default function ConnectionsPage() {
             <label className="flex items-center gap-2 text-sm"><input type="radio" checked={access === "selected"} onChange={() => setAccess("selected")} /> {t.onlyChosen}</label>
             <label className="flex items-center gap-2 text-sm"><input type="radio" checked={access === "all"} onChange={() => setAccess("all")} /> {t.allItems}</label>
             <SharePicker value={refs} onChange={setRefs} allItems={access === "all"}
-              lessonValue={lessonRefs} onLessonChange={setLessonRefs} lessonsAllowed={canSelectLessons(scopes)}
-              pendingValue={pendingRefs} onPendingChange={setPendingRefs} learn={learn} />
+              lessonValue={lessonRefs} onLessonChange={setLessonRefs} lessonsAllowed={canSelectLessons(scopes)} />
           </fieldset>
           <div className="space-y-2">
             <h3 className="text-sm font-medium">{t.willAllow(draftApp)}</h3>
             <ConnectionAccessList appName={label} scopes={scopes} access={access} selectedCount={refs.length}
-              lessonCount={canSelectLessons(scopes) ? lessonRefs.length : 0} pendingSelected={learnSelectionCounts(pendingRefs)} />
+              lessonCount={canSelectLessons(scopes) ? lessonRefs.length : 0} />
           </div>
           <label className="block text-sm">{t.expires}<input type="number" min={1} max={3650} value={expires} onChange={(e) => setExpires(e.target.value)} className="kb-input mt-1 w-32" /></label>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
-          <button type="button" onClick={submit} disabled={!scopes.length || !label.trim()} className="ws-btn ws-btn--primary disabled:opacity-50">{t.createConnection}</button>
+          <button type="button" onClick={submit} disabled={saving || !scopes.length || !label.trim()} className="ws-btn ws-btn--primary disabled:opacity-50">{t.createConnection}</button>
         </section>
       )}
 
@@ -377,11 +374,10 @@ export default function ConnectionsPage() {
                 {editable && (editing === c._id ? (
                   <div className="space-y-2">
                     <SharePicker value={editRefs} onChange={setEditRefs} allItems={c.access === "all"}
-                      lessonValue={editLessonRefs} onLessonChange={setEditLessonRefs} lessonsAllowed={canSelectLessons(c.scopes)}
-                      pendingValue={editPendingRefs} onPendingChange={setEditPendingRefs} learn={learn} />
+                      lessonValue={editLessonRefs} onLessonChange={setEditLessonRefs} lessonsAllowed={canSelectLessons(c.scopes)} />
                     <div className="flex gap-2">
-                      <button type="button" className="ws-btn ws-btn--primary ws-btn--sm" onClick={() => void saveEdit(c)}>{t.save}</button>
-                      <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => setEditing(null)}>{t.cancel}</button>
+                      <button type="button" className="ws-btn ws-btn--primary ws-btn--sm" disabled={saving} onClick={() => void saveEdit(c)}>{t.save}</button>
+                      <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={saving} onClick={() => setEditing(null)}>{t.cancel}</button>
                     </div>
                   </div>
                 ) : (
@@ -389,9 +385,9 @@ export default function ConnectionsPage() {
                     setEditing(c._id);
                     setEditRefs(liveItems.map((i) => i.ref));
                     setEditLessonRefs(sharedLessons.map((i) => i.ref));
-                    setEditPendingRefs([]);
                   }}>{t.change}</button>
                 ))}
+                {sharedLessons.length > 0 && <FallbackBoundary fallback={null}><ConnectedLessonComparison lessons={sharedLessons.map(item => ({ id: item.ref.slice(7) as Id<"lessons">, title: titles.get(item.ref) ?? t.missingLesson }))} /></FallbackBoundary>}
                 {!c.revokedAt && <ConnectionActivity rows={c.activity} appName={app} titles={titles} />}
               </li>
             );

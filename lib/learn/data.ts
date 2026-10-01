@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 
 import { useConvex, useConvexAuth, usePaginatedQuery, useQueries, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
+import { DurableLibraryClient, useLibraryAnnotations, useLibraryFolders, useLibraryMembers, useLibraryFolderItems, useLibraryCurriculum, useLibraryCourses, useLibraryFlashcards, useLibraryFlashcardRows, annotationSave, annotationHighlight, annotationNote, flashcardUi } from "./libraryClient";
 import { DurableLessonClient, DurableProgressClient, durableMetadata } from "./durableClient";
 import { fromDurableDocument, toDurableDocument } from "./chaosDocument";
 import { useUser } from "@clerk/nextjs";
@@ -23,10 +24,10 @@ import type {
  * screens unchanged. See docs/learn-frontend-contract.md for the matching backend API.
  */
 
-/** Local store: publishing is device-only; AI, verification and weak areas wait for the backend. */
+/** Durable library/student flows; discussions, folder pins and tutor history remain local-only. */
 export const localCapabilities: LearnCapabilities = {
-  sharedPublishing: true, versionRestore: true, ai: false, verification: false, discussions: false, reports: false,
-  deviceSync: false, weakAreas: false, curriculumDirectory: false, quizForks: false,
+  sharedPublishing: true, versionRestore: true, ai: false, verification: false, discussions: false, reports: true,
+  deviceSync: true, weakAreas: false, curriculumDirectory: true, quizForks: false,
 };
 
 export function useLearnCapabilities(): LearnCapabilities {
@@ -82,7 +83,7 @@ function uiMeta(metadata: Doc<"lessons">["metadata"]): LessonMeta { return { ...
 function uiLesson(row: Doc<"lessons">, version?: Doc<"lessonVersions"> | null): Lesson {
   const draft = { meta: uiMeta(row.metadata), content: fromDurableDocument(row.draft), updatedAt: row.updatedAt };
   return { id: row._id, ownerId: row.ownerId, ownerName: row.metadata.authorDisplay ?? "Chaos creator", draft,
-    ...(version ? { published: { version: version.number, meta: uiMeta(version.metadata), content: fromDurableDocument(version.document), publishedAt: version.publishedAt }, publishedDraftAt: JSON.stringify(row.draft) === JSON.stringify(version.document) && JSON.stringify(row.metadata) === JSON.stringify(version.metadata) ? row.updatedAt : version.publishedAt } : {}),
+    ...(version ? { published: { version: version.number, meta: { ...uiMeta(version.metadata), curricula: (version.curriculumMappings ?? []).map(m => ({ moduleId: m.nodeId, versionId: m.versionId, path: [], versionLabel: "" })) }, content: fromDurableDocument(version.document), publishedAt: version.publishedAt }, publishedDraftAt: JSON.stringify(row.draft) === JSON.stringify(version.document) && JSON.stringify(row.metadata) === JSON.stringify(version.metadata) ? row.updatedAt : version.publishedAt } : {}),
     visibility: row.visibility === "public" ? "public" : "private", sources: [], quizzes: [],
     moderation: row.communityState === "review" ? "under_review" : row.communityState === "hidden" ? "restricted" : row.communityState === "removed" ? "removed" : "ok",
     quality: "none", stats: { views: 0, saves: 0, helpful: 0, notHelpful: 0, forks: 0 }, archived: row.status === "archived", createdAt: row.createdAt, updatedAt: row.updatedAt,
@@ -94,12 +95,13 @@ function publicUiLesson(result: { lessonId: Id<"lessons">; ownerId: string; owne
 }
 function useOwnedLessons(archived: boolean): Lesson[] | undefined {
   const rows = useOwnedRows();
+  const members = useLibraryMembers();
   const viewer = useLearnViewer();
   const queries = useMemo(() => Object.fromEntries((rows ?? []).filter(r => r.publishedVersionId).map(row => [row._id, { query: api.lessons.getPublished, args: { lessonId: row._id } }])), [rows]);
   const versions = useQueries(queries);
   useEffect(() => { if (viewer?.signedIn) for (const row of rows ?? []) { const version = versions[row._id]; if (version && !(version instanceof Error)) rememberProgress(viewer.id, { lessonId: row._id, version }); } }, [rows, versions, viewer?.id, viewer?.signedIn]);
   if (rows === undefined || rows.some(r => r.publishedVersionId && versions[r._id] === undefined)) return undefined;
-  return rows.filter(r => (r.status === "archived") === archived).map(row => { const version = versions[row._id]; if (version instanceof Error) throw version; return uiLesson(row, version as Doc<"lessonVersions"> | undefined); });
+  return rows.filter(r => (r.status === "archived") === archived).map(row => { const version = versions[row._id]; if (version instanceof Error) throw version; return { ...uiLesson(row, version as Doc<"lessonVersions"> | undefined), folderId: members?.find(m => m.asset.kind === "lesson" && m.asset.id === row._id)?.folderId }; });
 }
 export function useMyLessons(): Lesson[] | undefined { return useOwnedLessons(false); }
 export function useArchivedLessons(): Lesson[] | undefined { return useOwnedLessons(true); }
@@ -126,7 +128,7 @@ export function useLesson(id: string | undefined): Lesson | null | undefined {
 export function isListed(lesson: Lesson): boolean { return !!lesson.published && lesson.visibility === "public" && !lesson.archived && lesson.moderation === "ok"; }
 export function usePublicLessons(filters: SearchFilters = {}): Lesson[] | undefined {
   const [asOf] = useState(() => Date.now());
-  const rank = useQuery(api.learnCommunity.rank, { asOf, limit: 20 });
+  const rank = useQuery(api.learnCommunity.rank, { asOf, limit: 20, ...(filters.moduleId ? { nodeId: filters.moduleId as Id<"curriculumNodes"> } : {}), ...(filters.versionId ? { curriculumVersionId: filters.versionId as Id<"curriculumVersions"> } : {}) });
   const search = usePaginatedQuery(api.learnSearch.searchPublic, filters.q?.trim() ? { text: filters.q.trim().slice(0, 200) } : "skip", { initialNumItems: 20 });
   const ids = filters.q?.trim() ? search.results.map(r => r.lessonId) : rank?.map(r => r.lessonId);
   const queries = Object.fromEntries((ids ?? []).map(id => [id, { query: api.learnFrontend.publicLesson, args: { id } }]));
@@ -148,21 +150,9 @@ export function useLessonRecovery(lessonId: string | undefined) {
   return useQuery(api.lessons.listRecovery, own ? { lessonId: own._id } : "skip");
 }
 
-export function useFolders(): Folder[] | undefined {
-  const state = useLearnState();
-  const viewer = useLearnViewer();
-  return useMemo(() => state && viewer ? Object.values(state.folders).filter((f) => f.ownerId === viewer.id).sort((a, b) => a.name.localeCompare(b.name)) : undefined, [state, viewer]);
-}
+export function useFolders(): Folder[] | undefined { return useLibraryFolders(); }
 
-export function useFolderItems(): FolderItem[] | undefined {
-  const state = useLearnState();
-  const folders = useFolders();
-  return useMemo(() => {
-    if (!state || !folders) return undefined;
-    const mine = new Set(folders.map((f) => f.id));
-    return state.folderItems.filter((i) => mine.has(i.folderId));
-  }, [state, folders]);
-}
+export function useFolderItems(): FolderItem[] | undefined { return useLibraryFolderItems(); }
 
 /** Published collections anyone can open. */
 export function usePublicCollections(): Folder[] | undefined {
@@ -171,22 +161,17 @@ export function usePublicCollections(): Folder[] | undefined {
 }
 
 export function useFolder(id: string | undefined): Folder | null | undefined {
-  const state = useLearnState();
-  const viewer = useLearnViewer();
-  if (!state || !viewer) return undefined;
-  const folder = id ? state.folders[id] : undefined;
-  if (!folder) return null;
-  if (folder.ownerId === viewer.id) return folder;
-  return folder.collection?.publishedAt && folder.collection.visibility !== "private" ? folder : null;
+  const folders = useFolders();
+  return folders === undefined ? undefined : folders.find(f => f.id === id) ?? null;
 }
 
 export function useCollectionLessons(folderId: string | undefined): Lesson[] | undefined {
-  const state = useLearnState();
-  return useMemo(() => {
-    if (!state || !folderId) return undefined;
-    const ids = descendantFolderIds(state, folderId);
-    return Object.values(state.lessons).filter((l) => l.folderId && ids.has(l.folderId) && !l.archived);
-  }, [state, folderId]);
+  const folders = useFolders(), members = useLibraryMembers(), lessons = useMyLessons();
+  if (!folders || !members || !lessons) return undefined;
+  const ids = new Set(folderId ? [folderId] : []);
+  for (let i = 0; i < 8; i++) for (const f of folders) if (f.parentId && ids.has(f.parentId)) ids.add(f.id);
+  const lessonIds = new Set(members.filter(m => ids.has(m.folderId) && m.asset.kind === "lesson").map(m => m.asset.id));
+  return lessons.filter(l => lessonIds.has(l.id as Id<"lessons">));
 }
 
 function descendantFolderIds(state: LearnState, rootId: string): Set<string> {
@@ -199,28 +184,20 @@ function descendantFolderIds(state: LearnState, rootId: string): Set<string> {
   return ids;
 }
 
-export function useCurriculumNodes(): CurriculumNode[] | undefined {
-  const state = useLearnState();
-  return useMemo(() => state ? Object.values(state.curriculum).sort((a, b) => (a.order ?? 0) - (b.order ?? 0) || a.name.localeCompare(b.name)) : undefined, [state]);
-}
+export function useCurriculumNodes(): CurriculumNode[] | undefined { return useLibraryCurriculum(); }
 
-export function useMyCourses(): MyCourse[] | undefined {
-  return usePersonal()?.courses;
-}
+export function useMyCourses(): MyCourse[] | undefined { return useLibraryCourses(); }
 
 export function useSaved(): SavedItem[] | undefined {
-  const mine = usePersonal();
-  return useMemo(() => mine ? [...mine.saves].sort((a, b) => b.createdAt - a.createdAt) : undefined, [mine]);
+  return useLibraryAnnotations()?.filter(r => !r.deleted && r.kind === "save").map(annotationSave).sort((a,b) => b.createdAt - a.createdAt);
 }
 
 export function useHighlights(lessonId: string): Highlight[] | undefined {
-  const mine = usePersonal();
-  return useMemo(() => mine?.highlights.filter((h) => h.lessonId === lessonId), [mine, lessonId]);
+  return useLibraryAnnotations()?.filter(r => !r.deleted && r.kind === "highlight" && r.lessonId === lessonId).map(annotationHighlight);
 }
 
 export function useNotes(lessonId?: string): PersonalNote[] | undefined {
-  const mine = usePersonal();
-  return useMemo(() => mine?.notes.filter((n) => !lessonId || n.lessonId === lessonId), [mine, lessonId]);
+  return useLibraryAnnotations()?.filter(r => !r.deleted && r.kind === "note" && (!lessonId || r.lessonId === lessonId)).map(annotationNote);
 }
 
 export function useProgress(): Record<string, LessonProgress> | undefined {
@@ -243,8 +220,9 @@ export function useProgress(): Record<string, LessonProgress> | undefined {
 }
 
 export function useVote(lessonId: string): "helpful" | "not_helpful" | null | undefined {
-  const mine = usePersonal();
-  return mine ? mine.votes[lessonId] ?? null : undefined;
+  const auth = useConvexAuth();
+  const signals = useQuery(api.learnCommunity.getMySignals, auth.isAuthenticated ? { lessonId: lessonId as Id<"lessons"> } : "skip");
+  return auth.isLoading || (auth.isAuthenticated && !signals) ? undefined : signals?.helpful ? "helpful" : null;
 }
 
 /** Lessons this person opened, most recent first, with the time they last opened each. */
@@ -286,30 +264,26 @@ export function usePerson(id: string | undefined): (Person & { lessons: Lesson[]
   }, [state, id]);
 }
 
-export function useFlashcardSets(): FlashcardSet[] | undefined {
-  const state = useLearnState();
-  const viewer = useLearnViewer();
-  return useMemo(() => state && viewer ? Object.values(state.flashcards).filter((f) => f.ownerId === viewer.id).sort((a, b) => b.updatedAt - a.updatedAt) : undefined, [state, viewer]);
-}
+export function useFlashcardSets(): FlashcardSet[] | undefined { return useLibraryFlashcards(); }
 
 export function useFlashcardSet(id: string | undefined): FlashcardSet | null | undefined {
-  const state = useLearnState();
-  const viewer = useLearnViewer();
-  if (!state || !viewer) return undefined;
-  const set = id ? state.flashcards[id] : undefined;
-  if (!set) return null;
-  return set.ownerId === viewer.id || set.visibility !== "private" ? set : null;
+  const row = useQuery(api.learnLibrary.flashcard, id ? { id } : "skip");
+  return !id ? null : row === undefined ? undefined : row ? flashcardUi(row) : null;
 }
 
 export function useLessonFlashcards(lessonId: string): FlashcardSet[] | undefined {
-  const state = useLearnState();
-  const viewer = useLearnViewer();
-  return useMemo(() => state && viewer ? Object.values(state.flashcards).filter((f) => f.lessonId === lessonId && (f.ownerId === viewer.id || f.visibility === "public")) : undefined, [state, viewer, lessonId]);
+  const attachments = useQuery(api.flashcardStudy.listAttached, { lessonId: lessonId as Id<"lessons"> });
+  const rows = useQueries(Object.fromEntries((attachments ?? []).map(r => [r.setId, { query: api.learnLibrary.flashcard, args: { id: r.setId } }])));
+  if (!attachments || attachments.some(r => rows[r.setId] === undefined)) return undefined;
+  return attachments.flatMap(a => { const row = rows[a.setId]; if (row instanceof Error) throw row; return row ? [{ ...flashcardUi(row), lessonId }] : []; });
 }
 
 export function useCardReviews(setId: string) {
-  const mine = usePersonal();
-  return useMemo(() => mine?.reviews.filter((r) => r.setId === setId), [mine, setId]);
+  const auth = useConvexAuth();
+  const version = useQuery(api.flashcards.getPublished, { setId: setId as Id<"flashcardSets"> });
+  const [now] = useState(() => Date.now());
+  const summary = useQuery(api.flashcardStudy.reviewSchedule, auth.isAuthenticated && version ? { versionId: version._id, now, limit: 100 } : "skip");
+  return auth.isLoading || version === undefined || (auth.isAuthenticated && version && !summary) ? undefined : (summary?.items ?? []).map(r => ({ setId, cardId: r.cardId, box: r.box, reviewedAt: 0 }));
 }
 
 export function useTutorThread(lessonId: string): TutorMessage[] | undefined {
@@ -318,6 +292,7 @@ export function useTutorThread(lessonId: string): TutorMessage[] | undefined {
 }
 
 export function usePinnedFolders(): string[] | undefined {
+  // Sidebar pin preferences remain device-only; they are not library synchronization.
   return usePersonal()?.pinnedFolders;
 }
 
@@ -352,6 +327,10 @@ export class LearnError extends Error {}
 export function useLearnActions() {
   const viewer = useLearnViewer();
   const client = useConvex();
+  const annotations = useLibraryAnnotations();
+  const flashcardRows = useLibraryFlashcardRows();
+  const library = useMemo(() => { void viewer?.id; return new DurableLibraryClient(client); }, [client, viewer?.id]);
+  useEffect(() => { if (annotations) library.observe(annotations); if (flashcardRows) library.observeFlashcards(flashcardRows); }, [library, annotations, flashcardRows]);
   const service = useMemo(() => { void viewer?.id; return new DurableLessonClient(client); }, [client, viewer?.id]);
   for (const [key, row] of durableRows) if (key.startsWith((viewer?.id ?? "guest") + ":")) service.observe(row);
   const progressService = useMemo(() => { void viewer?.id; return new DurableProgressClient(client); }, [client, viewer?.id]);
@@ -368,8 +347,9 @@ export function useLearnActions() {
     return {
       async createLesson(input: { language: string; folderId?: string; title?: string; content?: unknown[] } = { language: "en" }): Promise<string> {
         requireSignIn();
-        if (input.folderId) throw new LearnError("Folder membership is not wired to durable Learn yet. Create at the library root.");
-        return client.mutation(api.lessons.create, { metadata: durableMetadata(blankMeta(input.language, input.title || "Untitled lesson")), document: toDurableDocument(input.content ?? []) });
+        const id = await client.mutation(api.lessons.create, { metadata: durableMetadata(blankMeta(input.language, input.title || "Untitled lesson")), document: toDurableDocument(input.content ?? []) });
+        if (input.folderId) await library.moveAsset("lesson", id, input.folderId);
+        return id;
       },
       saveDraftContent(id: string, content: unknown[]) { requireSignIn(); return service.saveContent(id, content); },
       async reloadDraft(id: string) { requireSignIn(); const row = await service.reload(id); return uiLesson(row); },
@@ -394,81 +374,38 @@ export function useLearnActions() {
         if (!source) throw new LearnError("NOT_FOUND");
         return client.mutation(api.lessons.fork, { lessonId: source.lessonId, versionId: source.version._id });
       },
-      recordView(id: string) {
-        writeState((s) => {
-          const l = s.lessons[id];
-          if (!l) return s;
-          const mine = personal(s, me);
-          const seenRecently = (mine.recent[id] ?? 0) > Date.now() - 30 * 60_000;
-          const lessons = l.ownerId === me || seenRecently ? s.lessons : { ...s.lessons, [id]: { ...l, stats: { ...l.stats, views: l.stats.views + 1 } } };
-          return { ...s, lessons, mine: { ...s.mine, [me]: { ...mine, recent: { ...mine.recent, [id]: Date.now() } } } };
-        });
-      },
-      vote(id: string, vote: "helpful" | "not_helpful" | null) {
+      async recordView(id: string, engagement?: { blockId: string; engagedSeconds: number }) {
         requireSignIn();
-        writeState((s) => {
-          const l = s.lessons[id];
-          if (!l || l.ownerId === me) return s;
-          const mine = personal(s, me);
-          const before = mine.votes[id];
-          const stats = { ...l.stats };
-          if (before === "helpful") stats.helpful--;
-          if (before === "not_helpful") stats.notHelpful--;
-          if (vote === "helpful") stats.helpful++;
-          if (vote === "not_helpful") stats.notHelpful++;
-          const votes = { ...mine.votes };
-          if (vote) votes[id] = vote; else delete votes[id];
-          return { ...s, lessons: { ...s.lessons, [id]: { ...l, stats } }, mine: { ...s.mine, [me]: { ...mine, votes } } };
-        });
+        if (!engagement) return false;
+        const version = await library.published(id);
+        return client.mutation(api.learnCommunity.recordView, { lessonId: version.lessonId, versionId: version._id, ...engagement });
       },
-
-      /* Saves, highlights, notes, progress: private to this person. */
+      async vote(id: string, vote: "helpful" | "not_helpful" | null) {
+        requireSignIn();
+        if (vote === "not_helpful") throw new LearnError("Only Helpful votes are supported. Report inaccurate or unsafe material instead.");
+        return client.mutation(api.learnCommunity.setSignals, { lessonId: id as Id<"lessons">, helpful: vote === "helpful" });
+      },
       saveLesson(lesson: Lesson) {
         requireSignIn();
-        writeState((s) => {
-          const mine = personal(s, me);
-          if (mine.saves.some((x) => x.kind === "lesson" && x.lessonId === lesson.id)) return s;
-          const item: SavedItem = { id: newId("save"), kind: "lesson", lessonId: lesson.id, lessonTitle: (lesson.published ?? lesson.draft).meta.title, createdAt: Date.now() };
-          const l = s.lessons[lesson.id];
-          const lessons = l && l.ownerId !== me ? { ...s.lessons, [l.id]: { ...l, stats: { ...l.stats, saves: l.stats.saves + 1 } } } : s.lessons;
-          return { ...s, lessons, mine: { ...s.mine, [me]: { ...mine, saves: [item, ...mine.saves] } } };
-        });
+        return library.put({ key: "lesson_" + lesson.id, lessonId: lesson.id, kind: "save" });
       },
-      saveBlock(lesson: Lesson, blockId: string, excerptText: string, imageUrl?: string) {
+      async saveBlock(lesson: Lesson, blockId: string, excerptText: string, _imageUrl?: string) {
         requireSignIn();
-        updatePersonal(me, (mine) => mine.saves.some((x) => x.kind === "block" && x.lessonId === lesson.id && x.blockId === blockId) ? mine : {
-          ...mine, saves: [{ id: newId("save"), kind: "block", lessonId: lesson.id, lessonTitle: (lesson.published ?? lesson.draft).meta.title, blockId, excerpt: makeExcerpt(excerptText, 280), imageUrl, createdAt: Date.now() }, ...mine.saves],
-        });
+        const version = await library.published(lesson.id);
+        const block = version.document.blocks.find(b => b.id === blockId);
+        const start = block && "text" in block ? block.text.indexOf(excerptText) : -1;
+        return library.put({ key: "block_" + lesson.id + "_" + blockId, lessonId: lesson.id, blockId, kind: "save", ...(excerptText && excerptText.length <= 2000 && start >= 0 ? { anchor: { start, end: start + excerptText.length, quote: excerptText } } : {}) });
       },
-      removeSave(saveId: string) {
-        writeState((s) => {
-          const mine = personal(s, me);
-          const item = mine.saves.find((x) => x.id === saveId);
-          if (!item) return s;
-          const l = item.kind === "lesson" ? s.lessons[item.lessonId] : undefined;
-          const lessons = l && l.ownerId !== me ? { ...s.lessons, [l.id]: { ...l, stats: { ...l.stats, saves: Math.max(0, l.stats.saves - 1) } } } : s.lessons;
-          return { ...s, lessons, mine: { ...s.mine, [me]: { ...mine, saves: mine.saves.filter((x) => x.id !== saveId) } } };
-        });
-      },
+      removeSave(saveId: string) { requireSignIn(); return library.remove(saveId); },
       addHighlight(h: { lessonId: string; blockId: string; quote: string; offset: number; color: HighlightColor }) {
         requireSignIn();
-        updatePersonal(me, (mine) => ({ ...mine, highlights: [...mine.highlights, { ...h, quote: h.quote.slice(0, 2000), id: newId("hl"), createdAt: Date.now() }] }));
+        return library.put({ key: "hl_" + h.color + "_" + crypto.randomUUID().replaceAll("-", "_"), lessonId: h.lessonId, blockId: h.blockId, kind: "highlight", anchor: { start: h.offset, end: h.offset + h.quote.length, quote: h.quote } });
       },
-      removeHighlight(id: string) {
-        updatePersonal(me, (mine) => ({ ...mine, highlights: mine.highlights.filter((h) => h.id !== id) }));
-      },
+      removeHighlight(id: string) { requireSignIn(); return library.remove(id); },
       upsertNote(note: { id?: string; lessonId: string; blockId: string; body: string }) {
-        requireSignIn();
-        const now = Date.now();
-        updatePersonal(me, (mine) => {
-          const body = note.body.slice(0, 5000);
-          if (note.id && mine.notes.some((n) => n.id === note.id)) return { ...mine, notes: mine.notes.map((n) => n.id === note.id ? { ...n, body, updatedAt: now } : n) };
-          return { ...mine, notes: [...mine.notes, { id: newId("note"), lessonId: note.lessonId, blockId: note.blockId, body, createdAt: now, updatedAt: now }] };
-        });
+        requireSignIn(); return library.put({ key: note.id, lessonId: note.lessonId, blockId: note.blockId, kind: "note", note: note.body });
       },
-      deleteNote(id: string) {
-        updatePersonal(me, (mine) => ({ ...mine, notes: mine.notes.filter((n) => n.id !== id) }));
-      },
+      deleteNote(id: string) { requireSignIn(); return library.remove(id); },
       setProgress(lessonId: string, patch: { state?: ProgressState; lastBlockId?: string; percent?: number }): Promise<void> {
         requireSignIn();
         const key = me + ":" + lessonId;
@@ -479,121 +416,46 @@ export function useLearnActions() {
       },
 
       /* Library folders and collections. */
-      createFolder(name: string, parentId?: string): string {
-        requireSignIn();
-        const id = newId("folder");
-        const now = Date.now();
-        writeState((s) => {
-          if (parentId && s.folders[parentId]?.ownerId !== me) throw new LearnError("NOT_FOUND");
-          return { ...s, folders: { ...s.folders, [id]: { id, ownerId: me, name: name.trim().slice(0, 120) || "Untitled folder", parentId, createdAt: now, updatedAt: now } } };
-        });
-        return id;
-      },
-      renameFolder(id: string, name: string) {
-        writeState((s) => {
-          const f = s.folders[id];
-          if (f?.ownerId !== me) throw new LearnError("NOT_FOUND");
-          return { ...s, folders: { ...s.folders, [id]: { ...f, name: name.trim().slice(0, 120) || f.name, updatedAt: Date.now() } } };
-        });
-      },
-      /** Refuses moves into itself or its own subfolders. */
-      moveFolder(id: string, parentId: string | undefined) {
-        writeState((s) => {
-          const f = s.folders[id];
-          if (f?.ownerId !== me || (parentId && s.folders[parentId]?.ownerId !== me)) throw new LearnError("NOT_FOUND");
-          if (parentId && descendantFolderIds(s, id).has(parentId)) throw new LearnError("FOLDER_CYCLE");
-          return { ...s, folders: { ...s.folders, [id]: { ...f, parentId, updatedAt: Date.now() } } };
-        });
-      },
-      archiveFolder(id: string, archived = true) {
-        writeState((s) => {
-          const f = s.folders[id];
-          if (f?.ownerId !== me) throw new LearnError("NOT_FOUND");
-          const ids = descendantFolderIds(s, id);
-          const folders = { ...s.folders };
-          for (const fid of ids) folders[fid] = { ...folders[fid], archived };
-          return { ...s, folders };
-        });
-      },
-      duplicateFolder(id: string): string {
-        requireSignIn();
-        const newRoot = newId("folder");
-        writeState((s) => {
-          const root = s.folders[id];
-          if (root?.ownerId !== me) throw new LearnError("NOT_FOUND");
-          const now = Date.now();
-          const map = new Map<string, string>([[id, newRoot]]);
-          for (const fid of descendantFolderIds(s, id)) if (!map.has(fid)) map.set(fid, newId("folder"));
-          const folders = { ...s.folders };
-          for (const [oldId, nid] of map) {
-            const f = s.folders[oldId];
-            folders[nid] = { ...f, id: nid, name: oldId === id ? `${f.name} (copy)` : f.name, parentId: oldId === id ? f.parentId : map.get(f.parentId!), collection: f.collection ? { ...f.collection, publishedAt: undefined, visibility: "private" } : undefined, createdAt: now, updatedAt: now };
-          }
-          // Items are references, so the copy points at the same forms and lessons stay where they are.
-          const items = s.folderItems.filter((i) => map.has(i.folderId)).map((i) => ({ ...i, folderId: map.get(i.folderId)!, addedAt: now }));
-          return { ...s, folders, folderItems: [...s.folderItems, ...items] };
-        });
-        return newRoot;
-      },
-      moveLesson(lessonId: string, folderId: string | undefined) {
-        writeState((s) => {
-          const l = requireOwned(s, lessonId, me);
-          if (folderId && s.folders[folderId]?.ownerId !== me) throw new LearnError("NOT_FOUND");
-          return putLesson(s, { ...l, folderId });
-        });
-      },
-      addToFolder(item: { folderId: string; kind: Exclude<LibraryItemKind, "lesson">; refId: string; title: string }) {
-        writeState((s) => {
-          if (s.folders[item.folderId]?.ownerId !== me) throw new LearnError("NOT_FOUND");
-          const rest = s.folderItems.filter((i) => !(i.kind === item.kind && i.refId === item.refId && s.folders[i.folderId]?.ownerId === me));
-          return { ...s, folderItems: [...rest, { ...item, addedAt: Date.now() }] };
-        });
-      },
-      removeFromFolder(kind: LibraryItemKind, refId: string) {
-        writeState((s) => ({ ...s, folderItems: s.folderItems.filter((i) => !(i.kind === kind && i.refId === refId && s.folders[i.folderId]?.ownerId === me)) }));
-      },
+      createFolder(name: string, parentId?: string): Promise<string> { requireSignIn(); return client.mutation(api.folders.create, { name, parentId: parentId as Id<"folders"> ?? null }); },
+      renameFolder(id: string, name: string) { requireSignIn(); return client.mutation(api.folders.rename, { folderId: id as Id<"folders">, name }); },
+      moveFolder(id: string, parentId: string | undefined) { requireSignIn(); return client.mutation(api.folders.move, { folderId: id as Id<"folders">, parentId: parentId as Id<"folders"> ?? null }); },
+      archiveFolder(_id: string, _archived = true) { throw new LearnError("Folder archiving is not supported. Move its contents or remove an empty folder."); },
+      duplicateFolder(_id: string): string { throw new LearnError("Folder duplication is not supported by the backend."); },
+      moveLesson(lessonId: string, folderId: string | undefined) { requireSignIn(); return library.moveAsset("lesson", lessonId, folderId); },
+      addToFolder(item: { folderId: string; kind: Exclude<LibraryItemKind, "lesson">; refId: string; title: string }) { requireSignIn(); return library.moveAsset(item.kind, item.refId, item.folderId); },
+      removeFromFolder(kind: LibraryItemKind, refId: string) { requireSignIn(); return library.moveAsset(kind, refId); },
       togglePinnedFolder(id: string) {
         updatePersonal(me, (mine) => ({ ...mine, pinnedFolders: mine.pinnedFolders.includes(id) ? mine.pinnedFolders.filter((x) => x !== id) : [...mine.pinnedFolders, id] }));
       },
-      setCollection(id: string, collection: Folder["collection"]) {
-        writeState((s) => {
-          const f = s.folders[id];
-          if (f?.ownerId !== me) throw new LearnError("NOT_FOUND");
-          return { ...s, folders: { ...s.folders, [id]: { ...f, collection, updatedAt: Date.now() } } };
-        });
-      },
-
-      /* Curriculum: the local store lets people build their own tree until the shared directory exists. */
-      addCurriculumNode(node: Omit<CurriculumNode, "id">): string {
+      async createLibraryCollection(input: { title: string; description: string; language: string; folderId: string; visibility: Visibility }) {
         requireSignIn();
-        const id = newId("cur");
-        writeState((s) => ({ ...s, curriculum: { ...s.curriculum, [id]: { ...node, name: node.name.trim().slice(0, 160), id } } }));
-        return id;
+        if (input.visibility === "unlisted") throw new LearnError("Unlisted collections are not supported. Choose private or public.");
+        let cursor: string | null = null;
+        const members: Doc<"folderMembers">[] = [];
+        do {
+          const page: { page: Doc<"folderMembers">[]; isDone: boolean; continueCursor: string } = await client.query(api.folders.listMembers, { folderId: input.folderId as Id<"folders">, paginationOpts: { cursor, numItems: 25 } });
+          members.push(...page.page);
+          cursor = page.isDone ? null : page.continueCursor;
+        } while (cursor);
+        const items: Doc<"learnCollections">["items"] = [];
+        for (const member of members) {
+          if (member.asset.kind === "lesson") { const version = await library.published(member.asset.id); items.push({ kind: "lesson", id: member.asset.id, versionId: version._id }); }
+          else if (member.asset.kind === "source") items.push({ kind: "source", id: member.asset.id });
+          else throw new LearnError("Collections support published lessons and source metadata only. Use a folder containing only those assets.");
+        }
+        if (!items.length) throw new LearnError("Add published lessons or source metadata to this folder first.");
+        const collectionId = await client.mutation(api.learnCollections.create, { metadata: durableMetadata({ ...blankMeta(input.language, input.title), description: input.description }) });
+        const revision = await client.mutation(api.learnCollections.replaceItems, { collectionId, expectedRevision: 0, items });
+        await client.mutation(api.learnCollections.publish, { collectionId, expectedRevision: revision, visibility: input.visibility });
+        return collectionId;
       },
-      renameCurriculumNode(id: string, name: string) {
-        writeState((s) => s.curriculum[id] ? { ...s, curriculum: { ...s.curriculum, [id]: { ...s.curriculum[id], name: name.trim().slice(0, 160) || s.curriculum[id].name } } } : s);
-      },
-      setCurrentVersion(versionId: string) {
-        writeState((s) => {
-          const v = s.curriculum[versionId];
-          if (v?.kind !== "version") return s;
-          const curriculum = { ...s.curriculum };
-          for (const n of Object.values(curriculum)) if (n.kind === "version" && n.parentId === v.parentId) curriculum[n.id] = { ...n, current: n.id === versionId };
-          return { ...s, curriculum };
-        });
-      },
-      followCourse(moduleId: string, versionId: string) {
-        requireSignIn();
-        updatePersonal(me, (mine) => mine.courses.some((c) => c.moduleId === moduleId) ? mine : { ...mine, courses: [...mine.courses, { moduleId, versionId, addedAt: Date.now() }] });
-      },
-      unfollowCourse(moduleId: string) {
-        updatePersonal(me, (mine) => ({ ...mine, courses: mine.courses.filter((c) => c.moduleId !== moduleId) }));
-      },
-      openCourse(moduleId: string) {
-        updatePersonal(me, (mine) => ({ ...mine, courses: mine.courses.map((c) => c.moduleId === moduleId ? { ...c, lastOpenedAt: Date.now() } : c) }));
-      },
-
-      /* Community. */
+      setCollection(_id: string, _collection: Folder["collection"]) { throw new LearnError("Collections are separate durable assets. Use createLibraryCollection and publishLibraryCollection; folders cannot be published in place."); },
+      addCurriculumNode(_node: Omit<CurriculumNode, "id">): string { throw new LearnError("The canonical curriculum directory is administered on the server."); },
+      renameCurriculumNode(_id: string, _name: string) { throw new LearnError("Canonical curriculum records are immutable."); },
+      setCurrentVersion(_versionId: string) { throw new LearnError("The curriculum backend has no current-version setting."); },
+      followCourse(moduleId: string, _versionId: string) { requireSignIn(); return library.follow(moduleId, true); },
+      unfollowCourse(moduleId: string) { requireSignIn(); return library.follow(moduleId, false); },
+      openCourse(_moduleId: string) { /* The backend does not record course-open timestamps. */ },
       startThread(input: { lessonId: string; blockId?: string; anchorExcerpt?: string; body: string }): string {
         requireSignIn();
         const id = newId("thread");
@@ -625,12 +487,13 @@ export function useLearnActions() {
           ...s, threads: s.threads.map((t) => t.id !== threadId ? t : { ...t, comments: t.comments.map((c) => c.id === commentId && c.authorId === me ? { ...c, body: "", moderation: "removed" as const } : c) }),
         }));
       },
-      report(target: ReportTarget, reason: ReportReason, details: string) {
+      async report(target: ReportTarget, reason: ReportReason, details: string) {
         requireSignIn();
-        writeState((s) => ({ ...s, reports: [...s.reports, { id: newId("report"), target, reason, details: details.trim().slice(0, 2000), createdAt: Date.now(), status: "open" }] }));
+        if (target.kind !== "lesson") throw new LearnError("Reports for this asset type are not supported.");
+        if (reason === "other") throw new LearnError("Choose a supported report category.");
+        const category = reason === "incorrect" ? "inaccurate" : reason === "abuse" ? "unsafe" : reason;
+        return client.mutation(api.learnCommunity.report, { lessonId: target.id as Id<"lessons">, category, detail: details });
       },
-
-      /* Profiles and verification. */
       updateProfile(patch: Partial<Pick<Person, "name" | "bio" | "username">>) {
         requireSignIn();
         writeState((s) => {
@@ -649,51 +512,29 @@ export function useLearnActions() {
       },
 
       /* Flashcards. */
-      createFlashcardSet(input: { title: string; lessonId?: string; cards?: Flashcard[] }): string {
+      async createFlashcardSet(input: { title: string; lessonId?: string; cards?: Flashcard[] }): Promise<string> {
         requireSignIn();
-        const id = newId("cards");
-        const now = Date.now();
-        writeState((s) => ({ ...s, flashcards: { ...s.flashcards, [id]: { id, ownerId: me, ownerName: myName, title: input.title.trim().slice(0, 160) || "Untitled set", description: "", lessonId: input.lessonId, cards: input.cards ?? [], visibility: "private", createdAt: now, updatedAt: now } } }));
-        return id;
+        if (input.lessonId) throw new LearnError("Create a set first, publish it, then attach its version to a lesson.");
+        return client.mutation(api.flashcards.create, { title: input.title, cards: (input.cards ?? []).map(c => ({ id: c.id, front: c.front, back: c.back, conceptIds: [] })) });
       },
-      updateFlashcardSet(id: string, patch: Partial<Pick<FlashcardSet, "title" | "description" | "cards" | "visibility" | "lessonId">>) {
-        writeState((s) => {
-          const set = s.flashcards[id];
-          if (set?.ownerId !== me) throw new LearnError("NOT_FOUND");
-          const cards = patch.cards?.slice(0, 500).map((c) => ({ ...c, front: c.front.slice(0, 1000), back: c.back.slice(0, 2000) }));
-          return { ...s, flashcards: { ...s.flashcards, [id]: { ...set, ...patch, ...(cards ? { cards } : {}), updatedAt: Date.now() } } };
-        });
+      async publishFlashcardStudy(id: string) {
+        requireSignIn(); const row = await client.query(api.learnLibrary.flashcard, { id });
+        if (!row) throw new LearnError("NOT_FOUND");
+        return client.mutation(api.flashcards.publish, { setId: row._id, expectedRevision: row.revision, visibility: row.visibility });
       },
-      deleteFlashcardSet(id: string) {
-        writeState((s) => {
-          if (s.flashcards[id]?.ownerId !== me) throw new LearnError("NOT_FOUND");
-          const flashcards = { ...s.flashcards };
-          delete flashcards[id];
-          return { ...s, flashcards };
-        });
+      updateFlashcardSet(id: string, patch: Partial<Pick<FlashcardSet, "title" | "description" | "cards" | "visibility" | "lessonId">>) { requireSignIn(); return library.updateFlashcards(id, patch); },
+      async deleteFlashcardSet(id: string) {
+        requireSignIn(); const row = await client.query(api.learnLibrary.flashcard, { id });
+        if (!row) throw new LearnError("NOT_FOUND");
+        return client.mutation(api.flashcards.setLifecycle, { setId: row._id, expectedRevision: row.revision, action: "archive" });
       },
-      forkFlashcardSet(id: string): string {
-        requireSignIn();
-        const forkId = newId("cards");
-        writeState((s) => {
-          const src = s.flashcards[id];
-          if (!src || src.visibility === "private") throw new LearnError("NOT_FOUND");
-          const now = Date.now();
-          return { ...s, flashcards: { ...s.flashcards, [forkId]: { ...src, id: forkId, ownerId: me, ownerName: myName, visibility: "private", cards: src.cards.map((c) => ({ ...c, id: newId("card") })), forkedFrom: { kind: "flashcards", sourceId: src.id, sourceTitle: src.title, authorId: src.ownerId, authorName: src.ownerName, forkedAt: now }, createdAt: now, updatedAt: now } } };
-        });
-        return forkId;
+      async forkFlashcardSet(id: string): Promise<string> {
+        requireSignIn(); const version = await client.query(api.flashcards.getPublished, { setId: id as Id<"flashcardSets"> });
+        if (!version) throw new LearnError("No published flashcards to fork.");
+        return client.mutation(api.flashcards.fork, { setId: version.setId, versionId: version._id });
       },
-      /** Leitner boxes: right moves a card up a box, wrong sends it back to box 1. */
-      reviewCard(setId: string, cardId: string, knewIt: boolean) {
-        updatePersonal(me, (mine) => {
-          const current = mine.reviews.find((r) => r.setId === setId && r.cardId === cardId);
-          const box = knewIt ? Math.min(5, (current?.box ?? 0) + 1) : 1;
-          return { ...mine, reviews: [...mine.reviews.filter((r) => r !== current), { setId, cardId, box, reviewedAt: Date.now() }] };
-        });
-      },
-      resetReviews(setId: string) {
-        updatePersonal(me, (mine) => ({ ...mine, reviews: mine.reviews.filter((r) => r.setId !== setId) }));
-      },
+      reviewCard(setId: string, cardId: string, knewIt: boolean) { requireSignIn(); return library.review(setId, cardId, knewIt); },
+      resetReviews(_setId: string) { throw new LearnError("Study evidence cannot be reset. Restart the queue to practice again."); },
 
       /**
        * Fork a quiz attached to a public lesson into the reader’s Chaos library as a draft with provenance.
@@ -713,7 +554,7 @@ export function useLearnActions() {
         updatePersonal(me, (mine) => { const tutor = { ...mine.tutor }; delete tutor[lessonId]; return { ...mine, tutor }; });
       },
     };
-  }, [me, myName, requireSignIn, client, service, progressService]);
+  }, [me, myName, requireSignIn, client, service, progressService, library]);
 }
 
 export type LearnActions = ReturnType<typeof useLearnActions>;
@@ -733,18 +574,27 @@ export const readerView = (lesson: Lesson) => lesson.published ?? { version: 0, 
 export { emptyPersonal };
 
 /** Every highlight this person made, newest first (Saved → Highlights). */
-export function useAllHighlights(): Highlight[] | undefined {
-  const mine = usePersonal();
-  return useMemo(() => mine?.highlights.slice().sort((a, b) => b.createdAt - a.createdAt), [mine]);
-}
+export function useAllHighlights(): Highlight[] | undefined { return useLibraryAnnotations()?.filter(r => !r.deleted && r.kind === "highlight").map(annotationHighlight); }
 
 /** Titles for lesson ids, for lists that reference lessons (saved items, notes). */
 export function useLessonTitles(): ((id: string) => string | undefined) | undefined {
-  const state = useLearnState();
-  return useMemo(() => state ? (id: string) => { const l = state.lessons[id]; return l ? (l.published ?? l.draft).meta.title : undefined; } : undefined, [state]);
+  const annotations = useLibraryAnnotations();
+  const results = useQueries(Object.fromEntries([...new Set(annotations?.map(a => a.lessonId) ?? [])].map(id => [id, { query: api.learnFrontend.publicLesson, args: { id } }])));
+  return annotations === undefined ? undefined : id => { const row = results[id]; return row && !(row instanceof Error) ? row.version.metadata.title : undefined; };
 }
 
 /** Ids for client-created parts of a lesson (cards, sources). */
 export { newId } from "./localStore";
 /** Lesson file storage (images, PDFs). Stored references resolve to displayable URLs. */
 export { putFile as uploadLearnFile, resolveFileUrl as resolveLearnFileUrl, MAX_FILE_BYTES as LEARN_MAX_FILE_BYTES } from "./localStore";
+
+export { DurableLibraryClient, useLibraryCollections } from "./libraryClient";
+
+export function usePublishedCollection(id: string) { return useQuery(api.learnLibrary.collection, { id }); }
+export function useCollectionSnapshotLessons(id: string): Lesson[] | undefined {
+  const snapshot = usePublishedCollection(id);
+  const items = snapshot?.items.filter(i => i.kind === "lesson") ?? [];
+  const versions = useQueries(Object.fromEntries(items.map(i => [i.id, { query: api.lessonVersionReads.get, args: { lessonId: i.id, versionId: i.versionId } }])));
+  if (snapshot === undefined || items.some(i => versions[i.id] === undefined)) return undefined;
+  return items.flatMap(i => { const version = versions[i.id]; if (!version || version instanceof Error) return []; return [publicUiLesson({ lessonId: i.id, ownerId: "", ownerName: version.metadata.authorDisplay ?? "Chaos creator", createdAt: version.publishedAt, version })]; });
+}
