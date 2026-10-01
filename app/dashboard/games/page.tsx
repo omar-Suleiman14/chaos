@@ -9,6 +9,7 @@ import type { ThemePresetId } from "@/convex/formLogic";
 import { emptyDefinition } from "@/convex/formLogic";
 import { DEFAULT_TIME_LIMIT, TIME_LIMITS } from "@/convex/liveLogic";
 import { ThemePicker } from "@/components/ThemePicker";
+import GameHistory from "@/components/live/GameHistory";
 import { themeFromPreset } from "@/components/forms/formThemes";
 import { useHostLive } from "@/components/live/HostLiveButton";
 import { useCreateForm } from "@/components/workspace/useCreateForm";
@@ -31,7 +32,7 @@ const copy = {
     hostingNote: "Hosting uses the published version. Publish any edits before your next game.",
     draftNote: "Add choice questions with correct answers, then publish to host a live game.",
     emptyReady: "No published quizzes yet.", emptyDrafts: "No drafts.", loading: "Loading your games…",
-    untitled: "Untitled game",
+    untitled: "Untitled game", history: "History", historyHelp: "Games you hosted. Open a running game or see the saved results.",
   },
   ar: {
     title: "الألعاب", lead: "أنشئ اختبارًا أو استضف اختبارًا منشورًا. ينضم اللاعبون عبر /play برمز اللعبة.",
@@ -46,7 +47,7 @@ const copy = {
     hostingNote: "تستخدم الاستضافة النسخة المنشورة. انشر تعديلاتك قبل اللعبة التالية.",
     draftNote: "أضف أسئلة اختيار بإجابات صحيحة، ثم انشر لاستضافة لعبة مباشرة.",
     emptyReady: "لا اختبارات منشورة بعد.", emptyDrafts: "لا مسودات.", loading: "جارٍ تحميل ألعابك…",
-    untitled: "لعبة بلا عنوان",
+    untitled: "لعبة بلا عنوان", history: "السجل", historyHelp: "الألعاب التي استضفتها. افتح لعبة جارية أو اطّلع على النتائج المحفوظة.",
   },
 };
 
@@ -115,6 +116,7 @@ export default function GamesPage() {
     {loaded && <>
       <section className="games-library" aria-labelledby="games-published-title"><h2 id="games-published-title">{t.ready}</h2><p className="games-help">{t.hostingNote}</p>{quizRows(true)}</section>
       <section className="games-library" aria-labelledby="games-drafts-title"><h2 id="games-drafts-title">{t.draft}</h2><p className="games-help">{t.draftNote}</p>{quizRows(false)}</section>
+      <section className="games-library" aria-labelledby="games-history-title"><h2 id="games-history-title">{t.history}</h2><p className="games-help">{t.historyHelp}</p><GameHistory /></section>
     </>}
   </div>;
 }

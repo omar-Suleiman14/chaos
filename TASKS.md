@@ -526,3 +526,11 @@ Outcome: expose existing owner course helpers through trusted MCP transport; dra
 - [x] Hero trimmed to two actions (Create, Explore); Play removed from the public nav and the nav links no longer float centred.
 - [x] Unit suite 687/687 and memberCards integration 9/9 passed; tsc clean; scoped lint 0 errors.
 - [ ] Not visually checked in a signed-in browser (local Clerk credentials are placeholders).
+## Hero, Library tabs, game history, card flip and live avatar (2026-10-01, night)
+- [x] Hero actions share one width (176px min) with a 12px gap.
+- [x] Library tabs: All, Forms, Quizzes, Courses, Games. Courses moved from the strip above the tabs into its own tab (with an empty state); Games tab shows game history plus "Host a game". Header Games button removed.
+- [x] Games page has a History section: new `live.myGames` query (newest 30 by host via by_hostId_and_createdAt); running games link to the host screen, ended games to saved results.
+- [x] Card flip fixed: the drop-shadow filter flattened the 3D card and the `both` fill-mode entrance animation pinned its transform. Tilt now lives on .mc-tilt, shadow on .mc-stage, animation fill is `backwards`.
+- [x] Avatars are seeded from the username: the card previews the typed username and avatar live; the sidebar and Learn profiles use the same seed. Member number and title stay account-seeded.
+- [x] Unit 688/688 (new history test), live + memberCards integration 40/40, tsc (app and convex) clean, scoped lint 0 errors. Flip verified by computed styles in a browser; pixel screenshot unavailable (preview renderer error).
+- [ ] Needs a Convex deploy for `live.myGames`. Not checked signed-in in a real browser.

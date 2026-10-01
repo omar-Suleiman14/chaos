@@ -1,6 +1,7 @@
 import { blobatar } from "blobatar";
 import { qrMatrix, QR_QUIET_ZONE } from "./qr";
-export { avatarSeed } from "./avatarSeed";
+import { avatarSeed } from "./avatarSeed";
+export { avatarSeed };
 
 function hash(seed: string): number {
   let h = 2166136261;
@@ -105,7 +106,7 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
       ${qr(data.url, W / 2 - 92, 65, 184, "#111827", "#ffffff")}
       <text x="${W / 2}" y="330" text-anchor="middle" font-family="${SANS}" font-size="16" font-weight="800" fill="${theme.ink}">${ar ? "امسح لترى البطاقة" : "Scan to see this card"}</text>
       <text x="${W / 2}" y="352" text-anchor="middle" font-family="${MONO}" font-size="11" fill="${muted}">${esc(data.url.replace(/^https?:\/\//, ""))}</text>
-      ${blob(data.seed, W / 2 - 26, 372, 52, theme.hue)}
+      ${blob(avatarSeed(data.username), W / 2 - 26, 372, 52, theme.hue)}
       ${footer}</svg>`;
   }
   const name = fitName(data.name);
@@ -119,7 +120,7 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
       <rect x="22" y="22" width="${W - 44}" height="270" fill="url(#@@sheen)"/>
     </g>
     <circle cx="${W / 2}" cy="${157}" r="72" fill="${theme.paper}" opacity=".22"/>
-    ${blob(data.seed, W / 2 - 66, 91, 132)}
+    ${blob(avatarSeed(data.username), W / 2 - 66, 91, 132)}
     <text x="22" y="${H - 156}" font-family="${SANS}" font-size="${name.size}" font-weight="800" letter-spacing="-.5" fill="${theme.accent}">${esc(name.text)}</text>
     <text x="22" y="${H - 132}" font-family="${MONO}" font-size="12.5" fill="${theme.ink}">${esc(memberTitle(data.seed, data.locale))}</text>
     <text x="22" y="${H - 110}" font-family="${MONO}" font-size="11" fill="${muted}">@${esc(data.username)}</text>

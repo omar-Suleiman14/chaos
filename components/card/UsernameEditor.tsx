@@ -6,7 +6,8 @@ import { api } from "@/convex/_generated/api";
 import { useLocale } from "@/lib/i18n";
 import { parseError } from "@/lib/errors";
 
-export default function UsernameEditor({ username }: { username: string }) {
+/** `onDraft` lets the card preview the typed username (and its avatar) before saving. */
+export default function UsernameEditor({ username, onDraft }: { username: string; onDraft?: (value: string) => void }) {
   const { locale } = useLocale();
   const ar = locale === "ar";
   const [value, setValue] = useState(username);
@@ -32,7 +33,7 @@ export default function UsernameEditor({ username }: { username: string }) {
     <label htmlFor="card-username">{ar ? "اسم المستخدم" : "Username"}</label>
     <p className="mc-help" id="card-username-help">{ar ? "٣–٣٠ حرفًا. يبقى اسم روابط الاختبارات القديمة كما هو. روابط النماذج المخصصة تمنع تغيير الاسم لحمايتها." : "3–30 characters. Existing quiz URLs keep their original username. Custom form links currently prevent renaming to protect their addresses."}</p>
     <div className="mc-field">
-      <input id="card-username" className="mc-input" dir="ltr" autoComplete="username" autoCapitalize="none" spellCheck={false} value={value} onChange={(e) => { setValue(e.target.value); setStatus(""); }} minLength={3} maxLength={30} pattern="[a-zA-Z0-9][a-zA-Z0-9_.\-]{2,29}" required disabled={busy} aria-describedby="card-username-help card-username-status" />
+      <input id="card-username" className="mc-input" dir="ltr" autoComplete="username" autoCapitalize="none" spellCheck={false} value={value} onChange={(e) => { setValue(e.target.value); onDraft?.(e.target.value); setStatus(""); }} minLength={3} maxLength={30} pattern="[a-zA-Z0-9][a-zA-Z0-9_.\-]{2,29}" required disabled={busy} aria-describedby="card-username-help card-username-status" />
       <button className="mc-btn" type="submit" disabled={busy || value.trim().toLowerCase() === username}>{busy ? (ar ? "جارٍ الحفظ…" : "Saving…") : (ar ? "حفظ" : "Save")}</button>
     </div>
     <p id="card-username-status" className="mc-help" role="status">{status}</p>

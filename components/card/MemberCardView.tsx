@@ -66,11 +66,13 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
       <div className={framed ? "mc-frame" : undefined}>
         {framed && <span className="mc-frame__label">{t.label}</span>}
         <div className="mc-stage" ref={tilt} onPointerMove={move} onPointerLeave={leave}>
-          <button type="button" className="mc-card" data-flipped={flipped} onClick={() => setFlipped((f) => !f)} aria-label={`${t.cardOf(data.name)}. ${flipped ? t.flipBack : t.flip}`}>
-            <span aria-hidden={flipped} className="mc-face mc-face--front" dangerouslySetInnerHTML={{ __html: front }} />
-            <span aria-hidden={!flipped} className="mc-face mc-face--back" dangerouslySetInnerHTML={{ __html: back }} />
-            <span className="mc-glare" aria-hidden />
-          </button>
+          <div className="mc-tilt">
+            <button type="button" className="mc-card" data-flipped={flipped} onClick={() => setFlipped((f) => !f)} aria-label={`${t.cardOf(data.name)}. ${flipped ? t.flipBack : t.flip}`}>
+              <span aria-hidden={flipped} className="mc-face mc-face--front" dangerouslySetInnerHTML={{ __html: front }} />
+              <span aria-hidden={!flipped} className="mc-face mc-face--back" dangerouslySetInnerHTML={{ __html: back }} />
+              <span className="mc-glare" aria-hidden />
+            </button>
+          </div>
         </div>
       </div>
       <div className="mc-actions" role="group" aria-label={t.label}>

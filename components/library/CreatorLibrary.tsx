@@ -1,13 +1,14 @@
 "use client";
 
 import LibraryCourses from "@/components/courses/LibraryCourses";
+import GameHistory from "@/components/live/GameHistory";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { formIntentHandlers, useQuery } from "@/lib/convexCache";
 import { deleteFormLocally, setFormStatusLocally, useOptimisticMutation } from "@/lib/optimistic";
-import { Archive, ArrowDown, ArrowUp, ArrowUpDown, BarChart3, Check, ChevronDown, Copy, ExternalLink, FileUp, Globe, FileText, GraduationCap, LayoutGrid, LayoutTemplate, List, ListFilter, Lock, Pencil, Plus, Radio, Search, Trash2, X, Pin, PinOff } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, ArrowUpDown, BarChart3, BookOpen, Check, ChevronDown, Copy, ExternalLink, FileUp, Globe, FileText, GraduationCap, LayoutGrid, LayoutTemplate, List, ListFilter, Lock, Pencil, Plus, Radio, Search, Trash2, Trophy, X, Pin, PinOff } from "lucide-react";
 import { useHostLive } from "@/components/live/HostLiveButton";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -30,7 +31,7 @@ import type { UndoToast } from "@/components/workspace/primitives";
 import { usePinned } from "@/components/workspace/usePinned";
 import { useCreateForm } from "@/components/workspace/useCreateForm";
 
-const kinds = ["All", "Forms", "Quizzes"] as const;
+const kinds = ["All", "Forms", "Quizzes", "Courses", "Games"] as const;
 type Kind = (typeof kinds)[number];
 type Status = "live" | "draft" | "closed" | "archived";
 const statusOptions: { id: Status }[] = [{ id: "live" }, { id: "draft" }, { id: "closed" }];
@@ -45,7 +46,7 @@ const statusOrder: Record<Status, number> = { live: 0, draft: 1, closed: 2, arch
 
 const copy = {
   en: {
-    kinds: { All: "All", Forms: "Forms", Quizzes: "Quizzes" },
+    kinds: { All: "All", Forms: "Forms", Quizzes: "Quizzes", Courses: "Courses", Games: "Games" }, hostGame: "Host a game",
     status_: { live: "Live", draft: "Draft", closed: "Closed", archived: "Archived" },
     sort_: { edited: "Last edited", name: "Name", responses: "Most responses", status: "Status" },
     colName: "Name", colStatus: "Status", colResponses: "Responses", colEdited: "Edited", colActions: "Actions",
@@ -82,7 +83,7 @@ const copy = {
     preview: "Preview", fieldsCount: (n: number) => `${n} fields`, textBlock: "Text block", options: (n: number) => `${n} options`, required: "required", createDraft: "Create draft",
   },
   ar: {
-    kinds: { All: "الكل", Forms: "النماذج", Quizzes: "الاختبارات" },
+    kinds: { All: "الكل", Forms: "النماذج", Quizzes: "الاختبارات", Courses: "الدورات", Games: "الألعاب" }, hostGame: "استضف لعبة",
     status_: { live: "منشور", draft: "مسودة", closed: "مغلق", archived: "مؤرشف" },
     sort_: { edited: "آخر تعديل", name: "الاسم", responses: "الأكثر ردودًا", status: "الحالة" },
     colName: "الاسم", colStatus: "الحالة", colResponses: "الردود", colEdited: "آخر تعديل", colActions: "الإجراءات",
@@ -366,7 +367,6 @@ export default function CreatorLibrary() {
       <div className="ws-page-header">
         <h1 className="ws-page-title">{t.library}</h1>
         <div className="flex items-stretch">
-          <Link href="/dashboard/games" className="ws-btn me-3"><Radio size={17} />{t.games}</Link>
           <button type="button" onClick={() => create()} disabled={busy} className="ws-btn ws-btn--primary !rounded-e-none"><Plus size={17} /> {busy ? t.creating : t.newLabel}</button>
           <WsMenu label={t.moreWays} triggerClassName="ws-btn ws-btn--primary !rounded-s-none !px-2.5 border-s border-s-white/25" trigger={<ChevronDown size={17} />}>
             {(close) => (
@@ -381,7 +381,6 @@ export default function CreatorLibrary() {
         </div>
       </div>
 
-      <LibraryCourses />
       {error && (
         <div role="alert" className="chaos-card border-destructive p-3 mb-4 flex items-center justify-between gap-4">
           <p className="text-sm font-semibold text-destructive">{error}</p>
@@ -390,7 +389,9 @@ export default function CreatorLibrary() {
       )}
 
       <div className="flex items-end gap-3 flex-wrap mb-6">
-        <div className="flex-1 min-w-[260px]"><WsTabs tabs={kinds} value={kind} onChange={setKind} label={t.filterLibrary} labels={t.kinds} icons={{ All: LayoutGrid, Forms: FileText, Quizzes: GraduationCap }} /></div>
+        <div className="flex-1 min-w-[260px]"><WsTabs tabs={kinds} value={kind} onChange={setKind} label={t.filterLibrary} labels={t.kinds} icons={{ All: LayoutGrid, Forms: FileText, Quizzes: GraduationCap, Courses: BookOpen, Games: Trophy }} /></div>
+        {kind === "Games" && <Link href="/dashboard/games" className="ws-btn"><Radio size={17} />{t.hostGame}</Link>}
+        {kind !== "Courses" && kind !== "Games" && <>
         <label className="ws-search !flex-none w-56 max-sm:!w-full max-sm:!max-w-none max-sm:order-last">
           <span className="sr-only">{t.searchLibrary}</span>
           <Search size={16} aria-hidden="true" />
@@ -425,9 +426,10 @@ export default function CreatorLibrary() {
             </>
           )}
         </WsMenu>
+        </>}
       </div>
 
-      {loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
+      {kind === "Courses" ? <LibraryCourses onNew={() => void newCourse()} /> : kind === "Games" ? <GameHistory /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
         <div className="ws-empty ws-page">
           <span className="ws-empty__art"><Plus size={24} /></span>
           <h2 className="text-xl font-semibold">{search || statuses.length ? t.nothingMatches : t.createFirst}</h2>

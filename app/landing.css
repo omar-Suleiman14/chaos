@@ -36,7 +36,9 @@
 .site-title > span { color: var(--s-accent); }
 .site-title--sm { font-size: clamp(2.2rem, 5vw, 3.8rem); }
 .site-lead { margin: 24px auto 0; max-width: 36rem; font-size: 18px; line-height: 1.7; color: var(--s-soft); text-wrap: pretty; }
-.site-hero__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 24px; margin-top: 28px; }
+.site-hero__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; margin-top: 28px; }
+/* Both hero actions share one size so they read as a pair. */
+.site-hero__actions .site-btn { min-width: 176px; }
 .site-demo-wrap { max-width: 1080px; margin: auto; padding: 0 28px; }
 .site-demo { border: 1px solid var(--s-line-strong); border-radius: 14px; background: var(--s-card); box-shadow: 0 4px 8px -6px #0002, 0 24px 64px -36px #0004; overflow: clip; }
 .site-demo__toolbar { display: grid; gap: 16px; padding: 20px 28px 22px; border-bottom: 1px solid var(--s-line); }

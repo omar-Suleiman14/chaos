@@ -393,7 +393,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             ) : (
               <div className="ws-user">
                 <IntentLink href="/dashboard/card" className="ws-user__card" title={t.myCard} aria-label={t.myCard}>
-                  {user && <MemberAvatar seed={avatarSeed(user.id)} size={28} />}
+                  {account && <MemberAvatar seed={avatarSeed(account.username)} size={28} />}
                   <span className="truncate text-[13px] text-muted-foreground">{user?.fullName || user?.username || ""}</span>
                 </IntentLink>
                 <button type="button" className="ws-icon-button" title={t.account} aria-label={t.account} onClick={() => clerk.openUserProfile()}><UserCog size={16} aria-hidden="true" /></button>

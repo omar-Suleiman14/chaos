@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -31,6 +32,7 @@ const copy = {
 export default function MyCardPage() {
   const t = useCopy(copy);
   const card = useQuery(api.memberCards.mine);
+  const [draft, setDraft] = useState("");
   const setStyle = useMutation(api.memberCards.setStyle).withOptimisticUpdate((store, { style }) => {
     const current = store.getQuery(api.memberCards.mine, {});
     if (current) store.setQuery(api.memberCards.mine, {}, { ...current, style });
@@ -41,12 +43,12 @@ export default function MyCardPage() {
   return (
     <div className="mc-page">
       <section className="mc-panel" aria-labelledby="card-title">
-        <MemberCardView data={{ ...card, url: `${siteUrl}/card/${card.username}` }} onStyle={(style) => setStyle({ style })} />
+        <MemberCardView data={{ ...card, username: draft.trim().toLowerCase() || card.username, url: `${siteUrl}/card/${card.username}` }} onStyle={(style) => setStyle({ style })} />
         <div>
           <h1 id="card-title">{t.welcome(first)}</h1>
           <p>{t.lead}</p>
           <p>{t.card}</p>
-          <UsernameEditor key={card.username} username={card.username} />
+          <UsernameEditor key={card.username} username={card.username} onDraft={setDraft} />
           <a className="mc-url" href={`/card/${encodeURIComponent(card.username)}`} dir="ltr">{siteUrl}/card/{card.username}</a>
           <Link className="mc-cta" href="/dashboard">{t.go}<ArrowRight size={20} aria-hidden /></Link>
         </div>

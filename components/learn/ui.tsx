@@ -230,9 +230,10 @@ export function initials(name: string) {
   return name.trim().split(/\s+/).slice(0, 2).map((w) => w.charAt(0).toUpperCase()).join("") || "?";
 }
 
-/** People are drawn as their blobatar (seeded from their account), never an uploaded photo. */
-export function Avatar({ person, size = 72 }: { person: Pick<Person, "name" | "avatarUrl"> & { id?: string }; size?: number }) {
-  if (person.id) return <MemberAvatar seed={avatarSeed(person.id)} size={size} />;
+/** People are drawn as their blobatar (seeded from their username), never an uploaded photo. */
+export function Avatar({ person, size = 72 }: { person: Pick<Person, "name" | "avatarUrl" | "username"> & { id?: string }; size?: number }) {
+  const seed = person.username || person.id;
+  if (seed) return <MemberAvatar seed={avatarSeed(seed)} size={size} />;
   return (
     <span className="lx-avatar" style={{ width: size, height: size, fontSize: size * 0.38 }} aria-hidden>
       {initials(person.name)}

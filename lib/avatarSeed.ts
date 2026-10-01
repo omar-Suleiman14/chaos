@@ -1,6 +1,6 @@
-/** Stable, non-reversible avatar seed from an account ID (FNV-1a). The same person is the same blob everywhere. */
-export function avatarSeed(accountId: string): string {
+/** Stable avatar seed (FNV-1a). Avatars are seeded from the username, so the blob follows a rename and previews while typing. */
+export function avatarSeed(value: string): string {
   let h = 0x811c9dc5;
-  for (let i = 0; i < accountId.length; i++) { h ^= accountId.charCodeAt(i); h = Math.imul(h, 0x01000193); }
+  for (let i = 0; i < value.length; i++) { h ^= value.charCodeAt(i); h = Math.imul(h, 0x01000193); }
   return "chaos-" + (h >>> 0).toString(36);
 }
