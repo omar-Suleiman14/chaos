@@ -1,9 +1,9 @@
 "use client";
 
-import LibraryCourses from "@/components/courses/LibraryCourses";
-import GameHistory from "@/components/live/GameHistory";
+import CoursesHub from "@/components/courses/CoursesHub";
+import GamesHub from "@/components/live/GamesHub";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { formIntentHandlers, useQuery } from "@/lib/convexCache";
@@ -31,8 +31,10 @@ import type { UndoToast } from "@/components/workspace/primitives";
 import { usePinned } from "@/components/workspace/usePinned";
 import { useCreateForm } from "@/components/workspace/useCreateForm";
 
-const kinds = ["All", "Forms", "Quizzes", "Courses", "Games"] as const;
+const kinds = ["Forms", "Quizzes", "Courses", "Games"] as const;
 type Kind = (typeof kinds)[number];
+/** The open tab lives in the address (?tab=games) so links, Back and refresh keep it. */
+const kindFromParam = (value: string | null): Kind => kinds.find((k) => k.toLowerCase() === value) ?? "Forms";
 type Status = "live" | "draft" | "closed" | "archived";
 const statusOptions: { id: Status }[] = [{ id: "live" }, { id: "draft" }, { id: "closed" }];
 type SortKey = "edited" | "name" | "responses" | "status";
@@ -46,7 +48,7 @@ const statusOrder: Record<Status, number> = { live: 0, draft: 1, closed: 2, arch
 
 const copy = {
   en: {
-    kinds: { All: "All", Forms: "Forms", Quizzes: "Quizzes", Courses: "Courses", Games: "Games" }, hostGame: "Host a game",
+    kinds: { Forms: "Forms", Quizzes: "Quizzes", Courses: "Courses", Games: "Games" },
     status_: { live: "Live", draft: "Draft", closed: "Closed", archived: "Archived" },
     sort_: { edited: "Last edited", name: "Name", responses: "Most responses", status: "Status" },
     colName: "Name", colStatus: "Status", colResponses: "Responses", colEdited: "Edited", colActions: "Actions",
@@ -83,7 +85,7 @@ const copy = {
     preview: "Preview", fieldsCount: (n: number) => `${n} fields`, textBlock: "Text block", options: (n: number) => `${n} options`, required: "required", createDraft: "Create draft",
   },
   ar: {
-    kinds: { All: "الكل", Forms: "النماذج", Quizzes: "الاختبارات", Courses: "الدورات", Games: "الألعاب" }, hostGame: "استضف لعبة",
+    kinds: { Forms: "النماذج", Quizzes: "الاختبارات", Courses: "الدورات", Games: "الألعاب" },
     status_: { live: "منشور", draft: "مسودة", closed: "مغلق", archived: "مؤرشف" },
     sort_: { edited: "آخر تعديل", name: "الاسم", responses: "الأكثر ردودًا", status: "الحالة" },
     colName: "الاسم", colStatus: "الحالة", colResponses: "الردود", colEdited: "آخر تعديل", colActions: "الإجراءات",
@@ -165,7 +167,10 @@ export default function CreatorLibrary() {
   const hostLive = useHostLive();
   const [dialog, setDialog] = useState<"none" | "templates" | "import">("none");
   const [search, setSearch] = useState("");
-  const [kind, setKind] = useState<Kind>("All");
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const kind = kindFromParam(params.get("tab"));
+  const setKind = (next: Kind) => router.replace(next === "Forms" ? pathname : `${pathname}?tab=${next.toLowerCase()}`, { scroll: false });
   const [view, setView] = useState<"gallery" | "list">("gallery");
   /** No statuses chosen means everything except archived, the everyday view. */
   const [statuses, setStatuses] = useState<Status[]>([]);
@@ -257,7 +262,7 @@ export default function CreatorLibrary() {
     const ordered = (a: Row, b: Row) => (dir === "asc" ? 1 : -1) * compare[sort](a, b);
     // Archived forms live on the Archive page, never in the library.
     return rows.filter((r) => r.status !== "archived" && (!statuses.length || statuses.includes(r.status)))
-      .filter((r) => kind === "Forms" ? r.kind === "form" : kind === "Quizzes" ? r.kind !== "form" : true)
+      .filter((r) => kind === "Forms" ? r.kind === "form" : r.kind !== "form")
       .filter((r) => !q || r.title.toLowerCase().includes(q) || r.group.toLowerCase().includes(q))
       .sort(ordered);
   }, [rows, search, kind, statuses, sort, dir]);
@@ -389,8 +394,7 @@ export default function CreatorLibrary() {
       )}
 
       <div className="flex items-end gap-3 flex-wrap mb-6">
-        <div className="flex-1 min-w-[260px]"><WsTabs tabs={kinds} value={kind} onChange={setKind} label={t.filterLibrary} labels={t.kinds} icons={{ All: LayoutGrid, Forms: FileText, Quizzes: GraduationCap, Courses: BookOpen, Games: Trophy }} /></div>
-        {kind === "Games" && <Link href="/dashboard/games" className="ws-btn"><Radio size={17} />{t.hostGame}</Link>}
+        <div className="flex-1 min-w-[260px] max-sm:basis-full max-sm:min-w-0"><WsTabs tabs={kinds} value={kind} onChange={setKind} label={t.filterLibrary} labels={t.kinds} icons={{ Forms: FileText, Quizzes: GraduationCap, Courses: BookOpen, Games: Trophy }} /></div>
         {kind !== "Courses" && kind !== "Games" && <>
         <label className="ws-search !flex-none w-56 max-sm:!w-full max-sm:!max-w-none max-sm:order-last">
           <span className="sr-only">{t.searchLibrary}</span>
@@ -429,7 +433,7 @@ export default function CreatorLibrary() {
         </>}
       </div>
 
-      {kind === "Courses" ? <LibraryCourses onNew={() => void newCourse()} /> : kind === "Games" ? <GameHistory /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
+      {kind === "Courses" ? <CoursesHub embedded /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
         <div className="ws-empty ws-page">
           <span className="ws-empty__art"><Plus size={24} /></span>
           <h2 className="text-xl font-semibold">{search || statuses.length ? t.nothingMatches : t.createFirst}</h2>

@@ -541,3 +541,11 @@ Outcome: expose existing owner course helpers through trusted MCP transport; dra
 - [x] /play uses a fixed Apple-style look (components/live/apple.css): iOS system colours following device light/dark, system font, grouped inset join form, capsule buttons, frosted bar, answer colours matching host shapes. Quiz theme now only picks the sound pack on phones; host screen unchanged.
 - [x] Unit 691/691, tsc clean, scoped lint 0 errors.
 - [ ] Not visually checked in a browser (preview renderer unavailable here).
+## Library tabs carry Courses and Games; sidebar Recent mixes them (2026-10-01, late night)
+- [x] live:myGames missing on dev: `npx convex dev` runs from Documents\chaos, whose convex/ matched e2e except live.ts. Copied e2e convex/live.ts there so the watcher deploys it.
+- [x] Library tabs: Forms, Quizzes, Courses, Games (All removed). Tab lives in ?tab= (Forms default). Courses tab = full Courses page (CoursesHub); Games tab = full Games page (GamesHub: create, session settings, ready/drafts, history).
+- [x] /dashboard/games and /dashboard/courses redirect to the tabs; all in-app links updated. Sidebar Courses and Games links removed.
+- [x] Sidebar Recent mixes forms, courses and hosted games by last activity; only forms are pinnable.
+- [x] Tabs take the full row on phones so Games is reachable.
+- [x] Unit 691/691, tsc clean, lint 0 errors.
+- [ ] Not checked in a browser.

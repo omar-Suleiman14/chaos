@@ -180,7 +180,7 @@ export default function LandingPage() {
           <div className="site-features">
             {t.main.map((item, i) => <article key={item.title} className="site-feature">
               {i === 1 && <Radio size={22} aria-hidden="true" />}<h3>{item.title}</h3><p>{item.body}</p>
-              {i === 1 && <PrimaryCta href="/dashboard/games" label={t.createGame} />}
+              {i === 1 && <PrimaryCta href="/dashboard?tab=games" label={t.createGame} />}
               {item.href && <Link href={item.href} className="site-text-link">{item.link} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>}
             </article>)}
           </div>

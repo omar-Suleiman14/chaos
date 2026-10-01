@@ -6,7 +6,7 @@ import { ArrowRight, Radio } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { formatNumber, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
-import "@/app/dashboard/games/games.css";
+import "./games.css";
 
 const copy = {
   en: {

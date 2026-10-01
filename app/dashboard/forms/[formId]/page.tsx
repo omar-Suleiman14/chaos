@@ -313,7 +313,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
         </div>
       </header>
 
-      {canEdit && quiz && <div className="ws-next-step"><span className="flex-1 text-sm">{t.gameGuide}</span><Link href="/dashboard/games" className="ws-btn ws-btn--sm">{t.gameGuideLink}</Link></div>}
+      {canEdit && quiz && <div className="ws-next-step"><span className="flex-1 text-sm">{t.gameGuide}</span><Link href="/dashboard?tab=games" className="ws-btn ws-btn--sm">{t.gameGuideLink}</Link></div>}
       {canEdit && !published && !guide.dismissed && (() => {
         const steps = [
           { done: def.fields.some((f) => f.type !== "section" && f.type !== "statement"), text: t.step1, action: t.step1Action, run: () => { setTab("Questions"); requestAnimationFrame(() => document.querySelector(`[aria-label='${t.addQuestionLabel}']`)?.scrollIntoView({ behavior: "smooth", block: "center" })); } },

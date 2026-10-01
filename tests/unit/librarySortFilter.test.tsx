@@ -15,7 +15,7 @@ const forms = {
   ],
   shared: [],
 };
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), usePathname: () => "/dashboard", useSearchParams: () => new URLSearchParams() }));
 const setFormStatus = vi.hoisted(() => vi.fn(async () => null));
 vi.mock("convex/react", () => ({
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? forms : getFunctionName(ref) === "quizFunctions:getMyQuizzes" ? [] : undefined),

@@ -87,7 +87,7 @@ export default function PracticePanel({ lessonId, onCreateCards }: { lessonId: s
           const f = byId.get(id);
           if (f) void change([...quizzes, { formId: f._id, shareId: f.shareId, title: f.title, label: f.title || "Practice", kind: "custom", order: quizzes.length, questionCount: f.fieldCount }]);
         }} options={mine.filter((f) => !attached.has(f._id)).map((f) => ({ value: f._id, label: f.title || "Untitled quiz", description: f.publishedVersion === undefined ? t.unpublished : undefined }))} />
-      ) : <p className="lx-muted">{t.none} <Link className="lx-link" href="/dashboard/games">{t.create}</Link></p>)}
+      ) : <p className="lx-muted">{t.none} <Link className="lx-link" href="/dashboard?tab=games">{t.create}</Link></p>)}
       <hr className="lx-divider" />
       <div className="lx-panel__row"><strong style={{ display: "flex", gap: 6, alignItems: "center" }}><Layers size={14} aria-hidden />{t.cards}</strong><button type="button" className="ws-btn ws-btn--sm" onClick={onCreateCards}><Plus size={14} aria-hidden />{t.newCards}</button></div>
       {decks.map((d) => <Link key={d.id} className="lx-row" href={`/dashboard/learn/flashcards/${d.id}`}><span className="lx-row__main"><span className="lx-row__title">{d.title}</span><span className="lx-row__sub">{t.cardsCount(d.cards.length)}</span></span></Link>)}

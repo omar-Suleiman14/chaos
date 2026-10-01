@@ -22,7 +22,9 @@ const fixtures = vi.hoisted(() => {
 
 vi.mock("next/navigation", () => ({
   useParams: () => ({ formId: "form-1" }),
-  useRouter: () => ({ push: vi.fn() }),
+  useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
+  usePathname: () => "/dashboard",
+  useSearchParams: () => new URLSearchParams(),
 }));
 vi.mock("@/convex/_generated/api", () => ({
   api: {

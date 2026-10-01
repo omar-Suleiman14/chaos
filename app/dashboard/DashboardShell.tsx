@@ -11,6 +11,8 @@ import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Archive, BarChart3, BookOpen, Bookmark, ChevronUp, FileText, GraduationCap, Home, Layers, Library, Link2, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, UserCog, X } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { Id } from "@/convex/_generated/dataModel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import NotificationBell from "@/components/NotificationBell";
 import Logo from "@/components/Logo";
@@ -82,13 +84,14 @@ const copy = {
   },
 };
 type Copy = typeof copy.en;
+/** One row in the sidebar's Pinned or Recent list. Only forms can be pinned. */
+interface SidebarItem { key: string; title: string; href: string; time: number; formId?: Id<"forms">; color?: string; icon?: LucideIcon }
+
 type NavKey = "library" | "games" | "legacyResults" | "archive" | "connections" | "settings" | "learnHome" | "courses" | "learnLibrary" | "saved" | "flashcards";
 
 const libraryItem = { href: "/dashboard", key: "library", icon: Library } as const;
-const gamesItem = { href: "/dashboard/games", key: "games", icon: Trophy } as const;
 /** Only shown to people who still have quizzes from the old quiz editor. */
 const legacyResultsItem = { href: "/dashboard/results", key: "legacyResults", icon: BarChart3 } as const;
-const coursesItem = { href: "/dashboard/courses", key: "courses", icon: GraduationCap } as const;
 const savedItem = { href: "/dashboard/learn/saved", key: "saved", icon: Bookmark } as const;
 const workspaceItems = [
   { href: "/dashboard/archive", key: "archive", icon: Archive },
@@ -117,7 +120,7 @@ function pageLabel(pathname: string, t: Copy): string {
   if (pathname === "/dashboard/forms") return t.library;
   if (pathname.startsWith("/dashboard/courses")) return t.courses;
   if (pathname.startsWith("/dashboard/card")) return t.myCard;
-  const item = [libraryItem, gamesItem, legacyResultsItem, ...workspaceItems].find((i) => (i.href === "/dashboard" ? pathname === i.href : pathname.startsWith(i.href)));
+  const item = [libraryItem, legacyResultsItem, ...workspaceItems].find((i) => (i.href === "/dashboard" ? pathname === i.href : pathname.startsWith(i.href)));
   return item ? t[item.key] : t.dashboard;
 }
 
@@ -132,6 +135,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const account = useQuery(api.quizFunctions.getCurrentUser);
   const forms = useQuery(api.forms.listMyForms);
   const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
+  const myCourses = useQuery(api.courses.listMine);
+  const myGames = useQuery(api.live.myGames);
   const [actionError, setActionError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobile, setMobile] = useState(false);
@@ -236,8 +241,15 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   // Settings → Glass sets how see-through menus and popups are (read by .ws-glass).
   useEffect(() => { document.documentElement.style.setProperty("--popup-opacity", String(preferences.popupOpacity / 100)); }, [preferences.popupOpacity]);
   const allForms = useMemo(() => [...(forms?.owned ?? []), ...(forms?.shared ?? [])], [forms]);
-  const pinned = pinnedIds.map((id) => allForms.find((f) => f._id === id)).filter((f): f is NonNullable<typeof f> => !!f);
-  const recent = (forms?.owned ?? []).filter((f) => f.status !== "archived" && !pinnedIds.includes(f._id));
+  // Sidebar rows: forms (pinnable), courses and hosted games, newest first.
+  const formItem = (f: (typeof allForms)[number]): SidebarItem => ({ key: f._id, title: f.title || t.untitled, href: `/dashboard/forms/${f._id}`, time: f.updatedAt, formId: f._id, color: /^#[0-9a-f]{6}$/i.test(f.theme.accent) ? f.theme.accent : "var(--primary)" });
+  const pinned = pinnedIds.map((id) => allForms.find((f) => f._id === id)).filter((f): f is NonNullable<typeof f> => !!f).map(formItem);
+  const recent: SidebarItem[] = [
+    ...(forms?.owned ?? []).filter((f) => f.status !== "archived" && !pinnedIds.includes(f._id)).map(formItem),
+    ...(myCourses ?? []).filter((c) => !c.archived).map((c) => ({ key: c.id, title: c.title || t.untitled, href: `/dashboard/courses/${c.id}`, time: c.updatedAt, icon: GraduationCap })),
+    ...(myGames ?? []).map((g) => ({ key: g._id, title: g.title || t.untitled, time: g.endedAt ?? g.createdAt, icon: Trophy,
+      href: g.state !== "ended" ? `/dashboard/live/${g._id}` : g.formId ? `/dashboard/forms/${g.formId}/responses` : g.quizId ? `/dashboard/results?id=${g.quizId}` : "/dashboard?tab=games" })),
+  ].sort((a, b) => b.time - a.time);
   // Each section shows a few, then "Show N more" in steps, like a thread list.
   const [shown, setShown] = useState<Record<string, number>>({ Pinned: 12, Recent: 6 });
   const sectionNames: Record<string, string> = { Pinned: t.pinned, Recent: t.recent };
@@ -311,29 +323,29 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             <>
             <nav aria-label={t.library} className="grid gap-px mt-4">
               {link(libraryItem)}
-              {link(coursesItem)}
-              {link(gamesItem)}
               {link(savedItem)}
               {(quizzes?.length ?? 0) > 0 && link(legacyResultsItem)}
             </nav>
 
             {(() => {
               const sections = ([["Pinned", pinned], ["Recent", recent]] as const).filter(([, list]) => list.length > 0);
-              const row = (f: (typeof allForms)[number]) => {
-                const isPinned = pinnedIds.includes(f._id);
-                const title = f.title || t.untitled;
+              const row = (item: SidebarItem) => {
+                const isPinned = !!item.formId && pinnedIds.includes(item.formId);
+                const Icon = item.icon;
                 return (
-                  <div key={f._id} className="ws-nav-row ws-reveal-host">
-                    <IntentLink href={`/dashboard/forms/${f._id}`} className="ws-nav-item" aria-current={pathname.startsWith(`/dashboard/forms/${f._id}`) ? "page" : undefined} {...formIntentHandlers(f._id)}>
-                      <span className="ws-recent-icon" aria-hidden="true" style={{ background: /^#[0-9a-f]{6}$/i.test(f.theme.accent) ? f.theme.accent : "var(--primary)" }}>
-                        {title.trim().charAt(0).toUpperCase()}
-                      </span>
-                      <span>{title}</span>
+                  <div key={item.key} className="ws-nav-row ws-reveal-host">
+                    <IntentLink href={item.href} className="ws-nav-item" aria-current={pathname.startsWith(item.href) ? "page" : undefined} {...(item.formId ? formIntentHandlers(item.formId) : undefined)}>
+                      {Icon ? <Icon size={18} aria-hidden="true" /> : (
+                        <span className="ws-recent-icon" aria-hidden="true" style={{ background: item.color }}>{item.title.trim().charAt(0).toUpperCase()}</span>
+                      )}
+                      <span>{item.title}</span>
                     </IntentLink>
-                    <button type="button" className="ws-icon-button ws-reveal ws-nav-row__action" onClick={() => togglePin(f._id)}
-                      aria-label={t.pinLabel(title, isPinned)} title={isPinned ? t.unpin : t.pin}>
-                      {isPinned ? <PinOff size={14} /> : <Pin size={14} />}
-                    </button>
+                    {item.formId && (
+                      <button type="button" className="ws-icon-button ws-reveal ws-nav-row__action" onClick={() => togglePin(item.formId!)}
+                        aria-label={t.pinLabel(item.title, isPinned)} title={isPinned ? t.unpin : t.pin}>
+                        {isPinned ? <PinOff size={14} /> : <Pin size={14} />}
+                      </button>
+                    )}
                   </div>
                 );
               };

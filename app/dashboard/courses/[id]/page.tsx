@@ -75,7 +75,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
   return (
     <div className="cb">
       <div className="cb-top">
-        <Link href="/dashboard/courses" className="ws-btn ws-btn--ghost ws-btn--sm"><ArrowLeft size={16} aria-hidden /> {t.back}</Link>
+        <Link href="/dashboard?tab=courses" className="ws-btn ws-btn--ghost ws-btn--sm"><ArrowLeft size={16} aria-hidden /> {t.back}</Link>
         <span className="cb-status" data-live={course.published}>{course.published ? t.live : t.draft}</span>
         {course.published && dirty && <span className="cb-note">{t.changes}</span>}
         <span className="cb-top__spacer" />
@@ -121,7 +121,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
         <div className="cb-row"><label htmlFor="cb-tags">{t.tags}</label><input id="cb-tags" className="kb-input" value={tags} onChange={(e) => setTags(e.target.value)} onBlur={() => save({ courseId, tags: tags.split(",") })} /><span className="cb-note">{t.tagsHelp}</span></div>
         <div className="flex gap-2 flex-wrap">
           {course.published && <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(() => unpublish({ courseId }))}>{t.unpublish}</button>}
-          <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(async () => { await setArchived({ courseId, archived: true }); router.push("/dashboard/courses"); })}>{t.archive}</button>
+          <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(async () => { await setArchived({ courseId, archived: true }); router.push("/dashboard?tab=courses"); })}>{t.archive}</button>
         </div>
       </section>
 
