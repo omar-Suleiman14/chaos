@@ -13,6 +13,13 @@ async function setup() {
 }
 
 describe("card identity and public privacy", () => {
+  it("preserves existing cardStyle values and accepts accounts without the optional field", async () => {
+    const { t, owner, id } = await setup();
+    expect((await owner.query(api.memberCards.mine, {}))?.style).toBe(0);
+    await t.run(ctx => ctx.db.patch("users", id, { cardStyle: 1 }));
+    expect((await owner.query(api.memberCards.mine, {}))?.style).toBe(1);
+    expect((await t.query(api.memberCards.byUsername, { username: "casey" }))?.style).toBe(1);
+  });
   it("returns only public fields and hides missing, invalid, banned and suspended accounts", async () => {
     const { t, id } = await setup();
     const card = await t.query(api.memberCards.byUsername, { username: " CASEY " });

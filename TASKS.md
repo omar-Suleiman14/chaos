@@ -509,3 +509,13 @@ Outcome: expose existing owner course helpers through trusted MCP transport; dra
 - [x] Server-filtered metadata/404, outage retry boundary, alias ownership/privacy and paginated legacy backfill regression tests.
 - [ ] Final build/type/lint and scoped regressions; no deploy/commit/push. Marketing: no sitemap changes or new listing endpoint.
 - Release action: after parent deploy, run internal links:backfillUsernameAliases with phase users, then quizzes, cursor null; repeat each phase using returned cursor until done. Conflicting pre-existing owners abort rather than reassign a namespace. Previously erased names cannot be recovered from current records.
+## Verified public Learn/profile delivery (2026-10-01)
+- [x] Delivered landing Explore, public /learn discovery, Learn/course SEO and factual ChatGPT marketing.
+- [x] Six course MCP tools, trusted actor checks, explicit publication, backend visibility parity and moderation guards.
+- [x] Native member cards/course pages; editable usernames with permanent alias reservations, old card redirects and preserved form/classic quiz links.
+- [x] Cleaner editor settings/recovery layout and awaited flashcard creation.
+- [x] Local candidate verification: 682 unit checks passed in full run; remaining accessibility fixture corrected and all 14 accessibility tests passed (683 total unit checks). 663 integration checks passed; 1 existing TODO. Frontend/backend typechecks, scoped lint, diff checks and webpack production build passed.
+- [x] Tested candidate deployed to personal dev superb-zebra-196; e2e babe9b642c6b7aa6fcca71d1113f5f1a13d46300 pushed. Remote main remains 7293a8c0f771d1415314acb8e29ac57b393d0ce9.
+- [x] Local browser /learn renders signed-out search and course/lesson empty states with native navigation.
+- [ ] Signed-in browser, real phone/screen-reader and ChatGPT marketplace acceptance unverified. Placeholder local Clerk credentials prevent auth verification. Existing health-route package JSON import build warning remains.
+- [ ] Run paginated username alias backfill on each deployment before production rollout; production has not been modified.
