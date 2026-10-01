@@ -3,6 +3,7 @@
 import posthog from "@/lib/analytics";
 import { useEffect } from "react";
 import Logo from "@/components/Logo";
+import { statusPageUrl } from "@/lib/site";
 
 /**
  * Replaces the root layout when it fails, so it carries its own styles:
@@ -23,6 +24,8 @@ const css = `
   .ge-btn--primary:hover { background: var(--accent-hover); color: #fff; }
   .ge-btn:focus-visible { outline: 3px solid color-mix(in srgb, var(--accent) 40%, transparent); outline-offset: 2px; }
   .ge-ref { margin-top: 16px !important; font-size: 13px !important; user-select: all; }
+  .ge-status { color: var(--muted); text-underline-offset: 4px; }
+  .ge-status:hover { color: var(--text); }
 `;
 
 export default function GlobalError({ error, reset, retry }: { error: Error & { digest?: string }; reset: () => void; retry?: () => void }) {
@@ -49,6 +52,7 @@ export default function GlobalError({ error, reset, retry }: { error: Error & { 
               <a className="ge-btn" href="/">Go home</a>
               <button type="button" className="ge-btn ge-btn--primary" onClick={retry ?? reset}>Try again</button>
             </div>
+            {statusPageUrl && <p><a className="ge-status" href={statusPageUrl}>Check service status</a></p>}
             {error.digest && <p className="ge-ref">Reference: {error.digest}</p>}
           </div>
         </main>

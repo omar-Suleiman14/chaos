@@ -37,7 +37,7 @@ export default function MyCoursesPage() {
         <div><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></div>
         <div className="lx-actions"><Link href="/dashboard/learn/courses/browse" className="ws-btn ws-btn--primary"><Search size={16} aria-hidden />{t.browse}</Link></div>
       </header>
-      {!sorted.length ? <EmptyState icon={GraduationCap} title={t.empty} body={t.emptyBody}><Link href="/dashboard/learn/courses/browse" className="ws-btn">{t.browse}</Link></EmptyState> : (
+      {!sorted.length ? <EmptyState level={2} icon={GraduationCap} title={t.empty} body={t.emptyBody}><Link href="/dashboard/learn/courses/browse" className="ws-btn">{t.browse}</Link></EmptyState> : (
         <div className="lx-list">
           {sorted.map((c) => {
             const mod = byId[c.moduleId];

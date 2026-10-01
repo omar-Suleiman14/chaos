@@ -23,6 +23,7 @@ const query = (ref: Parameters<typeof getFunctionName>[0]) => {
 vi.mock("@/lib/convexCache", () => ({ useQuery: (ref: Parameters<typeof getFunctionName>[0]) => query(ref) }));
 vi.mock("@/lib/analytics", () => ({ default: { capture: vi.fn() } }));
 vi.mock("@/app/dashboard/connections/WebhooksSection", () => ({ default: () => null }));
+vi.mock("@/lib/learn/data", () => ({ useMyLessons: () => [], useFolders: () => [], useCurriculumNodes: () => [] }));
 vi.mock("convex/react", () => ({
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => query(ref),
   useMutation: (ref: Parameters<typeof getFunctionName>[0]) => {
@@ -39,7 +40,12 @@ describe("connections page", () => {
     expect(screen.getByText(/last used/)).toBeInTheDocument();
     expect(screen.getByText(/old token works until/)).toBeInTheDocument();
     expect(screen.getByText("Each connection can make up to 300 reads and 60 changes a minute.")).toBeInTheDocument();
-    expect(within(screen.getByText("Recent activity").closest("details")!).getByText("Created a draft")).toBeInTheDocument();
+    expect(within(screen.getByText("Recent activity").closest("details")!).getByText("Max created draft “Survey”")).toBeInTheDocument();
+    // Scopes are also explained as plain sentences, including what it cannot do.
+    const access = screen.getByText("What Max can and cannot do").closest("details")!;
+    expect(within(access).getByText("Max can create new form and quiz drafts. You review and publish them in Chaos.")).toBeInTheDocument();
+    expect(within(access).getByText("Max cannot publish, close or share anything for you.")).toBeInTheDocument();
+    expect(within(access).getByText("Max cannot read or change your lessons.")).toBeInTheDocument();
     // Only the hint is shown for an existing token.
     expect(screen.queryByLabelText("Connection token")).toBeNull();
 

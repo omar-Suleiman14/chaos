@@ -36,7 +36,10 @@ export default function ResponsesPage() {
           <ArrowLeft size={14} className="rtl:rotate-180" aria-hidden="true" /> {t.backToForm}
         </Link>
         <h1 className="ws-page-title">{form.title}</h1>
-        <p className="ws-page-subtitle">{formatNumber(locale, form.responseCount)} {pluralForm(locale, form.responseCount, t.responses)}</p>
+        <p className="ws-page-subtitle">
+          {formatNumber(locale, form.responseCount)} {pluralForm(locale, form.responseCount, t.responses)}
+          {tab !== "export" && <> · <button type="button" className="ws-link-quiet inline-flex items-center gap-1" onClick={() => setTab("export")}><Download size={13} aria-hidden="true" /> {t.exportShortcut}</button></>}
+        </p>
       </header>
       <SummaryHeader analysis={analysis ?? undefined} />
       <WsTabs tabs={tabs} value={tab} onChange={setTab} label={t.tabsLabel} labels={t.tabs}

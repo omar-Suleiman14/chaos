@@ -336,3 +336,14 @@ Outcome: Learn as a second surface beside Create, fully usable through the `lib/
 - [x] Added preview crawler exclusion, fixed Learn webhook labels and recorded performance/security verification boundaries.
 - [x] Created provider follow-ups #1, #2, #3 per user instruction.
 - [ ] Final exact snapshot typecheck, tests, lint, development verification and e2e push.
+
+## Opus items 63–98 and Learn accessibility (2026-10-01)
+Outcome: finish the non-Sol roadmap items (forms 63–78, site 79–85, Connections 86–98, Learn accessibility 99) and push them to e2e without Sol's in-progress backend/wiring.
+- [x] Forms: hidden URL fields, Pro-only branding removal, CSV/XLSX question import with row fixes, verified email/domain restriction, question performance and completion-time analytics, in-product hints for logic, piping, uploads, partials, responder controls, exports, team and Connections. 67/68/70 UIs wait for Sol's team/homework/cross-tab backends.
+- [x] Site: rewritten landing/SEO copy (EN/AR), /compare (dated, lists gaps), /support, status-page link (env), open-source footer, new guides (uploads, partials, API, help, self-hosting). Short share links: Share tab + QR, and proxy 301 from the short host to the site (`shortHostRedirect`).
+- [x] Connections: plain-language scope sentences (EN/AR), Learn lesson picker saved via `setLessonSelection` (collection/curriculum picks shown as not saved), activity sentences, ExternalRefBadge and ChangePreview components. Docs: integration-api "Learn (version 2)" from the implemented routes; learn-integration.md and webhooks-v1.md statuses corrected.
+- [x] Learn accessibility: axe/keyboard/RTL tests over reader, home, dialogs and Learn pages; heading order and phone-hidden button names fixed (the Library page part ships with Sol's next push of that file).
+- [x] Checks in a clean worktree on origin/e2e: typecheck, lint 0 errors (12 warnings), production build, full unit suite (see commit). Integration suite not rerun: no Convex files in this push.
+- [ ] Not in this push (Sol's active files): lib/learn/** wiring, lesson editor/reader/library page edits, Convex changes after 7f01e17.
+- [ ] Unverified in a browser: signed-in forms/Connections journeys, phone/RTL visuals. Email restriction needs the Clerk `convex` token to carry `email_verified`.
+- [ ] ChangePreview has no caller until Sol adds an approval queue for connected-app lesson updates.

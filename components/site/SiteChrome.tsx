@@ -9,24 +9,28 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { ThemeModeSwitch } from "@/components/ThemeModeSwitch";
 import { useCopy, useLocale } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
-import { supportEmail } from "@/lib/site";
+import { repoIssuesUrl, repoUrl, statusPageUrl } from "@/lib/site";
 
 const copy = {
   en: {
     getFree: "Get Chaos free", open: "Open Chaos", logIn: "Log in", skip: "Skip to content", main: "Main", footer: "Footer",
     modes: "Modes", themes: "Themes", features: "Features", docs: "Docs", pricing: "Pricing", play: "Join a game",
     menu: "Menu", closeMenu: "Close menu", language: "Language",
-    tagline: "Forms, surveys and live quizzes.",
-    product: "Product", ways: "Ways to answer", chatgpt: "Chaos in ChatGPT",
-    start: "Get started", help: "Help", legal: "Legal", privacy: "Privacy policy", terms: "Terms and conditions", contact: "Contact",
+    tagline: "Forms, surveys, quizzes and live games. Open source.",
+    product: "Product", ways: "Ways to answer", chatgpt: "Chaos in ChatGPT", compare: "Compare",
+    openSource: "Open source", source: "Source code", selfHost: "Self-hosting", api: "API and connections", webhooks: "Webhooks",
+    start: "Get started", help: "Support", status: "Status", issues: "Report an issue",
+    legal: "Legal", privacy: "Privacy policy", terms: "Terms and conditions", security: "Security",
   },
   ar: {
     getFree: "ابدأ مجانًا", open: "افتح Chaos", logIn: "تسجيل الدخول", skip: "انتقل إلى المحتوى", main: "التنقل الرئيسي", footer: "التذييل",
     modes: "طرق العرض", themes: "المظاهر", features: "المزايا", docs: "الدليل", pricing: "الأسعار", play: "انضم إلى لعبة",
     menu: "القائمة", closeMenu: "إغلاق القائمة", language: "اللغة",
-    tagline: "نماذج واستطلاعات واختبارات مباشرة.",
-    product: "المنتج", ways: "طرق الإجابة", chatgpt: "Chaos في ChatGPT",
-    start: "ابدأ الآن", help: "المساعدة", legal: "قانوني", privacy: "سياسة الخصوصية", terms: "الشروط والأحكام", contact: "تواصل معنا",
+    tagline: "نماذج واستطلاعات واختبارات وألعاب مباشرة. مفتوح المصدر.",
+    product: "المنتج", ways: "طرق الإجابة", chatgpt: "Chaos في ChatGPT", compare: "المقارنة",
+    openSource: "مفتوح المصدر", source: "الشيفرة المصدرية", selfHost: "الاستضافة الذاتية", api: "API والاتصالات", webhooks: "Webhooks",
+    start: "ابدأ الآن", help: "الدعم", status: "حالة الخدمة", issues: "أبلغ عن مشكلة",
+    legal: "قانوني", privacy: "سياسة الخصوصية", terms: "الشروط والأحكام", security: "الأمان",
   },
 };
 
@@ -143,20 +147,31 @@ export function SiteFooter() {
             <Link href="/#modes">{t.ways}</Link>
             <Link href="/#themes">{t.themes}</Link>
             <Link href="/#features">{t.features}</Link>
+            <Link href="/compare">{t.compare}</Link>
             <Link href="/chatgpt">{t.chatgpt}</Link>
             <Link href="/pricing">{t.pricing}</Link>
             <Link href="/docs">{t.docs}</Link>
           </div>
           <div>
+            <h2>{t.openSource}</h2>
+            <a href={repoUrl}>{t.source}</a>
+            <Link href="/docs/self-hosting">{t.selfHost}</Link>
+            <Link href="/docs/integration-api">{t.api}</Link>
+            <Link href="/docs/webhooks">{t.webhooks}</Link>
+          </div>
+          <div>
             <h2>{t.start}</h2>
             <Link href="/dashboard">{t.open}</Link>
-            <a href={`mailto:${supportEmail}`}>{t.help}</a>
+            <Link href="/play">{t.play}</Link>
+            <Link href="/support">{t.help}</Link>
+            {statusPageUrl && <a href={statusPageUrl}>{t.status}</a>}
+            <a href={repoIssuesUrl}>{t.issues}</a>
           </div>
           <div>
             <h2>{t.legal}</h2>
             <Link href="/privacy">{t.privacy}</Link>
             <Link href="/terms">{t.terms}</Link>
-            <a href={`mailto:${supportEmail}`}>{t.contact}</a>
+            <Link href="/support#security">{t.security}</Link>
           </div>
         </nav>
       </div>

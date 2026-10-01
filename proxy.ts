@@ -3,6 +3,7 @@ import { NextResponse } from "next/server";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { decideFraming } from "@/lib/embed";
+import { shortHostRedirect } from "@/lib/site";
 import type { EmbedPolicy, EmbedTarget } from "@/lib/embed";
 
 // /print shows a quiz with its answer key; the queries already check ownership, and
@@ -25,6 +26,9 @@ async function lookupPolicy(target: EmbedTarget): Promise<EmbedPolicy> {
 }
 
 export default clerkMiddleware(async (auth, req) => {
+  // The short share host (NEXT_PUBLIC_SHORT_SHARE_ORIGIN) only redirects; pages live on the canonical site.
+  const short = shortHostRedirect(req.url);
+  if (short) return NextResponse.redirect(short, 301);
   if (isProtectedRoute(req)) await auth.protect();
   // Framing: every response here gets X-Frame-Options: DENY and frame-ancestors 'none',
   // except a published form whose creator allows the framing site (lib/embed.ts).

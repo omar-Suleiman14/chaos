@@ -254,3 +254,15 @@ html[lang="ar"] .site-ui :is(h1, h2, h3, .site-brand) { letter-spacing: 0; }
 .site-compare-note { margin-top: 12px; color: var(--s-muted); font-size: 13px; }
 @media (max-width: 900px) { .site-also { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 640px) { .site-features, .site-also { grid-template-columns: 1fr; } .site-compare th:first-child { position: sticky; inset-inline-start: 0; background: var(--s-card); } }
+
+/* Compare page and landing: two-column lists of longer sentences, and doc links inside feature cards. */
+.site-also--wide { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.site-feature > .site-text-link { margin-top: 12px; }
+.site-controls { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-top: 36px; }
+.site-control { display: flex; flex-direction: column; align-items: flex-start; padding: 20px; border: 1px solid var(--s-line); border-radius: 14px; background: var(--s-card); }
+.site-control h3 { font-size: 16px; font-weight: 600; }
+.site-control p { margin-top: 6px; color: var(--s-soft); font-size: 14.5px; line-height: 1.6; }
+.site-control .site-text-link { margin-top: auto; padding-top: 6px; font-size: 14px; }
+.site-compare-more { margin-top: 4px; }
+@media (max-width: 900px) { .site-controls { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 640px) { .site-also--wide, .site-controls { grid-template-columns: 1fr; } }

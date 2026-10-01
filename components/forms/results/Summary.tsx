@@ -8,6 +8,7 @@ import { formatDate, formatNumber, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
 import { BarList, Columns, Sparkline, lastDays } from "./charts";
 import { formatDuration, resultsCopy } from "./copy";
+import DocHint from "@/components/forms/DocHint";
 
 export type Analysis = NonNullable<FunctionReturnType<typeof api.formResults.getAnalysis>>;
 type FieldResult = Analysis["fields"][number];
@@ -188,9 +189,45 @@ function QuestionCard({ field, analysis, index }: { field: FieldResult; analysis
   );
 }
 
+/** Quiz questions ranked by correct rate, hardest first, from the same sample as the cards below. */
+function QuestionPerformance({ analysis }: { analysis: Analysis }) {
+  const t = useCopy(resultsCopy);
+  const { locale } = useLocale();
+  const rows = analysis.fields
+    .filter((f) => f.quiz && f.quiz.correctRate !== null)
+    .sort((x, y) => x.quiz!.correctRate! - y.quiz!.correctRate!);
+  if (rows.length < 2) return null;
+  return (
+    <section className="ws-question" aria-labelledby="perf-title">
+      <header className="ws-question__head">
+        <div>
+          <h3 id="perf-title" className="ws-question__title">{t.perfTitle}</h3>
+          <p className="ws-question__meta">{t.perfHelp}</p>
+        </div>
+      </header>
+      <div className="ws-matrix-wrap">
+        <table className="ws-matrix ws-perf">
+          <thead><tr><th scope="col">{t.colQuestion}</th><th scope="col">{t.colCorrect}</th><th scope="col">{t.colCommonWrong}</th><th scope="col">{t.colAnswered}</th></tr></thead>
+          <tbody>
+            {rows.map((f) => (
+              <tr key={f.fieldId}>
+                <th scope="row"><a href={`#q-${f.fieldId}`} className="underline-offset-2 hover:underline">{f.label}</a></th>
+                <td style={{ ["--heat" as string]: 1 - f.quiz!.correctRate! }}>{Math.round(f.quiz!.correctRate! * 100)}%</td>
+                <td>{f.quiz!.commonWrong ? `${f.quiz!.commonWrong.label} · ${formatNumber(locale, f.quiz!.commonWrong.count)}` : "—"}</td>
+                <td>{formatNumber(locale, f.quiz!.answered)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
 /** Per-question summary cards, the default view of a results page. */
 export function SummaryTab({ analysis }: { analysis: Analysis | undefined }) {
   const t = useCopy(resultsCopy);
+  const { locale: lang } = useLocale();
   if (analysis === undefined) {
     return (
       <div role="status" aria-busy="true" className="grid gap-4">
@@ -205,10 +242,12 @@ export function SummaryTab({ analysis }: { analysis: Analysis | undefined }) {
       <div className="ws-empty">
         <h2 className="text-xl font-semibold">{t.emptyTitle}</h2>
         <p className="ws-muted max-w-sm">{t.emptyBody}</p>
+        <DocHint slug="results">{t.emptyTips}</DocHint>
       </div>
     );
   }
   const languageName = (l: string) => (l === "ar" ? t.arabic : l === "en" ? t.english : l);
+  const locale = lang;
   return (
     <div className="ws-summary">
       {(a.sampleLimited || a.editedResponses > 0) && (
@@ -225,7 +264,23 @@ export function SummaryTab({ analysis }: { analysis: Analysis | undefined }) {
         </section>
       )}
 
+      <QuestionPerformance analysis={a} />
+
       {a.fields.map((f, i) => <QuestionCard key={f.fieldId} field={f} analysis={a} index={i} />)}
+
+      {(a.durationBins?.length ?? 0) > 1 && (
+        <section className="ws-question" aria-labelledby="time-title">
+          <header className="ws-question__head">
+            <div>
+              <h3 id="time-title" className="ws-question__title">{t.timeTitle}</h3>
+              <p className="ws-question__meta">{t.timeHelp(a.durationBins.reduce((s, b) => s + b.count, 0))}</p>
+            </div>
+          </header>
+          <Columns label={t.timeTitle} bins={a.durationBins.map((b) => ({ label: b.from === b.to ? formatDuration(b.from * 1000, locale) : `${formatDuration(b.from * 1000, locale)}–${formatDuration(b.to * 1000, locale)}`, count: b.count }))} />
+        </section>
+      )}
+
+      {!a.collectPartial && <DocHint slug="results">{t.partialOff}</DocHint>}
 
       {a.collectPartial && a.partialCount > 0 && (
         <section className="ws-question" aria-labelledby="dropoff-title">

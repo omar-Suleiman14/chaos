@@ -2,9 +2,10 @@
 
 
 import Link from "next/link";
-import { ArrowRight, Check, ChevronRight, Radio } from "lucide-react";
+import { ArrowRight, Braces, Check, ChevronRight, Radio, Server } from "lucide-react";
 import { PrimaryCta, SiteFooter, SiteNav } from "@/components/site/SiteChrome";
 import { ChatGptMark } from "@/components/site/marks";
+import { compareCopy, compareSources, landingRows } from "@/components/site/compareData";
 import { useThemeName } from "@/components/ThemePicker";
 import { themeClass, themeFromPreset, themePresets, themeStyle } from "@/components/forms/formThemes";
 import { emptyDefinition } from "@/convex/formLogic";
@@ -14,10 +15,17 @@ import { serializeStructuredData, websiteStructuredData } from "@/lib/seo";
 import "@/components/forms/formThemes.css";
 import "./landing.css";
 
+/*
+ * Every claim here maps to shipped code; see components/site/compareData.ts for the
+ * sources behind the comparison and the docs (lib/docs) for each linked feature.
+ * Responder controls: convex/formModel.ts settings (access, onePerPerson, responseLimit,
+ * opensAt/closesAt/timezone, retentionDays, collectPartial, allowEditAfterSubmit) and
+ * convex/respond.ts (file uploads: 1–5 files, 10 MB, listed types).
+ */
 const copy = {
   en: {
     title: ["Forms, surveys", "and live quizzes."],
-    lead: "Build a form, collect responses or host a quiz with friends.",
+    lead: "Collect responses, run quizzes and host live games. Works with ChatGPT, has an API, and it’s open source.",
     create: "Create a form", createGame: "Create a game",
     modesTitle: "Choose how people answer.", modesLead: "A whole page, or one question at a time.",
     modes: [
@@ -28,43 +36,51 @@ const copy = {
     themesTitle: "Choose a theme.",
     themesLead: (n: number) => `${n} themes. Change any colour, font or sound.`,
     themesLink: "Explore themes in the example", sampleTitle: "Hello.", sampleBody: "Make yourself at home.", galleryLabel: "A selection of form themes",
-    featuresTitle: ["Forms, quizzes and live games.", "One app."],
-    featuresLead: "Google Forms, Typeform and Kahoot in one place. Free for now.",
+    featuresTitle: ["Forms, quizzes and live games.", "One open-source app."],
+    featuresLead: "Build it yourself, or let an agent do the busywork. Free for personal use within plan limits.",
     main: [
-      { title: "Forms, surveys and quizzes", body: "16 question types, sections and branching. Quiz mode marks answers for you." },
+      { title: "Forms, surveys and quizzes", body: "16 question types, including file uploads, with sections, branching and endings. Quiz mode marks answers for you." },
       { title: "Live games", body: "Questions on the big screen, answers on phones, a leaderboard after each round." },
-      { title: "Results you can use", body: "Charts, every response, and export to CSV, Excel or JSON. API and webhooks too." },
+      { title: "Results you can use", body: "Charts, every response, and export to CSV, Excel or JSON.", href: "/docs/export-responses", link: "Export responses" },
+      { title: "Agents can run it", body: "The Chaos app in ChatGPT drafts forms and quizzes, publishes when you ask, runs games and reads results. It can’t delete anything.", href: "/chatgpt", link: "Chaos in ChatGPT" },
+      { title: "API and webhooks", body: "Give another app a scoped token to create drafts and read count-only summaries. Webhooks tell your server when responses arrive.", href: "/docs/integration-api", link: "Integration API" },
       { title: "A look for every form", body: "18 themes, including Google Forms and Microsoft Forms looks, or your own colours and logo." },
       { title: "Build with your team", body: "Editors, viewers, comments and approval before publishing." },
-      { title: "Logic and endings", body: "Skip questions that don't apply and end with a message that fits." },
-      { title: "One form, two languages", body: "English and Arabic in the same form, with right-to-left built in." },
-      { title: "A history you can return to", body: "Every published version is kept. Restore any of them." },
+      { title: "Open source", body: "AGPL licensed. Read the code, report issues, or host your own copy.", href: "/docs/self-hosting", link: "Self-hosting" },
     ],
     alsoTitle: "Also included",
     also: [
-      "English and Arabic, right to left", "21 ready-made templates", "Collaborators with roles", "Version history and undo",
-      "Opening and closing times with time zones", "Response limits and access codes", "Respondents can edit their answers", "Links, QR codes and embedding",
-      "Chaos in ChatGPT", "Max integration", "Open source, self-hostable", "Step-by-step docs",
+      "English and Arabic in one form, right to left", "21 ready-made templates", "Collaborators with roles", "Version history and undo",
+      "Branching logic and custom endings", "Import Typeform and Google Forms files", "Receipts for every response", "Links, custom links, QR codes and embedding",
+      "Spam folder", "Max integration", "Keyboard shortcuts", "Step-by-step docs",
     ],
+    learn: "In progress: Learn, lessons and courses that use Chaos quizzes and live games for practice. Not available yet.",
+    controlsTitle: "Decide who answers, and for how long.", controlsLead: "Every control is set per form, and the server enforces it.",
+    controls: [
+      { title: "Who can respond", body: "Anyone with the link, people signed in to Chaos, or only people with an access code.", href: "/docs/access-and-limits#who" },
+      { title: "One per person", body: "On sign-in forms, allow one response per account.", href: "/docs/access-and-limits#who" },
+      { title: "Response limits", body: "The form says it’s full after the number you set.", href: "/docs/access-and-limits#limits" },
+      { title: "Opening and closing times", body: "Open and close on a schedule, in the time zone you choose.", href: "/docs/access-and-limits#limits" },
+      { title: "Automatic deletion", body: "Delete responses and their files after a number of days.", href: "/docs/access-and-limits#privacy" },
+      { title: "Unfinished responses", body: "Off by default. When on, people are told you can see answers they haven’t sent.", href: "/docs/partial-responses" },
+      { title: "Edit after submitting", body: "Off by default. A private link lets people change their answers, and earlier versions are kept.", href: "/docs/respondent-experience#edit-later" },
+      { title: "File uploads", body: "1 to 5 files per question, up to 10 MB each, visible only to you and your collaborators.", href: "/docs/file-uploads" },
+      { title: "Embedding", body: "Off until you turn it on, and only on the sites you list.", href: "/docs/links-and-embed#embed" },
+    ],
+    controlsLink: "How it works",
     compareTitle: "How Chaos compares",
     compareNote: "Other products change their features and plans. Sources:",
-    compareCols: ["Chaos", "Google Forms", "Microsoft Forms", "Typeform", "Kahoot!"],
-    compareRows: [
-      ["Main use", "Forms, surveys, quizzes + live games", "Forms + quizzes", "Forms + quizzes", "Conversational forms + quizzes", "Live quizzes + learning games"],
-      ["Ways to answer", "Page, sections, focused + swipe", "Page + sections", "Page + sections", "One question at a time", "Hosted rounds + self-paced play"],
-      ["Live game with PIN and leaderboard", "Yes", "Not a live-game host", "Presentation mode", "Not a live-game host", "Yes"],
-      ["Design controls", "18 presets, colours, type + backdrops", "Colours, fonts + header", "Themes + backgrounds", "Themes, media + question layouts", "Game themes + branding by plan"],
-      ["Motion and feedback", "Question transitions, sounds + live reveals", "Page flow", "Page flow", "Conversational question flow", "Timers, reveals + podium"],
-      ["Open source and self-hostable", "Yes", "No", "No", "No", "No"],
-    ],
+    compareMore: "Full comparison, including what Chaos doesn’t do yet",
     worksTitle: "Connect Chaos.",
     max: { name: "Max", title: "Turn Max pages into forms.", body: "Pick a Max page and get a Chaos draft. Only summaries go back to Max.", link: "Get Max" },
-    gpt: { name: "ChatGPT", title: "Make forms from a chat.", body: "Ask ChatGPT to turn a chat into a quiz or a game. Included with Pro.", link: "See how it works" },
+    gpt: { name: "ChatGPT", title: "Run Chaos from a chat.", body: "Ask ChatGPT to draft a quiz, publish it when you’re ready, run a game or check results. Included with Pro.", link: "See how it works" },
+    api: { name: "API and webhooks", title: "Connect your own tools.", body: "Scoped tokens for drafts and summaries, and signed webhooks for new responses. Answers stay in Chaos unless you choose otherwise.", link: "Read the API guide" },
+    host: { name: "Self-hosting", title: "Run your own copy.", body: "Chaos is open source under the AGPL. There is a Docker setup for the app and its backend. It hasn’t been tested end to end yet.", link: "Self-hosting guide" },
     ctaTitle: "Create your first form.", ctaLead: "Start blank or from a template.",
   },
   ar: {
     title: ["نماذج واستطلاعات", "واختبارات مباشرة."],
-    lead: "أنشئ نموذجًا أو اجمع الردود أو استضف اختبارًا مع أصدقائك.",
+    lead: "اجمع الردود وأدر الاختبارات واستضف ألعابًا مباشرة. يعمل مع ChatGPT، وله API، ومفتوح المصدر.",
     create: "أنشئ نموذجًا", createGame: "أنشئ لعبة",
     modesTitle: "اختر طريقة الإجابة.", modesLead: "صفحة كاملة، أو سؤال واحد في كل مرة.",
     modes: [
@@ -75,44 +91,53 @@ const copy = {
     themesTitle: "اختر مظهرًا.",
     themesLead: (n: number) => `${n} مظهرًا. غيّر أي لون أو خط أو صوت.`,
     themesLink: "استكشف المظاهر في المثال", sampleTitle: "مرحبًا.", sampleBody: "تفضّل، البيت بيتك.", galleryLabel: "مجموعة من مظاهر النماذج",
-    featuresTitle: ["نماذج واختبارات وألعاب مباشرة.", "في تطبيق واحد."],
-    featuresLead: "Google Forms وTypeform وKahoot في مكان واحد. مجانًا حاليًا.",
+    featuresTitle: ["نماذج واختبارات وألعاب مباشرة.", "في تطبيق واحد مفتوح المصدر."],
+    featuresLead: "ابنِ بنفسك، أو دع وكيلًا يتولى الأعمال المتكررة. مجاني للاستخدام الشخصي ضمن حدود الخطة.",
     main: [
-      { title: "نماذج واستطلاعات واختبارات", body: "16 نوعًا من الأسئلة وأقسام وتفرّع. ويصحح وضع الاختبار الإجابات تلقائيًا." },
+      { title: "نماذج واستطلاعات واختبارات", body: "16 نوعًا من الأسئلة، منها رفع الملفات، مع أقسام وتفرّع وخواتيم. ويصحح وضع الاختبار الإجابات تلقائيًا." },
       { title: "ألعاب مباشرة", body: "الأسئلة على الشاشة الكبيرة، والإجابات من الهواتف، ولوحة صدارة بعد كل جولة." },
-      { title: "نتائج تفيدك", body: "رسوم بيانية وكل ردّ وتصدير إلى CSV وExcel وJSON، مع API وWebhooks." },
+      { title: "نتائج تفيدك", body: "رسوم بيانية وكل ردّ وتصدير إلى CSV وExcel وJSON.", href: "/docs/export-responses", link: "تصدير الردود" },
+      { title: "يمكن للوكلاء تشغيله", body: "تطبيق Chaos في ChatGPT يصوغ النماذج والاختبارات، وينشر حين تطلب، ويدير الألعاب، ويقرأ النتائج. ولا يستطيع حذف أي شيء.", href: "/chatgpt", link: "Chaos في ChatGPT" },
+      { title: "API وWebhooks", body: "امنح تطبيقًا آخر رمزًا بصلاحيات محددة لإنشاء المسودات وقراءة ملخصات بالأعداد فقط. وتخبر الـ webhooks خادمك حين تصل الردود.", href: "/docs/integration-api", link: "API التكامل" },
       { title: "مظهر لكل نموذج", body: "18 مظهرًا، منها أسلوبا Google Forms وMicrosoft Forms، أو ألوانك وشعارك." },
       { title: "ابنِ مع فريقك", body: "محررون ومشاهدون وتعليقات وموافقة قبل النشر." },
-      { title: "المنطق والنهايات", body: "تخطَّ الأسئلة غير المناسبة، واختم برسالة تناسب المجيب." },
-      { title: "نموذج واحد بلغتين", body: "العربية والإنجليزية في النموذج نفسه، مع دعم الكتابة من اليمين." },
-      { title: "سجل يمكنك الرجوع إليه", body: "كل نسخة منشورة محفوظة، ويمكنك استعادة أي منها." },
+      { title: "مفتوح المصدر", body: "برخصة AGPL. اقرأ الشيفرة، أو أبلغ عن مشكلة، أو استضف نسختك الخاصة.", href: "/docs/self-hosting", link: "الاستضافة الذاتية" },
     ],
     alsoTitle: "وأيضًا",
     also: [
-      "العربية والإنجليزية، من اليمين إلى اليسار", "21 قالبًا جاهزًا", "متعاونون بأدوار", "سجل الإصدارات والتراجع",
-      "مواعيد فتح وإغلاق بالمنطقة الزمنية", "حدود للردود ورموز دخول", "يستطيع المجيب تعديل إجابته", "روابط ورموز QR وتضمين",
-      "Chaos في ChatGPT", "التكامل مع Max", "مفتوح المصدر ويمكن استضافته بنفسك", "دليل خطوة بخطوة",
+      "العربية والإنجليزية في نموذج واحد، من اليمين إلى اليسار", "21 قالبًا جاهزًا", "متعاونون بأدوار", "سجل الإصدارات والتراجع",
+      "منطق التفرّع وخواتيم مخصصة", "استيراد ملفات Typeform وGoogle Forms", "إيصال لكل رد", "روابط وروابط مخصصة ورموز QR وتضمين",
+      "مجلد للمزعج", "التكامل مع Max", "اختصارات لوحة المفاتيح", "دليل خطوة بخطوة",
     ],
+    learn: "قيد الإنشاء: Learn، دروس ومقررات تستخدم اختبارات Chaos وألعابه المباشرة للتدريب. لم يُتح بعد.",
+    controlsTitle: "حدّد من يجيب، وإلى متى.", controlsLead: "كل إعداد خاص بالنموذج، والخادم هو من يطبّقه.",
+    controls: [
+      { title: "من يستطيع الإجابة", body: "كل من لديه الرابط، أو المسجلون في Chaos، أو من لديهم رمز دخول فقط.", href: "/docs/access-and-limits#who" },
+      { title: "رد واحد لكل شخص", body: "في النماذج التي تتطلب تسجيل الدخول، اسمح برد واحد لكل حساب.", href: "/docs/access-and-limits#who" },
+      { title: "حدود الردود", body: "يعلن النموذج امتلاءه بعد العدد الذي تحدده.", href: "/docs/access-and-limits#limits" },
+      { title: "مواعيد الفتح والإغلاق", body: "افتح وأغلق وفق جدول، بالمنطقة الزمنية التي تختارها.", href: "/docs/access-and-limits#limits" },
+      { title: "الحذف التلقائي", body: "احذف الردود وملفاتها بعد عدد من الأيام.", href: "/docs/access-and-limits#privacy" },
+      { title: "الردود غير المكتملة", body: "متوقفة افتراضيًا. وعند تفعيلها يُبلَّغ الناس بأنك ترى إجابات لم يرسلوها.", href: "/docs/partial-responses" },
+      { title: "التعديل بعد الإرسال", body: "متوقف افتراضيًا. رابط خاص يتيح تعديل الإجابات، وتُحفظ النسخ السابقة.", href: "/docs/respondent-experience#edit-later" },
+      { title: "رفع الملفات", body: "من 1 إلى 5 ملفات لكل سؤال، حتى 10 ميغابايت للملف، لا يراها إلا أنت والمتعاونون معك.", href: "/docs/file-uploads" },
+      { title: "التضمين", body: "متوقف حتى تفعّله، وعلى المواقع التي تحددها فقط.", href: "/docs/links-and-embed#embed" },
+    ],
+    controlsLink: "كيف يعمل",
     compareTitle: "مقارنة Chaos بغيره",
     compareNote: "قد تتغير مزايا المنتجات الأخرى وخططها. المصادر:",
-    compareCols: ["Chaos", "Google Forms", "Microsoft Forms", "Typeform", "Kahoot!"],
-    compareRows: [
-      ["الاستخدام الأساسي", "نماذج واستطلاعات واختبارات وألعاب", "نماذج واختبارات", "نماذج واختبارات", "نماذج محادثة واختبارات", "اختبارات وألعاب تعليمية مباشرة"],
-      ["طرق الإجابة", "صفحة وأقسام وتركيز وسحب", "صفحة وأقسام", "صفحة وأقسام", "سؤال في كل مرة", "جولات مباشرة ولعب فردي"],
-      ["لعبة مباشرة برمز ولوحة متصدرين", "نعم", "ليس مضيف ألعاب", "وضع عرض تقديمي", "ليس مضيف ألعاب", "نعم"],
-      ["خيارات التصميم", "18 مظهرًا وألوان وخطوط وخلفيات", "ألوان وخطوط وترويسة", "مظاهر وخلفيات", "مظاهر ووسائط وتخطيطات", "مظاهر وهوية حسب الخطة"],
-      ["الحركة والتفاعل", "انتقالات وأصوات وكشف الإجابات", "صفحات", "صفحات", "تدفق أسئلة المحادثة", "مؤقت وكشف النتائج ومنصة"],
-      ["مفتوح المصدر ويمكن استضافته", "نعم", "لا", "لا", "لا", "لا"],
-    ],
+    compareMore: "المقارنة الكاملة، ومنها ما لا يفعله Chaos بعد",
     worksTitle: "اربط Chaos بأدواتك.",
     max: { name: "Max", title: "حوّل صفحات Max إلى نماذج.", body: "اختر صفحة من Max واحصل على مسودة في Chaos. لا يعود إلى Max سوى الملخصات.", link: "احصل على Max" },
-    gpt: { name: "ChatGPT", title: "اصنع نموذجًا من محادثة.", body: "اطلب من ChatGPT تحويل محادثة إلى اختبار أو لعبة. متاح مع Pro.", link: "اعرف كيف يعمل" },
+    gpt: { name: "ChatGPT", title: "أدِر Chaos من محادثة.", body: "اطلب من ChatGPT صياغة اختبار، ونشره حين تكون جاهزًا، أو تشغيل لعبة، أو معرفة النتائج. متاح مع Pro.", link: "اعرف كيف يعمل" },
+    api: { name: "API وWebhooks", title: "اربط أدواتك الخاصة.", body: "رموز بصلاحيات محددة للمسودات والملخصات، وwebhooks موقّعة للردود الجديدة. تبقى الإجابات في Chaos ما لم تختر غير ذلك.", link: "اقرأ دليل الـ API" },
+    host: { name: "الاستضافة الذاتية", title: "شغّل نسختك الخاصة.", body: "Chaos مفتوح المصدر برخصة AGPL. يتوفر إعداد Docker للتطبيق وخادمه، ولم يُختبر من البداية إلى النهاية بعد.", link: "دليل الاستضافة الذاتية" },
     ctaTitle: "أنشئ نموذجك الأول.", ctaLead: "ابدأ من الصفر أو من قالب.",
   },
 };
 
 export default function LandingPage() {
   const t = useCopy(copy);
+  const compare = useCopy(compareCopy);
   const themeName = useThemeName();
   return (
     <div className="site-ui">
@@ -149,22 +174,38 @@ export default function LandingPage() {
         <section id="features" className="site-section" aria-labelledby="features-title">
           <div className="site-section-heading"><h2 id="features-title" className="site-h2">{t.featuresTitle[0]}<br />{t.featuresTitle[1]}</h2><p>{t.featuresLead}</p></div>
           <div className="site-features">
-            {t.main.map((item, i) => <article key={item.title} className="site-feature">{i === 1 && <Radio size={22} aria-hidden="true" />}<h3>{item.title}</h3><p>{item.body}</p>{i === 1 && <PrimaryCta href="/dashboard/games" label={t.createGame} />}</article>)}
+            {t.main.map((item, i) => <article key={item.title} className="site-feature">
+              {i === 1 && <Radio size={22} aria-hidden="true" />}<h3>{item.title}</h3><p>{item.body}</p>
+              {i === 1 && <PrimaryCta href="/dashboard/games" label={t.createGame} />}
+              {item.href && <Link href={item.href} className="site-text-link">{item.link} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>}
+            </article>)}
           </div>
           <h3 className="site-also-title">{t.alsoTitle}</h3>
           <ul className="site-also">{t.also.map((item) => <li key={item}><Check size={15} aria-hidden="true" />{item}</li>)}</ul>
+          <p className="site-compare-note">{t.learn}</p>
+        </section>
+
+        <section id="controls" className="site-section" aria-labelledby="controls-title">
+          <div className="site-section-heading"><h2 id="controls-title" className="site-h2">{t.controlsTitle}</h2><p>{t.controlsLead}</p></div>
+          <div className="site-controls">
+            {t.controls.map((item) => <article key={item.title} className="site-control">
+              <h3>{item.title}</h3><p>{item.body}</p>
+              <Link href={item.href} className="site-text-link" aria-label={`${t.controlsLink}: ${item.title}`}>{t.controlsLink} <ChevronRight size={15} className="site-arrow" aria-hidden="true" /></Link>
+            </article>)}
+          </div>
         </section>
 
         <section id="compare" className="site-section" aria-labelledby="compare-title">
           <div className="site-section-heading"><h2 id="compare-title" className="site-h2">{t.compareTitle}</h2></div>
           <div className="site-compare-wrap">
             <table className="site-compare">
-              <thead><tr><th scope="col"><span className="sr-only">{t.compareTitle}</span></th>{t.compareCols.map((c, i) => <th key={c} scope="col" data-us={i === 0 || undefined}>{c}</th>)}</tr></thead>
-              <tbody>{t.compareRows.map(([row, ...cells]) => <tr key={row}><th scope="row">{row}</th>{cells.map((cell, i) => <td key={i} data-us={i === 0 || undefined}>{cell}</td>)}</tr>)}</tbody>
+              <thead><tr><th scope="col"><span className="sr-only">{t.compareTitle}</span></th>{compare.cols.map((c, i) => <th key={c} scope="col" data-us={i === 0 || undefined}>{c}</th>)}</tr></thead>
+              <tbody>{compare.rows.slice(0, landingRows).map(([row, ...cells]) => <tr key={row}><th scope="row">{row}</th>{cells.map((cell, i) => <td key={i} data-us={i === 0 || undefined}>{cell}</td>)}</tr>)}</tbody>
             </table>
           </div>
           <p className="site-compare-note">{t.compareNote}</p>
-          <div className="site-compare-sources"><a href="https://support.google.com/docs/answer/145737">Google Forms</a><a href="https://support.microsoft.com/en-us/forms/change-a-form-theme">Microsoft Forms</a><a href="https://help.typeform.com/hc/en-us/articles/41381686182292--Your-complete-guide-to-designing-a-typeform">Typeform</a><a href="https://support.kahoot.com/hc/en-us/articles/4433531677715-How-to-use-themes">Kahoot!</a></div>
+          <div className="site-compare-sources">{compareSources.map((s) => <a key={s.href} href={s.href}>{s.label}</a>)}</div>
+          <Link href="/compare" className="site-text-link site-compare-more">{t.compareMore} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>
         </section>
 
         <section id="works-with" className="site-section" aria-labelledby="works-with-title">
@@ -188,6 +229,24 @@ export default function LandingPage() {
               <h3>{t.gpt.title}</h3>
               <p>{t.gpt.body}</p>
               <Link href="/chatgpt" className="site-text-link">{t.gpt.link} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>
+            </article>
+            <article className="site-partner">
+              <div className="site-partner__head">
+                <span className="site-partner__mark"><Braces size={24} aria-hidden="true" /></span>
+                <span className="site-partner__name">{t.api.name}</span>
+              </div>
+              <h3>{t.api.title}</h3>
+              <p>{t.api.body}</p>
+              <Link href="/docs/integration-api" className="site-text-link">{t.api.link} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>
+            </article>
+            <article className="site-partner">
+              <div className="site-partner__head">
+                <span className="site-partner__mark"><Server size={24} aria-hidden="true" /></span>
+                <span className="site-partner__name">{t.host.name}</span>
+              </div>
+              <h3>{t.host.title}</h3>
+              <p>{t.host.body}</p>
+              <Link href="/docs/self-hosting" className="site-text-link">{t.host.link} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>
             </article>
           </div>
         </section>

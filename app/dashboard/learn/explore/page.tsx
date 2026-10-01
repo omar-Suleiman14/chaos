@@ -19,7 +19,7 @@ const copy = {
     sorts: { relevant: "Most relevant", recent: "Newest", helpful: "Most helpful" }, langs: { en: "English", ar: "العربية" } as Record<string, string>,
     results: (n: number) => `${n} ${n === 1 ? "lesson" : "lessons"}`, empty: "No lessons match", emptyBody: "Try fewer filters or other words.",
     none: "Nothing published yet", noneBody: "Public lessons appear here once authors publish them.",
-    collections: "Collections", lessonsIn: (n: number) => `${n} items`, loading: "Loading lessons…", current: "current", old: "older",
+    resultsTitle: "Lessons", collections: "Collections", lessonsIn: (n: number) => `${n} items`, loading: "Loading lessons…", current: "current", old: "older",
   },
   ar: {
     title: "استكشف", lead: "دروس عامة من مجتمع Chaos. تحقّق من المصادر فيما تعتمد عليه.",
@@ -28,7 +28,7 @@ const copy = {
     sorts: { relevant: "الأكثر صلة", recent: "الأحدث", helpful: "الأكثر فائدة" }, langs: { en: "English", ar: "العربية" } as Record<string, string>,
     results: (n: number) => `${n} درس`, empty: "لا دروس مطابقة", emptyBody: "جرّب عوامل تصفية أقل أو كلمات أخرى.",
     none: "لم يُنشر شيء بعد", noneBody: "تظهر الدروس العامة هنا عندما ينشرها كتّابها.",
-    collections: "المجموعات", lessonsIn: (n: number) => `${n} عنصر`, loading: "جارٍ تحميل الدروس…", current: "الحالي", old: "أقدم",
+    resultsTitle: "الدروس", collections: "المجموعات", lessonsIn: (n: number) => `${n} عنصر`, loading: "جارٍ تحميل الدروس…", current: "الحالي", old: "أقدم",
   },
 };
 
@@ -88,7 +88,8 @@ function Explore() {
         {active && <button type="button" className="lx-link" style={{ justifySelf: "start" }} onClick={() => router.replace(pathname)}><X size={13} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} /> {t.clear}</button>}
       </search>
 
-      <section className="lx-section" aria-live="polite">
+      <section className="lx-section" aria-live="polite" aria-labelledby="explore-results">
+        <h2 id="explore-results" className="sr-only">{t.resultsTitle}</h2>
         {everything.length === 0 ? <EmptyState icon={Compass} title={t.none} body={t.noneBody} />
           : results.length === 0 ? <EmptyState icon={Search} title={t.empty} body={t.emptyBody} />
           : (

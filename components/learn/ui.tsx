@@ -183,9 +183,10 @@ export function ExternalRefLine({ externalRef }: { externalRef: ExternalRef }) {
   );
 }
 
-export function LessonCard({ lesson, href, progress, footer, showStatus, currentVersionIds }: {
-  lesson: Lesson; href: string; progress?: LessonProgress; footer?: React.ReactNode; showStatus?: boolean; currentVersionIds?: Set<string>;
+export function LessonCard({ lesson, href, progress, footer, showStatus, currentVersionIds, level = 3 }: {
+  lesson: Lesson; href: string; progress?: LessonProgress; footer?: React.ReactNode; showStatus?: boolean; currentVersionIds?: Set<string>; level?: 2 | 3;
 }) {
+  const Heading = level === 2 ? "h2" : "h3";
   const t = useCopy(copy);
   const { locale } = useLocale();
   const view = showStatus ? { meta: lesson.draft.meta, content: lesson.draft.content } : readerView(lesson);
@@ -198,7 +199,7 @@ export function LessonCard({ lesson, href, progress, footer, showStatus, current
         {showStatus ? <LessonStatus lesson={lesson} /> : <span>{t.by(meta.authorDisplay || lesson.ownerName)}</span>}
         <QualityBadge quality={lesson.quality} note={lesson.qualityNote} />
       </div>
-      <h3><Link href={href} className="lx-card__link">{meta.title || t.untitled}</Link></h3>
+      <Heading><Link href={href} className="lx-card__link">{meta.title || t.untitled}</Link></Heading>
       {meta.description && <p>{meta.description}</p>}
       <CurriculumBadges refs={meta.curricula} max={2} currentVersionIds={currentVersionIds} />
       {lesson.forkedFrom && <span className="lx-card__meta"><GitFork size={13} aria-hidden />{t.forkedFrom} “{lesson.forkedFrom.sourceTitle}” · {lesson.forkedFrom.authorName}</span>}
@@ -210,11 +211,13 @@ export function LessonCard({ lesson, href, progress, footer, showStatus, current
   );
 }
 
-export function EmptyState({ icon: Icon = BookOpen, title, body, children }: { icon?: typeof BookOpen; title: string; body?: string; children?: React.ReactNode }) {
+/** `level` keeps the outline continuous: 2 directly under a page title, 3 inside a section. */
+export function EmptyState({ icon: Icon = BookOpen, title, body, children, level = 3 }: { icon?: typeof BookOpen; title: string; body?: string; children?: React.ReactNode; level?: 2 | 3 }) {
+  const Heading = level === 2 ? "h2" : "h3";
   return (
     <div className="lx-empty">
       <Icon size={28} aria-hidden />
-      <h3>{title}</h3>
+      <Heading>{title}</Heading>
       {body && <p>{body}</p>}
       {children && <div className="lx-actions" style={{ justifyContent: "center" }}>{children}</div>}
     </div>

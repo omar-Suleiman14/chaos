@@ -3,10 +3,14 @@
 import Link from "next/link";
 import Logo from "@/components/Logo";
 import { useCopy } from "@/lib/i18n";
+import { statusPageUrl } from "@/lib/site";
 
 type Action = { label: string } & ({ href: string } | { onClick: () => void });
 
-const copy = { en: { reference: "Reference" }, ar: { reference: "المرجع" } };
+const copy = {
+  en: { reference: "Reference", status: "Check service status" },
+  ar: { reference: "المرجع", status: "تحقق من حالة الخدمة" },
+};
 
 function ActionButton({ action, primary }: { action: Action; primary?: boolean }) {
   const className = `ws-btn ${primary ? "ws-btn--primary" : "ws-btn--ghost"} !min-h-[46px] !px-5 !text-base`;
@@ -21,13 +25,15 @@ function ActionButton({ action, primary }: { action: Action; primary?: boolean }
  * shell instead of filling the screen. Never shows error messages or stacks;
  * only Next's digest, as a reference someone can quote to support.
  */
-export default function ErrorScreen({ title, body, primary, secondary, digest, inline }: {
+export default function ErrorScreen({ title, body, primary, secondary, digest, inline, showStatus }: {
   title: string;
   body: string;
   primary: Action;
   secondary?: Action;
   digest?: string;
   inline?: boolean;
+  /** Link to the hosted status page (NEXT_PUBLIC_STATUS_PAGE_URL) when one is configured. */
+  showStatus?: boolean;
 }) {
   const t = useCopy(copy);
   const content = (
@@ -39,6 +45,7 @@ export default function ErrorScreen({ title, body, primary, secondary, digest, i
         {secondary && <ActionButton action={secondary} />}
         <ActionButton action={primary} primary />
       </div>
+      {showStatus && statusPageUrl && <a href={statusPageUrl} className="text-[15px] text-[var(--on-surface-variant)] underline underline-offset-4 hover:text-[var(--on-background)]">{t.status}</a>}
       {digest && <p className="mt-4 select-all text-[13px] text-[var(--on-surface-variant)]">{t.reference}: {digest}</p>}
     </div>
   );

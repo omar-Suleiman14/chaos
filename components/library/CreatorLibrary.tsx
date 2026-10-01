@@ -19,6 +19,10 @@ import { timeAgo } from "@/lib/timeAgo";
 import { useBuilderLabels } from "@/components/forms/formThemeLabels";
 import StatusBadge from "@/components/forms/StatusBadge";
 import FormThumb from "./FormThumb";
+import dynamic from "next/dynamic";
+
+// Spreadsheet parsing loads only when someone opens that import mode.
+const SheetImport = dynamic(() => import("@/components/forms/SheetImport"));
 import { WsDialog, WsMenu, WsTabs, WsUndoToast } from "@/components/workspace/primitives";
 import { LibrarySkeleton } from "@/components/workspace/Skeletons";
 import type { UndoToast } from "@/components/workspace/primitives";
@@ -70,7 +74,7 @@ const copy = {
     counting: "Counting responses…",
     deleteForm: (n: number) => `Its ${n} response${n === 1 ? "" : "s"}, uploads and history will be deleted. This cannot be undone. Archive it from its settings instead to keep the data.`,
     cancel: "Cancel", deleteForever: "Delete permanently",
-    sourceChaos: "Chaos export", sourceText: "Pasted questions",
+    sourceChaos: "Chaos export", sourceText: "Pasted questions", sourceSheet: "Spreadsheet", modeExport: "Form export or text", modeSheet: "Questions from CSV or Excel",
     importFailed: "This file could not be read.", fileTooBig: "Files can be at most 2 MB.",
     importHelp: "Upload a Chaos, Typeform or Google Forms export, or paste questions: one per paragraph, options starting with “-”, “*” for required.",
     chooseFile: "Choose file", orPaste: "Or paste", sample: "# Event feedback\n\nHow did you hear about us? *\n- Friend\n- Social media\n- Other\n\nAny comments?",
@@ -107,7 +111,7 @@ const copy = {
     counting: "جارٍ عدّ الردود…",
     deleteForm: (n: number) => `${n === 0 ? "سيُحذف ما فيه من ملفات مرفوعة وسجل" : `سيُحذف ${pluralForm("ar", n, { one: "ردّ واحد", two: "ردّان", few: `${n} ردود`, many: `${n} ردًّا`, other: `${n} ردّ` })} مع الملفات المرفوعة والسجل`}. لا يمكن التراجع عن ذلك. أرشِفه من إعداداته بدلًا من ذلك للاحتفاظ بالبيانات.`,
     cancel: "إلغاء", deleteForever: "احذف نهائيًا",
-    sourceChaos: "تصدير Chaos", sourceText: "أسئلة ملصوقة",
+    sourceChaos: "تصدير Chaos", sourceText: "أسئلة ملصوقة", sourceSheet: "جدول بيانات", modeExport: "تصدير نموذج أو نص", modeSheet: "أسئلة من CSV أو Excel",
     importFailed: "تعذّرت قراءة هذا الملف.", fileTooBig: "الحد الأقصى لحجم الملف 2 ميغابايت.",
     importHelp: "ارفع ملف تصدير من Chaos أو Typeform أو Google Forms، أو الصق الأسئلة: سؤال في كل فقرة، والخيارات تبدأ بـ «-»، و«*» للإلزامي.",
     chooseFile: "اختر ملفًا", orPaste: "أو الصق", sample: "# ملاحظات عن الفعالية\n\nكيف عرفت عنا؟ *\n- صديق\n- وسائل التواصل\n- أخرى\n\nهل لديك تعليقات؟",
@@ -555,6 +559,7 @@ function ImportPanel({ busy, onImport }: { busy: boolean; onImport: (result: Imp
   const [fileName, setFileName] = useState("");
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState("");
+  const [mode, setMode] = useState<"export" | "sheet">("export");
 
   const preview = async (input: string) => {
     setError("");
@@ -569,9 +574,24 @@ function ImportPanel({ busy, onImport }: { busy: boolean; onImport: (result: Imp
     }
   };
 
-  const sourceNames = { chaos: t.sourceChaos, typeform: "Typeform", google: "Google Forms", text: t.sourceText } as const;
+  const sourceNames = { chaos: t.sourceChaos, typeform: "Typeform", google: "Google Forms", text: t.sourceText, sheet: t.sourceSheet } as const;
+  const modes = (
+    <div className="ws-segmented" role="group" aria-label={t.importTitle}>
+      <button type="button" aria-pressed={mode === "export"} onClick={() => setMode("export")}><FileUp size={14} aria-hidden="true" /> {t.modeExport}</button>
+      <button type="button" aria-pressed={mode === "sheet"} onClick={() => setMode("sheet")}><FileText size={14} aria-hidden="true" /> {t.modeSheet}</button>
+    </div>
+  );
+  if (mode === "sheet") {
+    return (
+      <section className="space-y-4" aria-label={t.importTitle}>
+        {modes}
+        <SheetImport busy={busy} onImport={(r, file) => onImport(r, file ? `${t.sourceSheet} (${file})` : t.sourceSheet)} />
+      </section>
+    );
+  }
   return (
     <section className="space-y-4" aria-label={t.importTitle}>
+      {modes}
       <p className="text-[13px] text-muted-foreground">
         {t.importHelp}
       </p>

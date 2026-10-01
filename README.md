@@ -91,7 +91,9 @@ and add a production `CONVEX_DEPLOY_KEY` (Convex dashboard → Settings → Depl
 
 ## Documentation
 
-- For people using Chaos: [chaos.fail/docs](https://chaos.fail/docs) (source in `lib/docs/`)
+- For people using Chaos: [chaos.fail/docs](https://chaos.fail/docs) (source in `lib/docs/`), including [file uploads](https://chaos.fail/docs/file-uploads), [unfinished responses](https://chaos.fail/docs/partial-responses), [exports](https://chaos.fail/docs/export-responses), [connections](https://chaos.fail/docs/connections) and [self-hosting](https://chaos.fail/docs/self-hosting)
+- How Chaos compares with Google Forms, Microsoft Forms, Typeform and Kahoot!, including its gaps: [chaos.fail/compare](https://chaos.fail/compare)
+- Getting help: [chaos.fail/support](https://chaos.fail/support)
 - Integration API: [`docs/integration-api-v1.md`](./docs/integration-api-v1.md)
 - Webhooks: [`docs/webhooks-v1.md`](./docs/webhooks-v1.md)
 - ChatGPT app: [`docs/chatgpt-app.md`](./docs/chatgpt-app.md)

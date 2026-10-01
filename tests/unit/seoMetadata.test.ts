@@ -16,8 +16,8 @@ vi.mock("next/server", () => ({ NextResponse: { next: () => ({ headers: new Head
 afterEach(() => { fetch.mockReset(); vi.unstubAllEnvs(); });
 
 describe("public search metadata", () => {
-  it("uses the configured origin in structured data and lists every docs page once", () => {
-    const entries = sitemap();
+  it("uses the configured origin in structured data and lists every docs page once", async () => {
+    const entries = await sitemap();
     const urls = entries.map((entry) => entry.url);
     expect(new Set(urls).size).toBe(urls.length);
     expect(urls).toContain(`${siteUrl}/`);
@@ -46,7 +46,7 @@ describe("public search metadata", () => {
       import("@/lib/seo"), import("@/app/sitemap"), import("@/app/robots"),
     ]);
     expect(data.url).toBe("https://forms.example.com");
-    expect(ownSitemap().every((entry) => new URL(entry.url).origin === "https://forms.example.com")).toBe(true);
+    expect((await ownSitemap()).every((entry) => new URL(entry.url).origin === "https://forms.example.com")).toBe(true);
     expect(ownRobots().sitemap).toBe("https://forms.example.com/sitemap.xml");
   });
 

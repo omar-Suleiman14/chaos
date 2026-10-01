@@ -49,7 +49,7 @@ describe("authorization helper guard", () => {
     // Every page folder under app/ that is not public must be listed above.
     const publicTop = new Set(["[username]", "f", "docs", "chatgpt", "pricing", "privacy", "terms", "api", "mcp", ".well-known",
       // Live game players join with a PIN and no account (host screens live under /dashboard).
-      "play",
+      "play", "compare", "support",
       // Published lessons, profiles and collections are readable without an account; writing needs sign-in.
       "learn"]);
     const appDir = resolve(process.cwd(), "app");

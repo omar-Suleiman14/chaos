@@ -392,7 +392,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
         {tab === "Design" && <DesignTab def={def} change={d.change} readOnly={!canEdit} onFullPreview={() => setPreviewing(true)} announce={announce} />}
         {tab === "Settings" && (
           <SettingsTab formId={formId} settings={editableSettings} hasAccessCode={hasAccessCode} groupName={data.groupName} status={data.status}
-            published={published} def={def} isOwner={data.role === "owner"} announce={announce} slug={data.slug} shareId={data.shareId} />
+            published={published} def={def} isOwner={data.role === "owner"} announce={announce} slug={data.slug} shareId={data.shareId} canHideBranding={data.canHideBranding} />
         )}
         {tab === "Share" && <ShareTab formId={formId} shareId={data.shareId} title={def.title} published={published} status={data.status} slug={data.slug} />}
         {tab === "Team" && <TeamTab formId={formId} role={data.role} def={def} />}

@@ -8,7 +8,7 @@ import {
 } from "@/convex/formLogic";
 import type { Choice, FieldType, FormDefinition, FormField } from "@/convex/formLogic";
 
-export type ImportSource = "chaos" | "typeform" | "google" | "text";
+export type ImportSource = "chaos" | "typeform" | "google" | "text" | "sheet";
 export interface ImportResult { source: ImportSource; definition: FormDefinition; warnings: string[] }
 
 const clip = (s: unknown, n: number = LIMITS.label) => (typeof s === "string" ? s.trim().slice(0, n) : "");
@@ -239,3 +239,156 @@ export function importForm(input: string): ImportResult {
   if (Array.isArray(d.fields)) return fromTypeform(d);
   throw new Error("Chaos recognises Chaos, Typeform and Google Forms exports. For Microsoft Forms, paste the questions as text.");
 }
+
+// ── Question spreadsheets (CSV / XLSX) ──────────────────────────────────────
+// One question per row. Columns are mapped by the creator (guessed from the
+// header row); every row is checked on its own so bad rows can be fixed or skipped.
+
+export const sheetRoles = ["ignore", "question", "type", "options", "option", "correct", "points", "explanation", "required", "description"] as const;
+export type SheetRole = (typeof sheetRoles)[number];
+
+const roleAliases: [SheetRole, RegExp][] = [
+  ["question", /^(question|question text|prompt|title|السؤال|سؤال|نص السؤال)$/],
+  ["type", /^(type|question type|kind|format|النوع|نوع السؤال)$/],
+  ["options", /^(options|choices|answers|answer options|الخيارات|الاختيارات)$/],
+  ["option", /^((option|choice|خيار) ?[a-z0-9]{1,2}|[a-f])$/],
+  ["correct", /^(correct|correct answers?|answer key|key|answer|right answer|الإجابة الصحيحة|الإجابة)$/],
+  ["points", /^(points?|score|marks?|weight|الدرجة|النقاط|الدرجات)$/],
+  ["explanation", /^(explanation|feedback|rationale|reason|الشرح|التوضيح)$/],
+  ["required", /^(required|mandatory|إلزامي|مطلوب)$/],
+  ["description", /^(description|help|hint|details|الوصف|تلميح)$/],
+];
+
+/** Roles from a header row. Without a recognised header, the first column is the question. */
+export function guessSheetRoles(header: string[]): { roles: SheetRole[]; hasHeader: boolean } {
+  const guessed = header.map((h) => {
+    const key = h.trim().toLowerCase().replace(/[_*:]+/g, " ").replace(/\s+/g, " ").trim();
+    return roleAliases.find(([, re]) => re.test(key))?.[0] ?? "ignore";
+  });
+  const hasHeader = guessed.some((r) => r !== "ignore");
+  // One column per role except spread options; later duplicates are ignored.
+  const seen = new Set<SheetRole>();
+  const roles = guessed.map((r): SheetRole => {
+    if (r === "option" || r === "ignore") return r;
+    if (seen.has(r)) return "ignore";
+    seen.add(r);
+    return r;
+  });
+  if (!roles.includes("question") && roles.length) roles[Math.max(0, roles.indexOf("ignore"))] = "question";
+  return { roles, hasHeader };
+}
+
+type SheetKind = FieldType | "true_false" | "yes_no";
+const typeAliases: Record<string, SheetKind> = {
+  mcq: "choice", choice: "choice", single: "choice", singlechoice: "choice", multiplechoice: "choice", radio: "choice", "اختيارمنمتعدد": "choice",
+  checkbox: "multi_choice", checkboxes: "multi_choice", multi: "multi_choice", multiselect: "multi_choice", multichoice: "multi_choice", multipleanswers: "multi_choice", multipleselect: "multi_choice",
+  dropdown: "dropdown", select: "dropdown",
+  truefalse: "true_false", tf: "true_false", boolean: "true_false", "صحوخطأ": "true_false", "صحأوخطأ": "true_false", yesno: "yes_no",
+  text: "text", short: "text", shorttext: "text", shortanswer: "text", "نص": "text", "نصقصير": "text",
+  long: "textarea", longtext: "textarea", longanswer: "textarea", paragraph: "textarea", essay: "textarea", written: "textarea", textarea: "textarea", "مقالي": "textarea", "نصطويل": "textarea",
+  number: "number", numeric: "number", email: "email", phone: "phone", url: "url", website: "url", date: "date", time: "time",
+  rating: "rating", scale: "scale", linearscale: "scale",
+};
+const choiceKinds: FieldType[] = ["choice", "dropdown", "multi_choice", "ranking"];
+const gradable: FieldType[] = ["choice", "dropdown", "multi_choice"];
+const truthy = /^(y|yes|true|1|required|x|✓|نعم|صح)$/i;
+
+export interface SheetRow {
+  /** 1-based row number in the file, as people see it in their spreadsheet. */
+  line: number;
+  cells: string[];
+  /** Null when the row has errors. */
+  field: FormField | null;
+  errors: string[];
+  warnings: string[];
+}
+
+const splitList = (s: string) => s.split(/\s*(?:\||;|\r?\n)\s*/).map((x) => x.trim()).filter(Boolean);
+
+/** Converts one row. Errors mean the row cannot be imported as is; warnings only inform. */
+export function sheetRowToField(cells: string[], roles: SheetRole[], line: number): SheetRow {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const cell = (role: SheetRole) => { const i = roles.indexOf(role); return i >= 0 ? (cells[i] ?? "").trim() : ""; };
+  const label = cell("question");
+  const spread = roles.flatMap((r, i) => (r === "option" && cells[i]?.trim() ? [cells[i].trim()] : []));
+  let options = [...splitList(cell("options")), ...spread];
+  const correctRaw = cell("correct");
+  const rawType = cell("type");
+  let kind: SheetKind | undefined = rawType ? typeAliases[rawType.toLowerCase().replace(/[\s_\-/]+/g, "")] : undefined;
+  if (rawType && !kind) errors.push(`Unknown type “${rawType.slice(0, 40)}”. Use choice, checkboxes, dropdown, true_false, text, paragraph, number, email, date, rating or scale.`);
+  if (!rawType) kind = options.length ? (splitList(correctRaw).length > 1 ? "multi_choice" : "choice") : "text";
+  if (kind === "true_false" && options.length !== 2) options = ["True", "False"];
+  if (kind === "yes_no" && options.length !== 2) options = ["Yes", "No"];
+  const type: FieldType = kind === "true_false" || kind === "yes_no" ? "choice" : (kind ?? "text");
+
+  if (!label) errors.push("The question text is empty.");
+  if (label.length > LIMITS.label) errors.push(`The question is longer than ${LIMITS.label} characters.`);
+  if (choiceKinds.includes(type)) {
+    const minimum = type === "multi_choice" ? 1 : 2;
+    if (options.length < minimum) errors.push(`Add at least ${minimum} options (separate them with |).`);
+    if (options.length > LIMITS.options) errors.push(`Use at most ${LIMITS.options} options.`);
+    if (options.some((o) => o.length > LIMITS.label)) errors.push(`An option is longer than ${LIMITS.label} characters.`);
+    if (new Set(options.map((o) => o.toLowerCase())).size !== options.length) warnings.push("Two options have the same text.");
+  } else if (options.length) warnings.push("Options were ignored: this question type does not use them.");
+
+  const field: FormField = { ...blankField(type), label: label.slice(0, LIMITS.label), required: truthy.test(cell("required")) };
+  const description = cell("description");
+  if (description) field.description = description.slice(0, LIMITS.description);
+  if (choiceKinds.includes(type)) field.options = options.slice(0, LIMITS.options).map((o) => ({ id: newId("o"), label: o.slice(0, LIMITS.label) }));
+
+  const pointsRaw = cell("points");
+  const explanation = cell("explanation");
+  if (correctRaw) {
+    if (!gradable.includes(type)) warnings.push("The correct answer was ignored: only choice questions are graded.");
+    else {
+      const opts = field.options ?? [];
+      let tokens = splitList(correctRaw);
+      // "A, C" style keys: commas split only when the value is not itself an option.
+      if (tokens.length === 1 && tokens[0].includes(",") && !opts.some((o) => o.label.toLowerCase() === tokens[0].toLowerCase())) tokens = tokens[0].split(",").map((x) => x.trim()).filter(Boolean);
+      const ids: string[] = [];
+      for (const token of tokens) {
+        const lower = token.toLowerCase();
+        let match = opts.find((o) => o.label.toLowerCase() === lower);
+        if (!match && /^[a-z]$/i.test(token)) match = opts[lower.charCodeAt(0) - 97];
+        if (!match && /^\d+$/.test(token)) match = opts[Number(token) - 1];
+        if (!match && (kind === "true_false" || kind === "yes_no")) match = /^(t|true|y|yes|صح|نعم)$/i.test(token) ? opts[0] : /^(f|false|n|no|خطأ|لا)$/i.test(token) ? opts[1] : undefined;
+        if (!match) errors.push(`The correct answer “${token.slice(0, 60)}” is not one of the options.`);
+        else if (!ids.includes(match.id)) ids.push(match.id);
+      }
+      if (type !== "multi_choice" && ids.length > 1) errors.push("This question takes one correct answer; use checkboxes for several.");
+      const points = pointsRaw ? Number(pointsRaw.replace(",", ".")) : 1;
+      if (!Number.isFinite(points) || points < 0 || points > 1000) errors.push("Points must be a number from 0 to 1000.");
+      if (explanation.length > 2000) errors.push("The explanation is longer than 2000 characters.");
+      if (ids.length) field.quiz = { correctOptionIds: ids, points: Number.isFinite(points) ? points : 1, ...(explanation ? { explanation } : {}) };
+    }
+  } else if (pointsRaw || explanation) warnings.push("Points and explanation need a correct answer; they were ignored.");
+  return { line, cells, field: errors.length ? null : field, errors, warnings };
+}
+
+/** Every non-empty row after the header, checked. */
+export function sheetQuestions(rows: string[][], roles: SheetRole[], hasHeader: boolean): SheetRow[] {
+  const out: SheetRow[] = [];
+  rows.forEach((cells, i) => {
+    if ((hasHeader && i === 0) || !cells.some((c) => c?.trim())) return;
+    out.push(sheetRowToField(cells, roles, i + 1));
+  });
+  return out;
+}
+
+/** A draft from the rows the creator kept. Any graded row turns quiz mode on. */
+export function sheetDefinition(rows: SheetRow[], title: string): ImportResult {
+  const result = finish("sheet", title, "", rows.flatMap((r) => (r.field ? [r.field] : [])), []);
+  if (result.definition.fields.some((f) => f.quiz)) result.definition.quiz = { enabled: true };
+  return result;
+}
+
+/** Example file offered as a download; its headers are what guessSheetRoles recognises. */
+export const SHEET_TEMPLATE: string[][] = [
+  ["Question", "Type", "Options", "Correct answer", "Points", "Explanation", "Required"],
+  ["What is the capital of France?", "choice", "Paris | London | Rome", "Paris", "1", "Paris has been the capital since 987.", "yes"],
+  ["Which numbers are prime?", "checkboxes", "2 | 4 | 5 | 9", "2 | 5", "2", "", "yes"],
+  ["The Sun is a star.", "true_false", "", "True", "1", "", ""],
+  ["Which planet is largest?", "dropdown", "Earth | Jupiter | Mars", "B", "1", "", ""],
+  ["Explain your reasoning.", "paragraph", "", "", "", "", "no"],
+];

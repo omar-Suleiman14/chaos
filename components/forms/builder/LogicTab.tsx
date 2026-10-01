@@ -8,6 +8,7 @@ import type { AnswerValue, Answers, FormDefinition, Language } from "@/convex/fo
 import { useCopy, useLocale } from "@/lib/i18n";
 import { localizeMessage } from "@/lib/messages";
 import RuleEditor from "./RuleEditor";
+import DocHint from "@/components/forms/DocHint";
 import { Select } from "@/components/workspace/Select";
 
 const copy = {
@@ -19,6 +20,7 @@ const copy = {
     standardThanks: "Respondents see a standard thank-you message.", ending: (n: number) => `Ending ${n}`, title: "Title", message: "Message",
     endingTitle: (n: number) => `Ending ${n} title`, endingMessage: (n: number) => `Ending ${n} message`, showEndingIf: "Show this ending if",
     moveUp: "Move up", remove: "Remove", debugger: "Logic debugger", test: "Test your logic", testLanguage: "Test language", reset: "Reset",
+    pipingExample: "E.g. “Thanks, {{name}}!” when a question’s id is name.",
     testHelp: "Answer as a respondent would. Nothing is saved.", checkEnding: "Check ending", score: "Score", endingLabel: "Ending", soFar: " so far", standardShort: "Standard thank-you",
   },
   ar: {
@@ -29,6 +31,7 @@ const copy = {
     standardThanks: "يرى المجيبون رسالة شكر افتراضية.", ending: (n: number) => `شاشة النهاية ${n}`, title: "العنوان", message: "الرسالة",
     endingTitle: (n: number) => `عنوان شاشة النهاية ${n}`, endingMessage: (n: number) => `رسالة شاشة النهاية ${n}`, showEndingIf: "أظهر شاشة النهاية هذه إذا",
     moveUp: "انقل لأعلى", remove: "احذف", debugger: "أداة فحص المنطق", test: "اختبر المنطق", testLanguage: "لغة الاختبار", reset: "إعادة ضبط",
+    pipingExample: "مثال: «شكرًا يا {{name}}!» إذا كان رمز السؤال name.",
     testHelp: "أجب كما يفعل المجيب. لا يُحفظ شيء.", checkEnding: "افحص شاشة النهاية", score: "الدرجة", endingLabel: "شاشة النهاية", soFar: " حتى الآن", standardShort: "رسالة الشكر الافتراضية",
   },
 };
@@ -60,7 +63,7 @@ export default function LogicTab({ def, change, readOnly, errors }: {
       <div className="space-y-6">
         <section className="chaos-card bg-card p-5 space-y-3" aria-label={t.overview}>
           <h2 className="chaos-heading text-sm">{t.branching}</h2>
-          <p className="text-xs text-muted-foreground">{t.branchingHelp}</p>
+          <DocHint slug="logic">{t.branchingHelp}</DocHint>
           {logicErrors.length > 0 && (
             <ul className="text-sm text-destructive list-disc ps-5" role="alert">{logicErrors.map((e) => <li key={e}>{localizeMessage(locale, e)}</li>)}</ul>
           )}
@@ -85,7 +88,7 @@ export default function LogicTab({ def, change, readOnly, errors }: {
               </button>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">{t.endingsHelpBefore}<bdi dir="ltr">{"{{score}}"}</bdi>{t.endingsHelpMid}<bdi dir="ltr">{"{{question-id}}"}</bdi>{t.endingsHelpAfter}</p>
+          <DocHint slug="endings">{t.endingsHelpBefore}<bdi dir="ltr">{"{{score}}"}</bdi>{t.endingsHelpMid}<bdi dir="ltr">{"{{question-id}}"}</bdi>{t.endingsHelpAfter} {t.pipingExample}</DocHint>
           {def.endings.length === 0 && <p className="text-sm text-muted-foreground">{t.standardThanks}</p>}
           {def.endings.map((e, i) => (
             <fieldset key={e.id} disabled={readOnly} className="border-2 border-foreground/10 p-3 space-y-2">

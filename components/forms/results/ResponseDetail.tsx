@@ -78,6 +78,8 @@ export function ResponseDetail({ responseId, formId, tags, position, onPrevious,
     [t.versionLabel, String(r.version)],
     ...(r.respondent ? [[t.respondent, r.respondent] as [string, string]] : []),
     ...(r.ending ? [[t.ending, r.ending] as [string, string]] : []),
+    // Hidden fields from the link, e.g. source = instagram.
+    ...Object.entries(r.hidden ?? {}).map(([k, v]) => [k, v] as [string, string]),
   ];
 
   return (
@@ -123,7 +125,7 @@ export function ResponseDetail({ responseId, formId, tags, position, onPrevious,
       <header className="ws-detail__head">
         <h2 id={`detail-${r._id}`} className="ws-detail__title">{r.status === "partial" ? t.unfinishedResponse : t.responseLabel} · {when(r.submittedAt)}</h2>
         <dl className="ws-detail__meta">
-          {metaRows.map(([k, v]) => <div key={k}><dt>{k}</dt><dd>{v}</dd></div>)}
+          {metaRows.map(([k, v], i) => <div key={`${i}-${k}`}><dt>{k}</dt><dd>{v}</dd></div>)}
         </dl>
         {(r.tags.length > 0 || r.quizScore !== null) && (
           <div className="flex flex-wrap gap-1.5">

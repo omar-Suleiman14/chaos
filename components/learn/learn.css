@@ -40,7 +40,7 @@
 .lx-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 14px; }
 .lx-card { position: relative; display: grid; gap: 8px; align-content: start; padding: 16px; border: 1px solid var(--ws-line); border-radius: 12px; background: var(--ws-card); color: inherit; text-decoration: none; min-width: 0; transition: border-color .15s var(--ws-ease), box-shadow .15s var(--ws-ease); }
 .lx-card:hover { border-color: var(--ws-line-strong); box-shadow: var(--ws-shadow-sm); }
-.lx-card h3 { font-size: 15px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
+.lx-card :is(h2, h3) { font-size: 15px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
 .lx-card p { font-size: 13px; line-height: 1.5; color: var(--ws-text-soft); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .lx-card__cover { margin: -16px -16px 4px; height: 96px; border-radius: 11px 11px 0 0; background: var(--ws-canvas-subtle) center / cover no-repeat; border-bottom: 1px solid var(--ws-line); }
 .lx-card__meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 12px; color: var(--on-surface-variant); }
@@ -61,7 +61,7 @@
 .lx-row__icon[data-kind="flashcards"] { background: color-mix(in srgb, var(--ws-success) 14%, transparent); color: var(--ws-success); }
 
 .lx-empty { display: grid; justify-items: center; gap: 10px; text-align: center; padding: 36px 16px; border: 1px dashed var(--ws-line-strong); border-radius: 12px; color: var(--on-surface-variant); }
-.lx-empty h3 { color: var(--on-surface); font-size: 15px; font-weight: 600; }
+.lx-empty :is(h2, h3) { color: var(--on-surface); font-size: 15px; font-weight: 600; }
 .lx-empty p { font-size: 13px; max-width: 420px; line-height: 1.55; }
 .lx-empty svg { opacity: .7; }
 
@@ -408,4 +408,9 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 @media (pointer: coarse) {
   .lx-reader-top .ws-btn, .lx-reader-top .ws-icon-button, .lx-block__mark, .lx-chip { min-height: 40px; }
   .lx-block__handle { opacity: 1; }
+}
+
+/* Toolbar labels collapse to icons on phones but stay the button's accessible name. */
+@media (max-width: 640px) {
+  .lx-phone-label { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
 }

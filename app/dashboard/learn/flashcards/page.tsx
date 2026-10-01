@@ -36,12 +36,12 @@ export default function FlashcardsPage() {
         <div><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></div>
         <div className="lx-actions"><button type="button" className="ws-btn ws-btn--primary" onClick={create}><Plus size={16} aria-hidden />{t.create}</button></div>
       </header>
-      {!sets.length ? <EmptyState icon={Layers} title={t.empty} body={t.emptyBody}><button type="button" className="ws-btn" onClick={create}><Plus size={16} aria-hidden />{t.create}</button></EmptyState> : (
+      {!sets.length ? <EmptyState level={2} icon={Layers} title={t.empty} body={t.emptyBody}><button type="button" className="ws-btn" onClick={create}><Plus size={16} aria-hidden />{t.create}</button></EmptyState> : (
         <div className="lx-grid">
           {sets.map((s) => (
             <article key={s.id} className="lx-card">
               <span className="lx-card__meta"><Layers size={13} aria-hidden />{t.cards(s.cards.length)} · {timeAgo(locale, s.updatedAt)}{s.forkedFrom ? ` · ${t.copied}` : ""}</span>
-              <h3><Link className="lx-card__link" href={`/dashboard/learn/flashcards/${s.id}`}>{s.title || t.untitled}</Link></h3>
+              <h2><Link className="lx-card__link" href={`/dashboard/learn/flashcards/${s.id}`}>{s.title || t.untitled}</Link></h2>
               {s.description && <p>{s.description}</p>}
             </article>
           ))}
