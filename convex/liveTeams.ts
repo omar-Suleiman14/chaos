@@ -86,16 +86,18 @@ export const standings = query({
   args: { gameId: v.id("liveGames"), token: v.optional(v.string()) },
   handler: async (ctx, args) => {
     const game = await gameFor(ctx, args.gameId);
-    if (args.token !== undefined) await playerFor(ctx, game._id, args.token);
+    const host = args.token === undefined;
+    if (!host) await playerFor(ctx, game._id, args.token!);
     else await hostFor(ctx, game._id);
     const teams = await ctx.db.query("liveTeams").withIndex("by_gameId", q => q.eq("gameId", game._id)).take(21);
     const members = await ctx.db.query("liveTeamMembers").withIndex("by_gameId_and_playerId", q => q.eq("gameId", game._id)).take(501);
     if (teams.length > 20 || members.length > 500) throw new Error("LIVE_TEAM_LIMIT");
-    const totals = new Map(teams.map(t => [t._id, { teamId: t._id, name: t.name, score: 0, members: 0 }]));
+    // The host also sees who is on each team; players see counts only.
+    const totals = new Map(teams.map(t => [t._id, { teamId: t._id, name: t.name, score: 0, members: 0, players: [] as string[] }]));
     for (const member of members) {
       const p = await ctx.db.get("livePlayers", member.playerId);
       const total = totals.get(member.teamId);
-      if (total && p && !p.kicked && p.gameId === game._id) { total.score += p.score; total.members++; }
+      if (total && p && !p.kicked && p.gameId === game._id) { total.score += p.score; total.members++; if (host) total.players.push(p.nickname); }
     }
     const rows = [...totals.values()].sort((a, b) => b.score - a.score || (a.name < b.name ? -1 : a.name > b.name ? 1 : a.teamId < b.teamId ? -1 : 1));
     let rank = 0;
