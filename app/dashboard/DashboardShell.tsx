@@ -393,9 +393,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 <Shield size={18} aria-hidden="true" /> <span>{t.admin}</span>
               </IntentLink>
             )}
-            <IntentLink href="/docs" className="ws-nav-item" title={rail ? t.docs : undefined}>
+            {/* Docs open in a new tab so work in progress stays put. */}
+            <a href="/docs" target="_blank" rel="noopener" className="ws-nav-item" title={rail ? t.docs : undefined}>
               <BookOpen size={18} aria-hidden="true" /> <span>{t.docs}</span>
-            </IntentLink>
+            </a>
             {/* Phones: Clerk's account popover opens outside the drawer, which the drawer treats as a
                 click away and hides. A plain row signs out without it. */}
             {mobile ? (

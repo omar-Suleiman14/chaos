@@ -41,11 +41,14 @@ beforeEach(() => {
 describe("sidebar sections", () => {
   it("prefetches only an intended destination and preserves form focus handlers and link semantics", () => {
     const { container } = render(<DashboardLayout><p>Page</p></DashboardLayout>);
-    const links = Array.from(container.querySelectorAll("a.ws-nav-item"));
+    // Docs opens in a new tab, so it is a plain link outside the prefetch rules.
+    const newTab = screen.getByRole("link", { name: "Docs" });
+    expect(newTab).toHaveAttribute("target", "_blank");
+    const links = Array.from(container.querySelectorAll("a.ws-nav-item")).filter((link) => link !== newTab);
     expect(links.length).toBeGreaterThan(2);
     for (const link of links) expect(link).toHaveAttribute("data-prefetch", "false");
     expect(intent.warmForm).not.toHaveBeenCalled();
-    const docs = screen.getByRole("link", { name: "Docs" });
+    const docs = screen.getByRole("link", { name: "Archive" });
     fireEvent.mouseEnter(docs);
     expect(docs).toHaveAttribute("data-prefetch", "auto");
     const form = within(screen.getByRole("navigation", { name: "Recent" })).getByRole("link", { name: "Event registration" });

@@ -549,3 +549,12 @@ Outcome: expose existing owner course helpers through trusted MCP transport; dra
 - [x] Tabs take the full row on phones so Games is reachable.
 - [x] Unit 691/691, tsc clean, lint 0 errors.
 - [ ] Not checked in a browser.
+## Card QR, eyes, profile card, language, docs tab (2026-10-01, late night)
+- [x] Card back QR drawn straight on the art (no white tile), light modules on Midnight, Chaos mark in a cleared centre (ECC level H).
+- [x] Front avatar now takes the card theme's hue, like the back.
+- [x] Avatar eyes follow the pointer: card eyes (tagged .mc-eyes) via a small pointer hook; MemberAvatar via blobatar useGaze. Reduced motion respected on the card.
+- [x] Profile card was invisible (percentage width collapsed in a content-sized grid track); stage now 340px with max-width, profile shows a smaller 240px card.
+- [x] Language (English/العربية) added to Profile → Appearance and to Ctrl+K.
+- [x] Docs opens in a new tab from the sidebar, Settings and Ctrl+K.
+- [x] Unit 691/691 (test setup gains matchMedia/ResizeObserver stand-ins for jsdom), tsc clean, lint 0 errors.
+- [ ] QR scan with the centre logo not tested on a phone; not checked in a browser.

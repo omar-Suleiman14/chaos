@@ -13,7 +13,8 @@ import { useTheme } from "@/components/ThemeProvider";
 import { ThemeModeSwitch } from "@/components/ThemeModeSwitch";
 import { WsSwitch } from "@/components/workspace/primitives";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
-import { Row, Section, useScrollToHash } from "@/components/workspace/settingsUi";
+import { Row, Section, Segmented, useScrollToHash } from "@/components/workspace/settingsUi";
+import type { Locale } from "@/lib/locale";
 import MemberCardView from "@/components/card/MemberCardView";
 import UsernameEditor from "@/components/card/UsernameEditor";
 import "@/components/card/card.css";
@@ -31,6 +32,7 @@ const copy = {
     appearance: "Appearance", appearanceHelp: "System follows your device.",
     glass: "Glass", glassHelp: "How see-through menus and popups are. 100% is solid.", glassLabel: "Menu transparency", opaque: (n: number) => `${n}% opaque`, reset: "Reset",
     motion: "Reduce motion", motionHelp: "Fewer animations across the workspace.",
+    language: "Language", languageHelp: "The language of Chaos menus and pages on this device.",
   },
   ar: {
     loading: "جارٍ تحميل ملفك…", missing: "يظهر ملفك بعد إكمال إعداد حسابك. حدّث الصفحة بعد قليل.",
@@ -42,12 +44,13 @@ const copy = {
     appearance: "الوضع", appearanceHelp: "وضع النظام يتبع جهازك.",
     glass: "الزجاج", glassHelp: "مدى شفافية القوائم والنوافذ المنبثقة. 100% تعني معتمة تمامًا.", glassLabel: "شفافية القوائم", opaque: (n: number) => `معتمة بنسبة ${n}%`, reset: "إعادة الضبط",
     motion: "تقليل الحركة", motionHelp: "رسوم متحركة أقل في مساحة العمل.",
+    language: "اللغة", languageHelp: "لغة قوائم Chaos وصفحاته على هذا الجهاز.",
   },
 };
 
 export default function ProfilePage() {
   const t = useCopy(copy);
-  const { locale } = useLocale();
+  const { locale, setLocale } = useLocale();
   const { user } = useUser();
   const clerk = useClerk();
   const { mode } = useTheme();
@@ -92,6 +95,9 @@ export default function ProfilePage() {
       <Section id="appearance" icon={SunMoon} title={t.appearanceSection} description={t.appearanceAbout}>
         <Row id="settings-appearance" label={t.appearance} help={t.appearanceHelp} isDefault={mode === "system"}>
           <ThemeModeSwitch showLabels />
+        </Row>
+        <Row id="settings-language" label={t.language} help={t.languageHelp}>
+          <Segmented<Locale> label={t.language} value={locale} onChange={setLocale} options={[{ id: "en", label: "English" }, { id: "ar", label: "العربية" }]} />
         </Row>
         <Row id="settings-glass" label={t.glass} help={t.glassHelp} isDefault={p.popupOpacity === defaultPreferences.popupOpacity}>
           <div className="ws-slider">

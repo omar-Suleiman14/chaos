@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Download, RefreshCw, Repeat2, Send } from "lucide-react";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { CARD_THEMES, memberCardPng, memberCardSvg, type MemberCardData } from "@/lib/memberCard";
@@ -28,6 +28,8 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
   const [flipped, setFlipped] = useState(false);
   const [status, setStatus] = useState("");
   const tilt = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLDivElement>(null);
+  useEyesFollowPointer(root);
   // Tilt uses CSS variables, so pointer moves never re-render the card.
   const front = memberCardSvg(card, "front");
   const back = memberCardSvg(card, "back");
@@ -62,7 +64,7 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
   const leave = () => { const el = tilt.current; if (el) { el.style.setProperty("--rx", "0deg"); el.style.setProperty("--ry", "0deg"); } };
 
   return (
-    <div className="mc">
+    <div className="mc" ref={root}>
       <div className={framed ? "mc-frame" : undefined}>
         {framed && <span className="mc-frame__label">{t.label}</span>}
         <div className="mc-stage" ref={tilt} onPointerMove={move} onPointerLeave={leave}>
@@ -85,4 +87,25 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
       <p className="mc-status" role="status">{status}</p>
     </div>
   );
+}
+
+/** The avatar's eyes (.mc-eyes, tagged in lib/memberCard.ts) glance toward the pointer, a few units at most. */
+function useEyesFollowPointer(root: React.RefObject<HTMLElement | null>) {
+  useEffect(() => {
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    let frame = 0, x = 0, y = 0;
+    const aim = () => {
+      frame = 0;
+      root.current?.querySelectorAll<SVGGElement>(".mc-eyes").forEach((eyes) => {
+        const box = (eyes.ownerSVGElement ?? eyes).getBoundingClientRect();
+        if (!box.width) return;
+        const dx = Math.max(-1, Math.min(1, (x - (box.left + box.width / 2)) / 260));
+        const dy = Math.max(-1, Math.min(1, (y - (box.top + box.height / 2)) / 260));
+        eyes.style.transform = `translate(${(dx * 4).toFixed(2)}px, ${(dy * 3).toFixed(2)}px)`;
+      });
+    };
+    const move = (e: PointerEvent) => { x = e.clientX; y = e.clientY; if (!frame) frame = requestAnimationFrame(aim); };
+    window.addEventListener("pointermove", move, { passive: true });
+    return () => { window.removeEventListener("pointermove", move); cancelAnimationFrame(frame); };
+  }, [root]);
 }

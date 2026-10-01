@@ -51,18 +51,30 @@ const W = 340, H = 500;
 const SANS = "Inter, 'Segoe UI', system-ui, -apple-system, sans-serif";
 const MONO = "'JetBrains Mono', ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace";
 
-/** Nested blobatar SVG positioned inside the card. */
+/** Nested blobatar SVG positioned inside the card. The second group is the eyes, tagged so the view can aim them at the pointer. */
 function blob(seed: string, x: number, y: number, size: number, hue?: number): string {
   const svg = blobatar(seed, hue === undefined ? {} : { hue });
-  return svg.replace(/^<svg[^>]*>/, `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 100 100">`);
+  let groups = 0;
+  return svg.replace(/^<svg[^>]*>/, `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 100 100" overflow="visible">`)
+    .replace(/<g /g, (g) => (++groups === 2 ? '<g class="mc-eyes" ' : g));
 }
 
-function qr(url: string, x: number, y: number, size: number, ink: string, paper: string): string {
+/**
+ * QR modules drawn straight onto the card art (no white backing) with the Chaos mark in the middle.
+ * The code uses error-correction level H, so the small cleared centre stays scannable.
+ */
+function qr(url: string, x: number, y: number, size: number, ink: string, logoGradient: string): string {
   const { size: n, dark } = qrMatrix(url);
   const total = n + QR_QUIET_ZONE * 2;
+  const hole = Math.round(n * 0.22) | 1;
+  const from = (n - hole) / 2, to = from + hole;
   let d = "";
-  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (dark(c, r)) d += `M${c + QR_QUIET_ZONE} ${r + QR_QUIET_ZONE}h1v1h-1z`;
-  return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 ${total} ${total}" shape-rendering="crispEdges"><rect width="${total}" height="${total}" rx="3" fill="${paper}"/><path d="${d}" fill="${ink}"/></svg>`;
+  for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) {
+    if (r >= from - 1 && r < to + 1 && c >= from - 1 && c < to + 1) continue;
+    if (dark(c, r)) d += `M${c + QR_QUIET_ZONE} ${r + QR_QUIET_ZONE}h1v1h-1z`;
+  }
+  const lx = from + QR_QUIET_ZONE;
+  return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 ${total} ${total}"><path d="${d}" fill="${ink}" shape-rendering="crispEdges"/><rect x="${lx}" y="${lx}" width="${hole}" height="${hole}" rx="${hole * 0.26}" fill="url(#${logoGradient})" stroke="#fff" stroke-opacity=".85" stroke-width=".35"/></svg>`;
 }
 
 function fitName(name: string): { text: string; size: number } {
@@ -89,6 +101,7 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
     <radialGradient id="@@g2" cx="80%" cy="90%" r="90%"><stop offset="0" stop-color="${c}"/><stop offset=".6" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></radialGradient>
     <filter id="@@grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .09 0"/></filter>
     <clipPath id="@@art"><rect x="22" y="22" width="${W - 44}" height="270" rx="10"/></clipPath>
+    <linearGradient id="@@logo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fca535"/><stop offset="1" stop-color="#e9482b"/></linearGradient>
     <linearGradient id="@@sheen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".0"/><stop offset=".5" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
   </defs>`;
   const frame = `<rect width="${W}" height="${H}" rx="18" fill="${theme.paper}"/>`;
@@ -103,7 +116,7 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
   if (side === "back") {
     return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${defs}${frame}
       <g clip-path="url(#@@art)"><rect x="22" y="22" width="${W - 44}" height="270" fill="url(#@@g2)"/><rect x="22" y="22" width="${W - 44}" height="270" filter="url(#@@grain)"/></g>
-      ${qr(data.url, W / 2 - 92, 65, 184, "#111827", "#ffffff")}
+      ${qr(data.url, W / 2 - 92, 65, 184, dark ? "#ffffff" : "#111827", "@@logo")}
       <text x="${W / 2}" y="330" text-anchor="middle" font-family="${SANS}" font-size="16" font-weight="800" fill="${theme.ink}">${ar ? "امسح لترى البطاقة" : "Scan to see this card"}</text>
       <text x="${W / 2}" y="352" text-anchor="middle" font-family="${MONO}" font-size="11" fill="${muted}">${esc(data.url.replace(/^https?:\/\//, ""))}</text>
       ${blob(avatarSeed(data.username), W / 2 - 26, 372, 52, theme.hue)}
@@ -120,7 +133,7 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
       <rect x="22" y="22" width="${W - 44}" height="270" fill="url(#@@sheen)"/>
     </g>
     <circle cx="${W / 2}" cy="${157}" r="72" fill="${theme.paper}" opacity=".22"/>
-    ${blob(avatarSeed(data.username), W / 2 - 66, 91, 132)}
+    ${blob(avatarSeed(data.username), W / 2 - 66, 91, 132, theme.hue)}
     <text x="22" y="${H - 156}" font-family="${SANS}" font-size="${name.size}" font-weight="800" letter-spacing="-.5" fill="${theme.accent}">${esc(name.text)}</text>
     <text x="22" y="${H - 132}" font-family="${MONO}" font-size="12.5" fill="${theme.ink}">${esc(memberTitle(data.seed, data.locale))}</text>
     <text x="22" y="${H - 110}" font-family="${MONO}" font-size="11" fill="${muted}">@${esc(data.username)}</text>

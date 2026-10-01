@@ -110,7 +110,7 @@ export default function CommandPalette({ open, onClose, items, onNew }: { open: 
       make("connections", t.connections, "max chatgpt apps integrations mcp", <Link2 size={16} />, go("/dashboard/connections")),
       make("settings", t.settings, "preferences options account appearance", <Settings size={16} />, go("/dashboard/settings")),
       make("shortcuts", t.shortcuts, "keys hotkeys ctrl", <Keyboard size={16} />, go("/dashboard/settings#settings-shortcuts")),
-      make("docs", t.docs, "help guide how to learn documentation support", <BookOpen size={16} />, go("/docs")),
+      make("docs", t.docs, "help guide how to learn documentation support", <BookOpen size={16} />, () => { onClose(); window.open("/docs", "_blank", "noopener"); }),
       make("theme", t.darkMode, "light theme night appearance", <Moon size={16} />, () => { onClose(); toggleTheme(); }),
     ];
   }, [onClose, onNew, router, toggleTheme, locale, t]);
