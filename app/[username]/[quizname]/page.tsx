@@ -32,8 +32,8 @@ type AnswerFeedback = Partial<FunctionReturnType<typeof api.quizFunctions.gradeA
 type FinalResults = Partial<FunctionReturnType<typeof api.quizFunctions.completeQuizSession>>;
 
 const notFoundCopy = {
-  en: { title: "Quiz not found", body: "This quiz doesn't exist, or its owner made it private.", home: "Go home" },
-  ar: { title: "الاختبار غير موجود", body: "هذا الاختبار غير موجود، أو جعله صاحبه خاصًا.", home: "الرئيسية" },
+  en: { title: "Nothing here", body: "This page doesn't exist or isn't available to you.", home: "Go home" },
+  ar: { title: "لا شيء هنا", body: "هذه الصفحة غير موجودة أو غير متاحة لك.", home: "الرئيسية" },
 };
 
 function errorMessage(error: unknown, fallback: string) {

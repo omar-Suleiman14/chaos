@@ -2,13 +2,13 @@ import { pageMetadata } from "@/lib/seo";
 import LegalPage from "@/components/site/LegalPage";
 import { supportEmail } from "@/lib/site";
 
-export const metadata = pageMetadata("Privacy policy", "How Chaos handles accounts, form responses, analytics and your choices about data.", "/privacy");
+export const metadata = pageMetadata("Privacy policy", "How Chaos handles accounts, responses, lessons, learning progress, connections and your choices about data.", "/privacy");
 
 export default function PrivacyPage() {
   return (
-    <LegalPage title="Privacy policy" updated="September 29, 2026">
+    <LegalPage title="Privacy policy" updated="October 2, 2026" draft>
       <p>
-        Chaos lets people create forms, surveys and quizzes (&ldquo;creators&rdquo;) and lets anyone answer them (&ldquo;respondents&rdquo;).
+        Chaos lets people create forms, quizzes, lessons, courses and flashcards (&ldquo;creators&rdquo;), lets anyone answer forms and quizzes (&ldquo;respondents&rdquo;), and lets people read and study published material (&ldquo;learners&rdquo;).
         This policy explains what we collect, why, and the choices you have. If something here is unclear, email{" "}
         <a href={`mailto:${supportEmail}`}>{supportEmail}</a>.
       </p>
@@ -16,7 +16,7 @@ export default function PrivacyPage() {
       <h2>The short version</h2>
       <ul>
         <li>We don&rsquo;t sell your data and we don&rsquo;t show ads.</li>
-        <li>We don&rsquo;t use your forms or answers to train AI models, and Chaos has no AI features.</li>
+        <li>We don&rsquo;t use your content or answers to train AI models, and Chaos runs no AI itself. If you connect ChatGPT or Claude, they see only what you ask them to work with (see below).</li>
         <li>Answers belong to the creator of the form. The creator decides how long they are kept and can delete them at any time.</li>
         <li>You don&rsquo;t need an account to answer a form unless its creator asks you to sign in.</li>
       </ul>
@@ -25,7 +25,8 @@ export default function PrivacyPage() {
       <h3>If you create an account</h3>
       <ul>
         <li><strong>Account details</strong>: your name, email address, username and profile picture, handled by our sign-in provider, Clerk.</li>
-        <li><strong>Your content</strong>: the forms, quizzes, themes, templates, comments and settings you create, and who you share them with.</li>
+        <li><strong>Your content</strong>: the forms, quizzes, lessons, courses, flashcards, themes, templates, comments and settings you create, the source files you upload to lessons, and who you share them with.</li>
+        <li><strong>Copies</strong>: when you copy a public lesson or quiz, we record where it came from so the original author stays credited.</li>
         <li><strong>Activity</strong>: records such as when a form was published or edited, so collaborators can see its history.</li>
       </ul>
       <h3>If you answer a form</h3>
@@ -34,6 +35,13 @@ export default function PrivacyPage() {
         <li>If the form requires sign-in, your <strong>account ID</strong> is linked to your answer, for example to allow one response per person.</li>
         <li>If the creator turns on unfinished answers, what you type may be <strong>saved before you submit</strong>. The form tells you when this is on.</li>
         <li>Basic <strong>technical signals</strong> used to prevent spam and abuse, such as how fast a form was completed and short-lived rate-limit counters.</li>
+      </ul>
+      <h3>If you learn on Chaos</h3>
+      <ul>
+        <li>When you&rsquo;re signed in, your <strong>progress</strong> through lessons and courses, your answers to attached quizzes, flashcard reviews and the weak areas worked out from them. These are private to you.</li>
+        <li>Lessons you <strong>save</strong>, and any <strong>reports</strong> or comments you post. Comments on public lessons are visible to other readers.</li>
+        <li><strong>Highlights and notes</strong> are kept on your own device and are not shown to anyone else.</li>
+        <li><strong>Verification</strong> requests aren&rsquo;t open yet; nothing is collected for them.</li>
       </ul>
       <h3>Stored on your own device</h3>
       <p>
@@ -47,7 +55,9 @@ export default function PrivacyPage() {
         <li>To keep it safe: prevent spam, enforce limits and investigate abuse.</li>
         <li>To send in-app notifications to creators, for example when a response arrives.</li>
         <li>To connect with Max when a creator chooses to. Max receives only the form definitions the creator selects and permitted summary numbers, never individual answers.</li>
-        <li>To work with ChatGPT when a creator connects the Chaos app there (see below).</li>
+        <li>To work with ChatGPT, Claude or another assistant when you connect it (see below).</li>
+        <li>To send webhook events to an address a creator sets up. Events say what happened (for example that a response arrived) and contain counts, not answers.</li>
+        <li>To make an Apple Wallet or Google Wallet pass of your member card when you ask. The pass holds what your public card shows and is then handled by Apple or Google.</li>
       </ul>
 
       <h2>Who can see answers</h2>
@@ -56,17 +66,18 @@ export default function PrivacyPage() {
         and should tell respondents why they are asking. Small groups are hidden in summaries sent to Max so individuals can&rsquo;t be singled out.
       </p>
 
-      <h2>Using Chaos in ChatGPT</h2>
+      <h2>Using Chaos from ChatGPT or Claude</h2>
       <p>
-        Creators can connect their Chaos account to ChatGPT with the Chaos app. You sign in with your Chaos account and approve the connection;
-        you can disconnect it at any time in ChatGPT&rsquo;s app settings, or ask us to revoke it.
+        You can connect your Chaos account to ChatGPT, Claude or another assistant that supports MCP. You sign in with your Chaos account and approve the connection;
+        you can disconnect it at any time in the assistant&rsquo;s settings, or ask us to revoke it.
       </p>
       <ul>
-        <li>ChatGPT can create and edit drafts, publish, close or archive your forms, and read your forms, results and responses, but only when you ask it to.</li>
-        <li>What ChatGPT reads (for example a results summary or the answers you ask it to look at) is sent to OpenAI and handled under{" "}
-          <a href="https://openai.com/policies/privacy-policy">OpenAI&rsquo;s privacy policy</a>. Only ask it to read individual answers when you are allowed to share them.</li>
-        <li>Chaos never sends respondents&rsquo; answers to ChatGPT on its own, and ChatGPT cannot delete forms or responses.</li>
-        <li>Anything ChatGPT creates starts as a draft in your library, marked as made with ChatGPT.</li>
+        <li>The assistant can create, edit and publish forms, quizzes, lessons, courses and flashcards, and read your content, results and responses, only when you ask it to. New things it creates are published straight away unless you ask for a draft.</li>
+        <li>What the assistant reads (for example a results summary or the answers you ask it to look at) is sent to its provider and handled under their policy, such as{" "}
+          <a href="https://openai.com/policies/privacy-policy">OpenAI&rsquo;s</a> or <a href="https://www.anthropic.com/legal/privacy">Anthropic&rsquo;s</a>. Only ask it to read individual answers when you are allowed to share them.</li>
+        <li><strong>Ask ChatGPT / Ask Claude</strong> buttons in lessons open the assistant with the lesson text or your selection. Nothing is sent until you choose to.</li>
+        <li>Chaos never sends respondents&rsquo; answers to an assistant on its own, and assistants cannot delete forms or responses.</li>
+        <li>Anything an assistant creates is marked in its history as made by a connected app.</li>
       </ul>
 
       <h2>Service providers</h2>

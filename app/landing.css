@@ -108,6 +108,7 @@
 .site-footer__legal { max-width: 1080px; margin: auto; padding: 0 28px 32px; font-size: 12px; color: var(--s-muted); }
 .site-legal { max-width: 720px; margin: auto; padding: 40px 24px 80px; font-size: 17px; line-height: 1.75; color: var(--s-soft); }
 .site-legal h1 { color: var(--s-text); }
+.site-legal__draft { margin-top: 14px; padding: 10px 14px; border: 1px solid var(--s-line-strong); border-radius: 10px; background: var(--s-subtle); font-size: 14px; color: var(--s-text); }
 .site-legal__updated { margin-top: 6px; font-size: 14px; color: var(--s-muted); }
 .site-legal h2 { margin: 40px 0 10px; font-size: 21px; font-weight: 600; color: var(--s-text); }
 .site-legal h3 { margin: 22px 0 6px; font-size: 17px; font-weight: 600; color: var(--s-text); }

@@ -60,7 +60,7 @@ describe("quiz Start control", () => {
   it("renders unavailable player data without a Start control", async () => {
     queryResults["quizFunctions:getQuizForPlayer"] = null;
     render(<QuizRoute />);
-    await screen.findByText("Quiz not found");
+    await screen.findByText("Nothing here");
     expect(screen.queryByRole("button", { name: /Start quiz/ })).toBeNull();
     expect(startSession).not.toHaveBeenCalled();
   });

@@ -1,11 +1,27 @@
 import type { Locale } from "@/lib/locale";
 import { sectionsAr } from "./content-ar";
 import { sectionsEn } from "./content-en";
+import { extraArticles } from "./articles-extra";
+import { docStructure } from "./structure";
 import type { DocArticle, DocBlock, DocSection } from "./types";
 
 export type { DocArticle, DocBlock, DocSection } from "./types";
 
-export const docSections: Record<Locale, DocSection[]> = { en: sectionsEn, ar: sectionsAr };
+/** Articles from every source, grouped by lib/docs/structure.ts. Anything unplaced is appended so it stays reachable. */
+function grouped(locale: Locale, sections: DocSection[]): DocSection[] {
+  const all = [...sections.flatMap((section) => section.articles), ...extraArticles[locale]];
+  const bySlug = new Map(all.map((article) => [article.slug, article]));
+  const placed = new Set<string>();
+  const result = docStructure.map((group) => ({
+    id: group.id,
+    title: group.title[locale],
+    articles: group.slugs.flatMap((slug) => { const article = bySlug.get(slug); if (!article) return []; placed.add(slug); return [article]; }),
+  }));
+  const rest = all.filter((article) => !placed.has(article.slug));
+  return rest.length ? [...result, { id: "more", title: locale === "ar" ? "المزيد" : "More", articles: rest }] : result;
+}
+
+export const docSections: Record<Locale, DocSection[]> = { en: grouped("en", sectionsEn), ar: grouped("ar", sectionsAr) };
 
 export interface FlatArticle extends DocArticle {
   sectionId: string;

@@ -17,7 +17,7 @@ const copy = {
       abuse: ["Abusive or hateful", "Harassment, hate, threats or personal information about someone."],
       other: ["Something else", "Tell us what is wrong."],
     } as Record<ReportReason, [string, string]>,
-    details: "Details", detailsHelp: (r: ReportReason): string => r === "incorrect" ? "Say what is wrong and, if you can, a source that shows the correct information." : r === "copyright" ? "Who owns the material and where it was originally published." : "Anything that helps a moderator understand.",
+    policy: "How copyright reports work", details: "Details", detailsHelp: (r: ReportReason): string => r === "incorrect" ? "Say what is wrong and, if you can, a source that shows the correct information." : r === "copyright" ? "Who owns the material and where it was originally published." : "Anything that helps a moderator understand.",
     required: "Please add a few words so a moderator can act on it.", send: "Send report", cancel: "Cancel", sent: "Thanks. A moderator will review it.", close: "Close",
   },
   ar: {
@@ -29,7 +29,7 @@ const copy = {
       abuse: ["إساءة أو كراهية", "تحرّش أو كراهية أو تهديد أو معلومات شخصية عن أحد."],
       other: ["شيء آخر", "أخبرنا ما المشكلة."],
     } as Record<ReportReason, [string, string]>,
-    details: "التفاصيل", detailsHelp: (r: ReportReason): string => r === "incorrect" ? "اذكر الخطأ، وإن أمكن مصدرًا يوضّح المعلومة الصحيحة." : r === "copyright" ? "من يملك المادة وأين نُشرت أصلًا." : "أي شيء يساعد المشرف على الفهم.",
+    policy: "كيف تُعالَج بلاغات حقوق النشر", details: "التفاصيل", detailsHelp: (r: ReportReason): string => r === "incorrect" ? "اذكر الخطأ، وإن أمكن مصدرًا يوضّح المعلومة الصحيحة." : r === "copyright" ? "من يملك المادة وأين نُشرت أصلًا." : "أي شيء يساعد المشرف على الفهم.",
     required: "أضف بضع كلمات ليتمكن المشرف من التصرف.", send: "أرسل البلاغ", cancel: "إلغاء", sent: "شكرًا. سيراجعه أحد المشرفين.", close: "إغلاق",
   },
 };
@@ -73,6 +73,7 @@ export default function ReportDialog({ target, title, onClose }: { target: Repor
               <small id="report-help">{t.detailsHelp(reason)}</small>
             </label>
           )}
+          {reason === "copyright" && <a className="lx-muted" href="/copyright" target="_blank" rel="noopener" style={{ fontSize: 13, textDecoration: "underline" }}>{t.policy}</a>}
           {error && <p className="lx-error" role="alert">{error}</p>}
           <div className="lx-actions" style={{ justifyContent: "flex-end" }}>
             <button type="button" className="ws-btn ws-btn--ghost" onClick={onClose}>{t.cancel}</button>

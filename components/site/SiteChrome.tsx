@@ -20,7 +20,7 @@ const copy = {
     product: "Product", ways: "Ways to answer", chatgpt: "Chaos in ChatGPT", compare: "Compare",
     openSource: "Open source", source: "Source code", selfHost: "Self-hosting", api: "API and connections", webhooks: "Webhooks",
     start: "Get started", help: "Support", status: "Status", issues: "Report an issue",
-    legal: "Legal", privacy: "Privacy policy", terms: "Terms and conditions", security: "Security",
+    legal: "Legal", privacy: "Privacy policy", terms: "Terms and conditions", copyright: "Copyright", security: "Security",
   },
   ar: {
     getFree: "ابدأ مجانًا", open: "افتح Chaos", logIn: "تسجيل الدخول", skip: "انتقل إلى المحتوى", main: "التنقل الرئيسي", footer: "التذييل",
@@ -30,7 +30,7 @@ const copy = {
     product: "المنتج", ways: "طرق الإجابة", chatgpt: "Chaos في ChatGPT", compare: "المقارنة",
     openSource: "مفتوح المصدر", source: "الشيفرة المصدرية", selfHost: "الاستضافة الذاتية", api: "API والاتصالات", webhooks: "Webhooks",
     start: "ابدأ الآن", help: "الدعم", status: "حالة الخدمة", issues: "أبلغ عن مشكلة",
-    legal: "قانوني", privacy: "سياسة الخصوصية", terms: "الشروط والأحكام", security: "الأمان",
+    legal: "قانوني", privacy: "سياسة الخصوصية", terms: "الشروط والأحكام", copyright: "حقوق النشر", security: "الأمان",
   },
 };
 
@@ -172,6 +172,7 @@ export function SiteFooter() {
             <h2>{t.legal}</h2>
             <Link href="/privacy">{t.privacy}</Link>
             <Link href="/terms">{t.terms}</Link>
+            <Link href="/copyright">{t.copyright}</Link>
             <Link href="/support#security">{t.security}</Link>
           </div>
         </nav>
