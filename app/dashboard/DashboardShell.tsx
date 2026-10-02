@@ -86,8 +86,8 @@ const copy = {
   },
 };
 type Copy = typeof copy.en;
-/** One row in the sidebar's Pinned or Recent list. Only forms can be pinned. */
-interface SidebarItem { key: string; title: string; href: string; time: number; formId?: Id<"forms">; color?: string; icon?: LucideIcon }
+/** One row in the sidebar's Pinned or Recent list. Forms and courses can be pinned (pinId); games can't. */
+interface SidebarItem { key: string; title: string; href: string; time: number; formId?: Id<"forms">; pinId?: string; color?: string; icon?: LucideIcon }
 
 type NavKey = "library" | "games" | "legacyResults" | "archive" | "connections" | "settings" | "learnHome" | "courses" | "learnLibrary" | "saved" | "flashcards";
 
@@ -249,11 +249,18 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   useEffect(() => { document.documentElement.style.setProperty("--popup-opacity", String(preferences.popupOpacity / 100)); }, [preferences.popupOpacity]);
   const allForms = useMemo(() => [...(forms?.owned ?? []), ...(forms?.shared ?? [])], [forms]);
   // Sidebar rows: forms (pinnable), courses and hosted games, newest first.
-  const formItem = (f: (typeof allForms)[number]): SidebarItem => ({ key: f._id, title: f.title || t.untitled, href: `/dashboard/forms/${f._id}`, time: f.updatedAt, formId: f._id, color: /^#[0-9a-f]{6}$/i.test(f.theme.accent) ? f.theme.accent : "var(--primary)" });
-  const pinned = pinnedIds.map((id) => allForms.find((f) => f._id === id)).filter((f): f is NonNullable<typeof f> => !!f).map(formItem);
+  const formItem = (f: (typeof allForms)[number]): SidebarItem => ({ key: f._id, title: f.title || t.untitled, href: `/dashboard/forms/${f._id}`, time: f.updatedAt, formId: f._id, pinId: f._id, color: /^#[0-9a-f]{6}$/i.test(f.theme.accent) ? f.theme.accent : "var(--primary)" });
+  const courseItem = (c: NonNullable<typeof myCourses>[number]): SidebarItem => ({ key: c.id, title: c.title || t.untitled, href: `/dashboard/courses/${c.id}`, time: c.updatedAt, pinId: c.id, icon: GraduationCap });
+  // Pins are device-local IDs (usePinned); a pinned item that was deleted or archived simply drops out.
+  const pinned = pinnedIds.flatMap((id) => {
+    const form = allForms.find((f) => f._id === id);
+    if (form) return [formItem(form)];
+    const course = myCourses?.find((c) => c.id === id && !c.archived);
+    return course ? [courseItem(course)] : [];
+  });
   const recent: SidebarItem[] = [
     ...(forms?.owned ?? []).filter((f) => f.status !== "archived" && !pinnedIds.includes(f._id)).map(formItem),
-    ...(myCourses ?? []).filter((c) => !c.archived).map((c) => ({ key: c.id, title: c.title || t.untitled, href: `/dashboard/courses/${c.id}`, time: c.updatedAt, icon: GraduationCap })),
+    ...(myCourses ?? []).filter((c) => !c.archived && !pinnedIds.includes(c.id)).map(courseItem),
     ...(myGames ?? []).map((g) => ({ key: g._id, title: g.title || t.untitled, time: g.endedAt ?? g.createdAt, icon: Trophy,
       href: g.state !== "ended" ? `/dashboard/live/${g._id}` : g.formId ? `/dashboard/forms/${g.formId}/responses` : g.quizId ? `/dashboard/results?id=${g.quizId}` : "/dashboard?tab=games" })),
   ].sort((a, b) => b.time - a.time);
@@ -339,7 +346,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             {(() => {
               const sections = ([["Pinned", pinned], ["Recent", recent]] as const).filter(([, list]) => list.length > 0);
               const row = (item: SidebarItem) => {
-                const isPinned = !!item.formId && pinnedIds.includes(item.formId);
+                const isPinned = !!item.pinId && pinnedIds.includes(item.pinId);
                 const Icon = item.icon;
                 return (
                   <div key={item.key} className="ws-nav-row ws-reveal-host">
@@ -349,8 +356,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                       )}
                       <span>{item.title}</span>
                     </IntentLink>
-                    {item.formId && (
-                      <button type="button" className="ws-icon-button ws-reveal ws-nav-row__action" onClick={() => togglePin(item.formId!)}
+                    {item.pinId && (
+                      <button type="button" className="ws-icon-button ws-reveal ws-nav-row__action" onClick={() => togglePin(item.pinId!)}
                         aria-label={t.pinLabel(item.title, isPinned)} title={isPinned ? t.unpin : t.pin}>
                         {isPinned ? <PinOff size={14} /> : <Pin size={14} />}
                       </button>

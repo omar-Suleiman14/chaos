@@ -17,6 +17,7 @@ vi.mock("@/lib/convexCache", () => ({
   formIntentHandlers: (id: string) => ({ onFocus: () => intent.warmForm(id), onPointerEnter: () => intent.warmForm(id), onTouchStart: () => intent.warmForm(id) }),
   useQuery: () => undefined,
 }));
+const courses = [{ id: "course1", title: "Night sky course", description: "", lessons: 2, visibility: "public", published: true, updatedAt: 1, archived: false }];
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/dashboard" }));
 vi.mock("@/components/ThemeProvider", () => ({ useTheme: () => ({ toggleTheme: vi.fn() }) }));
 vi.mock("@clerk/nextjs", () => ({ useUser: () => ({ isLoaded: false }), useClerk: () => ({ signOut: async () => {} }), UserButton: () => null }));
@@ -25,7 +26,7 @@ vi.mock("convex/react", () => ({
   useConvexAuth: () => ({ isAuthenticated: false, isLoading: true }),
   usePaginatedQuery: () => ({ results: [], status: "Exhausted", loadMore: learnBackend.loadMore }),
   useQueries: () => ({}),
-  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? forms : getFunctionName(ref) === "quizFunctions:getMyQuizzes" ? [] : undefined),
+  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? forms : getFunctionName(ref) === "quizFunctions:getMyQuizzes" ? [] : getFunctionName(ref) === "courses:listMine" ? courses : undefined),
   useMutation: () => vi.fn(),
 }));
 vi.mock("@/components/workspace/useCreateForm", () => ({ useCreateForm: () => ({ create: vi.fn(), busy: false }) }));
@@ -74,11 +75,20 @@ describe("sidebar sections", () => {
     expect(screen.queryByRole("navigation", { name: "Pinned" })).toBeNull();
   });
 
+  it("pins a course like a form", () => {
+    render(<DashboardLayout><p>Page</p></DashboardLayout>);
+    fireEvent.click(screen.getByRole("button", { name: "Pin Night sky course" }));
+    const pinned = screen.getByRole("navigation", { name: "Pinned" });
+    expect(within(pinned).getByRole("link", { name: /Night sky course/ })).toHaveAttribute("href", "/dashboard/courses/course1");
+    expect(within(screen.getByRole("navigation", { name: "Recent" })).queryByRole("link", { name: /Night sky course/ })).toBeNull();
+    expect(JSON.parse(localStorage.getItem("chaos.ui.pinned")!)).toEqual(["course1"]);
+  });
+
   it("folds Recent to the bottom and opens it again", () => {
     const { container } = render(<DashboardLayout><p>Page</p></DashboardLayout>);
-    fireEvent.click(screen.getByRole("button", { name: "Recent, 2. Fold" }));
+    fireEvent.click(screen.getByRole("button", { name: "Recent, 3. Fold" }));
     expect(screen.queryByRole("navigation", { name: "Recent" })).toBeNull();
-    const folded = screen.getByRole("button", { name: "Recent, 2. Open" });
+    const folded = screen.getByRole("button", { name: "Recent, 3. Open" });
     expect(folded).toHaveAttribute("aria-expanded", "false");
     expect(container.querySelector(".ws-sidebar__folded")).toContainElement(folded);
     fireEvent.click(folded);
