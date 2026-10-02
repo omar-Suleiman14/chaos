@@ -92,7 +92,7 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
   </div>;
 
   return <div className="games-hub">
-    {/* In the Library, New → Game creates games; the standalone header only appears outside it. */}
+    {/* In the Library, games start from a quiz (New → Quiz, then Host); the standalone header only appears outside it. */}
     {!embedded && <header className="ws-page-header games-header">
       <div><h1 className="ws-page-title">{t.title}</h1><p className="games-help">{t.lead}</p></div>
       <div className="games-actions"><Link href="/docs/live-games" className="ws-btn"><BookOpen size={16} aria-hidden="true" />{t.guide}</Link><button type="button" className="ws-btn ws-btn--primary" disabled={busy} onClick={createGame}><Plus size={18} aria-hidden="true" />{busy ? t.creating : t.create}</button></div>

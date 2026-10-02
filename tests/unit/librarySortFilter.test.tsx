@@ -70,3 +70,14 @@ describe("library sort and filter", () => {
     expect(screen.queryByRole("menuitem", { name: /Delete/ })).toBeNull();
   });
 });
+
+describe("library New menu", () => {
+  it("has one New button whose menu offers Form, Quiz, Lesson, Course, From template and Import", () => {
+    render(<CreatorLibrary />);
+    const triggers = screen.getAllByRole("button", { name: "Create something new" });
+    expect(triggers).toHaveLength(1);
+    fireEvent.click(triggers[0]);
+    const items = screen.getAllByRole("menuitem").map((item) => (item.textContent ?? "").trim());
+    for (const [i, label] of ["Form", "Quiz", "Lesson", "Course", "From a template", "Import"].entries()) expect(items[i]).toMatch(new RegExp(`^${label}`));
+  });
+});

@@ -65,7 +65,7 @@ const copy = {
     open: "Open", results: "Results", viewLive: "View live", copyLink: "Copy link", unpin: "Unpin from sidebar", pin: "Pin to sidebar",
     duplicate: "Duplicate", unpublish: "Unpublish", publish: "Publish", archive: "Archive", delete: "Delete",
     oldQuiz: "Old quiz", quiz: "Quiz", form: "Form",
-    games: "Games", library: "Library", newQuiz: "New quiz", newLesson: "New lesson", newCourse: "New course", creating: "Creating…", newLabel: "New", moreWays: "More ways to start", blank: "Blank", fromTemplate: "From a template", import: "Import",
+    games: "Games", library: "Library", newForm: "Form", newFormHelp: "Surveys, sign-ups and feedback", newQuiz: "Quiz", newQuizHelp: "Marked for you; host it live any time", newLesson: "Lesson", newLessonHelp: "A page to teach one thing", newCourse: "Course", newCourseHelp: "Lessons in order, for people to take", newMenu: "Create something new", creating: "Creating…", newLabel: "New", moreWays: "More ways to start", blank: "Blank", fromTemplate: "From a template", import: "Import",
     dismissError: "Dismiss error", filterLibrary: "Filter library", searchLibrary: "Search library", search: "Search",
     filterByStatus: "Filter by status", status: "Status", clearFilter: "Clear filter", sort: "Sort", viewOptions: "View options", gallery: "Gallery", list: "List",
     loadingLibrary: "Loading library...", nothingMatches: "Nothing matches", createFirst: "Create your first form",
@@ -102,7 +102,7 @@ const copy = {
     open: "افتح", results: "النتائج", viewLive: "اعرض المنشور", copyLink: "انسخ الرابط", unpin: "إلغاء التثبيت من الشريط الجانبي", pin: "ثبّت في الشريط الجانبي",
     duplicate: "كرّر", unpublish: "ألغِ النشر", publish: "انشر", archive: "أرشِف", delete: "احذف",
     oldQuiz: "اختبار قديم", quiz: "اختبار", form: "نموذج",
-    games: "الألعاب", library: "المكتبة", newQuiz: "اختبار جديد", newLesson: "درس جديد", newCourse: "دورة جديدة", creating: "جارٍ الإنشاء…", newLabel: "جديد", moreWays: "طرق أخرى للبدء", blank: "فارغ", fromTemplate: "من قالب", import: "استيراد",
+    games: "الألعاب", library: "المكتبة", newForm: "نموذج", newFormHelp: "استبيانات وتسجيل وآراء", newQuiz: "اختبار", newQuizHelp: "يُصحَّح تلقائيًا؛ استضفه مباشرة متى شئت", newLesson: "درس", newLessonHelp: "صفحة تشرح شيئًا واحدًا", newCourse: "دورة", newCourseHelp: "دروس مرتبة يأخذها الناس", newMenu: "أنشئ شيئًا جديدًا", creating: "جارٍ الإنشاء…", newLabel: "جديد", moreWays: "طرق أخرى للبدء", blank: "فارغ", fromTemplate: "من قالب", import: "استيراد",
     dismissError: "أخفِ الخطأ", filterLibrary: "تصفية المكتبة", searchLibrary: "ابحث في المكتبة", search: "بحث",
     filterByStatus: "تصفية حسب الحالة", status: "الحالة", clearFilter: "امسح التصفية", sort: "ترتيب", viewOptions: "خيارات العرض", gallery: "معرض", list: "قائمة",
     loadingLibrary: "جارٍ تحميل المكتبة...", nothingMatches: "لا نتائج", createFirst: "أنشئ أول نموذج لك",
@@ -374,25 +374,28 @@ export default function CreatorLibrary() {
     catch (err) { setError(err instanceof Error ? err.message : String(err)); }
   };
 
+  // One New menu for every Library tab: the same choices whatever tab is open.
+  const newMenu = (
+    <WsMenu label={t.newMenu} align="end" triggerClassName="ws-btn ws-btn--primary" trigger={<><Plus size={17} /> {busy ? t.creating : t.newLabel} <ChevronDown size={15} aria-hidden /></>}>
+      {(close) => (
+        <div className="ws-new-choices">
+          <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(); }}><FileText size={16} /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>
+          <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(newQuizArgs(locale)); }}><ListChecks size={16} /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>
+          <button type="button" role="menuitem" onClick={() => { close(); void newLesson(); }}><BookOpenText size={16} /><span><strong>{t.newLesson}</strong><small>{t.newLessonHelp}</small></span></button>
+          <button type="button" role="menuitem" onClick={() => { close(); void newCourse(); }}><GraduationCap size={16} /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>
+          <hr />
+          <button type="button" role="menuitem" onClick={() => { close(); setDialog("templates"); }}><LayoutTemplate size={16} /> {t.fromTemplate}</button>
+          <button type="button" role="menuitem" onClick={() => { close(); setDialog("import"); }}><FileUp size={16} /> {t.import}</button>
+        </div>
+      )}
+    </WsMenu>
+  );
+
   return (
     <div className="font-sans">
       <div className="ws-page-header">
         <h1 className="ws-page-title">{t.library}</h1>
-        <div className="flex items-stretch">
-          <button type="button" onClick={() => create()} disabled={busy} className="ws-btn ws-btn--primary !rounded-e-none"><Plus size={17} /> {busy ? t.creating : t.newLabel}</button>
-          <WsMenu label={t.moreWays} triggerClassName="ws-btn ws-btn--primary !rounded-s-none !px-2.5 border-s border-s-white/25" trigger={<ChevronDown size={17} />}>
-            {(close) => (
-              <>
-                <button type="button" role="menuitem" onClick={() => { close(); void create(); }}><Plus size={16} /> {t.blank}</button>
-                <button type="button" role="menuitem" onClick={() => { close(); setDialog("templates"); }}><LayoutTemplate size={16} /> {t.fromTemplate}</button>
-                <button type="button" role="menuitem" onClick={() => { close(); setDialog("import"); }}><FileUp size={16} /> {t.import}</button>
-                <button type="button" role="menuitem" onClick={() => { close(); void create(newQuizArgs(locale)); }}><ListChecks size={16} /> {t.newQuiz}</button>
-                <button type="button" role="menuitem" onClick={() => { close(); void newLesson(); }}><BookOpenText size={16} /> {t.newLesson}</button>
-                <button type="button" role="menuitem" onClick={() => { close(); void newCourse(); }}><GraduationCap size={16} /> {t.newCourse}</button>
-              </>
-            )}
-          </WsMenu>
-        </div>
+        {newMenu}
       </div>
 
       {error && (
@@ -450,25 +453,16 @@ export default function CreatorLibrary() {
           {statuses.length > 0 && <button type="button" className="ws-btn mt-3" onClick={() => chooseStatuses([])}>{t.clearFilter}</button>}
           {!search && !statuses.length && (
             <div className="flex gap-2 mt-3">
-              <button type="button" onClick={() => create()} disabled={busy} className="ws-btn ws-btn--primary"><Plus size={17} /> {t.newLabel}</button>
-              <button type="button" onClick={() => setDialog("templates")} className="ws-btn"><LayoutTemplate size={17} /> {t.templates}</button>
+              {newMenu}
             </div>
           )}
         </div>
       ) : view === "gallery" ? (
         <div className="space-y-8">
-          {groups.map(([group, list], groupIndex) => (
+          {groups.map(([group, list]) => (
             <section key={group || "ungrouped"} aria-label={groupLabel(group)}>
               {group && <h2 className="text-sm font-semibold text-muted-foreground mb-3">{groupLabel(group)}</h2>}
               <ul className="ws-gallery ws-stagger">
-                {groupIndex === 0 && !search && !statuses.length && (
-                  <li style={{ ["--i" as string]: 0 }} className="max-sm:hidden">
-                    <button type="button" className="ws-card ws-card--new w-full h-full" onClick={() => create()} disabled={busy}>
-                      <span className="ws-plus-lg"><Plus size={22} /></span>
-                      {busy ? t.creating : t.newLabel}
-                    </button>
-                  </li>
-                )}
                 {list.map((row, i) => (
                   <li key={row.key} className="ws-card" style={{ ["--i" as string]: i + 1 }} {...(row.formId ? formIntentHandlers(row.formId) : undefined)}>
                     <span className="ws-card__thumb"><FormThumb theme={row.theme} presentation={row.presentation} title={row.title} legacy={row.kind === "legacy"} /></span>

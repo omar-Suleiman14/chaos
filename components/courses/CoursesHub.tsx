@@ -33,12 +33,14 @@ export default function CoursesHub({ embedded = false }: { embedded?: boolean })
         {embedded ? <p className="ws-page-subtitle">{t.subtitle}</p> : <div><h1 className="ws-page-title">{t.title}</h1><p className="ws-page-subtitle">{t.subtitle}</p></div>}
         <div className="flex gap-2">
           <Link className="ws-btn ws-btn--ghost" href="/learn">{t.explore}</Link>
-          <button type="button" className="ws-btn ws-btn--primary" onClick={() => void newCourse()} disabled={busy}><Plus size={16} aria-hidden /> {busy ? t.creating : t.new}</button>
+          {/* In the Library, its New menu is the only place to create; this page keeps its own button when used alone. */}
+          {!embedded && <button type="button" className="ws-btn ws-btn--primary" onClick={() => void newCourse()} disabled={busy}><Plus size={16} aria-hidden /> {busy ? t.creating : t.new}</button>}
         </div>
       </header>
       {error && <p role="alert" className="ws-error mb-4">{error}</p>}
+      {embedded && shown.length === 0 && <p className="ws-empty">{t.empty}</p>}
       <div className="cx-grid">
-        <button type="button" className="cx-new" onClick={() => void newCourse()} disabled={busy}><Plus size={24} aria-hidden /><span>{t.new}</span></button>
+        {!embedded && <button type="button" className="cx-new" onClick={() => void newCourse()} disabled={busy}><Plus size={24} aria-hidden /><span>{t.new}</span></button>}
         {shown.map((c) => (
           <Link key={c.id} href={`/dashboard/courses/${c.id}`} className="cx-card">
             <div className="cx-cover" style={coverStyle(c.id, c.coverUrl)}><span className="cx-cover__badge">{!c.published ? t.draft : c.visibility === "public" ? t.live : t.privateLive}</span></div>
