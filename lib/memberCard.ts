@@ -100,16 +100,12 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
   const defs = `<defs>
     <radialGradient id="@@g1" cx="25%" cy="20%" r="90%"><stop offset="0" stop-color="${b}"/><stop offset=".55" stop-color="${a}"/><stop offset="1" stop-color="${c}"/></radialGradient>
     <radialGradient id="@@g2" cx="80%" cy="90%" r="90%"><stop offset="0" stop-color="${c}"/><stop offset=".6" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></radialGradient>
-    <filter id="@@paper" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".75" numOctaves="3" seed="7" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 ${dark ? 1 : 0}  0 0 0 0 ${dark ? 1 : 0}  0 0 0 0 ${dark ? 1 : 0}  0 0 0 ${dark ? ".07" : ".11"} 0"/></filter>
-    <filter id="@@fibre" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".012 .45" numOctaves="2" seed="3"/><feColorMatrix values="0 0 0 0 ${dark ? 1 : 0}  0 0 0 0 ${dark ? 1 : 0}  0 0 0 0 ${dark ? 1 : 0}  0 0 0 ${dark ? ".05" : ".07"} 0"/></filter>
-    <linearGradient id="@@edge" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#fff" stop-opacity="${dark ? ".14" : ".9"}"/><stop offset="1" stop-color="#000" stop-opacity="${dark ? ".4" : ".1"}"/></linearGradient>
-    <filter id="@@grain"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" stitchTiles="stitch"/><feColorMatrix values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 .09 0"/></filter>
+    <filter id="@@grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.15" numOctaves="3" seed="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0" intercept="1"/></feComponentTransfer></filter>
     <clipPath id="@@art"><rect x="22" y="22" width="${W - 44}" height="270" rx="10"/></clipPath>
     <linearGradient id="@@logo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fca535"/><stop offset="1" stop-color="#e9482b"/></linearGradient>
     <linearGradient id="@@sheen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".0"/><stop offset=".5" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
   </defs>`;
-  // Card stock: fine grain and faint horizontal fibres over the whole card, with a lit top edge.
-  const frame = `<rect width="${W}" height="${H}" rx="18" fill="${theme.paper}"/><rect width="${W}" height="${H}" rx="18" filter="url(#@@fibre)"/><rect width="${W}" height="${H}" rx="18" filter="url(#@@paper)"/><rect x=".5" y=".5" width="${W - 1}" height="${H - 1}" rx="17.5" fill="none" stroke="url(#@@edge)"/>`;
+  const frame = `<rect width="${W}" height="${H}" rx="18" fill="${theme.paper}"/>`;
   const footer = `<g direction="ltr" font-family="${MONO}" font-size="10" font-weight="700" fill="${theme.ink}">
       <rect x="22" y="${H - 44}" width="168" height="22" rx="4" fill="none" stroke="${theme.ink}" stroke-width="1.4"/>
       <text x="32" y="${H - 29}">CHAOS</text>
@@ -120,7 +116,7 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
     </g>`;
   if (side === "back") {
     return `<svg xmlns="http://www.w3.org/2000/svg" direction="ltr" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${defs}${frame}
-      <g clip-path="url(#@@art)"><rect x="22" y="22" width="${W - 44}" height="270" fill="url(#@@g2)"/><rect x="22" y="22" width="${W - 44}" height="270" filter="url(#@@grain)"/></g>
+      <g clip-path="url(#@@art)"><rect x="22" y="22" width="${W - 44}" height="270" fill="url(#@@g2)"/><rect x="22" y="22" width="${W - 44}" height="270" filter="url(#@@grain)" opacity=".28" style="mix-blend-mode:overlay"/></g>
       ${qr(data.url, W / 2 - 92, 65, 184, dark ? "#ffffff" : "#111827", "@@logo")}
       <text x="${W / 2}" y="330" text-anchor="middle" font-family="${SANS}" font-size="16" font-weight="800" fill="${theme.ink}">${ar ? "امسح لترى البطاقة" : "Scan to see this card"}</text>
       <text x="${W / 2}" y="352" text-anchor="middle" font-family="${MONO}" font-size="11" fill="${muted}">${esc(data.url.replace(/^https?:\/\//, ""))}</text>
@@ -137,7 +133,7 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
       <path d="M22 168 Q ${W / 2} 108 ${W - 22} 168 L ${W - 22} 186 Q ${W / 2} 128 22 186 Z" fill="${theme.paper}"/>
       <rect x="22" y="186" width="${W - 44}" height="106" fill="url(#@@g2)" opacity=".9"/>
       <path d="M22 186 Q ${W / 2} 128 ${W - 22} 186 L ${W - 22} 292 L 22 292 Z" fill="url(#@@g2)"/>
-      <rect x="22" y="22" width="${W - 44}" height="270" filter="url(#@@grain)"/>
+      <rect x="22" y="22" width="${W - 44}" height="270" filter="url(#@@grain)" opacity=".28" style="mix-blend-mode:overlay"/>
       <rect x="22" y="22" width="${W - 44}" height="270" fill="url(#@@sheen)"/>
     </g>
     <circle cx="${W / 2}" cy="${157}" r="72" fill="${theme.paper}" opacity=".22"/>
