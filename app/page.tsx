@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { ArrowRight, BookOpen, Braces, Download, FileText, GitFork, GraduationCap, ListChecks, Radio, Server, Webhook } from "lucide-react";
 import { PrimaryCta, SiteFooter, SiteNav } from "@/components/site/SiteChrome";
-import { ChatGptMark } from "@/components/site/marks";
+import { ChatGptMark, NotionMark } from "@/components/site/marks";
 import ProductDemo from "@/components/site/ProductDemo";
 import { useCopy } from "@/lib/i18n";
 import { serializeStructuredData, websiteStructuredData } from "@/lib/seo";
@@ -182,7 +182,7 @@ export default function LandingPage() {
             </article>
             <article className="site-partner site-partner--soon" aria-label={`${t.connect.notion.name}: ${t.connect.notion.soon}`}>
               <div className="site-partner__head">
-                <span className="site-partner__mark site-partner__mark--letter" aria-hidden="true">N</span>
+                <span className="site-partner__mark" aria-hidden="true"><NotionMark size={26} /></span>
                 <span className="site-partner__name">{t.connect.notion.name}</span>
               </div>
               <p className="site-soon">{t.connect.notion.soon}</p>

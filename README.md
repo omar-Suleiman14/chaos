@@ -1,19 +1,21 @@
 # Chaos
 
-Forms, surveys, quizzes and live quiz games in one open-source app, in English and Arabic.
+Turn what you know into something people can use.
 
-Chaos is what you would otherwise split across Google Forms, Typeform and Kahoot. It runs at [chaos.fail](https://chaos.fail), and you can host your own copy.
+Chaos is where you create, teach, learn and test: forms, quizzes, lessons and courses, with quizzes you can run as live games. It works in English and Arabic, connects to Max, ChatGPT and Claude, and runs no AI itself. It runs at [chaos.fail](https://chaos.fail), and you can host your own copy.
 
 ## What it does
 
 **Main features**
 
 - **Forms, surveys and quizzes.** 16 question types, sections, branching and required rules. Quiz mode adds answer keys, points and automatic marking.
+- **Lessons and courses.** A document-like editor with covers, icons, images, video, equations, tables, sources and citations. Put lessons in order as a course and publish it.
+- **Learning.** Public courses and community lessons, saved lessons, progress and weak areas, and copies that keep the original author credited.
 - **Live games.** Host a quiz on a big screen; people join from their phones with a PIN, answer against the clock and watch the leaderboard.
 - **Results you can use.** Live summaries and charts, every response in detail, CSV, Excel and JSON export, webhooks and an HTTP API.
 - **A look for every form.** 18 themes (including Google Forms and Microsoft Forms styles), four ways to answer (page, sections, one at a time, swipe), optional sounds, your own colours and logo.
 
-**Also included:** English and Arabic with right-to-left layouts, 21 templates, collaborators with roles, version history and undo, opening and closing times with time zones, response limits and access codes, respondent edits with history, links, QR codes and embedding, a ChatGPT app, a Max integration, and step-by-step guides at [`/docs`](https://chaos.fail/docs).
+**Also included:** English and Arabic with right-to-left layouts, 21 templates, collaborators with roles, version history and undo, opening and closing times with time zones, response limits and access codes, respondent edits with history, links, QR codes and embedding, use from ChatGPT or Claude through MCP, a Max integration, and step-by-step guides at [`/docs`](https://chaos.fail/docs).
 
 ## Stack
 

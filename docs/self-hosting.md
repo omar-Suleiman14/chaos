@@ -162,12 +162,7 @@ this repo; test yours. See Convex's self-hosting docs for details.
 
 ## Wallet passes (optional)
 
-Member cards can be added to Apple Wallet and Google Wallet. Both need your own issuer account; until the variables below are set, the buttons don't appear.
-
-**Apple Wallet**
-1. In your Apple Developer account, create a Pass Type ID (for example `pass.com.example.chaos`) and its certificate.
-2. Export the certificate and its private key as PEM, and download Apple's WWDR intermediate certificate (G4) as PEM.
-3. Set `APPLE_WALLET_PASS_TYPE_ID`, `APPLE_WALLET_TEAM_ID`, `APPLE_WALLET_CERT`, `APPLE_WALLET_KEY` (and `APPLE_WALLET_KEY_PASSPHRASE` if the key has one) and `APPLE_WALLET_WWDR`. PEM text or base64-encoded PEM both work.
+Member cards can be added to Google Wallet. It needs your own Google Wallet issuer account; until the variables below are set, the button doesn't appear.
 
 **Google Wallet**
 1. Create an issuer account in the Google Pay & Wallet Console and note the issuer ID.

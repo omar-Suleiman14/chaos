@@ -28,7 +28,7 @@ export const compareCopy = {
     rows: [
       ["Main use", "Forms, surveys, quizzes and live games", "Forms and quizzes", "Forms and quizzes", "Conversational forms and quizzes", "Live quizzes and learning games"],
       ["Ways to answer", "Page, sections, one at a time or swipe", "Page and sections", "Page and sections", "One question at a time", "Hosted rounds and self-paced play"],
-      ["Live game with PIN and leaderboard", "Yes, up to 500 players", "Not a live-game host", "Presentation mode", "Not a live-game host", "Yes"],
+      ["Live game with PIN and leaderboard", "Yes (room cap 500 players)", "Not a live-game host", "Presentation mode", "Not a live-game host", "Yes"],
       ["Design controls", "18 themes, colours, fonts and backdrops", "Colours, fonts and header", "Themes and backgrounds", "Themes, media and question layouts", "Game themes, branding by plan"],
       ["Motion and feedback", "Question transitions, sounds and live reveals", "Page flow", "Page flow", "Conversational question flow", "Timers, reveals and podium"],
       ["Open source and self-hostable", "Yes (AGPL)", "No", "No", "No", "No"],
@@ -44,7 +44,7 @@ export const compareCopy = {
     rows: [
       ["الاستخدام الأساسي", "نماذج واستطلاعات واختبارات وألعاب مباشرة", "نماذج واختبارات", "نماذج واختبارات", "نماذج محادثة واختبارات", "اختبارات وألعاب تعليمية مباشرة"],
       ["طرق الإجابة", "صفحة أو أقسام أو سؤال في كل مرة أو سحب", "صفحة وأقسام", "صفحة وأقسام", "سؤال في كل مرة", "جولات مباشرة ولعب فردي"],
-      ["لعبة مباشرة برمز ولوحة متصدرين", "نعم، حتى 500 لاعب", "ليس مضيف ألعاب", "وضع عرض تقديمي", "ليس مضيف ألعاب", "نعم"],
+      ["لعبة مباشرة برمز ولوحة متصدرين", "نعم (حد الغرفة 500 لاعب)", "ليس مضيف ألعاب", "وضع عرض تقديمي", "ليس مضيف ألعاب", "نعم"],
       ["خيارات التصميم", "18 مظهرًا وألوان وخطوط وخلفيات", "ألوان وخطوط وترويسة", "مظاهر وخلفيات", "مظاهر ووسائط وتخطيطات", "مظاهر وهوية حسب الخطة"],
       ["الحركة والتفاعل", "انتقالات وأصوات وكشف الإجابات", "صفحات", "صفحات", "تدفق أسئلة المحادثة", "مؤقت وكشف النتائج ومنصة"],
       ["مفتوح المصدر ويمكن استضافته", "نعم (AGPL)", "لا", "لا", "لا", "لا"],

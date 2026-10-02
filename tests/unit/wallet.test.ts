@@ -5,34 +5,18 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("server-only", () => ({}));
 
-// Throwaway self-signed certificates, generated for this test only. They carry no trust.
+// A throwaway RSA key generated for this test only. It carries no trust.
 const fixture = (name: string) => readFileSync(new URL(`../fixtures/wallet/${name}`, import.meta.url), "utf8");
 const card = { name: "Omar Suleiman", username: "omar", seed: "user_abc", memberSince: Date.UTC(2026, 9, 1), style: 0 };
 
 afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
 
-describe("wallet passes", () => {
-  it("are unavailable and return nothing without issuer credentials", async () => {
-    vi.stubEnv("APPLE_WALLET_PASS_TYPE_ID", ""); vi.stubEnv("GOOGLE_WALLET_ISSUER_ID", "");
+describe("Google Wallet pass", () => {
+  it("is unavailable and returns nothing without issuer credentials", async () => {
+    vi.stubEnv("GOOGLE_WALLET_ISSUER_ID", "");
     const wallet = await import("@/lib/wallet");
-    expect(wallet.walletAvailability()).toEqual({ apple: false, google: false });
-    expect(await wallet.applePass(card)).toBeNull();
+    expect(wallet.walletAvailability()).toEqual({ google: false });
     expect(wallet.googleSaveUrl(card)).toBeNull();
-  });
-
-  it("builds a signed Apple pass with the card's public details and a QR code", async () => {
-    vi.stubEnv("APPLE_WALLET_PASS_TYPE_ID", "pass.fail.chaos.member");
-    vi.stubEnv("APPLE_WALLET_TEAM_ID", "ABCDE12345");
-    vi.stubEnv("APPLE_WALLET_CERT", Buffer.from(fixture("signer.pem")).toString("base64"));
-    vi.stubEnv("APPLE_WALLET_KEY", fixture("signer.key"));
-    vi.stubEnv("APPLE_WALLET_WWDR", fixture("wwdr.pem"));
-    const wallet = await import("@/lib/wallet");
-    expect(wallet.walletAvailability().apple).toBe(true);
-    const pass = await wallet.applePass(card);
-    expect(pass).not.toBeNull();
-    const zip = pass!.toString("latin1");
-    expect(zip.startsWith("PK")).toBe(true);
-    for (const entry of ["pass.json", "manifest.json", "signature", "icon.png", "logo.png"]) expect(zip).toContain(entry);
   });
 
   it("signs a Google save link that verifies with the issuer key and holds only public card data", async () => {

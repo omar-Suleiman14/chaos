@@ -9,11 +9,11 @@ import "./card.css";
 const copy = {
   en: {
     label: "Your Chaos member card", flip: "Flip card", flipBack: "Show front", shuffle: "Change colours", download: "Download card",
-    share: "Share card", apple: "Add to Apple Wallet", google: "Add to Google Wallet", copied: "Link copied", shared: "Shared", failed: "Couldn't do that. Try again.", cardOf: (n: string) => `${n}'s Chaos member card`,
+    share: "Share card", google: "Add to Google Wallet", copied: "Link copied", shared: "Shared", failed: "Couldn't do that. Try again.", cardOf: (n: string) => `${n}'s Chaos member card`,
   },
   ar: {
     label: "بطاقة عضويتك في Chaos", flip: "اقلب البطاقة", flipBack: "اعرض الوجه", shuffle: "غيّر الألوان", download: "نزّل البطاقة",
-    share: "شارك البطاقة", apple: "أضف إلى Apple Wallet", google: "أضف إلى Google Wallet", copied: "نُسخ الرابط", shared: "تمت المشاركة", failed: "تعذر ذلك. حاول مجددًا.", cardOf: (n: string) => `بطاقة عضوية ${n} في Chaos`,
+    share: "شارك البطاقة", google: "أضف إلى Google Wallet", copied: "نُسخ الرابط", shared: "تمت المشاركة", failed: "تعذر ذلك. حاول مجددًا.", cardOf: (n: string) => `بطاقة عضوية ${n} في Chaos`,
   },
 };
 
@@ -90,7 +90,6 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
         <span className="mc-gap" />
         <button type="button" className="mc-btn" title={t.download} aria-label={t.download} onClick={() => void download()}><Download size={18} aria-hidden /><span>{t.download}</span></button>
         <button type="button" className="mc-btn" title={t.share} aria-label={t.share} onClick={() => void share()}><Send size={18} aria-hidden /><span>{t.share}</span></button>
-        {wallet.apple && <a className="mc-btn mc-btn--wallet" href={`${walletBase}/apple`} download><Wallet size={18} aria-hidden /><span>{t.apple}</span></a>}
         {wallet.google && <a className="mc-btn mc-btn--wallet" href={`${walletBase}/google`} target="_blank" rel="noopener"><Wallet size={18} aria-hidden /><span>{t.google}</span></a>}
       </div>
       <p className="mc-status" role="status">{status}</p>
@@ -100,10 +99,10 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
 
 /** Wallet buttons appear only on installations with issuer credentials (GET /api/wallet). */
 function useWalletAvailability() {
-  const [state, setState] = useState({ apple: false, google: false });
+  const [state, setState] = useState({ google: false });
   useEffect(() => {
     let live = true;
-    fetch("/api/wallet").then((r) => (r.ok ? r.json() : null)).then((v) => { if (live && v) setState({ apple: v.apple === true, google: v.google === true }); }).catch(() => {});
+    fetch("/api/wallet").then((r) => (r.ok ? r.json() : null)).then((v) => { if (live && v) setState({ google: v.google === true }); }).catch(() => {});
     return () => { live = false; };
   }, []);
   return state;

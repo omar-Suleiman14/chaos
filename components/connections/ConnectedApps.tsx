@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { ArrowUpRight } from "lucide-react";
-import { ChatGptMark } from "@/components/site/marks";
+import { ChatGptMark, NotionMark } from "@/components/site/marks";
 import { useCopy } from "@/lib/i18n";
 
 /* The apps most people connect, in plain words. Developer tools (API tokens, MCP, webhooks) sit below on
@@ -44,7 +44,7 @@ export default function ConnectedApps() {
           <Link className="ws-btn ws-btn--sm" href="/docs/chatgpt-app" target="_blank">{t.ai.action} <ArrowUpRight size={14} aria-hidden /></Link>
         </article>
         <article className="cx-app cx-app--soon" aria-label={`${t.notion.name}: ${t.notion.soon}`}>
-          <span className="cx-app__mark cx-app__mark--letter" aria-hidden>N</span>
+          <span className="cx-app__mark" aria-hidden><NotionMark size={20} /></span>
           <h3>{t.notion.name}</h3>
           <span className="ws-pill">{t.notion.soon}</span>
         </article>

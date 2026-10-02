@@ -57,7 +57,7 @@ export default function PrivacyPage() {
         <li>To connect with Max when a creator chooses to. Max receives only the form definitions the creator selects and permitted summary numbers, never individual answers.</li>
         <li>To work with ChatGPT, Claude or another assistant when you connect it (see below).</li>
         <li>To send webhook events to an address a creator sets up. Events say what happened (for example that a response arrived) and contain counts, not answers.</li>
-        <li>To make an Apple Wallet or Google Wallet pass of your member card when you ask. The pass holds what your public card shows and is then handled by Apple or Google.</li>
+        <li>To make a Google Wallet pass of your member card when you ask. The pass holds what your public card shows and is then handled by Google.</li>
       </ul>
 
       <h2>Who can see answers</h2>
