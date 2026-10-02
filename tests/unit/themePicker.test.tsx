@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { ThemePicker } from "@/components/ThemePicker";
 import type { ThemePresetId } from "@/convex/formLogic";
 import { LocaleProvider } from "@/lib/i18n";
@@ -11,6 +11,9 @@ function Picker({ initial = "paper" }: { initial?: ThemePresetId }) {
 }
 
 describe("compact theme choices", () => {
+  // Picks are remembered as recent themes; each test starts with none.
+  beforeEach(() => localStorage.clear());
+
   it("keeps a selected preset visible, expands all 18, searches, and keeps a newly selected preset on collapse", () => {
     render(<Picker />);
     expect(screen.getByRole("radio", { name: "Paper" })).toBeChecked();

@@ -43,3 +43,25 @@ it("creates a course like a form, publishes it publicly with its lessons, and ke
   expect(await t.query(api.courses.getPublic, { courseId })).toBeNull();
   expect(await owner.query(api.courses.getPublic, { courseId })).not.toBeNull();
 });
+
+it("gives a course a Notion-style cover and icon, owner only", async () => {
+  vi.stubEnv("CLERK_JWT_ISSUER_DOMAIN", creatorIdentity.issuer);
+  const t = createTestConvex(), owner = t.withIdentity(creatorIdentity), other = t.withIdentity(otherCreatorIdentity);
+  await owner.mutation(api.quizFunctions.getOrCreateUser, {});
+  await other.mutation(api.quizFunctions.getOrCreateUser, {});
+  const courseId = await owner.mutation(api.courses.create, { title: "Stars" });
+
+  await owner.mutation(api.courses.update, { courseId, coverUrl: "/covers/webb/carina.jpg", coverY: 30.4, icon: "🔭" });
+  expect(await owner.query(api.courses.get, { courseId })).toMatchObject({ coverUrl: "/covers/webb/carina.jpg", coverY: 30, icon: "🔭" });
+
+  await expect(owner.mutation(api.courses.update, { courseId, coverUrl: "/etc/passwd" })).rejects.toThrow("VALIDATION_FAILED");
+  await expect(owner.mutation(api.courses.update, { courseId, coverUrl: "javascript:alert(1)" })).rejects.toThrow("VALIDATION_FAILED");
+  await expect(owner.mutation(api.courses.update, { courseId, coverY: 140 })).rejects.toThrow("VALIDATION_FAILED");
+  await expect(owner.mutation(api.courses.update, { courseId, icon: "<b>x</b>" })).rejects.toThrow("VALIDATION_FAILED");
+  await expect(other.mutation(api.courses.update, { courseId, icon: "🙂" })).rejects.toThrow("NOT_FOUND");
+
+  // Removing the cover also clears its position; null clears the icon.
+  await owner.mutation(api.courses.update, { courseId, coverUrl: null, icon: null });
+  const cleared = await owner.query(api.courses.get, { courseId });
+  expect(cleared.coverUrl).toBeUndefined(); expect(cleared.coverY).toBeUndefined(); expect(cleared.icon).toBeUndefined();
+});

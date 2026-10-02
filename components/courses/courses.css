@@ -84,3 +84,29 @@
 @media (prefers-reduced-motion: reduce) {
   .cx-card, .cp-lesson, .cp .cp-start { transition: none; }
 }
+
+/* Course page as a Notion page (app/dashboard/courses/[id]): a full-bleed cover band, the page icon
+   overlapping it, a large borderless title, and quiet list rows instead of boxed cards. */
+.cb-page { max-width: none; padding-top: 0; gap: 0; }
+.cb-page > * { width: 100%; max-width: 860px; margin-inline: auto; }
+.cb-page > .lx-cover { width: auto; max-width: none; margin-inline: -48px; }
+.cb-page > .cb-hero { margin-top: 40px; border: 0; border-radius: 0; overflow: visible; }
+.cb-page > .lx-cover + .cb-hero { margin-top: 0; }
+.cb-page .lx-page-top[data-cover="true"]:not([data-icon="true"]) { padding-top: 12px; }
+.cb-page .cb-hero:hover .lx-page-add, .cb-page .cb-hero:focus-within .lx-page-add { opacity: 1; }
+.cb-page .cb-hero__body { padding: 4px 0 0; gap: 6px; }
+.cb-page .cb-title { font-size: clamp(32px, 5vw, 40px); font-weight: 700; letter-spacing: -.025em; }
+.cb-page .cb-title:focus-visible, .cb-page .cb-desc:focus-visible { box-shadow: none; }
+.cb-page .cb-desc { font-size: 16px; }
+.cb-page > .cb-section { margin-top: 32px; }
+.cb-page .cb-section h2 { margin: 0 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--ws-line, rgba(127,127,127,.2)); font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; }
+.cb-page .cb-lessons { gap: 1px; }
+.cb-page .cb-lesson { grid-template-columns: 24px 1fr auto; gap: 10px; padding: 6px 8px; border: 0; border-radius: 6px; background: transparent; }
+.cb-page .cb-lesson:hover { background: var(--ws-hover, rgba(55,53,47,.06)); }
+.cb-page .cb-lesson__no { width: 22px; height: 22px; border-radius: 5px; font-size: 12px; font-weight: 600; }
+.cb-page .cb-lesson__actions { opacity: 0; transition: opacity .12s ease; }
+.cb-page .cb-lesson:hover .cb-lesson__actions, .cb-page .cb-lesson:focus-within .cb-lesson__actions { opacity: 1; }
+.cb-page .cb-add { justify-content: flex-start; padding: 8px; border: 0; border-radius: 6px; font-weight: 500; }
+.cb-page .cb-add:hover { background: var(--ws-hover, rgba(55,53,47,.06)); color: var(--on-background); }
+@media (max-width: 860px) { .cb-page > .lx-cover { margin-inline: -16px; } }
+@media (hover: none) { .cb-page .cb-lesson__actions { opacity: 1; } }

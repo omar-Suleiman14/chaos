@@ -310,6 +310,18 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "set_course_outline": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:setOutline"), { ...input, userId }); break;
       case "add_course_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:addLesson"), { ...input, userId }); break;
       case "publish_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:publish"), { ...input, userId }); break;
+      case "list_courses": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCourses:list"), { ...input, userId }); break;
+      case "set_course_archived": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:setArchived"), { ...input, userId }); break;
+      case "unpublish_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:unpublish"), { ...input, userId }); break;
+      case "list_flashcard_sets": result = await ctx.runQuery(makeFunctionReference<"query">("mcpFlashcards:list"), { ...input, userId }); break;
+      case "get_flashcard_set": result = await ctx.runQuery(makeFunctionReference<"query">("mcpFlashcards:get"), { ...input, userId }); break;
+      case "create_flashcard_set": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpFlashcards:create"), { ...input, userId }); break;
+      case "save_flashcard_set": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpFlashcards:save"), { ...input, userId }); break;
+      case "publish_flashcard_set": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpFlashcards:publish"), { ...input, userId }); break;
+      case "set_flashcard_set_lifecycle": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpFlashcards:lifecycle"), { ...input, userId }); break;
+      case "attach_lesson_flashcards": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpFlashcards:attach"), { ...input, userId }); break;
+      case "detach_lesson_flashcards": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpFlashcards:detach"), { ...input, userId }); break;
+      case "get_lesson_flashcards": result = await ctx.runQuery(makeFunctionReference<"query">("mcpFlashcards:listAttached"), { ...input, userId }); break;
       case "create_folder": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:createFolder"), { ...input, userId }); break;
       case "list_folders": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listFolders"), { ...input, userId }); break;
       case "move_folder": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:moveFolder"), { ...input, userId }); break;
@@ -391,6 +403,10 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
     return respond({ status: 200, body: { result } });
   } catch (caught) {
     if (b.tool === "search_learn_directory" && caught instanceof Error && /ArgumentValidationError|Validator error|Page size|Search text|Filter does not apply|creatorMatch applies|Discovery does not support/.test(caught.message)) return error(400, "VALIDATION_FAILED", "Invalid directory search arguments.");
+    if (/flashcard|^(list_courses|set_course_archived|unpublish_course)$/.test(b.tool)) {
+      if (caught instanceof ConvexError && (caught.data as { code?: unknown } | null)?.code === "REVISION_CONFLICT") return error(409, "REVISION_CONFLICT", "The flashcard set changed; reload it with get_flashcard_set before editing.", { currentRevision: (caught.data as { currentRevision?: unknown }).currentRevision });
+      if (caught instanceof Error && /ArgumentValidationError|Validator error/.test(caught.message)) return error(400, "VALIDATION_FAILED", "Invalid tool arguments; use IDs returned by Chaos tools.");
+    }
     if (caught instanceof ConvexError && caught.data && typeof caught.data === "object" && !Array.isArray(caught.data)) {
       const data = caught.data as Record<string, unknown>;
       if (data.code === "SETTINGS_CONFLICT" || data.code === "MEMBERSHIP_CONFLICT" || data.code === "DRAFT_CONFLICT") {

@@ -10,7 +10,7 @@ const DAY = 86_400_000;
 async function accessibleVersion(ctx: QueryCtx | MutationCtx, versionId: Id<"flashcardVersions">, actor: string) {
   const version = await ctx.db.get("flashcardVersions", versionId);
   const set = version && await ctx.db.get("flashcardSets", version.setId);
-  if (!version || !set || set.archived || (set.ownerId !== actor && (set.visibility !== "public" || set.publishedVersionId !== versionId || await creatorRestricted(ctx, set.ownerId)))) throw new Error("Flashcards not found or unauthorized");
+  if (!version || !set || set.archived || (set.ownerId !== actor && (set.visibility !== "public" || set.publishedVersionId !== versionId || await creatorRestricted(ctx, set.ownerId)))) throw new Error("NOT_FOUND: Flashcards not found or unauthorized");
   return version;
 }
 /** Self-reported retrieval evidence, never server-graded concept mastery. */
@@ -66,53 +66,56 @@ export const history = query({
     return ctx.db.query("flashcardStudyEvidence").withIndex("by_userKey_and_versionId_and_reviewedAt", q => { const range = q.eq("userKey", identity.tokenIdentifier).eq("versionId", args.versionId); return args.before === undefined ? range : range.lt("reviewedAt", args.before); }).order("desc").take(100);
   },
 });
+// Shared by the signed-in app and the ChatGPT app; `actor` is always a server-verified user id.
+export async function attachFlashcardsForActor(ctx: MutationCtx, actor: string, args: { lessonId: Id<"lessons">; versionId: Id<"flashcardVersions">; label: string; order: number }) {
+  const lesson = await ctx.db.get("lessons", args.lessonId);
+  if (!lesson || lesson.ownerId !== actor || lesson.status !== "active") throw new Error("NOT_FOUND: Lesson not found or unauthorized");
+  if (args.label.length > 200 || !Number.isSafeInteger(args.order) || args.order < 0 || args.order > 1000) throw new Error("VALIDATION_FAILED: Invalid attachment label/order");
+  const version = await accessibleVersion(ctx, args.versionId, actor);
+  const prior = await ctx.db.query("lessonFlashcards").withIndex("by_lessonId_and_setId", q => q.eq("lessonId", args.lessonId).eq("setId", version.setId)).unique();
+  if (prior) { await ctx.db.patch("lessonFlashcards", prior._id, { versionId: args.versionId, label: args.label, order: args.order }); return prior._id; }
+  const count = await ctx.db.query("lessonFlashcards").withIndex("by_lessonId_and_order", q => q.eq("lessonId", args.lessonId)).take(51);
+  if (count.length >= 50) throw new Error("VALIDATION_FAILED: At most 50 flashcard attachments");
+  return ctx.db.insert("lessonFlashcards", { lessonId: args.lessonId, versionId: args.versionId, label: args.label, order: args.order, setId: version.setId });
+}
+export async function detachFlashcardsForActor(ctx: MutationCtx, actor: string, attachmentId: Id<"lessonFlashcards">) {
+  const attachment = await ctx.db.get("lessonFlashcards", attachmentId);
+  if (!attachment) return null;
+  const lesson = await ctx.db.get("lessons", attachment.lessonId);
+  if (!lesson || lesson.ownerId !== actor) throw new Error("NOT_FOUND: Lesson not found or unauthorized");
+  await ctx.db.delete("lessonFlashcards", attachment._id);
+  return null;
+}
+export const attachedFlashcards = v.array(v.object({ attachmentId: v.id("lessonFlashcards"), setId: v.id("flashcardSets"), versionId: v.id("flashcardVersions"), title: v.string(), label: v.string(), order: v.number(), cardCount: v.number() }));
+/** `viewer` is the signed-in subject (or verified MCP actor); undefined for anonymous readers. */
+export async function listAttachedFlashcards(ctx: QueryCtx, viewer: string | undefined, lessonId: Id<"lessons">) {
+  const lesson = await ctx.db.get("lessons", lessonId);
+  if (!lesson || lesson.status !== "active") throw new Error("NOT_FOUND: Lesson not found or unauthorized");
+  const owner = viewer !== undefined && lesson.ownerId === viewer;
+  const grant = viewer !== undefined && await ctx.db.query("lessonPermissions").withIndex("by_lessonId_and_userId", q => q.eq("lessonId", lessonId).eq("userId", viewer)).unique();
+  if (!owner && !grant && (lesson.visibility !== "public" || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId))) throw new Error("NOT_FOUND: Lesson not found or unauthorized");
+  const rows = await ctx.db.query("lessonFlashcards").withIndex("by_lessonId_and_order", q => q.eq("lessonId", lessonId)).take(50);
+  const result = [];
+  for (const row of rows) {
+    try {
+      const version = await accessibleVersion(ctx, row.versionId, viewer ?? "");
+      result.push({ attachmentId: row._id, setId: row.setId, versionId: row.versionId, title: version.title, label: row.label, order: row.order, cardCount: version.cards.length });
+    } catch { /* Revoked/private attachments expose no metadata. */ }
+  }
+  return result;
+}
 export const attach = mutation({
   args: { lessonId: v.id("lessons"), versionId: v.id("flashcardVersions"), label: v.string(), order: v.number() },
   returns: v.id("lessonFlashcards"),
-  handler: async (ctx, args) => {
-    const { identity } = await requireActiveUser(ctx);
-    const lesson = await ctx.db.get("lessons", args.lessonId);
-    if (!lesson || lesson.ownerId !== identity.subject || lesson.status !== "active") throw new Error("Lesson not found or unauthorized");
-    if (args.label.length > 200 || !Number.isSafeInteger(args.order) || args.order < 0 || args.order > 1000) throw new Error("Invalid attachment label/order");
-    const version = await accessibleVersion(ctx, args.versionId, identity.subject);
-    const prior = await ctx.db.query("lessonFlashcards").withIndex("by_lessonId_and_setId", q => q.eq("lessonId", args.lessonId).eq("setId", version.setId)).unique();
-    if (prior) { await ctx.db.patch("lessonFlashcards", prior._id, { versionId: args.versionId, label: args.label, order: args.order }); return prior._id; }
-    const count = await ctx.db.query("lessonFlashcards").withIndex("by_lessonId_and_order", q => q.eq("lessonId", args.lessonId)).take(51);
-    if (count.length >= 50) throw new Error("At most 50 flashcard attachments");
-    return ctx.db.insert("lessonFlashcards", { ...args, setId: version.setId });
-  },
+  handler: async (ctx, args) => attachFlashcardsForActor(ctx, (await requireActiveUser(ctx)).identity.subject, args),
 });
 export const detach = mutation({
   args: { attachmentId: v.id("lessonFlashcards") },
   returns: v.null(),
-  handler: async (ctx, args) => {
-    const { identity } = await requireActiveUser(ctx);
-    const attachment = await ctx.db.get("lessonFlashcards", args.attachmentId);
-    if (!attachment) return null;
-    const lesson = await ctx.db.get("lessons", attachment.lessonId);
-    if (!lesson || lesson.ownerId !== identity.subject) throw new Error("Lesson not found or unauthorized");
-    await ctx.db.delete("lessonFlashcards", attachment._id);
-    return null;
-  },
+  handler: async (ctx, args) => detachFlashcardsForActor(ctx, (await requireActiveUser(ctx)).identity.subject, args.attachmentId),
 });
 export const listAttached = query({
   args: { lessonId: v.id("lessons") },
-  returns: v.array(v.object({ attachmentId: v.id("lessonFlashcards"), setId: v.id("flashcardSets"), versionId: v.id("flashcardVersions"), title: v.string(), label: v.string(), order: v.number(), cardCount: v.number() })),
-  handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
-    const lesson = await ctx.db.get("lessons", args.lessonId);
-    if (!lesson || lesson.status !== "active") throw new Error("Lesson not found or unauthorized");
-    const owner = lesson.ownerId === identity?.subject;
-    const grant = identity && await ctx.db.query("lessonPermissions").withIndex("by_lessonId_and_userId", q => q.eq("lessonId", args.lessonId).eq("userId", identity.subject)).unique();
-    if (!owner && !grant && (lesson.visibility !== "public" || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId))) throw new Error("Lesson not found or unauthorized");
-    const rows = await ctx.db.query("lessonFlashcards").withIndex("by_lessonId_and_order", q => q.eq("lessonId", args.lessonId)).take(50);
-    const result = [];
-    for (const row of rows) {
-      try {
-        const version = await accessibleVersion(ctx, row.versionId, identity?.subject ?? "");
-        result.push({ attachmentId: row._id, setId: row.setId, versionId: row.versionId, title: version.title, label: row.label, order: row.order, cardCount: version.cards.length });
-      } catch { /* Revoked/private attachments expose no metadata. */ }
-    }
-    return result;
-  },
+  returns: attachedFlashcards,
+  handler: async (ctx, args) => listAttachedFlashcards(ctx, (await ctx.auth.getUserIdentity())?.subject, args.lessonId),
 });

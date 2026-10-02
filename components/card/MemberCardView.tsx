@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, RefreshCw, Repeat2, Send } from "lucide-react";
+import { Download, RefreshCw, Send } from "lucide-react";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { CARD_THEMES, memberCardPng, memberCardSvg, type MemberCardData } from "@/lib/memberCard";
 import "./card.css";
@@ -18,7 +18,7 @@ const copy = {
 };
 
 /**
- * Chaos member card: tilts toward the pointer, flips to a scannable QR code, and
+ * Chaos member card: tilts toward the pointer, flips to a scannable QR code when tapped, and
  * downloads as a crisp PNG. `onStyle` (owner only) cycles the colour theme.
  */
 export default function MemberCardView({ data, onStyle, framed = true }: { data: MemberCardData; onStyle?: (style: number) => unknown; framed?: boolean }) {
@@ -69,7 +69,7 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
         {framed && <span className="mc-frame__label">{t.label}</span>}
         <div className="mc-stage" ref={tilt} onPointerMove={move} onPointerLeave={leave}>
           <div className="mc-tilt">
-            <button type="button" className="mc-card" data-flipped={flipped} onClick={() => setFlipped((f) => !f)} aria-label={`${t.cardOf(data.name)}. ${flipped ? t.flipBack : t.flip}`}>
+            <button type="button" className="mc-card" data-flipped={flipped} title={flipped ? t.flipBack : t.flip} onClick={() => setFlipped((f) => !f)} aria-label={`${t.cardOf(data.name)}. ${flipped ? t.flipBack : t.flip}`}>
               <span aria-hidden={flipped} className="mc-face mc-face--front" dangerouslySetInnerHTML={{ __html: front }} />
               <span aria-hidden={!flipped} className="mc-face mc-face--back" dangerouslySetInnerHTML={{ __html: back }} />
               <span className="mc-glare" aria-hidden />
@@ -79,7 +79,6 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
       </div>
       <div className="mc-actions" role="group" aria-label={t.label}>
         {onStyle && <button type="button" className="mc-btn" title={t.shuffle} aria-label={t.shuffle} onClick={() => void Promise.resolve().then(() => onStyle((data.style + 1) % CARD_THEMES.length)).catch(() => say(t.failed))}><RefreshCw size={18} aria-hidden /><span>{t.shuffle}</span></button>}
-        <button type="button" className="mc-btn" title={flipped ? t.flipBack : t.flip} aria-label={flipped ? t.flipBack : t.flip} aria-pressed={flipped} onClick={() => setFlipped((f) => !f)}><Repeat2 size={18} aria-hidden /><span>{flipped ? t.flipBack : t.flip}</span></button>
         <span className="mc-gap" />
         <button type="button" className="mc-btn" title={t.download} aria-label={t.download} onClick={() => void download()}><Download size={18} aria-hidden /><span>{t.download}</span></button>
         <button type="button" className="mc-btn" title={t.share} aria-label={t.share} onClick={() => void share()}><Send size={18} aria-hidden /><span>{t.share}</span></button>

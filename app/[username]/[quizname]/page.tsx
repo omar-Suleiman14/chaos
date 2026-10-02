@@ -13,6 +13,8 @@ import { Zap, ArrowDown, Volume2, VolumeX } from "lucide-react";
 import LoadingState from "@/components/LoadingState";
 import { RespondLoading, RespondToForm } from "@/components/forms/respond/RespondPage";
 import FallbackBoundary from "@/components/FallbackBoundary";
+import ErrorScreen from "@/components/site/ErrorScreen";
+import { useCopy } from "@/lib/i18n";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Fisher-Yates shuffle (creates a new array)
@@ -28,6 +30,11 @@ function shuffleArray<T>(arr: T[]): T[] {
 type GameState = "entry" | "playing";
 type AnswerFeedback = Partial<FunctionReturnType<typeof api.quizFunctions.gradeAnswer>>;
 type FinalResults = Partial<FunctionReturnType<typeof api.quizFunctions.completeQuizSession>>;
+
+const notFoundCopy = {
+  en: { title: "Quiz not found", body: "This quiz doesn't exist, or its owner made it private.", home: "Go home" },
+  ar: { title: "الاختبار غير موجود", body: "هذا الاختبار غير موجود، أو جعله صاحبه خاصًا.", home: "الرئيسية" },
+};
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
@@ -53,6 +60,7 @@ function QuizPlayerPage() {
   const params = useParams();
   const username = params.username as string;
   const quizname = params.quizname as string;
+  const notFound = useCopy(notFoundCopy);
 
   const quizMeta = useQuery(
     api.quizFunctions.getQuizByUsernameSlug,
@@ -360,18 +368,7 @@ function QuizPlayerPage() {
 
   if (quizMeta === null || quizData === null || (quizData && !quizData.isPublished)) {
     return (
-      <div className="h-[100dvh] bg-background flex flex-col items-center justify-center p-6 text-center">
-        <div className="chaos-card bg-card p-10 max-w-sm w-full text-center">
-          <h1 className="chaos-display text-4xl mb-3">NOT FOUND.</h1>
-          <p className="text-muted-foreground mb-8 text-sm">This quiz does not exist or is currently private.</p>
-          <Link
-            href="/"
-            className="kb-btn kb-btn-primary w-full"
-          >
-            GO HOME
-          </Link>
-        </div>
-      </div>
+      <ErrorScreen title={notFound.title} body={notFound.body} primary={{ label: notFound.home, href: "/" }} />
     );
   }
 

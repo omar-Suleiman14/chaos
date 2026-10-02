@@ -16,6 +16,7 @@ import { registerCommunityTools } from "./community";
 import { registerQuizForkTools } from "./quizForks";
 import { registerAssessmentTools } from "./assessments";
 import { registerCourseTools } from "./courses";
+import { registerFlashcardTools } from "./flashcards";
 import { registerOrganizationTools } from "./organization";
 
 export type McpCaller = (tool: string, input: Record<string, unknown>) => Promise<unknown>;
@@ -32,7 +33,9 @@ const instructions = `Chaos (chaos.fail) is where this person builds forms, surv
 - Forms, quizzes, lessons and courses are created as drafts. Draft edits never publish. Folders are private organisation, not publishable content. Publish only on explicit request after review, using publish_form, publish_lesson or publish_course for the selected content.
 - Work only on content the person selected or asked to find. Authorization is enforced for the connected account; never supply an actor/userId or infer permission from a reference. Folder membership and source metadata do not grant content access. Only request source metadata through the supported tools; no source file bytes are exposed here.
 - Forms return shareUrl: share it only when returned and published. Lesson and course tools do not return shareUrl. After publish_lesson returns ok true, use the lessonId from a verified create/get response to construct https://chaos.fail/learn/<lessonId>. After publish_course returns ok true, use courseId from verified create_course (or id from get_course) to construct https://chaos.fail/learn/courses/<courseId>. Never invent IDs, claim draft links are public, or imply private/restricted links grant access. Visibility values are public, restricted and private; restricted/private require Business.
-- Courses: create_course creates a draft; add_course_lesson creates a blank lesson draft; use lesson tools to write it. get_course reads the owner's outline and metadata. update_course edits draft metadata. set_course_outline replaces the full ordered list, so read get_course first and preserve wanted lessons. publish_course publishes the outlined lessons too. Inspect per-lesson problems when ok is false; other lessons may already have published. Do not automatically retry course/lesson creation or publication after uncertain success.
+- Courses: create_course creates a draft; add_course_lesson creates a blank lesson draft; use lesson tools to write it. get_course reads the owner's outline and metadata. update_course edits draft metadata. set_course_outline replaces the full ordered list, so read get_course first and preserve wanted lessons. publish_course publishes the outlined lessons too. Inspect per-lesson problems when ok is false; other lessons may already have published. Do not automatically retry course/lesson creation or publication after uncertain success. list_courses lists the person's courses; set_course_archived archives or restores one; unpublish_course takes a course offline. Course covers are update_course coverUrl; lesson covers are metadata.coverUrl and an optional emoji metadata.icon on create_lesson/save_lesson_draft.
+- Flashcards: create_flashcard_set makes a private set; get_flashcard_set returns cards and revision; save_flashcard_set replaces the whole card list, so keep card IDs. publish_flashcard_set makes an immutable version only on request; attach_lesson_flashcards links that version to an owned lesson. set_flashcard_set_lifecycle archives, restores or unpublishes.
+- get_learn_capabilities lists the lesson, course, flashcard, game and folder tools with limits; call it when unsure what Chaos can do.
 - Lessons: search_lessons/list_lessons use scope owned for drafts or public for published discovery. get_lesson draft and get_lesson_outline with outlineFrom draft require edit permission; outlines default to published. get_lesson and get_lesson_outline return bounded pages: offset 0?500, limit 1?100; follow nextOffset until null instead of claiming the first page is complete. Keep stable block IDs and use the current expectedRevision for edits; on conflict reload before making a reviewed change.
 - Folders: list_folders and list_folder_contents use paginationOpts and continueCursor, including empty partial pages. create_folder creates an owned private folder; add_folder_member requires ownership of both folder and asset; move_folder needs explicit relocation intent. Folder changes never publish content.
 - A quiz is a form with quizMode on. For "make a quiz about what we discussed", write the questions from the conversation yourself: mostly single_choice with 3–4 options, set correctAnswers to the exact option label, and give points.
@@ -434,6 +437,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
   registerLearnTools(server, run, securitySchemes);
   registerOrganizationTools(server, run, securitySchemes);
   registerCourseTools(server, run, securitySchemes);
+  registerFlashcardTools(server, run, securitySchemes);
   registerQuizForkTools(server, run, securitySchemes);
   registerCommunityTools(server, run, securitySchemes);
   registerAdvancedFormTools(server, run, securitySchemes);

@@ -18,6 +18,7 @@ import NotificationBell from "@/components/NotificationBell";
 import Logo from "@/components/Logo";
 import type { PaletteItem } from "@/components/workspace/CommandPalette";
 import { useCreateForm } from "@/components/workspace/useCreateForm";
+import { newGameArgs } from "@/components/live/newGame";
 import { errorMessage } from "@/lib/errors";
 import { useModal } from "@/components/workspace/useModal";
 import { WsTooltips } from "@/components/workspace/primitives";
@@ -59,7 +60,7 @@ const copy = {
     dismiss: "Dismiss error",
     banned: "Your account is banned.", suspended: (until: string) => `Your account is suspended until ${until}.`,
     paused: "Editing and response collection are paused. Your existing data is preserved.", contact: "Contact support",
-    create: "Create", learn: "Learn", surface: "Workspace", learnHome: "Home", courses: "Courses", newForm: "Form or quiz", newFormHelp: "Surveys, quizzes and live games", newCourse: "Course", newCourseHelp: "Lessons people can take, free", learnLibrary: "Library", saved: "Saved", flashcards: "Flashcards",
+    create: "Create", learn: "Learn", surface: "Workspace", learnHome: "Home", courses: "Courses", newForm: "Form or quiz", newFormHelp: "Surveys, quizzes and live games", newGame: "Game", newGameHelp: "A live quiz people join with a PIN", newCourse: "Course", newCourseHelp: "Lessons people can take, free", learnLibrary: "Library", saved: "Saved", flashcards: "Flashcards",
     newLesson: "New lesson", folders: "Folders", lessons: "Recent lessons", untitledLesson: "Untitled lesson", lesson: "Lesson",
   },
   ar: {
@@ -79,7 +80,7 @@ const copy = {
     dismiss: "إخفاء الخطأ",
     banned: "حسابك محظور.", suspended: (until: string) => `حسابك معلّق حتى ${until}.`,
     paused: "التعديل وجمع الردود متوقفان. بياناتك الحالية محفوظة.", contact: "تواصل مع الدعم",
-    create: "إنشاء", learn: "تعلّم", surface: "مساحة العمل", learnHome: "الرئيسية", courses: "الدورات", newForm: "نموذج أو اختبار", newFormHelp: "استبيانات واختبارات وألعاب مباشرة", newCourse: "دورة", newCourseHelp: "دروس يأخذها الناس مجانًا", learnLibrary: "المكتبة", saved: "المحفوظات", flashcards: "البطاقات",
+    create: "إنشاء", learn: "تعلّم", surface: "مساحة العمل", learnHome: "الرئيسية", courses: "الدورات", newForm: "نموذج أو اختبار", newFormHelp: "استبيانات واختبارات وألعاب مباشرة", newGame: "لعبة", newGameHelp: "اختبار مباشر ينضم إليه الناس برمز", newCourse: "دورة", newCourseHelp: "دروس يأخذها الناس مجانًا", learnLibrary: "المكتبة", saved: "المحفوظات", flashcards: "البطاقات",
     newLesson: "درس جديد", folders: "المجلدات", lessons: "دروس حديثة", untitledLesson: "درس بلا عنوان", lesson: "الدرس",
   },
 };
@@ -314,6 +315,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             {newOpen && (
               <div role="menu" className="ws-new-menu__list" onKeyDown={(e) => { if (e.key === "Escape") setNewOpen(false); }}>
                 <button type="button" role="menuitem" autoFocus className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(); }}><FileText size={16} aria-hidden="true" /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>
+                <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(newGameArgs(locale)); }}><Trophy size={16} aria-hidden="true" /><span><strong>{t.newGame}</strong><small>{t.newGameHelp}</small></span></button>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createCourse(); }}><GraduationCap size={16} aria-hidden="true" /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>
               </div>
             )}
@@ -400,9 +402,17 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             {/* Phones: Clerk's account popover opens outside the drawer, which the drawer treats as a
                 click away and hides. A plain row signs out without it. */}
             {mobile ? (
-              <button type="button" className="ws-nav-item" onClick={() => void clerk.signOut({ redirectUrl: "/" })}>
-                <LogOut size={18} aria-hidden="true" /> <span className="truncate">{t.signOut}{user?.fullName ? ` (${user.fullName})` : ""}</span>
-              </button>
+              <>
+                {/* Profile holds the app settings (appearance, language, account). */}
+                <IntentLink href="/dashboard/card" className="ws-nav-item" aria-current={pathname.startsWith("/dashboard/card") ? "page" : undefined}>
+                  {account ? <MemberAvatar seed={avatarSeed(account.username)} size={20} /> : <UserCog size={18} aria-hidden="true" />}
+                  <span>{user?.fullName || t.myCard}</span>
+                  <small className="ms-auto text-[13px] text-muted-foreground">{t.myCard}</small>
+                </IntentLink>
+                <button type="button" className="ws-nav-item" onClick={() => void clerk.signOut({ redirectUrl: "/" })}>
+                  <LogOut size={18} aria-hidden="true" /> <span>{t.signOut}</span>
+                </button>
+              </>
             ) : (
               <div className="ws-user">
                 <IntentLink href="/dashboard/card" className="ws-user__card" title={t.myCard} aria-label={t.myCard}>

@@ -21,7 +21,6 @@
 .mc-gap { display:none; }
 .mc-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-width:44px; min-height:44px; padding:8px 12px; border-radius:8px; cursor:pointer; color:var(--on-background); background:var(--ws-card,var(--surface-container-low)); border:1px solid var(--ws-line,var(--outline-variant)); font-size:13px; }
 .mc-btn:hover { background:var(--ws-hover,var(--surface-container)); }
-.mc-btn[aria-pressed="true"] { border-color:var(--primary); }
 .mc-btn:disabled { opacity:.5; cursor:wait; }
 .mc-card:focus-visible,.mc-btn:focus-visible,.mc-cta:focus-visible,.mc-input:focus-visible { outline:2px solid var(--primary); outline-offset:4px; }
 .mc .mc-status { min-height:20px; margin:0; font-size:13px; color:var(--on-surface-variant); }

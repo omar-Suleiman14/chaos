@@ -10,7 +10,8 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useCopy } from "@/lib/i18n";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { WsDialog } from "@/components/workspace/primitives";
-import { coverStyle } from "@/components/courses/shared";
+import { LessonCover, PageIconControls, type PageLook } from "@/components/learn/editor/PageHeader";
+import "@/components/learn/learn.css";
 import "@/components/courses/courses.css";
 
 const copy = {
@@ -19,7 +20,7 @@ const copy = {
     titlePh: "Course title", descPh: "What will people learn? One or two sentences.", lessons: "Lessons", add: "Add a lesson", empty: "No lessons yet. Add the first one.",
     up: "Move up", down: "Move down", remove: "Remove from course", unpublishedLesson: "Not published yet", changedLesson: "Edited since publishing", livelesson: "Published",
     blocks: (n: number) => `${n} ${n === 1 ? "block" : "blocks"}`,
-    settings: "Details", cover: "Cover image link", coverHelp: "An https image link. Leave empty for a generated cover.", tags: "Topics", tagsHelp: "Comma separated, up to 12.",
+    settings: "Details", tags: "Topics", tagsHelp: "Comma separated, up to 12.",
     publish: "Publish", update: "Publish changes", view: "View course", unpublish: "Unpublish", archive: "Archive",
     publishTitle: "Publish this course", who: "Who can take it", public: "Public", publicHelp: "Anyone can find and take it, free. Recommended.",
     private: "Private", privateHelp: "Only you and people you share lessons with. Part of Chaos Business.", business: "Business only",
@@ -31,7 +32,7 @@ const copy = {
     titlePh: "عنوان الدورة", descPh: "ماذا سيتعلم الناس؟ جملة أو جملتان.", lessons: "الدروس", add: "أضف درسًا", empty: "لا دروس بعد. أضف أول درس.",
     up: "انقل لأعلى", down: "انقل لأسفل", remove: "احذف من الدورة", unpublishedLesson: "لم يُنشر بعد", changedLesson: "عُدّل بعد النشر", livelesson: "منشور",
     blocks: (n: number) => `${n} ${n === 1 ? "كتلة" : "كتل"}`,
-    settings: "التفاصيل", cover: "رابط صورة الغلاف", coverHelp: "رابط صورة https. اتركه فارغًا لغلاف تلقائي.", tags: "المواضيع", tagsHelp: "مفصولة بفواصل، حتى 12.",
+    settings: "التفاصيل", tags: "المواضيع", tagsHelp: "مفصولة بفواصل، حتى 12.",
     publish: "انشر", update: "انشر التغييرات", view: "اعرض الدورة", unpublish: "ألغِ النشر", archive: "أرشف",
     publishTitle: "انشر هذه الدورة", who: "من يمكنه أخذها", public: "عامة", publicHelp: "يمكن لأي أحد إيجادها وأخذها مجانًا. موصى به.",
     private: "خاصة", privateHelp: "أنت ومن تشاركهم الدروس فقط. جزء من Chaos للأعمال.", business: "للأعمال فقط",
@@ -50,7 +51,9 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
   const course = useQuery(api.courses.get, { courseId });
   const update = useMutation(api.courses.update), setOutline = useMutation(api.courses.setOutline), addLesson = useMutation(api.courses.addLesson);
   const publish = useMutation(api.courses.publish), unpublish = useMutation(api.courses.unpublish), setArchived = useMutation(api.courses.setArchived);
-  const [title, setTitle] = useState(""), [desc, setDesc] = useState(""), [cover, setCover] = useState(""), [tags, setTags] = useState("");
+  const [title, setTitle] = useState(""), [desc, setDesc] = useState(""), [tags, setTags] = useState("");
+  // Cover and icon show the change at once; the server copy catches up.
+  const [look, setLook] = useState<PageLook | null>(null);
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const [error, setError] = useState(""), [busy, setBusy] = useState(false);
   const [publishing, setPublishing] = useState(false), [visibility, setVisibility] = useState<"public" | "private">("public");
@@ -58,7 +61,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
 
   useEffect(() => {
     if (course && loadedId !== course.id) {
-      setLoadedId(course.id); setTitle(course.title); setDesc(course.description); setCover(course.coverUrl ?? ""); setTags(course.tags.join(", "));
+      setLoadedId(course.id); setTitle(course.title); setDesc(course.description); setLook(null); setTags(course.tags.join(", "));
       setVisibility(course.visibility === "public" ? "public" : "private");
     }
   }, [course, loadedId]);
@@ -70,10 +73,15 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
   const save = (patch: Parameters<typeof update>[0]) => void run(() => update(patch));
   const ids = course.lessons.map((l) => l.id);
   const move = (i: number, d: -1 | 1) => { const next = [...ids]; [next[i], next[i + d]] = [next[i + d], next[i]]; void run(() => setOutline({ courseId, lessonIds: next })); };
+  const page: PageLook = look ?? { coverUrl: course.coverUrl, coverY: course.coverY, icon: course.icon };
+  const saveLook = (patch: Partial<PageLook>) => {
+    setLook({ ...page, ...patch });
+    save({ courseId, ...("coverUrl" in patch ? { coverUrl: patch.coverUrl ?? null } : {}), ...("coverY" in patch ? { coverY: patch.coverY ?? null } : {}), ...("icon" in patch ? { icon: patch.icon ?? null } : {}) });
+  };
   const dirty = !course.published || course.lessons.some((l) => l.changed);
 
   return (
-    <div className="cb">
+    <div className="cb cb-page">
       <div className="cb-top">
         <Link href="/dashboard?tab=courses" className="ws-btn ws-btn--ghost ws-btn--sm"><ArrowLeft size={16} aria-hidden /> {t.back}</Link>
         <span className="cb-status" data-live={course.published}>{course.published ? t.live : t.draft}</span>
@@ -84,8 +92,9 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
       </div>
       {error && <p role="alert" className="ws-error">{error}</p>}
 
+      <LessonCover meta={page} editable onChange={saveLook} />
       <section className="cb-hero">
-        <div className="cx-cover" style={coverStyle(course.id, course.coverUrl)} />
+        <PageIconControls meta={page} editable onChange={saveLook} />
         <div className="cb-hero__body">
           <input className="cb-title" aria-label={t.titlePh} placeholder={t.titlePh} value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} onBlur={() => title.trim() && title !== course.title && save({ courseId, title })} />
           <textarea className="cb-desc" aria-label={t.descPh} placeholder={t.descPh} rows={2} value={desc} maxLength={4000} onChange={(e) => setDesc(e.target.value)} onBlur={() => desc !== course.description && save({ courseId, description: desc })} />
@@ -117,7 +126,6 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
 
       <section className="cb-section grid gap-4" aria-labelledby="cb-settings">
         <h2 id="cb-settings">{t.settings}</h2>
-        <div className="cb-row"><label htmlFor="cb-cover">{t.cover}</label><input id="cb-cover" className="kb-input" type="url" inputMode="url" placeholder="https://…" value={cover} onChange={(e) => setCover(e.target.value)} onBlur={() => cover !== (course.coverUrl ?? "") && save({ courseId, coverUrl: cover.trim() || null })} /><span className="cb-note">{t.coverHelp}</span></div>
         <div className="cb-row"><label htmlFor="cb-tags">{t.tags}</label><input id="cb-tags" className="kb-input" value={tags} onChange={(e) => setTags(e.target.value)} onBlur={() => save({ courseId, tags: tags.split(",") })} /><span className="cb-note">{t.tagsHelp}</span></div>
         <div className="flex gap-2 flex-wrap">
           {course.published && <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(() => unpublish({ courseId }))}>{t.unpublish}</button>}

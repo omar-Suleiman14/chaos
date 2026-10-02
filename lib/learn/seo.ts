@@ -1,3 +1,4 @@
+import { isCoverUrl } from "@/lib/learn/covers";
 import type { Metadata } from "next";
 import { excerpt, outline } from "./doc";
 import type { Lesson } from "./types";
@@ -21,7 +22,8 @@ export function lessonMetadata(lesson: Lesson | null): Metadata {
   const title = meta.title || "Untitled lesson";
   const description = excerpt(meta.description || outline(lesson.published.content).map((h) => h.text).join(" · ") || `A lesson by ${lesson.ownerName} on Chaos.`, 200);
   const path = lessonPath(lesson.id);
-  const image = meta.coverUrl?.startsWith("https://") ? [{ url: meta.coverUrl, alt: title }] : undefined;
+  // Social previews can't show SVG, so colour covers are left out.
+  const image = isCoverUrl(meta.coverUrl) && !meta.coverUrl.endsWith(".svg") ? [{ url: meta.coverUrl, alt: title }] : undefined;
   return {
     title,
     description,

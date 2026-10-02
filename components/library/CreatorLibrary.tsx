@@ -2,6 +2,7 @@
 
 import CoursesHub from "@/components/courses/CoursesHub";
 import GamesHub from "@/components/live/GamesHub";
+import { newGameArgs } from "@/components/live/newGame";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -63,7 +64,7 @@ const copy = {
     open: "Open", results: "Results", viewLive: "View live", copyLink: "Copy link", unpin: "Unpin from sidebar", pin: "Pin to sidebar",
     duplicate: "Duplicate", unpublish: "Unpublish", publish: "Publish", archive: "Archive", delete: "Delete",
     oldQuiz: "Old quiz", quiz: "Quiz", form: "Form",
-    games: "Games", library: "Library", newCourse: "New course", creating: "Creating…", newLabel: "New", moreWays: "More ways to start", blank: "Blank", fromTemplate: "From a template", import: "Import",
+    games: "Games", library: "Library", newGame: "New game", newCourse: "New course", creating: "Creating…", newLabel: "New", moreWays: "More ways to start", blank: "Blank", fromTemplate: "From a template", import: "Import",
     dismissError: "Dismiss error", filterLibrary: "Filter library", searchLibrary: "Search library", search: "Search",
     filterByStatus: "Filter by status", status: "Status", clearFilter: "Clear filter", sort: "Sort", viewOptions: "View options", gallery: "Gallery", list: "List",
     loadingLibrary: "Loading library...", nothingMatches: "Nothing matches", createFirst: "Create your first form",
@@ -100,7 +101,7 @@ const copy = {
     open: "افتح", results: "النتائج", viewLive: "اعرض المنشور", copyLink: "انسخ الرابط", unpin: "إلغاء التثبيت من الشريط الجانبي", pin: "ثبّت في الشريط الجانبي",
     duplicate: "كرّر", unpublish: "ألغِ النشر", publish: "انشر", archive: "أرشِف", delete: "احذف",
     oldQuiz: "اختبار قديم", quiz: "اختبار", form: "نموذج",
-    games: "الألعاب", library: "المكتبة", newCourse: "دورة جديدة", creating: "جارٍ الإنشاء…", newLabel: "جديد", moreWays: "طرق أخرى للبدء", blank: "فارغ", fromTemplate: "من قالب", import: "استيراد",
+    games: "الألعاب", library: "المكتبة", newGame: "لعبة جديدة", newCourse: "دورة جديدة", creating: "جارٍ الإنشاء…", newLabel: "جديد", moreWays: "طرق أخرى للبدء", blank: "فارغ", fromTemplate: "من قالب", import: "استيراد",
     dismissError: "أخفِ الخطأ", filterLibrary: "تصفية المكتبة", searchLibrary: "ابحث في المكتبة", search: "بحث",
     filterByStatus: "تصفية حسب الحالة", status: "الحالة", clearFilter: "امسح التصفية", sort: "ترتيب", viewOptions: "خيارات العرض", gallery: "معرض", list: "قائمة",
     loadingLibrary: "جارٍ تحميل المكتبة...", nothingMatches: "لا نتائج", createFirst: "أنشئ أول نموذج لك",
@@ -379,6 +380,7 @@ export default function CreatorLibrary() {
                 <button type="button" role="menuitem" onClick={() => { close(); void create(); }}><Plus size={16} /> {t.blank}</button>
                 <button type="button" role="menuitem" onClick={() => { close(); setDialog("templates"); }}><LayoutTemplate size={16} /> {t.fromTemplate}</button>
                 <button type="button" role="menuitem" onClick={() => { close(); setDialog("import"); }}><FileUp size={16} /> {t.import}</button>
+                <button type="button" role="menuitem" onClick={() => { close(); void create(newGameArgs(locale)); }}><Trophy size={16} /> {t.newGame}</button>
                 <button type="button" role="menuitem" onClick={() => { close(); void newCourse(); }}><GraduationCap size={16} /> {t.newCourse}</button>
               </>
             )}

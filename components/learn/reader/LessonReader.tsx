@@ -1,5 +1,6 @@
 "use client";
 
+import { isCoverUrl } from "@/lib/learn/covers";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
@@ -362,7 +363,8 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
           {isOwner && !caps.sharedPublishing && lesson.published && !previewDraft && <p className="lx-notice" style={{ marginBottom: 16 }}>{t.devicePublish}</p>}
           <ModerationNotice state={lesson.moderation} note={isOwner ? lesson.moderationNote : undefined} owner={isOwner} />
           <article ref={article} className="lx-article" data-size={prefs.size} data-font={prefs.font} lang={meta.language} dir={meta.language === "ar" ? "rtl" : "ltr"} aria-labelledby="lesson-title">
-            {meta.coverUrl?.startsWith("https://") && <img className="lx-article__cover" src={meta.coverUrl} alt="" />}
+            {isCoverUrl(meta.coverUrl) && <img className="lx-article__cover" src={meta.coverUrl} alt="" style={{ objectPosition: `center ${meta.coverY ?? 50}%` }} />}
+            {meta.icon && <span className="lx-article__icon" aria-hidden>{meta.icon}</span>}
             <h1 id="lesson-title" className="lx-article__title">{meta.title || t.untitled}</h1>
             {meta.description && <p className="lx-article__lead">{meta.description}</p>}
             <div className="lx-article__byline">

@@ -22,6 +22,7 @@ import type { AssistRequest } from "@/components/learn/editor/LessonEditor";
 import type { LessonEditorType } from "@/components/learn/editor/blocks";
 import { focusLessonEnd } from "@/components/learn/editor/focusEnd";
 import { MetadataPanel } from "@/components/learn/editor/MetadataPanel";
+import { LessonCover, PageIconControls } from "@/components/learn/editor/PageHeader";
 import PracticePanel from "@/components/learn/editor/PracticePanel";
 import PublishDialog from "@/components/learn/editor/PublishDialog";
 import SourcesPanel from "@/components/learn/editor/SourcesPanel";
@@ -121,6 +122,8 @@ function LessonEditorSession({ id }: { id: string }) {
   const [assist, setAssist] = useState<{ request: AssistRequest; editor: LessonEditorType; busy: boolean; suggestion?: string; error?: string } | null>(null);
   const [handoff, setHandoff] = useState<HandoffContext | null>(null);
   const [title, setTitle] = useState<string>();
+  /** Cover and icon edits, shown at once and saved with the rest of the metadata. */
+  const [look, setLook] = useState<Partial<LessonMeta>>({});
   const [description, setDescription] = useState<string>();
   const pending = useRef<{ content?: unknown[]; meta?: Partial<LessonMeta>; timer?: ReturnType<typeof setTimeout> }>({});
   const actionRef = useRef(actions);
@@ -194,6 +197,7 @@ function LessonEditorSession({ id }: { id: string }) {
     if (!conflict) p.timer = setTimeout(() => { p.timer = undefined; void run(flush); }, 600);
   };
   const saveMeta = (patch: Partial<LessonMeta>) => { pending.current.meta = { ...pending.current.meta, ...patch }; schedule(); };
+  const saveLook = (patch: Partial<LessonMeta>) => { setLook((current) => ({ ...current, ...patch })); saveMeta(patch); };
   const onContent = (content: unknown[]) => { setEditorContent(content); pending.current.content = structuredClone(content); schedule(); };
   const nativeEdit = async (change: (row: Doc<"lessons">) => Promise<LessonDocument>) => {
     if (mediaLock.current || conflict) throw new Error("Reload the conflicted draft before editing its sources or citations.");
@@ -296,7 +300,7 @@ function LessonEditorSession({ id }: { id: string }) {
           const latest = await actions.reloadDraft(lesson.id);
           pending.current = {};
           setRecoveredContent(latest.draft.content); setEditorContent(latest.draft.content);
-          setTitle(latest.draft.meta.title);
+          setTitle(latest.draft.meta.title); setLook({});
           setDescription(latest.draft.meta.description);
           setConflict(false);
           setSaving(false);
@@ -304,12 +308,13 @@ function LessonEditorSession({ id }: { id: string }) {
           setEditorKey(k => k + 1);
         })}>Reload server draft; keep retained copy</button>}
         {retained && <details className="lx-notice"><summary>Retained unsaved draft</summary><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => { try { const saved = JSON.parse(retained); if (Array.isArray(saved.content)) { setRecoveredContent(saved.content); setEditorContent(saved.content); pending.current.content = saved.content; setEditorKey(k => k + 1); } if (saved.meta) { pending.current.meta = saved.meta; if (saved.meta.title !== undefined) setTitle(saved.meta.title); if (saved.meta.description !== undefined) setDescription(saved.meta.description); } } catch (err) { setError(errorMessage(err)); } }}>Open retained draft for review</button><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => void run(flush)}>Save reviewed draft</button><pre style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap" }}>{retained}</pre></details>}
-        {(conflict || !!error) && recovery && recovery.length > 0 && <details className="lx-notice"><summary>Server recovery revisions</summary>{recovery?.map(row => <details key={row._id}><summary>Revision {row.revision} ? {row.metadata.title}</summary><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => void run(async () => { await flush(); const restored = await actions.recoverDraft(lesson.id, row._id); setRecoveredContent(restored.draft.content); setEditorContent(restored.draft.content); setTitle(restored.draft.meta.title); setDescription(restored.draft.meta.description); setEditorKey(k => k + 1); })}>Restore this revision to draft</button><pre style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap" }}>{JSON.stringify({ metadata: row.metadata, document: row.document }, null, 2)}</pre></details>)}</details>}
+        {(conflict || !!error) && recovery && recovery.length > 0 && <details className="lx-notice"><summary>Server recovery revisions</summary>{recovery?.map(row => <details key={row._id}><summary>Revision {row.revision} ? {row.metadata.title}</summary><button type="button" className="ws-btn ws-btn--sm" disabled={conflict} onClick={() => void run(async () => { await flush(); const restored = await actions.recoverDraft(lesson.id, row._id); setRecoveredContent(restored.draft.content); setEditorContent(restored.draft.content); setTitle(restored.draft.meta.title); setLook({}); setDescription(restored.draft.meta.description); setEditorKey(k => k + 1); })}>Restore this revision to draft</button><pre style={{ maxHeight: 240, overflow: "auto", whiteSpace: "pre-wrap" }}>{JSON.stringify({ metadata: row.metadata, document: row.document }, null, 2)}</pre></details>)}</details>}
 
       </section>}
       {sourceError && <p className="lx-error" role="alert">Source {sourceError} is unavailable or its metadata access was revoked. Its stable reference remains in the draft.</p>}
       {uploadCount > 0 && <p className="lx-help" role="status">Uploading {uploadCount} image(s) to private Chaos sources…</p>}
 
+      <LessonCover meta={{ ...lesson.draft.meta, ...look }} editable={!conflict} onChange={saveLook} />
       <div className="lx-edit__body" data-panel={panelOpen ? "open" : "closed"}
         onPointerDown={event => { if (event.button === 0 && event.target === event.currentTarget && editorRef.current) { event.preventDefault(); focusLessonEnd(editorRef.current); } }}>
         <div className="lx-edit__doc" dir={lesson.draft.meta.language === "ar" ? "rtl" : "ltr"} lang={lesson.draft.meta.language}
@@ -321,6 +326,7 @@ function LessonEditorSession({ id }: { id: string }) {
               {lesson.externalRef && <ExternalRefLine externalRef={lesson.externalRef} />}
             </div>
           )}
+          <PageIconControls meta={{ ...lesson.draft.meta, ...look }} editable={!conflict} onChange={saveLook} />
           <textarea className="lx-title-input" rows={1} value={title ?? ""} placeholder={t.titlePh} aria-label={t.titlePh} maxLength={200}
             onChange={(e) => { setTitle(e.target.value.replace(/\n/g, " ")); saveMeta({ title: e.target.value.replace(/\n/g, " ") }); }}
             onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }} />
@@ -380,8 +386,8 @@ function LessonEditorSession({ id }: { id: string }) {
         setDialog(null);
         say(t.publishedToast(v));
       })} />}
-      {dialog === "history" && <VersionHistory lesson={editorLesson} error={error} disabled={conflict || mediaBusy || uploadCount > 0} onClose={() => setDialog(null)} onRestore={(v) => run(async () => { await flush(); await actions.restoreVersion(lesson.id, v); const restored = await actions.reloadDraft(lesson.id); setRecoveredContent(restored.draft.content); setEditorContent(restored.draft.content); setTitle(restored.draft.meta.title); setDescription(restored.draft.meta.description); setDialog(null); setEditorKey((k) => k + 1); say(t.restoredToast(v)); })} />}
-      {dialog === "discard" && <WsConfirm title={t.discardTitle} body={t.discardBody} confirmLabel={t.discard} onClose={() => setDialog(null)} onConfirm={() => run(async () => { await flush(); await actions.discardDraft(lesson.id); const restored = await actions.reloadDraft(lesson.id); setRecoveredContent(restored.draft.content); setTitle(restored.draft.meta.title); setDescription(restored.draft.meta.description); setEditorKey((k) => k + 1); })} />}
+      {dialog === "history" && <VersionHistory lesson={editorLesson} error={error} disabled={conflict || mediaBusy || uploadCount > 0} onClose={() => setDialog(null)} onRestore={(v) => run(async () => { await flush(); await actions.restoreVersion(lesson.id, v); const restored = await actions.reloadDraft(lesson.id); setRecoveredContent(restored.draft.content); setEditorContent(restored.draft.content); setTitle(restored.draft.meta.title); setLook({}); setDescription(restored.draft.meta.description); setDialog(null); setEditorKey((k) => k + 1); say(t.restoredToast(v)); })} />}
+      {dialog === "discard" && <WsConfirm title={t.discardTitle} body={t.discardBody} confirmLabel={t.discard} onClose={() => setDialog(null)} onConfirm={() => run(async () => { await flush(); await actions.discardDraft(lesson.id); const restored = await actions.reloadDraft(lesson.id); setRecoveredContent(restored.draft.content); setTitle(restored.draft.meta.title); setLook({}); setDescription(restored.draft.meta.description); setEditorKey((k) => k + 1); })} />}
       {dialog === "unpublish" && <WsConfirm title={t.unpublishTitle} body={t.unpublishBody} confirmLabel={t.unpublish} onClose={() => setDialog(null)} onConfirm={() => run(() => actions.unpublish(lesson.id))} />}
       {dialog === "delete" && <WsConfirm title={t.deleteTitle} body={t.deleteBody} confirmLabel={t.delete} onClose={() => setDialog(null)} onConfirm={() => run(async () => { await actions.deleteLesson(lesson.id); router.push("/dashboard/learn/library"); })} />}
       {image && <ImageDetailsDialog initial={image.initial} onClose={() => setImage(null)} onSave={(value) => { image.editor.updateBlock(image.blockId, { props: value }); setImage(null); }} />}

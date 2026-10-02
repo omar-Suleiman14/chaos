@@ -75,6 +75,10 @@ export interface LessonMeta {
   title: string;
   description: string;
   coverUrl?: string;
+  /** Vertical focus of the cover image, 0 (top) to 100 (bottom); default 50. */
+  coverY?: number;
+  /** Page icon, one emoji, shown above the title like a Notion page. */
+  icon?: string;
   tags: string[];
   language: LearnLanguage;
   curricula: CurriculumRef[];

@@ -26,10 +26,12 @@ async function ownedCourse(ctx: QueryCtx | MutationCtx, courseId: Id<"learnColle
 }
 const outline = (row: Doc<"learnCollections">) => row.lessonIds ?? row.items.flatMap((i) => (i.kind === "lesson" ? [i.id] : []));
 
-const courseCard = v.object({
+export const courseCard = v.object({
   id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), lessons: v.number(),
   visibility, published: v.boolean(), updatedAt: v.number(), archived: v.boolean(),
 });
+/** Library card for an owned course; shared by the dashboard and the ChatGPT app. */
+export const toCourseCard = (r: Doc<"learnCollections">): Infer<typeof courseCard> => ({ id: r._id, title: r.metadata.title, description: r.metadata.description, coverUrl: r.metadata.coverUrl, lessons: outline(r).length, visibility: r.visibility, published: !!r.publishedVersionId, updatedAt: r.updatedAt, archived: !!r.archived });
 
 export const listMine = query({
   args: {},
@@ -38,7 +40,7 @@ export const listMine = query({
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) return [];
     const rows = await ctx.db.query("learnCollections").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", identity.subject)).order("desc").take(200);
-    return rows.map((r) => ({ id: r._id, title: r.metadata.title, description: r.metadata.description, coverUrl: r.metadata.coverUrl, lessons: outline(r).length, visibility: r.visibility, published: !!r.publishedVersionId, updatedAt: r.updatedAt, archived: !!r.archived }));
+    return rows.map(toCourseCard);
   },
 });
 
@@ -57,14 +59,14 @@ export async function getCourse(ctx: QueryCtx, args: Infer<typeof getArgs>, asAc
       lessons.push({ id, title: lesson.metadata.title, description: lesson.metadata.description, published: !!pub, changed: !pub || JSON.stringify(pub.document) !== JSON.stringify(lesson.draft) || JSON.stringify(pub.metadata) !== JSON.stringify(lesson.metadata), blocks: lesson.draft.blocks.length });
     }
     return {
-      id: row._id, title: row.metadata.title, description: row.metadata.description, coverUrl: row.metadata.coverUrl, language: row.metadata.language, tags: row.metadata.tags,
+      id: row._id, title: row.metadata.title, description: row.metadata.description, coverUrl: row.metadata.coverUrl, coverY: row.metadata.coverY, icon: row.metadata.icon, language: row.metadata.language, tags: row.metadata.tags,
       visibility: row.visibility, published: !!row.publishedVersionId, publishedAt: version?.publishedAt ?? null, canPrivate: isPaidPlan(user ?? null, Date.now()), lessons, revision: row.revision,
     };
 }
 export const get = query({
   args: getArgs.fields,
   returns: v.object({
-    id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), language: v.string(), tags: v.array(v.string()),
+    id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), coverY: v.optional(v.number()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()),
     visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), canPrivate: v.boolean(), lessons: v.array(lessonRow), revision: v.number(),
   }),
   handler: (ctx, args) => getCourse(ctx, args),
@@ -84,13 +86,16 @@ export const create = mutation({
   handler: (ctx, args) => createCourse(ctx, args),
 });
 
-const updateArgs = v.object({ courseId: v.id("learnCollections"), title: v.optional(v.string()), description: v.optional(v.string()), coverUrl: v.optional(v.union(v.string(), v.null())), language: v.optional(v.string()), tags: v.optional(v.array(v.string())) });
+const updateArgs = v.object({ courseId: v.id("learnCollections"), title: v.optional(v.string()), description: v.optional(v.string()), coverUrl: v.optional(v.union(v.string(), v.null())), coverY: v.optional(v.union(v.number(), v.null())), icon: v.optional(v.union(v.string(), v.null())), language: v.optional(v.string()), tags: v.optional(v.array(v.string())) });
 export async function updateCourse(ctx: MutationCtx, args: Infer<typeof updateArgs>, asActor?: string) {
     const { row } = await ownedCourse(ctx, args.courseId, asActor);
     const m = { ...row.metadata };
     if (args.title !== undefined) { const t = args.title.trim(); if (!t || t.length > 200) throw new Error("VALIDATION_FAILED: Give the course a title of up to 200 characters."); m.title = t; }
     if (args.description !== undefined) { if (args.description.length > 4000) throw new Error("VALIDATION_FAILED: Keep the description under 4,000 characters."); m.description = args.description; }
-    if (args.coverUrl !== undefined) { if (args.coverUrl && !/^https:\/\/\S{1,2000}$/.test(args.coverUrl)) throw new Error("VALIDATION_FAILED: Use an https image link."); if (args.coverUrl) m.coverUrl = args.coverUrl; else delete m.coverUrl; }
+    // Covers are an https link or a bundled gallery image (public/covers, lib/learn/covers.ts), as on lessons.
+    if (args.coverUrl !== undefined) { if (args.coverUrl && !/^https:\/\/\S{1,2000}$/.test(args.coverUrl) && !/^\/covers\/[a-z0-9/_-]+\.(jpg|svg)$/.test(args.coverUrl)) throw new Error("VALIDATION_FAILED: Use an https image link or a gallery cover."); if (args.coverUrl) m.coverUrl = args.coverUrl; else { delete m.coverUrl; delete m.coverY; } }
+    if (args.coverY !== undefined) { if (args.coverY === null) delete m.coverY; else if (Number.isFinite(args.coverY) && args.coverY >= 0 && args.coverY <= 100) m.coverY = Math.round(args.coverY); else throw new Error("VALIDATION_FAILED: Cover position is a percentage from 0 to 100."); }
+    if (args.icon !== undefined) { if (!args.icon) delete m.icon; else if (args.icon.length <= 16 && !/[\s\u0000-\u001f\u007f<>]/.test(args.icon)) m.icon = args.icon; else throw new Error("VALIDATION_FAILED: Use a single emoji as the course icon."); }
     if (args.language !== undefined) m.language = args.language.slice(0, 35) || "en";
     if (args.tags !== undefined) m.tags = [...new Set(args.tags.map((t) => t.trim().slice(0, 40)).filter(Boolean))].slice(0, 12);
     await ctx.db.patch("learnCollections", row._id, { metadata: m, updatedAt: Date.now() });
@@ -186,25 +191,28 @@ export const publish = mutation({
   handler: (ctx, args) => publishCourse(ctx, args),
 });
 
-export const unpublish = mutation({
-  args: { courseId: v.id("learnCollections") },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    const { row, actor } = await ownedCourse(ctx, args.courseId);
+export async function unpublishCourse(ctx: MutationCtx, args: { courseId: Id<"learnCollections"> }, asActor?: string) {
+    const { row, actor } = await ownedCourse(ctx, args.courseId, asActor);
     await ctx.db.patch("learnCollections", row._id, { publishedVersionId: undefined, revision: row.revision + 1, updatedAt: Date.now() });
     await recordAssetPublicationAction(ctx, { asset: { kind: "collection", id: row._id }, actorId: actor, action: "unpublish", revision: row.revision + 1, beforeVisibility: row.visibility, afterVisibility: row.visibility, reason: "Unpublished the course." });
     return null;
-  },
+}
+export const unpublish = mutation({
+  args: { courseId: v.id("learnCollections") },
+  returns: v.null(),
+  handler: (ctx, args) => unpublishCourse(ctx, args),
 });
 
+/** Archive hides the course from the library and its public page; restore brings it back. Lessons are untouched. */
+export async function setCourseArchived(ctx: MutationCtx, args: { courseId: Id<"learnCollections">; archived: boolean }, asActor?: string) {
+    const { row } = await ownedCourse(ctx, args.courseId, asActor);
+    await ctx.db.patch("learnCollections", row._id, { archived: args.archived, updatedAt: Date.now() });
+    return null;
+}
 export const setArchived = mutation({
   args: { courseId: v.id("learnCollections"), archived: v.boolean() },
   returns: v.null(),
-  handler: async (ctx, args) => {
-    const { row } = await ownedCourse(ctx, args.courseId);
-    await ctx.db.patch("learnCollections", row._id, { archived: args.archived, updatedAt: Date.now() });
-    return null;
-  },
+  handler: (ctx, args) => setCourseArchived(ctx, args),
 });
 
 const publicLesson = v.object({ id: v.id("lessons"), versionId: v.id("lessonVersions"), title: v.string(), description: v.string(), blocks: v.number() });

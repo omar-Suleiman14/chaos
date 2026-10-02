@@ -1,6 +1,6 @@
 // userId is supplied only by the secret-protected OAuth transport.
 import { v } from "convex/values";
-import { learnCapabilityLimits } from "./learnCapabilityModel";
+import { learnCapabilityLimits, mcpToolGroups } from "./learnCapabilityModel";
 import { internalMutation, internalQuery, type QueryCtx, type MutationCtx } from "./_generated/server";
 import { LEARN_LIMITS, lessonBlock, lessonDocument, lessonMeta, sourceMetadata, visibility } from "./learnModel";
 import { creatorRestricted } from "./authz";
@@ -78,9 +78,9 @@ export const updateBlocks = internalMutation({ args: { ...edit, blocks: v.array(
 export const moveBlocks = internalMutation({ args: { ...edit, moves: v.array(v.object({ blockId: v.string(), beforeId: v.union(v.string(), v.null()) })) }, returns: v.object({ revision: v.number() }), handler: async (ctx, args) => ({ revision: await editLessonBlocksForActor(ctx, await requireLearnActor(ctx, args.userId), { ...args, operations: args.moves.map(move => ({ ...move, action: "move" as const })) }) }) });
 export const deleteBlocks = internalMutation({ args: { ...edit, blockIds: v.array(v.string()) }, returns: v.object({ revision: v.number() }), handler: async (ctx, args) => ({ revision: await editLessonBlocksForActor(ctx, await requireLearnActor(ctx, args.userId), { ...args, operations: args.blockIds.map(blockId => ({ action: "delete" as const, blockId })) }) }) });
 
-export const getCapabilities = internalQuery({ args: actor, returns: v.object({ schemaVersion: v.number(), limits: v.record(v.string(), v.number()) }), handler: async (ctx, args) => {
+export const getCapabilities = internalQuery({ args: actor, returns: v.object({ schemaVersion: v.number(), limits: v.record(v.string(), v.number()), tools: v.record(v.string(), v.object({ tools: v.array(v.string()), notes: v.string() })) }), handler: async (ctx, args) => {
   await requireLearnActor(ctx, args.userId);
-  return { schemaVersion: 1, limits: learnCapabilityLimits };
+  return { schemaVersion: 1, limits: learnCapabilityLimits, tools: Object.fromEntries(Object.entries(mcpToolGroups).map(([area, group]) => [area, { tools: [...group.tools], notes: group.notes }])) };
 } });
 const versionSummary = v.object({ versionId: v.id("lessonVersions"), number: v.number(), metadata: lessonMeta, publishedAt: v.number(), current: v.boolean() });
 export const listLessonVersions = internalQuery({ args: { ...actor, lessonId: v.id("lessons"), beforeNumber: v.optional(v.number()), limit: v.optional(v.number()) }, returns: v.object({ versions: v.array(versionSummary), nextBeforeNumber: v.union(v.number(), v.null()) }), handler: async (ctx, args) => {

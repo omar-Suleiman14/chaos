@@ -558,3 +558,13 @@ Outcome: expose existing owner course helpers through trusted MCP transport; dra
 - [x] Docs opens in a new tab from the sidebar, Settings and Ctrl+K.
 - [x] Unit 691/691 (test setup gains matchMedia/ResizeObserver stand-ins for jsdom), tsc clean, lint 0 errors.
 - [ ] QR scan with the centre logo not tested on a phone; not checked in a browser.
+
+## Notion course page, member card RTL/texture, quiz not-found, mobile profile (2026-10-02)
+- [x] Confirmed the previous thread's work: MCP subagent finished (list/archive/unpublish courses, full flashcard tools, get_learn_capabilities); Notion lesson header (gallery covers, reposition, emoji icon) done. Both were uncommitted; committed here.
+- [x] Course page is a Notion page: full-bleed cover with gallery/link/reposition/remove, emoji icon, large borderless title, quiet lesson rows. `courses.update` (and MCP `update_course`) accept gallery covers, `coverY` and `icon`; removing the cover clears its position. Integration test in courses.test.ts.
+- [x] Member card: flip button removed (tap the card); SVG fixes its own direction, so Arabic pages no longer clip the name/badge; Arabic title uses the sans face; paper grain, fibres and a lit edge on every card.
+- [x] Old quiz links that don't exist use the shared Notion-style error screen (EN/AR).
+- [x] Phones: Profile (app settings) row in the sidebar footer; fixed sidebar rows no longer squash into each other on short screens.
+- [x] Fixed test pollution in themePicker.test.tsx (recent themes persisted between tests).
+- [x] Verification: both typechecks; ESLint 0 errors; unit 98 files / 696; integration 669 + 1 todo, one 500-answer live test timed out under full-suite load and passed alone (20/20). Card front/back rendered headless in an RTL page.
+- [ ] Not checked signed in on a phone. Public course page does not show the course icon yet.

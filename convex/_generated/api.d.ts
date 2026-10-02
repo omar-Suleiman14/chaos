@@ -95,6 +95,7 @@ import type * as mcpAdvancedForms from "../mcpAdvancedForms.js";
 import type * as mcpAssessments from "../mcpAssessments.js";
 import type * as mcpContract from "../mcpContract.js";
 import type * as mcpCourses from "../mcpCourses.js";
+import type * as mcpFlashcards from "../mcpFlashcards.js";
 import type * as mcpFormManagement from "../mcpFormManagement.js";
 import type * as mcpGames from "../mcpGames.js";
 import type * as mcpLearn from "../mcpLearn.js";
@@ -216,6 +217,7 @@ declare const fullApi: ApiFromModules<{
   mcpAssessments: typeof mcpAssessments;
   mcpContract: typeof mcpContract;
   mcpCourses: typeof mcpCourses;
+  mcpFlashcards: typeof mcpFlashcards;
   mcpFormManagement: typeof mcpFormManagement;
   mcpGames: typeof mcpGames;
   mcpLearn: typeof mcpLearn;

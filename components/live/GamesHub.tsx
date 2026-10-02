@@ -6,13 +6,13 @@ import { useQuery } from "convex/react";
 import { ArrowRight, BookOpen, Plus, Radio } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { ThemePresetId } from "@/convex/formLogic";
-import { emptyDefinition } from "@/convex/formLogic";
 import { DEFAULT_TIME_LIMIT, TIME_LIMITS } from "@/convex/liveLogic";
 import { ThemePicker } from "@/components/ThemePicker";
 import GameHistory from "@/components/live/GameHistory";
 import { themeFromPreset } from "@/components/forms/formThemes";
 import { useHostLive } from "@/components/live/HostLiveButton";
 import { useCreateForm } from "@/components/workspace/useCreateForm";
+import { newGameArgs } from "./newGame";
 import { WsSwitch } from "@/components/workspace/primitives";
 import { Select } from "@/components/workspace/Select";
 import { useCopy, useLocale } from "@/lib/i18n";
@@ -68,11 +68,7 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
 
   const createGame = () => {
     setError("");
-    const definition = {
-      ...emptyDefinition(t.untitled), theme: themeFromPreset(preset ?? "paper"),
-      quiz: { enabled: true }, defaultLanguage: locale, languages: [locale], presentation: "conversational" as const,
-    };
-    void create({ definition, quizMode: true, title: definition.title });
+    void create(newGameArgs(locale, preset ?? "paper"));
   };
   const reportHost = async (target: Parameters<typeof host.start>[0]) => {
     setError("");
@@ -96,10 +92,11 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
   </div>;
 
   return <div className="games-hub">
-    <header className="ws-page-header games-header">
-      {embedded ? <p className="games-help">{t.lead}</p> : <div><h1 className="ws-page-title">{t.title}</h1><p className="games-help">{t.lead}</p></div>}
+    {/* In the Library, New → Game creates games; the standalone header only appears outside it. */}
+    {!embedded && <header className="ws-page-header games-header">
+      <div><h1 className="ws-page-title">{t.title}</h1><p className="games-help">{t.lead}</p></div>
       <div className="games-actions"><Link href="/docs/live-games" className="ws-btn"><BookOpen size={16} aria-hidden="true" />{t.guide}</Link><button type="button" className="ws-btn ws-btn--primary" disabled={busy} onClick={createGame}><Plus size={18} aria-hidden="true" />{busy ? t.creating : t.create}</button></div>
-    </header>
+    </header>}
     {error && <p className="text-destructive" role="alert">{error}</p>}
     <section className="games-session" aria-labelledby="games-session-title">
       <h2 id="games-session-title">{t.setup}</h2><p className="games-help">{t.setupHelp}</p>

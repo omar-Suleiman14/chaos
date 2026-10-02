@@ -17,6 +17,9 @@ it("registers course review annotations and strips client actor injection", asyn
  set_course_outline: { readOnlyHint:false, destructiveHint:true, openWorldHint:false, idempotentHint:true },
  add_course_lesson: { readOnlyHint:false, destructiveHint:false, openWorldHint:false, idempotentHint:false },
  publish_course: { readOnlyHint:false, destructiveHint:true, openWorldHint:true, idempotentHint:false },
+ list_courses: { readOnlyHint:true, destructiveHint:false, openWorldHint:false, idempotentHint:true },
+ set_course_archived: { readOnlyHint:false, destructiveHint:true, openWorldHint:true, idempotentHint:true },
+ unpublish_course: { readOnlyHint:false, destructiveHint:true, openWorldHint:true, idempotentHint:true },
  };
  expect(tools.filter(t => t.name.includes("course")).map(t => t.name).sort()).toEqual(Object.keys(expected).sort());
  for (const [name, annotations] of Object.entries(expected)) {
