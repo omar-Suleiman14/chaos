@@ -41,9 +41,6 @@
 .cb-vis label[data-disabled="true"] { opacity: .55; cursor: not-allowed; }
 
 /* Public directory shares the site palette, or the workspace palette when embedded. */
-.cx-directory { margin-block-end: 40px; }
-.cx-directory__title { font-size: 18px; font-weight: 600; color: var(--s-text, var(--on-surface)); }
-.cx-directory__lead { margin-block: 8px 20px; font-size: 14px; line-height: 1.65; color: var(--s-soft, var(--on-surface-variant)); }
 .cx-state { padding: 20px; border: 1px solid var(--s-line, var(--ws-line)); border-radius: 12px; background: var(--s-subtle, var(--surface-container)); color: var(--s-soft, var(--on-surface-variant)); font-size: 14px; line-height: 1.65; }
 .cx-card:focus-visible { outline: 2px solid var(--s-accent, var(--primary)); outline-offset: 4px; }
 .cx-body { min-width: 0; overflow-wrap: anywhere; }

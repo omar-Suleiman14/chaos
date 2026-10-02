@@ -248,7 +248,7 @@ export const getPublic = query({
 /** Public course catalogue for Explore and the sitemap, newest first. */
 export const listPublic = query({
   args: { limit: v.optional(v.number()) },
-  returns: v.array(v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), lessons: v.number(), updatedAt: v.number() })),
+  returns: v.array(v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), language: v.string(), tags: v.array(v.string()), lessons: v.number(), updatedAt: v.number() })),
   handler: async (ctx, args) => {
     if (args.limit !== undefined && (!Number.isSafeInteger(args.limit) || args.limit < 1 || args.limit > 100)) throw new Error("VALIDATION_FAILED: Limit must be an integer from 1 to 100.");
     const limit = args.limit ?? 24;
@@ -261,7 +261,7 @@ export const listPublic = query({
       if (restricted.get(row.ownerId)) continue;
       const version = await ctx.db.get("collectionVersions", row.publishedVersionId);
       if (!version || version.collectionId !== row._id) continue;
-      result.push({ id: row._id, title: version.metadata.title, description: version.metadata.description, coverUrl: version.metadata.coverUrl, lessons: version.items.filter(item => item.kind === "lesson").length, updatedAt: version.publishedAt });
+      result.push({ id: row._id, title: version.metadata.title, description: version.metadata.description, coverUrl: version.metadata.coverUrl, language: version.metadata.language, tags: version.metadata.tags, lessons: version.items.filter(item => item.kind === "lesson").length, updatedAt: version.publishedAt });
       if (result.length === limit) break;
     }
     return result;
