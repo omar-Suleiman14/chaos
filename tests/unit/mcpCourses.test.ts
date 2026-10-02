@@ -84,7 +84,7 @@ it("advertises truthful Learn/course/folder instructions and verified publicatio
 });
 
 it("create_full_course builds the course, every lesson with its blocks, then publishes publicly", async () => {
- const call = vi.fn(async (tool: string) => tool === "create_course" ? { courseId: "course1" } : tool === "add_course_lesson" ? { lessonId: `lesson${call.mock.calls.filter(([t]) => t === "add_course_lesson").length}` } : tool === "publish_course" ? { ok: true } : { ok: true, revision: 1 });
+ const call = vi.fn(async (tool: string, _input?: Record<string, unknown>) => tool === "create_course" ? { courseId: "course1" } : tool === "add_course_lesson" ? { lessonId: `lesson${call.mock.calls.filter(([t]) => t === "add_course_lesson").length}` } : tool === "publish_course" ? { ok: true } : { ok: true, revision: 1 });
  const server = createChaosMcpServer({ call, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" });
  const client = new Client({ name: "full-course", version: "1" });
  const [a,b] = InMemoryTransport.createLinkedPair();

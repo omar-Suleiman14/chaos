@@ -288,7 +288,7 @@ function QuizPlayerPage() {
       if (!result.withheld && result.score / result.totalPoints >= 0.9 && !quizData?.disableAnimations && !prefersReducedMotion()) {
         try {
           const confetti = (await import("canvas-confetti")).default;
-          confetti({ particleCount: 200, spread: 90, origin: { y: 0.5 }, colors: ["#2F5333", "#F0EFEA", "#111111"], disableForReducedMotion: true });
+          confetti({ particleCount: 200, spread: 90, origin: { y: 0.5 }, colors: ["#fca535", "#e9482b", "#ffffff"], disableForReducedMotion: true });
         } catch { /* ok */ }
       }
     } catch (err: unknown) {
@@ -360,7 +360,7 @@ function QuizPlayerPage() {
 
   if (quizMeta === undefined || (quizMeta && quizData === undefined)) {
     return (
-      <div className="h-[100dvh] bg-background flex items-center justify-center">
+      <div className="workspace-ui h-[100dvh] bg-background flex items-center justify-center">
         <LoadingState label="Loading quiz..." className="py-8" />
       </div>
     );
@@ -375,15 +375,15 @@ function QuizPlayerPage() {
   // ── ENTRY SCREEN
   if (gameState === "entry") {
     return (
-      <div className="h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center p-6 relative">
+      <div className="workspace-ui h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center p-6 relative">
         <ThemeToggle className="absolute top-5 right-5" />
         <div className="max-w-md w-full">
           <div className="chaos-card bg-card p-8 sm:p-10">
             <p className="chaos-heading text-xs text-primary mb-3">
-              {quizData?.usesPool ? `${quizData.questionCount} QUESTIONS` : `${quizData?.totalPoints} MARKS · ${rawQuestions.length} QUESTIONS`}
+              {quizData?.usesPool ? `${quizData.questionCount} questions` : `${quizData?.totalPoints} marks · ${rawQuestions.length} questions`}
             </p>
             <h1 className="chaos-display text-4xl sm:text-5xl mb-8 leading-none">
-              {quizData?.title || "QUIZ"}
+              {quizData?.title || "Quiz"}
             </h1>
 
             <div className="space-y-4">
@@ -392,7 +392,7 @@ function QuizPlayerPage() {
                 value={playerName}
                 onChange={e => setPlayerName(e.target.value)}
                 onKeyDown={e => e.key === "Enter" && handleStart()}
-                placeholder="ENTER YOUR NAME"
+                placeholder="Your name"
                 aria-label="Your name"
                 maxLength={100}
                 autoFocus
@@ -403,7 +403,7 @@ function QuizPlayerPage() {
                 disabled={isStarting || !playerName.trim()}
                 className="kb-btn kb-btn-primary w-full disabled:opacity-50"
               >
-                {isStarting ? "STARTING…" : "START QUIZ →"}
+                {isStarting ? "Starting…" : "Start quiz"}
               </button>
               <button
                 type="button"
@@ -412,13 +412,13 @@ function QuizPlayerPage() {
                 aria-pressed={soundEnabled}
               >
                 {soundEnabled ? <Volume2 size={16} /> : <VolumeX size={16} />}
-                SOUND {soundEnabled ? "ON" : "OFF"}
+                Sound {soundEnabled ? "on" : "off"}
               </button>
               {savedAttempt && releasedResult && (
                 <p className="text-xs text-muted-foreground chaos-heading">
                   {releasedResult.released
-                    ? `YOUR LAST RESULT: ${releasedResult.score} OF ${releasedResult.totalPoints} MARKS`
-                    : "YOUR LAST ATTEMPT IS AWAITING RESULTS"}
+                    ? `Your last result: ${releasedResult.score} of ${releasedResult.totalPoints} marks`
+                    : "Your last attempt is waiting for results"}
                 </p>
               )}
               {startError && (
@@ -435,7 +435,7 @@ function QuizPlayerPage() {
 
   // ── PLAYING (SNAP SCROLL)
   return (
-    <div className="h-[100dvh] bg-background text-foreground font-sans relative">
+    <div className="workspace-ui h-[100dvh] bg-background text-foreground font-sans relative">
       <div className="fixed top-4 right-4 z-[60] flex items-center gap-2">
         <button
           type="button"
@@ -488,7 +488,7 @@ function QuizPlayerPage() {
                 {/* Header */}
                 <div className="flex justify-between items-center mb-6">
                   <span className="chaos-heading text-xs text-primary">
-                    QUESTION {i + 1} OF {questions.length}
+                    Question {i + 1} of {questions.length}
                   </span>
                   <span aria-hidden="true" className={`chaos-heading text-sm flex items-center gap-1.5 tabular-nums border-2 px-3 py-1 ${
                     tLeft <= 10
@@ -510,10 +510,10 @@ function QuizPlayerPage() {
                     const isCorrectAns = isFeedback && feed?.correctAnswer === opt;
                     const isWrongSel = graded && isSelected && !feed?.isCorrect;
 
-                    let cls = "border-[3px] border-foreground/30 bg-card hover:border-foreground hover:shadow-[4px_4px_0px_var(--on-surface)] transition-all";
-                    if (isCorrectAns) cls = "border-[3px] border-primary bg-chaos text-chaos-foreground shadow-[6px_6px_0px_var(--primary)]";
-                    else if (isWrongSel) cls = "border-[3px] border-destructive bg-destructive text-on-error shadow-[6px_6px_0px_var(--error-dim)]";
-                    else if (isFeedback) cls = "border-[3px] border-foreground/10 bg-muted text-muted-foreground opacity-60";
+                    let cls = "rounded-xl border-2 border-foreground/15 bg-card hover:border-foreground/40 transition-colors";
+                    if (isCorrectAns) cls = "rounded-xl border-2 border-primary bg-primary/10 text-foreground";
+                    else if (isWrongSel) cls = "rounded-xl border-2 border-destructive bg-destructive/10 text-foreground";
+                    else if (isFeedback) cls = "rounded-xl border-2 border-foreground/10 bg-muted text-muted-foreground opacity-60";
 
                     return (
                       <button
@@ -534,10 +534,10 @@ function QuizPlayerPage() {
                     const isCorrectAns = isFeedback && feed?.correctAnswer === val;
                     const isWrongSel = graded && isSelected && !feed?.isCorrect;
 
-                    let cls = "border-[3px] border-foreground/30 bg-card hover:border-foreground hover:shadow-[4px_4px_0px_var(--on-surface)] transition-all";
-                    if (isCorrectAns) cls = "border-[3px] border-primary bg-chaos text-chaos-foreground shadow-[6px_6px_0px_var(--primary)]";
-                    else if (isWrongSel) cls = "border-[3px] border-destructive bg-destructive text-on-error shadow-[6px_6px_0px_var(--error-dim)]";
-                    else if (isFeedback) cls = "border-[3px] border-foreground/10 bg-muted text-muted-foreground opacity-60";
+                    let cls = "rounded-xl border-2 border-foreground/15 bg-card hover:border-foreground/40 transition-colors";
+                    if (isCorrectAns) cls = "rounded-xl border-2 border-primary bg-primary/10 text-foreground";
+                    else if (isWrongSel) cls = "rounded-xl border-2 border-destructive bg-destructive/10 text-foreground";
+                    else if (isFeedback) cls = "rounded-xl border-2 border-foreground/10 bg-muted text-muted-foreground opacity-60";
 
                     return (
                       <button
@@ -559,18 +559,18 @@ function QuizPlayerPage() {
                       : []);
                     return (
                       <div className="space-y-3" role="group" aria-labelledby={`q-heading-${i}`} aria-describedby={`q-hint-${i}`}>
-                        <p id={`q-hint-${i}`} className="chaos-heading text-[10px] text-muted-foreground mb-1">SELECT ALL THAT APPLY</p>
+                        <p id={`q-hint-${i}`} className="chaos-heading text-[10px] text-muted-foreground mb-1">Select all that apply</p>
                         {q.options?.map((opt, optIdx) => {
                           const isChecked = currentSel.includes(opt);
                           const isCorrectAns = isFeedback && correctList.includes(opt);
                           const isWrongSel = graded && isChecked && !correctList.includes(opt);
                           const isDimmed = isFeedback && !isChecked && !correctList.includes(opt);
 
-                          let cls = "border-[3px] border-foreground/30 bg-card hover:border-foreground transition-all";
-                          if (isCorrectAns) cls = "border-[3px] border-primary bg-chaos text-chaos-foreground shadow-[6px_6px_0px_var(--primary)]";
-                          else if (isWrongSel) cls = "border-[3px] border-destructive bg-destructive/20 text-destructive";
-                          else if (isDimmed) cls = "border-[3px] border-foreground/10 bg-muted text-muted-foreground opacity-50";
-                          else if (isChecked) cls = "border-[3px] border-primary bg-primary/10 text-foreground shadow-[4px_4px_0px_var(--primary)]";
+                          let cls = "rounded-xl border-2 border-foreground/15 bg-card hover:border-foreground/40 transition-colors";
+                          if (isCorrectAns) cls = "rounded-xl border-2 border-primary bg-primary/10 text-foreground";
+                          else if (isWrongSel) cls = "rounded-xl border-2 border-destructive bg-destructive/10 text-foreground";
+                          else if (isDimmed) cls = "rounded-xl border-2 border-foreground/10 bg-muted text-muted-foreground opacity-50";
+                          else if (isChecked) cls = "rounded-xl border-2 border-primary bg-primary/10 text-foreground";
 
                           return (
                             <button
@@ -612,7 +612,7 @@ function QuizPlayerPage() {
                             disabled={isSubmitting || (multiSelections[q._id] || []).length === 0}
                             className="kb-btn kb-btn-primary w-full mt-2 disabled:opacity-50"
                           >
-                            SUBMIT SELECTION ({(multiSelections[q._id] || []).length} selected)
+                            Submit ({(multiSelections[q._id] || []).length} selected)
                           </button>
                         )}
                       </div>
@@ -626,7 +626,7 @@ function QuizPlayerPage() {
                         value={writtenAnswers[q._id] || ""}
                         onChange={(e) => setWrittenAnswers({ ...writtenAnswers, [q._id]: e.target.value })}
                         disabled={isFeedback || isSubmitting}
-                        placeholder="TYPE YOUR ANSWER HERE..."
+                        placeholder="Type your answer"
                         className={`kb-input min-h-[120px] resize-y ${
                           isFeedback && feed?.isCorrect ? "border-primary bg-chaos/10" :
                           isFeedback && !feed?.isCorrect && (feed?.pointsEarned ?? 0) > 0 ? "border-yellow-500 bg-yellow-500/10" :
@@ -639,7 +639,7 @@ function QuizPlayerPage() {
                           disabled={isSubmitting || !(writtenAnswers[q._id]?.trim())}
                           className="kb-btn kb-btn-primary w-full disabled:opacity-50"
                         >
-                          SUBMIT ANSWER
+                          Submit answer
                         </button>
                       )}
                     </div>
@@ -657,7 +657,7 @@ function QuizPlayerPage() {
                       disabled={isSubmitting}
                       className="kb-btn kb-btn-ghost text-xs disabled:opacity-50"
                     >
-                      RETRY ANSWER
+                      Try again
                     </button>
                   </div>
                 )}
@@ -666,14 +666,14 @@ function QuizPlayerPage() {
                 {isFeedback && (
                   <div className={`mt-6 chaos-card bg-card p-5 ${quizData?.disableAnimations ? '' : 'animate-in slide-in-from-bottom-4 duration-300'}`}>
                     {feed.withheld ? (
-                      <p className="chaos-heading text-sm mb-2 text-foreground">ANSWER RECORDED<span className="text-muted-foreground ml-3 font-normal text-xs">Results are released by the organiser</span></p>
+                      <p className="chaos-heading text-sm mb-2 text-foreground">Answer saved<span className="text-muted-foreground ml-3 font-normal text-xs">Results are released by the organiser</span></p>
                     ) : (
                     <p className={`chaos-heading text-sm mb-2 ${
                       feed.isCorrect ? "text-primary"
                       : (!feed.isCorrect && (feed.pointsEarned ?? 0) > 0) ? "text-yellow-500"
                       : "text-destructive"
                     }`}>
-                      {feed.isCorrect ? "✓ CORRECT" : (!feed.isCorrect && (feed.pointsEarned ?? 0) > 0) ? "~ PARTIAL" : "✗ INCORRECT"}
+                      {feed.isCorrect ? "Correct" : (!feed.isCorrect && (feed.pointsEarned ?? 0) > 0) ? "Partly correct" : "Not quite"}
                       <span className="text-muted-foreground ml-3 font-normal text-xs">+{feed.pointsEarned} marks</span>
                     </p>
                     )}
@@ -685,7 +685,7 @@ function QuizPlayerPage() {
                       className={`mt-4 flex items-center gap-2 text-primary chaos-heading text-xs underline-offset-4 hover:underline ${quizData?.disableAnimations ? "" : "animate-bounce"}`}
                       onClick={() => goNext(i)}
                     >
-                      {i < questions.length - 1 ? "NEXT QUESTION" : "FINISH"}
+                      {i < questions.length - 1 ? "Next question" : "Finish"}
                       <ArrowDown size={13} aria-hidden="true" />
                     </button>
                   </div>
@@ -699,7 +699,7 @@ function QuizPlayerPage() {
         <section aria-labelledby="quiz-final-heading" inert={currentQ < questions.length && questions.length > 0 && !feedbacks[questions[questions.length - 1]?._id]} className="tiktok-slide flex flex-col items-center justify-center p-6 text-center">
           {!finalResults ? (
             <div className="chaos-card bg-card p-10 max-w-sm w-full text-center">
-              <h2 id="quiz-final-heading" tabIndex={-1} className="chaos-display text-4xl mb-3 outline-none">QUIZ COMPLETE.</h2>
+              <h2 id="quiz-final-heading" tabIndex={-1} className="chaos-display text-4xl mb-3 outline-none">All done.</h2>
               <p className="text-muted-foreground mb-8 text-sm">
                 You&apos;ve answered all questions. Submit to view your final results.
               </p>
@@ -707,7 +707,7 @@ function QuizPlayerPage() {
                 onClick={handleFinish}
                 className="kb-btn kb-btn-primary w-full"
               >
-                SUBMIT QUIZ →
+                Submit quiz
               </button>
               {finishError && (
                 <p className="mt-4 text-sm font-semibold text-destructive" role="alert">
@@ -717,11 +717,11 @@ function QuizPlayerPage() {
             </div>
           ) : finalResults.withheld && !releasedResult?.released ? (
             <div className="chaos-card bg-card p-10 max-w-md w-full text-center">
-              <h2 id="quiz-final-heading" tabIndex={-1} className="chaos-display text-4xl mb-3 outline-none">SUBMITTED.</h2>
+              <h2 id="quiz-final-heading" tabIndex={-1} className="chaos-display text-4xl mb-3 outline-none">Submitted.</h2>
               <p className="text-muted-foreground mb-8 text-sm">
                 Your answers are saved. The organiser will release results; this page updates when they do, and you can come back to this link on this device.
               </p>
-              <Link href="/" className="kb-btn kb-btn-ghost w-full">EXIT</Link>
+              <Link href="/" className="kb-btn kb-btn-ghost w-full">Exit</Link>
             </div>
           ) : (() => {
             const shown = finalResults.withheld && releasedResult?.released ? { ...finalResults, score: releasedResult.score, totalPoints: releasedResult.totalPoints } : finalResults;
@@ -740,20 +740,20 @@ function QuizPlayerPage() {
                       {passed ? "✓" : "✗"}
                     </p>
                     <p className={`chaos-heading text-3xl mb-3 ${passed ? "text-primary" : "text-destructive"}`}>
-                      {passed ? "PASSED" : "FAILED"}
+                      {passed ? "Passed" : "Not passed"}
                     </p>
                     <p className="text-muted-foreground chaos-heading text-sm mb-8">
-                      {score} OF {totalPoints} MARKS &nbsp;·&nbsp; {pct}%
+                      {score} of {totalPoints} marks &nbsp;·&nbsp; {pct}%
                       <br />
                       <span className="text-xs opacity-70">Passing: {passingThreshold}%</span>
                     </p>
                   </>
                 ) : (
                   <>
-                    <p className="chaos-heading text-sm text-muted-foreground mb-2">YOUR SCORE</p>
+                    <p className="chaos-heading text-sm text-muted-foreground mb-2">Your score</p>
                     <p className="chaos-display text-7xl text-primary mb-2">{pct}%</p>
                     <p className="text-muted-foreground mb-4 chaos-heading text-sm">
-                      {score} OF {totalPoints} MARKS
+                      {score} of {totalPoints} marks
                     </p>
                     {typeof percentile === "number" && (
                       <p className="text-sm text-muted-foreground mb-6 italic border border-foreground/10 rounded px-3 py-2 bg-muted/30">
@@ -784,13 +784,13 @@ function QuizPlayerPage() {
                     }}
                     className="flex-1 kb-btn kb-btn-primary"
                   >
-                    PLAY AGAIN
+                    Play again
                   </button>
                   <Link
                     href="/"
                     className="flex-1 kb-btn kb-btn-ghost"
                   >
-                    EXIT
+                    Exit
                   </Link>
                 </div>
               </div>

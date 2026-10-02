@@ -47,6 +47,7 @@ vi.mock("convex/react", () => ({
 vi.mock("@/app/dashboard/forms/[formId]/use-form-draft", () => ({
   useFormDraft: () => fixtures.draftState,
 }));
+vi.mock("@/lib/learn/data", () => ({ useLearnActions: () => ({ createLesson: vi.fn() }) }));
 vi.mock("@/components/workspace/useCreateForm", () => ({
   useCreateForm: () => ({ create: vi.fn(), busy: false }),
 }));

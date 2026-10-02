@@ -10,7 +10,7 @@ import { avatarSeed } from "@/lib/avatarSeed";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, BarChart3, BookOpen, Bookmark, ChevronUp, FileText, GraduationCap, Home, Layers, Library, Link2, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, UserCog, X } from "lucide-react";
+import { Archive, BarChart3, BookOpen, Bookmark, ChevronUp, FileText, GraduationCap, Home, Layers, Library, Link2, ListChecks, BookOpenText, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, UserCog, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -18,7 +18,8 @@ import NotificationBell from "@/components/NotificationBell";
 import Logo from "@/components/Logo";
 import type { PaletteItem } from "@/components/workspace/CommandPalette";
 import { useCreateForm } from "@/components/workspace/useCreateForm";
-import { newGameArgs } from "@/components/live/newGame";
+import { newQuizArgs } from "@/components/live/newGame";
+import { useLearnActions } from "@/lib/learn/data";
 import { errorMessage } from "@/lib/errors";
 import { useModal } from "@/components/workspace/useModal";
 import { WsTooltips } from "@/components/workspace/primitives";
@@ -60,7 +61,7 @@ const copy = {
     dismiss: "Dismiss error",
     banned: "Your account is banned.", suspended: (until: string) => `Your account is suspended until ${until}.`,
     paused: "Editing and response collection are paused. Your existing data is preserved.", contact: "Contact support",
-    create: "Create", learn: "Learn", surface: "Workspace", learnHome: "Home", courses: "Courses", newForm: "Form or quiz", newFormHelp: "Surveys, quizzes and live games", newGame: "Game", newGameHelp: "A live quiz people join with a PIN", newCourse: "Course", newCourseHelp: "Lessons people can take, free", learnLibrary: "Library", saved: "Saved", flashcards: "Flashcards",
+    create: "Create", learn: "Learn", surface: "Workspace", learnHome: "Home", courses: "Courses", newForm: "Form", newFormHelp: "Surveys, sign-ups and feedback", newQuiz: "Quiz", newQuizHelp: "Marked for you; host it live any time", newLessonItem: "Lesson", newLessonHelp: "A page to teach one thing", newCourse: "Course", newCourseHelp: "Lessons in order, for people to take", learnLibrary: "Library", saved: "Saved", flashcards: "Flashcards",
     newLesson: "New lesson", folders: "Folders", lessons: "Recent lessons", untitledLesson: "Untitled lesson", lesson: "Lesson",
   },
   ar: {
@@ -80,7 +81,7 @@ const copy = {
     dismiss: "إخفاء الخطأ",
     banned: "حسابك محظور.", suspended: (until: string) => `حسابك معلّق حتى ${until}.`,
     paused: "التعديل وجمع الردود متوقفان. بياناتك الحالية محفوظة.", contact: "تواصل مع الدعم",
-    create: "إنشاء", learn: "تعلّم", surface: "مساحة العمل", learnHome: "الرئيسية", courses: "الدورات", newForm: "نموذج أو اختبار", newFormHelp: "استبيانات واختبارات وألعاب مباشرة", newGame: "لعبة", newGameHelp: "اختبار مباشر ينضم إليه الناس برمز", newCourse: "دورة", newCourseHelp: "دروس يأخذها الناس مجانًا", learnLibrary: "المكتبة", saved: "المحفوظات", flashcards: "البطاقات",
+    create: "إنشاء", learn: "تعلّم", surface: "مساحة العمل", learnHome: "الرئيسية", courses: "الدورات", newForm: "نموذج", newFormHelp: "استبيانات وتسجيل وآراء", newQuiz: "اختبار", newQuizHelp: "يُصحَّح تلقائيًا؛ استضفه مباشرة متى شئت", newLessonItem: "درس", newLessonHelp: "صفحة تشرح شيئًا واحدًا", newCourse: "دورة", newCourseHelp: "دروس مرتبة يأخذها الناس", learnLibrary: "المكتبة", saved: "المحفوظات", flashcards: "البطاقات",
     newLesson: "درس جديد", folders: "المجلدات", lessons: "دروس حديثة", untitledLesson: "درس بلا عنوان", lesson: "الدرس",
   },
 };
@@ -166,6 +167,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     document.addEventListener("pointerdown", close);
     return () => document.removeEventListener("pointerdown", close);
   }, [newOpen]);
+  const learnActions = useLearnActions();
+  const createLesson = useCallback(async () => {
+    try { const id = await learnActions.createLesson({ language: locale }); router.push(`/dashboard/learn/lessons/${id}`); }
+    catch (err) { setActionError(errorMessage(err)); }
+  }, [learnActions, locale, router]);
   const createCourseMutation = useMutation(api.courses.create);
   const createCourse = useCallback(async () => {
     try { const id = await createCourseMutation({ language: locale }); router.push(`/dashboard/courses/${id}`); }
@@ -315,7 +321,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             {newOpen && (
               <div role="menu" className="ws-new-menu__list" onKeyDown={(e) => { if (e.key === "Escape") setNewOpen(false); }}>
                 <button type="button" role="menuitem" autoFocus className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(); }}><FileText size={16} aria-hidden="true" /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>
-                <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(newGameArgs(locale)); }}><Trophy size={16} aria-hidden="true" /><span><strong>{t.newGame}</strong><small>{t.newGameHelp}</small></span></button>
+                <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(newQuizArgs(locale)); }}><ListChecks size={16} aria-hidden="true" /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>
+                <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createLesson(); }}><BookOpenText size={16} aria-hidden="true" /><span><strong>{t.newLessonItem}</strong><small>{t.newLessonHelp}</small></span></button>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createCourse(); }}><GraduationCap size={16} aria-hidden="true" /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>
               </div>
             )}

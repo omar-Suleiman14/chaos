@@ -24,6 +24,7 @@ import SharePicker from "@/components/connections/SharePicker";
 import { isItemRef, lessonIdsFromRefs, lessonRef, sourceIdsFromRefs } from "@/components/connections/learnShare";
 import { canSelectLessons, connectionAppName, describeConnectionAccess } from "@/components/connections/permissionText";
 import WebhooksSection from "./WebhooksSection";
+import ConnectedApps from "@/components/connections/ConnectedApps";
 import FallbackBoundary from "@/components/FallbackBoundary";
 
 type ScopeText = Record<LegacyIntegrationScope, { label: string; help: string }>;
@@ -39,7 +40,8 @@ const copy = {
       "definitions:read": { label: "Copy questions", help: "Read questions so you can reuse them as a template elsewhere." },
       "webhooks:manage": { label: "Receive updates (webhooks)", help: "Register a webhook that tells the app when shared items change. Counts only, never answers. Optional: the app works without it." },
     } as ScopeText,
-    title: "Connections", intro: "Let a connected app create drafts here and show the status of the forms, quizzes and lessons you choose. You decide what it can reach and what it can do.", newConnection: "New connection",
+    title: "Connections", intro: "Connect Chaos to the apps you use. You decide what each one can reach.", newConnection: "New connection",
+    developer: "Developer", developerLead: "For your own apps and scripts: API tokens with scoped permissions, and webhooks that tell another app when something happens. Assistants connect through MCP with your sign-in, without a token.", mcpDocs: "MCP guide", apiDocs: "API guide",
     howLabel: "How connections work", howTitle: "What a connected app can and cannot do",
     how1: "It reaches only the items you select (or all of your forms and quizzes, if you choose), plus drafts it created.",
     how2: "Summaries contain counts only and are hidden until at least 5 people responded. Answer text, names, emails and uploaded files never leave Chaos.",
@@ -83,7 +85,8 @@ const copy = {
       "definitions:read": { label: "نسخ الأسئلة", help: "قراءة الأسئلة لتعيد استخدامها كقالب في مكان آخر." },
       "webhooks:manage": { label: "تلقي التحديثات (webhooks)", help: "تسجيل webhook يخبر التطبيق عند تغيّر العناصر المشاركة. أعداد فقط، بلا إجابات أبدًا. اختياري: يعمل التطبيق بدونه." },
     } as ScopeText,
-    title: "الاتصالات", intro: "اسمح لتطبيق متصل بإنشاء مسودات هنا وعرض حالة النماذج والاختبارات والدروس التي تختارها. أنت تقرر ما يصل إليه وما يستطيع فعله.", newConnection: "اتصال جديد",
+    title: "الاتصالات", intro: "اربط Chaos بالتطبيقات التي تستخدمها. أنت تقرر ما يصل إليه كل منها.", newConnection: "اتصال جديد",
+    developer: "للمطورين", developerLead: "لتطبيقاتك وبرامجك: رموز API بصلاحيات محددة، وwebhooks تخبر تطبيقًا آخر حين يحدث شيء. يتصل المساعدون عبر MCP بتسجيل دخولك، دون رمز.", mcpDocs: "دليل MCP", apiDocs: "دليل الـ API",
     howLabel: "كيف تعمل الاتصالات", howTitle: "ما يستطيعه التطبيق المتصل وما لا يستطيعه",
     how1: "يصل فقط إلى العناصر التي تحددها (أو إلى كل نماذجك واختباراتك إن اخترت ذلك)، إضافةً إلى المسودات التي أنشأها.",
     how2: "تحتوي الملخصات على أعداد فقط، وتُخفى حتى يجيب 5 أشخاص على الأقل. لا تغادر نصوص الإجابات والأسماء والبريد الإلكتروني والملفات المرفوعة Chaos أبدًا.",
@@ -262,6 +265,15 @@ export default function ConnectionsPage() {
         <div>
           <h1 className="ws-page-title">{t.title}</h1>
           <p className="ws-page-subtitle">{t.intro}</p>
+        </div>
+      </div>
+
+      <ConnectedApps />
+
+      <div className="cx-dev flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h2 className="cx-dev__title">{t.developer}</h2>
+          <p className="cx-dev__lead">{t.developerLead} <a className="underline" href="/docs/integration-api" target="_blank" rel="noopener">{t.apiDocs}</a> · <a className="underline" href="/docs/chatgpt-app" target="_blank" rel="noopener">{t.mcpDocs}</a></p>
         </div>
         {!creating && <button type="button" onClick={() => { setCreating(true); setSecret(null); }} className="ws-btn ws-btn--primary"><Plus size={16} /> {t.newConnection}</button>}
       </div>

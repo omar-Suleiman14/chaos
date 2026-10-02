@@ -1018,3 +1018,17 @@ body.noise-bg:has(.workspace-ui)::before { display: none; }
 .ws-new-menu__item svg { margin-top: 2px; flex: none; }
 .ws-new-menu__item strong { display: block; font-size: 14px; font-weight: 600; }
 .ws-new-menu__item small { display: block; font-size: 12px; color: var(--on-surface-variant); }
+
+/* Connections: the apps row (components/connections/ConnectedApps.tsx) above the developer tools. */
+.cx-apps__title, .cx-dev__title { font-size: 18px; font-weight: 650; color: var(--on-background); }
+.cx-apps__lead, .cx-dev__lead { margin-top: 4px; font-size: 14px; color: var(--on-surface-variant); }
+.cx-apps__grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 14px; }
+.cx-app { display: flex; flex-direction: column; align-items: flex-start; gap: 8px; padding: 18px; border: 1px solid var(--ws-line); border-radius: 12px; background: var(--ws-card); }
+.cx-app h3 { font-size: 15px; font-weight: 600; color: var(--on-background); }
+.cx-app p { font-size: 14px; line-height: 1.55; color: var(--on-surface-variant); flex: 1; }
+.cx-app__mark { display: grid; place-items: center; width: 36px; height: 36px; border-radius: 9px; border: 1px solid var(--ws-line); background: var(--ws-canvas-subtle, var(--surface-container)); color: var(--on-background); }
+.cx-app__mark--max { background: #121212; border-color: #121212; }
+.cx-app__mark--letter { font: 700 18px/1 Georgia, "Times New Roman", serif; }
+.cx-app--soon { opacity: .7; }
+.cx-dev { padding-top: 8px; border-top: 1px solid var(--ws-line); }
+@media (max-width: 760px) { .cx-apps__grid { grid-template-columns: 1fr; } }
