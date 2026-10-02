@@ -24,12 +24,12 @@ export async function lessonAccessForActor(ctx: QueryCtx | MutationCtx, actor: s
   if (grant && (!edit || grant.role === "editor")) {
     // Explicit policy: Direct grants do NOT bypass platform moderation or creator restriction.
     if (lesson.communityState === "removed" || await creatorRestricted(ctx, lesson.ownerId)) {
-      throw new Error("NOT_FOUND: Lesson not found or unavailable.");
+      throw new Error("NOT_FOUND: Lesson not found or unauthorized.");
     }
     return lesson;
   }
   if (!edit && lesson.status === "active" && lesson.visibility === "public" && lesson.communityState === "ok" && lesson.publishedVersionId && !await creatorRestricted(ctx, lesson.ownerId)) return lesson;
-  throw new Error("NOT_FOUND: Lesson not found or unavailable.");
+  throw new Error("NOT_FOUND: Lesson not found or unauthorized.");
 }
 function revisionCheck(lesson: Doc<"lessons">, expected: number) {
   if (!Number.isSafeInteger(expected) || expected !== lesson.revision) throw new ConvexError({ code: "REVISION_CONFLICT", expectedRevision: expected, currentRevision: lesson.revision, draft: lesson.draft, metadata: lesson.metadata });
@@ -97,8 +97,11 @@ export async function saveLessonDraftForActor(ctx: MutationCtx, actor: string, a
   if (args.metadata) metadataCheck(args.metadata);
   await consumeRate(ctx, `learn:write:${actor}`, LEARN_WRITE_LIMITS.draftWritesPerMinute, 60_000);
   await recovery(ctx, lesson);
-  const searchText = await buildLessonSearchText(ctx, actor, args.metadata ?? lesson.metadata, args.document.blocks);
-  await ctx.db.patch("lessons", lesson._id, { draft: args.document, metadata: args.metadata ?? lesson.metadata, searchText, revision: lesson.revision + 1, updatedAt: Date.now() });
+  const patch: Partial<Doc<"lessons">> = { draft: args.document, metadata: args.metadata ?? lesson.metadata, revision: lesson.revision + 1, updatedAt: Date.now() };
+  if (!lesson.publishedVersionId) {
+    patch.searchText = await buildLessonSearchText(ctx, actor, args.metadata ?? lesson.metadata, args.document.blocks);
+  }
+  await ctx.db.patch("lessons", lesson._id, patch);
   await enqueueLearnWebhookEvent(ctx, { event: "lesson.updated", lessonId: lesson._id, operationId: `revision:${lesson.revision + 1}`, revision: lesson.revision + 1 });
   return lesson.revision + 1;
 }
@@ -207,8 +210,11 @@ export async function restoreLessonVersionForActor(ctx: MutationCtx, actor: stri
   const version = await ctx.db.get("lessonVersions", args.versionId);
   if (!version || version.lessonId !== lesson._id) throw new Error("Version does not belong to this lesson");
   await recovery(ctx, lesson);
-  const searchText = await buildLessonSearchText(ctx, actor, version.metadata, version.document.blocks);
-  await ctx.db.patch("lessons", lesson._id, { draft: version.document, metadata: version.metadata, searchText, revision: lesson.revision + 1, updatedAt: Date.now() });
+  const patch: Partial<Doc<"lessons">> = { draft: version.document, metadata: version.metadata, revision: lesson.revision + 1, updatedAt: Date.now() };
+  if (!lesson.publishedVersionId) {
+    patch.searchText = await buildLessonSearchText(ctx, actor, version.metadata, version.document.blocks);
+  }
+  await ctx.db.patch("lessons", lesson._id, patch);
   await recordPublicationAction(ctx, { lessonId: lesson._id, actorId: actor, action: "restore_draft", revision: lesson.revision + 1, versionId: version._id, beforeVisibility: lesson.visibility, afterVisibility: lesson.visibility, reason: "Restored a historical version into the draft; publication is unchanged." });
   return lesson.revision + 1;
 }

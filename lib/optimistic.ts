@@ -15,7 +15,7 @@ export function setFormStatusLocally(store: OptimisticLocalStore, args: Function
   const library = store.getQuery(api.forms.listMyForms, {});
   if (library) {
     const patch = <T extends { _id: string; status: string }>(list: T[]) => list.map((f) => (f._id === args.formId ? { ...f, status: args.status } : f));
-    store.setQuery(api.forms.listMyForms, {}, { owned: patch(library.owned), shared: patch(library.shared) });
+    store.setQuery(api.forms.listMyForms, {}, { owned: patch(library.owned), shared: patch(library.shared), invites: library.invites ?? [] });
   }
   const editor = store.getQuery(api.forms.getFormForEditor, { formId: args.formId });
   if (editor) store.setQuery(api.forms.getFormForEditor, { formId: args.formId }, { ...editor, status: args.status });
@@ -28,6 +28,7 @@ export function deleteFormLocally(store: OptimisticLocalStore, args: FunctionArg
   store.setQuery(api.forms.listMyForms, {}, {
     owned: library.owned.filter((f) => f._id !== args.formId),
     shared: library.shared.filter((f) => f._id !== args.formId),
+    invites: library.invites ?? [],
   });
 }
 

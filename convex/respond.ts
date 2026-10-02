@@ -334,7 +334,17 @@ export const submitResponse = mutation({
 
     const { identity } = await assertCanCollect(ctx, form, args.accessCode);
     if (!args.final && !form.settings.collectPartial) throw new Error("PARTIAL_DISABLED: This form does not store unfinished answers.");
+    const respondentKey = identity?.subject ?? (args.submissionKey ? (await sha256Hex(args.submissionKey)).slice(0, 16) : "anon");
     await consumeRate(ctx, `${args.final ? "submit" : "partial"}:${form._id}`, args.final ? 120 : 600, 60_000);
+    await consumeRate(ctx, `${args.final ? "submit" : "partial"}:${form._id}:${respondentKey}`, args.final ? 15 : 45, 60_000);
+
+    if (!args.final && !existing) {
+      const partials = await ctx.db
+        .query("formResponses")
+        .withIndex("by_formId_and_status_and_submittedAt", (q) => q.eq("formId", form._id).eq("status", "partial"))
+        .take(500);
+      if (partials.length >= 500) throw new Error("FORM_FULL: Maximum unfinished responses reached for this form.");
+    }
 
     const version = existing
       ? await ctx.db.query("formVersions").withIndex("by_formId_and_version", (q) => q.eq("formId", form._id).eq("version", existing.version)).unique()
@@ -493,8 +503,9 @@ export const saveResumeDraft = mutation({
     if (!/^[a-f0-9]{32,128}$/.test(args.token)) throw new Error("INVALID_TOKEN: Invalid resume token.");
     const form = await formByShareId(ctx, args.shareId);
     const { form: live } = await assertCanCollect(ctx, form, args.accessCode);
-    if (!live.settings.allowResumeLink) throw new Error("RESUME_DISABLED: This form does not offer resume links.");
+    const tokenHash = await sha256Hex(args.token);
     await consumeRate(ctx, `resume:${live._id}`, 300, 60_000);
+    await consumeRate(ctx, `resume:${live._id}:${tokenHash.slice(0, 16)}`, 15, 60_000);
     const version = await currentVersion(ctx, live);
     if (!version) throw new Error("FORM_UNAVAILABLE: This form is not available.");
     // Keep only well-formed answers; files are never stored in resume copies.
@@ -502,9 +513,12 @@ export const saveResumeDraft = mutation({
     const def = releasedDefinition(version.definition as FormDefinition, Date.now());
     const checked = checkAnswers(def, args.answers, { partial: true, fileIds: new Set() });
     if (JSON.stringify(checked.answers).length > 400_000) throw new Error("PAYLOAD_TOO_LARGE: These answers are too large.");
-    const tokenHash = await sha256Hex(args.token);
     const expiresAt = Date.now() + RESUME_TTL_MS;
     const existing = await ctx.db.query("formResumeDrafts").withIndex("by_formId_and_tokenHash", (q) => q.eq("formId", live._id).eq("tokenHash", tokenHash)).unique();
+    if (!existing) {
+      const activeDrafts = await ctx.db.query("formResumeDrafts").withIndex("by_formId_and_tokenHash", (q) => q.eq("formId", live._id)).take(500);
+      if (activeDrafts.length >= 500) throw new Error("CAP_REACHED: Resume drafts limit reached for this form.");
+    }
     const record = { answers: checked.answers, language: args.language, version: version.version, expiresAt, updatedAt: Date.now() };
     const draftId = existing?._id ?? await ctx.db.insert("formResumeDrafts", { formId: live._id, tokenHash, ...record });
     if (existing) await ctx.db.patch("formResumeDrafts", draftId, record);
@@ -564,11 +578,14 @@ const uploadResult = v.object({ uploadId: v.id("formUploads"), name: v.string(),
  * raw storage URL, so every stored respondent file has a matching formUploads row.
  */
 export const generateUploadUrl = mutation({
-  args: { shareId: v.string(), fieldId: v.string(), accessCode: v.optional(v.string()) },
+  args: { shareId: v.string(), fieldId: v.string(), accessCode: v.optional(v.string()), clientToken: v.optional(v.string()) },
   returns: v.string(),
   handler: async (ctx, args) => {
     const form = await fileFieldFor(ctx, args.shareId, args.fieldId, args.accessCode);
-    await consumeRate(ctx, `upload:${form._id}`, 60, 60_000);
+    const identity = await ctx.auth.getUserIdentity();
+    const uploaderKey = identity?.subject ?? (args.clientToken ? (await sha256Hex(args.clientToken)).slice(0, 16) : "anon");
+    await consumeRate(ctx, `upload:${form._id}`, 300, 60_000);
+    await consumeRate(ctx, `upload:${form._id}:${uploaderKey}`, 100, 60_000);
     const token = randomHex(24);
     await ctx.db.insert("formUploadTickets", {
       formId: form._id, fieldId: args.fieldId, uploadKey: randomHex(12),

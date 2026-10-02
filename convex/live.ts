@@ -571,6 +571,7 @@ export const joinGame = mutation({
       return { status: "joined" as const, gameId: game._id, nickname: existing.nickname };
     }
     await consumeRate(ctx, `live-join:${game._id}`, 300, 60_000);
+    await consumeRate(ctx, `live-join:${game._id}:${tokenHash.slice(0, 16)}`, 10, 60_000);
     const nickname = cleanNickname(args.nickname);
     const problem = nicknameProblem(nickname);
     if (problem === "empty") throw new Error("NICKNAME_EMPTY: Enter a nickname.");

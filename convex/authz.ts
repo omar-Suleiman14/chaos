@@ -128,12 +128,17 @@ export function isFormOwner(form: Doc<"forms">, identity: Identity | null): bool
 export async function formRoleFor(ctx: DbCtx, form: Doc<"forms">, identity: Identity | null): Promise<FormRole | null> {
   if (!identity) return null;
   if (form.ownerId === identity.subject) return "owner";
-  const email = identity.email?.toLowerCase();
+  const emailVerified = (identity as any).emailVerified !== false;
+  const email = emailVerified ? identity.email?.toLowerCase() : undefined;
   const collaborators = await ctx.db
     .query("formCollaborators")
     .withIndex("by_formId", (q) => q.eq("formId", form._id))
     .take(100);
-  const match = collaborators.find((c) => c.userId ? c.userId === identity.subject : (!!email && c.email === email));
+  const match = collaborators.find((c) => {
+    if (c.status === "declined") return false;
+    if (c.userId) return c.userId === identity.subject;
+    return !!email && c.email.toLowerCase() === email;
+  });
   return match ? match.role : null;
 }
 

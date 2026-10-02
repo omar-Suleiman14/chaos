@@ -29,13 +29,20 @@ export const listThreads = query({
   returns: v.array(thread),
   handler: async (ctx, args) => {
     await lessonAccess(ctx, args.lessonId);
+    const viewerIdentity = await ctx.auth.getUserIdentity();
+    const viewerId = viewerIdentity?.subject;
+    const lesson = await ctx.db.get("lessons", args.lessonId);
+    const ownerId = lesson?.ownerId;
     const threads = await ctx.db.query("learnThreads").withIndex("by_lessonId_and_lastActivityAt", q => q.eq("lessonId", args.lessonId)).order("desc").take(DISCUSSION_LIMITS.threadsPerLesson);
     return Promise.all(threads.map(async t => {
       const rows = await ctx.db.query("learnComments").withIndex("by_threadId_and_createdAt", q => q.eq("threadId", t._id)).take(DISCUSSION_LIMITS.commentsPerThread);
       return {
         id: t._id, lessonId: t.lessonId, blockId: t.blockId, anchorExcerpt: t.anchorExcerpt, resolved: t.resolved, createdAt: t.createdAt,
-        // Removed comments keep their place in the thread without their text.
-        comments: rows.map(c => ({ id: c._id, authorId: c.authorId, authorName: c.moderation === "removed" ? "" : c.authorName, body: c.moderation === "removed" ? "" : c.body, createdAt: c.createdAt, editedAt: c.editedAt, moderation: c.moderation })),
+        // Removed comments keep their place in the thread without their text. Omit raw internal IDs of other users.
+        comments: rows.map(c => {
+          const safeAuthorId = (c.authorId === viewerId || c.authorId === ownerId) ? c.authorId : "community_member";
+          return { id: c._id, authorId: safeAuthorId, authorName: c.moderation === "removed" ? "" : c.authorName, body: c.moderation === "removed" ? "" : c.body, createdAt: c.createdAt, editedAt: c.editedAt, moderation: c.moderation };
+        }),
       };
     }));
   },

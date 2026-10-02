@@ -369,6 +369,7 @@ export const formTables = {
     email: v.string(),
     userId: v.optional(v.string()),
     role: formRoleValidator,
+    status: v.optional(v.union(v.literal("pending"), v.literal("accepted"), v.literal("declined"))),
     invitedBy: v.string(),
     createdAt: v.number(),
   })

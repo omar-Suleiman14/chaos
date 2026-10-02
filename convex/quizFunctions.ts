@@ -12,6 +12,7 @@ import type { Id } from "./_generated/dataModel";
 import type { Doc } from "./_generated/dataModel";
 import { publicationErrors, quizQuestionFields } from "./quizModel";
 import { emitQuizAttemptEvent, emitQuizStatusEvent } from "./webhookEvents";
+import { consumeRate } from "./serverUtils";
 import {
   canViewQuizAsRespondent,
   getQuizIfOwner,
@@ -27,14 +28,13 @@ import {
 
 /**
  * A quiz's completed attempts, oldest first (the order the by_quiz index gives).
- * Reads only completed rows through the status index, so a query built on it is neither
- * charged for nor re-run by answers landing on attempts that are still in progress.
+ * Reads only completed rows through the status index, bounded to 500 to prevent unbounded reads.
  */
-async function completedSessions(ctx: QueryCtx, quizId: Id<"quizzes">): Promise<Doc<"quizSessions">[]> {
+async function completedSessions(ctx: QueryCtx, quizId: Id<"quizzes">, limit = 500): Promise<Doc<"quizSessions">[]> {
   const rows = await ctx.db
     .query("quizSessions")
     .withIndex("by_quizId_and_status_and_score", (q) => q.eq("quizId", quizId).eq("status", "completed"))
-    .collect();
+    .take(limit);
   return rows.sort((a, b) => a._creationTime - b._creationTime);
 }
 
@@ -353,7 +353,7 @@ async function cascadeDeleteQuiz(ctx: MutationCtx, quizId: Id<"quizzes">) {
   const questions = await ctx.db
     .query("questions")
     .withIndex("by_quiz", (q) => q.eq("quizId", quizId))
-    .collect();
+    .take(200);
   for (const question of questions) {
     await ctx.db.delete("questions", question._id);
   }
@@ -361,7 +361,7 @@ async function cascadeDeleteQuiz(ctx: MutationCtx, quizId: Id<"quizzes">) {
   const sessions = await ctx.db
     .query("quizSessions")
     .withIndex("by_quiz", (q) => q.eq("quizId", quizId))
-    .collect();
+    .take(200);
   for (const session of sessions) {
     await ctx.db.delete("quizSessions", session._id);
   }
@@ -369,7 +369,7 @@ async function cascadeDeleteQuiz(ctx: MutationCtx, quizId: Id<"quizzes">) {
   const aiJobs = await ctx.db
     .query("aiJobs")
     .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
-    .collect();
+    .take(50);
   for (const job of aiJobs) {
     if (job.quizId === quizId) {
       await ctx.db.patch("aiJobs", job._id, { quizId: undefined });
@@ -937,6 +937,20 @@ export const startQuizSession = mutation({
     }
 
     const now = Date.now();
+    const identity = await ctx.auth.getUserIdentity();
+    const playerKey = identity?.subject ?? name.trim().toLowerCase();
+    await consumeRate(ctx, `quiz:start:${args.quizId}:${playerKey}`, 10, 60_000);
+
+    const activeSessions = await ctx.db
+      .query("quizSessions")
+      .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
+      .filter((q) => q.eq(q.field("status"), "in_progress"))
+      .take(20);
+    const playerActive = activeSessions.filter((s) => s.playerName.trim().toLowerCase() === name.trim().toLowerCase());
+    if (playerActive.length >= 5) {
+      throw new Error("CAP_REACHED: You have too many in-progress attempts for this quiz. Finish or wait before starting a new one.");
+    }
+
     const recent = await ctx.db
       .query("quizSessions")
       .withIndex("by_quiz_started", (q) =>
