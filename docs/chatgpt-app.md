@@ -24,12 +24,14 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 | Protected resource metadata (RFC 9728) | `app/.well-known/oauth-protected-resource/route.ts` and `…/mcp/route.ts` |
 | Authorization server metadata (Clerk mirror) | `app/.well-known/oauth-authorization-server/route.ts` |
 | OpenAI domain verification | `app/.well-known/openai-apps-challenge/route.ts` |
-| Backend functions | `convex/mcp.ts`; MCP game wrappers in `convex/mcpGames.ts`; translation and validation in `convex/mcpContract.ts` |
+| Backend functions | `convex/mcp.ts`; MCP game wrappers in `convex/mcpGames.ts`; Learn lesson wrappers in `convex/mcpLearn.ts`; course wrappers in `convex/mcpCourses.ts`; flashcard wrappers in `convex/mcpFlashcards.ts`; assessment wrappers in `convex/mcpAssessments.ts`; organization/folder wrappers in `convex/mcpOrganization.ts`; advanced form wrappers in `convex/mcpAdvancedForms.ts`, `convex/mcpFormManagement.ts`; translation and validation in `convex/mcpContract.ts` |
 | Theme presets for the tools (resolved on the Next.js side, because Convex cannot import `components/`) | `lib/mcp/themes.ts`, palettes in `components/forms/formThemes.ts` |
 | Public help page | `app/chatgpt/page.tsx` → https://chaos.fail/chatgpt |
-| Tests | `tests/unit/mcpContract.test.ts`, `tests/unit/mcpServer.test.ts`, `tests/unit/mcpGames.test.ts`, `tests/integration/mcp.test.ts`, `tests/integration/mcpGames.test.ts` |
+| Tests | `tests/unit/mcpContract.test.ts`, `tests/unit/mcpServer.test.ts`, `tests/unit/mcpGames.test.ts`, `tests/unit/mcpCourses.test.ts`, `tests/unit/mcpCommunity.test.ts`, `tests/integration/mcp.test.ts`, `tests/integration/mcpGames.test.ts`, `tests/integration/mcpCourses.test.ts`, `tests/integration/learnMcp.test.ts`, `tests/integration/learnOrganizationMcp.test.ts` |
 
 ### Tools
+
+#### Form and quiz tools
 
 | Tool | What it does | readOnly | destructive | openWorld |
 |---|---|---|---|---|
@@ -41,9 +43,91 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 | `update_form` | Edit a draft; a sent question list replaces the old one | false | **true** | false |
 | `publish_form` | Publish the draft and return the public link | false | false | **true** |
 | `list_themes` | The looks (presets) and the choices for fonts, buttons, start screens, backdrops, radius, layouts and sound packs | true | false | false |
-| `set_form_theme` | Apply a preset by name and/or set accent, page, card and text colours (hex), font, radius, buttons, start screen, backdrop, layout, fixed/auto dark mode on the draft | false | false | false |
+| `set_form_theme` | Apply a preset by name and/or set individual theme properties on the draft | false | false | false |
 | `set_form_sound` | Pick the sound pack respondents hear: soft (Glass), pop, wood, arcade, or off | false | false | false |
 | `set_form_status` | Close, reopen, archive, restore (never delete) | false | false | false |
+
+#### Advanced form tools
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `set_form_branching` | Replace or clear one field/ending visibility rule on the draft | false | false | false |
+| `upsert_form_file_question` | Create or update a file-upload question in the draft | false | false | false |
+| `get_form_response_controls` | Read owned form response controls and settings revision | true | false | false |
+| `set_form_response_controls` | Change response access, dates, limits, retention, hidden fields | false | **true** | **true** |
+| `get_form_advanced_analytics` | Owner-only aggregate analytics: correct rates, completion times, distributions | true | false | false |
+| `export_form_responses` | Export responses as CSV/XLSX/JSON; returns a download link (24h) | false | false | **true** |
+| `list_form_collaborators` | Owner-only collaborator list and membership snapshot | true | false | false |
+| `change_form_collaborator` | Invite, change role or remove a collaborator | false | **true** | **true** |
+| `fork_quiz` | Fork a published quiz into a new owned draft | false | false | false |
+| `get_quiz_fork_lineage` | Read the fork lineage of a quiz | true | false | false |
+
+#### Learn lesson tools
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `create_lesson` | Create a private lesson draft from Chaos blocks | false | false | false |
+| `get_lesson` | Read up to 100 blocks of a draft, published or outline view | true | false | false |
+| `list_lessons` | List owned lessons or search public published lessons | true | false | false |
+| `search_lessons` | Alias for `list_lessons`; search owned or public lessons | true | false | false |
+| `save_lesson_draft` | Revision-protected full draft replacement | false | **true** | false |
+| `edit_lesson_blocks` | Atomic append/update/move/delete block operations | false | **true** | false |
+| `add_lesson_blocks` | Append blocks to the draft | false | false | false |
+| `update_lesson_blocks` | Replace named existing blocks only | false | **true** | false |
+| `move_lesson_blocks` | Reorder blocks in the draft | false | false | false |
+| `delete_lesson_blocks` | Remove blocks from the draft | false | **true** | false |
+| `publish_lesson` | Owner-only explicit publication with visibility | false | false | **true** |
+| `set_lesson_lifecycle` | Archive, unpublish or reactivate a lesson | false | **true** | **true** |
+| `restore_lesson_version` | Restore a published version into the draft | false | **true** | false |
+| `fork_lesson` | Copy a published version into a new private draft | false | false | false |
+| `list_lesson_versions` | Inspect version metadata history | true | false | false |
+| `get_lesson_version` | Read blocks from an immutable published version | true | false | false |
+| `get_lesson_outline` | Read the outline of a draft or published lesson | true | false | false |
+| `get_lesson_sources` | Read source metadata cited in a lesson | true | false | false |
+| `get_learn_source_metadata` | Read independently authorized source metadata | true | false | false |
+| `get_learn_capabilities` | Discover deployed schema, block/file limits | true | false | false |
+
+#### Course tools
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `create_course` | Create an owned course draft | false | false | false |
+| `get_course` | Read course metadata, ordered lesson summaries and revision | true | false | false |
+| `update_course` | Edit course draft metadata (title, description, tags, cover, language) | false | false | false |
+| `set_course_outline` | Replace the ordered lesson list (does not delete lessons) | false | **true** | false |
+| `add_course_lesson` | Create a blank lesson draft at the end of the course | false | false | false |
+| `publish_course` | Publish the course and its outlined lessons with visibility | false | **true** | **true** |
+
+#### Assessment tools
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `attach_lesson_quiz` | Attach an owned quiz to an owned lesson | false | false | false |
+| `get_lesson_quizzes` | List assessment references linked to a lesson | true | false | false |
+| `create_lesson_live_game` | Create a live game room from a lesson's assessment | false | false | **true** |
+
+#### Organization tools
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `create_folder` | Create an owned private folder | false | false | false |
+| `list_folders` | List owned folders under a parent | true | false | false |
+| `move_folder` | Move a folder to a new parent | false | **true** | false |
+| `list_folder_contents` | List folder membership references | true | false | false |
+| `add_folder_member` | Add a form, quiz, lesson, source or collection to a folder | false | false | false |
+| `list_curriculum_institutions` | Browse public curriculum institutions | true | false | false |
+| `list_curriculum_programs` | Browse public curriculum programs | true | false | false |
+| `list_curriculum_versions` | Browse public curriculum versions | true | false | false |
+| `list_curriculum_nodes` | Browse public curriculum nodes | true | false | false |
+| `create_lesson_curriculum_mapping` | Map a lesson draft to a curriculum node | false | false | false |
+
+#### Community tools
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `save_lesson` | Save/unsave a public lesson to your library | false | false | false |
+| `search_learn_directory` | Search public institutions, programs, creators or tags | true | false | false |
+
 
 `create_form` also takes an optional `theme` (preset name) and `sound`. ChatGPT is told to pick a theme that suits the form; without one it uses the Google Forms style. Sound is on (Glass) unless `sound` is `off`. Forms made in Chaos itself start silent.
 
@@ -108,7 +192,7 @@ You do these steps; they change production.
    # → {"resource":"https://chaos.fail/mcp","authorization_servers":["https://clerk.chaos.fail"],...}
    curl -s https://chaos.fail/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
      -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
-   # → the 18 tools
+   # → the 69 tools
    ```
    You can also point the MCP Inspector at it: `npx @modelcontextprotocol/inspector` → Streamable HTTP → `https://chaos.fail/mcp` → Connect (it runs the OAuth flow).
 
@@ -120,7 +204,7 @@ You do these steps; they change production.
    - MCP server URL: `https://chaos.fail/mcp`
    - Authentication: **OAuth** (leave client ID/secret empty; ChatGPT registers itself through DCR/CIMD)
    - Tick "I trust this application" → **Create**.
-3. ChatGPT opens the Clerk sign-in → approve the consent screen. The app shows as connected with 18 tools.
+3. ChatGPT opens the Clerk sign-in → approve the consent screen. The app shows as connected with 69 tools.
 4. In a new chat, choose **+ → Developer mode → Chaos** (or just name Chaos in the prompt) and try:
    - *"Let's talk about the solar system for a bit"* … then *"Create me a quiz of what we discussed using Chaos"*
    - *"Show me my Chaos forms"*
@@ -152,7 +236,7 @@ Before you start: the submitting account needs the **Apps Management: Write** ro
 - **Demo credentials:** create a dedicated reviewer account in the **production** Clerk instance with email + password, **no MFA, no email code**. Check in Clerk → Configure → Attack protection / Client Trust that new-device email verification is **off** for it, or reviewers will be blocked. Seed it with: 1 live form with 5+ responses, 1 quiz, 1 draft (see "Test cases"). **Give it Pro with a long expiry** (`/admin` → Users → Plan) — the app refuses Free accounts, so reviewers would otherwise be blocked once the trial ends.
 - **Content Security Policy:** none. The app has no UI component (text and structured results only).
 - **Domain verification:** copy the token into Vercel as `OPENAI_APPS_CHALLENGE_TOKEN`, redeploy, check that `https://chaos.fail/.well-known/openai-apps-challenge` returns exactly the token, then verify.
-- **Scan Tools:** should find the 18 tools above with titles, descriptions, input and output schemas, annotations and `securitySchemes`.
+- **Scan Tools:** should find the 69 tools above with titles, descriptions, input and output schemas, annotations and `securitySchemes`.
 
 ### Tool justifications (paste per tool)
 - `search_forms`: read-only lookup of the signed-in person's own forms; no side effects, bounded to their account.
