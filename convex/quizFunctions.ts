@@ -914,10 +914,9 @@ export const startQuizSession = mutation({
     if (!name) throw new Error("NAME_REQUIRED: Enter a name to start.");
 
     const quiz = await ctx.db.get("quizzes", args.quizId);
-    if (!quiz) throw new Error("QUIZ_NOT_FOUND: This quiz no longer exists.");
-    if (quiz.isBanned || await creatorRestricted(ctx, quiz.creatorId)) throw new Error("QUIZ_BANNED: This quiz is unavailable.");
-    if (!quiz.isPublished) {
-      throw new Error("QUIZ_UNPUBLISHED: This quiz is not accepting responses right now.");
+    // Missing, unpublished, banned and restricted look the same, so a quiz ID doesn't reveal private state.
+    if (!quiz || !quiz.isPublished || quiz.isBanned || await creatorRestricted(ctx, quiz.creatorId)) {
+      throw new Error("QUIZ_UNAVAILABLE: This quiz isn't available.");
     }
 
     // Enforce 100-player limit for non-elevated quizzes
@@ -988,7 +987,10 @@ export const gradeAnswer = mutation({
     }
 
     const existingAnswer = session.answers.find((answer) => answer.questionId === args.questionId);
-    const withheld = resultsWithheld(await ctx.db.get("quizzes", session.quizId));
+    const sessionQuiz = await ctx.db.get("quizzes", session.quizId);
+    // Unpublishing or moderation stops attempts already in progress.
+    if (!sessionQuiz || !sessionQuiz.isPublished || sessionQuiz.isBanned) throw new Error("QUIZ_UNAVAILABLE: This quiz isn't available.");
+    const withheld = resultsWithheld(sessionQuiz);
     if (existingAnswer && withheld) {
       return { isCorrect: false, pointsEarned: 0, totalPointsPossible: question.points, alreadyAnswered: true, withheld: true, correctAnswer: undefined, explanation: undefined };
     }

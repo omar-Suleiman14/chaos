@@ -88,8 +88,14 @@ export const enroll = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const assignment = await owned(ctx, args.assignmentId);
-    // Host selects a registered account by ID or email; authorization never derives from this argument.
+    // Email lookups reveal whether an account exists, so they are rate-limited per teacher. An ID only
+    // toggles someone already on this roster; it can't be used to look up arbitrary accounts.
+    await consumeRate(ctx, `homework:enroll:${assignment.ownerId}`, 60, 60 * 60 * 1000);
     const email = args.email?.trim();
+    if (args.studentId) {
+      const enrolled = await ctx.db.query("homeworkEnrollments").withIndex("by_assignmentId_and_studentId", (q) => q.eq("assignmentId", assignment._id).eq("studentId", args.studentId!)).unique();
+      if (!enrolled) throw new Error("NOT_FOUND: That student isn't on this assignment.");
+    }
     const student = args.studentId
       ? await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.studentId!)).first()
       : email
@@ -280,90 +286,6 @@ export const submitAttempt = mutation({
     await countResponse(ctx, form, response, definition, 1);
     await emitWebhookEvent(ctx, form.ownerId, "response.completed", `form_${form._id}`, () => formResponseData(form, response, definition));
     return { responseId, score: grade.score, maxScore: grade.maxScore, duplicate: false };
-  },
-});
-export const recordAttempt = mutation({
-  args: {
-    attemptId: v.id("homeworkAttempts"),
-    responseId: v.id("formResponses"),
-  },
-  returns: v.id("homeworkAttempts"),
-  handler: async (ctx, args) => {
-    const identity = await actor(ctx);
-    const attempt = await ctx.db.get("homeworkAttempts", args.attemptId);
-    if (!attempt || attempt.studentId !== identity.tokenIdentifier)
-      throw new Error("Own attempt required");
-    if (attempt.responseId) {
-      if (attempt.responseId !== args.responseId)
-        throw new Error("Attempt already recorded");
-      return attempt._id;
-    }
-    const assignment = await ctx.db.get(
-      "homeworkAssignments",
-      attempt.assignmentId,
-    );
-    const response = await ctx.db.get("formResponses", args.responseId);
-    const version =
-      assignment && (await ctx.db.get("formVersions", assignment.versionId));
-    const enrollment = await ctx.db
-      .query("homeworkEnrollments")
-      .withIndex("by_assignmentId_and_studentId", (q) =>
-        q
-          .eq("assignmentId", attempt.assignmentId)
-          .eq("studentId", identity.subject),
-      )
-      .unique();
-    if (
-      !assignment ||
-      assignment.closed ||
-      !enrollment?.active ||
-      !version ||
-      !response ||
-      response.respondentId !== identity.subject ||
-      response.status !== "completed" ||
-      response.spam ||
-      response.formId !== assignment.formId ||
-      response.version !== version.version ||
-      response.source === "live"
-    )
-      throw new Error("Eligible completed quiz response required");
-    // Edited responses cannot supply original immutable homework evidence.
-    if (
-      response.editCount ||
-      response.editedAt ||
-      !Number.isFinite(response.startedAt) ||
-      !Number.isFinite(response.submittedAt) ||
-      response.startedAt <
-        Math.max(
-          attempt.startedAt,
-          enrollment.enrolledAt,
-          assignment.opensAt,
-        ) ||
-      response.submittedAt < response.startedAt ||
-      response.submittedAt > assignment.deadline ||
-      response.submittedAt > Date.now()
-    )
-      throw new Error("Response outside attempt window or edited");
-    const duplicate = await ctx.db
-      .query("homeworkAttempts")
-      .withIndex("by_responseId", (q) => q.eq("responseId", args.responseId))
-      .unique();
-    if (duplicate) throw new Error("Response already associated with homework");
-    const grade = gradeQuiz(version.definition, response.answers);
-    if (
-      !grade ||
-      !Number.isFinite(grade.score) ||
-      !Number.isFinite(grade.maxScore) ||
-      grade.maxScore <= 0
-    )
-      throw new Error("Valid graded quiz required");
-    await ctx.db.patch("homeworkAttempts", attempt._id, {
-      responseId: response._id,
-      submittedAt: response.submittedAt,
-      score: grade.score,
-      maxScore: grade.maxScore,
-    });
-    return attempt._id;
   },
 });
 const progress = v.object({

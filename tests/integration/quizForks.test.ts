@@ -83,7 +83,7 @@ describe("assessment fork provenance", () => {
     });
     await t.run(async ctx => {
       const questions = await ctx.db.query("questions").withIndex("by_quiz", q => q.eq("quizId", copy.asset.id as typeof quizId)).take(200);
-      await ctx.db.patch("quizzes", copy.asset.id as typeof quizId, { isPublished: true, publishedAt: 15, publishedSnapshot: { title: "Fork published", questions: questions.map(({ _creationTime: _time, quizId: _quiz, deletedAt: _deleted, ...question }) => question) } });
+      await ctx.db.patch("quizzes", copy.asset.id as typeof quizId, { isPublished: true, publishedAt: 15, publishedSnapshot: { title: "Fork published", questions: questions.map(({ _creationTime: _time, quizId: _quiz, deletedAt: _deleted, ...question }) => ({ ...question, correctAnswer: "B" })) } });
     });
     const grandchild = await owner.mutation(fork, { asset: copy.asset, expectedPublishedAt: 15 });
     const descendant = await owner.query(lineage, grandchild);
@@ -93,6 +93,8 @@ describe("assessment fork provenance", () => {
       expect(q?.creatorId).toBe(otherCreatorIdentity.subject);
       const questions = await ctx.db.query("questions").withIndex("by_quiz", q => q.eq("quizId", copy.asset.id as typeof quizId)).take(5);
       expect(questions[0].questionText).toBe("Published question");
+      // Someone else's answer key is not copied.
+      expect(questions[0].correctAnswer).toBeUndefined();
       await ctx.db.patch("quizzes", quizId, { publishedAt: 20, publishedSnapshot: { title: "New publication", questions: [] } });
       const snap = await ctx.db.get("quizForkSnapshots", saved.parentVersion.id);
       expect(snap?.snapshot.title).toBe("Published title");

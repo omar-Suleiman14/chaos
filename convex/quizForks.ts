@@ -9,6 +9,7 @@ import { consumeCreation } from "./plans";
 import { creatorRestricted, requireActiveUser } from "./authz";
 import { requireLearnActor } from "./mcpLearn";
 import { publicationErrors } from "./quizModel";
+import { publicQuizDefinition } from "./formQuiz";
 import { randomCode } from "./serverUtils";
 
 const argsValidator = v.object({ asset: assessmentRef, formVersionId: v.optional(v.id("formVersions")), expectedPublishedAt: v.optional(v.number()) });
@@ -31,7 +32,9 @@ export async function forkAssessmentForActor(ctx: MutationCtx, actor: string, in
     if (!form || !version || version.formId !== form._id || form.isBanned || await creatorRestricted(ctx, form.ownerId)) throw new Error("NOT_FOUND_OR_UNAUTHORIZED");
     if (form.ownerId !== actor && (form.status !== "live" || form.settings.access !== "public" || form.settings.allowedEmails?.length || form.settings.allowedDomains?.length || version.version !== form.publishedVersion)) throw new Error("NOT_FOUND_OR_UNAUTHORIZED");
     parentCreatorId = form.ownerId;
-    asset = { kind: "form", id: await createFormRecord(ctx, actor, { ...version.definition, title: `${version.definition.title} (fork)`.slice(0, 200) }) };
+    // Someone else's quiz is forked without its answer key, as respondents see it; the owner keeps theirs.
+    const definition = form.ownerId === actor ? version.definition : publicQuizDefinition(version.definition);
+    asset = { kind: "form", id: await createFormRecord(ctx, actor, { ...definition, title: `${definition.title} (fork)`.slice(0, 200) }) };
     parentVersion = { kind: "form", id: version._id };
   } else {
     if (input.formVersionId || !Number.isFinite(input.expectedPublishedAt)) throw new Error("VALIDATION: Select expectedPublishedAt for a classic quiz.");
@@ -54,6 +57,8 @@ export async function forkAssessmentForActor(ctx: MutationCtx, actor: string, in
     const id = await ctx.db.insert("quizzes", { creatorId: actor, creatorUsername: user.username, title: `${snapshot.title} (fork)`.slice(0, 200), description: snapshot.description, slug, isPublished: false, createdAt: now, updatedAt: now });
     for (const question of snapshot.questions) {
       const { _id: _originalId, ...fields } = question;
+      // Answers, accepted keywords, explanations and hints stay with the author: a fork of someone else's quiz starts without them.
+      if (quiz.creatorId !== actor) { delete fields.correctAnswer; delete fields.correctAnswers; delete fields.keywords; delete fields.explanation; delete fields.hint; }
       await ctx.db.insert("questions", { ...fields, quizId: id });
     }
     const captured = await ctx.db.query("quizForkSnapshots").withIndex("by_quizId_and_publishedAt", q => q.eq("quizId", quiz._id).eq("publishedAt", quiz.publishedAt!)).unique();

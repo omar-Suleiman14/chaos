@@ -80,7 +80,7 @@ async function setup() {
   const enroll = () =>
     host.mutation(ref("enroll"), {
       assignmentId,
-      studentId: "student",
+      email: "s@test.com",
       active: true,
     });
   const response = () =>
@@ -229,7 +229,7 @@ describe("homework", () => {
       await expect(s.student.query(read("getAttemptDefinition"), { attemptId })).rejects.toThrow();
       await s.t.run(ctx => ctx.db.patch("homeworkAssignments", s.assignmentId, { closed: original!.closed, deadline: original!.deadline, opensAt: original!.opensAt, maxAttempts: original!.maxAttempts }));
     }
-    await s.student.mutation(ref("recordAttempt"), { attemptId, responseId: await s.response() });
+    await s.student.mutation(ref("submitAttempt"), { attemptId, answers: { q: "a" }, language: "en" });
     await expect(s.student.query(read("getAttemptDefinition"), { attemptId })).rejects.toThrow("Attempt unavailable");
   });
   it("does not deliver unreleased fields or moderated content", async () => {
@@ -264,76 +264,29 @@ describe("homework", () => {
       assignmentId: s.assignmentId,
     });
     await expect(
-      s.other.mutation(ref("recordAttempt"), {
-        attemptId,
-        responseId: await s.response(),
-      }),
+      s.other.mutation(ref("submitAttempt"), { attemptId, answers: { q: "a" }, language: "en" }),
     ).rejects.toThrow("Own attempt");
   });
-  it("server grades once; edits and retries cannot change evidence; caps attempts", async () => {
+  it("counts only the attempt's own submission and caps attempts", async () => {
     const s = await setup();
     await s.enroll();
-    const attemptId = await s.student.mutation(ref("startAttempt"), {
-      assignmentId: s.assignmentId,
-    });
-    expect(
-      await s.student.mutation(ref("startAttempt"), {
-        assignmentId: s.assignmentId,
-      }),
-    ).toBe(attemptId);
-    const responseId = await s.response();
-    await s.student.mutation(ref("recordAttempt"), { attemptId, responseId });
-    await s.t.run((ctx) =>
-      ctx.db.patch(responseId, {
-        answers: { q: "b" },
-        editCount: 1,
-        editedAt: Date.now(),
-      }),
-    );
-    await s.student.mutation(ref("recordAttempt"), { attemptId, responseId });
-    const result = await s.student.query(read("myProgress"), {
-      assignmentId: s.assignmentId,
-    });
+    const attemptId = await s.student.mutation(ref("startAttempt"), { assignmentId: s.assignmentId });
+    expect(await s.student.mutation(ref("startAttempt"), { assignmentId: s.assignmentId })).toBe(attemptId);
+    // An ordinary form submission (e.g. a retry through the public link) is not homework evidence.
+    await s.response();
+    await s.student.mutation(ref("submitAttempt"), { attemptId, answers: { q: "a" }, language: "en" });
+    const result = await s.student.query(read("myProgress"), { assignmentId: s.assignmentId });
     expect(result[0].score).toBe(2);
     expect(result[0].maxScore).toBe(2);
-    expect(
-      await s.other.query(read("myProgress"), { assignmentId: s.assignmentId }),
-    ).toEqual([]);
-    await expect(
-      s.other.query(read("report"), {
-        assignmentId: s.assignmentId,
-        studentId: "student",
-      }),
-    ).rejects.toThrow("owner");
-    await expect(
-      s.student.mutation(ref("startAttempt"), { assignmentId: s.assignmentId }),
-    ).rejects.toThrow("limit");
+    expect(await s.other.query(read("myProgress"), { assignmentId: s.assignmentId })).toEqual([]);
+    await expect(s.other.query(read("report"), { assignmentId: s.assignmentId, studentId: "student" })).rejects.toThrow("owner");
+    await expect(s.student.mutation(ref("startAttempt"), { assignmentId: s.assignmentId })).rejects.toThrow("limit");
   });
-  it("rejects late and edited initial records", async () => {
+  it("refuses new attempts once closed, and only toggles students already enrolled by ID", async () => {
     const s = await setup();
+    await expect(s.host.mutation(ref("enroll"), { assignmentId: s.assignmentId, studentId: "student", active: true })).rejects.toThrow("NOT_FOUND");
     await s.enroll();
-    const attemptId = await s.student.mutation(ref("startAttempt"), {
-      assignmentId: s.assignmentId,
-    });
-    const responseId = await s.response();
-    await s.t.run((ctx) =>
-      ctx.db.patch(responseId, { submittedAt: Date.now() + 120000 }),
-    );
-    await expect(
-      s.student.mutation(ref("recordAttempt"), { attemptId, responseId }),
-    ).rejects.toThrow("window");
-    await s.t.run((ctx) =>
-      ctx.db.patch(responseId, { submittedAt: Date.now(), editCount: 1 }),
-    );
-    await expect(
-      s.student.mutation(ref("recordAttempt"), { attemptId, responseId }),
-    ).rejects.toThrow("edited");
-    await s.host.mutation(ref("setClosed"), {
-      assignmentId: s.assignmentId,
-      closed: true,
-    });
-    await expect(
-      s.student.mutation(ref("startAttempt"), { assignmentId: s.assignmentId }),
-    ).rejects.toThrow("open");
+    await s.host.mutation(ref("setClosed"), { assignmentId: s.assignmentId, closed: true });
+    await expect(s.student.mutation(ref("startAttempt"), { assignmentId: s.assignmentId })).rejects.toThrow("open");
   });
 });

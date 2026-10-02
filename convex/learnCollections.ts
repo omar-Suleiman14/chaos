@@ -6,7 +6,8 @@ import { requireActiveUser } from "./authz";
 import { requireVisibilityAllowed } from "./plans";
 import { collectionItem } from "./learnAssetModel";
 import { lessonMeta, visibility } from "./learnModel";
-import { lessonAccess, lessonAccessForActor } from "./lessons";
+import { lessonAccess, lessonAccessForActor, metadataCheck } from "./lessons";
+import { creatorRestricted } from "./authz";
 import schema from "./schema";
 import type { Id, Doc } from "./_generated/dataModel";
 
@@ -19,7 +20,8 @@ function revision(row: Doc<"learnCollections">, expected: number) {
 }
 export const create = mutation({ args: { metadata: lessonMeta }, returns: v.id("learnCollections"), handler: async (ctx, args) => {
   const { identity } = await requireActiveUser(ctx);
-  if (!args.metadata.title.trim() || args.metadata.title.length > 200 || args.metadata.description.length > 4000 || args.metadata.tags.length > 20) throw new Error("Invalid collection metadata");
+  // Same checks as lesson metadata: safe cover links, bounded icon, author, language, tags and licence.
+  metadataCheck(args.metadata);
   const collectionId = await ctx.db.insert("learnCollections", { ownerId: identity.subject, metadata: args.metadata, items: [], revision: 0, visibility: "private", communityState: "ok", createdAt: Date.now(), updatedAt: Date.now() });
   await recordAssetPublicationAction(ctx, { asset: { kind: "collection", id: collectionId }, actorId: identity.subject, action: "create", revision: 0, afterVisibility: "private", reason: "Created a private ordered collection draft." });
   return collectionId;
@@ -55,7 +57,7 @@ export const publish = mutation({ args: { collectionId: v.id("learnCollections")
 export const getDraft = query({ args: { collectionId: v.id("learnCollections") }, returns: schema.doc("learnCollections"), handler: (ctx, args) => owned(ctx, args.collectionId) });
 export const getPublished = query({ args: { collectionId: v.id("learnCollections") }, returns: v.union(schema.doc("collectionVersions"), v.null()), handler: async (ctx, args) => {
   const row = await ctx.db.get("learnCollections", args.collectionId); const identity = await ctx.auth.getUserIdentity();
-  if (!row || (row.ownerId !== identity?.subject && (row.visibility !== "public" || row.communityState !== "ok"))) throw new Error("Collection not found or unauthorized");
+  if (!row || (row.ownerId !== identity?.subject && (row.visibility !== "public" || row.communityState !== "ok" || row.archived || await creatorRestricted(ctx, row.ownerId)))) throw new Error("Collection not found or unauthorized");
   // Returns IDs and metadata only. Linked lesson/source reads still enforce current access.
   return row.publishedVersionId ? ctx.db.get("collectionVersions", row.publishedVersionId) : null;
 } });
@@ -70,4 +72,6 @@ export async function attachAssessmentForActor(ctx: MutationCtx, actor: string, 
   return ctx.db.insert("lessonAssessments", args);
 }
 export const attachAssessment = mutation({ args: { lessonId: v.id("lessons"), asset: schema.tables.lessonAssessments.validator.fields.asset, label: v.string(), order: v.number() }, returns: v.id("lessonAssessments"), handler: async (ctx, args) => attachAssessmentForActor(ctx, (await requireActiveUser(ctx)).identity.subject, args) });
-export const listAssessments = query({ args: { lessonId: v.id("lessons") }, returns: v.array(schema.doc("lessonAssessments")), handler: async (ctx, args) => { await lessonAccess(ctx, args.lessonId); return ctx.db.query("lessonAssessments").withIndex("by_lessonId_and_order", q => q.eq("lessonId", args.lessonId)).take(50); } });
+export const listAssessments = query({ args: { lessonId: v.id("lessons") }, returns: v.array(schema.doc("lessonAssessments")), handler: async (ctx, args) => {
+  // Editors only: the list includes unpublished and private attachments. Readers use learnFrontend.attachedQuizzes.
+  await lessonAccess(ctx, args.lessonId, true); return ctx.db.query("lessonAssessments").withIndex("by_lessonId_and_order", q => q.eq("lessonId", args.lessonId)).take(50); } });

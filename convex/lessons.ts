@@ -29,7 +29,7 @@ export async function lessonAccessForActor(ctx: QueryCtx | MutationCtx, actor: s
 function revisionCheck(lesson: Doc<"lessons">, expected: number) {
   if (!Number.isSafeInteger(expected) || expected !== lesson.revision) throw new ConvexError({ code: "REVISION_CONFLICT", expectedRevision: expected, currentRevision: lesson.revision, draft: lesson.draft, metadata: lesson.metadata });
 }
-function metadataCheck(metadata: Doc<"lessons">["metadata"]) {
+export function metadataCheck(metadata: Doc<"lessons">["metadata"]) {
   const presentationProblems = validateMetadataPresentation(metadata);
   if (presentationProblems.length) throw new ConvexError({ code: "VALIDATION", problems: presentationProblems.map(problem => ({ ...problem })) });
   if (!metadata.title.trim() || metadata.title.length > LEARN_LIMITS.title || metadata.description.length > 4000 || metadata.language.length > 35 || metadata.tags.length > LEARN_LIMITS.tags || metadata.tags.some(t => !t.trim() || t.length > 80) || (metadata.license?.length ?? 0) > 300) throw new Error("Invalid lesson metadata: title, description, language, tags or license exceeds limits");
