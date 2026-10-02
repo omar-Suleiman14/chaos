@@ -9,6 +9,7 @@ import { WsMenu, WsSwitch } from "@/components/workspace/primitives";
 import { useBuilderLabels } from "@/components/forms/formThemeLabels";
 import { useCopy } from "@/lib/i18n";
 import RuleEditor from "./RuleEditor";
+import DocHint from "@/components/forms/DocHint";
 import { Select } from "@/components/workspace/Select";
 
 /** Change type, keeping the label, description, logic and any options that still apply. */
@@ -279,9 +280,12 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
             </div>
           )}
           {field.type === "file" && (
+            <>
             <label className={`${labelClass} block`}>{t.filesAllowed} <input type="number" min={1} max={5} value={field.max ?? 1} onChange={(e) => set({ max: num(e.target.value) })} className="kb-input py-1 w-20 mt-1" />
               <span className="block text-xs mt-1">{t.fileNote}</span>
             </label>
+            <DocHint slug="question-types" />
+            </>
           )}
           {field.type !== "section" && (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
@@ -289,7 +293,7 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
               <label className={labelClass}>{t.imageDescription} <input placeholder={t.imageAltHint} value={field.image?.alt ?? ""} disabled={!field.image} onChange={(e) => set({ image: field.image ? { ...field.image, alt: e.target.value } : undefined })} className="kb-input py-1 mt-1" /></label>
             </div>
           )}
-          <p className="text-xs text-muted-foreground">{t.tipBefore}<bdi dir="ltr">{"{{question-id}}"}</bdi>{t.tipMid}<code>{field.id}</code>{t.tipAfter}<bdi dir="ltr">{"{{score}}"}</bdi>{t.tipEnd}</p>
+          <DocHint slug="endings">{t.tipBefore}<bdi dir="ltr">{"{{question-id}}"}</bdi>{t.tipMid}<code>{field.id}</code>{t.tipAfter}<bdi dir="ltr">{"{{score}}"}</bdi>{t.tipEnd}</DocHint>
         </div>
       </details>
 

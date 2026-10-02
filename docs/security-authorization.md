@@ -56,11 +56,12 @@ Webhooks require management permission. Signing secrets are encrypted with
 network destinations, and does not follow redirects. Localhost delivery is an
 explicit development-only option. See [webhooks-v1.md](./webhooks-v1.md).
 
-## Retired AI endpoints
+## No internal AI
 
-`convex/aiQuiz.ts`, `convex/aiEditorChat.ts` and `convex/aiQuizMutations.ts` retain
-compatibility tombstones. Legacy calls throw `AI_FEATURE_RETIRED` before provider
-requests or writes. Legacy content, results and schema fields remain intact.
+Chaos runs no AI models and has no AI endpoints. ChatGPT and Claude reach Chaos only
+through MCP, with the same permissions as the signed-in user. The old `aiJobs` table and
+`quizzes.isAiGenerated` stay in the schema so historical rows remain valid; nothing reads
+or writes them except quiz deletion, which detaches old jobs.
 
 ## Verification
 

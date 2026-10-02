@@ -19,6 +19,7 @@ import { internal } from "./_generated/api";
 import { hasPro, requireActiveUser, requireFormRole } from "./authz";
 import { consumeRate, notify, randomCode, sha256Hex } from "./serverUtils";
 import { languageValidator, themeValidator } from "./formModel";
+import { liveStateValidator } from "./liveModel";
 import type { Answers, FormDefinition, FormTheme } from "./formLogic";
 import { searchTextFor, selectEnding } from "./formLogic";
 import { gradeQuiz } from "./formQuiz";
@@ -525,6 +526,26 @@ export const hostView = query({
   },
 });
 
+/** The host's recent games, newest first, for the Games history list. */
+export const myGames = query({
+  args: {},
+  returns: v.array(v.object({
+    _id: v.id("liveGames"), title: v.string(), state: liveStateValidator, createdAt: v.number(), endedAt: v.union(v.number(), v.null()),
+    formId: v.union(v.id("forms"), v.null()), quizId: v.union(v.id("quizzes"), v.null()), questionCount: v.number(),
+    players: v.union(v.number(), v.null()), savedResponses: v.number(),
+  })),
+  handler: async (ctx) => {
+    const identity = await ctx.auth.getUserIdentity();
+    if (!identity) return [];
+    const games = await ctx.db.query("liveGames").withIndex("by_hostId_and_createdAt", (q) => q.eq("hostId", identity.subject)).order("desc").take(30);
+    return games.map((g) => ({
+      _id: g._id, title: g.title, state: g.state, createdAt: g.createdAt, endedAt: g.endedAt ?? null,
+      formId: g.formId ?? null, quizId: g.quizId ?? null, questionCount: g.questions.length,
+      players: g.activePlayerCount ?? null, savedResponses: g.savedResponses ?? 0,
+    }));
+  },
+});
+
 // ── Players ────────────────────────────────────────────────────────────────
 
 export const joinGame = mutation({
@@ -550,6 +571,7 @@ export const joinGame = mutation({
       return { status: "joined" as const, gameId: game._id, nickname: existing.nickname };
     }
     await consumeRate(ctx, `live-join:${game._id}`, 300, 60_000);
+    await consumeRate(ctx, `live-join:${game._id}:${tokenHash.slice(0, 16)}`, 10, 60_000);
     const nickname = cleanNickname(args.nickname);
     const problem = nicknameProblem(nickname);
     if (problem === "empty") throw new Error("NICKNAME_EMPTY: Enter a nickname.");

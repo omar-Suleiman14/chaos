@@ -1,0 +1,58 @@
+.layout :global(.lx-edit__doc) {
+  max-width: 980px;
+}
+.layout :global(.lx-edit__side) {
+  width: min(400px, 94vw);
+  gap: 20px;
+  padding-inline: 24px;
+  overscroll-behavior: contain;
+}
+.layout :global(.lx-edit__side-head) {
+  position: sticky;
+  top: -16px;
+  z-index: 2;
+  padding-block: 12px;
+  background: var(--background);
+}
+.layout :global(.lx-editor-settings-group) {
+  border-top: 1px solid var(--ws-line);
+  padding-top: 14px;
+  min-width: 0;
+}
+.layout :global(.lx-editor-settings-group > summary) {
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 600;
+  padding-block: 4px;
+}
+.layout :global(.lx-editor-settings-group > .lx-form) {
+  margin-top: 14px;
+}
+.layout :global(.lx-editor-settings-group > summary:focus-visible) {
+  outline: 2px solid var(--ws-ring);
+  outline-offset: 4px;
+  border-radius: 4px;
+}
+.recovery {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--ws-line-strong);
+  border-radius: 10px;
+  background: var(--ws-canvas-subtle);
+  min-width: 0;
+}
+.recovery :global(.lx-notice) {
+  margin: 0;
+}
+.recovery :global(.ws-btn) {
+  width: fit-content;
+  max-width: 100%;
+  white-space: normal;
+}
+@media (max-width: 640px) {
+  .layout :global(.lx-edit__side) {
+    padding-inline: 16px;
+  }
+}

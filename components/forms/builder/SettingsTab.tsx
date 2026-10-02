@@ -16,6 +16,8 @@ import { errorMessage } from "@/lib/errors";
 import { useCopy } from "@/lib/i18n";
 import { WsSwitch } from "@/components/workspace/primitives";
 import FallbackBoundary from "@/components/FallbackBoundary";
+import { HIDDEN_FIELD_LIMITS, hiddenFieldNameError } from "@/convex/formRespondent";
+import DocHint from "@/components/forms/DocHint";
 import RuleEditor from "./RuleEditor";
 
 type EditableSettings = Omit<FormSettings, "accessCodeHash">;
@@ -120,6 +122,18 @@ const copy = {
     archive: "Archive", archiveHelp: "Hidden from people answering. Responses are kept.",
     unsaved: "Unsaved settings", unsavedChanges: "Unsaved changes", discard: "Discard", saving: "Saving…", save: "Save",
     saved: "Settings saved", savedCode: "Settings saved. The new access code is in use.",
+    allowedEmails: "Allowed emails", allowedEmailsHelp: "One per line. Leave emails and domains empty to allow anyone signed in.",
+    allowedDomains: "Allowed domains", allowedDomainsHelp: "For example school.edu. Exact match, verified emails only.", domainsPlaceholder: "school.edu",
+    accessGuide: "How access, limits, schedules and retention fit together.",
+    sumRestricted: "listed emails only", sumOne: "one response each", sumLimit: (n: number) => `up to ${n} responses`, sumScheduled: "scheduled",
+    sumPartial: "unfinished answers saved", sumRetention: (n: number) => `deleted after ${n} days`, sumKept: "kept until you delete them",
+    hiddenFields: "Hidden fields", hiddenFieldsHelp: "Capture link values such as ?source=instagram. Saved with each response and in exports, never as answers.",
+    hiddenPlaceholder: "source, campaign", hiddenExample: (url: string) => `Example link: ${url}`,
+    hiddenInvalid: (n: string) => `“${n}” can't be used. Start with a letter; use letters, digits, - or _ (up to 40). lang, embed, resume, edit and score are taken.`,
+    hiddenDuplicate: (n: string) => `“${n}” is listed twice.`, hiddenTooMany: (n: number) => `Use at most ${n} hidden fields.`,
+    partialNote: "Saved a few seconds after each answer, so Results can show where people stop. Retention applies to them too.",
+    branding: "Branding", hideBranding: "Hide Chaos branding", hideBrandingHelp: "Removes the Chaos logo from your form. Privacy and Terms links stay.",
+    hideBrandingPro: "Available with Pro.", hideBrandingLapsed: "Your plan no longer includes this, so respondents see the branding again.",
   },
   ar: {
     statusWords: { draft: "أُعيد النموذج إلى مسودة", live: "أُعيد فتح النموذج", closed: "أُغلق النموذج", archived: "أُرشف النموذج" },
@@ -155,8 +169,36 @@ const copy = {
     archive: "الأرشيف", archiveHelp: "يُخفى عمّن يجيبون. تبقى الردود محفوظة.",
     unsaved: "إعدادات غير محفوظة", unsavedChanges: "تغييرات غير محفوظة", discard: "تجاهل", saving: "جارٍ الحفظ…", save: "احفظ",
     saved: "حُفظت الإعدادات", savedCode: "حُفظت الإعدادات. رمز الوصول الجديد قيد الاستخدام.",
+    allowedEmails: "البريد المسموح", allowedEmailsHelp: "عنوان في كل سطر. اترك البريد والنطاقات فارغة للسماح لأي مسجّل.",
+    allowedDomains: "النطاقات المسموحة", allowedDomainsHelp: "مثل school.edu. تطابق تام، وللبريد الموثّق فقط.", domainsPlaceholder: "school.edu",
+    accessGuide: "كيف يعمل الوصول والحدود والجدولة ومدة الاحتفاظ معًا.",
+    sumRestricted: "للعناوين المدرجة فقط", sumOne: "ردّ واحد لكل شخص", sumLimit: (n: number) => `حتى ${n} ردّ`, sumScheduled: "مجدول",
+    sumPartial: "تُحفظ الإجابات غير المكتملة", sumRetention: (n: number) => `تُحذف بعد ${n} يومًا`, sumKept: "تبقى حتى تحذفها",
+    hiddenFields: "حقول مخفية", hiddenFieldsHelp: "التقط قيمًا من الرابط مثل ‎?source=instagram. تُحفظ مع كل رد وفي التصدير، ولا تُعد إجابات.",
+    hiddenPlaceholder: "source, campaign", hiddenExample: (url: string) => `رابط مثال: ${url}`,
+    hiddenInvalid: (n: string) => `لا يمكن استخدام «${n}». ابدأ بحرف واستخدم حروفًا لاتينية أو أرقامًا أو - أو _ (حتى 40). الأسماء lang وembed وresume وedit وscore محجوزة.`,
+    hiddenDuplicate: (n: string) => `«${n}» مكرر.`, hiddenTooMany: (n: number) => `استخدم ${n} حقلًا مخفيًا على الأكثر.`,
+    partialNote: "تُحفظ بعد كل إجابة بثوانٍ لتُظهر النتائج أين يتوقف الناس. تنطبق عليها مدة الاحتفاظ أيضًا.",
+    branding: "العلامة التجارية", hideBranding: "إخفاء علامة Chaos", hideBrandingHelp: "يزيل شعار Chaos من نموذجك. تبقى روابط الخصوصية والشروط.",
+    hideBrandingPro: "متاح مع Pro.", hideBrandingLapsed: "لم تعد خطتك تشمل هذا، لذا يرى المجيبون العلامة مجددًا.",
   },
 };
+
+/** A comma, space or newline separated list. The typed text is kept while focused; otherwise it shows the parsed list. */
+function ListInput({ value, onChange, label, placeholder, multiline, invalid }: {
+  value: string[] | undefined; onChange: (next: string[] | undefined) => void; label: string; placeholder?: string; multiline?: boolean; invalid?: boolean;
+}) {
+  const joined = (value ?? []).join(multiline ? "\n" : ", ");
+  const [draft, setDraft] = useState<string | null>(null);
+  const change = (raw: string) => { setDraft(raw); const list = raw.split(/[\s,;]+/).map((x) => x.trim()).filter(Boolean); onChange(list.length ? list : undefined); };
+  const common = {
+    value: draft ?? joined, placeholder, "aria-label": label, "aria-invalid": invalid || undefined, dir: "ltr" as const, spellCheck: false,
+    onFocus: () => setDraft(joined), onBlur: () => setDraft(null),
+  };
+  return multiline
+    ? <textarea {...common} rows={3} className="kb-input text-sm font-mono" onChange={(e) => change(e.target.value)} />
+    : <input {...common} className="kb-input text-sm font-mono" onChange={(e) => change(e.target.value)} />;
+}
 
 /** Custom link: chaos.fail/<username>/<slug>. Asks for a username only when someone first wants one. */
 function CustomLink({ formId, slug, shareId, title, announce }: {
@@ -240,7 +282,7 @@ function CustomLink({ formId, slug, shareId, title, announce }: {
   );
 }
 
-export default function SettingsTab({ formId, settings, hasAccessCode, groupName, status, published, def, isOwner, announce, slug, shareId }: {
+export default function SettingsTab({ formId, settings, hasAccessCode, groupName, status, published, def, isOwner, announce, slug, shareId, canHideBranding = false }: {
   formId: Id<"forms">;
   settings: EditableSettings;
   hasAccessCode: boolean;
@@ -252,6 +294,8 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
   announce?: (text: string, undo: (() => void) | null) => void;
   slug: string | null;
   shareId: string;
+  /** From the server: the owner's plan allows hiding branding. */
+  canHideBranding?: boolean;
 }) {
   const t = useCopy(copy);
   const update = useMutation(api.forms.updateFormSettings);
@@ -323,6 +367,15 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
     { id: "code" as const, label: t.withCode, row: t.withCodeRow, icon: KeyRound, help: t.withCodeHelp },
   ];
   const access = accessOptions.find((a) => a.id === s.access) ?? accessOptions[0];
+  // Same rules as the server (convex/formRespondent.ts), shown before saving.
+  const hiddenError = (() => {
+    const names = s.hiddenFields ?? [];
+    if (names.length > HIDDEN_FIELD_LIMITS.count) return t.hiddenTooMany(HIDDEN_FIELD_LIMITS.count);
+    const bad = names.find((n) => hiddenFieldNameError(n));
+    if (bad) return t.hiddenInvalid(bad);
+    const dupe = names.find((n, i) => names.findIndex((m) => m.toLowerCase() === n.toLowerCase()) !== i);
+    return dupe ? t.hiddenDuplicate(dupe) : null;
+  })();
 
   return (
     <div className="max-w-2xl w-full mx-auto pb-24">
@@ -341,11 +394,20 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
 
       <section aria-labelledby="settings-access" className="ws-rows">
         <h2 id="settings-access" className="ws-rows__title">{t.whoCanRespond}</h2>
+        <p className="ws-row__help py-2" data-testid="controls-summary">{[
+          access.row,
+          s.access === "signed_in" && (s.allowedEmails?.length || s.allowedDomains?.length) ? t.sumRestricted : "",
+          s.onePerPerson ? t.sumOne : "",
+          s.responseLimit !== undefined ? t.sumLimit(s.responseLimit) : "",
+          s.opensAt !== undefined || s.closesAt !== undefined ? t.sumScheduled : "",
+          s.collectPartial ? t.sumPartial : "",
+          s.retentionDays !== undefined ? t.sumRetention(s.retentionDays) : t.sumKept,
+        ].filter(Boolean).join(" · ")}</p>
         <Row label={access.row} help={access.help} isDefault={s.access === "public"}>
           <div className="ws-segmented" role="group" aria-label={t.whoCanRespond}>
             {accessOptions.map((a) => (
               <button key={a.id} type="button" aria-pressed={s.access === a.id} title={a.help}
-                onClick={() => { set("access", a.id); if (a.id !== "signed_in") set("onePerPerson", false); }}>
+                onClick={() => { set("access", a.id); if (a.id !== "signed_in") { set("onePerPerson", false); set("allowedEmails", undefined); set("allowedDomains", undefined); } }}>
                 <a.icon size={14} aria-hidden="true" /> {a.label}
               </button>
             ))}
@@ -362,6 +424,17 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
             <Switch label={t.onePerPerson} checked={s.onePerPerson} onChange={(v) => set("onePerPerson", v)} />
           </Row>
         )}
+        {s.access === "signed_in" && (
+          <>
+            <Row label={t.allowedEmails} help={t.allowedEmailsHelp} isDefault={!s.allowedEmails?.length} stack>
+              <ListInput multiline value={s.allowedEmails} onChange={(v) => set("allowedEmails", v)} label={t.allowedEmails} placeholder="name@example.com" />
+            </Row>
+            <Row label={t.allowedDomains} help={t.allowedDomainsHelp} isDefault={!s.allowedDomains?.length}>
+              <ListInput value={s.allowedDomains} onChange={(v) => set("allowedDomains", v)} label={t.allowedDomains} placeholder={t.domainsPlaceholder} />
+            </Row>
+          </>
+        )}
+        <DocHint slug="access-and-limits" className="px-1 pt-2">{t.accessGuide}</DocHint>
       </section>
 
       <section aria-labelledby="settings-limits" className="ws-rows">
@@ -383,6 +456,7 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
           <Row label={t.partial} help={t.partialHelp} isDefault={s.collectPartial === defaultFormSettings.collectPartial}>
             <Switch label={t.partial} checked={s.collectPartial} onChange={(v) => set("collectPartial", v)} />
           </Row>
+          {s.collectPartial && <DocHint slug="results" className="px-1">{t.partialNote}</DocHint>}
           <Row label={t.editAfter} help={t.editAfterHelp} isDefault={s.allowEditAfterSubmit === defaultFormSettings.allowEditAfterSubmit}>
             <Switch label={t.editAfter} checked={s.allowEditAfterSubmit} onChange={(v) => { set("allowEditAfterSubmit", v); if (!v) set("allowEditAfterClose", undefined); }} />
           </Row>
@@ -401,6 +475,22 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
             <textarea value={s.closedMessage ?? ""} onChange={(e) => set("closedMessage", e.target.value || undefined)} className="kb-input" rows={2} maxLength={2000}
               placeholder={t.closedPlaceholder} aria-label={t.closedMessage} />
           </Row>
+          <Row label={t.hiddenFields} help={t.hiddenFieldsHelp} isDefault={!s.hiddenFields?.length} stack>
+            <ListInput value={s.hiddenFields} onChange={(v) => set("hiddenFields", v)} label={t.hiddenFields} placeholder={t.hiddenPlaceholder} invalid={!!hiddenError} />
+            {hiddenError && <p role="alert" className="text-xs text-[var(--error)]">{hiddenError}</p>}
+            {!!s.hiddenFields?.length && !hiddenError && (
+              <p className="text-xs text-muted-foreground break-all" dir="ltr">{t.hiddenExample(`/f/${shareId}?${s.hiddenFields.map((n) => `${n}=…`).join("&")}`)}</p>
+            )}
+          </Row>
+        </section>
+
+        <section aria-labelledby="settings-branding" className="ws-rows">
+          <h2 id="settings-branding" className="ws-rows__title">{t.branding}</h2>
+          <Row label={t.hideBranding} help={!canHideBranding ? (s.hideBranding ? t.hideBrandingLapsed : t.hideBrandingPro) : t.hideBrandingHelp} isDefault={!s.hideBranding}>
+            <WsSwitch label={t.hideBranding} hideLabel checked={!!s.hideBranding && canHideBranding} disabled={!canHideBranding && !s.hideBranding}
+              onChange={(v) => set("hideBranding", v || undefined)} />
+          </Row>
+          {!canHideBranding && <DocHint slug="plans" className="px-1 pt-2" />}
         </section>
 
         <section aria-labelledby="settings-privacy" className="ws-rows">
@@ -458,7 +548,7 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
             : <span className="text-sm text-muted-foreground">{t.unsavedChanges}</span>}
           <span className="ms-auto flex gap-2">
             {dirty && !saving && <button type="button" onClick={discard} className="ws-btn ws-btn--ghost">{t.discard}</button>}
-            <button type="button" onClick={save} disabled={!dirty || saving} className="ws-btn ws-btn--primary">{saving ? t.saving : t.save}</button>
+            <button type="button" onClick={save} disabled={!dirty || saving || !!hiddenError} className="ws-btn ws-btn--primary">{saving ? t.saving : t.save}</button>
           </span>
         </div>
       )}

@@ -4,7 +4,7 @@ import { mutation, query, internalMutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { hasPro, requireAdmin, requireIdentity } from "./authz";
+import { isPaidPlan, requireAdmin, requireIdentity } from "./authz";
 
 const DAY = 86_400_000;
 const planValidator = v.union(v.literal("free"), v.literal("pro"));
@@ -73,7 +73,7 @@ export const users = query({
             : ("active" as const),
         suspendedUntil: u.suspendedUntil ?? null,
         reason: u.moderationReason ?? "",
-        plan: hasPro(u) ? ("pro" as const) : ("free" as const),
+        plan: isPaidPlan(u) ? ("pro" as const) : ("free" as const),
         legacyGrant: u.plan === undefined && !!u.isElevated,
         planExpiresAt: u.planExpiresAt ?? null,
       })),

@@ -1,3 +1,18 @@
+import { quizForkTables } from "./quizForkModel";
+import { discussionTables } from "./learnDiscussionModel";
+import { proposalTables } from "./lessonProposalModel";
+import { publicationAuditTables } from "./learnPublicationAuditModel";
+import { personalTables } from "./learnPersonalModel";
+import { observabilityTables } from "./observabilityModel";
+import { liveTeamTables } from "./liveTeamModel";
+import { homeworkTables } from "./homeworkModel";
+import { sourceModerationTables } from "./learnSourceModerationModel";
+import { practiceTables } from "./learnPracticeModel";
+import { communityTables } from "./learnCommunityModel";
+import { assetTables } from "./learnAssetModel";
+import { curriculumTables } from "./curriculumModel";
+import { folderTables } from "./folderModel";
+import { learnTables } from "./learnModel";
 import { metricsValidator } from "./adminModel";
 import { defineSchema, defineTable } from "convex/server";
 import { v } from "convex/values";
@@ -8,6 +23,21 @@ import { webhookTables } from "./webhookModel";
 import { liveTables } from "./liveModel";
 
 export default defineSchema({
+  ...learnTables,
+  ...discussionTables,
+  ...proposalTables,
+  ...publicationAuditTables,
+  ...personalTables,
+  ...quizForkTables,
+  ...observabilityTables,
+  ...liveTeamTables,
+  ...homeworkTables,
+  ...sourceModerationTables,
+  ...practiceTables,
+  ...communityTables,
+  ...assetTables,
+  ...curriculumTables,
+  ...folderTables,
   ...formTables,
   ...integrationTables,
   ...webhookTables,
@@ -25,6 +55,12 @@ export default defineSchema({
   adminAudit: defineTable({
     actorId: v.string(), action: v.string(), target: v.string(), reason: v.string(), createdAt: v.number(),
   }),
+  /** Permanent namespace reservations; retain these even when an account is removed. */
+  usernameAliases: defineTable({
+    username: v.string(),
+    ownerId: v.string(),
+    createdAt: v.number(),
+  }).index("by_username", ["username"]),
   // ============ USERS ============
   users: defineTable({
     clerkId: v.string(),
@@ -34,6 +70,8 @@ export default defineSchema({
     /** True once the person picks a username; sign-in sync then stops overwriting it. */
     usernameChosen: v.optional(v.boolean()),
     imageUrl: v.optional(v.string()),
+    /** Member card colour theme index (lib/memberCard.ts CARD_THEMES). */
+    cardStyle: v.optional(v.number()),
     isBanned: v.optional(v.boolean()),
     creationMonth: v.optional(v.string()),
     monthlyCreations: v.optional(v.number()),
@@ -49,7 +87,7 @@ export default defineSchema({
     .index("by_username", ["username"])
     .index("by_email", ["email"])
     .index("by_planExpiresAt", ["planExpiresAt"])
-    .index("by_suspendedUntil", ["suspendedUntil"]),
+    .index("by_suspendedUntil", ["suspendedUntil"]).searchIndex("search_name", { searchField: "name", filterFields: [] }),
 
   // ============ TEACHER SETTINGS (Auto Settings) ============
   teacherSettings: defineTable({
@@ -167,7 +205,8 @@ export default defineSchema({
     // answers landing on in-progress attempts neither get read nor re-run those subscriptions.
     .index("by_quizId_and_status_and_score", ["quizId", "status", "score"]),
 
-  // ============ AI JOBS ============
+  // ============ AI JOBS (inert) ============
+  // Chaos no longer runs AI. Kept so historical rows stay valid; nothing creates or reads jobs.
   aiJobs: defineTable({
     clerkId: v.string(),
     status: v.union(

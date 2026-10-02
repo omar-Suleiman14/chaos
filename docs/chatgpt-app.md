@@ -1,6 +1,8 @@
 # Chaos in ChatGPT: setup, testing and submission
 
-The Chaos ChatGPT app is an MCP server at **`https://chaos.fail/mcp`**. It is a **Chaos Pro** feature: every call checks the plan and Free accounts get `PRO_REQUIRED` (new accounts start with a 30-day Pro trial, so they can try it straight away). People connect it with their Chaos account (Clerk OAuth) and ChatGPT can then create drafts, edit them, publish, and read forms, results and responses in that account.
+The Chaos ChatGPT app is an MCP server at **`https://chaos.fail/mcp`**. It works with ChatGPT, Claude and other MCP clients, and it's free on every plan. People connect it with their Chaos account (OAuth) and the assistant can then create, edit and publish forms, quizzes, lessons, courses and flashcards, and read results and responses in that account. Chaos itself runs no AI; the assistant does the writing.
+
+**Publishing.** The owner chose that content created through MCP goes live straight away: `create_form`, `create_game_draft`, `create_lesson`, `create_full_course` and `create_flashcard_set` publish after creating (lessons, courses and flashcards as public) unless the assistant passes `publish: false`. If publication is blocked (for example a quiz without answers), the item stays a draft and the problems are returned. Edits to existing content stay drafts until `publish_form`, `publish_lesson` or `publish_course`.
 
 ## How it fits together
 
@@ -39,7 +41,7 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 | `get_form` | Questions, options, answer key, publish readiness, links | true | false | false |
 | `get_results` | Counts, completion, averages, per-question distributions, quiz average | true | false | false |
 | `list_responses` | Individual completed responses as text (paged, max 25) | true | false | false |
-| `create_form` | New form/survey/quiz **draft** with all questions | false | false | false |
+| `create_form` | New form/survey/quiz with all questions, **published** unless `publish: false` | false | false | **true** |
 | `update_form` | Edit a draft; a sent question list replaces the old one | false | **true** | false |
 | `publish_form` | Publish the draft and return the public link | false | false | **true** |
 | `list_themes` | The looks (presets) and the choices for fonts, buttons, start screens, backdrops, radius, layouts and sound packs | true | false | false |
@@ -47,6 +49,20 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 | `set_form_sound` | Pick the sound pack respondents hear: soft (Glass), pop, wood, arcade, or off | false | false | false |
 | `set_form_status` | Close, reopen, archive, restore (never delete) | false | false | false |
 
+#### Advanced forms, collaboration and quiz forks
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `get_form_advanced_analytics` | Aggregate analytics: correct rates, completion times, score distribution | true | false | false |
+| `export_form_responses` | Export responses as CSV/XLSX/JSON; returns a secure download link | false | false | **true** |
+| `list_form_collaborators` | List collaborators and permissions on an owned form | true | false | false |
+| `change_form_collaborator` | Invite, update role or remove a collaborator | false | **true** | **true** |
+| `set_form_branching` | Configure question jump logic and conditional branches | false | **true** | false |
+| `upsert_form_file_question` | Add or update file upload questions on an owned draft | false | false | false |
+| `get_form_response_controls` | Inspect submission caps, closing dates, respondent limits | true | false | false |
+| `set_form_response_controls` | Set submission caps, closing dates and access controls | false | **true** | false |
+| `fork_quiz` | Fork a published quiz into a new owned draft | false | false | false |
+| `get_quiz_fork_lineage` | Trace fork provenance and original author credit | true | false | false |
 #### Advanced form tools
 
 | Tool | What it does | readOnly | destructive | openWorld |
@@ -133,7 +149,7 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 
 #### Live game tools
 
-- `create_game_draft`: creates an ordinary private quiz draft with 1–100 questions. Each must be single choice, multiple choice or dropdown, with 2–4 distinct nonempty options and an explicit correct answer. Uses the same themes and builder as forms; default theme is Evergreen. Returns the `form_…` ID and edit link, never opens or publishes a room. Read-only: false; destructive: false; open-world: false; idempotent: false.
+- `create_game_draft`: creates an ordinary quiz with 1–100 questions and publishes it unless `publish: false`. Each must be single choice, multiple choice or dropdown, with 2–4 distinct nonempty options and an explicit correct answer. Uses the same themes and builder as forms; default theme is Evergreen. Returns the `form_…` ID and links; never opens a room. Read-only: false; destructive: false; open-world: true; idempotent: false.
 - `list_games`: lists only the signed-in account's hosted rooms, newest first, with cursor pagination (default 20, max 50). Includes ended rooms; use `search_forms` to find quiz drafts. Read-only and idempotent.
 - `get_game`: gets the owned room's state, question index, timer, settings, source ID and host/join links. No question text, answer keys, participant names, player tokens or individual answers are returned, including after reveal. Read-only and idempotent.
 - `host_game`: snapshots an owned, already published quiz into a joinable lobby. Takes the source `form_…` or `quiz_…` ID, optional language (`en`/`ar`), theme preset name, `timeLimitSec` (5–240), `showAnswerLabels` (default true), `autoAdvance` (default true), `breakSec` (3–60, default 5) and `startWhenPlayers` (0 = host starts). Closed/archived forms, drafts, non-quizzes, and quizzes without eligible graded choices are refused. Does not publish draft changes or start play. Opening a room is an open-world write, non-destructive and non-idempotent: do not retry automatically after an uncertain response.
@@ -141,7 +157,7 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 - `advance_game`: advances exactly one step using `from` and `questionIndex` from `get_game`. Lobby → question → reveal → leaderboard → next question/end. With autoplay on, only needed to start without the countdown or to skip ahead. Requires a joined player to start. Advancing from question ends that question early, so it requires the host's explicit request. Repeating the same state/index is harmless. Open-world write, destructive and idempotent.
 - `end_game`: explicitly stops an owned room and uses the ordinary live-game result-saving workflow. Does not delete the source or collected responses. Returns aggregate save status/counts; repeating for an ended room is harmless. Open-world write, destructive and idempotent.
 
-Creation, publication and hosting are separate actions: **create_game_draft → review in Chaos → publish_form on explicit request → host_game on explicit request**. Follow `hostUrl` to project the game and `joinUrl`/PIN for players. Games run themselves by default: each question closes on its timer, the answer and leaderboard each show for `breakSec`, and the next question starts. Pressing Start (or reaching `startWhenPlayers`) shows a 5-second countdown first. `get_game` returns `nextStepAt` and `startsAt`. When labels are hidden, players need to see the host screen to read their options.
+Creation publishes the quiz; hosting stays a separate action: **create_game_draft → host_game when asked**. Follow `hostUrl` to project the game and `joinUrl`/PIN for players. Games run themselves by default: each question closes on its timer, the answer and leaderboard each show for `breakSec`, and the next question starts. Pressing Start (or reaching `startWhenPlayers`) shows a 5-second countdown first. `get_game` returns `nextStepAt` and `startsAt`. When labels are hidden, players need to see the host screen to read their options.
 
 Games use the existing account-wide OAuth grant (`openid profile email`), with no new external scope or client-supplied account identity. Next.js verifies Clerk OAuth, then the secret-protected Convex transport passes the verified user ID to internal-only MCP functions. Each game wrapper rechecks Pro entitlement; writes recheck moderation and source/host ownership. Shared nonregistered helpers from `convex/live.ts` enforce live eligibility, clock, grading, transition and result-saving rules. Public live mutations continue deriving identity from `ctx.auth`; MCP never fabricates auth or invokes registered handlers directly. Account Pro checks and the existing 120-calls/minute gate run before dispatch; lobby creation also uses the existing 30/hour live-create limit.
 
@@ -160,7 +176,7 @@ MCP hosting requires source ownership; being a source editor/viewer does not gra
 Example prompts: "make it dark", "use the Typeform look", "change the accent to our brand blue #1a56db", "use a serif font with rounded buttons", "turn on arcade sounds", "make it silent again".
 
 
-Rules the backend enforces (the theme and sound tools follow the `update_form` rules): Pro plan (or the 30-day trial) required for every tool; drafts only on create; owner or editor to edit/publish (approval rules respected); owner only for status; archived forms must be restored first; classic quizzes are read-only; banned or suspended accounts are read-only; nothing can be deleted.
+Rules the backend enforces (the theme and sound tools follow the `update_form` rules): available on every plan; create publishes unless told not to; owner or editor to edit/publish (approval rules respected); owner only for status; archived forms must be restored first; classic quizzes are read-only; banned or suspended accounts are read-only; nothing can be deleted.
 
 ## 1. One-time production setup
 
@@ -209,10 +225,64 @@ You do these steps; they change production.
    - *"Let's talk about the solar system for a bit"* … then *"Create me a quiz of what we discussed using Chaos"*
    - *"Show me my Chaos forms"*
    - *"How is that quiz doing?"* / *"Publish it"*
-5. ChatGPT asks for confirmation before write tools. The new quiz appears in your Chaos library as a draft, with a history entry from "Connected app · ChatGPT".
+5. ChatGPT asks for confirmation before write tools. The new quiz appears in your Chaos library, published, with a history entry from "Connected app · ChatGPT".
 6. After changing tools, use **Refresh** on the app in Settings → Apps so ChatGPT reloads the tool list.
 
 If something fails, check Vercel logs for `/mcp` and the Convex logs for `mcp:*` functions. `NOT_CONFIGURED` means `CHAOS_MCP_SECRET` is missing in Vercel; `401 UNAUTHORIZED` from Convex means the two secrets differ.
+
+## 2b. Connect and test in Claude Code (CLI)
+
+The exact same Chaos MCP server (`https://chaos.fail/mcp`) works across ChatGPT, Claude Desktop, and Claude Code using the open Model Context Protocol standard.
+
+1. **Add the remote MCP server in Claude Code**:
+   Run the CLI command:
+   ```bash
+   claude mcp add --transport sse chaos https://chaos.fail/mcp
+   ```
+   Or if using standard HTTP transport:
+   ```bash
+   claude mcp add --transport http chaos https://chaos.fail/mcp
+   ```
+2. **Authenticate with OAuth**:
+   - Claude Code connects to `https://chaos.fail/mcp`.
+   - Your browser will open the Clerk OAuth authorization screen for Chaos (`https://chaos.fail`).
+   - Sign in to your Chaos account and click **Allow**.
+   - Your OAuth grant is securely stored by Claude Code.
+3. **Verify with the `/mcp` command**:
+   - Inside any Claude Code session, type `/mcp`.
+   - You will see `chaos` listed as connected with 69 tools.
+   - Use `/mcp` to manage, inspect, or refresh available tools.
+4. **Try commands across Forms, Quizzes, Lessons, and Courses**:
+   - **Forms**: `"Create a Chaos feedback form for our workshop with a 1-5 rating and an open feedback question."`
+   - **Quizzes**: `"Create a 10-question quiz about cellular respiration with explanations and point values in Chaos."`
+   - **Lessons**: `"Create a lesson about portal hypertension with callouts, key takeaways and equations, and publish it in Chaos."`
+   - **Courses**: `"Create a complete course on Human Biology with 3 lessons (Cardiovascular, Respiratory, Digestive) and publish it in Chaos."`
+
+## 2c. Connect and test in Claude Desktop
+
+1. Open `claude_desktop_config.json`:
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+2. Add the Chaos MCP remote server configuration:
+   ```json
+   {
+     "mcpServers": {
+       "chaos": {
+         "url": "https://chaos.fail/mcp"
+       }
+     }
+   }
+   ```
+3. Restart Claude Desktop. Complete the sign-in prompt in your browser to authorize access to your Chaos account.
+4. In any chat, Claude can now use the 69 Chaos tools to search your library, create quizzes, forms, lessons, courses, and flashcard sets, host live games, and summarize results.
+
+## 2d. Auto-publishing rules and draft behavior
+
+All assistants (ChatGPT, Claude Desktop, and Claude Code) share identical publication and draft semantics:
+- **ChatGPT-created content publishes by default**: When ChatGPT creates a form, quiz, game draft, lesson, course, or flashcard set, it publishes it immediately so share links and reader pages work right away. Pass `publish: false` in the prompt only if you explicitly want a private draft.
+- **Claude-created content publishes by default**: When Claude creates new content through MCP, it publishes immediately with public visibility (unless you request `publish: false` or private/restricted visibility).
+- **Imported content still starts as draft**: Content imported into Chaos from outside sources (Google Forms imports, Microsoft Forms imports, CSV/spreadsheet uploads, or syncs from Max via `/connections/max`) always begins as an unpublished private draft in your library. You can review all questions, citations, and settings before publishing.
+- **Subsequent edits remain drafts**: Any modifications to existing published forms, quizzes, lessons, or courses remain in draft mode until you explicitly run the respective publish action (`publish_form`, `publish_lesson`, `publish_course`, `publish_flashcard_set`).
 
 ## 3. Submission packet (OpenAI Platform → Plugins → Submit)
 
@@ -220,9 +290,9 @@ Before you start: the submitting account needs the **Apps Management: Write** ro
 
 ### Info
 - **Plugin name:** Chaos
-- **Short description:** Create quizzes, forms and surveys, and check the results, in your Chaos account.
+- **Short description:** Create quizzes, forms, lessons, and courses, and check the results, in your Chaos account.
 - **Long description:**
-  Chaos is a simple, beautiful form and quiz builder. With the Chaos app, ChatGPT works in your own Chaos account: turn a conversation into a quiz with right answers and points, draft a survey or signup form, edit questions, and publish when you're ready. Ask how a form is doing and get response counts, answer breakdowns and average quiz scores, or read individual responses when you need them. Everything ChatGPT creates starts as a draft you can review, and nothing is ever deleted from ChatGPT. Works in English and Arabic. The Chaos app is included with Chaos Pro; new accounts get a 30-day Pro trial.
+  Chaos is a simple, beautiful form, quiz, and course builder. With the Chaos app, ChatGPT works in your own Chaos account: turn a conversation into a quiz with right answers and points, draft a survey or signup form, create lessons and courses, edit content, and publish when you're ready. Ask how a form is doing and get response counts, answer breakdowns and average quiz scores, or read individual responses when you need them. New things ChatGPT creates are published straight away unless you ask for a draft, edits stay drafts until you choose to publish, and nothing is ever deleted from ChatGPT. Works in English and Arabic. The Chaos app is included on every plan, including free Personal accounts.
 - **Category:** Productivity (alternative: Education)
 - **Logo:** `public/icon.svg` exported as a square PNG (at least 512×512, no transparency padding issues)
 - **Website:** https://chaos.fail
@@ -233,7 +303,7 @@ Before you start: the submitting account needs the **Apps Management: Write** ro
 ### MCP
 - **URL type:** Universal · **MCP Server URL:** `https://chaos.fail/mcp`
 - **Authentication:** OAuth 2.1 (Clerk, DCR/CIMD, PKCE S256). Scopes: `openid profile email`.
-- **Demo credentials:** create a dedicated reviewer account in the **production** Clerk instance with email + password, **no MFA, no email code**. Check in Clerk → Configure → Attack protection / Client Trust that new-device email verification is **off** for it, or reviewers will be blocked. Seed it with: 1 live form with 5+ responses, 1 quiz, 1 draft (see "Test cases"). **Give it Pro with a long expiry** (`/admin` → Users → Plan) — the app refuses Free accounts, so reviewers would otherwise be blocked once the trial ends.
+- **Demo credentials:** create a dedicated reviewer account in the **production** Clerk instance with email + password, **no MFA, no email code**. Check in Clerk → Configure → Attack protection / Client Trust that new-device email verification is **off** for it, or reviewers will be blocked. Seed it with: 1 live form with 5+ responses, 1 quiz, 1 draft (see "Test cases"). Chaos MCP is available on every plan (no Pro tier requirement).
 - **Content Security Policy:** none. The app has no UI component (text and structured results only).
 - **Domain verification:** copy the token into Vercel as `OPENAI_APPS_CHALLENGE_TOKEN`, redeploy, check that `https://chaos.fail/.well-known/openai-apps-challenge` returns exactly the token, then verify.
 - **Scan Tools:** should find the 69 tools above with titles, descriptions, input and output schemas, annotations and `securitySchemes`.
@@ -243,7 +313,7 @@ Before you start: the submitting account needs the **Apps Management: Write** ro
 - `get_form`: read-only; returns one form's questions and answer key to the owner or collaborators.
 - `get_results`: read-only aggregate statistics; contains no individual answers.
 - `list_responses`: read-only; returns individual responses that the person already sees in Chaos. The description tells the model to use it only on request.
-- `create_form`: creates a private draft; nothing is shared or published.
+- `create_form`: creates the form and publishes it (anyone with the link can respond) unless `publish: false`, so `openWorldHint: true`.
 - `update_form`: `destructiveHint: true` because a sent question list replaces the draft's questions (removed questions leave the draft; collected responses are kept and the live version is unchanged until publishing).
 - `publish_form`: `openWorldHint: true` because it makes the form reachable by anyone with its link.
 - `list_themes`: read-only, static list of looks and options; no data from the account.
@@ -271,13 +341,13 @@ Before you start: the submitting account needs the **Apps Management: Write** ro
 3. **Prompt:** "Publish my 'Empty draft' form." (a draft with no questions) → `publish_form` returns `PUBLICATION_BLOCKED: Add at least one question.`; the model offers to add questions first. *Why:* incomplete forms can't go live. *Fixture:* draft "Empty draft" with no questions.
 
 ### Test case — negative (extra, optional)
-4. **Prompt (Free account):** "Show my Chaos forms." → every tool returns `PRO_REQUIRED: Chaos in ChatGPT is part of Chaos Pro…`; the model explains the app needs Pro. *Why:* the app is a paid feature.
+4. **Prompt (Accessing another account's items):** "Show responses for quiz owned by another user." → returns `NOT_FOUND` or authorization error; the model explains that items from other accounts cannot be accessed.
 
 ### Global
 Pick the countries where Chaos's terms and support apply (for example all available regions, or start with the ones you support).
 
 ### Release notes (initial submission)
-Initial release of the Chaos app (requires Chaos Pro; new accounts get a 30-day trial, and the reviewer account has Pro). Lets people create quiz, form and survey drafts, edit and publish them, change their status, and read results and responses in their own Chaos account. OAuth via Clerk (DCR/CIMD + PKCE). No UI component. Reviewer account: <email> / <password> (no MFA); it contains a live form "Workshop feedback" with responses, a live quiz "Chapter 3 review" and a draft "Empty draft".
+Initial release of the Chaos app (available on every plan). Lets people create quizzes, forms, surveys, lessons, courses and flashcard sets, edit and publish them, change their status, host live games, and read results and responses in their own Chaos account. OAuth via Clerk (DCR/CIMD + PKCE). No UI component. Reviewer account: <email> / <password> (no MFA); it contains a live form "Workshop feedback" with responses, a live quiz "Chapter 3 review" and a draft "Empty draft".
 
 ## Limits and known gaps
 - No inline UI widget yet; ChatGPT shows text with links. A card widget would need CSP and a dedicated widget domain for review.

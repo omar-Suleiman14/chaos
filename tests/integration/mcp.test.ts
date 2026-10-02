@@ -84,19 +84,19 @@ describe("ChatGPT app backend", () => {
     expect((await t.query(internal.mcp.getForm, { userId: owner, id: created.id })).title).toBe("What we discussed");
   });
 
-  it("is a Pro feature: Free and expired plans are refused, the trial works", async () => {
+  it("works on every plan, including Personal and expired paid plans", async () => {
     const t = await setup();
     // A new account is on the 30-day Pro trial, so begin() succeeded in setup().
     await t.run(async (ctx) => {
       const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", owner)).first();
       await ctx.db.patch("users", user!._id, { plan: "free", planExpiresAt: undefined, isElevated: false });
     });
-    await expect(t.mutation(internal.mcp.begin, { userId: owner })).rejects.toThrow(/PRO_REQUIRED/);
+    await expect(t.mutation(internal.mcp.begin, { userId: owner })).resolves.toBeNull();
     await t.run(async (ctx) => {
       const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", owner)).first();
       await ctx.db.patch("users", user!._id, { plan: "pro", planExpiresAt: Date.now() - 1 });
     });
-    await expect(t.mutation(internal.mcp.begin, { userId: owner })).rejects.toThrow(/PRO_REQUIRED/);
+    await expect(t.mutation(internal.mcp.begin, { userId: owner })).resolves.toBeNull();
   });
 
   it("styles a draft: theme, sound and warnings, on drafts and published forms, with the usual access rules", async () => {

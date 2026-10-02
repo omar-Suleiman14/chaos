@@ -259,7 +259,7 @@ describe("live games: safety", () => {
     expect((await owner.query(api.live.hostView, { gameId }))!.playerCount).toBe(1);
   });
 
-  it("enforces the Free plan's 100 players per game", async () => {
+  it("gives Personal hosts the 500-player maximum", async () => {
     const t = createTestConvex();
     const { owner, formId } = await publishedQuiz(t);
     // New accounts start on a Pro trial; this host is on Free.
@@ -269,9 +269,9 @@ describe("live games: safety", () => {
     });
     const gameId = await owner.mutation(api.live.createGame, { formId });
     const pin = (await owner.query(api.live.hostView, { gameId }))!.pin;
-    expect((await owner.query(api.live.hostView, { gameId }))!.settings.maxPlayers).toBe(100);
+    expect((await owner.query(api.live.hostView, { gameId }))!.settings.maxPlayers).toBe(500);
     await t.run(async (ctx) => {
-      for (let i = 0; i < 100; i++) {
+      for (let i = 0; i < 500; i++) {
         await ctx.db.insert("livePlayers", { gameId, nickname: `P${i}`, nicknameKey: `p${i}`, tokenHash: `h${i}`, score: 0, streak: 0, correctCount: 0, kicked: false, joinedAt: 0 });
       }
     });

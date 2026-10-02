@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { Archive, BarChart3, BookOpen, ChevronDown, FileText, Keyboard, Link2, Moon, Plus, Search, Settings, Sparkles } from "lucide-react";
+import { Archive, BarChart3, BookOpen, ChevronDown, FileText, Folder, Keyboard, Link2, Moon, Plus, Search, Settings, Sparkles } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useTheme } from "@/components/ThemeProvider";
 import FallbackBoundary from "@/components/FallbackBoundary";
@@ -15,28 +15,30 @@ import { settingsIndexFor } from "@/lib/settingsIndex";
 import type { SettingsEntry } from "@/lib/settingsIndex";
 import { useModal } from "./useModal";
 
-export interface PaletteItem { id: string; title: string; kind: "form" | "quiz" | "legacy"; href: string; accent?: string; archived?: boolean }
+export interface PaletteItem { id: string; title: string; kind: "form" | "quiz" | "legacy" | "lesson" | "folder"; href: string; accent?: string; archived?: boolean; body?: string }
 
 type Entry = { key: string; group: string; label: string; hint?: string; icon: React.ReactNode; run: () => void; titleRanges?: Range[]; snippet?: Snippet; keepOpen?: boolean };
 type IndexRow = { id: string; title: string; status: "draft" | "live" | "closed" | "archived"; quiz: boolean; text: string };
 
 const GROUP_LIMIT = 6;
 
+const kindIcon = (kind: PaletteItem["kind"]) => kind === "form" ? <FileText size={16} /> : kind === "lesson" ? <BookOpen size={16} /> : kind === "folder" ? <Folder size={16} /> : <Sparkles size={16} />;
+
 const copy = {
   en: {
-    groupActions: "Actions", groupForms: "Forms and quizzes", groupSettings: "Settings", groupDocs: "Docs",
+    groupActions: "Actions", groupForms: "Forms, quizzes and lessons", groupSettings: "Settings", groupDocs: "Docs",
     newForm: "New form or quiz", newHint: "Blank draft", openArchive: "Open archive", openResults: "Open results", connections: "Connections",
     settings: "Settings", shortcuts: "Keyboard shortcuts", docs: "Docs", darkMode: "Toggle dark mode",
-    archivedHint: "Archived", legacyHint: "Legacy quiz", quizHint: "Quiz", formHint: "Form", untitled: "Untitled",
+    archivedHint: "Archived", legacyHint: "Legacy quiz", quizHint: "Quiz", formHint: "Form", lessonHint: "Lesson", folderHint: "Folder", untitled: "Untitled", learn: "Open Learn",
     showAll: (n: number) => `Show all ${n}`,
     dialog: "Search and commands", placeholder: "Search forms, settings and help…", search: "Search", list: "Commands and pages",
     noMatches: (q: string) => `No matches for “${q}”.`, navigate: "Navigate", select: "Select", close: "Close",
   },
   ar: {
-    groupActions: "الإجراءات", groupForms: "النماذج والاختبارات", groupSettings: "الإعدادات", groupDocs: "الدليل",
+    groupActions: "الإجراءات", groupForms: "النماذج والاختبارات والدروس", groupSettings: "الإعدادات", groupDocs: "الدليل",
     newForm: "نموذج أو اختبار جديد", newHint: "مسودة فارغة", openArchive: "افتح الأرشيف", openResults: "افتح النتائج", connections: "الاتصالات",
     settings: "الإعدادات", shortcuts: "اختصارات لوحة المفاتيح", docs: "الدليل", darkMode: "بدّل الوضع الداكن",
-    archivedHint: "مؤرشف", legacyHint: "اختبار قديم", quizHint: "اختبار", formHint: "نموذج", untitled: "بلا عنوان",
+    archivedHint: "مؤرشف", legacyHint: "اختبار قديم", quizHint: "اختبار", formHint: "نموذج", lessonHint: "درس", folderHint: "مجلد", untitled: "بلا عنوان", learn: "افتح Learn",
     showAll: (n: number) => `اعرض الكل (${n})`,
     dialog: "البحث والأوامر", placeholder: "ابحث في النماذج والإعدادات والدليل…", search: "بحث", list: "الأوامر والصفحات",
     noMatches: (q: string) => `لا نتائج لـ «${q}».`, navigate: "تنقل", select: "اختر", close: "إغلاق",
@@ -53,6 +55,7 @@ const actionKeywordsAr: Record<string, string> = {
   shortcuts: "اختصارات مفاتيح لوحة المفاتيح",
   docs: "الدليل مساعدة شرح تعلم توثيق دعم",
   theme: "الوضع الداكن الوضع الفاتح ليلي مظهر",
+  learn: "تعلم دروس مقررات مذاكرة استكشاف",
 };
 
 /** Loads the full-text index of the person's forms. If the backend function is not deployed yet, this renders nothing and the palette keeps searching titles. */
@@ -103,10 +106,11 @@ export default function CommandPalette({ open, onClose, items, onNew }: { open: 
       make("new", t.newForm, "create blank draft add start quiz survey", <Plus size={16} />, () => { onClose(); onNew(); }, t.newHint),
       make("archive", t.openArchive, "archived restore delete trash bin", <Archive size={16} />, go("/dashboard/archive")),
       make("results", t.openResults, "old quiz results legacy scores", <BarChart3 size={16} />, go("/dashboard/results")),
+      make("learn", t.learn, "learn lessons courses study explore curriculum", <BookOpen size={16} />, go("/dashboard/learn")),
       make("connections", t.connections, "max chatgpt apps integrations mcp", <Link2 size={16} />, go("/dashboard/connections")),
       make("settings", t.settings, "preferences options account appearance", <Settings size={16} />, go("/dashboard/settings")),
       make("shortcuts", t.shortcuts, "keys hotkeys ctrl", <Keyboard size={16} />, go("/dashboard/settings#settings-shortcuts")),
-      make("docs", t.docs, "help guide how to learn documentation support", <BookOpen size={16} />, go("/docs")),
+      make("docs", t.docs, "help guide how to learn documentation support", <BookOpen size={16} />, () => { onClose(); window.open("/docs", "_blank", "noopener"); }),
       make("theme", t.darkMode, "light theme night appearance", <Moon size={16} />, () => { onClose(); toggleTheme(); }),
     ];
   }, [onClose, onNew, router, toggleTheme, locale, t]);
@@ -121,9 +125,9 @@ export default function CommandPalette({ open, onClose, items, onNew }: { open: 
       seen.add(item.id);
       const row = byId.get(item.id);
       const archived = item.archived || row?.status === "archived";
-      const hint = archived ? t.archivedHint : item.kind === "legacy" ? t.legacyHint : item.kind === "quiz" ? t.quizHint : t.formHint;
+      const hint = archived ? t.archivedHint : item.kind === "legacy" ? t.legacyHint : item.kind === "quiz" ? t.quizHint : item.kind === "lesson" ? t.lessonHint : item.kind === "folder" ? t.folderHint : t.formHint;
       const extra = [hint, row?.status ?? "", item.kind === "legacy" ? "old" : ""].join(" ");
-      return { id: item.id, title: item.title || t.untitled, extra, body: row?.text ?? "", item, hint, archived };
+      return { id: item.id, title: item.title || t.untitled, extra, body: row?.text ?? item.body ?? "", item, hint, archived };
     });
     // Forms that the workspace list left out (for example, shared and archived ones).
     for (const row of indexRows ?? []) {
@@ -147,7 +151,7 @@ export default function CommandPalette({ open, onClose, items, onNew }: { open: 
     if (!q) {
       const recent = formIndex.filter((e) => !(e.doc as { archived?: boolean }).archived).slice(0, 8).map((e): Entry => {
         const d = e.doc as (typeof formIndex)[number]["doc"] & { item: PaletteItem; hint: string };
-        return { key: `form-${d.id}`, group: t.groupForms, label: d.title, hint: d.hint, icon: d.item.kind === "form" ? <FileText size={16} /> : <Sparkles size={16} />, run: go(d.item.href) };
+        return { key: `form-${d.id}`, group: t.groupForms, label: d.title, hint: d.hint, icon: kindIcon(d.item.kind), run: go(d.item.href) };
       });
       return [...actionDocs.map((a) => toEntry(a)), ...recent];
     }
@@ -164,7 +168,7 @@ export default function CommandPalette({ open, onClose, items, onNew }: { open: 
       rows: find(formIndex).map((r) => {
         const d = r.doc as (typeof formIndex)[number]["doc"] & { item: PaletteItem; hint: string; archived: boolean };
         const href = d.archived ? "/dashboard/archive" : d.item.href;
-        return { key: `form-${d.id}`, group: t.groupForms, label: d.title, hint: d.hint, icon: d.archived ? <Archive size={16} /> : d.item.kind === "form" ? <FileText size={16} /> : <Sparkles size={16} />, run: go(href), titleRanges: r.titleRanges, snippet: r.snippet };
+        return { key: `form-${d.id}`, group: t.groupForms, label: d.title, hint: d.hint, icon: d.archived ? <Archive size={16} /> : kindIcon(d.item.kind), run: go(href), titleRanges: r.titleRanges, snippet: r.snippet };
       }),
     });
     groups.push({

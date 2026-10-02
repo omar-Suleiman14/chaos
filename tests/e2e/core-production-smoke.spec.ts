@@ -126,18 +126,18 @@ test("creator to respondent production smoke", async ({ page, browser }) => {
   const respondentPage = await respondentContext.newPage();
   try {
     await respondentPage.goto(publicURL);
-    await respondentPage.getByPlaceholder("ENTER YOUR NAME").fill(respondentName);
-    await respondentPage.getByRole("button", { name: /START QUIZ/ }).click();
+    await respondentPage.getByPlaceholder("Your name").fill(respondentName);
+    await respondentPage.getByRole("button", { name: /Start quiz/ }).click();
 
     await expect(respondentPage.getByText(questionText, { exact: true })).toBeVisible();
     await respondentPage.getByRole("button", { name: new RegExp(correctAnswer) }).click();
-    await expect(respondentPage.getByText(/CORRECT/, { exact: false })).toBeVisible();
+    await expect(respondentPage.getByText(/^(Correct|Partly correct|Not quite)$/)).toBeVisible();
     await respondentPage.getByText("SWIPE UP TO FINISH", { exact: true }).click();
 
-    const submitQuiz = respondentPage.getByRole("button", { name: /SUBMIT QUIZ/ });
+    const submitQuiz = respondentPage.getByRole("button", { name: /Submit quiz/ });
     await expect(submitQuiz).toBeVisible();
     await submitQuiz.click();
-    await expect(respondentPage.getByText("YOUR SCORE", { exact: true })).toBeVisible();
+    await expect(respondentPage.getByText("Your score", { exact: true })).toBeVisible();
     await expect(respondentPage.getByText("100%", { exact: true })).toBeVisible();
   } finally {
     await respondentContext.close();

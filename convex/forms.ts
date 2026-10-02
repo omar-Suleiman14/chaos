@@ -7,7 +7,8 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
-import { getFormIfRole, ownsRecord, requireActiveUser, requireFormRole } from "./authz";
+import { getFormIfRole, hasPro, ownsRecord, requireActiveUser, requireFormRole } from "./authz";
+import { checkHiddenFieldNames, checkHiddenParameters, normalizeEmailRules } from "./formRespondent";
 import { checkDefinition, emptyDefinition, FORM_SCHEMA_VERSION, LIMITS } from "./formLogic";
 import type { FormDefinition } from "./formLogic";
 import { isValidTimeZone } from "./formSchedule";
@@ -17,6 +18,12 @@ import { builtInTemplates } from "./formTemplates";
 import { emitFormStatusChange, emitWebhookEvent, formItem } from "./webhookEvents";
 
 type Definition = Infer<typeof definitionValidator>;
+
+/** Pro (or an active trial) on the form owner's account. */
+export async function ownerHasPro(ctx: QueryCtx | MutationCtx, ownerId: string): Promise<boolean> {
+  const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", ownerId)).first();
+  return hasPro(owner, Date.now());
+}
 
 const MAX_DEFINITION_BYTES = 600_000;
 
@@ -123,13 +130,15 @@ export const listMyForms = query({
       .withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", identity.subject))
       .order("desc")
       .take(500);
-    const email = identity.email?.toLowerCase();
+    const emailVerified = (identity as any).emailVerified !== false;
+    const email = emailVerified ? identity.email?.toLowerCase() : undefined;
     const memberships = [
       ...(await ctx.db.query("formCollaborators").withIndex("by_userId", (q) => q.eq("userId", identity.subject)).take(200)),
       ...(email ? await ctx.db.query("formCollaborators").withIndex("by_email", (q) => q.eq("email", email)).take(200) : []),
     ];
     const seen = new Set<string>();
     const shared = [];
+    const invites = [];
     // One name lookup per owner, not per shared form.
     const ownerNames = new Map<string, string>();
     for (const m of memberships) {
@@ -140,9 +149,14 @@ export const listMyForms = query({
       if (!form || form.ownerId === identity.subject) continue;
       let ownerName = ownerNames.get(form.ownerId);
       if (ownerName === undefined) ownerNames.set(form.ownerId, (ownerName = await displayName(ctx, form.ownerId)));
-      shared.push({ ...formSummary(form), role: m.role, ownerName });
+      if (m.status === "declined") continue;
+      if (m.status === "pending") {
+        invites.push({ collaboratorId: m._id, formId: form._id, title: form.title, role: m.role, ownerName, createdAt: m.createdAt });
+      } else {
+        shared.push({ ...formSummary(form), role: m.role, ownerName });
+      }
     }
-    return { owned: owned.map(formSummary), shared };
+    return { owned: owned.map(formSummary), shared, invites };
   },
 });
 
@@ -229,6 +243,9 @@ export const getFormForEditor = query({
       slug: form.slug ?? null,
       draft: form.draft,
       settings: { ...form.settings, accessCodeHash: undefined, hasAccessCode: !!form.settings.accessCodeHash },
+      /** The owner's plan allows hiding Chaos branding (respondents only see it hidden while this holds). */
+      settingsRevision: form.settingsRevision ?? 0,
+      canHideBranding: await ownerHasPro(ctx, form.ownerId),
       approval: form.approval ? { ...form.approval, requestedByName: await displayName(ctx, form.approval.requestedBy) } : null,
       versions: await withPublisherNames(ctx, versions),
     };
@@ -308,6 +325,14 @@ export const updateFormSettings = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const { form, identity } = await requireFormRole(ctx, args.formId, "owner");
+    return applyFormSettingsForActor(ctx, form, identity.subject, args);
+  },
+});
+
+/** Shared owner-only settings policy for native and trusted client transports. */
+const editableSettingsValidator = formSettingsValidator.omit("accessCodeHash");
+export async function applyFormSettingsForActor(ctx: MutationCtx, form: Doc<"forms">, actorId: string, args: { settings: Infer<typeof editableSettingsValidator>; accessCode?: string; groupName?: string }) {
+  if (form.ownerId !== actorId || form.isBanned) throw new Error("FORBIDDEN: Form owner required");
     const s = args.settings;
     if (s.responseLimit !== undefined && (!Number.isInteger(s.responseLimit) || s.responseLimit < 1)) throw new Error("INVALID_SETTINGS: The response limit must be a whole number.");
     if (s.retentionDays !== undefined && (!Number.isInteger(s.retentionDays) || s.retentionDays < 1 || s.retentionDays > 3650)) throw new Error("INVALID_SETTINGS: Retention must be 1–3650 days.");
@@ -324,15 +349,29 @@ export const updateFormSettings = mutation({
       accessCodeHash = code ? await sha256Hex(`${form._id}:${code}`) : undefined;
     }
     if (s.access === "code" && !accessCodeHash) throw new Error("INVALID_SETTINGS: Set an access code.");
+    const hiddenFields = s.hiddenFields ? checkHiddenFieldNames(s.hiddenFields) : undefined;
+    const hiddenParameters = s.hiddenParameters ?? form.settings.hiddenParameters;
+    checkHiddenParameters(hiddenParameters ?? [], hiddenFields ?? []);
+    const rules = normalizeEmailRules(s.allowedEmails, s.allowedDomains);
+    if ((rules.emails.length || rules.domains.length) && s.access !== "signed_in") throw new Error("INVALID_SETTINGS: Email and domain limits only work when respondents sign in.");
+    // Eligibility is the owner's plan, read here; the client flag alone never hides branding.
+    if (s.hideBranding && !form.settings.hideBranding && !(await ownerHasPro(ctx, form.ownerId))) throw new Error("PRO_REQUIRED: Removing Chaos branding needs Pro.");
     await ctx.db.patch("forms", form._id, {
-      settings: { ...s, accessCodeHash },
+      settingsRevision: (form.settingsRevision ?? 0) + 1,
+      settings: {
+        ...s, accessCodeHash,
+        hiddenFields: hiddenFields?.length ? hiddenFields : undefined,
+        hiddenParameters,
+        hideBranding: s.hideBranding || undefined,
+        allowedEmails: rules.emails.length ? rules.emails : undefined,
+        allowedDomains: rules.domains.length ? rules.domains : undefined,
+      },
       groupName: args.groupName === undefined ? form.groupName : args.groupName.trim() || undefined,
       updatedAt: Date.now(),
     });
-    await logActivity(ctx, form._id, identity.subject, "changed settings");
+    await logActivity(ctx, form._id, actorId, "changed settings");
     return null;
-  },
-});
+}
 
 export async function publishNow(ctx: MutationCtx, form: Doc<"forms">, actorId: string) {
   if (form.isBanned) throw new Error(`CONTENT_HELD: Contact ${supportEmail()} before republishing.`);
@@ -515,8 +554,8 @@ export const inviteCollaborator = mutation({
     if (existing.length >= 50) throw new Error("COLLABORATOR_LIMIT: A form can have at most 50 collaborators.");
     const match = existing.find((c) => c.email === email);
     const invitee = await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email)).first();
-    if (match) await ctx.db.patch("formCollaborators", match._id, { role: args.role });
-    else await ctx.db.insert("formCollaborators", { formId: form._id, email, userId: invitee?.clerkId, role: args.role, invitedBy: identity.subject, createdAt: Date.now() });
+    if (match) await ctx.db.patch("formCollaborators", match._id, { role: args.role, status: "pending" });
+    else await ctx.db.insert("formCollaborators", { formId: form._id, email, userId: invitee?.clerkId, role: args.role, status: "pending", invitedBy: identity.subject, createdAt: Date.now() });
     if (invitee) await notify(ctx, invitee.clerkId, "comment", `You can now ${args.role === "editor" ? "edit" : "view"} “${form.title}”.`, `invite:${form._id}:${email}:${args.role}`, form._id);
     await logActivity(ctx, form._id, identity.subject, "shared", `${email} as ${args.role}`);
     return null;
@@ -536,12 +575,66 @@ export const removeCollaborator = mutation({
   },
 });
 
+export const acceptInvite = mutation({
+  args: { collaboratorId: v.id("formCollaborators") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { identity } = await requireActiveUser(ctx);
+    const row = await ctx.db.get("formCollaborators", args.collaboratorId);
+    if (!row) throw new Error("NOT_FOUND: Invitation not found.");
+    const emailVerified = (identity as any).emailVerified === true;
+    const emailMatches = !!identity.email && emailVerified && row.email.toLowerCase() === identity.email.toLowerCase();
+    const userMatches = row.userId === identity.subject;
+    if (!emailMatches && !userMatches) throw new Error("UNAUTHORIZED: This invitation was sent to someone else.");
+    await ctx.db.patch("formCollaborators", row._id, { status: "accepted", userId: identity.subject });
+    return null;
+  },
+});
+
+export const declineInvite = mutation({
+  args: { collaboratorId: v.id("formCollaborators") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { identity } = await requireActiveUser(ctx);
+    const row = await ctx.db.get("formCollaborators", args.collaboratorId);
+    if (!row) return null;
+    const emailVerified = (identity as any).emailVerified === true;
+    const emailMatches = !!identity.email && emailVerified && row.email.toLowerCase() === identity.email.toLowerCase();
+    const userMatches = row.userId === identity.subject;
+    if (!emailMatches && !userMatches) throw new Error("UNAUTHORIZED: This invitation was sent to someone else.");
+    await ctx.db.delete("formCollaborators", row._id);
+    return null;
+  },
+});
+
+export const leaveForm = mutation({
+  args: { formId: v.id("forms") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const { identity } = await requireActiveUser(ctx);
+    const email = identity.email?.toLowerCase();
+    const rows = await ctx.db.query("formCollaborators").withIndex("by_formId", (q) => q.eq("formId", args.formId)).take(100);
+    const match = rows.find((c) => c.userId === identity.subject || (!!email && c.email.toLowerCase() === email));
+    if (match) await ctx.db.delete("formCollaborators", match._id);
+    return null;
+  },
+});
+
 export const listComments = query({
   args: { formId: v.id("forms") },
   handler: async (ctx, args) => {
     const access = await getFormIfRole(ctx, args.formId, "viewer");
     if (!access) return [];
-    return await ctx.db.query("formComments").withIndex("by_formId", (q) => q.eq("formId", args.formId)).order("desc").take(200);
+    const rows = await ctx.db.query("formComments").withIndex("by_formId", (q) => q.eq("formId", args.formId)).order("desc").take(200);
+    return rows.map((c) => ({
+      _id: c._id,
+      formId: c.formId,
+      authorName: c.authorName,
+      fieldId: c.fieldId,
+      body: c.body,
+      resolved: c.resolved,
+      createdAt: c.createdAt,
+    }));
   },
 });
 

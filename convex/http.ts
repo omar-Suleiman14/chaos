@@ -1,4 +1,11 @@
-import { httpRouter } from "convex/server";
+import { observeHttp } from "../lib/backendTelemetry";
+import { httpRouter, makeFunctionReference } from "convex/server";
+import { registerLearnIntegrationRoutes } from "./learnIntegrations";
+import { registerLearnStudyIntegrationRoutes } from "./learnStudyIntegrations";
+import { registerCommunityIntegrationRoutes } from "./learnCommunityHttp";
+import { registerOrganizationIntegrationRoutes } from "./learnOrganizationIntegrations";
+import { registerSourceRoutes } from "./learnSources";
+import { ConvexError } from "convex/values";
 import { env, httpAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -117,12 +124,12 @@ async function authenticate(ctx: ActionCtx, request: Request, state: RequestStat
   return result.tokenId;
 }
 
-const handle = httpAction(async (ctx, request) => {
+const handle = httpAction(async (ctx, request) => observeHttp(ctx, "integration-api", async () => {
   const state: RequestState = { headers: {} };
   const response = await route(ctx, request, state);
   for (const [name, value] of Object.entries(state.headers)) response.headers.set(name, value);
   return response;
-});
+}));
 
 async function route(ctx: ActionCtx, request: Request, state: RequestState): Promise<Response> {
   const url = new URL(request.url);
@@ -240,7 +247,7 @@ const MCP_STATUS: Record<string, number> = {
   MONTHLY_CREATION_LIMIT: 402, PRO_REQUIRED: 402,
 };
 
-const mcpHandler = httpAction(async (ctx, request) => {
+const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", async () => {
   const secret = env.CHAOS_MCP_SECRET;
   const presented = /^Bearer (.+)$/.exec(request.headers.get("Authorization") ?? "")?.[1] ?? "";
   if (!secret || secret.length < 32 || !(await sameSecret(presented, secret))) return error(401, "UNAUTHORIZED", "Unknown caller.");
@@ -279,6 +286,72 @@ const mcpHandler = httpAction(async (ctx, request) => {
     });
     let result: unknown;
     switch (b.tool) {
+      case "set_form_branching": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdvancedForms:setBranching"), { ...input, userId }); break;
+      case "get_form_advanced_analytics": result = await ctx.runQuery(makeFunctionReference<"query">("mcpFormManagement:analytics"), { ...input, userId }); break;
+      case "export_form_responses": result = await ctx.runAction(makeFunctionReference<"action">("mcpFormManagement:exportArtifact"), { ...input, userId }); break;
+      case "list_form_collaborators": result = await ctx.runQuery(makeFunctionReference<"query">("mcpFormManagement:collaborators"), { ...input, userId }); break;
+      case "change_form_collaborator": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpFormManagement:changeCollaborator"), { ...input, userId }); break;
+      case "upsert_form_file_question": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdvancedForms:upsertFileQuestion"), { ...input, userId }); break;
+      case "get_form_response_controls": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdvancedForms:getResponseControls"), { ...input, userId }); break;
+      case "set_form_response_controls": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdvancedForms:setResponseControls"), { ...input, userId }); break;
+      case "search_learn_directory": result = await ctx.runQuery(makeFunctionReference<"query">("learnCommunityIntegrations:directory"), { ...input, userId }); break;
+      case "save_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("learnCommunityIntegrations:saveLesson"), { ...input, userId }); break;
+      case "fork_quiz": result = await ctx.runMutation(makeFunctionReference<"mutation">("quizForks:mcpFork"), { ...input, userId }); break;
+      case "get_quiz_fork_lineage": result = await ctx.runQuery(makeFunctionReference<"query">("quizForks:mcpLineage"), { ...input, userId }); break;
+      case "attach_lesson_quiz": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAssessments:attach"), { ...input, userId }); break;
+      case "get_lesson_quizzes": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAssessments:list"), { ...input, userId }); break;
+      case "create_lesson_live_game": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAssessments:createLive"), { ...input, userId }); break;
+      case "get_learn_capabilities": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getCapabilities"), { ...input, userId }); break;
+      case "list_lesson_versions": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:listLessonVersions"), { ...input, userId }); break;
+      case "get_lesson_version": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getLessonVersion"), { ...input, userId }); break;
+      case "create_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:create"), { ...input, userId }); break;
+      case "get_course": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCourses:read"), { ...input, userId }); break;
+      case "update_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:update"), { ...input, userId }); break;
+      case "set_course_outline": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:setOutline"), { ...input, userId }); break;
+      case "add_course_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:addLesson"), { ...input, userId }); break;
+      case "publish_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:publish"), { ...input, userId }); break;
+      case "list_courses": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCourses:list"), { ...input, userId }); break;
+      case "set_course_archived": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:setArchived"), { ...input, userId }); break;
+      case "unpublish_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:unpublish"), { ...input, userId }); break;
+      case "list_flashcard_sets": result = await ctx.runQuery(makeFunctionReference<"query">("mcpFlashcards:list"), { ...input, userId }); break;
+      case "get_flashcard_set": result = await ctx.runQuery(makeFunctionReference<"query">("mcpFlashcards:get"), { ...input, userId }); break;
+      case "create_flashcard_set": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpFlashcards:create"), { ...input, userId }); break;
+      case "save_flashcard_set": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpFlashcards:save"), { ...input, userId }); break;
+      case "publish_flashcard_set": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpFlashcards:publish"), { ...input, userId }); break;
+      case "set_flashcard_set_lifecycle": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpFlashcards:lifecycle"), { ...input, userId }); break;
+      case "attach_lesson_flashcards": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpFlashcards:attach"), { ...input, userId }); break;
+      case "detach_lesson_flashcards": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpFlashcards:detach"), { ...input, userId }); break;
+      case "get_lesson_flashcards": result = await ctx.runQuery(makeFunctionReference<"query">("mcpFlashcards:listAttached"), { ...input, userId }); break;
+      case "create_folder": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:createFolder"), { ...input, userId }); break;
+      case "list_folders": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listFolders"), { ...input, userId }); break;
+      case "move_folder": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:moveFolder"), { ...input, userId }); break;
+      case "list_folder_contents": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listFolderContents"), { ...input, userId }); break;
+      case "add_folder_member": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:addFolderMember"), { ...input, userId }); break;
+      case "list_curriculum_institutions": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listInstitutions"), { ...input, userId }); break;
+      case "list_curriculum_programs": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listPrograms"), { ...input, userId }); break;
+      case "list_curriculum_versions": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listVersions"), { ...input, userId }); break;
+      case "list_curriculum_nodes": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listNodes"), { ...input, userId }); break;
+      case "create_lesson_curriculum_mapping": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:createLessonMapping"), { ...input, userId }); break;
+      case "search_lessons": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:listLessons"), { ...input, userId }); break;
+      case "get_lesson_outline": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getLessonOutline"), { ...input, userId }); break;
+      case "get_lesson_sources": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getLessonSources"), { ...input, userId }); break;
+      case "add_lesson_blocks": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:addBlocks"), { ...input, userId }); break;
+      case "update_lesson_blocks": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:updateBlocks"), { ...input, userId }); break;
+      case "move_lesson_blocks": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:moveBlocks"), { ...input, userId }); break;
+      case "delete_lesson_blocks": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:deleteBlocks"), { ...input, userId }); break;
+      case "list_lessons": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:listLessons"), { ...input, userId }); break;
+      case "get_lesson": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getLesson"), { ...input, userId }); break;
+      case "create_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:createLesson"), { ...input, userId }); break;
+      case "save_lesson_draft": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:saveLesson"), { ...input, userId }); break;
+      case "edit_lesson_blocks": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:editBlocks"), { ...input, userId }); break;
+      case "publish_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:publishLesson"), { ...input, userId }); break;
+      case "restore_lesson_version": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:restoreLesson"), { ...input, userId }); break;
+      case "set_lesson_lifecycle": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:lifecycle"), { ...input, userId }); break;
+      case "fork_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:forkLesson"), { ...input, userId }); break;
+      case "get_learn_source_metadata": {
+        const source = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getSourceMetadata"), { ...input, userId });
+        result = { available: source !== null, source }; break;
+      }
       case "search_forms": {
         const status = str(input.status);
         const allowed = ["live", "draft", "closed", "archived", "any"] as const;
@@ -329,18 +402,42 @@ const mcpHandler = httpAction(async (ctx, request) => {
     }
     return respond({ status: 200, body: { result } });
   } catch (caught) {
+    if (b.tool === "search_learn_directory" && caught instanceof Error && /ArgumentValidationError|Validator error|Page size|Search text|Filter does not apply|creatorMatch applies|Discovery does not support/.test(caught.message)) return error(400, "VALIDATION_FAILED", "Invalid directory search arguments.");
+    if (/flashcard|^(list_courses|set_course_archived|unpublish_course)$/.test(b.tool)) {
+      if (caught instanceof ConvexError && (caught.data as { code?: unknown } | null)?.code === "REVISION_CONFLICT") return error(409, "REVISION_CONFLICT", "The flashcard set changed; reload it with get_flashcard_set before editing.", { currentRevision: (caught.data as { currentRevision?: unknown }).currentRevision });
+      if (caught instanceof Error && /ArgumentValidationError|Validator error/.test(caught.message)) return error(400, "VALIDATION_FAILED", "Invalid tool arguments; use IDs returned by Chaos tools.");
+    }
+    if (caught instanceof ConvexError && caught.data && typeof caught.data === "object" && !Array.isArray(caught.data)) {
+      const data = caught.data as Record<string, unknown>;
+      if (data.code === "SETTINGS_CONFLICT" || data.code === "MEMBERSHIP_CONFLICT" || data.code === "DRAFT_CONFLICT") {
+        return error(409, data.code, "The asset changed; reload its current state before editing.", typeof data.currentRevision === "number" ? { currentRevision: data.currentRevision } : undefined);
+      }
+    }
+    const learnTool = ["search_lessons", "get_lesson_outline", "get_lesson_sources", "add_lesson_blocks", "update_lesson_blocks", "move_lesson_blocks", "delete_lesson_blocks", "list_lessons", "get_lesson", "create_lesson", "save_lesson_draft", "edit_lesson_blocks", "publish_lesson", "restore_lesson_version", "set_lesson_lifecycle", "fork_lesson", "get_learn_source_metadata"].includes(b.tool);
+    if (learnTool) {
+      if (caught instanceof ConvexError && caught.data && typeof caught.data === "object" && !Array.isArray(caught.data)) {
+        const data = caught.data as Record<string, unknown>;
+        if (data.code === "REVISION_CONFLICT") return error(409, "REVISION_CONFLICT", "The lesson changed; reload before editing.", { currentRevision: data.currentRevision });
+        if (data.code === "VALIDATION") return error(400, "VALIDATION_FAILED", "Invalid lesson document.", { problems: data.problems });
+      }
+      const message = caught instanceof Error ? caught.message : String(caught);
+      if (/Lesson not found or unauthorized|Version not accessible|Destination block not found|Block not found/.test(message)) return error(404, "NOT_FOUND", "Lesson or block not found or unauthorized.");
+      if (/Only (the )?owner/.test(message)) return error(403, "FORBIDDEN", "Only the owner may perform this action.");
+      if (/Resolve moderation or archive state/.test(message)) return error(409, "INVALID_STATUS", "Resolve moderation or archive state before publishing.");
+      if (/ArgumentValidationError|Validator error|Invalid lesson metadata|Version does not belong/.test(message)) return error(400, "VALIDATION_FAILED", "Invalid Learn tool arguments.");
+    }
     const { code, message } = errorCode(caught);
     const status = MCP_STATUS[code] ?? (code === "ERROR" ? 500 : 400);
     if (status === 500) console.error("mcp tool failed", b.tool, caught);
     return error(status, code, status === 500 ? "Something went wrong in Chaos. Try again." : message);
   }
-});
+}));
 
 // The single-use ticket is the credential, so any origin (including embeds) may upload.
 const UPLOAD_CORS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "POST",
-  "Access-Control-Allow-Headers": "Content-Type",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization",
   "Access-Control-Max-Age": "86400",
 };
 
@@ -349,7 +446,7 @@ function uploadError(status: number, code: string, message: string): Response {
 }
 
 /** Respondent file upload: checks the ticket, stores the body, then records it in one step. */
-const uploadHandler = httpAction(async (ctx, request) => {
+const uploadHandler = httpAction(async (ctx, request) => observeHttp(ctx, "submissions", async () => {
   const url = new URL(request.url);
   const token = url.searchParams.get("ticket") ?? "";
   const name = url.searchParams.get("name") ?? "upload";
@@ -380,9 +477,15 @@ const uploadHandler = httpAction(async (ctx, request) => {
     const { code, message } = errorCode(caught);
     return uploadError(code === "UPLOAD_TICKET_INVALID" ? 403 : 400, code, message);
   }
-});
+}));
 
 const http = httpRouter();
+http.route({ path: "/api/status/v1", method: "GET", handler: httpAction(async ctx => Response.json(await ctx.runQuery(makeFunctionReference<"query">("observability:publicStatus"), {}), { headers: { "Cache-Control": "public, max-age=30" } })) });
+registerLearnIntegrationRoutes(http);
+registerOrganizationIntegrationRoutes(http);
+registerCommunityIntegrationRoutes(http);
+registerLearnStudyIntegrationRoutes(http);
+registerSourceRoutes(http);
 http.route({ path: UPLOAD_PATH, method: "POST", handler: uploadHandler });
 http.route({ path: UPLOAD_PATH, method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: UPLOAD_CORS })) });
 http.route({ path: "/api/mcp/v1", method: "POST", handler: mcpHandler });

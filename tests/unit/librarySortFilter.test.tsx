@@ -15,12 +15,13 @@ const forms = {
   ],
   shared: [],
 };
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }) }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), usePathname: () => "/dashboard", useSearchParams: () => new URLSearchParams() }));
 const setFormStatus = vi.hoisted(() => vi.fn(async () => null));
 vi.mock("convex/react", () => ({
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? forms : getFunctionName(ref) === "quizFunctions:getMyQuizzes" ? [] : undefined),
   useMutation: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:setFormStatus" ? setFormStatus : vi.fn()),
 }));
+vi.mock("@/lib/learn/data", () => ({ useLearnActions: () => ({ createLesson: vi.fn() }) }));
 vi.mock("@/components/workspace/useCreateForm", () => ({ useCreateForm: () => ({ create: vi.fn(), busy: false }) }));
 vi.mock("./FormThumb", () => ({ default: () => null }));
 
@@ -67,5 +68,16 @@ describe("library sort and filter", () => {
     expect(names()).toEqual(["BBeta survey", "AAlpha form"]);
     fireEvent.click(screen.getByRole("button", { name: "Actions for Beta survey" }));
     expect(screen.queryByRole("menuitem", { name: /Delete/ })).toBeNull();
+  });
+});
+
+describe("library New menu", () => {
+  it("has one New button whose menu offers Form, Quiz, Lesson, Course, From template and Import", () => {
+    render(<CreatorLibrary />);
+    const triggers = screen.getAllByRole("button", { name: "Create something new" });
+    expect(triggers).toHaveLength(1);
+    fireEvent.click(triggers[0]);
+    const items = screen.getAllByRole("menuitem").map((item) => (item.textContent ?? "").trim());
+    for (const [i, label] of ["Form", "Quiz", "Lesson", "Course", "From a template", "Import"].entries()) expect(items[i]).toMatch(new RegExp(`^${label}`));
   });
 });

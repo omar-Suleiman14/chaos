@@ -1,0 +1,37 @@
+import { afterEach, expect, it, vi } from "vitest";
+import { makeFunctionReference } from "convex/server";
+import { api, internal } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
+import { creatorIdentity } from "../fixtures";
+import { createTestConvex } from "./setup";
+
+afterEach(() => vi.unstubAllEnvs());
+it("completes the Max-compatible token/create/edit/conflict/link/progress/unlink contract", async () => {
+  vi.stubEnv("CLERK_JWT_ISSUER_DOMAIN", creatorIdentity.issuer);
+  const t = createTestConvex(), owner = t.withIdentity(creatorIdentity);
+  await owner.mutation(api.quizFunctions.getOrCreateUser, {});
+  const connection = await owner.mutation(api.integrations.createConnection, { label: "Selected notes", access: "selected", itemRefs: [], scopes: ["lessons:read", "lessons:create", "lessons:update", "progress:read", "progress:write"] });
+  const metadata = { title: "Imported notes", description: "", language: "en", tags: [] };
+  const document = { schemaVersion: 1 as const, blocks: [{ id: "intro", type: "paragraph" as const, text: "Original notes", citations: [], conceptIds: [] }] };
+  const created = await t.mutation(internal.learnIntegrations.createDraft, { tokenId: connection.tokenId, idempotencyKey: "create", body: { kind: "lesson", metadata, document, source: { type: "notes", id: "page-x", title: "Selected page", url: "https://notes.example/page-x" } } });
+  expect(created.status).toBe(201);
+  const item = (created.body as { item: { itemRef: string; lessonId: Id<"lessons"> } }).item;
+  const updatedDocument = { ...document, blocks: [{ ...document.blocks[0], text: "Reviewed notes" }] };
+  const update = { tokenId: connection.tokenId, ref: item.itemRef, ifMatch: "0", idempotencyKey: "edit", body: { document: updatedDocument } };
+  expect((await t.mutation(internal.learnIntegrations.updateDraft, update)).status).toBe(200);
+  expect((await t.mutation(internal.learnIntegrations.updateDraft, { ...update, idempotencyKey: "stale" })).status).toBe(409);
+  const draft = await owner.query(api.lessons.getDraft, { lessonId: item.lessonId });
+  expect(draft.publishedVersionId).toBeUndefined();
+  const link = await t.run(ctx => ctx.db.query("integrationCreatedItems").withIndex("by_tokenId_and_itemRef", q => q.eq("tokenId", connection.tokenId).eq("itemRef", item.itemRef)).unique());
+  expect(link?.source?.id).toBe("page-x");
+  const published = await owner.mutation(api.lessons.publish, { lessonId: item.lessonId, expectedRevision: 1, visibility: "private" });
+  if (!published.ok) throw new Error("Expected publication");
+  const target = { tokenId: connection.tokenId, lessonId: item.lessonId, versionId: published.versionId };
+  const write = makeFunctionReference<"mutation">("learnStudyIntegrations:writeProgress");
+  expect(await t.mutation(write, { ...target, idempotencyKey: "start", operation: { action: "start" } })).toMatchObject({ status: 200, body: { sessionSeq: 1 } });
+  expect(await t.mutation(write, { ...target, idempotencyKey: "complete", operation: { action: "complete", sessionSeq: 1, writeSeq: 1, blockIds: ["intro"] } })).toMatchObject({ status: 200 });
+  expect((await owner.query(api.learnCommunity.getProgress, { lessonId: item.lessonId, versionId: published.versionId }))?.completedBlocks).toEqual(["intro"]);
+  expect((await t.mutation(internal.learnIntegrations.unlinkLesson, { tokenId: connection.tokenId, ref: item.itemRef })).status).toBe(200);
+  expect((await t.query(internal.learnIntegrations.getLesson, { tokenId: connection.tokenId, now: Date.now(), ref: item.itemRef })).status).toBe(404);
+  expect((await owner.query(api.lessons.getDraft, { lessonId: item.lessonId })).draft).toEqual(updatedDocument);
+});

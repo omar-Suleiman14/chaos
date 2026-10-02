@@ -50,13 +50,16 @@ describe("custom links", () => {
     await expect(other.mutation(api.links.setFormSlug, { formId, slug: "mine" })).rejects.toThrow();
   });
 
-  it("follows a username change and can be removed", async () => {
+  it("keeps all custom links working across repeated renames and can remove a slug", async () => {
     const { owner, formId } = await setup();
     await owner.mutation(api.links.chooseUsername, { username: "omar" });
     await owner.mutation(api.links.setFormSlug, { formId, slug: "apply" });
     await owner.mutation(api.links.chooseUsername, { username: "omar.s" });
     expect(await owner.query(api.links.resolveLink, { username: "omar.s", slug: "apply" })).not.toBeNull();
-    expect(await owner.query(api.links.resolveLink, { username: "omar", slug: "apply" })).toBeNull();
+    expect(await owner.query(api.links.resolveLink, { username: "omar", slug: "apply" })).not.toBeNull();
+    await owner.mutation(api.quizFunctions.setUsername, { username: "omar-final" });
+    expect(await owner.query(api.links.resolveLink, { username: "omar.s", slug: "apply" })).not.toBeNull();
+    expect(await owner.query(api.links.resolveLink, { username: "omar-final", slug: "apply" })).not.toBeNull();
 
     await owner.mutation(api.links.setFormSlug, { formId, slug: null });
     expect(await owner.query(api.links.resolveLink, { username: "omar.s", slug: "apply" })).toBeNull();

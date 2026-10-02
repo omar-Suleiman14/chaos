@@ -1,5 +1,5 @@
 /**
- * Every row of App Settings (app/dashboard/settings/page.tsx), for the Ctrl+K palette.
+ * Every row of Settings (app/dashboard/settings/page.tsx) and Profile (app/dashboard/card/page.tsx), for the Ctrl+K palette.
  * Each `id` is the id of that row on the page, so the link scrolls to it.
  */
 export interface SettingsEntry {
@@ -11,8 +11,11 @@ export interface SettingsEntry {
   href: string;
 }
 
+/** Account and appearance rows live on the profile page; everything else is in Settings. */
+const PROFILE_ROWS = new Set(["settings-account", "settings-username", "settings-password", "settings-appearance", "settings-language", "settings-glass", "settings-reduce-motion", "settings-sign-out"]);
+
 const entry = (id: string, section: string, label: string, keywords: string): SettingsEntry => ({
-  id, section, label, keywords, href: `/dashboard/settings#${id}`,
+  id, section, label, keywords, href: `${PROFILE_ROWS.has(id) ? "/dashboard/card" : "/dashboard/settings"}#${id}`,
 });
 
 const english: SettingsEntry[] = [
@@ -20,6 +23,7 @@ const english: SettingsEntry[] = [
   entry("settings-username", "Account", "Username", "custom link url handle name slug address share"),
   entry("settings-password", "Account", "Password and security", "sign in login two factor 2fa devices sessions passkey"),
   entry("settings-appearance", "Appearance", "Appearance", "dark mode light mode theme night auto system colors color scheme"),
+  entry("settings-language", "Appearance", "Language", "arabic english عربي rtl translate interface menus"),
   entry("settings-glass", "Appearance", "Glass", "opacity transparency translucent blur see-through menus popups frosted"),
   entry("settings-reduce-motion", "Appearance", "Reduce motion", "animations animation accessibility motion transitions"),
   entry("settings-new-theme", "New forms", "Theme for new forms", "default look style preset colors swatch"),
@@ -46,6 +50,7 @@ const arabic: Record<string, { section: string; label: string; keywords: string 
   "settings-username": { section: "الحساب", label: "اسم المستخدم", keywords: "الرابط المخصص عنوان مشاركة username custom link url handle slug" },
   "settings-password": { section: "الحساب", label: "كلمة المرور والأمان", keywords: "تسجيل الدخول التحقق بخطوتين الأجهزة الجلسات مفتاح المرور password security sign in 2fa devices sessions passkey" },
   "settings-appearance": { section: "المظهر", label: "المظهر", keywords: "الوضع الداكن الوضع الفاتح ليلي تلقائي النظام الألوان dark mode light mode theme appearance" },
+  "settings-language": { section: "المظهر", label: "اللغة", keywords: "عربي إنجليزي ترجمة الواجهة language arabic english rtl" },
   "settings-glass": { section: "المظهر", label: "الزجاج", keywords: "الشفافية التمويه القوائم النوافذ glass opacity transparency blur menus popups" },
   "settings-reduce-motion": { section: "المظهر", label: "تقليل الحركة", keywords: "الرسوم المتحركة إمكانية الوصول الانتقالات reduce motion animations accessibility transitions" },
   "settings-new-theme": { section: "النماذج الجديدة", label: "مظهر النماذج الجديدة", keywords: "الشكل الافتراضي النمط الألوان theme default look style preset colors" },

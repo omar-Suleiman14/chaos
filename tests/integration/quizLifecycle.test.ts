@@ -115,7 +115,7 @@ describe("quiz deletion lifecycle", () => {
     expect(await t.query(api.quizFunctions.getQuizForPlayer, { quizId })).toBeNull();
     await expect(
       t.mutation(api.quizFunctions.startQuizSession, { quizId, playerName: "Late" })
-    ).rejects.toThrow("QUIZ_NOT_FOUND");
+    ).rejects.toThrow("QUIZ_UNAVAILABLE");
   });
 
   it("does not let another creator or an anonymous caller delete the quiz", async () => {

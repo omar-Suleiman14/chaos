@@ -1,0 +1,11 @@
+import { defineTable } from "convex/server";
+import { v } from "convex/values";
+import { quizSnapshot } from "./quizModel";
+
+export const assessmentRef = v.union(v.object({ kind: v.literal("form"), id: v.id("forms") }), v.object({ kind: v.literal("quiz"), id: v.id("quizzes") }));
+export const assessmentVersionRef = v.union(v.object({ kind: v.literal("form"), id: v.id("formVersions") }), v.object({ kind: v.literal("quiz"), id: v.id("quizForkSnapshots") }));
+/** Additive provenance only: content remains in the existing forms/quizzes tables. */
+export const quizForkTables = {
+  quizForkSnapshots: defineTable({ quizId: v.id("quizzes"), publishedAt: v.number(), snapshot: quizSnapshot, capturedAt: v.number() }).index("by_quizId_and_publishedAt", ["quizId", "publishedAt"]),
+  quizForkLineage: defineTable({ asset: assessmentRef, parent: assessmentRef, parentVersion: assessmentVersionRef, root: assessmentRef, rootVersion: assessmentVersionRef, parentCreatorId: v.string(), rootCreatorId: v.string(), ownerId: v.string(), depth: v.number(), createdAt: v.number() }).index("by_asset", ["asset"]),
+};

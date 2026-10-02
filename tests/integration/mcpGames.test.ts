@@ -202,7 +202,7 @@ describe("MCP games: trusted transport, shared live rules", () => {
     expect(source.theme).toMatchObject({ preset: "midnight" });
   });
 
-  it("rechecks Pro and read-only restrictions inside the wrappers", async () => {
+  it("rechecks read-only restrictions inside the wrappers and works on Personal", async () => {
     const t = await setup();
     const { game } = await hosted(t);
     await t.run(async (ctx) => {
@@ -215,7 +215,10 @@ describe("MCP games: trusted transport, shared live rules", () => {
       const user = (await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", userId)).first())!;
       await ctx.db.patch("users", user._id, { plan: "free", planExpiresAt: undefined });
     });
-    await expect(t.query(internal.mcp.getGame, { userId, id: game.id })).rejects.toThrow(/PRO_REQUIRED/);
-    await expect(t.mutation(internal.mcp.createGameDraft, { userId, input })).rejects.toThrow(/PRO_REQUIRED/);
+    await t.run(async (ctx) => {
+      const user = (await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", userId)).first())!;
+      await ctx.db.patch("users", user._id, { isBanned: false });
+    });
+    expect((await t.query(internal.mcp.getGame, { userId, id: game.id })).state).toBe("lobby");
   });
 });

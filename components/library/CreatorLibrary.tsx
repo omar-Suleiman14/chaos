@@ -1,12 +1,16 @@
 "use client";
 
+import CoursesHub from "@/components/courses/CoursesHub";
+import GamesHub from "@/components/live/GamesHub";
+import { newQuizArgs } from "@/components/live/newGame";
+import { useLearnActions } from "@/lib/learn/data";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { formIntentHandlers, useQuery } from "@/lib/convexCache";
 import { deleteFormLocally, setFormStatusLocally, useOptimisticMutation } from "@/lib/optimistic";
-import { Archive, ArrowDown, ArrowUp, ArrowUpDown, BarChart3, Check, ChevronDown, Copy, ExternalLink, FileUp, Globe, FileText, GraduationCap, LayoutGrid, LayoutTemplate, List, ListFilter, Lock, Pencil, Plus, Radio, Search, Trash2, X, Pin, PinOff } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, ArrowUpDown, BarChart3, BookOpen, Check, ChevronDown, Copy, ExternalLink, FileUp, Globe, FileText, GraduationCap, ListChecks, BookOpenText, LayoutGrid, LayoutTemplate, List, ListFilter, Lock, Pencil, Plus, Radio, Search, Trash2, Trophy, X, Pin, PinOff } from "lucide-react";
 import { useHostLive } from "@/components/live/HostLiveButton";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -19,14 +23,20 @@ import { timeAgo } from "@/lib/timeAgo";
 import { useBuilderLabels } from "@/components/forms/formThemeLabels";
 import StatusBadge from "@/components/forms/StatusBadge";
 import FormThumb from "./FormThumb";
+import dynamic from "next/dynamic";
+
+// Spreadsheet parsing loads only when someone opens that import mode.
+const SheetImport = dynamic(() => import("@/components/forms/SheetImport"));
 import { WsDialog, WsMenu, WsTabs, WsUndoToast } from "@/components/workspace/primitives";
 import { LibrarySkeleton } from "@/components/workspace/Skeletons";
 import type { UndoToast } from "@/components/workspace/primitives";
 import { usePinned } from "@/components/workspace/usePinned";
 import { useCreateForm } from "@/components/workspace/useCreateForm";
 
-const kinds = ["All", "Forms", "Quizzes"] as const;
+const kinds = ["Forms", "Quizzes", "Courses", "Games"] as const;
 type Kind = (typeof kinds)[number];
+/** The open tab lives in the address (?tab=games) so links, Back and refresh keep it. */
+const kindFromParam = (value: string | null): Kind => kinds.find((k) => k.toLowerCase() === value) ?? "Forms";
 type Status = "live" | "draft" | "closed" | "archived";
 const statusOptions: { id: Status }[] = [{ id: "live" }, { id: "draft" }, { id: "closed" }];
 type SortKey = "edited" | "name" | "responses" | "status";
@@ -40,7 +50,7 @@ const statusOrder: Record<Status, number> = { live: 0, draft: 1, closed: 2, arch
 
 const copy = {
   en: {
-    kinds: { All: "All", Forms: "Forms", Quizzes: "Quizzes" },
+    kinds: { Forms: "Forms", Quizzes: "Quizzes", Courses: "Courses", Games: "Games" },
     status_: { live: "Live", draft: "Draft", closed: "Closed", archived: "Archived" },
     sort_: { edited: "Last edited", name: "Name", responses: "Most responses", status: "Status" },
     colName: "Name", colStatus: "Status", colResponses: "Responses", colEdited: "Edited", colActions: "Actions",
@@ -55,7 +65,7 @@ const copy = {
     open: "Open", results: "Results", viewLive: "View live", copyLink: "Copy link", unpin: "Unpin from sidebar", pin: "Pin to sidebar",
     duplicate: "Duplicate", unpublish: "Unpublish", publish: "Publish", archive: "Archive", delete: "Delete",
     oldQuiz: "Old quiz", quiz: "Quiz", form: "Form",
-    games: "Games", library: "Library", creating: "Creating…", newLabel: "New", moreWays: "More ways to start", blank: "Blank", fromTemplate: "From a template", import: "Import",
+    games: "Games", library: "Library", newForm: "Form", newFormHelp: "Surveys, sign-ups and feedback", newQuiz: "Quiz", newQuizHelp: "Marked for you; host it live any time", newLesson: "Lesson", newLessonHelp: "A page to teach one thing", newCourse: "Course", newCourseHelp: "Lessons in order, for people to take", newMenu: "Create something new", creating: "Creating…", newLabel: "New", moreWays: "More ways to start", blank: "Blank", fromTemplate: "From a template", import: "Import",
     dismissError: "Dismiss error", filterLibrary: "Filter library", searchLibrary: "Search library", search: "Search",
     filterByStatus: "Filter by status", status: "Status", clearFilter: "Clear filter", sort: "Sort", viewOptions: "View options", gallery: "Gallery", list: "List",
     loadingLibrary: "Loading library...", nothingMatches: "Nothing matches", createFirst: "Create your first form",
@@ -70,14 +80,14 @@ const copy = {
     counting: "Counting responses…",
     deleteForm: (n: number) => `Its ${n} response${n === 1 ? "" : "s"}, uploads and history will be deleted. This cannot be undone. Archive it from its settings instead to keep the data.`,
     cancel: "Cancel", deleteForever: "Delete permanently",
-    sourceChaos: "Chaos export", sourceText: "Pasted questions",
+    sourceChaos: "Chaos export", sourceText: "Pasted questions", sourceSheet: "Spreadsheet", modeExport: "Form export or text", modeSheet: "Questions from CSV or Excel",
     importFailed: "This file could not be read.", fileTooBig: "Files can be at most 2 MB.",
     importHelp: "Upload a Chaos, Typeform or Google Forms export, or paste questions: one per paragraph, options starting with “-”, “*” for required.",
     chooseFile: "Choose file", orPaste: "Or paste", sample: "# Event feedback\n\nHow did you hear about us? *\n- Friend\n- Social media\n- Other\n\nAny comments?",
     preview: "Preview", fieldsCount: (n: number) => `${n} fields`, textBlock: "Text block", options: (n: number) => `${n} options`, required: "required", createDraft: "Create draft",
   },
   ar: {
-    kinds: { All: "الكل", Forms: "النماذج", Quizzes: "الاختبارات" },
+    kinds: { Forms: "النماذج", Quizzes: "الاختبارات", Courses: "الدورات", Games: "الألعاب" },
     status_: { live: "منشور", draft: "مسودة", closed: "مغلق", archived: "مؤرشف" },
     sort_: { edited: "آخر تعديل", name: "الاسم", responses: "الأكثر ردودًا", status: "الحالة" },
     colName: "الاسم", colStatus: "الحالة", colResponses: "الردود", colEdited: "آخر تعديل", colActions: "الإجراءات",
@@ -92,7 +102,7 @@ const copy = {
     open: "افتح", results: "النتائج", viewLive: "اعرض المنشور", copyLink: "انسخ الرابط", unpin: "إلغاء التثبيت من الشريط الجانبي", pin: "ثبّت في الشريط الجانبي",
     duplicate: "كرّر", unpublish: "ألغِ النشر", publish: "انشر", archive: "أرشِف", delete: "احذف",
     oldQuiz: "اختبار قديم", quiz: "اختبار", form: "نموذج",
-    games: "الألعاب", library: "المكتبة", creating: "جارٍ الإنشاء…", newLabel: "جديد", moreWays: "طرق أخرى للبدء", blank: "فارغ", fromTemplate: "من قالب", import: "استيراد",
+    games: "الألعاب", library: "المكتبة", newForm: "نموذج", newFormHelp: "استبيانات وتسجيل وآراء", newQuiz: "اختبار", newQuizHelp: "يُصحَّح تلقائيًا؛ استضفه مباشرة متى شئت", newLesson: "درس", newLessonHelp: "صفحة تشرح شيئًا واحدًا", newCourse: "دورة", newCourseHelp: "دروس مرتبة يأخذها الناس", newMenu: "أنشئ شيئًا جديدًا", creating: "جارٍ الإنشاء…", newLabel: "جديد", moreWays: "طرق أخرى للبدء", blank: "فارغ", fromTemplate: "من قالب", import: "استيراد",
     dismissError: "أخفِ الخطأ", filterLibrary: "تصفية المكتبة", searchLibrary: "ابحث في المكتبة", search: "بحث",
     filterByStatus: "تصفية حسب الحالة", status: "الحالة", clearFilter: "امسح التصفية", sort: "ترتيب", viewOptions: "خيارات العرض", gallery: "معرض", list: "قائمة",
     loadingLibrary: "جارٍ تحميل المكتبة...", nothingMatches: "لا نتائج", createFirst: "أنشئ أول نموذج لك",
@@ -107,7 +117,7 @@ const copy = {
     counting: "جارٍ عدّ الردود…",
     deleteForm: (n: number) => `${n === 0 ? "سيُحذف ما فيه من ملفات مرفوعة وسجل" : `سيُحذف ${pluralForm("ar", n, { one: "ردّ واحد", two: "ردّان", few: `${n} ردود`, many: `${n} ردًّا`, other: `${n} ردّ` })} مع الملفات المرفوعة والسجل`}. لا يمكن التراجع عن ذلك. أرشِفه من إعداداته بدلًا من ذلك للاحتفاظ بالبيانات.`,
     cancel: "إلغاء", deleteForever: "احذف نهائيًا",
-    sourceChaos: "تصدير Chaos", sourceText: "أسئلة ملصوقة",
+    sourceChaos: "تصدير Chaos", sourceText: "أسئلة ملصوقة", sourceSheet: "جدول بيانات", modeExport: "تصدير نموذج أو نص", modeSheet: "أسئلة من CSV أو Excel",
     importFailed: "تعذّرت قراءة هذا الملف.", fileTooBig: "الحد الأقصى لحجم الملف 2 ميغابايت.",
     importHelp: "ارفع ملف تصدير من Chaos أو Typeform أو Google Forms، أو الصق الأسئلة: سؤال في كل فقرة، والخيارات تبدأ بـ «-»، و«*» للإلزامي.",
     chooseFile: "اختر ملفًا", orPaste: "أو الصق", sample: "# ملاحظات عن الفعالية\n\nكيف عرفت عنا؟ *\n- صديق\n- وسائل التواصل\n- أخرى\n\nهل لديك تعليقات؟",
@@ -150,6 +160,7 @@ export default function CreatorLibrary() {
   const publishQuiz = useMutation(api.quizFunctions.publishQuiz);
   const unpublishQuiz = useMutation(api.quizFunctions.unpublishQuiz);
   const duplicateForm = useMutation(api.forms.duplicateForm);
+  const createCourse = useMutation(api.courses.create);
   const deleteForm = useOptimisticMutation(api.forms.deleteForm, deleteFormLocally);
   const deleteTemplate = useMutation(api.forms.deleteTemplate);
   const [error, setError] = useState("");
@@ -158,7 +169,10 @@ export default function CreatorLibrary() {
   const hostLive = useHostLive();
   const [dialog, setDialog] = useState<"none" | "templates" | "import">("none");
   const [search, setSearch] = useState("");
-  const [kind, setKind] = useState<Kind>("All");
+  const pathname = usePathname();
+  const params = useSearchParams();
+  const kind = kindFromParam(params.get("tab"));
+  const setKind = (next: Kind) => router.replace(next === "Forms" ? pathname : `${pathname}?tab=${next.toLowerCase()}`, { scroll: false });
   const [view, setView] = useState<"gallery" | "list">("gallery");
   /** No statuses chosen means everything except archived, the everyday view. */
   const [statuses, setStatuses] = useState<Status[]>([]);
@@ -250,7 +264,7 @@ export default function CreatorLibrary() {
     const ordered = (a: Row, b: Row) => (dir === "asc" ? 1 : -1) * compare[sort](a, b);
     // Archived forms live on the Archive page, never in the library.
     return rows.filter((r) => r.status !== "archived" && (!statuses.length || statuses.includes(r.status)))
-      .filter((r) => kind === "Forms" ? r.kind === "form" : kind === "Quizzes" ? r.kind !== "form" : true)
+      .filter((r) => kind === "Forms" ? r.kind === "form" : r.kind !== "form")
       .filter((r) => !q || r.title.toLowerCase().includes(q) || r.group.toLowerCase().includes(q))
       .sort(ordered);
   }, [rows, search, kind, statuses, sort, dir]);
@@ -350,24 +364,38 @@ export default function CreatorLibrary() {
   const kindLabel = (row: Row) => (row.kind === "legacy" ? t.oldQuiz : row.kind === "quiz" ? t.quiz : t.form);
 
   const loading = forms === undefined || quizzes === undefined;
+  const learnActions = useLearnActions();
+  const newLesson = async () => {
+    try { const id = await learnActions.createLesson({ language: locale }); router.push(`/dashboard/learn/lessons/${id}`); }
+    catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+  };
+  const newCourse = async () => {
+    try { const id = await createCourse({ language: locale }); router.push(`/dashboard/courses/${id}`); }
+    catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+  };
+
+  // One New menu for every Library tab: the same choices whatever tab is open.
+  const newMenu = (
+    <WsMenu label={t.newMenu} align="end" triggerClassName="ws-btn ws-btn--primary" trigger={<><Plus size={17} /> {busy ? t.creating : t.newLabel} <ChevronDown size={15} aria-hidden /></>}>
+      {(close) => (
+        <div className="ws-new-choices">
+          <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(); }}><FileText size={16} /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>
+          <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(newQuizArgs(locale)); }}><ListChecks size={16} /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>
+          <button type="button" role="menuitem" onClick={() => { close(); void newLesson(); }}><BookOpenText size={16} /><span><strong>{t.newLesson}</strong><small>{t.newLessonHelp}</small></span></button>
+          <button type="button" role="menuitem" onClick={() => { close(); void newCourse(); }}><GraduationCap size={16} /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>
+          <hr />
+          <button type="button" role="menuitem" onClick={() => { close(); setDialog("templates"); }}><LayoutTemplate size={16} /> {t.fromTemplate}</button>
+          <button type="button" role="menuitem" onClick={() => { close(); setDialog("import"); }}><FileUp size={16} /> {t.import}</button>
+        </div>
+      )}
+    </WsMenu>
+  );
 
   return (
     <div className="font-sans">
       <div className="ws-page-header">
         <h1 className="ws-page-title">{t.library}</h1>
-        <div className="flex items-stretch">
-          <Link href="/dashboard/games" className="ws-btn me-3"><Radio size={17} />{t.games}</Link>
-          <button type="button" onClick={() => create()} disabled={busy} className="ws-btn ws-btn--primary !rounded-e-none"><Plus size={17} /> {busy ? t.creating : t.newLabel}</button>
-          <WsMenu label={t.moreWays} triggerClassName="ws-btn ws-btn--primary !rounded-s-none !px-2.5 border-s border-s-white/25" trigger={<ChevronDown size={17} />}>
-            {(close) => (
-              <>
-                <button type="button" role="menuitem" onClick={() => { close(); void create(); }}><Plus size={16} /> {t.blank}</button>
-                <button type="button" role="menuitem" onClick={() => { close(); setDialog("templates"); }}><LayoutTemplate size={16} /> {t.fromTemplate}</button>
-                <button type="button" role="menuitem" onClick={() => { close(); setDialog("import"); }}><FileUp size={16} /> {t.import}</button>
-              </>
-            )}
-          </WsMenu>
-        </div>
+        {newMenu}
       </div>
 
       {error && (
@@ -378,7 +406,8 @@ export default function CreatorLibrary() {
       )}
 
       <div className="flex items-end gap-3 flex-wrap mb-6">
-        <div className="flex-1 min-w-[260px]"><WsTabs tabs={kinds} value={kind} onChange={setKind} label={t.filterLibrary} labels={t.kinds} icons={{ All: LayoutGrid, Forms: FileText, Quizzes: GraduationCap }} /></div>
+        <div className="flex-1 min-w-[260px] max-sm:basis-full max-sm:min-w-0"><WsTabs tabs={kinds} value={kind} onChange={setKind} label={t.filterLibrary} labels={t.kinds} icons={{ Forms: FileText, Quizzes: GraduationCap, Courses: BookOpen, Games: Trophy }} /></div>
+        {kind !== "Courses" && kind !== "Games" && <>
         <label className="ws-search !flex-none w-56 max-sm:!w-full max-sm:!max-w-none max-sm:order-last">
           <span className="sr-only">{t.searchLibrary}</span>
           <Search size={16} aria-hidden="true" />
@@ -413,9 +442,10 @@ export default function CreatorLibrary() {
             </>
           )}
         </WsMenu>
+        </>}
       </div>
 
-      {loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
+      {kind === "Courses" ? <CoursesHub embedded /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
         <div className="ws-empty ws-page">
           <span className="ws-empty__art"><Plus size={24} /></span>
           <h2 className="text-xl font-semibold">{search || statuses.length ? t.nothingMatches : t.createFirst}</h2>
@@ -423,25 +453,16 @@ export default function CreatorLibrary() {
           {statuses.length > 0 && <button type="button" className="ws-btn mt-3" onClick={() => chooseStatuses([])}>{t.clearFilter}</button>}
           {!search && !statuses.length && (
             <div className="flex gap-2 mt-3">
-              <button type="button" onClick={() => create()} disabled={busy} className="ws-btn ws-btn--primary"><Plus size={17} /> {t.newLabel}</button>
-              <button type="button" onClick={() => setDialog("templates")} className="ws-btn"><LayoutTemplate size={17} /> {t.templates}</button>
+              {newMenu}
             </div>
           )}
         </div>
       ) : view === "gallery" ? (
         <div className="space-y-8">
-          {groups.map(([group, list], groupIndex) => (
+          {groups.map(([group, list]) => (
             <section key={group || "ungrouped"} aria-label={groupLabel(group)}>
               {group && <h2 className="text-sm font-semibold text-muted-foreground mb-3">{groupLabel(group)}</h2>}
               <ul className="ws-gallery ws-stagger">
-                {groupIndex === 0 && !search && !statuses.length && (
-                  <li style={{ ["--i" as string]: 0 }} className="max-sm:hidden">
-                    <button type="button" className="ws-card ws-card--new w-full h-full" onClick={() => create()} disabled={busy}>
-                      <span className="ws-plus-lg"><Plus size={22} /></span>
-                      {busy ? t.creating : t.newLabel}
-                    </button>
-                  </li>
-                )}
                 {list.map((row, i) => (
                   <li key={row.key} className="ws-card" style={{ ["--i" as string]: i + 1 }} {...(row.formId ? formIntentHandlers(row.formId) : undefined)}>
                     <span className="ws-card__thumb"><FormThumb theme={row.theme} presentation={row.presentation} title={row.title} legacy={row.kind === "legacy"} /></span>
@@ -555,6 +576,7 @@ function ImportPanel({ busy, onImport }: { busy: boolean; onImport: (result: Imp
   const [fileName, setFileName] = useState("");
   const [result, setResult] = useState<ImportResult | null>(null);
   const [error, setError] = useState("");
+  const [mode, setMode] = useState<"export" | "sheet">("export");
 
   const preview = async (input: string) => {
     setError("");
@@ -569,9 +591,24 @@ function ImportPanel({ busy, onImport }: { busy: boolean; onImport: (result: Imp
     }
   };
 
-  const sourceNames = { chaos: t.sourceChaos, typeform: "Typeform", google: "Google Forms", text: t.sourceText } as const;
+  const sourceNames = { chaos: t.sourceChaos, typeform: "Typeform", google: "Google Forms", text: t.sourceText, sheet: t.sourceSheet } as const;
+  const modes = (
+    <div className="ws-segmented" role="group" aria-label={t.importTitle}>
+      <button type="button" aria-pressed={mode === "export"} onClick={() => setMode("export")}><FileUp size={14} aria-hidden="true" /> {t.modeExport}</button>
+      <button type="button" aria-pressed={mode === "sheet"} onClick={() => setMode("sheet")}><FileText size={14} aria-hidden="true" /> {t.modeSheet}</button>
+    </div>
+  );
+  if (mode === "sheet") {
+    return (
+      <section className="space-y-4" aria-label={t.importTitle}>
+        {modes}
+        <SheetImport busy={busy} onImport={(r, file) => onImport(r, file ? `${t.sourceSheet} (${file})` : t.sourceSheet)} />
+      </section>
+    );
+  }
   return (
     <section className="space-y-4" aria-label={t.importTitle}>
+      {modes}
       <p className="text-[13px] text-muted-foreground">
         {t.importHelp}
       </p>

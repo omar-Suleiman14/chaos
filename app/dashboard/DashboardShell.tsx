@@ -2,18 +2,24 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
-import { UserButton, useClerk, useUser } from "@clerk/nextjs";
+import { useClerk, useUser } from "@clerk/nextjs";
+import MemberAvatar from "@/components/MemberAvatar";
+import { avatarSeed } from "@/lib/avatarSeed";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, BarChart3, BookOpen, ChevronUp, Library, Link2, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, X } from "lucide-react";
+import { Archive, BarChart3, BookOpen, Bookmark, ChevronUp, FileText, GraduationCap, Home, Layers, Library, Link2, ListChecks, BookOpenText, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, UserCog, X } from "lucide-react";
+import type { LucideIcon } from "lucide-react";
+import type { Id } from "@/convex/_generated/dataModel";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import NotificationBell from "@/components/NotificationBell";
 import Logo from "@/components/Logo";
 import type { PaletteItem } from "@/components/workspace/CommandPalette";
 import { useCreateForm } from "@/components/workspace/useCreateForm";
+import { newQuizArgs } from "@/components/live/newGame";
+import { useLearnActions } from "@/lib/learn/data";
 import { errorMessage } from "@/lib/errors";
 import { useModal } from "@/components/workspace/useModal";
 import { WsTooltips } from "@/components/workspace/primitives";
@@ -23,6 +29,7 @@ import { formIntentHandlers } from "@/lib/convexCache";
 import { usePreferences } from "@/lib/preferences";
 import { dateLocale, useCopy, useLocale } from "@/lib/i18n";
 import { supportEmail } from "@/lib/site";
+import { useFolders, useMyLessons } from "@/lib/learn/data";
 
 /**
  * The palette carries the docs and settings search indexes (~150 KB of text), so it loads on
@@ -50,10 +57,12 @@ const copy = {
     showMore: (n: number) => `Show ${n} more`,
     pinLabel: (title: string, pinned: boolean) => `${pinned ? "Unpin" : "Pin"} ${title}`,
     unpin: "Unpin", pin: "Pin to sidebar",
-    admin: "Admin", docs: "Docs", signOut: "Sign out", resize: "Resize sidebar",
+    admin: "Admin", docs: "Docs", signOut: "Sign out", myCard: "Profile", account: "Account", resize: "Resize sidebar",
     dismiss: "Dismiss error",
     banned: "Your account is banned.", suspended: (until: string) => `Your account is suspended until ${until}.`,
     paused: "Editing and response collection are paused. Your existing data is preserved.", contact: "Contact support",
+    create: "Create", learn: "Learn", surface: "Workspace", learnHome: "Home", courses: "Courses", newForm: "Form", newFormHelp: "Surveys, sign-ups and feedback", newQuiz: "Quiz", newQuizHelp: "Marked for you; host it live any time", newLessonItem: "Lesson", newLessonHelp: "A page to teach one thing", newCourse: "Course", newCourseHelp: "Lessons in order, for people to take", learnLibrary: "Library", saved: "Saved", flashcards: "Flashcards",
+    newLesson: "New lesson", folders: "Folders", lessons: "Recent lessons", untitledLesson: "Untitled lesson", lesson: "Lesson",
   },
   ar: {
     games: "الألعاب", library: "المكتبة", legacyResults: "نتائج الاختبارات القديمة", archive: "الأرشيف", connections: "الاتصالات", settings: "الإعدادات",
@@ -68,31 +77,52 @@ const copy = {
     showMore: (n: number) => `عرض المزيد (${n})`,
     pinLabel: (title: string, pinned: boolean) => `${pinned ? "إلغاء تثبيت" : "تثبيت"} ${title}`,
     unpin: "إلغاء التثبيت", pin: "تثبيت في الشريط الجانبي",
-    admin: "الإدارة", docs: "الدليل", signOut: "تسجيل الخروج", resize: "تغيير عرض الشريط الجانبي",
+    admin: "الإدارة", docs: "الدليل", signOut: "تسجيل الخروج", myCard: "الملف الشخصي", account: "الحساب", resize: "تغيير عرض الشريط الجانبي",
     dismiss: "إخفاء الخطأ",
     banned: "حسابك محظور.", suspended: (until: string) => `حسابك معلّق حتى ${until}.`,
     paused: "التعديل وجمع الردود متوقفان. بياناتك الحالية محفوظة.", contact: "تواصل مع الدعم",
+    create: "إنشاء", learn: "تعلّم", surface: "مساحة العمل", learnHome: "الرئيسية", courses: "الدورات", newForm: "نموذج", newFormHelp: "استبيانات وتسجيل وآراء", newQuiz: "اختبار", newQuizHelp: "يُصحَّح تلقائيًا؛ استضفه مباشرة متى شئت", newLessonItem: "درس", newLessonHelp: "صفحة تشرح شيئًا واحدًا", newCourse: "دورة", newCourseHelp: "دروس مرتبة يأخذها الناس", learnLibrary: "المكتبة", saved: "المحفوظات", flashcards: "البطاقات",
+    newLesson: "درس جديد", folders: "المجلدات", lessons: "دروس حديثة", untitledLesson: "درس بلا عنوان", lesson: "الدرس",
   },
 };
 type Copy = typeof copy.en;
-type NavKey = "library" | "games" | "legacyResults" | "archive" | "connections" | "settings";
+/** One row in the sidebar's Pinned or Recent list. Forms and courses can be pinned (pinId); games can't. */
+interface SidebarItem { key: string; title: string; href: string; time: number; formId?: Id<"forms">; pinId?: string; color?: string; icon?: LucideIcon }
+
+type NavKey = "library" | "games" | "legacyResults" | "archive" | "connections" | "settings" | "learnHome" | "courses" | "learnLibrary" | "saved" | "flashcards";
 
 const libraryItem = { href: "/dashboard", key: "library", icon: Library } as const;
-const gamesItem = { href: "/dashboard/games", key: "games", icon: Trophy } as const;
 /** Only shown to people who still have quizzes from the old quiz editor. */
 const legacyResultsItem = { href: "/dashboard/results", key: "legacyResults", icon: BarChart3 } as const;
+const savedItem = { href: "/dashboard/learn/saved", key: "saved", icon: Bookmark } as const;
 const workspaceItems = [
   { href: "/dashboard/archive", key: "archive", icon: Archive },
   { href: "/dashboard/connections", key: "connections", icon: Link2 },
   { href: "/dashboard/settings", key: "settings", icon: Settings },
 ] as const;
 
+/** Personal learning routes share the workspace shell; Explore is public. */
+const learnItems = [
+  { href: "/dashboard/learn", key: "learnHome", icon: Home },
+  { href: "/dashboard/learn/courses", key: "courses", icon: GraduationCap },
+  { href: "/dashboard/learn/library", key: "learnLibrary", icon: Library },
+  { href: "/dashboard/learn/saved", key: "saved", icon: Bookmark },
+  { href: "/dashboard/learn/flashcards", key: "flashcards", icon: Layers },
+] as const;
+
 function pageLabel(pathname: string, t: Copy): string {
+  if (/^\/dashboard\/learn\/lessons\/[^/]+/.test(pathname)) return t.lesson;
+  if (pathname.startsWith("/dashboard/learn")) {
+    const match = [...learnItems].reverse().find((i) => pathname === i.href || (i.href !== "/dashboard/learn" && pathname.startsWith(i.href)));
+    return match && match.key !== "learnHome" ? t[match.key] : t.learn;
+  }
   if (pathname.startsWith("/dashboard/editor")) return t.legacyEditor;
   if (/^\/dashboard\/forms\/[^/]+\/responses/.test(pathname)) return t.results;
   if (/^\/dashboard\/forms\/[^/]+$/.test(pathname)) return t.builder;
   if (pathname === "/dashboard/forms") return t.library;
-  const item = [libraryItem, gamesItem, legacyResultsItem, ...workspaceItems].find((i) => (i.href === "/dashboard" ? pathname === i.href : pathname.startsWith(i.href)));
+  if (pathname.startsWith("/dashboard/courses")) return t.courses;
+  if (pathname.startsWith("/dashboard/card")) return t.myCard;
+  const item = [libraryItem, legacyResultsItem, ...workspaceItems].find((i) => (i.href === "/dashboard" ? pathname === i.href : pathname.startsWith(i.href)));
   return item ? t[item.key] : t.dashboard;
 }
 
@@ -107,6 +137,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const account = useQuery(api.quizFunctions.getCurrentUser);
   const forms = useQuery(api.forms.listMyForms);
   const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
+  const myCourses = useQuery(api.courses.listMine);
+  const myGames = useQuery(api.live.myGames);
   const [actionError, setActionError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobile, setMobile] = useState(false);
@@ -125,6 +157,26 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   }, []);
   const [scrolled, setScrolled] = useState(false);
   const { create, busy } = useCreateForm(setActionError);
+  const router = useRouter();
+  const myLessons = useMyLessons();
+  const learnFolders = useFolders();
+  const [newOpen, setNewOpen] = useState(false);
+  useEffect(() => {
+    if (!newOpen) return;
+    const close = (e: PointerEvent) => { if (!(e.target as Element).closest?.(".ws-new-menu")) setNewOpen(false); };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [newOpen]);
+  const learnActions = useLearnActions();
+  const createLesson = useCallback(async () => {
+    try { const id = await learnActions.createLesson({ language: locale }); router.push(`/dashboard/learn/lessons/${id}`); }
+    catch (err) { setActionError(errorMessage(err)); }
+  }, [learnActions, locale, router]);
+  const createCourseMutation = useMutation(api.courses.create);
+  const createCourse = useCallback(async () => {
+    try { const id = await createCourseMutation({ language: locale }); router.push(`/dashboard/courses/${id}`); }
+    catch (err) { setActionError(errorMessage(err)); }
+  }, [createCourseMutation, locale, router]);
   // As in Max: Ctrl/Cmd+B folds the sidebar into a slim rail, and its edge can be dragged to resize.
   const [collapsed, setCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
@@ -186,7 +238,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     ...(forms?.owned ?? []).map((f) => ({ id: f._id, title: f.title, kind: f.quizMode ? "quiz" as const : "form" as const, href: f.status === "archived" ? "/dashboard/archive" : `/dashboard/forms/${f._id}`, archived: f.status === "archived" })),
     ...(forms?.shared ?? []).map((f) => ({ id: f._id, title: f.title, kind: f.quizMode ? "quiz" as const : "form" as const, href: f.status === "archived" ? "/dashboard/archive" : `/dashboard/forms/${f._id}`, archived: f.status === "archived" })),
     ...(quizzes ?? []).map((q) => ({ id: q._id, title: q.title, kind: "legacy" as const, href: `/dashboard/editor?id=${q._id}` })),
-  ], [forms, quizzes]);
+    ...(myLessons ?? []).map((l) => ({ id: l.id, title: l.draft.meta.title, kind: "lesson" as const, href: `/dashboard/learn/lessons/${l.id}`, body: [l.draft.meta.description, l.draft.meta.tags.join(" ")].join(" ") })),
+    ...(learnFolders ?? []).filter((f) => !f.archived).map((f) => ({ id: f.id, title: f.name, kind: "folder" as const, href: `/dashboard/learn/library?folder=${f.id}` })),
+  ], [forms, quizzes, myLessons, learnFolders]);
   const { pinned: pinnedIds, toggle: togglePin } = usePinned();
   const { preferences } = usePreferences();
   // Settings → Reduce motion applies across the workspace.
@@ -194,8 +248,22 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   // Settings → Glass sets how see-through menus and popups are (read by .ws-glass).
   useEffect(() => { document.documentElement.style.setProperty("--popup-opacity", String(preferences.popupOpacity / 100)); }, [preferences.popupOpacity]);
   const allForms = useMemo(() => [...(forms?.owned ?? []), ...(forms?.shared ?? [])], [forms]);
-  const pinned = pinnedIds.map((id) => allForms.find((f) => f._id === id)).filter((f): f is NonNullable<typeof f> => !!f);
-  const recent = (forms?.owned ?? []).filter((f) => f.status !== "archived" && !pinnedIds.includes(f._id));
+  // Sidebar rows: forms (pinnable), courses and hosted games, newest first.
+  const formItem = (f: (typeof allForms)[number]): SidebarItem => ({ key: f._id, title: f.title || t.untitled, href: `/dashboard/forms/${f._id}`, time: f.updatedAt, formId: f._id, pinId: f._id, color: /^#[0-9a-f]{6}$/i.test(f.theme.accent) ? f.theme.accent : "var(--primary)" });
+  const courseItem = (c: NonNullable<typeof myCourses>[number]): SidebarItem => ({ key: c.id, title: c.title || t.untitled, href: `/dashboard/courses/${c.id}`, time: c.updatedAt, pinId: c.id, icon: GraduationCap });
+  // Pins are device-local IDs (usePinned); a pinned item that was deleted or archived simply drops out.
+  const pinned = pinnedIds.flatMap((id) => {
+    const form = allForms.find((f) => f._id === id);
+    if (form) return [formItem(form)];
+    const course = myCourses?.find((c) => c.id === id && !c.archived);
+    return course ? [courseItem(course)] : [];
+  });
+  const recent: SidebarItem[] = [
+    ...(forms?.owned ?? []).filter((f) => f.status !== "archived" && !pinnedIds.includes(f._id)).map(formItem),
+    ...(myCourses ?? []).filter((c) => !c.archived && !pinnedIds.includes(c.id)).map(courseItem),
+    ...(myGames ?? []).map((g) => ({ key: g._id, title: g.title || t.untitled, time: g.endedAt ?? g.createdAt, icon: Trophy,
+      href: g.state !== "ended" ? `/dashboard/live/${g._id}` : g.formId ? `/dashboard/forms/${g.formId}/responses` : g.quizId ? `/dashboard/results?id=${g.quizId}` : "/dashboard?tab=games" })),
+  ].sort((a, b) => b.time - a.time);
   // Each section shows a few, then "Show N more" in steps, like a thread list.
   const [shown, setShown] = useState<Record<string, number>>({ Pinned: 12, Recent: 6 });
   const sectionNames: Record<string, string> = { Pinned: t.pinned, Recent: t.recent };
@@ -207,8 +275,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     return next;
   });
 
-  const wide = pathname.startsWith("/dashboard/forms/") || pathname.startsWith("/dashboard/editor");
-  const isActive = (href: string) => (href === "/dashboard" ? pathname === href || pathname === "/dashboard/forms" : pathname.startsWith(href));
+  const wide = pathname.startsWith("/dashboard/forms/") || pathname.startsWith("/dashboard/editor") || pathname.startsWith("/dashboard/learn/lessons/");
+  const isActive = (href: string) => (href === "/dashboard" ? pathname === href || pathname === "/dashboard/forms" : href === "/dashboard/learn" ? pathname === href : pathname.startsWith(href));
 
   const rail = collapsed && !mobile;
   const shortcut = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform) ? "⌘ B" : "Ctrl B";
@@ -253,34 +321,47 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           <button type="button" className="ws-nav-item ws-reveal-host" onClick={() => setPaletteOpen(true)} title={rail ? `${t.search} (Ctrl K)` : undefined}>
             <Search size={18} aria-hidden="true" /> <span>{t.search}</span> <kbd className="ws-reveal">Ctrl K</kbd>
           </button>
-          <button type="button" className="ws-nav-item ws-nav-item--new" onClick={() => create()} disabled={busy} title={rail ? t.new : undefined}>
-            <span className="ws-plus" aria-hidden="true"><Plus size={14} strokeWidth={2.6} /></span> <span>{busy ? t.creating : t.new}</span>
-          </button>
+          <div className="ws-new-menu">
+            <button type="button" className="ws-nav-item ws-nav-item--new" onClick={() => setNewOpen((o) => !o)} disabled={busy} aria-expanded={newOpen} aria-haspopup="menu" title={rail ? t.new : undefined}>
+              <span className="ws-plus" aria-hidden="true"><Plus size={14} strokeWidth={2.6} /></span> <span>{busy ? t.creating : t.new}</span>
+            </button>
+            {newOpen && (
+              <div role="menu" className="ws-new-menu__list" onKeyDown={(e) => { if (e.key === "Escape") setNewOpen(false); }}>
+                <button type="button" role="menuitem" autoFocus className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(); }}><FileText size={16} aria-hidden="true" /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>
+                <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(newQuizArgs(locale)); }}><ListChecks size={16} aria-hidden="true" /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>
+                <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createLesson(); }}><BookOpenText size={16} aria-hidden="true" /><span><strong>{t.newLessonItem}</strong><small>{t.newLessonHelp}</small></span></button>
+                <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createCourse(); }}><GraduationCap size={16} aria-hidden="true" /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>
+              </div>
+            )}
+          </div>
 
           <div className="ws-sidebar__scroll">
+            <>
             <nav aria-label={t.library} className="grid gap-px mt-4">
               {link(libraryItem)}
-              {link(gamesItem)}
+              {link(savedItem)}
               {(quizzes?.length ?? 0) > 0 && link(legacyResultsItem)}
             </nav>
 
             {(() => {
               const sections = ([["Pinned", pinned], ["Recent", recent]] as const).filter(([, list]) => list.length > 0);
-              const row = (f: (typeof allForms)[number]) => {
-                const isPinned = pinnedIds.includes(f._id);
-                const title = f.title || t.untitled;
+              const row = (item: SidebarItem) => {
+                const isPinned = !!item.pinId && pinnedIds.includes(item.pinId);
+                const Icon = item.icon;
                 return (
-                  <div key={f._id} className="ws-nav-row ws-reveal-host">
-                    <IntentLink href={`/dashboard/forms/${f._id}`} className="ws-nav-item" aria-current={pathname.startsWith(`/dashboard/forms/${f._id}`) ? "page" : undefined} {...formIntentHandlers(f._id)}>
-                      <span className="ws-recent-icon" aria-hidden="true" style={{ background: /^#[0-9a-f]{6}$/i.test(f.theme.accent) ? f.theme.accent : "var(--primary)" }}>
-                        {title.trim().charAt(0).toUpperCase()}
-                      </span>
-                      <span>{title}</span>
+                  <div key={item.key} className="ws-nav-row ws-reveal-host">
+                    <IntentLink href={item.href} className="ws-nav-item" aria-current={pathname.startsWith(item.href) ? "page" : undefined} {...(item.formId ? formIntentHandlers(item.formId) : undefined)}>
+                      {Icon ? <Icon size={18} aria-hidden="true" /> : (
+                        <span className="ws-recent-icon" aria-hidden="true" style={{ background: item.color }}>{item.title.trim().charAt(0).toUpperCase()}</span>
+                      )}
+                      <span>{item.title}</span>
                     </IntentLink>
-                    <button type="button" className="ws-icon-button ws-reveal ws-nav-row__action" onClick={() => togglePin(f._id)}
-                      aria-label={t.pinLabel(title, isPinned)} title={isPinned ? t.unpin : t.pin}>
-                      {isPinned ? <PinOff size={14} /> : <Pin size={14} />}
-                    </button>
+                    {item.pinId && (
+                      <button type="button" className="ws-icon-button ws-reveal ws-nav-row__action" onClick={() => togglePin(item.pinId!)}
+                        aria-label={t.pinLabel(item.title, isPinned)} title={isPinned ? t.unpin : t.pin}>
+                        {isPinned ? <PinOff size={14} /> : <Pin size={14} />}
+                      </button>
+                    )}
                   </div>
                 );
               };
@@ -318,7 +399,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 </>
               );
             })()}
-
+            </>
           </div>
 
           <div className="ws-sidebar__footer">
@@ -328,19 +409,32 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 <Shield size={18} aria-hidden="true" /> <span>{t.admin}</span>
               </IntentLink>
             )}
-            <IntentLink href="/docs" className="ws-nav-item" title={rail ? t.docs : undefined}>
+            {/* Docs open in a new tab so work in progress stays put. */}
+            <a href="/docs" target="_blank" rel="noopener" className="ws-nav-item" title={rail ? t.docs : undefined}>
               <BookOpen size={18} aria-hidden="true" /> <span>{t.docs}</span>
-            </IntentLink>
+            </a>
             {/* Phones: Clerk's account popover opens outside the drawer, which the drawer treats as a
                 click away and hides. A plain row signs out without it. */}
             {mobile ? (
-              <button type="button" className="ws-nav-item" onClick={() => void clerk.signOut({ redirectUrl: "/" })}>
-                <LogOut size={18} aria-hidden="true" /> <span className="truncate">{t.signOut}{user?.fullName ? ` (${user.fullName})` : ""}</span>
-              </button>
+              <>
+                {/* Profile holds the app settings (appearance, language, account). */}
+                <IntentLink href="/dashboard/card" className="ws-nav-item" aria-current={pathname.startsWith("/dashboard/card") ? "page" : undefined}>
+                  {account ? <MemberAvatar seed={avatarSeed(account.username)} size={20} /> : <UserCog size={18} aria-hidden="true" />}
+                  <span>{user?.fullName || t.myCard}</span>
+                  <small className="ms-auto text-[13px] text-muted-foreground">{t.myCard}</small>
+                </IntentLink>
+                <button type="button" className="ws-nav-item" onClick={() => void clerk.signOut({ redirectUrl: "/" })}>
+                  <LogOut size={18} aria-hidden="true" /> <span>{t.signOut}</span>
+                </button>
+              </>
             ) : (
               <div className="ws-user">
-                <UserButton />
-                <span className="truncate text-[13px] text-muted-foreground">{user?.fullName || user?.username || ""}</span>
+                <IntentLink href="/dashboard/card" className="ws-user__card" title={t.myCard} aria-label={t.myCard}>
+                  {account && <MemberAvatar seed={avatarSeed(account.username)} size={28} />}
+                  <span className="truncate text-[13px] text-muted-foreground">{user?.fullName || user?.username || ""}</span>
+                </IntentLink>
+                <button type="button" className="ws-icon-button" title={t.account} aria-label={t.account} onClick={() => clerk.openUserProfile()}><UserCog size={16} aria-hidden="true" /></button>
+                <button type="button" className="ws-icon-button" title={t.signOut} aria-label={t.signOut} onClick={() => void clerk.signOut({ redirectUrl: "/" })}><LogOut size={16} aria-hidden="true" /></button>
               </div>
             )}
           </div>
@@ -394,7 +488,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </main>
         </div>
       </div>
-      {paletteUsed && <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} items={paletteItems} onNew={() => create()} />}
+      {paletteUsed && <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} items={paletteItems} onNew={() => void create()} />}
     </div>
   );
 }

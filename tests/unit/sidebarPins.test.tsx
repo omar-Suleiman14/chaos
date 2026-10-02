@@ -11,16 +11,22 @@ const forms = {
   shared: [],
 };
 const intent = vi.hoisted(() => ({ warmForm: vi.fn() }));
+const learnBackend = vi.hoisted(() => ({ query: vi.fn(), mutation: vi.fn(), loadMore: vi.fn() }));
 vi.mock("next/link", () => ({ default: ({ prefetch, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { prefetch?: boolean | null }) => <a {...props} data-prefetch={prefetch === null ? "auto" : String(prefetch)} /> }));
 vi.mock("@/lib/convexCache", () => ({
   formIntentHandlers: (id: string) => ({ onFocus: () => intent.warmForm(id), onPointerEnter: () => intent.warmForm(id), onTouchStart: () => intent.warmForm(id) }),
   useQuery: () => undefined,
 }));
+const courses = [{ id: "course1", title: "Night sky course", description: "", lessons: 2, visibility: "public", published: true, updatedAt: 1, archived: false }];
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/dashboard" }));
 vi.mock("@/components/ThemeProvider", () => ({ useTheme: () => ({ toggleTheme: vi.fn() }) }));
 vi.mock("@clerk/nextjs", () => ({ useUser: () => ({ isLoaded: false }), useClerk: () => ({ signOut: async () => {} }), UserButton: () => null }));
 vi.mock("convex/react", () => ({
-  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? forms : getFunctionName(ref) === "quizFunctions:getMyQuizzes" ? [] : undefined),
+  useConvex: () => learnBackend,
+  useConvexAuth: () => ({ isAuthenticated: false, isLoading: true }),
+  usePaginatedQuery: () => ({ results: [], status: "Exhausted", loadMore: learnBackend.loadMore }),
+  useQueries: () => ({}),
+  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? forms : getFunctionName(ref) === "quizFunctions:getMyQuizzes" ? [] : getFunctionName(ref) === "courses:listMine" ? courses : undefined),
   useMutation: () => vi.fn(),
 }));
 vi.mock("@/components/workspace/useCreateForm", () => ({ useCreateForm: () => ({ create: vi.fn(), busy: false }) }));
@@ -36,11 +42,14 @@ beforeEach(() => {
 describe("sidebar sections", () => {
   it("prefetches only an intended destination and preserves form focus handlers and link semantics", () => {
     const { container } = render(<DashboardLayout><p>Page</p></DashboardLayout>);
-    const links = Array.from(container.querySelectorAll("a.ws-nav-item"));
+    // Docs opens in a new tab, so it is a plain link outside the prefetch rules.
+    const newTab = screen.getByRole("link", { name: "Docs" });
+    expect(newTab).toHaveAttribute("target", "_blank");
+    const links = Array.from(container.querySelectorAll("a.ws-nav-item")).filter((link) => link !== newTab);
     expect(links.length).toBeGreaterThan(2);
     for (const link of links) expect(link).toHaveAttribute("data-prefetch", "false");
     expect(intent.warmForm).not.toHaveBeenCalled();
-    const docs = screen.getByRole("link", { name: "Docs" });
+    const docs = screen.getByRole("link", { name: "Archive" });
     fireEvent.mouseEnter(docs);
     expect(docs).toHaveAttribute("data-prefetch", "auto");
     const form = within(screen.getByRole("navigation", { name: "Recent" })).getByRole("link", { name: "Event registration" });
@@ -48,6 +57,7 @@ describe("sidebar sections", () => {
     expect(form).toHaveAttribute("data-prefetch", "auto");
     expect(form).toHaveAttribute("href", "/dashboard/forms/f2");
     expect(intent.warmForm).toHaveBeenCalledExactlyOnceWith("f2");
+    expect(learnBackend.mutation).not.toHaveBeenCalled();
     for (const link of links.filter((link) => link !== docs && link !== form)) expect(link).toHaveAttribute("data-prefetch", "false");
     const current = links.find((link) => link.getAttribute("aria-current") === "page")!;
     fireEvent.focus(current);
@@ -65,11 +75,20 @@ describe("sidebar sections", () => {
     expect(screen.queryByRole("navigation", { name: "Pinned" })).toBeNull();
   });
 
+  it("pins a course like a form", () => {
+    render(<DashboardLayout><p>Page</p></DashboardLayout>);
+    fireEvent.click(screen.getByRole("button", { name: "Pin Night sky course" }));
+    const pinned = screen.getByRole("navigation", { name: "Pinned" });
+    expect(within(pinned).getByRole("link", { name: /Night sky course/ })).toHaveAttribute("href", "/dashboard/courses/course1");
+    expect(within(screen.getByRole("navigation", { name: "Recent" })).queryByRole("link", { name: /Night sky course/ })).toBeNull();
+    expect(JSON.parse(localStorage.getItem("chaos.ui.pinned")!)).toEqual(["course1"]);
+  });
+
   it("folds Recent to the bottom and opens it again", () => {
     const { container } = render(<DashboardLayout><p>Page</p></DashboardLayout>);
-    fireEvent.click(screen.getByRole("button", { name: "Recent, 2. Fold" }));
+    fireEvent.click(screen.getByRole("button", { name: "Recent, 3. Fold" }));
     expect(screen.queryByRole("navigation", { name: "Recent" })).toBeNull();
-    const folded = screen.getByRole("button", { name: "Recent, 2. Open" });
+    const folded = screen.getByRole("button", { name: "Recent, 3. Open" });
     expect(folded).toHaveAttribute("aria-expanded", "false");
     expect(container.querySelector(".ws-sidebar__folded")).toContainElement(folded);
     fireEvent.click(folded);

@@ -1,3 +1,5 @@
+import { setOwnedUsername } from "./links";
+import { reserveUsername, usernameOwner } from "./usernameModel";
 import { consumeCreation } from "./plans";
 import { DEFAULT_HALF_MARK_THRESHOLD, clampThreshold, gradeMulti, gradeSingle, gradeWritten, parseMultiAnswer } from "./grading";
 import { internal } from "./_generated/api";
@@ -10,6 +12,7 @@ import type { Id } from "./_generated/dataModel";
 import type { Doc } from "./_generated/dataModel";
 import { publicationErrors, quizQuestionFields } from "./quizModel";
 import { emitQuizAttemptEvent, emitQuizStatusEvent } from "./webhookEvents";
+import { consumeRate } from "./serverUtils";
 import {
   canViewQuizAsRespondent,
   getQuizIfOwner,
@@ -25,14 +28,13 @@ import {
 
 /**
  * A quiz's completed attempts, oldest first (the order the by_quiz index gives).
- * Reads only completed rows through the status index, so a query built on it is neither
- * charged for nor re-run by answers landing on attempts that are still in progress.
+ * Reads only completed rows through the status index, bounded to 500 to prevent unbounded reads.
  */
-async function completedSessions(ctx: QueryCtx, quizId: Id<"quizzes">): Promise<Doc<"quizSessions">[]> {
+async function completedSessions(ctx: QueryCtx, quizId: Id<"quizzes">, limit = 500): Promise<Doc<"quizSessions">[]> {
   const rows = await ctx.db
     .query("quizSessions")
     .withIndex("by_quizId_and_status_and_score", (q) => q.eq("quizId", quizId).eq("status", "completed"))
-    .collect();
+    .take(limit);
   return rows.sort((a, b) => a._creationTime - b._creationTime);
 }
 
@@ -77,26 +79,9 @@ export const getOrCreateUser = mutation({
       if (identity.email && identity.email !== existing.email) updates.email = identity.email;
       if (identity.pictureUrl && identity.pictureUrl !== existing.imageUrl) updates.imageUrl = identity.pictureUrl;
 
-      // A username chosen in Chaos wins over the sign-in provider's nickname.
-      const newUsername = existing.usernameChosen ? undefined : identity.nickname?.toLowerCase().replace(/[^a-z0-9_.-]+/g, "");
-      if (newUsername && newUsername !== existing.username) {
-        updates.username = newUsername;
-      }
-
-      if (Object.keys(updates).length > 0) {
-        await ctx.db.patch("users", existing._id, updates);
-
-        // Update all quizzes to reflect the new username url
-        if (updates.username) {
-          const quizzes = await ctx.db
-            .query("quizzes")
-            .withIndex("by_creator", (q) => q.eq("creatorId", identity.subject))
-            .collect();
-          for (const quiz of quizzes) {
-            await ctx.db.patch("quizzes", quiz._id, { creatorUsername: newUsername });
-          }
-        }
-      }
+      // Identity-provider sync must not rename public URLs or rewrite historical quizzes.
+      await reserveUsername(ctx, existing.username, existing.clerkId);
+      if (Object.keys(updates).length > 0) await ctx.db.patch("users", existing._id, updates);
       return existing._id;
     }
 
@@ -112,11 +97,19 @@ export const getOrCreateUser = mutation({
 /** First sign-in, from the web app or from a connected app such as ChatGPT. */
 export async function insertNewUser(ctx: MutationCtx, profile: { clerkId: string; name: string; email: string; imageUrl?: string }) {
   const planExpiresAt = Date.now() + 30 * 86_400_000;
+  let username = "";
+  // Bounded retry; indexed reads participate in the transaction's uniqueness checks.
+  for (let attempt = 0; attempt < 12; attempt++) {
+    const candidate = "user" + Math.floor(10000 + Math.random() * 90000);
+    if (await usernameOwner(ctx, candidate) === null) { username = candidate; break; }
+  }
+  if (!username) throw new Error("USERNAME_UNAVAILABLE: Please retry account setup.");
+  await reserveUsername(ctx, username, profile.clerkId);
   const userId = await ctx.db.insert("users", {
     clerkId: profile.clerkId,
     name: profile.name,
     email: profile.email,
-    username: "user" + Math.floor(10000 + Math.random() * 90000),
+    username,
     imageUrl: profile.imageUrl,
     // Every new account receives one 30-day Pro trial.
     plan: "pro",
@@ -144,31 +137,9 @@ export const getCurrentUser = query({
 
 export const setUsername = mutation({
   args: { username: v.string() },
+  returns: v.boolean(),
   handler: async (ctx, args) => {
-    const { identity, user } = await requireActiveUser(ctx);
-    if (!user) throw new Error("User not found");
-
-    const newUsername = args.username.trim().toLowerCase().replace(/[^a-z0-9_.-]+/g, "");
-    if (newUsername.length < 3) throw new Error("Username too short");
-
-    const existing = await ctx.db
-      .query("users")
-      .withIndex("by_username", (q) => q.eq("username", newUsername))
-      .first();
-    if (existing && existing._id !== user._id) {
-      throw new Error("Username already taken");
-    }
-
-    await ctx.db.patch("users", user._id, { username: newUsername, usernameChosen: true });
-
-    const quizzes = await ctx.db
-      .query("quizzes")
-      .withIndex("by_creator", (q) => q.eq("creatorId", identity.subject))
-      .collect();
-    for (const quiz of quizzes) {
-      await ctx.db.patch("quizzes", quiz._id, { creatorUsername: newUsername });
-    }
-
+    await setOwnedUsername(ctx, args);
     return true;
   },
 });
@@ -382,7 +353,7 @@ async function cascadeDeleteQuiz(ctx: MutationCtx, quizId: Id<"quizzes">) {
   const questions = await ctx.db
     .query("questions")
     .withIndex("by_quiz", (q) => q.eq("quizId", quizId))
-    .collect();
+    .take(200);
   for (const question of questions) {
     await ctx.db.delete("questions", question._id);
   }
@@ -390,7 +361,7 @@ async function cascadeDeleteQuiz(ctx: MutationCtx, quizId: Id<"quizzes">) {
   const sessions = await ctx.db
     .query("quizSessions")
     .withIndex("by_quiz", (q) => q.eq("quizId", quizId))
-    .collect();
+    .take(200);
   for (const session of sessions) {
     await ctx.db.delete("quizSessions", session._id);
   }
@@ -398,7 +369,7 @@ async function cascadeDeleteQuiz(ctx: MutationCtx, quizId: Id<"quizzes">) {
   const aiJobs = await ctx.db
     .query("aiJobs")
     .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
-    .collect();
+    .take(50);
   for (const job of aiJobs) {
     if (job.quizId === quizId) {
       await ctx.db.patch("aiJobs", job._id, { quizId: undefined });
@@ -943,10 +914,9 @@ export const startQuizSession = mutation({
     if (!name) throw new Error("NAME_REQUIRED: Enter a name to start.");
 
     const quiz = await ctx.db.get("quizzes", args.quizId);
-    if (!quiz) throw new Error("QUIZ_NOT_FOUND: This quiz no longer exists.");
-    if (quiz.isBanned || await creatorRestricted(ctx, quiz.creatorId)) throw new Error("QUIZ_BANNED: This quiz is unavailable.");
-    if (!quiz.isPublished) {
-      throw new Error("QUIZ_UNPUBLISHED: This quiz is not accepting responses right now.");
+    // Missing, unpublished, banned and restricted look the same, so a quiz ID doesn't reveal private state.
+    if (!quiz || !quiz.isPublished || quiz.isBanned || await creatorRestricted(ctx, quiz.creatorId)) {
+      throw new Error("QUIZ_UNAVAILABLE: This quiz isn't available.");
     }
 
     // Enforce 100-player limit for non-elevated quizzes
@@ -967,6 +937,20 @@ export const startQuizSession = mutation({
     }
 
     const now = Date.now();
+    const identity = await ctx.auth.getUserIdentity();
+    const playerKey = identity?.subject ?? name.trim().toLowerCase();
+    await consumeRate(ctx, `quiz:start:${args.quizId}:${playerKey}`, 10, 60_000);
+
+    const activeSessions = await ctx.db
+      .query("quizSessions")
+      .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
+      .filter((q) => q.eq(q.field("status"), "in_progress"))
+      .take(20);
+    const playerActive = activeSessions.filter((s) => s.playerName.trim().toLowerCase() === name.trim().toLowerCase());
+    if (playerActive.length >= 5) {
+      throw new Error("CAP_REACHED: You have too many in-progress attempts for this quiz. Finish or wait before starting a new one.");
+    }
+
     const recent = await ctx.db
       .query("quizSessions")
       .withIndex("by_quiz_started", (q) =>
@@ -1017,7 +1001,10 @@ export const gradeAnswer = mutation({
     }
 
     const existingAnswer = session.answers.find((answer) => answer.questionId === args.questionId);
-    const withheld = resultsWithheld(await ctx.db.get("quizzes", session.quizId));
+    const sessionQuiz = await ctx.db.get("quizzes", session.quizId);
+    // Unpublishing or moderation stops attempts already in progress.
+    if (!sessionQuiz || !sessionQuiz.isPublished || sessionQuiz.isBanned) throw new Error("QUIZ_UNAVAILABLE: This quiz isn't available.");
+    const withheld = resultsWithheld(sessionQuiz);
     if (existingAnswer && withheld) {
       return { isCorrect: false, pointsEarned: 0, totalPointsPossible: question.points, alreadyAnswered: true, withheld: true, correctAnswer: undefined, explanation: undefined };
     }

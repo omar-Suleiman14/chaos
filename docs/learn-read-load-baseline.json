@@ -1,0 +1,20 @@
+{
+  "measuredAt": "2026-09-30T17:42:20.209Z",
+  "label": "Learn indexed search development baseline",
+  "host": "superb-zebra-196.eu-west-1.convex.cloud",
+  "requests": 100,
+  "concurrency": 5,
+  "elapsedMs": 2602,
+  "requestsPerSecond": 38.44,
+  "latencyMs": {
+    "p50": 102,
+    "p95": 201,
+    "p99": 379,
+    "max": 401
+  },
+  "statuses": {
+    "200": 100
+  },
+  "errors": {},
+  "limitation": "Controlled development sample; not a production capacity guarantee. Report excludes payloads, paths, headers and response content."
+}

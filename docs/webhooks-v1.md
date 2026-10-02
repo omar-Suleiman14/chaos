@@ -127,6 +127,19 @@ Webhooks created by a connected app can never include answers.
 `previousStatus` is sent for `form.closed` and `form.reopened`.
 `sharePath` is relative to the Chaos app origin.
 
+**Learn events.** `lesson.updated`, `lesson.published`, `lesson.forked`,
+`lesson.archived`, `lesson.unpublished`, `collection.updated`,
+`collection.published` and `curriculum.mapping_changed` carry ids and the
+revision only, never lesson content, notes or reader data. They are sent only
+for lessons the subscription selected explicitly: an `all` subscription stays
+forms and quizzes only. A connection's subscription also needs `lessons:read`
+and the lesson selected for that connection; collection events are not sent to
+connections yet.
+
+```json
+{ "itemRef": "lesson_…", "lessonId": "…", "revision": 7, "versionId": "…" }
+```
+
 ## Request
 
 ```

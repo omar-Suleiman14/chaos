@@ -8,10 +8,18 @@ import DashboardLayout from "@/app/dashboard/layout";
 import { useModal } from "@/components/workspace/useModal";
 
 const mocks = vi.hoisted(() => ({ push: vi.fn(), toggleTheme: vi.fn() }));
+const learnBackend = vi.hoisted(() => ({ query: vi.fn(), mutation: vi.fn(), loadMore: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }), usePathname: () => "/dashboard" }));
 vi.mock("@/components/ThemeProvider", () => ({ useTheme: () => ({ toggleTheme: mocks.toggleTheme }) }));
 vi.mock("@clerk/nextjs", () => ({ useUser: () => ({ isLoaded: false }), useClerk: () => ({ signOut: async () => {} }), UserButton: () => null }));
-vi.mock("convex/react", () => ({ useQuery: () => undefined, useMutation: () => vi.fn() }));
+vi.mock("convex/react", () => ({
+  useConvex: () => learnBackend,
+  useConvexAuth: () => ({ isAuthenticated: false, isLoading: true }),
+  usePaginatedQuery: () => ({ results: [], status: "Exhausted", loadMore: learnBackend.loadMore }),
+  useQueries: () => ({}),
+  useQuery: () => undefined,
+  useMutation: () => vi.fn(),
+}));
 vi.mock("@/components/workspace/useCreateForm", () => ({ useCreateForm: () => ({ create: vi.fn(), busy: false }) }));
 vi.mock("@/components/NotificationBell", () => ({ default: () => null }));
 vi.mock("@/components/ThemeToggle", () => ({ ThemeToggle: () => null }));

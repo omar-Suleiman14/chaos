@@ -1,0 +1,35 @@
+import { expect, it } from "vitest";
+import { api } from "../../convex/_generated/api";
+import { emptyDefinition } from "../../convex/formLogic";
+import { createTestConvex } from "./setup";
+import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
+
+it("completes draft/edit/publication/fork/assessment/curriculum lifecycle without rewriting the parent", async () => {
+  const t = createTestConvex(), owner = t.withIdentity(creatorIdentity), student = t.withIdentity(otherCreatorIdentity);
+  await owner.mutation(api.quizFunctions.getOrCreateUser, {});
+  await student.mutation(api.quizFunctions.getOrCreateUser, {});
+  await t.run(ctx => ctx.db.insert("admins", { clerkId: creatorIdentity.subject, email: creatorIdentity.email!, grantedAt: Date.now() }));
+  const metadata = { title: "Portal pressure", description: "Mechanism", language: "en", tags: [], indexing: "index" as const };
+  const lessonId = await owner.mutation(api.lessons.create, { metadata });
+  const document = { schemaVersion: 1 as const, blocks: [{ id: "mechanism", type: "paragraph" as const, text: "Portal pressure increases.", citations: [], conceptIds: [] }] };
+  expect(await owner.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: 0, document })).toBe(1);
+  const published = await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 1, visibility: "public" });
+  expect(published.ok).toBe(true); if (!published.ok) throw new Error("Publication failed");
+  const forkId = await student.mutation(api.lessons.fork, { lessonId, versionId: published.versionId });
+  const quiz = emptyDefinition("Assessment");
+  quiz.quiz = { enabled: true };
+  quiz.fields = [{ id: "q", type: "choice", label: "Pressure increases?", required: true, options: [{ id: "yes", label: "Yes" }, { id: "no", label: "No" }], quiz: { correctOptionIds: ["yes"], points: 1 } }];
+  const formId = await student.mutation(api.forms.createForm, { definition: quiz });
+  const relationshipId = await student.mutation(api.learnCollections.attachAssessment, { lessonId: forkId, asset: { kind: "form", id: formId }, label: "Practice", order: 0 });
+  const institutionId = await owner.mutation(api.curricula.createInstitution, { key: "test-school", name: "Test school" });
+  const programId = await owner.mutation(api.curricula.createProgram, { institutionId, key: "science", name: "Science" });
+  const versionId = await owner.mutation(api.curricula.createVersion, { programId, key: "2026", name: "2026" });
+  const nodeId = await owner.mutation(api.curricula.createNode, { versionId, parentId: null, key: "portal", name: "Portal pressure", kind: "module", conceptKeys: [] });
+  await student.mutation(api.curricula.createLessonMapping, { lessonId: forkId, versionId, nodeId, blockIds: ["mechanism"], conceptKeys: [] });
+  const fork = await student.query(api.lessons.getDraft, { lessonId: forkId });
+  expect(fork.parentVersionId).toBe(published.versionId);
+  expect((await student.query(api.learnCollections.listAssessments, { lessonId: forkId }))[0]._id).toBe(relationshipId);
+  expect((await student.query(api.curricula.listLessonMappings, { lessonId: forkId, paginationOpts: { numItems: 10, cursor: null } })).page).toHaveLength(1);
+  expect((await t.query(api.lessons.getPublished, { lessonId }))?.document).toEqual(document);
+  await expect(owner.mutation(api.lessons.saveDraft, { lessonId: forkId, expectedRevision: fork.revision, document })).rejects.toThrow();
+});

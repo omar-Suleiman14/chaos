@@ -102,21 +102,6 @@ export async function getSessionIfOwnerOrAdmin(
   return null;
 }
 
-export async function requireAIJobOwner(ctx: DbCtx, jobId: Id<"aiJobs">): Promise<Doc<"aiJobs">> {
-  const { identity } = await requireActiveUser(ctx);
-  const job = await ctx.db.get("aiJobs", jobId);
-  if (!job || job.clerkId !== identity.subject) throw new Error("AI job not found or unauthorized");
-  return job;
-}
-
-export async function getAIJobIfOwner(ctx: DbCtx, jobId: Id<"aiJobs">): Promise<Doc<"aiJobs"> | null> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) return null;
-  const job = await ctx.db.get("aiJobs", jobId);
-  if (!job || job.clerkId !== identity.subject) return null;
-  return job;
-}
-
 export async function canViewQuizAsRespondent(ctx: DbCtx, quiz: Doc<"quizzes">): Promise<boolean> {
   const identity = await ctx.auth.getUserIdentity();
   const ownerOrAdmin =
@@ -143,12 +128,17 @@ export function isFormOwner(form: Doc<"forms">, identity: Identity | null): bool
 export async function formRoleFor(ctx: DbCtx, form: Doc<"forms">, identity: Identity | null): Promise<FormRole | null> {
   if (!identity) return null;
   if (form.ownerId === identity.subject) return "owner";
-  const email = identity.email?.toLowerCase();
+  const emailVerified = (identity as any).emailVerified !== false;
+  const email = emailVerified ? identity.email?.toLowerCase() : undefined;
   const collaborators = await ctx.db
     .query("formCollaborators")
     .withIndex("by_formId", (q) => q.eq("formId", form._id))
     .take(100);
-  const match = collaborators.find((c) => c.userId ? c.userId === identity.subject : (!!email && c.email === email));
+  const match = collaborators.find((c) => {
+    if (c.status === "declined") return false;
+    if (c.userId) return c.userId === identity.subject;
+    return !!email && c.email.toLowerCase() === email;
+  });
   return match ? match.role : null;
 }
 
@@ -188,8 +178,12 @@ export async function creatorRestricted(ctx: DbCtx, clerkId: string): Promise<bo
   const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", clerkId)).first();
   return !!(user?.isBanned || user?.suspendedUntil);
 }
-/** Mutations pass now for exact enforcement if an expiry job is delayed. */
-export function hasPro(user: Doc<"users"> | null, now?: number): boolean {
+/** A paid Business seat or admin grant (reporting only). Mutations pass now for exact expiry. */
+export function isPaidPlan(user: Doc<"users"> | null, now?: number): boolean {
   if (user?.plan !== undefined) return user.plan === "pro" && !!user.planExpiresAt && (now === undefined || user.planExpiresAt > now);
   return !!user?.isElevated;
+}
+/** Every account has every feature: Personal is free, Business pays per seat for business use. Bans are checked separately. */
+export function hasPro(user: Doc<"users"> | null, _now?: number): boolean {
+  return !!user;
 }

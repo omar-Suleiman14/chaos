@@ -16,6 +16,7 @@ export default function ErrorPage({ error, reset, retry }: { error: Error & { di
       primary={{ label: "Try again", onClick: retry ?? reset }}
       secondary={{ label: "Go home", href: "/" }}
       digest={error.digest}
+      showStatus
     />
   );
 }

@@ -106,7 +106,8 @@ text or any respondent data; managing collaborators; theme, image and file
 assets; authoring branching logic, translations, endings or calculations
 (PATCH preserves them); rich text and math (plain text only); file-upload
 questions; bulk endpoints; OAuth or any sign-in other than connection tokens;
-AI generation of any kind.
+AI generation of any kind. Lessons, folders and curricula are served by version 2; see
+[Learn (version 2)](#learn-version-2).
 
 | Status | Code | Meaning |
 | --- | --- | --- |
@@ -528,3 +529,140 @@ now**: it is never returned again. Replaying the same key and body returns
 - Webhooks are a hint to refresh, not a replacement for reading: on an event,
   fetch the item or summary again. Keep polling on open so a missed or late
   delivery never leaves stale data.
+
+## Learn (version 2)
+
+Lessons, folders, curricula, study progress and community lessons are served
+under `/api/integrations/v2/`, next to the unchanged v1 routes. The same
+connection token works for both; v2 responses carry `Chaos-Api-Version: 2`
+and `Cache-Control: no-store`. A request that sends any other
+`Chaos-Api-Version` gets `400 UNSUPPORTED_VERSION`.
+
+The principles are the same as v1. The owner chooses what a connection reaches.
+Everything a connection writes is a **private draft**. Nothing is published,
+made public or deleted through the API. Personal notes, highlights, other
+people's progress and respondent data are never returned. The end-to-end user
+flow is in [learn-integration.md](learn-integration.md).
+
+Status: implemented with contract tests (`tests/integration/learn*`); not yet
+exercised by a live Max client.
+
+### Selection and scopes
+
+| Scope | Allows |
+| --- | --- |
+| `lessons:read` | Read selected lessons: details, definition and outline. |
+| `lessons:create` | Create lesson drafts (`POST /drafts`). A draft the connection created stays reachable by it. |
+| `lessons:update` | Replace or edit blocks of selected drafts; unlink a lesson from the connection. |
+| `sources:read` | Read metadata (title, kind, author, link) of selected sources. Never file bytes. |
+| `folders:read` / `folders:update` | List folders and the selected assets inside them; create and move folders, add reachable assets. |
+| `curricula:read` / `curricula:map` | Browse the curriculum directory; map reachable lessons to curriculum nodes. |
+| `progress:read` / `progress:write` | The owner's own study progress on selected lessons. |
+| `tutor:context` | Assemble bounded text of a selected lesson for studying elsewhere. |
+| `collections:read` | Read the title and ordered lesson references of selected, published collections. Lessons still need their own selection. |
+| `community:read` / `community:save` / `community:fork` | Search public lessons; save one to the owner's library; fork one as a private copy. |
+
+Lessons are selected one by one in **Connections** (stored as `lesson_<id>`
+references next to `form_…` and `quiz_…`). `access: "all"` keeps meaning
+all forms and quizzes; it never grants lessons. Folder listings show folder
+names, but folder contents list only assets the connection may already reach.
+An unselected or missing lesson returns `404 NOT_FOUND`, so a connection
+cannot probe for ids.
+
+### Lesson document
+
+A lesson is `{ metadata, document }`. `metadata` has `title`, `description`,
+`language`, `tags` and optional `license`, `coverUrl`, `authorDisplay`,
+`indexing`. `document` is `{ "schemaVersion": 1, "blocks": [...] }`; every
+block has a stable `id`, `citations` and `conceptIds`. Text blocks are
+`paragraph`, `heading` (`level` 1–3), `list` (`bullet`/`number`/`check`),
+`callout`, `code`, `quote` and `toggle`, with plain `text` and optional
+`inline` runs (bold, italic, underline, strike, code, colours, links). Media
+blocks (`image`, `youtube`) and citations refer to sources by id; those
+sources must be selected for the connection and need `sources:read`. Limits:
+500 blocks, 300 KB per document, 350 KB per request.
+
+### Endpoints
+
+| Method and path | Scope | Notes |
+| --- | --- | --- |
+| `GET /capabilities` (alias `/connection`) | none | Scopes, limits and supported kinds. |
+| `GET /lessons/{ref}` (alias `/items/{ref}`) | `lessons:read` | Add `/definition` for blocks or `/outline` for headings; `offset`/`limit` page large documents. |
+| `POST /drafts` | `lessons:create` | Body `{ "kind": "lesson", metadata, document?, source? }`. Requires `Idempotency-Key`. |
+| `PATCH /lessons/{ref}` | `lessons:update` | Body `{ document, metadata? }`. Requires `If-Match` (lesson revision) and `Idempotency-Key`. |
+| `PATCH /lessons/{ref}/blocks` | `lessons:update` | Body `{ operations: [...] }`, 1–100 of `append`, `update`, `move`, `delete`. Same headers. |
+| `DELETE /lessons/{ref}/link` | `lessons:update` | Removes the connection's access and link. The lesson and its versions stay. |
+| `GET /sources/{ref}` | `sources:read` | Metadata only. |
+| `GET /collections/{ref}` | `collections:read` | Published snapshot: title, description, language, tags and ordered `lesson_…`/`source_…` references. |
+| `GET /folders?parentId=…`, `GET /folders/contents?folderId=…` | `folders:read` | `cursor`, `limit` (1–100). |
+| `POST /folders`, `/folders/move`, `/folders/members` | `folders:update` | Requires `Idempotency-Key`. |
+| `GET /curricula/{institutions,programs,versions,nodes,mappings}` | `curricula:read` | Filter by the parent id (`institutionId`, `programId`, `versionId`, `lessonId`). |
+| `POST /curricula/mappings` | `curricula:map` | `{ lessonId, versionId, nodeId, conceptKeys, blockIds }`. |
+| `GET /progress/lesson_{id}` | `progress:read` | Optional `versionId` or `revision`. |
+| `POST /progress/lesson_{id}` | `progress:write` | `{ versionId?, revision?, operation }`; operation `start`, or `complete` with `sessionSeq`, `writeSeq`, `blockIds`. |
+| `POST /context/assemble` | `tutor:context` | Bounded lesson text; curriculum and progress need their own scopes too. |
+| `GET /community/search`, `/community/directory` | `community:read` | `text`, `limit`, `cursor`. |
+| `POST /community/save`, `/community/fork` | `community:save` / `community:fork` | Fork requires `Idempotency-Key` and creates a private draft with attribution. |
+
+Unknown query parameters or body fields are rejected with
+`400 VALIDATION_FAILED`.
+
+### Example: notes to a lesson draft
+
+```http
+POST /api/integrations/v2/drafts
+Authorization: Bearer chaos_…
+Idempotency-Key: max-page-8f2c-v1
+Content-Type: application/json
+
+{
+  "kind": "lesson",
+  "metadata": { "title": "Portal hypertension", "description": "", "language": "en", "tags": ["GIT", "liver"] },
+  "document": { "schemaVersion": 1, "blocks": [
+    { "id": "b1", "type": "heading", "level": 2, "text": "Causes", "citations": [], "conceptIds": [] },
+    { "id": "b2", "type": "list", "style": "bullet", "text": "Cirrhosis", "citations": [], "conceptIds": [] }
+  ] },
+  "source": { "type": "max_page", "id": "8f2c", "title": "GIT Notes", "url": "https://max.example/p/8f2c" }
+}
+```
+
+The response holds the new `lesson_…` item with its `revision`. The lesson is
+private; the owner sees where it came from in Chaos and publishes it there.
+
+### Example: edit blocks of a draft
+
+```http
+PATCH /api/integrations/v2/lessons/lesson_k57…/blocks
+Authorization: Bearer chaos_…
+If-Match: "4"
+Idempotency-Key: max-page-8f2c-v2
+Content-Type: application/json
+
+{ "operations": [
+  { "action": "update", "blockId": "b2", "block": { "id": "b2", "type": "list", "style": "bullet", "text": "Cirrhosis (most common)", "citations": [], "conceptIds": [] } },
+  { "action": "append", "blocks": [ { "id": "b3", "type": "paragraph", "text": "See also: varices.", "citations": [], "conceptIds": [] } ] }
+] }
+```
+
+If the owner turned on **Ask before applying lesson changes** for the connection,
+the response is `202` with `{ "proposal": { "id": "proposal_…", "status": "pending" } }`
+and nothing changes until the owner accepts it in Connections (block edits are
+re-applied on top if the owner edited in between). Otherwise the draft is
+updated directly.
+
+If the lesson changed since revision 4, the request fails with `409` and
+nothing is written; read the lesson again and resend. Archived or moderated
+lessons return `409 NOT_A_DRAFT`.
+
+### Activity
+
+Each write is logged on the connection and shown on the Connections screen in
+plain words, for example "Max created draft “Portal hypertension”" and "Max
+updated draft “Portal hypertension” (3 times)". Logged actions include
+`lesson.draft_created`, `lesson.draft_updated`, `lesson.unlinked` and
+`lesson.selection_updated`.
+
+### Not in v2 yet
+
+Listing all lessons (only selected ones are reachable), publishing, changing
+visibility, deleting, writing collections, raw editor JSON and discussions.

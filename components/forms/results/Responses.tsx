@@ -253,6 +253,7 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
                         <span className="ws-rtable__status">
                           {r.status === "partial" ? <span className="ws-pill">{t.statusPartial}</span> : fresh ? <span className="ws-pill ws-pill--blue"><span className="ws-dot" aria-hidden="true" />{t.new}</span> : <span className="ws-pill">{t.statusCompleted}</span>}
                           {(r.editCount ?? 0) > 0 && <span className="ws-pill ws-pill--purple">{t.editedTag}</span>}
+                          {r.hidden && Object.entries(r.hidden).slice(0, 1).map(([k, v]) => <span key={k} className="ws-pill" title={`${k}=${v}`} dir="ltr">{k}={v.slice(0, 24)}</span>)}
                           {r.tags.slice(0, 2).map((tag) => <span key={tag} className="ws-pill ws-tag">{tag}</span>)}
                           {r.tags.length > 2 && <span className="ws-pill ws-tag">+{r.tags.length - 2}</span>}
                         </span>

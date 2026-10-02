@@ -1,4 +1,6 @@
+import { homeworkUploadAccess } from "./homeworkUploadAccess";
 import { hasPro } from "./authz";
+import { planLimits } from "../lib/planCatalog";
 import { v } from "convex/values";
 import { env, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { internal } from "./_generated/api";
@@ -14,8 +16,10 @@ import { consumeRate, notify, randomCode, randomHex, sha256Hex } from "./serverU
 import { ruleHolds, visibleFieldIds } from "./formLogic";
 import { gradeQuiz, publicQuizDefinition } from "./formQuiz";
 import { emitWebhookEvent, formResponseData } from "./webhookEvents";
+import { releasedDefinition, releasedFieldIds, nextFieldReleaseAt, releasedAnswers, assertReleasedAnswers } from "./formRelease";
+import { captureHidden, captureTypedHidden, checkEmailRules } from "./formRespondent";
 
-export const DEFAULT_FORM_RESPONSE_LIMIT = 1000;
+export const DEFAULT_FORM_RESPONSE_LIMIT = planLimits.free.responsesPerForm;
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
 const ALLOWED_UPLOAD_TYPES = [
   "application/pdf", "image/png", "image/jpeg", "image/webp", "image/gif", "text/plain", "text/csv",
@@ -52,14 +56,18 @@ async function currentVersion(ctx: Ctx, form: Doc<"forms">) {
 export async function responseCap(ctx: Ctx, form: Doc<"forms">, now?: number): Promise<number | null> {
   const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", form.ownerId)).first();
   const config = await ctx.db.query("globalConfig").first();
-  const platform = hasPro(owner, now) ? null : config?.formResponseLimit ?? DEFAULT_FORM_RESPONSE_LIMIT;
+  const platform = hasPro(owner, now) ? planLimits.pro.responsesPerForm : config?.formResponseLimit ?? DEFAULT_FORM_RESPONSE_LIMIT;
   const own = form.settings.responseLimit ?? null;
   if (platform === null) return own;
   return own === null ? platform : Math.min(own, platform);
 }
 
+async function ownerOf(ctx: Ctx, form: Doc<"forms">) {
+  return await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", form.ownerId)).first();
+}
+
 export async function ownerBanned(ctx: Ctx, form: Doc<"forms">) {
-  const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", form.ownerId)).first();
+  const owner = await ownerOf(ctx, form);
   return !!(form.isBanned || owner?.isBanned || owner?.suspendedUntil);
 }
 
@@ -92,7 +100,9 @@ export const getPublicForm = query({
     if (!version) return { state: "unavailable" as const };
     const def = version.definition;
     const schedule = { opensAt: form.settings.opensAt ?? null, closesAt: form.settings.closesAt ?? null, timezone: form.settings.timezone ?? null };
-    const base = { title: def.title, translations: def.translations, defaultLanguage: def.defaultLanguage, languages: def.languages, theme: def.theme, allowIndexing: form.settings.allowIndexing };
+    // Branding is hidden only while the owner still has Pro; a lapsed plan brings it back.
+    const hideBranding = !!form.settings.hideBranding && hasPro(await ownerOf(ctx, form), Date.now());
+    const base = { title: def.title, translations: def.translations, defaultLanguage: def.defaultLanguage, languages: def.languages, theme: def.theme, allowIndexing: form.settings.allowIndexing, hideBranding };
     // A valid edit link may keep working after closing when the creator allowed it; new responses stay blocked.
     const editingClosed = !!args.editToken && form.settings.allowEditAfterSubmit && !!form.settings.allowEditAfterClose && !!(await responseForEditToken(ctx, form, args.editToken));
     const now = Date.now();
@@ -106,6 +116,11 @@ export const getPublicForm = query({
     if (!editingClosed && cap !== null && form.responseCount >= cap) return { state: "full" as const, ...base, message: form.settings.closedMessage ?? null };
     const identity = await ctx.auth.getUserIdentity();
     if (form.settings.access === "signed_in" && !identity) return { state: "sign_in" as const, ...base };
+    if (form.settings.access === "signed_in") {
+      const check = checkEmailRules(form.settings, identity);
+      // The allow-list stays private; the respondent only learns which account they used.
+      if (check !== "ok") return { state: "restricted" as const, ...base, reason: check, email: identity?.email ?? null };
+    }
     if (form.settings.access === "code" && !(await accessCodeMatches(ctx, form, args.accessCode))) {
       return { state: "code" as const, ...base, invalidCode: !!args.accessCode };
     }
@@ -122,7 +137,9 @@ export const getPublicForm = query({
       ...base,
       shareId: form.shareId,
       version: version.version,
-      definition: publicQuizDefinition(def as FormDefinition),
+      definition: publicQuizDefinition(releasedDefinition(def as FormDefinition, now)),
+      nextFieldReleaseAt: nextFieldReleaseAt(def as FormDefinition, now),
+      serverTime: now,
       ...schedule,
       allowEditAfterClose: !!form.settings.allowEditAfterClose,
       closedMessage: form.settings.closedMessage ?? null,
@@ -130,6 +147,7 @@ export const getPublicForm = query({
       allowResumeLink: form.settings.allowResumeLink,
       allowEditAfterSubmit: form.settings.allowEditAfterSubmit,
       showReceipt: form.settings.showReceipt,
+      hiddenFields: [...(form.settings.hiddenFields ?? []), ...(form.settings.hiddenParameters ?? []).map(d => d.name)],
       signedIn: !!identity,
       alreadyResponded,
     };
@@ -183,6 +201,11 @@ async function assertCanCollect(ctx: MutationCtx, form: Doc<"forms"> | null, acc
   if (when === "closed" && !skipClosing) throw new Error("FORM_CLOSED: This form closed and is no longer accepting responses.");
   const identity = await ctx.auth.getUserIdentity();
   if (form.settings.access === "signed_in" && !identity) throw new Error("SIGN_IN_REQUIRED: Sign in to respond to this form.");
+  if (form.settings.access === "signed_in") {
+    const check = checkEmailRules(form.settings, identity);
+    if (check === "unverified") throw new Error("EMAIL_UNVERIFIED: Sign in with a verified email address to respond to this form.");
+    if (check === "not_allowed") throw new Error("EMAIL_NOT_ALLOWED: This form only accepts responses from certain email addresses.");
+  }
   if (form.settings.access === "code" && !(await accessCodeMatches(ctx, form, accessCode))) throw new Error("ACCESS_CODE_REQUIRED: Enter the access code for this form.");
   return { form, identity };
 }
@@ -197,7 +220,7 @@ async function resolveUploads(ctx: MutationCtx, formId: Id<"forms">, answers: An
     for (const raw of value) {
       const id = ctx.db.normalizeId("formUploads", raw);
       const upload = id ? await ctx.db.get("formUploads", id) : null;
-      if (upload && upload.formId === formId && upload.fieldId === f.id && (!upload.responseId || upload.responseId === responseId)) {
+      if (upload && !upload.homeworkAttemptId && upload.formId === formId && upload.fieldId === f.id && (!upload.responseId || upload.responseId === responseId)) {
         ids.add(raw);
         docs.push(upload);
       }
@@ -273,6 +296,8 @@ export const submitResponse = mutation({
     resumeToken: v.optional(v.string()),
     lastFieldId: v.optional(v.string()),
     honeypot: v.optional(v.string()),
+    /** Hidden-field values read from the link; undeclared names are dropped on the server. */
+    hidden: v.optional(v.record(v.string(), v.string())),
   },
   returns: v.object({
     responseId: v.id("formResponses"),
@@ -287,6 +312,7 @@ export const submitResponse = mutation({
     if (!/^[A-Za-z0-9-]{8,100}$/.test(args.submissionKey)) throw new Error("INVALID_SUBMISSION: Missing submission key.");
     if (args.editToken !== undefined && !/^[a-f0-9]{32,128}$/.test(args.editToken)) throw new Error("INVALID_SUBMISSION: Invalid edit token.");
     if (JSON.stringify(args.answers).length > 400_000) throw new Error("PAYLOAD_TOO_LARGE: These answers are too large.");
+    if (args.hidden && JSON.stringify(args.hidden).length > 50_000) throw new Error("PAYLOAD_TOO_LARGE: These link parameters are too large.");
     const form = await formByShareId(ctx, args.shareId);
     if (!form) throw new Error("FORM_UNAVAILABLE: This form is not available.");
 
@@ -308,13 +334,24 @@ export const submitResponse = mutation({
 
     const { identity } = await assertCanCollect(ctx, form, args.accessCode);
     if (!args.final && !form.settings.collectPartial) throw new Error("PARTIAL_DISABLED: This form does not store unfinished answers.");
+    const respondentKey = identity?.subject ?? (args.submissionKey ? (await sha256Hex(args.submissionKey)).slice(0, 16) : "anon");
     await consumeRate(ctx, `${args.final ? "submit" : "partial"}:${form._id}`, args.final ? 120 : 600, 60_000);
+    await consumeRate(ctx, `${args.final ? "submit" : "partial"}:${form._id}:${respondentKey}`, args.final ? 15 : 45, 60_000);
+
+    if (!args.final && !existing) {
+      const partials = await ctx.db
+        .query("formResponses")
+        .withIndex("by_formId_and_status_and_submittedAt", (q) => q.eq("formId", form._id).eq("status", "partial"))
+        .take(500);
+      if (partials.length >= 500) throw new Error("FORM_FULL: Maximum unfinished responses reached for this form.");
+    }
 
     const version = existing
       ? await ctx.db.query("formVersions").withIndex("by_formId_and_version", (q) => q.eq("formId", form._id).eq("version", existing.version)).unique()
       : await currentVersion(ctx, form);
     if (!version) throw new Error("FORM_UNAVAILABLE: This form is not available.");
-    const def = version.definition as FormDefinition;
+    assertReleasedAnswers(version.definition as FormDefinition, args.answers, Date.now());
+    const def = releasedDefinition(version.definition as FormDefinition, Date.now());
 
     if (args.final) {
       const cap = await responseCap(ctx, form, Date.now());
@@ -353,6 +390,9 @@ export const submitResponse = mutation({
       editTokenHash: args.editToken ? await sha256Hex(args.editToken) : existing?.editTokenHash,
       quizScore: grade?.score,
       quizMaxScore: grade?.maxScore,
+      // Stored beside answers, so a parameter named like a question never replaces its answer.
+      hidden: captureHidden(form.settings.hiddenFields, args.hidden) ?? existing?.hidden,
+      typedHidden: captureTypedHidden(form.settings.hiddenParameters, args.hidden ?? (existing?.typedHidden ? Object.fromEntries(Object.entries(existing.typedHidden).map(([k, value]) => [k, String(value)])) : undefined), !args.final) ?? existing?.typedHidden,
     };
 
     let responseId: Id<"formResponses">;
@@ -409,7 +449,7 @@ export const getSubmissionForEdit = query({
     if (!response) return null;
     const def = await definitionForResponse(ctx, response);
     if (!def) return null;
-    return { answers: response.answers, language: response.language, definition: publicQuizDefinition(def), receiptCode: response.receiptCode, submittedAt: response.submittedAt, editCount: response.editCount ?? 0 };
+    return { answers: releasedAnswers(def, response.answers as Answers, Date.now()), language: response.language, definition: publicQuizDefinition(releasedDefinition(def, Date.now())), receiptCode: response.receiptCode, submittedAt: response.submittedAt, editCount: response.editCount ?? 0 };
   },
 });
 
@@ -426,10 +466,12 @@ export const updateSubmission = mutation({
     const def = await definitionForResponse(ctx, response);
     if (!def) throw new Error("RESPONSE_NOT_FOUND: This edit link is no longer valid.");
     const uploads = await resolveUploads(ctx, form._id, args.answers, def, response._id);
-    const checked = checkAnswers(def, args.answers, { fileIds: uploads.ids });
+    assertReleasedAnswers(def, args.answers, Date.now());
+    const available = releasedDefinition(def, Date.now());
+    const checked = checkAnswers(available, args.answers, { fileIds: uploads.ids });
     if (Object.keys(checked.errors).length) validationFailure(checked.errors);
-    const ending = selectEnding(def, checked.answers);
-    const grade = gradeQuiz(def, checked.answers);
+    const ending = selectEnding(available, checked.answers);
+    const grade = gradeQuiz(available, checked.answers);
     // An unchanged resubmission is not an edit: no history entry, no notification.
     if (args.language === response.language && stableJson(checked.answers) === stableJson(response.answers)) {
       return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null };
@@ -461,17 +503,22 @@ export const saveResumeDraft = mutation({
     if (!/^[a-f0-9]{32,128}$/.test(args.token)) throw new Error("INVALID_TOKEN: Invalid resume token.");
     const form = await formByShareId(ctx, args.shareId);
     const { form: live } = await assertCanCollect(ctx, form, args.accessCode);
-    if (!live.settings.allowResumeLink) throw new Error("RESUME_DISABLED: This form does not offer resume links.");
+    const tokenHash = await sha256Hex(args.token);
     await consumeRate(ctx, `resume:${live._id}`, 300, 60_000);
+    await consumeRate(ctx, `resume:${live._id}:${tokenHash.slice(0, 16)}`, 15, 60_000);
     const version = await currentVersion(ctx, live);
     if (!version) throw new Error("FORM_UNAVAILABLE: This form is not available.");
     // Keep only well-formed answers; files are never stored in resume copies.
-    const def = version.definition as FormDefinition;
+    assertReleasedAnswers(version.definition as FormDefinition, args.answers, Date.now());
+    const def = releasedDefinition(version.definition as FormDefinition, Date.now());
     const checked = checkAnswers(def, args.answers, { partial: true, fileIds: new Set() });
     if (JSON.stringify(checked.answers).length > 400_000) throw new Error("PAYLOAD_TOO_LARGE: These answers are too large.");
-    const tokenHash = await sha256Hex(args.token);
     const expiresAt = Date.now() + RESUME_TTL_MS;
     const existing = await ctx.db.query("formResumeDrafts").withIndex("by_formId_and_tokenHash", (q) => q.eq("formId", live._id).eq("tokenHash", tokenHash)).unique();
+    if (!existing) {
+      const activeDrafts = await ctx.db.query("formResumeDrafts").withIndex("by_formId_and_tokenHash", (q) => q.eq("formId", live._id)).take(500);
+      if (activeDrafts.length >= 500) throw new Error("CAP_REACHED: Resume drafts limit reached for this form.");
+    }
     const record = { answers: checked.answers, language: args.language, version: version.version, expiresAt, updatedAt: Date.now() };
     const draftId = existing?._id ?? await ctx.db.insert("formResumeDrafts", { formId: live._id, tokenHash, ...record });
     if (existing) await ctx.db.patch("formResumeDrafts", draftId, record);
@@ -492,7 +539,9 @@ export const getResumeDraft = query({
       .withIndex("by_formId_and_tokenHash", (q) => q.eq("formId", form._id).eq("tokenHash", tokenHash))
       .unique();
     if (!draft || draft.expiresAt <= Date.now()) return null;
-    return { answers: draft.answers, language: draft.language, version: draft.version, updatedAt: draft.updatedAt, expiresAt: draft.expiresAt };
+    const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", form._id).eq("version", draft.version)).unique();
+    if (!version) return null;
+    return { answers: releasedAnswers(version.definition as FormDefinition, draft.answers as Answers, Date.now()), language: draft.language, version: draft.version, updatedAt: draft.updatedAt, expiresAt: draft.expiresAt };
   },
 });
 
@@ -516,6 +565,7 @@ async function fileFieldFor(ctx: MutationCtx, shareId: string, fieldId: string, 
   const { form: live } = await assertCanCollect(ctx, form, accessCode);
   const version = await currentVersion(ctx, live);
   const field = version?.definition.fields.find((f) => f.id === fieldId && f.type === "file");
+  if (version && !releasedFieldIds(version.definition as FormDefinition, Date.now()).has(fieldId)) throw new Error("FIELD_NOT_RELEASED: This question is not available yet.");
   if (!field) throw new Error("INVALID_FIELD: This question does not accept files.");
   return live;
 }
@@ -528,11 +578,14 @@ const uploadResult = v.object({ uploadId: v.id("formUploads"), name: v.string(),
  * raw storage URL, so every stored respondent file has a matching formUploads row.
  */
 export const generateUploadUrl = mutation({
-  args: { shareId: v.string(), fieldId: v.string(), accessCode: v.optional(v.string()) },
+  args: { shareId: v.string(), fieldId: v.string(), accessCode: v.optional(v.string()), clientToken: v.optional(v.string()) },
   returns: v.string(),
   handler: async (ctx, args) => {
     const form = await fileFieldFor(ctx, args.shareId, args.fieldId, args.accessCode);
-    await consumeRate(ctx, `upload:${form._id}`, 60, 60_000);
+    const identity = await ctx.auth.getUserIdentity();
+    const uploaderKey = identity?.subject ?? (args.clientToken ? (await sha256Hex(args.clientToken)).slice(0, 16) : "anon");
+    await consumeRate(ctx, `upload:${form._id}`, 300, 60_000);
+    await consumeRate(ctx, `upload:${form._id}:${uploaderKey}`, 100, 60_000);
     const token = randomHex(24);
     await ctx.db.insert("formUploadTickets", {
       formId: form._id, fieldId: args.fieldId, uploadKey: randomHex(12),
@@ -547,10 +600,18 @@ async function liveTicket(ctx: Ctx, token: string, now: number) {
   const tokenHash = await sha256Hex(token);
   const ticket = await ctx.db.query("formUploadTickets").withIndex("by_tokenHash", (q) => q.eq("tokenHash", tokenHash)).unique();
   if (!Number.isFinite(now) || !ticket || ticket.expiresAt <= now) return null;
+  if (ticket.homeworkAttemptId) {
+    try {
+      const { form, version } = await homeworkUploadAccess(ctx, ticket.homeworkAttemptId, now);
+      if (form._id !== ticket.formId || !releasedDefinition(version.definition, now).fields.some(f => f.id === ticket.fieldId && f.type === "file")) return null;
+      return ticket;
+    } catch { return null; }
+  }
   const form = await ctx.db.get("forms", ticket.formId);
   if (!form || form.status !== "live" || await ownerBanned(ctx, form) || scheduleState(form.settings, now) !== "open") return null;
   const version = await currentVersion(ctx, form);
   if (!version?.definition.fields.some((field) => field.id === ticket.fieldId && field.type === "file")) return null;
+  if (!releasedFieldIds(version.definition as FormDefinition, Date.now()).has(ticket.fieldId)) return null;
   return ticket;
 }
 
@@ -571,9 +632,12 @@ export const recordUpload = internalMutation({
     await ctx.db.delete("formUploadTickets", ticket._id);
     const form = await ctx.db.get("forms", ticket.formId);
     if (!form || form.status === "archived") throw new Error("FORM_UNAVAILABLE: This form is not available.");
+    const metadata = await ctx.db.system.get("_storage", args.storageId);
+    if (!metadata || metadata.size !== args.size || (metadata.contentType !== undefined && metadata.contentType !== args.contentType) || uploadRejection(args.contentType, args.size)) throw new Error("UPLOAD_INVALID: Invalid stored file");
     const name = args.name.replace(/[\\/\u0000-\u001f]/g, "_").slice(0, 200) || "upload";
     const uploadId = await ctx.db.insert("formUploads", {
       formId: ticket.formId, storageId: args.storageId, uploadKey: ticket.uploadKey, fieldId: ticket.fieldId,
+      ...(ticket.homeworkAttemptId ? { homeworkAttemptId: ticket.homeworkAttemptId } : {}),
       name, contentType: args.contentType, size: args.size, createdAt: Date.now(),
     });
     return { uploadId, name, size: args.size };
@@ -583,7 +647,7 @@ export const recordUpload = internalMutation({
 /** Shared limits for the HTTP endpoint. */
 export function uploadRejection(contentType: string, size: number): string | null {
   if (size > MAX_UPLOAD_BYTES) return "UPLOAD_TOO_LARGE: Files can be at most 10 MB.";
-  if (size === 0) return "UPLOAD_MISSING: The file is empty.";
+  if (!Number.isFinite(size) || !Number.isInteger(size) || size <= 0) return "UPLOAD_MISSING: The file is empty.";
   if (!ALLOWED_UPLOAD_TYPES.includes(contentType)) return "UPLOAD_TYPE: Upload a PDF, image, text, CSV, Word or Excel file.";
   return null;
 }

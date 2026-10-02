@@ -8,3 +8,15 @@ import "@testing-library/jest-dom/vitest";
 afterEach(() => {
   cleanup();
 });
+
+// jsdom has no matchMedia; avatars' pointer gaze (blobatar/gaze) reads it on mount. Every browser has it.
+if (typeof window !== "undefined" && !window.matchMedia) {
+  window.matchMedia = (query: string) => ({
+    matches: false, media: query, onchange: null,
+    addListener: () => {}, removeListener: () => {}, addEventListener: () => {}, removeEventListener: () => {}, dispatchEvent: () => false,
+  });
+}
+// The gaze driver also watches avatar size with ResizeObserver, which jsdom lacks.
+if (typeof window !== "undefined" && !("ResizeObserver" in window)) {
+  (window as unknown as { ResizeObserver: unknown }).ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
+}

@@ -159,7 +159,7 @@ export function formResponseData(form: Doc<"forms">, response: Doc<"formResponse
       endingId: response.endingId ?? null,
     },
   };
-  return { base, withAnswers: { ...base, answers: formAnswers(def, response.answers as Answers) } };
+  return { base, withAnswers: { ...base, answers: formAnswers(def, response.answers as Answers), hidden: response.hidden ?? {}, typedHidden: response.typedHidden ?? {} } };
 }
 
 type QuizQuestionLike = { _id: Id<"questions">; questionText: string; type: string; points: number };

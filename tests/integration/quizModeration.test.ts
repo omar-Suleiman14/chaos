@@ -74,7 +74,7 @@ describe("banned user (server enforcement)", () => {
 
     await expect(
       t.mutation(api.quizFunctions.startQuizSession, { quizId, playerName: "Student" })
-    ).rejects.toThrow("QUIZ_BANNED");
+    ).rejects.toThrow("QUIZ_UNAVAILABLE");
     expect(await t.query(api.quizFunctions.getQuizForPlayer, { quizId })).toBeNull();
   });
 });
@@ -92,7 +92,7 @@ describe("banned quiz (respondent paths)", () => {
     expect(await t.query(api.quizFunctions.getQuizLeaderboard, { quizId })).toEqual([]);
     await expect(
       t.mutation(api.quizFunctions.startQuizSession, { quizId, playerName: "Late Comer" })
-    ).rejects.toThrow("QUIZ_BANNED");
+    ).rejects.toThrow("QUIZ_UNAVAILABLE");
     await expect(
       t.mutation(api.quizFunctions.completeQuizSession, { sessionId: inProgress })
     ).rejects.toThrow("QUIZ_UNAVAILABLE");

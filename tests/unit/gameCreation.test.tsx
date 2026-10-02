@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { getFunctionName } from "convex/server";
-import GamesPage from "@/app/dashboard/games/page";
+import GamesPage from "@/components/live/GamesHub";
 import ProductDemo from "@/components/site/ProductDemo";
 import { LocaleProvider } from "@/lib/i18n";
 

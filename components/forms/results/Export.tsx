@@ -10,7 +10,9 @@ import { csvCell } from "@/convex/formLogic";
 import { buildXlsx, downloadBlob, safeFilename } from "@/lib/xlsx";
 import { errorMessage } from "@/lib/errors";
 import { useCopy } from "@/lib/i18n";
+import Link from "next/link";
 import { WsSwitch } from "@/components/workspace/primitives";
+import DocHint from "@/components/forms/DocHint";
 import { resultsCopy } from "./copy";
 
 /** Downloads every visible response. Column headers stay in English: they are a file format other tools read. */
@@ -25,16 +27,18 @@ export function ExportTab({ formId, title }: { formId: Id<"forms">; title: strin
   const collect = async () => {
     const rows: NonNullable<Awaited<ReturnType<typeof fetchPage>>>["rows"] = [];
     let columns: { key: string; label: string }[] = [];
+    const hiddenColumns = new Set<string>();
     let cursor: string | null = null;
     for (let guard = 0; guard < 1000; guard++) {
       const page = await fetchPage(cursor);
       if (!page) throw new Error(t.noAccess);
       columns = page.columns;
+      for (const name of page.hiddenColumns ?? []) hiddenColumns.add(name);
       rows.push(...page.rows);
       if (page.isDone) break;
       cursor = page.continueCursor;
     }
-    return { columns, rows };
+    return { columns, rows, hidden: [...hiddenColumns] };
   };
   const fetchPage = (cursor: string | null) =>
     convex.query(api.formResults.exportResponses, { formId, includePartial, includeSpam, paginationOpts: { numItems: 200, cursor } });
@@ -43,18 +47,18 @@ export function ExportTab({ formId, title }: { formId: Id<"forms">; title: strin
     setBusy(kind);
     setError("");
     try {
-      const { columns, rows } = await collect();
+      const { columns, rows, hidden } = await collect();
       const name = `${safeFilename(title)}-responses`;
       if (kind === "json") {
-        const body = { format: "chaos-responses", formatVersion: 1, form: title, exportedAt: new Date().toISOString(), columns, responses: rows };
+        const body = { format: "chaos-responses", formatVersion: 1, form: title, exportedAt: new Date().toISOString(), columns, hiddenFields: hidden, responses: rows };
         downloadBlob(JSON.stringify(body, null, 2), `${name}.json`, "application/json");
         posthog.capture("form_responses_exported", { format: kind, includes_partial: includePartial, includes_spam: includeSpam });
         return;
       }
-      const header = ["Response ID", "Receipt", "Status", "Submitted", "Language", "Seconds", "Version", "Ending", "Quiz score", "Quiz max score", "Tags", "Reviewed", "Edited", "Last edited", ...(includeSpam ? ["Spam"] : []), ...columns.map((c) => c.label)];
+      const header = ["Response ID", "Receipt", "Status", "Submitted", "Language", "Seconds", "Version", "Ending", "Quiz score", "Quiz max score", "Tags", "Reviewed", "Edited", "Last edited", ...(includeSpam ? ["Spam"] : []), ...columns.map((c) => c.label), ...hidden.map((h) => `Hidden: ${h}`)];
       const table = rows.map((r) => [
         r.id, r.receiptCode, r.status, new Date(r.submittedAt).toISOString(), r.language, r.durationSeconds ?? "", r.version, r.ending ?? "", r.quizScore ?? "", r.quizMaxScore ?? "", r.tags.join(", "), r.reviewed ? "yes" : "no", r.edited ? "yes" : "no", r.editedAt ? new Date(r.editedAt).toISOString() : "",
-        ...(includeSpam ? [r.spam ? "yes" : "no"] : []), ...columns.map((c) => r.cells[c.key] ?? ""),
+        ...(includeSpam ? [r.spam ? "yes" : "no"] : []), ...columns.map((c) => r.cells[c.key] ?? ""), ...hidden.map((h) => r.hidden?.[h] ?? ""),
       ]);
       if (kind === "xlsx") downloadBlob(buildXlsx([header, ...table]), `${name}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
       else downloadBlob("﻿" + [header, ...table].map((row) => row.map(csvCell).join(",")).join("\r\n"), `${name}.csv`, "text/csv;charset=utf-8");
@@ -96,6 +100,7 @@ export function ExportTab({ formId, title }: { formId: Id<"forms">; title: strin
         ))}
       </ul>
       {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      <DocHint slug="webhooks">{t.automate} <Link href="/dashboard/connections" className="underline underline-offset-2">{t.connections}</Link> ·</DocHint>
     </section>
   );
 }

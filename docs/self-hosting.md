@@ -160,6 +160,17 @@ portable option. If you use an external Postgres/MySQL (`CONVEX_DATABASE_URL`),
 use that database's own backup tooling. Restores have not been rehearsed for
 this repo; test yours. See Convex's self-hosting docs for details.
 
+## Wallet passes (optional)
+
+Member cards can be added to Google Wallet. It needs your own Google Wallet issuer account; until the variables below are set, the button doesn't appear.
+
+**Google Wallet**
+1. Create an issuer account in the Google Pay & Wallet Console and note the issuer ID.
+2. Create a Google Cloud service account, give it access to the issuer, and create a JSON key.
+3. Set `GOOGLE_WALLET_ISSUER_ID`, `GOOGLE_WALLET_SERVICE_ACCOUNT_EMAIL` and `GOOGLE_WALLET_PRIVATE_KEY` (the key's `private_key` value). `NEXT_PUBLIC_APP_URL` must be the public https origin, because Google loads the pass logo from `/wallet/logo.png`.
+
+Passes carry only what the public card shows: name, username, title, member number, join date and the card link.
+
 ## What is not supported / differs from hosted Chaos
 
 - **Clerk is mandatory** and cannot be self-hosted. Core Forms and Quiz work with

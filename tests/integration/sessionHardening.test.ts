@@ -44,9 +44,9 @@ describe("anonymous respondent session hardening", () => {
     const { quizId: gone } = await seed(t);
     await t.run((ctx) => ctx.db.delete(gone));
 
-    await expect(t.mutation(api.quizFunctions.startQuizSession, { quizId: gone, playerName: "G" })).rejects.toThrow("QUIZ_NOT_FOUND");
-    await expect(t.mutation(api.quizFunctions.startQuizSession, { quizId: unpublished, playerName: "G" })).rejects.toThrow("QUIZ_UNPUBLISHED");
-    await expect(t.mutation(api.quizFunctions.startQuizSession, { quizId: banned, playerName: "G" })).rejects.toThrow("QUIZ_BANNED");
+    await expect(t.mutation(api.quizFunctions.startQuizSession, { quizId: gone, playerName: "G" })).rejects.toThrow("QUIZ_UNAVAILABLE");
+    await expect(t.mutation(api.quizFunctions.startQuizSession, { quizId: unpublished, playerName: "G" })).rejects.toThrow("QUIZ_UNAVAILABLE");
+    await expect(t.mutation(api.quizFunctions.startQuizSession, { quizId: banned, playerName: "G" })).rejects.toThrow("QUIZ_UNAVAILABLE");
   });
 
   it("rate limits a burst of scripted session creations per quiz", async () => {

@@ -12,10 +12,12 @@ import { useCopy, useLocale } from "@/lib/i18n";
 import { localizeActivityAction, localizeActivityDetail, localizeMessage } from "@/lib/messages";
 import { timeAgo } from "@/lib/timeAgo";
 import { Select } from "@/components/workspace/Select";
+import DocHint from "@/components/forms/DocHint";
 
 const copy = {
   en: {
-    people: "People", peopleHelp: "Editors can change and publish. Viewers can only look.",
+    people: "People", peopleHelp: "Editors can change and publish. Viewers can only look.", approvalsHint: "To review before editors publish, turn on approvals in Settings.",
+    activityHelp: "Edits, publishing, sharing and settings changes, newest first.", commentsHelp: "Notes for collaborators. Respondents never see them.",
     emailAddress: "Email address", role: "Role", editor: "Editor", viewer: "Viewer", invite: "Invite",
     inviteNote: "No email is sent. Tell them to sign in with this address.",
     invited: " · invited", makeViewer: "Make viewer", makeEditor: "Make editor", remove: (email: string) => `Remove ${email}`, onlyYou: "Only you.",
@@ -23,7 +25,8 @@ const copy = {
     aboutQuestion: "About question", wholeForm: "Whole form", on: (label: string) => ` · on “${label}”`, reopen: "Reopen", resolve: "Resolve",
   },
   ar: {
-    people: "الأشخاص", peopleHelp: "يعدّل المحررون وينشرون. يطّلع المشاهدون فقط.",
+    people: "الأشخاص", peopleHelp: "يعدّل المحررون وينشرون. يطّلع المشاهدون فقط.", approvalsHint: "لمراجعة التغييرات قبل نشر المحررين، فعّل الموافقة من الإعدادات.",
+    activityHelp: "التعديلات والنشر والمشاركة وتغييرات الإعدادات، الأحدث أولًا.", commentsHelp: "ملاحظات للمتعاونين. لا يراها المجيبون أبدًا.",
     emailAddress: "البريد الإلكتروني", role: "الدور", editor: "محرر", viewer: "مشاهد", invite: "ادعُ",
     inviteNote: "لا تُرسل رسالة. أخبرهم أن يسجلوا الدخول بهذا البريد.",
     invited: " · مدعو", makeViewer: "اجعله مشاهدًا", makeEditor: "اجعله محررًا", remove: (email: string) => `أزل ${email}`, onlyYou: "أنت فقط.",
@@ -55,7 +58,7 @@ export default function TeamTab({ formId, role, def }: { formId: Id<"forms">; ro
       <div className="space-y-6">
         <section className="chaos-card bg-card p-5 space-y-3" aria-label={t.people}>
           <h2 className="chaos-heading text-sm">{t.people}</h2>
-          <p className="text-xs text-muted-foreground">{t.peopleHelp}</p>
+          <DocHint slug="team">{t.peopleHelp} {t.approvalsHint}</DocHint>
           {role === "owner" && (
             <form className="flex gap-2 flex-wrap" onSubmit={(e) => {
               e.preventDefault();
@@ -91,6 +94,7 @@ export default function TeamTab({ formId, role, def }: { formId: Id<"forms">; ro
 
         <section className="chaos-card bg-card p-5 space-y-3" aria-label={t.activity}>
           <h2 className="chaos-heading text-sm">{t.activity}</h2>
+          <p className="text-xs text-muted-foreground">{t.activityHelp}</p>
           <ul className="space-y-2 text-sm max-h-96 overflow-y-auto">
             {activity?.map((a) => (
               <li key={a._id}>
@@ -107,6 +111,7 @@ export default function TeamTab({ formId, role, def }: { formId: Id<"forms">; ro
           <h2 className="chaos-heading text-sm">{t.comments}</h2>
           <label className="text-xs flex items-center gap-1"><input type="checkbox" checked={showResolved} onChange={(e) => setShowResolved(e.target.checked)} /> {t.showResolved}</label>
         </div>
+        <p className="text-xs text-muted-foreground">{t.commentsHelp}</p>
         <form className="space-y-2" onSubmit={(e) => {
           e.preventDefault();
           if (!body.trim()) return;

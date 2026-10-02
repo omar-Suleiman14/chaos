@@ -6,8 +6,8 @@ export const metadata: Metadata = { title: "Page not found", robots: { index: fa
 export default function NotFound() {
   return (
     <ErrorScreen
-      title="Page not found"
-      body="This page doesn't exist, or it has moved."
+      title="Nothing here"
+      body="This page doesn't exist or isn't available to you."
       primary={{ label: "Go home", href: "/" }}
     />
   );

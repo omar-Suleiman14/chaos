@@ -47,9 +47,11 @@ describe("authorization helper guard", () => {
     const matcher = /createRouteMatcher\(\[([^\]]*)\]\)/.exec(proxy)?.[1] ?? "";
     for (const route of ["/dashboard(.*)", "/admin(.*)", "/print(.*)"]) expect(matcher).toContain(`"${route}"`);
     // Every page folder under app/ that is not public must be listed above.
-    const publicTop = new Set(["[username]", "f", "docs", "chatgpt", "pricing", "privacy", "terms", "api", "mcp", ".well-known",
+    const publicTop = new Set(["[username]", "f", "docs", "chatgpt", "pricing", "privacy", "terms", "copyright", "api", "mcp", ".well-known",
       // Live game players join with a PIN and no account (host screens live under /dashboard).
-      "play"]);
+      "play", "compare", "support", "card",
+      // Published lessons, profiles and collections are readable without an account; writing needs sign-in.
+      "learn"]);
     const appDir = resolve(process.cwd(), "app");
     const folders = readdirSync(appDir).filter((name) => statSync(resolve(appDir, name)).isDirectory());
     for (const folder of folders) {

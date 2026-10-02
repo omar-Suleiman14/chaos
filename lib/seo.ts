@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { siteUrl } from "@/lib/site";
 
-export const siteDescription = "Create forms, surveys and quizzes. Collect responses, export results and host live quiz games. Open source, in English and Arabic.";
+export const siteDescription = "Forms, quizzes and live games, with lessons and free public courses in Chaos Learn. One open-source workspace. Create manually, with optional ChatGPT, API and webhook connections. English and Arabic.";
 
 /** Use the same page address and copy in search results and shared links. */
 export function pageMetadata(title: string, description: string, path: string): Metadata {

@@ -51,17 +51,17 @@ function withQuestion(type = "mcq") {
 
 async function beginQuiz(fakeTimers = false) {
   startSession.mockResolvedValue("session1");
-  fireEvent.change(await screen.findByPlaceholderText("ENTER YOUR NAME"), { target: { value: "Guest" } });
+  fireEvent.change(await screen.findByPlaceholderText("Your name"), { target: { value: "Guest" } });
   if (fakeTimers) vi.useFakeTimers();
-  await act(async () => { fireEvent.click(screen.getByRole("button", { name: /START QUIZ/ })); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Start quiz/ })); });
 }
 
 describe("quiz Start control", () => {
   it("renders unavailable player data without a Start control", async () => {
     queryResults["quizFunctions:getQuizForPlayer"] = null;
     render(<QuizRoute />);
-    await screen.findByText("NOT FOUND.");
-    expect(screen.queryByRole("button", { name: /START QUIZ/ })).toBeNull();
+    await screen.findByText("Nothing here");
+    expect(screen.queryByRole("button", { name: /Start quiz/ })).toBeNull();
     expect(startSession).not.toHaveBeenCalled();
   });
 
@@ -75,7 +75,7 @@ describe("quiz Start control", () => {
     rerender(<QuizRoute />);
     expect(await screen.findByRole("heading", { name: "Another quiz" })).toBeInTheDocument();
     expect(screen.queryByText("Pick one")).toBeNull();
-    expect(screen.getByPlaceholderText("ENTER YOUR NAME")).toHaveValue("");
+    expect(screen.getByPlaceholderText("Your name")).toHaveValue("");
   });
 
   it("does not play every pool question when the attempt selection is unavailable", async () => {
@@ -98,8 +98,8 @@ describe("quiz Start control", () => {
     vi.spyOn(console, "error").mockImplementation(() => {});
     render(<QuizRoute />);
     await beginQuiz();
-    expect(screen.getByRole("button", { name: /START QUIZ/ })).toBeEnabled();
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /START QUIZ/ })); });
+    expect(screen.getByRole("button", { name: /Start quiz/ })).toBeEnabled();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Start quiz/ })); });
     expect(screen.getByText("Pick one")).toBeInTheDocument();
     expect(startSession).toHaveBeenCalledTimes(1);
     expect(attemptQuery).toHaveBeenCalledTimes(2);
@@ -110,8 +110,8 @@ describe("quiz Start control", () => {
     completeSession.mockResolvedValue({ withheld: false, score: 0, totalPoints: 0 });
     render(<QuizRoute />);
     await beginQuiz();
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /SUBMIT QUIZ/ })); });
-    fireEvent.click(screen.getByRole("button", { name: "PLAY AGAIN" }));
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Submit quiz/ })); });
+    fireEvent.click(screen.getByRole("button", { name: "Play again" }));
     await beginQuiz();
     expect(startSession).toHaveBeenCalledTimes(2);
   });
@@ -122,8 +122,8 @@ describe("quiz Start control", () => {
     render(<QuizRoute />);
     await beginQuiz();
     fireEvent.click(screen.getByRole("checkbox", { name: /First/ }));
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /SUBMIT SELECTION/ })); });
-    expect(screen.getByText("ANSWER RECORDED")).toBeInTheDocument();
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /selected/ })); });
+    expect(screen.getByText("Answer saved")).toBeInTheDocument();
     expect(screen.queryByText("Private explanation")).toBeNull();
     expect(screen.getByRole("checkbox", { name: /Second/ })).not.toHaveClass("bg-chaos");
   });
@@ -139,7 +139,7 @@ describe("quiz Start control", () => {
     act(() => { vi.advanceTimersByTime(3000); });
     expect(gradeAnswer).toHaveBeenCalledTimes(1);
     await act(async () => { reject(new Error("Try again")); });
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "RETRY ANSWER" })); });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Try again" })); });
     expect(gradeAnswer).toHaveBeenCalledTimes(2);
     expect(gradeAnswer).toHaveBeenLastCalledWith(expect.objectContaining({ answer: "First" }));
   });
@@ -159,19 +159,19 @@ describe("quiz Start control", () => {
     startSession.mockReturnValue(new Promise<string>((resolve) => { settle = resolve; }));
     render(<QuizRoute />);
 
-    const start = await screen.findByRole("button", { name: /START QUIZ/ });
+    const start = await screen.findByRole("button", { name: /Start quiz/ });
     expect(start).toBeDisabled();
 
-    fireEvent.change(screen.getByPlaceholderText("ENTER YOUR NAME"), { target: { value: "Guest" } });
+    fireEvent.change(screen.getByPlaceholderText("Your name"), { target: { value: "Guest" } });
     expect(start).toBeEnabled();
 
     // A rapid double click (and Enter) reaches the server once.
     fireEvent.click(start);
     fireEvent.click(start);
-    fireEvent.keyDown(screen.getByPlaceholderText("ENTER YOUR NAME"), { key: "Enter" });
+    fireEvent.keyDown(screen.getByPlaceholderText("Your name"), { key: "Enter" });
     expect(startSession).toHaveBeenCalledTimes(1);
     expect(startSession).toHaveBeenCalledWith({ quizId: "quiz1", playerName: "Guest" });
-    expect(screen.getByRole("button", { name: /STARTING/ })).toBeDisabled();
+    expect(screen.getByRole("button", { name: /Starting/ })).toBeDisabled();
 
     await act(async () => { settle("session1"); });
   });
@@ -180,9 +180,9 @@ describe("quiz Start control", () => {
     startSession.mockRejectedValue(new Error("RATE_LIMITED: Too many people are starting this quiz at once."));
     vi.spyOn(console, "error").mockImplementation(() => {});
     render(<QuizRoute />);
-    fireEvent.change(await screen.findByPlaceholderText("ENTER YOUR NAME"), { target: { value: "Guest" } });
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /START QUIZ/ })); });
+    fireEvent.change(await screen.findByPlaceholderText("Your name"), { target: { value: "Guest" } });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Start quiz/ })); });
     expect(await screen.findByText(/Too many people/)).toBeInTheDocument();
-    expect(screen.getByRole("button", { name: /START QUIZ/ })).toBeEnabled();
+    expect(screen.getByRole("button", { name: /Start quiz/ })).toBeEnabled();
   });
 });

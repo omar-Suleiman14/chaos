@@ -19,6 +19,7 @@ import { Announcer, Countdown, StartCountdown, usePrefersReducedMotion, useSecon
 import { gameSound, gameThemeProps } from "./GameTheme";
 import { ThemePicker } from "@/components/ThemePicker";
 import { themeFromPreset } from "@/components/forms/formThemes";
+import TeamPanel from "./TeamPanel";
 
 const copy = {
   en: {
@@ -148,7 +149,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
       <div className="live-root">
         <div className="live-center">
           <p>{t.missing}</p>
-          <Link href="/dashboard/games" className="live-btn">{t.back}</Link>
+          <Link href="/dashboard?tab=games" className="live-btn">{t.back}</Link>
         </div>
       </div>
     );
@@ -176,7 +177,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
       {confirming && <WsConfirm title={confirming.label} body={confirming.body} confirmLabel={confirming.label} onClose={() => setConfirming(null)} onConfirm={confirming.run} />}
       <Announcer text={announce} />
       <header className="live-bar">
-        <Link href="/dashboard/games" className="live-icon-btn" aria-label={t.back}><ArrowLeft size={20} className="rtl:rotate-180" /></Link>
+        <Link href="/dashboard?tab=games" className="live-icon-btn" aria-label={t.back}><ArrowLeft size={20} className="rtl:rotate-180" /></Link>
         <span className="live-bar__title">{game.title}</span>
         {game.state !== "lobby" && game.state !== "ended" && <span className="live-muted">{t.questionOf(game.questionIndex + 1, game.questionCount)}</span>}
         <span className="live-muted inline-flex items-center gap-1"><Users size={18} aria-hidden="true" /> {t.players(game.playerCount)}</span>
@@ -189,6 +190,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
 
       <main className="live-main" id="live-main">
         {error && <p className="live-error" role="alert">{error}</p>}
+        <TeamPanel gameId={gameId} frozen={game.state !== "lobby" || game.startsAt != null} maxPlayers={game.settings.maxPlayers} players={game.players} />
 
         {game.state === "lobby" && game.startsAt && (
           <div className="live-center">

@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { getFunctionName } from "convex/server";
-import GamesPage from "@/app/dashboard/games/page";
+import GamesPage from "@/components/live/GamesHub";
 import { LocaleProvider } from "@/lib/i18n";
 
 const mocks = vi.hoisted(() => ({ create: vi.fn(), host: vi.fn(), push: vi.fn() }));
@@ -10,7 +10,12 @@ vi.mock("next/link", () => ({ default: ({ children, ...props }: React.AnchorHTML
 vi.mock("@/lib/analytics", () => ({ default: { capture: vi.fn() } }));
 vi.mock("convex/react", () => ({
   useMutation: (ref: Parameters<typeof getFunctionName>[0]) => getFunctionName(ref) === "forms:createForm" ? mocks.create : mocks.host,
-  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => getFunctionName(ref) === "forms:listMyForms"
+  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => getFunctionName(ref) === "live:myGames"
+    ? [
+      { _id: "room-live", title: "Friday quiz", state: "question", createdAt: Date.now() - 60_000, endedAt: null, formId: "ready", quizId: null, questionCount: 5, players: 12, savedResponses: 0 },
+      { _id: "room-done", title: "Monday quiz", state: "ended", createdAt: Date.now() - 86_400_000, endedAt: Date.now() - 80_000_000, formId: "ready", quizId: null, questionCount: 1, players: 3, savedResponses: 3 },
+    ]
+    : getFunctionName(ref) === "forms:listMyForms"
     ? { owned: [{ _id: "draft", title: "Draft game", status: "draft", quizMode: true }, { _id: "ready", title: "Ready game", status: "live", quizMode: true, publishedVersion: 1 }, { _id: "archived", title: "Archived game", status: "archived", quizMode: true, publishedVersion: 1 }], shared: [{ _id: "editor", title: "Shared editable game", status: "live", quizMode: true, publishedVersion: 1, role: "editor" }, { _id: "viewer", title: "View-only game", status: "live", quizMode: true, publishedVersion: 1, role: "viewer" }] }
     : [{ _id: "legacy", title: "Older game", isPublished: true }],
 }));
@@ -70,5 +75,13 @@ describe("Games workspace", () => {
     fireEvent.click(screen.getByRole("radio", { name: "مخمل" }));
     fireEvent.click(screen.getByRole("button", { name: "أنشئ لعبة" }));
     await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ definition: expect.objectContaining({ defaultLanguage: "ar", languages: ["ar"], theme: expect.objectContaining({ preset: "velvet" }) }) })));
+  });
+  it("lists past games: rejoin a running one, open results of an ended one", () => {
+    render(<LocaleProvider initial="en"><GamesPage /></LocaleProvider>);
+    const history = screen.getByRole("region", { name: "History" });
+    expect(within(within(history).getByText("Friday quiz").closest("article")!).getByRole("link", { name: "Open" })).toHaveAttribute("href", "/dashboard/live/room-live");
+    const done = within(history).getByText("Monday quiz").closest("article")!;
+    expect(done).toHaveTextContent("Ended");
+    expect(within(done).getByRole("link", { name: "Results" })).toHaveAttribute("href", "/dashboard/forms/ready/responses");
   });
 });

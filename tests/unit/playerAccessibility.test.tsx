@@ -43,7 +43,7 @@ beforeEach(() => {
 async function startQuiz() {
   render(<QuizRoute />);
   fireEvent.change(await screen.findByLabelText("Your name"), { target: { value: "Guest" } });
-  await act(async () => { fireEvent.click(screen.getByRole("button", { name: /START QUIZ/ })); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: /Start quiz/ })); });
   await screen.findByRole("radiogroup");
 }
 
@@ -71,7 +71,7 @@ describe("quiz player accessibility", () => {
     await act(async () => { fireEvent.click(screen.getByRole("radio", { name: /A one/ })); });
     await waitFor(() => expect(screen.getAllByRole("status").some((el) => /Correct\. 1 marks/.test(el.textContent ?? ""))).toBe(true));
     expect(screen.getAllByRole("radio")[0]).toHaveAttribute("aria-checked", "true");
-    fireEvent.click(screen.getByRole("button", { name: /NEXT QUESTION/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Next question/ }));
     await waitFor(() => expect(document.activeElement?.id).toBe("q-heading-1"));
     expect(screen.getByRole("region", { name: "Question 2 of 3" })).not.toHaveAttribute("inert");
   });
@@ -79,10 +79,10 @@ describe("quiz player accessibility", () => {
   it("sends multi-select picks as a JSON array so commas in an option are safe", async () => {
     await startQuiz();
     await act(async () => { fireEvent.click(screen.getByRole("radio", { name: /A one/ })); });
-    fireEvent.click(screen.getByRole("button", { name: /NEXT QUESTION/ }));
+    fireEvent.click(screen.getByRole("button", { name: /Next question/ }));
     fireEvent.click(await screen.findByRole("checkbox", { name: /Paris, France/ }));
     fireEvent.click(screen.getByRole("checkbox", { name: /Lyon/ }));
-    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /SUBMIT SELECTION/ })); });
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: /selected/ })); });
     expect(gradeAnswer).toHaveBeenLastCalledWith(expect.objectContaining({ answer: JSON.stringify(["Paris, France", "Lyon"]) }));
   });
 });

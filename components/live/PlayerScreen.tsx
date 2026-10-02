@@ -1,6 +1,9 @@
 "use client";
 
+import TeamPanel from "./TeamPanel";
+
 import "./live.css";
+import "./apple.css";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useConvexConnectionState, useMutation, useQuery } from "convex/react";
 import { Check, Trophy, Volume2, VolumeX, X } from "lucide-react";
@@ -16,7 +19,7 @@ import type { Locale } from "@/lib/locale";
 import { AnswerTile } from "./tiles";
 import { Announcer, Countdown, StartCountdown, usePrefersReducedMotion, useServerClock } from "./clock";
 import Link from "next/link";
-import { gameSound, gameThemeProps } from "./GameTheme";
+import { gameSound } from "./GameTheme";
 import Logo from "@/components/Logo";
 
 const SESSION_KEY = "chaos-live-session";
@@ -122,10 +125,10 @@ function PlayerSession({ initialPin }: { initialPin?: string }) {
   const toggleSound = () => { const next = !sound; sfx.setEnabled(next); setSound(next); };
   const offline = loaded && !connection.isWebSocketConnected && connection.hasEverConnected;
   const activeView = useQuery(api.live.playerView, session ? { gameId: session.gameId, token: session.token } : "skip");
-  const theme = activeView && "theme" in activeView ? activeView.theme : null;
+  // Phones always use the system-native look (apple.css); the quiz theme only picks the sound pack.
 
   return (
-    <div {...gameThemeProps(theme)} data-calm={calm} data-joining={!session}>
+    <div className="live-root live-apple" data-calm={calm} data-joining={!session}>
       <Announcer text={announce} />
       <header className="live-bar">
         <Link href="/" className="live-bar__title live-brand"><Logo size={28} />Chaos<span>live</span></Link>
@@ -198,7 +201,7 @@ function JoinForm({ t, initialPin, onJoined }: { t: Copy; initialPin: string; on
       {error && <p className="live-error" role="alert">{error}</p>}
       <button type="submit" className="live-btn live-btn--primary w-full" disabled={busy || pin.length !== 6 || !nickname.trim()}>{busy ? t.joining : t.join}</button>
       </form>
-      <div className="live-create-callout"><Link href="/dashboard/games">{t.createGame} <span aria-hidden="true">↗</span></Link><p>{t.hostHelp}</p></div>
+      <div className="live-create-callout"><Link href="/dashboard?tab=games">{t.createGame} <span aria-hidden="true">↗</span></Link><p>{t.hostHelp}</p></div>
       </div>
     </div>
   );
@@ -294,6 +297,7 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
           {view.startsAt ? <StartCountdown startsAt={view.startsAt} offset={offset} onTick={() => sfx.play("tap", pack)} /> : <p className="text-4xl font-bold live-pop">{t.youreIn}</p>}
           <p className="text-2xl font-semibold">{view.nickname}</p>
           {!view.startsAt && <p className="live-muted live-pulse">{t.waitStart}</p>}
+          <TeamPanel gameId={session.gameId} token={session.token} frozen={view.startsAt != null} />
         </div>
       );
     case "question": {
@@ -344,7 +348,7 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
           {view.bonus > 0 && <p className="text-lg font-semibold">{t.streak(view.streak, fmt(view.bonus))}</p>}
           {view.rank !== null && <p className="text-2xl font-bold">{t.rank(fmt(view.rank))}</p>}
           <p className="live-muted">{t.score(fmt(view.score))}</p>
-          {view.state === "leaderboard" && <p className="live-muted">{t.lookUp}</p>}
+          {view.state === "leaderboard" && <><p className="live-muted">{t.lookUp}</p><TeamPanel gameId={session.gameId} token={session.token} frozen /></>}
         </div>
       );
     }
@@ -354,6 +358,7 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
           <Trophy size={56} aria-hidden="true" />
           <p className="text-3xl font-bold" role="status">{view.rank !== null ? t.finalRank(fmt(view.rank)) : t.ended}</p>
           <p className="text-xl">{t.score(fmt(view.score))} · {t.correctCount(view.correctCount, view.questionCount)}</p>
+          <TeamPanel gameId={session.gameId} token={session.token} frozen />
           {view.podium.length > 0 && (
             <section className="live-card w-full" aria-label={t.podium}>
               <h2 className="font-bold mb-2">{t.podium}</h2>

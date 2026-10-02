@@ -97,6 +97,8 @@ export interface FormField {
   label: string;
   description?: string;
   required: boolean;
+  /** UTC milliseconds; a section gates its children until the next section. */
+  releasesAt?: number;
   placeholder?: string;
   options?: Choice[];
   rows?: Choice[];
@@ -619,6 +621,7 @@ export function checkDefinition(def: FormDefinition): DefinitionReport {
     if (f.type === "file" && (!Number.isInteger(f.max ?? 1) || (f.max ?? 1) < 1 || (f.max ?? 1) > LIMITS.files)) errors.push(`${name}: allow 1–${LIMITS.files} files.`);
     if (f.type === "multi_choice" && f.max !== undefined && f.max > (f.options?.length ?? 0)) warnings.push(`${name}: the selection limit exceeds the number of options.`);
     if (f.required && !isAnswerable(f)) warnings.push(`${name}: text blocks and sections cannot be required.`);
+    if (f.releasesAt !== undefined && (!Number.isSafeInteger(f.releasesAt) || f.releasesAt < 0 || f.releasesAt > 8640000000000000)) errors.push(`${name}: release time must be a valid UTC timestamp in milliseconds.`);
     checkRule(f.showIf, name, seen, errors, def);
     for (const [lang, t] of Object.entries(f.translations ?? {})) {
       if (!(languages as readonly string[]).includes(lang)) errors.push(`${name}: unsupported translation language ${lang}.`);

@@ -14,6 +14,7 @@ import type { AttemptOutcome, WebhookEventType, WebhookSentEvent } from "@/conve
 import { errorMessage } from "@/lib/errors";
 import { formatDateTime, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
+import { learnWebhookLabel } from "@/lib/learnWebhookLabels";
 
 type Health = "healthy" | "new" | "failing" | "paused" | "disabled";
 type DeliveryStatus = "pending" | "retrying" | "succeeded" | "failed" | "cancelled";
@@ -188,7 +189,7 @@ function DeliveryHistory({ subscriptionId, active, now }: { subscriptionId: Id<"
           return (
             <li key={d._id} className="px-3 py-2 space-y-1">
               <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-                <span className="font-bold">{t.events[d.event].label}</span>
+                <span className="font-bold">{t.events[d.event]?.label ?? learnWebhookLabel(locale, d.event)}</span>
                 <span className={d.status === "failed" ? "text-destructive" : d.status === "succeeded" ? "text-green-700 dark:text-green-400" : "text-muted-foreground"}>{t.status[d.status]}</span>
                 <span className="text-muted-foreground">{formatDateTime(locale, d.createdAt)}</span>
                 <span className="text-muted-foreground">{t.attempts(d.attempts)}</span>
@@ -301,7 +302,7 @@ export default function WebhooksSection() {
             {webhookEventTypes.map((e) => (
               <label key={e} className="flex items-start gap-2 text-sm">
                 <input type="checkbox" className="mt-1" checked={events.includes(e)} onChange={(ev) => setEvents(ev.target.checked ? [...events, e] : events.filter((x) => x !== e))} />
-                <span>{t.events[e].label} <code dir="ltr" className="text-[11px] text-muted-foreground">{e}</code><span className="block text-xs text-muted-foreground">{t.events[e].help}</span></span>
+                <span>{t.events[e]?.label ?? learnWebhookLabel(locale, e)} <code dir="ltr" className="text-[11px] text-muted-foreground">{e}</code><span className="block text-xs text-muted-foreground">{t.events[e]?.help}</span></span>
               </label>
             ))}
           </fieldset>
@@ -350,7 +351,7 @@ export default function WebhooksSection() {
                 </div>
                 {h.status === "disabled" && <p className="text-xs text-destructive">{h.disabledReason === "connection_revoked" ? t.connectionRevoked : t.switchedOff}</p>}
                 {h.health === "failing" && <p className="text-xs text-destructive">{t.failingNote(h.consecutiveFailures)}</p>}
-                <p className="text-xs">{h.events.map((e) => t.events[e].label).join(" · ")}{h.includeAnswers ? ` · ${t.withAnswers}` : ""}</p>
+                <p className="text-xs">{h.events.map((e) => t.events[e]?.label ?? learnWebhookLabel(locale, e)).join(" · ")}{h.includeAnswers ? ` · ${t.withAnswers}` : ""}</p>
                 <p className="text-xs text-muted-foreground">
                   {h.connection ? t.byConnection(h.connection.label ?? "") : h.target === "all" ? t.all : t.some(h.items.map((i) => i.title ?? t.deleted).join(t.sep))}
                 </p>

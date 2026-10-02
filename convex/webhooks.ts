@@ -16,6 +16,7 @@ import {
 } from "./webhookModel";
 import type { WebhookEventType } from "./webhookModel";
 import { checkWebhookUrl } from "./webhookUrl";
+import { isLearnWebhookEvent, learnWebhookOwnerTitle, mayDeliverLearnWebhook } from "./learnWebhookEvents";
 
 type Ctx = QueryCtx | MutationCtx;
 type Subscription = Doc<"webhookSubscriptions">;
@@ -47,6 +48,7 @@ function validEvents(events: WebhookEventType[]): WebhookEventType[] {
 }
 
 async function ownerRefTitle(ctx: Ctx, ownerId: string, ref: string): Promise<string | null> {
+  if (/^(lesson|collection)_/.test(ref)) return await learnWebhookOwnerTitle(ctx, ownerId, ref);
   const match = /^(form|quiz)_([A-Za-z0-9]+)$/.exec(ref);
   if (!match) return null;
   if (match[1] === "form") {
@@ -327,6 +329,7 @@ async function mayDeliver(ctx: MutationCtx, sub: Subscription, delivery: Doc<"we
   // Test events have no item; they still require an active owner and connection.
   if (delivery.event === "webhook.test") return !delivery.containsAnswers;
   if (!sub.events.includes(delivery.event) || !delivery.itemRef) return false;
+  if (isLearnWebhookEvent(delivery.event)) return !delivery.containsAnswers && await mayDeliverLearnWebhook(ctx, sub, delivery.event, delivery.itemRef);
   const ref = delivery.itemRef;
   const match = /^(form|quiz)_([A-Za-z0-9]+)$/.exec(ref);
   if (!match) return false;

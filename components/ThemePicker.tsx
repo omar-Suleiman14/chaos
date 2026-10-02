@@ -33,6 +33,16 @@ export function useThemeName() {
 
 const compactIds: readonly ThemePresetId[] = ["chaos", "terracotta", "ocean", "midnight", "velvet", "arcade"];
 
+/** Themes picked on this device, most recent first. Lists show them first. */
+const RECENT_KEY = "chaos.ui.recent-themes";
+function readRecentThemes(): ThemePresetId[] {
+  try { const list: unknown = JSON.parse(localStorage.getItem(RECENT_KEY) ?? "[]"); return Array.isArray(list) ? list.filter((id): id is ThemePresetId => themePresets.some((p) => p.id === id)) : []; }
+  catch { return []; }
+}
+function rememberTheme(id: ThemePresetId) {
+  try { localStorage.setItem(RECENT_KEY, JSON.stringify([id, ...readRecentThemes().filter((x) => x !== id)].slice(0, 12))); } catch { /* private mode */ }
+}
+
 interface ThemePickerProps {
   value: ThemePresetId | string | undefined;
   onChange: (id: ThemePresetId) => void;
@@ -57,8 +67,13 @@ export function ThemePicker({ value, onChange, label, ids, defaultOption, expand
   const [expanded, setExpanded] = useState(false);
   const [search, setSearch] = useState("");
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
-  const available = ids ? themePresets.filter((p) => ids.includes(p.id)).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id)) : themePresets;
-  const compact = compactIds.map((id) => available.find((p) => p.id === id)).filter((p) => p !== undefined);
+  // Read once: reordering while someone arrows through the list would move the focus under them.
+  const [recent] = useState(readRecentThemes);
+  const rank = (id: ThemePresetId) => { const i = recent.indexOf(id); return i < 0 ? recent.length : i; };
+  const available = ids ? themePresets.filter((p) => ids.includes(p.id)).sort((a, b) => ids.indexOf(a.id) - ids.indexOf(b.id))
+    : [...themePresets].sort((a, b) => rank(a.id) - rank(b.id));
+  const compact = (ids ? compactIds : [...new Set([...recent, ...compactIds])].slice(0, compactIds.length))
+    .map((id) => available.find((p) => p.id === id)).filter((p) => p !== undefined);
   const selectedPreset = available.find((p) => p.id === value);
   if (selectedPreset && !compact.some((p) => p.id === selectedPreset.id)) compact.splice(Math.max(0, compact.length - 1), 1, selectedPreset);
   const query = search.trim().toLocaleLowerCase();
@@ -73,7 +88,7 @@ export function ThemePicker({ value, onChange, label, ids, defaultOption, expand
     const choice = choices[index];
     if (!choice) return;
     if (choice.id === undefined) defaultOption?.onSelect();
-    else onChange(choice.id);
+    else { rememberTheme(choice.id); onChange(choice.id); }
   };
 
   const move = (from: number, step: number) => {
