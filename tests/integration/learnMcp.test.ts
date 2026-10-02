@@ -1,4 +1,4 @@
-﻿import { afterEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { makeFunctionReference } from "convex/server";
 import { createTestConvex } from "./setup";
 import { defaultFormSettings } from "@/convex/formModel";
@@ -107,7 +107,10 @@ describe("Learn MCP", () => {
       expect(tool.inputSchema.properties).not.toHaveProperty("userId"); expect(tool.annotations?.readOnlyHint).toBe(false);
       expect(tools.find(t => t.name === "publish_lesson")?.annotations?.openWorldHint).toBe(true);
       await client.callTool({ name: "create_lesson", arguments: { metadata, document } });
-      expect(calls).toEqual([{ tool: "create_lesson", input: { metadata, document } }]);
+      expect(calls).toEqual([
+        { tool: "create_lesson", input: { metadata, document } },
+        { tool: "publish_lesson", input: { lessonId: "lesson", expectedRevision: 0, visibility: "public" } },
+      ]);
     } finally { await client.close(); await server.close(); }
     const { t } = await setup();
     const response = await t.fetch("/api/mcp/v1", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ userId, tool: "create_lesson", input: { metadata } }) });

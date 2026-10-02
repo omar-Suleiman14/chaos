@@ -47,6 +47,105 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 | `set_form_sound` | Pick the sound pack respondents hear: soft (Glass), pop, wood, arcade, or off | false | false | false |
 | `set_form_status` | Close, reopen, archive, restore (never delete) | false | false | false |
 
+#### Advanced forms, collaboration and quiz forks
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `get_form_advanced_analytics` | Aggregate analytics: correct rates, completion times, score distribution | true | false | false |
+| `export_form_responses` | Export responses as CSV/XLSX/JSON; returns a secure download link | false | false | **true** |
+| `list_form_collaborators` | List collaborators and permissions on an owned form | true | false | false |
+| `change_form_collaborator` | Invite, update role or remove a collaborator | false | **true** | **true** |
+| `set_form_branching` | Configure question jump logic and conditional branches | false | **true** | false |
+| `upsert_form_file_question` | Add or update file upload questions on an owned draft | false | false | false |
+| `get_form_response_controls` | Inspect submission caps, closing dates, respondent limits | true | false | false |
+| `set_form_response_controls` | Set submission caps, closing dates and access controls | false | **true** | false |
+| `fork_quiz` | Fork a published quiz into a new owned draft | false | false | false |
+| `get_quiz_fork_lineage` | Trace fork provenance and original author credit | true | false | false |
+
+#### Learn lesson tools
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `create_lesson` | Create a lesson draft (published immediately unless `publish: false`) | false | false | **true** |
+| `get_lesson` | Read draft, published or outline blocks (paged, max 100) | true | false | false |
+| `list_lessons` | List owned lesson drafts or search public published lessons | true | false | false |
+| `search_lessons` | Alias for `list_lessons`; search owned or public lessons | true | false | false |
+| `save_lesson_draft` | Revision-protected full draft replacement | false | **true** | false |
+| `edit_lesson_blocks` | Atomic append, update, move or delete block operations | false | **true** | false |
+| `add_lesson_blocks` | Append new blocks to a lesson draft | false | false | false |
+| `update_lesson_blocks` | Replace existing blocks by id | false | **true** | false |
+| `move_lesson_blocks` | Reorder blocks within a draft | false | false | false |
+| `delete_lesson_blocks` | Remove blocks from a draft | false | **true** | false |
+| `publish_lesson` | Explicitly publish a lesson draft with visibility | false | false | **true** |
+| `set_lesson_lifecycle` | Archive, unpublish or restore an owned lesson | false | **true** | **true** |
+| `restore_lesson_version` | Restore a historical published version into the draft | false | **true** | false |
+| `fork_lesson` | Fork a public lesson into an owned editable copy | false | false | false |
+| `list_lesson_versions` | Inspect version publication history | true | false | false |
+| `get_lesson_version` | Read blocks from an immutable published snapshot | true | false | false |
+| `get_lesson_outline` | Read heading outline of a draft or published lesson | true | false | false |
+| `get_lesson_sources` | List sources cited in a lesson | true | false | false |
+| `get_learn_source_metadata` | Read metadata for an authorized cited source | true | false | false |
+| `get_learn_capabilities` | Inspect schema limits, block types and capabilities | true | false | false |
+
+#### Course tools
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `create_full_course` | Create course and all lessons with blocks in one call, published by default | false | false | **true** |
+| `create_course` | Create an empty owned course draft | false | false | false |
+| `get_course` | Read course metadata, cover, icon, outline and status | true | false | false |
+| `update_course` | Update draft title, description, cover, icon, tags or language | false | false | false |
+| `set_course_outline` | Replace ordered lesson list (preserves existing lessons) | false | **true** | false |
+| `add_course_lesson` | Append a blank lesson draft to the course | false | false | false |
+| `publish_course` | Publish course and outlined lessons with visibility | false | **true** | **true** |
+| `list_courses` | List the person's courses including archived (paged) | true | false | false |
+| `set_course_archived` | Archive or restore an owned course | false | **true** | **true** |
+| `unpublish_course` | Take an owned published course offline | false | **true** | **true** |
+
+#### Flashcard tools
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `create_flashcard_set` | Create a flashcard set, published by default | false | false | **true** |
+| `get_flashcard_set` | Read cards, metadata and revision of an owned set | true | false | false |
+| `list_flashcard_sets` | List owned flashcard sets (paged) | true | false | false |
+| `save_flashcard_set` | Replace card list with revision check | false | **true** | false |
+| `publish_flashcard_set` | Make an immutable published version of a card set | false | false | **true** |
+| `set_flashcard_set_lifecycle` | Archive, restore or unpublish a flashcard set | false | **true** | **true** |
+| `attach_lesson_flashcards` | Link a published card set to an owned lesson | false | false | false |
+| `detach_lesson_flashcards` | Remove card set link from an owned lesson | false | **true** | false |
+| `get_lesson_flashcards` | Read card sets attached to a lesson | true | false | false |
+
+#### Assessment tools
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `attach_lesson_quiz` | Link an owned published quiz to a lesson for practice | false | false | false |
+| `get_lesson_quizzes` | List quizzes attached to a lesson | true | false | false |
+| `create_lesson_live_game` | Start a live game room directly from a lesson assessment | false | false | **true** |
+
+#### Organization and curriculum tools
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `create_folder` | Create an owned private folder | false | false | false |
+| `list_folders` | List owned folders under a parent | true | false | false |
+| `move_folder` | Move a folder to a new parent | false | **true** | false |
+| `list_folder_contents` | List member assets in a folder | true | false | false |
+| `add_folder_member` | Add a form, quiz, lesson or course to a folder | false | false | false |
+| `list_curriculum_institutions` | Browse public curriculum institutions | true | false | false |
+| `list_curriculum_programs` | Browse public curriculum programs | true | false | false |
+| `list_curriculum_versions` | Browse public curriculum versions | true | false | false |
+| `list_curriculum_nodes` | Browse public curriculum learning nodes | true | false | false |
+| `create_lesson_curriculum_mapping` | Map an owned lesson to a curriculum node | false | false | false |
+
+#### Community tools
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `save_lesson` | Save or unsave a public lesson to your library | false | false | false |
+| `search_learn_directory` | Search public institutions, programs and creators | true | false | false |
+
 `create_form` also takes an optional `theme` (preset name) and `sound`. ChatGPT is told to pick a theme that suits the form; without one it uses the Google Forms style. Sound is on (Glass) unless `sound` is `off`. Forms made in Chaos itself start silent.
 
 #### Live game tools
@@ -110,7 +209,7 @@ You do these steps; they change production.
    # → {"resource":"https://chaos.fail/mcp","authorization_servers":["https://clerk.chaos.fail"],...}
    curl -s https://chaos.fail/mcp -H 'Content-Type: application/json' -H 'Accept: application/json, text/event-stream' \
      -d '{"jsonrpc":"2.0","id":1,"method":"tools/list"}'
-   # → the 18 tools
+   # → the 69 tools
    ```
    You can also point the MCP Inspector at it: `npx @modelcontextprotocol/inspector` → Streamable HTTP → `https://chaos.fail/mcp` → Connect (it runs the OAuth flow).
 
@@ -122,7 +221,7 @@ You do these steps; they change production.
    - MCP server URL: `https://chaos.fail/mcp`
    - Authentication: **OAuth** (leave client ID/secret empty; ChatGPT registers itself through DCR/CIMD)
    - Tick "I trust this application" → **Create**.
-3. ChatGPT opens the Clerk sign-in → approve the consent screen. The app shows as connected with 18 tools.
+3. ChatGPT opens the Clerk sign-in → approve the consent screen. The app shows as connected with 69 tools.
 4. In a new chat, choose **+ → Developer mode → Chaos** (or just name Chaos in the prompt) and try:
    - *"Let's talk about the solar system for a bit"* … then *"Create me a quiz of what we discussed using Chaos"*
    - *"Show me my Chaos forms"*
@@ -132,15 +231,33 @@ You do these steps; they change production.
 
 If something fails, check Vercel logs for `/mcp` and the Convex logs for `mcp:*` functions. `NOT_CONFIGURED` means `CHAOS_MCP_SECRET` is missing in Vercel; `401 UNAUTHORIZED` from Convex means the two secrets differ.
 
+## 2b. Test it in Claude (Desktop or Code)
+
+1. In Claude Desktop, open your configuration file (`claude_desktop_config.json`):
+   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
+   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
+2. Add the Chaos MCP server configuration:
+   ```json
+   {
+     "mcpServers": {
+       "chaos": {
+         "url": "https://chaos.fail/mcp"
+       }
+     }
+   }
+   ```
+3. Restart Claude Desktop. Complete the sign-in prompt in your browser to authorize access to your Chaos account.
+4. In any chat, Claude can now use the 69 Chaos tools to search your library, create quizzes, forms, lessons, courses, and flashcard sets, host live games, and summarize results.
+
 ## 3. Submission packet (OpenAI Platform → Plugins → Submit)
 
 Before you start: the submitting account needs the **Apps Management: Write** role, and the organization needs a **verified individual or business identity**.
 
 ### Info
 - **Plugin name:** Chaos
-- **Short description:** Create quizzes, forms and surveys, and check the results, in your Chaos account.
+- **Short description:** Create quizzes, forms, lessons, and courses, and check the results, in your Chaos account.
 - **Long description:**
-  Chaos is a simple, beautiful form and quiz builder. With the Chaos app, ChatGPT works in your own Chaos account: turn a conversation into a quiz with right answers and points, draft a survey or signup form, edit questions, and publish when you're ready. Ask how a form is doing and get response counts, answer breakdowns and average quiz scores, or read individual responses when you need them. Everything ChatGPT creates starts as a draft you can review, and nothing is ever deleted from ChatGPT. Works in English and Arabic. The Chaos app is included with Chaos Pro; new accounts get a 30-day Pro trial.
+  Chaos is a simple, beautiful form, quiz, and course builder. With the Chaos app, ChatGPT works in your own Chaos account: turn a conversation into a quiz with right answers and points, draft a survey or signup form, create lessons and courses, edit content, and publish when you're ready. Ask how a form is doing and get response counts, answer breakdowns and average quiz scores, or read individual responses when you need them. New things ChatGPT creates are published straight away unless you ask for a draft, edits stay drafts until you choose to publish, and nothing is ever deleted from ChatGPT. Works in English and Arabic. The Chaos app is included on every plan, including free Personal accounts.
 - **Category:** Productivity (alternative: Education)
 - **Logo:** `public/icon.svg` exported as a square PNG (at least 512×512, no transparency padding issues)
 - **Website:** https://chaos.fail
@@ -151,10 +268,10 @@ Before you start: the submitting account needs the **Apps Management: Write** ro
 ### MCP
 - **URL type:** Universal · **MCP Server URL:** `https://chaos.fail/mcp`
 - **Authentication:** OAuth 2.1 (Clerk, DCR/CIMD, PKCE S256). Scopes: `openid profile email`.
-- **Demo credentials:** create a dedicated reviewer account in the **production** Clerk instance with email + password, **no MFA, no email code**. Check in Clerk → Configure → Attack protection / Client Trust that new-device email verification is **off** for it, or reviewers will be blocked. Seed it with: 1 live form with 5+ responses, 1 quiz, 1 draft (see "Test cases"). **Give it Pro with a long expiry** (`/admin` → Users → Plan) — the app refuses Free accounts, so reviewers would otherwise be blocked once the trial ends.
+- **Demo credentials:** create a dedicated reviewer account in the **production** Clerk instance with email + password, **no MFA, no email code**. Check in Clerk → Configure → Attack protection / Client Trust that new-device email verification is **off** for it, or reviewers will be blocked. Seed it with: 1 live form with 5+ responses, 1 quiz, 1 draft (see "Test cases"). Chaos MCP is available on every plan (no Pro tier requirement).
 - **Content Security Policy:** none. The app has no UI component (text and structured results only).
 - **Domain verification:** copy the token into Vercel as `OPENAI_APPS_CHALLENGE_TOKEN`, redeploy, check that `https://chaos.fail/.well-known/openai-apps-challenge` returns exactly the token, then verify.
-- **Scan Tools:** should find the 18 tools above with titles, descriptions, input and output schemas, annotations and `securitySchemes`.
+- **Scan Tools:** should find the 69 tools above with titles, descriptions, input and output schemas, annotations and `securitySchemes`.
 
 ### Tool justifications (paste per tool)
 - `search_forms`: read-only lookup of the signed-in person's own forms; no side effects, bounded to their account.
@@ -189,13 +306,13 @@ Before you start: the submitting account needs the **Apps Management: Write** ro
 3. **Prompt:** "Publish my 'Empty draft' form." (a draft with no questions) → `publish_form` returns `PUBLICATION_BLOCKED: Add at least one question.`; the model offers to add questions first. *Why:* incomplete forms can't go live. *Fixture:* draft "Empty draft" with no questions.
 
 ### Test case — negative (extra, optional)
-4. **Prompt (Free account):** "Show my Chaos forms." → every tool returns `PRO_REQUIRED: Chaos in ChatGPT is part of Chaos Pro…`; the model explains the app needs Pro. *Why:* the app is a paid feature.
+4. **Prompt (Accessing another account's items):** "Show responses for quiz owned by another user." → returns `NOT_FOUND` or authorization error; the model explains that items from other accounts cannot be accessed.
 
 ### Global
 Pick the countries where Chaos's terms and support apply (for example all available regions, or start with the ones you support).
 
 ### Release notes (initial submission)
-Initial release of the Chaos app (requires Chaos Pro; new accounts get a 30-day trial, and the reviewer account has Pro). Lets people create quiz, form and survey drafts, edit and publish them, change their status, and read results and responses in their own Chaos account. OAuth via Clerk (DCR/CIMD + PKCE). No UI component. Reviewer account: <email> / <password> (no MFA); it contains a live form "Workshop feedback" with responses, a live quiz "Chapter 3 review" and a draft "Empty draft".
+Initial release of the Chaos app (available on every plan). Lets people create quizzes, forms, surveys, lessons, courses and flashcard sets, edit and publish them, change their status, host live games, and read results and responses in their own Chaos account. OAuth via Clerk (DCR/CIMD + PKCE). No UI component. Reviewer account: <email> / <password> (no MFA); it contains a live form "Workshop feedback" with responses, a live quiz "Chapter 3 review" and a draft "Empty draft".
 
 ## Limits and known gaps
 - No inline UI widget yet; ChatGPT shows text with links. A card widget would need CSP and a dedicated widget domain for review.

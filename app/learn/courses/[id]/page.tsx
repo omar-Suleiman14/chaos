@@ -45,6 +45,7 @@ export default async function PublicCoursePage({ params }: Props) {
       <header className="cp-hero">
         <Link href="/learn" className="cp-kicker">{labels.explore}</Link>
         <div className="cp-cover" style={coverStyle(course.id, course.coverUrl)} aria-hidden="true" />
+        {course.icon && <span className="cp-icon" aria-hidden="true">{course.icon}</span>}
         <h1>{course.title}</h1>
         {course.description && <p>{course.description}</p>}
         <div className="cp-by"><span>{labels.by} <Link href={`/card/${course.ownerUsername}`}>{course.ownerName || `@${course.ownerUsername}`}</Link></span><span aria-hidden="true">·</span><span>{labels.count}</span></div>

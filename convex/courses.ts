@@ -220,7 +220,7 @@ const publicLesson = v.object({ id: v.id("lessons"), versionId: v.id("lessonVers
 /** Anyone can read a published public course (owner and granted readers for private ones). */
 export const getPublic = query({
   args: { courseId: v.string() },
-  returns: v.union(v.null(), v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), language: v.string(), tags: v.array(v.string()), ownerName: v.string(), ownerUsername: v.string(), publishedAt: v.number(), lessons: v.array(publicLesson) })),
+  returns: v.union(v.null(), v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()), ownerName: v.string(), ownerUsername: v.string(), publishedAt: v.number(), lessons: v.array(publicLesson) })),
   handler: async (ctx, args) => {
     const id = ctx.db.normalizeId("learnCollections", args.courseId);
     const row = id ? await ctx.db.get("learnCollections", id) : null;
@@ -241,7 +241,7 @@ export const getPublic = query({
       const lv = await ctx.db.get("lessonVersions", item.versionId);
       if (lv && lv.lessonId === item.id && (ownsLesson || lv.visibility === undefined || lv.visibility === "public")) lessons.push({ id: item.id, versionId: item.versionId, title: lv.metadata.title, description: lv.metadata.description, blocks: lv.document.blocks.length });
     }
-    return { id: row._id, title: version.metadata.title, description: version.metadata.description, coverUrl: version.metadata.coverUrl, language: version.metadata.language, tags: version.metadata.tags, ownerName: owner.name, ownerUsername: owner.username, publishedAt: version.publishedAt, lessons };
+    return { id: row._id, title: version.metadata.title, description: version.metadata.description, coverUrl: version.metadata.coverUrl, icon: version.metadata.icon, language: version.metadata.language, tags: version.metadata.tags, ownerName: owner.name, ownerUsername: owner.username, publishedAt: version.publishedAt, lessons };
   },
 });
 

@@ -20,6 +20,7 @@ it("creates a course like a form, publishes it publicly with its lessons, and ke
   const second = await owner.mutation(api.courses.addLesson, { courseId, title: "Portal hypertension" });
   for (const lessonId of [first, second]) await owner.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: 0, document: { schemaVersion: 1, blocks: [paragraph("p", "Text")] } });
   await owner.mutation(api.courses.setOutline, { courseId, lessonIds: [second, first] });
+  await owner.mutation(api.courses.update, { courseId, icon: "🩺" });
 
   // Strangers can neither read the draft nor change the outline.
   await expect(other.query(api.courses.get, { courseId })).rejects.toThrow("NOT_FOUND");
@@ -28,11 +29,13 @@ it("creates a course like a form, publishes it publicly with its lessons, and ke
 
   const draft = await owner.query(api.courses.get, { courseId });
   expect(draft.canPrivate).toBe(false);
+  expect(draft.icon).toBe("🩺");
   await expect(owner.mutation(api.courses.publish, { courseId, visibility: "private" })).rejects.toThrow("BUSINESS_REQUIRED");
   expect(await owner.mutation(api.courses.publish, { courseId, visibility: "public" })).toEqual({ ok: true });
 
   const pub = await t.query(api.courses.getPublic, { courseId });
   expect(pub?.lessons.map((l) => l.title)).toEqual(["Portal hypertension", "Lesson 1"]);
+  expect(pub?.icon).toBe("🩺");
   expect((await t.query(api.courses.listPublic, {})).map((c) => c.id)).toContain(courseId);
   // Lessons went public with the course.
   expect((await t.run((ctx) => ctx.db.get("lessons", first)))?.visibility).toBe("public");

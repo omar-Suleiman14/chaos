@@ -1049,9 +1049,9 @@ export const sectionsEn: DocSection[] = [
           {
             type: "list",
             items: [
-              "Find your forms and quizzes.",
-              "Create a form, survey or quiz as a **draft**, with all its questions. For a quiz, it sets correct answers, points and explanations.",
-              "Edit a draft: title, introduction, quiz mode, layout and the question list.",
+              "Find your forms, quizzes, lessons and courses.",
+              "Create a form, survey, quiz, lesson, course or flashcard set with all content, published straight away unless you ask for a draft. For a quiz, it sets correct answers, points and explanations.",
+              "Edit a draft: title, introduction, quiz mode, layout, questions and lesson blocks.",
               "Change a form's theme and sounds.",
               "Publish, when you ask, and give you the link.",
               "Close, reopen, archive and restore a form.",
@@ -1061,8 +1061,8 @@ export const sectionsEn: DocSection[] = [
           },
           { type: "heading", id: "cannot", text: "What it cannot do" },
           { type: "list", items: ["It cannot delete anything. Deleting is only in the Archive, in Chaos.", "It cannot change the live version without publishing.", "Classic quizzes from the old editor are read-only.", "File upload questions and custom endings cannot be created from ChatGPT. They are kept when you edit."] },
-          { type: "heading", id: "drafts", text: "Drafts first" },
-          { type: "p", text: "Everything it creates starts as a draft in your Library. Nothing is shared until you ask it to publish. Open the draft in Chaos to check it." },
+          { type: "heading", id: "drafts", text: "Publishing and drafts" },
+          { type: "p", text: "New things it creates are published straight away so links work immediately, unless you ask for a draft. Later edits always stay drafts until you choose to publish them. Open any item in Chaos to check or edit it." },
           { type: "heading", id: "try", text: "Things to try" },
           {
             type: "list",
