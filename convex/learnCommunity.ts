@@ -355,6 +355,8 @@ export const report = mutation({
   handler: async (ctx, args) => {
     const identity = await actor(ctx);
     await lessonAccess(ctx, args.lessonId);
+    // Reports lower a lesson's ranking and fill the review queue, so one account gets a bounded number.
+    await consumeRate(ctx, `learn:report:${identity.tokenIdentifier}`, 20, 60 * 60 * 1000);
     const detail = text(args.detail);
     const old = await ctx.db
       .query("learnReports")

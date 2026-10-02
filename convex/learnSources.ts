@@ -1,3 +1,4 @@
+import { consumeRate } from "./serverUtils";
 import { observeHttp } from "../lib/backendTelemetry";
 import { v, type Infer } from "convex/values";
 import { makeFunctionReference, type HttpRouter } from "convex/server";
@@ -499,6 +500,8 @@ export const registerUpload = internalMutation({
   returns: v.object({ sourceId: v.id("learnSources"), duplicate: v.boolean(), nearDuplicateOf: v.optional(v.id("learnSources")) }),
   handler: async (ctx, args) => {
     const { identity } = await requireActiveUser(ctx);
+    // Bounds storage one account can add (each file is up to 25 MB); a refused upload's file is deleted by the caller.
+    await consumeRate(ctx, `learn:source-upload:${identity.subject}`, 40, 60 * 60 * 1000);
     validateMetadata(args.metadata);
     const file = await ctx.db.system.get("_storage", args.storageId);
     if (
