@@ -6,8 +6,7 @@ import { asBlocks, blockText, parseYouTube, cellInlines, inlineText, type Block,
  * block-level citations with structured locators.
  *
  * v1 cannot yet hold everything the editor produces. Anything it cannot hold is reported in
- * `lost` so the save path can warn instead of silently dropping it; the list doubles as the
- * backend's to-do (docs/learn-frontend-contract.md, "Document gaps").
+ * `lost` so the save path can warn instead of silently dropping it.
  */
 
 export type Locator =

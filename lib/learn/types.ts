@@ -6,7 +6,6 @@
  * (`lib/learn/localStore.ts`) so every screen works end to end, and the Convex
  * backend replaces that store behind the same hooks. Keep field names product-neutral:
  * external apps (Max, ChatGPT, Claude) are clients of this model, not part of it.
- * See `docs/learn-frontend-contract.md`.
  */
 
 /** Opaque string ids. Convex ids fit. */

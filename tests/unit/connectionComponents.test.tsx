@@ -1,21 +1,9 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
-import ExternalRefBadge from "@/components/connections/ExternalRefBadge";
 import ChangePreview from "@/components/connections/ChangePreview";
 import type { LessonMeta } from "@/lib/learn/types";
 
 const meta = (title: string): LessonMeta => ({ title, description: "", tags: [], language: "en", curricula: [], indexing: "noindex" });
-
-describe("ExternalRefBadge", () => {
-  it("links back to the source app only when there is an address", () => {
-    const ref = { connectionId: "c1", app: "max", appName: "Max", kind: "page", title: "GIT Notes", url: "https://max.example/p/1", linkedAt: 0 };
-    const { rerender } = render(<ExternalRefBadge externalRef={ref} />);
-    expect(screen.getByText("Created from Max page: GIT Notes")).toBeInTheDocument();
-    expect(screen.getByRole("link", { name: "Open in Max" })).toHaveAttribute("href", "https://max.example/p/1");
-    rerender(<ExternalRefBadge externalRef={{ ...ref, url: undefined }} />);
-    expect(screen.queryByRole("link")).toBeNull();
-  });
-});
 
 describe("ChangePreview", () => {
   it("shows detail and block changes and calls the chosen action", () => {

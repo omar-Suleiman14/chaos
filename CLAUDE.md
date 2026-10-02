@@ -12,7 +12,7 @@ Convex agent skills for common tasks can be installed by running `npx convex ai-
 - Keep taking the next safe, authorized step when no user input is needed. Pair brief progress notes with the next action; do not stop merely to offer to continue.
 - Ask when a necessary decision or missing access prevents progress, or before destructive or out-of-scope actions that the user has not authorized. Never disable permission safeguards.
 - Incorporate follow-up instructions into the current task without restarting completed work. Revisit settled decisions only when asked or when new evidence shows a problem.
-- For long tasks, maintain a concise checklist in TASKS.md with completed work, remaining work, verification and blockers. Preserve existing entries; this is a working checklist, not a replacement for the GitHub roadmap.
+- Track engineering work in GitHub Issues and Milestones, not in planning Markdown files in this repository. For a long task, keep a short checklist in the issue or pull request (completed, remaining, verification, blockers).
 - Parallelize independent audits or migrations with subagents when available. Give each a bounded scope and verify its evidence before accepting its result.
 - Inspect current code before treating an open issue or old document as proof of a defect. Distinguish implemented, verified, proposed and unconfirmed work.
 - Review the final diff and run checks appropriate to the change. Report actionable defects with file/line, impact and a reproduction or test; do not claim checks passed unless they ran.

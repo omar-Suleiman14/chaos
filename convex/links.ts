@@ -12,7 +12,7 @@ import { requireActiveUser, requireFormRole } from "./authz";
 
 /** First path segments the app already uses, so no username can shadow a page. */
 const RESERVED = new Set([
-  "admin", "api", "app", "compare", "dashboard", "f", "help", "login", "logout", "privacy", "settings", "sign-in", "sign-up",
+  "admin", "api", "app", "compare", "copyright", "dashboard", "f", "help", "login", "logout", "privacy", "settings", "sign-in", "sign-up",
   "signin", "signup", "static", "support", "terms", "_next", "favicon.ico", "icon.svg", "robots.txt", "sitemap.xml",
   "mcp", "print", "opengraph-image", "chatgpt", "play", "learn", "homework", "card", "docs", "pricing", "courses",
 ]);

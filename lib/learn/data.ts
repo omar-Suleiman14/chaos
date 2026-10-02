@@ -23,7 +23,7 @@ import type {
 /**
  * Every Learn screen reads and writes through these hooks. Loading returns `undefined`,
  * like Convex's `useQuery`, so swapping the local store for the backend keeps the
- * screens unchanged. See docs/learn-frontend-contract.md for the matching backend API.
+ * screens unchanged.
  */
 
 /** Durable library/student flows; discussions, folder pins and tutor history remain local-only. */
