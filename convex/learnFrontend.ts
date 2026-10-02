@@ -29,6 +29,27 @@ export const publicLesson = query({
   },
 });
 
+/** Fast batched metadata + version lookup for multiple public lessons in one roundtrip. */
+export const publicLessonsBatch = query({
+  args: { ids: v.array(v.string()) },
+  returns: v.array(v.object({ lessonId: v.id("lessons"), ownerId: v.string(), ownerName: v.string(), createdAt: v.number(), version: schema.doc("lessonVersions") })),
+  handler: async (ctx, args) => {
+    const results = [];
+    for (const rawId of args.ids.slice(0, 50)) {
+      if (!rawId || rawId.length > 100) continue;
+      const id = ctx.db.normalizeId("lessons", rawId);
+      if (!id) continue;
+      const lesson = await ctx.db.get("lessons", id);
+      if (!lesson || lesson.status !== "active" || lesson.visibility !== "public" || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) continue;
+      const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
+      if (!version || version.lessonId !== id || (version.visibility !== undefined && version.visibility !== "public")) continue;
+      const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
+      results.push({ lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", createdAt: lesson.createdAt, version });
+    }
+    return results;
+  },
+});
+
 /** Direct editor lookup does not depend on a bounded dashboard page containing this asset. */
 export const editableLesson = query({
   args: { id: v.string() }, returns: v.union(v.null(), schema.doc("lessons")),

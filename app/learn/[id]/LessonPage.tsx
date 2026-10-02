@@ -7,11 +7,14 @@ import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { useLearnViewer, useLesson } from "@/lib/learn/data";
 import { useCopy } from "@/lib/i18n";
 
+import type { Lesson } from "@/lib/learn/types";
+
 const copy = { en: { loading: "Opening lesson…" }, ar: { loading: "جارٍ فتح الدرس…" } };
 
-export default function LessonPage({ id }: { id: string }) {
+export default function LessonPage({ id, initialLesson }: { id: string; initialLesson?: Lesson | null }) {
   const t = useCopy(copy);
-  const lesson = useLesson(id);
+  const liveLesson = useLesson(id);
+  const lesson = liveLesson !== undefined ? liveLesson : initialLesson;
   const viewer = useLearnViewer();
   const preview = useSearchParams().get("preview") === "draft";
   const isOwner = !!lesson && lesson.ownerId === viewer?.id;

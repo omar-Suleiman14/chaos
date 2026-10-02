@@ -27,7 +27,7 @@ const copy = {
   },
 };
 
-import { CourseOrLessonIcon, LEARN_ICON_NAMES, LUCIDE_LEARN_ICONS } from "../icons";
+import { CourseOrLessonIcon, LEARN_ICON_NAMES, LUCIDE_LEARN_ICONS, NOTION_ICON_COLORS, type NotionIconColorId, parseIconWithColor } from "../icons";
 
 const pickRandom = <T,>(list: T[]) => list[Math.floor(Math.random() * list.length)];
 
@@ -87,21 +87,59 @@ function CoverPicker({ onPick, onRemove, onClose }: { onPick: (url: string) => v
   );
 }
 
-function IconPicker({ onPick, onRemove, onClose }: { onPick: (icon: string) => void; onRemove?: () => void; onClose: () => void }) {
+function IconPicker({ currentIcon, onPick, onRemove, onClose }: { currentIcon?: string; onPick: (icon: string) => void; onRemove?: () => void; onClose: () => void }) {
   const t = useCopy(copy);
   const ref = useDismiss(true, onClose);
+  const parsed = parseIconWithColor(currentIcon);
+  const [selectedColor, setSelectedColor] = useState<NotionIconColorId>(parsed.colorId ?? "default");
+  const colorHex = NOTION_ICON_COLORS.find((c) => c.id === selectedColor)?.color;
+
   return (
     <div ref={ref} className="lx-emoji-picker ws-glass" role="dialog" aria-label={t.icon}>
       <div className="lx-cover-picker__tabs">
-        <button type="button" onClick={() => { onPick(pickRandom(LEARN_ICON_NAMES)); onClose(); }}>{t.random}</button>
+        <button type="button" onClick={() => { onPick(selectedColor !== "default" ? `${pickRandom(LEARN_ICON_NAMES)}:${selectedColor}` : pickRandom(LEARN_ICON_NAMES)); onClose(); }}>{t.random}</button>
         {onRemove && <button type="button" className="lx-cover-picker__remove" onClick={() => { onRemove(); onClose(); }}>{t.remove}</button>}
+      </div>
+      <div className="lx-color-swatches" style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: "8px", padding: "10px 14px", borderBottom: "1px solid var(--ws-line)" }}>
+        {NOTION_ICON_COLORS.map((c) => {
+          const isSelected = selectedColor === c.id;
+          return (
+            <button
+              key={c.id}
+              type="button"
+              aria-label={c.label}
+              title={c.label}
+              onClick={() => setSelectedColor(c.id)}
+              style={{
+                width: "22px",
+                height: "22px",
+                borderRadius: "50%",
+                backgroundColor: c.color,
+                border: isSelected ? "2px solid #ffffff" : "1px solid rgba(255,255,255,0.2)",
+                boxShadow: isSelected ? "0 0 0 2px var(--primary, #3b82f6)" : "none",
+                cursor: "pointer",
+                justifySelf: "center",
+                transition: "transform 0.1s ease",
+              }}
+            />
+          );
+        })}
       </div>
       <div className="lx-emoji-picker__grid">
         {LEARN_ICON_NAMES.map((name) => {
           const Icon = LUCIDE_LEARN_ICONS[name];
           return (
-            <button key={name} type="button" aria-label={name} title={name} onClick={() => { onPick(name); onClose(); }}>
-              <Icon size={20} aria-hidden="true" />
+            <button
+              key={name}
+              type="button"
+              aria-label={name}
+              title={name}
+              onClick={() => {
+                onPick(selectedColor !== "default" ? `${name}:${selectedColor}` : name);
+                onClose();
+              }}
+            >
+              <Icon size={20} style={selectedColor !== "default" ? { color: colorHex } : undefined} aria-hidden="true" />
             </button>
           );
         })}
@@ -152,7 +190,7 @@ export function PageIconControls({ meta, editable, onChange }: { meta: PageLook;
           <button type="button" className="lx-page-icon" aria-label={t.icon} disabled={!editable} onClick={() => setPicker(true)}>
             <CourseOrLessonIcon icon={meta.icon} size={48} />
           </button>
-          {picker && <IconPicker onPick={(icon) => onChange({ icon })} onRemove={() => onChange({ icon: undefined })} onClose={() => setPicker(false)} />}
+          {picker && <IconPicker currentIcon={meta.icon} onPick={(icon) => onChange({ icon })} onRemove={() => onChange({ icon: undefined })} onClose={() => setPicker(false)} />}
         </div>
       )}
       {editable && (!meta.icon || !hasCover) && (

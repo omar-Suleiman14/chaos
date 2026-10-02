@@ -14,7 +14,7 @@ export function validateMetadataPresentation(metadata: Infer<typeof lessonMeta>)
   // Covers are an absolute link or one of the bundled gallery images (public/covers, see lib/learn/covers.ts).
   if (metadata.coverUrl !== undefined && metadata.coverUrl !== "" && !/^\/covers\/[a-z0-9/_-]+\.(jpg|svg)$/.test(metadata.coverUrl) && (!safeLessonLink(metadata.coverUrl) || !/^https?:/.test(metadata.coverUrl))) problems.push({ path: "metadata.coverUrl", code: "LINK", message: "Use an absolute HTTP or HTTPS cover URL without credentials, or a /covers/ gallery image." });
   if (metadata.coverY !== undefined && !(Number.isFinite(metadata.coverY) && metadata.coverY >= 0 && metadata.coverY <= 100)) problems.push({ path: "metadata.coverY", code: "LIMIT", message: "Cover position is a percentage from 0 to 100." });
-  if (metadata.icon !== undefined && metadata.icon !== "" && (metadata.icon.length > 16 || /[\s\u0000-\u001f\u007f<>]/.test(metadata.icon))) problems.push({ path: "metadata.icon", code: "LIMIT", message: "Use a valid Lucide icon name or emoji as the page icon." });
+  if (metadata.icon !== undefined && metadata.icon !== "" && (metadata.icon.length > 40 || /[\s\u0000-\u001f\u007f<>]/.test(metadata.icon))) problems.push({ path: "metadata.icon", code: "LIMIT", message: "Use a valid Lucide icon name or emoji as the page icon." });
   if (metadata.authorDisplay !== undefined && (metadata.authorDisplay.length > 200 || /[\u0000-\u001f\u007f]/.test(metadata.authorDisplay))) problems.push({ path: "metadata.authorDisplay", code: "LIMIT", message: "Use an author display name of at most 200 characters without control characters." });
   return problems;
 }

@@ -7,6 +7,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Compass, Search, X } from "lucide-react";
 import { EmptyState, LessonCard } from "@/components/learn/ui";
+import { CourseOrLessonIcon } from "@/components/learn/icons";
 import { courseCopy, coverStyle } from "@/components/courses/shared";
 import "@/components/courses/courses.css";
 import { Select } from "@/components/workspace/Select";
@@ -26,6 +27,7 @@ const copy = {
     empty: "Nothing matches", emptyBody: "Try fewer filters or other words.",
     none: "Nothing published yet", noneBody: "Public courses and lessons appear here once authors publish them.",
     resultsTitle: "Courses and lessons", collections: "Collections", lessonsIn: (n: number) => `${n} items`, loading: "Loading…", current: "current", old: "older",
+    standaloneLessons: "Independent lessons", coursesSection: "Courses",
   },
   ar: {
     title: "Chaos Learn", lead: "استكشف دورات عامة مجانية ودروس المجتمع دون تسجيل الدخول. تحقّق من المصادر فيما تعتمد عليه.",
@@ -37,6 +39,7 @@ const copy = {
     empty: "لا شيء مطابق", emptyBody: "جرّب عوامل تصفية أقل أو كلمات أخرى.",
     none: "لم يُنشر شيء بعد", noneBody: "تظهر الدورات والدروس العامة هنا عندما ينشرها كتّابها.",
     resultsTitle: "الدورات والدروس", collections: "المجموعات", lessonsIn: (n: number) => `${n} عنصر`, loading: "جارٍ التحميل…", current: "الحالي", old: "أقدم",
+    standaloneLessons: "دروس مستقلة", coursesSection: "الدورات",
   },
 };
 
@@ -59,28 +62,42 @@ function Explore() {
   const kind: Kind = kindParam === "courses" || kindParam === "lessons" ? kindParam : "all";
   const results = usePublicLessons(filters);
   const courses = useQuery(api.courses.listPublic, { limit: 60 });
-  const everything = usePublicLessons({});
   const nodes = useCurriculumNodes();
   const currentVersions = useMemo(() => new Set((nodes ?? []).filter((n) => n.kind === "version" && n.current).map((n) => n.id)), [nodes]);
 
-  if (!results || !everything || !nodes || courses === undefined) return <PageSkeleton label={t.loading} />;
+  if (!results || !nodes || courses === undefined) return <PageSkeleton label={t.loading} />;
 
   const universities = nodes.filter((n) => n.kind === "university");
   const modules = nodes.filter((n) => n.kind === "module");
   const versions = nodes.filter((n) => n.kind === "version");
-  const tags = [...new Set(everything.flatMap((l) => (l.published ?? l.draft).meta.tags))].slice(0, 30);
-  const creators = [...new Map(everything.map((l) => [l.ownerId, l.ownerName])).entries()];
+  const tags = [...new Set([
+    ...results.flatMap((l) => (l.published ?? l.draft).meta.tags),
+    ...courses.flatMap((course) => course.tags),
+  ])].slice(0, 30);
+  const creators = [...new Map([
+    ...results.map((l) => [l.ownerId, l.ownerName] as [string, string]),
+    ...courses.map((course) => [course.ownerName, course.ownerName] as [string, string]),
+  ]).entries()];
   const active = KEYS.some((k) => k !== "sort" && filters[k]);
-  // Courses match the search words and language; lesson-only filters (module, author, topic…) leave them out.
-  const lessonOnly = !!(filters.topic || filters.universityId || filters.moduleId || filters.versionId || filters.creatorId);
   const words = (filters.q ?? "").toLocaleLowerCase().split(/\s+/).filter(Boolean);
-  const matchingCourses = kind === "lessons" || lessonOnly ? [] : courses.filter((course) => {
+
+  // Search matches all course words, author name, username, and lessons inside the course
+  const matchingCourses = kind === "lessons" ? [] : courses.filter((course) => {
     if (filters.language && course.language !== filters.language) return false;
-    const text = `${course.title} ${course.description} ${course.tags.join(" ")}`.toLocaleLowerCase();
+    if (filters.creatorId && course.ownerName !== filters.creatorId && course.ownerUsername !== filters.creatorId) return false;
+    if (filters.topic && !course.tags.includes(filters.topic)) return false;
+    if (!words.length) return true;
+    const text = `${course.title} ${course.description} ${course.tags.join(" ")} ${course.ownerName} ${course.ownerUsername} ${(course.lessonTitles ?? []).join(" ")}`.toLocaleLowerCase();
     return words.every((w) => text.includes(w));
   });
-  const listedLessons = kind === "courses" ? [] : results.filter(isListed);
-  const nothingPublished = everything.length === 0 && courses.length === 0;
+
+  const listedLessons = results.filter(isListed);
+  // Lessons belonging to courses belong inside their course, not beside them
+  const courseLessonIds = new Set(courses.flatMap((course) => course.lessonIds ?? []));
+  const standaloneLessons = listedLessons.filter((l) => !courseLessonIds.has(l.id as any));
+  const displayLessons = kind === "lessons" ? listedLessons : standaloneLessons;
+
+  const nothingPublished = results.length === 0 && courses.length === 0;
   const byId = new Map(nodes.map((n) => [n.id, n]));
 
   return (
@@ -113,24 +130,47 @@ function Explore() {
       <section id="course-directory" className="lx-section" aria-live="polite" aria-labelledby="explore-results">
         <h2 id="explore-results" className="sr-only">{t.resultsTitle}</h2>
         {nothingPublished ? <EmptyState icon={Compass} title={t.none} body={t.noneBody} />
-          : matchingCourses.length + listedLessons.length === 0 ? <EmptyState icon={Search} title={t.empty} body={t.emptyBody} />
+          : matchingCourses.length + displayLessons.length === 0 ? <EmptyState icon={Search} title={t.empty} body={t.emptyBody} />
           : (
             <>
-              <p className="lx-muted">{t.count(matchingCourses.length, listedLessons.length)}</p>
-              {/* One list: courses first (they lead somewhere bigger), then lessons. */}
-              <div className="lx-grid">
-                {matchingCourses.map((course) => (
-                  <Link key={course.id} href={`/learn/courses/${course.id}`} className="cx-card">
-                    <div className="cx-cover" style={coverStyle(course.id, course.coverUrl)}><span className="cx-cover__badge">{t.course}</span></div>
-                    <div className="cx-body"><span className="cx-title">{course.title}</span>{course.description && <span className="cx-meta line-clamp-2">{course.description}</span>}<span className="cx-meta">{c.lessons(course.lessons)}</span></div>
-                  </Link>
-                ))}
-                {listedLessons.map((l) => <LessonCard key={l.id} lesson={l} href={`/learn/${l.id}`} currentVersionIds={currentVersions} />)}
-              </div>
+              <p className="lx-muted">{t.count(matchingCourses.length, displayLessons.length)}</p>
+              {matchingCourses.length > 0 && (
+                <div className="lx-grid" style={{ marginBottom: displayLessons.length > 0 && kind === "all" ? "32px" : undefined }}>
+                  {matchingCourses.map((course) => (
+                    <Link key={course.id} href={`/learn/courses/${course.id}`} className="cx-card">
+                      <div className="cx-cover" style={coverStyle(course.id, course.coverUrl)}>
+                        {course.icon && (
+                          <span className="cx-card__icon" aria-hidden="true" style={{ position: "absolute", bottom: "8px", left: "12px", background: "var(--ws-card)", borderRadius: "8px", padding: "6px", display: "inline-flex", boxShadow: "0 2px 8px rgba(0,0,0,0.25)" }}>
+                            <CourseOrLessonIcon icon={course.icon} size={24} />
+                          </span>
+                        )}
+                        <span className="cx-cover__badge">{t.course}</span>
+                      </div>
+                      <div className="cx-body">
+                        <span className="cx-title">{course.title}</span>
+                        {course.description && <span className="cx-meta line-clamp-2">{course.description}</span>}
+                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginTop: "4px" }}>
+                          <span className="cx-meta">{c.lessons(course.lessons)}</span>
+                          {course.ownerName && <span className="cx-meta" style={{ fontSize: "12px" }}>By {course.ownerName}</span>}
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              )}
+              {displayLessons.length > 0 && (
+                <>
+                  {kind === "all" && matchingCourses.length > 0 && (
+                    <h3 className="ws-section-title" style={{ fontSize: "16px", fontWeight: 650, margin: "24px 0 12px" }}>{t.standaloneLessons}</h3>
+                  )}
+                  <div className="lx-grid">
+                    {displayLessons.map((l) => <LessonCard key={l.id} lesson={l} href={`/learn/${l.id}`} currentVersionIds={currentVersions} />)}
+                  </div>
+                </>
+              )}
             </>
           )}
       </section>
-
     </div>
   );
 }

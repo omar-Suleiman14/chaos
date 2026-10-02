@@ -41,7 +41,7 @@
 .lx-card { position: relative; display: grid; gap: 8px; align-content: start; padding: 16px; border: 1px solid var(--ws-line); border-radius: 12px; background: var(--ws-card); color: inherit; text-decoration: none; min-width: 0; transition: border-color .15s var(--ws-ease), box-shadow .15s var(--ws-ease); }
 .lx-card:hover { border-color: var(--ws-line-strong); box-shadow: var(--ws-shadow-sm); }
 .lx-card :is(h2, h3) { font-size: 15px; font-weight: 650; line-height: 1.35; overflow-wrap: anywhere; }
-.lx-card p { font-size: 13px; line-height: 1.5; color: var(--ws-text-soft); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.lx-card p { font-size: 13px; line-height: 1.5; color: var(--ws-text-soft); display: -webkit-box; -webkit-line-clamp: 3; line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
 .lx-card__cover { margin: -16px -16px 4px; height: 96px; border-radius: 11px 11px 0 0; background: var(--ws-canvas-subtle) center / cover no-repeat; border-bottom: 1px solid var(--ws-line); }
 .lx-card__meta { display: flex; flex-wrap: wrap; gap: 6px 10px; align-items: center; font-size: 12px; color: var(--on-surface-variant); }
 .lx-card__meta > span { display: inline-flex; align-items: center; gap: 4px; }
@@ -178,6 +178,8 @@ button.lx-badge { cursor: pointer; font-family: inherit; }
 .lx-reader-top { position: sticky; top: 0; z-index: 30; display: flex; align-items: center; gap: 10px; padding: 10px clamp(12px, 3vw, 28px); background: color-mix(in srgb, var(--background) 88%, transparent); backdrop-filter: saturate(160%) blur(10px); border-bottom: 1px solid var(--ws-line); }
 .lx-reader-top__title { flex: 1; min-width: 0; font-size: 14px; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; opacity: 0; transition: opacity .2s; }
 .lx-reader-top[data-scrolled="true"] .lx-reader-top__title { opacity: 1; }
+.lx-reader-back { width: 30px !important; height: 30px !important; min-width: 30px !important; min-height: 30px !important; padding: 0 !important; border-radius: 7px; color: var(--on-surface-variant); transition: background .15s ease, color .15s ease; }
+.lx-reader-back:hover { background: var(--ws-hover); color: var(--on-background); }
 .lx-reader-progress { position: absolute; inset-inline: 0; bottom: -1px; height: 2px; background: transparent; }
 .lx-reader-progress > span { display: block; height: 100%; background: var(--primary); transform-origin: left; }
 [dir="rtl"] .lx-reader-progress > span { transform-origin: right; }

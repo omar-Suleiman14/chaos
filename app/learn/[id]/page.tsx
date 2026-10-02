@@ -23,7 +23,7 @@ export default async function PublicLessonRoute({ params }: Props) {
   return (
     <>
       {structured && <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(structured) }} />}
-      <Suspense fallback={null}><LessonPage id={id} /></Suspense>
+      <Suspense fallback={null}><LessonPage id={id} initialLesson={lesson ?? null} /></Suspense>
     </>
   );
 }

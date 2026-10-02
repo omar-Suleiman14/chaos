@@ -323,7 +323,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   return (
     <div className={embedded ? "" : "lx-reader-root"} dir={locale === "ar" ? "rtl" : "ltr"}>
       <header className="lx-reader-top" data-scrolled={scrolled > 4}>
-        <Link href={backHref} className="ws-icon-button" aria-label={t.back}><ArrowLeft size={18} className="lx-flip" /></Link>
+        <Link href={backHref} className="ws-icon-button lx-reader-back" aria-label={t.back}><ArrowLeft size={15} strokeWidth={2} className="lx-flip" /></Link>
         <span className="lx-reader-top__title" aria-hidden={scrolled <= 4}>{meta.title || t.untitled}</span>
         <div className="lx-actions" style={{ gap: 2 }}>
           {isOwner && <Link href={`/dashboard/learn/lessons/${lesson.id}`} className="ws-btn ws-btn--sm ws-btn--ghost"><PenLine size={15} aria-hidden /><span className="lx-phone-label">{t.edit}</span></Link>}

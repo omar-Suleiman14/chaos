@@ -95,7 +95,7 @@ export async function updateCourse(ctx: MutationCtx, args: Infer<typeof updateAr
     // Covers are an https link or a bundled gallery image (public/covers, lib/learn/covers.ts), as on lessons.
     if (args.coverUrl !== undefined) { if (args.coverUrl && !/^https:\/\/\S{1,2000}$/.test(args.coverUrl) && !/^\/covers\/[a-z0-9/_-]+\.(jpg|svg)$/.test(args.coverUrl)) throw new Error("VALIDATION_FAILED: Use an https image link or a gallery cover."); if (args.coverUrl) m.coverUrl = args.coverUrl; else { delete m.coverUrl; delete m.coverY; } }
     if (args.coverY !== undefined) { if (args.coverY === null) delete m.coverY; else if (Number.isFinite(args.coverY) && args.coverY >= 0 && args.coverY <= 100) m.coverY = Math.round(args.coverY); else throw new Error("VALIDATION_FAILED: Cover position is a percentage from 0 to 100."); }
-    if (args.icon !== undefined) { if (!args.icon) delete m.icon; else if (args.icon.length <= 16 && !/[\s\u0000-\u001f\u007f<>]/.test(args.icon)) m.icon = args.icon; else throw new Error("VALIDATION_FAILED: Use a valid Lucide icon name or emoji as the course icon."); }
+    if (args.icon !== undefined) { if (!args.icon) delete m.icon; else if (args.icon.length <= 40 && !/[\s\u0000-\u001f\u007f<>]/.test(args.icon)) m.icon = args.icon; else throw new Error("VALIDATION_FAILED: Use a valid Lucide icon name or emoji as the course icon."); }
     if (args.language !== undefined) m.language = args.language.slice(0, 35) || "en";
     if (args.tags !== undefined) m.tags = [...new Set(args.tags.map((t) => t.trim().slice(0, 40)).filter(Boolean))].slice(0, 12);
     await ctx.db.patch("learnCollections", row._id, { metadata: m, updatedAt: Date.now() });
@@ -248,7 +248,21 @@ export const getPublic = query({
 /** Public course catalogue for Explore and the sitemap, newest first. */
 export const listPublic = query({
   args: { limit: v.optional(v.number()) },
-  returns: v.array(v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), language: v.string(), tags: v.array(v.string()), lessons: v.number(), updatedAt: v.number() })),
+  returns: v.array(v.object({
+    id: v.id("learnCollections"),
+    title: v.string(),
+    description: v.string(),
+    coverUrl: v.optional(v.string()),
+    icon: v.optional(v.string()),
+    language: v.string(),
+    tags: v.array(v.string()),
+    lessons: v.number(),
+    lessonIds: v.array(v.id("lessons")),
+    lessonTitles: v.array(v.string()),
+    ownerName: v.string(),
+    ownerUsername: v.string(),
+    updatedAt: v.number(),
+  })),
   handler: async (ctx, args) => {
     if (args.limit !== undefined && (!Number.isSafeInteger(args.limit) || args.limit < 1 || args.limit > 100)) throw new Error("VALIDATION_FAILED: Limit must be an integer from 1 to 100.");
     const limit = args.limit ?? 24;
@@ -261,7 +275,29 @@ export const listPublic = query({
       if (restricted.get(row.ownerId)) continue;
       const version = await ctx.db.get("collectionVersions", row.publishedVersionId);
       if (!version || version.collectionId !== row._id) continue;
-      result.push({ id: row._id, title: version.metadata.title, description: version.metadata.description, coverUrl: version.metadata.coverUrl, language: version.metadata.language, tags: version.metadata.tags, lessons: version.items.filter(item => item.kind === "lesson").length, updatedAt: version.publishedAt });
+      const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", row.ownerId)).first();
+      const lessonItems = version.items.filter((item) => item.kind === "lesson");
+      const lessonIds = lessonItems.map((item) => item.id as Id<"lessons">);
+      const lessonTitles: string[] = [];
+      for (const item of lessonItems) {
+        const lv = await ctx.db.get("lessonVersions", item.versionId);
+        if (lv) lessonTitles.push(lv.metadata.title);
+      }
+      result.push({
+        id: row._id,
+        title: version.metadata.title,
+        description: version.metadata.description,
+        coverUrl: version.metadata.coverUrl,
+        icon: version.metadata.icon,
+        language: version.metadata.language,
+        tags: version.metadata.tags,
+        lessons: lessonItems.length,
+        lessonIds,
+        lessonTitles,
+        ownerName: owner?.name ?? "Chaos creator",
+        ownerUsername: owner?.username ?? "",
+        updatedAt: version.publishedAt,
+      });
       if (result.length === limit) break;
     }
     return result;
