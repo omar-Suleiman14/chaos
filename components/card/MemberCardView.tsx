@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, RefreshCw, Send } from "lucide-react";
+import { Download, RefreshCw, Send, Wallet } from "lucide-react";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { CARD_THEMES, memberCardPng, memberCardSvg, type MemberCardData } from "@/lib/memberCard";
 import "./card.css";
@@ -9,11 +9,11 @@ import "./card.css";
 const copy = {
   en: {
     label: "Your Chaos member card", flip: "Flip card", flipBack: "Show front", shuffle: "Change colours", download: "Download card",
-    share: "Share card", copied: "Link copied", shared: "Shared", failed: "Couldn't do that. Try again.", cardOf: (n: string) => `${n}'s Chaos member card`,
+    share: "Share card", apple: "Add to Apple Wallet", google: "Add to Google Wallet", copied: "Link copied", shared: "Shared", failed: "Couldn't do that. Try again.", cardOf: (n: string) => `${n}'s Chaos member card`,
   },
   ar: {
     label: "بطاقة عضويتك في Chaos", flip: "اقلب البطاقة", flipBack: "اعرض الوجه", shuffle: "غيّر الألوان", download: "نزّل البطاقة",
-    share: "شارك البطاقة", copied: "نُسخ الرابط", shared: "تمت المشاركة", failed: "تعذر ذلك. حاول مجددًا.", cardOf: (n: string) => `بطاقة عضوية ${n} في Chaos`,
+    share: "شارك البطاقة", apple: "أضف إلى Apple Wallet", google: "أضف إلى Google Wallet", copied: "نُسخ الرابط", shared: "تمت المشاركة", failed: "تعذر ذلك. حاول مجددًا.", cardOf: (n: string) => `بطاقة عضوية ${n} في Chaos`,
   },
 };
 
@@ -30,25 +30,33 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
   const tilt = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
   useEyesFollowPointer(root);
+  const wallet = useWalletAvailability();
+  // Relative path so preview and self-hosted origins serve their own passes.
+  const walletBase = `${new URL(data.url, "https://chaos.invalid").pathname}/wallet`;
   // Tilt uses CSS variables, so pointer moves never re-render the card.
   const front = memberCardSvg(card, "front");
   const back = memberCardSvg(card, "back");
 
   const say = (text: string) => { setStatus(text); window.setTimeout(() => setStatus(""), 2500); };
-  const fileName = `chaos-card-${data.username}-${flipped ? "back" : "front"}.png`;
+  // Both sides, as two PNGs: the front to show, the back with its scannable code.
+  const sides = async () => Promise.all((["front", "back"] as const).map(async (side) =>
+    new File([await memberCardPng(card, side)], `chaos-card-${data.username}-${side}.png`, { type: "image/png" })));
   const download = async () => {
     try {
-      const blob = await memberCardPng(card, flipped ? "back" : "front");
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob); a.download = fileName; a.click();
-      window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      for (const file of await sides()) {
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(file); a.download = file.name; a.click();
+        window.setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+        // Some browsers drop a second download started in the same tick.
+        await new Promise((r) => window.setTimeout(r, 250));
+      }
     } catch { say(t.failed); }
   };
   const share = async () => {
     try {
-      const blob = await memberCardPng(card, "front");
-      const file = new File([blob], `chaos-card-${data.username}.png`, { type: "image/png" });
-      if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: t.cardOf(data.name), url: data.url }); say(t.shared); return; }
+      const files = await sides();
+      if (navigator.canShare?.({ files })) { await navigator.share({ files, title: t.cardOf(data.name), url: data.url }); say(t.shared); return; }
+      if (navigator.canShare?.({ files: [files[0]] })) { await navigator.share({ files: [files[0]], title: t.cardOf(data.name), url: data.url }); say(t.shared); return; }
       if (navigator.share) { await navigator.share({ title: t.cardOf(data.name), url: data.url }); say(t.shared); return; }
       await navigator.clipboard.writeText(data.url); say(t.copied);
     } catch (err) { if (!(err instanceof DOMException && err.name === "AbortError")) say(t.failed); }
@@ -82,10 +90,23 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
         <span className="mc-gap" />
         <button type="button" className="mc-btn" title={t.download} aria-label={t.download} onClick={() => void download()}><Download size={18} aria-hidden /><span>{t.download}</span></button>
         <button type="button" className="mc-btn" title={t.share} aria-label={t.share} onClick={() => void share()}><Send size={18} aria-hidden /><span>{t.share}</span></button>
+        {wallet.apple && <a className="mc-btn mc-btn--wallet" href={`${walletBase}/apple`} download><Wallet size={18} aria-hidden /><span>{t.apple}</span></a>}
+        {wallet.google && <a className="mc-btn mc-btn--wallet" href={`${walletBase}/google`} target="_blank" rel="noopener"><Wallet size={18} aria-hidden /><span>{t.google}</span></a>}
       </div>
       <p className="mc-status" role="status">{status}</p>
     </div>
   );
+}
+
+/** Wallet buttons appear only on installations with issuer credentials (GET /api/wallet). */
+function useWalletAvailability() {
+  const [state, setState] = useState({ apple: false, google: false });
+  useEffect(() => {
+    let live = true;
+    fetch("/api/wallet").then((r) => (r.ok ? r.json() : null)).then((v) => { if (live && v) setState({ apple: v.apple === true, google: v.google === true }); }).catch(() => {});
+    return () => { live = false; };
+  }, []);
+  return state;
 }
 
 /** The avatar's eyes (.mc-eyes, tagged in lib/memberCard.ts) glance toward the pointer, a few units at most. */

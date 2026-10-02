@@ -20,6 +20,8 @@
 .mc-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
 .mc-gap { display:none; }
 .mc-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-width:44px; min-height:44px; padding:8px 12px; border-radius:8px; cursor:pointer; color:var(--on-background); background:var(--ws-card,var(--surface-container-low)); border:1px solid var(--ws-line,var(--outline-variant)); font-size:13px; }
+.mc .mc-btn.mc-btn--wallet { text-decoration:none; background:#000; color:#fff; border-color:#000; }
+.mc .mc-btn.mc-btn--wallet:hover { background:#1d1d1f; }
 .mc-btn:hover { background:var(--ws-hover,var(--surface-container)); }
 .mc-btn:disabled { opacity:.5; cursor:wait; }
 .mc-card:focus-visible,.mc-btn:focus-visible,.mc-cta:focus-visible,.mc-input:focus-visible { outline:2px solid var(--primary); outline-offset:4px; }
