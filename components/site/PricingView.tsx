@@ -8,69 +8,70 @@ import { planCatalog } from "@/lib/planCatalog";
 import "@/app/landing.css";
 
 /*
- * Mirrors lib/planCatalog.ts: both plans have every feature and no creation or response caps;
- * Live games stop at 500 players (convex/liveLogic.ts). No payment integration yet, so no buy button.
+ * Mirrors lib/planCatalog.ts: no creation or response caps on either plan. Live rooms are capped at
+ * planCatalog.free.livePlayers (convex/liveLogic.ts); that's a limit, not a tested load, so the page
+ * doesn't advertise it. There's no payment integration, so there's no buy button.
  */
 const copy = {
   en: {
-    title: "Free for personal use. 20 EGP a seat for business.",
-    lead: "Personal use is free, with every feature and no monthly caps. Businesses pay 20 EGP per active creator seat each month for the same product. Billing is not live yet.",
+    title: "Free for personal use. 50 EGP a seat for business.",
+    lead: "Personal use is free, with no monthly caps. Business use is planned at 50 EGP per creator seat each month, for the same product. Checkout isn't live yet.",
     free: {
       name: "Personal", price: "Free", note: "For study, teaching and your own projects.",
       items: [
-        "Unlimited forms, surveys and quizzes",
+        "Unlimited forms, quizzes, lessons and courses",
         "Unlimited responses",
-        `Live games with up to ${planCatalog.free.livePlayers} players`,
+        "Live games from any quiz",
         "Every question type, theme and language",
-        "Results, and CSV, Excel and JSON export",
-        "Remove Chaos branding from your forms",
-        "10 MiB per form upload; 25 MiB per teaching source file",
+        "Results and exports (CSV, Excel, JSON)",
+        "No Chaos branding on your forms",
+        "Files up to 10 MiB per answer and 25 MiB per lesson source",
       ],
-      chatgpt: "Chaos in ChatGPT",
-      chatgptTail: ": make and manage forms from a chat",
+      chatgpt: "Use Chaos from ChatGPT or Claude",
+      chatgptTail: "",
       cta: "Get started free",
     },
     pro: {
-      name: "Business", price: `${planCatalog.pro.proposedPriceEgp} EGP`, per: " / active seat / month", note: "Planned price; no checkout or automatic charges yet.",
+      name: "Business", price: `${planCatalog.pro.proposedPriceEgp} EGP`, per: " / creator seat / month", note: "Planned price. Checkout isn't live and nothing is charged.",
       items: [
         "Everything in Personal, licensed for business use",
-        "Pay only for people who create or manage content",
-        "Respondents, students and Live players are always free",
-        "Seats set up through Support",
+        "Seats only for people who create or manage content",
+        "Respondents, students and Live players are free",
+        "Ask Support to set up seats",
       ],
       cta: "Get started",
     },
-    fine: "Checkout is unavailable; businesses can request seats through Support, and nothing is charged automatically. Rate limits and security checks apply to every account. Hosted-service pricing does not change AGPL self-hosting rights.",
+    fine: "Checkout isn't available yet. Businesses can ask Support for seats; nothing is charged automatically. Rate limits and security checks apply to every account. Hosted pricing doesn't change your right to self-host under the AGPL.",
   },
   ar: {
-    title: "مجاني للاستخدام الشخصي. 20 جنيهًا للمقعد للأعمال.",
-    lead: "الاستخدام الشخصي مجاني بكل الميزات ودون حدود شهرية. تدفع الأعمال 20 جنيهًا مصريًا لكل مقعد إنشاء نشط شهريًا مقابل المنتج نفسه. الدفع غير متاح بعد.",
+    title: "مجاني للاستخدام الشخصي. 50 جنيهًا للمقعد للأعمال.",
+    lead: "الاستخدام الشخصي مجاني ودون حدود شهرية. السعر المخطط لاستخدام الأعمال 50 جنيهًا لكل مقعد إنشاء شهريًا، للمنتج نفسه. الدفع غير متاح بعد.",
     free: {
       name: "شخصي", price: "مجاني", note: "للدراسة والتدريس ومشروعاتك الخاصة.",
       items: [
-        "نماذج واستبيانات واختبارات بلا حدود",
+        "نماذج واختبارات ودروس ودورات بلا حدود",
         "ردود بلا حدود",
-        `ألعاب مباشرة حتى ${planCatalog.free.livePlayers} لاعب`,
+        "ألعاب مباشرة من أي اختبار",
         "كل أنواع الأسئلة والمظاهر واللغات",
-        "النتائج وتصدير CSV وExcel وJSON",
-        "إخفاء علامة Chaos من نماذجك",
-        "10 MiB لكل ملف رد؛ و25 MiB لكل ملف مصدر تعليمي",
+        "النتائج والتصدير (CSV وExcel وJSON)",
+        "بلا علامة Chaos على نماذجك",
+        "ملفات حتى 10 MiB لكل إجابة و25 MiB لكل مصدر درس",
       ],
-      chatgpt: "Chaos في ChatGPT",
-      chatgptTail: ": أنشئ نماذجك وأدرها من محادثة",
+      chatgpt: "استخدم Chaos من ChatGPT أو Claude",
+      chatgptTail: "",
       cta: "ابدأ مجانًا",
     },
     pro: {
-      name: "الأعمال", price: `${planCatalog.pro.proposedPriceEgp} جنيهًا`, per: " / مقعد نشط / شهر", note: "سعر مخطط؛ لا دفع ولا رسوم تلقائية بعد.",
+      name: "الأعمال", price: `${planCatalog.pro.proposedPriceEgp} جنيهًا`, per: " / مقعد إنشاء / شهر", note: "سعر مخطط. الدفع غير متاح ولا تُفرض أي رسوم.",
       items: [
         "كل ما في الخطة الشخصية، مرخّصًا للاستخدام التجاري",
-        "تدفع فقط عن من ينشئ المحتوى أو يديره",
-        "المجيبون والطلاب ولاعبو الألعاب المباشرة مجانًا دائمًا",
-        "تفعيل المقاعد عن طريق الدعم",
+        "مقاعد فقط لمن ينشئ المحتوى أو يديره",
+        "المجيبون والطلاب ولاعبو الألعاب المباشرة مجانًا",
+        "اطلب تفعيل المقاعد من الدعم",
       ],
       cta: "ابدأ الآن",
     },
-    fine: "الدفع غير متاح؛ يمكن للأعمال طلب المقاعد من الدعم، ولا تُفرض أي رسوم تلقائيًا. تنطبق حدود المعدل وفحوص الأمان على كل الحسابات. أسعار الخدمة المستضافة لا تغيّر حقوق الاستضافة الذاتية وفق AGPL.",
+    fine: "الدفع غير متاح بعد. يمكن للأعمال طلب المقاعد من الدعم، ولا تُفرض أي رسوم تلقائيًا. تنطبق حدود المعدل وفحوص الأمان على كل الحسابات. أسعار الخدمة المستضافة لا تغيّر حقك في الاستضافة الذاتية وفق AGPL.",
   },
 };
 

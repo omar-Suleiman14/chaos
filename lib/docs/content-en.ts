@@ -1197,11 +1197,11 @@ export const sectionsEn: DocSection[] = [
         title: "Plans",
         summary: "Personal is free; Business pays per seat.",
         blocks: [
-          { type: "p", text: "Personal use is free, with every feature and no monthly caps. Business is planned at 20 EGP per active creator seat per month; respondents, students and Live players never need seats. Checkout is not live and nobody is automatically charged. Every account allows up to 10 MiB per form upload and 25 MiB per teaching source file; these are not total storage allowances. See [Pricing](/pricing)." },
+          { type: "p", text: "Personal use is free, with every feature and no monthly caps. Business is planned at 50 EGP per active creator seat per month; respondents, students and Live players never need seats. Checkout is not live and nobody is automatically charged. Every account allows up to 10 MiB per form upload and 25 MiB per teaching source file; these are not total storage allowances. See [Pricing](/pricing)." },
           { type: "heading", id: "free", text: "Personal" },
           { type: "p", text: "Unlimited forms, surveys, quizzes and responses, Live games with up to 500 players, the Chaos app in ChatGPT and branding removal. Rate limits and security checks still apply." },
           { type: "heading", id: "pro", text: "Business" },
-          { type: "list", items: ["The same product, licensed for business use.", "20 EGP per active creator seat per month: only people who create or manage content."] },
+          { type: "list", items: ["The same product, licensed for business use.", "50 EGP per active creator seat per month: only people who create or manage content."] },
           { type: "p", text: "Businesses can request seats through Support until checkout is available." },
           { type: "tip", text: "Questions about a plan? See [Support](/support)." },
         ],

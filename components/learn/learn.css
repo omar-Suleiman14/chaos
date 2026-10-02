@@ -462,3 +462,23 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-article__cover + .lx-article__icon { position: relative; margin-top: -60px; padding-inline-start: 12px; }
 /* Touch screens have no hover: keep the page-top and cover controls visible. */
 @media (hover: none) { .lx-page-add, .lx-cover__actions { opacity: 1; } }
+
+/* Editor popups (/ menu, formatting toolbar, block and colour menus) use the workspace glass. BlockNote
+   renders them inside .bn-container, which the editor makes transparent, so they need their own surface. */
+.bn-container .bn-suggestion-menu, .bn-container .bn-grid-suggestion-menu, .bn-container .bn-menu-dropdown, .bn-container .bn-toolbar, .bn-container .bn-color-picker-dropdown,
+.bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-menu-dropdown, .bn-color-picker-dropdown {
+  background: color-mix(in srgb, var(--ws-card, var(--surface-container-lowest, #fff)) calc(var(--popup-opacity, 0.85) * 100%), transparent) !important;
+  -webkit-backdrop-filter: blur(calc(14px + (1 - var(--popup-opacity, 0.85)) * 40px)) saturate(1.6);
+  backdrop-filter: blur(calc(14px + (1 - var(--popup-opacity, 0.85)) * 40px)) saturate(1.6);
+  border: 1px solid var(--ws-line) !important;
+  border-radius: 10px !important;
+  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, .3) !important;
+  color: var(--on-surface);
+}
+.bn-suggestion-menu .bn-suggestion-menu-label { color: var(--on-surface-variant); font-size: 12px; font-weight: 600; }
+.bn-suggestion-menu .bn-suggestion-menu-item[aria-selected="true"], .bn-suggestion-menu .bn-suggestion-menu-item:hover { background: var(--ws-hover) !important; }
+.bn-suggestion-menu .bn-suggestion-menu-item-small, .bn-suggestion-menu .bn-suggestion-menu-item-subtitle { color: var(--on-surface-variant) !important; }
+.bn-suggestion-menu [data-position="right"] > *, .bn-suggestion-menu .mantine-Badge-root { background: transparent !important; color: var(--on-surface-variant) !important; border: 1px solid var(--ws-line) !important; font-weight: 500; text-transform: none; }
+@media (prefers-reduced-transparency: reduce) {
+  .bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-menu-dropdown, .bn-color-picker-dropdown, .bn-container .bn-toolbar { background: var(--ws-card, #fff) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}

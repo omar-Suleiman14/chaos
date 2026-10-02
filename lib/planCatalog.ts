@@ -4,7 +4,7 @@ type Allowance = { creationsPerMonth: number | null; responsesPerForm: number | 
 const unlimited: Allowance = { creationsPerMonth: null, responsesPerForm: null, livePlayers: 500 };
 export const planCatalog = {
   free: { priceEgp: 0, audience: "personal", ...unlimited },
-  pro: { proposedPriceEgp: 20, billingUnit: "active-seat-month", audience: "business", ...unlimited },
+  pro: { proposedPriceEgp: 50, billingUnit: "active-seat-month", audience: "business", ...unlimited },
   uploads: { formFileBytes: 10 * 1024 * 1024, teachingFileBytes: 25 * 1024 * 1024, appliesTo: "both-plans", totalStorageQuota: "not-enforced" },
   billing: { available: false, trialDays: 30, automaticCharges: false },
 } as const;

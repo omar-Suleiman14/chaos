@@ -272,3 +272,22 @@ html[lang="ar"] .site-ui :is(h1, h2, h3, .site-brand) { letter-spacing: 0; }
 /* Public Explore reuses workspace filters/cards without a sidebar. */
 .site-explore { padding: 40px 28px 64px; }
 @media (max-width: 640px) { .site-explore { padding: 28px 20px 48px; } }
+
+/* Landing: the notes → lesson → quiz/flashcards/course → practice flow under the hero. */
+.site-flow { display: grid; justify-items: center; gap: 10px; margin: 56px auto 0; max-width: 520px; }
+.site-flow__node { display: inline-flex; align-items: center; min-height: 40px; padding: 0 16px; border: 1px solid var(--s-line-strong); border-radius: 999px; background: var(--s-card); color: var(--s-text); font-size: 15px; font-weight: 500; }
+.site-flow__node--main { min-height: 48px; padding: 0 22px; border-color: var(--s-text); font-size: 17px; font-weight: 600; }
+.site-flow__node--muted { border-style: dashed; color: var(--s-soft); background: transparent; }
+.site-flow__row { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+.site-flow__arrow { width: 1px; height: 18px; background: var(--s-line-strong); }
+.site-demo-wrap--section { margin-top: 40px; }
+.site-features:has(> :nth-child(3):last-child) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.site-feature > svg { color: var(--s-accent); margin-bottom: 14px; }
+.site-feature h3 { font-size: 18px; font-weight: 600; }
+.site-feature p { margin-top: 8px; color: var(--s-soft); line-height: 1.65; }
+.site-h2-icon { display: inline-block; vertical-align: -2px; margin-inline-end: 12px; color: var(--s-accent); }
+.site-partners:has(> :nth-child(3):last-child) { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.site-partner--soon { opacity: .75; }
+.site-partner__mark--letter { font-weight: 700; font-size: 22px; font-family: Georgia, "Times New Roman", serif; }
+.site-soon { display: inline-flex; margin-top: 24px !important; padding: 2px 10px; border-radius: 999px; background: var(--s-subtle); font-size: 13px !important; font-weight: 600; color: var(--s-soft); }
+@media (max-width: 900px) { .site-features:has(> :nth-child(3):last-child), .site-partners:has(> :nth-child(3):last-child) { grid-template-columns: 1fr; } }
