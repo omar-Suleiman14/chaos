@@ -446,7 +446,7 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 
 .lx-page-top { position: relative; }
 .lx-page-icon-wrap { position: relative; width: max-content; }
-.lx-page-icon { display: block; font-size: 72px; line-height: 1.1; padding: 0 6px; border: 0; border-radius: 8px; background: none; cursor: pointer; }
+.lx-page-icon { display: inline-flex; align-items: center; justify-content: center; min-width: 64px; min-height: 64px; font-size: 56px; line-height: 1.1; padding: 6px; border: 0; border-radius: 8px; background: none; cursor: pointer; color: var(--primary); }
 .lx-page-icon:hover:not(:disabled) { background: var(--ws-hover, rgba(55, 53, 47, .08)); }
 .lx-page-top[data-cover="true"][data-icon="true"] .lx-page-icon-wrap { margin-top: -48px; }
 .lx-page-add { display: flex; gap: 4px; min-height: 30px; margin-top: 8px; opacity: 0; transition: opacity .15s ease; }
@@ -454,10 +454,10 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-page-add button { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--on-surface-variant); font-size: 14px; cursor: pointer; }
 .lx-page-add button:hover { background: var(--ws-hover, rgba(55, 53, 47, .08)); }
 .lx-emoji-picker { top: calc(100% + 4px); inset-inline-start: 0; width: min(360px, calc(100vw - 32px)); }
-.lx-emoji-picker__grid { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 2px; padding: 8px; max-height: 260px; overflow: auto; }
-.lx-emoji-picker__grid button { aspect-ratio: 1; border: 0; border-radius: 6px; background: none; font-size: 22px; cursor: pointer; }
-.lx-emoji-picker__grid button:hover { background: var(--ws-hover, rgba(55, 53, 47, .08)); }
-.lx-article__icon { display: block; font-size: 64px; line-height: 1.1; margin-bottom: 8px; }
+.lx-emoji-picker__grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; padding: 8px; max-height: 260px; overflow: auto; }
+.lx-emoji-picker__grid button { display: grid; place-items: center; aspect-ratio: 1; border: 0; border-radius: 6px; background: none; color: var(--on-surface); font-size: 20px; cursor: pointer; }
+.lx-emoji-picker__grid button:hover { background: var(--ws-hover, rgba(55, 53, 47, .08)); color: var(--primary); }
+.lx-article__icon { display: inline-flex; align-items: center; font-size: 56px; line-height: 1.1; margin-bottom: 8px; color: var(--primary); }
 @media (hover: none) { .lx-page-add, .lx-cover__actions { opacity: 1; } }
 .lx-article__cover + .lx-article__icon { position: relative; margin-top: -60px; padding-inline-start: 12px; }
 /* Touch screens have no hover: keep the page-top and cover controls visible. */

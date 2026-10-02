@@ -24,7 +24,7 @@ const copy = {
     howTitle: "How it works",
     how: [
       "You connect once by signing in with your Chaos account. If you’re new, the account is created for you.",
-      "New things ChatGPT creates are published straight away so links work immediately, unless you ask for a draft. Later edits stay drafts until you choose to publish.",
+      "New things your assistant creates are published straight away so links work immediately, unless you ask for a draft. Imported content from outside tools always starts as a draft for review, and later edits stay drafts until you choose to publish.",
       "ChatGPT can read your forms, results and responses, but only when you ask. It can close, reopen and archive forms, and edit lesson draft blocks. Review changes before publishing.",
       "Public courses are free to read. Publishing a course also publishes its outlined lessons; request this only after reviewing their drafts.",
       "Quizzes use Chaos’s quiz mode: right answers, points and a short explanation for each question.",
@@ -50,7 +50,7 @@ const copy = {
     howTitle: "كيف يعمل",
     how: [
       "تربط حسابك مرة واحدة بتسجيل الدخول إلى حسابك في Chaos. وإن كنت جديدًا يُنشأ لك حساب تلقائيًا.",
-      "تُنشر الأشياء الجديدة التي ينشئها ChatGPT فورًا لتعمل الروابط مباشرةً، ما لم تطلب مسودة. والتعديلات اللاحقة تبقى مسودات حتى تختار نشرها.",
+      "تُنشر الأشياء الجديدة التي ينشئها مساعدك فورًا لتعمل الروابط مباشرةً، ما لم تطلب مسودة. ويبدأ المحتوى المستورد من أدوات خارجية دائمًا كمسودة للمراجعة، والتعديلات اللاحقة تبقى مسودات حتى تختار نشرها.",
       "يستطيع ChatGPT قراءة نماذجك ونتائجها وإجاباتها، لكن عند طلبك فقط. ويستطيع إغلاق النماذج وإعادة فتحها وأرشفتها، وتعديل كتل مسودة الدرس. راجع التغييرات قبل النشر.",
       "الدورات العامة مجانية للقراءة. نشر الدورة ينشر دروسها المدرجة أيضًا؛ اطلب ذلك بعد مراجعة مسوداتها.",
       "الاختبارات تستخدم وضع الاختبار في Chaos: إجابات صحيحة ودرجات وشرح قصير لكل سؤال.",

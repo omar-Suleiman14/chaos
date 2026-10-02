@@ -231,12 +231,40 @@ You do these steps; they change production.
 
 If something fails, check Vercel logs for `/mcp` and the Convex logs for `mcp:*` functions. `NOT_CONFIGURED` means `CHAOS_MCP_SECRET` is missing in Vercel; `401 UNAUTHORIZED` from Convex means the two secrets differ.
 
-## 2b. Test it in Claude (Desktop or Code)
+## 2b. Connect and test in Claude Code (CLI)
 
-1. In Claude Desktop, open your configuration file (`claude_desktop_config.json`):
+The exact same Chaos MCP server (`https://chaos.fail/mcp`) works across ChatGPT, Claude Desktop, and Claude Code using the open Model Context Protocol standard.
+
+1. **Add the remote MCP server in Claude Code**:
+   Run the CLI command:
+   ```bash
+   claude mcp add --transport sse chaos https://chaos.fail/mcp
+   ```
+   Or if using standard HTTP transport:
+   ```bash
+   claude mcp add --transport http chaos https://chaos.fail/mcp
+   ```
+2. **Authenticate with OAuth**:
+   - Claude Code connects to `https://chaos.fail/mcp`.
+   - Your browser will open the Clerk OAuth authorization screen for Chaos (`https://chaos.fail`).
+   - Sign in to your Chaos account and click **Allow**.
+   - Your OAuth grant is securely stored by Claude Code.
+3. **Verify with the `/mcp` command**:
+   - Inside any Claude Code session, type `/mcp`.
+   - You will see `chaos` listed as connected with 69 tools.
+   - Use `/mcp` to manage, inspect, or refresh available tools.
+4. **Try commands across Forms, Quizzes, Lessons, and Courses**:
+   - **Forms**: `"Create a Chaos feedback form for our workshop with a 1-5 rating and an open feedback question."`
+   - **Quizzes**: `"Create a 10-question quiz about cellular respiration with explanations and point values in Chaos."`
+   - **Lessons**: `"Create a lesson about portal hypertension with callouts, key takeaways and equations, and publish it in Chaos."`
+   - **Courses**: `"Create a complete course on Human Biology with 3 lessons (Cardiovascular, Respiratory, Digestive) and publish it in Chaos."`
+
+## 2c. Connect and test in Claude Desktop
+
+1. Open `claude_desktop_config.json`:
    - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
    - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-2. Add the Chaos MCP server configuration:
+2. Add the Chaos MCP remote server configuration:
    ```json
    {
      "mcpServers": {
@@ -248,6 +276,14 @@ If something fails, check Vercel logs for `/mcp` and the Convex logs for `mcp:*`
    ```
 3. Restart Claude Desktop. Complete the sign-in prompt in your browser to authorize access to your Chaos account.
 4. In any chat, Claude can now use the 69 Chaos tools to search your library, create quizzes, forms, lessons, courses, and flashcard sets, host live games, and summarize results.
+
+## 2d. Auto-publishing rules and draft behavior
+
+All assistants (ChatGPT, Claude Desktop, and Claude Code) share identical publication and draft semantics:
+- **ChatGPT-created content publishes by default**: When ChatGPT creates a form, quiz, game draft, lesson, course, or flashcard set, it publishes it immediately so share links and reader pages work right away. Pass `publish: false` in the prompt only if you explicitly want a private draft.
+- **Claude-created content publishes by default**: When Claude creates new content through MCP, it publishes immediately with public visibility (unless you request `publish: false` or private/restricted visibility).
+- **Imported content still starts as draft**: Content imported into Chaos from outside sources (Google Forms imports, Microsoft Forms imports, CSV/spreadsheet uploads, or syncs from Max via `/connections/max`) always begins as an unpublished private draft in your library. You can review all questions, citations, and settings before publishing.
+- **Subsequent edits remain drafts**: Any modifications to existing published forms, quizzes, lessons, or courses remain in draft mode until you explicitly run the respective publish action (`publish_form`, `publish_lesson`, `publish_course`, `publish_flashcard_set`).
 
 ## 3. Submission packet (OpenAI Platform → Plugins → Submit)
 

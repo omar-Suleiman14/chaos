@@ -1,0 +1,122 @@
+import React from "react";
+import type { LucideIcon } from "lucide-react";
+import {
+  Atom,
+  Award,
+  Bookmark,
+  BookOpen,
+  Bot,
+  Brain,
+  Calculator,
+  Camera,
+  CheckCircle2,
+  Clock,
+  Code,
+  Compass,
+  Cpu,
+  Database,
+  Dna,
+  Feather,
+  FileText,
+  Film,
+  Flame,
+  FlaskConical,
+  Folder,
+  Globe,
+  GraduationCap,
+  Heart,
+  HelpCircle,
+  Landmark,
+  Languages,
+  Layers,
+  Library,
+  Lightbulb,
+  MapPin,
+  Microscope,
+  Music,
+  Network,
+  Palette,
+  PenTool,
+  Rocket,
+  School,
+  Shield,
+  Smile,
+  Sparkles,
+  Star,
+  Stethoscope,
+  Target,
+  Telescope,
+  Terminal,
+  Trophy,
+  Zap,
+} from "lucide-react";
+
+export const LUCIDE_LEARN_ICONS: Record<string, LucideIcon> = {
+  BookOpen,
+  GraduationCap,
+  Lightbulb,
+  Brain,
+  Compass,
+  Sparkles,
+  School,
+  Library,
+  Atom,
+  FlaskConical,
+  Calculator,
+  Dna,
+  Telescope,
+  Microscope,
+  Stethoscope,
+  Globe,
+  Code,
+  Cpu,
+  Terminal,
+  Database,
+  Network,
+  Layers,
+  Bot,
+  Rocket,
+  Palette,
+  Music,
+  Camera,
+  PenTool,
+  Feather,
+  Languages,
+  Landmark,
+  Film,
+  Star,
+  Award,
+  Trophy,
+  Target,
+  Flame,
+  Zap,
+  Heart,
+  Smile,
+  CheckCircle2,
+  Bookmark,
+  Folder,
+  FileText,
+  HelpCircle,
+  Clock,
+  Shield,
+  MapPin,
+};
+
+export const LEARN_ICON_NAMES = Object.keys(LUCIDE_LEARN_ICONS);
+
+export function CourseOrLessonIcon({
+  icon,
+  size = 24,
+  className,
+}: {
+  icon?: string | null;
+  size?: number;
+  className?: string;
+}) {
+  if (!icon) return null;
+  const IconComponent = LUCIDE_LEARN_ICONS[icon];
+  if (IconComponent) {
+    return <IconComponent size={size} className={className} aria-hidden="true" />;
+  }
+  return <span className={className} aria-hidden="true">{icon}</span>;
+}

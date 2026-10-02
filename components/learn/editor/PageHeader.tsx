@@ -27,7 +27,8 @@ const copy = {
   },
 };
 
-const EMOJI = "📘 📗 📕 📙 📓 📝 ✏️ 🖊️ 📐 📏 🧮 🔬 🧪 🧬 🔭 🌍 🌱 🌊 🔥 ⚡ 💡 🧠 🎯 🚀 🛰️ 🪐 ⭐ 🌙 ☀️ 🌈 🎨 🎵 🎭 📷 🏛️ 🗺️ 🧭 ⏳ 🕰️ 📊 📈 💻 🖥️ ⌨️ 🤖 🧩 ♟️ 🏆 🎓 🏫 📚 🗂️ 📎 📌 🔑 💬 ❓ ✅ ❤️ 🙂 😎 🤔 🐢 🦊 🐙 🦋 🍎 🌸 🍀 🎉".split(" ");
+import { CourseOrLessonIcon, LEARN_ICON_NAMES, LUCIDE_LEARN_ICONS } from "../icons";
+
 const pickRandom = <T,>(list: T[]) => list[Math.floor(Math.random() * list.length)];
 
 /** Closes a popover on outside click or Escape. */
@@ -86,17 +87,24 @@ function CoverPicker({ onPick, onRemove, onClose }: { onPick: (url: string) => v
   );
 }
 
-function EmojiPicker({ onPick, onRemove, onClose }: { onPick: (emoji: string) => void; onRemove?: () => void; onClose: () => void }) {
+function IconPicker({ onPick, onRemove, onClose }: { onPick: (icon: string) => void; onRemove?: () => void; onClose: () => void }) {
   const t = useCopy(copy);
   const ref = useDismiss(true, onClose);
   return (
     <div ref={ref} className="lx-emoji-picker ws-glass" role="dialog" aria-label={t.icon}>
       <div className="lx-cover-picker__tabs">
-        <button type="button" onClick={() => { onPick(pickRandom(EMOJI)); onClose(); }}>{t.random}</button>
+        <button type="button" onClick={() => { onPick(pickRandom(LEARN_ICON_NAMES)); onClose(); }}>{t.random}</button>
         {onRemove && <button type="button" className="lx-cover-picker__remove" onClick={() => { onRemove(); onClose(); }}>{t.remove}</button>}
       </div>
       <div className="lx-emoji-picker__grid">
-        {EMOJI.map((e) => <button key={e} type="button" aria-label={e} onClick={() => { onPick(e); onClose(); }}>{e}</button>)}
+        {LEARN_ICON_NAMES.map((name) => {
+          const Icon = LUCIDE_LEARN_ICONS[name];
+          return (
+            <button key={name} type="button" aria-label={name} title={name} onClick={() => { onPick(name); onClose(); }}>
+              <Icon size={20} aria-hidden="true" />
+            </button>
+          );
+        })}
       </div>
     </div>
   );
@@ -135,19 +143,21 @@ export function LessonCover({ meta, editable, onChange }: { meta: PageLook; edit
 /** The page icon and the hover row of "Add icon" / "Add cover", placed above the title. */
 export function PageIconControls({ meta, editable, onChange }: { meta: PageLook; editable: boolean; onChange: (patch: Partial<PageLook>) => void }) {
   const t = useCopy(copy);
-  const [emoji, setEmoji] = useState(false);
+  const [picker, setPicker] = useState(false);
   const hasCover = isCoverUrl(meta.coverUrl);
   return (
     <div className="lx-page-top" data-cover={hasCover} data-icon={!!meta.icon}>
       {meta.icon && (
         <div className="lx-page-icon-wrap">
-          <button type="button" className="lx-page-icon" aria-label={t.icon} disabled={!editable} onClick={() => setEmoji(true)}>{meta.icon}</button>
-          {emoji && <EmojiPicker onPick={(icon) => onChange({ icon })} onRemove={() => onChange({ icon: undefined })} onClose={() => setEmoji(false)} />}
+          <button type="button" className="lx-page-icon" aria-label={t.icon} disabled={!editable} onClick={() => setPicker(true)}>
+            <CourseOrLessonIcon icon={meta.icon} size={48} />
+          </button>
+          {picker && <IconPicker onPick={(icon) => onChange({ icon })} onRemove={() => onChange({ icon: undefined })} onClose={() => setPicker(false)} />}
         </div>
       )}
       {editable && (!meta.icon || !hasCover) && (
         <div className="lx-page-add">
-          {!meta.icon && <button type="button" onClick={() => onChange({ icon: pickRandom(EMOJI) })}><SmilePlus size={15} aria-hidden />{t.addIcon}</button>}
+          {!meta.icon && <button type="button" onClick={() => onChange({ icon: pickRandom(LEARN_ICON_NAMES) })}><SmilePlus size={15} aria-hidden />{t.addIcon}</button>}
           {!hasCover && <button type="button" onClick={() => onChange({ coverUrl: pickRandom(coverGallery.filter((c) => c.category !== "color")).src, coverY: 50 })}><ImageIcon size={15} aria-hidden />{t.addCover}</button>}
         </div>
       )}
