@@ -30,10 +30,15 @@ it("validates flashcard input, fills conceptIds and never forwards a client acto
   const client = await connect(call);
   const result = await client.callTool({ name: "create_flashcard_set", arguments: { title: "Deck", cards: [{ id: "c1", front: "Q", back: "A" }], userId: "user_evil" } });
   expect(result.isError).toBeFalsy();
-  expect(call).toHaveBeenCalledTimes(1);
+  // Creates, then publishes publicly by default (the owner chose publish-on-create for assistants).
+  expect(call).toHaveBeenCalledTimes(2);
   const [tool, input] = call.mock.calls[0];
   expect(tool).toBe("create_flashcard_set");
   expect(input).toEqual({ title: "Deck", cards: [{ id: "c1", front: "Q", back: "A", conceptIds: [] }] });
+  expect(call.mock.calls[1]).toEqual(["publish_flashcard_set", { setId: "set1", expectedRevision: 0, visibility: "public" }]);
+  call.mockClear();
+  await client.callTool({ name: "create_flashcard_set", arguments: { title: "Deck", cards: [{ id: "c1", front: "Q", back: "A" }], publish: false } });
+  expect(call.mock.calls.map(([name]) => name)).toEqual(["create_flashcard_set"]);
   expect((await client.callTool({ name: "create_flashcard_set", arguments: { title: "Deck", cards: [{ id: "bad id", front: "Q", back: "A" }] } })).isError).toBe(true);
   expect((await client.callTool({ name: "publish_flashcard_set", arguments: { setId: "set1", expectedRevision: 0, visibility: "unlisted" } })).isError).toBe(true);
 });

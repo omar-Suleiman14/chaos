@@ -12,6 +12,7 @@ it("registers course review annotations and strips client actor injection", asyn
  const byName = Object.fromEntries(tools.map(t => [t.name,t]));
  const expected = {
  create_course: { readOnlyHint:false, destructiveHint:false, openWorldHint:false, idempotentHint:false },
+ create_full_course: { readOnlyHint:false, destructiveHint:false, openWorldHint:true, idempotentHint:false },
  get_course: { readOnlyHint:true, destructiveHint:false, openWorldHint:false, idempotentHint:true },
  update_course: { readOnlyHint:false, destructiveHint:false, openWorldHint:false, idempotentHint:true },
  set_course_outline: { readOnlyHint:false, destructiveHint:true, openWorldHint:false, idempotentHint:true },
@@ -76,8 +77,29 @@ it("advertises truthful Learn/course/folder instructions and verified publicatio
  await Promise.all([server.connect(a),client.connect(b)]);
  try {
   const instructions = client.getInstructions()!;
-  for (const text of ["Learn lessons and courses", "Folders are private organisation", "Publish only on explicit request", "person selected", "never supply an actor/userId", "Lesson and course tools do not return shareUrl", "publish_course returns ok true", "courseId from verified create_course", "https://chaos.fail/learn/courses/<courseId>", "https://chaos.fail/learn/<lessonId>", "offset 0?500, limit 1?100", "follow nextOffset until null", "outlineFrom draft require edit permission", "Folder changes never publish content", "Do not automatically retry"]) expect(instructions).toContain(text);
+  for (const text of ["Learn lessons and courses", "Folders are private organisation", "publish false", "person selected", "never supply an actor/userId", "Lesson and course tools do not return shareUrl", "publish_course returns ok true", "courseId from verified create_course", "https://chaos.fail/learn/courses/<courseId>", "https://chaos.fail/learn/<lessonId>", "offset 0?500, limit 1?100", "follow nextOffset until null", "outlineFrom draft require edit permission", "Folder changes never publish content", "Do not automatically retry"]) expect(instructions).toContain(text);
   expect(instructions).not.toContain("share the returned shareUrl");
   expect(instructions).not.toMatch(/AI provider|model provider/i);
+ } finally { await client.close(); await server.close(); }
+});
+
+it("create_full_course builds the course, every lesson with its blocks, then publishes publicly", async () => {
+ const call = vi.fn(async (tool: string) => tool === "create_course" ? { courseId: "course1" } : tool === "add_course_lesson" ? { lessonId: `lesson${call.mock.calls.filter(([t]) => t === "add_course_lesson").length}` } : tool === "publish_course" ? { ok: true } : { ok: true, revision: 1 });
+ const server = createChaosMcpServer({ call, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" });
+ const client = new Client({ name: "full-course", version: "1" });
+ const [a,b] = InMemoryTransport.createLinkedPair();
+ await Promise.all([server.connect(a),client.connect(b)]);
+ try {
+  const doc = { schemaVersion: 1, blocks: [{ id: "p1", type: "paragraph", text: "Hello", citations: [], conceptIds: [] }] };
+  const result = await client.callTool({ name: "create_full_course", arguments: { title: "Stars", icon: "🔭", coverUrl: "/covers/webb/carina.jpg", userId: "foreign", lessons: [{ title: "One", document: doc }, { title: "Two", document: doc }] } });
+  expect(result.isError).toBeFalsy();
+  expect(result.structuredContent).toMatchObject({ courseId: "course1", lessonIds: ["lesson1", "lesson2"], published: true });
+  expect(call.mock.calls.map(([t]) => t)).toEqual(["create_course", "update_course", "add_course_lesson", "save_lesson_draft", "add_course_lesson", "save_lesson_draft", "publish_course"]);
+  expect(call).toHaveBeenCalledWith("update_course", { courseId: "course1", coverUrl: "/covers/webb/carina.jpg", icon: "🔭" });
+  expect(call).toHaveBeenLastCalledWith("publish_course", { courseId: "course1", visibility: "public" });
+  for (const [, input] of call.mock.calls) expect(input).not.toHaveProperty("userId");
+  call.mockClear();
+  await client.callTool({ name: "create_full_course", arguments: { title: "Draft", publish: false, lessons: [{ title: "One", document: doc }] } });
+  expect(call.mock.calls.map(([t]) => t)).not.toContain("publish_course");
  } finally { await client.close(); await server.close(); }
 });

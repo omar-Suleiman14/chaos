@@ -1,6 +1,8 @@
 # Chaos in ChatGPT: setup, testing and submission
 
-The Chaos ChatGPT app is an MCP server at **`https://chaos.fail/mcp`**. It is a **Chaos Pro** feature: every call checks the plan and Free accounts get `PRO_REQUIRED` (new accounts start with a 30-day Pro trial, so they can try it straight away). People connect it with their Chaos account (Clerk OAuth) and ChatGPT can then create drafts, edit them, publish, and read forms, results and responses in that account.
+The Chaos ChatGPT app is an MCP server at **`https://chaos.fail/mcp`**. It works with ChatGPT, Claude and other MCP clients, and it's free on every plan. People connect it with their Chaos account (OAuth) and the assistant can then create, edit and publish forms, quizzes, lessons, courses and flashcards, and read results and responses in that account. Chaos itself runs no AI; the assistant does the writing.
+
+**Publishing.** The owner chose that content created through MCP goes live straight away: `create_form`, `create_game_draft`, `create_lesson`, `create_full_course` and `create_flashcard_set` publish after creating (lessons, courses and flashcards as public) unless the assistant passes `publish: false`. If publication is blocked (for example a quiz without answers), the item stays a draft and the problems are returned. Edits to existing content stay drafts until `publish_form`, `publish_lesson` or `publish_course`.
 
 ## How it fits together
 
@@ -37,7 +39,7 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 | `get_form` | Questions, options, answer key, publish readiness, links | true | false | false |
 | `get_results` | Counts, completion, averages, per-question distributions, quiz average | true | false | false |
 | `list_responses` | Individual completed responses as text (paged, max 25) | true | false | false |
-| `create_form` | New form/survey/quiz **draft** with all questions | false | false | false |
+| `create_form` | New form/survey/quiz with all questions, **published** unless `publish: false` | false | false | **true** |
 | `update_form` | Edit a draft; a sent question list replaces the old one | false | **true** | false |
 | `publish_form` | Publish the draft and return the public link | false | false | **true** |
 | `list_themes` | The looks (presets) and the choices for fonts, buttons, start screens, backdrops, radius, layouts and sound packs | true | false | false |
@@ -49,7 +51,7 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 
 #### Live game tools
 
-- `create_game_draft`: creates an ordinary private quiz draft with 1–100 questions. Each must be single choice, multiple choice or dropdown, with 2–4 distinct nonempty options and an explicit correct answer. Uses the same themes and builder as forms; default theme is Evergreen. Returns the `form_…` ID and edit link, never opens or publishes a room. Read-only: false; destructive: false; open-world: false; idempotent: false.
+- `create_game_draft`: creates an ordinary quiz with 1–100 questions and publishes it unless `publish: false`. Each must be single choice, multiple choice or dropdown, with 2–4 distinct nonempty options and an explicit correct answer. Uses the same themes and builder as forms; default theme is Evergreen. Returns the `form_…` ID and links; never opens a room. Read-only: false; destructive: false; open-world: true; idempotent: false.
 - `list_games`: lists only the signed-in account's hosted rooms, newest first, with cursor pagination (default 20, max 50). Includes ended rooms; use `search_forms` to find quiz drafts. Read-only and idempotent.
 - `get_game`: gets the owned room's state, question index, timer, settings, source ID and host/join links. No question text, answer keys, participant names, player tokens or individual answers are returned, including after reveal. Read-only and idempotent.
 - `host_game`: snapshots an owned, already published quiz into a joinable lobby. Takes the source `form_…` or `quiz_…` ID, optional language (`en`/`ar`), theme preset name, `timeLimitSec` (5–240), `showAnswerLabels` (default true), `autoAdvance` (default true), `breakSec` (3–60, default 5) and `startWhenPlayers` (0 = host starts). Closed/archived forms, drafts, non-quizzes, and quizzes without eligible graded choices are refused. Does not publish draft changes or start play. Opening a room is an open-world write, non-destructive and non-idempotent: do not retry automatically after an uncertain response.
@@ -57,7 +59,7 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 - `advance_game`: advances exactly one step using `from` and `questionIndex` from `get_game`. Lobby → question → reveal → leaderboard → next question/end. With autoplay on, only needed to start without the countdown or to skip ahead. Requires a joined player to start. Advancing from question ends that question early, so it requires the host's explicit request. Repeating the same state/index is harmless. Open-world write, destructive and idempotent.
 - `end_game`: explicitly stops an owned room and uses the ordinary live-game result-saving workflow. Does not delete the source or collected responses. Returns aggregate save status/counts; repeating for an ended room is harmless. Open-world write, destructive and idempotent.
 
-Creation, publication and hosting are separate actions: **create_game_draft → review in Chaos → publish_form on explicit request → host_game on explicit request**. Follow `hostUrl` to project the game and `joinUrl`/PIN for players. Games run themselves by default: each question closes on its timer, the answer and leaderboard each show for `breakSec`, and the next question starts. Pressing Start (or reaching `startWhenPlayers`) shows a 5-second countdown first. `get_game` returns `nextStepAt` and `startsAt`. When labels are hidden, players need to see the host screen to read their options.
+Creation publishes the quiz; hosting stays a separate action: **create_game_draft → host_game when asked**. Follow `hostUrl` to project the game and `joinUrl`/PIN for players. Games run themselves by default: each question closes on its timer, the answer and leaderboard each show for `breakSec`, and the next question starts. Pressing Start (or reaching `startWhenPlayers`) shows a 5-second countdown first. `get_game` returns `nextStepAt` and `startsAt`. When labels are hidden, players need to see the host screen to read their options.
 
 Games use the existing account-wide OAuth grant (`openid profile email`), with no new external scope or client-supplied account identity. Next.js verifies Clerk OAuth, then the secret-protected Convex transport passes the verified user ID to internal-only MCP functions. Each game wrapper rechecks Pro entitlement; writes recheck moderation and source/host ownership. Shared nonregistered helpers from `convex/live.ts` enforce live eligibility, clock, grading, transition and result-saving rules. Public live mutations continue deriving identity from `ctx.auth`; MCP never fabricates auth or invokes registered handlers directly. Account Pro checks and the existing 120-calls/minute gate run before dispatch; lobby creation also uses the existing 30/hour live-create limit.
 
@@ -76,7 +78,7 @@ MCP hosting requires source ownership; being a source editor/viewer does not gra
 Example prompts: "make it dark", "use the Typeform look", "change the accent to our brand blue #1a56db", "use a serif font with rounded buttons", "turn on arcade sounds", "make it silent again".
 
 
-Rules the backend enforces (the theme and sound tools follow the `update_form` rules): Pro plan (or the 30-day trial) required for every tool; drafts only on create; owner or editor to edit/publish (approval rules respected); owner only for status; archived forms must be restored first; classic quizzes are read-only; banned or suspended accounts are read-only; nothing can be deleted.
+Rules the backend enforces (the theme and sound tools follow the `update_form` rules): available on every plan; create publishes unless told not to; owner or editor to edit/publish (approval rules respected); owner only for status; archived forms must be restored first; classic quizzes are read-only; banned or suspended accounts are read-only; nothing can be deleted.
 
 ## 1. One-time production setup
 
@@ -125,7 +127,7 @@ You do these steps; they change production.
    - *"Let's talk about the solar system for a bit"* … then *"Create me a quiz of what we discussed using Chaos"*
    - *"Show me my Chaos forms"*
    - *"How is that quiz doing?"* / *"Publish it"*
-5. ChatGPT asks for confirmation before write tools. The new quiz appears in your Chaos library as a draft, with a history entry from "Connected app · ChatGPT".
+5. ChatGPT asks for confirmation before write tools. The new quiz appears in your Chaos library, published, with a history entry from "Connected app · ChatGPT".
 6. After changing tools, use **Refresh** on the app in Settings → Apps so ChatGPT reloads the tool list.
 
 If something fails, check Vercel logs for `/mcp` and the Convex logs for `mcp:*` functions. `NOT_CONFIGURED` means `CHAOS_MCP_SECRET` is missing in Vercel; `401 UNAUTHORIZED` from Convex means the two secrets differ.
@@ -159,7 +161,7 @@ Before you start: the submitting account needs the **Apps Management: Write** ro
 - `get_form`: read-only; returns one form's questions and answer key to the owner or collaborators.
 - `get_results`: read-only aggregate statistics; contains no individual answers.
 - `list_responses`: read-only; returns individual responses that the person already sees in Chaos. The description tells the model to use it only on request.
-- `create_form`: creates a private draft; nothing is shared or published.
+- `create_form`: creates the form and publishes it (anyone with the link can respond) unless `publish: false`, so `openWorldHint: true`.
 - `update_form`: `destructiveHint: true` because a sent question list replaces the draft's questions (removed questions leave the draft; collected responses are kept and the live version is unchanged until publishing).
 - `publish_form`: `openWorldHint: true` because it makes the form reachable by anyone with its link.
 - `list_themes`: read-only, static list of looks and options; no data from the account.

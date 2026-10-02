@@ -1,14 +1,49 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
+import type { McpFlow } from "./flow";
+import { lessonDocumentSchema } from "./learn";
 const ref = z.string().min(1).max(100);
 const course = { courseId: ref };
 const visibility = z.enum(["public", "restricted", "private"]);
 const read = { readOnlyHint: true, destructiveHint: false, idempotentHint: true, openWorldHint: false };
 const write = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
-export function registerCourseTools(server: McpServer, run: (tool: string, input: Record<string, unknown>, summarize: (data: Record<string, unknown>) => string) => Promise<CallToolResult>, securitySchemes: { type: string; scopes: string[] }[]) {
+export function registerCourseTools(server: McpServer, run: (tool: string, input: Record<string, unknown>, summarize: (data: Record<string, unknown>) => string) => Promise<CallToolResult>, securitySchemes: { type: string; scopes: string[] }[], { call, flow }: McpFlow) {
  const meta = { securitySchemes };
- server.registerTool("create_course", { description: "Create an owned course draft. Never publishes. Each call creates a new course; inspect the library before retrying uncertain success.", inputSchema: { title: z.string().trim().min(1).max(200).optional(), language: z.string().min(1).max(35).optional() }, outputSchema: { courseId: ref }, annotations: write, _meta: meta }, input => run("create_course", input, () => "Course draft created."));
+ const cover = z.union([z.string().url().max(2008), z.string().regex(/^\/covers\/[a-z0-9/_-]+\.(jpg|svg)$/)]);
+ const icon = z.string().min(1).max(16);
+ server.registerTool("create_full_course", {
+  description: "Create a whole course in one call: title, description, cover (https link or /covers/ gallery path), cover position, icon, and up to 100 lessons in order, each with its own blocks, cover and icon. Publishes the course and its lessons (public by default) unless publish is false. Private needs Business. If something fails part-way, the result says what was created so you can continue with the course tools instead of starting again.",
+  inputSchema: {
+   title: z.string().trim().min(1).max(200), description: z.string().max(4000).optional(), language: z.string().min(1).max(35).optional(), tags: z.array(z.string().max(40)).max(12).optional(),
+   coverUrl: cover.optional(), coverY: z.number().min(0).max(100).optional(), icon: icon.optional(),
+   lessons: z.array(z.object({ title: z.string().trim().min(1).max(200), description: z.string().max(4000).optional(), coverUrl: cover.optional(), icon: icon.optional(), document: lessonDocumentSchema })).min(1).max(100),
+   publish: z.boolean().optional(), visibility: visibility.optional(),
+  },
+  outputSchema: { courseId: ref, lessonIds: z.array(ref), published: z.boolean(), problems: z.array(z.object({ lessonId: ref, title: z.string(), message: z.string() })).optional() },
+  annotations: { ...write, openWorldHint: true },
+  _meta: meta,
+ }, ({ title, description, language, tags, coverUrl, coverY, icon: courseIcon, lessons, publish, visibility: chosen }) => flow(async () => {
+  const { courseId } = await call("create_course", { title, ...(language ? { language } : {}) });
+  const lessonIds: string[] = [];
+  try {
+   await call("update_course", { courseId, ...(description !== undefined ? { description } : {}), ...(tags ? { tags } : {}), ...(coverUrl ? { coverUrl } : {}), ...(coverY !== undefined ? { coverY } : {}), ...(courseIcon ? { icon: courseIcon } : {}) });
+   for (const lesson of lessons) {
+    const { lessonId } = await call("add_course_lesson", { courseId, title: lesson.title });
+    lessonIds.push(lessonId as string);
+    // A new lesson starts at revision 0 (convex/lessons.ts createLessonForActor).
+    await call("save_lesson_draft", { lessonId, expectedRevision: 0, document: lesson.document, metadata: { title: lesson.title, description: lesson.description ?? "", language: language ?? "en", tags: [], indexing: "index", ...(lesson.coverUrl ? { coverUrl: lesson.coverUrl } : {}), ...(lesson.icon ? { icon: lesson.icon } : {}) } });
+   }
+  } catch (error) {
+   const message = error instanceof Error ? error.message : String(error);
+   throw new Error(`${message} (course ${courseId} was created with ${lessonIds.length} of ${lessons.length} lessons; continue with get_course and the lesson tools)`);
+  }
+  if (publish === false) return { text: `Course draft created with ${lessonIds.length} lessons.`, data: { courseId, lessonIds, published: false } };
+  const p = await call("publish_course", { courseId, visibility: chosen ?? "public" });
+  return p.ok ? { text: `Course published with ${lessonIds.length} lessons.`, data: { courseId, lessonIds, published: true } }
+   : { text: "Course created; some lessons need fixes before it can publish.", data: { courseId, lessonIds, published: false, problems: p.problems } };
+ }));
+ server.registerTool("create_course", { description: "Create an empty owned course draft to build step by step (create_full_course does everything in one call). Never publishes. Each call creates a new course; inspect the library before retrying uncertain success.", inputSchema: { title: z.string().trim().min(1).max(200).optional(), language: z.string().min(1).max(35).optional() }, outputSchema: { courseId: ref }, annotations: write, _meta: meta }, input => run("create_course", input, () => "Course draft created."));
  server.registerTool("get_course", { description: "Read the current owner's course builder metadata and ordered lesson summaries. No lesson content or respondent data. Use get_lesson for lesson drafts.", inputSchema: course, outputSchema: { id: ref, title: z.string(), description: z.string(), coverUrl: z.string().optional(), coverY: z.number().optional(), icon: z.string().optional(), language: z.string(), tags: z.array(z.string()), visibility, published: z.boolean(), publishedAt: z.number().nullable(), canPrivate: z.boolean(), lessons: z.array(z.object({ id: ref, title: z.string(), description: z.string(), published: z.boolean(), changed: z.boolean(), blocks: z.number() })), revision: z.number() }, annotations: read, _meta: meta }, input => run("get_course", input, () => "Course loaded."));
  server.registerTool("update_course", { description: "Edit owned course draft metadata without publishing. Omitted fields stay unchanged; null coverUrl removes the cover. coverUrl is an https image link or a /covers/ gallery path (same gallery as lessons); coverY (0-100) is the cover's vertical focus; icon is one emoji shown above the title. Published metadata changes only on explicit publish_course.", inputSchema: { ...course, title: z.string().trim().min(1).max(200).optional(), description: z.string().max(4000).optional(), coverUrl: z.union([z.string().url().max(2008), z.string().regex(/^\/covers\/[a-z0-9/_-]+\.(jpg|svg)$/)]).nullable().optional(), coverY: z.number().min(0).max(100).nullable().optional(), icon: z.string().min(1).max(16).nullable().optional(), language: z.string().min(1).max(35).optional(), tags: z.array(z.string().max(40)).max(12).optional() }, outputSchema: { ok: z.boolean() }, annotations: { ...write, idempotentHint: true }, _meta: meta }, input => run("update_course", input, () => "Course draft updated."));
  server.registerTool("set_course_outline", { description: "Replace the complete ordered course draft outline with up to 100 owned lesson IDs. Get the course first and preserve all wanted lessons. Removing an ID does not delete the lesson. Does not publish.", inputSchema: { ...course, lessonIds: z.array(ref).max(100) }, outputSchema: { ok: z.boolean() }, annotations: { ...write, destructiveHint: true, idempotentHint: true }, _meta: meta }, input => run("set_course_outline", input, () => "Course draft outline updated."));

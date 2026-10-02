@@ -30,7 +30,7 @@ const securitySchemes = [{ type: "oauth2", scopes: MCP_SCOPES }];
 
 const instructions = `Chaos (chaos.fail) is where this person builds forms, surveys, quizzes, Learn lessons and courses, organises owned content in folders, and reads authorized published material and requested answers.
 - The Chaos app is free on every plan.
-- Forms, quizzes, lessons and courses are created as drafts. Draft edits never publish. Folders are private organisation, not publishable content. Publish only on explicit request after review, using publish_form, publish_lesson or publish_course for the selected content.
+- The person has chosen that new things go live: create_form, create_game_draft, create_lesson, create_full_course and create_flashcard_set publish as soon as they are created (lessons, courses and flashcards as public). Pass publish false only when the person asks for a draft or private work. If publishing is blocked, the result lists the problems and the item stays a draft: tell the person what to fix. Later edits to existing content are drafts until publish_form, publish_lesson or publish_course. Folders are private organisation, not publishable content.
 - Work only on content the person selected or asked to find. Authorization is enforced for the connected account; never supply an actor/userId or infer permission from a reference. Folder membership and source metadata do not grant content access. Only request source metadata through the supported tools; no source file bytes are exposed here.
 - Forms return shareUrl: share it only when returned and published. Lesson and course tools do not return shareUrl. After publish_lesson returns ok true, use the lessonId from a verified create/get response to construct https://chaos.fail/learn/<lessonId>. After publish_course returns ok true, use courseId from verified create_course (or id from get_course) to construct https://chaos.fail/learn/courses/<courseId>. Never invent IDs, claim draft links are public, or imply private/restricted links grant access. Visibility values are public, restricted and private; restricted/private require Business.
 - Courses: create_course creates a draft; add_course_lesson creates a blank lesson draft; use lesson tools to write it. get_course reads the owner's outline and metadata. update_course edits draft metadata. set_course_outline replaces the full ordered list, so read get_course first and preserve wanted lessons. publish_course publishes the outlined lessons too. Inspect per-lesson problems when ok is false; other lessons may already have published. Do not automatically retry course/lesson creation or publication after uncertain success. list_courses lists the person's courses; set_course_archived archives or restores one; unpublish_course takes a course offline. Course covers are update_course coverUrl; lesson covers are metadata.coverUrl and an optional emoji metadata.icon on create_lesson/save_lesson_draft.
@@ -47,7 +47,7 @@ const instructions = `Chaos (chaos.fail) is where this person builds forms, surv
 - Sounds: forms you create have sound on (Glass). Pick a pack that suits the mood with sound (soft is Glass, pop, wood, arcade), and use off only when the person asks for silence or the form is formal or sensitive (health, HR, legal).
 - Theme and sound changes go to the draft, like other edits; respondents see them after publish_form.
 - Respondent answers can be personal. Only fetch them with list_responses when the person asks to read individual answers.
-- Live games: create_game_draft makes a quiz draft with 1–100 choice questions, each with 2–4 distinct options and correctAnswers. Review it, publish_form only on explicit request, then host_game only when asked to open a live lobby. Hosting does not publish or start the first question.
+- Live games: create_game_draft makes a quiz draft with 1–100 choice questions, each with 2–4 distinct options and correctAnswers. It publishes on creation; call host_game only when asked to open a live lobby. Hosting does not publish or start the first question.
 - Games use game_… ids from list_games or host_game. get_game returns room state and host/join links, never player identities, tokens, individual answers or answer keys. Use hostUrl for the projected question and leaderboard.
 - Games run themselves by default: each question ends on its timer, the answer and then the leaderboard show for breakSec seconds (default 5), and the next question starts. startWhenPlayers makes the lobby count down 5-4-3-2-1 and start once that many have joined. Pass these to host_game when the host mentions them ("start when 20 join", "10 seconds between questions", "I'll click through myself" = autoAdvance false).
 - set_game_settings changes a lobby's theme, timer (5–240 seconds), answer labels and startWhenPlayers; autoAdvance and breakSec can change at any time, so "pause the game" is autoAdvance false and "carry on" is autoAdvance true. It does not change the source quiz. Themes use the same presets as forms.
@@ -78,6 +78,7 @@ const formFields = {
   questions: z.array(question).max(200),
   theme: z.string().max(60).optional().describe("Optional look by name, e.g. Google Forms style (default), Microsoft Forms style, Paper, Evergreen, Spotlight (Typeform-like), Midnight (dark). See list_themes."),
   sound: z.string().max(20).optional().describe(`Optional sound pack for respondents: ${MCP_SOUNDS.join(", ")} (soft = Glass, the default; off = silent). Choose one that suits the form.`),
+  publish: z.boolean().optional().describe("Default true: publish right after creating so the link works. Pass false only when the person asks for a draft."),
 };
 
 const soundField = z.string().max(20).describe(`One of ${MCP_SOUNDS.join(", ")}. soft is called Glass; off means silent.`);
@@ -192,21 +193,37 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
     }
   };
 
+  // Multi-step tools chain existing, individually authorized calls. Each step is checked by Convex as the
+  // connected account; a failure part-way returns what was created so the assistant can report it.
+  const call = async (tool: string, input: Record<string, unknown>) => (await options.call!(tool, input)) as Record<string, unknown>;
+  const flow = async (work: () => Promise<{ text: string; data: Record<string, unknown> }>): Promise<CallToolResult> => {
+    if (!options.call) return authRequired(options.resourceMetadataUrl);
+    try { const { text, data } = await work(); return ok(text, data); } catch (error) { return problem(error); }
+  };
+  /** Creates a form, then publishes it unless asked not to or it isn't ready yet. */
+  const createThenPublish = (tool: string, input: Record<string, unknown>, publish: boolean, noun: string) => flow(async () => {
+    const d = await call(tool, input);
+    if (!publish) return { text: `Created ${noun} draft “${d.title}”. Edit: ${d.editUrl}`, data: { ...d, published: false } };
+    if (!d.readyToPublish) return { text: `Created ${noun} draft “${d.title}”, but it can't publish yet: ${(d.problems as string[]).join(" ")} Edit: ${d.editUrl}`, data: { ...d, published: false } };
+    const p = await call("publish_form", { id: d.id });
+    return { text: `Published ${noun} “${p.title}”: ${p.shareUrl}`, data: { ...d, ...p, published: true } };
+  });
+
   server.registerTool("create_game_draft", {
     title: "Create a quiz game draft",
-    description: "Create a private quiz draft for live play using the ordinary Chaos builder and themes. Needs 1–100 single_choice, multiple_choice or dropdown questions, each with 2–4 distinct options and correctAnswers. Never publishes or opens a room. Review the returned editUrl, explicitly publish_form, then host_game when the person asks to host. Owner account and Pro required.",
+    description: "Create a private quiz draft for live play using the ordinary Chaos builder and themes. Needs 1–100 single_choice, multiple_choice or dropdown questions, each with 2–4 distinct options and correctAnswers. Publishes the quiz straight away (publish false keeps a draft) but never opens a room: call host_game when the person asks to host.",
     inputSchema: {
       title: formFields.title, description: formFields.description,
       questions: z.array(question.extend({ type: z.enum(["single_choice", "multiple_choice", "dropdown"]), options: z.array(z.string().trim().min(1).max(500)).min(2).max(4), correctAnswers: z.array(z.string()).min(1).max(4) })).min(1).max(100),
-      theme: formFields.theme, sound: formFields.sound,
+      theme: formFields.theme, sound: formFields.sound, publish: formFields.publish,
     },
-    outputSchema: { ...itemShape, readyToPublish: z.boolean(), problems: z.array(z.string()) },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, idempotentHint: false },
+    outputSchema: { ...itemShape, readyToPublish: z.boolean(), problems: z.array(z.string()), published: z.boolean() },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true, idempotentHint: false },
     _meta: meta("Creating a game draft…", "Game draft created"),
-  }, ({ theme, sound, ...input }) => {
+  }, ({ theme, sound, publish, ...input }) => {
     try {
       const form = { ...input, theme: buildThemePatch({ preset: theme ?? "Evergreen" }).patch, ...(sound ? { sound: requireSound(sound) } : {}) };
-      return run("create_game_draft", { form }, (d) => `Created private game draft “${d.title}”. Review: ${d.editUrl}`);
+      return createThenPublish("create_game_draft", { form }, publish !== false, "game quiz");
     } catch (error) { return Promise.resolve(problem(error)); }
   });
 
@@ -315,13 +332,13 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
 
   server.registerTool("create_form", {
     title: "Create a form or quiz",
-    description: "Create a new form, survey or quiz as a draft in the person's Chaos library, with all its questions. For a quiz set quizMode true and give correctAnswers (exact option labels) and points on choice questions. Pass a theme (a preset name) that suits the form; the default is Google Forms style. Sound is on (Glass) unless you pass sound, e.g. off for formal or sensitive forms. Nothing is shared until publish_form. Returns the edit link and anything that must be fixed before publishing.",
+    description: "Create a new form, survey or quiz as a draft in the person's Chaos library, with all its questions. For a quiz set quizMode true and give correctAnswers (exact option labels) and points on choice questions. Pass a theme (a preset name) that suits the form; the default is Google Forms style. Sound is on (Glass) unless you pass sound, e.g. off for formal or sensitive forms. Publishes straight away and returns the share link, unless publish is false or something must be fixed first (then it stays a draft and the problems are listed).",
     inputSchema: formFields,
-    outputSchema: { ...itemShape, readyToPublish: z.boolean(), problems: z.array(z.string()) },
-    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false, idempotentHint: false, title: "Create a form or quiz" },
-    _meta: meta("Creating in Chaos…", "Draft created"),
+    outputSchema: { ...itemShape, readyToPublish: z.boolean(), problems: z.array(z.string()), published: z.boolean() },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true, idempotentHint: false, title: "Create a form or quiz" },
+    _meta: meta("Creating in Chaos…", "Created"),
   }, (input) => {
-    const { theme, sound, ...form } = input;
+    const { theme, sound, publish, ...form } = input;
     let extra: Record<string, unknown>;
     try {
       extra = {
@@ -331,7 +348,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
     } catch (error) {
       return Promise.resolve(problem(error));
     }
-    return run("create_form", { form: { ...form, ...extra } }, (d) => `Created draft “${d.title}”. Edit: ${d.editUrl}`);
+    return createThenPublish("create_form", { form: { ...form, ...extra } }, publish !== false, form.quizMode ? "quiz" : "form");
   });
 
   server.registerTool("update_form", {
@@ -434,10 +451,10 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
     _meta: meta("Updating status…", "Status updated"),
   }, (input) => run("set_form_status", input, (d) => `“${d.title}” is now ${d.status}.`));
 
-  registerLearnTools(server, run, securitySchemes);
+  registerLearnTools(server, run, securitySchemes, { call, flow });
   registerOrganizationTools(server, run, securitySchemes);
-  registerCourseTools(server, run, securitySchemes);
-  registerFlashcardTools(server, run, securitySchemes);
+  registerCourseTools(server, run, securitySchemes, { call, flow });
+  registerFlashcardTools(server, run, securitySchemes, { call, flow });
   registerQuizForkTools(server, run, securitySchemes);
   registerCommunityTools(server, run, securitySchemes);
   registerAdvancedFormTools(server, run, securitySchemes);
