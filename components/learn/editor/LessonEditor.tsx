@@ -12,10 +12,13 @@ import {
 } from "@blocknote/react";
 import { SideMenuExtension } from "@blocknote/core/extensions";
 import { BlockNoteView } from "@blocknote/shadcn";
-import { BookMarked, Copy, Image as ImageIcon, Info, MoveDown, MoveUp, PlayCircle, Quote, Sigma, Sparkles } from "lucide-react";
+import { BookMarked, Copy, Image as ImageIcon, Info, MoveDown, MoveUp, PlayCircle, Quote, Sigma, MessageCircleQuestion } from "lucide-react";
 import { blockText } from "@/lib/learn/doc";
 import type { Block } from "@/lib/learn/doc";
-import type { AiAction, LessonSource } from "@/lib/learn/types";
+import type { LessonSource } from "@/lib/learn/types";
+
+/** What the writer wants to ask their own assistant about a selection (see HandoffDialog). */
+export type SelectionAction = "explain" | "simplify" | "expand" | "rewrite" | "organize";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { EditorBridge, lessonSchema, type LessonEditorBridge, type LessonEditorType } from "./blocks";
 import { focusLessonEnd, isBlankEditorTarget } from "./focusEnd";
@@ -26,9 +29,9 @@ const copy = {
     callout: "Callout", calloutHint: "Highlight a note, tip or caution", equation: "Equation", equationHint: "Math with LaTeX",
     youtube: "YouTube", youtubeHint: "Embed a video, or just the useful part", source: "Source", sourceHint: "Show the material this is based on",
     cite: "Citation", citeHint: "Point this sentence to a source (Lecture 8 · page 23)",
-    imageDetails: "Image details", assist: "Assist", duplicate: "Duplicate", moveUp: "Move up", moveDown: "Move down", delete: "Delete", colors: "Colours",
+    imageDetails: "Image details", assist: "Ask ChatGPT or Claude", duplicate: "Duplicate", moveUp: "Move up", moveDown: "Move down", delete: "Delete", colors: "Colours",
     headerRow: "Header row", headerCol: "Header column",
-    actions: { explain: "Explain", simplify: "Simplify", expand: "Expand", rewrite: "Rewrite", organize: "Organize" } as Record<AiAction, string>,
+    actions: { explain: "Explain", simplify: "Simplify", expand: "Expand", rewrite: "Rewrite", organize: "Organize" } as Record<SelectionAction, string>,
     fileTooLarge: "Files can be at most 20 MB.", uploadFailed: "The file could not be stored on this device.",
   },
   ar: {
@@ -36,16 +39,16 @@ const copy = {
     callout: "تنبيه", calloutHint: "أبرز ملاحظة أو نصيحة أو تحذيرًا", equation: "معادلة", equationHint: "رياضيات بصيغة LaTeX",
     youtube: "YouTube", youtubeHint: "ضمّن فيديو أو الجزء المفيد منه فقط", source: "مصدر", sourceHint: "اعرض المادة التي بُني عليها هذا الجزء",
     cite: "استشهاد", citeHint: "اربط هذه الجملة بمصدر (المحاضرة 8 · صفحة 23)",
-    imageDetails: "تفاصيل الصورة", assist: "مساعدة", duplicate: "تكرار", moveUp: "نقل لأعلى", moveDown: "نقل لأسفل", delete: "حذف", colors: "الألوان",
+    imageDetails: "تفاصيل الصورة", assist: "اسأل ChatGPT أو Claude", duplicate: "تكرار", moveUp: "نقل لأعلى", moveDown: "نقل لأسفل", delete: "حذف", colors: "الألوان",
     headerRow: "صف عناوين", headerCol: "عمود عناوين",
-    actions: { explain: "اشرح", simplify: "بسّط", expand: "وسّع", rewrite: "أعد الصياغة", organize: "نظّم" } as Record<AiAction, string>,
+    actions: { explain: "اشرح", simplify: "بسّط", expand: "وسّع", rewrite: "أعد الصياغة", organize: "نظّم" } as Record<SelectionAction, string>,
     fileTooLarge: "الحد الأقصى لحجم الملف 20 ميغابايت.", uploadFailed: "تعذّر حفظ الملف على هذا الجهاز.",
   },
 };
 
-export const ASSIST_ACTIONS: AiAction[] = ["explain", "simplify", "expand", "rewrite", "organize"];
+export const ASSIST_ACTIONS: SelectionAction[] = ["explain", "simplify", "expand", "rewrite", "organize"];
 
-export interface AssistRequest { action: AiAction; text: string; blockIds: string[] }
+export interface AssistRequest { action: SelectionAction; text: string; blockIds: string[] }
 
 export interface LessonEditorProps {
   initialContent: unknown[];
@@ -199,8 +202,8 @@ function ImageDetailsButton({ label, onClick }: { label: string; onClick: (block
   return <Components.FormattingToolbar.Button className="bn-button" label={label} mainTooltip={label} icon={<ImageIcon size={16} />} onClick={() => onClick(block.id)} />;
 }
 
-/** Optional helpers on a selection. They never replace text on their own: results come back as a suggestion to accept. */
-function AssistButtons({ labels, title, onRun }: { labels: Record<AiAction, string>; title: string; onRun: (action: AiAction) => void }) {
+/** Hands a selection to the writer's own ChatGPT or Claude. Nothing in the lesson changes. */
+function AssistButtons({ labels, title, onRun }: { labels: Record<SelectionAction, string>; title: string; onRun: (action: SelectionAction) => void }) {
   const Components = useComponentsContext()!;
   const editor = useBlockNoteEditor(lessonSchema);
   const hasText = useEditorState({ editor, selector: ({ editor }) => {
@@ -212,7 +215,7 @@ function AssistButtons({ labels, title, onRun }: { labels: Record<AiAction, stri
   return (
     <Components.Generic.Menu.Root portalElement={portal} position="bottom-start">
       <Components.Generic.Menu.Trigger>
-        <Components.FormattingToolbar.Button className="bn-button" label={title} mainTooltip={title} icon={<Sparkles size={16} />}>{title}</Components.FormattingToolbar.Button>
+        <Components.FormattingToolbar.Button className="bn-button" label={title} mainTooltip={title} icon={<MessageCircleQuestion size={16} />}>{title}</Components.FormattingToolbar.Button>
       </Components.Generic.Menu.Trigger>
       <Components.Generic.Menu.Dropdown className="bn-menu-dropdown">
         {ASSIST_ACTIONS.map((action) => (

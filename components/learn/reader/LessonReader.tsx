@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
-  ArrowLeft, Bookmark, BookmarkCheck, CheckCircle2, ExternalLink, Flag, GitFork, GraduationCap, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
+  ArrowLeft, Bookmark, BookmarkCheck, CheckCircle2, ExternalLink, Flag, GitFork, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
   MoreHorizontal, NotebookPen, PenLine, RotateCcw, Share2, ThumbsDown, ThumbsUp, Type, X,
 } from "lucide-react";
 import { WsConfirm, WsMenu, WsTabs, WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
@@ -31,12 +31,11 @@ import { jumpTo, MobileOutline, Outline, useActiveHeading } from "./Outline";
 import PracticeTab from "./PracticeTab";
 import ReportDialog from "./ReportDialog";
 import SelectionToolbar, { useTextSelection, type SelectionAction } from "./SelectionToolbar";
-import TutorPanel from "./TutorPanel";
 
 const copy = {
   en: {
     back: "Back", untitled: "Untitled lesson", by: "By", minutes: (n: number) => `${n} min read`, version: (n: number) => `Version ${n}`, updated: (d: string) => `Published ${d}`,
-    tutor: "Tutor", discussion: "Discussion", save: "Save", saved: "Saved", more: "More", fork: "Copy to my library", forkHelp: "Make an editable copy. The original author stays credited.",
+    ask: "Ask", discussion: "Discussion", save: "Save", saved: "Saved", more: "More", fork: "Copy to my library", forkHelp: "Make an editable copy. The original author stays credited.",
     report: "Report", copyLink: "Copy link", linkCopied: "Link copied", askChatgpt: "Ask ChatGPT", askClaude: "Ask Claude", edit: "Edit lesson",
     reading: "Reading settings", size: "Text size", sizes: { small: "Small", normal: "Normal", large: "Large" }, width: "Line width", widths: { narrow: "Narrow", normal: "Normal", wide: "Wide" },
     font: "Typeface", fonts: { sans: "Sans", serif: "Serif" }, appearance: "Appearance",
@@ -56,7 +55,7 @@ const copy = {
   },
   ar: {
     back: "رجوع", untitled: "درس بلا عنوان", by: "بقلم", minutes: (n: number) => `${n} د قراءة`, version: (n: number) => `الإصدار ${n}`, updated: (d: string) => `نُشر ${d}`,
-    tutor: "المدرّس", discussion: "النقاش", save: "احفظ", saved: "محفوظ", more: "المزيد", fork: "انسخ إلى مكتبتي", forkHelp: "أنشئ نسخة قابلة للتعديل. يبقى الكاتب الأصلي منسوبًا.",
+    ask: "اسأل", discussion: "النقاش", save: "احفظ", saved: "محفوظ", more: "المزيد", fork: "انسخ إلى مكتبتي", forkHelp: "أنشئ نسخة قابلة للتعديل. يبقى الكاتب الأصلي منسوبًا.",
     report: "إبلاغ", copyLink: "انسخ الرابط", linkCopied: "نُسخ الرابط", askChatgpt: "اسأل ChatGPT", askClaude: "اسأل Claude", edit: "عدّل الدرس",
     reading: "إعدادات القراءة", size: "حجم النص", sizes: { small: "صغير", normal: "عادي", large: "كبير" }, width: "عرض السطر", widths: { narrow: "ضيق", normal: "عادي", wide: "عريض" },
     font: "الخط", fonts: { sans: "بلا زوائد", serif: "بزوائد" }, appearance: "المظهر",
@@ -127,14 +126,13 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const vote = useVote(lesson.id);
   const progress = useProgress()?.[lesson.id];
   const [prefs, setPrefs] = useReaderPrefs();
-  const [panel, setPanel] = useState<"tutor" | "discussion" | null>(null);
+  const [panel, setPanel] = useState<"discussion" | null>(null);
   const [tab, setTab] = useState<"lesson" | "practice">("lesson");
   const [handoff, setHandoff] = useState<HandoffContext | null>(null);
   const [reporting, setReporting] = useState(false);
   const [lightbox, setLightbox] = useState<{ url: string; alt: string; caption?: string } | null>(null);
   const [toast, setToast] = useState<UndoToast | null>(null);
   const [editingNote, setEditingNote] = useState<{ id?: string; blockId: string; body: string } | null>(null);
-  const [tutorSelection, setTutorSelection] = useState<{ text: string; blockId: string }>();
   const [discussAnchor, setDiscussAnchor] = useState<{ blockId: string; excerpt: string }>();
   const [scrolled, setScrolled] = useState(0);
   const [openSource, setOpenSource] = useState<{ source: LessonSource; locator: string } | null>(null);
@@ -218,7 +216,6 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
     else if (action === "note") guard(() => setEditingNote({ blockId, body: `“${excerpt(text, 120)}” ` }));
     else if (action === "discuss") { setDiscussAnchor({ blockId, excerpt: excerpt(text, 140) }); setPanel("discussion"); }
     else if (action === "chatgpt" || action === "claude") openHandoff(action, text, blockId, "ask");
-    else if (caps.ai) { setTutorSelection({ text, blockId }); setPanel("tutor"); }
     else openHandoff(undefined, text, blockId, action as HandoffAction);
     clearSelection();
   };
@@ -245,7 +242,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
         <WsMenu label={t.blockMenu} trigger={<MoreHorizontal size={16} />}>
           {(close) => (
             <>
-              {isImage && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); if (caps.ai) { setTutorSelection({ text: String(block.props.alt || block.props.caption || ""), blockId: block.id }); setPanel("tutor"); } else openHandoff(undefined, "", block.id, "explain", String(block.props.alt || block.props.caption || "")); }}><ImageIcon size={15} />{t.explainImage}</button>}
+              {isImage && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); openHandoff(undefined, "", block.id, "explain", String(block.props.alt || block.props.caption || "")); }}><ImageIcon size={15} />{t.explainImage}</button>}
               {isImage && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); openHandoff(undefined, "", block.id, "ask", String(block.props.alt || block.props.caption || "")); }}><MessageSquare size={15} />{t.askImage}</button>}
               <button role="menuitem" className="ws-menu__row" onClick={() => { close(); guard(() => { actions.saveBlock(lesson, block.id, blockText(block), isImage ? String(block.props.url ?? "") : undefined); say(t.savedToast); }); }}><Bookmark size={15} />{t.saveBlock}</button>
               <button role="menuitem" className="ws-menu__row" onClick={() => { close(); guard(() => setEditingNote({ blockId: block.id, body: "" })); }}><NotebookPen size={15} />{t.note}</button>
@@ -298,10 +295,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
 
   const [forkingQuiz, setForkingQuiz] = useState<AttachedQuiz | null>(null);
 
-  const sidePanel = panel === "tutor" ? (
-    <TutorPanel lessonId={lesson.id} version={view.version} sources={lesson.sources} selection={tutorSelection} onClearSelection={() => setTutorSelection(undefined)} onClose={() => setPanel(null)}
-      onHandoff={(target, question) => setHandoff({ lessonTitle: meta.title, selection: tutorSelection?.text ?? "", section: tutorSelection ? sectionOf(tutorSelection.blockId) : undefined, publicUrl, target, action: "ask", sources: tutorSelection ? citationsIn(tutorSelection.blockId) : undefined, context: question ? undefined : undefined })} />
-  ) : panel === "discussion" ? (
+  const sidePanel = panel === "discussion" ? (
     <DiscussionPanel lesson={lesson} draftAnchor={discussAnchor} onClearAnchor={() => setDiscussAnchor(undefined)} onClose={() => setPanel(null)} blockExists={(id) => blockIds.has(id)} />
   ) : null;
 
@@ -338,7 +332,8 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
               {lessonSaved ? <BookmarkCheck size={15} aria-hidden /> : <Bookmark size={15} aria-hidden />}<span className="lx-phone-label">{lessonSaved ? t.saved : t.save}</span>
             </button>
           )}
-          <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={panel === "tutor"} onClick={() => setPanel(panel === "tutor" ? null : "tutor")}><GraduationCap size={15} aria-hidden /><span className="lx-phone-label">{t.tutor}</span></button>
+          {/* Chaos runs no AI: questions go to the reader's own ChatGPT or Claude with the lesson as context. */}
+          <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" onClick={() => setHandoff({ lessonTitle: meta.title || t.untitled, selection: "", publicUrl, action: "ask" })}><MessageCircleQuestion size={15} aria-hidden /><span className="lx-phone-label">{t.ask}</span></button>
           {caps.discussions && <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={panel === "discussion"} onClick={() => setPanel(panel === "discussion" ? null : "discussion")}><MessageSquare size={15} aria-hidden /><span className="lx-phone-label">{t.discussion}{threads.filter((th) => !th.resolved).length ? ` (${threads.filter((th) => !th.resolved).length})` : ""}</span></button>}
           {readingMenu}
           <WsMenu label={t.more}>
@@ -443,7 +438,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
       {panel && !phone && <NarrowPanel onClose={() => setPanel(null)}>{sidePanel}</NarrowPanel>}
 
       {selection && tab === "lesson" && (
-        <SelectionToolbar selection={selection} onAction={onSelectionAction} canWrite={signedIn} aiLabel={caps.ai ? undefined : t.aiOff} />
+        <SelectionToolbar selection={selection} onAction={onSelectionAction} canWrite={signedIn} aiLabel={t.aiOff} />
       )}
       {handoff && <HandoffDialog input={handoff} onClose={() => setHandoff(null)} />}
       {reporting && <ReportDialog target={{ kind: "lesson", id: lesson.id }} title={meta.title} onClose={() => setReporting(false)} />}

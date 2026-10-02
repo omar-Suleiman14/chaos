@@ -1,34 +1,10 @@
 import { describe, expect, it } from "vitest";
-import { api, internal } from "@/convex/_generated/api";
+import { api } from "@/convex/_generated/api";
 import { createTestConvex } from "./setup";
 import { creatorIdentity, questionFixtures, quizFixture } from "../fixtures";
 
+// The AI generation endpoints are gone; content and results made with them stay readable.
 describe("AI retirement", () => {
-  it("rejects stale public and internal AI calls without writing anything", async () => {
-    const t = createTestConvex();
-    const jobId = await t.run((ctx) => ctx.db.insert("aiJobs", { clerkId: creatorIdentity.subject, status: "pending", createdAt: 1 }));
-    const owner = t.withIdentity(creatorIdentity);
-
-    await expect(owner.mutation(api.aiQuizMutations.generateUploadUrl, {})).rejects.toThrow(/AI_FEATURE_RETIRED/);
-    await expect(owner.mutation(api.aiQuizMutations.createAIJob, {})).rejects.toThrow(/AI_FEATURE_RETIRED/);
-    await expect(owner.query(api.aiQuizMutations.getAIJob, { jobId })).rejects.toThrow(/AI_FEATURE_RETIRED/);
-    await expect(t.mutation(internal.aiQuizMutations.updateAIJob, { jobId, status: "done" })).rejects.toThrow(/AI_FEATURE_RETIRED/);
-    await expect(
-      t.mutation(internal.aiQuizMutations.saveGeneratedQuiz, {
-        clerkId: creatorIdentity.subject,
-        title: "Generated",
-        questions: [{ type: "mcq", questionText: "Q", options: ["a", "b"], answer: "a" }],
-      })
-    ).rejects.toThrow(/AI_FEATURE_RETIRED/);
-
-    const state = await t.run(async (ctx) => ({
-      quizzes: await ctx.db.query("quizzes").collect(),
-      job: await ctx.db.get(jobId),
-    }));
-    expect(state.quizzes).toHaveLength(0);
-    expect(state.job?.status).toBe("pending");
-  });
-
   it("keeps legacy AI-generated quizzes, questions and results readable", async () => {
     const t = createTestConvex();
     const { quizId } = await t.run(async (ctx) => {

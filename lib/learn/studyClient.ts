@@ -21,7 +21,7 @@ export const studyReads = {
 type Client = Pick<ConvexReactClient, "query" | "mutation">;
 export function useStudyCapabilities() {
   const auth = useConvexAuth();
-  return { quizForks: auth.isAuthenticated, verification: auth.isAuthenticated, weakAreas: auth.isAuthenticated, ai: false as const };
+  return { quizForks: auth.isAuthenticated, verification: auth.isAuthenticated, weakAreas: auth.isAuthenticated };
 }
 export class StudyClient {
   constructor(private client: Client) {}

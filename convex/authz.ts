@@ -102,21 +102,6 @@ export async function getSessionIfOwnerOrAdmin(
   return null;
 }
 
-export async function requireAIJobOwner(ctx: DbCtx, jobId: Id<"aiJobs">): Promise<Doc<"aiJobs">> {
-  const { identity } = await requireActiveUser(ctx);
-  const job = await ctx.db.get("aiJobs", jobId);
-  if (!job || job.clerkId !== identity.subject) throw new Error("AI job not found or unauthorized");
-  return job;
-}
-
-export async function getAIJobIfOwner(ctx: DbCtx, jobId: Id<"aiJobs">): Promise<Doc<"aiJobs"> | null> {
-  const identity = await ctx.auth.getUserIdentity();
-  if (!identity) return null;
-  const job = await ctx.db.get("aiJobs", jobId);
-  if (!job || job.clerkId !== identity.subject) return null;
-  return job;
-}
-
 export async function canViewQuizAsRespondent(ctx: DbCtx, quiz: Doc<"quizzes">): Promise<boolean> {
   const identity = await ctx.auth.getUserIdentity();
   const ownerOrAdmin =

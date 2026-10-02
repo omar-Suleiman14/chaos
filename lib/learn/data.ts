@@ -17,7 +17,7 @@ import { StudyClient, studyReads, useStudyCapabilities } from "./studyClient";
 import type {
   AttachedQuiz, ContentReport, CurriculumNode, DiscussionThread, Flashcard, FlashcardSet, Folder, FolderItem, Highlight, HighlightColor,
   LearnCapabilities, Lesson, LessonMeta, LessonProgress, LessonSource, LessonVersion, LibraryItemKind, MyCourse, PersonalNote, Person,
-  ProgressState, ReportReason, ReportTarget, SavedItem, SearchFilters, TutorMessage, VerificationKind, Visibility, WeakArea,
+  ProgressState, ReportReason, ReportTarget, SavedItem, SearchFilters, VerificationKind, Visibility, WeakArea,
 } from "./types";
 
 /**
@@ -28,7 +28,7 @@ import type {
 
 /** Durable library/student flows; discussions, folder pins and tutor history remain local-only. */
 export const localCapabilities: LearnCapabilities = {
-  sharedPublishing: true, versionRestore: true, ai: false, verification: false, discussions: true, reports: true,
+  sharedPublishing: true, versionRestore: true, verification: false, discussions: true, reports: true,
   deviceSync: true, weakAreas: false, curriculumDirectory: true, quizForks: false,
 };
 
@@ -289,11 +289,6 @@ export function useCardReviews(setId: string) {
   return auth.isLoading || version === undefined || (auth.isAuthenticated && version && !summary) ? undefined : (summary?.items ?? []).map(r => ({ setId, cardId: r.cardId, box: r.box, reviewedAt: 0 }));
 }
 
-export function useTutorThread(lessonId: string): TutorMessage[] | undefined {
-  const mine = usePersonal();
-  return mine ? mine.tutor[lessonId] ?? [] : undefined;
-}
-
 export function usePinnedFolders(): string[] | undefined {
   // Sidebar pin preferences remain device-only; they are not library synchronization.
   return usePersonal()?.pinnedFolders;
@@ -537,14 +532,6 @@ export function useLearnActions() {
         requireSignIn();
         void from; // Provenance is recorded server-side from the published source quiz.
         return new StudyClient(client).forkQuiz(formId);
-      },
-
-      /* Tutor conversation history (answers come from the backend when `capabilities.ai`). */
-      appendTutor(lessonId: string, message: Omit<TutorMessage, "id" | "createdAt">) {
-        updatePersonal(me, (mine) => ({ ...mine, tutor: { ...mine.tutor, [lessonId]: [...(mine.tutor[lessonId] ?? []), { ...message, id: newId("msg"), createdAt: Date.now() }].slice(-100) } }));
-      },
-      clearTutor(lessonId: string) {
-        updatePersonal(me, (mine) => { const tutor = { ...mine.tutor }; delete tutor[lessonId]; return { ...mine, tutor }; });
       },
     };
   }, [me, myName, requireSignIn, client, service, progressService, library]);

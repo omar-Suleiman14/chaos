@@ -17,7 +17,7 @@ import { ArrowLeft, Archive, Check, Copy, Eye, FolderInput, History, Info, Layer
 import { WsConfirm, WsMenu, WsTabs, WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { Select } from "@/components/workspace/Select";
-import { AssistDialog, CitationDialog, ImageDetailsDialog, type ImageDetails } from "@/components/learn/editor/EditorDialogs";
+import { CitationDialog, ImageDetailsDialog, type ImageDetails } from "@/components/learn/editor/EditorDialogs";
 import type { AssistRequest } from "@/components/learn/editor/LessonEditor";
 import type { LessonEditorType } from "@/components/learn/editor/blocks";
 import { focusLessonEnd } from "@/components/learn/editor/focusEnd";
@@ -30,7 +30,6 @@ import VersionHistory from "@/components/learn/editor/VersionHistory";
 import HandoffDialog, { type HandoffContext } from "@/components/learn/reader/HandoffDialog";
 import { UnavailableLesson } from "@/components/learn/reader/LessonReader";
 import { ExternalRefLine, LessonStatus, ModerationNotice, ProvenanceLine } from "@/components/learn/ui";
-import { AiUnavailableError, learnAi } from "@/lib/learn/ai";
 import { hasUnpublishedChanges, useFolders, useLearnActions, useLearnCapabilities, useLearnViewer, useLesson, useCanEditLesson, useLessonRecovery, nextToastId } from "@/lib/learn/data";
 import { asBlocks, blockText, walk } from "@/lib/learn/doc";
 import { newId } from "@/lib/learn/data";
@@ -52,7 +51,7 @@ const copy = {
     deleteTitle: "Delete this lesson?", deleteBody: "The lesson, its versions and its discussion are deleted. Saved copies in other people’s libraries stop working. This can’t be undone.",
     unpublishTitle: "Unpublish this lesson?", unpublishBody: "Readers lose access and it leaves Explore. Your draft and version history stay.",
     publishedToast: (v: number) => `Published version ${v}`, restoredToast: (v: number) => `Version ${v} copied into your draft`, archivedToast: "Lesson archived", duplicated: "Duplicate created", moved: "Moved",
-    tip: "Type / for blocks: headings, lists, tables, images, YouTube, equations, callouts, sources and citations. Select text for formatting and Assist.",
+    tip: "Type / for blocks: headings, lists, tables, images, YouTube, equations, callouts, sources and citations. Select text to format it or ask ChatGPT or Claude about it.",
     cardsCreated: "Flashcards made from your headings", makeCards: "Make flashcards from headings", cardsTitle: (title: string) => `${title} — flashcards`,
     notOwner: "Only the author can edit this lesson.",
     folderMove: "Folder",
@@ -119,7 +118,6 @@ function LessonEditorSession({ id }: { id: string }) {
   const [error, setError] = useState("");
   const [image, setImage] = useState<{ blockId: string; editor: LessonEditorType; initial: ImageDetails } | null>(null);
   const [cite, setCite] = useState<{ blockId: string; previous?: NativeCitation; initial?: { sourceId: string; locator: string } } | null>(null);
-  const [assist, setAssist] = useState<{ request: AssistRequest; editor: LessonEditorType; busy: boolean; suggestion?: string; error?: string } | null>(null);
   const [handoff, setHandoff] = useState<HandoffContext | null>(null);
   const [title, setTitle] = useState<string>();
   /** Cover and icon edits, shown at once and saved with the rest of the metadata. */
@@ -232,19 +230,9 @@ function LessonEditorSession({ id }: { id: string }) {
   const editorLesson = { ...lesson, sources, draft: { ...lesson.draft, content: editorContent ?? recoveredContent ?? lesson.draft.content, meta: { ...lesson.draft.meta, ...pending.current.meta, title: title ?? lesson.draft.meta.title, description: description ?? lesson.draft.meta.description } } };
   const changes = hasUnpublishedChanges(lesson);
 
-  const runAssist = async (request: AssistRequest, editor: LessonEditorType) => {
-    if (!caps.ai) {
-      const block = request.blockIds[0];
-      setHandoff({ lessonTitle: lesson.draft.meta.title, selection: request.text, action: assistToHandoff[request.action] ?? "ask", section: sectionOf(block) });
-      return;
-    }
-    setAssist({ request, editor, busy: true });
-    try {
-      const suggestion = await learnAi.assist({ lessonId: lesson.id, action: request.action, text: request.text, blockIds: request.blockIds, language: lesson.draft.meta.language });
-      setAssist((a) => a && { ...a, busy: false, suggestion });
-    } catch (err) {
-      setAssist((a) => a && { ...a, busy: false, error: err instanceof AiUnavailableError ? undefined : errorMessage(err) });
-    }
+  // Chaos runs no AI: a selection goes to the writer's own ChatGPT or Claude with the lesson as context.
+  const runAssist = (request: AssistRequest) => {
+    setHandoff({ lessonTitle: lesson.draft.meta.title, selection: request.text, action: assistToHandoff[request.action] ?? "ask", section: sectionOf(request.blockIds[0]) });
   };
   const sectionOf = (blockId?: string) => {
     let heading: string | undefined;
@@ -349,7 +337,7 @@ function LessonEditorSession({ id }: { id: string }) {
               if (!target) { setError("Choose a stable block to cite."); return; }
               setCite({ blockId: target, initial });
             }}
-            onAssist={(request, editor) => void runAssist(request, editor)}
+            onAssist={(request) => runAssist(request)}
             onUploadError={setError} />
           <p className="lx-muted" style={{ marginTop: 24, paddingInline: 8 }}><Info size={13} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} /> {t.tip}</p>
         </div>
@@ -395,21 +383,6 @@ function LessonEditorSession({ id }: { id: string }) {
         await nativeEdit(async row => replaceBlockCitation(row.draft, cite.blockId, { sourceId: value.sourceId as Id<"learnSources">, locator: parseCitationLocator(value.locator) }, cite.previous));
         setCite(null);
       }} />}
-      {assist && (
-        <AssistDialog action={assist.request.action} original={assist.request.text} suggestion={assist.suggestion} busy={assist.busy} error={assist.error} onClose={() => setAssist(null)}
-          onReplace={(text) => {
-            const { editor, request } = assist;
-            if (editor.getSelectedText()) editor.insertInlineContent(text);
-            else if (request.blockIds[0]) editor.updateBlock(request.blockIds[0], { content: text } as never);
-            setAssist(null);
-          }}
-          onInsert={(text) => {
-            const { editor, request } = assist;
-            const anchor = request.blockIds.at(-1);
-            if (anchor) editor.insertBlocks(text.split(/\n{2,}/).map((p) => ({ type: "paragraph" as const, content: p })), anchor, "after");
-            setAssist(null);
-          }} />
-      )}
       {handoff && <HandoffDialog input={handoff} onClose={() => setHandoff(null)} />}
       <WsUndoToast toast={toast} onClose={() => setToast(null)} />
     </div>

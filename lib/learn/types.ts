@@ -272,8 +272,6 @@ export interface LearnCapabilities {
   /** Public pages reachable by other people and search engines. False for the local store. */
   sharedPublishing: boolean;
   versionRestore: boolean;
-  /** In-product AI (tutor, editor actions). The ChatGPT/Claude handoffs work without it. */
-  ai: boolean;
   verification: boolean;
   discussions: boolean;
   reports: boolean;
@@ -286,10 +284,5 @@ export interface LearnCapabilities {
 }
 
 /** Tutor answers mark every part as grounded in the lesson/sources or as additional explanation. */
-export type Grounding = "lesson" | "source" | "general";
-export interface TutorPart { text: string; grounding: Grounding; blockId?: string; sourceId?: LearnId; locator?: string }
-export interface TutorMessage { id: LearnId; role: "user" | "tutor"; parts: TutorPart[]; createdAt: number; selection?: string }
-
-export type AiAction = "explain" | "simplify" | "expand" | "rewrite" | "organize" | "example" | "quiz";
 
 export interface SearchFilters { q?: string; topic?: string; moduleId?: LearnId; universityId?: LearnId; versionId?: LearnId; creatorId?: LearnId; language?: string; sort?: "relevant" | "recent" | "helpful" }

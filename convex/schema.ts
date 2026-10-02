@@ -205,7 +205,8 @@ export default defineSchema({
     // answers landing on in-progress attempts neither get read nor re-run those subscriptions.
     .index("by_quizId_and_status_and_score", ["quizId", "status", "score"]),
 
-  // ============ AI JOBS ============
+  // ============ AI JOBS (inert) ============
+  // Chaos no longer runs AI. Kept so historical rows stay valid; nothing creates or reads jobs.
   aiJobs: defineTable({
     clerkId: v.string(),
     status: v.union(

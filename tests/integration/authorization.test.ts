@@ -69,7 +69,6 @@ describe("creator-owned data authorization", () => {
     await expect(other.query(api.quizFunctions.getQuizSessions, { quizId })).resolves.toEqual([]);
     await expect(other.query(api.quizFunctions.getSessionDetail, { sessionId })).resolves.toBeNull();
     await expect(other.query(api.quizFunctions.getQuizStatsEnhanced, { quizId })).resolves.toBeNull();
-    await expect(other.query(api.aiQuizMutations.getAIJob, { jobId })).rejects.toThrow(/AI_FEATURE_RETIRED/);
 
     await expect(
       other.mutation(api.quizFunctions.updateQuiz, { quizId, title: "Hijacked" })
@@ -100,28 +99,6 @@ describe("creator-owned data authorization", () => {
         newPoints: 0,
       })
     ).rejects.toThrow(/unauthorized/i);
-    await expect(
-      other.mutation(api.aiQuizMutations.cancelAIJob, { jobId })
-    ).rejects.toThrow(/AI_FEATURE_RETIRED/);
-
-    await expect(
-      other.action(api.aiEditorChat.editQuizWithAI, {
-        quizId,
-        quizTitle: "Fixture Quiz",
-        questions: [],
-        message: "Rewrite this quiz",
-      })
-    ).rejects.toThrow(/AI_FEATURE_RETIRED/);
-
-    await expect(
-      other.action(api.aiQuiz.runAIQuizGeneration, {
-        jobId,
-        extractedText: "This text is deliberately long enough to pass the length check.",
-        mode: "quiz",
-        quizTitle: "Foreign job",
-      })
-    ).rejects.toThrow(/AI_FEATURE_RETIRED/);
-
     const stored = await t.run(async (ctx) => ({
       quiz: await ctx.db.get(quizId),
       question: await ctx.db.get(questionId),

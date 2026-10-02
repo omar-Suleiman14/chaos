@@ -2,7 +2,7 @@
 
 import type {
   CardReview, ContentReport, CurriculumNode, DiscussionThread, FlashcardSet, Folder, FolderItem, Highlight, Lesson,
-  LessonProgress, LessonVersion, MyCourse, PersonalNote, Person, SavedItem, TutorMessage,
+  LessonProgress, LessonVersion, MyCourse, PersonalNote, Person, SavedItem,
 } from "./types";
 
 /**
@@ -39,7 +39,6 @@ export interface PersonalState {
   votes: Record<string, "helpful" | "not_helpful">;
   recent: Record<string, number>;
   reviews: CardReview[];
-  tutor: Record<string, TutorMessage[]>;
   pinnedFolders: string[];
 }
 
@@ -47,7 +46,7 @@ const KEY = "chaos.learn.v1";
 const EVENT = "chaos-learn-change";
 
 export const emptyPersonal = (): PersonalState => ({
-  courses: [], saves: [], highlights: [], notes: [], progress: {}, votes: {}, recent: {}, reviews: [], tutor: {}, pinnedFolders: [],
+  courses: [], saves: [], highlights: [], notes: [], progress: {}, votes: {}, recent: {}, reviews: [], pinnedFolders: [],
 });
 
 export const emptyState = (): LearnState => ({
