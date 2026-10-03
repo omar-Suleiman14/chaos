@@ -150,6 +150,8 @@ export const getPublicForm = query({
       showReceipt: form.settings.showReceipt,
       hiddenFields: [...(form.settings.hiddenFields ?? []), ...(form.settings.hiddenParameters ?? []).map(d => d.name)],
       signedIn: !!identity,
+      // Anonymous/code forms deliberately do not link answers to an account.
+      responseIdentityLinked: form.settings.access === "signed_in",
       alreadyResponded,
     };
   },

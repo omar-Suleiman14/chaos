@@ -24,6 +24,7 @@ const copy = {
     title: "Settings", loading: "Loading…", saving: "Saving…", saved: "Saved", savedDot: "Saved.", save: "Save", open: "Open", read: "Read", reset: "Reset",
     preferencesHelp: "Settings for your forms, quizzes and library. They save on this device as you change them.",
     profile: "Profile and app", profileAbout: "Your card, username, account and how Chaos looks.", profileRow: "Profile", profileHelp: "Account, appearance, glass and motion.",
+    authorListing: "Show me in author lists", authorListingHelp: "People can find you in the public author directory and creator search. Your published links and card remain available when this is off.", authorListingError: "Could not save your author visibility. Try again.",
     resetTheme: "Reset theme", layoutHelp: "Choose whether people see all questions, one at a time, or in steps.",
     account: "Account", accountAbout: "Who you are in Chaos, and the name in your links.", yourAccount: "Your account", manage: "Manage account",
     username: "Username", usernameHelp: (url: string) => `Used in custom links, like ${url}.`, chooseOne: "Choose one", yourname: "yourname",
@@ -54,6 +55,7 @@ const copy = {
     privacy: "Privacy policy", terms: "Terms", signOut: "Sign out", signOutHelp: "You can sign back in any time.",
   },
   ar: {
+    authorListing: "أظهرني في قوائم المؤلفين", authorListingHelp: "يمكن للآخرين العثور عليك في دليل المؤلفين العام والبحث عن المنشئين. تظل روابط منشوراتك وبطاقتك متاحة عند إيقاف هذا الخيار.", authorListingError: "تعذر حفظ ظهورك في قوائم المؤلفين. حاول مجددًا.",
     title: "الإعدادات", loading: "جارٍ التحميل…", saving: "جارٍ الحفظ…", saved: "تم الحفظ", savedDot: "تم الحفظ.", save: "احفظ", open: "افتح", read: "اقرأ", reset: "إعادة الضبط",
     preferencesHelp: "إعدادات نماذجك واختباراتك ومكتبتك. تُحفظ على هذا الجهاز عند تعديلها.",
     profile: "الملف والتطبيق", profileAbout: "بطاقتك واسم المستخدم والحساب وشكل Chaos.", profileRow: "الملف الشخصي", profileHelp: "الحساب والمظهر والزجاج والحركة.",
@@ -137,6 +139,9 @@ export default function SettingsPage() {
   const t = useCopy(copy);
   const labels = useBuilderLabels();
   const me = useQuery(api.quizFunctions.getCurrentUser);
+  const setListingVisibility = useMutation(api.publicAuthors.setListingVisibility);
+  const [listingSaving, setListingSaving] = useState(false);
+  const [listingStatus, setListingStatus] = useState("");
   const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
   const { preferences: p, set } = usePreferences();
   const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
@@ -150,6 +155,17 @@ export default function SettingsPage() {
         <Row id="settings-profile" label={t.profileRow} help={t.profileHelp}>
           <Link href="/dashboard/card" className="ws-btn ws-btn--sm">{t.open} <ChevronRight size={14} className="rtl:-scale-x-100" /></Link>
         </Row>
+        <Row id="settings-author-listing" label={t.authorListing} help={t.authorListingHelp}>
+          <WsSwitch label={t.authorListing} hideLabel checked={!me?.hideFromAuthorLists} disabled={!me || listingSaving}
+            onChange={async (visible) => {
+              setListingSaving(true);
+              setListingStatus(t.saving);
+              try { await setListingVisibility({ visible }); setListingStatus(t.saved); }
+              catch { setListingStatus(t.authorListingError); }
+              finally { setListingSaving(false); }
+            }} />
+        </Row>
+        <p className="ws-row__help py-2" role="status" aria-live="polite">{listingStatus}</p>
       </Section>
 
 

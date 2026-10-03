@@ -27,6 +27,46 @@ it("guards permission changes against unauthorized users and native membership c
  await t.mutation(change,{...input,expectedMembershipRevision:changed.membershipRevision,email:"other@example.com",role:null});
  expect((await t.query(list,input)).members).toEqual([]);
 });
+
+it.each([undefined, false])("never authorizes MCP through an unverified profile email (%s)", async (emailVerified) => {
+ const { t, formId, userId } = await setup();
+ const read = makeFunctionReference<"query">("mcp:getForm");
+ const search = makeFunctionReference<"query">("mcp:searchForms");
+ const update = makeFunctionReference<"mutation">("mcp:updateForm");
+ const native = t.withIdentity({ subject: "other", issuer: "https://test", tokenIdentifier: "https://test|other", email: "other@example.com", ...(emailVerified === undefined ? {} : { emailVerified }) });
+ const initial = await t.query(list, { formId, userId });
+ await t.mutation(change, { formId, userId, expectedMembershipRevision: initial.membershipRevision, email: "other@example.com", role: "editor" });
+ const row = (await t.run(ctx => ctx.db.query("formCollaborators").collect()))[0];
+ expect(row).toMatchObject({ status: "pending" });
+ expect(row.userId).toBeUndefined();
+ expect(await t.run(ctx => ctx.db.query("notifications").collect())).toEqual([]);
+ const assertDenied = async () => {
+  expect((await t.query(search, { userId: "other" })).items).toEqual([]);
+  await expect(t.query(read, { userId: "other", id: formId })).rejects.toThrow("NOT_FOUND");
+  await expect(t.mutation(update, { userId: "other", id: formId, input: { title: "Stolen draft" } })).rejects.toThrow("NOT_FOUND");
+  await expect(native.mutation(makeFunctionReference<"mutation">("forms:acceptInvite"), { collaboratorId: row._id })).rejects.toThrow("UNAUTHORIZED");
+ };
+ await assertDenied();
+ // Historical pending prebindings must not act as accepted account grants.
+ await t.run(ctx => ctx.db.patch("formCollaborators", row._id, { userId: "other" }));
+ expect((await t.query(list, { formId, userId })).members[0].joined).toBe(false);
+ await assertDenied();
+ const beforeAccept = await t.query(list, { formId, userId });
+ await t.withIdentity({ subject: "other", issuer: "https://test", tokenIdentifier: "https://test|other", email: "other@example.com", emailVerified: true }).mutation(makeFunctionReference<"mutation">("forms:acceptInvite"), { collaboratorId: row._id });
+ expect((await t.query(list, { formId, userId })).membershipRevision).not.toBe(beforeAccept.membershipRevision);
+ expect((await t.query(list, { formId, userId })).members[0].joined).toBe(true);
+ expect((await t.query(search, { userId: "other" })).items).toHaveLength(1);
+ expect((await t.query(read, { userId: "other", id: formId })).role).toBe("editor");
+ await t.mutation(update, { userId: "other", id: formId, input: { title: "Authorized draft" } });
+ expect((await t.run(ctx => ctx.db.get("forms", formId)))!.title).toBe("Authorized draft");
+ // Preserve historical explicit account grants, but never declined grants.
+ await t.run(ctx => ctx.db.patch("formCollaborators", row._id, { status: undefined }));
+ expect((await t.query(read, { userId: "other", id: formId })).role).toBe("editor");
+ await t.run(ctx => ctx.db.patch("formCollaborators", row._id, { status: "declined" }));
+ expect((await t.query(search, { userId: "other" })).items).toEqual([]);
+ await expect(t.query(read, { userId: "other", id: formId })).rejects.toThrow("NOT_FOUND");
+ await expect(t.mutation(update, { userId: "other", id: formId, input: { title: "Declined draft" } })).rejects.toThrow("NOT_FOUND");
+});
 it("returns aggregate analytics without individual text or private definition",async()=>{
  const {t,formId,userId}=await setup(); const result=await t.query(analytics,{formId,userId});
  expect(result.analysisJson).not.toContain("PRIVATE"); expect(JSON.parse(result.analysisJson).definition).toBeUndefined();

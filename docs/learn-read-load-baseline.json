@@ -1,7 +1,7 @@
 {
   "measuredAt": "2026-09-30T17:42:20.209Z",
   "label": "Learn indexed search development baseline",
-  "host": "superb-zebra-196.eu-west-1.convex.cloud",
+  "target": "development Convex backend",
   "requests": 100,
   "concurrency": 5,
   "elapsedMs": 2602,

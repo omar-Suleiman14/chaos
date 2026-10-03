@@ -98,7 +98,7 @@ describe("embedding", () => {
     await expect(owner.mutation(api.embed.setEmbedSettings, { formId, enabled: true, origins: ["https://a.com; script-src *"], anyOrigin: false })).rejects.toThrow(/INVALID_EMBED/);
     await expect(owner.mutation(api.embed.setEmbedSettings, { formId, enabled: true, origins: Array.from({ length: 21 }, (_, i) => `https://s${i}.com`), anyOrigin: false })).rejects.toThrow(/INVALID_EMBED/);
 
-    const stranger = t.withIdentity(otherCreatorIdentity);
+    const stranger = t.withIdentity({ ...otherCreatorIdentity, emailVerified: true });
     await stranger.mutation(api.quizFunctions.getOrCreateUser, {});
     await expect(stranger.mutation(api.embed.setEmbedSettings, { formId, ...site })).rejects.toThrow(/FORM_NOT_FOUND/);
     expect(await stranger.query(api.embed.getEmbedSettings, { formId })).toBeNull();

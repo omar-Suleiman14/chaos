@@ -37,9 +37,11 @@ describe("respondent account boundaries", () => {
 
   it("does not transfer an account-bound collaborator invitation through an email match", async () => {
     const { t, owner, formId } = await formFixture();
-    const invitee = t.withIdentity(otherCreatorIdentity);
+    const invitee = t.withIdentity({ ...otherCreatorIdentity, emailVerified: true });
     await invitee.mutation(api.quizFunctions.getOrCreateUser, {});
     await owner.mutation(api.forms.inviteCollaborator, { formId, email: otherCreatorIdentity.email, role: "editor" });
+    const collaboratorId = (await invitee.query(api.forms.listMyForms, {})).invites![0].collaboratorId;
+    await invitee.mutation(api.forms.acceptInvite, { collaboratorId });
     const unrelated = t.withIdentity({ ...otherCreatorIdentity, subject: "another-account", tokenIdentifier: `${otherCreatorIdentity.issuer}|another-account` });
     expect(await unrelated.query(api.forms.getFormForEditor, { formId })).toBeNull();
     expect((await unrelated.query(api.forms.listMyForms, {})).shared).toEqual([]);

@@ -168,11 +168,115 @@ export const listNodes = internalQuery({
   },
 });
 export const createLessonMapping = internalMutation({
-  args: { ...actor, ...curriculumTables.lessonCurriculumMappings.validator.fields },
+  args: {
+    ...actor,
+    ...curriculumTables.lessonCurriculumMappings.validator.fields,
+  },
   returns: v.id("lessonCurriculumMappings"),
   handler: async (ctx, args) => {
     const ownerId = await requireLearnActor(ctx, args.userId);
     const { userId: _actor, ...input } = args;
     return createLessonMappingForActor(ctx, ownerId, input);
+  },
+});
+
+// Mapping coverage refers to the current draft, so reads require its owner even
+// when the lesson has a public published version.
+export const listLessonMappings = internalQuery({
+  args: {
+    ...actor,
+    lessonId: v.id("lessons"),
+    paginationOpts: paginationOptsValidator,
+  },
+  returns: paginationResultValidator(
+    docValidator(
+      "lessonCurriculumMappings",
+      curriculumTables.lessonCurriculumMappings,
+    ),
+  ),
+  handler: async (ctx, args) => {
+    const ownerId = await requireLearnActor(ctx, args.userId);
+    const lesson = await ctx.db.get("lessons", args.lessonId);
+    if (!lesson || lesson.ownerId !== ownerId)
+      throw new Error("Lesson not found or unauthorized");
+    if (
+      !Number.isSafeInteger(args.paginationOpts.numItems) ||
+      args.paginationOpts.numItems < 1 ||
+      args.paginationOpts.numItems > 50 ||
+      (args.paginationOpts.cursor?.length ?? 0) > 2000
+    )
+      throw new Error("VALIDATION_FAILED: Invalid pagination.");
+    return ctx.db
+      .query("lessonCurriculumMappings")
+      .withIndex("by_lessonId_and_nodeId", (q) => q.eq("lessonId", lesson._id))
+      .paginate(args.paginationOpts);
+  },
+});
+
+export const searchModules = internalQuery({
+  args: {
+    ...actor,
+    versionId: v.id("curriculumVersions"),
+    query: v.string(),
+    limit: v.optional(v.number()),
+  },
+  returns: v.object({
+    modules: v.array(
+      docValidator("curriculumNodes", curriculumTables.curriculumNodes),
+    ),
+  }),
+  handler: async (ctx, args) => {
+    await requireLearnActor(ctx, args.userId);
+    const query = args.query.trim(),
+      limit = args.limit ?? 20;
+    if (
+      !query ||
+      query.length > 200 ||
+      !Number.isSafeInteger(limit) ||
+      limit < 1 ||
+      limit > 50
+    )
+      throw new Error("VALIDATION_FAILED: Invalid module search.");
+    if (!(await ctx.db.get("curriculumVersions", args.versionId)))
+      throw new Error("Version not found");
+    const exact = await ctx.db
+      .query("curriculumNodes")
+      .withIndex("by_versionId_and_key", (q) =>
+        q.eq("versionId", args.versionId).eq("key", query.toLowerCase()),
+      )
+      .unique();
+    const alias = await ctx.db
+      .query("curriculumAliases")
+      .withIndex("by_scope_and_alias", (q) =>
+        q
+          .eq("scope", `nodes:${args.versionId}`)
+          .eq("alias", query.toLowerCase()),
+      )
+      .unique();
+    const aliasId =
+      alias && ctx.db.normalizeId("curriculumNodes", alias.targetId);
+    const aliased = aliasId
+      ? await ctx.db.get("curriculumNodes", aliasId)
+      : null;
+    const matches = await ctx.db
+      .query("curriculumNodes")
+      .withSearchIndex("search_name", (q) =>
+        q
+          .search("name", query)
+          .eq("versionId", args.versionId)
+          .eq("kind", "module"),
+      )
+      .take(limit);
+    const modules: Doc<"curriculumNodes">[] = [];
+    for (const node of [exact, aliased, ...matches]) {
+      if (
+        node?.kind === "module" &&
+        node.versionId === args.versionId &&
+        !modules.some((existing) => existing._id === node._id)
+      )
+        modules.push(node);
+      if (modules.length === limit) break;
+    }
+    return { modules };
   },
 });

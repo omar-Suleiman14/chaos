@@ -19,6 +19,7 @@ const collaboratorIdentity = {
   issuer: "https://chaos.test.clerk.accounts.dev",
   tokenIdentifier: "https://chaos.test.clerk.accounts.dev|user_collaborator_3",
   email: "helper@example.com",
+  emailVerified: true,
   name: "Harper Helper",
   nickname: "helper",
 };

@@ -7,7 +7,7 @@ if (!fixturePath) throw new Error("Usage: node scripts/load-backend.mjs <private
 const config = JSON.parse(await readFile(fixturePath, "utf8"));
 const allowedHost = process.env.CHAOS_LOAD_DEV_HOST;
 const url = new URL(config.url);
-if (!allowedHost || url.hostname !== allowedHost || !/^(localhost|127\.0\.0\.1|superb-zebra-196\.eu-west-1\.(convex\.cloud|convex\.site))$/.test(allowedHost)) throw new Error("Only the explicitly selected development host is allowed");
+if (!allowedHost || url.hostname !== allowedHost || !/^(localhost|127\.0\.0\.1)$/.test(allowedHost) || !["http:", "https:"].includes(url.protocol) || url.username || url.password) throw new Error("Only the explicitly selected local development host is allowed");
 const count = config.requests ?? 100;
 const concurrency = config.concurrency ?? 5;
 if (!Number.isInteger(count) || count < 1 || count > 10000 || !Number.isInteger(concurrency) || concurrency < 1 || concurrency > 50) throw new Error("Requests 1–10000; concurrency 1–50");
@@ -21,7 +21,7 @@ async function worker() {
     const index = next++;
     const began = performance.now();
     try {
-      const response = await fetch(url, { method: config.method ?? "GET", headers: config.headers, body: config.body === undefined ? undefined : JSON.stringify(config.body), signal: AbortSignal.timeout(config.timeoutMs ?? 10000) });
+      const response = await fetch(url, { method: config.method ?? "GET", headers: config.headers, body: config.body === undefined ? undefined : JSON.stringify(config.body), redirect: "error", signal: AbortSignal.timeout(config.timeoutMs ?? 10000) });
       const body = await response.text();
       statuses[response.status] = (statuses[response.status] ?? 0) + 1;
       if (config.assertJsonSuccess) {

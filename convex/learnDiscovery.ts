@@ -50,6 +50,7 @@ export const search = query({
         : await ctx.db.query("users").withIndex("by_username", q => q.gte("username", text).lt("username", `${text}\uffff`)).paginate(args.paginationOpts);
       const page = [];
       for (const user of result.page) {
+        if (user.hideFromAuthorLists) continue;
         if (await creatorRestricted(ctx, user.clerkId)) continue;
         // Bound hydration while allowing a stale newest candidate to be skipped.
         const lessons = await ctx.db.query("lessons").withIndex("by_ownerId_and_visibility_and_communityState_and_status", q => q.eq("ownerId", user.clerkId).eq("visibility", "public").eq("communityState", "ok").eq("status", "active")).order("desc").take(5);

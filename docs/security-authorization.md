@@ -23,6 +23,12 @@ where the specific function requests them. Form access is scoped by owner,
 editor and viewer roles. Sensitive settings and collaborator administration
 require the appropriate role. Writes also check account moderation restrictions.
 
+Email invitations require a positive `emailVerified` provider claim for pending
+or unbound grants. Profile creation does not bind invitations using unverified
+email addresses, and stored profile email alone cannot grant access. Accepted
+and legacy explicit account grants retain their account ID authorization. The
+same matching policy governs listing, accepting, declining and leaving forms.
+
 Read functions may return `null` or an empty collection when access is denied,
 where the existing client expects that behavior. Creator mutations reject an
 unauthorized caller. Possessing a document ID does not grant creator access.

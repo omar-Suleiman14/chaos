@@ -76,6 +76,8 @@ export default defineSchema({
     imageUrl: v.optional(v.string()),
     /** Number of currently public, indexed publications; maintained by authorIndex.ts. */
     publicAuthorAssets: v.optional(v.number()),
+    /** Opt out of public author directories; direct published links stay available. */
+    hideFromAuthorLists: v.optional(v.boolean()),
     /** Member card colour theme index (lib/memberCard.ts CARD_THEMES). */
     cardStyle: v.optional(v.number()),
     isBanned: v.optional(v.boolean()),

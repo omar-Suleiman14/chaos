@@ -1,6 +1,6 @@
 # Backend load verification
 
-Run `node scripts/load-backend.mjs <private-fixture.json> <report.json>` with `CHAOS_LOAD_DEV_HOST` set to the exact development host. The runner accepts localhost or the designated superb-zebra-196 regional deployment, limits concurrency to 50 and requests to 10,000, and rejects write probes unless `CHAOS_LOAD_ALLOW_WRITES=development-fixtures` is set. Keep credential-bearing fixtures outside the repository.
+Run `node scripts/load-backend.mjs <private-fixture.json> <report.json>` with `CHAOS_LOAD_DEV_HOST` set to `localhost` or `127.0.0.1` for a local development backend. The runner limits concurrency to 50 and requests to 10,000, and rejects write probes unless `CHAOS_LOAD_ALLOW_WRITES=development-fixtures` is set. Remote deployments are refused. Keep credential-bearing fixtures and generated reports outside the repository.
 
 A fixture contains `url`, `method`, `headers`, optional JSON `body`, `requests`, `concurrency`, `label`, and `readOnly`. For Convex query requests, set `assertJsonSuccess: true` to detect backend errors returned in successful HTTP responses. Reports omit request paths, credentials, payloads and response data.
 

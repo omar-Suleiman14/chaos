@@ -4,6 +4,17 @@ import { optionalHttpsOrigin, optionalHttpsUrl, shortHostRedirect, shortShareUrl
 
 afterEach(() => { vi.unstubAllEnvs(); vi.resetModules(); });
 
+it("links a hosted fork's source while keeping the upstream support docs", async () => {
+  vi.resetModules();
+  vi.stubEnv("NEXT_PUBLIC_SOURCE_REPO_URL", "https://example.org/my-chaos/source");
+  const site = await import("@/lib/site");
+  expect(site.repoUrl).toBe("https://example.org/my-chaos/source");
+  expect(site.repoIssuesUrl).toBe("https://github.com/omar-Suleiman14/chaos/issues");
+  vi.resetModules();
+  vi.stubEnv("NEXT_PUBLIC_SOURCE_REPO_URL", "javascript:alert(1)");
+  expect((await import("@/lib/site")).repoUrl).toBe("https://github.com/omar-Suleiman14/chaos");
+});
+
 describe("short share links", () => {
   it("accepts only a bare https origin", () => {
     expect(optionalHttpsOrigin(" https://chs.example/ ")).toBe("https://chs.example");

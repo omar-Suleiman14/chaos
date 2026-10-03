@@ -42,6 +42,8 @@ npx convex env set CLERK_JWT_ISSUER_DOMAIN https://your-app.clerk.accounts.dev
 
 The app runs at <http://localhost:3000>. To make yourself an admin, sign in once, then run `npx convex run admin:grantAdmin '{"email":"you@example.com"}'`.
 
+Email-based collaborator invitations require a verified email claim. Keep `email` and `email_verified` in the Clerk `convex` JWT template, with `email_verified` derived from `{{user.email_verified}}`, rather than a hardcoded value. Missing or false verification never grants invitation access. See [Clerk JWT templates](https://clerk.com/docs/guides/sessions/jwt-templates).
+
 ### Environment variables
 
 Every variable is listed with what it does in [`.env.example`](./.env.example). The ones you need to start:
@@ -79,6 +81,8 @@ npx convex deploy --cmd 'pnpm build'
 and add a production `CONVEX_DEPLOY_KEY` (Convex dashboard → Settings → Deploy keys). Every Vercel deploy then pushes the matching Convex functions first. Without this, run `npx convex deploy` yourself after each merge.
 
 **Self-hosting.** Docker, Compose with the self-hosted Convex backend, and the full guide are in [`docs/self-hosting.md`](./docs/self-hosting.md).
+
+When hosting a modified version, set `NEXT_PUBLIC_SOURCE_REPO_URL` to the source for your running version before building. The site's Source link then points to your fork.
 
 ## Project layout
 

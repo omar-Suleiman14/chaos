@@ -16,8 +16,6 @@ Fingerprints are computed after authenticated upload and signature validation, n
 
 All checks are bounded: 1,024 fingerprint hashes per file and 100 indexed candidates per registration. Publication, citations and downloads continue using existing source permission checks. A linked candidate can later be removed without changing the new source's lifecycle or access rights.
 
-## Local verification (2026-10-01)
+## Regression coverage
 
-[Near-duplicate regression tests](../tests/integration/sourceNearDuplicates.test.ts) passed locally: five tests cover small aligned edits, exact reuse, unrelated/small/repetitive/resized files, other-owner isolation, server-side computation and fingerprint/lineage/hash/storage/excerpt redaction across MCP metadata, API metadata and default context. The bounded roadmap follow-up ran seven integration suites with 28 passing tests overall. These tests establish the documented byte-level implementation; live deployment and real PDF/slide similarity effectiveness remain unverified.
-
-[Source upload boundary tests](../tests/integration/learnSources.test.ts) additionally exercised a valid text upload of exactly 25 MiB, checked its stored size and bounded fingerprint, and verified streamed overflow cancellation before storage despite an understated Content-Length. Declared overflow is also rejected. This verifies local size enforcement, not deployed PDF/slide throughput, memory headroom or processing performance.
+[Near-duplicate tests](../tests/integration/sourceNearDuplicates.test.ts) cover aligned edits, exact reuse, unrelated and repetitive files, other-owner isolation, server-side computation and redaction of private source metadata across MCP, API and default context. [Source upload tests](../tests/integration/learnSources.test.ts) exercise the 25 MiB boundary and streamed overflow cancellation before storage. This coverage verifies bounded local policy; deployed PDF/slide similarity, memory headroom and throughput require separate acceptance.

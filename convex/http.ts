@@ -334,6 +334,8 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "list_curriculum_programs": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listPrograms"), { ...input, userId }); break;
       case "list_curriculum_versions": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listVersions"), { ...input, userId }); break;
       case "list_curriculum_nodes": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listNodes"), { ...input, userId }); break;
+      case "list_lesson_curriculum_mappings": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:listLessonMappings"), { ...input, userId }); break;
+      case "search_curriculum_modules": result = await ctx.runQuery(makeFunctionReference<"query">("mcpOrganization:searchModules"), { ...input, userId }); break;
       case "create_lesson_curriculum_mapping": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpOrganization:createLessonMapping"), { ...input, userId }); break;
       case "search_lessons": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:listLessons"), { ...input, userId }); break;
       case "get_lesson_outline": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getLessonOutline"), { ...input, userId }); break;
@@ -405,6 +407,10 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
     }
     return respond({ status: 200, body: { result } });
   } catch (caught) {
+    if (["list_lesson_curriculum_mappings", "search_curriculum_modules"].includes(b.tool) && caught instanceof Error) {
+      if (/ArgumentValidationError|Validator error|VALIDATION_FAILED/.test(caught.message)) return error(400, "VALIDATION_FAILED", "Invalid curriculum tool arguments.");
+      if (/Lesson not found or unauthorized|Version not found/.test(caught.message)) return error(404, "NOT_FOUND", "Lesson or curriculum version not found or unauthorized.");
+    }
     if (b.tool === "search_learn_directory" && caught instanceof Error && /ArgumentValidationError|Validator error|Page size|Search text|Filter does not apply|creatorMatch applies|Discovery does not support/.test(caught.message)) return error(400, "VALIDATION_FAILED", "Invalid directory search arguments.");
     if (/flashcard|^(list_courses|set_course_archived|unpublish_course)$/.test(b.tool)) {
       if (caught instanceof ConvexError && (caught.data as { code?: unknown } | null)?.code === "REVISION_CONFLICT") return error(409, "REVISION_CONFLICT", "The flashcard set changed; reload it with get_flashcard_set before editing.", { currentRevision: (caught.data as { currentRevision?: unknown }).currentRevision });

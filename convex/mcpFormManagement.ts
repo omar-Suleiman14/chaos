@@ -4,6 +4,7 @@ import { makeFunctionReference } from "convex/server";
 import { internalQuery, internalMutation, internalAction, type QueryCtx, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireLearnActor } from "./mcpLearn";
+import { matchesAccountFormCollaborator } from "./authz";
 import { getAnalysisForActor, exportResponsesForActor } from "./formResults";
 import { logActivity, notify } from "./serverUtils";
 import { buildXlsx, safeFilename } from "../lib/xlsx";
@@ -26,10 +27,10 @@ export const analytics = internalQuery({ args, returns: v.object({ analysisJson:
 } });
 const member = v.object({ id: v.id("formCollaborators"), email: v.string(), role: v.union(v.literal("editor"), v.literal("viewer")), joined: v.boolean() });
 async function members(ctx: QueryCtx | MutationCtx, formId: Id<"forms">) { return ctx.db.query("formCollaborators").withIndex("by_formId", q => q.eq("formId", formId)).take(101); }
-function snapshot(rows: Awaited<ReturnType<typeof members>>) { return JSON.stringify(rows.map(r => [r._id, r.email, r.role, r.userId ?? null]).sort((a,b) => String(a[0]).localeCompare(String(b[0])))); }
+function snapshot(rows: Awaited<ReturnType<typeof members>>) { return JSON.stringify(rows.map(r => [r._id, r.email, r.role, r.userId ?? null, r.status ?? null]).sort((a,b) => String(a[0]).localeCompare(String(b[0])))); }
 export const collaborators = internalQuery({ args, returns: v.object({ members: v.array(member), membershipRevision: v.string() }), handler: async (ctx, input) => {
   await owned(ctx, input.userId, input.formId); const rows = await members(ctx, input.formId);
-  return { members: rows.map(r => ({ id: r._id, email: r.email, role: r.role, joined: !!r.userId })), membershipRevision: snapshot(rows) };
+  return { members: rows.map(r => ({ id: r._id, email: r.email, role: r.role, joined: !!r.userId && matchesAccountFormCollaborator(r, r.userId) })), membershipRevision: snapshot(rows) };
 } });
 export const changeCollaborator = internalMutation({ args: { ...args, expectedMembershipRevision: v.string(), email: v.string(), role: v.union(v.literal("editor"), v.literal("viewer"), v.null()) }, returns: v.object({ membershipRevision: v.string() }), handler: async (ctx, input) => {
   const form = await owned(ctx, input.userId, input.formId), rows = await members(ctx, input.formId);
@@ -42,10 +43,9 @@ export const changeCollaborator = internalMutation({ args: { ...args, expectedMe
   if (input.role === null) { if (match) { await ctx.db.delete("formCollaborators", match._id); await logActivity(ctx, form._id, input.userId, "removed access", email); } }
   else if (match?.role !== input.role) {
     if (!match && rows.length >= 50) throw new Error("COLLABORATOR_LIMIT");
-    const invitee = await ctx.db.query("users").withIndex("by_email", q => q.eq("email", email)).first();
     if (match) await ctx.db.patch("formCollaborators", match._id, { role: input.role });
-    else await ctx.db.insert("formCollaborators", { formId: form._id, email, ...(invitee ? { userId: invitee.clerkId } : {}), role: input.role, invitedBy: input.userId, createdAt: Date.now() });
-    if (invitee) await notify(ctx, invitee.clerkId, "comment", `You can now ${input.role === "editor" ? "edit" : "view"} �${form.title}�.`, `invite:${form._id}:${email}:${input.role}`, form._id);
+    else await ctx.db.insert("formCollaborators", { formId: form._id, email, status: "pending", role: input.role, invitedBy: input.userId, createdAt: Date.now() });
+    if (match?.userId && matchesAccountFormCollaborator(match, match.userId)) await notify(ctx, match.userId, "comment", `Your access to this form is now ${input.role}.`, `invite:${form._id}:${email}:${input.role}`, form._id);
     await logActivity(ctx, form._id, input.userId, "shared", `${email} as ${input.role}`);
   }
   return { membershipRevision: snapshot(await members(ctx, form._id)) };

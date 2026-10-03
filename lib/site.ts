@@ -12,13 +12,14 @@ export const siteUrl = siteOrigin(process.env.NEXT_PUBLIC_APP_URL || "https://ch
 /** Contact address shown in the footer, legal pages and help rows. Self-hosted instances set NEXT_PUBLIC_SUPPORT_EMAIL. */
 export const supportEmail = process.env.NEXT_PUBLIC_SUPPORT_EMAIL?.trim() || "khomod14@gmail.com";
 
-/** The open-source repository. Self-hosted forks keep pointing at upstream for issues and the self-hosting guide. */
-export const repoUrl = "https://github.com/omar-Suleiman14/chaos";
-export const repoIssuesUrl = `${repoUrl}/issues`;
-export const selfHostingGuideUrl = `${repoUrl}/blob/main/docs/self-hosting.md`;
-export const integrationApiDocUrl = `${repoUrl}/blob/main/docs/integration-api-v1.md`;
-export const webhooksDocUrl = `${repoUrl}/blob/main/docs/webhooks-v1.md`;
-export const securityPolicyUrl = `${repoUrl}/blob/main/SECURITY.md`;
+/** Forks can link the source actually serving their instance; support docs stay upstream. */
+const upstreamRepoUrl = "https://github.com/omar-Suleiman14/chaos";
+export const repoUrl = optionalHttpsUrl(process.env.NEXT_PUBLIC_SOURCE_REPO_URL) ?? upstreamRepoUrl;
+export const repoIssuesUrl = `${upstreamRepoUrl}/issues`;
+export const selfHostingGuideUrl = `${upstreamRepoUrl}/blob/main/docs/self-hosting.md`;
+export const integrationApiDocUrl = `${upstreamRepoUrl}/blob/main/docs/integration-api-v1.md`;
+export const webhooksDocUrl = `${upstreamRepoUrl}/blob/main/docs/webhooks-v1.md`;
+export const securityPolicyUrl = `${upstreamRepoUrl}/blob/main/SECURITY.md`;
 
 /**
  * An optional HTTPS link, such as a hosted status page. Anything else (http, credentials,

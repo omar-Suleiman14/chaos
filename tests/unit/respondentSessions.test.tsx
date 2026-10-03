@@ -9,6 +9,7 @@ import { RespondToForm } from "@/components/forms/respond/RespondPage";
 const m = vi.hoisted(() => ({
   search: "", state: "open", resumed: undefined as unknown, editing: null as unknown,
   submit: vi.fn(), update: vi.fn(), saveResume: vi.fn(), unlock: vi.fn(), queries: vi.fn(),
+  ingest: vi.fn(), signedIn: true, linked: true,
 }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams(m.search) }));
 vi.mock("next/link", () => ({ default: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a> }));
@@ -39,16 +40,21 @@ vi.mock("convex/react", () => ({
       state: m.state, title: "Example", defaultLanguage: "en", definition, theme: definition.theme,
       version: 1, opensAt: null, closesAt: null, collectPartial: true, allowResumeLink: true,
       allowEditAfterSubmit: true, showReceipt: true, alreadyResponded: false,
+      signedIn: m.signedIn, responseIdentityLinked: m.linked,
     };
   },
   useMutation: (ref: Parameters<typeof getFunctionName>[0]) => ({
     "respond:submitResponse": m.submit, "respond:updateSubmission": m.update,
     "respond:saveResumeDraft": m.saveResume, "respond:unlockForm": m.unlock,
+    "learnPractice:ingestResponse": m.ingest,
   })[getFunctionName(ref)] ?? vi.fn(),
 }));
 beforeEach(() => {
   vi.useFakeTimers(); vi.clearAllMocks(); localStorage.clear(); sessionStorage.clear();
   m.search = ""; m.state = "open"; m.resumed = undefined; m.editing = null;
+  m.signedIn = true; m.linked = true; definition.quiz = undefined;
+  definition.languages = ["en"]; definition.defaultLanguage = "en";
+  m.ingest.mockReset().mockResolvedValue({ evidenceCount: 1 });
   m.submit.mockReset().mockResolvedValue({ receiptCode: "R1", endingId: null });
   m.saveResume.mockReset().mockResolvedValue(null);
 });
@@ -128,4 +134,69 @@ it("defers private-link lookups until the form access gate is open", () => {
   expect(screen.getByRole("textbox", { name: "Enter the access code" })).toBeInTheDocument();
   expect(m.queries).toHaveBeenCalledWith("respond:getResumeDraft", "skip");
   expect(m.queries).toHaveBeenCalledWith("respond:getSubmissionForEdit", "skip");
+});
+
+it("only records study progress after explicit consent to a completed Learn quiz attempt", async () => {
+  definition.quiz = { enabled: true };
+  m.submit.mockResolvedValue({ responseId: "response1", status: "completed", receiptCode: "R1", endingId: null });
+  render(<RespondToForm shareId="a" inline studyProgress />);
+  expect(screen.queryByRole("button", { name: "Use this attempt for study progress" })).not.toBeInTheDocument();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Submit" })));
+  expect(m.ingest).not.toHaveBeenCalled();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Use this attempt for study progress" })));
+  expect(m.ingest).toHaveBeenCalledExactlyOnceWith({ formResponseId: "response1" });
+  expect(screen.getByRole("status")).toHaveTextContent("This attempt was added to your study progress.");
+});
+
+it.each([
+  { label: "ordinary respondent", studyProgress: false, signedIn: true, linked: true, quiz: true, status: "completed" },
+  { label: "anonymous form while signed in", studyProgress: true, signedIn: true, linked: false, quiz: true, status: "completed" },
+  { label: "signed out respondent", studyProgress: true, signedIn: false, linked: true, quiz: true, status: "completed" },
+  { label: "non-quiz form", studyProgress: true, signedIn: true, linked: true, quiz: false, status: "completed" },
+  { label: "unfinished response", studyProgress: true, signedIn: true, linked: true, quiz: true, status: "partial" },
+])("does not offer study ingestion for $label", async ({ studyProgress, signedIn, linked, quiz, status }) => {
+  definition.quiz = { enabled: quiz }; m.signedIn = signedIn; m.linked = linked;
+  m.submit.mockResolvedValue({ responseId: "response1", status, receiptCode: "R1", endingId: null });
+  render(<RespondToForm shareId="a" inline studyProgress={studyProgress} />);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Submit" })));
+  expect(screen.queryByRole("button", { name: "Use this attempt for study progress" })).not.toBeInTheDocument();
+  expect(m.ingest).not.toHaveBeenCalled();
+});
+
+it("does not use stored receipts as authenticated study evidence", () => {
+  definition.quiz = { enabled: true };
+  localStorage.setItem("chaos-receipt:a", JSON.stringify({ responseId: "untrusted", receiptCode: "R1", endingId: null, submittedAt: Date.now(), answers: {}, language: "en" }));
+  render(<RespondToForm shareId="a" inline studyProgress />);
+  expect(screen.getByText("Finished")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Use this attempt for study progress" })).not.toBeInTheDocument();
+  expect(m.ingest).not.toHaveBeenCalled();
+});
+
+it("shows ingestion rejection without claiming progress, and allows retry", async () => {
+  definition.quiz = { enabled: true };
+  m.submit.mockResolvedValue({ responseId: "response1", status: "completed", receiptCode: "R1", endingId: null });
+  m.ingest.mockRejectedValueOnce(new Error("Own authenticated completed response required"));
+  m.ingest.mockResolvedValueOnce({ evidenceCount: 0 });
+  render(<RespondToForm shareId="a" inline studyProgress />);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Submit" })));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Use this attempt for study progress" })));
+  expect(screen.getByRole("alert")).toHaveTextContent("Own authenticated completed response required");
+  expect(screen.queryByText("This attempt was added to your study progress.")).not.toBeInTheDocument();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Use this attempt for study progress" })));
+  expect(screen.getByRole("status")).toHaveTextContent("no progress was added");
+});
+
+it("offers Arabic consent and prevents duplicate clicks during ingestion", async () => {
+  definition.quiz = { enabled: true }; definition.languages = ["ar"]; definition.defaultLanguage = "ar";
+  m.submit.mockResolvedValue({ responseId: "response1", status: "completed", receiptCode: "R1", endingId: null });
+  let finish!: (value: { evidenceCount: number }) => void;
+  m.ingest.mockImplementation(() => new Promise((resolve) => { finish = resolve; }));
+  render(<RespondToForm shareId="a" inline studyProgress />);
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Submit" })));
+  fireEvent.click(screen.getByRole("button", { name: "استخدم هذه المحاولة للتقدّم الدراسي" }));
+  expect(screen.getByRole("button", { name: "جارٍ الحفظ…" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "جارٍ الحفظ…" }));
+  expect(m.ingest).toHaveBeenCalledTimes(1);
+  await act(async () => finish({ evidenceCount: 1 }));
+  expect(screen.getByRole("status")).toHaveTextContent("أُضيفت هذه المحاولة إلى تقدّمك الدراسي.");
 });

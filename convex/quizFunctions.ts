@@ -5,7 +5,7 @@ import { consumeCreation } from "./plans";
 import { DEFAULT_HALF_MARK_THRESHOLD, clampThreshold, gradeMulti, gradeSingle, gradeWritten, parseMultiAnswer } from "./grading";
 import { internal } from "./_generated/api";
 import { grantPlan } from "./admin";
-import { creatorRestricted, hasPro } from "./authz";
+import { creatorRestricted, hasPro, verifiedIdentityEmail } from "./authz";
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -62,7 +62,7 @@ export const getOrCreateUser = mutation({
   handler: async (ctx) => {
     const identity = await ctx.auth.getUserIdentity();
     if (!identity) throw new Error("Not authenticated");
-    await linkPendingInvites(ctx, identity.subject, identity.email);
+    await linkPendingInvites(ctx, identity.subject, verifiedIdentityEmail(identity));
 
     const existing = await ctx.db
       .query("users")

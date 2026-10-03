@@ -68,7 +68,7 @@ describe("forms: drafts and publication", () => {
     const t = createTestConvex();
     const { owner, formId } = await publishedForm(t);
     await owner.mutation(api.forms.inviteCollaborator, { formId, email: otherCreatorIdentity.email, role: "editor" });
-    const editor = t.withIdentity(otherCreatorIdentity);
+    const editor = t.withIdentity({ ...otherCreatorIdentity, emailVerified: true });
     const form = await editor.query(api.forms.getFormForEditor, { formId });
     expect(form?.role).toBe("editor");
     await editor.mutation(api.forms.saveFormDraft, { formId, expectedRevision: form!.draftRevision, definition: { ...sampleDefinition(), title: "Edited" } });

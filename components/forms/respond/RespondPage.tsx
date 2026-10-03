@@ -22,6 +22,8 @@ import { EMBED_HEIGHT_MESSAGE } from "@/lib/embed";
 import type { EmbedHeightMessage } from "@/lib/embed";
 import { useInitialTheme } from "./initial-theme";
 import { formatScheduleTime } from "@/convex/formSchedule";
+import type { Id } from "@/convex/_generated/dataModel";
+import { StudyProgressOptIn } from "./StudyProgressOptIn";
 
 function randomHex(bytes: number) {
   const buf = new Uint8Array(bytes);
@@ -75,10 +77,10 @@ function readHidden(names: string[]): Record<string, string> | undefined {
 interface Receipt { receiptCode: string; endingId: string | null; editToken?: string; submittedAt: number; answers: Answers; language: Language; quizScore?: number | null; quizMaxScore?: number | null }
 
 /** The respondent experience for one form; also served at custom links (chaos.fail/<username>/<slug>). */
-export function RespondToForm({ shareId, inline = false }: { shareId: string; inline?: boolean }) {
+export function RespondToForm({ shareId, inline = false, studyProgress = false }: { shareId: string; inline?: boolean; studyProgress?: boolean }) {
   return (
     <Suspense fallback={<RespondLoading />}>
-      <RespondPage key={shareId} shareId={shareId} inline={inline} />
+      <RespondPage key={shareId} shareId={shareId} inline={inline} studyProgress={studyProgress} />
     </Suspense>
   );
 }
@@ -88,7 +90,7 @@ export function RespondLoading() {
   return <Shell embed={false}><FormLoading /></Shell>;
 }
 
-function RespondPage({ shareId, inline = false }: { shareId: string; inline?: boolean }) {
+function RespondPage({ shareId, inline = false, studyProgress = false }: { shareId: string; inline?: boolean; studyProgress?: boolean }) {
   const search = useSearchParams();
   const embed = inline || search.get("embed") === "1";
   const resumeToken = inline ? null : search.get("resume");
@@ -172,6 +174,7 @@ function RespondPage({ shareId, inline = false }: { shareId: string; inline?: bo
       resumed={resumed ?? null}
       editToken={editToken}
       editing={editing ?? null}
+      studyProgress={studyProgress}
     />
   );
 }
@@ -189,10 +192,11 @@ function ReloadAt({ at }: { at: number }) {
 
 type OpenForm = Extract<FunctionReturnType<typeof api.respond.getPublicForm>, { state: "open" }>;
 
-function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, editToken, editing }: {
+function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, editToken, editing, studyProgress }: {
   form: OpenForm; shareId: string; embed: boolean; accessCode?: string; resumeToken: string | null;
   resumed: { answers: Answers; language: Language; version: number } | null;
   editToken: string | null; editing: { answers: Answers; language: Language; definition: FormDefinition; receiptCode: string } | null;
+  studyProgress: boolean;
 }) {
   const def = (editing?.definition ?? form.definition) as FormDefinition;
   const storageKey = `chaos-form:${shareId}:v${form.version}`;
@@ -213,6 +217,8 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   const [progress, setProgress] = useState<LocalProgress | null>(null);
   const [restored, setRestored] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  // Never trust a receipt restored from shared-device storage as account evidence.
+  const [studyResponseId, setStudyResponseId] = useState<Id<"formResponses"> | null>(null);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string>("");
   const [serverErrors, setServerErrors] = useState<Record<string, string>>({});
@@ -335,6 +341,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
         honeypot: honeypot || undefined, hidden: progress.hidden,
       });
       const r: Receipt = { receiptCode: result.receiptCode, endingId: result.endingId, editToken: token, submittedAt: Date.now(), answers: progress.answers, language: progress.language, quizScore: result.quizScore, quizMaxScore: result.quizMaxScore };
+      setStudyResponseId(result.status === "completed" ? result.responseId : null);
       posthog.capture("form_response_submitted", { language: progress.language, form_type: def.quiz?.enabled ? "quiz" : "form" });
       setReceipt(r);
       try {
@@ -376,6 +383,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
     const fresh = { answers: {}, language, startedAt: Date.now(), submissionKey: randomHex(16), version: form.version, hidden: progress?.hidden };
     setProgress(fresh);
     setReceipt(null);
+    setStudyResponseId(null);
     setRestored(false);
     try { window.localStorage.removeItem(storageKey); window.localStorage.removeItem(receiptKey); } catch { /* ignore */ }
   };
@@ -404,6 +412,9 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
     <Shell embed={embed} def={def} plain={form.hideBranding} languageSwitch={languageSwitch} immersive={receipt ? def.presentation === "conversational" || def.presentation === "swipe" : !(form.alreadyResponded && !editing) && !notOpen}>
       {receipt ? (
         <EndingView ending={ending} def={def} language={receipt.language} answers={receipt.answers} score={score}>
+          {studyProgress && form.signedIn && form.responseIdentityLinked && def.quiz?.enabled && studyResponseId && (
+            <StudyProgressOptIn key={studyResponseId} responseId={studyResponseId} language={receipt.language} />
+          )}
           {form.showReceipt && receipt.editToken && form.allowEditAfterSubmit && (
             <div className="form-receipt" dir={isRtl(receipt.language) ? "rtl" : "ltr"}>
               <p className="text-xs form-muted">{text[receipt.language].editLink}</p>

@@ -9,7 +9,7 @@ export default function PrivacyView() {
 
   if (locale === "ar") {
     return (
-      <LegalPage title="سياسة الخصوصية" updated="٢ أكتوبر ٢٠٢٦" draft>
+      <LegalPage title="سياسة الخصوصية" updated="٤ أكتوبر ٢٠٢٦" draft>
         <p>
           يتيح Chaos للأشخاص إنشاء النماذج والاختبارات والدروس والدورات والبطاقات التعليمية («المنشئون»)، ويتيح للجميع الإجابة عن النماذج والاختبارات («المجيبون»)، وقراءة المواد المنشورة ودراستها («المتعلمون»). توضح هذه السياسة ما نجمعه من معلومات، وأسباب ذلك، والخيارات المتاحة لك. إذا كان أي بند غير واضح، يُرجى مراسلتنا عبر{" "}
           <a href={`mailto:${supportEmail}`}>{supportEmail}</a>.
@@ -92,10 +92,15 @@ export default function PrivacyView() {
           <li>يمكن للمنشئين تحديد مدة استبقاء الردود لكل نموذج؛ وتُحذف الردود الأقدم تلقائيًا عند انقضاء المدة.</li>
           <li>حذف أي نموذج يؤدي إلى حذف كامل إجاباته وملفاته المرفوعة وتاريخه.</li>
           <li>تنتهي صلاحية روابط متابعة الإجابات غير المكتملة بعد 30 يومًا. وتُحذف الملفات المرفوعة التي لم تُعتمد ضمن رد مُرسل تلقائيًا.</li>
-          <li>لإغلاق حسابك، راسلنا عبر البريد الإلكتروني وسنقوم بحذف حسابك ومحتواك، باستثناء ما يلزمنا القانون بالاحتفاظ به.</li>
+          <li>لطلب إغلاق حسابك أو نسخة من بياناته، راسلنا من عنوان حسابك. تُراجع الطلبات يدويًا بعد التحقق من هويتك وتحديد البيانات المشمولة. قد يلزم الاحتفاظ ببعض السجلات لأسباب قانونية أو لارتباطها بمحتوى منشور؛ سنوضح لك نطاق الطلب قبل اتخاذ إجراء.</li>
         </ul>
 
         <h2>خياراتك وحقوقك</h2>
+        <p>
+          <a href={`mailto:${supportEmail}?subject=${encodeURIComponent("Chaos account data request")}`}>اطلب نسخة من بيانات حسابك</a>{" · "}
+          <a href={`mailto:${supportEmail}?subject=${encodeURIComponent("Chaos account closure request")}`}>اطلب إغلاق حسابك</a>.
+          {" "}هذه الروابط تفتح رسالة بريد؛ لا تحذف أي بيانات تلقائيًا. لطلبات إجابات نموذج يملكه شخص آخر، تواصل مع منشئه أولًا.
+        </p>
         <p>
           يمكنك عرض نماذجك وإجاباتك وتعديلها وتصديرها وحذفها من لوحة التحكم في أي وقت. وبحسب محل إقامتك، قد تتمتع أيضًا بالحق في الوصول إلى بياناتك الشخصية، أو تصحيحها، أو حذفها، أو استلام نسخة منها، أو الاعتراض على كيفية معالجتها. إذا أجبت عن نموذج يملكه شخص آخر، يُرجى التواصل مع ذلك المنشئ أولًا لأنه المتحكم في تلك الإجابات؛ وسنساعدك في حال تعذر الوصول إليه. راسلنا عبر{" "}
           <a href={`mailto:${supportEmail}`}>{supportEmail}</a> لأي طلب أو استفسار.
@@ -118,7 +123,7 @@ export default function PrivacyView() {
   }
 
   return (
-    <LegalPage title="Privacy policy" updated="October 2, 2026" draft>
+    <LegalPage title="Privacy policy" updated="October 4, 2026" draft>
       <p>
         Chaos lets people create forms, quizzes, lessons, courses and flashcards (&ldquo;creators&rdquo;), lets anyone answer forms and quizzes (&ldquo;respondents&rdquo;), and lets people read and study published material (&ldquo;learners&rdquo;).
         This policy explains what we collect, why, and the choices you have. If something here is unclear, email{" "}
@@ -206,10 +211,15 @@ export default function PrivacyView() {
         <li>Creators can set a retention period on each form; older responses are then deleted automatically.</li>
         <li>Deleting a form deletes its responses, uploads and history.</li>
         <li>Unfinished resume links expire after 30 days. Uploads that are never attached to a submitted answer are removed automatically.</li>
-        <li>To close your account, email us and we will delete your account and content, except where we must keep something to meet a legal obligation.</li>
+        <li>To request account closure or a copy of account data, email us from your account address. Requests are handled manually after identity and scope checks. Some records may need preservation for legal reasons or because published content references them; we will explain the scope before taking action.</li>
       </ul>
 
       <h2>Your choices and rights</h2>
+      <p>
+        <a href={`mailto:${supportEmail}?subject=${encodeURIComponent("Chaos account data request")}`}>Request a copy of account data</a>{" · "}
+        <a href={`mailto:${supportEmail}?subject=${encodeURIComponent("Chaos account closure request")}`}>Request account closure</a>.
+        {" "}These links open an email request and do not delete data automatically. For answers to another person&rsquo;s form, contact that creator first.
+      </p>
       <p>
         You can view, edit, export and delete your forms and responses from your dashboard. Depending on where you live, you may also have the right to
         access, correct, delete or receive a copy of your personal data, or to object to how it is used. If you answered someone else&rsquo;s form, contact

@@ -16,7 +16,7 @@ import type { Aggregates, Answers, FormDefinition } from "./formLogic";
 import { createFormRecord, publishNow, replaceDraft } from "./forms";
 import { fromDefinition, parseFormInput, themeView, themeWarnings, toDefinition } from "./mcpContract";
 import type { McpFormInput } from "./mcpContract";
-import { hasPro } from "./authz";
+import { hasPro, matchesAccountFormCollaborator } from "./authz";
 import { insertNewUser } from "./quizFunctions";
 import { consumeRate, logActivity } from "./serverUtils";
 import { emitFormStatusChange } from "./webhookEvents";
@@ -79,9 +79,10 @@ type Item = { kind: "form"; ref: string; doc: Doc<"forms">; role: Role } | { kin
 
 async function formRole(ctx: Ctx, form: Doc<"forms">, userId: string): Promise<Role | null> {
   if (form.ownerId === userId) return "owner";
-  const email = (await userRow(ctx, userId))?.email?.toLowerCase();
   const rows = await ctx.db.query("formCollaborators").withIndex("by_formId", (q) => q.eq("formId", form._id)).take(100);
-  return rows.find((c) => c.userId ? c.userId === userId : (!!email && c.email === email))?.role ?? null;
+  // This transport proves an account ID, not email verification. Pending email
+  // invitations must be accepted through the verified native identity flow.
+  return rows.find((c) => matchesAccountFormCollaborator(c, userId))?.role ?? null;
 }
 
 /** Ids are `form_<id>` or `quiz_<id>` (classic quizzes); a bare form id also works. */
@@ -153,14 +154,10 @@ export const searchForms = internalQuery({
     const items: Item[] = [];
     const owned = await ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", args.userId)).order("desc").take(500);
     for (const doc of owned) items.push({ kind: "form", ref: `form_${doc._id}`, doc, role: "owner" });
-    const email = (await userRow(ctx, args.userId))?.email?.toLowerCase();
-    const memberships = [
-      ...(await ctx.db.query("formCollaborators").withIndex("by_userId", (q) => q.eq("userId", args.userId)).take(200)),
-      ...(email ? await ctx.db.query("formCollaborators").withIndex("by_email", (q) => q.eq("email", email)).take(200) : []),
-    ];
+    const memberships = await ctx.db.query("formCollaborators").withIndex("by_userId", (q) => q.eq("userId", args.userId)).take(200);
     const seen = new Set(owned.map((f) => f._id as string));
     for (const m of memberships) {
-      if (m.userId && m.userId !== args.userId) continue;
+      if (!matchesAccountFormCollaborator(m, args.userId)) continue;
       if (seen.has(m.formId)) continue;
       seen.add(m.formId);
       const doc = await ctx.db.get("forms", m.formId);

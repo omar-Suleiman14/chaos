@@ -121,6 +121,25 @@ const roleRank: Record<FormRole, number> = { viewer: 1, editor: 2, owner: 3 };
 
 type Identity = NonNullable<Awaited<ReturnType<DbCtx["auth"]["getUserIdentity"]>>>;
 
+/** Email invitations require a positive provider verification claim. */
+export function verifiedIdentityEmail(identity: Identity): string | undefined {
+  return identity.emailVerified === true ? identity.email?.trim().toLowerCase() : undefined;
+}
+
+/** Transports carrying only an account ID must not infer verified email access. */
+export function matchesAccountFormCollaborator(row: Doc<"formCollaborators">, userId: string): boolean {
+  return row.status !== "pending" && row.status !== "declined" && row.userId === userId;
+}
+
+export function matchesFormCollaborator(row: Doc<"formCollaborators">, identity: Identity): boolean {
+  if (row.status === "declined") return false;
+  // Old pending invitations may have been bound through an unverified profile.
+  // Accepted and legacy explicit account grants retain their stable ID access.
+  if (row.status !== "pending" && row.userId) return matchesAccountFormCollaborator(row, identity.subject);
+  const email = verifiedIdentityEmail(identity);
+  return !!email && row.email.toLowerCase() === email;
+}
+
 export function isFormOwner(form: Doc<"forms">, identity: Identity | null): boolean {
   return !!identity && form.ownerId === identity.subject;
 }
@@ -128,17 +147,11 @@ export function isFormOwner(form: Doc<"forms">, identity: Identity | null): bool
 export async function formRoleFor(ctx: DbCtx, form: Doc<"forms">, identity: Identity | null): Promise<FormRole | null> {
   if (!identity) return null;
   if (form.ownerId === identity.subject) return "owner";
-  const emailVerified = (identity as any).emailVerified !== false;
-  const email = emailVerified ? identity.email?.toLowerCase() : undefined;
   const collaborators = await ctx.db
     .query("formCollaborators")
     .withIndex("by_formId", (q) => q.eq("formId", form._id))
     .take(100);
-  const match = collaborators.find((c) => {
-    if (c.status === "declined") return false;
-    if (c.userId) return c.userId === identity.subject;
-    return !!email && c.email.toLowerCase() === email;
-  });
+  const match = collaborators.find((c) => matchesFormCollaborator(c, identity));
   return match ? match.role : null;
 }
 

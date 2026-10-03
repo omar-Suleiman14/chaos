@@ -8,7 +8,7 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
-import { getFormIfRole, hasPro, ownsRecord, requireActiveUser, requireFormRole } from "./authz";
+import { getFormIfRole, hasPro, matchesAccountFormCollaborator, matchesFormCollaborator, ownsRecord, requireActiveUser, requireFormRole, verifiedIdentityEmail } from "./authz";
 import { checkHiddenFieldNames, checkHiddenParameters, normalizeEmailRules } from "./formRespondent";
 import { checkDefinition, emptyDefinition, FORM_SCHEMA_VERSION, LIMITS } from "./formLogic";
 import type { FormDefinition } from "./formLogic";
@@ -131,8 +131,7 @@ export const listMyForms = query({
       .withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", identity.subject))
       .order("desc")
       .take(500);
-    const emailVerified = (identity as any).emailVerified !== false;
-    const email = emailVerified ? identity.email?.toLowerCase() : undefined;
+    const email = verifiedIdentityEmail(identity);
     const memberships = [
       ...(await ctx.db.query("formCollaborators").withIndex("by_userId", (q) => q.eq("userId", identity.subject)).take(200)),
       ...(email ? await ctx.db.query("formCollaborators").withIndex("by_email", (q) => q.eq("email", email)).take(200) : []),
@@ -143,7 +142,7 @@ export const listMyForms = query({
     // One name lookup per owner, not per shared form.
     const ownerNames = new Map<string, string>();
     for (const m of memberships) {
-      if (m.userId && m.userId !== identity.subject) continue;
+      if (!matchesFormCollaborator(m, identity)) continue;
       if (seen.has(m.formId)) continue;
       seen.add(m.formId);
       const form = await ctx.db.get("forms", m.formId);
@@ -196,7 +195,7 @@ export const searchIndex = query({
       .withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", identity.subject))
       .order("desc")
       .take(SEARCH_FORM_CAP);
-    const email = identity.email?.toLowerCase();
+    const email = verifiedIdentityEmail(identity);
     const memberships = [
       ...(await ctx.db.query("formCollaborators").withIndex("by_userId", (q) => q.eq("userId", identity.subject)).take(100)),
       ...(email ? await ctx.db.query("formCollaborators").withIndex("by_email", (q) => q.eq("email", email)).take(100) : []),
@@ -204,7 +203,7 @@ export const searchIndex = query({
     const forms = [...owned];
     const seen = new Set<string>(owned.map((f) => f._id));
     for (const m of memberships) {
-      if (m.userId && m.userId !== identity.subject) continue;
+      if (!matchesFormCollaborator(m, identity)) continue;
       if (seen.has(m.formId)) continue;
       seen.add(m.formId);
       const form = await ctx.db.get("forms", m.formId);
@@ -554,10 +553,10 @@ export const inviteCollaborator = mutation({
     const existing = await ctx.db.query("formCollaborators").withIndex("by_formId", (q) => q.eq("formId", form._id)).take(100);
     if (existing.length >= 50) throw new Error("COLLABORATOR_LIMIT: A form can have at most 50 collaborators.");
     const match = existing.find((c) => c.email === email);
-    const invitee = await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email)).first();
     if (match) await ctx.db.patch("formCollaborators", match._id, { role: args.role, status: "pending" });
-    else await ctx.db.insert("formCollaborators", { formId: form._id, email, userId: invitee?.clerkId, role: args.role, status: "pending", invitedBy: identity.subject, createdAt: Date.now() });
-    if (invitee) await notify(ctx, invitee.clerkId, "comment", `You can now ${args.role === "editor" ? "edit" : "view"} “${form.title}”.`, `invite:${form._id}:${email}:${args.role}`, form._id);
+    else await ctx.db.insert("formCollaborators", { formId: form._id, email, role: args.role, status: "pending", invitedBy: identity.subject, createdAt: Date.now() });
+    // A stored profile email is not evidence of ownership of the invited address.
+    if (match?.userId && matchesAccountFormCollaborator(match, match.userId)) await notify(ctx, match.userId, "comment", `You can now ${args.role === "editor" ? "edit" : "view"} “${form.title}”.`, `invite:${form._id}:${email}:${args.role}`, form._id);
     await logActivity(ctx, form._id, identity.subject, "shared", `${email} as ${args.role}`);
     return null;
   },
@@ -583,10 +582,7 @@ export const acceptInvite = mutation({
     const { identity } = await requireActiveUser(ctx);
     const row = await ctx.db.get("formCollaborators", args.collaboratorId);
     if (!row) throw new Error("NOT_FOUND: Invitation not found.");
-    const emailVerified = (identity as any).emailVerified === true;
-    const emailMatches = !!identity.email && emailVerified && row.email.toLowerCase() === identity.email.toLowerCase();
-    const userMatches = row.userId === identity.subject;
-    if (!emailMatches && !userMatches) throw new Error("UNAUTHORIZED: This invitation was sent to someone else.");
+    if (!matchesFormCollaborator(row, identity)) throw new Error("UNAUTHORIZED: This invitation was sent to someone else.");
     await ctx.db.patch("formCollaborators", row._id, { status: "accepted", userId: identity.subject });
     return null;
   },
@@ -599,10 +595,7 @@ export const declineInvite = mutation({
     const { identity } = await requireActiveUser(ctx);
     const row = await ctx.db.get("formCollaborators", args.collaboratorId);
     if (!row) return null;
-    const emailVerified = (identity as any).emailVerified === true;
-    const emailMatches = !!identity.email && emailVerified && row.email.toLowerCase() === identity.email.toLowerCase();
-    const userMatches = row.userId === identity.subject;
-    if (!emailMatches && !userMatches) throw new Error("UNAUTHORIZED: This invitation was sent to someone else.");
+    if (!matchesFormCollaborator(row, identity)) throw new Error("UNAUTHORIZED: This invitation was sent to someone else.");
     await ctx.db.delete("formCollaborators", row._id);
     return null;
   },
@@ -613,9 +606,8 @@ export const leaveForm = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const { identity } = await requireActiveUser(ctx);
-    const email = identity.email?.toLowerCase();
     const rows = await ctx.db.query("formCollaborators").withIndex("by_formId", (q) => q.eq("formId", args.formId)).take(100);
-    const match = rows.find((c) => c.userId === identity.subject || (!!email && c.email.toLowerCase() === email));
+    const match = rows.find((c) => matchesFormCollaborator(c, identity));
     if (match) await ctx.db.delete("formCollaborators", match._id);
     return null;
   },

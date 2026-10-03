@@ -9,7 +9,11 @@ const page = {
   }),
 };
 const parentId = ref.nullable();
-const pagedOutput = { page: z.array(z.record(z.string(), z.unknown())), isDone: z.boolean(), continueCursor: z.string() };
+const pagedOutput = {
+  page: z.array(z.record(z.string(), z.unknown())),
+  isDone: z.boolean(),
+  continueCursor: z.string(),
+};
 const asset = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("form"), id: ref }),
   z.object({ kind: z.literal("quiz"), id: ref }),
@@ -49,7 +53,8 @@ export function registerOrganizationTools(
       annotations: read,
       _meta: meta,
     },
-    (input: Record<string, unknown>) => run("list_folders", input, () => "Folders loaded."),
+    (input: Record<string, unknown>) =>
+      run("list_folders", input, () => "Folders loaded."),
   );
   server.registerTool(
     "create_folder",
@@ -61,7 +66,8 @@ export function registerOrganizationTools(
       annotations: write,
       _meta: meta,
     },
-    (input: Record<string, unknown>) => run("create_folder", input, () => "Folder created."),
+    (input: Record<string, unknown>) =>
+      run("create_folder", input, () => "Folder created."),
   );
   server.registerTool(
     "move_folder",
@@ -73,7 +79,8 @@ export function registerOrganizationTools(
       annotations: { ...write, destructiveHint: true, idempotentHint: true },
       _meta: meta,
     },
-    (input: Record<string, unknown>) => run("move_folder", input, () => "Folder moved."),
+    (input: Record<string, unknown>) =>
+      run("move_folder", input, () => "Folder moved."),
   );
   server.registerTool(
     "list_folder_contents",
@@ -98,7 +105,8 @@ export function registerOrganizationTools(
       annotations: { ...write, idempotentHint: true },
       _meta: meta,
     },
-    (input: Record<string, unknown>) => run("add_folder_member", input, () => "Folder member added."),
+    (input: Record<string, unknown>) =>
+      run("add_folder_member", input, () => "Folder member added."),
   );
   for (const [name, scope] of [
     ["institutions", {}],
@@ -122,6 +130,44 @@ export function registerOrganizationTools(
         run("list_curriculum_" + name, input, () => "Curriculum loaded."),
     );
   const coverage = z.array(z.string().trim().min(1).max(200)).max(100);
+  server.registerTool(
+    "list_lesson_curriculum_mappings",
+    {
+      description:
+        "Read all curriculum mapping references and concept/block coverage of an owned lesson draft, one page at a time. Ownership is required even for public lessons. Continue using continueCursor. No lesson text or source content.",
+      inputSchema: { lessonId: ref, ...page },
+      outputSchema: pagedOutput,
+      annotations: read,
+      _meta: meta,
+    },
+    (input: Record<string, unknown>) =>
+      run(
+        "list_lesson_curriculum_mappings",
+        input,
+        () => "Curriculum mappings loaded.",
+      ),
+  );
+  server.registerTool(
+    "search_curriculum_modules",
+    {
+      description:
+        "Find public canonical modules within an explicitly selected curriculum version by natural module name, exact key or registered alias. Returns at most limit results (default 20, maximum 50); choose a version before searching. Existing active account required. No private lessons or source content.",
+      inputSchema: {
+        versionId: ref,
+        query: z.string().trim().min(1).max(200),
+        limit: z.number().int().min(1).max(50).optional(),
+      },
+      outputSchema: { modules: z.array(z.record(z.string(), z.unknown())) },
+      annotations: read,
+      _meta: meta,
+    },
+    (input: Record<string, unknown>) =>
+      run(
+        "search_curriculum_modules",
+        input,
+        () => "Curriculum modules loaded.",
+      ),
+  );
   server.registerTool(
     "create_lesson_curriculum_mapping",
     {

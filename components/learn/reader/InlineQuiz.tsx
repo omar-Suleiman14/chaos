@@ -58,7 +58,7 @@ export default function InlineQuiz({
       </header>
       {started &&
         (asset.kind === "form" ? (
-          <Form shareId={details.shareId || shareId || ""} inline />
+          <Form shareId={details.shareId || shareId || ""} inline studyProgress />
         ) : (
           <Quiz quizId={asset.id as Id<"quizzes">} inline />
         ))}

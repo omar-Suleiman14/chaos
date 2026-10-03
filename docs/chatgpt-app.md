@@ -135,6 +135,8 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 | `list_curriculum_programs` | Browse public curriculum programs | true | false | false |
 | `list_curriculum_versions` | Browse public curriculum versions | true | false | false |
 | `list_curriculum_nodes` | Browse public curriculum nodes | true | false | false |
+| `search_curriculum_modules` | Find canonical modules by name, key or alias within a selected version (maximum 50 results) | true | false | false |
+| `list_lesson_curriculum_mappings` | Page through owned draft mapping references and concept/block coverage (ownership required even for public lessons) | true | false | false |
 | `create_lesson_curriculum_mapping` | Map a lesson draft to a curriculum node | false | false | false |
 
 #### Community tools
