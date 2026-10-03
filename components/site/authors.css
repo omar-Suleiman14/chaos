@@ -16,8 +16,3 @@
 .author-stack-card[data-active=true]:active { cursor: grabbing; }
 .author-stack-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 5px; }
 
-.author-navigation { position: absolute; inset: 0; pointer-events: none; }
-.author-arrow { position: absolute; top: 50%; z-index: 8; display: grid; place-items: center; width: 44px; height: 44px; border-radius: 50%; border: 1px solid var(--outline-variant); background: var(--surface-container); box-shadow: 0 2px 12px rgb(0 0 0 / .12); color: var(--on-surface); cursor: pointer; pointer-events: auto; }
-.author-arrow--previous { left: max(0px, calc(50% - clamp(250px, 58vw, 320px) / 2 - 64px)); }
-.author-arrow--next { right: max(0px, calc(50% - clamp(250px, 58vw, 320px) / 2 - 64px)); }
-.author-arrow:disabled { opacity: .3; cursor: default; }

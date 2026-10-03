@@ -12,6 +12,7 @@ describe("author card directory", () => {
  it("keeps rendering bounded and links to the existing member card", () => {
    const {container} = render(<PublicAuthors/>);
    expect(container.querySelectorAll(".author-stack-card").length).toBeLessThanOrEqual(5);
+   expect(screen.queryByRole("button")).toBeNull();
    expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author0");
    fireEvent.keyDown(screen.getByRole("region", {name: "Author cards"}), {key: "ArrowRight"});
    expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author1");
@@ -19,9 +20,9 @@ describe("author card directory", () => {
    fireEvent.keyDown(stage, {key:"ArrowDown"});
    expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author2");
    fireEvent.keyDown(stage, {key:"Home"});
-   fireEvent.click(screen.getByRole("button", {name: "Previous author"}));
+   fireEvent.keyDown(stage, {key: "ArrowLeft"});
    expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author29");
-   fireEvent.click(screen.getByRole("button", {name: "Next author"}));
+   fireEvent.keyDown(stage, {key: "ArrowRight"});
    expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author0");
  });
  it("continues past filtered empty pages rather than claiming no authors exist", () => {
