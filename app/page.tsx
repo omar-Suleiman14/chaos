@@ -31,8 +31,8 @@ const copy = {
     learn: {
       title: "Learn", lead: "Put lessons in order, share them, and see what people still find hard.",
       items: [
-        { icon: GraduationCap, title: "Courses", body: "Lessons in a clear order, free for anyone to take when public.", href: "/learn#course-directory", link: "Browse courses" },
-        { icon: GitFork, title: "Community material", body: "Search public lessons, save what helps, and copy one to adapt it. The original author stays credited.", href: "/learn", link: "Find a lesson" },
+        { icon: GraduationCap, title: "Courses", body: "Lessons in a clear order, free for anyone to take when public.", href: "/learn", link: "Browse courses" },
+        { icon: GitFork, title: "Community courses", body: "Browse public courses, save lessons that help, and keep the original author credited.", href: "/learn", link: "Browse courses" },
         { icon: ListChecks, title: "Practice and progress", body: "Quizzes and flashcards attached to lessons, with progress and weak areas for each learner.", href: "/docs/progress", link: "How progress works" },
       ],
     },
@@ -63,9 +63,9 @@ const copy = {
     start: "ابدأ مجانًا", explore: "استكشف الدورات",
     flow: { label: "كيف يترابط كل شيء", source: "ملاحظات أو ملف PDF أو فكرة", lesson: "درس", outputs: ["اختبار", "بطاقات", "دورة"], practice: "تدريب أو لعبة مباشرة" },
     create: {
-      title: "أنشئ", lead: "كل شيء يُصنع يدويًا، في محرر لا يعترض طريقك.",
+      title: "أنشئ", lead: "اكتب محتواك وعدّله ورتّبه في مكان واحد.",
       items: [
-        { icon: FileText, title: "النماذج", body: "استطلاعات وتسجيل وآراء. أقسام وتفرّع ورفع ملفات وخواتيم مخصصة.", href: "/docs/first-form", link: "أنشئ نموذجًا" },
+        { icon: FileText, title: "النماذج", body: "استطلاعات وتسجيل وآراء. أقسام وتفرّع ورفع ملفات ورسائل ختامية مخصصة.", href: "/docs/first-form", link: "أنشئ نموذجًا" },
         { icon: ListChecks, title: "الاختبارات", body: "تُصحَّح تلقائيًا، مع شروح وتلميحات وحدود للمحاولات. ويمكن أن يصبح أي اختبار لعبة مباشرة.", href: "/docs/first-quiz", link: "أنشئ اختبارًا" },
         { icon: BookOpen, title: "الدروس", body: "صفحة كالمستند: عناوين وصور وفيديو ومعادلات وجداول ومصادر واستشهادات.", href: "/docs/lessons", link: "اكتب درسًا" },
       ],
@@ -73,8 +73,8 @@ const copy = {
     learn: {
       title: "تعلّم", lead: "رتّب الدروس وشاركها واعرف ما يصعب على الناس.",
       items: [
-        { icon: GraduationCap, title: "الدورات", body: "دروس بترتيب واضح، مجانية لأي أحد حين تكون عامة.", href: "/learn#course-directory", link: "تصفّح الدورات" },
-        { icon: GitFork, title: "مواد المجتمع", body: "ابحث في الدروس العامة واحفظ ما يفيدك وانسخ درسًا لتعدّله. يبقى اسم الكاتب الأصلي.", href: "/learn", link: "اعثر على درس" },
+        { icon: GraduationCap, title: "الدورات", body: "دروس بترتيب واضح، مجانية لأي أحد حين تكون عامة.", href: "/learn", link: "تصفّح الدورات" },
+        { icon: GitFork, title: "دورات المجتمع", body: "تصفّح الدورات العامة واحفظ الدروس التي تفيدك. يبقى اسم المؤلف الأصلي.", href: "/learn", link: "تصفّح الدورات" },
         { icon: ListChecks, title: "التدريب والتقدّم", body: "اختبارات وبطاقات مرتبطة بالدروس، مع التقدّم ونقاط الضعف لكل متعلم.", href: "/docs/progress", link: "كيف يعمل التقدّم" },
       ],
     },

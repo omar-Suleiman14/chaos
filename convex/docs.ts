@@ -4,6 +4,7 @@ import { requireAdmin, requireIdentity } from "./authz";
 import { docFields, docLocale, publishedDoc } from "./docsModel";
 import { docSections } from "../lib/docs/content";
 import type { Doc } from "./_generated/dataModel";
+import { updateDocCopy } from "../lib/docs/copyUpdates";
 
 type Fields = Pick<Doc<"docArticles">, "slug" | "locale" | "sectionId" | "sectionTitle" | "order" | "content">;
 const saveArgs = { ...docFields, expectedRevision: v.optional(v.number()), publish: v.optional(v.boolean()) };
@@ -63,3 +64,32 @@ export const seed = internalMutation({ args: { locale: docLocale, offset: v.opti
   }
   return { inserted, nextOffset: offset + 10 < all.length ? offset + 10 : null };
 } });
+
+function refreshContent<T extends Doc<"docArticles">["content"]>(content: T): T {
+  return { ...content, title: updateDocCopy(content.title), summary: updateDocCopy(content.summary), blocks: content.blocks.map(block => {
+    if (block.type === "keys") return { ...block, items: block.items.map(item => ({ ...item, label: updateDocCopy(item.label) })) };
+    if (block.type === "list" || block.type === "steps") return { ...block, items: block.items.map(updateDocCopy) };
+    return { ...block, text: updateDocCopy(block.text) };
+  }) };
+}
+
+/** Update exact obsolete phrases without replacing articles or publishing admin drafts. */
+export const refreshCopy = internalMutation({
+  args: { locale: docLocale, cursor: v.optional(v.union(v.string(), v.null())) },
+  returns: v.object({ updated: v.number(), nextCursor: v.union(v.string(), v.null()) }),
+  handler: async (ctx, { locale, cursor = null }) => {
+    const page = await ctx.db.query("docArticles").withIndex("by_locale_and_order", q => q.eq("locale", locale)).paginate({ numItems: 10, cursor });
+    let updated = 0;
+    for (const row of page.page) {
+      const content = refreshContent(row.content);
+      const published = row.published ? refreshContent(row.published) : null;
+      const contentChanged = JSON.stringify(content) !== JSON.stringify(row.content);
+      const publishedChanged = JSON.stringify(published) !== JSON.stringify(row.published);
+      if (!contentChanged && !publishedChanged) continue;
+      const now = Date.now();
+      await ctx.db.patch("docArticles", row._id, { content, published, revision: row.revision + 1, updatedAt: now, publishedAt: publishedChanged ? now : row.publishedAt });
+      updated++;
+    }
+    return { updated, nextCursor: page.isDone ? null : page.continueCursor };
+  },
+});
