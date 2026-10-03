@@ -22,9 +22,7 @@ function Explore() {
   const [query, setQuery] = useState(search);
   const [language, setLanguage] = useState(params.get("language") ?? "");
   const [topic, setTopic] = useState(params.get("topic") ?? "");
-  const [sort, setSort] = useState<"recent" | "relevant">(
-    search ? "relevant" : "recent",
-  );
+  const sort = query ? "relevant" : "recent";
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const create = useMutation(api.courses.create);
@@ -108,12 +106,11 @@ function Explore() {
               placeholder={
                 ar
                   ? "ابحث بالموضوع أو الدورة أو المؤلف…"
-                  : "Search topics, courses, lessons or authors…"
+                  : "Search topics, courses or authors…"
               }
               aria-label={ar ? "البحث عن الدورات" : "Search courses"}
               onChange={(e) => {
                 setSearch(e.target.value);
-                if (e.target.value) setSort("relevant");
               }}
             />
           </label>
@@ -130,7 +127,7 @@ function Explore() {
           <Select
             label={ar ? "الترتيب" : "Sort"}
             value={sort}
-            onChange={(v) => setSort(v as "recent" | "relevant")}
+            onChange={() => {}}
             options={
               query
                 ? [
