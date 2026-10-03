@@ -12,6 +12,7 @@ import type * as admin from "../admin.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminModel from "../adminModel.js";
 import type * as authorIndex from "../authorIndex.js";
+import type * as authIdentity from "../authIdentity.js";
 import type * as authz from "../authz.js";
 import type * as courseDirectory from "../courseDirectory.js";
 import type * as courseSearchModel from "../courseSearchModel.js";
@@ -137,6 +138,7 @@ declare const fullApi: ApiFromModules<{
   adminAnalytics: typeof adminAnalytics;
   adminModel: typeof adminModel;
   authorIndex: typeof authorIndex;
+  authIdentity: typeof authIdentity;
   authz: typeof authz;
   courseDirectory: typeof courseDirectory;
   courseSearchModel: typeof courseSearchModel;

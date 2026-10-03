@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
@@ -39,7 +40,7 @@ export const getMyLinkIdentity = query({
   args: {},
   returns: v.union(v.null(), v.object({ username: v.string(), chosen: v.boolean() })),
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return null;
     const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject)).first();
     if (!user) return null;

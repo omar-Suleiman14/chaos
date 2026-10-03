@@ -56,4 +56,5 @@ pnpm_install.log
 /skills-lock.json
 /AGENTS.md
 /CLAUDE.md
+/convex/_generated/ai/
 /load-report*.json

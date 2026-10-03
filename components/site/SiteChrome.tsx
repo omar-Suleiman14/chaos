@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { IntentLink as Link } from "@/components/IntentLink";
-import { SignInButton, SignUpButton, useUser } from "@clerk/nextjs";
+import { SignInButton, SignUpButton, useUser } from "@/lib/auth/client";
 import { Languages, LogIn, Menu, X } from "lucide-react";
 import Logo from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";

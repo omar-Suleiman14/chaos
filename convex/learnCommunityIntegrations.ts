@@ -1,3 +1,4 @@
+import { actorForAccount } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { searchHit } from "./learnSearch";
 import { directoryHit } from "./learnDiscovery";
@@ -12,13 +13,8 @@ import { sha256Hex } from "./serverUtils";
 import type { Id } from "./_generated/dataModel";
 
 /** Matches Convex's issuer-qualified native identity; configuration is server-only. */
-export function canonicalCommunityActor(subject: string) {
-  // eslint-disable-next-line @convex-dev/no-process-env -- configured auth issuer, not caller input
-  const issuer = process.env.CLERK_JWT_ISSUER_DOMAIN?.trim();
-  if (!issuer) throw new Error("CLERK_JWT_ISSUER_DOMAIN is required for community identity parity");
-  const url = new URL(issuer);
-  if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) throw new Error("Invalid configured auth issuer");
-  return { subject, tokenIdentifier: `${issuer}|${subject}` };
+export async function canonicalCommunityActor(ctx: QueryCtx | MutationCtx, subject: string) {
+  return actorForAccount(ctx, subject);
 }
 async function authorize(ctx: QueryCtx | MutationCtx, tokenId: Id<"integrationTokens">, scope: string) {
   const token = await activeIntegrationToken(ctx, tokenId, Date.now());
@@ -57,7 +53,7 @@ export const saveLesson = internalMutation({
   handler: async (ctx, args) => {
     const subject = await requireLearnActor(ctx, args.userId);
     const saved = args.saved ?? true;
-    await setSignalsForActor(ctx, canonicalCommunityActor(subject), { lessonId: args.lessonId, saved });
+    await setSignalsForActor(ctx, await canonicalCommunityActor(ctx, subject), { lessonId: args.lessonId, saved });
     return { saved };
   },
 });
@@ -77,7 +73,7 @@ export const savePublic = internalMutation({
   returns: v.object({ saved: v.boolean() }),
   handler: async (ctx, args) => {
     const token = await authorize(ctx, args.tokenId, "community:save");
-    await setSignalsForActor(ctx, canonicalCommunityActor(token.ownerId), { lessonId: args.lessonId, saved: args.saved });
+    await setSignalsForActor(ctx, await canonicalCommunityActor(ctx, token.ownerId), { lessonId: args.lessonId, saved: args.saved });
     await logConnectionActivity(ctx, token._id, "community.saved", `lesson_${args.lessonId}`);
     return { saved: args.saved };
   },

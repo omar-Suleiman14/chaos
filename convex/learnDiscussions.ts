@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
@@ -29,7 +30,7 @@ export const listThreads = query({
   returns: v.array(thread),
   handler: async (ctx, args) => {
     await lessonAccess(ctx, args.lessonId);
-    const viewerIdentity = await ctx.auth.getUserIdentity();
+    const viewerIdentity = await getAuthIdentity(ctx);
     const viewerId = viewerIdentity?.subject;
     const lesson = await ctx.db.get("lessons", args.lessonId);
     const ownerId = lesson?.ownerId;

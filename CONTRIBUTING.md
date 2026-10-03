@@ -12,13 +12,13 @@ By contributing you agree that your work is licensed under the project's license
 
 ## Setup
 
-Follow [Run it locally](./README.md#run-it-locally) in the README. `pnpm test` needs no accounts or keys, so you can run the test suite before configuring Convex and Clerk.
+Follow [Run it locally](./README.md#run-it-locally) in the README. `pnpm test` needs no accounts or keys, so you can run the test suite before configuring a backend or authentication provider.
 
 ## How the code is organised
 
 - **`app/`**: Next.js routes. The workspace lives under `app/dashboard`, public forms under `app/f` and `app/[username]/[quizname]`, live games under `app/play` and `app/dashboard/live`.
 - **`components/`**: UI. `components/forms` holds the form renderer (what respondents see) and the builder (what creators edit).
-- **`convex/`**: the backend. Read [`convex/_generated/ai/guidelines.md`](./convex/_generated/ai/guidelines.md) before writing Convex code. `schema.ts` and `formModel.ts` define the data. Creator functions check identity and role on the server (`authz.ts`); anonymous respondent functions validate publication, access settings and respondent capabilities.
+- **`convex/`**: the backend. Read [`convex/README.md`](./convex/README.md) and the [authorization guide](./docs/security-authorization.md) before changing backend code. `schema.ts` and `formModel.ts` define the data. Creator functions check identity and role on the server (`authz.ts`); anonymous respondent functions validate publication, access settings and respondent capabilities.
 - **`lib/`**: shared helpers, including the language layer (`i18n.tsx`, `locale.ts`) and the user guides (`lib/docs`).
 - **`tests/`**: see [`tests/README.md`](./tests/README.md).
 
@@ -30,6 +30,8 @@ Follow [Run it locally](./README.md#run-it-locally) in the README. `pnpm test` n
 - **Tests.** Add or update tests for what you change: unit tests in `tests/unit`, Convex function tests in `tests/integration`.
 - **Docs.** If people will notice the change, update the matching guide in both `lib/docs/content-en.ts` and `lib/docs/content-ar.ts` (same headings in both; a test checks this).
 - **Schema changes are additive.** New fields are optional so existing data keeps working. If old rows need rewriting, add a migration and describe it in [`docs/migrations.md`](./docs/migrations.md).
+- **Keep private artifacts local.** Do not commit credentials, real respondent data, personal deployment URLs, internal review notes or agent configuration. Public examples must use placeholders or synthetic fixtures.
+- **Preserve existing content.** Retired generation services must stay retired. Existing lessons, questions, responses, scores and external-connector provenance must remain readable.
 
 ## Checks
 
@@ -41,6 +43,8 @@ pnpm lint        # 0 errors; warnings are allowed but don't add new ones
 pnpm test
 pnpm build
 ```
+
+Check dependency advisories with `pnpm audit` and `pnpm audit --prod`. Report unresolved advisories and whether they affect runtime or development tooling; a successful build does not establish that dependencies are vulnerability-free.
 
 ## Pull requests
 

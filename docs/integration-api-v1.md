@@ -96,7 +96,7 @@ serialisable mutation, so a retry can never race a duplicate into existence.
 A Next.js route would add a network hop and a second auth system, and would
 still have to call Convex for every step. The endpoint also works on
 self-hosted deployments with no web app in front of it. The Next.js app only
-hosts the MCP route, which needs Clerk OAuth.
+hosts the MCP route, which needs OAuth from the selected authentication provider.
 
 ## Not in v1
 

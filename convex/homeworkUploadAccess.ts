@@ -1,9 +1,10 @@
+import { getAuthIdentity } from "./authIdentity";
 import { type MutationCtx, type QueryCtx } from "./_generated/server";
 import { type Id } from "./_generated/dataModel";
 import { creatorRestricted } from "./authz";
 type Ctx = MutationCtx | QueryCtx;
 async function actor(ctx: Ctx) {
-  const id = await ctx.auth.getUserIdentity();
+  const id = await getAuthIdentity(ctx);
   if (!id) throw new Error("Not authenticated");
   const user = await ctx.db
     .query("users")

@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 import { requireVisibilityAllowed } from "./plans";
@@ -13,7 +14,7 @@ import { consumeRate } from "./serverUtils";
 import { assertDocument, validateDocument, validateMetadataPresentation, type LessonProblem } from "./learnValidation";
 
 export async function lessonAccess(ctx: QueryCtx | MutationCtx, id: Id<"lessons">, edit = false) {
-  const identity = await ctx.auth.getUserIdentity();
+  const identity = await getAuthIdentity(ctx);
   return lessonAccessForActor(ctx, identity?.subject ?? null, id, edit);
 }
 

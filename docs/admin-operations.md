@@ -1,6 +1,6 @@
 ﻿# Admin operations and plans
 
-Open `/admin` from the workspace sidebar. Admin access is authorized in Convex on every query and mutation from the `admins` table, which is keyed by Clerk user ID. No admin email or ID lives in the code. Grant access with `npx convex run --prod admin:grantAdmin '{"email":"person@example.com"}'` (the person must have signed in to Chaos once) and remove it with `admin:revokeAdmin`. Both are internal functions that only the Convex CLI or dashboard can run, and both write to `adminAudit`. Editing a stored account email cannot grant admin access.
+Open `/admin` from the workspace sidebar. Admin access is authorized in Convex on every query and mutation from the `admins` table, which is keyed by the stable Chaos account ID (the legacy field is named `clerkId`). No admin email or ID lives in the code. Grant access with `npx convex run --prod admin:grantAdmin '{"email":"person@example.com"}'` (the person must have signed in to Chaos once) and remove it with `admin:revokeAdmin`. Both are internal functions that only the Convex CLI or dashboard can run, and both write to `adminAudit`. Editing a stored account email cannot grant admin access.
 
 Set `NEXT_PUBLIC_SUPPORT_EMAIL` (frontend build) and `CHAOS_SUPPORT_EMAIL`
 (Convex deployment) to your instance's support address.

@@ -17,7 +17,7 @@ export const publicIdentity = query({
     if (!args.username || args.username.length > 100) return [];
     const user = await ctx.db.query("users").withIndex("by_username", q => q.eq("username", args.username)).unique();
     if (!user || await creatorRestricted(ctx, user.clerkId)) return [];
-    const key = canonicalCommunityActor(user.clerkId).tokenIdentifier;
+    const key = (await canonicalCommunityActor(ctx, user.clerkId)).tokenIdentifier;
     const claims = await ctx.db.query("learnIdentityClaims").withIndex("by_userKey_and_role", q => q.eq("userKey", key)).take(2);
     return claims.filter(c => c.status === "verified" && c.method === "manual_review" && !!c.reviewedBy && (c.expiresAt ?? 0) > Date.now()).map(c => ({ kind: c.role, expiresAt: c.expiresAt! }));
   },

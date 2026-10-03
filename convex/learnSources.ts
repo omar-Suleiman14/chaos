@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { consumeRate } from "./serverUtils";
 import { observeHttp } from "../lib/backendTelemetry";
 import { v, type Infer } from "convex/values";
@@ -284,7 +285,7 @@ async function accessible(
     (await creatorRestricted(ctx, source.ownerId))
   )
     return null;
-  const identity = await ctx.auth.getUserIdentity();
+  const identity = await getAuthIdentity(ctx);
   if (identity && (await creatorRestricted(ctx, identity.subject))) return null;
   if (identity?.subject === source.ownerId) return source;
   const level =

@@ -7,7 +7,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { useState, useEffect, Suspense, useMemo } from "react";
 import { haptics } from "@/lib/haptics";
 import { Select } from "@/components/workspace/Select";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/lib/auth/client";
 import {
   Plus, Trash2, ChevronDown, ChevronUp, Globe, Lock, RefreshCw, Check, X, GripVertical,
   Shuffle, Eye, EyeOff, ListOrdered, ChevronsUpDown, ChevronsDownUp, Undo2, Redo2,

@@ -10,7 +10,7 @@ import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { DurableLibraryClient, useLibraryAnnotations, useLibraryFolders, useLibraryMembers, useLibraryFolderItems, useLibraryCurriculum, useLibraryCourses, useLibraryFlashcards, useLibraryFlashcardRows, annotationSave, annotationHighlight, annotationNote, flashcardUi } from "./libraryClient";
 import { DurableLessonClient, DurableProgressClient, durableMetadata } from "./durableClient";
 import { fromDurableDocument, toDurableDocument } from "./chaosDocument";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/lib/auth/client";
 import { documentText, excerpt as makeExcerpt } from "./doc";
 import { emptyPersonal, newId, personal, readState, serverState, subscribe, updatePersonal, writeState } from "./localStore";
 import type { LearnState, PersonalState } from "./localStore";

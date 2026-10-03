@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { ChevronRight, CircleUser, SunMoon } from "lucide-react";
-import { useClerk, useUser } from "@clerk/nextjs";
+import { useClerk, useUser } from "@/lib/auth/client";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCopy, useLocale } from "@/lib/i18n";

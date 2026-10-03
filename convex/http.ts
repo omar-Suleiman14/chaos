@@ -256,10 +256,10 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
   const body = await readJson(request);
   if (body instanceof Response) return body;
   const b = body.value as { userId?: unknown; profile?: unknown; tool?: unknown; input?: unknown };
-  if (typeof b?.userId !== "string" || !/^user_[A-Za-z0-9]+$/.test(b.userId) || typeof b.tool !== "string") {
+  if (typeof b?.userId !== "string" || !(/^(?:user_[A-Za-z0-9]+|oidc_[a-f0-9]{64})$/).test(b.userId) || typeof b.tool !== "string") {
     return error(400, "VALIDATION_FAILED", "userId and tool are required.");
   }
-  const userId = b.userId;
+  const userId = await ctx.runQuery(internal.authIdentity.resolveTransportActor, { externalActorId: b.userId });
   const input = (b.input && typeof b.input === "object" ? b.input : {}) as Record<string, unknown>;
   const str = (x: unknown) => (typeof x === "string" ? x : undefined);
   const num = (x: unknown) => (typeof x === "number" && Number.isFinite(x) ? x : undefined);

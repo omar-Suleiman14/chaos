@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import { ownsRecord, requireIdentity } from "./authz";
@@ -5,7 +6,7 @@ import { ownsRecord, requireIdentity } from "./authz";
 export const listNotifications = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return { items: [], unread: 0 };
     const items = await ctx.db
       .query("notifications")

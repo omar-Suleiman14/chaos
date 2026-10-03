@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { courseSearchText } from "./courseSearchModel";
 import { v, type Infer } from "convex/values";
@@ -39,7 +40,7 @@ export const listMine = query({
   args: {},
   returns: v.array(courseCard),
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return [];
     const rows = await ctx.db.query("learnCollections").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", identity.subject)).order("desc").take(200);
     return rows.map(toCourseCard);
@@ -227,7 +228,7 @@ export const getPublic = query({
     const id = ctx.db.normalizeId("learnCollections", args.courseId);
     const row = id ? await ctx.db.get("learnCollections", id) : null;
     if (!row || !row.publishedVersionId || row.archived || row.communityState === "removed" || row.communityState === "hidden") return null;
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (identity?.subject !== row.ownerId && (row.visibility !== "public" || row.communityState !== "ok")) return null;
     const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", row.ownerId)).first();
     if (!owner || owner.isBanned || owner.suspendedUntil) return null;

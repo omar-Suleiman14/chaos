@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { setOwnedUsername } from "./links";
 import { reserveUsername, usernameOwner } from "./usernameModel";
@@ -60,7 +61,7 @@ async function linkPendingInvites(ctx: MutationCtx, userId: string, email: strin
 export const getOrCreateUser = mutation({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) throw new Error("Not authenticated");
     await linkPendingInvites(ctx, identity.subject, verifiedIdentityEmail(identity));
 
@@ -126,7 +127,7 @@ export async function insertNewUser(ctx: MutationCtx, profile: { clerkId: string
 export const getCurrentUser = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return null;
 
     return await ctx.db
@@ -152,7 +153,7 @@ export const setUsername = mutation({
 export const getTeacherSettings = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return null;
 
     const settings = await ctx.db
@@ -410,7 +411,7 @@ export const deleteQuiz = mutation({
 export const getMyQuizzes = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return [];
 
     const quizzes = await ctx.db
@@ -938,7 +939,7 @@ export const startQuizSession = mutation({
     }
 
     const now = Date.now();
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     const playerKey = identity?.subject ?? name.trim().toLowerCase();
     await consumeRate(ctx, `quiz:start:${args.quizId}:${playerKey}`, 10, 60_000);
 

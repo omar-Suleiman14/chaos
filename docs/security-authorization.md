@@ -6,10 +6,7 @@ or a guarantee that every possible attack has been tested.
 
 ## Identity and administration
 
-`convex/auth.config.ts` requires an explicit HTTPS Clerk issuer and the `convex`
-JWT audience. Each installation configures its own issuer. Existing account
-and ownership records use Clerk user IDs; changing those identity keys requires
-a deliberate migration.
+`convex/auth.config.ts` requires the selected Clerk or OIDC provider's explicit HTTPS issuer and the `convex` JWT audience. Each installation configures its own issuer. New OIDC accounts use issuer-scoped identities. Existing account and ownership IDs remain stable through an explicit operator-controlled legacy binding; email matching never links accounts. See [migration](./self-hosting.md#migrating-an-existing-installation).
 
 Admin membership lives in the `admins` table. Only internal `admin:grantAdmin`
 and `admin:revokeAdmin` functions can change it. Neither a client-provided email
@@ -52,7 +49,7 @@ content selection. It creates imports as drafts. Respondent data is available
 only through the corresponding permission; it is not implicitly shared with
 another product. See [integration-api-v1.md](./integration-api-v1.md).
 
-The Next.js `/mcp` route verifies Clerk OAuth tokens and the optional client
+The Next.js `/mcp` route verifies the selected provider's OAuth tokens and the client
 allowlist before forwarding a verified account ID through the shared-secret
 Convex endpoint. Backend tools recheck content permissions. Configure the same
 `CHAOS_MCP_SECRET` in both processes.

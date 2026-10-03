@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { consumeCreation } from "./plans";
 import { deleteUploadRecord } from "./formResults";
@@ -124,7 +125,7 @@ export function formSummary(form: Doc<"forms">) {
 export const listMyForms = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return { owned: [], shared: [] };
     const owned = await ctx.db
       .query("forms")
@@ -188,7 +189,7 @@ function searchText(def: Doc<"forms">["draft"]): string {
 export const searchIndex = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return [];
     const owned = await ctx.db
       .query("forms")
@@ -671,7 +672,7 @@ export const listActivity = query({
 export const listTemplates = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     const own = identity
       ? await ctx.db.query("formTemplates").withIndex("by_ownerId", (q) => q.eq("ownerId", identity.subject)).take(100)
       : [];
@@ -722,7 +723,7 @@ export const listMyThemes = query({
   args: {},
   returns: v.array(v.object({ _id: v.id("formThemes"), name: v.string(), theme: themeValidator, updatedAt: v.number() })),
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return [];
     const themes = await ctx.db.query("formThemes")
       .withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", identity.subject))

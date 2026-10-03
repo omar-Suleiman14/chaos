@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { consumeRate } from "./serverUtils";
 import { v } from "convex/values";
@@ -198,7 +199,7 @@ export const recordView = mutation({
 });
 
 async function progressTarget(ctx: ReadCtx | WriteCtx, args: { lessonId: Id<"lessons">; versionId?: Id<"lessonVersions">; revision?: number }) {
-  const identity = await ctx.auth.getUserIdentity();
+  const identity = await getAuthIdentity(ctx);
   return resolveStudyTarget(ctx, { subject: identity?.subject ?? null }, args);
 }
 const progressDoc = docValidator(

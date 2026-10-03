@@ -16,6 +16,7 @@ jobs:
       E2E_CONVEX_ENV: ${{ secrets.E2E_CONVEX_ENV }}
       E2E_CREATOR_EMAIL: ${{ secrets.E2E_CREATOR_EMAIL }}
       E2E_CREATOR_PASSWORD: ${{ secrets.E2E_CREATOR_PASSWORD }}
+      E2E_AUTH_PROVIDER: ${{ vars.E2E_AUTH_PROVIDER || 'clerk' }}
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0

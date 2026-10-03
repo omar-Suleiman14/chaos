@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { parseMultiAnswer } from "./grading";
 import { consumeCreation } from "./plans";
@@ -56,7 +57,7 @@ async function itemTitle(ctx: Ctx, ownerId: string, ref: string): Promise<string
 export const listConnections = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return [];
     const tokens = await ctx.db.query("integrationTokens").withIndex("by_ownerId", (q) => q.eq("ownerId", identity.subject)).take(100);
     const now = Date.now();
@@ -87,7 +88,7 @@ export const listConnections = query({
 export const listShareableItems = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return [];
     const forms = await ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", identity.subject)).order("desc").take(300);
     const quizzes = await ctx.db.query("quizzes").withIndex("by_creator", (q) => q.eq("creatorId", identity.subject)).take(300);

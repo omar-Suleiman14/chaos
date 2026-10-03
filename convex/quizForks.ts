@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { docValidator } from "convex/server";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
@@ -79,7 +80,7 @@ async function readLineage(ctx: QueryCtx, actor: string, asset: Infer<typeof ass
 }
 export const fork = mutation({ args: argsValidator.fields, returns: result, handler: async (ctx, args) => forkAssessmentForActor(ctx, (await requireActiveUser(ctx)).identity.subject, args) });
 export const getLineage = query({ args: { asset: assessmentRef }, returns: v.union(lineage, v.null()), handler: async (ctx, args) => {
-  const identity = await ctx.auth.getUserIdentity();
+  const identity = await getAuthIdentity(ctx);
   if (!identity) throw new Error("Not authenticated");
   return readLineage(ctx, identity.subject, args.asset);
 } });

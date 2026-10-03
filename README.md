@@ -21,20 +21,20 @@ Chaos is where you create, teach, learn and test: forms, quizzes, lessons and co
 
 - [Next.js](https://nextjs.org) 16 (App Router) and React 19 for the web app
 - [Convex](https://convex.dev) for the database, server functions, scheduling and file storage
-- [Clerk](https://clerk.com) for sign-in
+- [Clerk](https://clerk.com) or self-hosted [Keycloak](https://www.keycloak.org) / OIDC for sign-in
 - TypeScript everywhere; Vitest, `convex-test` and Playwright for tests
 
 ## Run it locally
 
-You need Node.js 22.12 or later in the 22.x series, [pnpm](https://pnpm.io) 12.4.2 (pinned in `package.json`), a Convex account and a Clerk application.
+You need Node.js 22.12 or later in the 22.x series, [pnpm](https://pnpm.io) 12.4.2 (pinned in `package.json`), a backend deployment and a configured authentication provider. Choose Clerk + Convex, self-hosted Keycloak + Convex Cloud, or self-hosted Keycloak + self-hosted Convex with no required paid service. The complete setup and migration instructions are in [self-hosting](./docs/self-hosting.md).
 
 ```bash
 pnpm install
-cp .env.example .env.local   # then fill in the Clerk keys
+cp .env.example .env.local   # then select and configure authentication
 pnpm dev                     # runs next dev and convex dev together
 ```
 
-On first run, Convex asks you to sign in and creates a development deployment, then writes `NEXT_PUBLIC_CONVEX_URL` into `.env.local`. Leave `NEXT_PUBLIC_CONVEX_SITE_URL` empty when using Convex Cloud so Chaos derives the matching HTTP actions URL. Create Clerk's **JWT template named `convex`** using its Convex preset. The first backend deployment waits for its required issuer; keep `pnpm dev` running and set it from a second terminal:
+For the default Clerk + Convex Cloud setup, on first run Convex asks you to sign in and creates a development deployment, then writes `NEXT_PUBLIC_CONVEX_URL` into `.env.local`. Leave `NEXT_PUBLIC_CONVEX_SITE_URL` empty when using Convex Cloud so Chaos derives the matching HTTP actions URL. Create Clerk's **JWT template named `convex`** using its Convex preset. The first backend deployment waits for its required issuer; keep `pnpm dev` running and set it from a second terminal:
 
 ```bash
 npx convex env set CLERK_JWT_ISSUER_DOMAIN https://your-app.clerk.accounts.dev
@@ -44,6 +44,8 @@ The app runs at <http://localhost:3000>. To make yourself an admin, sign in once
 
 Email-based collaborator invitations require a verified email claim. Keep `email` and `email_verified` in the Clerk `convex` JWT template, with `email_verified` derived from `{{user.email_verified}}`, rather than a hardcoded value. Missing or false verification never grants invitation access. See [Clerk JWT templates](https://clerk.com/docs/guides/sessions/jwt-templates).
 
+For OIDC, set `NEXT_PUBLIC_AUTH_PROVIDER=oidc` and runtime `AUTH_OIDC_ISSUER`, `AUTH_OIDC_CLIENT_ID`, `AUTH_OIDC_CLIENT_SECRET`, `AUTH_SECRET`. Configure the backend with `CHAOS_AUTH_PROVIDER=oidc` and the identical HTTPS issuer. Access tokens need audience `convex`; email verification must reflect the actual account. Clerk credentials are unnecessary in this mode. Existing accounts require an explicit operator binding before the replacement identity first signs in; see the [migration steps](./docs/self-hosting.md#migrating-an-existing-installation).
+
 ### Environment variables
 
 Every variable is listed with what it does in [`.env.example`](./.env.example). The ones you need to start:
@@ -51,8 +53,11 @@ Every variable is listed with what it does in [`.env.example`](./.env.example). 
 | Variable | Where | Purpose |
 |---|---|---|
 | `NEXT_PUBLIC_CONVEX_URL` | `.env.local` | Your Convex deployment (written by `convex dev`). |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` | `.env.local` | Clerk keys. |
-| `CLERK_JWT_ISSUER_DOMAIN` | Convex (`npx convex env set`) | Lets Convex verify Clerk sign-ins. |
+| `NEXT_PUBLIC_AUTH_PROVIDER` | Build / `.env.local` | `clerk` (default) or `oidc`. Match the backend mode. |
+| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` | `.env.local` | Required only for Clerk mode. |
+| `AUTH_OIDC_ISSUER`, `AUTH_OIDC_CLIENT_ID`, `AUTH_OIDC_CLIENT_SECRET`, `AUTH_SECRET` | App runtime | Required only for OIDC mode. |
+| `CHAOS_AUTH_PROVIDER`, `AUTH_OIDC_ISSUER` | Convex | Backend mode and HTTPS issuer for OIDC. |
+| `CLERK_JWT_ISSUER_DOMAIN` | Convex (`npx convex env set`) | Required for Clerk mode; lets Convex verify sign-ins. |
 
 Optional features switch on when their variables are set: webhooks (`CHAOS_WEBHOOK_KEY`), the ChatGPT app (`CHAOS_MCP_SECRET`, `CHAOS_MCP_CLIENT_IDS`), analytics (`NEXT_PUBLIC_POSTHOG_*`), and your support address (`NEXT_PUBLIC_SUPPORT_EMAIL`, `CHAOS_SUPPORT_EMAIL`). Set Convex variables with `pnpm exec convex env set`; putting them only in `.env.local` does not configure the backend. The MCP shared secret must match in both processes.
 
@@ -62,7 +67,7 @@ Optional features switch on when their variables are set: webhooks (`CHAOS_WEBHO
 pnpm typecheck
 pnpm lint
 pnpm test        # unit + integration, no credentials needed
-pnpm test:e2e    # Playwright against a running app with real Convex and Clerk
+pnpm test:e2e    # Playwright against a running app; configured dedicated test accounts required
 pnpm build
 ```
 
@@ -72,7 +77,7 @@ See [`tests/README.md`](./tests/README.md) for what each layer covers.
 
 The web app and the Convex functions deploy separately, and they must match: a new web app talking to old Convex functions fails (for example, saves are rejected).
 
-**Vercel + Convex Cloud (recommended).** In Vercel, set the build command to
+**Vercel + Convex Cloud.** In Vercel, set the build command to
 
 ```
 npx convex deploy --cmd 'pnpm build'

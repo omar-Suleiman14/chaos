@@ -9,8 +9,7 @@ import "./workspace.css";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import FrameGuard from "@/components/FrameGuard";
 import { ThemeProvider } from "@/components/ThemeProvider";
-import { ClerkProvider } from "@clerk/nextjs";
-import { arSA } from "@clerk/localizations/ar-SA";
+import { AuthProvider } from "@/lib/auth/client";
 import { themeInitScript } from "@/lib/theme";
 import { LocaleProvider } from "@/lib/i18n";
 import { isLocale, LOCALE_COOKIE, localeDir } from "@/lib/locale";
@@ -112,12 +111,12 @@ export default async function RootLayout({
         <ThemeProvider>
           <FrameGuard />
           <ProductAnalytics />
-          <ClerkProvider dynamic localization={locale === "ar" ? arSA : undefined} signInFallbackRedirectUrl="/dashboard" signUpFallbackRedirectUrl="/dashboard" afterSignOutUrl="/">
+          <AuthProvider locale={locale}>
             <AnalyticsIdentity />
             <ConvexClientProvider>
               {children}
             </ConvexClientProvider>
-          </ClerkProvider>
+          </AuthProvider>
         </ThemeProvider>
         </LocaleProvider>
       </body>

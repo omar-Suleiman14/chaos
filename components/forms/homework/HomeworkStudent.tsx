@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { SignInButton, useAuth } from "@clerk/nextjs";
+import { SignInButton, useAuth } from "@/lib/auth/client";
 import { useConvex, useConvexAuth, useMutation, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";

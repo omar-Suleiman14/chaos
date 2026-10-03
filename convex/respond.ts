@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { homeworkUploadAccess } from "./homeworkUploadAccess";
 import { hasPro } from "./authz";
@@ -115,7 +116,7 @@ export const getPublicForm = query({
     }
     const cap = await responseCap(ctx, form);
     if (!editingClosed && cap !== null && form.responseCount >= cap) return { state: "full" as const, ...base, message: form.settings.closedMessage ?? null };
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (form.settings.access === "signed_in" && !identity) return { state: "sign_in" as const, ...base };
     if (form.settings.access === "signed_in") {
       const check = checkEmailRules(form.settings, identity);
@@ -202,7 +203,7 @@ async function assertCanCollect(ctx: MutationCtx, form: Doc<"forms"> | null, acc
   const when = scheduleState(form.settings, Date.now());
   if (when === "not_open" && !skipClosing) throw new Error("FORM_NOT_OPEN: This form is not open yet.");
   if (when === "closed" && !skipClosing) throw new Error("FORM_CLOSED: This form closed and is no longer accepting responses.");
-  const identity = await ctx.auth.getUserIdentity();
+  const identity = await getAuthIdentity(ctx);
   if (form.settings.access === "signed_in" && !identity) throw new Error("SIGN_IN_REQUIRED: Sign in to respond to this form.");
   if (form.settings.access === "signed_in") {
     const check = checkEmailRules(form.settings, identity);
@@ -326,7 +327,7 @@ export const submitResponse = mutation({
     // Account-bound submissions require the same account even on retries.
     // Anonymous submissions continue to use their private submission key.
     if (existing?.respondentId) {
-      const identity = await ctx.auth.getUserIdentity();
+      const identity = await getAuthIdentity(ctx);
       if (identity?.subject !== existing.respondentId) throw new Error("SUBMISSION_UNAUTHORIZED: This submission belongs to another respondent.");
     }
     // Idempotent retry: a completed submission is returned unchanged, so a
@@ -585,7 +586,7 @@ export const generateUploadUrl = mutation({
   returns: v.string(),
   handler: async (ctx, args) => {
     const form = await fileFieldFor(ctx, args.shareId, args.fieldId, args.accessCode);
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     const uploaderKey = identity?.subject ?? (args.clientToken ? (await sha256Hex(args.clientToken)).slice(0, 16) : "anon");
     await consumeRate(ctx, `upload:${form._id}`, 300, 60_000);
     await consumeRate(ctx, `upload:${form._id}:${uploaderKey}`, 100, 60_000);

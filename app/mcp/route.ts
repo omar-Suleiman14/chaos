@@ -1,12 +1,12 @@
 // MCP endpoint for the Chaos ChatGPT app: https://chaos.fail/mcp
-// Stateless Streamable HTTP. Clerk is the OAuth authorization server; tokens
-// are verified here and the verified user id is forwarded to Convex.
+// Stateless Streamable HTTP. The selected auth provider verifies OAuth tokens;
+// only verified account identities are forwarded to the backend.
 
 import { clerkClient } from "@clerk/nextjs/server";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createChaosMcpServer, McpToolError } from "@/lib/mcp/server";
 import type { McpCaller } from "@/lib/mcp/server";
-import { resourceMetadataUrl, resourceUrl } from "@/lib/mcp/oauth";
+import { resourceMetadataUrl, resourceUrl, verifyOidcMcpToken } from "@/lib/mcp/oauth";
 import { detectAiClient, type CreatedWith } from "@/lib/aiClients";
 
 export const runtime = "nodejs";
@@ -34,10 +34,15 @@ function unauthorized(request: Request, description: string): Response {
   ));
 }
 
-type Verified = { userId: string; clientId?: string };
+type Verified = { userId: string; clientId?: string; profile?: { name: string; email: string; imageUrl?: string }; provider: "clerk" | "oidc" };
 async function verifiedUser(request: Request): Promise<Verified | null | Response> {
   if (!/^Bearer\s+\S+/i.test(request.headers.get("authorization") ?? "")) return null;
   try {
+    if (process.env.NEXT_PUBLIC_AUTH_PROVIDER === "oidc") {
+      const token = /^Bearer\s+(\S+)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
+      if (!token) return unauthorized(request, "An OAuth access token is required.");
+      return { ...await verifyOidcMcpToken(token), provider: "oidc" };
+    }
     const clerk = await clerkClient();
     const state = await clerk.authenticateRequest(request, { acceptsToken: "oauth_token" });
     const auth = state.toAuth();
@@ -45,7 +50,7 @@ async function verifiedUser(request: Request): Promise<Verified | null | Respons
       // Only OAuth clients on the allow-list (the ChatGPT app) may act for a person. Unset = any client of this Clerk instance.
       const allowed = (process.env.CHAOS_MCP_CLIENT_IDS ?? "").split(",").map((id) => id.trim()).filter(Boolean);
       if (allowed.length && !allowed.includes(auth.clientId ?? "")) return unauthorized(request, "This app is not allowed to use Chaos.");
-      return { userId: auth.userId, clientId: auth.clientId ?? undefined };
+      return { userId: auth.userId, clientId: auth.clientId ?? undefined, provider: "clerk" };
     }
   } catch (error) {
     console.error("mcp: token verification failed", error instanceof Error ? error.message : error);
@@ -84,9 +89,10 @@ async function oauthClientName(clientId: string | undefined): Promise<string | u
   return undefined;
 }
 
-function convexCaller(userId: string, client?: CreatedWith): McpCaller {
+function convexCaller(verified: Verified, client?: CreatedWith): McpCaller {
+  const { userId } = verified;
   const secret = process.env.CHAOS_MCP_SECRET;
-  let profile: { name: string; email: string; imageUrl?: string } | undefined;
+  let profile = verified.profile;
   const send = async (tool: string, input: Record<string, unknown>) => {
     if (!secret) throw new McpToolError("NOT_CONFIGURED", "The Chaos app is not configured on this server yet.");
     const response = await fetch(`${convexSiteUrl()}/api/mcp/v1`, {
@@ -102,7 +108,7 @@ function convexCaller(userId: string, client?: CreatedWith): McpCaller {
   return async (tool, input) => {
     let outcome = await send(tool, input);
     // First visit from ChatGPT: create the Chaos account from the Clerk profile, then retry once.
-    if (!outcome.ok && outcome.code === "ACCOUNT_REQUIRED" && !profile) {
+    if (!outcome.ok && outcome.code === "ACCOUNT_REQUIRED" && !profile && verified.provider === "clerk") {
       const user = await (await clerkClient()).users.getUser(userId);
       const email = user.primaryEmailAddress?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? "";
       profile = { name: user.fullName || user.username || user.firstName || "Anonymous", email, imageUrl: user.imageUrl || undefined };
@@ -119,8 +125,8 @@ async function handle(request: Request): Promise<Response> {
   if (verified instanceof Response) return verified;
   const userId = verified?.userId ?? null;
   // Which assistant is calling, so content it creates can say "Created with ChatGPT/Claude/…".
-  const client = verified ? detectAiClient(await oauthClientName(verified.clientId), request.headers.get("user-agent")) : undefined;
-  const call = userId ? convexCaller(userId, client) : null;
+  const client = verified ? detectAiClient(verified.provider === "clerk" ? await oauthClientName(verified.clientId) : undefined, request.headers.get("user-agent")) : undefined;
+  const call = verified ? convexCaller(verified, client) : null;
   let admin = false;
   if (call && userId) {
     const cached = adminCapabilities.get(userId);
@@ -135,7 +141,7 @@ async function handle(request: Request): Promise<Response> {
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   try {
-    const response = await transport.handleRequest(request, userId ? { authInfo: { token: "", clientId: "clerk", scopes: [], resource: new URL(resourceUrl(request)), extra: { userId } } } : undefined);
+    const response = await transport.handleRequest(request, userId ? { authInfo: { token: "", clientId: verified?.clientId ?? verified!.provider, scopes: [], resource: new URL(resourceUrl(request)), extra: { userId } } } : undefined);
     return withCors(response);
   } finally {
     await server.close().catch(() => undefined);

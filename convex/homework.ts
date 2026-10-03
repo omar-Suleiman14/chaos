@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { homeworkUploadAccess } from "./homeworkUploadAccess";
 import { env } from "./_generated/server";
 import { UPLOAD_PATH, uploadRejection } from "./respond";
@@ -20,7 +21,7 @@ import { consumeRate, randomCode } from "./serverUtils";
 import { emitWebhookEvent, formResponseData } from "./webhookEvents";
 type Ctx = MutationCtx | QueryCtx;
 async function actor(ctx: Ctx) {
-  const id = await ctx.auth.getUserIdentity();
+  const id = await getAuthIdentity(ctx);
   if (!id) throw new Error("Not authenticated");
   const user = await ctx.db
     .query("users")

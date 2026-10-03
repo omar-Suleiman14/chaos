@@ -13,7 +13,7 @@ Please do not test against other people's data, run load or denial-of-service te
 
 ## Supported versions
 
-Only the latest `main` branch (what runs on chaos.fail) receives security fixes. If you self-host, update to the latest release to get them.
+Security fixes target the current `main` branch. Older snapshots do not receive backports. If you self-host, review and apply updates from `main`; the repository does not guarantee that every installation or the hosted site runs the same commit.
 
 ## How Chaos protects data
 
@@ -21,3 +21,9 @@ Only the latest `main` branch (what runs on chaos.fail) receives security fixes.
 - Quiz answer keys are withheld until the configured reveal stage. Live games reveal answers after the question closes. Access-code checks are rate-limited on the server.
 - Webhook deliveries are signed, and they are never sent to private or internal network addresses.
 - Security-relevant decisions are written up in [`docs/security-authorization.md`](./docs/security-authorization.md).
+
+## Self-hosted installations
+
+The operator is responsible for TLS, protected backend and administration endpoints, credential rotation, backups and restore testing, software updates, and the privacy of stored respondent data. Follow the [self-hosting guide](./docs/self-hosting.md) and use synthetic data for security testing.
+
+Run `pnpm audit --prod` to inspect runtime dependency advisories and `pnpm audit` to include development tools. Report actionable dependency findings privately when they expose application data or permissions. These checks do not replace an independent security review.

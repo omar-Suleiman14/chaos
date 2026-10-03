@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { v } from "convex/values";
 import { env, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -142,7 +143,7 @@ async function removeSubscription(ctx: MutationCtx, sub: Subscription) {
 export const listWebhooks = query({
   args: {},
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return [];
     const subs = await ctx.db.query("webhookSubscriptions").withIndex("by_ownerId", (q) => q.eq("ownerId", identity.subject)).take(100);
     const out = [];
@@ -170,7 +171,7 @@ export const listWebhooks = query({
 export const listDeliveries = query({
   args: { subscriptionId: v.id("webhookSubscriptions") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return [];
     const sub = await ctx.db.get("webhookSubscriptions", args.subscriptionId);
     if (!sub || !ownsRecord(sub, identity)) return [];

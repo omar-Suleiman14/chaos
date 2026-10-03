@@ -2,14 +2,19 @@
 import { DocsProvider } from "@/lib/docs/provider";
 
 
-import { ReactNode } from "react";
-import { ConvexProviderWithClerk } from "convex/react-clerk";
-import { useAuth } from "@clerk/nextjs";
+import { ReactNode, useCallback } from "react";
+import { ConvexProviderWithAuth } from "convex/react";
+import { useAuth } from "@/lib/auth/client";
 import ConnectivityBanner from "@/components/ConnectivityBanner";
 import { convex } from "@/lib/convexClient";
 
 // Analytics identity is handled by AnalyticsIdentity (components/ProductAnalytics.tsx), which
-// links events to the Clerk account id only, never an email address or name.
+// links events to the stable account id only, never an email address or name.
+function useBackendAuth() {
+  const { isLoaded, isSignedIn, getToken } = useAuth();
+  const fetchAccessToken = useCallback(({ forceRefreshToken }: { forceRefreshToken: boolean }) => getToken({ template: "convex", skipCache: forceRefreshToken }), [getToken]);
+  return { isLoading: !isLoaded, isAuthenticated: !!isSignedIn, fetchAccessToken };
+}
 
 export default function ConvexClientProvider({
   children,
@@ -19,9 +24,9 @@ export default function ConvexClientProvider({
   if (!convex) return <>{children}</>;
 
   return (
-    <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
+    <ConvexProviderWithAuth client={convex} useAuth={useBackendAuth}>
       <ConnectivityBanner />
       <DocsProvider>{children}</DocsProvider>
-    </ConvexProviderWithClerk>
+    </ConvexProviderWithAuth>
   );
 }

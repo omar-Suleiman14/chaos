@@ -32,9 +32,19 @@ function smokeEnvironment() {
   return { baseURL, creatorEmail, creatorPassword };
 }
 
-async function signInWithClerk(page: Page, email: string, password: string) {
+async function signInCreator(page: Page, email: string, password: string) {
   await page.goto("/");
   await page.getByRole("button", { name: "Log in" }).click();
+
+  const provider = process.env.E2E_AUTH_PROVIDER ?? "clerk";
+  if (provider === "oidc") {
+    await page.locator("#username").fill(email);
+    await page.locator("#password").fill(password);
+    await page.locator("#kc-login").click();
+    await expect(page.getByRole("link", { name: "Open Chaos" }).first()).toBeVisible();
+    return;
+  }
+  if (provider !== "clerk") throw new Error("E2E_AUTH_PROVIDER must be clerk or oidc");
 
   const identifier = page.locator('input[name="identifier"]');
   await expect(identifier).toBeVisible();
@@ -83,7 +93,7 @@ test("creator to respondent production smoke", async ({ page, browser }) => {
   const wrongAnswer = `Wrong ${suffix}`;
   const respondentName = `Respondent ${suffix}`;
 
-  await signInWithClerk(page, creatorEmail, creatorPassword);
+  await signInCreator(page, creatorEmail, creatorPassword);
   await page.goto("/dashboard");
   await ensureCreatorUsername(page, suffix);
 

@@ -24,6 +24,7 @@ COPY . .
 # Public, build-time values (see .env.example). Not secrets.
 ARG NEXT_PUBLIC_CONVEX_URL
 ARG NEXT_PUBLIC_CONVEX_SITE_URL
+ARG NEXT_PUBLIC_AUTH_PROVIDER=clerk
 ARG NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
 ARG NEXT_PUBLIC_APP_URL
 ARG NEXT_PUBLIC_SUPPORT_EMAIL
@@ -31,6 +32,7 @@ ARG NEXT_PUBLIC_SOURCE_REPO_URL
 ARG NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
 ARG NEXT_PUBLIC_POSTHOG_HOST
 ENV NEXT_PUBLIC_CONVEX_URL=$NEXT_PUBLIC_CONVEX_URL \
+    NEXT_PUBLIC_AUTH_PROVIDER=$NEXT_PUBLIC_AUTH_PROVIDER \
     NEXT_PUBLIC_CONVEX_SITE_URL=$NEXT_PUBLIC_CONVEX_SITE_URL \
     NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY \
     NEXT_PUBLIC_APP_URL=$NEXT_PUBLIC_APP_URL \
@@ -51,6 +53,8 @@ FROM base AS convex-deploy
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json tsconfig.json ./
 COPY convex ./convex
+# Convex modules also import shared documents, telemetry, plans and identity helpers.
+COPY lib ./lib
 COPY docker/convex-deploy.sh ./convex-deploy.sh
 CMD ["sh", "./convex-deploy.sh"]
 

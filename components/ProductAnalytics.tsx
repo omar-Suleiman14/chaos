@@ -1,9 +1,9 @@
-﻿"use client";
+"use client";
 
 import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import posthog from "@/lib/analytics";
-import { useUser } from "@clerk/nextjs";
+import { useUser } from "@/lib/auth/client";
 
 export function analyticsScreen(path: string): string {
   if (path === "/") return "home";

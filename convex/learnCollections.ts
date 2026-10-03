@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { courseSearchText } from "./courseSearchModel";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
@@ -58,7 +59,7 @@ export const publish = mutation({ args: { collectionId: v.id("learnCollections")
 } });
 export const getDraft = query({ args: { collectionId: v.id("learnCollections") }, returns: schema.doc("learnCollections"), handler: (ctx, args) => owned(ctx, args.collectionId) });
 export const getPublished = query({ args: { collectionId: v.id("learnCollections") }, returns: v.union(schema.doc("collectionVersions"), v.null()), handler: async (ctx, args) => {
-  const row = await ctx.db.get("learnCollections", args.collectionId); const identity = await ctx.auth.getUserIdentity();
+  const row = await ctx.db.get("learnCollections", args.collectionId); const identity = await getAuthIdentity(ctx);
   if (!row || (row.ownerId !== identity?.subject && (row.visibility !== "public" || row.communityState !== "ok" || row.archived || await creatorRestricted(ctx, row.ownerId)))) throw new Error("Collection not found or unauthorized");
   // Returns IDs and metadata only. Linked lesson/source reads still enforce current access.
   return row.publishedVersionId ? ctx.db.get("collectionVersions", row.publishedVersionId) : null;

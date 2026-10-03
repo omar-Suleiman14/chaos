@@ -4,7 +4,7 @@ import Link from "next/link";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 
-import { useClerk, useUser } from "@clerk/nextjs";
+import { useClerk, useUser } from "@/lib/auth/client";
 import MemberAvatar from "@/components/MemberAvatar";
 import { avatarSeed } from "@/lib/avatarSeed";
 import { useMutation, useQuery } from "convex/react";

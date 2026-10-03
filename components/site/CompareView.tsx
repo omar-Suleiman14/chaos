@@ -14,7 +14,7 @@ import "@/app/landing.css";
  * no native Sheets/Slack/Zapier connectors, no CAPTCHA (honeypot + timing in convex/respond.ts),
  * no URL prefill, two languages (convex/formLogic.ts `languages`), live games play choice
  * questions with 2–4 options, the integration API cannot publish or read responses,
- * sign-in requires Clerk, and the Docker setup is untested end to end.
+ * sign-in supports Clerk or OIDC, and the Docker setup is untested end to end.
  */
 const copy = {
   en: {
@@ -42,7 +42,7 @@ const copy = {
       "Live games play choice questions with 2 to 4 options. Rooms are capped at 500 players; games that large haven't been load-tested.",
       "The integration API can’t publish forms or read individual responses, by design.",
       "The ChatGPT app can’t add file upload questions.",
-      "Sign-in needs Clerk, also when you host Chaos yourself, and the Docker setup hasn’t been tested end to end yet.",
+      "Sign-in supports Clerk or self-hosted Keycloak. The complete Docker setup hasn’t been tested end to end yet.",
     ],
     fitTitle: "When another tool may fit better",
     fit: [
@@ -77,7 +77,7 @@ const copy = {
       "الألعاب المباشرة تلعب أسئلة الاختيار ذات 2 إلى 4 خيارات. الحد الأقصى للغرفة 500 لاعب، ولم تُختبر ألعاب بهذا الحجم تحت الضغط.",
       "لا يستطيع API التكامل نشر النماذج أو قراءة الردود الفردية، عن قصد.",
       "تطبيق ChatGPT لا يستطيع إضافة أسئلة رفع الملفات.",
-      "تسجيل الدخول يحتاج إلى Clerk حتى عند الاستضافة الذاتية، ولم يُختبر إعداد Docker من البداية إلى النهاية بعد.",
+      "تسجيل الدخول يدعم Clerk أو Keycloak المستضاف ذاتيًا. لم يُختبر إعداد Docker الكامل من البداية إلى النهاية بعد.",
     ],
     fitTitle: "متى قد تناسبك أداة أخرى",
     fit: [

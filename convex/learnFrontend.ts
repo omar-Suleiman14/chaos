@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 import { query } from "./_generated/server";
@@ -54,7 +55,7 @@ export const publicLessonsBatch = query({
 export const editableLesson = query({
   args: { id: v.string() }, returns: v.union(v.null(), schema.doc("lessons")),
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity || !args.id || args.id.length > 100) return null;
     const id = ctx.db.normalizeId("lessons", args.id);
     if (!id) return null;
@@ -128,7 +129,7 @@ export const publicProfile = query({
     if (!args.username || args.username.length > 100) return null;
     const user = await ctx.db.query("users").withIndex("by_username", q => q.eq("username", args.username)).unique();
     if (!user || await creatorRestricted(ctx, user.clerkId)) return null;
-    const userKey = canonicalCommunityActor(user.clerkId).tokenIdentifier;
+    const userKey = (await canonicalCommunityActor(ctx, user.clerkId)).tokenIdentifier;
     const claims = await ctx.db.query("learnIdentityClaims").withIndex("by_userKey_and_role", q => q.eq("userKey", userKey)).take(2);
     return { username: user.username, name: user.name, imageUrl: user.imageUrl ?? null, verifiedRoles: claims.filter(c => c.status === "verified" && c.method === "manual_review" && !!c.reviewedBy && (c.expiresAt ?? 0) > Date.now()).map(c => c.role) };
   },

@@ -1,0 +1,38 @@
+{
+  "realm": "chaos",
+  "enabled": true,
+  "sslRequired": "all",
+  "registrationAllowed": false,
+  "resetPasswordAllowed": false,
+  "verifyEmail": true,
+  "bruteForceProtected": true,
+  "clients": [
+    {
+      "clientId": "${AUTH_OIDC_CLIENT_ID}",
+      "name": "Chaos web",
+      "enabled": true,
+      "protocol": "openid-connect",
+      "publicClient": false,
+      "secret": "${AUTH_OIDC_CLIENT_SECRET}",
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": false,
+      "redirectUris": ["${CHAOS_APP_ORIGIN}/api/auth/callback/keycloak"],
+      "webOrigins": ["${CHAOS_APP_ORIGIN}"],
+      "attributes": { "pkce.code.challenge.method": "S256" },
+      "defaultClientScopes": ["profile", "email"],
+      "protocolMappers": [
+        {
+          "name": "convex-audience",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-audience-mapper",
+          "config": {
+            "included.custom.audience": "convex",
+            "access.token.claim": "true",
+            "id.token.claim": "false"
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { ConvexError, v } from "convex/values";
 import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
@@ -117,5 +118,5 @@ export const detach = mutation({
 export const listAttached = query({
   args: { lessonId: v.id("lessons") },
   returns: attachedFlashcards,
-  handler: async (ctx, args) => listAttachedFlashcards(ctx, (await ctx.auth.getUserIdentity())?.subject, args.lessonId),
+  handler: async (ctx, args) => listAttachedFlashcards(ctx, (await getAuthIdentity(ctx))?.subject, args.lessonId),
 });

@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import posthog from "@/lib/analytics";
-import { SignInButton, SignOutButton } from "@clerk/nextjs";
+import { SignInButton, SignOutButton } from "@/lib/auth/client";
 import { Copy, Download, RotateCcw, Volume2, VolumeX } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import FormRenderer, { EndingView, formUi, themeClass, themeStyle } from "@/components/forms/FormRenderer";

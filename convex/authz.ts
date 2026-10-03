@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import type { Doc, Id } from "./_generated/dataModel";
 import { supportEmail } from "./support";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -5,7 +6,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 type DbCtx = QueryCtx | MutationCtx;
 
 export async function requireIdentity(ctx: DbCtx) {
-  const identity = await ctx.auth.getUserIdentity();
+  const identity = await getAuthIdentity(ctx);
   if (!identity) throw new Error("Not authenticated");
   return identity;
 }
@@ -29,7 +30,7 @@ export async function requireActiveUser(ctx: DbCtx) {
  * the code and no profile email can grant access.
  */
 export async function isAdmin(ctx: DbCtx): Promise<boolean> {
-  const identity = await ctx.auth.getUserIdentity();
+  const identity = await getAuthIdentity(ctx);
   if (!identity) return false;
   const row = await ctx.db.query("admins").withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject)).first();
   return row !== null;
@@ -48,7 +49,7 @@ export async function requireQuizOwner(ctx: DbCtx, quizId: Id<"quizzes">): Promi
 }
 
 export async function getQuizIfOwner(ctx: DbCtx, quizId: Id<"quizzes">): Promise<Doc<"quizzes"> | null> {
-  const identity = await ctx.auth.getUserIdentity();
+  const identity = await getAuthIdentity(ctx);
   if (!identity) return null;
   const quiz = await ctx.db.get("quizzes", quizId);
   if (!quiz || quiz.creatorId !== identity.subject) return null;
@@ -56,7 +57,7 @@ export async function getQuizIfOwner(ctx: DbCtx, quizId: Id<"quizzes">): Promise
 }
 
 export async function getQuizIfOwnerOrAdmin(ctx: DbCtx, quizId: Id<"quizzes">): Promise<Doc<"quizzes"> | null> {
-  const identity = await ctx.auth.getUserIdentity();
+  const identity = await getAuthIdentity(ctx);
   if (!identity) return null;
   const quiz = await ctx.db.get("quizzes", quizId);
   if (!quiz) return null;
@@ -92,7 +93,7 @@ export async function getSessionIfOwnerOrAdmin(
   ctx: DbCtx,
   sessionId: Id<"quizSessions">
 ): Promise<{ session: Doc<"quizSessions">; quiz: Doc<"quizzes"> } | null> {
-  const identity = await ctx.auth.getUserIdentity();
+  const identity = await getAuthIdentity(ctx);
   if (!identity) return null;
   const session = await ctx.db.get("quizSessions", sessionId);
   if (!session) return null;
@@ -103,7 +104,7 @@ export async function getSessionIfOwnerOrAdmin(
 }
 
 export async function canViewQuizAsRespondent(ctx: DbCtx, quiz: Doc<"quizzes">): Promise<boolean> {
-  const identity = await ctx.auth.getUserIdentity();
+  const identity = await getAuthIdentity(ctx);
   const ownerOrAdmin =
     !!identity && (quiz.creatorId === identity.subject || (await isAdmin(ctx)));
   if (quiz.isBanned || await creatorRestricted(ctx, quiz.creatorId)) return ownerOrAdmin;
@@ -160,7 +161,7 @@ export async function getFormIfRole(
   formId: Id<"forms">,
   minimum: FormRole
 ): Promise<{ form: Doc<"forms">; role: FormRole; identity: Identity } | null> {
-  const identity = await ctx.auth.getUserIdentity();
+  const identity = await getAuthIdentity(ctx);
   if (!identity) return null;
   const form = await ctx.db.get("forms", formId);
   if (!form) return null;

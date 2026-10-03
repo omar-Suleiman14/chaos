@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 // Live games: a host runs a quiz on a shared screen; players join with a PIN and
 // answer on their phones. See convex/liveLogic.ts for the pure rules.
 //
@@ -260,7 +261,7 @@ export async function createGameForAccount(ctx: MutationCtx, userId: string, arg
     const form = await ctx.db.get("forms", args.formId);
     if (!form) throw new Error("FORM_NOT_FOUND: Form not found or you do not have access.");
     if (form.ownerId !== userId) {
-      const identity = await ctx.auth.getUserIdentity();
+      const identity = await getAuthIdentity(ctx);
       if (identity?.subject !== userId) throw new Error("FORM_NOT_FOUND: Form not found or you do not have access.");
       await requireFormRole(ctx, args.formId, "editor");
     }
@@ -476,7 +477,7 @@ export const kickPlayer = mutation({
 export const hostView = query({
   args: { gameId: v.id("liveGames") },
   handler: async (ctx, args) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     const game = await ctx.db.get("liveGames", args.gameId);
     if (!identity || !game || game.hostId !== identity.subject) return null;
     // During answering, only the small standing preview and shard counts change.
@@ -537,7 +538,7 @@ export const myGames = query({
     players: v.union(v.number(), v.null()), savedResponses: v.number(),
   })),
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return [];
     const games = await ctx.db.query("liveGames").withIndex("by_hostId_and_createdAt", (q) => q.eq("hostId", identity.subject)).order("desc").take(30);
     return games.map((g) => ({

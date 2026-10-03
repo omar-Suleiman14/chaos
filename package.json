@@ -37,9 +37,11 @@
     "clsx": "^2.1.1",
     "convex": "^1.46.0",
     "date-fns": "^4.4.0",
+    "jose": "^6.2.12",
     "katex": "^0.18.9",
     "lucide-react": "^1.48.0",
     "next": "^16.3.6",
+    "next-auth": "5.0.0-beta.32",
     "posthog-js": "^1.434.16",
     "qrcode": "^1.5.4",
     "radix-ui": "^1.6.7",
@@ -51,7 +53,6 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
-    "shadcn": "^4.21.0",
     "@convex-dev/eslint-plugin": "^5.0.0",
     "@edge-runtime/vm": "^5.0.0",
     "@playwright/test": "^1.63.0",
@@ -74,6 +75,7 @@
     "jsqr": "^1.4.0",
     "npm-run-all2": "^9.0.3",
     "prettier": "^3.9.9",
+    "shadcn": "^4.21.0",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.2",
     "vite": "^8.3.1",

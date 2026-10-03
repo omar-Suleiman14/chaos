@@ -1,5 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse } from "next/server";
+import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { decideFraming } from "@/lib/embed";
@@ -25,7 +25,7 @@ async function lookupPolicy(target: EmbedTarget): Promise<EmbedPolicy> {
   }
 }
 
-export default clerkMiddleware(async (auth, req) => {
+const clerkProxy = clerkMiddleware(async (auth, req) => {
   // The short share host (NEXT_PUBLIC_SHORT_SHARE_ORIGIN) only redirects; pages live on the canonical site.
   const short = shortHostRedirect(req.url);
   if (short) return NextResponse.redirect(short, 301);
@@ -42,6 +42,30 @@ export default clerkMiddleware(async (auth, req) => {
   }
   return response;
 });
+
+export default process.env.NEXT_PUBLIC_AUTH_PROVIDER === "oidc" ? async function oidcProxy(req: NextRequest, event: NextFetchEvent) {
+  // Auth.js owns its callback/session/CSRF routes; never redirect those to login.
+  if (req.nextUrl.pathname.startsWith("/api/auth/")) return NextResponse.next();
+  const short = shortHostRedirect(req.url);
+  if (short) return NextResponse.redirect(short, 301);
+  const { auth } = await import("@/lib/auth/server");
+  // The middleware wrapper persists refreshed encrypted session cookies on the
+  // response. A plain auth() session read cannot propagate Set-Cookie here.
+  const wrapped = auth(async (authenticatedReq, _event: NextFetchEvent) => {
+    const session = authenticatedReq.auth;
+    if (isProtectedRoute(authenticatedReq) && (!session?.user.id || session.authError)) {
+      const login = new URL("/api/auth/signin", req.url);
+      login.searchParams.set("callbackUrl", `${req.nextUrl.pathname}${req.nextUrl.search}`);
+      return NextResponse.redirect(login);
+    }
+    const headers = await decideFraming(req.nextUrl.pathname, req.headers.get("sec-fetch-dest"), lookupPolicy);
+    const response = NextResponse.next();
+    for (const [key, value] of Object.entries(headers)) response.headers.set(key, value);
+    if ((process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production") || ["edit", "resume", "embed"].some((key) => req.nextUrl.searchParams.has(key))) response.headers.set("X-Robots-Tag", "noindex, nofollow");
+    return response;
+  });
+  return wrapped(req, event);
+} : clerkProxy;
 
 export const config = {
   matcher: [

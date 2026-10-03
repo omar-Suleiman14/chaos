@@ -54,7 +54,8 @@ services:
       args:
         NEXT_PUBLIC_CONVEX_URL: ${NEXT_PUBLIC_CONVEX_URL}
         NEXT_PUBLIC_CONVEX_SITE_URL: ${NEXT_PUBLIC_CONVEX_SITE_URL}
-        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:?set NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY in .env}
+        NEXT_PUBLIC_AUTH_PROVIDER: ${NEXT_PUBLIC_AUTH_PROVIDER:-clerk}
+        NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY:-}
         NEXT_PUBLIC_APP_URL: ${NEXT_PUBLIC_APP_URL:-}
         NEXT_PUBLIC_SUPPORT_EMAIL: ${NEXT_PUBLIC_SUPPORT_EMAIL:-}
         NEXT_PUBLIC_SOURCE_REPO_URL: ${NEXT_PUBLIC_SOURCE_REPO_URL:-}
@@ -65,7 +66,14 @@ services:
     ports:
       - "${APP_PORT:-3000}:3000"
     environment:
-      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:?set CLERK_SECRET_KEY in .env}
+      CLERK_SECRET_KEY: ${CLERK_SECRET_KEY:-}
+      AUTH_SECRET: ${AUTH_SECRET:-}
+      AUTH_URL: ${NEXT_PUBLIC_APP_URL:-}
+      AUTH_TRUST_HOST: "true"
+      AUTH_OIDC_ISSUER: ${AUTH_OIDC_ISSUER:-}
+      AUTH_OIDC_CLIENT_ID: ${AUTH_OIDC_CLIENT_ID:-chaos-web}
+      AUTH_OIDC_CLIENT_SECRET: ${AUTH_OIDC_CLIENT_SECRET:-}
+      AUTH_OIDC_MCP_AUDIENCE: ${AUTH_OIDC_MCP_AUDIENCE:-chaos-mcp}
       CHAOS_MCP_SECRET: ${CHAOS_MCP_SECRET:-}
       CHAOS_MCP_CLIENT_IDS: ${CHAOS_MCP_CLIENT_IDS:-}
       OPENAI_APPS_CHALLENGE_TOKEN: ${OPENAI_APPS_CHALLENGE_TOKEN:-}
@@ -89,6 +97,8 @@ services:
       CONVEX_SELF_HOSTED_URL: http://backend:3210
       CONVEX_SELF_HOSTED_ADMIN_KEY: ${CONVEX_SELF_HOSTED_ADMIN_KEY:-} # checked by docker/convex-deploy.sh
       CLERK_JWT_ISSUER_DOMAIN: ${CLERK_JWT_ISSUER_DOMAIN:-}
+      CHAOS_AUTH_PROVIDER: ${NEXT_PUBLIC_AUTH_PROVIDER:-clerk}
+      AUTH_OIDC_ISSUER: ${AUTH_OIDC_ISSUER:-}
       CHAOS_APP_URL: ${CHAOS_APP_URL:-${NEXT_PUBLIC_APP_URL:-}}
       CHAOS_MCP_SECRET: ${CHAOS_MCP_SECRET:-}
       CHAOS_SUPPORT_EMAIL: ${CHAOS_SUPPORT_EMAIL:-${NEXT_PUBLIC_SUPPORT_EMAIL:-}}
@@ -101,5 +111,57 @@ services:
       backend:
         condition: service_healthy
 
+  keycloak-db:
+    profiles: ["oidc"]
+    image: postgres:17.11-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: keycloak
+      POSTGRES_USER: keycloak
+      POSTGRES_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-}
+    volumes:
+      - keycloak-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U keycloak -d keycloak"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  keycloak:
+    profiles: ["oidc"]
+    image: quay.io/keycloak/keycloak:26.8.0
+    restart: unless-stopped
+    # Only the TLS reverse proxy should reach this listener.
+    ports:
+      - "127.0.0.1:${KEYCLOAK_PORT:-8080}:8080"
+    entrypoint: ["/bin/bash", "-ec"]
+    command:
+      - |
+        : "$${KC_BOOTSTRAP_ADMIN_PASSWORD:?set KEYCLOAK_ADMIN_PASSWORD}"
+        : "$${KC_DB_PASSWORD:?set KEYCLOAK_DB_PASSWORD}"
+        : "$${AUTH_OIDC_CLIENT_SECRET:?set AUTH_OIDC_CLIENT_SECRET}"
+        : "$${CHAOS_APP_ORIGIN:?set NEXT_PUBLIC_APP_URL}"
+        : "$${KC_HOSTNAME:?set KEYCLOAK_HOSTNAME to an HTTPS origin}"
+        exec /opt/keycloak/bin/kc.sh start --import-realm
+    environment:
+      KC_DB: postgres
+      KC_DB_URL: jdbc:postgresql://keycloak-db:5432/keycloak
+      KC_DB_USERNAME: keycloak
+      KC_DB_PASSWORD: ${KEYCLOAK_DB_PASSWORD:-}
+      KC_BOOTSTRAP_ADMIN_USERNAME: ${KEYCLOAK_ADMIN_USERNAME:-admin}
+      KC_BOOTSTRAP_ADMIN_PASSWORD: ${KEYCLOAK_ADMIN_PASSWORD:-}
+      KC_HOSTNAME: ${KEYCLOAK_HOSTNAME:-}
+      KC_HTTP_ENABLED: "true"
+      KC_PROXY_HEADERS: xforwarded
+      AUTH_OIDC_CLIENT_ID: ${AUTH_OIDC_CLIENT_ID:-chaos-web}
+      AUTH_OIDC_CLIENT_SECRET: ${AUTH_OIDC_CLIENT_SECRET:-}
+      CHAOS_APP_ORIGIN: ${NEXT_PUBLIC_APP_URL:-}
+    volumes:
+      - ./docker/keycloak/chaos-realm.json:/opt/keycloak/data/import/chaos-realm.json:ro
+    depends_on:
+      keycloak-db:
+        condition: service_healthy
+
 volumes:
   convex-data:
+  keycloak-data:

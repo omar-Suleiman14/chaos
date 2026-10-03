@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo } from "react";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/lib/auth/client";
 import { useConvex } from "convex/react";
 import type { ConvexReactClient } from "convex/react";
 import { api } from "../../convex/_generated/api";

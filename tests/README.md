@@ -12,7 +12,9 @@ Three layers, each with its own runner and reasons:
 - **`tests/e2e`** — Playwright, a real browser against a real running app.
   **Optional in CI**: it requires `pnpm dev` (or an already-running instance
   via `PLAYWRIGHT_BASE_URL`) backed by a real Convex deployment and a real
-  Clerk instance, which the other two layers deliberately avoid needing. Run
+  Clerk or Keycloak instance, which the other layers deliberately avoid needing.
+  The creator smoke supports both providers; a passing unit suite does not verify
+  a live provider deployment. Run
   locally with `pnpm test:e2e`.
 
 `pnpm test` runs `test:unit` and `test:integration` only — the suites that
@@ -36,8 +38,9 @@ Set these environment variables before running it:
 - `PLAYWRIGHT_BASE_URL`: URL of the deployed E2E app.
 - `E2E_CONVEX_ENV`: marker naming the dedicated non-production Convex target
   (for example `e2e` or `staging`).
-- `E2E_CREATOR_EMAIL`: Clerk test-user email.
-- `E2E_CREATOR_PASSWORD`: Clerk test-user password. Use a dedicated account
+- `E2E_AUTH_PROVIDER`: `clerk` (default) or `oidc` for the standard Keycloak login page.
+- `E2E_CREATOR_EMAIL`: dedicated test-user email or Keycloak username.
+- `E2E_CREATOR_PASSWORD`: test-user password. Use a dedicated account
   without MFA for this automated flow.
 
 Run exactly:
@@ -51,7 +54,8 @@ named `prod` or `production`, by default. `E2E_ALLOW_PRODUCTION=true` is the
 explicit emergency override and is intentionally absent from the GitHub Actions
 workflow. `.github/workflows/e2e-smoke.yml` is manual-only, so this smoke test
 does not run blindly on every pull request. Configure its four referenced
-repository secrets with the same dedicated E2E target and Clerk test user.
+repository secrets with the same dedicated E2E target and test user. Set the
+repository variable `E2E_AUTH_PROVIDER=oidc` for Keycloak; default is Clerk.
 
 AI retirement coverage lives in `tests/integration/aiRetirement.test.ts`: stale public/internal calls fail without provider requests or writes, while legacy content and results remain readable.
 

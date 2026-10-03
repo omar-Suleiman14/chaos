@@ -12,6 +12,10 @@ tests
 .vscode
 .claude
 .agents
+AGENTS.md
+CLAUDE.md
+skills-lock.json
+convex/_generated/ai
 .clerk
 .vercel
 .pnp.*

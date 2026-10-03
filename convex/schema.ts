@@ -24,6 +24,7 @@ import { webhookTables } from "./webhookModel";
 import { liveTables } from "./liveModel";
 
 export default defineSchema({
+  authIdentityBindings: defineTable({ externalActorId: v.string(), actorId: v.string(), tokenIdentifier: v.string() }).index("by_externalActorId", ["externalActorId"]).index("by_actorId", ["actorId"]),
   ...docsTables,
   ...learnTables,
   ...discussionTables,

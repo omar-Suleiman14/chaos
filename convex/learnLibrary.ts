@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 import { query } from "./_generated/server";
@@ -46,7 +47,7 @@ export const flashcard = query({
   handler: async (ctx, args) => {
     const id = ctx.db.normalizeId("flashcardSets", args.id);
     if (!id) return null;
-    const row = await ctx.db.get("flashcardSets", id), identity = await ctx.auth.getUserIdentity();
+    const row = await ctx.db.get("flashcardSets", id), identity = await getAuthIdentity(ctx);
     if (!row || row.archived || (row.ownerId !== identity?.subject && (row.visibility !== "public" || !row.publishedVersionId || await creatorRestricted(ctx, row.ownerId)))) return null;
     if (row.ownerId === identity?.subject) return row;
     const version = await ctx.db.get("flashcardVersions", row.publishedVersionId!);
@@ -65,7 +66,7 @@ export const collection = query({
   args: { id: v.string() }, returns: v.union(schema.doc("collectionVersions"), v.null()),
   handler: async (ctx, args) => {
     const id = ctx.db.normalizeId("learnCollections", args.id);
-    const row = id && await ctx.db.get("learnCollections", id), identity = await ctx.auth.getUserIdentity();
+    const row = id && await ctx.db.get("learnCollections", id), identity = await getAuthIdentity(ctx);
     if (!row || !row.publishedVersionId || (row.ownerId !== identity?.subject && (row.visibility !== "public" || row.communityState !== "ok" || await creatorRestricted(ctx, row.ownerId)))) return null;
     return ctx.db.get("collectionVersions", row.publishedVersionId);
   },

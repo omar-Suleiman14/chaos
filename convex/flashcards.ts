@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { v, ConvexError, type Infer } from "convex/values";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
@@ -52,7 +53,7 @@ export const create = mutation({ args: { title: v.string(), cards }, returns: v.
 export const save = mutation({ args: { setId: v.id("flashcardSets"), expectedRevision: v.number(), title: v.string(), cards }, returns: v.number(), handler: async (ctx, args) => saveFlashcardSet(ctx, (await requireActiveUser(ctx)).identity.subject, args) });
 export const publish = mutation({ args: { setId: v.id("flashcardSets"), expectedRevision: v.number(), visibility }, returns: v.id("flashcardVersions"), handler: async (ctx, args) => publishFlashcardSet(ctx, (await requireActiveUser(ctx)).identity.subject, args) });
 export const getPublished = query({ args: { setId: v.id("flashcardSets") }, returns: v.union(schema.doc("flashcardVersions"), v.null()), handler: async (ctx, args) => {
-  const row = await ctx.db.get("flashcardSets", args.setId); const identity = await ctx.auth.getUserIdentity();
+  const row = await ctx.db.get("flashcardSets", args.setId); const identity = await getAuthIdentity(ctx);
   if (!row || row.archived || (row.ownerId !== identity?.subject && (row.visibility !== "public" || await creatorRestricted(ctx, row.ownerId)))) throw new Error("Flashcards not found or unauthorized");
   return row.publishedVersionId ? ctx.db.get("flashcardVersions", row.publishedVersionId) : null;
 } });

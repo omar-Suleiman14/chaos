@@ -1,3 +1,4 @@
+import { actorForAccount } from "./authIdentity";
 import { makeFunctionReference, type HttpRouter } from "convex/server";
 import { ConvexError, v } from "convex/values";
 import { httpAction, internalQuery, internalMutation, type QueryCtx, type MutationCtx } from "./_generated/server";
@@ -22,13 +23,8 @@ function canonical(value: unknown): string {
   return JSON.stringify(value) ?? "null";
 }
 /** Issuer is deployment configuration, never supplied by a client. Fail closed if absent. */
-function trustedActor(subject: string) {
-  // eslint-disable-next-line @convex-dev/no-process-env -- existing auth issuer is deploy configuration; parent owns env declaration
-  const issuer = process.env.CLERK_JWT_ISSUER_DOMAIN?.trim();
-  if (!issuer) throw new Error("Identity issuer is not configured");
-  const url = new URL(issuer);
-  if (url.protocol !== "https:" || url.username || url.password || url.search || url.hash) throw new Error("Invalid identity issuer configuration");
-  return { subject, tokenIdentifier: `${issuer}|${subject}` };
+async function trustedActor(ctx: Ctx, subject: string) {
+  return actorForAccount(ctx, subject);
 }
 async function selected(ctx: Ctx, token: Doc<"integrationTokens">, ref: string) {
   return token.itemRefs.includes(ref) || !!await ctx.db.query("integrationCreatedItems").withIndex("by_tokenId_and_itemRef", q => q.eq("tokenId", token._id).eq("itemRef", ref)).unique();
@@ -45,7 +41,7 @@ const base = { tokenId: v.id("integrationTokens"), ...studyTarget.fields };
 export const getProgress = internalQuery({ args: base, returns: resultValidator, handler: async (ctx, args): Promise<Result> => {
   const token = await authorize(ctx, args.tokenId, args.lessonId, "progress:read"); if ("status" in token) return token;
   try {
-    const state = await readStudyProgress(ctx, trustedActor(token.ownerId), args);
+    const state = await readStudyProgress(ctx, await trustedActor(ctx, token.ownerId), args);
     return { status: 200, body: { progress: state ? { sessionSeq: state.sessionSeq, writeSeq: state.writeSeq, completedBlockIds: state.completedBlocks, updatedAt: state.updatedAt } : null } };
   } catch (error) { return caught(error); }
 } });
@@ -54,7 +50,7 @@ export const writeProgress = internalMutation({ args: { ...base, idempotencyKey:
   const token = await authorize(ctx, args.tokenId, args.lessonId, "progress:write"); if ("status" in token) return token;
   if (!/^[\x21-\x7e]{1,200}$/.test(args.idempotencyKey)) return fail(400, "VALIDATION_FAILED", "Invalid Idempotency-Key");
   try {
-    const actor = trustedActor(token.ownerId);
+    const actor = await trustedActor(ctx, token.ownerId);
     // Revalidate the target before every replay, including stale draft revisions.
     await readStudyProgress(ctx, actor, args);
     const key = `v2:progress:${args.idempotencyKey}`;
@@ -76,7 +72,7 @@ export const getContext = internalQuery({ args: { tokenId: v.id("integrationToke
   if (args.includeMyProgress && !token.scopes.includes("progress:read")) return fail(403, "INSUFFICIENT_SCOPE", "Progress inclusion requires progress:read");
   if (args.sourceIds.length && !token.scopes.includes("sources:read")) return fail(403, "INSUFFICIENT_SCOPE", "Sources require sources:read");
   for (const id of args.sourceIds) if (!await selected(ctx, token, `source_${id}`)) return fail(404, "NOT_FOUND", "Source is not selected");
-  try { return { status: 200, body: await assembleForActor(ctx, trustedActor(token.ownerId), args) }; }
+  try { return { status: 200, body: await assembleForActor(ctx, await trustedActor(ctx, token.ownerId), args) }; }
   catch (error) { return caught(error); }
 } });
 

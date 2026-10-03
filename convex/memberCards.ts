@@ -1,3 +1,4 @@
+import { getAuthIdentity } from "./authIdentity";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
@@ -13,7 +14,7 @@ export const mine = query({
   args: {},
   returns: v.union(card, v.null()),
   handler: async (ctx) => {
-    const identity = await ctx.auth.getUserIdentity();
+    const identity = await getAuthIdentity(ctx);
     if (!identity) return null;
     const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", identity.subject)).first();
     return user ? view(user) : null;

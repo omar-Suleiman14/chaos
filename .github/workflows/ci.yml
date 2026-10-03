@@ -58,6 +58,18 @@ jobs:
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_Y2ktcGxhY2Vob2xkZXIuZXhhbXBsZS5jb20k"
           CLERK_SECRET_KEY: "sk_test_ci-placeholder-not-a-real-credential"
 
+      - name: Build without Clerk
+        run: pnpm build
+        env:
+          NEXT_PUBLIC_AUTH_PROVIDER: "oidc"
+          NEXT_PUBLIC_CONVEX_URL: "https://ci-placeholder.convex.cloud"
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ""
+          CLERK_SECRET_KEY: ""
+          AUTH_OIDC_ISSUER: "https://identity.example.com/realms/chaos"
+          AUTH_OIDC_CLIENT_ID: "chaos-web"
+          AUTH_OIDC_CLIENT_SECRET: "build-only-placeholder-client-secret"
+          AUTH_SECRET: "build-only-placeholder-session-secret-at-least-32-characters"
+
   docker:
     name: Docker image build
     runs-on: ubuntu-latest
