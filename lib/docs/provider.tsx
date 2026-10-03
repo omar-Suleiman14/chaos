@@ -1,15 +1,20 @@
 "use client";
 import { createContext, useContext, useMemo, type ReactNode } from "react";
 import { useQuery } from "convex/react";
+import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import { useLocale } from "@/lib/i18n";
 import type { DocSection, DocBlock } from "./types";
 import type { DocSearchEntry } from "./index";
+import type { Locale } from "@/lib/locale";
 
 const DocsContext = createContext<{ sections: DocSection[]; loading: boolean }>({ sections: [], loading: true });
-function LiveDocs({ children }: { children: ReactNode }) {
+type Rows = FunctionReturnType<typeof api.docs.listPublished>;
+function LiveDocs({ children, seed }: { children: ReactNode; seed?: { locale: Locale; rows: Rows } }) {
   const { locale } = useLocale();
-  const rows = useQuery(api.docs.listPublished, { locale });
+  const live = useQuery(api.docs.listPublished, { locale });
+  // The server's cached catalog paints first; the live query replaces it once connected.
+  const rows = live ?? (seed?.locale === locale ? seed.rows : undefined);
   const sections = useMemo(() => {
     const groups = new Map<string, DocSection>();
     for (const row of rows ?? []) {
@@ -20,6 +25,10 @@ function LiveDocs({ children }: { children: ReactNode }) {
     return [...groups.values()];
   }, [rows]);
   return <DocsContext.Provider value={{ sections, loading: rows === undefined }}>{children}</DocsContext.Provider>;
+}
+/** Docs pages pass the catalog the server already fetched, so guides render without waiting for the socket. */
+export function SeededDocs({ seed, children }: { seed: { locale: Locale; rows: Rows }; children: ReactNode }) {
+  return process.env.NEXT_PUBLIC_CONVEX_URL ? <LiveDocs seed={seed}>{children}</LiveDocs> : <>{children}</>;
 }
 /** One live public catalog subscription persists across app navigation. No bundled article fallback. */
 export function DocsProvider({ children }: { children: ReactNode }) {

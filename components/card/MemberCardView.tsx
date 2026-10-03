@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Download, RefreshCw, Send, Wallet } from "lucide-react";
+import { Copy, Download, RefreshCw, Send, Wallet } from "lucide-react";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { CARD_THEMES, memberCardPng, memberCardSvg, type MemberCardData } from "@/lib/memberCard";
 import "./card.css";
@@ -11,11 +11,11 @@ import { cardRuqaa } from "@/lib/cardFonts";
 const copy = {
   en: {
     label: "Your Chaos member card", flip: "Flip card", flipBack: "Show front", shuffle: "Change colours", download: "Download card",
-    share: "Share card", google: "Add to Google Wallet", copied: "Link copied", shared: "Shared", failed: "Couldn't do that. Try again.", cardOf: (n: string) => `${n}'s Chaos member card`,
+    share: "Share card", copyLink: "Copy link", google: "Add to Google Wallet", copied: "Link copied", shared: "Shared", failed: "Couldn't do that. Try again.", cardOf: (n: string) => `${n}'s Chaos member card`,
   },
   ar: {
     label: "بطاقة عضويتك في Chaos", flip: "اقلب البطاقة", flipBack: "اعرض الوجه", shuffle: "غيّر الألوان", download: "نزّل البطاقة",
-    share: "شارك البطاقة", google: "أضف إلى Google Wallet", copied: "نُسخ الرابط", shared: "تمت المشاركة", failed: "تعذر ذلك. حاول مجددًا.", cardOf: (n: string) => `بطاقة عضوية ${n} في Chaos`,
+    share: "شارك البطاقة", copyLink: "انسخ الرابط", google: "أضف إلى Google Wallet", copied: "نُسخ الرابط", shared: "تمت المشاركة", failed: "تعذر ذلك. حاول مجددًا.", cardOf: (n: string) => `بطاقة عضوية ${n} في Chaos`,
   },
 };
 
@@ -64,6 +64,10 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
     } catch (err) { if (!(err instanceof DOMException && err.name === "AbortError")) say(t.failed); }
   };
 
+  const copyLink = async () => {
+    try { await navigator.clipboard.writeText(data.url); say(t.copied); } catch { say(t.failed); }
+  };
+
   const move = (e: React.PointerEvent) => {
     const el = tilt.current; if (!el || e.pointerType === "touch") return;
     const r = el.getBoundingClientRect();
@@ -94,6 +98,9 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
         <button type="button" className="mc-btn" title={t.share} aria-label={t.share} onClick={() => void share()}><Send size={18} aria-hidden /><span>{t.share}</span></button>
         {wallet.google && <a className="mc-btn mc-btn--wallet" href={`${walletBase}/google`} target="_blank" rel="noopener"><Wallet size={18} aria-hidden /><span>{t.google}</span></a>}
       </div>
+      <button type="button" className="mc-link" title={t.copyLink} aria-label={`${t.copyLink}: ${data.url}`} onClick={() => void copyLink()}>
+        <span dir="ltr">{data.url.replace(/^https?:\/\//, "")}</span><Copy size={16} aria-hidden />
+      </button>
       <p className="mc-status" role="status">{status}</p>
     </div>
   );

@@ -4,7 +4,7 @@ import "./live.css";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, Check, Maximize, Minimize, Pause, Play, Users, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, Maximize, Minimize, Pause, Play, Users, Volume2, VolumeX, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { BREAKS, TIME_LIMITS } from "@/convex/liveLogic";
@@ -19,14 +19,14 @@ import { Announcer, Countdown, StartCountdown, usePrefersReducedMotion, useSecon
 import { gameSound, gameThemeProps } from "./GameTheme";
 import { ThemePicker } from "@/components/ThemePicker";
 import { themeFromPreset } from "@/components/forms/formThemes";
-import TeamPanel from "./TeamPanel";
+import TeamPanel, { TEAMS_ENABLED } from "./TeamPanel";
 
 const copy = {
   en: {
     loading: "Loading game…", missing: "This game was not found, or you are not its host.", back: "Back to games", settings: "Game settings", theme: "Theme", answerLabels: "Show answer text on phones",
     autoplay: "Autoplay", breakTime: "Pause between questions", autoStart: "Start when this many join", manual: "When I press Start",
     nextIn: (n: number) => `Next in ${n}`, pause: "Pause", cancel: "Cancel", startNow: "Start now",
-    joinAt: "Join at", withPin: "Game PIN", scan: "Or scan to join",
+    joinAt: "Join at", withPin: "Game PIN", scan: "Or scan to join", copyLink: "Copy join link", linkCopied: "Link copied", copyFailed: "Couldn't copy. Select the link instead.",
     players: (n: number) => `${n} ${n === 1 ? "player" : "players"}`, waiting: "Waiting for players…",
     remove: (name: string) => `Remove ${name}`, confirmRemove: (name: string) => `Remove ${name} from the game?`,
     time: "Time per question", seconds: (n: number) => `${n} s`, start: "Start", skipped: (n: number) => `${n} question${n === 1 ? "" : "s"} skipped (live games need 2–4 choices).`,
@@ -46,7 +46,7 @@ const copy = {
     loading: "جارٍ تحميل اللعبة…", missing: "لم نجد هذه اللعبة، أو لست مضيفها.", back: "العودة إلى الألعاب", settings: "إعدادات اللعبة", theme: "المظهر", answerLabels: "اعرض نص الإجابات على الهواتف",
     autoplay: "تشغيل تلقائي", breakTime: "الاستراحة بين الأسئلة", autoStart: "ابدأ عند انضمام هذا العدد", manual: "عندما أضغط ابدأ",
     nextIn: (n: number) => `التالي بعد ${n}`, pause: "إيقاف مؤقت", cancel: "إلغاء", startNow: "ابدأ الآن",
-    joinAt: "انضم عبر", withPin: "رمز اللعبة", scan: "أو امسح الرمز للانضمام",
+    joinAt: "انضم عبر", withPin: "رمز اللعبة", scan: "أو امسح الرمز للانضمام", copyLink: "انسخ رابط الانضمام", linkCopied: "نُسخ الرابط", copyFailed: "تعذر النسخ. حدد الرابط بدلًا من ذلك.",
     players: (n: number) => (n === 1 ? "لاعب واحد" : n === 2 ? "لاعبان" : n >= 3 && n <= 10 ? `${n} لاعبين` : `${n} لاعبًا`), waiting: "بانتظار اللاعبين…",
     remove: (name: string) => `إزالة ${name}`, confirmRemove: (name: string) => `هل تريد إزالة ${name} من اللعبة؟`,
     time: "الوقت لكل سؤال", seconds: (n: number) => `${n} ث`, start: "ابدأ", skipped: (n: number) => `تُرك ${n === 1 ? "سؤال واحد" : `${n} من الأسئلة`} (تحتاج الألعاب إلى 2–4 خيارات).`,
@@ -96,6 +96,11 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://chaos.fail";
   const joinUrl = game ? `${origin}/play?pin=${game.pin}` : "";
   const qr = useMemo(() => (joinUrl ? qrSvg(joinUrl) : ""), [joinUrl]);
+  const [copied, setCopied] = useState("");
+  const copyJoinLink = async () => {
+    try { await navigator.clipboard.writeText(joinUrl); setCopied(t.linkCopied); } catch { setCopied(t.copyFailed); }
+    window.setTimeout(() => setCopied(""), 2500);
+  };
 
   // Sounds and announcements follow state changes.
   const lastState = useRef<string>("");
@@ -190,7 +195,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
 
       <main className="live-main" id="live-main">
         {error && <p className="live-error" role="alert">{error}</p>}
-        <TeamPanel gameId={gameId} frozen={game.state !== "lobby" || game.startsAt != null} maxPlayers={game.settings.maxPlayers} players={game.players} />
+        {TEAMS_ENABLED && <TeamPanel gameId={gameId} frozen={game.state !== "lobby" || game.startsAt != null} maxPlayers={game.settings.maxPlayers} players={game.players} />}
 
         {game.state === "lobby" && game.startsAt && (
           <div className="live-center">
@@ -209,6 +214,10 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
                 <p className="text-2xl">{t.joinAt} <strong dir="ltr">{origin.replace(/^https?:\/\//, "")}/play</strong></p>
                 <p className="live-muted text-xl">{t.withPin}</p>
                 <p className="live-pin" aria-label={game.pin.split("").join(" ")}>{game.pin.slice(0, 3)} {game.pin.slice(3)}</p>
+                <button type="button" className="live-copy-link" title={t.copyLink} aria-label={`${t.copyLink}: ${joinUrl}`} onClick={() => void copyJoinLink()}>
+                  <span dir="ltr">{joinUrl.replace(/^https?:\/\//, "")}</span><Copy size={18} aria-hidden="true" />
+                </button>
+                <p className="live-muted" role="status">{copied}</p>
               </div>
               <figure className="flex flex-col items-center gap-2 m-0">
                 <div className="live-qr" role="img" aria-label={t.scan} dangerouslySetInnerHTML={{ __html: qr }} />

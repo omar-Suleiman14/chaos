@@ -11,6 +11,9 @@ const copy = {
   en: { title: "Teams", loading: "Loading teams…", empty: "No teams yet.", name: "Team name", capacity: "Maximum members", create: "Create team", player: "Player", team: "Team", choose: "Choose a team", assign: "Assign player", join: "Join team", rank: "Rank", members: "Members", score: "Score", frozen: "Teams are locked once the countdown starts.", created: "Team created.", assigned: "Player assigned.", joined: "You joined the team.", failed: "Could not update the team. Try again.", full: "This team is full. Choose another team.", busy: "Saving…" },
   ar: { title: "الفرق", loading: "جارٍ تحميل الفرق…", empty: "لا توجد فرق بعد.", name: "اسم الفريق", capacity: "الحد الأقصى للأعضاء", create: "إنشاء فريق", player: "اللاعب", team: "الفريق", choose: "اختر فريقًا", assign: "تعيين اللاعب", join: "الانضمام للفريق", rank: "الترتيب", members: "الأعضاء", score: "الدرجة", frozen: "تُقفل الفرق عند بدء العد التنازلي.", created: "تم إنشاء الفريق.", assigned: "تم تعيين اللاعب.", joined: "انضممت إلى الفريق.", failed: "تعذر تحديث الفريق. حاول مجددًا.", full: "هذا الفريق مكتمل. اختر فريقًا آخر.", busy: "جارٍ الحفظ…" },
 };
+/** Teams are switched off in the host and player screens until the feature is ready. */
+export const TEAMS_ENABLED = false;
+
 type HostProps = { gameId: Id<"liveGames">; frozen: boolean; maxPlayers: number; players: { _id: Id<"livePlayers">; nickname: string }[]; token?: never };
 type PlayerProps = { gameId: Id<"liveGames">; frozen: boolean; token: string; maxPlayers?: never; players?: never };
 
