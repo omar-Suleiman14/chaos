@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 /**
  * Tilts the card toward the pointer. The easing runs here, one frame at a time, rather than as a CSS
@@ -30,4 +30,28 @@ export function useTilt(stage: RefObject<HTMLElement | null>) {
     el.addEventListener("pointerleave", leave);
     return () => { el.removeEventListener("pointermove", move); el.removeEventListener("pointerleave", leave); cancelAnimationFrame(frame); };
   }, [stage]);
+}
+
+/**
+ * Turns the card to `turn` degrees over 0.7s, frame by frame, for the same reason as useTilt: as a CSS
+ * transition the card was blurry for the whole flip and a moment after it landed.
+ */
+export function useFlip(card: RefObject<HTMLElement | null>, turn: number) {
+  const shown = useRef(turn);
+  useEffect(() => {
+    const el = card.current;
+    if (!el) return;
+    const from = shown.current;
+    const set = (deg: number) => { shown.current = deg; el.style.setProperty("--flip", `${deg}deg`); };
+    if (from === turn || window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) { set(turn); return; }
+    let frame = 0;
+    const start = performance.now();
+    const step = (now: number) => {
+      const p = Math.min(1, (now - start) / 700);
+      set(from + (turn - from) * (1 - Math.pow(1 - p, 4))); // ease-out
+      if (p < 1) frame = requestAnimationFrame(step);
+    };
+    frame = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(frame);
+  }, [card, turn]);
 }

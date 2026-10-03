@@ -6,16 +6,20 @@
    A filter on a 3D element flattens it, so the shadow must stay outside the 3D context.
    The stage needs a fixed width capped by max-width: a percentage width collapses to zero when its grid track sizes to content. */
 .mc-stage { width:340px; max-width:100%; margin-inline:auto; perspective:1400px; --rx:0deg; --ry:0deg; --gx:50%; --gy:50%; filter:drop-shadow(0 24px 32px rgba(0,0,0,.2)) drop-shadow(0 4px 8px rgba(0,0,0,.1)); }
-/* No transition here: useTilt eases the tilt itself so the text stays sharp while it moves. */
-.mc-tilt { width:100%; transform-style:preserve-3d; transform:rotateX(var(--rx)) rotateY(var(--ry)); animation:mc-in .9s cubic-bezier(.2,.9,.2,1) backwards; }
-.mc-card { position:relative; display:block; width:100%; aspect-ratio:340/500; border:0; padding:0; background:none; cursor:pointer; transform-style:preserve-3d; transform:rotateY(var(--flip,0deg)); transition:transform .7s cubic-bezier(.2,.8,.2,1); border-radius:18px; }
+/* Keeping the card sharp while it moves:
+   - will-change makes Chrome draw the card once at full resolution and reuse it as it tilts and flips. Without it,
+     every new angle triggers a redraw, and Chrome shows a blurry stand-in until each one finishes.
+   - No transitions on these transforms: useTilt and useFlip ease them frame by frame. */
+.mc-tilt { width:100%; will-change:transform; transform-style:preserve-3d; transform:rotateX(var(--rx)) rotateY(var(--ry)); animation:mc-in .9s cubic-bezier(.2,.9,.2,1) backwards; }
+.mc-card { position:relative; display:block; will-change:transform; width:100%; aspect-ratio:340/500; border:0; padding:0; background:none; cursor:pointer; transform-style:preserve-3d; transform:rotateY(var(--flip,0deg)); border-radius:18px; }
 .mc-face { position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:18px; overflow:hidden; }
 .mc-face svg { display:block; width:100%; height:100%; }
 .mc-face--back { transform:rotateY(180deg); }
 .mc-glare { position:absolute; inset:0; border-radius:18px; pointer-events:none; mix-blend-mode:soft-light; opacity:0; transform:translateZ(1px); transition:opacity .8s ease; background:radial-gradient(circle at var(--gx) var(--gy),rgba(255,255,255,.35),transparent 60%); }
 .mc-stage:hover .mc-glare { opacity:1; }
 .mc-card[data-flipped="true"] .mc-glare { display:none; }
-@keyframes mc-in { from { opacity:0; transform:translateY(24px) rotateX(12deg) rotateY(-16deg) scale(.94); } }
+/* Fade and rise only: a rotating or scaling CSS animation would blur the card until it ends. */
+@keyframes mc-in { from { opacity:0; transform:translateY(24px); } }
 .mc-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
 .mc-gap { display:none; }
 .mc-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-width:44px; min-height:44px; padding:8px 12px; border-radius:8px; cursor:pointer; color:var(--on-background); background:var(--ws-card,var(--surface-container-low)); border:1px solid var(--ws-line,var(--outline-variant)); font-size:13px; }
@@ -60,6 +64,6 @@
 .mc-public .mc-cta:hover { background:#000; transform:translateY(-1px); }
 .mc-public__brand { font-size:13px; color:#86868b; text-decoration:none; }
 
-@media(prefers-reduced-motion:reduce) { .mc-tilt { animation:none; transform:none; } .mc-card { transition:none; } .mc-glare { display:none; } }
+@media(prefers-reduced-motion:reduce) { .mc-tilt { animation:none; transform:none; } .mc-glare { display:none; } }
 .mc-eyes { transition:transform .35s cubic-bezier(.22,.61,.36,1); }
 .mc-profile .mc-stage { width:240px; }

@@ -1,22 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Copy, Download, RefreshCw, Send, Wallet } from "lucide-react";
+import { Download, RefreshCw, Send, Wallet } from "lucide-react";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { CARD_THEMES, memberCardGrain, memberCardPng, memberCardSvg, withGrainImage, type MemberCardData } from "@/lib/memberCard";
 import "./card.css";
 import { useEyesFollowPointer } from "./useEyesFollowPointer";
-import { useTilt } from "./useTilt";
+import { useFlip, useTilt } from "./useTilt";
 import { cardRuqaa } from "@/lib/cardFonts";
 
 const copy = {
   en: {
     label: "Your Chaos member card", flip: "Flip card", flipBack: "Show front", shuffle: "Change colours", download: "Download card",
-    share: "Share card", copyLink: "Copy link", google: "Add to Google Wallet", copied: "Link copied", shared: "Shared", failed: "Couldn't do that. Try again.", cardOf: (n: string) => `${n}'s Chaos member card`,
+    share: "Share card", google: "Add to Google Wallet", copied: "Link copied", shared: "Shared", failed: "Couldn't do that. Try again.", cardOf: (n: string) => `${n}'s Chaos member card`,
   },
   ar: {
     label: "بطاقة عضويتك في Chaos", flip: "اقلب البطاقة", flipBack: "اعرض الوجه", shuffle: "غيّر الألوان", download: "نزّل البطاقة",
-    share: "شارك البطاقة", copyLink: "انسخ الرابط", google: "أضف إلى Google Wallet", copied: "نُسخ الرابط", shared: "تمت المشاركة", failed: "تعذر ذلك. حاول مجددًا.", cardOf: (n: string) => `بطاقة عضوية ${n} في Chaos`,
+    share: "شارك البطاقة", google: "أضف إلى Google Wallet", copied: "نُسخ الرابط", shared: "تمت المشاركة", failed: "تعذر ذلك. حاول مجددًا.", cardOf: (n: string) => `بطاقة عضوية ${n} في Chaos`,
   },
 };
 
@@ -38,6 +38,8 @@ export default function MemberCardView({ data, onStyle, framed = true, actions }
     const left = e.detail > 0 && e.clientX < r.left + r.width / 2;
     setTurn((t) => t + (left ? -180 : 180));
   };
+  const cardEl = useRef<HTMLButtonElement>(null);
+  useFlip(cardEl, turn);
   const [status, setStatus] = useState("");
   const tilt = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -77,17 +79,13 @@ export default function MemberCardView({ data, onStyle, framed = true, actions }
     } catch (err) { if (!(err instanceof DOMException && err.name === "AbortError")) say(t.failed); }
   };
 
-  const copyLink = async () => {
-    try { await navigator.clipboard.writeText(data.url); say(t.copied); } catch { say(t.failed); }
-  };
-
   return (
     <div className={`mc ${cardRuqaa.variable}`} ref={root}>
       <div className={framed ? "mc-frame" : undefined}>
         {framed && <span className="mc-frame__label">{t.label}</span>}
         <div className="mc-stage" ref={tilt}>
           <div className="mc-tilt">
-            <button type="button" className="mc-card" data-flipped={flipped} style={{ ["--flip" as string]: `${turn}deg` }} title={flipped ? t.flipBack : t.flip} onClick={flip} aria-label={`${t.cardOf(data.name)}. ${flipped ? t.flipBack : t.flip}`}>
+            <button type="button" className="mc-card" ref={cardEl} data-flipped={flipped} title={flipped ? t.flipBack : t.flip} onClick={flip} aria-label={`${t.cardOf(data.name)}. ${flipped ? t.flipBack : t.flip}`}>
               <span aria-hidden={flipped} className="mc-face mc-face--front" dangerouslySetInnerHTML={{ __html: front }} />
               <span aria-hidden={!flipped} className="mc-face mc-face--back" dangerouslySetInnerHTML={{ __html: back }} />
               <span className="mc-glare" aria-hidden />
@@ -100,7 +98,6 @@ export default function MemberCardView({ data, onStyle, framed = true, actions }
         <span className="mc-gap" />
         <button type="button" className="mc-btn" title={t.download} aria-label={t.download} onClick={() => void download()}><Download size={18} aria-hidden /><span>{t.download}</span></button>
         <button type="button" className="mc-btn" title={t.share} aria-label={t.share} onClick={() => void share()}><Send size={18} aria-hidden /><span>{t.share}</span></button>
-        <button type="button" className="mc-btn" title={t.copyLink} aria-label={t.copyLink} onClick={() => void copyLink()}><Copy size={18} aria-hidden /><span>{t.copyLink}</span></button>
         {wallet.google && <a className="mc-btn mc-btn--wallet" href={`${walletBase}/google`} target="_blank" rel="noopener"><Wallet size={18} aria-hidden /><span>{t.google}</span></a>}
         {actions}
       </div>
