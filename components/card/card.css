@@ -6,7 +6,8 @@
    The shadow is a box-shadow on each face, not a filter here: a filter around the 3D card makes Chrome draw the
    tilted card into an in-between image first, which softens the text a second time.
    The stage needs a fixed width capped by max-width: a percentage width collapses to zero when its grid track sizes to content. */
-.mc-stage { width:340px; max-width:100%; margin-inline:auto; perspective:1400px; --rx:0deg; --ry:0deg; --tx:0px; --ty:0px; --gx:50%; --gy:50%; --mc-shadow:0 24px 32px rgba(0,0,0,.2),0 4px 8px rgba(0,0,0,.1); }
+/* Above the buttons below it: their frosted backgrounds would otherwise draw over a card tilted or pushed onto them. */
+.mc-stage { position:relative; z-index:1; width:340px; max-width:100%; margin-inline:auto; perspective:1400px; --rx:0deg; --ry:0deg; --tx:0px; --ty:0px; --gx:50%; --gy:50%; --mc-shadow:0 24px 32px rgba(0,0,0,.2),0 4px 8px rgba(0,0,0,.1); }
 /* Keeping the card sharp while it moves:
    - will-change makes Chrome draw the card once at full resolution and reuse it as it tilts and flips. Without it,
      every new angle triggers a redraw, and Chrome shows a blurry stand-in until each one finishes.
