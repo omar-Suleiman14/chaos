@@ -25,6 +25,15 @@ describe("author card directory", () => {
    fireEvent.keyDown(stage, {key: "ArrowRight"});
    expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author0");
  });
+ it("uses keyboard arrows without focusing the stack, and leaves text controls alone", () => {
+   render(<><input aria-label="Search"/><PublicAuthors/></>);
+   fireEvent.keyDown(window, {key:"ArrowRight"});
+   expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author1");
+   fireEvent.keyDown(screen.getByRole("textbox", {name:"Search"}), {key:"ArrowRight"});
+   expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author1");
+   fireEvent.keyDown(window, {key:"ArrowLeft"});
+   expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author0");
+ });
  it("continues past filtered empty pages rather than claiming no authors exist", () => {
    backend.paginate.mockReturnValue({results: [], status: "CanLoadMore", loadMore: backend.loadMore});
    render(<PublicAuthors/>);

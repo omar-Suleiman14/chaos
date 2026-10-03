@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { usePaginatedQuery } from "convex/react";
 import Link from "next/link";
 import { ChevronLeft } from "lucide-react";
@@ -30,13 +30,24 @@ export default function PublicAuthors() {
   const wheelAt = useRef(0);
   const pendingNext = useRef(false);
   const previousLength = useRef(0);
-  const next = () => {
+  const next = useCallback(() => {
     if (index < results.length - 1) setIndex(index + 1);
     else if (status === "CanLoadMore") { pendingNext.current = true; loadMore(24); }
     else if (status === "LoadingMore") pendingNext.current = true;
     else if (status === "Exhausted") setIndex(0);
-  };
-  const previous = () => setIndex(index > 0 ? index - 1 : results.length - 1);
+  }, [index, results.length, status, loadMore]);
+  const previous = useCallback(() => setIndex(index > 0 ? index - 1 : Math.max(0, results.length - 1)), [index, results.length]);
+  useEffect(() => {
+    const keydown = (event: KeyboardEvent) => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || results.length < 2) return;
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable], [role="menu"], [role="listbox"], [role="dialog"], [role="radiogroup"]')) return;
+      if (event.key === "ArrowRight" || event.key === "ArrowDown") { event.preventDefault(); next(); }
+      else if (event.key === "ArrowLeft" || event.key === "ArrowUp") { event.preventDefault(); previous(); }
+    };
+    window.addEventListener("keydown", keydown);
+    return () => window.removeEventListener("keydown", keydown);
+  }, [next, previous, results.length]);
   useEffect(() => {
     if (pendingNext.current && results.length > previousLength.current) { setIndex(previousLength.current); pendingNext.current = false; }
     previousLength.current = results.length;
