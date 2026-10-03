@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { usePaginatedQuery } from "convex/react";
 import Link from "next/link";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useLocale } from "@/lib/i18n";
 import { cardRuqaa } from "@/lib/cardFonts";
@@ -78,6 +78,10 @@ export default function PublicAuthors() {
           onClickCapture={event => { if (suppressClick.current) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false; } }}
           onDragStart={event => event.preventDefault()}>
           {cards.map(({author, position}) => { const depth = Math.abs(position); return <Link key={author.username} href={`/card/${encodeURIComponent(author.username)}`} aria-label={`${ar ? "??? ?????" : "View card of"} ${author.name}`} tabIndex={position === 0 ? 0 : -1} draggable={false} className="author-stack-card" aria-hidden={position !== 0} style={{ "--depth": depth, "--position": position, "--lean": `${position * 3}deg`, "--turn": `${position * -12}deg`, zIndex: 5 - depth } as CSSProperties} data-active={position === 0}><AuthorArt author={author} locale={locale} /></Link>; })}
+          <div className="author-navigation" aria-label={ar ? "تصفح المؤلفين" : "Browse authors"}>
+            <button type="button" className="author-arrow author-arrow--previous" aria-label={ar ? "المؤلف السابق" : "Previous author"} onPointerDown={event => event.stopPropagation()} onClick={previous} disabled={results.length < 2}><ChevronLeft size={20} /></button>
+            <button type="button" className="author-arrow author-arrow--next" aria-label={ar ? "المؤلف التالي" : "Next author"} onPointerDown={event => event.stopPropagation()} onClick={next} disabled={results.length < 2 && status === "Exhausted"}><ChevronRight size={20} /></button>
+          </div>
         </div>
         <p className="sr-only" aria-live="polite" aria-atomic="true">{current?.name} @{current?.username}</p>
         <p className="authors-hint">{ar ? "اسحب يمينًا أو يسارًا، أو مرّر فوق البطاقات." : "Swipe left or right, or scroll over the cards."}</p>
