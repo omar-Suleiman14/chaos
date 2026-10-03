@@ -9,6 +9,7 @@ import { useLocale } from "@/lib/i18n";
 import { cardRuqaa } from "@/lib/cardFonts";
 import { memberCardSvg } from "@/lib/memberCard";
 import { useEyesFollowPointer } from "@/components/card/useEyesFollowPointer";
+import { useTilt } from "@/components/card/useTilt";
 import { SiteNav, SiteFooter } from "./SiteChrome";
 import "@/app/landing.css";
 import "./authors.css";
@@ -28,6 +29,9 @@ export default function PublicAuthors() {
   const stage = useRef<HTMLDivElement>(null);
   // Every avatar in the stack looks toward the mouse (or finger while swiping).
   useEyesFollowPointer(stage);
+  // The front card shies away from the mouse and follows a phone's tilt (useTilt writes the variables authors.css reads).
+  const frontCard = useCallback(() => stage.current?.querySelector<HTMLElement>(".author-stack-card[data-active=true]") ?? null, []);
+  useTilt(stage, frontCard);
   const gesture = useRef<{ x: number; y: number } | null>(null);
   const suppressClick = useRef(false);
   const wheelAt = useRef(0);
@@ -86,8 +90,6 @@ export default function PublicAuthors() {
       {status === "LoadingFirstPage" ? <p className="authors-state" role="status">{ar ? "جارٍ تحميل المؤلفين…" : "Loading authors…"}</p> : !results.length ? <p className="authors-state" role="status">{status === "Exhausted" ? (ar ? "لا يوجد مؤلفون بمحتوى عام بعد." : "No authors with public content yet.") : (ar ? "جارٍ البحث عن المؤلفين…" : "Finding authors…")}</p> : <>
         <div ref={stage} className="author-stack" role="region" aria-roledescription="carousel" aria-label={ar ? "بطاقات المؤلفين" : "Author cards"} tabIndex={0}
           onKeyDown={event => { if (event.key === "ArrowRight") { event.preventDefault(); next(); } else if (event.key === "ArrowLeft") { event.preventDefault(); previous(); } else if (event.key === "Home") { event.preventDefault(); setIndex(0); } }}
-          onPointerMove={event => { if (event.pointerType === "touch") return; const bounds = event.currentTarget.getBoundingClientRect(); const x = Math.max(-.5, Math.min(.5, (event.clientX - bounds.left) / bounds.width - .5)); const y = Math.max(-.5, Math.min(.5, (event.clientY - bounds.top) / bounds.height - .5)); event.currentTarget.style.setProperty("--hover-x", `${-y * 10}deg`); event.currentTarget.style.setProperty("--hover-y", `${x * 14}deg`); }}
-          onPointerLeave={event => { event.currentTarget.style.setProperty("--hover-x", "0deg"); event.currentTarget.style.setProperty("--hover-y", "0deg"); }}
           onPointerDown={event => { suppressClick.current = false; gesture.current = { x: event.clientX, y: event.clientY }; }}
           onPointerUp={event => { if (!gesture.current) return; const delta = event.clientX - gesture.current.x; const vertical = event.clientY - gesture.current.y; gesture.current = null; suppressClick.current = Math.abs(delta) > 12 || Math.abs(vertical) > 12; if (Math.abs(delta) > 45 && Math.abs(delta) > Math.abs(vertical)) { if (delta < 0) next(); else previous(); } }}
           onPointerCancel={() => { gesture.current = null; suppressClick.current = true; }}
