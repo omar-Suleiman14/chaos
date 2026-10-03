@@ -6,6 +6,7 @@ import { useCopy, useLocale } from "@/lib/i18n";
 import { CARD_THEMES, memberCardPng, memberCardSvg, type MemberCardData } from "@/lib/memberCard";
 import "./card.css";
 import { useEyesFollowPointer } from "./useEyesFollowPointer";
+import { useTilt } from "./useTilt";
 import { cardRuqaa } from "@/lib/cardFonts";
 
 const copy = {
@@ -32,10 +33,11 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
   const tilt = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
   useEyesFollowPointer(root);
+  useTilt(tilt);
   const wallet = useWalletAvailability();
   // Relative path so preview and self-hosted origins serve their own passes.
   const walletBase = `${new URL(data.url, "https://chaos.invalid").pathname}/wallet`;
-  // Tilt uses CSS variables, so pointer moves never re-render the card.
+  // Tilt (useTilt) uses CSS variables, so pointer moves never re-render the card.
   const front = memberCardSvg(card, "front");
   const back = memberCardSvg(card, "back");
 
@@ -68,20 +70,11 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
     try { await navigator.clipboard.writeText(data.url); say(t.copied); } catch { say(t.failed); }
   };
 
-  const move = (e: React.PointerEvent) => {
-    const el = tilt.current; if (!el || e.pointerType === "touch") return;
-    const r = el.getBoundingClientRect();
-    const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
-    el.style.setProperty("--rx", `${(-y * 10).toFixed(2)}deg`); el.style.setProperty("--ry", `${(x * 14).toFixed(2)}deg`);
-    el.style.setProperty("--gx", `${(x + 0.5) * 100}%`); el.style.setProperty("--gy", `${(y + 0.5) * 100}%`);
-  };
-  const leave = () => { const el = tilt.current; if (el) { el.style.setProperty("--rx", "0deg"); el.style.setProperty("--ry", "0deg"); } };
-
   return (
     <div className={`mc ${cardRuqaa.variable}`} ref={root}>
       <div className={framed ? "mc-frame" : undefined}>
         {framed && <span className="mc-frame__label">{t.label}</span>}
-        <div className="mc-stage" ref={tilt} onPointerMove={move} onPointerLeave={leave}>
+        <div className="mc-stage" ref={tilt}>
           <div className="mc-tilt">
             <button type="button" className="mc-card" data-flipped={flipped} title={flipped ? t.flipBack : t.flip} onClick={() => setFlipped((f) => !f)} aria-label={`${t.cardOf(data.name)}. ${flipped ? t.flipBack : t.flip}`}>
               <span aria-hidden={flipped} className="mc-face mc-face--front" dangerouslySetInnerHTML={{ __html: front }} />

@@ -6,8 +6,8 @@
    A filter on a 3D element flattens it, so the shadow must stay outside the 3D context.
    The stage needs a fixed width capped by max-width: a percentage width collapses to zero when its grid track sizes to content. */
 .mc-stage { width:340px; max-width:100%; margin-inline:auto; perspective:1400px; --rx:0deg; --ry:0deg; --gx:50%; --gy:50%; filter:drop-shadow(0 24px 32px rgba(0,0,0,.2)) drop-shadow(0 4px 8px rgba(0,0,0,.1)); }
-/* Slow, heavy easing so the card drifts toward the pointer instead of snapping to it. */
-.mc-tilt { width:100%; transform-style:preserve-3d; transform:rotateX(var(--rx)) rotateY(var(--ry)); transition:transform .35s cubic-bezier(.22,.61,.36,1); animation:mc-in .9s cubic-bezier(.2,.9,.2,1) backwards; }
+/* No transition here: useTilt eases the tilt itself so the text stays sharp while it moves. */
+.mc-tilt { width:100%; transform-style:preserve-3d; transform:rotateX(var(--rx)) rotateY(var(--ry)); animation:mc-in .9s cubic-bezier(.2,.9,.2,1) backwards; }
 .mc-card { position:relative; display:block; width:100%; aspect-ratio:340/500; border:0; padding:0; background:none; cursor:pointer; transform-style:preserve-3d; transform:rotateY(var(--flip,0deg)); transition:transform .7s cubic-bezier(.2,.8,.2,1); border-radius:18px; }
 .mc-card[data-flipped="true"] { --flip:180deg; }
 .mc-face { position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:18px; overflow:hidden; }
@@ -66,6 +66,6 @@
 .mc-public .mc-cta:hover { background:#000; transform:translateY(-1px); }
 .mc-public__brand { font-size:13px; color:#86868b; text-decoration:none; }
 
-@media(prefers-reduced-motion:reduce) { .mc-tilt { animation:none; transition:none; transform:none; } .mc-card { transition:none; } .mc-glare { display:none; } }
+@media(prefers-reduced-motion:reduce) { .mc-tilt { animation:none; transform:none; } .mc-card { transition:none; } .mc-glare { display:none; } }
 .mc-eyes { transition:transform .35s cubic-bezier(.22,.61,.36,1); }
 .mc-profile .mc-stage { width:240px; }
