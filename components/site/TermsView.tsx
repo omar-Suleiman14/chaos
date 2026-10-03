@@ -59,7 +59,7 @@ export default function TermsView() {
 
         <h2>٦. استخدام الأعمال</h2>
         <p>
-          الاستخدام الشخصي مجاني تمامًا. الاستخدام للشركات والأعمال مخطط له بسعر 50 جنيهًا مصريًا شهريًا لكل مقعد منشئ نشط؛ ولا يحتاج المجيبون والطلاب ولاعبو المباريات المباشرة إلى مقاعد مدفوعة. الدفع الإلكتروني غير متاح بعد ولا يتم خصم أي مبالغ تلقائيًا؛ ويمكن للشركات ترتيب المقاعد بالاتصال بالدعم.
+          الاستخدام الشخصي مجاني تمامًا. الاستخدام للشركات والأعمال مخطط له بسعر 50 جنيهًا مصريًا شهريًا لكل مستخدم ينشئ المحتوى أو يديره؛ ولا يحتاج المجيبون والطلاب ولاعبو المباريات المباشرة إلى حسابات مدفوعة. الدفع الإلكتروني غير متاح بعد ولا يتم خصم أي مبالغ تلقائيًا؛ ويمكن للشركات إعداد حسابات فريقها بالاتصال بالدعم.
         </p>
 
         <h2>٧. الحدود وتوافر الخدمة</h2>
@@ -135,8 +135,8 @@ export default function TermsView() {
 
       <h2>6. Business use</h2>
       <p>
-        Personal use is free. Using Chaos for a business is planned to cost 50 EGP per active creator seat per month; respondents, students and live players
-        don&rsquo;t need seats. Checkout isn&rsquo;t available yet and nothing is charged automatically; businesses can arrange seats through Support.
+        Personal use is free. Using Chaos for a business is planned to cost 50 EGP per person who creates or manages content per month; respondents, students and live players
+        don&rsquo;t need paid accounts. Checkout isn&rsquo;t available yet and nothing is charged automatically; businesses can set up their team through Support.
       </p>
 
       <h2>7. Limits and availability</h2>

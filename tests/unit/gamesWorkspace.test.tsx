@@ -61,6 +61,7 @@ describe("Games workspace", () => {
     render(<LocaleProvider initial="en"><GamesPage /></LocaleProvider>);
     expect(screen.queryByText("View-only game")).toBeNull();
     expect(screen.queryByText("Archived game")).toBeNull();
+    fireEvent.click(screen.getByText("Drafts"));
     const drafts = screen.getByRole("region", { name: "Drafts" });
     expect(within(drafts).getByText("Draft game")).toBeInTheDocument();
     expect(within(drafts).queryByRole("button", { name: "Host live" })).toBeNull();
@@ -78,6 +79,7 @@ describe("Games workspace", () => {
   });
   it("lists past games: rejoin a running one, open results of an ended one", () => {
     render(<LocaleProvider initial="en"><GamesPage /></LocaleProvider>);
+    fireEvent.click(screen.getByText("History"));
     const history = screen.getByRole("region", { name: "History" });
     expect(within(within(history).getByText("Friday quiz").closest("article")!).getByRole("link", { name: "Open" })).toHaveAttribute("href", "/dashboard/live/room-live");
     const done = within(history).getByText("Monday quiz").closest("article")!;

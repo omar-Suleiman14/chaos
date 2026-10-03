@@ -17,11 +17,11 @@ import "./landing.css";
 const copy = {
   en: {
     title: ["Turn what you know", "into something people can use."],
-    lead: "Write a lesson, make a quiz, build a course or run a live game. Chaos turns notes and ideas into things people learn from and interact with.",
-    start: "Start free", explore: "Explore lessons",
+    lead: "Write lessons, make quizzes, build courses and host live games in one place.",
+    start: "Start free", explore: "Explore courses",
     flow: { label: "How it fits together", source: "Notes, a PDF or an idea", lesson: "Lesson", outputs: ["Quiz", "Flashcards", "Course"], practice: "Practice or a live game" },
     create: {
-      title: "Create", lead: "Everything is made by hand, in an editor that stays out of the way.",
+      title: "Create", lead: "Write, edit and arrange your content in one place.",
       items: [
         { icon: FileText, title: "Forms", body: "Surveys, sign-ups and feedback. Sections, branching, file uploads and custom endings.", href: "/docs/first-form", link: "Build a form" },
         { icon: ListChecks, title: "Quizzes", body: "Marked for you, with explanations, hints and attempt limits. Any quiz can become a live game.", href: "/docs/first-quiz", link: "Make a quiz" },
@@ -32,7 +32,7 @@ const copy = {
       title: "Learn", lead: "Put lessons in order, share them, and see what people still find hard.",
       items: [
         { icon: GraduationCap, title: "Courses", body: "Lessons in a clear order, free for anyone to take when public.", href: "/learn#course-directory", link: "Browse courses" },
-        { icon: GitFork, title: "Community material", body: "Search public lessons, save what helps, and copy one to adapt it. The original author stays credited.", href: "/learn#lesson-search", link: "Find a lesson" },
+        { icon: GitFork, title: "Community material", body: "Search public lessons, save what helps, and copy one to adapt it. The original author stays credited.", href: "/learn", link: "Find a lesson" },
         { icon: ListChecks, title: "Practice and progress", body: "Quizzes and flashcards attached to lessons, with progress and weak areas for each learner.", href: "/docs/progress", link: "How progress works" },
       ],
     },
@@ -55,12 +55,12 @@ const copy = {
         { icon: Webhook, title: "Webhooks", body: "Chaos tells another app when something happens, like a new response.", href: "/docs/webhooks", link: "Webhooks" },
       ],
     },
-    ctaTitle: "Make your first thing.", ctaLead: "A form, a quiz, a lesson or a course. Free for personal use.",
+    ctaTitle: "Create something to share.", ctaLead: "A form, a quiz, a lesson or a course. Free for personal use.",
   },
   ar: {
     title: ["حوّل ما تعرفه", "إلى شيء يستفيد منه الناس."],
     lead: "اكتب درسًا، أو أنشئ اختبارًا، أو ابنِ دورة، أو شغّل لعبة مباشرة. يحوّل Chaos الملاحظات والأفكار إلى ما يتعلم منه الناس ويتفاعلون معه.",
-    start: "ابدأ مجانًا", explore: "استكشف الدروس",
+    start: "ابدأ مجانًا", explore: "استكشف الدورات",
     flow: { label: "كيف يترابط كل شيء", source: "ملاحظات أو ملف PDF أو فكرة", lesson: "درس", outputs: ["اختبار", "بطاقات", "دورة"], practice: "تدريب أو لعبة مباشرة" },
     create: {
       title: "أنشئ", lead: "كل شيء يُصنع يدويًا، في محرر لا يعترض طريقك.",
@@ -74,7 +74,7 @@ const copy = {
       title: "تعلّم", lead: "رتّب الدروس وشاركها واعرف ما يصعب على الناس.",
       items: [
         { icon: GraduationCap, title: "الدورات", body: "دروس بترتيب واضح، مجانية لأي أحد حين تكون عامة.", href: "/learn#course-directory", link: "تصفّح الدورات" },
-        { icon: GitFork, title: "مواد المجتمع", body: "ابحث في الدروس العامة واحفظ ما يفيدك وانسخ درسًا لتعدّله. يبقى اسم الكاتب الأصلي.", href: "/learn#lesson-search", link: "اعثر على درس" },
+        { icon: GitFork, title: "مواد المجتمع", body: "ابحث في الدروس العامة واحفظ ما يفيدك وانسخ درسًا لتعدّله. يبقى اسم الكاتب الأصلي.", href: "/learn", link: "اعثر على درس" },
         { icon: ListChecks, title: "التدريب والتقدّم", body: "اختبارات وبطاقات مرتبطة بالدروس، مع التقدّم ونقاط الضعف لكل متعلم.", href: "/docs/progress", link: "كيف يعمل التقدّم" },
       ],
     },
@@ -97,7 +97,7 @@ const copy = {
         { icon: Webhook, title: "Webhooks", body: "يخبر Chaos تطبيقًا آخر حين يحدث شيء، مثل وصول رد جديد.", href: "/docs/webhooks", link: "Webhooks" },
       ],
     },
-    ctaTitle: "اصنع أول شيء لك.", ctaLead: "نموذج أو اختبار أو درس أو دورة. مجاني للاستخدام الشخصي.",
+    ctaTitle: "أنشئ محتوى وشاركه.", ctaLead: "نموذج أو اختبار أو درس أو دورة. مجاني للاستخدام الشخصي.",
   },
 };
 

@@ -14,8 +14,8 @@ import "@/app/landing.css";
  */
 const copy = {
   en: {
-    title: "Free for personal use. 50 EGP a seat for business.",
-    lead: "Personal use is free, with no monthly caps. Business use is planned at 50 EGP per creator seat each month, for the same product. Checkout isn't live yet.",
+    title: "Free for personal use. 50 EGP per person for business.",
+    lead: "Personal use is free, with no monthly caps. Business use is planned at 50 EGP per person each month, for the same product. Checkout isn't live yet.",
     free: {
       name: "Personal", price: "Free", note: "For study, teaching and your own projects.",
       items: [
@@ -32,20 +32,20 @@ const copy = {
       cta: "Get started free",
     },
     pro: {
-      name: "Business", price: `${planCatalog.pro.proposedPriceEgp} EGP`, per: " / creator seat / month", note: "Planned price. Checkout isn't live and nothing is charged.",
+      name: "Business", price: `${planCatalog.pro.proposedPriceEgp} EGP`, per: " / person / month", note: "Planned price. Checkout isn't live and nothing is charged.",
       items: [
         "Everything in Personal, licensed for business use",
-        "Seats only for people who create or manage content",
+        "Only people who create or manage content need a paid account",
         "Respondents, students and Live players are free",
-        "Ask Support to set up seats",
+        "Contact Support to set up your team",
       ],
       cta: "Get started",
     },
-    fine: "Checkout isn't available yet. Businesses can ask Support for seats; nothing is charged automatically. Rate limits and security checks apply to every account. Hosted pricing doesn't change your right to self-host under the AGPL.",
+    fine: "Checkout isn't available yet. Businesses can contact Support to set up their team; nothing is charged automatically. Rate limits and security checks apply to every account. Hosted pricing doesn't change your right to self-host under the AGPL.",
   },
   ar: {
-    title: "مجاني للاستخدام الشخصي. 50 جنيهًا للمقعد للأعمال.",
-    lead: "الاستخدام الشخصي مجاني ودون حدود شهرية. السعر المخطط لاستخدام الأعمال 50 جنيهًا لكل مقعد إنشاء شهريًا، للمنتج نفسه. الدفع غير متاح بعد.",
+    title: "مجاني للاستخدام الشخصي. 50 جنيهًا لكل مستخدم للأعمال.",
+    lead: "الاستخدام الشخصي مجاني ودون حدود شهرية. السعر المخطط لاستخدام الأعمال 50 جنيهًا لكل مستخدم شهريًا، للمنتج نفسه. الدفع غير متاح بعد.",
     free: {
       name: "شخصي", price: "مجاني", note: "للدراسة والتدريس ومشروعاتك الخاصة.",
       items: [
@@ -62,16 +62,16 @@ const copy = {
       cta: "ابدأ مجانًا",
     },
     pro: {
-      name: "الأعمال", price: `${planCatalog.pro.proposedPriceEgp} جنيهًا`, per: " / مقعد إنشاء / شهر", note: "سعر مخطط. الدفع غير متاح ولا تُفرض أي رسوم.",
+      name: "الأعمال", price: `${planCatalog.pro.proposedPriceEgp} جنيهًا`, per: " / مستخدم / شهر", note: "سعر مخطط. الدفع غير متاح ولا تُفرض أي رسوم.",
       items: [
         "كل ما في الخطة الشخصية، مرخّصًا للاستخدام التجاري",
-        "مقاعد فقط لمن ينشئ المحتوى أو يديره",
+        "الدفع فقط لمن ينشئ المحتوى أو يديره",
         "المجيبون والطلاب ولاعبو الألعاب المباشرة مجانًا",
-        "اطلب تفعيل المقاعد من الدعم",
+        "تواصل مع الدعم لإعداد حسابات فريقك",
       ],
       cta: "ابدأ الآن",
     },
-    fine: "الدفع غير متاح بعد. يمكن للأعمال طلب المقاعد من الدعم، ولا تُفرض أي رسوم تلقائيًا. تنطبق حدود المعدل وفحوص الأمان على كل الحسابات. أسعار الخدمة المستضافة لا تغيّر حقك في الاستضافة الذاتية وفق AGPL.",
+    fine: "الدفع غير متاح بعد. يمكن للأعمال التواصل مع الدعم لإعداد حسابات فريقها، ولا تُفرض أي رسوم تلقائيًا. تنطبق حدود المعدل وفحوص الأمان على كل الحسابات. أسعار الخدمة المستضافة لا تغيّر حقك في الاستضافة الذاتية وفق AGPL.",
   },
 };
 
