@@ -17,7 +17,7 @@ const copy = {
     label: "المظهر",
     expand: "كل المظاهر", collapse: "مظاهر أقل", search: "ابحث عن مظهر", empty: "لا توجد مظاهر تطابق بحثك.",
     names: {
-      "google-forms": "بأسلوب Google Forms", "microsoft-forms": "بأسلوب Microsoft Forms",
+      "google-forms": "ليلكي", "microsoft-forms": "شريط",
       paper: "ورقي", chaos: "أخضر داكن", "soft-grid": "شبكة ناعمة", spotlight: "تسليط الضوء", terracotta: "طيني",
       ocean: "محيط", midnight: "منتصف الليل", garden: "حديقة", neon: "نيون", aurora: "شفق",
       candy: "حلوى", terminal: "طرفية", newsprint: "صحيفة", arcade: "ألعاب", velvet: "مخمل", sunset: "غروب",

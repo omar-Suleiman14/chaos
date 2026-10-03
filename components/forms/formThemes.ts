@@ -6,8 +6,8 @@ type Palette = Omit<FormTheme, "version" | "preset" | "logoUrl">;
 export interface ThemePreset { id: ThemePresetId; name: string; inspiration: string; theme: Palette }
 
 export const themePresets: ThemePreset[] = [
-  { id: "google-forms", name: "Google Forms style", inspiration: "Looks like Google Forms. Not affiliated with Google.", theme: omitMeta(googleFormsTheme) },
-  { id: "microsoft-forms", name: "Microsoft Forms style", inspiration: "Looks like Microsoft Forms. Not affiliated with Microsoft.", theme: omitMeta(microsoftFormsTheme) },
+  { id: "google-forms", name: "Lilac", inspiration: "A lilac page with separate white question cards.", theme: omitMeta(googleFormsTheme) },
+  { id: "microsoft-forms", name: "Banner", inspiration: "A full-width title banner above a clean question column.", theme: omitMeta(microsoftFormsTheme) },
   { id: "paper", name: "Paper", inspiration: "Google Forms inspired", theme: { ...omitMeta(paperTheme), sound: "soft" } },
   { id: "chaos", name: "Evergreen", inspiration: "Bold green poster, the first Chaos look", theme: omitMeta(chaosTheme) },
   { id: "soft-grid", name: "Soft grid", inspiration: "Microsoft Forms inspired", theme: { accent: "#0f6cbd", background: "plain", font: "sans", radius: "large", pageColor: "#f3f6fb", surfaceColor: "#ffffff", textColor: "#17253a", layout: "card", cover: "minimal", backdrop: "dots", buttons: "soft", appearance: "auto", sound: "pop" } },

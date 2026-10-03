@@ -66,7 +66,7 @@ describe("app settings", () => {
     expect(screen.getByRole("radio", { name: "Sunset" })).toBeChecked();
     fireEvent.click(screen.getByRole("button", { name: "Reset theme" }));
     expect(readPreferences().newFormPreset).toBe(defaultPreferences.newFormPreset);
-    expect(screen.getByRole("radio", { name: "Google Forms style" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Lilac" })).toBeChecked();
     expect(mocks.setMode).not.toHaveBeenCalled();
   });
 

@@ -38,7 +38,7 @@ describe("Games workspace", () => {
 
   it("hosts with Apple styling by default and sends the selected phone/timer settings", async () => {
     render(<LocaleProvider initial="en"><GamesPage /></LocaleProvider>);
-    expect(screen.getByRole("radio", { name: "Apple style (default)" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Flow (default)" })).toBeChecked();
     fireEvent.click(screen.getByRole("combobox", { name: "Time per question" }));
     fireEvent.click(screen.getByRole("option", { name: "60 seconds" }));
     fireEvent.click(screen.getByRole("switch", { name: "Show answers on phones" }));
@@ -52,7 +52,7 @@ describe("Games workspace", () => {
     fireEvent.click(screen.getByRole("radio", { name: "Terracotta" }));
     fireEvent.click(within(screen.getByText("Older game").closest("article")!).getByRole("button", { name: "Host live" }));
     await waitFor(() => expect(mocks.host).toHaveBeenCalledWith(expect.objectContaining({ quizId: "legacy", timeLimitSec: 20, showAnswerLabels: true, theme: expect.objectContaining({ preset: "terracotta" }) })));
-    fireEvent.click(screen.getByRole("radio", { name: "Apple style (default)" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Flow (default)" }));
     fireEvent.click(within(screen.getByText("Shared editable game").closest("article")!).getByRole("button", { name: "Host live" }));
     await waitFor(() => expect(mocks.host).toHaveBeenLastCalledWith({ formId: "editor", language: "en", timeLimitSec: 20, showAnswerLabels: true }));
   });

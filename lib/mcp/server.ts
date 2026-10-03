@@ -41,10 +41,11 @@ const instructions = `Chaos (chaos.fail) is where this person builds forms, surv
 - Folders: list_folders and list_folder_contents use paginationOpts and continueCursor, including empty partial pages. create_folder creates an owned private folder; add_folder_member requires ownership of both folder and asset; move_folder needs explicit relocation intent. Folder changes never publish content.
 - A quiz is a form with quizMode on. For "make a quiz about what we discussed", write the questions from the conversation yourself: mostly single_choice with 3–4 options, set correctAnswers to the exact option label, and give points.
 - Write like a real teacher or organiser, not a brochure. Each question is one short, direct sentence (usually under 15 words) that tests one fact or asks one thing. Options are 1–5 words, parallel in form, and every wrong option is plausible; no "All of the above", joke options or filler. Leave question descriptions empty unless a hint is truly needed. A quiz explanation, if any, is one plain sentence saying why the answer is right. Titles are 2–6 words; the intro is one sentence or empty. No emojis, exclamation marks, hype ("ultimate", "fun-filled", "dive into", "journey", "test your knowledge") or restating the question in the options.
+- Use natural, human language in all content and chat replies. Write short, clear sentences. Avoid em dashes; use periods or commas instead. Avoid promotional wording, jargon, stock phrases and filler. Match the person's language, including natural Arabic when they write in Arabic.
 - Keep chat replies short: one or two sentences on what you made, then the link. Do not list the questions back unless the person asks.
 - Ids look like form_… (forms and quizzes) or quiz_… (classic quizzes, read-only). Find them with search_forms.
 - update_form replaces the question list when you send questions: call get_form first, keep each question's id, and send the full list.
-- Looks: every form has a theme (colours, font, buttons, start screen). When you create a form, pick a preset that suits it and pass it as theme: "Google Forms style" for everyday forms and sign-ups, "Microsoft Forms style" for work and school, and a livelier one (Candy, Arcade, Neon, Sunset, Aurora) for games, parties and fun quizzes. Use list_themes to see them all, and set_form_theme for "make it dark", "use the Typeform look" or a brand colour. If the person names a look, use theirs. If set_form_theme returns warnings about hard-to-read colours, fix them.
+- Looks: every form has a theme (colours, font, buttons, start screen). When you create a form, pick a preset that suits it and pass it as theme: "Lilac" for everyday forms and sign-ups, "Banner" for work and school, and a livelier one (Candy, Arcade, Neon, Sunset, Aurora) for games, parties and fun quizzes. Use list_themes to see them all, and set_form_theme for "make it dark", "use the Typeform look" or a brand colour. If the person names a look, use theirs. If set_form_theme returns warnings about hard-to-read colours, fix them.
 - Sounds: forms you create have sound on (Glass). Pick a pack that suits the mood with sound (soft is Glass, pop, wood, arcade), and use off only when the person asks for silence or the form is formal or sensitive (health, HR, legal).
 - Theme and sound changes go to the draft, like other edits; respondents see them after publish_form.
 - Respondent answers can be personal. Only fetch them with list_responses when the person asks to read individual answers.
@@ -77,7 +78,7 @@ const formFields = {
   quizMode: z.boolean().optional().describe("true for a scored quiz with an answer key."),
   presentation: z.enum(MCP_PRESENTATIONS).optional().describe("page = all questions on one page (default); one_at_a_time = one question per screen; sections = one page per section; swipe = full-screen cards."),
   questions: z.array(question).max(200),
-  theme: z.string().max(60).optional().describe("Optional look by name, e.g. Google Forms style (default), Microsoft Forms style, Paper, Evergreen, Spotlight (Typeform-like), Midnight (dark). See list_themes."),
+  theme: z.string().max(60).optional().describe("Optional look by name, e.g. Lilac (default), Banner, Paper, Evergreen, Spotlight (Typeform-like), Midnight (dark). See list_themes."),
   sound: z.string().max(20).optional().describe(`Optional sound pack for respondents: ${MCP_SOUNDS.join(", ")} (soft = Glass, the default; off = silent). Choose one that suits the form.`),
   publish: z.boolean().optional().describe("Default true: publish right after creating so the link works. Pass false only when the person asks for a draft."),
 };
@@ -85,7 +86,7 @@ const formFields = {
 const soundField = z.string().max(20).describe(`One of ${MCP_SOUNDS.join(", ")}. soft is called Glass; off means silent.`);
 const hex = (name: string) => z.string().regex(/^#[0-9a-fA-F]{6}$/, `${name} must be a six-digit hex colour like #1a73e8`).optional();
 const themeFields = {
-  preset: z.string().max(60).optional().describe("A preset by name or id, e.g. Google Forms style, Microsoft Forms style, Paper, Evergreen (also “chaos”), Spotlight, Midnight. Applied first; the properties below then override it. Sound and logo are kept."),
+  preset: z.string().max(60).optional().describe("A preset by name or id, e.g. Lilac, Banner, Paper, Evergreen (also “chaos”), Spotlight, Midnight. Applied first; the properties below then override it. Sound and logo are kept."),
   accent: hex("accent").describe("Buttons and highlights, hex like #1a73e8."),
   pageColor: hex("pageColor").describe("Page background, hex."),
   surfaceColor: hex("surfaceColor").describe("Question card background, hex."),
@@ -333,7 +334,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
 
   server.registerTool("create_form", {
     title: "Create a form or quiz",
-    description: "Create a new form, survey or quiz as a draft in the person's Chaos library, with all its questions. For a quiz set quizMode true and give correctAnswers (exact option labels) and points on choice questions. Pass a theme (a preset name) that suits the form; the default is Google Forms style. Sound is on (Glass) unless you pass sound, e.g. off for formal or sensitive forms. Publishes straight away and returns the share link, unless publish is false or something must be fixed first (then it stays a draft and the problems are listed).",
+    description: "Create a new form, survey or quiz as a draft in the person's Chaos library, with all its questions. For a quiz set quizMode true and give correctAnswers (exact option labels) and points on choice questions. Pass a theme (a preset name) that suits the form; the default is Lilac. Sound is on (Glass) unless you pass sound, e.g. off for formal or sensitive forms. Publishes straight away and returns the share link, unless publish is false or something must be fixed first (then it stays a draft and the problems are listed).",
     inputSchema: formFields,
     outputSchema: { ...itemShape, readyToPublish: z.boolean(), problems: z.array(z.string()), published: z.boolean() },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true, idempotentHint: false, title: "Create a form or quiz" },
@@ -394,7 +395,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
 
   server.registerTool("set_form_theme", {
     title: "Change a form's look",
-    description: "Change the look of a form's draft: apply a preset by name (Google Forms style, Microsoft Forms style, Paper, Evergreen, Midnight…) and/or set individual properties such as accent or background colour (hex), font, corner radius, buttons, start screen, backdrop, layout, or fixed/auto dark mode. Only what you send changes; the logo and sound are kept. Colours that are hard to read are reported in warnings. Respondents see it after publish_form.",
+    description: "Change the look of a form's draft: apply a preset by name (Lilac, Banner, Paper, Evergreen, Midnight…) and/or set individual properties such as accent or background colour (hex), font, corner radius, buttons, start screen, backdrop, layout, or fixed/auto dark mode. Only what you send changes; the logo and sound are kept. Colours that are hard to read are reported in warnings. Respondents see it after publish_form.",
     inputSchema: {
       id: itemId,
       expectedRevision: z.number().int().optional().describe("revision from get_form; the edit is refused if the form changed since."),

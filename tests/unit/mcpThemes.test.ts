@@ -4,16 +4,16 @@ import { applyThemePatch, parseThemePatch } from "@/convex/mcpContract";
 import { googleFormsTheme } from "@/convex/formLogic";
 
 describe("MCP themes: look-alike presets", () => {
-  it("lists both presets and marks Google Forms style as the default", () => {
+  it("lists both presets and marks Lilac as the default", () => {
     const { presets } = themeCatalog();
-    expect(presets.find((p) => p.id === "google-forms")).toMatchObject({ name: "Google Forms style", isDefault: true, description: "Looks like Google Forms. Not affiliated with Google." });
-    expect(presets.find((p) => p.id === "microsoft-forms")).toMatchObject({ name: "Microsoft Forms style", isDefault: false });
+    expect(presets.find((p) => p.id === "google-forms")).toMatchObject({ name: "Lilac", isDefault: true, description: "A lilac page with separate white question cards." });
+    expect(presets.find((p) => p.id === "microsoft-forms")).toMatchObject({ name: "Banner", isDefault: false });
     expect(presets.filter((p) => p.isDefault)).toHaveLength(1);
   });
 
   it("finds them by id, name and common short names", () => {
-    for (const name of ["google-forms", "Google Forms style", "google forms", "Google Forms", "google"]) expect(findPreset(name)?.id, name).toBe("google-forms");
-    for (const name of ["microsoft-forms", "Microsoft Forms style", "microsoft forms", "Microsoft"]) expect(findPreset(name)?.id, name).toBe("microsoft-forms");
+    for (const name of ["google-forms", "Lilac", "google forms", "Google Forms", "google"]) expect(findPreset(name)?.id, name).toBe("google-forms");
+    for (const name of ["microsoft-forms", "Banner", "microsoft forms", "Microsoft"]) expect(findPreset(name)?.id, name).toBe("microsoft-forms");
     expect(findPreset("Paper")?.id).toBe("paper");
   });
 

@@ -25,7 +25,7 @@ describe("form themes", () => {
     for (const preset of themePresets) expect(contrastIssues(themeFromPreset(preset.id)), preset.id).toEqual([]);
   });
 
-  it("starts new forms on the Google Forms style, silent and without a start screen, and keeps Paper as a preset", () => {
+  it("starts new forms on the Lilac, silent and without a start screen, and keeps Paper as a preset", () => {
     expect(emptyDefinition().theme).toEqual(googleFormsTheme);
     expect(googleFormsTheme).toMatchObject({ preset: "google-forms", cover: "none", sound: "off", chrome: "google", pageColor: "#f0ebf8", accent: "#673ab7", font: "roboto" });
     expect(themePresets.find((p) => p.id === "paper")).toBeTruthy();
@@ -35,8 +35,8 @@ describe("form themes", () => {
   it("defines the two look-alike presets with their notes", () => {
     const google = themePresets.find((p) => p.id === "google-forms")!;
     const microsoft = themePresets.find((p) => p.id === "microsoft-forms")!;
-    expect(google).toMatchObject({ name: "Google Forms style", inspiration: "Looks like Google Forms. Not affiliated with Google." });
-    expect(microsoft).toMatchObject({ name: "Microsoft Forms style", inspiration: "Looks like Microsoft Forms. Not affiliated with Microsoft." });
+    expect(google).toMatchObject({ name: "Lilac", inspiration: "A lilac page with separate white question cards." });
+    expect(microsoft).toMatchObject({ name: "Banner", inspiration: "A full-width title banner above a clean question column." });
     expect(themeFromPreset("google-forms")).toMatchObject({ ...googleFormsTheme, sound: "off" });
     expect(themeFromPreset("microsoft-forms")).toMatchObject({ ...microsoftFormsTheme, accent: "#03787c", pageColor: "#f3f2f1", font: "segoe", chrome: "microsoft", sound: "off" });
     expect(google.theme.appearance).toBe("fixed");

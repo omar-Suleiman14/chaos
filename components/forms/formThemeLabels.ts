@@ -28,8 +28,8 @@ const ar = {
     gt: "أكبر من", gte: "لا يقل عن", lt: "أصغر من", lte: "لا يزيد على",
   } as Record<ConditionOp, string>,
   themes: {
-    "google-forms": ["بأسلوب Google Forms", "يشبه Google Forms. غير تابع لشركة Google."],
-    "microsoft-forms": ["بأسلوب Microsoft Forms", "يشبه Microsoft Forms. غير تابع لشركة Microsoft."],
+    "google-forms": ["ليلكي", "خلفية ليلكية وبطاقات بيضاء للأسئلة."],
+    "microsoft-forms": ["شريط", "شريط عنوان بعرض الصفحة وأسئلة مرتبة تحته."],
     paper: ["ورق", "مستوحى من Google Forms"],
     chaos: ["أخضر داكن", "ملصق أخضر جريء، أول مظهر في Chaos"],
     "soft-grid": ["شبكة ناعمة", "مستوحى من Microsoft Forms"],

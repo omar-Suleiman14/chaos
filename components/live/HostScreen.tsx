@@ -230,7 +230,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
             <details className="live-settings live-card">
               <summary>{t.settings}</summary>
               <div className="live-settings__content">
-                <ThemePicker label={t.theme} value={game.appearance === "apple" ? undefined : game.theme?.preset ?? "chaos"} defaultOption={{ label: locale === "ar" ? "بأسلوب Apple (الافتراضي)" : "Apple style (default)", onSelect: () => void run(() => setSettings({ gameId, appearance: "apple" })) }} onChange={(preset) => void run(() => setSettings({ gameId, theme: themeFromPreset(preset), appearance: "theme" }))} />
+                <ThemePicker label={t.theme} value={game.appearance === "apple" ? undefined : game.theme?.preset ?? "chaos"} defaultOption={{ label: locale === "ar" ? "انسيابي (الافتراضي)" : "Flow (default)", onSelect: () => void run(() => setSettings({ gameId, appearance: "apple" })) }} onChange={(preset) => void run(() => setSettings({ gameId, theme: themeFromPreset(preset), appearance: "theme" }))} />
                 <label className="live-toggle"><input type="checkbox" checked={game.settings.showAnswerLabels !== false} disabled={busy} onChange={(e) => void run(() => setSettings({ gameId, showAnswerLabels: e.target.checked }))} /><span>{t.answerLabels}</span></label>
                 <label className="live-toggle"><input type="checkbox" checked={!!game.settings.autoAdvance} disabled={busy} onChange={(e) => void run(() => setAutoplay({ gameId, autoAdvance: e.target.checked }))} /><span>{t.autoplay}</span></label>
                 {game.settings.autoAdvance && (
