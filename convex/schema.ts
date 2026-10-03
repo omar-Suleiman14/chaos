@@ -63,6 +63,8 @@ export default defineSchema({
     ownerId: v.string(),
     createdAt: v.number(),
   }).index("by_username", ["username"]),
+  publicAuthorAssets: defineTable({ assetId: v.string(), table: v.union(v.literal("forms"), v.literal("quizzes"), v.literal("lessons"), v.literal("learnCollections")), ownerId: v.string() }).index("by_assetId", ["assetId"]).index("by_ownerId", ["ownerId"]),
+
   // ============ USERS ============
   users: defineTable({
     clerkId: v.string(),
@@ -72,6 +74,8 @@ export default defineSchema({
     /** True once the person picks a username; sign-in sync then stops overwriting it. */
     usernameChosen: v.optional(v.boolean()),
     imageUrl: v.optional(v.string()),
+    /** Number of currently public, indexed publications; maintained by authorIndex.ts. */
+    publicAuthorAssets: v.optional(v.number()),
     /** Member card colour theme index (lib/memberCard.ts CARD_THEMES). */
     cardStyle: v.optional(v.number()),
     isBanned: v.optional(v.boolean()),
@@ -87,6 +91,7 @@ export default defineSchema({
   })
     .index("by_clerkId", ["clerkId"])
     .index("by_username", ["username"])
+    .index("by_publicAuthorAssets", ["publicAuthorAssets"])
     .index("by_email", ["email"])
     .index("by_planExpiresAt", ["planExpiresAt"])
     .index("by_suspendedUntil", ["suspendedUntil"]).searchIndex("search_name", { searchField: "name", filterFields: [] }),

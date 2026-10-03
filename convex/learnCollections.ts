@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { courseSearchText } from "./courseSearchModel";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 import { recordAssetPublicationAction } from "./learnPublicationAudit";
@@ -23,7 +24,7 @@ export const create = mutation({ args: { metadata: lessonMeta }, returns: v.id("
   const { identity } = await requireActiveUser(ctx);
   // Same checks as lesson metadata: safe cover links, bounded icon, author, language, tags and licence.
   metadataCheck(args.metadata);
-  const collectionId = await ctx.db.insert("learnCollections", { ownerId: identity.subject, metadata: args.metadata, items: [], revision: 0, visibility: "private", communityState: "ok", createdAt: Date.now(), updatedAt: Date.now() });
+  const collectionId = await authorDb(ctx).insert("learnCollections", { ownerId: identity.subject, metadata: args.metadata, items: [], revision: 0, visibility: "private", communityState: "ok", createdAt: Date.now(), updatedAt: Date.now() });
   await recordAssetPublicationAction(ctx, { asset: { kind: "collection", id: collectionId }, actorId: identity.subject, action: "create", revision: 0, afterVisibility: "private", reason: "Created a private ordered collection draft." });
   return collectionId;
 } });
@@ -39,7 +40,7 @@ export const replaceItems = mutation({ args: { collectionId: v.id("learnCollecti
       if (!source || source.status !== "active" || (source.ownerId !== row.ownerId && source.metadataVisibility !== "public")) throw new Error("Source metadata inaccessible");
     }
   }
-  await ctx.db.patch("learnCollections", row._id, { items: args.items, revision: row.revision + 1, updatedAt: Date.now() }); await enqueueLearnWebhookEvent(ctx, { event: "collection.updated", collectionId: row._id, operationId: `revision:${row.revision + 1}`, revision: row.revision + 1 }); return row.revision + 1;
+  await authorDb(ctx).patch("learnCollections", row._id, { items: args.items, revision: row.revision + 1, updatedAt: Date.now() }); await enqueueLearnWebhookEvent(ctx, { event: "collection.updated", collectionId: row._id, operationId: `revision:${row.revision + 1}`, revision: row.revision + 1 }); return row.revision + 1;
 } });
 export const publish = mutation({ args: { collectionId: v.id("learnCollections"), expectedRevision: v.number(), visibility }, returns: v.id("collectionVersions"), handler: async (ctx, args) => {
   const row = await owned(ctx, args.collectionId); revision(row, args.expectedRevision);
@@ -51,7 +52,7 @@ export const publish = mutation({ args: { collectionId: v.id("learnCollections")
   }
   const last = await ctx.db.query("collectionVersions").withIndex("by_collectionId_and_number", q => q.eq("collectionId", row._id)).order("desc").first();
   const versionId = await ctx.db.insert("collectionVersions", { collectionId: row._id, number: (last?.number ?? 0) + 1, metadata: row.metadata, items: row.items, publishedAt: Date.now() });
-  await ctx.db.patch("learnCollections", row._id, { searchText: await courseSearchText(ctx, row.ownerId, row.metadata, row.items), publishedVersionId: versionId, visibility: args.visibility, revision: row.revision + 1, updatedAt: Date.now() }); await enqueueLearnWebhookEvent(ctx, { event: "collection.published", collectionId: row._id, versionId, operationId: `version:${versionId}`, revision: row.revision + 1 });
+  await authorDb(ctx).patch("learnCollections", row._id, { searchText: await courseSearchText(ctx, row.ownerId, row.metadata, row.items), publishedVersionId: versionId, visibility: args.visibility, revision: row.revision + 1, updatedAt: Date.now() }); await enqueueLearnWebhookEvent(ctx, { event: "collection.published", collectionId: row._id, versionId, operationId: `version:${versionId}`, revision: row.revision + 1 });
   await recordAssetPublicationAction(ctx, { asset: { kind: "collection", id: row._id }, actorId: row.ownerId, action: "publish", revision: row.revision + 1, versionId, beforeVisibility: row.visibility, afterVisibility: args.visibility, reason: "Published an immutable ordered collection snapshot." });
   return versionId;
 } });

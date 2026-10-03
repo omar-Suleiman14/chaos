@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { setOwnedUsername } from "./links";
 import { reserveUsername, usernameOwner } from "./usernameModel";
 import { consumeCreation } from "./plans";
@@ -259,7 +260,7 @@ export const createQuiz = mutation({
     }
 
     await consumeCreation(ctx, identity.subject);
-    return await ctx.db.insert("quizzes", {
+    return await authorDb(ctx).insert("quizzes", {
       title: args.title,
       description: args.description,
       groupName: args.groupName,
@@ -308,7 +309,7 @@ export const updateQuiz = mutation({
       const questions = await draftQuestions(ctx, args.quizId);
       const errors = publicationErrors(args.title ?? quiz.title, questions);
       if (errors.length) throw new Error("PUBLICATION_BLOCKED:\n" + errors.join("\n"));
-      await ctx.db.patch("quizzes", quiz._id, { publishedAt: Math.max(Date.now(), quiz.updatedAt + 1), publishedSnapshot: {
+      await authorDb(ctx).patch("quizzes", quiz._id, { publishedAt: Math.max(Date.now(), quiz.updatedAt + 1), publishedSnapshot: {
         title: args.title ?? quiz.title,
         description: args.description ?? quiz.description,
         questions: questions.map(snapshotQuestion),
@@ -336,7 +337,7 @@ export const updateQuiz = mutation({
       }
     }
 
-    await ctx.db.patch("quizzes", quizId, updates);
+    await authorDb(ctx).patch("quizzes", quizId, updates);
   },
 });
 
@@ -376,7 +377,7 @@ async function cascadeDeleteQuiz(ctx: MutationCtx, quizId: Id<"quizzes">) {
     }
   }
 
-  await ctx.db.delete("quizzes", quizId);
+  await authorDb(ctx).delete("quizzes", quizId);
 }
 
 export const getQuizDeletionImpact = query({
@@ -522,7 +523,7 @@ async function draftQuestions(ctx: MutationCtx, quizId: Id<"quizzes">) {
 
 async function preservePublishedQuiz(ctx: MutationCtx, quiz: Doc<"quizzes">) {
   if (quiz.isPublished && !quiz.publishedSnapshot) {
-    await ctx.db.patch("quizzes", quiz._id, { publishedAt: quiz.publishedAt ?? quiz.updatedAt, publishedSnapshot: {
+    await authorDb(ctx).patch("quizzes", quiz._id, { publishedAt: quiz.publishedAt ?? quiz.updatedAt, publishedSnapshot: {
       title: quiz.title, description: quiz.description,
       questions: (await draftQuestions(ctx, quiz._id)).map(snapshotQuestion),
     } });
@@ -616,7 +617,7 @@ export const saveQuizDraft = mutation({
     if (args.groupName === "") patch.groupName = undefined;
     // 0 turns the pool off.
     if (args.poolSize === 0) patch.poolSize = undefined;
-    await ctx.db.patch("quizzes", quiz._id, patch);
+    await authorDb(ctx).patch("quizzes", quiz._id, patch);
     return { updatedAt, questionIds };
   },
 });
@@ -635,7 +636,7 @@ export const publishQuiz = mutation({
     const errors = [...publicationErrors(quiz.title, questions), ...poolErrors(quiz.poolSize, questions.length)];
     if (errors.length) throw new Error("PUBLICATION_BLOCKED:\n" + errors.join("\n"));
     const updatedAt = Math.max(Date.now(), quiz.updatedAt + 1);
-    await ctx.db.patch("quizzes", quiz._id, {
+    await authorDb(ctx).patch("quizzes", quiz._id, {
       isPublished: true,
       publishedAt: updatedAt,
       updatedAt,
@@ -654,7 +655,7 @@ export const unpublishQuiz = mutation({
     const quiz = await requireQuizOwner(ctx, args.quizId);
     await preservePublishedQuiz(ctx, quiz);
     const updatedAt = Math.max(Date.now(), quiz.updatedAt + 1);
-    await ctx.db.patch("quizzes", quiz._id, { isPublished: false, updatedAt, publishedAt: quiz.publishedAt ?? updatedAt });
+    await authorDb(ctx).patch("quizzes", quiz._id, { isPublished: false, updatedAt, publishedAt: quiz.publishedAt ?? updatedAt });
     if (quiz.isPublished) await emitQuizStatusEvent(ctx, quiz._id, "form.closed");
     return { updatedAt };
   },
@@ -684,7 +685,7 @@ export const addQuestion = mutation({
     const quiz = await requireQuizOwner(ctx, args.quizId);
     await preservePublishedQuiz(ctx, quiz);
     if (!Number.isFinite(args.points)) throw new Error("Points must be finite.");
-    await ctx.db.patch("quizzes", quiz._id, { updatedAt: Math.max(Date.now(), quiz.updatedAt + 1) });
+    await authorDb(ctx).patch("quizzes", quiz._id, { updatedAt: Math.max(Date.now(), quiz.updatedAt + 1) });
 
     return await ctx.db.insert("questions", {
       quizId: args.quizId,
@@ -728,7 +729,7 @@ export const updateQuestion = mutation({
   handler: async (ctx, args) => {
     const { quiz } = await requireQuestionOwner(ctx, args.questionId);
     await preservePublishedQuiz(ctx, quiz);
-    await ctx.db.patch("quizzes", quiz._id, { updatedAt: Math.max(Date.now(), quiz.updatedAt + 1) });
+    await authorDb(ctx).patch("quizzes", quiz._id, { updatedAt: Math.max(Date.now(), quiz.updatedAt + 1) });
 
     const { questionId, ...updates } = args;
     const cleanUpdates: Record<string, unknown> = {};
@@ -750,7 +751,7 @@ export const deleteQuestion = mutation({
   handler: async (ctx, args) => {
     const { quiz } = await requireQuestionOwner(ctx, args.questionId);
     await preservePublishedQuiz(ctx, quiz);
-    await ctx.db.patch("quizzes", quiz._id, { updatedAt: Math.max(Date.now(), quiz.updatedAt + 1) });
+    await authorDb(ctx).patch("quizzes", quiz._id, { updatedAt: Math.max(Date.now(), quiz.updatedAt + 1) });
     // Questions are soft-deleted so historical session answers can still
     // resolve the original prompt and grading data. The row is hard-deleted
     // only when its entire quiz (and those sessions) is deleted.
@@ -1181,7 +1182,7 @@ export const setResultsReleased = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const quiz = await requireQuizOwner(ctx, args.quizId);
-    await ctx.db.patch("quizzes", quiz._id, { resultsReleasedAt: args.released ? Date.now() : undefined });
+    await authorDb(ctx).patch("quizzes", quiz._id, { resultsReleasedAt: args.released ? Date.now() : undefined });
     return null;
   },
 });
@@ -1477,7 +1478,7 @@ export const adminToggleUserElevation = mutation({
         .withIndex("by_creator", (q) => q.eq("creatorId", args.clerkId))
         .collect();
       for (const quiz of quizzes) {
-        await ctx.db.patch("quizzes", quiz._id, { isElevated: args.elevate });
+        await authorDb(ctx).patch("quizzes", quiz._id, { isElevated: args.elevate });
       }
     }
   },
@@ -1487,7 +1488,7 @@ export const adminToggleQuizElevation = mutation({
   args: { quizId: v.id("quizzes"), elevate: v.boolean() },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    await ctx.db.patch("quizzes", args.quizId, { isElevated: args.elevate });
+    await authorDb(ctx).patch("quizzes", args.quizId, { isElevated: args.elevate });
   },
 });
 
@@ -1495,7 +1496,7 @@ export const adminToggleQuizBan = mutation({
   args: { quizId: v.id("quizzes"), ban: v.boolean() },
   handler: async (ctx, args) => {
     await requireAdmin(ctx);
-    await ctx.db.patch("quizzes", args.quizId, { isBanned: args.ban });
+    await authorDb(ctx).patch("quizzes", args.quizId, { isBanned: args.ban });
   },
 });
 

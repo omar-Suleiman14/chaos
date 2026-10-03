@@ -98,6 +98,7 @@ function Explore() {
             {ar ? "إنشاء دورة" : "Create course"}
           </button>
         )}
+        <Link href="/card" className="ws-btn ws-btn--ghost">{ar ? "تعرّف على المؤلفين" : "Discover authors"}</Link>
       </header>
       {error && (
         <p role="alert" className="lx-error">

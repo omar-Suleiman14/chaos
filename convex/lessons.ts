@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 import { requireVisibilityAllowed } from "./plans";
 import { recordPublicationAction } from "./learnPublicationAudit";
@@ -82,7 +83,7 @@ export async function createLessonForActor(ctx: MutationCtx, actor: string, args
   await consumeRate(ctx, `learn:create:${actor}`, LEARN_WRITE_LIMITS.creationsPerHour, 3_600_000);
   const now = Date.now();
   const searchText = await buildLessonSearchText(ctx, actor, args.metadata, draft.blocks);
-  const lessonId = await ctx.db.insert("lessons", { ownerId: actor, metadata: args.metadata, draft, revision: 0, status: "active", visibility: "private", communityState: "ok", createdAt: now, updatedAt: now, searchText });
+  const lessonId = await authorDb(ctx).insert("lessons", { ownerId: actor, metadata: args.metadata, draft, revision: 0, status: "active", visibility: "private", communityState: "ok", createdAt: now, updatedAt: now, searchText });
   await recordPublicationAction(ctx, { lessonId, actorId: actor, action: "create", revision: 0, afterVisibility: "private", reason: "Created an editable private draft." });
   return lessonId;
 }
@@ -101,7 +102,7 @@ export async function saveLessonDraftForActor(ctx: MutationCtx, actor: string, a
   if (!lesson.publishedVersionId) {
     patch.searchText = await buildLessonSearchText(ctx, actor, args.metadata ?? lesson.metadata, args.document.blocks);
   }
-  await ctx.db.patch("lessons", lesson._id, patch);
+  await authorDb(ctx).patch("lessons", lesson._id, patch);
   await enqueueLearnWebhookEvent(ctx, { event: "lesson.updated", lessonId: lesson._id, operationId: `revision:${lesson.revision + 1}`, revision: lesson.revision + 1 });
   return lesson.revision + 1;
 }
@@ -182,7 +183,7 @@ export async function publishLessonForActor(ctx: MutationCtx, actor: string, arg
   const curriculumMappings = (await ctx.db.query("lessonCurriculumMappings").withIndex("by_lessonId_and_nodeId", q => q.eq("lessonId", lesson._id)).take(100)).map(({ versionId, nodeId, conceptKeys, blockIds }) => ({ versionId, nodeId, conceptKeys, blockIds }));
   const versionId = await ctx.db.insert("lessonVersions", { ...(args.note?.trim() ? { note: args.note.trim() } : {}), visibility: args.visibility, curriculumMappings, lessonId: lesson._id, number: (last?.number ?? 0) + 1, metadata: lesson.metadata, document: lesson.draft, authorId: actor, publishedAt: Date.now() });
   const searchText = await buildLessonSearchText(ctx, actor, lesson.metadata, lesson.draft.blocks);
-  await ctx.db.patch("lessons", lesson._id, { publishedVersionId: versionId, visibility: args.visibility, searchText, revision: lesson.revision + 1, updatedAt: Date.now() });
+  await authorDb(ctx).patch("lessons", lesson._id, { publishedVersionId: versionId, visibility: args.visibility, searchText, revision: lesson.revision + 1, updatedAt: Date.now() });
   await enqueueLearnWebhookEvent(ctx, { event: "lesson.published", lessonId: lesson._id, versionId, operationId: `version:${versionId}`, revision: lesson.revision + 1 });
   await recordPublicationAction(ctx, { lessonId: lesson._id, actorId: actor, action: "publish", revision: lesson.revision + 1, versionId, beforeVisibility: lesson.visibility, afterVisibility: args.visibility, reason: args.note?.trim() || "Explicitly published an immutable lesson version." });
   return { ok: true as const, versionId, revision: lesson.revision + 1 };
@@ -214,7 +215,7 @@ export async function restoreLessonVersionForActor(ctx: MutationCtx, actor: stri
   if (!lesson.publishedVersionId) {
     patch.searchText = await buildLessonSearchText(ctx, actor, version.metadata, version.document.blocks);
   }
-  await ctx.db.patch("lessons", lesson._id, patch);
+  await authorDb(ctx).patch("lessons", lesson._id, patch);
   await recordPublicationAction(ctx, { lessonId: lesson._id, actorId: actor, action: "restore_draft", revision: lesson.revision + 1, versionId: version._id, beforeVisibility: lesson.visibility, afterVisibility: lesson.visibility, reason: "Restored a historical version into the draft; publication is unchanged." });
   return lesson.revision + 1;
 }
@@ -230,7 +231,7 @@ export const setLifecycle = mutation({ args: { lessonId: v.id("lessons"), expect
 export async function setLessonLifecycleForActor(ctx: MutationCtx, actor: string, args: { lessonId: Id<"lessons">; expectedRevision: number; action: "archive" | "unpublish" | "reactivate" }) {
   const lesson = await lessonAccessForActor(ctx, actor, args.lessonId, true);
   if (lesson.ownerId !== actor) throw new Error("Only owner can change lifecycle"); revisionCheck(lesson, args.expectedRevision);
-  await ctx.db.patch("lessons", lesson._id, { status: args.action === "archive" ? "archived" : "active", ...(args.action === "unpublish" ? { publishedVersionId: undefined, visibility: "private" as const } : {}), revision: lesson.revision + 1, updatedAt: Date.now() });
+  await authorDb(ctx).patch("lessons", lesson._id, { status: args.action === "archive" ? "archived" : "active", ...(args.action === "unpublish" ? { publishedVersionId: undefined, visibility: "private" as const } : {}), revision: lesson.revision + 1, updatedAt: Date.now() });
   await recordPublicationAction(ctx, { lessonId: lesson._id, actorId: actor, action: args.action, revision: lesson.revision + 1, ...(lesson.publishedVersionId ? { versionId: lesson.publishedVersionId } : {}), beforeVisibility: lesson.visibility, afterVisibility: args.action === "unpublish" ? "private" : lesson.visibility, reason: `Owner requested ${args.action}. Version history remains intact.` });
   return lesson.revision + 1;
 }
@@ -245,7 +246,7 @@ export async function forkLessonForActor(ctx: MutationCtx, actor: string, args: 
   if (!version || version.lessonId !== parent._id || (actor !== parent.ownerId && version._id !== parent.publishedVersionId)) throw new Error("Version not accessible");
   // Content is copied by value; source IDs remain citations with independent access.
   await consumeRate(ctx, `learn:create:${actor}`, LEARN_WRITE_LIMITS.creationsPerHour, 3_600_000);
-  const lessonId = await ctx.db.insert("lessons", { ownerId: actor, metadata: version.metadata, draft: version.document, revision: 0, status: "active", visibility: "private", communityState: "ok", parentLessonId: parent._id, parentVersionId: version._id, originLessonId: parent.originLessonId ?? parent._id, createdAt: Date.now(), updatedAt: Date.now(), searchText: "" });
+  const lessonId = await authorDb(ctx).insert("lessons", { ownerId: actor, metadata: version.metadata, draft: version.document, revision: 0, status: "active", visibility: "private", communityState: "ok", parentLessonId: parent._id, parentVersionId: version._id, originLessonId: parent.originLessonId ?? parent._id, createdAt: Date.now(), updatedAt: Date.now(), searchText: "" });
   await enqueueLearnWebhookEvent(ctx, { event: "lesson.forked", lessonId, operationId: "fork:0", revision: 0 });
   await recordPublicationAction(ctx, { lessonId, actorId: actor, action: "fork", revision: 0, versionId: version._id, parentLessonId: parent._id, afterVisibility: "private", reason: "Created a private copy from an immutable parent version, retaining lineage." });
   return lessonId;
@@ -329,7 +330,7 @@ export const reindexAllLessons = mutation({
       const blocks = version ? version.document.blocks : l.draft.blocks;
       const searchText = await buildLessonSearchText(ctx, l.ownerId, meta, blocks);
       if (l.searchText !== searchText) {
-        await ctx.db.patch("lessons", l._id, { searchText });
+        await authorDb(ctx).patch("lessons", l._id, { searchText });
         count++;
       }
     }

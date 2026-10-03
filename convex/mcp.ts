@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 // Backend for the ChatGPT app (MCP server at /mcp).
 //
 // The Next.js /mcp route verifies the person's Clerk OAuth token, then calls
@@ -445,7 +446,7 @@ export const setFormStatus = internalMutation({
       if (form.status !== "archived") fail("INVALID_STATUS", "Only archived forms can be restored.");
       status = published ? "closed" : "draft";
     }
-    await ctx.db.patch("forms", form._id, { status, updatedAt: Date.now() });
+    await authorDb(ctx).patch("forms", form._id, { status, updatedAt: Date.now() });
     await emitFormStatusChange(ctx, form, status);
     await logActivity(ctx, form._id, args.userId, { close: "closed", reopen: "reopened", archive: "archived", restore: "restored" }[args.action]);
     const fresh = (await ctx.db.get("forms", form._id))!;

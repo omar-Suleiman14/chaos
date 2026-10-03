@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { observeHttp } from "../lib/backendTelemetry";
 import { learnCapabilityLimits } from "./learnCapabilityModel";
 import type { HttpRouter } from "convex/server";
@@ -259,7 +260,7 @@ export const createDraft = internalMutation({ args: { tokenId: base.tokenId, ide
   try { lessonId = await createLessonForActor(ctx, token.ownerId, { metadata: body.metadata, document }); }
   catch (e) { return caught(e); }
   const itemRef = `lesson_${lessonId}`;
-  await ctx.db.patch("lessons", lessonId, { externalOrigin: { connectionId: token._id, source: body.source, createdAt: Date.now() } });
+  await authorDb(ctx).patch("lessons", lessonId, { externalOrigin: { connectionId: token._id, source: body.source, createdAt: Date.now() } });
   await ctx.db.insert("integrationCreatedItems", { tokenId: token._id, itemRef, source: body.source, createdAt: Date.now() });
   await logConnectionActivity(ctx, token._id, "lesson.draft_created", itemRef);
   const lesson = (await ctx.db.get("lessons", lessonId))!;

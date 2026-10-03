@@ -11,6 +11,7 @@
 import type * as admin from "../admin.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminModel from "../adminModel.js";
+import type * as authorIndex from "../authorIndex.js";
 import type * as authz from "../authz.js";
 import type * as courseDirectory from "../courseDirectory.js";
 import type * as courseSearchModel from "../courseSearchModel.js";
@@ -107,6 +108,7 @@ import type * as notifications from "../notifications.js";
 import type * as observability from "../observability.js";
 import type * as observabilityModel from "../observabilityModel.js";
 import type * as plans from "../plans.js";
+import type * as publicAuthors from "../publicAuthors.js";
 import type * as questionImports from "../questionImports.js";
 import type * as quizForkModel from "../quizForkModel.js";
 import type * as quizForks from "../quizForks.js";
@@ -134,6 +136,7 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   adminAnalytics: typeof adminAnalytics;
   adminModel: typeof adminModel;
+  authorIndex: typeof authorIndex;
   authz: typeof authz;
   courseDirectory: typeof courseDirectory;
   courseSearchModel: typeof courseSearchModel;
@@ -230,6 +233,7 @@ declare const fullApi: ApiFromModules<{
   observability: typeof observability;
   observabilityModel: typeof observabilityModel;
   plans: typeof plans;
+  publicAuthors: typeof publicAuthors;
   questionImports: typeof questionImports;
   quizForkModel: typeof quizForkModel;
   quizForks: typeof quizForks;

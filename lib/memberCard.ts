@@ -49,6 +49,7 @@ export interface MemberCardData {
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const W = 340, H = 500;
 const SANS = "Inter, 'Segoe UI', system-ui, -apple-system, sans-serif";
+const RUQAA = "var(--font-ruqaa), 'Aref Ruqaa', serif";
 const SERIF = "Georgia, 'Times New Roman', serif";
 const MONO = "'JetBrains Mono', ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace";
 
@@ -111,8 +112,8 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
       <text x="32" y="${H - 29}">CHAOS</text>
       <rect x="72" y="${H - 44}" width="14" height="22" fill="${theme.ink}" opacity=".25"/>
       <text x="94" y="${H - 29}">No. ${no}</text>
-      <text x="${W - 22}" y="${H - 36}" text-anchor="end" font-family="${ar ? SANS : SERIF}" font-size="11" font-weight="400">${ar ? "عضو منذ" : "MEMBER SINCE"}</text>
-      <text x="${W - 22}" y="${H - 23}" text-anchor="end" font-family="${ar ? SANS : SERIF}" font-size="11" font-weight="400">${esc(since)}</text>
+      <text x="${W - 22}" y="${H - 36}" text-anchor="end" font-family="${ar ? RUQAA : SERIF}" font-size="11" font-weight="400">${ar ? "عضو منذ" : "MEMBER SINCE"}</text>
+      <text x="${W - 22}" y="${H - 23}" text-anchor="end" font-family="${ar ? RUQAA : SERIF}" font-size="11" font-weight="400">${esc(since)}</text>
     </g>`;
   if (side === "back") {
     return `<svg xmlns="http://www.w3.org/2000/svg" direction="ltr" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${defs}${frame}
@@ -138,8 +139,8 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
     </g>
     <circle cx="${W / 2}" cy="${157}" r="72" fill="${theme.paper}" opacity=".22"/>
     ${blob(avatarSeed(data.username), W / 2 - 66, 91, 132, theme.hue)}
-    <text ${tx} y="${H - 156}" font-family="${SANS}" font-size="${name.size}" font-weight="800"${ar ? "" : ` letter-spacing="-.5"`} fill="${theme.accent}">${esc(name.text)}</text>
-    <text ${tx} y="${H - 132}" font-family="${ar ? SANS : MONO}" font-size="${ar ? 14 : 12.5}" fill="${theme.ink}">${esc(memberTitle(data.seed, data.locale))}</text>
+    <text ${tx} y="${H - 156}" font-family="${ar ? RUQAA : SANS}" font-size="${name.size}" font-weight="${ar ? 700 : 800}"${ar ? "" : ` letter-spacing="-.5"`} fill="${theme.accent}">${esc(name.text)}</text>
+    <text ${tx} y="${H - 132}" font-family="${ar ? RUQAA : MONO}" font-size="${ar ? 14 : 12.5}" fill="${theme.ink}">${esc(memberTitle(data.seed, data.locale))}</text>
     <text x="${ar ? W - 22 : 22}"${ar ? ` text-anchor="end"` : ""} y="${H - 110}" font-family="${MONO}" font-size="11" fill="${muted}">@${esc(data.username)}</text>
     ${footer}</svg>`;
 }

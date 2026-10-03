@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { consumeRate } from "./serverUtils";
 import { v } from "convex/values";
 import { resolveStudyTarget, readStudyProgress, startStudySession, completeStudyBlocks } from "./learnProgressServices";
@@ -425,7 +426,7 @@ export const moderate = mutation({
         remove: "removed",
       } as const
     )[args.action];
-    await ctx.db.patch("lessons", lesson._id, {
+    await authorDb(ctx).patch("lessons", lesson._id, {
       communityState: after,
       revision: lesson.revision + 1,
       updatedAt: Date.now(),

@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { v } from "convex/values";
 import { mutation, query } from "./_generated/server";
 import type { QueryCtx } from "./_generated/server";
@@ -86,7 +87,7 @@ export const setEmbedSettings = mutation({
     if ("tooMany" in result) throw new Error(`INVALID_EMBED: Add at most ${MAX_EMBED_ORIGINS} sites.`);
     if ("invalid" in result) throw new Error(`INVALID_EMBED: "${result.invalid.slice(0, 80)}" is not a website address like https://example.com.`);
     const embed = { enabled: args.enabled, origins: result.origins, anyOrigin: args.anyOrigin };
-    await ctx.db.patch("forms", form._id, { embed, updatedAt: Date.now() });
+    await authorDb(ctx).patch("forms", form._id, { embed, updatedAt: Date.now() });
     await logActivity(ctx, form._id, identity.subject, "changed embedding", embed.enabled ? (embed.anyOrigin ? "any site" : `${embed.origins.length} site${embed.origins.length === 1 ? "" : "s"}`) : "off");
     return embed;
   },

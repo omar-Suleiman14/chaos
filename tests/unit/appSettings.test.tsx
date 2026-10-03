@@ -1,3 +1,4 @@
+vi.mock("@/lib/cardFonts", () => ({ cardRuqaa: { variable: "ruqaa" } }));
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";

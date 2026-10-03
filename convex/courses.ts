@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { courseSearchText } from "./courseSearchModel";
 import { v, type Infer } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
@@ -77,7 +78,7 @@ export async function createCourse(ctx: MutationCtx, args: { title?: string; lan
     const identity = { subject: actor ?? (await requireActiveUser(ctx)).identity.subject };
     const title = (args.title ?? "").trim().slice(0, 200) || "Untitled course";
     const now = Date.now();
-    const id = await ctx.db.insert("learnCollections", { ownerId: identity.subject, metadata: { title, description: "", language: args.language?.slice(0, 35) || "en", tags: [] }, items: [], lessonIds: [], revision: 0, visibility: "public", communityState: "ok", createdAt: now, updatedAt: now });
+    const id = await authorDb(ctx).insert("learnCollections", { ownerId: identity.subject, metadata: { title, description: "", language: args.language?.slice(0, 35) || "en", tags: [] }, items: [], lessonIds: [], revision: 0, visibility: "public", communityState: "ok", createdAt: now, updatedAt: now });
     await recordAssetPublicationAction(ctx, { asset: { kind: "collection", id }, actorId: identity.subject, action: "create", revision: 0, afterVisibility: "public", reason: "Created a course draft." });
     return id;
 }
@@ -99,7 +100,7 @@ export async function updateCourse(ctx: MutationCtx, args: Infer<typeof updateAr
     if (args.icon !== undefined) { if (!args.icon) delete m.icon; else if (args.icon.length <= 40 && !/[\s\u0000-\u001f\u007f<>]/.test(args.icon)) m.icon = args.icon; else throw new Error("VALIDATION_FAILED: Use a valid Lucide icon name or emoji as the course icon."); }
     if (args.language !== undefined) m.language = args.language.slice(0, 35) || "en";
     if (args.tags !== undefined) m.tags = [...new Set(args.tags.map((t) => t.trim().slice(0, 40)).filter(Boolean))].slice(0, 12);
-    await ctx.db.patch("learnCollections", row._id, { metadata: m, updatedAt: Date.now() });
+    await authorDb(ctx).patch("learnCollections", row._id, { metadata: m, updatedAt: Date.now() });
     return null;
 }
 export const update = mutation({
@@ -115,7 +116,7 @@ export async function setOutlineCourse(ctx: MutationCtx, args: Infer<typeof setO
     const ids = [...new Set(args.lessonIds)];
     if (ids.length > MAX_LESSONS) throw new Error(`VALIDATION_FAILED: A course holds up to ${MAX_LESSONS} lessons.`);
     for (const id of ids) { const l = await ctx.db.get("lessons", id); if (!l || l.ownerId !== actor) throw new Error("NOT_FOUND: Lesson not found."); }
-    await ctx.db.patch("learnCollections", row._id, { lessonIds: ids, updatedAt: Date.now() });
+    await authorDb(ctx).patch("learnCollections", row._id, { lessonIds: ids, updatedAt: Date.now() });
     return null;
 }
 export const setOutline = mutation({
@@ -132,7 +133,7 @@ export async function addLessonCourse(ctx: MutationCtx, args: Infer<typeof addLe
     if (current.length >= MAX_LESSONS) throw new Error(`VALIDATION_FAILED: A course holds up to ${MAX_LESSONS} lessons.`);
     const title = args.title?.trim().slice(0, 200) || `Lesson ${current.length + 1}`;
     const lessonId = await createLessonForActor(ctx, actor, { metadata: { title, description: "", language: row.metadata.language, tags: [], indexing: "index" } });
-    await ctx.db.patch("learnCollections", row._id, { lessonIds: [...current, lessonId], updatedAt: Date.now() });
+    await authorDb(ctx).patch("learnCollections", row._id, { lessonIds: [...current, lessonId], updatedAt: Date.now() });
     return lessonId;
 }
 export const addLesson = mutation({
@@ -181,7 +182,7 @@ export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publish
     if (problems.length) return { ok: false as const, problems };
     const last = await ctx.db.query("collectionVersions").withIndex("by_collectionId_and_number", (q) => q.eq("collectionId", row._id)).order("desc").first();
     const versionId = await ctx.db.insert("collectionVersions", { collectionId: row._id, number: (last?.number ?? 0) + 1, metadata: row.metadata, items, publishedAt: Date.now() });
-    await ctx.db.patch("learnCollections", row._id, { items, searchText: await courseSearchText(ctx, row.ownerId, row.metadata, items), publishedVersionId: versionId, visibility: args.visibility, revision: row.revision + 1, updatedAt: Date.now() });
+    await authorDb(ctx).patch("learnCollections", row._id, { items, searchText: await courseSearchText(ctx, row.ownerId, row.metadata, items), publishedVersionId: versionId, visibility: args.visibility, revision: row.revision + 1, updatedAt: Date.now() });
     await enqueueLearnWebhookEvent(ctx, { event: "collection.published", collectionId: row._id, versionId, operationId: `publish:${versionId}`, revision: row.revision + 1 });
     await recordAssetPublicationAction(ctx, { asset: { kind: "collection", id: row._id }, actorId: actor, action: "publish", revision: row.revision + 1, versionId, beforeVisibility: row.visibility, afterVisibility: args.visibility, reason: "Published the course." });
     return { ok: true as const };
@@ -194,7 +195,7 @@ export const publish = mutation({
 
 export async function unpublishCourse(ctx: MutationCtx, args: { courseId: Id<"learnCollections"> }, asActor?: string) {
     const { row, actor } = await ownedCourse(ctx, args.courseId, asActor);
-    await ctx.db.patch("learnCollections", row._id, { publishedVersionId: undefined, revision: row.revision + 1, updatedAt: Date.now() });
+    await authorDb(ctx).patch("learnCollections", row._id, { publishedVersionId: undefined, revision: row.revision + 1, updatedAt: Date.now() });
     await recordAssetPublicationAction(ctx, { asset: { kind: "collection", id: row._id }, actorId: actor, action: "unpublish", revision: row.revision + 1, beforeVisibility: row.visibility, afterVisibility: row.visibility, reason: "Unpublished the course." });
     return null;
 }
@@ -207,7 +208,7 @@ export const unpublish = mutation({
 /** Archive hides the course from the library and its public page; restore brings it back. Lessons are untouched. */
 export async function setCourseArchived(ctx: MutationCtx, args: { courseId: Id<"learnCollections">; archived: boolean }, asActor?: string) {
     const { row } = await ownedCourse(ctx, args.courseId, asActor);
-    await ctx.db.patch("learnCollections", row._id, { archived: args.archived, updatedAt: Date.now() });
+    await authorDb(ctx).patch("learnCollections", row._id, { archived: args.archived, updatedAt: Date.now() });
     return null;
 }
 export const setArchived = mutation({
