@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { searchHit } from "./learnSearch";
 import { directoryHit } from "./learnDiscovery";
 import { v } from "convex/values";
@@ -103,7 +104,7 @@ export const forkPublic = internalMutation({
       return { lessonId: lesson._id, revision: 0 };
     }
     const lessonId = await forkLessonForActor(ctx, token.ownerId, args);
-    await ctx.db.patch("lessons", lessonId, { externalOrigin: { connectionId: token._id, createdAt: Date.now() } });
+    await authorDb(ctx).patch("lessons", lessonId, { externalOrigin: { connectionId: token._id, createdAt: Date.now() } });
     await ctx.db.insert("integrationCreatedItems", { tokenId: token._id, itemRef: `lesson_${lessonId}`, createdAt: Date.now() });
     const result = { lessonId, revision: 0 };
     await ctx.db.insert("integrationIdempotency", { tokenId: token._id, key, requestHash, status: 201, body: JSON.stringify(result), createdAt: Date.now() });

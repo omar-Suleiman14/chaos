@@ -1,3 +1,4 @@
+vi.mock("@/lib/cardFonts", () => ({ cardRuqaa: { variable: "ruqaa" } }));
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
@@ -66,7 +67,7 @@ describe("app settings", () => {
     expect(screen.getByRole("radio", { name: "Sunset" })).toBeChecked();
     fireEvent.click(screen.getByRole("button", { name: "Reset theme" }));
     expect(readPreferences().newFormPreset).toBe(defaultPreferences.newFormPreset);
-    expect(screen.getByRole("radio", { name: "Google Forms style" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Lilac" })).toBeChecked();
     expect(mocks.setMode).not.toHaveBeenCalled();
   });
 

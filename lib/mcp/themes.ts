@@ -80,7 +80,7 @@ export function themeCatalog() {
       sounds: soundOptions.map((o) => ({ id: o.id, name: o.label, description: o.hint })),
     },
     notes: [
-      "Forms created from ChatGPT use the theme you pass (default Google Forms style) with sound on (Glass); set sound to off for silence. Forms made in Chaos itself start silent.",
+      "Forms created from ChatGPT use the theme you pass (default Lilac) with sound on (Glass); set sound to off for silence. Forms made in Chaos itself start silent.",
       "Colours are six-digit hex like #1a73e8. appearance auto adds a darker version for respondents who use dark mode; fixed always uses the chosen colours.",
       "Changing a single property keeps the preset and shows it as edited in Chaos.",
     ],

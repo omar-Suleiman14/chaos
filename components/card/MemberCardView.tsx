@@ -5,6 +5,7 @@ import { Download, RefreshCw, Send, Wallet } from "lucide-react";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { CARD_THEMES, memberCardPng, memberCardSvg, type MemberCardData } from "@/lib/memberCard";
 import "./card.css";
+import { cardRuqaa } from "@/lib/cardFonts";
 
 const copy = {
   en: {
@@ -66,13 +67,13 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
     const el = tilt.current; if (!el || e.pointerType === "touch") return;
     const r = el.getBoundingClientRect();
     const x = (e.clientX - r.left) / r.width - 0.5, y = (e.clientY - r.top) / r.height - 0.5;
-    el.style.setProperty("--rx", `${(-y * 6).toFixed(2)}deg`); el.style.setProperty("--ry", `${(x * 8).toFixed(2)}deg`);
+    el.style.setProperty("--rx", `${(-y * 10).toFixed(2)}deg`); el.style.setProperty("--ry", `${(x * 14).toFixed(2)}deg`);
     el.style.setProperty("--gx", `${(x + 0.5) * 100}%`); el.style.setProperty("--gy", `${(y + 0.5) * 100}%`);
   };
   const leave = () => { const el = tilt.current; if (el) { el.style.setProperty("--rx", "0deg"); el.style.setProperty("--ry", "0deg"); } };
 
   return (
-    <div className="mc" ref={root}>
+    <div className={`mc ${cardRuqaa.variable}`} ref={root}>
       <div className={framed ? "mc-frame" : undefined}>
         {framed && <span className="mc-frame__label">{t.label}</span>}
         <div className="mc-stage" ref={tilt} onPointerMove={move} onPointerLeave={leave}>

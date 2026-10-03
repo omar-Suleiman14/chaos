@@ -354,7 +354,7 @@ describe("live games: bounded completion and active memberships", () => {
     await owner.mutation(api.live.advance, { gameId, from: "reveal", questionIndex: 0 });
     await owner.mutation(api.live.advance, { gameId, from: "leaderboard", questionIndex: 0 });
     expect((await owner.query(api.live.hostView, { gameId }))!.answeredCount).toBe(0);
-  });
+  }, 20_000); // Shared CI runners need room for 500 serial submissions; all bounds remain asserted.
 });
 
 describe("live games: results", () => {

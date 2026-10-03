@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { v } from "convex/values";
 import {
   paginationOptsValidator,
@@ -110,7 +111,7 @@ export const backfill = internalMutation({
           row.publishedVersionId,
         );
         if (version?.collectionId === row._id)
-          await ctx.db.patch("learnCollections", row._id, {
+          await authorDb(ctx).patch("learnCollections", row._id, {
             searchText: await courseSearchText(
               ctx,
               row.ownerId,

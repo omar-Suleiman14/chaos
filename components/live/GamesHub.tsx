@@ -23,8 +23,8 @@ const copy = {
     title: "Games", lead: "Create a quiz or host a published one. Players join at /play with a PIN.",
     create: "Create a game", creating: "Creating…", guide: "Hosting guide",
     setup: "Session settings", setupHelp: "You can change these in the lobby too.",
-    theme: "Theme", themeLabel: "Game theme", inherit: "Apple style (default)",
-    themeHelp: "Keep the quiz’s design or pick a theme.",
+    theme: "Theme", themeLabel: "Game theme", inherit: "Flow (default)",
+    themeHelp: "Use Flow or choose another theme.",
     time: "Time per question", seconds: (n: number) => `${n} seconds`,
     labels: "Show answers on phones", labelsHelp: "Players see the answer text on their phones.",
     ready: "Ready to host", draft: "Drafts", published: "Published", draftStatus: "Draft",
@@ -38,8 +38,8 @@ const copy = {
     title: "الألعاب", lead: "أنشئ اختبارًا أو استضف اختبارًا منشورًا. ينضم اللاعبون عبر /play برمز اللعبة.",
     create: "أنشئ لعبة", creating: "جارٍ الإنشاء…", guide: "دليل الاستضافة",
     setup: "إعدادات الجلسة", setupHelp: "يمكنك تعديلها في الردهة أيضًا.",
-    theme: "المظهر", themeLabel: "مظهر اللعبة", inherit: "بأسلوب Apple (الافتراضي)",
-    themeHelp: "احتفظ بتصميم الاختبار أو اختر مظهرًا.",
+    theme: "المظهر", themeLabel: "مظهر اللعبة", inherit: "انسيابي (الافتراضي)",
+    themeHelp: "استخدم المظهر الانسيابي أو اختر مظهرًا آخر.",
     time: "وقت كل سؤال", seconds: (n: number) => `${n} ثانية`,
     labels: "اعرض الإجابات على الهواتف", labelsHelp: "يرى اللاعبون نص الإجابات على هواتفهم.",
     ready: "جاهزة للاستضافة", draft: "المسودات", published: "منشور", draftStatus: "مسودة",
@@ -122,9 +122,9 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
     <label className="ws-search"><Search size={16} aria-hidden/><input type="search" value={search} aria-label={locale === "ar" ? "ابحث عن اختبار لاستضافته" : "Find a quiz to host"} placeholder={locale === "ar" ? "ابحث عن اختبار لاستضافته…" : "Find a quiz to host…"} onChange={event=> {setSearch(event.target.value);setShown({published:12,drafts:12});}}/></label>
     {!loaded && <p className="games-help" role="status">{t.loading}</p>}
     {loaded && <>
-      <section className="games-library" aria-labelledby="games-published-title"><h2 id="games-published-title">{t.ready}</h2><p className="games-help">{t.hostingNote}</p>{quizRows(true)}</section>
-      <section className="games-library" aria-labelledby="games-drafts-title"><h2 id="games-drafts-title">{t.draft}</h2><p className="games-help">{t.draftNote}</p>{quizRows(false)}</section>
-      <section className="games-library" aria-labelledby="games-history-title"><h2 id="games-history-title">{t.history}</h2><p className="games-help">{t.historyHelp}</p><GameHistory /></section>
+      <section className="games-library" aria-labelledby="games-published-title"><details className="games-toggle" open><summary><h2 id="games-published-title">{t.ready}</h2><span>{quizzes.filter(q => q.publishedVersion !== undefined).length + (legacy ?? []).filter(q => q.isPublished).length}</span></summary><p className="games-help">{t.hostingNote}</p>{quizRows(true)}</details></section>
+      <section className="games-library" aria-labelledby="games-drafts-title"><details className="games-toggle"><summary><h2 id="games-drafts-title">{t.draft}</h2><span>{quizzes.filter(q => q.publishedVersion === undefined).length + (legacy ?? []).filter(q => !q.isPublished).length}</span></summary><p className="games-help">{t.draftNote}</p>{quizRows(false)}</details></section>
+      <section className="games-library" aria-labelledby="games-history-title"><details className="games-toggle"><summary><h2 id="games-history-title">{t.history}</h2></summary><p className="games-help">{t.historyHelp}</p><GameHistory /></details></section>
     </>}
   </div>;
 }

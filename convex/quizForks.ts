@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { docValidator } from "convex/server";
 import { mutation, query, internalMutation, internalQuery } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -54,7 +55,7 @@ export async function forkAssessmentForActor(ctx: MutationCtx, actor: string, in
       if (!await ctx.db.query("quizzes").withIndex("by_creator_slug", q => q.eq("creatorUsername", user.username).eq("slug", candidate)).first()) { slug = candidate; break; }
     }
     if (!slug) throw new Error("SLUG_UNAVAILABLE");
-    const id = await ctx.db.insert("quizzes", { creatorId: actor, creatorUsername: user.username, title: `${snapshot.title} (fork)`.slice(0, 200), description: snapshot.description, slug, isPublished: false, createdAt: now, updatedAt: now });
+    const id = await authorDb(ctx).insert("quizzes", { creatorId: actor, creatorUsername: user.username, title: `${snapshot.title} (fork)`.slice(0, 200), description: snapshot.description, slug, isPublished: false, createdAt: now, updatedAt: now });
     for (const question of snapshot.questions) {
       const { _id: _originalId, ...fields } = question;
       // Answers, accepted keywords, explanations and hints stay with the author: a fork of someone else's quiz starts without them.

@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { parseMultiAnswer } from "./grading";
 import { consumeCreation } from "./plans";
 import { v } from "convex/values";
@@ -664,7 +665,7 @@ async function createQuizDraft(ctx: MutationCtx, token: Token, body: DraftBody):
   const { questions, warnings } = toQuizQuestions(body, await defaultPoints(ctx, token.ownerId));
   const now = Date.now();
   await consumeCreation(ctx, token.ownerId);
-  const quizId = await ctx.db.insert("quizzes", {
+  const quizId = await authorDb(ctx).insert("quizzes", {
     title: body.title,
     description: body.description || undefined,
     slug: await uniqueQuizSlug(ctx, username, body.title),
@@ -759,7 +760,7 @@ export const updateDraft = internalMutation({
         const existing = await ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", quiz._id)).take(1000);
         for (const q of existing) if (q.deletedAt === undefined) await ctx.db.patch("questions", q._id, { deletedAt: Date.now() });
         for (const [order, q] of questions.entries()) await ctx.db.insert("questions", { quizId: quiz._id, ...q, order });
-        await ctx.db.patch("quizzes", quiz._id, { title: parsed.body.title, description: parsed.body.description || undefined, updatedAt: Math.max(Date.now(), quiz.updatedAt + 1) });
+        await authorDb(ctx).patch("quizzes", quiz._id, { title: parsed.body.title, description: parsed.body.description || undefined, updatedAt: Math.max(Date.now(), quiz.updatedAt + 1) });
         warnings = w;
       }
     } catch (error) {

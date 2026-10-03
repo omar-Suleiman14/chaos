@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internalMutation, mutation, query } from "./_generated/server";
@@ -324,7 +325,7 @@ export async function deleteResponseRecord(ctx: MutationCtx, response: Doc<"form
       const def = await definitionForResponse(ctx, response);
       if (def) await countResponse(ctx, form, response, def, -1);
     } else if (response.status === "partial") {
-      await ctx.db.patch("forms", form._id, { partialCount: Math.max(0, form.partialCount - 1) });
+      await authorDb(ctx).patch("forms", form._id, { partialCount: Math.max(0, form.partialCount - 1) });
     }
   }
   await ctx.db.delete("formResponses", response._id);

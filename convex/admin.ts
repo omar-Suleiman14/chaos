@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 ﻿import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { mutation, query, internalMutation } from "./_generated/server";
@@ -314,7 +315,7 @@ export const moderateContent = mutation({
     const item = formId ? await ctx.db.get("forms", formId) : quizId ? await ctx.db.get("quizzes", quizId) : null;
     if (!item) throw new Error("Content not found");
     if ("shareId" in item) {
-      await ctx.db.patch("forms", item._id, {
+      await authorDb(ctx).patch("forms", item._id, {
         isBanned: args.hold,
         ...(args.hold
           ? {
@@ -327,7 +328,7 @@ export const moderateContent = mutation({
         updatedAt: Date.now(),
       });
     } else {
-      await ctx.db.patch("quizzes", item._id, {
+      await authorDb(ctx).patch("quizzes", item._id, {
         isBanned: args.hold,
         ...(args.hold ? { isPublished: false } : {}),
         updatedAt: Date.now(),

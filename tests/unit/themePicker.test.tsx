@@ -21,12 +21,12 @@ describe("compact theme choices", () => {
     expect(screen.queryByText("Aa")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "All themes (18)" }));
     expect(screen.getAllByRole("radio")).toHaveLength(19);
-    fireEvent.change(screen.getByRole("searchbox", { name: "Search themes" }), { target: { value: "Microsoft" } });
+    fireEvent.change(screen.getByRole("searchbox", { name: "Search themes" }), { target: { value: "Banner" } });
     expect(screen.getAllByRole("radio")).toHaveLength(2);
-    fireEvent.click(screen.getByRole("radio", { name: "Microsoft Forms style" }));
+    fireEvent.click(screen.getByRole("radio", { name: "Banner" }));
     fireEvent.click(screen.getByRole("button", { name: "Fewer themes" }));
-    expect(screen.getByRole("radio", { name: "Microsoft Forms style" })).toBeChecked();
-    expect(screen.getByRole("radio", { name: "Microsoft Forms style" })).toHaveAttribute("tabindex", "0");
+    expect(screen.getByRole("radio", { name: "Banner" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Banner" })).toHaveAttribute("tabindex", "0");
     expect(screen.queryByRole("searchbox")).toBeNull();
   });
 

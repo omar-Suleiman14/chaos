@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 // One-off, re-runnable data repairs for rows written by older versions.
 //
 // Nothing here runs automatically. An operator starts a repair with
@@ -90,7 +91,7 @@ export const repairQuestionTypes = internalMutation({
         changedIds.push(`snapshot:${sq._id}`);
         return { ...sq, type: fixed };
       });
-      if (touched && !args.dryRun) await ctx.db.patch("quizzes", quiz._id, { publishedSnapshot: { ...quiz.publishedSnapshot, questions } });
+      if (touched && !args.dryRun) await authorDb(ctx).patch("quizzes", quiz._id, { publishedSnapshot: { ...quiz.publishedSnapshot, questions } });
     }
     return { scanned: page.page.length, changed: changedIds.length, changedIds, isDone: page.isDone, continueCursor: page.isDone ? null : page.continueCursor };
   },

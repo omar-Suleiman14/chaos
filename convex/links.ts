@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
@@ -79,7 +80,7 @@ export const setFormSlug = mutation({
       user: await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", access.identity.subject)).first(),
     }));
     if (args.slug === null) {
-      await ctx.db.patch("forms", form._id, { slug: undefined, updatedAt: Date.now() });
+      await authorDb(ctx).patch("forms", form._id, { slug: undefined, updatedAt: Date.now() });
       return null;
     }
     if (!user || (user.usernameChosen !== true && GENERATED.test(user.username))) {
@@ -91,7 +92,7 @@ export const setFormSlug = mutation({
     if (clash && clash._id !== form._id) throw new Error("SLUG_TAKEN: Another of your forms already uses that link.");
     const quiz = await ctx.db.query("quizzes").withIndex("by_creator_slug", (q) => q.eq("creatorUsername", user.username).eq("slug", slug)).first();
     if (quiz) throw new Error("SLUG_TAKEN: One of your older quizzes already uses that link.");
-    await ctx.db.patch("forms", form._id, { slug, updatedAt: Date.now() });
+    await authorDb(ctx).patch("forms", form._id, { slug, updatedAt: Date.now() });
     return slug;
   },
 });

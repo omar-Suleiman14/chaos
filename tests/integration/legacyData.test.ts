@@ -36,6 +36,7 @@ const snapshotAll = (t: T) => t.run(async (ctx) => ({
   responses: await ctx.db.query("formResponses").collect(),
   aiJobs: await ctx.db.query("aiJobs").collect(),
   settings: await ctx.db.query("teacherSettings").collect(),
+  authorAssets: await ctx.db.query("publicAuthorAssets").collect(),
 }));
 
 describe("legacy data: the current schema accepts old shapes", () => {
@@ -333,9 +334,17 @@ describe("migrations: repairQuestionTypes", () => {
     const physics = after.quizzes.find((q) => q._id === ds.quizzes.snapshot)!;
     expect(physics.publishedSnapshot!.questions.map((q) => q.type)).toEqual(["mcq", "multi_select"]);
     expect(physics.publishedSnapshot!.title).toBe("Physics (published)");
-    // Sessions, users, forms are untouched.
+    // Sessions and forms are untouched. Repairing the public snapshot also
+    // registers its author; all other profile data must remain unchanged.
     expect(after.sessions).toEqual(before.sessions);
-    expect(after.users).toEqual(before.users);
+    expect(after.users).toEqual(before.users.map(user => user._id === ds.users.teacher
+      ? { ...user, publicAuthorAssets: 1 }
+      : user));
+    expect(before.authorAssets).toEqual([]);
+    expect(after.authorAssets).toHaveLength(1);
+    expect(after.authorAssets[0]).toMatchObject({
+      assetId: ds.quizzes.snapshot, table: "quizzes", ownerId: LEGACY_TEACHER.clerkId,
+    });
     expect(after.forms).toEqual(before.forms);
 
     const second = await runToEnd(t, internal.migrations.repairQuestionTypes);

@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { homeworkUploadAccess } from "./homeworkUploadAccess";
 import { hasPro } from "./authz";
 import { planLimits } from "../lib/planCatalog";
@@ -248,7 +249,7 @@ async function adjustAggregates(ctx: MutationCtx, formId: Id<"forms">, def: Form
 export async function countResponse(ctx: MutationCtx, form: Doc<"forms">, response: Doc<"formResponses">, def: FormDefinition, sign: 1 | -1) {
   await adjustAggregates(ctx, form._id, def, response.answers as Answers, sign, response.durationMs);
   const fresh = (await ctx.db.get("forms", form._id))!;
-  await ctx.db.patch("forms", form._id, { responseCount: Math.max(0, fresh.responseCount + sign), ...(sign === 1 ? { lastResponseAt: Date.now() } : {}) });
+  await authorDb(ctx).patch("forms", form._id, { responseCount: Math.max(0, fresh.responseCount + sign), ...(sign === 1 ? { lastResponseAt: Date.now() } : {}) });
 }
 
 export async function definitionForResponse(ctx: Ctx, response: Doc<"formResponses">): Promise<FormDefinition | null> {
@@ -401,7 +402,7 @@ export const submitResponse = mutation({
       await ctx.db.patch("formResponses", existing._id, record);
       responseId = existing._id;
       receiptCode = existing.receiptCode;
-      if (args.final) await ctx.db.patch("forms", form._id, { partialCount: Math.max(0, form.partialCount - 1) });
+      if (args.final) await authorDb(ctx).patch("forms", form._id, { partialCount: Math.max(0, form.partialCount - 1) });
     } else {
       receiptCode = randomCode(8).toUpperCase();
       responseId = await ctx.db.insert("formResponses", {
@@ -417,7 +418,7 @@ export const submitResponse = mutation({
         reviewed: false,
         tags: [],
       });
-      if (!args.final) await ctx.db.patch("forms", form._id, { partialCount: form.partialCount + 1 });
+      if (!args.final) await authorDb(ctx).patch("forms", form._id, { partialCount: form.partialCount + 1 });
     }
     for (const upload of uploads.docs) if (!upload.responseId) await ctx.db.patch("formUploads", upload._id, { responseId });
 

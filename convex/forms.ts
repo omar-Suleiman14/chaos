@@ -1,3 +1,4 @@
+import { authorDb } from "./authorIndex";
 import { consumeCreation } from "./plans";
 import { deleteUploadRecord } from "./formResults";
 import { supportEmail } from "./support";
@@ -59,7 +60,7 @@ export async function createFormRecord(
   assertDraftSize(definition);
   await consumeCreation(ctx, ownerId);
   const now = Date.now();
-  const formId = await ctx.db.insert("forms", {
+  const formId = await authorDb(ctx).insert("forms", {
     ownerId,
     title: definition.title,
     shareId: await uniqueShareId(ctx),
@@ -84,7 +85,7 @@ export async function replaceDraft(ctx: MutationCtx, form: Doc<"forms">, definit
   if (form.status === "archived") throw new Error("FORM_ARCHIVED: Restore this form before editing.");
   assertDraftSize(definition);
   const draftRevision = form.draftRevision + 1;
-  await ctx.db.patch("forms", form._id, { draft: definition, title: definition.title, draftRevision, updatedAt: Date.now() });
+  await authorDb(ctx).patch("forms", form._id, { draft: definition, title: definition.title, draftRevision, updatedAt: Date.now() });
   // One activity row per burst of edits keeps the log readable.
   const last = await ctx.db.query("formActivity").withIndex("by_formId_and_at", (q) => q.eq("formId", form._id)).order("desc").first();
   if (!last || last.action !== "edited" || last.actorId !== actorId || Date.now() - last.at > 10 * 60_000) {
@@ -356,7 +357,7 @@ export async function applyFormSettingsForActor(ctx: MutationCtx, form: Doc<"for
     if ((rules.emails.length || rules.domains.length) && s.access !== "signed_in") throw new Error("INVALID_SETTINGS: Email and domain limits only work when respondents sign in.");
     // Eligibility is the owner's plan, read here; the client flag alone never hides branding.
     if (s.hideBranding && !form.settings.hideBranding && !(await ownerHasPro(ctx, form.ownerId))) throw new Error("PRO_REQUIRED: Removing Chaos branding needs Pro.");
-    await ctx.db.patch("forms", form._id, {
+    await authorDb(ctx).patch("forms", form._id, {
       settingsRevision: (form.settingsRevision ?? 0) + 1,
       settings: {
         ...s, accessCodeHash,
@@ -387,7 +388,7 @@ export async function publishNow(ctx: MutationCtx, form: Doc<"forms">, actorId: 
     publishedBy: await displayName(ctx, actorId),
     draftRevision: form.draftRevision,
   });
-  await ctx.db.patch("forms", form._id, {
+  await authorDb(ctx).patch("forms", form._id, {
     status: form.status === "closed" ? "closed" : "live",
     publishedVersion: version,
     publishedRevision: form.draftRevision,
@@ -410,7 +411,7 @@ export const publishForm = mutation({
     if (role !== "owner" && form.settings.requireApproval) {
       const report = checkDefinition(form.draft as FormDefinition);
       if (report.errors.length) throw new Error("PUBLICATION_BLOCKED:\n" + report.errors.join("\n"));
-      await ctx.db.patch("forms", form._id, { approval: { requestedBy: identity.subject, requestedAt: Date.now(), revision: form.draftRevision } });
+      await authorDb(ctx).patch("forms", form._id, { approval: { requestedBy: identity.subject, requestedAt: Date.now(), revision: form.draftRevision } });
       await notify(ctx, form.ownerId, "approval", `${await displayName(ctx, identity.subject)} asked you to publish “${form.title}”.`, `approval:${form._id}:${form.draftRevision}`, form._id);
       await logActivity(ctx, form._id, identity.subject, "requested publication");
       return { outcome: "approval_requested" as const };
@@ -425,7 +426,7 @@ export const rejectPublication = mutation({
   handler: async (ctx, args) => {
     const { form, identity } = await requireFormRole(ctx, args.formId, "owner");
     if (!form.approval) return null;
-    await ctx.db.patch("forms", form._id, { approval: undefined });
+    await authorDb(ctx).patch("forms", form._id, { approval: undefined });
     await notify(ctx, form.approval.requestedBy, "approval", `Publication of “${form.title}” was not approved.`, `approval-rejected:${form._id}:${form.approval.revision}`, form._id);
     await logActivity(ctx, form._id, identity.subject, "declined publication");
     return null;
@@ -441,7 +442,7 @@ export const setFormStatus = mutation({
     if (args.status === "live" && form.publishedVersion === undefined) throw new Error("NOT_PUBLISHED: Publish the form first.");
     // "draft" is only valid to restore an archived, never-published form.
     const status = args.status === "draft" && form.publishedVersion !== undefined ? "closed" : args.status;
-    await ctx.db.patch("forms", form._id, { status, updatedAt: Date.now() });
+    await authorDb(ctx).patch("forms", form._id, { status, updatedAt: Date.now() });
     await emitFormStatusChange(ctx, form, status);
     await logActivity(ctx, form._id, identity.subject, status === "live" ? "reopened" : status === "closed" ? "closed" : status === "archived" ? "archived" : "restored");
     return null;
@@ -485,7 +486,7 @@ export const deleteForm = mutation({
     const { form } = await requireFormRole(ctx, args.formId, "owner");
     // Deleting is final, so it only happens from the Archive: archive first, then delete.
     if (form.status !== "archived") throw new Error("ARCHIVE_FIRST: Archive the form before deleting it.");
-    await ctx.db.delete("forms", form._id);
+    await authorDb(ctx).delete("forms", form._id);
     await ctx.scheduler.runAfter(0, internal.forms.purgeFormData, { formId: form._id });
     return null;
   },
