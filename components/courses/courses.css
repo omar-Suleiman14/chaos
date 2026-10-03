@@ -54,6 +54,7 @@
 .cp-kicker:hover { color: var(--s-accent); }
 .cp-cover { height: clamp(120px, 23vw, 220px); margin-block: 16px 28px; border-radius: 14px; background: var(--cx-cover, var(--s-subtle)); background-size: cover; background-position: center; border: 1px solid var(--s-line); }
 .cp-icon { display: block; font-size: clamp(48px, 8vw, 64px); line-height: 1.1; margin-block-end: 16px; }
+.cp-cover--image { display: block; width: 100%; height: auto; max-height: 360px; object-fit: cover; }
 .cp-cover + .cp-icon { position: relative; margin-top: -48px; margin-inline-start: 12px; margin-block-end: 16px; width: max-content; }
 .cp-hero h1 { font-family: inherit; font-size: clamp(30px, 5vw, 48px); font-weight: 600; line-height: 1.17; letter-spacing: -.035em; margin-block: 0 16px; overflow-wrap: anywhere; text-wrap: balance; }
 .cp-hero p { font-size: 17px; line-height: 1.7; color: var(--s-soft); max-width: 65ch; margin: 0; overflow-wrap: anywhere; }

@@ -45,7 +45,11 @@ export default async function PublicCoursePage({ params }: Props) {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <header className="cp-hero">
         <Link href="/learn" className="cp-kicker">{labels.explore}</Link>
-        <div className="cp-cover" style={coverStyle(course.id, course.coverUrl)} aria-hidden="true" />
+        {/* A real image, like the lesson cover, so the picture isn't cut down to a thin band. */}
+        {course.coverUrl
+          // eslint-disable-next-line @next/next/no-img-element -- covers can be any https URL a creator pastes
+          ? <img className="cp-cover cp-cover--image" src={course.coverUrl} alt="" />
+          : <div className="cp-cover" style={coverStyle(course.id)} aria-hidden="true" />}
         {course.icon && <span className="cp-icon" aria-hidden="true"><CourseOrLessonIcon icon={course.icon} size={48} /></span>}
         <h1>{course.title}</h1>
         {course.description && <p>{course.description}</p>}

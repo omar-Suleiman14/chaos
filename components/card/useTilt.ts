@@ -28,7 +28,9 @@ export function useTilt(stage: RefObject<HTMLElement | null>, measure?: () => HT
       frame = moving ? requestAnimationFrame(step) : 0;
       const el = stage.current; if (!el) return;
       el.style.setProperty("--rx", `${now.rx.toFixed(2)}deg`); el.style.setProperty("--ry", `${now.ry.toFixed(2)}deg`);
-      el.style.setProperty("--tx", `${now.tx.toFixed(2)}px`); el.style.setProperty("--ty", `${now.ty.toFixed(2)}px`);
+      // The push lands on whole screen pixels: part-pixel offsets make Chrome blend each letter across two pixels.
+      const dpr = window.devicePixelRatio || 1, snap = (v: number) => (Math.round(v * dpr) / dpr).toFixed(3);
+      el.style.setProperty("--tx", `${snap(now.tx)}px`); el.style.setProperty("--ty", `${snap(now.ty)}px`);
     };
     const aim = (next: typeof to) => { Object.assign(to, next); if (!frame) frame = requestAnimationFrame(step); };
     const rest = () => aim({ rx: 0, ry: 0, tx: 0, ty: 0 });
