@@ -18,6 +18,7 @@ const lifecycle = makeFunctionReference<"mutation">("mcpLearn:lifecycle");
 const fork = makeFunctionReference<"mutation">("mcpLearn:forkLesson");
 const restore = makeFunctionReference<"mutation">("mcpLearn:restoreLesson");
 const sourceMetadata = makeFunctionReference<"query">("mcpLearn:getSourceMetadata");
+const stampCreatedWith = makeFunctionReference<"mutation">("mcpLearn:stampCreatedWith");
 const userId = "user_learnowner", otherId = "user_learnother";
 const metadata = { title: "Pressure", description: "Mechanisms", language: "en", tags: [] };
 const block = (id: string, text = id): LessonBlock => ({ id, type: "paragraph", text, citations: [], conceptIds: [] });
@@ -29,6 +30,14 @@ async function setup() {
   return { t, lessonId };
 }
 describe("Learn MCP", () => {
+  it("labels only the owner's lesson with the assistant that created it, once", async () => {
+    const { t, lessonId } = await setup();
+    await t.mutation(stampCreatedWith, { userId: otherId, lessonId, createdWith: { client: "claude", name: "Claude" } });
+    expect((await t.run(ctx => ctx.db.get("lessons", lessonId)))?.createdWith).toBeUndefined();
+    await t.mutation(stampCreatedWith, { userId, lessonId, createdWith: { client: "chatgpt", name: "ChatGPT" } });
+    await t.mutation(stampCreatedWith, { userId, lessonId, createdWith: { client: "claude", name: "Claude" } });
+    expect((await t.run(ctx => ctx.db.get("lessons", lessonId)))?.createdWith).toEqual({ client: "chatgpt", name: "ChatGPT" });
+  });
   it("requires an existing active transport actor and enforces lesson ownership", async () => {
     const { t, lessonId } = await setup();
     await expect(t.mutation(create, { userId: "missing", metadata })).rejects.toThrow("ACCOUNT_REQUIRED");

@@ -54,4 +54,6 @@ pnpm_install.log
 /.agents/
 /.claude/
 /skills-lock.json
+/AGENTS.md
+/CLAUDE.md
 /load-report*.json

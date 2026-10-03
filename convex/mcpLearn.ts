@@ -2,7 +2,7 @@
 import { v } from "convex/values";
 import { learnCapabilityLimits, mcpToolGroups } from "./learnCapabilityModel";
 import { internalMutation, internalQuery, type QueryCtx, type MutationCtx } from "./_generated/server";
-import { LEARN_LIMITS, lessonBlock, lessonDocument, lessonMeta, sourceMetadata, visibility } from "./learnModel";
+import { LEARN_LIMITS, createdWith, lessonBlock, lessonDocument, lessonMeta, sourceMetadata, visibility } from "./learnModel";
 import { creatorRestricted } from "./authz";
 import { lessonAccessForActor, createLessonForActor, saveLessonDraftForActor, publishLessonForActor, restoreLessonVersionForActor, setLessonLifecycleForActor, forkLessonForActor, editLessonBlocksForActor, readLessonForActor, summarizeLesson, lessonSummary, lessonReadResult, lessonBlockOperation } from "./lessons";
 
@@ -13,6 +13,12 @@ export async function requireLearnActor(ctx: QueryCtx | MutationCtx, userId: str
   return userId;
 }
 const actor = { userId: v.string() };
+/** Labels a lesson the caller just created through an assistant. Only the owner's own, unlabelled lessons. */
+export const stampCreatedWith = internalMutation({ args: { ...actor, lessonId: v.id("lessons"), createdWith }, returns: v.null(), handler: async (ctx, args) => {
+  const lesson = await ctx.db.get("lessons", args.lessonId);
+  if (lesson && lesson.ownerId === args.userId && !lesson.createdWith) await ctx.db.patch("lessons", args.lessonId, { createdWith: args.createdWith });
+  return null;
+} });
 const edit = { ...actor, lessonId: v.id("lessons"), expectedRevision: v.number() };
 const problem = v.object({ path: v.string(), code: v.string(), message: v.string() });
 export const createLesson = internalMutation({ args: { ...actor, metadata: lessonMeta, document: v.optional(lessonDocument) }, returns: v.object({ lessonId: v.id("lessons"), revision: v.number() }), handler: async (ctx, args) => ({ lessonId: await createLessonForActor(ctx, await requireLearnActor(ctx, args.userId), args), revision: 0 }) });

@@ -92,11 +92,12 @@ function uiLesson(row: Doc<"lessons">, version?: Doc<"lessonVersions"> | null): 
     visibility: row.visibility === "public" ? "public" : "private", sources: [], quizzes: [],
     moderation: row.communityState === "review" ? "under_review" : row.communityState === "hidden" ? "restricted" : row.communityState === "removed" ? "removed" : "ok",
     quality: "none", stats: { views: 0, saves: 0, helpful: 0, notHelpful: 0, forks: 0 }, archived: row.status === "archived", createdAt: row.createdAt, updatedAt: row.updatedAt,
+    ...(row.createdWith ? { createdWith: row.createdWith } : {}),
     ...(row.parentLessonId ? { forkedFrom: { kind: "lesson" as const, sourceId: row.parentLessonId, sourceTitle: "Original lesson", authorId: "", authorName: "Chaos creator", forkedAt: row.createdAt, originId: row.originLessonId } } : {}),
   };
 }
-function publicUiLesson(result: { lessonId: Id<"lessons">; ownerId: string; ownerName: string; createdAt: number; version: Doc<"lessonVersions"> }): Lesson {
-  return { ...uiLesson({ _id: result.lessonId, _creationTime: result.createdAt, ownerId: result.ownerId, metadata: result.version.metadata, draft: result.version.document, revision: 0, status: "active", visibility: "public", communityState: "ok", createdAt: result.createdAt, updatedAt: result.version.publishedAt, searchText: "", publishedVersionId: result.version._id }, result.version), ownerName: result.ownerName };
+function publicUiLesson(result: { lessonId: Id<"lessons">; ownerId: string; ownerName: string; createdWith?: Doc<"lessons">["createdWith"]; createdAt: number; version: Doc<"lessonVersions"> }): Lesson {
+  return { ...uiLesson({ _id: result.lessonId, _creationTime: result.createdAt, ownerId: result.ownerId, createdWith: result.createdWith, metadata: result.version.metadata, draft: result.version.document, revision: 0, status: "active", visibility: "public", communityState: "ok", createdAt: result.createdAt, updatedAt: result.version.publishedAt, searchText: "", publishedVersionId: result.version._id }, result.version), ownerName: result.ownerName };
 }
 function useOwnedLessons(archived: boolean): Lesson[] | undefined {
   const rows = useOwnedRows();

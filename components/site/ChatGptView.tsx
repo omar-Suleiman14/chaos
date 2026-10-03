@@ -12,6 +12,7 @@ const copy = {
   en: {
     title: "Chaos in ChatGPT",
     intro: "The Chaos app lets ChatGPT work in your Chaos account. Ask it to turn a conversation into a quiz, draft a survey, check how a form is doing, or publish it when you’re ready. You can also draft lessons and courses. The connection is optional and available on every Chaos plan. Create and edit manually in Chaos without connecting ChatGPT.",
+    connect: ["Set it up in a minute: ", "connect Chaos to ChatGPT or Claude", "."],
     tryTitle: "Things to try",
     tries: [
       "“Make a 10-question quiz about what we just discussed, using Chaos.”",
@@ -38,6 +39,7 @@ const copy = {
   ar: {
     title: "Chaos في ChatGPT",
     intro: "يتيح تطبيق Chaos لـ ChatGPT أن يعمل داخل حسابك في Chaos. اطلب منه تحويل محادثة إلى اختبار، أو صياغة استطلاع، أو متابعة نتائج نموذج، أو نشره حين تكون جاهزًا. يمكنك أيضًا إنشاء مسودات دروس ودورات. الربط اختياري ومتاح في كل خطط Chaos. يمكنك الإنشاء والتعديل يدويًا في Chaos دون ربط ChatGPT.",
+    connect: ["الإعداد يستغرق دقيقة: ", "اربط Chaos بـ ChatGPT أو Claude", "."],
     tryTitle: "جرّب هذه الطلبات",
     tries: [
       "«اصنع اختبارًا من 10 أسئلة عمّا ناقشناه للتو، باستخدام Chaos.»",
@@ -69,6 +71,7 @@ export default function ChatGptView() {
     <LegalPage title={t.title}>
       <ChatGptMark size={40} className="site-chatgpt-mark" />
       <p>{t.intro}</p>
+      <p>{t.connect[0]}<Link href="/connect">{t.connect[1]}</Link>{t.connect[2]}</p>
 
       <h2>{t.tryTitle}</h2>
       <ul>{t.tries.map((item) => <li key={item}>{item}</li>)}</ul>

@@ -24,6 +24,7 @@ import { errorMessage } from "@/lib/errors";
 import { sourceIcon, sourceLabel, useBlockCopy } from "../editor/blocks";
 import { CurriculumBadges, ExternalRefLine, ModerationNotice, ProvenanceLine, QualityBadge, VerificationBadges } from "../ui";
 import { CourseOrLessonIcon } from "../icons";
+import { AiMark } from "@/components/site/aiMarks";
 import BlockRenderer from "./BlockRenderer";
 import DiscussionPanel from "./DiscussionPanel";
 import HandoffDialog, { type HandoffContext } from "./HandoffDialog";
@@ -35,7 +36,7 @@ import SelectionToolbar, { useTextSelection, type SelectionAction } from "./Sele
 
 const copy = {
   en: {
-    back: "Back", untitled: "Untitled lesson", by: "By", minutes: (n: number) => `${n} min read`, version: (n: number) => `Version ${n}`, updated: (d: string) => `Published ${d}`,
+    back: "Back", untitled: "Untitled lesson", by: "By", createdWith: (name: string) => `Created with ${name}`, minutes: (n: number) => `${n} min read`, version: (n: number) => `Version ${n}`, updated: (d: string) => `Published ${d}`,
     ask: "Ask", discussion: "Discussion", save: "Save", saved: "Saved", more: "More", fork: "Copy to my library", forkHelp: "Make an editable copy. The original author stays credited.",
     report: "Report", copyLink: "Copy link", linkCopied: "Link copied", askChatgpt: "Ask ChatGPT", askClaude: "Ask Claude", edit: "Edit lesson",
     reading: "Reading settings", size: "Text size", sizes: { small: "Small", normal: "Normal", large: "Large" }, width: "Line width", widths: { narrow: "Narrow", normal: "Normal", wide: "Wide" },
@@ -55,7 +56,7 @@ const copy = {
     unavailable: "This lesson is unavailable", unavailableBody: "It may have been removed, made private or never published.",
   },
   ar: {
-    back: "رجوع", untitled: "درس بلا عنوان", by: "بقلم", minutes: (n: number) => `${n} د قراءة`, version: (n: number) => `الإصدار ${n}`, updated: (d: string) => `نُشر ${d}`,
+    back: "رجوع", untitled: "درس بلا عنوان", by: "بقلم", createdWith: (name: string) => `أُنشئ باستخدام ${name}`, minutes: (n: number) => `${n} د قراءة`, version: (n: number) => `الإصدار ${n}`, updated: (d: string) => `نُشر ${d}`,
     ask: "اسأل", discussion: "النقاش", save: "احفظ", saved: "محفوظ", more: "المزيد", fork: "انسخ إلى مكتبتي", forkHelp: "أنشئ نسخة قابلة للتعديل. يبقى الكاتب الأصلي منسوبًا.",
     report: "إبلاغ", copyLink: "انسخ الرابط", linkCopied: "نُسخ الرابط", askChatgpt: "اسأل ChatGPT", askClaude: "اسأل Claude", edit: "عدّل الدرس",
     reading: "إعدادات القراءة", size: "حجم النص", sizes: { small: "صغير", normal: "عادي", large: "كبير" }, width: "عرض السطر", widths: { narrow: "ضيق", normal: "عادي", wide: "عريض" },
@@ -365,6 +366,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
             {meta.description && <p className="lx-article__lead">{meta.description}</p>}
             <div className="lx-article__byline">
               <span>{t.by} <Link href={`/learn/people/${encodeURIComponent(lesson.ownerId)}`}>{meta.authorDisplay || lesson.ownerName}</Link></span>
+              {lesson.createdWith && <span className="lx-created-with"><AiMark client={lesson.createdWith.client} size={14} /><bdi>{t.createdWith(lesson.createdWith.name)}</bdi></span>}
               {author && <VerificationBadges verifications={author.verifications} />}
               <QualityBadge quality={lesson.quality} note={lesson.qualityNote} />
               <span>{t.minutes(readingMinutes(view.content))}</span>

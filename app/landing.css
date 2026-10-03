@@ -235,6 +235,10 @@ html[dir="rtl"] .site-arrow { transform: scaleX(-1); }
 html[lang="ar"] .site-ui { font-family: var(--font-cairo), var(--font-plex-arabic), "IBM Plex Sans Arabic", sans-serif; letter-spacing: 0; }
 html[lang="ar"] .site-ui :is(h1, h2, h3, .site-brand) { letter-spacing: 0; }
 .site-chatgpt-mark { display: block; margin-top: 20px; color: var(--s-text); }
+.site-connect-url { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.site-connect-url code { padding: 6px 10px; border-radius: 8px; background: color-mix(in srgb, currentColor 8%, transparent); font-size: 14px; }
+.site-connect-btn { display: inline-flex; align-items: center; gap: 6px; min-height: 40px; padding: 0 14px; border: 1px solid currentColor; border-radius: 999px; background: none; color: inherit; font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; }
+.site-connect-title { display: flex; align-items: center; gap: 10px; }
 
 /* Features: four main ones, then a plain list. Comparison table scrolls sideways on phones. */
 .site-features { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 16px; margin-top: 36px; }

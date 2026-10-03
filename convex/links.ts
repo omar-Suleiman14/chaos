@@ -15,7 +15,7 @@ import { requireActiveUser, requireFormRole } from "./authz";
 const RESERVED = new Set([
   "admin", "api", "app", "compare", "copyright", "dashboard", "f", "help", "login", "logout", "privacy", "settings", "sign-in", "sign-up",
   "signin", "signup", "static", "support", "terms", "_next", "favicon.ico", "icon.svg", "robots.txt", "sitemap.xml",
-  "mcp", "print", "opengraph-image", "chatgpt", "play", "learn", "homework", "card", "docs", "pricing", "courses",
+  "mcp", "print", "opengraph-image", "chatgpt", "connect", "play", "learn", "homework", "card", "docs", "pricing", "courses",
 ]);
 const USERNAME = /^[a-z0-9][a-z0-9_.-]{2,29}$/;
 const SLUG = /^[a-z0-9](?:[a-z0-9-]{0,62}[a-z0-9])?$/;

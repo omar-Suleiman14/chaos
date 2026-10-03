@@ -1,4 +1,5 @@
 import { observeHttp } from "../lib/backendTelemetry";
+import { parseCreatedWith } from "../lib/aiClients";
 import { httpRouter, makeFunctionReference } from "convex/server";
 import { registerLearnIntegrationRoutes } from "./learnIntegrations";
 import { registerLearnStudyIntegrationRoutes } from "./learnStudyIntegrations";
@@ -8,6 +9,7 @@ import { registerSourceRoutes } from "./learnSources";
 import { ConvexError } from "convex/values";
 import { env, httpAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import type { ApiResult } from "./integrations";
 import type { IntegrationScope } from "./integrationModel";
@@ -263,6 +265,11 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
   const num = (x: unknown) => (typeof x === "number" && Number.isFinite(x) ? x : undefined);
   const p = b.profile as { name?: unknown; email?: unknown; imageUrl?: unknown } | undefined;
   const profile = p && typeof p.email === "string" ? { name: str(p.name) ?? "", email: p.email, imageUrl: str(p.imageUrl) } : undefined;
+  const createdWith = parseCreatedWith((body.value as { client?: unknown }).client);
+  const stamp = async (created: unknown) => {
+    const lessonId = (created as { lessonId?: unknown } | null)?.lessonId;
+    if (createdWith && typeof lessonId === "string") await ctx.runMutation(internal.mcpLearn.stampCreatedWith, { userId, lessonId: lessonId as Id<"lessons">, createdWith });
+  };
   try {
     await ctx.runMutation(internal.mcp.begin, { userId, profile });
     const id = str(input.id) ?? "";
@@ -311,7 +318,7 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "get_course": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCourses:read"), { ...input, userId }); break;
       case "update_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:update"), { ...input, userId }); break;
       case "set_course_outline": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:setOutline"), { ...input, userId }); break;
-      case "add_course_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:addLesson"), { ...input, userId }); break;
+      case "add_course_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:addLesson"), { ...input, userId }); await stamp(result); break;
       case "publish_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:publish"), { ...input, userId }); break;
       case "list_courses": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCourses:list"), { ...input, userId }); break;
       case "set_course_archived": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:setArchived"), { ...input, userId }); break;
@@ -346,7 +353,7 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "delete_lesson_blocks": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:deleteBlocks"), { ...input, userId }); break;
       case "list_lessons": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:listLessons"), { ...input, userId }); break;
       case "get_lesson": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getLesson"), { ...input, userId }); break;
-      case "create_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:createLesson"), { ...input, userId }); break;
+      case "create_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:createLesson"), { ...input, userId }); await stamp(result); break;
       case "save_lesson_draft": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:saveLesson"), { ...input, userId }); break;
       case "edit_lesson_blocks": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:editBlocks"), { ...input, userId }); break;
       case "publish_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpLearn:publishLesson"), { ...input, userId }); break;

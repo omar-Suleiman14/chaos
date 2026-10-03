@@ -7,6 +7,7 @@ import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/
 import { createChaosMcpServer, McpToolError } from "@/lib/mcp/server";
 import type { McpCaller } from "@/lib/mcp/server";
 import { resourceMetadataUrl, resourceUrl } from "@/lib/mcp/oauth";
+import { detectAiClient, type CreatedWith } from "@/lib/aiClients";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -33,7 +34,8 @@ function unauthorized(request: Request, description: string): Response {
   ));
 }
 
-async function verifiedUserId(request: Request): Promise<string | null | Response> {
+type Verified = { userId: string; clientId?: string };
+async function verifiedUser(request: Request): Promise<Verified | null | Response> {
   if (!/^Bearer\s+\S+/i.test(request.headers.get("authorization") ?? "")) return null;
   try {
     const clerk = await clerkClient();
@@ -43,7 +45,7 @@ async function verifiedUserId(request: Request): Promise<string | null | Respons
       // Only OAuth clients on the allow-list (the ChatGPT app) may act for a person. Unset = any client of this Clerk instance.
       const allowed = (process.env.CHAOS_MCP_CLIENT_IDS ?? "").split(",").map((id) => id.trim()).filter(Boolean);
       if (allowed.length && !allowed.includes(auth.clientId ?? "")) return unauthorized(request, "This app is not allowed to use Chaos.");
-      return auth.userId;
+      return { userId: auth.userId, clientId: auth.clientId ?? undefined };
     }
   } catch (error) {
     console.error("mcp: token verification failed", error instanceof Error ? error.message : error);
@@ -58,7 +60,31 @@ function convexSiteUrl(): string {
   return cloud.replace(/\.convex\.cloud\/?$/, ".convex.site");
 }
 
-function convexCaller(userId: string): McpCaller {
+// OAuth client id -> registered app name ("ChatGPT", "Claude", ...). Dynamic clients rarely change, so cache for an hour.
+const clientNames = new Map<string, { name: string; expires: number }>();
+async function oauthClientName(clientId: string | undefined): Promise<string | undefined> {
+  if (!clientId) return undefined;
+  const cached = clientNames.get(clientId);
+  if (cached && cached.expires > Date.now()) return cached.name;
+  try {
+    const clerk = await clerkClient();
+    for (let offset = 0; offset < 1000; offset += 100) {
+      const page = await clerk.oauthApplications.list({ limit: 100, offset });
+      const app = page.data.find(a => a.clientId === clientId);
+      if (app) {
+        if (clientNames.size >= 500) clientNames.clear();
+        clientNames.set(clientId, { name: app.name, expires: Date.now() + 3_600_000 });
+        return app.name;
+      }
+      if (page.data.length < 100) break;
+    }
+  } catch (error) {
+    console.error("mcp: client lookup failed", error instanceof Error ? error.message : error);
+  }
+  return undefined;
+}
+
+function convexCaller(userId: string, client?: CreatedWith): McpCaller {
   const secret = process.env.CHAOS_MCP_SECRET;
   let profile: { name: string; email: string; imageUrl?: string } | undefined;
   const send = async (tool: string, input: Record<string, unknown>) => {
@@ -66,7 +92,7 @@ function convexCaller(userId: string): McpCaller {
     const response = await fetch(`${convexSiteUrl()}/api/mcp/v1`, {
       method: "POST",
       headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, profile, tool, input }),
+      body: JSON.stringify({ userId, profile, tool, input, ...(client ? { client } : {}) }),
       cache: "no-store",
     });
     const body = (await response.json().catch(() => null)) as { result?: unknown; error?: { code: string; message: string } } | null;
@@ -89,9 +115,12 @@ function convexCaller(userId: string): McpCaller {
 
 const adminCapabilities = new Map<string, { admin: boolean; expires: number }>();
 async function handle(request: Request): Promise<Response> {
-  const userId = await verifiedUserId(request);
-  if (userId instanceof Response) return userId;
-  const call = userId ? convexCaller(userId) : null;
+  const verified = await verifiedUser(request);
+  if (verified instanceof Response) return verified;
+  const userId = verified?.userId ?? null;
+  // Which assistant is calling, so content it creates can say "Created with ChatGPT/Claude/…".
+  const client = verified ? detectAiClient(await oauthClientName(verified.clientId), request.headers.get("user-agent")) : undefined;
+  const call = userId ? convexCaller(userId, client) : null;
   let admin = false;
   if (call && userId) {
     const cached = adminCapabilities.get(userId);

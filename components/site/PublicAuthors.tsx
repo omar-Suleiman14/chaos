@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { useLocale } from "@/lib/i18n";
 import { cardRuqaa } from "@/lib/cardFonts";
 import { memberCardSvg } from "@/lib/memberCard";
+import { useEyesFollowPointer } from "@/components/card/useEyesFollowPointer";
 import { SiteNav, SiteFooter } from "./SiteChrome";
 import "@/app/landing.css";
 import "./authors.css";
@@ -25,6 +26,8 @@ export default function PublicAuthors() {
   const [selectedIndex, setIndex] = useState(0);
   const index = Math.min(selectedIndex, Math.max(0, results.length - 1));
   const stage = useRef<HTMLDivElement>(null);
+  // Every avatar in the stack looks toward the mouse (or finger while swiping).
+  useEyesFollowPointer(stage);
   const gesture = useRef<{ x: number; y: number } | null>(null);
   const suppressClick = useRef(false);
   const wheelAt = useRef(0);
@@ -89,7 +92,7 @@ export default function PublicAuthors() {
           onPointerCancel={() => { gesture.current = null; suppressClick.current = true; }}
           onClickCapture={event => { if (suppressClick.current) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false; } }}
           onDragStart={event => event.preventDefault()}>
-          {cards.map(({author, position}) => { const depth = Math.abs(position); return <Link key={author.username} href={`/card/${encodeURIComponent(author.username)}`} aria-label={`${ar ? "??? ?????" : "View card of"} ${author.name}`} tabIndex={position === 0 ? 0 : -1} draggable={false} className="author-stack-card" aria-hidden={position !== 0} style={{ "--depth": depth, "--position": position, "--lean": `${position * 3}deg`, "--turn": `${position * -12}deg`, zIndex: 5 - depth } as CSSProperties} data-active={position === 0}><AuthorArt author={author} locale={locale} /></Link>; })}
+          {cards.map(({author, position}) => { const depth = Math.abs(position); return <Link key={author.username} href={`/card/${encodeURIComponent(author.username)}`} aria-label={`${ar ? "عرض بطاقة" : "View card of"} ${author.name}`} tabIndex={position === 0 ? 0 : -1} draggable={false} className="author-stack-card" aria-hidden={position !== 0} style={{ "--depth": depth, "--position": position, "--lean": `${position * 3}deg`, "--turn": `${position * -12}deg`, zIndex: 5 - depth } as CSSProperties} data-active={position === 0}><AuthorArt author={author} locale={locale} /></Link>; })}
         </div>
         <p className="sr-only" aria-live="polite" aria-atomic="true">{current?.name} @{current?.username}</p>
         <p className="authors-hint">{ar ? "اسحب يمينًا أو يسارًا، أو مرّر فوق البطاقات." : "Swipe left or right, or scroll over the cards."}</p>

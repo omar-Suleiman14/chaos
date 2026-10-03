@@ -1,3 +1,4 @@
+import type { CreatedWith } from "@/lib/aiClients";
 /**
  * Chaos Learn: the data the Learn screens read and write.
  *
@@ -166,6 +167,8 @@ export interface Lesson {
   sources: LessonSource[];
   quizzes: AttachedQuiz[];
   forkedFrom?: Provenance;
+  /** Set when an assistant created the lesson through the Chaos connector. */
+  createdWith?: CreatedWith;
   externalRef?: ExternalRef;
   stats: LessonStats;
   moderation: ModerationState;

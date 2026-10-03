@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { creatorRestricted, requireActiveUser } from "./authz";
 import { lessonAccess, lessonSummary } from "./lessons";
-import { lessonMeta } from "./learnModel";
+import { createdWith, lessonMeta } from "./learnModel";
 import { questionsFromForm, questionsFromLegacy } from "./liveLogic";
 import { canonicalCommunityActor } from "./learnCommunityIntegrations";
 import schema from "./schema";
@@ -15,7 +15,7 @@ function pageCheck(count: number) {
 /** An anonymous, fail-closed metadata read. Owner/editor grants cannot make a private asset indexable. */
 export const publicLesson = query({
   args: { id: v.string() },
-  returns: v.union(v.null(), v.object({ lessonId: v.id("lessons"), ownerId: v.string(), ownerName: v.string(), createdAt: v.number(), version: schema.doc("lessonVersions") })),
+  returns: v.union(v.null(), v.object({ lessonId: v.id("lessons"), ownerId: v.string(), ownerName: v.string(), createdWith: v.optional(createdWith), createdAt: v.number(), version: schema.doc("lessonVersions") })),
   handler: async (ctx, args) => {
     if (!args.id || args.id.length > 100) return null;
     const id = ctx.db.normalizeId("lessons", args.id);
@@ -25,14 +25,14 @@ export const publicLesson = query({
     const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
     if (!version || version.lessonId !== id || (version.visibility !== undefined && version.visibility !== "public")) return null;
     const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
-    return { lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", createdAt: lesson.createdAt, version };
+    return { lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", ...(lesson.createdWith ? { createdWith: lesson.createdWith } : {}), createdAt: lesson.createdAt, version };
   },
 });
 
 /** Fast batched metadata + version lookup for multiple public lessons in one roundtrip. */
 export const publicLessonsBatch = query({
   args: { ids: v.array(v.string()) },
-  returns: v.array(v.object({ lessonId: v.id("lessons"), ownerId: v.string(), ownerName: v.string(), createdAt: v.number(), version: schema.doc("lessonVersions") })),
+  returns: v.array(v.object({ lessonId: v.id("lessons"), ownerId: v.string(), ownerName: v.string(), createdWith: v.optional(createdWith), createdAt: v.number(), version: schema.doc("lessonVersions") })),
   handler: async (ctx, args) => {
     const results = [];
     for (const rawId of args.ids.slice(0, 50)) {
@@ -44,7 +44,7 @@ export const publicLessonsBatch = query({
       const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
       if (!version || version.lessonId !== id || (version.visibility !== undefined && version.visibility !== "public")) continue;
       const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
-      results.push({ lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", createdAt: lesson.createdAt, version });
+      results.push({ lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", ...(lesson.createdWith ? { createdWith: lesson.createdWith } : {}), createdAt: lesson.createdAt, version });
     }
     return results;
   },

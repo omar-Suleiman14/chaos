@@ -199,6 +199,7 @@ button.lx-badge { cursor: pointer; font-family: inherit; }
 .lx-article__lead { font-size: 1.12em; color: var(--ws-text-soft); margin-bottom: 18px; }
 .lx-article__byline { display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center; font-size: 13px; color: var(--on-surface-variant); padding-bottom: 18px; margin-bottom: 26px; border-bottom: 1px solid var(--ws-line); }
 .lx-article__byline a { color: inherit; font-weight: 600; }
+.lx-created-with { display: inline-flex; align-items: center; gap: 6px; padding: 2px 9px 2px 6px; border: 1px solid var(--ws-line, rgb(0 0 0 / .12)); border-radius: 999px; font-size: 12px; font-weight: 500; }
 .lx-article__cover { width: 100%; max-height: 360px; object-fit: cover; border-radius: 14px; margin-bottom: 24px; }
 .lx-block { position: relative; scroll-margin-top: 84px; border-radius: 8px; }
 .lx-block + .lx-block { margin-top: .85em; }

@@ -9,12 +9,13 @@ function hash(seed: string): number {
   return h >>> 0;
 }
 
-const ADJ = ["Industrious", "Curious", "Fearless", "Relentless", "Quiet", "Brilliant", "Restless", "Unstoppable", "Patient", "Wildly Organized", "Daring", "Thoughtful", "Bold", "Tireless", "Gentle", "Electric"];
-const NOUN = ["Big Shot", "Quiz Wrangler", "Note Taker", "Question Asker", "Study Captain", "Form Builder", "Idea Collector", "Night Owl", "Chaos Tamer", "Deep Diver", "Fact Finder", "Explorer", "Puzzle Solver", "Bookworm", "Game Host", "Mind Mapper"];
-const ADJ_AR = ["المجتهد", "الفضولي", "الجريء", "المثابر", "الهادئ", "اللامع", "النشيط", "الذي لا يتوقف", "الصبور", "شديد التنظيم", "المغامر", "المتأمل", "الواثق", "الدؤوب", "اللطيف", "المتّقد"];
-const NOUN_AR = ["النجم", "صائد الاختبارات", "كاتب الملاحظات", "صاحب الأسئلة", "قائد المذاكرة", "صانع النماذج", "جامع الأفكار", "ساهر الليل", "مروّض الفوضى", "الغوّاص", "باحث الحقائق", "المستكشف", "حلّال الألغاز", "عاشق الكتب", "مضيف الألعاب", "راسم الخرائط"];
+// Two plain words, never more. Every entry is a single word in both languages.
+const ADJ = ["Curious", "Steady", "Bold", "Quiet", "Bright", "Keen", "Patient", "Daring", "Thoughtful", "Tireless", "Gentle", "Clever", "Focused", "Calm", "Eager", "Sharp"];
+const NOUN = ["Learner", "Builder", "Thinker", "Reader", "Maker", "Writer", "Teacher", "Scholar", "Planner", "Mentor", "Creator", "Student", "Solver", "Author", "Host", "Guide"];
+const ADJ_AR = ["فضولي", "ثابت", "جريء", "هادئ", "لامع", "شغوف", "صبور", "مغامر", "متأمل", "دؤوب", "لطيف", "ذكي", "مركّز", "رزين", "متحمس", "نبيه"];
+const NOUN_AR = ["متعلم", "بانٍ", "مفكر", "قارئ", "صانع", "كاتب", "معلم", "باحث", "مخطط", "مرشد", "مبدع", "طالب", "حلّال", "مؤلف", "مضيف", "دليل"];
 
-/** A playful, deterministic title like Arc's ("Industrious Big Shot"). */
+/** A short, deterministic two-word title ("Curious Learner"). */
 export function memberTitle(seed: string, locale: "en" | "ar" = "en"): string {
   const h = hash(seed + ":title");
   return locale === "ar" ? `${NOUN_AR[(h >>> 4) % NOUN_AR.length]} ${ADJ_AR[h % ADJ_AR.length]}` : `${ADJ[h % ADJ.length]} ${NOUN[(h >>> 4) % NOUN.length]}`;
@@ -25,15 +26,22 @@ export function memberNumber(seed: string): string {
   return String(hash(seed + ":no") % 10000).padStart(4, "0");
 }
 
-export interface CardTheme { name: string; paper: string; ink: string; accent: string; art: [string, string, string]; hue: number }
+export type CardPattern = "arch" | "rings" | "stripes" | "dots";
+export interface CardTheme { name: string; paper: string; ink: string; accent: string; art: [string, string, string]; hue: number; pattern: CardPattern }
+// Stored styles are indexes, so existing entries keep their position. New designs go at the end.
 export const CARD_THEMES: CardTheme[] = [
-  { name: "Mint", paper: "#fdfbf0", ink: "#0f8a5f", accent: "#13a26f", art: ["#5cbfa6", "#a9d9cf", "#7cc7b8"], hue: 160 },
-  { name: "Sunset", paper: "#fff8f0", ink: "#c2410c", accent: "#ea580c", art: ["#fb923c", "#fdba74", "#f472b6"], hue: 25 },
-  { name: "Grape", paper: "#faf7ff", ink: "#6d28d9", accent: "#7c3aed", art: ["#a78bfa", "#c4b5fd", "#f0abfc"], hue: 275 },
-  { name: "Ocean", paper: "#f4f9ff", ink: "#1d4ed8", accent: "#2563eb", art: ["#60a5fa", "#93c5fd", "#22d3ee"], hue: 215 },
-  { name: "Citrus", paper: "#fffde8", ink: "#a16207", accent: "#ca8a04", art: ["#facc15", "#fde68a", "#a3e635"], hue: 60 },
-  { name: "Rose", paper: "#fff5f7", ink: "#be123c", accent: "#e11d48", art: ["#fb7185", "#fda4af", "#f9a8d4"], hue: 345 },
-  { name: "Midnight", paper: "#11131f", ink: "#c7d2fe", accent: "#818cf8", art: ["#312e81", "#4f46e5", "#0ea5e9"], hue: 235 },
+  { name: "Mint", paper: "#fdfbf0", ink: "#0f8a5f", accent: "#13a26f", art: ["#5cbfa6", "#a9d9cf", "#7cc7b8"], hue: 160, pattern: "arch" },
+  { name: "Sunset", paper: "#fff8f0", ink: "#c2410c", accent: "#ea580c", art: ["#fb923c", "#fdba74", "#f472b6"], hue: 25, pattern: "arch" },
+  { name: "Grape", paper: "#faf7ff", ink: "#6d28d9", accent: "#7c3aed", art: ["#a78bfa", "#c4b5fd", "#f0abfc"], hue: 275, pattern: "arch" },
+  { name: "Ocean", paper: "#f4f9ff", ink: "#1d4ed8", accent: "#2563eb", art: ["#60a5fa", "#93c5fd", "#22d3ee"], hue: 215, pattern: "arch" },
+  { name: "Citrus", paper: "#fffde8", ink: "#a16207", accent: "#ca8a04", art: ["#facc15", "#fde68a", "#a3e635"], hue: 60, pattern: "arch" },
+  { name: "Rose", paper: "#fff5f7", ink: "#be123c", accent: "#e11d48", art: ["#fb7185", "#fda4af", "#f9a8d4"], hue: 345, pattern: "arch" },
+  { name: "Lagoon", paper: "#f2fbfb", ink: "#0f766e", accent: "#0d9488", art: ["#2dd4bf", "#99f6e4", "#38bdf8"], hue: 175, pattern: "rings" },
+  { name: "Peach", paper: "#fff7f2", ink: "#9a3412", accent: "#f97316", art: ["#fdba74", "#fed7aa", "#fca5a5"], hue: 20, pattern: "stripes" },
+  { name: "Meadow", paper: "#f7fdf2", ink: "#3f6212", accent: "#65a30d", art: ["#a3e635", "#d9f99d", "#4ade80"], hue: 90, pattern: "dots" },
+  { name: "Lilac", paper: "#fbf7ff", ink: "#7e22ce", accent: "#a855f7", art: ["#d8b4fe", "#f3e8ff", "#f9a8d4"], hue: 285, pattern: "rings" },
+  { name: "Sky", paper: "#f5faff", ink: "#0369a1", accent: "#0284c7", art: ["#7dd3fc", "#e0f2fe", "#a5b4fc"], hue: 200, pattern: "stripes" },
+  { name: "Honey", paper: "#fffbeb", ink: "#92400e", accent: "#d97706", art: ["#fcd34d", "#fef3c7", "#fdba74"], hue: 45, pattern: "dots" },
 ];
 
 export interface MemberCardData {
@@ -79,6 +87,28 @@ function qr(url: string, x: number, y: number, size: number, ink: string, logoGr
   return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 ${total} ${total}"><path d="${d}" fill="${ink}" shape-rendering="crispEdges"/><rect x="${lx}" y="${lx}" width="${hole}" height="${hole}" rx="${hole * 0.26}" fill="url(#${logoGradient})" stroke="#fff" stroke-opacity=".85" stroke-width=".35"/></svg>`;
 }
 
+/** The front artwork inside the clipped art window (x 22–318, y 22–292). */
+function frontArt(theme: CardTheme): string {
+  const box = `x="22" y="22" width="${W - 44}" height="270"`;
+  switch (theme.pattern) {
+    case "rings":
+      return `<rect ${box} fill="url(#@@g1)"/>` + [150, 118, 88, 60].map((r, i) => `<circle cx="${W / 2}" cy="157" r="${r}" fill="none" stroke="${theme.paper}" stroke-width="${10 - i * 2}" opacity="${.35 + i * .1}"/>`).join("")
+        + `<circle cx="${W - 40}" cy="270" r="70" fill="url(#@@g2)" opacity=".75"/>`;
+    case "stripes":
+      return `<rect ${box} fill="url(#@@g2)"/>` + Array.from({ length: 9 }, (_, i) => `<rect x="${-120 + i * 64}" y="-40" width="26" height="420" fill="${i % 2 ? theme.paper : theme.art[1]}" opacity="${i % 2 ? .3 : .45}" transform="rotate(-28 ${W / 2} 157)"/>`).join("");
+    case "dots": {
+      let dots = "";
+      for (let y = 40; y < 292; y += 24) for (let x = 34 + ((y / 24) % 2) * 12; x < W - 22; x += 24) dots += `<circle cx="${x}" cy="${y}" r="4.5"/>`;
+      return `<rect ${box} fill="url(#@@g1)"/><g fill="${theme.paper}" opacity=".4">${dots}</g><path d="M22 230 Q ${W / 2} 196 ${W - 22} 230 L ${W - 22} 292 L 22 292 Z" fill="url(#@@g2)" opacity=".85"/>`;
+    }
+    default:
+      return `<rect ${box} fill="url(#@@g1)"/>
+      <path d="M22 168 Q ${W / 2} 108 ${W - 22} 168 L ${W - 22} 186 Q ${W / 2} 128 22 186 Z" fill="${theme.paper}"/>
+      <rect x="22" y="186" width="${W - 44}" height="106" fill="url(#@@g2)" opacity=".9"/>
+      <path d="M22 186 Q ${W / 2} 128 ${W - 22} 186 L ${W - 22} 292 L 22 292 Z" fill="url(#@@g2)"/>`;
+  }
+}
+
 function fitName(name: string): { text: string; size: number } {
   const text = name.trim() || "Chaos member";
   const size = text.length > 18 ? 22 : text.length > 12 ? 28 : 34;
@@ -93,8 +123,7 @@ export function memberCardSvg(data: MemberCardData, side: "front" | "back" = "fr
 function renderCard(data: MemberCardData, side: "front" | "back"): string {
   const theme = CARD_THEMES[((data.style % CARD_THEMES.length) + CARD_THEMES.length) % CARD_THEMES.length];
   const ar = data.locale === "ar";
-  const dark = theme.paper.startsWith("#1");
-  const muted = dark ? "rgba(199,210,254,.6)" : "rgba(0,0,0,.45)";
+  const muted = "rgba(0,0,0,.45)";
   const since = new Date(data.memberSince).toLocaleDateString(ar ? "ar-EG" : "en-GB", { day: "numeric", month: "short", year: "numeric" });
   const no = memberNumber(data.seed);
   const [a, b, c] = theme.art;
@@ -118,7 +147,7 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
   if (side === "back") {
     return `<svg xmlns="http://www.w3.org/2000/svg" direction="ltr" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${defs}${frame}
       <g clip-path="url(#@@art)"><rect x="22" y="22" width="${W - 44}" height="270" fill="url(#@@g2)"/><rect x="22" y="22" width="${W - 44}" height="270" filter="url(#@@grain)" opacity=".28" style="mix-blend-mode:overlay"/></g>
-      ${qr(data.url, W / 2 - 92, 65, 184, dark ? "#ffffff" : "#111827", "@@logo")}
+      ${qr(data.url, W / 2 - 92, 65, 184, "#111827", "@@logo")}
       <text x="${W / 2}" y="330" text-anchor="middle" font-family="${SANS}" font-size="16" font-weight="800" fill="${theme.ink}">${ar ? "امسح لترى البطاقة" : "Scan to see this card"}</text>
       <text x="${W / 2}" y="352" text-anchor="middle" font-family="${MONO}" font-size="11" fill="${muted}">${esc(data.url.replace(/^https?:\/\//, ""))}</text>
       ${blob(avatarSeed(data.username), W / 2 - 26, 372, 52, theme.hue)}
@@ -130,10 +159,7 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
   const tx = ar ? `x="${W - 22}" direction="rtl"` : `x="22"`;
   return `<svg xmlns="http://www.w3.org/2000/svg" direction="ltr" viewBox="0 0 ${W} ${H}" width="${W}" height="${H}">${defs}${frame}
     <g clip-path="url(#@@art)">
-      <rect x="22" y="22" width="${W - 44}" height="270" fill="url(#@@g1)"/>
-      <path d="M22 168 Q ${W / 2} 108 ${W - 22} 168 L ${W - 22} 186 Q ${W / 2} 128 22 186 Z" fill="${theme.paper}"/>
-      <rect x="22" y="186" width="${W - 44}" height="106" fill="url(#@@g2)" opacity=".9"/>
-      <path d="M22 186 Q ${W / 2} 128 ${W - 22} 186 L ${W - 22} 292 L 22 292 Z" fill="url(#@@g2)"/>
+      ${frontArt(theme)}
       <rect x="22" y="22" width="${W - 44}" height="270" filter="url(#@@grain)" opacity=".28" style="mix-blend-mode:overlay"/>
       <rect x="22" y="22" width="${W - 44}" height="270" fill="url(#@@sheen)"/>
     </g>
