@@ -80,6 +80,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  interactiveWidget: "resizes-content",
   themeColor: [
     { media: "(prefers-color-scheme: light)", color: "#fdfcfb" },
     { media: "(prefers-color-scheme: dark)", color: "#171716" },
@@ -97,6 +98,7 @@ export default async function RootLayout({
   const locale = isLocale(stored) ? stored : "en";
   return (
     <html
+      data-scroll-behavior="smooth"
       lang={locale}
       dir={localeDir(locale)}
       suppressHydrationWarning

@@ -13,7 +13,7 @@ export function IntentLink({ href, onMouseEnter, onFocus, onTouchStart, ...props
     && props["aria-current"] !== "page";
   const warm = () => { if (eligible) setIntentHref(href); };
 
-  return <Link {...props} href={href} prefetch={eligible && intentHref === href ? null : false}
+  return <Link {...props} href={href} prefetch={eligible ? (intentHref === href ? true : null) : false}
     onMouseEnter={(event) => { onMouseEnter?.(event); if (!event.defaultPrevented) warm(); }}
     onFocus={(event) => { onFocus?.(event); if (!event.defaultPrevented) warm(); }}
     onTouchStart={(event) => { onTouchStart?.(event); if (!event.defaultPrevented) warm(); }}

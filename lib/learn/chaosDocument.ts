@@ -228,6 +228,12 @@ export function toDurableDocument(input: unknown, original?: LessonDocument): Le
       props.label = props.locator ?? props.label ?? "";
       delete props.locator;
     }
+    if (type === "lessonQuiz" || type === "quiz") {
+      type = "lessonQuiz";
+      const kind = props.assetKind; const id = props.assetId;
+      if (kind && id) props.lessonData = JSON.stringify({ asset: { kind, id } });
+      delete props.assetKind; delete props.assetId;
+    }
     if (type === "equation") props.display = previous?.type === "equation" ? previous.display : true;
     if (type === "codeBlock" && previous?.type === "diagram" && props.language === "mermaid") {
       type = "diagram";
@@ -265,7 +271,7 @@ export function fromDurableDocument(document: LessonDocument): Block[] {
     if (b.type === "equation") content = b.inline ? b.inline.map(r => ({ type: "text", text: r.text, styles: r.marks ?? {} })) : [{ type: "text", text: b.text, styles: {} }];
     if (b.type === "diagram") { type = "codeBlock"; props.language = "mermaid"; content = [{ type: "text", text: b.text, styles: {} }]; }
     if (b.type === "table") content = { type: "tableContent", headerRows: b.headerRows, rows: b.rows.map(row => ({ cells: row.map(text => [{ type: "text", text, styles: {} }]) })) };
-    if (b.type === "quiz") throw new Error("Embedded quiz blocks are not supported by this editor yet; this lesson remains safely stored on the server.");
+    if (b.type === "quiz") { type = "lessonQuiz"; Object.assign(props, { assetKind: b.asset.kind, assetId: b.asset.id }); }
     return { id: b.id, type, props, ...(content === undefined ? {} : { content }), children: visit(item.children) };
   });
   return visit(result.value);

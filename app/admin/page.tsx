@@ -1,4 +1,6 @@
-﻿"use client";
+"use client";
+import DocumentationPanel from "@/components/admin/DocumentationPanel";
+﻿
 
 import Link from "next/link";
 import { useState } from "react";
@@ -31,6 +33,7 @@ const adminTabs = [
   { id: "users", icon: Users, label: "Users & plans" },
   { id: "forms", icon: FileText, label: "Forms" },
   { id: "quizzes", icon: FileText, label: "Legacy quizzes" },
+  { id: "docs", icon: FileText, label: "Documentation" },
   { id: "activity", icon: History, label: "Activity" },
 ];
 const date = (time: number) => new Date(time).toLocaleString();
@@ -155,7 +158,7 @@ function AdminConsole() {
             {message}
           </p>
         )}
-        {tab === "overview" ? (
+        {tab === "docs" ? <DocumentationPanel /> : tab === "overview" ? (
           <Overview />
         ) : tab === "users" ? (
           <UsersPanel choose={choose} />

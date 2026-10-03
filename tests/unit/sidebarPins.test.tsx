@@ -40,25 +40,25 @@ beforeEach(() => {
 });
 
 describe("sidebar sections", () => {
-  it("prefetches only an intended destination and preserves form focus handlers and link semantics", () => {
+  it("prefetches visible destinations and prioritizes an intended destination and preserves form focus handlers and link semantics", () => {
     const { container } = render(<DashboardLayout><p>Page</p></DashboardLayout>);
     // Docs opens in a new tab, so it is a plain link outside the prefetch rules.
     const newTab = screen.getByRole("link", { name: "Docs" });
     expect(newTab).toHaveAttribute("target", "_blank");
     const links = Array.from(container.querySelectorAll("a.ws-nav-item")).filter((link) => link !== newTab);
     expect(links.length).toBeGreaterThan(2);
-    for (const link of links) expect(link).toHaveAttribute("data-prefetch", "false");
+    for (const link of links) expect(link).toHaveAttribute("data-prefetch", link.getAttribute("aria-current") === "page" ? "false" : "auto");
     expect(intent.warmForm).not.toHaveBeenCalled();
     const docs = screen.getByRole("link", { name: "Archive" });
     fireEvent.mouseEnter(docs);
-    expect(docs).toHaveAttribute("data-prefetch", "auto");
+    expect(docs).toHaveAttribute("data-prefetch", "true");
     const form = within(screen.getByRole("navigation", { name: "Recent" })).getByRole("link", { name: "Event registration" });
     fireEvent.focus(form);
-    expect(form).toHaveAttribute("data-prefetch", "auto");
+    expect(form).toHaveAttribute("data-prefetch", "true");
     expect(form).toHaveAttribute("href", "/dashboard/forms/f2");
     expect(intent.warmForm).toHaveBeenCalledExactlyOnceWith("f2");
     expect(learnBackend.mutation).not.toHaveBeenCalled();
-    for (const link of links.filter((link) => link !== docs && link !== form)) expect(link).toHaveAttribute("data-prefetch", "false");
+    for (const link of links.filter((link) => link !== docs && link !== form)) expect(link).toHaveAttribute("data-prefetch", link.getAttribute("aria-current") === "page" ? "false" : "auto");
     const current = links.find((link) => link.getAttribute("aria-current") === "page")!;
     fireEvent.focus(current);
     expect(current).toHaveAttribute("data-prefetch", "false");

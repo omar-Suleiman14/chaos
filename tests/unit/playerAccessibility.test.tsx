@@ -72,7 +72,7 @@ describe("quiz player accessibility", () => {
     await waitFor(() => expect(screen.getAllByRole("status").some((el) => /Correct\. 1 marks/.test(el.textContent ?? ""))).toBe(true));
     expect(screen.getAllByRole("radio")[0]).toHaveAttribute("aria-checked", "true");
     fireEvent.click(screen.getByRole("button", { name: /Next question/ }));
-    await waitFor(() => expect(document.activeElement?.id).toBe("q-heading-1"));
+    await waitFor(() => expect(document.activeElement).toBe(screen.getByRole("heading", { name: "Pick some" })));
     expect(screen.getByRole("region", { name: "Question 2 of 3" })).not.toHaveAttribute("inert");
   });
 

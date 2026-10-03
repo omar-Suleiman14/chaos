@@ -1,17 +1,19 @@
 "use client";
 
+import InlineQuiz from "./InlineQuiz";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { ArrowRight, GitFork, Layers, PenLine, Radio, Target } from "lucide-react";
+import { GitFork, Layers, PenLine, Radio, Target } from "lucide-react";
 import { useHostLive } from "@/components/live/HostLiveButton";
 import { useLessonFlashcards } from "@/lib/learn/data";
 import { useStudyActions, useStudyCapabilities } from "@/lib/learn/studyClient";
 import type { AttachedQuiz, Lesson, QuizKind } from "@/lib/learn/types";
 import { useCopy } from "@/lib/i18n";
 import { useState } from "react";
+import FlashcardStudy from "../study/FlashcardStudy";
 
 const copy = {
   en: {
@@ -43,6 +45,7 @@ export default function PracticeTab({ lesson, isOwner }: { lesson: Lesson; isOwn
   const capabilities = useStudyCapabilities();
   const [copying, setCopying] = useState<string | null>(null);
   const [error, setError] = useState("");
+  const [studyingSet, setStudyingSet] = useState<string | null>(null);
   const decks = useLessonFlashcards(lesson.id) ?? [];
   // Owners can host live and edit only quizzes they still own or edit.
   const mine = useQuery(api.forms.listMyForms, isOwner ? {} : "skip");
@@ -86,8 +89,8 @@ export default function PracticeTab({ lesson, isOwner }: { lesson: Lesson; isOwn
               catch (err) { setError(err instanceof Error ? err.message : "Could not copy quiz."); }
               finally { setCopying(null); }
             }}><GitFork size={14} aria-hidden />{t.copyQuiz}</button>
-            <a className="ws-btn ws-btn--sm ws-btn--primary" href={`/f/${encodeURIComponent(quiz.shareId)}`} target="_blank" rel="noopener">{t.take}<ArrowRight size={14} aria-hidden className="lx-flip" /></a>
           </div>
+          <InlineQuiz asset={{kind:"form",id:quiz.formId}} shareId={quiz.shareId} title={quiz.title}/>
         </article>
       ))}
       {classic.map(quiz => <article key={quiz.id} className="lx-quiz-card">
@@ -100,15 +103,18 @@ export default function PracticeTab({ lesson, isOwner }: { lesson: Lesson; isOwn
             catch (err) { setError(err instanceof Error ? err.message : "Could not copy quiz."); }
             finally { setCopying(null); }
           }}><GitFork size={14} aria-hidden />{t.copyQuiz}</button>
-          <a className="ws-btn ws-btn--sm ws-btn--primary" href={quiz.href} target="_blank" rel="noopener">{t.take}<ArrowRight size={14} aria-hidden className="lx-flip" /></a>
         </div>
+        <InlineQuiz asset={{kind:"quiz",id:quiz.id}} title={quiz.title}/>
       </article>)}
       {decks.map((deck) => (
-        <article key={deck.id} className="lx-quiz-card">
+        <section key={deck.id}>
+        <article className="lx-quiz-card">
           <span className="lx-row__icon" data-kind="flashcards" aria-hidden><Layers size={16} /></span>
           <div className="lx-quiz-card__main"><span className="lx-badge" data-tone="green" style={{ justifySelf: "start" }}>{t.cards}</span><strong>{deck.title}</strong><span className="lx-muted">{t.cardsCount(deck.cards.length)}</span></div>
-          <Link className="ws-btn ws-btn--sm ws-btn--primary" href={`/dashboard/learn/flashcards/${deck.id}`}>{t.study}</Link>
+          <button type="button" className="ws-btn ws-btn--sm ws-btn--primary" aria-expanded={studyingSet === deck.id} onClick={() => setStudyingSet(studyingSet === deck.id ? null : deck.id)}>{t.study}</button>
         </article>
+        {studyingSet === deck.id && <FlashcardStudy setId={deck.id} />}
+        </section>
       ))}
     </div>
   );

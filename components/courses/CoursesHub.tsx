@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Plus } from "lucide-react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
+import { useQuery } from "@/lib/convexCache";
 import { api } from "@/convex/_generated/api";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
@@ -12,7 +13,11 @@ import { courseCopy, coverStyle } from "./shared";
 import "./courses.css";
 
 /** Your courses: create, open and browse. Shown as the Library's Courses tab. */
-export default function CoursesHub({ embedded = false }: { embedded?: boolean }) {
+export default function CoursesHub({
+  embedded = false,
+}: {
+  embedded?: boolean;
+}) {
   const t = useCopy(courseCopy);
   const { locale } = useLocale();
   const router = useRouter();
@@ -21,30 +26,106 @@ export default function CoursesHub({ embedded = false }: { embedded?: boolean })
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const newCourse = async () => {
-    setBusy(true); setError("");
-    try { const id = await create({ language: locale }); router.push(`/dashboard/courses/${id}`); }
-    catch { setError(t.failed); setBusy(false); }
+    setBusy(true);
+    setError("");
+    try {
+      const id = await create({ language: locale });
+      router.push(`/dashboard/courses/${id}`);
+    } catch {
+      setError(t.failed);
+      setBusy(false);
+    }
   };
   if (courses === undefined) return <PageSkeleton label={t.loading} />;
   const shown = courses.filter((c) => !c.archived);
   return (
     <div>
       <header className="ws-page-header">
-        {embedded ? <p className="ws-page-subtitle">{t.subtitle}</p> : <div><h1 className="ws-page-title">{t.title}</h1><p className="ws-page-subtitle">{t.subtitle}</p></div>}
+        {embedded ? (
+          <p className="ws-page-subtitle">{t.subtitle}</p>
+        ) : (
+          <div>
+            <h1 className="ws-page-title">{t.title}</h1>
+            <p className="ws-page-subtitle">{t.subtitle}</p>
+          </div>
+        )}
         <div className="flex gap-2">
-          <Link className="ws-btn ws-btn--ghost" href="/learn">{t.explore}</Link>
+          <Link className="ws-btn ws-btn--ghost" href="/learn">
+            {t.explore}
+          </Link>
           {/* In the Library, its New menu is the only place to create; this page keeps its own button when used alone. */}
-          {!embedded && <button type="button" className="ws-btn ws-btn--primary" onClick={() => void newCourse()} disabled={busy}><Plus size={16} aria-hidden /> {busy ? t.creating : t.new}</button>}
+          {!embedded && (
+            <button
+              type="button"
+              className="ws-btn ws-btn--primary"
+              onClick={() => void newCourse()}
+              disabled={busy}
+            >
+              <Plus size={16} aria-hidden /> {busy ? t.creating : t.new}
+            </button>
+          )}
         </div>
       </header>
-      {error && <p role="alert" className="ws-error mb-4">{error}</p>}
-      {embedded && shown.length === 0 && <p className="ws-empty">{t.empty}</p>}
+      {error && (
+        <p role="alert" className="ws-error mb-4">
+          {error}
+        </p>
+      )}
+      {embedded && shown.length === 0 && (
+        <div className="ws-empty ws-page">
+          <span className="ws-empty__art">
+            <Plus size={24} />
+          </span>
+          <h2 className="text-xl font-semibold">
+            {locale === "ar" ? "أنشئ دورتك الأولى" : "Create your first course"}
+          </h2>
+          <p className="text-muted-foreground max-w-sm">
+            {locale === "ar"
+              ? "ابدأ بدورة جديدة وأضف دروسك بالترتيب."
+              : "Start a new course and add your lessons in order."}
+          </p>
+          <button
+            type="button"
+            className="ws-btn ws-btn--primary mt-3"
+            disabled={busy}
+            onClick={() => void newCourse()}
+          >
+            <Plus size={16} aria-hidden />
+            {busy ? t.creating : t.new}
+          </button>
+        </div>
+      )}
       <div className="cx-grid">
-        {!embedded && <button type="button" className="cx-new" onClick={() => void newCourse()} disabled={busy}><Plus size={24} aria-hidden /><span>{t.new}</span></button>}
+        {!embedded && (
+          <button
+            type="button"
+            className="cx-new"
+            onClick={() => void newCourse()}
+            disabled={busy}
+          >
+            <Plus size={24} aria-hidden />
+            <span>{t.new}</span>
+          </button>
+        )}
         {shown.map((c) => (
-          <Link key={c.id} href={`/dashboard/courses/${c.id}`} className="cx-card">
-            <div className="cx-cover" style={coverStyle(c.id, c.coverUrl)}><span className="cx-cover__badge">{!c.published ? t.draft : c.visibility === "public" ? t.live : t.privateLive}</span></div>
-            <div className="cx-body"><span className="cx-title">{c.title}</span><span className="cx-meta">{t.lessons(c.lessons)}</span></div>
+          <Link
+            key={c.id}
+            href={`/dashboard/courses/${c.id}`}
+            className="cx-card"
+          >
+            <div className="cx-cover" style={coverStyle(c.id, c.coverUrl)}>
+              <span className="cx-cover__badge">
+                {!c.published
+                  ? t.draft
+                  : c.visibility === "public"
+                    ? t.live
+                    : t.privateLive}
+              </span>
+            </div>
+            <div className="cx-body">
+              <span className="cx-title">{c.title}</span>
+              <span className="cx-meta">{t.lessons(c.lessons)}</span>
+            </div>
           </Link>
         ))}
       </div>

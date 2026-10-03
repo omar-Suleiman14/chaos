@@ -3,14 +3,13 @@
 import CoursesHub from "@/components/courses/CoursesHub";
 import GamesHub from "@/components/live/GamesHub";
 import { newQuizArgs } from "@/components/live/newGame";
-import { useLearnActions } from "@/lib/learn/data";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { formIntentHandlers, useQuery } from "@/lib/convexCache";
 import { deleteFormLocally, setFormStatusLocally, useOptimisticMutation } from "@/lib/optimistic";
-import { Archive, ArrowDown, ArrowUp, ArrowUpDown, BarChart3, BookOpen, Check, ChevronDown, Copy, ExternalLink, FileUp, Globe, FileText, GraduationCap, ListChecks, BookOpenText, LayoutGrid, LayoutTemplate, List, ListFilter, Lock, Pencil, Plus, Radio, Search, Trash2, Trophy, X, Pin, PinOff } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, ArrowUpDown, BarChart3, BookOpen, Check, ChevronDown, Copy, ExternalLink, FileUp, Globe, FileText, GraduationCap, ListChecks, LayoutGrid, LayoutTemplate, List, ListFilter, Lock, Pencil, Plus, Radio, Search, Trash2, Trophy, X, Pin, PinOff } from "lucide-react";
 import { useHostLive } from "@/components/live/HostLiveButton";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -364,28 +363,21 @@ export default function CreatorLibrary() {
   const kindLabel = (row: Row) => (row.kind === "legacy" ? t.oldQuiz : row.kind === "quiz" ? t.quiz : t.form);
 
   const loading = forms === undefined || quizzes === undefined;
-  const learnActions = useLearnActions();
-  const newLesson = async () => {
-    try { const id = await learnActions.createLesson({ language: locale }); router.push(`/dashboard/learn/lessons/${id}`); }
-    catch (err) { setError(err instanceof Error ? err.message : String(err)); }
-  };
   const newCourse = async () => {
     try { const id = await createCourse({ language: locale }); router.push(`/dashboard/courses/${id}`); }
     catch (err) { setError(err instanceof Error ? err.message : String(err)); }
   };
 
-  // One New menu for every Library tab: the same choices whatever tab is open.
+  // Creation stays within the active Library tab.
   const newMenu = (
     <WsMenu label={t.newMenu} align="end" triggerClassName="ws-btn ws-btn--primary" trigger={<><Plus size={17} /> {busy ? t.creating : t.newLabel} <ChevronDown size={15} aria-hidden /></>}>
       {(close) => (
         <div className="ws-new-choices">
-          <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(); }}><FileText size={16} /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>
-          <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(newQuizArgs(locale)); }}><ListChecks size={16} /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>
-          <button type="button" role="menuitem" onClick={() => { close(); void newLesson(); }}><BookOpenText size={16} /><span><strong>{t.newLesson}</strong><small>{t.newLessonHelp}</small></span></button>
-          <button type="button" role="menuitem" onClick={() => { close(); void newCourse(); }}><GraduationCap size={16} /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>
-          <hr />
-          <button type="button" role="menuitem" onClick={() => { close(); setDialog("templates"); }}><LayoutTemplate size={16} /> {t.fromTemplate}</button>
-          <button type="button" role="menuitem" onClick={() => { close(); setDialog("import"); }}><FileUp size={16} /> {t.import}</button>
+          {kind === "Forms" && <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(); }}><FileText size={16} /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>}
+          {(kind === "Quizzes" || kind === "Games") && <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(newQuizArgs(locale)); }}><ListChecks size={16} /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>}
+          {kind === "Courses" && <button type="button" role="menuitem" onClick={() => { close(); void newCourse(); }}><GraduationCap size={16} /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>}
+          {kind === "Forms" && <><hr /><button type="button" role="menuitem" onClick={() => { close(); setDialog("templates"); }}><LayoutTemplate size={16} /> {t.fromTemplate}</button></>}
+          {(kind === "Forms" || kind === "Quizzes") && <button type="button" role="menuitem" onClick={() => { close(); setDialog("import"); }}><FileUp size={16} /> {t.import}</button>}
         </div>
       )}
     </WsMenu>
@@ -541,7 +533,7 @@ export default function CreatorLibrary() {
 
       {dialog === "import" && (
         <WsDialog title={t.importTitle} description={t.importDesc} onClose={() => setDialog("none")} wide>
-          <ImportPanel busy={busy} onImport={(r, label) => { setDialog("none"); void create({ definition: r.definition, sourceLabel: label }); }} />
+          <ImportPanel busy={busy} onImport={(r, label) => { setDialog("none"); void create({ definition: r.definition, sourceLabel: label, quizMode: kind === "Quizzes" }); }} />
         </WsDialog>
       )}
 

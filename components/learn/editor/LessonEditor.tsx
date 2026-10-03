@@ -125,6 +125,7 @@ export default function LessonEditor(props: LessonEditorProps) {
         key: "citation", title: t.cite, subtext: t.citeHint, group, icon: <Quote size={18} />, aliases: ["cite", "ref", "page", "استشهاد"],
         onItemClick: () => propsRef.current.onEditCitation(editor.getTextCursorPosition().block.id),
       },
+      { key: "quiz", title: "Quiz", subtext: "Embed a published Chaos quiz", group, icon: <BookMarked size={18} />, aliases: ["quiz", "practice", "assessment"], onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "lessonQuiz" }) },
     ] as DefaultReactSuggestionItem[];
   };
 

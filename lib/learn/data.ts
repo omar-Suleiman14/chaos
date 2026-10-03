@@ -1,8 +1,10 @@
 "use client";
+import { useQuery } from "@/lib/convexCache";
 
+import { saveGuestProgress, saveGuestReview, useGuestStudy } from "./guestStudy";
 import { useStableQueries } from "@/lib/stableQueries";
 import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from "react";
-import { useConvex, useConvexAuth, usePaginatedQuery, useQuery } from "convex/react";
+import { useConvex, useConvexAuth, usePaginatedQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { DurableLibraryClient, useLibraryAnnotations, useLibraryFolders, useLibraryMembers, useLibraryFolderItems, useLibraryCurriculum, useLibraryCourses, useLibraryFlashcards, useLibraryFlashcardRows, annotationSave, annotationHighlight, annotationNote, flashcardUi } from "./libraryClient";
@@ -203,12 +205,14 @@ export function useNotes(lessonId?: string): PersonalNote[] | undefined {
 }
 
 export function useProgress(): Record<string, LessonProgress> | undefined {
+  const guest = useGuestStudy();
   const viewer = useLearnViewer(); const auth = useConvexAuth();
   useSyncExternalStore(fn => { listeners.add(fn); return () => { listeners.delete(fn); }; }, () => targetGeneration, () => 0);
   const targets = [...progressTargets.entries()].filter(([key]) => key.startsWith((viewer?.id ?? "guest") + ":")).map(([, value]) => value);
   const queries = Object.fromEntries(auth.isAuthenticated ? targets.map(target => [target.lessonId, { query: api.learnCommunity.getProgress, args: { lessonId: target.lessonId, versionId: target.versionId } }]) : []);
   const rows = useStableQueries(queries);
   if (!viewer || auth.isLoading) return undefined;
+  if (!auth.isAuthenticated) return guest.progress;
   const result: Record<string, LessonProgress> = {};
   if (auth.isAuthenticated && targets.some(target => rows[target.lessonId] === undefined)) return undefined;
   for (const target of targets) {
@@ -281,11 +285,14 @@ export function useLessonFlashcards(lessonId: string): FlashcardSet[] | undefine
 }
 
 export function useCardReviews(setId: string) {
+  const guest = useGuestStudy();
   const auth = useConvexAuth();
   const version = useQuery(api.flashcards.getPublished, { setId: setId as Id<"flashcardSets"> });
   const [now] = useState(() => Date.now());
   const summary = useQuery(api.flashcardStudy.reviewSchedule, auth.isAuthenticated && version ? { versionId: version._id, now, limit: 100 } : "skip");
-  return auth.isLoading || version === undefined || (auth.isAuthenticated && version && !summary) ? undefined : (summary?.items ?? []).map(r => ({ setId, cardId: r.cardId, box: r.box, reviewedAt: 0 }));
+  if (auth.isLoading || version === undefined || (auth.isAuthenticated && version && !summary)) return undefined;
+  if (!auth.isAuthenticated) return version ? (guest.reviews[`${setId}:${version._id}`] ?? []).filter(r => version.cards.some(c => c.id === r.cardId)) : [];
+  return (summary?.items ?? []).map(r => ({ setId, cardId: r.cardId, box: r.box, reviewedAt: 0 }));
 }
 
 export function usePinnedFolders(): string[] | undefined {
@@ -410,6 +417,7 @@ export function useLearnActions() {
       },
       deleteNote(id: string) { requireSignIn(); return library.remove(id); },
       setProgress(lessonId: string, patch: { state?: ProgressState; lastBlockId?: string; percent?: number }): Promise<void> {
+        if (!viewer?.signedIn) { saveGuestProgress(lessonId, patch); return Promise.resolve(); }
         requireSignIn();
         const key = me + ":" + lessonId;
         const target = progressTargets.get(key);
@@ -520,7 +528,12 @@ export function useLearnActions() {
         if (!version) throw new LearnError("No published flashcards to fork.");
         return client.mutation(api.flashcards.fork, { setId: version.setId, versionId: version._id });
       },
-      reviewCard(setId: string, cardId: string, knewIt: boolean) { requireSignIn(); return library.review(setId, cardId, knewIt); },
+      async reviewCard(setId: string, cardId: string, knewIt: boolean) {
+        if (viewer?.signedIn) return library.review(setId, cardId, knewIt);
+        const version = await client.query(api.flashcards.getPublished, { setId: setId as Id<"flashcardSets"> });
+        if (!version || !version.cards.some(c => c.id === cardId)) throw new LearnError("Study the current published cards.");
+        saveGuestReview(setId, version._id, cardId, knewIt);
+      },
       resetReviews(_setId: string) { throw new LearnError("Study evidence cannot be reset. Restart the queue to practice again."); },
 
       /**
@@ -533,7 +546,7 @@ export function useLearnActions() {
         return new StudyClient(client).forkQuiz(formId);
       },
     };
-  }, [me, myName, requireSignIn, client, service, progressService, library]);
+  }, [me, myName, requireSignIn, client, service, progressService, library, viewer?.signedIn]);
 }
 
 export type LearnActions = ReturnType<typeof useLearnActions>;

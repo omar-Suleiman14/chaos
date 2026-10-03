@@ -310,6 +310,12 @@ export const Citation = createReactInlineContentSpec(
 /* ── Schema ──────────────────────────────────────────────────────────────── */
 
 /** Block types lessons use. Audio and generic file blocks stay out of the slash menu; sources cover documents. */
+export const LessonQuiz = createReactBlockSpec(
+ { type: "lessonQuiz", propSchema: { assetKind: { default: "form", values: ["form", "quiz"] as const }, assetId: { default: "" } }, content: "none" },
+ { render: function QuizBlock({ block, editor }) {
+  return <div contentEditable={false} className="lx-callout" data-tone="info"><strong>Quiz</strong>{editor.isEditable ? <div className="lx-form"><select aria-label="Quiz type" value={block.props.assetKind} onChange={e=>editor.updateBlock(block,{props:{assetKind:e.target.value as "form"|"quiz"}})}><option value="form">Quiz form</option><option value="quiz">Classic quiz</option></select><input aria-label="Quiz ID" placeholder="Paste the ID of a published quiz" value={block.props.assetId} onChange={e=>editor.updateBlock(block,{props:{assetId:e.target.value.trim()}})}/></div> : <span>{block.props.assetId}</span>}</div>;
+ } }
+);
 export const lessonSchema = BlockNoteSchema.create({
   blockSpecs: {
     ...defaultBlockSpecs,
@@ -319,6 +325,7 @@ export const lessonSchema = BlockNoteSchema.create({
     equation: Equation(),
     youtube: YouTube(),
     source: SourceBlock(),
+    lessonQuiz: LessonQuiz(),
   },
   inlineContentSpecs: { ...defaultInlineContentSpecs, citation: Citation },
 });

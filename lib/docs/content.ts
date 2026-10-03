@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/locale";
+import type { Locale } from "../locale";
 import { sectionsAr } from "./content-ar";
 import { sectionsEn } from "./content-en";
 import { extraArticles } from "./articles-extra";

@@ -87,10 +87,22 @@ function convexCaller(userId: string): McpCaller {
   };
 }
 
+const adminCapabilities = new Map<string, { admin: boolean; expires: number }>();
 async function handle(request: Request): Promise<Response> {
   const userId = await verifiedUserId(request);
   if (userId instanceof Response) return userId;
-  const server = createChaosMcpServer({ call: userId ? convexCaller(userId) : null, resourceMetadataUrl: resourceMetadataUrl(request) });
+  const call = userId ? convexCaller(userId) : null;
+  let admin = false;
+  if (call && userId) {
+    const cached = adminCapabilities.get(userId);
+    if (cached && cached.expires > Date.now()) admin = cached.admin;
+    else try {
+      admin = (await call("get_documentation_capabilities", {}) as { admin: boolean }).admin === true;
+      if (adminCapabilities.size >= 500) adminCapabilities.clear();
+      adminCapabilities.set(userId, { admin, expires: Date.now() + 30_000 });
+    } catch { /* Backend checks permissions again on every documentation operation. */ }
+  }
+  const server = createChaosMcpServer({ call, admin, resourceMetadataUrl: resourceMetadataUrl(request) });
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   try {

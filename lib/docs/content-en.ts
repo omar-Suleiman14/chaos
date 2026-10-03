@@ -1034,9 +1034,9 @@ export const sectionsEn: DocSection[] = [
           {
             type: "steps",
             items: [
-              "**In ChatGPT (web)**: open **Settings → Apps → Advanced settings** and turn on **Developer mode**. Go to **Create app**, enter Name: **Chaos**, MCP server URL: **https://chaos.fail/mcp**, Authentication: **OAuth** (leave client ID/secret blank), tick **I trust this application**, and choose **Create**. Sign in with Chaos and approve access.",
-              "**In Claude Code**: run `claude mcp add --transport sse chaos https://chaos.fail/mcp` or use the `/mcp` command in Claude Code to manage servers and complete the browser OAuth sign-in.",
-              "**In Claude Desktop**: add the server to `claude_desktop_config.json` (`{\"mcpServers\": {\"chaos\": {\"url\": \"https://chaos.fail/mcp\"}}}`) and restart Claude Desktop.",
+              "**In ChatGPT (web)**: open **Settings → Security and login** and turn on **Developer mode**, if your account and workspace allow it. Open **Plugins**, choose the **plus** button, name the connection **Chaos**, and enter **https://chaos.fail/mcp** as the public MCP endpoint. Create the connection, then sign in to Chaos through OAuth and approve access. Add the connection from the tools menu in a new conversation. Interface labels can vary by rollout; follow [OpenAI's connection guide](https://developers.openai.com/plugins/deploy/connect-chatgpt).",
+              "**In Claude Code**: run `claude mcp add --transport http chaos https://chaos.fail/mcp`. Run `/mcp` in Claude Code and complete the browser OAuth sign-in. Chaos uses Streamable HTTP; do not select the SSE transport. See [Claude Code's MCP guide](https://code.claude.com/docs/en/mcp).",
+              "**In Claude or Claude Desktop**: open **Customize → Connectors**, choose **+ Add → Add custom connector**, enter **Chaos** and **https://chaos.fail/mcp**, and continue. Choose OAuth sign-in and complete the Chaos connection, then enable it for your conversation. Workspace owners may need to add it in organization settings first. Use the remote connector UI rather than a local Desktop configuration file. See [Claude's remote connector guide](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp).",
             ],
           },
           { type: "p", text: "Your assistant asks for confirmation before making write changes. If Chaos adds new tools later, use **Refresh** in ChatGPT or `/mcp` in Claude to reload." },

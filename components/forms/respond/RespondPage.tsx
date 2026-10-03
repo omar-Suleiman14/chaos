@@ -75,10 +75,10 @@ function readHidden(names: string[]): Record<string, string> | undefined {
 interface Receipt { receiptCode: string; endingId: string | null; editToken?: string; submittedAt: number; answers: Answers; language: Language; quizScore?: number | null; quizMaxScore?: number | null }
 
 /** The respondent experience for one form; also served at custom links (chaos.fail/<username>/<slug>). */
-export function RespondToForm({ shareId }: { shareId: string }) {
+export function RespondToForm({ shareId, inline = false }: { shareId: string; inline?: boolean }) {
   return (
     <Suspense fallback={<RespondLoading />}>
-      <RespondPage key={shareId} shareId={shareId} />
+      <RespondPage key={shareId} shareId={shareId} inline={inline} />
     </Suspense>
   );
 }
@@ -88,11 +88,11 @@ export function RespondLoading() {
   return <Shell embed={false}><FormLoading /></Shell>;
 }
 
-function RespondPage({ shareId }: { shareId: string }) {
+function RespondPage({ shareId, inline = false }: { shareId: string; inline?: boolean }) {
   const search = useSearchParams();
-  const embed = search.get("embed") === "1";
-  const resumeToken = search.get("resume");
-  const editToken = search.get("edit");
+  const embed = inline || search.get("embed") === "1";
+  const resumeToken = inline ? null : search.get("resume");
+  const editToken = inline ? null : search.get("edit");
   // After a correct code the server hands back a short-lived pass; the code itself is never sent again.
   const grantKey = `chaos-access-${shareId}`;
   const [accessCode, setAccessCode] = useState<string | undefined>(() => {
@@ -548,11 +548,12 @@ function FormLoading() {
 function Shell({ children, embed, def, languageSwitch, immersive, plain }: { children: React.ReactNode; embed: boolean; def?: FormDefinition; languageSwitch?: React.ReactNode; immersive?: boolean; plain?: boolean }) {
   const initialTheme = useInitialTheme();
   const themed = useMemo(() => def ?? (initialTheme ? { ...fallbackDefinition, theme: initialTheme } : fallbackDefinition), [def, initialTheme]);
-  const fullBleed = !!def && !!immersive;
+  const fullBleed = !embed && !!def && !!immersive;
   const shell = useRef<HTMLDivElement>(null);
 
   // Overscroll and the browser chrome show the root background: paint it with the form's page colour.
   useEffect(() => {
+    if (embed) return;
     const root = document.documentElement;
     const sync = () => {
       if (!shell.current) return;
@@ -566,7 +567,7 @@ function Shell({ children, embed, def, languageSwitch, immersive, plain }: { chi
     const observer = new MutationObserver(() => { sync(); clearTimeout(timer); timer = setTimeout(sync, 450); });
     observer.observe(root, { attributes: true, attributeFilter: ["class"] });
     return () => { observer.disconnect(); clearTimeout(timer); root.style.backgroundColor = ""; document.body.style.backgroundColor = ""; };
-  }, [themed]);
+  }, [themed, embed]);
 
   // Embedded: size to the content and tell the host page, so its snippet can resize the iframe.
   // Message shape: { type: "chaos:embed:height", height: <CSS pixels> } (see lib/embed.ts).

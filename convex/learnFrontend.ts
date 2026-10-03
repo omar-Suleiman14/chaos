@@ -133,3 +133,16 @@ export const publicProfile = query({
     return { username: user.username, name: user.name, imageUrl: user.imageUrl ?? null, verifiedRoles: claims.filter(c => c.status === "verified" && c.method === "manual_review" && !!c.reviewedBy && (c.expiresAt ?? 0) > Date.now()).map(c => c.role) };
   },
 });
+
+export const embeddedQuiz = query({
+ args: {asset: v.union(v.object({kind:v.literal("form"),id:v.id("forms")}),v.object({kind:v.literal("quiz"),id:v.id("quizzes")}))},
+ returns: v.union(v.null(),v.object({title:v.string(),shareId:v.union(v.string(),v.null())})),
+ handler: async(ctx,{asset})=> {
+  if(asset.kind==="form") { const form=await ctx.db.get("forms",asset.id); if(!form||form.status!=="live"||form.isBanned||form.publishedVersion===undefined||await creatorRestricted(ctx,form.ownerId)) return null;
+   const version=await ctx.db.query("formVersions").withIndex("by_formId_and_version",q=>q.eq("formId",form._id).eq("version",form.publishedVersion!)).unique();
+   return version?.definition.quiz?.enabled ? {title:version.definition.title,shareId:form.shareId} : null;
+  }
+  const quiz=await ctx.db.get("quizzes",asset.id); if(!quiz?.isPublished||quiz.isBanned||!quiz.publishedSnapshot||await creatorRestricted(ctx,quiz.creatorId)) return null;
+  return {title:quiz.publishedSnapshot.title,shareId:null};
+ }
+});

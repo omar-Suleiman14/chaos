@@ -1,4 +1,6 @@
 "use client";
+import { DocsProvider } from "@/lib/docs/provider";
+
 
 import { ReactNode } from "react";
 import { ConvexProviderWithClerk } from "convex/react-clerk";
@@ -19,7 +21,7 @@ export default function ConvexClientProvider({
   return (
     <ConvexProviderWithClerk client={convex} useAuth={useAuth}>
       <ConnectivityBanner />
-      {children}
+      <DocsProvider>{children}</DocsProvider>
     </ConvexProviderWithClerk>
   );
 }

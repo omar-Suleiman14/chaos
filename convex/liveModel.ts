@@ -46,6 +46,8 @@ export const liveTables = {
     title: v.string(),
     /** Optional for rooms created before themes; snapshot survives source edits. */
     theme: v.optional(themeValidator),
+    /** New rooms default to Apple styling; an explicit theme remains a creator choice. */
+    appearance: v.optional(v.union(v.literal("apple"), v.literal("theme"))),
     pin: v.string(),
     state: liveStateValidator,
     /** -1 in the lobby. */

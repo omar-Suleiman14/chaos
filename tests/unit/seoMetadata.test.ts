@@ -106,3 +106,5 @@ describe("public search metadata", () => {
     }
   });
 });
+
+vi.mock("@/lib/docs/server",()=>({listPublicDocs:async()=>docSlugs.map(slug=>({slug,updatedAt:1})),getPublicDoc:vi.fn()}));

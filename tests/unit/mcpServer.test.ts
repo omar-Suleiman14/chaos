@@ -4,8 +4,8 @@ import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createChaosMcpServer } from "@/lib/mcp/server";
 import type { McpCaller } from "@/lib/mcp/server";
 
-async function connect(call: McpCaller | null) {
-  const server = createChaosMcpServer({ call, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" });
+async function connect(call: McpCaller | null, admin = false) {
+  const server = createChaosMcpServer({ call, admin, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" });
   const client = new Client({ name: "test", version: "1.0.0" });
   const [a, b] = InMemoryTransport.createLinkedPair();
   await Promise.all([server.connect(a), client.connect(b)]);
@@ -13,6 +13,15 @@ async function connect(call: McpCaller | null) {
 }
 
 describe("Chaos MCP server", () => {
+  it("exposes documentation authoring only to verified admin connections", async () => {
+    const caller = vi.fn().mockResolvedValue({slug:"guide",locale:"en",revision:0,published:true});
+    const regular = await connect(caller);
+    expect((await regular.listTools()).tools.map(t=>t.name)).not.toContain("save_documentation");
+    const admin = await connect(caller,true);
+    expect((await admin.listTools()).tools.map(t=>t.name)).toContain("save_documentation");
+    await admin.callTool({name:"save_documentation",arguments:{slug:"guide",locale:"en",sectionId:"start",sectionTitle:"Start",order:0,content:{title:"Guide",summary:"Help",blocks:[{type:"p",text:"Text"}]}}});
+    expect(caller).toHaveBeenCalledWith("save_documentation",expect.objectContaining({publish:true}));
+  });
   it("lists every tool with review annotations and OAuth security schemes", async () => {
     const client = await connect(null);
     const { tools } = await client.listTools();

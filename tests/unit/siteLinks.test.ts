@@ -90,3 +90,5 @@ describe("short host redirect", () => {
     expect(shortHostRedirect("https://chaos.example/f/abc", site, site)).toBeNull();
   });
 });
+
+vi.mock("@/lib/docs/server",()=>({listPublicDocs:async()=>[],getPublicDoc:vi.fn()}));

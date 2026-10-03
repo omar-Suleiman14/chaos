@@ -1,3 +1,4 @@
+import { docsTables } from "./docsModel";
 import { quizForkTables } from "./quizForkModel";
 import { discussionTables } from "./learnDiscussionModel";
 import { proposalTables } from "./lessonProposalModel";
@@ -23,6 +24,7 @@ import { webhookTables } from "./webhookModel";
 import { liveTables } from "./liveModel";
 
 export default defineSchema({
+  ...docsTables,
   ...learnTables,
   ...discussionTables,
   ...proposalTables,

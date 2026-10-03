@@ -1,5 +1,6 @@
 "use client";
 
+import InlineQuiz from "./InlineQuiz";
 import { Fragment, useEffect, useState } from "react";
 import { PlayCircle } from "lucide-react";
 import { asBlocks, blockText, cellInlines, formatTimestamp, inlineText, parseAnnotations, youTubeEmbedUrl, type Block, type CitationContent, type Inline, type LinkContent, type StyledText, type TableContent } from "@/lib/learn/doc";
@@ -232,6 +233,11 @@ function BlockBody({ block, props }: { block: Block; props: RendererProps }) {
       const level = Math.min(3, Math.max(1, Number(block.props.level) || 1));
       const Tag = (["h2", "h3", "h4"] as const)[level - 1];
       return <Tag style={align}>{inline}</Tag>;
+    }
+    case "quiz": case "lessonQuiz": {
+      let asset: { kind: "form" | "quiz"; id: string } | undefined;
+      try { asset = block.props.assetKind && block.props.assetId ? { kind: block.props.assetKind as "form" | "quiz", id: String(block.props.assetId) } : JSON.parse(String(block.props.lessonData)).asset; } catch { return null; }
+      return asset && <InlineQuiz asset={asset}/>;
     }
     case "paragraph": return <p style={align}>{inline}</p>;
     case "quote": return <blockquote>{inline}</blockquote>;

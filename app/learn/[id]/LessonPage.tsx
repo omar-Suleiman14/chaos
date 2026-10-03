@@ -16,7 +16,9 @@ export default function LessonPage({ id, initialLesson }: { id: string; initialL
   const liveLesson = useLesson(id);
   const lesson = liveLesson !== undefined ? liveLesson : initialLesson;
   const viewer = useLearnViewer();
-  const preview = useSearchParams().get("preview") === "draft";
+  const params = useSearchParams();
+  const preview = params.get("preview") === "draft";
+  const courseId = params.get("course");
   const isOwner = !!lesson && lesson.ownerId === viewer?.id;
   const title = lesson ? (preview && isOwner ? lesson.draft : lesson.published ?? lesson.draft).meta.title : "";
   useEffect(() => { if (title) document.title = `${title} · Chaos`; }, [title]);
@@ -24,5 +26,5 @@ export default function LessonPage({ id, initialLesson }: { id: string; initialL
   // Removed lessons stay visible to their owner (with the moderation notice) and nobody else.
   if (lesson === null || (!isOwner && (lesson.moderation === "removed" || lesson.moderation === "unavailable"))) return <UnavailableLesson backHref={viewer?.signedIn ? "/dashboard/learn" : "/"} />;
   if (!isOwner && !lesson.published) return <UnavailableLesson backHref={viewer?.signedIn ? "/dashboard/learn" : "/"} />;
-  return <LessonReader lesson={lesson} previewDraft={preview && isOwner} backHref={isOwner ? `/dashboard/learn/lessons/${lesson.id}` : "/learn"} />;
+  return <LessonReader lesson={lesson} previewDraft={preview && isOwner} backHref={courseId ? `/learn/courses/${encodeURIComponent(courseId)}` : isOwner && preview ? `/dashboard/learn/lessons/${lesson.id}` : "/learn"} />;
 }
