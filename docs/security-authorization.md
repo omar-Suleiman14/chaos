@@ -6,7 +6,7 @@ or a guarantee that every possible attack has been tested.
 
 ## Identity and administration
 
-`convex/auth.config.ts` requires the selected Clerk or OIDC provider's explicit HTTPS issuer and the `convex` JWT audience. Each installation configures its own issuer. New OIDC accounts use issuer-scoped identities. Existing account and ownership IDs remain stable through an explicit operator-controlled legacy binding; email matching never links accounts. See [migration](./self-hosting.md#migrating-an-existing-installation).
+`convex/auth.config.ts` requires the selected Clerk or Better Auth provider's explicit HTTPS issuer and the `convex` JWT audience. Each installation configures its own issuer. New Better Auth accounts use issuer-scoped identities. Existing account and ownership IDs remain stable through an explicit operator-controlled legacy binding; email matching never links accounts. See [migration](./self-hosting.md#migrating-an-existing-installation).
 
 Admin membership lives in the `admins` table. Only internal `admin:grantAdmin`
 and `admin:revokeAdmin` functions can change it. Neither a client-provided email
@@ -73,3 +73,7 @@ backend, including unauthorized callers, scoped integration access, response
 privacy, upload boundaries and live-game behavior. Unit tests also check selected
 authorization wiring. Real Clerk/OAuth, webhook delivery and multi-device games
 still require acceptance checks against your intended deployment.
+
+## Better Auth installations
+
+Better Auth stores credentials and sessions in a Convex component. Backend JWTs use the Convex HTTP-actions issuer and `convex` audience. MCP OAuth access tokens use the app issuer and `/mcp` resource audience; ID tokens and website tokens are rejected. MCP clients require PKCE, explicit consent, exact registered redirects and an operator allowlist. Account migration uses operator-verified identity bindings, never matching email. Unverified email cannot authorize an invitation. See [Better Auth](./better-auth.md) for configuration and email-recovery limitations.

@@ -54,8 +54,8 @@ attempts are kept as stored. Live-game attempts cannot be graded or completed
 through the classic quiz respondent endpoints.
 
 Deployments require an explicit HTTPS issuer for the selected authentication
-mode: `CLERK_JWT_ISSUER_DOMAIN` for Clerk, or `AUTH_OIDC_ISSUER` with
-`CHAOS_AUTH_PROVIDER=oidc` for OIDC. Set these on the intended Convex deployment
+mode: `CLERK_JWT_ISSUER_DOMAIN` for Clerk, or `BETTER_AUTH_SECRET` and `CHAOS_APP_URL` with
+`CHAOS_AUTH_PROVIDER=betterauth` for Better Auth. Set these on the intended Convex deployment
 before deploying functions. Changing providers does not merge users by email.
 Bind each verified replacement identity to its existing account before its
 first login, as described in [self-hosting migration](./self-hosting.md#migrating-an-existing-installation).

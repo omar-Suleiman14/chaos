@@ -1,4 +1,5 @@
 import { defineApp } from "convex/server";
+import betterAuth from "./betterAuth/convex.config";
 import { v } from "convex/values";
 
 // Typed deployment environment variables, read through `env` from ./_generated/server.
@@ -21,4 +22,5 @@ const app = defineApp({
   },
 });
 
+app.use(betterAuth);
 export default app;

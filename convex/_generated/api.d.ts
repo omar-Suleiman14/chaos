@@ -9,6 +9,7 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as auth from "../auth.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminModel from "../adminModel.js";
 import type * as authorIndex from "../authorIndex.js";
@@ -135,6 +136,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  auth: typeof auth;
   adminAnalytics: typeof adminAnalytics;
   adminModel: typeof adminModel;
   authorIndex: typeof authorIndex;
@@ -280,4 +282,4 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: {};
+export declare const components: { betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth"> & { refresh: { claim: FunctionReference<"mutation", "internal", { id: string; revokedAt: number }, boolean> } } };

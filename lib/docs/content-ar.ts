@@ -1177,7 +1177,7 @@ export const sectionsAr: DocSection[] = [
         summary: "حسابك واسم المستخدم والخروج بأمان.",
         blocks: [
           { type: "heading", id: "sign-in", text: "تسجيل الدخول" },
-          { type: "p", text: "افتح Chaos واضغط زر تسجيل الدخول. تستخدم نسختك Clerk أو مزود OIDC مُعدًا مثل Keycloak لتسجيل الدخول. عند أول دخول يُنشأ حسابك ومكتبتك." },
+          { type: "p", text: "افتح Chaos واضغط زر تسجيل الدخول. تستخدم نسختك Clerk أو Better Auth لتسجيل الدخول. عند أول دخول يُنشأ حسابك ومكتبتك." },
           { type: "heading", id: "sign-out", text: "تسجيل الخروج" },
           {
             type: "list",
@@ -1241,12 +1241,12 @@ export const sectionsAr: DocSection[] = [
             type: "list",
             items: [
               "Docker مع Compose. يشغّل الإعداد تطبيق Chaos وخادم Convex مستضافًا ذاتيًا.",
-              "اختر Clerk أو Keycloak المستضاف ذاتيًا لتسجيل الدخول. تشغيل Keycloak وConvex ذاتيًا لا يتطلب خدمة مدفوعة.",
+              "اختر Clerk أو Better Auth المستضاف ذاتيًا لتسجيل الدخول. تشغيل Better Auth وConvex ذاتيًا لا يتطلب خدمة مدفوعة.",
               "نطاق مع HTTPS لأي استخدام يتجاوز التجربة على جهازك.",
             ],
           },
           { type: "heading", id: "start", text: "ابدأ" },
-          { type: "p", text: "اتبع [دليل الاستضافة الذاتية](https://github.com/omar-Suleiman14/chaos/blob/main/docs/self-hosting.md) (بالإنجليزية). يشرح Clerk أو Keycloak ومتغيرات البيئة وHTTPS والترحيل والنسخ الاحتياطي والتحديث." },
+          { type: "p", text: "اتبع [دليل الاستضافة الذاتية](https://github.com/omar-Suleiman14/chaos/blob/main/docs/self-hosting.md) (بالإنجليزية). يشرح Clerk أو Better Auth ومتغيرات البيئة وHTTPS والترحيل والنسخ الاحتياطي والتحديث." },
           { type: "heading", id: "status", text: "الحالة الحالية" },
           { type: "p", text: "لم يُختبر إعداد Docker من البداية إلى النهاية بعد. اعتبره نقطة انطلاق، وأبلغ عن أي مشكلة في [بلاغات GitHub](https://github.com/omar-Suleiman14/chaos/issues)." },
           { type: "heading", id: "differences", text: "كيف يختلف عن chaos.fail" },

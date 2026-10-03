@@ -496,6 +496,17 @@ const uploadHandler = httpAction(async (ctx, request) => observeHttp(ctx, "submi
 }));
 
 const http = httpRouter();
+// Keep auth endpoints disabled on Clerk installations.
+// eslint-disable-next-line @convex-dev/no-process-env -- installation provider
+if (process.env.CHAOS_AUTH_PROVIDER === "betterauth") {
+  const authHandler = httpAction(async (ctx, request) => {
+    const { createAuth } = await import("./betterAuth/auth");
+    return createAuth(ctx).handler(request);
+  });
+  http.route({ pathPrefix: "/api/auth/", method: "GET", handler: authHandler });
+  http.route({ pathPrefix: "/api/auth/", method: "POST", handler: authHandler });
+  http.route({ path: "/.well-known/oauth-authorization-server", method: "GET", handler: authHandler });
+}
 http.route({ path: "/api/status/v1", method: "GET", handler: httpAction(async ctx => Response.json(await ctx.runQuery(makeFunctionReference<"query">("observability:publicStatus"), {}), { headers: { "Cache-Control": "public, max-age=30" } })) });
 registerLearnIntegrationRoutes(http);
 registerOrganizationIntegrationRoutes(http);

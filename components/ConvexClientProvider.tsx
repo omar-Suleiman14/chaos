@@ -5,6 +5,8 @@ import { DocsProvider } from "@/lib/docs/provider";
 import { ReactNode, useCallback } from "react";
 import { ConvexProviderWithAuth } from "convex/react";
 import { useAuth } from "@/lib/auth/client";
+import { ConvexBetterAuthProvider } from "@convex-dev/better-auth/react";
+import { authClient } from "@/lib/auth/better-client";
 import ConnectivityBanner from "@/components/ConnectivityBanner";
 import { convex } from "@/lib/convexClient";
 
@@ -23,6 +25,12 @@ export default function ConvexClientProvider({
 }) {
   if (!convex) return <>{children}</>;
 
+  if (process.env.NEXT_PUBLIC_AUTH_PROVIDER === "betterauth") return (
+    <ConvexBetterAuthProvider client={convex} authClient={authClient as unknown as import("@convex-dev/better-auth/react").AuthClient}>
+      <ConnectivityBanner />
+      <DocsProvider>{children}</DocsProvider>
+    </ConvexBetterAuthProvider>
+  );
   return (
     <ConvexProviderWithAuth client={convex} useAuth={useBackendAuth}>
       <ConnectivityBanner />

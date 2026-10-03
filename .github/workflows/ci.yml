@@ -61,14 +61,12 @@ jobs:
       - name: Build without Clerk
         run: pnpm build
         env:
-          NEXT_PUBLIC_AUTH_PROVIDER: "oidc"
+          NEXT_PUBLIC_AUTH_PROVIDER: "betterauth"
           NEXT_PUBLIC_CONVEX_URL: "https://ci-placeholder.convex.cloud"
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ""
           CLERK_SECRET_KEY: ""
-          AUTH_OIDC_ISSUER: "https://identity.example.com/realms/chaos"
-          AUTH_OIDC_CLIENT_ID: "chaos-web"
-          AUTH_OIDC_CLIENT_SECRET: "build-only-placeholder-client-secret"
-          AUTH_SECRET: "build-only-placeholder-session-secret-at-least-32-characters"
+          NEXT_PUBLIC_APP_URL: "https://chaos.example.com"
+          NEXT_PUBLIC_CONVEX_SITE_URL: "https://ci-placeholder.convex.site"
 
   docker:
     name: Docker image build

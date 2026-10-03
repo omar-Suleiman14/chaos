@@ -1172,7 +1172,7 @@ export const sectionsEn: DocSection[] = [
         summary: "Your account, your username, and leaving safely.",
         blocks: [
           { type: "heading", id: "sign-in", text: "Sign in" },
-          { type: "p", text: "Open Chaos and press the sign-in button. Your installation uses Clerk or a configured OIDC provider such as Keycloak for sign-in. The first time you sign in, your account and a library are created." },
+          { type: "p", text: "Open Chaos and press the sign-in button. Your installation uses Clerk or a configured Better Auth installation for sign-in. The first time you sign in, your account and a library are created." },
           { type: "heading", id: "sign-out", text: "Sign out" },
           {
             type: "list",
@@ -1236,12 +1236,12 @@ export const sectionsEn: DocSection[] = [
             type: "list",
             items: [
               "Docker with Compose. The setup runs the Chaos app and a self-hosted Convex backend.",
-              "Choose Clerk or self-hosted Keycloak for sign-in. Keycloak plus self-hosted Convex requires no paid service.",
+              "Choose Clerk or self-hosted Better Auth for sign-in. Better Auth plus self-hosted Convex requires no paid service.",
               "A domain with HTTPS for anything beyond a trial on your own computer.",
             ],
           },
           { type: "heading", id: "start", text: "Get started" },
-          { type: "p", text: "Follow the [self-hosting guide](https://github.com/omar-Suleiman14/chaos/blob/main/docs/self-hosting.md). It covers Clerk or Keycloak, environment variables, HTTPS, migration, backups and upgrades." },
+          { type: "p", text: "Follow the [self-hosting guide](https://github.com/omar-Suleiman14/chaos/blob/main/docs/self-hosting.md). It covers Clerk or Better Auth, environment variables, HTTPS, migration, backups and upgrades." },
           { type: "heading", id: "status", text: "Current status" },
           { type: "p", text: "The Docker setup has not been tested end to end yet. Treat it as a starting point, and report rough edges on [GitHub issues](https://github.com/omar-Suleiman14/chaos/issues)." },
           { type: "heading", id: "differences", text: "How it differs from chaos.fail" },

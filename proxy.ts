@@ -1,5 +1,5 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse, type NextRequest, type NextFetchEvent } from "next/server";
+import { NextResponse, type NextRequest } from "next/server";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { decideFraming } from "@/lib/embed";
@@ -8,7 +8,7 @@ import type { EmbedPolicy, EmbedTarget } from "@/lib/embed";
 
 // /print shows a quiz with its answer key; the queries already check ownership, and
 // signing in first keeps anonymous visitors off the page entirely.
-const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/admin(.*)", "/print(.*)", "/homework(.*)"]);
+const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/admin(.*)", "/print(.*)", "/homework(.*)", "/auth(.*)"]);
 
 /** Past this the frame is denied rather than holding up the page. */
 const POLICY_TIMEOUT_MS = 2500;
@@ -43,28 +43,24 @@ const clerkProxy = clerkMiddleware(async (auth, req) => {
   return response;
 });
 
-export default process.env.NEXT_PUBLIC_AUTH_PROVIDER === "oidc" ? async function oidcProxy(req: NextRequest, event: NextFetchEvent) {
-  // Auth.js owns its callback/session/CSRF routes; never redirect those to login.
+export default process.env.NEXT_PUBLIC_AUTH_PROVIDER === "betterauth" ? async function betterAuthProxy(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith("/api/auth/")) return NextResponse.next();
   const short = shortHostRedirect(req.url);
   if (short) return NextResponse.redirect(short, 301);
-  const { auth } = await import("@/lib/auth/server");
-  // The middleware wrapper persists refreshed encrypted session cookies on the
-  // response. A plain auth() session read cannot propagate Set-Cookie here.
-  const wrapped = auth(async (authenticatedReq, _event: NextFetchEvent) => {
-    const session = authenticatedReq.auth;
-    if (isProtectedRoute(authenticatedReq) && (!session?.user.id || session.authError)) {
-      const login = new URL("/api/auth/signin", req.url);
+  if (isProtectedRoute(req)) {
+    // This is a navigation hint only. Convex verifies JWTs and ownership on every request.
+    const { getSessionCookie } = await import("better-auth/cookies");
+    if (!getSessionCookie(req)) {
+      const login = new URL("/sign-in", req.url);
       login.searchParams.set("callbackUrl", `${req.nextUrl.pathname}${req.nextUrl.search}`);
       return NextResponse.redirect(login);
     }
-    const headers = await decideFraming(req.nextUrl.pathname, req.headers.get("sec-fetch-dest"), lookupPolicy);
-    const response = NextResponse.next();
-    for (const [key, value] of Object.entries(headers)) response.headers.set(key, value);
-    if ((process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production") || ["edit", "resume", "embed"].some((key) => req.nextUrl.searchParams.has(key))) response.headers.set("X-Robots-Tag", "noindex, nofollow");
-    return response;
-  });
-  return wrapped(req, event);
+  }
+  const headers = await decideFraming(req.nextUrl.pathname, req.headers.get("sec-fetch-dest"), lookupPolicy);
+  const response = NextResponse.next();
+  for (const [key, value] of Object.entries(headers)) response.headers.set(key, value);
+  if ((process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production") || ["edit", "resume", "embed"].some(key => req.nextUrl.searchParams.has(key))) response.headers.set("X-Robots-Tag", "noindex, nofollow");
+  return response;
 } : clerkProxy;
 
 export const config = {
@@ -75,6 +71,6 @@ export const config = {
     // Every path that could be a public form address, even one that looks like a file
     // (a username may contain dots). Must equal EMBED_PROXY_MATCHER in lib/embed.ts;
     // next.config.ts leaves exactly these paths to this proxy.
-    "/((?!(?:admin|api|app|card|compare|chatgpt|connect|dashboard|docs|help|homework|learn|login|logout|mcp|play|pricing|print|privacy|copyright|settings|sign\\-in|sign\\-up|signin|signup|static|support|terms|trpc|_next|\\.well\\-known|opengraph\\-image)/)[A-Za-z0-9_.\\-]{1,64}/[A-Za-z0-9_\\-]{1,64})",
+    "/((?!(?:admin|api|app|auth|card|compare|chatgpt|connect|dashboard|docs|help|homework|learn|login|logout|mcp|play|pricing|print|privacy|copyright|settings|sign\\-in|sign\\-up|signin|signup|static|support|terms|trpc|_next|\\.well\\-known|opengraph\\-image)/)[A-Za-z0-9_.\\-]{1,64}/[A-Za-z0-9_\\-]{1,64})",
   ],
 };

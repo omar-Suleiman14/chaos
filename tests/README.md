@@ -12,7 +12,7 @@ Three layers, each with its own runner and reasons:
 - **`tests/e2e`** — Playwright, a real browser against a real running app.
   **Optional in CI**: it requires `pnpm dev` (or an already-running instance
   via `PLAYWRIGHT_BASE_URL`) backed by a real Convex deployment and a real
-  Clerk or Keycloak instance, which the other layers deliberately avoid needing.
+  Clerk or Better Auth instance, which the other layers deliberately avoid needing.
   The creator smoke supports both providers; a passing unit suite does not verify
   a live provider deployment. Run
   locally with `pnpm test:e2e`.
@@ -38,8 +38,8 @@ Set these environment variables before running it:
 - `PLAYWRIGHT_BASE_URL`: URL of the deployed E2E app.
 - `E2E_CONVEX_ENV`: marker naming the dedicated non-production Convex target
   (for example `e2e` or `staging`).
-- `E2E_AUTH_PROVIDER`: `clerk` (default) or `oidc` for the standard Keycloak login page.
-- `E2E_CREATOR_EMAIL`: dedicated test-user email or Keycloak username.
+- `E2E_AUTH_PROVIDER`: `clerk` (default) or `betterauth` for the Chaos Better Auth email/password page.
+- `E2E_CREATOR_EMAIL`: dedicated test-user email.
 - `E2E_CREATOR_PASSWORD`: test-user password. Use a dedicated account
   without MFA for this automated flow.
 
@@ -55,7 +55,7 @@ explicit emergency override and is intentionally absent from the GitHub Actions
 workflow. `.github/workflows/e2e-smoke.yml` is manual-only, so this smoke test
 does not run blindly on every pull request. Configure its four referenced
 repository secrets with the same dedicated E2E target and test user. Set the
-repository variable `E2E_AUTH_PROVIDER=oidc` for Keycloak; default is Clerk.
+repository variable `E2E_AUTH_PROVIDER=betterauth` for Better Auth; default is Clerk.
 
 AI retirement coverage lives in `tests/integration/aiRetirement.test.ts`: stale public/internal calls fail without provider requests or writes, while legacy content and results remain readable.
 

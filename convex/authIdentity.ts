@@ -10,9 +10,9 @@ export async function getAuthIdentity(ctx: Context) {
   if (!identity) return null;
   // eslint-disable-next-line @convex-dev/no-process-env -- installation auth configuration
   const provider = process.env.CHAOS_AUTH_PROVIDER ?? "clerk";
-  if (provider !== "oidc") return identity;
+  if (provider !== "betterauth") return identity;
   // eslint-disable-next-line @convex-dev/no-process-env -- installation auth configuration
-  const issuer = process.env.AUTH_OIDC_ISSUER?.trim().replace(/\/+$/, "");
+  const issuer = process.env.CONVEX_SITE_URL?.trim().replace(/\/+$/, "");
   if (!issuer || identity.issuer !== issuer) throw new Error("Untrusted identity issuer");
   const externalActorId = await oidcActorId(issuer, identity.subject);
   const binding = await ctx.db.query("authIdentityBindings").withIndex("by_externalActorId", q => q.eq("externalActorId", externalActorId)).unique();
@@ -56,7 +56,7 @@ export const bindLegacyAccount = internalMutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     // eslint-disable-next-line @convex-dev/no-process-env -- operator migration, selected installation issuer
-    if (args.issuer !== process.env.AUTH_OIDC_ISSUER?.trim().replace(/\/+$/, "")) throw new Error("Issuer must match configured OpenID issuer");
+    if (args.issuer !== process.env.CONVEX_SITE_URL?.trim().replace(/\/+$/, "")) throw new Error("Issuer must match configured Better Auth issuer");
     if (args.subject.length > 512 || !args.legacyTokenIdentifier.endsWith(`|${args.legacyActorId}`)) throw new Error("Invalid legacy identity mapping");
     const externalActorId = await oidcActorId(args.issuer, args.subject);
     const legacy = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", args.legacyActorId)).unique();

@@ -6,11 +6,11 @@ The Chaos ChatGPT app is an MCP server at **`https://chaos.fail/mcp`**. It works
 
 ## How it fits together
 
-The diagram and hosted-product setup below describe Clerk. Self-hosted OIDC
-deployments use the selected issuer's discovery/JWKS, a separate MCP JWT audience
+The diagram and hosted-product setup below describe Clerk. Self-hosted Better Auth
+deployments use the app's OAuth discovery/JWKS, a single MCP JWT resource audience
 and an explicit client allowlist instead. Register approved connector clients
 with exact redirects and PKCE; automatic DCR/CIMD registration is not supplied
-by the Keycloak bootstrap. See [OIDC integration setup](./self-hosting.md#optional-integrations).
+by the Better Auth setup. See [Better Auth integration setup](./self-hosting.md#optional-integrations).
 
 ```
 ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)

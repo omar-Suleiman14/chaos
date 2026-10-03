@@ -37,14 +37,14 @@ async function signInCreator(page: Page, email: string, password: string) {
   await page.getByRole("button", { name: "Log in" }).click();
 
   const provider = process.env.E2E_AUTH_PROVIDER ?? "clerk";
-  if (provider === "oidc") {
-    await page.locator("#username").fill(email);
-    await page.locator("#password").fill(password);
-    await page.locator("#kc-login").click();
-    await expect(page.getByRole("link", { name: "Open Chaos" }).first()).toBeVisible();
+  if (provider === "betterauth") {
+    await page.getByRole("textbox", { name: /email/i }).fill(email);
+    await page.locator('input[name="password"]').fill(password);
+    await page.getByRole("button", { name: /continue/i }).click();
+    await expect(page).toHaveURL(/\/dashboard/);
     return;
   }
-  if (provider !== "clerk") throw new Error("E2E_AUTH_PROVIDER must be clerk or oidc");
+  if (provider !== "clerk") throw new Error("E2E_AUTH_PROVIDER must be clerk or betterauth");
 
   const identifier = page.locator('input[name="identifier"]');
   await expect(identifier).toBeVisible();

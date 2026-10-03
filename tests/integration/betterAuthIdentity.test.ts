@@ -4,14 +4,14 @@ import { createTestConvex } from "./setup";
 import { oidcActorId } from "@/lib/auth/identity";
 import { actorForAccount } from "@/convex/authIdentity";
 
-const issuer = "https://auth.example.com/realms/chaos";
+const issuer = "https://backend.example.com";
 const oidc = (subject = "person-1", emailVerified = true) => ({ issuer, subject, tokenIdentifier: `${issuer}|${subject}`, name: "Casey", email: "casey@example.com", emailVerified });
-function configure() { vi.stubEnv("CHAOS_AUTH_PROVIDER", "oidc"); vi.stubEnv("AUTH_OIDC_ISSUER", issuer); }
+function configure() { vi.stubEnv("CHAOS_AUTH_PROVIDER", "betterauth"); vi.stubEnv("CONVEX_SITE_URL", issuer); }
 afterEach(() => vi.unstubAllEnvs());
 
 it("namespaces the same provider subject and never joins an existing email account", async () => {
   configure();
-  vi.stubEnv("AUTH_OIDC_ISSUER", `${issuer}/`);
+  vi.stubEnv("CONVEX_SITE_URL", `${issuer}/`);
   const t = createTestConvex(), owner = t.withIdentity(oidc());
   await t.run(ctx => ctx.db.insert("users", { clerkId: "user_legacy", username: "legacy", name: "Old", email: "casey@example.com", createdAt: 1 }));
   const actor = await oidcActorId(issuer, "person-1");
@@ -54,7 +54,7 @@ it("refuses late merges, unknown accounts, and mappings for another issuer", asy
   await expect(t.mutation(internal.authIdentity.bindLegacyAccount, { ...input, issuer: "https://evil.example.com" })).rejects.toThrow("must match");
 });
 
-it("OIDC grants require verified email and preserve owner-only publications", async () => {
+it("Better Auth grants require verified email and preserve owner-only publications", async () => {
   configure();
   const t = createTestConvex(), owner = t.withIdentity(oidc("owner"));
   const inviteIdentity = { ...oidc("invited", false), email: "invite@example.com" };

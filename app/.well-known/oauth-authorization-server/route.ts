@@ -1,17 +1,19 @@
 // Mirrors the selected authorization server metadata for MCP clients that look for it
 // on the resource origin instead of following authorization_servers.
-import { metadataCors, oidcIssuer } from "@/lib/mcp/oauth";
+import { metadataCors, betterAuthIssuer } from "@/lib/mcp/oauth";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  if (process.env.NEXT_PUBLIC_AUTH_PROVIDER !== "oidc") {
+  if (process.env.NEXT_PUBLIC_AUTH_PROVIDER !== "betterauth") {
     const { authServerMetadataHandlerClerk } = await import("@clerk/mcp-tools/next");
     return authServerMetadataHandlerClerk()();
   }
   try {
-    const issuer = oidcIssuer();
-    const response = await fetch(`${issuer}/.well-known/openid-configuration`, { redirect: "error", signal: AbortSignal.timeout(5000), cache: "no-store" });
+    const issuer = betterAuthIssuer();
+    const site = process.env.NEXT_PUBLIC_CONVEX_SITE_URL;
+    if (!site) throw new Error("Convex HTTP-actions URL is required");
+    const response = await fetch(`${site.replace(/\/+$/, "")}/.well-known/oauth-authorization-server`, { redirect: "error", signal: AbortSignal.timeout(5000), cache: "no-store" });
     if (!response.ok) throw new Error("OIDC discovery unavailable");
     const metadata: unknown = await response.json();
     if (!metadata || typeof metadata !== "object" || Array.isArray(metadata) || !("issuer" in metadata) || metadata.issuer !== issuer) throw new Error("OIDC discovery issuer does not match");

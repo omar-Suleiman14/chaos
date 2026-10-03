@@ -24,6 +24,8 @@ Security fixes target the current `main` branch. Older snapshots do not receive 
 
 ## Self-hosted installations
 
+For Better Auth, use a random deployment secret, include its Convex component in backups, and configure genuine email verification before relying on email invitations. See [Better Auth](./docs/better-auth.md) for recovery limitations.
+
 The operator is responsible for TLS, protected backend and administration endpoints, credential rotation, backups and restore testing, software updates, and the privacy of stored respondent data. Follow the [self-hosting guide](./docs/self-hosting.md) and use synthetic data for security testing.
 
 Run `pnpm audit --prod` to inspect runtime dependency advisories and `pnpm audit` to include development tools. Report actionable dependency findings privately when they expose application data or permissions. These checks do not replace an independent security review.

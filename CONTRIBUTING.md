@@ -14,6 +14,8 @@ By contributing you agree that your work is licensed under the project's license
 
 Follow [Run it locally](./README.md#run-it-locally) in the README. `pnpm test` needs no accounts or keys, so you can run the test suite before configuring a backend or authentication provider.
 
+Use Clerk or the [Better Auth setup](./docs/better-auth.md). Better Auth uses a local Convex component; regenerate its schema with `node scripts/generate-auth-schema.mjs` after auth dependency changes. Test both frontend modes and the real HTTP auth/OAuth handlers before changing authentication.
+
 ## How the code is organised
 
 - **`app/`**: Next.js routes. The workspace lives under `app/dashboard`, public forms under `app/f` and `app/[username]/[quizname]`, live games under `app/play` and `app/dashboard/live`.

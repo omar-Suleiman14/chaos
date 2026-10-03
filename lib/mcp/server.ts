@@ -26,7 +26,7 @@ export const MCP_SERVER_NAME = "chaos";
 export const MCP_SERVER_VERSION = "1.1.0";
 
 /** Chaos uses one permission set; Clerk issues the standard OpenID scopes. */
-export const MCP_SCOPES = ["openid", "profile", "email"];
+export const MCP_SCOPES = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "betterauth" ? ["profile", "email"] : ["openid", "profile", "email"];
 const securitySchemes = [{ type: "oauth2", scopes: MCP_SCOPES }];
 
 const instructions = `Chaos (chaos.fail) is where this person builds forms, surveys, quizzes, Learn lessons and courses, organises owned content in folders, and reads authorized published material and requested answers.

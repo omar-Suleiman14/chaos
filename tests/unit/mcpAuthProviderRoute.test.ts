@@ -3,7 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ clerk: vi.fn(), verify: vi.fn(), backend: vi.fn() }));
 vi.mock("@clerk/nextjs/server", () => ({ clerkClient: mocks.clerk }));
-vi.mock("@/lib/mcp/oauth", () => ({ verifyOidcMcpToken: mocks.verify, resourceUrl: () => "https://chaos.example/mcp", resourceMetadataUrl: () => "https://chaos.example/.well-known/oauth-protected-resource/mcp" }));
+vi.mock("@/lib/mcp/oauth", () => ({ verifyBetterAuthMcpToken: mocks.verify, resourceUrl: () => "https://chaos.example/mcp", resourceMetadataUrl: () => "https://chaos.example/.well-known/oauth-protected-resource/mcp" }));
 vi.mock("@/lib/mcp/server", () => ({
   McpToolError: class extends Error {},
   createChaosMcpServer: () => ({ connect: async () => {}, close: async () => {} }),
@@ -11,7 +11,7 @@ vi.mock("@/lib/mcp/server", () => ({
 vi.mock("@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js", () => ({ WebStandardStreamableHTTPServerTransport: class { async handleRequest() { return Response.json({ accepted: true }); } } }));
 
 beforeEach(() => {
-  vi.stubEnv("NEXT_PUBLIC_AUTH_PROVIDER", "oidc");
+  vi.stubEnv("NEXT_PUBLIC_AUTH_PROVIDER", "betterauth");
   vi.stubEnv("CHAOS_MCP_SECRET", "test-only-backend-secret");
   vi.stubEnv("CONVEX_SITE_URL", "https://backend.example");
   mocks.verify.mockResolvedValue({ userId: `oidc_${"a".repeat(64)}`, clientId: "chat-client", profile: { name: "Verified Creator", email: "" } });

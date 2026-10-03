@@ -21,12 +21,12 @@ Chaos is where you create, teach, learn and test: forms, quizzes, lessons and co
 
 - [Next.js](https://nextjs.org) 16 (App Router) and React 19 for the web app
 - [Convex](https://convex.dev) for the database, server functions, scheduling and file storage
-- [Clerk](https://clerk.com) or self-hosted [Keycloak](https://www.keycloak.org) / OIDC for sign-in
+- [Clerk](https://clerk.com) or self-hosted [Better Auth](https://better-auth.com) backed by Convex for sign-in
 - TypeScript everywhere; Vitest, `convex-test` and Playwright for tests
 
 ## Run it locally
 
-You need Node.js 22.12 or later in the 22.x series, [pnpm](https://pnpm.io) 12.4.2 (pinned in `package.json`), a backend deployment and a configured authentication provider. Choose Clerk + Convex, self-hosted Keycloak + Convex Cloud, or self-hosted Keycloak + self-hosted Convex with no required paid service. The complete setup and migration instructions are in [self-hosting](./docs/self-hosting.md).
+You need Node.js 22.12 or later in the 22.x series, [pnpm](https://pnpm.io) 12.4.2 (pinned in `package.json`), a backend deployment and a configured authentication provider. Choose Clerk + Convex, Better Auth + Convex Cloud, or Better Auth + self-hosted Convex with no required paid service. The complete setup and migration instructions are in [self-hosting](./docs/self-hosting.md).
 
 ```bash
 pnpm install
@@ -44,7 +44,7 @@ The app runs at <http://localhost:3000>. To make yourself an admin, sign in once
 
 Email-based collaborator invitations require a verified email claim. Keep `email` and `email_verified` in the Clerk `convex` JWT template, with `email_verified` derived from `{{user.email_verified}}`, rather than a hardcoded value. Missing or false verification never grants invitation access. See [Clerk JWT templates](https://clerk.com/docs/guides/sessions/jwt-templates).
 
-For OIDC, set `NEXT_PUBLIC_AUTH_PROVIDER=oidc` and runtime `AUTH_OIDC_ISSUER`, `AUTH_OIDC_CLIENT_ID`, `AUTH_OIDC_CLIENT_SECRET`, `AUTH_SECRET`. Configure the backend with `CHAOS_AUTH_PROVIDER=oidc` and the identical HTTPS issuer. Access tokens need audience `convex`; email verification must reflect the actual account. Clerk credentials are unnecessary in this mode. Existing accounts require an explicit operator binding before the replacement identity first signs in; see the [migration steps](./docs/self-hosting.md#migrating-an-existing-installation).
+For Better Auth, set `NEXT_PUBLIC_AUTH_PROVIDER=betterauth`, `NEXT_PUBLIC_APP_URL` and both public Convex URLs. Set `CHAOS_AUTH_PROVIDER=betterauth`, the matching `CHAOS_APP_URL` and a random `BETTER_AUTH_SECRET` on Convex before deploying. Accounts and sessions live in Convex; no Clerk credentials, separate identity server or paid authentication service are required. Sign up at `/sign-up`. Existing accounts need an explicit operator binding before first use; see [migration steps](./docs/self-hosting.md#migrating-an-existing-installation).
 
 ### Environment variables
 
@@ -53,10 +53,10 @@ Every variable is listed with what it does in [`.env.example`](./.env.example). 
 | Variable | Where | Purpose |
 |---|---|---|
 | `NEXT_PUBLIC_CONVEX_URL` | `.env.local` | Your Convex deployment (written by `convex dev`). |
-| `NEXT_PUBLIC_AUTH_PROVIDER` | Build / `.env.local` | `clerk` (default) or `oidc`. Match the backend mode. |
+| `NEXT_PUBLIC_AUTH_PROVIDER` | Build / `.env.local` | `clerk` (default) or `betterauth`. Match the backend mode. |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` | `.env.local` | Required only for Clerk mode. |
-| `AUTH_OIDC_ISSUER`, `AUTH_OIDC_CLIENT_ID`, `AUTH_OIDC_CLIENT_SECRET`, `AUTH_SECRET` | App runtime | Required only for OIDC mode. |
-| `CHAOS_AUTH_PROVIDER`, `AUTH_OIDC_ISSUER` | Convex | Backend mode and HTTPS issuer for OIDC. |
+| `BETTER_AUTH_SECRET`, `CHAOS_APP_URL` | Convex | Random secret and exact app origin for Better Auth. |
+| `CHAOS_AUTH_PROVIDER` | Convex | `clerk` or `betterauth`, matching the frontend. |
 | `CLERK_JWT_ISSUER_DOMAIN` | Convex (`npx convex env set`) | Required for Clerk mode; lets Convex verify sign-ins. |
 
 Optional features switch on when their variables are set: webhooks (`CHAOS_WEBHOOK_KEY`), the ChatGPT app (`CHAOS_MCP_SECRET`, `CHAOS_MCP_CLIENT_IDS`), analytics (`NEXT_PUBLIC_POSTHOG_*`), and your support address (`NEXT_PUBLIC_SUPPORT_EMAIL`, `CHAOS_SUPPORT_EMAIL`). Set Convex variables with `pnpm exec convex env set`; putting them only in `.env.local` does not configure the backend. The MCP shared secret must match in both processes.

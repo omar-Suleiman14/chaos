@@ -4,19 +4,19 @@ Chaos supports three deployment choices:
 
 | Sign-in | Backend | Required paid services |
 |---|---|---|
-| Clerk | Convex Cloud or self-hosted Convex | Provider plans depend on your usage |
-| Self-hosted Keycloak (OIDC) | Convex Cloud | Convex plan depends on your usage |
-| Self-hosted Keycloak (OIDC) | Self-hosted Convex | None; you operate the infrastructure |
+| Clerk | Convex Cloud or self-hosted Convex | Provider plans depend on usage |
+| Better Auth | Convex Cloud | Convex plan depends on usage |
+| Better Auth | Self-hosted Convex | None; you operate the infrastructure |
 
-Convex remains the backend software in all three choices. The fully self-hosted choice removes the dependency on Convex Cloud and Clerk. Analytics, wallet issuers and external connectors are optional.
+Better Auth runs inside Convex and stores accounts, password hashes, sessions and OAuth signing keys in its component. No separate identity server or authentication database is needed. Analytics, wallet issuers and external connectors are optional.
 
-**Verification limit:** Compose configuration and application tests are checked separately. The complete Docker/Keycloak stack has not been built or exercised end to end in this environment. Test a deployment with synthetic accounts before serving real data.
+**Verification limit:** Automated application tests and builds do not verify an entire Docker deployment. Test the installed stack with synthetic accounts before serving real data.
 
 ## Requirements
 
-Use Docker Compose v2.20+, sufficient memory for Next.js builds, Convex and (if selected) Keycloak/PostgreSQL, persistent storage and backups. Use HTTPS origins for the app, backend API, backend HTTP actions and OIDC issuer. Authentication deliberately rejects an HTTP issuer, including localhost. A trusted local TLS proxy and certificate trust are required for a local OIDC trial.
+Use Docker Compose v2.20+, sufficient memory for Next.js builds and Convex, persistent storage and backups. Use HTTPS origins for the app, backend API and backend HTTP actions. Use a trusted local TLS proxy for authentication development.
 
-Copy `.env.example` to `.env`; never commit it. Generate independent random secrets, for example `openssl rand -hex 32`. Set `NEXT_PUBLIC_APP_URL`, `CHAOS_APP_URL`, `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CONVEX_SITE_URL`, `CONVEX_INSTANCE_SECRET` and your authentication choice. Public variables are baked into the app image; changing them requires a rebuild. Server credentials are runtime values.
+Copy `.env.example` to `.env`; never commit it. Generate independent random secrets, for example `openssl rand -hex 32`. Set `NEXT_PUBLIC_APP_URL`, `CHAOS_APP_URL` (the identical app origin), `NEXT_PUBLIC_CONVEX_URL`, `NEXT_PUBLIC_CONVEX_SITE_URL`, `CONVEX_INSTANCE_SECRET` and your authentication choice. Public variables are baked into the app image; changing them requires rebuilding.
 
 ## Choose sign-in
 
@@ -24,21 +24,11 @@ Copy `.env.example` to `.env`; never commit it. Generate independent random secr
 
 Keep `NEXT_PUBLIC_AUTH_PROVIDER=clerk`. Supply `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` and HTTPS `CLERK_JWT_ISSUER_DOMAIN`. Create Clerk's JWT template named `convex`, with audience `convex`. Include `email` and the genuine `email_verified` claim derived from `{{user.email_verified}}`. Do not hardcode verification. Set `CHAOS_AUTH_PROVIDER=clerk` on managed Convex; Compose sets it during deployment.
 
-### Keycloak / OIDC
+### Better Auth
 
-Set `NEXT_PUBLIC_AUTH_PROVIDER=oidc`, `AUTH_OIDC_ISSUER=https://identity.example.com/realms/chaos`, `AUTH_OIDC_CLIENT_ID=chaos-web`, `AUTH_OIDC_CLIENT_SECRET` and `AUTH_SECRET`. No Clerk keys are required. On managed Convex set `CHAOS_AUTH_PROVIDER=oidc` and the identical `AUTH_OIDC_ISSUER` before deploying. Use the canonical issuer without a trailing slash.
+Set `NEXT_PUBLIC_AUTH_PROVIDER=betterauth` and an independent random `BETTER_AUTH_SECRET` of at least 32 characters. Both public Convex URLs and the app origin must be explicit HTTPS URLs. Compose configures `CHAOS_AUTH_PROVIDER`, `CHAOS_APP_URL` and the secret on the backend. No Clerk credentials are required. Read [Better Auth configuration, account recovery and OAuth](./better-auth.md).
 
-For the included `oidc` Compose profile also set `KEYCLOAK_HOSTNAME=https://identity.example.com`, `KEYCLOAK_ADMIN_PASSWORD` and `KEYCLOAK_DB_PASSWORD`. Configure HTTPS proxying before starting it:
-
-```bash
-docker compose --profile oidc up -d keycloak-db keycloak
-```
-
-The pinned Keycloak image imports `docker/keycloak/chaos-realm.json` on first startup. It creates a confidential web client with the exact `${NEXT_PUBLIC_APP_URL}/api/auth/callback/keycloak` redirect, authorization-code flow, PKCE S256, profile/email scopes and an access-token audience mapper for `convex`. Existing realms are skipped on restart; changing `.env` or the bootstrap JSON does not update an existing client secret or redirect. Apply those changes in Keycloak administration and update the app together.
-
-The realm disables public registration and password reset by default. Create accounts in Keycloak; verify email through configured SMTP or another documented identity-verification process before marking an account verified. Do not mark arbitrary addresses verified merely to unblock a login or invitation. Configure SMTP and registration/reset policies yourself if needed. No users or fixed passwords are included in the realm file.
-
-A generic OIDC provider must expose discovery/JWKS and issue signed JWT access tokens with issuer equal to `AUTH_OIDC_ISSUER`, audience `convex`, a stable subject and genuine email-verification claims. Opaque access tokens are insufficient. Review [Keycloak containers](https://www.keycloak.org/server/containers), [realm imports](https://www.keycloak.org/server/importExport), [reverse proxies](https://www.keycloak.org/server/reverseproxy) and [Keycloak 26.8.0 release notes](https://www.keycloak.org/2026/10/keycloak-2680-released).
+For Convex Cloud, set those backend variables with `pnpm exec convex env set` before deploying; `.env.local` alone does not configure the backend. Set `NEXT_PUBLIC_CONVEX_SITE_URL` to the deployment's `.convex.site` origin and deploy Next.js to your chosen host. Better Auth does not require its own Compose service.
 
 ## Deploy the self-hosted backend and app
 
@@ -50,23 +40,23 @@ docker compose --profile deploy run --rm convex-deploy
 docker compose up -d --build app
 ```
 
-Deploy backend schema/functions before the app. The deploy container configures the selected issuer, authentication mode and nonempty optional backend settings. Empty optional settings do not clear old values; use `pnpm exec convex env remove VARIABLE` explicitly. Keep webhook encryption keys stable.
+Deploy backend schema/functions before the app. The deploy container configures authentication mode and nonempty backend settings. Empty optional settings do not clear old values; use `pnpm exec convex env remove VARIABLE` explicitly. Keep webhook encryption keys and the Better Auth secret stable.
 
-For Keycloak plus Convex Cloud, run only the identity profile, deploy backend functions with the normal managed Convex CLI and deploy the app to your chosen Node.js host. Set backend environment values using `pnpm exec convex env set`; `.env.local` alone does not configure them.
+Visit `/sign-up` to create a Better Auth account. Passwords require at least 12 characters. `/auth/account` changes passwords and revokes other sessions. New email addresses remain unverified; invitation access requires genuine verification. Automated email verification and forgotten-password delivery need an operator-provided mail integration. They are not configured by default.
 
 After signing in once, an operator can grant application administration with `pnpm exec convex run admin:grantAdmin '{"email":"you@example.com"}'` against the intended backend.
 
 ## Migrating an existing installation
 
-Back up and rehearse a restore before changing either authentication or backend hosting. Migrating to self-hosted Convex also requires exporting/importing the complete database and files using supported Convex tooling. Preserve ownership and respondent data; do not recreate accounts by email.
+Back up and rehearse a restore before changing authentication or backend hosting. Migrating to self-hosted Convex also requires exporting/importing the complete database, component data and files using supported Convex tooling. Preserve ownership and respondent data; do not recreate accounts by email.
 
-Before a replacement identity signs into Chaos for the first time, verify the old and new identity through an operator-controlled process, then run the internal binding command against the intended backend:
+Create the replacement account through Better Auth's `/api/auth/sign-up/email` API or an operator-controlled script and record the returned user ID. Do not use the website signup page for this step: it redirects to the workspace and creates a new Chaos account. Verify the old and new identities through an operator-controlled process, then run the internal binding before visiting the workspace:
 
 ```bash
-pnpm exec convex run authIdentity:bindLegacyAccount '{"issuer":"https://identity.example.com/realms/chaos","subject":"NEW_PROVIDER_SUBJECT","legacyActorId":"OLD_CLERK_USER_ID","legacyTokenIdentifier":"OLD_ISSUER|OLD_CLERK_USER_ID"}'
+pnpm exec convex run authIdentity:bindLegacyAccount '{"issuer":"https://convex-site.example.com","subject":"BETTER_AUTH_USER_ID","legacyActorId":"OLD_ACCOUNT_ACTOR_ID","legacyTokenIdentifier":"OLD_STORED_TOKEN_IDENTIFIER"}'
 ```
 
-Use the actual stored legacy identity values, not guesses. Binding preserves the existing actor and ownership IDs; matching email does not link accounts. Test old content, collaborator roles and respondent access before cutover. New OIDC installations need no legacy binding.
+The replacement issuer is the Convex HTTP-actions origin. Use actual stored legacy values. Binding preserves actor IDs, administration, ownership and study identity; matching email never links accounts. New installations need no binding. Passwords and sessions are not automatically imported from Clerk or Keycloak; migrating users create fresh credentials. Keep previous identity-service backups until migration and restore checks succeed. Test old content, collaborator roles and respondent access before cutover.
 
 ## TLS, storage and operations
 
@@ -77,18 +67,13 @@ Place a trusted reverse proxy in front of the public endpoints:
 | `https://chaos.example.com` | `app:3000` |
 | `https://convex.example.com` | `backend:3210` (WebSockets) |
 | `https://convex-site.example.com` | `backend:3211` |
-| `https://identity.example.com` | Keycloak listener on `127.0.0.1:8080` |
 
-Keycloak uses `xforwarded` proxy headers. The proxy must overwrite forwarded headers and only the proxy should reach its listener; protect the administration console separately. `AUTH_TRUST_HOST=true` in Compose assumes a trusted proxy and host configuration. Remove `CONVEX_DO_NOT_REQUIRE_SSL` behind TLS. Protect the Convex dashboard (localhost port 6791) and root key. App health at `/api/health` checks the app process only.
+The proxy must overwrite forwarded headers. Remove `CONVEX_DO_NOT_REQUIRE_SSL` behind TLS. Protect the Convex dashboard (localhost port 6791) and root key. App health at `/api/health` checks the app process only.
 
-Back up `convex-data`, the Keycloak PostgreSQL `keycloak-data` volume and server configuration/secrets consistently. PostgreSQL has no published host port. Stopped-volume snapshots or database-native backups must include a rehearsed restore. Never run `docker compose down -v` against retained data. A realm export alone is not a full Keycloak database backup.
-
-Review release/security notes before upgrades. Convex image tags are configurable; pin them to a tested release. Keycloak and PostgreSQL are pinned in Compose; update deliberately. Deploy schema/functions before swapping the app. There is no built-in high availability or managed monitoring.
-
-Run one app replica for OIDC sessions. Refresh-token coordination is local to that process, with a short grace window for requests carrying an older session cookie. Multiple replicas require shared refresh coordination or suitable provider refresh-token grace; strict token rotation across replicas has not been verified.
+Back up `convex-data`, including auth component data and signing keys, plus server configuration/secrets consistently. Rehearse a restore. Never run `docker compose down -v` against retained data. Review release/security notes before upgrades; pin Convex images to tested releases. Deploy schema/functions before swapping the app. High availability and managed monitoring are operator responsibilities.
 
 ## Optional integrations
 
-MCP requires `CHAOS_MCP_SECRET` shared by Next.js and Convex. OIDC MCP additionally requires a nonempty `CHAOS_MCP_CLIENT_IDS` allowlist and JWT access tokens for `AUTH_OIDC_MCP_AUDIENCE` (default `chaos-mcp`). Register each connector client with exact redirect URIs, PKCE and a dedicated audience mapper in Keycloak. The web client is not an MCP client; the supplied realm does not register external clients or enable dynamic client registration. Generic OIDC does not guarantee automatic ChatGPT registration compatibility.
+MCP requires `CHAOS_MCP_SECRET` shared by Next.js and Convex. Better Auth additionally requires explicitly registered PKCE clients and a nonempty Next.js `CHAOS_MCP_CLIENT_IDS` allowlist. Request the app's `/mcp` URL as the OAuth resource. Registration and consent are described in [Better Auth MCP setup](./better-auth.md#mcp-oauth). Dynamic client registration is disabled; test external connector callbacks before enabling them.
 
-Google Wallet needs your own issuer/service-account credentials; leave `GOOGLE_WALLET_*` empty to disable it. Analytics stays off without `NEXT_PUBLIC_POSTHOG_*`. Integration API/webhook callers must reach the backend HTTP actions origin. Set `NEXT_PUBLIC_SOURCE_REPO_URL` to the source for your running modified version, as required by the AGPL. See [data lifecycle](./data-lifecycle.md), [migrations](./migrations.md) and [security](../SECURITY.md).
+Google Wallet needs your own issuer/service-account credentials; leave `GOOGLE_WALLET_*` empty to disable it. Analytics stays off without `NEXT_PUBLIC_POSTHOG_*`. Integration API/webhook callers must reach the backend HTTP-actions origin. Set `NEXT_PUBLIC_SOURCE_REPO_URL` to the source for your running modified version, as required by the AGPL. See [data lifecycle](./data-lifecycle.md), [migrations](./migrations.md) and [security](../SECURITY.md).

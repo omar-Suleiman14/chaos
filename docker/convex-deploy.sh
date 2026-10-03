@@ -11,11 +11,12 @@ case "${CHAOS_AUTH_PROVIDER:-clerk}" in
     : "${CLERK_JWT_ISSUER_DOMAIN:?set CLERK_JWT_ISSUER_DOMAIN}"
     pnpm exec convex env set CLERK_JWT_ISSUER_DOMAIN "$CLERK_JWT_ISSUER_DOMAIN"
     ;;
-  oidc)
-    : "${AUTH_OIDC_ISSUER:?set AUTH_OIDC_ISSUER}"
-    pnpm exec convex env set AUTH_OIDC_ISSUER "$AUTH_OIDC_ISSUER"
+  betterauth)
+    : "${BETTER_AUTH_SECRET:?set BETTER_AUTH_SECRET (32+ random characters)}"
+    : "${CHAOS_APP_URL:?set CHAOS_APP_URL to the public HTTPS app origin}"
+    pnpm exec convex env set BETTER_AUTH_SECRET "$BETTER_AUTH_SECRET"
     ;;
-  *) echo 'CHAOS_AUTH_PROVIDER must be clerk or oidc' >&2; exit 1 ;;
+  *) echo 'CHAOS_AUTH_PROVIDER must be clerk or betterauth' >&2; exit 1 ;;
 esac
 pnpm exec convex env set CHAOS_AUTH_PROVIDER "${CHAOS_AUTH_PROVIDER:-clerk}"
 [ -z "${CHAOS_APP_URL:-}" ] || pnpm exec convex env set CHAOS_APP_URL "$CHAOS_APP_URL"

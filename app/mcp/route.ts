@@ -6,7 +6,7 @@ import { clerkClient } from "@clerk/nextjs/server";
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 import { createChaosMcpServer, McpToolError } from "@/lib/mcp/server";
 import type { McpCaller } from "@/lib/mcp/server";
-import { resourceMetadataUrl, resourceUrl, verifyOidcMcpToken } from "@/lib/mcp/oauth";
+import { resourceMetadataUrl, resourceUrl, verifyBetterAuthMcpToken } from "@/lib/mcp/oauth";
 import { detectAiClient, type CreatedWith } from "@/lib/aiClients";
 
 export const runtime = "nodejs";
@@ -34,14 +34,14 @@ function unauthorized(request: Request, description: string): Response {
   ));
 }
 
-type Verified = { userId: string; clientId?: string; profile?: { name: string; email: string; imageUrl?: string }; provider: "clerk" | "oidc" };
+type Verified = { userId: string; clientId?: string; profile?: { name: string; email: string; imageUrl?: string }; provider: "clerk" | "betterauth" };
 async function verifiedUser(request: Request): Promise<Verified | null | Response> {
   if (!/^Bearer\s+\S+/i.test(request.headers.get("authorization") ?? "")) return null;
   try {
-    if (process.env.NEXT_PUBLIC_AUTH_PROVIDER === "oidc") {
+    if (process.env.NEXT_PUBLIC_AUTH_PROVIDER === "betterauth") {
       const token = /^Bearer\s+(\S+)$/i.exec(request.headers.get("authorization") ?? "")?.[1];
       if (!token) return unauthorized(request, "An OAuth access token is required.");
-      return { ...await verifyOidcMcpToken(token), provider: "oidc" };
+      return { ...await verifyBetterAuthMcpToken(token), provider: "betterauth" };
     }
     const clerk = await clerkClient();
     const state = await clerk.authenticateRequest(request, { acceptsToken: "oauth_token" });
