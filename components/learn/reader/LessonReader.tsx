@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import {
-  ArrowLeft, Bookmark, BookmarkCheck, CheckCircle2, ExternalLink, Flag, GitFork, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
+  ChevronLeft, Bookmark, BookmarkCheck, CheckCircle2, ExternalLink, Flag, GitFork, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
   MoreHorizontal, NotebookPen, PenLine, RotateCcw, Share2, ThumbsDown, ThumbsUp, Type, X,
 } from "lucide-react";
 import { WsConfirm, WsMenu, WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
@@ -323,7 +323,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   return (
     <div className={embedded ? "" : "lx-reader-root"} dir={locale === "ar" ? "rtl" : "ltr"}>
       <header className="lx-reader-top" data-scrolled={scrolled > 4}>
-        <Link href={backHref} className="ws-icon-button lx-reader-back" aria-label={t.back}><ArrowLeft size={15} strokeWidth={2} className="lx-flip" /></Link>
+        <Link href={backHref} className="ws-icon-button lx-reader-back" aria-label={t.back}><ChevronLeft size={18} strokeWidth={2} className="lx-flip lx-back-chevron" aria-hidden /></Link>
         <span className="lx-reader-top__title" aria-hidden={scrolled <= 4}>{meta.title || t.untitled}</span>
         <div className="lx-actions" style={{ gap: 2 }}>
           {isOwner && <Link href={`/dashboard/learn/lessons/${lesson.id}`} className="ws-btn ws-btn--sm ws-btn--ghost"><PenLine size={15} aria-hidden /><span className="lx-phone-label">{t.edit}</span></Link>}

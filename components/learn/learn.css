@@ -509,3 +509,8 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .quiz-player[data-inline] { height: min(640px, 80dvh); min-height: 360px; overflow: hidden; border-radius: 12px; isolation: isolate; }
 .quiz-player[data-inline] > .fixed { position: absolute; }
 .quiz-player[data-inline] .tiktok-container, .quiz-player[data-inline] .tiktok-slide { height: 100%; }
+
+/* Compact chevron, with a separate comfortable touch target. */
+.lx-reader-back, .lx-reader-back:hover { background: transparent; }
+.lx-back-chevron { width: 18px; height: 18px; flex-shrink: 0; }
+@media (pointer: coarse) { .lx-reader-back { min-width: 44px !important; min-height: 44px !important; } }

@@ -13,7 +13,7 @@ import type { Id, Doc } from "@/convex/_generated/dataModel";
 import type { LessonDocument } from "@/convex/learnModel";
 import { detachSource, parseCitationLocator, replaceBlockCitation, sourceIds, sourceView, useLearnMediaClient, type NativeSource, type NativeCitation } from "@/lib/learn/mediaClient";
 import { formatLocator } from "@/lib/learn/chaosDocument";
-import { ArrowLeft, Archive, Check, Copy, Eye, FolderInput, History, Info, Layers, MoreHorizontal, PanelRight, Rocket, RotateCcw, Trash2, Undo2, X } from "lucide-react";
+import { ChevronLeft, Archive, Check, Copy, Eye, FolderInput, History, Info, Layers, MoreHorizontal, PanelRight, Rocket, RotateCcw, Trash2, Undo2, X } from "lucide-react";
 import { WsConfirm, WsMenu, WsTabs, WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { Select } from "@/components/workspace/Select";
@@ -256,7 +256,7 @@ function LessonEditorSession({ id }: { id: string }) {
   return (
     <div className={`lx-edit ${styles.layout}`}>
       <div className="lx-edit__bar">
-        <Link href={courseId && /^[a-z0-9]+$/i.test(courseId) ? `/dashboard/courses/${courseId}` : "/dashboard?tab=courses"} className="ws-btn ws-btn--sm ws-btn--ghost" aria-label={t.back}><ArrowLeft size={16} className="lx-flip" aria-hidden /><span className="lx-phone-label">{courseId ? t.backCourse : t.courses}</span></Link>
+        <Link href={courseId && /^[a-z0-9]+$/i.test(courseId) ? `/dashboard/courses/${courseId}` : "/dashboard?tab=courses"} className="ws-btn ws-btn--sm ws-btn--ghost" aria-label={t.back}><ChevronLeft size={18} strokeWidth={2} className="lx-flip lx-back-chevron" aria-hidden /><span className="lx-phone-label">{courseId ? t.backCourse : t.courses}</span></Link>
         <LessonStatus lesson={lesson} />
         <span className="lx-save" role="status">{saving ? t.saving : error || pending.current.content || pending.current.meta ? "Unsaved changes" : <><Check size={13} aria-hidden />{caps.sharedPublishing ? t.savedCloud : t.saved}</>}</span>
         <span style={{ flex: 1 }} />
