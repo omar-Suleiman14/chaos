@@ -1,3 +1,4 @@
+import { courseSearchText } from "./courseSearchModel";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 import { recordAssetPublicationAction } from "./learnPublicationAudit";
 import { v, ConvexError } from "convex/values";
@@ -50,7 +51,7 @@ export const publish = mutation({ args: { collectionId: v.id("learnCollections")
   }
   const last = await ctx.db.query("collectionVersions").withIndex("by_collectionId_and_number", q => q.eq("collectionId", row._id)).order("desc").first();
   const versionId = await ctx.db.insert("collectionVersions", { collectionId: row._id, number: (last?.number ?? 0) + 1, metadata: row.metadata, items: row.items, publishedAt: Date.now() });
-  await ctx.db.patch("learnCollections", row._id, { publishedVersionId: versionId, visibility: args.visibility, revision: row.revision + 1, updatedAt: Date.now() }); await enqueueLearnWebhookEvent(ctx, { event: "collection.published", collectionId: row._id, versionId, operationId: `version:${versionId}`, revision: row.revision + 1 });
+  await ctx.db.patch("learnCollections", row._id, { searchText: await courseSearchText(ctx, row.ownerId, row.metadata, row.items), publishedVersionId: versionId, visibility: args.visibility, revision: row.revision + 1, updatedAt: Date.now() }); await enqueueLearnWebhookEvent(ctx, { event: "collection.published", collectionId: row._id, versionId, operationId: `version:${versionId}`, revision: row.revision + 1 });
   await recordAssetPublicationAction(ctx, { asset: { kind: "collection", id: row._id }, actorId: row.ownerId, action: "publish", revision: row.revision + 1, versionId, beforeVisibility: row.visibility, afterVisibility: args.visibility, reason: "Published an immutable ordered collection snapshot." });
   return versionId;
 } });

@@ -18,10 +18,10 @@ function fakeStore(entries: [unknown, Record<string, unknown>, unknown][]) {
 
 describe("optimistic updates", () => {
   it("moves a form's status in the library and the builder at once, and removes deleted forms", () => {
-    const library = { owned: [{ _id: "a", status: "live" }, { _id: "b", status: "draft" }], shared: [] };
+    const library = { owned: [{ _id: "a", status: "live" }, { _id: "b", status: "draft" }], shared: [], invites: [] };
     const { store, get } = fakeStore([[api.forms.listMyForms, {}, library], [api.forms.getFormForEditor, { formId: "a" }, { _id: "a", status: "live" }]]);
     setFormStatusLocally(store, { formId: "a" as never, status: "archived" });
-    expect(get(api.forms.listMyForms, {})).toEqual({ owned: [{ _id: "a", status: "archived" }, { _id: "b", status: "draft" }], shared: [] });
+    expect(get(api.forms.listMyForms, {})).toEqual({ owned: [{ _id: "a", status: "archived" }, { _id: "b", status: "draft" }], shared: [], invites: [] });
     expect(get(api.forms.getFormForEditor, { formId: "a" })).toMatchObject({ status: "archived" });
     deleteFormLocally(store, { formId: "a" as never });
     expect((get(api.forms.listMyForms, {}) as typeof library).owned.map((f) => f._id)).toEqual(["b"]);

@@ -2,7 +2,7 @@ import type { LessonEditorType } from "./blocks";
 
 /** Blank document space is a writing target; existing blocks and controls keep their own cursor. */
 export function isBlankEditorTarget(target: EventTarget | null): boolean {
-  return target instanceof Element && !target.closest(".bn-block-outer, .bn-block-content, button, a, input, textarea, select, [role='menu'], [role='dialog'], [role='toolbar'], [role='listbox']");
+  return target instanceof Element && !target.closest(".bn-block-outer, .bn-block-content, .bn-side-menu, .bn-drag-handle, [draggable='true'], button, a, input, textarea, select, [role='menu'], [role='dialog'], [role='toolbar'], [role='listbox']");
 }
 
 export function focusLessonEnd(editor: LessonEditorType) {

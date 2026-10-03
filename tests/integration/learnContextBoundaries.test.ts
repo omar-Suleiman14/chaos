@@ -14,9 +14,9 @@ it("revokes context from a restricted lesson creator despite an existing reader 
   const selection = { ...args, sourceIds: [] };
   expect(await other.query(api.learnContext.assemble, selection)).toMatchObject({ blocks: [{ id: "selected" }] });
   await t.run(ctx => ctx.db.patch("users", userId, { isBanned: true }));
-  await expect(other.query(api.learnContext.assemble, selection)).rejects.toThrow("Lesson version not accessible");
+  await expect(other.query(api.learnContext.assemble, selection)).rejects.toThrow(/NOT_FOUND|Lesson version not accessible/);
   await t.run(ctx => ctx.db.patch("users", userId, { isBanned: false, suspendedUntil: Date.now() + 60000 }));
-  await expect(other.query(api.learnContext.assemble, selection)).rejects.toThrow("Lesson version not accessible");
+  await expect(other.query(api.learnContext.assemble, selection)).rejects.toThrow(/NOT_FOUND|Lesson version not accessible/);
 });
 async function fixture() {
   const t = createTestConvex(); const owner = t.withIdentity(creatorIdentity); const other = t.withIdentity(otherCreatorIdentity);

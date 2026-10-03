@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/locale";
+import type { Locale } from "../locale";
 
 /**
  * How the docs are grouped, by what people want to do. Articles live in content-en.ts / content-ar.ts and

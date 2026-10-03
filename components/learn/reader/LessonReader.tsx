@@ -8,7 +8,7 @@ import {
   ArrowLeft, Bookmark, BookmarkCheck, CheckCircle2, ExternalLink, Flag, GitFork, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
   MoreHorizontal, NotebookPen, PenLine, RotateCcw, Share2, ThumbsDown, ThumbsUp, Type, X,
 } from "lucide-react";
-import { WsConfirm, WsMenu, WsTabs, WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
+import { WsConfirm, WsMenu, WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useIsPhone } from "@/components/workspace/useIsPhone";
 import { useModal } from "@/components/workspace/useModal";
@@ -170,7 +170,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
       setScrolled(pct);
       if (Date.now() - lastSaved.current > 4000 && pct > 3) {
         lastSaved.current = Date.now();
-        if (signedIn) void actions.setProgress(lesson.id, { percent: pct, lastBlockId: active }).catch(err => say(errorMessage(err)));
+        void actions.setProgress(lesson.id, { percent: pct, lastBlockId: active }).catch(err => say(errorMessage(err)));
       }
     };
     onScroll();
@@ -240,7 +240,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
     const isImage = block.type === "image";
     return (
       <>
-        <WsMenu label={t.blockMenu} trigger={<MoreHorizontal size={16} />}>
+        <WsMenu label={t.blockMenu} triggerClassName="lx-block-action" trigger={<MoreHorizontal size={15} />}>
           {(close) => (
             <>
               {isImage && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); openHandoff(undefined, "", block.id, "explain", String(block.props.alt || block.props.caption || "")); }}><ImageIcon size={15} />{t.explainImage}</button>}
@@ -380,9 +380,8 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                 <button type="button" className="lx-link" onClick={() => jumpTo(resumeHeading.id)}>{t.resume(resumeHeading.text)}</button>
               </p>
             )}
-            <WsTabs tabs={["lesson", "practice"] as const} value={tab} onChange={setTab} label={meta.title} labels={{ lesson: t.tabs.lesson, practice: `${t.tabs.practice}${lesson.quizzes.length ? ` (${lesson.quizzes.length})` : ""}` }} />
             <div style={{ marginTop: 20 }}>
-              {tab === "lesson" ? (
+              {(
                 <>
                   <BlockRenderer content={view.content} sources={lesson.sources} highlights={highlights}
                     onCite={(sourceId, locator) => { const source = lesson.sources.find((s) => s.id === sourceId); if (source) setOpenSource({ source, locator }); }}
@@ -414,9 +413,9 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                     <footer className="lx-section" style={{ marginTop: 40, paddingTop: 20, borderTop: "1px solid var(--ws-line)" }}>
                       <div className="lx-actions" style={{ justifyContent: "space-between" }}>
                         {progress?.state === "completed" ? (
-                          <span className="lx-actions"><span className="lx-badge" data-tone="green"><CheckCircle2 size={13} aria-hidden />{t.completed}</span><button type="button" className="lx-link" onClick={() => guard(() => actions.setProgress(lesson.id, { state: "not_started" }))}>{t.reset}</button></span>
+                          <span className="lx-actions"><span className="lx-badge" data-tone="green"><CheckCircle2 size={13} aria-hidden />{t.completed}</span><button type="button" className="lx-link" onClick={() => actions.setProgress(lesson.id, { state: "not_started" }).catch(err => say(errorMessage(err)))}>{t.reset}</button></span>
                         ) : (
-                          <button type="button" className="ws-btn" onClick={() => guard(() => actions.setProgress(lesson.id, { state: "completed", percent: 100 }))}><CheckCircle2 size={16} aria-hidden />{t.complete}</button>
+                          <button type="button" className="ws-btn" onClick={() => actions.setProgress(lesson.id, { state: "completed", percent: 100 }).catch(err => say(errorMessage(err)))}><CheckCircle2 size={16} aria-hidden />{t.complete}</button>
                         )}
                         {!isOwner && (
                           <span className="lx-actions" role="group" aria-label={t.helpful}>
@@ -429,7 +428,8 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                     </footer>
                   )}
                 </>
-              ) : <PracticeTab lesson={lesson} isOwner={isOwner} onForkQuiz={signedIn && caps.quizForks ? setForkingQuiz : undefined} />}
+              ) }
+              <section id="practice" className="lx-section" aria-label={t.tabs.practice} style={{ marginTop: 32, borderTop: "1px solid var(--ws-line)", paddingTop: 24 }}><h2>{t.tabs.practice}</h2><PracticeTab lesson={lesson} isOwner={isOwner} onForkQuiz={signedIn && caps.quizForks ? setForkingQuiz : undefined} /></section>
             </div>
           </article>
         </main>

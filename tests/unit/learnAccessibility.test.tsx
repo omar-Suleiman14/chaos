@@ -64,7 +64,7 @@ window.matchMedia ??= ((query: string) => ({ matches: false, media: query, oncha
 beforeEach(() => { localStorage.clear(); push.mockReset(); backend.mutation.mockReset().mockResolvedValue("lesson_created"); backend.query.mockReset().mockResolvedValue(null); });
 
 describe("lesson reader", () => {
-  it("has a labelled article, outline and tabs, and no axe violations", async () => {
+  it("has a labelled article, outline and inline practice, and no axe violations", async () => {
     const l = lesson();
     seed(l);
     inWorkspace(<LessonReader lesson={l} />);
@@ -72,7 +72,7 @@ describe("lesson reader", () => {
     // Desktop and phone outlines are the same list; CSS shows one at a time.
     const outline = screen.getAllByRole("navigation", { name: "Lesson outline" })[0];
     expect(within(outline).getAllByRole("link").map((a) => a.textContent)).toEqual(["Causes", "Collaterals"]);
-    expect(screen.getByRole("tablist")).toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Practice" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Lecture 8 · page 23" })).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("Check for varices.");
     expect(screen.getByRole("columnheader", { name: "Site" })).toBeInTheDocument();
@@ -105,13 +105,10 @@ describe("lesson reader", () => {
     expect(screen.getAllByRole("navigation", { name: "مخطط الدرس" }).length).toBeGreaterThan(0);
   });
 
-  it("switches to the Practice tab with the keyboard", () => {
-    const l = lesson();
-    seed(l);
-    inWorkspace(<LessonReader lesson={l} />);
-    const tab = screen.getByRole("tab", { name: "Lesson" });
-    fireEvent.keyDown(tab, { key: "ArrowRight" });
-    expect(screen.getByRole("tab", { name: "Practice" })).toHaveAttribute("aria-selected", "true");
+  it("keeps practice inside the lesson without a separate tab", () => {
+    const l = lesson(); seed(l); inWorkspace(<LessonReader lesson={l} />);
+    expect(screen.queryByRole("tab", { name: "Practice" })).toBeNull();
+    expect(screen.getByRole("region", { name: "Practice" })).toBeInTheDocument();
     expect(screen.getByText("No practice attached yet.")).toBeInTheDocument();
   });
 });

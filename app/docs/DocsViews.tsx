@@ -4,7 +4,7 @@ import { IntentLink as Link } from "@/components/IntentLink";
 import { Fragment, useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, Lightbulb } from "lucide-react";
 import { useCopy, useLocale } from "@/lib/i18n";
-import { articleHeadings, docSections, findArticle, neighbours } from "@/lib/docs";
+import { useDocs } from "@/lib/docs/provider";
 import type { DocBlock } from "@/lib/docs";
 import DocsSearch from "./DocsSearch";
 import { docsCopy } from "./copy";
@@ -73,13 +73,16 @@ function useActiveHeading(ids: string[]) {
 export function DocsArticle({ slug }: { slug: string }) {
   const t = useCopy(docsCopy);
   const { locale, dir } = useLocale();
-  const article = findArticle(locale, slug)!;
-  const headings = articleHeadings(article);
+  const { articles, loading } = useDocs();
+  const article = articles.find(article => article.slug === slug);
+  const headings = article?.blocks.flatMap(block => block.type === "heading" ? [{ id: block.id, text: block.text }] : []) ?? [];
   const ids = headings.map((h) => h.id).join(" ");
   const active = useActiveHeading(ids ? ids.split(" ") : []);
-  const { previous, next } = neighbours(locale, slug);
+  const index = articles.findIndex(article => article.slug === slug);
+  const previous = articles[index - 1], next = articles[index + 1];
   const Back = dir === "rtl" ? ArrowRight : ArrowLeft;
   const Forward = dir === "rtl" ? ArrowLeft : ArrowRight;
+  if (!article) return <p role="status">{loading ? (locale === "ar" ? "جارٍ تحميل الدليل…" : "Loading guide…") : (locale === "ar" ? "الدليل غير متاح." : "This guide is unavailable.")}</p>;
 
   return (
     <div className="docs-article-wrap">
@@ -106,13 +109,16 @@ export function DocsArticle({ slug }: { slug: string }) {
 export function DocsIndex() {
   const t = useCopy(docsCopy);
   const { locale } = useLocale();
+  const { sections, loading } = useDocs();
   return (
     <div className="docs-index">
       <h1>{t.indexTitle}</h1>
       <p className="docs-summary">{t.indexLead}</p>
       <DocsSearch inline />
       <div className="docs-cards">
-        {docSections[locale].map((section) => (
+        {loading && <p role="status">{locale === "ar" ? "جارٍ تحميل الأدلة…" : "Loading guides…"}</p>}
+        {!loading && sections.length === 0 && <p>{locale === "ar" ? "لا توجد أدلة منشورة بعد." : "No guides have been published yet."}</p>}
+        {sections.map((section) => (
           <section key={section.id} className="docs-card">
             <h2>{section.title}</h2>
             <p className="docs-card__count">{t.articlesCount(section.articles.length)}</p>

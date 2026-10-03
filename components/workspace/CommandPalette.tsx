@@ -7,7 +7,8 @@ import { Archive, BarChart3, BookOpen, ChevronDown, FileText, Folder, Keyboard, 
 import { api } from "@/convex/_generated/api";
 import { useTheme } from "@/components/ThemeProvider";
 import FallbackBoundary from "@/components/FallbackBoundary";
-import { docSearchEntries } from "@/lib/docs";
+import type { DocSearchEntry } from "@/lib/docs";
+import { useDocs } from "@/lib/docs/provider";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { buildIndex, searchIndex, splitByRanges, stripStopwords } from "@/lib/search";
 import type { Range, SearchDoc, SearchResult, Snippet } from "@/lib/search";
@@ -141,7 +142,8 @@ export default function CommandPalette({ open, onClose, items, onNew }: { open: 
 
   const settingsRows = useMemo(() => settingsIndexFor(locale), [locale]);
   const settingsSearch = useMemo(() => buildIndex(settingsRows.map((s) => ({ id: s.id, title: s.label, extra: s.section, body: s.keywords, s }))), [settingsRows]);
-  const docsSearch = useMemo(() => buildIndex(docSearchEntries(locale).map((d) => ({ id: d.href, title: d.title, extra: d.section, body: d.text, d }))), [locale]);
+  const { entries: docEntries } = useDocs();
+  const docsSearch = useMemo(() => buildIndex(docEntries.map((d) => ({ id: d.href, title: d.title, extra: d.section, body: d.text, d }))), [docEntries]);
 
   const entries = useMemo<Entry[]>(() => {
     const go = (href: string) => () => { onClose(); navigate(router, href); };
@@ -181,7 +183,7 @@ export default function CommandPalette({ open, onClose, items, onNew }: { open: 
     groups.push({
       name: t.groupDocs,
       rows: find(docsSearch).map((r) => {
-        const d = (r.doc as (typeof docsSearch)[number]["doc"] & { d: ReturnType<typeof docSearchEntries>[number] }).d;
+        const d = (r.doc as (typeof docsSearch)[number]["doc"] & { d: DocSearchEntry }).d;
         return { key: `doc-${d.href}`, group: t.groupDocs, label: d.title, hint: d.section, icon: <BookOpen size={16} />, run: go(d.href), titleRanges: r.titleRanges, snippet: r.snippet };
       }),
     });

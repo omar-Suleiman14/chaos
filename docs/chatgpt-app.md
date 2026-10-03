@@ -215,20 +215,13 @@ You do these steps; they change production.
 
 ## 2. Test it in ChatGPT on production (developer mode)
 
-1. In ChatGPT (web), open **Settings → Apps** (called "Apps & Connectors" in some versions) **→ Advanced settings** and turn on **Developer mode**. Business and Enterprise workspaces need an admin to allow it.
-2. Back in **Settings → Apps**, choose **Create app**:
-   - Name: `Chaos` · Description: `Create quizzes and forms in Chaos` · Icon: `public/icon.svg` exported as a PNG
-   - MCP server URL: `https://chaos.fail/mcp`
-   - Authentication: **OAuth** (leave client ID/secret empty; ChatGPT registers itself through DCR/CIMD)
-   - Tick "I trust this application" → **Create**.
-3. ChatGPT opens the Clerk sign-in → approve the consent screen. The app shows as connected with 69 tools.
-4. In a new chat, choose **+ → Developer mode → Chaos** (or just name Chaos in the prompt) and try:
-   - *"Let's talk about the solar system for a bit"* … then *"Create me a quiz of what we discussed using Chaos"*
-   - *"Show me my Chaos forms"*
-   - *"How is that quiz doing?"* / *"Publish it"*
-5. ChatGPT asks for confirmation before write tools. The new quiz appears in your Chaos library, published, with a history entry from "Connected app · ChatGPT".
-6. After changing tools, use **Refresh** on the app in Settings → Apps so ChatGPT reloads the tool list.
+1. In ChatGPT web, open **Settings > Security and login** and enable **Developer mode** if your account and workspace policy allow it.
+2. Open **Plugins**, choose the plus button, and create a connection named `Chaos` with public MCP URL `https://chaos.fail/mcp`.
+3. Complete Chaos OAuth sign-in and review the discovered tools. Start a new conversation and add Chaos from the tools menu.
+4. Try “Create a quiz about what we discussed using Chaos” or “Show my Chaos forms.” New valid content publishes by default; ask for a draft to keep it private.
+5. After tool changes, open the connection and select **Refresh** before starting a new test conversation.
 
+Interface labels vary by rollout. Current official instructions: [OpenAI connection guide](https://developers.openai.com/plugins/deploy/connect-chatgpt).
 If something fails, check Vercel logs for `/mcp` and the Convex logs for `mcp:*` functions. `NOT_CONFIGURED` means `CHAOS_MCP_SECRET` is missing in Vercel; `401 UNAUTHORIZED` from Convex means the two secrets differ.
 
 ## 2b. Connect and test in Claude Code (CLI)
@@ -237,10 +230,6 @@ The exact same Chaos MCP server (`https://chaos.fail/mcp`) works across ChatGPT,
 
 1. **Add the remote MCP server in Claude Code**:
    Run the CLI command:
-   ```bash
-   claude mcp add --transport sse chaos https://chaos.fail/mcp
-   ```
-   Or if using standard HTTP transport:
    ```bash
    claude mcp add --transport http chaos https://chaos.fail/mcp
    ```
@@ -261,21 +250,13 @@ The exact same Chaos MCP server (`https://chaos.fail/mcp`) works across ChatGPT,
 
 ## 2c. Connect and test in Claude Desktop
 
-1. Open `claude_desktop_config.json`:
-   - macOS: `~/Library/Application Support/Claude/claude_desktop_config.json`
-   - Windows: `%APPDATA%\Claude\claude_desktop_config.json`
-2. Add the Chaos MCP remote server configuration:
-   ```json
-   {
-     "mcpServers": {
-       "chaos": {
-         "url": "https://chaos.fail/mcp"
-       }
-     }
-   }
-   ```
-3. Restart Claude Desktop. Complete the sign-in prompt in your browser to authorize access to your Chaos account.
-4. In any chat, Claude can now use the 69 Chaos tools to search your library, create quizzes, forms, lessons, courses, and flashcard sets, host live games, and summarize results.
+1. Open **Customize → Connectors → + Add → Add custom connector** in Claude or Claude Desktop.
+2. Name the connection `Chaos`, enter `https://chaos.fail/mcp`, and continue through the detected OAuth settings.
+3. Connect your Chaos account and enable Chaos for your conversation. Workspace owners may need to add it in organization settings before members connect.
+
+Chaos serves Streamable HTTP. Use the remote connector UI rather than a bare URL in a local Desktop configuration file. In Claude Code, use `--transport http` and `/mcp` to authenticate; Chaos does not serve an SSE endpoint.
+
+Current instructions: [Claude remote connectors](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp) and [Claude Code MCP](https://code.claude.com/docs/en/mcp).
 
 ## 2d. Auto-publishing rules and draft behavior
 

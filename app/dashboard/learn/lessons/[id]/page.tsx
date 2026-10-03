@@ -360,7 +360,7 @@ function LessonEditorSession({ id }: { id: string }) {
               onOpen={async source => { const tab = window.open("about:blank", "_blank"); if (tab) tab.opener = null; try { const url = await media.resolve(source.fileId!); if (tab) tab.location.href = url; } catch (err) { tab?.close(); throw err; } }}
               blockCitations={(native?.draft.blocks ?? []).flatMap(block => block.citations.map(citation => ({ blockId: block.id, citation })))}
               onEditCitation={(blockId, previous) => setCite({ blockId, previous, initial: { sourceId: previous.sourceId, locator: formatLocator(previous.locator) } })} />}
-            {tab === "practice" && <PracticePanel lessonId={lesson.id} quizzes={lesson.quizzes} onChange={(quizzes) => run(() => actions.setQuizzes(lesson.id, quizzes))} onCreateCards={makeFlashcards} />}
+            {tab === "practice" && <PracticePanel lessonId={lesson.id} quizzes={lesson.quizzes} onChange={(quizzes) => run(() => actions.setQuizzes(lesson.id, quizzes))} onCreateCards={makeFlashcards} onInsertQuiz={assetId => { const editor = editorRef.current; if (!editor) return; editor.insertBlocks([{ type: "lessonQuiz", props: { assetKind: "form", assetId } }], editor.getTextCursorPosition().block, "after"); editor.focus(); }} />}
           </aside>
         )}
       </div>

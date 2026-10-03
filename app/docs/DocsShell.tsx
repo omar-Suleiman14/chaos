@@ -5,8 +5,8 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ChevronDown } from "lucide-react";
 import { SiteFooter, SiteNav } from "@/components/site/SiteChrome";
-import { useCopy, useLocale } from "@/lib/i18n";
-import { docSections } from "@/lib/docs";
+import { useCopy } from "@/lib/i18n";
+import { useDocs } from "@/lib/docs/provider";
 import DocsSearch from "./DocsSearch";
 import { docsCopy } from "./copy";
 import "@/app/landing.css";
@@ -14,7 +14,7 @@ import "@/app/landing.css";
 /** Site header, a sidebar with search and every article, then the page. */
 export default function DocsShell({ children }: { children: React.ReactNode }) {
   const t = useCopy(docsCopy);
-  const { locale } = useLocale();
+  const { sections } = useDocs();
   const pathname = usePathname();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -31,7 +31,7 @@ export default function DocsShell({ children }: { children: React.ReactNode }) {
           </button>
           <nav id="docs-nav" className="docs-nav" data-open={menuOpen} aria-label={t.navLabel}>
             <Link href="/docs" className="docs-nav__home" aria-current={pathname === "/docs" ? "page" : undefined}>{t.indexTitle}</Link>
-            {docSections[locale].map((section) => (
+            {sections.map((section) => (
               <div key={section.id} className="docs-nav__group">
                 <h2>{section.title}</h2>
                 <ul>

@@ -2,8 +2,8 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "convex/react";
-import { ArrowRight, BookOpen, Plus, Radio } from "lucide-react";
+import { useQuery } from "@/lib/convexCache";
+import { ArrowRight, BookOpen, Plus, Radio, Search } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { ThemePresetId } from "@/convex/formLogic";
 import { DEFAULT_TIME_LIMIT, TIME_LIMITS } from "@/convex/liveLogic";
@@ -61,6 +61,9 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
   const [timeLimitSec, setTimeLimitSec] = useState<number>(DEFAULT_TIME_LIMIT);
   const [showAnswerLabels, setShowAnswerLabels] = useState(true);
   const [error, setError] = useState("");
+  const [search, setSearch] = useState("");
+  const [shown, setShown] = useState({ published: 12, drafts: 12 });
+  const matches = (title: string) => search.trim().toLocaleLowerCase().split(/\s+/).every(word => title.toLocaleLowerCase().includes(word));
   const { create, busy } = useCreateForm(setError);
   const host = useHostLive();
   const quizzes = forms ? [...forms.owned, ...forms.shared.filter((f) => f.role === "editor")].filter((f) => f.quizMode && f.status !== "archived") : [];
@@ -75,21 +78,27 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
     const message = await host.start({ ...target, timeLimitSec, showAnswerLabels, ...(preset ? { theme: themeFromPreset(preset) } : {}) });
     if (message) setError(message);
   };
-  const quizRows = (published: boolean) => <div className="games-quiz-list">
-    {quizzes.filter((quiz) => (quiz.publishedVersion !== undefined) === published).map((quiz) => <article key={quiz._id}>
+  const quizRows = (published: boolean) => {
+    const key = published ? "published" : "drafts";
+    const filtered = quizzes.filter(quiz => (quiz.publishedVersion !== undefined) === published && matches(quiz.title));
+    const old = (legacy ?? []).filter(quiz => quiz.isPublished === published && matches(quiz.title));
+    const count = filtered.length + old.length;
+    return <div className="games-quiz-list">
+    {filtered.slice(0, shown[key]).map((quiz) => <article key={quiz._id}>
       <div className="games-quiz-list__title"><Link href={`/dashboard/forms/${quiz._id}`}><h3>{quiz.title}</h3></Link><p>{published ? t.published : t.draftStatus}</p></div>
       <div className="games-quiz-list__actions"><Link className="ws-btn" href={`/dashboard/forms/${quiz._id}`}>{published ? t.edit : t.finish}<ArrowRight size={15} aria-hidden="true" className="rtl:rotate-180" /></Link>
         {published && <button type="button" disabled={host.busy} className="ws-btn ws-btn--primary" onClick={() => void reportHost({ formId: quiz._id })}><Radio size={16} aria-hidden="true" />{host.label}</button>}
       </div>
     </article>)}
-    {legacy?.filter((quiz) => quiz.isPublished === published).map((quiz) => <article key={quiz._id}>
+    {old.slice(0, Math.max(0, shown[key] - filtered.length)).map((quiz) => <article key={quiz._id}>
       <div className="games-quiz-list__title"><Link href={`/dashboard/editor?id=${quiz._id}`}><h3>{quiz.title}</h3></Link><p>{published ? t.published : t.draftStatus}</p></div>
       <div className="games-quiz-list__actions"><Link href={`/dashboard/editor?id=${quiz._id}`} className="ws-btn">{published ? t.edit : t.finish}</Link>
         {published && <button type="button" className="ws-btn ws-btn--primary" disabled={host.busy} onClick={() => void reportHost({ quizId: quiz._id })}><Radio size={16} aria-hidden="true" />{host.label}</button>}
       </div>
     </article>)}
-    {loaded && !quizzes.some((quiz) => (quiz.publishedVersion !== undefined) === published) && !legacy?.some((quiz) => quiz.isPublished === published) && <p className="games-empty">{published ? t.emptyReady : t.emptyDrafts}</p>}
-  </div>;
+    {loaded && count === 0 && <p className="games-empty">{published ? t.emptyReady : t.emptyDrafts}</p>}
+    {count > shown[key] && <button type="button" className="ws-btn" onClick={() => setShown(previous => ({...previous,[key]:previous[key]+12}))}>{locale === "ar" ? "عرض المزيد" : "Show more"} ({count-shown[key]})</button>}
+  </div>; };
 
   return <div className="games-hub">
     {/* In the Library, games start from a quiz (New → Quiz, then Host); the standalone header only appears outside it. */}
@@ -110,6 +119,7 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
         </div>
       </div>
     </section>
+    <label className="ws-search"><Search size={16} aria-hidden/><input type="search" value={search} aria-label={locale === "ar" ? "ابحث عن اختبار لاستضافته" : "Find a quiz to host"} placeholder={locale === "ar" ? "ابحث عن اختبار لاستضافته…" : "Find a quiz to host…"} onChange={event=> {setSearch(event.target.value);setShown({published:12,drafts:12});}}/></label>
     {!loaded && <p className="games-help" role="status">{t.loading}</p>}
     {loaded && <>
       <section className="games-library" aria-labelledby="games-published-title"><h2 id="games-published-title">{t.ready}</h2><p className="games-help">{t.hostingNote}</p>{quizRows(true)}</section>

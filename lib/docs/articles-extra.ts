@@ -1,4 +1,4 @@
-import type { Locale } from "@/lib/locale";
+import type { Locale } from "../locale";
 import type { DocArticle } from "./types";
 
 /** Articles added with the goal-based docs structure (lib/docs/structure.ts). Same slugs and heading ids in both languages. */

@@ -4,8 +4,8 @@ import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import { Search } from "lucide-react";
-import { useCopy, useLocale } from "@/lib/i18n";
-import { docSearchEntries } from "@/lib/docs";
+import { useCopy } from "@/lib/i18n";
+import { useDocs } from "@/lib/docs/provider";
 import { searchDocs } from "@/lib/docs/search";
 import { docsCopy } from "./copy";
 
@@ -15,7 +15,6 @@ import { docsCopy } from "./copy";
  */
 export default function DocsSearch({ global = false, inline = false }: { global?: boolean; inline?: boolean }) {
   const t = useCopy(docsCopy);
-  const { locale } = useLocale();
   const router = useRouter();
   const pathname = usePathname();
   const input = useRef<HTMLInputElement>(null);
@@ -25,7 +24,7 @@ export default function DocsSearch({ global = false, inline = false }: { global?
   const [active, setActive] = useState(0);
   const [open, setOpen] = useState(false);
 
-  const entries = useMemo(() => docSearchEntries(locale), [locale]);
+  const { entries } = useDocs();
   const results = useMemo(() => searchDocs(entries, query), [entries, query]);
   const showPanel = open && query.trim().length > 0;
   const current = results.length ? Math.min(active, results.length - 1) : -1;

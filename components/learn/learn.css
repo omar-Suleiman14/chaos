@@ -484,3 +484,28 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 @media (prefers-reduced-transparency: reduce) {
   .bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-menu-dropdown, .bn-color-picker-dropdown, .bn-container .bn-toolbar { background: var(--ws-card, #fff) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
+
+/* Reserve a gutter for reader actions and editor drag handles. */
+.lx-block-action { width: 28px; height: 28px; padding: 0; display: grid; place-items: center; border: 0; border-radius: 6px; background: var(--ws-card); color: var(--on-surface-variant); cursor: pointer; }
+.lx-block-action:hover { background: var(--ws-hover); color: var(--on-background); }
+.lx-block__handle { inset-inline-start: -34px; top: 0; }
+.lx-article { padding-inline: 36px; }
+.lx-editor .bn-editor { padding-inline: 52px 16px; min-height: 60vh; }
+.lx-editor .bn-block-outer { scroll-margin-top: 100px; }
+@media (max-width: 640px) {
+  .lx-article { padding-inline: 30px 0; }
+  .lx-block__handle { display: block; opacity: 1; inset-inline-start: -30px; }
+  .lx-block-action { width: 26px; height: 32px; }
+  .lx-editor .bn-editor { padding-inline: 38px 8px; }
+}
+
+.lx-inline-quiz { margin-block: 12px; width: 100%; min-width: 0; border: 1px solid var(--ws-line); border-radius: 12px; overflow: hidden; padding: 16px; }
+.lx-quiz-card:has(.lx-inline-quiz) { flex-wrap: wrap; }
+.lx-inline-quiz .min-h-screen, .lx-inline-quiz .min-h-\[100dvh\] { min-height: 0; }
+.lx-inline-quiz .form-chrome { position: static; }
+.lx-inline-quiz .form-shell--embed main { padding-top: 16px; }
+
+/* Embedded players keep their controls and question viewport inside the lesson. */
+.quiz-player[data-inline] { height: min(640px, 80dvh); min-height: 360px; overflow: hidden; border-radius: 12px; isolation: isolate; }
+.quiz-player[data-inline] > .fixed { position: absolute; }
+.quiz-player[data-inline] .tiktok-container, .quiz-player[data-inline] .tiktok-slide { height: 100%; }

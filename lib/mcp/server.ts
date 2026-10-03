@@ -1,3 +1,4 @@
+import { registerDocumentationTools } from "./docs";
 // The Chaos ChatGPT app: MCP tool definitions. Served by app/mcp/route.ts.
 // Tools only describe and forward; Convex (convex/mcp.ts) enforces access,
 // validation, plan limits and rate limits for the signed-in Chaos account.
@@ -180,7 +181,7 @@ export function authRequired(resourceMetadataUrl: string): CallToolResult {
   };
 }
 
-export function createChaosMcpServer(options: { call: McpCaller | null; resourceMetadataUrl: string }): McpServer {
+export function createChaosMcpServer(options: { call: McpCaller | null; resourceMetadataUrl: string; admin?: boolean }): McpServer {
   const server = new McpServer({ name: MCP_SERVER_NAME, version: MCP_SERVER_VERSION, title: "Chaos" }, { instructions });
 
   const run = async (tool: string, input: Record<string, unknown>, summarize: (data: Record<string, unknown>) => string): Promise<CallToolResult> => {
@@ -451,6 +452,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
     _meta: meta("Updating status…", "Status updated"),
   }, (input) => run("set_form_status", input, (d) => `“${d.title}” is now ${d.status}.`));
 
+  if (options.admin) registerDocumentationTools(server, run, securitySchemes);
   registerLearnTools(server, run, securitySchemes, { call, flow });
   registerOrganizationTools(server, run, securitySchemes);
   registerCourseTools(server, run, securitySchemes, { call, flow });

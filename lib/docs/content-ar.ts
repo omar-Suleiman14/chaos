@@ -1039,9 +1039,9 @@ export const sectionsAr: DocSection[] = [
           {
             type: "steps",
             items: [
-              "**في ChatGPT (نسخة الويب)**: افتح **Settings → Apps → Advanced settings** وفعّل **Developer mode**. اختر **Create app**، واكتب الاسم: **Chaos**، وعنوان خادم MCP: **https://chaos.fail/mcp**، والمصادقة: **OAuth** (اترك المعرّف والسر فارغين)، وحدّد **I trust this application** ثم اختر **Create**. سجّل الدخول بحسابك في Chaos ووافق على الوصول.",
-              "**في Claude Code**: شغّل الأمر `claude mcp add --transport sse chaos https://chaos.fail/mcp` أو استخدم الأمر `/mcp` داخل Claude Code لإدارة الخوادم وإتمام تسجيل الدخول عبر المتصفح.",
-              "**في Claude Desktop**: أضف الخادم إلى ملف `claude_desktop_config.json` (`{\"mcpServers\": {\"chaos\": {\"url\": \"https://chaos.fail/mcp\"}}}`) وأعد تشغيل Claude Desktop.",
+              "**في ChatGPT (الويب)**: افتح **Settings → Security and login** وفعّل **Developer mode** إذا كانت صلاحيات حسابك ومساحة العمل تسمح بذلك. افتح **Plugins** واختر زر **plus**، وسمّ الاتصال **Chaos** وأدخل **https://chaos.fail/mcp**. أنشئ الاتصال وسجّل الدخول بحساب Chaos عبر OAuth، ثم فعّل الاتصال من قائمة الأدوات في محادثة جديدة. قد تختلف أسماء الواجهة حسب الإصدار؛ راجع [دليل OpenAI](https://developers.openai.com/plugins/deploy/connect-chatgpt).",
+              "**في Claude Code**: شغّل `claude mcp add --transport http chaos https://chaos.fail/mcp` ثم `/mcp` لإكمال تسجيل الدخول عبر المتصفح. يستخدم Chaos بروتوكول Streamable HTTP؛ لا تختَر SSE. راجع [دليل Claude Code](https://code.claude.com/docs/en/mcp).",
+              "**في Claude أو Claude Desktop**: افتح **Customize → Connectors** ثم **+ Add → Add custom connector**، وأدخل **Chaos** و**https://chaos.fail/mcp**. اختر تسجيل الدخول عبر OAuth وأكمل الاتصال بحساب Chaos ثم فعّله للمحادثة. قد يحتاج مالك مساحة العمل إلى إضافته أولًا في إعدادات المؤسسة. استخدم واجهة الاتصال البعيد بدل ملف إعدادات Desktop المحلي. راجع [دليل اتصالات Claude](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp).",
             ],
           },
           { type: "p", text: "يسألك مساعدك دائمًا قبل إجراء أي تعديلات. وإن أُضيفت أدوات جديدة لاحقًا فيمكنك استخدام **Refresh** في ChatGPT أو الأمر `/mcp` في Claude لتحديث القائمة." },

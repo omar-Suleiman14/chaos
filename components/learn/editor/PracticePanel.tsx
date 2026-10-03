@@ -31,7 +31,7 @@ const copy = {
   },
 };
 
-export default function PracticePanel({ lessonId, onCreateCards }: { lessonId: string; quizzes: AttachedQuiz[]; onChange: (quizzes: AttachedQuiz[]) => void; onCreateCards: () => void }) {
+export default function PracticePanel({ lessonId, onCreateCards, onInsertQuiz }: { lessonId: string; quizzes: AttachedQuiz[]; onChange: (quizzes: AttachedQuiz[]) => void; onCreateCards: () => void; onInsertQuiz?: (id: string) => void }) {
   const t = useCopy(copy);
   const forms = useQuery(api.forms.listMyForms);
   const relationships = useQuery(api.learnCollections.listAssessments, { lessonId: lessonId as Id<"lessons"> });
@@ -77,6 +77,7 @@ export default function PracticePanel({ lessonId, onCreateCards }: { lessonId: s
               </span>
             </div>
             {form && form.publishedVersion === undefined && <small className="lx-muted" style={{ color: "var(--ws-warning)" }}>{t.unpublished}</small>}
+            {form?.publishedVersion !== undefined && onInsertQuiz && <button type="button" className="ws-btn ws-btn--sm" onClick={() => onInsertQuiz(q.formId)}>{t.attach === "Attach a quiz" ? "Insert into lesson" : "أدرج داخل الدرس"}</button>}
             <input className="lx-input" value={labels[q.formId] ?? q.label} placeholder={t.labelPh} aria-label={t.label} disabled={busy} maxLength={80} onChange={(e) => setLabels(values => ({ ...values, [q.formId]: e.target.value }))} />
             <button type="button" className="ws-btn ws-btn--sm" disabled={busy || labels[q.formId] === undefined || labels[q.formId] === q.label} onClick={() => change(quizzes.map(x => x.formId === q.formId ? { ...x, label: labels[q.formId] ?? q.label } : x))}>{t.save}</button>
           </div>
