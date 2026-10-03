@@ -1,4 +1,4 @@
-/* Player phones (/play): a fixed, system-native look in the style of Apple's apps instead of the quiz theme.
+/* The default live-game look, in the style of Apple's apps. Creators can choose another theme.
    Follows the device's light or dark setting. Answer colours keep matching the host screen's shapes. */
 .live-apple {
   --live-bg: #f2f2f7;

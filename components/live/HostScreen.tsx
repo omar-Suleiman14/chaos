@@ -173,7 +173,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
   const maxVotes = Math.max(1, ...Object.values(game.distribution ?? {}));
 
   return (
-    <div {...gameThemeProps(game.theme)} data-calm={calm} data-role="host">
+    <div {...gameThemeProps(game.theme, game.appearance)} data-calm={calm} data-role="host">
       {confirming && <WsConfirm title={confirming.label} body={confirming.body} confirmLabel={confirming.label} onClose={() => setConfirming(null)} onConfirm={confirming.run} />}
       <Announcer text={announce} />
       <header className="live-bar">
@@ -230,7 +230,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
             <details className="live-settings live-card">
               <summary>{t.settings}</summary>
               <div className="live-settings__content">
-                <ThemePicker label={t.theme} value={game.theme?.preset ?? "chaos"} onChange={(preset) => void run(() => setSettings({ gameId, theme: themeFromPreset(preset) }))} />
+                <ThemePicker label={t.theme} value={game.appearance === "apple" ? undefined : game.theme?.preset ?? "chaos"} defaultOption={{ label: locale === "ar" ? "بأسلوب Apple (الافتراضي)" : "Apple style (default)", onSelect: () => void run(() => setSettings({ gameId, appearance: "apple" })) }} onChange={(preset) => void run(() => setSettings({ gameId, theme: themeFromPreset(preset), appearance: "theme" }))} />
                 <label className="live-toggle"><input type="checkbox" checked={game.settings.showAnswerLabels !== false} disabled={busy} onChange={(e) => void run(() => setSettings({ gameId, showAnswerLabels: e.target.checked }))} /><span>{t.answerLabels}</span></label>
                 <label className="live-toggle"><input type="checkbox" checked={!!game.settings.autoAdvance} disabled={busy} onChange={(e) => void run(() => setAutoplay({ gameId, autoAdvance: e.target.checked }))} /><span>{t.autoplay}</span></label>
                 {game.settings.autoAdvance && (

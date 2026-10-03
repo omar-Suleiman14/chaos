@@ -86,7 +86,8 @@ describe("live games: create, join, start", () => {
     const host = await owner.query(api.live.hostView, { gameId });
     const player = await t.query(api.live.playerView, { gameId, token: players[0].token });
     expect(host!.theme).toEqual(source!.draft.theme);
-    expect(player).toMatchObject({ state: "lobby", theme: source!.draft.theme });
+    expect(host!.appearance).toBe("apple");
+    expect(player).toMatchObject({ state: "lobby", theme: source!.draft.theme, appearance: "apple" });
     expect(JSON.stringify(player)).not.toContain("correctOptionIds");
     await t.run(async (ctx) => {
       const form = await ctx.db.get("forms", formId);
@@ -101,17 +102,24 @@ describe("live games: create, join, start", () => {
     const theme = themeFromPreset("velvet");
     const gameId = await owner.mutation(api.live.createGame, { formId, theme });
     expect((await owner.query(api.live.hostView, { gameId }))!.theme).toEqual(theme);
+    expect((await owner.query(api.live.hostView, { gameId }))!.appearance).toBe("theme");
+    await t.mutation(api.live.joinGame, {pin:(await owner.query(api.live.hostView,{gameId}))!.pin,nickname:"Theme tester",token:token(19)});
+    expect(await t.query(api.live.playerView,{gameId,token:token(19)})).toMatchObject({appearance:"theme",theme});
+    await owner.mutation(api.live.setGameSettings,{gameId,appearance:"apple"});
+    expect(await t.query(api.live.playerView,{gameId,token:token(19)})).toMatchObject({appearance:"apple"});
     const stranger = t.withIdentity(otherCreatorIdentity);
     await stranger.mutation(api.quizFunctions.getOrCreateUser, {});
     await expect(stranger.mutation(api.live.createGame, { formId, theme })).rejects.toThrow();
+    await expect(stranger.mutation(api.live.setGameSettings,{gameId,appearance:"apple"})).rejects.toThrow();
   });
 
   it("keeps rooms created before themes readable", async () => {
     const t = createTestConvex();
     const { owner, gameId, players } = await gameWithPlayers(t, ["Sam"]);
-    await t.run(async (ctx) => { await ctx.db.patch("liveGames", gameId, { theme: undefined }); });
+    await t.run(async (ctx) => { await ctx.db.patch("liveGames", gameId, { theme: undefined, appearance: undefined }); });
     expect((await owner.query(api.live.hostView, { gameId }))!.theme).toBeNull();
-    expect(await t.query(api.live.playerView, { gameId, token: players[0].token })).toMatchObject({ state: "lobby", theme: null });
+    expect((await owner.query(api.live.hostView, { gameId }))!.appearance).toBe("theme");
+    expect(await t.query(api.live.playerView, { gameId, token: players[0].token })).toMatchObject({ state: "lobby", theme: null, appearance: "apple" });
   });
 
   it("creates a game with a 6-digit PIN, lets players join and the host start", async () => {

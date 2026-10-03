@@ -306,6 +306,7 @@ export async function createGameForAccount(ctx: MutationCtx, userId: string, arg
     quizId: args.quizId,
     title: title.slice(0, 200),
     theme,
+    appearance: args.theme ? "theme" : "apple",
     pin,
     state: "lobby",
     questionIndex: -1,
@@ -332,7 +333,7 @@ function validateTimeLimit(seconds: number) {
 
 /** Theme and phone layout are agreed before starting, so all players see the same choices. */
 export const setGameSettings = mutation({
-  args: { gameId: v.id("liveGames"), theme: v.optional(themeValidator), timeLimitSec: v.optional(v.number()), showAnswerLabels: v.optional(v.boolean()), startWhenPlayers: v.optional(v.number()) },
+  args: { gameId: v.id("liveGames"), appearance: v.optional(v.union(v.literal("apple"),v.literal("theme"))), theme: v.optional(themeValidator), timeLimitSec: v.optional(v.number()), showAnswerLabels: v.optional(v.boolean()), startWhenPlayers: v.optional(v.number()) },
   returns: v.null(),
   handler: async (ctx, args) => {
     const { identity } = await requireActiveUser(ctx);
@@ -340,14 +341,14 @@ export const setGameSettings = mutation({
   },
 });
 
-export async function setGameSettingsForAccount(ctx: MutationCtx, userId: string, args: { gameId: Id<"liveGames">; theme?: FormTheme; timeLimitSec?: number; showAnswerLabels?: boolean; startWhenPlayers?: number }) {
+export async function setGameSettingsForAccount(ctx: MutationCtx, userId: string, args: { gameId: Id<"liveGames">; appearance?: "apple" | "theme"; theme?: FormTheme; timeLimitSec?: number; showAnswerLabels?: boolean; startWhenPlayers?: number }) {
   const game = await requireHostForAccount(ctx, userId, args.gameId);
   if (game.state !== "lobby") throw new Error("LIVE_STARTED: Change game settings before starting.");
   if (args.timeLimitSec !== undefined) validateTimeLimit(args.timeLimitSec);
   if (args.startWhenPlayers !== undefined) validateStartTarget(args.startWhenPlayers);
   const startWhenPlayers = args.startWhenPlayers === undefined ? game.settings.startWhenPlayers : args.startWhenPlayers || undefined;
   const settings = { ...game.settings, timeLimitSec: args.timeLimitSec ?? game.settings.timeLimitSec, showAnswerLabels: args.showAnswerLabels ?? game.settings.showAnswerLabels ?? true, startWhenPlayers };
-  await ctx.db.patch("liveGames", game._id, { ...(args.theme ? { theme: args.theme } : {}), settings, lastActivityAt: Date.now() });
+  await ctx.db.patch("liveGames", game._id, { ...(args.theme ? { theme: args.theme } : {}), ...(args.appearance || args.theme ? { appearance: args.appearance ?? "theme" as const } : {}), settings, lastActivityAt: Date.now() });
   // A target that is already met starts the countdown straight away.
   if (startWhenPlayers && (await playersOf(ctx, game._id, startWhenPlayers)).length >= startWhenPlayers) await beginCountdown(ctx, { ...game, settings });
   return null;
@@ -508,6 +509,7 @@ export const hostView = query({
       phaseEndsAt: game.phaseEndsAt ?? null,
       startsAt: game.startsAt ?? null,
       settings: game.settings,
+      appearance: game.appearance ?? "theme",
       theme: game.theme ?? null,
       skippedQuestions: game.skippedQuestions,
       formId: game.formId ?? null,
@@ -604,6 +606,7 @@ export const playerView = query({
     if (player.kicked) return { state: "kicked" as const };
     const base = {
       title: game.title,
+      appearance: game.appearance ?? "apple",
       theme: game.theme ?? null,
       showAnswerLabels: game.settings.showAnswerLabels ?? true,
       nickname: player.nickname,
