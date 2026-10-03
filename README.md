@@ -77,13 +77,7 @@ See [`tests/README.md`](./tests/README.md) for what each layer covers.
 
 The web app and the Convex functions deploy separately, and they must match: a new web app talking to old Convex functions fails (for example, saves are rejected).
 
-**Vercel + Convex Cloud.** In Vercel, set the build command to
-
-```
-npx convex deploy --cmd 'pnpm build'
-```
-
-and add a production `CONVEX_DEPLOY_KEY` (Convex dashboard → Settings → Deploy keys). Every Vercel deploy then pushes the matching Convex functions first. Without this, run `npx convex deploy` yourself after each merge.
+**Vercel + Convex Cloud.** Vercel runs `pnpm vercel-build` ([`scripts/vercel-build.mjs`](./scripts/vercel-build.mjs)); keep Vercel's default build command. Add a production `CONVEX_DEPLOY_KEY` (Convex dashboard → Settings → Deploy keys) to Vercel's **Production** environment only. Every production deploy then pushes the matching Convex functions before building the site. Preview deploys build the site only, so unreviewed branches never reach the live backend. Without the key, the build warns and you run `npx convex deploy` yourself after each merge.
 
 **Self-hosting.** Docker, Compose with the self-hosted Convex backend, and the full guide are in [`docs/self-hosting.md`](./docs/self-hosting.md).
 
