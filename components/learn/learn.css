@@ -370,7 +370,6 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
   .lx-toc-mobile[open] summary { border-radius: 10px 10px 0 0; }
   .lx-toc-mobile .lx-toc { border: 1px solid var(--ws-line); border-top: 0; border-radius: 0 0 10px 10px; padding: 8px 4px; }
   .lx-block__marks { position: static; display: flex; margin-top: 4px; }
-  .lx-block__handle { display: none; }
 }
 @media (max-width: 980px) {
   .lx-edit__body { grid-template-columns: minmax(0, 1fr); }
@@ -413,7 +412,6 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 /* Touch targets: at least 40px for reader controls on coarse pointers. */
 @media (pointer: coarse) {
   .lx-reader-top .ws-btn, .lx-reader-top .ws-icon-button, .lx-block__mark, .lx-chip { min-height: 40px; }
-  .lx-block__handle { opacity: 1; }
 }
 
 /* Toolbar labels collapse to icons on phones but stay the button's accessible name. */
@@ -493,10 +491,15 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-article { padding-inline: 36px; }
 .lx-editor .bn-editor { padding-inline: 52px 16px; min-height: 60vh; }
 .lx-editor .bn-block-outer { scroll-margin-top: 100px; }
+/* No hover on phones and tablets: no gutter, and the ⋯ menu shows only on the tapped block, in its top corner. */
+@media (max-width: 1180px), (hover: none) {
+  .lx-article { padding-inline: 0; }
+  .lx-block__handle { display: none; }
+  .lx-block[data-active="true"] { background: var(--ws-hover); box-shadow: 0 0 0 6px var(--ws-hover); }
+  .lx-block[data-active="true"] > .lx-block__handle { display: block; opacity: 1; inset-inline-start: auto; inset-inline-end: -4px; top: -4px; z-index: 2; }
+  .lx-block-action { width: 36px; height: 36px; box-shadow: 0 1px 4px rgb(0 0 0 / .18); }
+}
 @media (max-width: 640px) {
-  .lx-article { padding-inline: 30px 0; }
-  .lx-block__handle { display: block; opacity: 1; inset-inline-start: -30px; }
-  .lx-block-action { width: 26px; height: 32px; }
   .lx-editor .bn-editor { padding-inline: 38px 8px; }
 }
 

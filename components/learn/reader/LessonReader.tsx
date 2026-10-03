@@ -3,7 +3,7 @@
 import { isCoverUrl } from "@/lib/learn/covers";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent as ReactMouseEvent } from "react";
 import {
   ChevronLeft, Bookmark, BookmarkCheck, CheckCircle2, ExternalLink, Flag, GitFork, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
   MoreHorizontal, NotebookPen, PenLine, RotateCcw, Share2, ThumbsDown, ThumbsUp, Type, X,
@@ -139,6 +139,15 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const [scrolled, setScrolled] = useState(0);
   const [openSource, setOpenSource] = useState<{ source: LessonSource; locator: string } | null>(null);
   const article = useRef<HTMLElement>(null);
+  // Phones and tablets have no hover, so a block's ⋯ menu appears only on the block the reader tapped.
+  const [tappedBlock, setTappedBlock] = useState<string>();
+  const tapBlock = (event: ReactMouseEvent<HTMLElement>) => {
+    if (!window.matchMedia("(max-width: 1180px), (hover: none)").matches) return;
+    const target = event.target as HTMLElement;
+    if (target.closest("a, button, input, textarea, select, summary, [role='menu'], .lx-block__handle")) return;
+    const id = target.closest<HTMLElement>(".lx-block")?.dataset.blockId;
+    setTappedBlock((current) => (current === id ? undefined : id));
+  };
   const [selection, clearSelection] = useTextSelection(article);
   const say = (text: string, undo?: () => void) => setToast({ id: nextToastId(), text, undo });
 
@@ -359,7 +368,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
           {previewDraft && <p className="lx-notice" data-tone="info" style={{ marginBottom: 16 }}>{t.draftPreview}</p>}
           {isOwner && !caps.sharedPublishing && lesson.published && !previewDraft && <p className="lx-notice" style={{ marginBottom: 16 }}>{t.devicePublish}</p>}
           <ModerationNotice state={lesson.moderation} note={isOwner ? lesson.moderationNote : undefined} owner={isOwner} />
-          <article ref={article} className="lx-article" data-size={prefs.size} data-font={prefs.font} lang={meta.language} dir={meta.language === "ar" ? "rtl" : "ltr"} aria-labelledby="lesson-title">
+          <article ref={article} onClick={tapBlock} className="lx-article" data-size={prefs.size} data-font={prefs.font} lang={meta.language} dir={meta.language === "ar" ? "rtl" : "ltr"} aria-labelledby="lesson-title">
             {isCoverUrl(meta.coverUrl) && <img className="lx-article__cover" src={meta.coverUrl} alt="" style={{ objectPosition: `center ${meta.coverY ?? 50}%` }} />}
             {meta.icon && <span className="lx-article__icon" aria-hidden><CourseOrLessonIcon icon={meta.icon} size={48} /></span>}
             <h1 id="lesson-title" className="lx-article__title">{meta.title || t.untitled}</h1>
@@ -388,7 +397,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                   <BlockRenderer content={view.content} sources={lesson.sources} highlights={highlights}
                     onCite={(sourceId, locator) => { const source = lesson.sources.find((s) => s.id === sourceId); if (source) setOpenSource({ source, locator }); }}
                     onOpenImage={(block, url) => setLightbox({ url, alt: String(block.props.alt ?? ""), caption: String(block.props.caption ?? "") || undefined })}
-                    blockAside={blockAside} blockAfter={blockAfter} />
+                    blockAside={blockAside} blockAfter={blockAfter} activeBlockId={tappedBlock} />
                   {lesson.sources.length > 0 && (
                     <section className="lx-section" style={{ marginTop: 40 }} aria-labelledby="lesson-sources">
                       <h2 id="lesson-sources" style={{ fontSize: "1.2em" }}>{t.sources}</h2>
