@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Copy, Download, RefreshCw, Send, Wallet } from "lucide-react";
 import { useCopy, useLocale } from "@/lib/i18n";
-import { CARD_THEMES, memberCardPng, memberCardSvg, type MemberCardData } from "@/lib/memberCard";
+import { CARD_THEMES, memberCardGrain, memberCardPng, memberCardSvg, withGrainImage, type MemberCardData } from "@/lib/memberCard";
 import "./card.css";
 import { useEyesFollowPointer } from "./useEyesFollowPointer";
 import { useTilt } from "./useTilt";
@@ -24,11 +24,20 @@ const copy = {
  * Chaos member card: tilts toward the pointer, flips to a scannable QR code when tapped, and
  * downloads as a crisp PNG. `onStyle` (owner only) cycles the colour theme.
  */
-export default function MemberCardView({ data, onStyle, framed = true }: { data: MemberCardData; onStyle?: (style: number) => unknown; framed?: boolean }) {
+/** `actions` adds more buttons to the end of the card's button row (the public page's "Get your own card"). */
+export default function MemberCardView({ data, onStyle, framed = true, actions }: { data: MemberCardData; onStyle?: (style: number) => unknown; framed?: boolean; actions?: React.ReactNode }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
   const card = { ...data, locale };
-  const [flipped, setFlipped] = useState(false);
+  // Total turn in degrees: each tap adds or takes away half a turn, so the card flips away from the side you pressed.
+  const [turn, setTurn] = useState(0);
+  const flipped = Math.abs(turn / 180) % 2 === 1;
+  const flip = (e: React.MouseEvent<HTMLButtonElement>) => {
+    const r = e.currentTarget.getBoundingClientRect();
+    // Keyboard presses have no pointer position (detail 0): turn the default way.
+    const left = e.detail > 0 && e.clientX < r.left + r.width / 2;
+    setTurn((t) => t + (left ? -180 : 180));
+  };
   const [status, setStatus] = useState("");
   const tilt = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
@@ -38,8 +47,10 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
   // Relative path so preview and self-hosted origins serve their own passes.
   const walletBase = `${new URL(data.url, "https://chaos.invalid").pathname}/wallet`;
   // Tilt (useTilt) uses CSS variables, so pointer moves never re-render the card.
-  const front = memberCardSvg(card, "front");
-  const back = memberCardSvg(card, "back");
+  const grain = useGrain();
+  const paint = (svg: string) => (grain ? withGrainImage(svg, grain) : svg);
+  const front = paint(memberCardSvg(card, "front"));
+  const back = paint(memberCardSvg(card, "back"));
 
   const say = (text: string) => { setStatus(text); window.setTimeout(() => setStatus(""), 2500); };
   // Both sides, as two PNGs: the front to show, the back with its scannable code.
@@ -76,7 +87,7 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
         {framed && <span className="mc-frame__label">{t.label}</span>}
         <div className="mc-stage" ref={tilt}>
           <div className="mc-tilt">
-            <button type="button" className="mc-card" data-flipped={flipped} title={flipped ? t.flipBack : t.flip} onClick={() => setFlipped((f) => !f)} aria-label={`${t.cardOf(data.name)}. ${flipped ? t.flipBack : t.flip}`}>
+            <button type="button" className="mc-card" data-flipped={flipped} style={{ ["--flip" as string]: `${turn}deg` }} title={flipped ? t.flipBack : t.flip} onClick={flip} aria-label={`${t.cardOf(data.name)}. ${flipped ? t.flipBack : t.flip}`}>
               <span aria-hidden={flipped} className="mc-face mc-face--front" dangerouslySetInnerHTML={{ __html: front }} />
               <span aria-hidden={!flipped} className="mc-face mc-face--back" dangerouslySetInnerHTML={{ __html: back }} />
               <span className="mc-glare" aria-hidden />
@@ -89,14 +100,24 @@ export default function MemberCardView({ data, onStyle, framed = true }: { data:
         <span className="mc-gap" />
         <button type="button" className="mc-btn" title={t.download} aria-label={t.download} onClick={() => void download()}><Download size={18} aria-hidden /><span>{t.download}</span></button>
         <button type="button" className="mc-btn" title={t.share} aria-label={t.share} onClick={() => void share()}><Send size={18} aria-hidden /><span>{t.share}</span></button>
+        <button type="button" className="mc-btn" title={t.copyLink} aria-label={t.copyLink} onClick={() => void copyLink()}><Copy size={18} aria-hidden /><span>{t.copyLink}</span></button>
         {wallet.google && <a className="mc-btn mc-btn--wallet" href={`${walletBase}/google`} target="_blank" rel="noopener"><Wallet size={18} aria-hidden /><span>{t.google}</span></a>}
+        {actions}
       </div>
-      <button type="button" className="mc-link" title={t.copyLink} aria-label={`${t.copyLink}: ${data.url}`} onClick={() => void copyLink()}>
-        <span dir="ltr">{data.url.replace(/^https?:\/\//, "")}</span><Copy size={16} aria-hidden />
-      </button>
       <p className="mc-status" role="status">{status}</p>
     </div>
   );
+}
+
+/** The grain as a bitmap once it's ready; until then the card paints the filter itself. */
+function useGrain() {
+  const [href, setHref] = useState<string | null>(null);
+  useEffect(() => {
+    let live = true;
+    memberCardGrain().then((url) => { if (live) setHref(url); }).catch(() => {});
+    return () => { live = false; };
+  }, []);
+  return href;
 }
 
 /** Wallet buttons appear only on installations with issuer credentials (GET /api/wallet). */

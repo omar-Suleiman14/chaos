@@ -55,6 +55,8 @@ export interface MemberCardData {
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const W = 340, H = 500;
+/** Film grain over the art. Costly to paint, so the on-screen card swaps it for a bitmap (memberCardGrain). */
+const GRAIN = `<feTurbulence type="fractalNoise" baseFrequency="1.15" numOctaves="3" seed="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0" intercept="1"/></feComponentTransfer>`;
 const SANS = "Inter, 'Segoe UI', system-ui, -apple-system, sans-serif";
 const RUQAA = "var(--font-ruqaa), 'Aref Ruqaa', serif";
 const SERIF = "Georgia, 'Times New Roman', serif";
@@ -107,7 +109,7 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
   const defs = `<defs>
     <radialGradient id="@@g1" cx="25%" cy="20%" r="90%"><stop offset="0" stop-color="${b}"/><stop offset=".55" stop-color="${a}"/><stop offset="1" stop-color="${c}"/></radialGradient>
     <radialGradient id="@@g2" cx="80%" cy="90%" r="90%"><stop offset="0" stop-color="${c}"/><stop offset=".6" stop-color="${a}"/><stop offset="1" stop-color="${b}"/></radialGradient>
-    <filter id="@@grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency="1.15" numOctaves="3" seed="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncA type="linear" slope="0" intercept="1"/></feComponentTransfer></filter>
+    <filter id="@@grain" x="0" y="0" width="100%" height="100%">${GRAIN}</filter>
     <clipPath id="@@art"><rect x="22" y="22" width="${W - 44}" height="270" rx="10"/></clipPath>
     <linearGradient id="@@logo" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fca535"/><stop offset="1" stop-color="#e9482b"/></linearGradient>
     <linearGradient id="@@sheen" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#fff" stop-opacity=".0"/><stop offset=".5" stop-color="#fff" stop-opacity=".18"/><stop offset="1" stop-color="#fff" stop-opacity="0"/></linearGradient>
@@ -163,3 +165,28 @@ export async function memberCardPng(data: MemberCardData, side: "front" | "back"
   ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
   return new Promise((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("PNG export failed"))), "image/png"));
 }
+
+let grain: Promise<string> | undefined;
+/**
+ * The grain painted once as a PNG (object URL, cached for the page). Repainting the live noise filter
+ * every time the avatar's eyes move made the tilting card fall back to a blurry low-resolution copy.
+ */
+export function memberCardGrain(scale = 3): Promise<string> {
+  grain ??= (async () => {
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${W - 44} 270" width="${W - 44}" height="270"><filter id="g" x="0" y="0" width="100%" height="100%">${GRAIN}</filter><rect width="${W - 44}" height="270" filter="url(#g)"/></svg>`;
+    const img = new Image();
+    img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svg);
+    await img.decode();
+    const canvas = document.createElement("canvas");
+    canvas.width = (W - 44) * scale; canvas.height = 270 * scale;
+    canvas.getContext("2d")!.drawImage(img, 0, 0, canvas.width, canvas.height);
+    const png = await new Promise<Blob>((resolve, reject) => canvas.toBlob((b) => (b ? resolve(b) : reject(new Error("Grain export failed"))), "image/png"));
+    return URL.createObjectURL(png);
+  })();
+  grain.catch(() => { grain = undefined; });
+  return grain;
+}
+
+/** Replaces the card's grain filter with the pre-painted grain image. */
+export const withGrainImage = (svg: string, href: string) =>
+  svg.replace(/<rect([^>]*?) filter="url\(#[^"]*grain\)"([^>]*)\/>/g, `<image href="${href}" preserveAspectRatio="none"$1$2/>`);

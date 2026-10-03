@@ -9,7 +9,6 @@
 /* No transition here: useTilt eases the tilt itself so the text stays sharp while it moves. */
 .mc-tilt { width:100%; transform-style:preserve-3d; transform:rotateX(var(--rx)) rotateY(var(--ry)); animation:mc-in .9s cubic-bezier(.2,.9,.2,1) backwards; }
 .mc-card { position:relative; display:block; width:100%; aspect-ratio:340/500; border:0; padding:0; background:none; cursor:pointer; transform-style:preserve-3d; transform:rotateY(var(--flip,0deg)); transition:transform .7s cubic-bezier(.2,.8,.2,1); border-radius:18px; }
-.mc-card[data-flipped="true"] { --flip:180deg; }
 .mc-face { position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:18px; overflow:hidden; }
 .mc-face svg { display:block; width:100%; height:100%; }
 .mc-face--back { transform:rotateY(180deg); }
@@ -23,12 +22,8 @@
 .mc .mc-btn.mc-btn--wallet { text-decoration:none; background:#000; color:#fff; border-color:#000; }
 .mc .mc-btn.mc-btn--wallet:hover { background:#1d1d1f; }
 .mc-btn:hover { background:var(--ws-hover,var(--surface-container)); }
-.mc-link { display:inline-flex; align-items:center; gap:8px; max-width:100%; min-height:40px; padding:8px 14px; border-radius:8px; cursor:pointer; font:inherit; font-size:13px; color:var(--on-surface-variant); background:none; border:1px dashed var(--ws-line,var(--outline-variant)); }
-.mc-link span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
-.mc-link svg { flex:none; }
-.mc-link:hover { color:var(--on-background); border-style:solid; }
 .mc-btn:disabled { opacity:.5; cursor:wait; }
-.mc-card:focus-visible,.mc-btn:focus-visible,.mc-link:focus-visible,.mc-cta:focus-visible,.mc-input:focus-visible { outline:2px solid var(--primary); outline-offset:4px; }
+.mc-card:focus-visible,.mc-btn:focus-visible,.mc-cta:focus-visible,.mc-input:focus-visible { outline:2px solid var(--primary); outline-offset:4px; }
 .mc .mc-status { min-height:20px; margin:0; font-size:13px; color:var(--on-surface-variant); }
 .mc-settings { margin-block:20px 12px; }
 .mc-settings label { display:block; font-size:14px; font-weight:600; margin-block-end:8px; }
@@ -48,21 +43,20 @@
   color-scheme:light; color:#1d1d1f; background:#f5f5f7; font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,"Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
 .mc-public::before { content:""; position:absolute; inset:-25%; z-index:-1; opacity:.5; filter:blur(80px);
   background:radial-gradient(38% 38% at 28% 30%,var(--a),transparent 70%),radial-gradient(34% 34% at 74% 70%,var(--c),transparent 70%),radial-gradient(28% 28% at 72% 22%,var(--b),transparent 70%); }
-.mc-public__inner { display:grid; justify-items:center; gap:24px; width:min(440px,100%); text-align:center; }
+.mc-public__inner { display:grid; justify-items:center; gap:16px; width:min(680px,100%); text-align:center; }
 .mc-public__head h1 { font-size:clamp(30px,6vw,44px); font-weight:700; line-height:1.08; letter-spacing:-.035em; margin:0; overflow-wrap:anywhere; }
 .mc-public__head p { font-size:17px; line-height:1.45; color:#6e6e73; margin:10px 0 0; }
-/* The card shrinks on short screens so the buttons, link and "Get your own card" stay in view. */
-.mc-public .mc-stage { width:min(400px,88vw,max(260px,calc((100dvh - 290px) * .68))); filter:drop-shadow(0 40px 50px rgba(0,0,0,.18)) drop-shadow(0 8px 14px rgba(0,0,0,.08)); }
+/* As big as the screen allows while the button row below it stays in view. */
+.mc-public .mc-stage { width:min(440px,88vw,max(280px,calc((100dvh - 150px) * .68))); filter:drop-shadow(0 40px 50px rgba(0,0,0,.18)) drop-shadow(0 8px 14px rgba(0,0,0,.08)); }
 .mc-public .mc-btn { border-radius:999px; padding:10px 18px; font-size:14px; font-weight:500; color:#1d1d1f; background:rgba(255,255,255,.72); border:1px solid rgba(0,0,0,.06); -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px); }
 .mc-public .mc-btn:hover { background:rgba(255,255,255,.92); }
-.mc-public .mc { gap:12px; position:relative; }
-.mc-public .mc-link { border-radius:999px; color:#6e6e73; border-color:rgba(0,0,0,.14); background:rgba(255,255,255,.4); }
-.mc-public .mc-link:hover { color:#1d1d1f; background:rgba(255,255,255,.72); }
+.mc-public .mc { gap:16px; position:relative; }
 /* Sits in the gap under the link, so a "Link copied" message never pushes the page down. */
 .mc-public .mc-status { position:absolute; inset-inline:0; top:100%; min-height:0; margin-top:2px; font-size:12px; color:#6e6e73; }
-.mc-public .mc-card:focus-visible,.mc-public .mc-btn:focus-visible,.mc-public .mc-link:focus-visible,.mc-public .mc-cta:focus-visible { outline-color:#0071e3; }
+.mc-public .mc-card:focus-visible,.mc-public .mc-btn:focus-visible,.mc-public .mc-cta:focus-visible { outline-color:#0071e3; }
 .mc-cta { display:inline-flex; align-items:center; gap:8px; font-size:15px; font-weight:600; text-decoration:none; }
-.mc-public .mc-cta { padding:12px 22px; border-radius:999px; color:#fff; background:#1d1d1f; transition:transform .2s ease,background .2s ease; }
+.mc-public .mc-cta { min-height:44px; padding:10px 20px; border-radius:999px; color:#fff; background:#1d1d1f; transition:transform .2s ease,background .2s ease; }
+.mc-public .mc-actions .mc-cta { font-size:14px; }
 .mc-public .mc-cta:hover { background:#000; transform:translateY(-1px); }
 .mc-public__brand { font-size:13px; color:#86868b; text-decoration:none; }
 

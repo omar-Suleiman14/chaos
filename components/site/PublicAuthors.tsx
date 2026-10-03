@@ -45,8 +45,8 @@ export default function PublicAuthors() {
       if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || results.length < 2) return;
       const target = event.target;
       if (target instanceof HTMLElement && target.closest('input, textarea, select, [contenteditable], [role="menu"], [role="listbox"], [role="dialog"], [role="radiogroup"]')) return;
-      if (event.key === "ArrowRight" || event.key === "ArrowDown") { event.preventDefault(); next(); }
-      else if (event.key === "ArrowLeft" || event.key === "ArrowUp") { event.preventDefault(); previous(); }
+      if (event.key === "ArrowRight") { event.preventDefault(); next(); }
+      else if (event.key === "ArrowLeft") { event.preventDefault(); previous(); }
     };
     window.addEventListener("keydown", keydown);
     return () => window.removeEventListener("keydown", keydown);
@@ -60,8 +60,9 @@ export default function PublicAuthors() {
     const element = stage.current;
     if (!element) return;
     const wheel = (event: WheelEvent) => {
-      const delta = Math.abs(event.deltaX) > Math.abs(event.deltaY) ? event.deltaX : event.deltaY;
-      if (event.ctrlKey || Math.abs(delta) < 12 || results.length < 2) return;
+      // Only a sideways trackpad swipe browses; scrolling up and down always scrolls the page.
+      const delta = event.deltaX;
+      if (event.ctrlKey || Math.abs(delta) <= Math.abs(event.deltaY) || Math.abs(delta) < 12 || results.length < 2) return;
       const direction = delta > 0 ? 1 : -1;
       event.preventDefault();
       if (performance.now() - wheelAt.current < 420) return;
@@ -81,10 +82,10 @@ export default function PublicAuthors() {
     <SiteNav />
     <main id="main-content" tabIndex={-1} className="authors-page">
       <Link href="/learn" className="authors-back"><ChevronLeft size={18} />{ar ? "الدورات" : "Courses"}</Link>
-      <header><p className="authors-eyebrow">{ar ? "مجتمع Chaos" : "The Chaos community"}</p><h1>{ar ? "تعرّف على المؤلفين" : "Discover authors"}</h1><p>{ar ? "أشخاص يشاركون الدروس والدورات والاختبارات. اسحب أو مرّر لتصفّح البطاقات. اضغط على بطاقة لفتحها." : "Meet the people sharing lessons, courses and quizzes. Swipe or scroll to browse. Tap a card to open it."}</p></header>
+      <header><p className="authors-eyebrow">{ar ? "مجتمع Chaos" : "The Chaos community"}</p><h1>{ar ? "تعرّف على المؤلفين" : "Discover authors"}</h1><p>{ar ? "أشخاص يشاركون الدروس والدورات والاختبارات. اسحب لتصفّح البطاقات. اضغط على بطاقة لفتحها." : "Meet the people sharing lessons, courses and quizzes. Swipe or drag to browse. Tap a card to open it."}</p></header>
       {status === "LoadingFirstPage" ? <p className="authors-state" role="status">{ar ? "جارٍ تحميل المؤلفين…" : "Loading authors…"}</p> : !results.length ? <p className="authors-state" role="status">{status === "Exhausted" ? (ar ? "لا يوجد مؤلفون بمحتوى عام بعد." : "No authors with public content yet.") : (ar ? "جارٍ البحث عن المؤلفين…" : "Finding authors…")}</p> : <>
         <div ref={stage} className="author-stack" role="region" aria-roledescription="carousel" aria-label={ar ? "بطاقات المؤلفين" : "Author cards"} tabIndex={0}
-          onKeyDown={event => { if (event.key === "ArrowRight" || event.key === "ArrowDown") { event.preventDefault(); next(); } else if (event.key === "ArrowLeft" || event.key === "ArrowUp") { event.preventDefault(); previous(); } else if (event.key === "Home") { event.preventDefault(); setIndex(0); } }}
+          onKeyDown={event => { if (event.key === "ArrowRight") { event.preventDefault(); next(); } else if (event.key === "ArrowLeft") { event.preventDefault(); previous(); } else if (event.key === "Home") { event.preventDefault(); setIndex(0); } }}
           onPointerMove={event => { if (event.pointerType === "touch") return; const bounds = event.currentTarget.getBoundingClientRect(); const x = Math.max(-.5, Math.min(.5, (event.clientX - bounds.left) / bounds.width - .5)); const y = Math.max(-.5, Math.min(.5, (event.clientY - bounds.top) / bounds.height - .5)); event.currentTarget.style.setProperty("--hover-x", `${-y * 10}deg`); event.currentTarget.style.setProperty("--hover-y", `${x * 14}deg`); }}
           onPointerLeave={event => { event.currentTarget.style.setProperty("--hover-x", "0deg"); event.currentTarget.style.setProperty("--hover-y", "0deg"); }}
           onPointerDown={event => { suppressClick.current = false; gesture.current = { x: event.clientX, y: event.clientY }; }}
@@ -95,7 +96,7 @@ export default function PublicAuthors() {
           {cards.map(({author, position}) => { const depth = Math.abs(position); return <Link key={author.username} href={`/card/${encodeURIComponent(author.username)}`} aria-label={`${ar ? "عرض بطاقة" : "View card of"} ${author.name}`} tabIndex={position === 0 ? 0 : -1} draggable={false} className="author-stack-card" aria-hidden={position !== 0} style={{ "--depth": depth, "--position": position, "--lean": `${position * 3}deg`, "--turn": `${position * -12}deg`, zIndex: 5 - depth } as CSSProperties} data-active={position === 0}><AuthorArt author={author} locale={locale} /></Link>; })}
         </div>
         <p className="sr-only" aria-live="polite" aria-atomic="true">{current?.name} @{current?.username}</p>
-        <p className="authors-hint">{ar ? "اسحب يمينًا أو يسارًا، أو مرّر فوق البطاقات." : "Swipe left or right, or scroll over the cards."}</p>
+        <p className="authors-hint">{ar ? "اسحب البطاقة يمينًا أو يسارًا، أو استخدم مفاتيح الأسهم." : "Swipe or drag the card, or use the arrow keys."}</p>
       </>}
     </main>
     <SiteFooter />

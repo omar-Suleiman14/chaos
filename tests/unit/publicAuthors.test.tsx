@@ -18,6 +18,8 @@ describe("author card directory", () => {
    expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author1");
    const stage = screen.getByRole("region", {name:"Author cards"});
    fireEvent.keyDown(stage, {key:"ArrowDown"});
+   expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author1");
+   fireEvent.keyDown(stage, {key:"ArrowRight"});
    expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author2");
    fireEvent.keyDown(stage, {key:"Home"});
    fireEvent.keyDown(stage, {key: "ArrowLeft"});
@@ -33,6 +35,18 @@ describe("author card directory", () => {
    expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author1");
    fireEvent.keyDown(window, {key:"ArrowLeft"});
    expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author0");
+ });
+ it("lets vertical scrolling scroll the page and browses only on a sideways swipe", () => {
+   render(<PublicAuthors/>);
+   const stage = screen.getByRole("region", {name: "Author cards"});
+   const down = new WheelEvent("wheel", {deltaY: 120, bubbles: true, cancelable: true});
+   stage.dispatchEvent(down);
+   expect(down.defaultPrevented).toBe(false);
+   expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author0");
+   const sideways = new WheelEvent("wheel", {deltaX: 80, deltaY: 4, bubbles: true, cancelable: true});
+   fireEvent(stage, sideways);
+   expect(sideways.defaultPrevented).toBe(true);
+   expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author1");
  });
  it("continues past filtered empty pages rather than claiming no authors exist", () => {
    backend.paginate.mockReturnValue({results: [], status: "CanLoadMore", loadMore: backend.loadMore});
