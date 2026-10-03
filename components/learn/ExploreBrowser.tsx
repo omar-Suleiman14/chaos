@@ -52,7 +52,19 @@ function Explore() {
     },
     { initialNumItems: 24 },
   );
-  const tags = [...new Set(results.flatMap((c) => c.tags))].slice(0, 30);
+  const [settledResults, setSettledResults] = useState<typeof results>([]);
+  useEffect(() => {
+    if (status !== "LoadingFirstPage") {
+      setSettledResults((previous) =>
+        JSON.stringify(previous) === JSON.stringify(results)
+          ? previous
+          : results,
+      );
+    }
+  }, [results, status]);
+  const visibleResults =
+    status === "LoadingFirstPage" ? settledResults : results;
+  const tags = [...new Set(visibleResults.flatMap((c) => c.tags))].slice(0, 30);
   return (
     <div className="lx-page">
       <header className="lx-hero">
@@ -175,67 +187,75 @@ function Explore() {
         aria-label={ar ? "الدورات" : "Courses"}
         aria-busy={status === "LoadingFirstPage"}
       >
-        {status === "LoadingFirstPage" ? (
-          <PageSkeleton label={ar ? "جارٍ البحث…" : "Finding courses…"} />
-        ) : (
-          <>
-            {!results.length && status === "Exhausted" && (
-              <div className="lx-empty">
-                <GraduationCap size={26} />
-                <h2>{ar ? "لا توجد دورات مطابقة" : "No matching courses"}</h2>
-                <p>
-                  {ar
-                    ? "جرّب بحثًا آخر أو امسح الفلاتر."
-                    : "Try another search or clear your filters."}
-                </p>
-              </div>
-            )}
-            <div className="lx-grid">
-              {results.map((course) => (
-                <Link
-                  key={course.id}
-                  href={"/learn/courses/" + course.id}
-                  className="cx-card"
-                  prefetch={true}
-                >
-                  <div
-                    className="cx-cover"
-                    style={coverStyle(course.id, course.coverUrl)}
-                  >
-                    <span className="cx-cover__badge">
-                      {ar ? "دورة" : "Course"}
-                    </span>
-                    {course.icon && (
-                      <span className="cx-card__icon">
-                        <CourseOrLessonIcon icon={course.icon} size={24} />
-                      </span>
-                    )}
-                  </div>
-                  <div className="cx-body">
-                    <span className="cx-title">{course.title}</span>
-                    <span className="cx-meta line-clamp-2">
-                      {course.description}
-                    </span>
-                    <span className="cx-meta">
-                      {courseCopy[locale].lessons(course.lessons)} ·{" "}
-                      {course.ownerName}
-                    </span>
-                  </div>
-                </Link>
-              ))}
+        <div
+          className="lx-muted"
+          role="status"
+          aria-live="polite"
+          style={{ minHeight: 24 }}
+        >
+          {status === "LoadingFirstPage"
+            ? ar
+              ? "جارٍ البحث…"
+              : "Finding courses…"
+            : ""}
+        </div>
+        <>
+          {!results.length && status === "Exhausted" && (
+            <div className="lx-empty">
+              <GraduationCap size={26} />
+              <h2>{ar ? "لا توجد دورات مطابقة" : "No matching courses"}</h2>
+              <p>
+                {ar
+                  ? "جرّب بحثًا آخر أو امسح الفلاتر."
+                  : "Try another search or clear your filters."}
+              </p>
             </div>
-            {status !== "Exhausted" && (
-              <button
-                type="button"
-                className="ws-btn"
-                disabled={status === "LoadingMore"}
-                onClick={() => loadMore(24)}
+          )}
+          <div className="lx-grid">
+            {visibleResults.map((course) => (
+              <Link
+                key={course.id}
+                href={"/learn/courses/" + course.id}
+                className="cx-card"
+                prefetch={true}
               >
-                {ar ? "عرض المزيد" : "Load more courses"}
-              </button>
-            )}
-          </>
-        )}
+                <div
+                  className="cx-cover"
+                  style={coverStyle(course.id, course.coverUrl)}
+                >
+                  <span className="cx-cover__badge">
+                    {ar ? "دورة" : "Course"}
+                  </span>
+                  {course.icon && (
+                    <span className="cx-card__icon">
+                      <CourseOrLessonIcon icon={course.icon} size={24} />
+                    </span>
+                  )}
+                </div>
+                <div className="cx-body">
+                  <span className="cx-title">{course.title}</span>
+                  <span className="cx-meta line-clamp-2">
+                    {course.description}
+                  </span>
+                  <span className="cx-meta">
+                    {courseCopy[locale].lessons(course.lessons)} ·{" "}
+                    {course.ownerName}
+                  </span>
+                </div>
+              </Link>
+            ))}
+          </div>
+          {(status === "CanLoadMore" || status === "LoadingMore") && (
+            <button
+              type="button"
+              className="ws-btn"
+              disabled={status === "LoadingMore"}
+              onClick={() => loadMore(24)}
+            >
+              {ar ? "عرض المزيد" : "Load more courses"}
+            </button>
+          )}
+        </>
       </section>
     </div>
   );
