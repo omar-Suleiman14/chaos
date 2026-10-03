@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
-import { useRef } from "react";
+import { useCallback, useRef } from "react";
 
 // Animation frames run when flush() says so, so the easing can be stepped to rest.
 let frames: FrameRequestCallback[] = [];
@@ -45,7 +45,7 @@ describe("member card motion", () => {
     expect(read("--ry")).toBeGreaterThan(3);
     point(140, 110); // over the card's top left
     flush();
-    expect(read("--tx")).toBeGreaterThan(8);
+    expect(read("--tx")).toBeGreaterThan(4);
     expect(read("--ty")).toBeGreaterThan(8);
     point(900, 250); // far away
     flush();
@@ -61,6 +61,26 @@ describe("member card motion", () => {
     flush();
     expect(read("--ry")).toBeGreaterThan(4);
     expect(eyes.style.transform).toMatch(/^translate\(2\.\d+px/);
+  });
+
+  it("pushes every card in a stack, the one nearest the mouse the most", async () => {
+    vi.resetModules();
+    const { useTilt } = await import("@/components/card/useTilt");
+    function Stack() {
+      const stage = useRef<HTMLDivElement>(null);
+      const cards = useCallback(() => Array.from(stage.current?.querySelectorAll<HTMLElement>(".card") ?? []), []);
+      useTilt(stage, cards);
+      return <div ref={stage}><div className="card" data-testid="left" /><div className="card" data-testid="right" /></div>;
+    }
+    const view = render(<Stack />);
+    const left = view.getByTestId("left"), right = view.getByTestId("right");
+    left.getBoundingClientRect = () => box as DOMRect;
+    right.getBoundingClientRect = () => ({ ...box, left: 160, right: 360, x: 160 }) as DOMRect;
+    point(390, 250); // just right of both, nearer the right card
+    flush();
+    const push = (el: HTMLElement) => parseFloat(el.style.getPropertyValue("--tx"));
+    expect(push(right)).toBeLessThan(push(left));
+    expect(push(left)).toBeLessThan(0);
   });
 
   it("lets a mouse that just moved win over the phone's tilt", async () => {

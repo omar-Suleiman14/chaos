@@ -7,9 +7,9 @@
 .author-stack { position: relative; width: min(100%, 700px); height: clamp(460px, 62vw, 580px); margin: 16px auto 0; perspective: 1200px; touch-action: pan-y; outline-offset: 4px; }
 .author-stack-card { position: absolute; width: clamp(250px, 58vw, 320px); inset-inline-start: 50%; top: 80px; margin-inline-start: calc(clamp(250px, 58vw, 320px) / -2); transform: translateX(calc(var(--position) * clamp(28px, 6vw, 64px))) translateY(calc(var(--depth) * 6px)) translateZ(calc(var(--depth) * -90px)) rotateY(var(--turn)) rotateZ(var(--lean)); transform-origin: center bottom; transition: transform 420ms cubic-bezier(.22,.8,.3,1), opacity 320ms; opacity: calc(1 - var(--depth) * .12); border-radius: 18px; backface-visibility: hidden; pointer-events: none; }
 .author-stack-card[data-active=true] { transform: translateZ(0); pointer-events: auto; cursor: grab; }
-/* The front card's art moves away from the mouse and follows a phone's tilt; useTilt sets the variables frame by frame. */
-.author-art { border-radius: 18px; box-shadow: 0 16px 42px rgb(0 0 0 / .18); }
-.author-stack-card[data-active=true] .author-art { will-change: transform; transform: perspective(1200px) translate(var(--tx, 0px), var(--ty, 0px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); }
+/* Each card's art moves away from the mouse (the nearest card most) and follows a phone's tilt; useTilt sets the
+   variables on each card frame by frame, while the card itself keeps its place in the stack. */
+.author-art { border-radius: 18px; box-shadow: 0 16px 42px rgb(0 0 0 / .18); will-change: transform; transform: perspective(1200px) translate(var(--tx, 0px), var(--ty, 0px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); }
 .author-art .mc-eyes { transition: transform .35s cubic-bezier(.22,.61,.36,1); }
 .author-art > svg { width: 100%; height: auto; display: block; border-radius: 18px; }
 .authors-hint { font-size: 12px; color: var(--on-surface-variant); margin-top: 8px; }

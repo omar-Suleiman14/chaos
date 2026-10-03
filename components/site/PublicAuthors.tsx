@@ -29,9 +29,10 @@ export default function PublicAuthors() {
   const stage = useRef<HTMLDivElement>(null);
   // Every avatar in the stack looks toward the mouse (or finger while swiping).
   useEyesFollowPointer(stage);
-  // The front card shies away from the mouse and follows a phone's tilt (useTilt writes the variables authors.css reads).
-  const frontCard = useCallback(() => stage.current?.querySelector<HTMLElement>(".author-stack-card[data-active=true]") ?? null, []);
-  useTilt(stage, frontCard);
+  // Every card in the stack shies away from the mouse, the nearest most, and follows a phone's tilt
+  // (useTilt writes the variables authors.css reads on each card).
+  const stackCards = useCallback(() => Array.from(stage.current?.querySelectorAll<HTMLElement>(".author-stack-card") ?? []), []);
+  useTilt(stage, stackCards);
   const gesture = useRef<{ x: number; y: number } | null>(null);
   const suppressClick = useRef(false);
   const wheelAt = useRef(0);
