@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { Plus, Users } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -16,7 +16,8 @@ const copy = {
 };
 export default function TeamsHome() {
   const t = useCopy(copy), router = useRouter();
-  const teams = useQuery(api.businessTeams.list), invites = useQuery(api.businessTeams.inbox);
+  const { isAuthenticated } = useConvexAuth();
+  const teams = useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip"), invites = useQuery(api.businessTeams.inbox, isAuthenticated ? {} : "skip");
   const create = useMutation(api.businessTeams.create), accept = useMutation(api.businessTeams.accept);
   const [name, setName] = useState(""), [link, setLink] = useState("");
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
@@ -30,6 +31,7 @@ export default function TeamsHome() {
     catch (error) { setError(errorMessage(error, "Could not join this team.")); }
     finally { setBusy(false); }
   }
+  if (!isAuthenticated) return <p role="status">{t.loading}</p>;
   return <div className="ws-page ws-teams-page">
     <header><h1 className="ws-page-title">{t.title}</h1><p className="ws-page-subtitle">{t.lead}</p></header>
     <BusinessPromo />

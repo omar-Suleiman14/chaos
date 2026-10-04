@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { Users } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useCopy } from "@/lib/i18n";
@@ -12,7 +12,8 @@ const copy = {
   ar: { label: "مساحة العمل", personal: "شخصي · لك وحدك", create: "أنشئ فريق أعمال", settings: "الفرق والدعوات" },
 };
 export default function TeamSwitcher() {
-  const teams = useQuery(api.businessTeams.list);
+  const { isAuthenticated } = useConvexAuth();
+  const teams = useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip");
   const pathname = usePathname(), router = useRouter(), t = useCopy(copy);
   const selected = pathname.match(/\/dashboard\/teams\/([^/]+)/)?.[1] ?? "";
   return <div className="ws-team-switcher">

@@ -29,7 +29,7 @@ describe("discoverable game creation", () => {
     fireEvent.click(screen.getByRole("button", { name: "أنشئ لعبة" }));
     await waitFor(() => expect(mocks.create).toHaveBeenCalledOnce());
     expect(mocks.create.mock.calls[0][0]).toMatchObject({
-      quizMode: true, definition: { quiz: { enabled: true }, theme: { preset: "velvet" }, languages: ["ar"], defaultLanguage: "ar", fields: [] },
+      quizMode: true, definition: { quiz: { enabled: true }, theme: { preset: "velvet" }, languages: ["ar"], defaultLanguage: "ar", fields: [{ type: "choice", label: "", options: [{ label: "Option 1" }, { label: "Option 2" }] }] },
     });
     await waitFor(() => expect(mocks.push).toHaveBeenCalledWith("/dashboard/forms/created-game"));
     expect(mocks.host).not.toHaveBeenCalled();

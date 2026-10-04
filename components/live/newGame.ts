@@ -15,7 +15,7 @@ export function newQuizArgs(locale: Locale) {
 export function newGameArgs(locale: Locale, preset: ThemePresetId = "flow") {
   const title = locale === "ar" ? "لعبة بلا عنوان" : "Untitled game";
   const definition = {
-    ...emptyDefinition(title), theme: themeFromPreset(preset),
+    ...emptyDefinition(title), fields: [blankField("choice")], theme: themeFromPreset(preset),
     quiz: { enabled: true }, defaultLanguage: locale, languages: [locale], presentation: "conversational" as const,
   };
   return { definition, quizMode: true, title };

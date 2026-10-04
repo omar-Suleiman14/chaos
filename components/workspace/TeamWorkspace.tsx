@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -17,7 +17,8 @@ const copy = {
 };
 type Action = { title: string; run: () => Promise<unknown> };
 export default function TeamWorkspace({ teamId }: { teamId: Id<"businessTeams"> }) {
-  const t = useCopy(copy), teams = useQuery(api.businessTeams.list);
+  const { isAuthenticated } = useConvexAuth();
+  const t = useCopy(copy), teams = useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip");
   const current = teams?.find(row => row.team._id === teamId);
   if (!current) return <div className="ws-teams-page"><p role="status">{teams === undefined ? t.loading : t.unavailable}</p><Link href="/dashboard/teams">{t.back}</Link></div>;
   return <TeamContents key={teamId} teamId={teamId} name={current.team.name} role={current.role} />;

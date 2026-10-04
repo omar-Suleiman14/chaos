@@ -11,7 +11,7 @@ import { themeFromPreset } from "@/components/forms/formThemes";
 import { useCopy } from "@/lib/i18n";
 import { defaultPreferences, readPreferences } from "@/lib/preferences";
 
-/** Only send a definition when the creator changed a default; otherwise the server's blank is the same. */
+/** Track whether the creator changed a new-form preference for analytics. */
 function hasCustomDefaults() {
   const p = readPreferences();
   return (Object.keys(defaultPreferences) as (keyof typeof defaultPreferences)[])
