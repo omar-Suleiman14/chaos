@@ -1,4 +1,4 @@
-import { courseModule } from "./learnAssetModel";
+import { courseModule, courseDetails } from "./learnAssetModel";
 import { canonicalCommunityActor } from "./learnCommunityIntegrations";
 import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
@@ -65,14 +65,14 @@ export async function getCourse(ctx: QueryCtx, args: Infer<typeof getArgs>, asAc
     }
     return {
       id: row._id, title: row.metadata.title, description: row.metadata.description, coverUrl: row.metadata.coverUrl, coverY: row.metadata.coverY, icon: row.metadata.icon, language: row.metadata.language, tags: row.metadata.tags,
-      visibility: row.visibility, published: !!row.publishedVersionId, publishedAt: version?.publishedAt ?? null, canPrivate: isPaidPlan(user ?? null, Date.now()), modules: row.modules ?? [], lessons, revision: row.revision,
+      visibility: row.visibility, published: !!row.publishedVersionId, publishedAt: version?.publishedAt ?? null, canPrivate: isPaidPlan(user ?? null, Date.now()), modules: row.modules ?? [], details: row.details, lessons, revision: row.revision,
     };
 }
 export const get = query({
   args: getArgs.fields,
   returns: v.object({
     id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), coverY: v.optional(v.number()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()),
-    visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), canPrivate: v.boolean(), modules: v.array(courseModule), lessons: v.array(lessonRow), revision: v.number(),
+    visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), canPrivate: v.boolean(), modules: v.array(courseModule), details: v.optional(courseDetails), lessons: v.array(lessonRow), revision: v.number(),
   }),
   handler: (ctx, args) => getCourse(ctx, args),
 });
@@ -91,7 +91,7 @@ export const create = mutation({
   handler: (ctx, args) => createCourse(ctx, args),
 });
 
-const updateArgs = v.object({ courseId: v.id("learnCollections"), title: v.optional(v.string()), description: v.optional(v.string()), coverUrl: v.optional(v.union(v.string(), v.null())), coverY: v.optional(v.union(v.number(), v.null())), icon: v.optional(v.union(v.string(), v.null())), language: v.optional(v.string()), tags: v.optional(v.array(v.string())) });
+const updateArgs = v.object({ courseId: v.id("learnCollections"), title: v.optional(v.string()), description: v.optional(v.string()), coverUrl: v.optional(v.union(v.string(), v.null())), coverY: v.optional(v.union(v.number(), v.null())), icon: v.optional(v.union(v.string(), v.null())), language: v.optional(v.string()), tags: v.optional(v.array(v.string())), details: v.optional(courseDetails) });
 export async function updateCourse(ctx: MutationCtx, args: Infer<typeof updateArgs>, asActor?: string) {
     const { row } = await ownedCourse(ctx, args.courseId, asActor);
     const m = { ...row.metadata };
@@ -103,7 +103,8 @@ export async function updateCourse(ctx: MutationCtx, args: Infer<typeof updateAr
     if (args.icon !== undefined) { if (!args.icon) delete m.icon; else if (args.icon.length <= 40 && !/[\s\u0000-\u001f\u007f<>]/.test(args.icon)) m.icon = args.icon; else throw new Error("VALIDATION_FAILED: Use a valid Lucide icon name or emoji as the course icon."); }
     if (args.language !== undefined) m.language = args.language.slice(0, 35) || "en";
     if (args.tags !== undefined) m.tags = [...new Set(args.tags.map((t) => t.trim().slice(0, 40)).filter(Boolean))].slice(0, 12);
-    await authorDb(ctx).patch("learnCollections", row._id, { metadata: m, updatedAt: Date.now() });
+    if (args.details && (args.details.outcomes.length > 20 || args.details.outcomes.some(o => !o.trim() || o.length > 500) || (args.details.estimatedMinutes !== undefined && (!Number.isFinite(args.details.estimatedMinutes) || args.details.estimatedMinutes <= 0 || args.details.estimatedMinutes > 10000)))) throw new Error("VALIDATION_FAILED: Use up to 20 clear outcomes and a duration from 1 to 10000 minutes.");
+    await authorDb(ctx).patch("learnCollections", row._id, { metadata: m, ...(args.details ? { details: args.details } : {}), updatedAt: Date.now() });
     return null;
 }
 export const update = mutation({
@@ -188,7 +189,7 @@ export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publish
     }
     if (problems.length) return { ok: false as const, problems };
     const last = await ctx.db.query("collectionVersions").withIndex("by_collectionId_and_number", (q) => q.eq("collectionId", row._id)).order("desc").first();
-    const versionId = await ctx.db.insert("collectionVersions", { collectionId: row._id, number: (last?.number ?? 0) + 1, metadata: row.metadata, modules: row.modules, items, publishedAt: Date.now() });
+    const versionId = await ctx.db.insert("collectionVersions", { collectionId: row._id, number: (last?.number ?? 0) + 1, metadata: row.metadata, modules: row.modules, details: row.details, items, publishedAt: Date.now() });
     await authorDb(ctx).patch("learnCollections", row._id, { items, searchText: await courseSearchText(ctx, row.ownerId, row.metadata, items), publishedVersionId: versionId, visibility: args.visibility, revision: row.revision + 1, updatedAt: Date.now() });
     await enqueueLearnWebhookEvent(ctx, { event: "collection.published", collectionId: row._id, versionId, operationId: `publish:${versionId}`, revision: row.revision + 1 });
     await recordAssetPublicationAction(ctx, { asset: { kind: "collection", id: row._id }, actorId: actor, action: "publish", revision: row.revision + 1, versionId, beforeVisibility: row.visibility, afterVisibility: args.visibility, reason: "Published the course." });
@@ -247,11 +248,11 @@ export async function readPublicCourse(ctx: QueryCtx, args: { courseId: string }
       const lv = await ctx.db.get("lessonVersions", item.versionId);
       if (lv && lv.lessonId === item.id && (ownsLesson || lv.visibility === undefined || lv.visibility === "public")) lessons.push({ id: item.id, versionId: item.versionId, title: lv.metadata.title, description: lv.metadata.description, blocks: lv.document.blocks.length });
     }
-    return { id: row._id, title: version.metadata.title, description: version.metadata.description, coverUrl: version.metadata.coverUrl, icon: version.metadata.icon, language: version.metadata.language, tags: version.metadata.tags, modules: (version.modules ?? []).map(m => ({ ...m, lessonIds: m.lessonIds.filter(id => lessons.some(l => l.id === id)) })), ownerName: owner.name, ownerUsername: owner.username, publishedAt: version.publishedAt, lessons };
+    return { id: row._id, title: version.metadata.title, description: version.metadata.description, coverUrl: version.metadata.coverUrl, icon: version.metadata.icon, language: version.metadata.language, tags: version.metadata.tags, details: version.details, modules: (version.modules ?? []).map(m => ({ ...m, lessonIds: m.lessonIds.filter(id => lessons.some(l => l.id === id)) })), ownerName: owner.name, ownerUsername: owner.username, publishedAt: version.publishedAt, lessons };
 }
 export const getPublic = query({
   args: { courseId: v.string() },
-  returns: v.union(v.null(), v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()), modules: v.array(courseModule), ownerName: v.string(), ownerUsername: v.string(), publishedAt: v.number(), lessons: v.array(publicLesson) })),
+  returns: v.union(v.null(), v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()), details: v.optional(courseDetails), modules: v.array(courseModule), ownerName: v.string(), ownerUsername: v.string(), publishedAt: v.number(), lessons: v.array(publicLesson) })),
   handler: (ctx, args) => readPublicCourse(ctx, args),
 });
 

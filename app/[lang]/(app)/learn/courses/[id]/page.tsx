@@ -1,9 +1,9 @@
+import CourseStart from "@/components/courses/CourseStart";
 import CourseOutline from "@/components/courses/CourseOutline";
 import { contentDirection } from "@/lib/learn/direction";
 import type { Metadata } from "next";
 import Link from "@/components/site/SiteLink";
 import { notFound } from "next/navigation";
-import { ArrowRight } from "lucide-react";
 import { fetchPublicCourse } from "@/lib/learn/server";
 import { pageMetadata } from "@/lib/seo";
 import { siteUrl } from "@/lib/site";
@@ -35,6 +35,8 @@ export default async function PublicCoursePage({ params }: Props) {
     url: `${siteUrl}/learn/courses/${course.id}`, inLanguage: course.language, isAccessibleForFree: true,
     provider: { "@type": "Organization", name: "Chaos", url: siteUrl },
     author: { "@type": "Person", name: course.ownerName },
+    ...(course.details?.estimatedMinutes ? { timeRequired: `PT${course.details.estimatedMinutes}M` } : {}),
+    ...(course.details ? { educationalLevel: course.details.level, teaches: course.details.outcomes } : {}),
     hasPart: course.lessons.map((l, i) => ({ "@type": "LearningResource", position: i + 1, name: l.title, url: `${siteUrl}/learn/${l.id}` })),
   };
   const first = course.lessons[0];
@@ -57,11 +59,13 @@ export default async function PublicCoursePage({ params }: Props) {
         {course.icon && <span className="cp-icon" aria-hidden="true"><CourseOrLessonIcon icon={course.icon} size={48} /></span>}
         <h1>{course.title}</h1>
         {course.description && <p>{course.description}</p>}
+        {course.details && <p className="cp-facts">{({ all: ar ? "كل المستويات" : "All levels", beginner: ar ? "مبتدئ" : "Beginner", intermediate: ar ? "متوسط" : "Intermediate", advanced: ar ? "متقدم" : "Advanced" })[course.details.level]}{course.details.estimatedMinutes ? ` · ${course.details.estimatedMinutes} ${ar ? "دقيقة" : "min"}` : ""}</p>}
         <div className="cp-by"><span>{labels.by} <Link href={`/card/${course.ownerUsername}`}><bdi>{course.ownerName || `@${course.ownerUsername}`}</bdi></Link></span><span aria-hidden="true">·</span><span>{labels.count}</span></div>
         {course.tags.length > 0 && <div className="cp-tags">{course.tags.map((t) => <span key={t}>{t}</span>)}</div>}
       </header>
       <section className="cp-main" aria-labelledby="course-lessons">
-        {first && <Link className="cp-start site-btn site-btn--primary" href={`/learn/${first.id}?course=${course.id}`}>{labels.start} <ArrowRight size={18} className="cp-arrow" aria-hidden /></Link>}
+        <CourseStart course={course} />
+        {!!course.details?.outcomes.length && <section className="cp-outcomes"><h2>{ar ? "ماذا ستتعلم" : "What you will learn"}</h2><ul>{course.details.outcomes.map((outcome, i) => <li key={i} dir="auto">{outcome}</li>)}</ul></section>}
         <h2 id="course-lessons" className="cp-outline-title">{labels.lessons}</h2>
         {!first && <p className="cx-state">{labels.empty}</p>}
         <CourseOutline course={course} />
