@@ -309,7 +309,7 @@ export function useWeakAreas(): WeakArea[] | undefined {
   return useMemo(() => {
     if (auth.isLoading) return undefined;
     if (!auth.isAuthenticated) return [];
-    return rows?.filter(r => r.lessonId).map(r => ({ concept: r.title, lessonId: r.lessonId!, blockId: r.blockId, quizFormId: r.formId, confidence: 0, lastSeenAt: r.lastSeenAt }));
+    return rows?.filter(r => r.lessonId).map(r => ({ concept: r.title, lessonId: r.lessonId!, blockId: r.blockId, quizFormId: r.formId, quizHref: r.quizHref, flashcardBlockId: r.flashcardBlockId, confidence: 0, lastSeenAt: r.lastSeenAt }));
   }, [auth.isLoading, auth.isAuthenticated, rows]);
 }
 

@@ -41,6 +41,8 @@ export default function WeakAreas() {
   const t = useCopy(copy);
   const { locale } = useLocale();
   const auth = useConvexAuth();
+  const [materialNow] = useState(() => Date.now());
+  const material = useQuery(studyReads.weakAreas, auth.isAuthenticated ? { now: materialNow } : "skip");
   const catalog = useQuery(studyReads.myConcepts, auth.isAuthenticated ? {} : "skip");
   const [offset, setOffset] = useState(0);
   const concepts = catalog?.concepts.slice(offset, offset + 10) ?? [];
@@ -55,6 +57,7 @@ export default function WeakAreas() {
     {!concepts.length ? <p className="lx-muted">{t.empty}</p> : states === undefined ? <p role="status">{t.loading}</p> : <div className="lx-list">{states.map(state => <article key={state.conceptId} className="lx-panel">
       <div className="lx-panel__row"><strong><Target size={14} aria-hidden /> {concepts.find(c => c.id === state.conceptId)?.title}</strong><span className="lx-badge" data-tone={state.state === "weak" ? "amber" : undefined}>{t.states[state.state]}</span></div>
       <p className="lx-help">{state.reason}</p>
+      {material?.filter(m => m.conceptId === state.conceptId).map(m => <div className="lx-actions" key={m.conceptId}>{m.lessonId && <Link className="ws-btn ws-btn--sm" href={`/learn/${m.lessonId}#${m.blockId ?? ""}`}>{locale === "ar" ? "أعد قراءة الفقرة" : "Re-read section"}</Link>}{m.lessonId && m.flashcardBlockId && <Link className="ws-btn ws-btn--sm" href={`/learn/${m.lessonId}#${m.flashcardBlockId}`}>{locale === "ar" ? "راجع البطاقات" : "Review cards"}</Link>}{m.quizHref && <Link className="ws-btn ws-btn--sm" href={m.quizHref}>{t.start}</Link>}</div>)}
       <p className="lx-muted">{t.attempts(state.attempts)}</p>
       {state.accuracy !== null && <p className="lx-muted">{t.accuracy}: {Math.round(state.accuracy * 100)}%</p>}
       <p className="lx-muted">{t.confidence}: {t[state.confidence]}</p>

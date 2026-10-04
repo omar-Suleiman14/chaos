@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { mutation, query } from "./_generated/server";
+import { mutation, query, type QueryCtx } from "./_generated/server";
 import { creatorRestricted, requireActiveUser } from "./authz";
 import { assessmentRef } from "./quizForkModel";
 import { lessonAccess, lessonAccessForActor } from "./lessons";
@@ -97,9 +97,11 @@ export const practiceLink = query({
  */
 export const weakAreas = query({
   args: { now: v.number() },
-  returns: v.array(v.object({ conceptId: v.id("learnConcepts"), title: v.string(), lessonId: v.optional(v.id("lessons")), blockId: v.optional(v.string()), formId: v.id("forms"), lastSeenAt: v.number() })),
-  handler: async (ctx, args) => {
-    const { identity } = await requireActiveUser(ctx);
+  returns: v.array(v.object({ conceptId: v.id("learnConcepts"), title: v.string(), lessonId: v.optional(v.id("lessons")), blockId: v.optional(v.string()), formId: v.id("forms"), quizHref: v.optional(v.string()), flashcardBlockId: v.optional(v.string()), lastSeenAt: v.number() })),
+  handler: (ctx, args) => readWeakAreas(ctx, args),
+});
+export async function readWeakAreas(ctx: QueryCtx, args: { now: number }, asActor?: string) {
+    const identity = asActor ? { subject: asActor, tokenIdentifier: (await canonicalCommunityActor(ctx, asActor)).tokenIdentifier } : (await requireActiveUser(ctx)).identity;
     if (!Number.isFinite(args.now) || args.now < 0) throw new Error("Invalid clock");
     const rows = await ctx.db.query("learnPracticeEvidence").withIndex("by_userId_and_formResponseId_and_fieldId_and_conceptId", q => q.eq("userId", identity.tokenIdentifier)).order("desc").take(200);
     const conceptIds = [...new Set(rows.map(row => row.conceptId))].slice(0, 20);
@@ -109,13 +111,21 @@ export const weakAreas = query({
       if (!evidence.length || summarizeEvidence(conceptId, evidence, args.now).state !== "weak") continue;
       const concept = await ctx.db.get("learnConcepts", conceptId);
       if (!concept) continue;
-      let place: { lessonId: Id<"lessons">; blockId: string } | undefined;
+      let place: { lessonId: Id<"lessons">; blockId: string; flashcardBlockId?: string } | undefined;
       for (const mapping of await ctx.db.query("learnConceptMappings").withIndex("by_conceptId", q => q.eq("conceptId", conceptId)).take(10)) {
         // Only point at lessons this reader may open.
-        try { await lessonAccessForActor(ctx, identity.subject, mapping.lessonId); place = { lessonId: mapping.lessonId, blockId: mapping.blockId }; break; } catch { /* not readable */ }
+        try {
+          const lesson = await lessonAccessForActor(ctx, identity.subject, mapping.lessonId);
+          if (lesson.publishedVersionId !== mapping.versionId || lesson.status !== "active" || lesson.communityState !== "ok") continue;
+          const version = await ctx.db.get("lessonVersions", mapping.versionId);
+          if (!version?.document.blocks.some(b => b.id === mapping.blockId)) continue;
+          const cards = version.document.blocks.find(b => b.type === "flashcards" && (b.conceptIds.includes(conceptId) || b.conceptIds.includes(concept.slug)));
+          place = { lessonId: mapping.lessonId, blockId: mapping.blockId, ...(cards ? { flashcardBlockId: cards.id } : {}) }; break;
+        } catch { /* not readable */ }
       }
-      out.push({ conceptId, title: concept.title, ...(place ?? {}), formId: evidence[0].formId, lastSeenAt: evidence[0].answeredAt });
+      const form = await ctx.db.get("forms", evidence[0].formId);
+      const eligible = form && form.status === "live" && !form.isBanned && form.publishedVersion === evidence[0].version && !await creatorRestricted(ctx, form.ownerId);
+      out.push({ ...(eligible ? { quizHref: `/f/${encodeURIComponent(form.shareId)}` } : {}), conceptId, title: concept.title, ...(place ?? {}), formId: evidence[0].formId, lastSeenAt: evidence[0].answeredAt });
     }
     return out;
-  },
-});
+}

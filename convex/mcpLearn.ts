@@ -1,3 +1,4 @@
+import { readWeakAreas } from "./learnStudyReads";
 import { readStudyProgress, resetStudyProgress } from "./learnProgressServices";
 import { canonicalCommunityActor } from "./learnCommunityIntegrations";
 // userId is supplied only by the secret-protected OAuth transport.
@@ -124,3 +125,5 @@ export const restartProgress = internalMutation({
   args: { ...actor, lessonId: v.id("lessons"), versionId: v.id("lessonVersions"), expectedSessionSeq: v.number() }, returns: v.object({ sessionSeq: v.number() }),
   handler: async (ctx, args) => { await requireLearnActor(ctx, args.userId); return { sessionSeq: await resetStudyProgress(ctx, await canonicalCommunityActor(ctx, args.userId), { lessonId: args.lessonId, versionId: args.versionId, expectedSessionSeq: args.expectedSessionSeq }) }; },
 });
+
+export const weakAreas = internalQuery({ args: { userId: v.string() }, handler: async (ctx, { userId }) => { const actor = await requireLearnActor(ctx, userId); return { areas: await readWeakAreas(ctx, { now: Date.now() }, actor) }; } });

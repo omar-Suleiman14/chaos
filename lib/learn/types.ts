@@ -234,7 +234,7 @@ export type ProgressState = "not_started" | "in_progress" | "completed";
 export interface LessonProgress { lessonId: LearnId; state: ProgressState; lastBlockId?: string; percent: number; updatedAt: number }
 
 /** Concept needing review, from the learning-state backend. The UI only presents it. */
-export interface WeakArea { concept: string; lessonId: LearnId; blockId?: string; quizFormId?: string; confidence: number; lastSeenAt: number }
+export interface WeakArea { concept: string; lessonId: LearnId; blockId?: string; quizFormId?: string; quizHref?: string; flashcardBlockId?: string; confidence: number; lastSeenAt: number }
 
 export type ReportReason = "incorrect" | "spam" | "copyright" | "abuse" | "other";
 export type ReportTarget = { kind: "lesson" | "comment" | "profile" | "flashcards" | "quiz"; id: LearnId };
