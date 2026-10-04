@@ -1,0 +1,167 @@
+.student-orbit {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+.student-orbit__slot {
+  position: absolute;
+  width: 76px;
+  perspective: 700px;
+}
+.student-orbit__slot[data-slot="0"] {
+  left: 12%;
+  top: 8%;
+}
+.student-orbit__slot[data-slot="1"] {
+  right: 12%;
+  top: 12%;
+}
+.student-orbit__slot[data-slot="2"] {
+  left: 2%;
+  top: 38%;
+}
+.student-orbit__slot[data-slot="3"] {
+  right: 2%;
+  top: 43%;
+}
+.student-orbit__slot[data-slot="4"] {
+  left: 12%;
+  top: 70%;
+}
+.student-orbit__slot[data-slot="5"] {
+  right: 12%;
+  top: 73%;
+}
+.student-orbit__slot[data-slot="6"] {
+  left: 1%;
+  top: 3%;
+}
+.student-orbit__slot[data-slot="7"] {
+  right: 1%;
+  top: 4%;
+}
+.student-orbit__float {
+  animation: student-drift 7s ease-in-out var(--delay) infinite;
+}
+.student-orbit__card {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 76px;
+  height: 112px;
+  padding: 5px;
+  border-radius: 7px;
+  background: #fff8f0;
+  color: var(--student-ink, #462514);
+  text-decoration: none;
+  box-shadow: 0 5px 14px #00000016;
+  pointer-events: auto;
+  transform: translate(var(--tx, 0px), var(--ty, 0px)) rotateX(var(--rx, 0deg))
+    rotateY(var(--ry, 0deg)) rotateZ(var(--lean));
+}
+.student-orbit__art {
+  display: grid;
+  place-items: center;
+  height: 62px;
+  flex: none;
+  border-radius: 4px;
+  background: var(--student-art);
+}
+.student-orbit__card strong,
+.student-orbit__handle {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: start;
+  font-size: 7px;
+  line-height: 1.3;
+}
+.student-orbit__handle {
+  font-size: 6px;
+  opacity: 0.65;
+}
+.student-orbit__stamp {
+  margin-top: auto;
+  font:
+    5px ui-monospace,
+    monospace;
+  letter-spacing: 0.12em;
+  text-align: start;
+}
+.student-orbit__card:focus-visible {
+  outline: 2px solid #0071e3;
+  outline-offset: 4px;
+}
+.student-visibility {
+  font-size: 12px;
+}
+.student-visibility label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+}
+@keyframes student-drift {
+  0%,
+  100% {
+    transform: translateY(-5px);
+  }
+  50% {
+    transform: translateY(5px);
+  }
+}
+@media (max-width: 600px) {
+  .student-orbit__slot {
+    width: 54px;
+  }
+  .student-orbit__card {
+    width: 54px;
+    height: 82px;
+    padding: 4px;
+  }
+  .student-orbit__art {
+    height: 42px;
+  }
+  .student-orbit__card strong {
+    font-size: 6px;
+  }
+  .student-orbit__handle {
+    font-size: 5px;
+  }
+  .student-orbit__slot[data-slot] {
+    left: 0;
+    right: auto;
+  }
+  .student-orbit__slot[data-slot="1"],
+  .student-orbit__slot[data-slot="3"],
+  .student-orbit__slot[data-slot="5"] {
+    left: auto;
+    right: 0;
+  }
+  .student-orbit__slot[data-slot="0"],
+  .student-orbit__slot[data-slot="1"] {
+    top: 3%;
+  }
+  .student-orbit__slot[data-slot="2"],
+  .student-orbit__slot[data-slot="3"] {
+    top: 32%;
+  }
+  .student-orbit__slot[data-slot="4"],
+  .student-orbit__slot[data-slot="5"] {
+    top: 61%;
+  }
+  .student-orbit__slot[data-slot="6"],
+  .student-orbit__slot[data-slot="7"] {
+    display: none;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .student-orbit__float {
+    animation: none;
+  }
+  .student-orbit__card {
+    transform: none;
+  }
+}

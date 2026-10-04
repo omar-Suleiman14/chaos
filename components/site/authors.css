@@ -4,6 +4,9 @@
 .authors-eyebrow { text-transform: uppercase; letter-spacing: .1em; font-size: 11px; font-weight: 600; color: var(--on-surface-variant); }
 .authors-page h1 { font-size: clamp(30px, 5vw, 48px); font-weight: 650; letter-spacing: -.035em; margin: 8px 0 12px; }
 .authors-page header > p:last-child { font-size: 15px; line-height: 1.7; color: var(--on-surface-variant); }
+.author-scene { position:relative; width:min(100%,900px); margin-inline:auto; }
+.author-scene .student-orbit { z-index:6; }
+@media (max-width:600px) { .author-scene .author-stack-card { width:calc(100vw - 180px); margin-inline-start:calc((100vw - 180px) / -2); } .author-scene .author-stack { height:390px; } }
 .author-stack { position: relative; width: min(100%, 700px); height: clamp(460px, 62vw, 580px); margin: 16px auto 0; perspective: 1200px; touch-action: pan-y; outline-offset: 4px; }
 .author-stack-card { position: absolute; width: clamp(250px, 58vw, 320px); inset-inline-start: 50%; top: 80px; margin-inline-start: calc(clamp(250px, 58vw, 320px) / -2); transform: translateX(calc(var(--position) * clamp(28px, 6vw, 64px))) translateY(calc(var(--depth) * 6px)) translateZ(calc(var(--depth) * -90px)) rotateY(var(--turn)) rotateZ(var(--lean)); transform-origin: center bottom; transition: transform 420ms cubic-bezier(.22,.8,.3,1), opacity 320ms; opacity: calc(1 - var(--depth) * .12); border-radius: 18px; backface-visibility: hidden; pointer-events: none; }
 .author-stack-card[data-active=true] { transform: translateZ(0); pointer-events: auto; cursor: grab; }
@@ -19,4 +22,3 @@
 
 .author-stack-card[data-active=true]:active { cursor: grabbing; }
 .author-stack-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 5px; }
-

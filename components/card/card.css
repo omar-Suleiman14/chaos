@@ -50,11 +50,14 @@
   color-scheme:light; color:#1d1d1f; background:#f5f5f7; font-family:-apple-system,BlinkMacSystemFont,"SF Pro Display","SF Pro Text",Inter,"Segoe UI",system-ui,sans-serif; -webkit-font-smoothing:antialiased; }
 .mc-public::before { content:""; position:absolute; inset:-25%; z-index:-1; opacity:.5; filter:blur(80px);
   background:radial-gradient(38% 38% at 28% 30%,var(--a),transparent 70%),radial-gradient(34% 34% at 74% 70%,var(--c),transparent 70%),radial-gradient(28% 28% at 72% 22%,var(--b),transparent 70%); }
-.mc-public__inner { display:grid; justify-items:center; gap:16px; width:min(680px,100%); text-align:center; }
+.mc-public__inner { display:grid; justify-items:center; gap:16px; width:min(1000px,100%); text-align:center; }
+.mc-public__scene { position:relative; width:100%; }
 .mc-public__head h1 { font-size:clamp(30px,6vw,44px); font-weight:700; line-height:1.08; letter-spacing:-.035em; margin:0; overflow-wrap:anywhere; }
 .mc-public__head p { font-size:17px; line-height:1.45; color:#6e6e73; margin:10px 0 0; }
 /* As big as the screen allows while the button row below it stays in view. */
 .mc-public .mc-stage { width:min(440px,88vw,max(280px,calc((100dvh - 162px) * .68))); --mc-shadow:0 40px 50px rgba(0,0,0,.18),0 8px 14px rgba(0,0,0,.08); }
+@media (min-width:601px) and (max-width:1000px) { .mc-public .mc-stage { width:min(440px,calc(100vw - 340px)); } }
+@media (max-width:600px) { .mc-public .mc-stage { width:min(280px,calc(100vw - 180px)); } }
 .mc-public .mc-btn { border-radius:999px; padding:10px 18px; font-size:14px; font-weight:500; color:#1d1d1f; background:rgba(255,255,255,.72); border:1px solid rgba(0,0,0,.06); -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px); }
 .mc-public .mc-btn:hover { background:rgba(255,255,255,.92); }
 .mc-public .mc { gap:28px; position:relative; }
