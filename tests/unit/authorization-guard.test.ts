@@ -50,7 +50,7 @@ describe("authorization helper guard", () => {
     // Every page folder under app/ that is not public must be listed above.
     const publicTop = new Set(["[username]", "f", "sign-in", "sign-up", "docs", "chatgpt", "connect", "pricing", "privacy", "terms", "copyright", "api", "mcp", ".well-known", "opengraph-image",
       // Live game players join with a PIN and no account (host screens live under /dashboard).
-      "play", "compare", "support", "card", "sitemap",
+      "play", "compare", "support", "faq", "card", "sitemap",
       // Published lessons, profiles and collections are readable without an account; writing needs sign-in.
       "learn"]);
     for (const folder of topLevelRouteFolders()) {
