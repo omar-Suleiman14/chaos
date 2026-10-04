@@ -1037,3 +1037,17 @@ body.noise-bg:has(.workspace-ui)::before { display: none; }
 .ws-menu .ws-new-choices button > span { display: grid; gap: 1px; }
 .ws-menu .ws-new-choices small { font-size: 12.5px; font-weight: 400; color: var(--on-surface-variant); }
 .ws-new-choices { min-width: 260px; }
+
+/* Share popup (forms and quizzes): link, QR code and embed. WsDialog makes it a bottom sheet on phones. */
+.ws-share { display: grid; gap: 18px; }
+.ws-share__tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 2px; padding: 2px; border-radius: 10px; background: var(--ws-active); }
+.ws-share__tab { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 36px; border-radius: 8px; font-size: 14px; font-weight: 500; color: var(--on-surface-variant); }
+.ws-share__tab[aria-selected="true"] { background: var(--ws-card, var(--background)); color: var(--on-background); box-shadow: 0 1px 3px rgb(0 0 0 / .12); font-weight: 600; }
+.ws-share__copy { display: flex; gap: 8px; align-items: stretch; }
+.ws-share__copy input, .ws-share__copy textarea { flex: 1; min-width: 0; padding: 10px 12px; border: 1px solid var(--ws-line-strong); border-radius: 8px; background: var(--ws-card, var(--background)); color: var(--on-background); font: 13px/1.45 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; resize: none; }
+.ws-share__copy textarea { min-height: 96px; }
+.ws-share__copy .ws-btn { flex-shrink: 0; align-self: flex-start; }
+.ws-share__targets { display: grid; grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+.ws-share__target { display: grid; justify-items: center; gap: 6px; padding: 12px 6px; border: 1px solid var(--ws-line); border-radius: 10px; font-size: 13px; color: var(--on-background); text-decoration: none; background: var(--ws-card, var(--background)); }
+.ws-share__target:hover { background: var(--ws-hover); }
+@media (max-width: 560px) { .ws-share__copy { flex-direction: column; } .ws-share__copy .ws-btn { align-self: stretch; justify-content: center; min-height: 44px; } .ws-share__targets { grid-template-columns: repeat(3, 1fr); } }

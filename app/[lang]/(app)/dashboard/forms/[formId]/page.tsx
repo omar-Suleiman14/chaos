@@ -16,6 +16,7 @@ import StatusBadge from "@/components/forms/StatusBadge";
 import SourceDetails from "@/components/forms/SourceDetails";
 import BuildTab from "@/components/forms/builder/BuildTab";
 import EmbedPanel from "@/components/forms/builder/EmbedPanel";
+import SharePopup from "@/components/forms/builder/SharePopup";
 import { FullPreview } from "@/components/forms/builder/FormPreview";
 import QuizLearningLinks from "@/components/learn/editor/QuizLearningLinks";
 import HostLiveButton from "@/components/live/HostLiveButton";
@@ -81,7 +82,7 @@ const copy = {
     library: "Library", undo: "Undo", redo: "Redo", undoTitle: "Undo (Ctrl+Z)", redoTitle: "Redo (Ctrl+Y)", archivedReadOnly: "Archived · read-only", readOnly: "Read-only",
     results: (n: number) => `Results${n > 0 ? ` (${n})` : ""}`, preview: "Preview",
     publishing: "Publishing…", awaiting: "Awaiting approval", requestPublication: "Request publication", publishChanges: "Publish changes", publishedLabel: "Published", publish: "Publish",
-    moreActions: "More actions", unpin: "Unpin from sidebar", pin: "Pin to sidebar", openLive: "Open live page", copyLink: "Copy link",
+    share: "Share", moreActions: "More actions", unpin: "Unpin from sidebar", pin: "Pin to sidebar", openLive: "Open live page", copyLink: "Copy link",
     quizTitle: "Quiz title", formTitle: "Form title", untitledQuiz: "Untitled quiz", untitledForm: "Untitled form", quizMode: "Quiz mode", changeLimits: "Change limits in Settings",
     kindQuiz: "quiz", kindForm: "form",
     role: (role: string, kind: string) => `You are ${role === "editor" ? "an editor" : "a viewer"} of this ${kind}. `,
@@ -107,7 +108,7 @@ const copy = {
     library: "المكتبة", undo: "تراجع", redo: "إعادة", undoTitle: "تراجع (Ctrl+Z)", redoTitle: "إعادة (Ctrl+Y)", archivedReadOnly: "مؤرشف · للقراءة فقط", readOnly: "للقراءة فقط",
     results: (n: number) => `النتائج${n > 0 ? ` (${n})` : ""}`, preview: "معاينة",
     publishing: "جارٍ النشر…", awaiting: "بانتظار الموافقة", requestPublication: "اطلب النشر", publishChanges: "انشر التغييرات", publishedLabel: "منشور", publish: "انشر",
-    moreActions: "إجراءات أخرى", unpin: "إلغاء التثبيت من الشريط الجانبي", pin: "ثبّت في الشريط الجانبي", openLive: "افتح الصفحة المنشورة", copyLink: "انسخ الرابط",
+    share: "مشاركة", moreActions: "إجراءات أخرى", unpin: "إلغاء التثبيت من الشريط الجانبي", pin: "ثبّت في الشريط الجانبي", openLive: "افتح الصفحة المنشورة", copyLink: "انسخ الرابط",
     quizTitle: "عنوان الاختبار", formTitle: "عنوان النموذج", untitledQuiz: "اختبار بلا عنوان", untitledForm: "نموذج بلا عنوان", quizMode: "وضع الاختبار", changeLimits: "غيّر الحدود من الإعدادات",
     kindQuiz: "الاختبار", kindForm: "النموذج",
     role: (role: string, kind: string) => `أنت ${role === "editor" ? "محرر" : "مشاهد"} في هذا ${kind === "الاختبار" ? "الاختبار" : "النموذج"}. `,
@@ -154,6 +155,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
   const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string; list?: string[] } | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [previewing, setPreviewing] = useState(false);
+  const [sharing, setSharing] = useState(false);
   const [toast, setToast] = useState<UndoToast | null>(null);
   const { toggle: togglePin, isPinned } = usePinned();
   useEffect(preloadTabs, []);
@@ -212,6 +214,8 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
       }
       const result = await publish({ formId, expectedRevision: d.revision() });
       posthog.capture("form_published", { outcome: result.outcome, form_type: quiz ? "quiz" : "form" });
+      // First time it goes live: offer the link, QR code and embed right away.
+      if (result.outcome !== "approval_requested" && !published) setSharing(true);
       setNotice(result.outcome === "approval_requested"
         ? { kind: "ok", text: t.requested }
         : { kind: "ok", text: t.published(result.version) });
@@ -268,6 +272,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
             </span>
             <Link href={`/dashboard/forms/${formId}/responses`} aria-label={t.results(data.responseCount)} className="ws-btn ws-btn--ghost"><BarChart3 size={17} /><span className="ws-phone-hide">{t.results(data.responseCount)}</span></Link>
             <button type="button" onClick={() => setPreviewing(true)} aria-label={t.preview} className="ws-btn"><Play size={16} /><span className="ws-phone-hide">{t.preview}</span></button>
+            {published && data.status === "live" && <button type="button" onClick={() => setSharing(true)} aria-label={t.share} className="ws-btn"><Share2 size={16} /><span className="ws-phone-hide">{t.share}</span></button>}
             {canEdit && quiz && published && data.status !== "archived" && <HostLiveButton formId={formId}onError={(text) => setNotice({ kind: "error", text })} />}
             {canEdit && (
               <button type="button" onClick={handlePublish} disabled={publishing || (data.approvalPending && needsApproval)} className="ws-btn ws-btn--primary">
@@ -405,6 +410,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
         {tab === "History" && <HistoryTab formId={formId} versions={data.versions} canEdit={canEdit} revision={d.revision} beforeRestore={d.save} />}
       </div>
       {previewing && <FullPreview def={def} onClose={() => setPreviewing(false)} />}
+      {sharing && <SharePopup formId={formId} shareId={data.shareId} slug={data.slug} title={def.title} quiz={quiz} onClose={() => setSharing(false)} />}
       <WsUndoToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
