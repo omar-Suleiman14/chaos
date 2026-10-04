@@ -1,19 +1,22 @@
 import { v } from "convex/values";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
-import { query, mutation, internalMutation } from "./_generated/server";
+import { query, mutation, internalMutation, type QueryCtx } from "./_generated/server";
 import { requireActiveUser } from "./authz";
 import { internal } from "./_generated/api";
 import { authorTables, syncAuthorAsset } from "./authorIndex";
 import { avatarSeed } from "../lib/avatarSeed";
 
 const card = v.object({ name: v.string(), username: v.string(), seed: v.string(), memberSince: v.number(), style: v.number() });
+export async function browsePublicAuthors(ctx: QueryCtx, paginationOpts: { numItems: number; cursor: string | null }) {
+  if (!Number.isSafeInteger(paginationOpts.numItems) || paginationOpts.numItems < 1 || paginationOpts.numItems > 48) throw new Error("VALIDATION_FAILED: Invalid author page size");
+  const result = await ctx.db.query("users").withIndex("by_publicAuthorAssets", q => q.gt("publicAuthorAssets", 0)).order("desc").paginate(paginationOpts);
+  return { ...result, page: result.page.filter(user => !user.hideFromAuthorLists && !user.isBanned && !user.suspendedUntil && /^[a-z0-9][a-z0-9_.-]{2,63}$/.test(user.username)).map(user => ({ name: user.name, username: user.username, seed: user.cardAvatarSeed ?? avatarSeed(user.clerkId), memberSince: user.createdAt, style: user.cardStyle ?? 0 })) };
+}
 export const browse = query({
   args: { paginationOpts: paginationOptsValidator },
   returns: paginationResultValidator(card),
   handler: async (ctx, { paginationOpts }) => {
-    if (paginationOpts.numItems < 1 || paginationOpts.numItems > 48) throw new Error("Invalid author page size");
-    const result = await ctx.db.query("users").withIndex("by_publicAuthorAssets", q => q.gt("publicAuthorAssets", 0)).order("desc").paginate(paginationOpts);
-    return { ...result, page: result.page.filter(user => !user.hideFromAuthorLists && !user.isBanned && !user.suspendedUntil && /^[a-z0-9][a-z0-9_.-]{2,63}$/.test(user.username)).map(user => ({ name: user.name, username: user.username, seed: avatarSeed(user.clerkId), memberSince: user.createdAt, style: user.cardStyle ?? 0 })) };
+    return browsePublicAuthors(ctx, paginationOpts);
   },
 });
 

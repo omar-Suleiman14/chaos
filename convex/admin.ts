@@ -1,5 +1,6 @@
+import { addCrmNote, contactListArgs, contactSaveArgs, listCrmContacts, readCrmNotes, saveCrmContact } from "./crmServices";
 import { authorDb } from "./authorIndex";
-﻿import { v } from "convex/values";
+import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { mutation, query, internalMutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
@@ -8,6 +9,18 @@ import { internal } from "./_generated/api";
 import { isPaidPlan, requireAdmin, requireIdentity } from "./authz";
 
 const DAY = 86_400_000;
+export const contacts = query({ args: contactListArgs, handler: async (ctx, args) => {
+  await requireAdmin(ctx); return listCrmContacts(ctx, args);
+} });
+export const contactNotes = query({ args: { contactId: v.id("crmContacts") }, handler: async (ctx, { contactId }) => {
+  await requireAdmin(ctx); return readCrmNotes(ctx, contactId);
+} });
+export const saveContact = mutation({ args: contactSaveArgs, handler: async (ctx, args) => {
+  await requireAdmin(ctx); const identity = await requireIdentity(ctx); return saveCrmContact(ctx, identity.subject, args);
+} });
+export const addContactNote = mutation({ args: { contactId: v.id("crmContacts"), body: v.string() }, handler: async (ctx, { contactId, body }) => {
+  await requireAdmin(ctx); const identity = await requireIdentity(ctx); await addCrmNote(ctx, identity.subject, contactId, body); return null;
+} });
 const planValidator = v.union(v.literal("free"), v.literal("pro"));
 const stateValidator = v.union(
   v.literal("active"),
@@ -41,7 +54,13 @@ const pageFields = {
   isDone: v.boolean(),
   continueCursor: v.string(),
   splitCursor: v.optional(v.union(v.string(), v.null())),
-  pageStatus: v.optional(v.union(v.literal("SplitRecommended"), v.literal("SplitRequired"), v.null())),
+  pageStatus: v.optional(
+    v.union(
+      v.literal("SplitRecommended"),
+      v.literal("SplitRequired"),
+      v.null(),
+    ),
+  ),
 };
 
 export const users = query({
@@ -312,7 +331,11 @@ export const moderateContent = mutation({
     const reason = reasonText(args.reason);
     const formId = ctx.db.normalizeId("forms", args.targetId);
     const quizId = ctx.db.normalizeId("quizzes", args.targetId);
-    const item = formId ? await ctx.db.get("forms", formId) : quizId ? await ctx.db.get("quizzes", quizId) : null;
+    const item = formId
+      ? await ctx.db.get("forms", formId)
+      : quizId
+        ? await ctx.db.get("quizzes", quizId)
+        : null;
     if (!item) throw new Error("Content not found");
     if ("shareId" in item) {
       await authorDb(ctx).patch("forms", item._id, {
@@ -471,12 +494,31 @@ export const grantAdmin = internalMutation({
   returns: v.object({ clerkId: v.string(), alreadyAdmin: v.boolean() }),
   handler: async (ctx, args) => {
     const email = args.email.trim().toLowerCase();
-    const user = await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email)).first();
-    if (!user) throw new Error("USER_NOT_FOUND: Sign in to Chaos with this email once, then try again.");
-    const existing = await ctx.db.query("admins").withIndex("by_clerkId", (q) => q.eq("clerkId", user.clerkId)).first();
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_email", (q) => q.eq("email", email))
+      .first();
+    if (!user)
+      throw new Error(
+        "USER_NOT_FOUND: Sign in to Chaos with this email once, then try again.",
+      );
+    const existing = await ctx.db
+      .query("admins")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", user.clerkId))
+      .first();
     if (existing) return { clerkId: user.clerkId, alreadyAdmin: true };
-    await ctx.db.insert("admins", { clerkId: user.clerkId, email, grantedAt: Date.now() });
-    await ctx.db.insert("adminAudit", { actorId: "convex-cli", action: "grant_admin", target: user.clerkId, reason: email, createdAt: Date.now() });
+    await ctx.db.insert("admins", {
+      clerkId: user.clerkId,
+      email,
+      grantedAt: Date.now(),
+    });
+    await ctx.db.insert("adminAudit", {
+      actorId: "convex-cli",
+      action: "grant_admin",
+      target: user.clerkId,
+      reason: email,
+      createdAt: Date.now(),
+    });
     return { clerkId: user.clerkId, alreadyAdmin: false };
   },
 });
@@ -490,7 +532,13 @@ export const revokeAdmin = internalMutation({
     const matches = rows.filter((row) => row.email === email);
     for (const row of matches) {
       await ctx.db.delete("admins", row._id);
-      await ctx.db.insert("adminAudit", { actorId: "convex-cli", action: "revoke_admin", target: row.clerkId, reason: email, createdAt: Date.now() });
+      await ctx.db.insert("adminAudit", {
+        actorId: "convex-cli",
+        action: "revoke_admin",
+        target: row.clerkId,
+        reason: email,
+        createdAt: Date.now(),
+      });
     }
     return matches.length;
   },

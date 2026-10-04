@@ -1,12 +1,11 @@
 "use client";
 import DocumentationPanel from "@/components/admin/DocumentationPanel";
-﻿
-
 import Link from "next/link";
 import { useState } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
+import MemberAvatar from "@/components/MemberAvatar";
 import type { Id } from "@/convex/_generated/dataModel";
 import {
   Dialog,
@@ -16,7 +15,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { WsTabs } from "@/components/workspace/primitives";
+import CrmPanel from "@/components/admin/CrmPanel";
+import SidebarNavItem from "@/components/admin/crm/SidebarNavItem";
+import "@/components/admin/crm/crm.css";
 import { supportEmail } from "@/lib/site";
 import {
   Shield,
@@ -29,8 +30,10 @@ import {
 } from "lucide-react";
 
 const adminTabs = [
+  { id: "contacts", icon: Users, label: "Contacts" },
+  { id: "followups", icon: History, label: "Follow-ups" },
   { id: "overview", icon: BarChart3, label: "Overview" },
-  { id: "users", icon: Users, label: "Users & plans" },
+  { id: "users", icon: Users, label: "Accounts" },
   { id: "forms", icon: FileText, label: "Forms" },
   { id: "quizzes", icon: FileText, label: "Legacy quizzes" },
   { id: "docs", icon: FileText, label: "Documentation" },
@@ -88,7 +91,7 @@ function AdminGate() {
   return <AdminConsole />;
 }
 function AdminConsole() {
-  const [tab, setTab] = useState("overview");
+  const [tab, setTab] = useState("contacts");
   const [action, setAction] = useState<Action | null>(null);
   const [reason, setReason] = useState("");
   const [days, setDays] = useState(7);
@@ -119,59 +122,70 @@ function AdminConsole() {
     }
   }
   return (
-    <div className="workspace-ui min-h-screen bg-background text-foreground">
-      <header className="border-b px-5 md:px-10 py-4 flex items-center justify-between gap-4">
-        <Link
-          href="/dashboard"
-          className="flex items-center gap-2 text-sm text-muted-foreground"
-        >
-          <ArrowLeft size={16} /> Workspace
-        </Link>
-        <span className="flex items-center gap-2 text-sm font-medium">
-          <Shield size={16} /> Chaos admin
-        </span>
-        <a
-          className="text-sm text-muted-foreground"
-          href={`mailto:${supportEmail}`}
-        >
-          Support
-        </a>
-      </header>
-      <main className="max-w-6xl mx-auto p-5 md:p-10 space-y-7">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">
-            Administration
-          </h1>
-          <p className="text-muted-foreground mt-2">
-            Manage accounts, keep content safe, and see how Chaos is being used.
-          </p>
+    <div className="workspace-ui chaos-admin bg-background text-foreground">
+      <aside className="crm-sidebar">
+        <div className="crm-brand">
+          <Shield size={28} />
+          <div>
+            <strong>Chaos</strong>
+            <small>Admin workspace</small>
+          </div>
         </div>
-        <WsTabs
-          label="Admin sections"
-          tabs={adminTabs.map((t) => t.label)}
-          value={adminTabs.find((t) => t.id === tab)!.label}
-          onChange={(label) => setTab(adminTabs.find((t) => t.label === label)!.id)}
-          icons={Object.fromEntries(adminTabs.map((t) => [t.label, t.icon]))}
-        />
-        {message && (
-          <p role="status" className="rounded-lg bg-muted p-3 text-sm">
-            {message}
-          </p>
-        )}
-        {tab === "docs" ? <DocumentationPanel /> : tab === "overview" ? (
-          <Overview />
-        ) : tab === "users" ? (
-          <UsersPanel choose={choose} />
-        ) : tab === "activity" ? (
-          <Activity />
-        ) : (
-          <ContentPanel
-            key={tab}
-            kind={tab as "forms" | "quizzes"}
-            choose={choose}
-          />
-        )}
-      </main>
+        <nav aria-label="Admin sections">
+          <p className="crm-nav-heading">Relationships & operations</p>
+          {adminTabs.map(({ id, icon, label }) => (
+            <SidebarNavItem
+              key={id}
+              icon={icon}
+              label={label}
+              active={tab === id}
+              onClick={() => setTab(id)}
+            />
+          ))}
+        </nav>
+        <Link href="/dashboard" className="crm-sidebar-footer">
+          <ArrowLeft size={16} />
+          Back to workspace
+        </Link>
+      </aside>
+      <div className="crm-admin-body">
+        <header className="crm-admin-header">
+          <div>
+            <h1>{adminTabs.find((item) => item.id === tab)?.label}</h1>
+            <p>Chaos / Administration</p>
+          </div>
+          <a
+            className="text-sm text-muted-foreground"
+            href={`mailto:${supportEmail}`}
+          >
+            Support
+          </a>
+        </header>
+        <main className="crm-admin-main space-y-7">
+          {message && (
+            <p role="status" className="rounded-lg bg-muted p-3 text-sm">
+              {message}
+            </p>
+          )}
+          {tab === "contacts" || tab === "followups" ? (
+            <CrmPanel key={tab} followUps={tab === "followups"} />
+          ) : tab === "docs" ? (
+            <DocumentationPanel />
+          ) : tab === "overview" ? (
+            <Overview />
+          ) : tab === "users" ? (
+            <UsersPanel choose={choose} />
+          ) : tab === "activity" ? (
+            <Activity />
+          ) : (
+            <ContentPanel
+              key={tab}
+              kind={tab as "forms" | "quizzes"}
+              choose={choose}
+            />
+          )}
+        </main>
+      </div>
       <Dialog
         open={!!action}
         onOpenChange={(open) => {
@@ -263,7 +277,6 @@ function Overview() {
   const stats = report.counts;
   const metrics = [
     ["Accounts", stats.users],
-    ["Pro accounts", stats.pro],
     ["Restricted accounts", stats.restricted],
     ["Live forms", `${stats.liveForms} / ${stats.forms}`],
     ["Live legacy quizzes", `${stats.liveQuizzes} / ${stats.quizzes}`],
@@ -298,18 +311,12 @@ function Overview() {
           </div>
         ))}
       </div>
-      <div className="rounded-xl border p-5 space-y-2">
-        <h3 className="font-semibold">Plans</h3>
-        <p className="text-sm text-muted-foreground">
-          Every account has every feature with no creation or response caps.
-          Personal is free; a Pro grant here marks a paid Business seat for
-          reporting only. Existing content is kept when a plan ends.
-        </p>
-      </div>
       <div className="rounded-xl border p-5">
         <h3 className="font-semibold">Product analytics</h3>
         <p className="text-sm text-muted-foreground mt-2">
-          PostHog receives screen names, errors and a few counts, such as submitted responses. It never receives answers, form content, URLs or recordings.
+          PostHog receives screen names, errors and a few counts, such as
+          submitted responses. It never receives answers, form content, URLs or
+          recordings.
         </p>
         <a
           href="https://eu.posthog.com"
@@ -326,50 +333,15 @@ function Overview() {
 function UsersPanel({ choose }: { choose: ChooseAction }) {
   const [emailInput, setEmailInput] = useState("");
   const [email, setEmail] = useState("");
-  const [selected, setSelected] = useState<Set<Id<"users">>>(new Set());
-  const [all, setAll] = useState(false);
-  const [jobId, setJobId] = useState<Id<"adminBulkJobs"> | null>(null);
-  const job = useQuery(api.admin.bulkJob, jobId ? { jobId } : "skip");
+  const [crmMessage, setCrmMessage] = useState("");
+  const [saving, setSaving] = useState<string | null>(null);
   const { results, status, loadMore } = usePaginatedQuery(
     api.admin.users,
     email ? { email } : {},
     { initialNumItems: 25 },
   );
   const moderate = useMutation(api.admin.moderateUser);
-  const plan = useMutation(api.admin.setPlan);
-  const bulk = useMutation(api.admin.bulkPlan);
-  const bulkAll = useMutation(api.admin.allUsersPlan);
-  const toggle = (id: Id<"users">) => {
-    setAll(false);
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else if (next.size < 100) next.add(id);
-      return next;
-    });
-  };
-  const bulkAction = (target: "pro" | "free") =>
-    choose({
-      title: `${target === "pro" ? "Grant Pro for 30 days" : "Move to Free"} · ${all ? "all accounts" : `${selected.size} selected`}`,
-      description: all
-        ? "This applies to every account currently in Chaos, including yours. Accounts created afterward are excluded. Processing runs in batches."
-        : "Existing content and responses will be kept. Pro grants expire 30 days from now, including renewals.",
-      run: async (reason) => {
-        if (all) setJobId(await bulkAll({ plan: target, reason }));
-        else await bulk({ userIds: [...selected], plan: target, reason });
-        setSelected(new Set());
-        setAll(false);
-      },
-    });
-  const planAction = (user: User, target: "pro" | "free") =>
-    choose({
-      title: `${target === "pro" ? "Grant / renew Pro" : "Move to Free"} · ${user.name}`,
-      description:
-        target === "pro"
-          ? "Pro lasts 30 days from now and returns to Free automatically."
-          : "Free allows five new items per month. Existing content and responses stay intact.",
-      run: (reason) => plan({ userId: user._id, plan: target, reason }),
-    });
+  const saveContact = useMutation(api.admin.saveContact);
   const stateAction = (user: User, state: "active" | "suspended" | "banned") =>
     choose({
       title: `${state === "active" ? "Restore account" : state === "banned" ? "Ban account" : "Suspend account"} · ${user.name}`,
@@ -381,22 +353,42 @@ function UsersPanel({ choose }: { choose: ChooseAction }) {
       run: (reason, days) =>
         moderate({ userId: user._id, state, reason, days }),
     });
+  async function addToCrm(user: User) {
+    setSaving(user._id);
+    setCrmMessage("");
+    try {
+      await saveContact({
+        name: user.name,
+        email: user.email,
+        organization: "",
+        stage: "new",
+        owner: "",
+        source: "Chaos account",
+        userId: user._id,
+      });
+      setCrmMessage(`${user.name} added to Contacts.`);
+    } catch (error) {
+      setCrmMessage(
+        error instanceof Error ? error.message : "Could not add contact.",
+      );
+    } finally {
+      setSaving(null);
+    }
+  }
   return (
     <section className="space-y-4">
       <form
         className="flex gap-2 max-w-lg"
-        onSubmit={(e) => {
-          e.preventDefault();
+        onSubmit={(event) => {
+          event.preventDefault();
           setEmail(emailInput.trim());
-          setSelected(new Set());
-          setAll(false);
         }}
       >
         <Input
           aria-label="Exact account email"
           placeholder="Find an account by exact email"
           value={emailInput}
-          onChange={(e) => setEmailInput(e.target.value)}
+          onChange={(event) => setEmailInput(event.target.value)}
         />
         <Button variant="outline" type="submit">
           <Search size={16} />
@@ -405,142 +397,62 @@ function UsersPanel({ choose }: { choose: ChooseAction }) {
         {email && (
           <Button
             variant="ghost"
+            type="button"
             onClick={() => {
               setEmail("");
               setEmailInput("");
-              setSelected(new Set());
-              setAll(false);
             }}
           >
             Clear
           </Button>
         )}
       </form>
-      <div className="flex flex-wrap gap-3 items-center rounded-lg bg-muted/50 p-3">
-        <label className="flex items-center gap-2 text-sm">
-          <input
-            type="checkbox"
-            checked={
-              all ||
-              (results.length > 0 &&
-                results.slice(0, 100).every((u) => selected.has(u._id)))
-            }
-            onChange={(e) => {
-              setAll(false);
-              setSelected(
-                e.target.checked
-                  ? new Set(results.slice(0, 100).map((u) => u._id))
-                  : new Set(),
-              );
-            }}
-          />
-          Select loaded (up to 100)
-        </label>
-        <Button
-          size="sm"
-          variant="ghost"
-          onClick={() => {
-            setAll(true);
-            setSelected(new Set());
-          }}
-        >
-          Select all accounts
-        </Button>
-        <span className="text-sm text-muted-foreground">
-          {all ? "Every account selected" : `${selected.size} selected`}
-        </span>
-        <Button
-          size="sm"
-          disabled={(!all && !selected.size) || job?.done === false}
-          onClick={() => bulkAction("pro")}
-        >
-          Upgrade / renew
-        </Button>
-        <Button
-          size="sm"
-          variant="outline"
-          disabled={(!all && !selected.size) || job?.done === false}
-          onClick={() => bulkAction("free")}
-        >
-          Downgrade
-        </Button>
-        {all && (
-          <Button variant="ghost" size="sm" onClick={() => setAll(false)}>
-            Clear selection
-          </Button>
-        )}
-      </div>
-      {job && (
-        <p role="status" className="text-sm">
-          {job.done ? "Bulk update complete" : "Bulk update in progress"}:{" "}
-          {job.processed} accounts updated.
-        </p>
-      )}
+      {crmMessage && <p role="status">{crmMessage}</p>}
       {status === "LoadingFirstPage" ? (
         <p role="status">Loading accounts…</p>
-      ) : results.length === 0 ? (
+      ) : !results.length ? (
         <p className="py-8 text-muted-foreground">No accounts found.</p>
       ) : (
-        <div className="divide-y border rounded-xl">
-          {results.map((u) => (
+        <div className="divide-y border rounded-lg">
+          {results.map((user) => (
             <article
-              key={u._id}
+              key={user._id}
               className="p-4 flex flex-col lg:flex-row gap-4 lg:items-center"
             >
-              <label className="flex gap-3 items-start flex-1 min-w-0">
-                <input
-                  className="mt-1"
-                  type="checkbox"
-                  aria-label={`Select ${u.email || u.name}`}
-                  checked={all || selected.has(u._id)}
-                  onChange={() => toggle(u._id)}
-                />
-                <span className="min-w-0">
-                  <span className="font-medium block">{u.name}</span>
-                  <span className="text-sm text-muted-foreground break-all block">
-                    {u.email} · @{u.username}
-                  </span>
-                  <span className="text-sm block mt-2">
-                    {u.state}
-                    {u.suspendedUntil
-                      ? ` until ${date(u.suspendedUntil)}`
-                      : ""}{" "}
-                    · {u.plan === "pro" ? "Pro" : "Free"}
-                    {u.legacyGrant
-                      ? " (legacy grant)"
-                      : u.planExpiresAt
-                        ? ` until ${date(u.planExpiresAt)}`
-                        : ""}
-                  </span>
-                  {u.reason && (
-                    <span className="text-xs text-muted-foreground block mt-1">
-                      {u.reason}
-                    </span>
+              <div className="flex gap-3 flex-1 min-w-0">
+                <MemberAvatar seed={user.email || user.name} size={36} />
+                <div>
+                  <strong className="block font-medium">{user.name}</strong>
+                  <p className="text-sm text-muted-foreground break-all">
+                    {user.email} · @{user.username}
+                  </p>
+                  <p className="text-sm mt-2">
+                    {user.state}
+                    {user.suspendedUntil
+                      ? ` until ${date(user.suspendedUntil)}`
+                      : ""}
+                  </p>
+                  {user.reason && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {user.reason}
+                    </p>
                   )}
-                </span>
-              </label>
+                </div>
+              </div>
               <div className="flex flex-wrap gap-2">
                 <Button
                   size="sm"
                   variant="outline"
-                  onClick={() => planAction(u, "pro")}
+                  disabled={saving !== null}
+                  onClick={() => addToCrm(user)}
                 >
-                  {u.plan === "pro" ? "Renew Pro" : "Grant Pro"}
+                  {saving === user._id ? "Saving…" : "Add to CRM"}
                 </Button>
-                {u.plan === "pro" && (
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => planAction(u, "free")}
-                  >
-                    Free
-                  </Button>
-                )}
-                {u.state !== "active" && (
+                {user.state !== "active" && (
                   <Button
                     size="sm"
                     variant="outline"
-                    onClick={() => stateAction(u, "active")}
+                    onClick={() => stateAction(user, "active")}
                   >
                     Restore
                   </Button>
@@ -548,16 +460,16 @@ function UsersPanel({ choose }: { choose: ChooseAction }) {
                 <Button
                   size="sm"
                   variant="ghost"
-                  onClick={() => stateAction(u, "suspended")}
+                  onClick={() => stateAction(user, "suspended")}
                 >
                   Suspend
                 </Button>
-                {u.state !== "banned" && (
+                {user.state !== "banned" && (
                   <Button
                     size="sm"
                     variant="ghost"
                     className="text-destructive"
-                    onClick={() => stateAction(u, "banned")}
+                    onClick={() => stateAction(user, "banned")}
                   >
                     Ban
                   </Button>

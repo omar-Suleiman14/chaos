@@ -318,6 +318,15 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "set_course_modules": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:modules"), { ...input, userId }); break;
       case "get_weak_area_actions": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:weakAreas"), { userId }); break;
       case "get_my_card": result = await ctx.runQuery(makeFunctionReference<"query">("memberCards:mcpMine"), { userId }); break;
+      case "list_public_authors": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCards:authors"), { ...input, userId }); break;
+      case "get_public_card": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCards:card"), { ...input, userId }); break;
+      case "list_public_student_cards": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCards:students"), { ...input, userId }); break;
+      case "get_student_card_visibility": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCards:visibility"), { ...input, userId }); break;
+      case "set_author_listing_visibility": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCards:listing"), { ...input, userId }); break;
+      case "list_crm_contacts": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCrm:list"), { ...input, userId }); break;
+      case "get_crm_contact": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCrm:get"), { ...input, userId }); break;
+      case "save_crm_contact": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCrm:save"), { ...input, userId }); break;
+      case "add_crm_note": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCrm:addNote"), { ...input, userId }); break;
       case "customize_my_card": result = await ctx.runMutation(makeFunctionReference<"mutation">("memberCards:mcpCustomize"), { ...input, userId }); break;
       case "list_my_students": result = await ctx.runQuery(makeFunctionReference<"query">("studentRoster:mcpList"), { ...input, userId }); break;
       case "set_student_card_visibility": result = await ctx.runMutation(makeFunctionReference<"mutation">("studentRoster:mcpVisibility"), { ...input, userId }); break;
@@ -427,6 +436,10 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
     }
     return respond({ status: 200, body: { result } });
   } catch (caught) {
+    if (["list_public_authors", "get_public_card", "list_public_student_cards", "get_student_card_visibility", "set_author_listing_visibility", "list_crm_contacts", "get_crm_contact", "save_crm_contact", "add_crm_note"].includes(b.tool) && caught instanceof Error) {
+      if (/ArgumentValidationError|Validator error/.test(caught.message)) return error(400, "VALIDATION_FAILED", "Invalid card or CRM arguments; use IDs returned by Chaos tools.");
+      if (caught.message.startsWith("CONFLICT:")) return error(409, "CONFLICT", caught.message.slice(9).trim());
+    }
     if (["list_lesson_curriculum_mappings", "search_curriculum_modules"].includes(b.tool) && caught instanceof Error) {
       if (/ArgumentValidationError|Validator error|VALIDATION_FAILED/.test(caught.message)) return error(400, "VALIDATION_FAILED", "Invalid curriculum tool arguments.");
       if (/Lesson not found or unauthorized|Version not found/.test(caught.message)) return error(404, "NOT_FOUND", "Lesson or curriculum version not found or unauthorized.");

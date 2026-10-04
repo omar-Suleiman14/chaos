@@ -1,4 +1,6 @@
 import { registerDocumentationTools } from "./docs";
+import { registerCardTools } from "./cards";
+import { registerCrmTools } from "./crm";
 // The Chaos ChatGPT app: MCP tool definitions. Served by app/mcp/route.ts.
 // Tools only describe and forward; Convex (convex/mcp.ts) enforces access,
 // validation, plan limits and rate limits for the signed-in Chaos account.
@@ -32,6 +34,8 @@ const securitySchemes = [{ type: "oauth2", scopes: MCP_SCOPES }];
 
 const instructions = `Chaos (chaos.fail) is where this person builds forms, surveys, quizzes, Learn lessons and courses, organises owned content in folders, and reads authorized published material and requested answers.
 - The Chaos app is free on every plan.
+- Cards: list_public_authors browses the opted-in author directory; get_public_card resolves current usernames and retained aliases. list_public_student_cards reads only opted-in account Cards, defaulting to eight floating previews. get_student_card_visibility and set_student_card_visibility concern only this person's existing teacher relationship. set_author_listing_visibility controls only this person's directory listing. The card fan animation is a browser interaction at https://chaos.fail/card.
+- Administrator connections also expose CRM tools: list_crm_contacts, get_crm_contact, save_crm_contact and add_crm_note. These contain private contact information. Read an existing contact before saving and preserve fields the administrator did not ask to change, including its linked account and follow-up date. CRM writes are audited; they never send messages. Do not retry creation or note additions after uncertain success.
 - The person has chosen that new things go live: create_form, create_game_draft, create_lesson, create_full_course and create_flashcard_set publish as soon as they are created (lessons, courses and flashcards as public). Pass publish false only when the person asks for a draft or private work. If publishing is blocked, the result lists the problems and the item stays a draft: tell the person what to fix. Later edits to existing content are drafts until publish_form, publish_lesson or publish_course. Folders are private organisation, not publishable content.
 - Work only on content the person selected or asked to find. Authorization is enforced for the connected account; never supply an actor/userId or infer permission from a reference. Folder membership and source metadata do not grant content access. Only request source metadata through the supported tools; no source file bytes are exposed here.
 - Forms return shareUrl: share it only when returned and published. Lesson and course tools do not return shareUrl. After publish_lesson returns ok true, use the lessonId from a verified create/get response to construct https://chaos.fail/learn/<lessonId>. After publish_course returns ok true, use courseId from verified create_course (or id from get_course) to construct https://chaos.fail/learn/courses/<courseId>. Never invent IDs, claim draft links are public, or imply private/restricted links grant access. Visibility values are public, restricted and private; restricted/private require Business.
@@ -458,6 +462,8 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
   }, (input) => run("set_form_status", input, (d) => `“${d.title}” is now ${d.status}.`));
 
   if (options.admin) registerDocumentationTools(server, run, securitySchemes);
+  if (options.admin) registerCrmTools(server, run, securitySchemes);
+  registerCardTools(server, run, securitySchemes);
   registerLearnTools(server, run, securitySchemes, { call, flow });
   registerOrganizationTools(server, run, securitySchemes);
   registerCourseTools(server, run, securitySchemes, { call, flow });

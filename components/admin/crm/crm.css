@@ -1,0 +1,310 @@
+/* Table, Tag and DetailSection adapted from github.com/kargulstudio/sales-crm.
+   The CRM is scoped to the Chaos admin; data comes from Convex. */
+.chaos-admin,
+.crm-contact-dialog {
+  --foreground: var(--on-background);
+  --muted: var(--ws-sidebar);
+  --muted-foreground: var(--on-surface-variant);
+  --border: var(--ws-line);
+}
+.chaos-admin {
+  --line-strong: var(--border);
+  --tag-blue-border: #345778;
+  --tag-blue-bg: #1c3045;
+  --tag-blue-text: #b5d6fc;
+  --tag-purple-border: #57446c;
+  --tag-purple-bg: #30223d;
+  --tag-purple-text: #d9b9fa;
+  --tag-green-border: #315c49;
+  --tag-green-bg: #1a3328;
+  --tag-green-text: #a7dfc0;
+  --tag-neutral-border: var(--border);
+  --tag-neutral-bg: var(--muted);
+  --tag-neutral-text: var(--muted-foreground);
+  display: flex;
+  min-height: 100vh;
+  font-size: 14px;
+}
+.crm-sidebar {
+  width: 232px;
+  flex: none;
+  background: var(--muted);
+  border-inline-end: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  position: sticky;
+  top: 0;
+  height: 100dvh;
+}
+.crm-brand {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+  padding: 22px 20px;
+  border-bottom: 1px solid var(--border);
+}
+.crm-brand strong {
+  display: block;
+  font-size: 16px;
+  letter-spacing: -0.03em;
+}
+.crm-brand small {
+  color: var(--muted-foreground);
+}
+.crm-sidebar nav {
+  padding: 14px 12px;
+  flex: 1;
+}
+.crm-nav-heading {
+  padding: 18px 10px 8px;
+  color: var(--muted-foreground);
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  font-size: 10px;
+}
+.crm-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  text-align: start;
+  padding: 9px 12px;
+  border-radius: 6px;
+  color: var(--muted-foreground);
+  cursor: pointer;
+}
+.crm-nav-item:hover {
+  background: var(--background);
+  color: var(--foreground);
+}
+.crm-nav-item[aria-current="page"] {
+  background: var(--background);
+  color: var(--foreground);
+  box-shadow: 0 1px 3px #0001;
+  font-weight: 600;
+}
+.crm-sidebar-footer {
+  padding: 18px 20px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--muted-foreground);
+}
+.crm-admin-body {
+  flex: 1;
+  min-width: 0;
+}
+.crm-admin-header {
+  padding: 20px 28px;
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+.crm-admin-header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.025em;
+}
+.crm-admin-header p {
+  color: var(--muted-foreground);
+  font-size: 12px;
+  margin-top: 4px;
+}
+.crm-admin-main {
+  padding: 28px;
+}
+.crm-admin-main:has(.crm-panel) {
+  padding: 0;
+}
+.crm-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 20px 28px;
+  flex-wrap: wrap;
+}
+.crm-toolbar form {
+  margin-inline-end: auto;
+  min-width: 260px;
+}
+.crm-select {
+  min-height: 36px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 6px 12px;
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 13px;
+}
+.crm-table-scroll {
+  overflow: auto;
+  border-block: 1px solid var(--border);
+}
+.crm-panel table {
+  min-width: 900px;
+}
+.crm-panel th {
+  background: var(--muted);
+  color: var(--muted-foreground);
+  font-size: 12px;
+  height: 40px;
+  padding: 0 24px;
+}
+.crm-panel td {
+  padding: 14px 24px;
+  height: 72px;
+}
+.crm-panel tr:hover td {
+  background: color-mix(in srgb, var(--muted) 45%, transparent);
+}
+.crm-panel tr {
+  border-color: var(--ws-line);
+}
+.crm-nav-item:focus-visible,
+.crm-contact-name:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 3px;
+}
+.dark .crm-contact-dialog {
+  color-scheme: dark;
+}
+.crm-contact-name {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  text-align: start;
+  cursor: pointer;
+}
+.crm-contact-name strong {
+  display: block;
+  font-weight: 500;
+}
+.crm-contact-name small {
+  display: block;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  margin-top: 5px;
+}
+.crm-contact-name > svg {
+  opacity: 0.5;
+  margin-left: 12px;
+}
+.crm-empty {
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--muted-foreground);
+}
+.crm-table-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 28px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+}
+.crm-contact-dialog {
+  --line-strong: var(--border);
+  padding: 24px 0 0;
+  gap: 10px;
+  max-height: 90dvh;
+  overflow: hidden;
+  width: min(600px, calc(100vw - 32px));
+  max-width: min(600px, calc(100vw - 32px));
+  grid-template-rows: auto auto minmax(0, 1fr);
+}
+.crm-contact-dialog > h2,
+.crm-contact-dialog > p {
+  padding-inline: 20px;
+}
+.crm-editor-scroll {
+  overflow: auto;
+}
+.crm-field-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 18px;
+}
+.crm-field-grid label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+.crm-field-grid input {
+  color: var(--foreground);
+}
+.crm-note-input {
+  display: block;
+  width: 100%;
+  min-height: 90px;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin-top: 8px;
+  background: var(--background);
+}
+.crm-note {
+  border-inline-start: 2px solid var(--border);
+  padding-inline-start: 14px;
+}
+.crm-note p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.crm-note small {
+  display: block;
+  color: var(--muted-foreground);
+  margin-top: 8px;
+  font-size: 11px;
+}
+.chaos-admin .eyebrow-style,
+.crm-contact-dialog .eyebrow-style {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted-foreground);
+}
+@media (max-width: 800px) {
+  .chaos-admin {
+    flex-direction: column;
+  }
+  .crm-sidebar {
+    width: 100%;
+    height: auto;
+    position: static;
+  }
+  .crm-brand {
+    padding: 14px 20px;
+  }
+  .crm-sidebar nav {
+    display: flex;
+    overflow: auto;
+    padding: 8px;
+    gap: 4px;
+  }
+  .crm-nav-heading,
+  .crm-sidebar-footer {
+    display: none;
+  }
+  .crm-nav-item {
+    width: auto;
+    white-space: nowrap;
+  }
+  .crm-admin-header,
+  .crm-admin-main {
+    padding: 20px;
+  }
+  .crm-toolbar {
+    padding: 16px;
+  }
+  .crm-field-grid {
+    grid-template-columns: 1fr;
+  }
+  .crm-table-footer {
+    padding: 14px 16px;
+    gap: 14px;
+  }
+}

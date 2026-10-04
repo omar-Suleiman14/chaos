@@ -3,4 +3,6 @@ Validated lesson study starts, completed responses and live joins add relationsh
 
 Creators can page through their private roster. Public cards query only explicit opt-in account relationships; no guest public profiles are created. A student can revoke visibility on their teacher’s Card. Counts appear only in the private roster. Cursor queries are bounded to 48 records per request; the grid renders only visible rows and a small buffer, automatically fetching subsequent pages without a total student ceiling.
 
-MCP `list_my_students` is categorized as individual information. `set_student_card_visibility` affects only the authenticated student's existing relationship.
+Public pages render up to eight tiny floating previews (six on phones) around the author Card, including the selected author in the carousel. The private dashboard retains its paginated roster. Public previews never automatically page through the full roster.
+
+MCP `list_my_students` is categorized as individual information. `get_student_card_visibility` and `set_student_card_visibility` affect only the authenticated student's existing relationship. `list_public_student_cards` returns only opted-in account Cards, with a default page size of eight and no private context. `list_public_authors` and `get_public_card` expose public Card fields. `set_author_listing_visibility` changes only the connected author's directory preference. The fan interaction remains in the browser; MCP can return the author Cards and their URLs, but does not control the visual animation.

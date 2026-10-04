@@ -1,6 +1,6 @@
 import { getAuthIdentity } from "./authIdentity";
 import { v } from "convex/values";
-import { mutation, query, internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
+import { mutation, query, internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { requireActiveUser } from "./authz";
 import { avatarSeed } from "../lib/avatarSeed";
@@ -10,6 +10,12 @@ import { reserveUsername, userByUsername } from "./usernameModel";
 
 const card = v.object({ name: v.string(), username: v.string(), seed: v.string(), memberSince: v.number(), style: v.number() });
 const view = (u: Doc<"users">) => ({ name: u.name, username: u.username, seed: u.cardAvatarSeed ?? avatarSeed(u.clerkId), memberSince: u.createdAt, style: u.cardStyle ?? 0 });
+export async function readPublicCard(ctx: QueryCtx, input: string) {
+  const username = input.trim().toLowerCase();
+  if (!/^[a-z0-9][a-z0-9_.-]{2,63}$/.test(username)) return null;
+  const user = await userByUsername(ctx, username);
+  return !user || user.isBanned || user.suspendedUntil ? null : view(user);
+}
 
 /** The signed-in person's card (null before their account row exists). */
 export const mine = query({
@@ -28,12 +34,7 @@ export const byUsername = query({
   args: { username: v.string() },
   returns: v.union(card, v.null()),
   handler: async (ctx, args) => {
-    const username = args.username.trim().toLowerCase();
-    // Public routes may contain arbitrary decoded input; never truncate it into a real account.
-    if (!/^[a-z0-9][a-z0-9_.-]{2,63}$/.test(username)) return null;
-    const user = await userByUsername(ctx, username);
-    if (!user || user.isBanned || user.suspendedUntil) return null;
-    return view(user);
+    return readPublicCard(ctx, args.username);
   },
 });
 

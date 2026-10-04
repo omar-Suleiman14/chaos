@@ -20,7 +20,7 @@ export async function recordStudent(ctx: MutationCtx, input: { authorId: string;
   if (count) await ctx.db.patch("authorStudentCounts", count._id, { count: count.count + 1 });
   else await ctx.db.insert("authorStudentCounts", { authorId: input.authorId, count: 1 });
 }
-async function pageFor(ctx: QueryCtx, authorId: string, options: { numItems: number; cursor: string | null }, isPublic = false) {
+export async function pageFor(ctx: QueryCtx, authorId: string, options: { numItems: number; cursor: string | null }, isPublic = false) {
   const rows = isPublic
     ? ctx.db.query("authorStudents").withIndex("by_author_public_updated", q => q.eq("authorId", authorId).eq("publicVisible", true))
     : ctx.db.query("authorStudents").withIndex("by_author_updated", q => q.eq("authorId", authorId));
@@ -30,7 +30,7 @@ async function pageFor(ctx: QueryCtx, authorId: string, options: { numItems: num
     const visible = user && !user.isBanned && !user.suspendedUntil;
     if (isPublic && !visible) return null;
     return { id: row._id, name: visible ? user.name : row.guestName || `Guest ${row._id.slice(-6)}`, username: visible ? user.username : null,
-      seed: visible ? avatarSeed(user.clerkId) : avatarSeed(row._id), style: visible ? user.cardStyle ?? 0 : 0, context: isPublic ? null : row.context };
+      seed: visible ? user.cardAvatarSeed ?? avatarSeed(user.clerkId) : avatarSeed(row._id), style: visible ? user.cardStyle ?? 0 : 0, context: isPublic ? null : row.context };
   }));
   return { ...result, page: mapped.filter((row): row is NonNullable<typeof row> => row !== null) };
 }

@@ -1,8 +1,8 @@
 # MCP tool inventory
 
-Generated from the public MCP registry with `pnpm mcp:inventory`. Admin documentation tools are excluded.
+Generated from the public MCP registry with `pnpm mcp:inventory`. Admin documentation and CRM tools are excluded; see [MCP permissions](mcp-permissions.md) for administrator access.
 
-97 tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
+102 tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
 
 - `add_course_lesson`
 - `add_folder_member`
@@ -47,8 +47,10 @@ Generated from the public MCP registry with `pnpm mcp:inventory`. Admin document
 - `get_lesson_sources`
 - `get_lesson_version`
 - `get_my_card`
+- `get_public_card`
 - `get_quiz_fork_lineage`
 - `get_results`
+- `get_student_card_visibility`
 - `get_weak_area_actions`
 - `host_game`
 - `import_course_lesson`
@@ -66,6 +68,8 @@ Generated from the public MCP registry with `pnpm mcp:inventory`. Admin document
 - `list_lesson_versions`
 - `list_lessons`
 - `list_my_students`
+- `list_public_authors`
+- `list_public_student_cards`
 - `list_responses`
 - `list_themes`
 - `move_folder`
@@ -84,6 +88,7 @@ Generated from the public MCP registry with `pnpm mcp:inventory`. Admin document
 - `search_forms`
 - `search_learn_directory`
 - `search_lessons`
+- `set_author_listing_visibility`
 - `set_course_archived`
 - `set_course_modules`
 - `set_course_outline`

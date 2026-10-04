@@ -16,7 +16,7 @@ const REST: Motion = { rx: 0, ry: 0, tx: 0, ty: 0 };
  * The easing runs here, one frame at a time, rather than as a CSS transition: Chrome paints a transitioning
  * layer from a low-resolution snapshot, which blurs the card's text until it settles.
  */
-export function useTilt(stage: RefObject<HTMLElement | null>, cards?: () => HTMLElement[]) {
+export function useTilt(stage: RefObject<HTMLElement | null>, cards?: () => HTMLElement[], pageMotion = false) {
   useEffect(() => {
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     const list = () => cards?.() ?? (stage.current ? [stage.current] : []);
@@ -51,7 +51,8 @@ export function useTilt(stage: RefObject<HTMLElement | null>, cards?: () => HTML
       for (const el of list()) {
         const r = el.getBoundingClientRect(); if (!r.width) continue;
         // Strongest with the pointer on the card's centre, gone 160px beyond its corners.
-        const reach = Math.hypot(r.width, r.height) / 2 + 160;
+        // Hero tiles respond across the whole viewport, including between the tiles.
+        const reach = pageMotion ? Math.hypot(window.innerWidth, window.innerHeight) * 1.4 : Math.hypot(r.width, r.height) / 2 + 160;
         const near = Math.max(0, 1 - Math.hypot(e.clientX - (r.left + r.width / 2), e.clientY - (r.top + r.height / 2)) / reach);
         if (!near) { aim(el, REST); continue; }
         const x = Math.max(-0.5, Math.min(0.5, (e.clientX - r.left) / r.width - 0.5)), y = Math.max(-0.5, Math.min(0.5, (e.clientY - r.top) / r.height - 0.5));
@@ -71,7 +72,7 @@ export function useTilt(stage: RefObject<HTMLElement | null>, cards?: () => HTML
       window.removeEventListener("pointermove", move); document.documentElement.removeEventListener("pointerleave", leave);
       stopTilt(); cancelAnimationFrame(frame);
     };
-  }, [stage, cards]);
+  }, [stage, cards, pageMotion]);
 }
 
 /**

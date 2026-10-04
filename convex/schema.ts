@@ -64,6 +64,14 @@ export default defineSchema({
   adminAudit: defineTable({
     actorId: v.string(), action: v.string(), target: v.string(), reason: v.string(), createdAt: v.number(),
   }),
+  crmContacts: defineTable({
+    name: v.string(), email: v.string(), organization: v.string(),
+    userId: v.optional(v.id("users")),
+    stage: v.union(v.literal("new"), v.literal("contacted"), v.literal("active"), v.literal("closed")),
+    owner: v.string(), source: v.string(), nextFollowUp: v.optional(v.number()),
+    createdAt: v.number(), updatedAt: v.number(),
+  }).index("by_email", ["email"]).index("by_stage", ["stage"]).index("by_follow_up", ["nextFollowUp"]).searchIndex("search_name", { searchField: "name", filterFields: ["stage"] }),
+  crmNotes: defineTable({ contactId: v.id("crmContacts"), body: v.string(), actorId: v.string(), createdAt: v.number() }).index("by_contact", ["contactId"]),
   /** Permanent namespace reservations; retain these even when an account is removed. */
   usernameAliases: defineTable({
     username: v.string(),

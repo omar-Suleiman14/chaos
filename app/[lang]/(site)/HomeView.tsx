@@ -6,6 +6,7 @@ import { ArrowRight, BookOpen, Braces, Download, FileText, GraduationCap, ListCh
 import { PrimaryCta, SiteFooter, SiteNav } from "@/components/site/SiteChrome";
 import { ChatGptMark, NotionMark } from "@/components/site/marks";
 import ProductDemo from "@/components/site/ProductDemo";
+import HeroAvatars from "@/components/site/HeroAvatars";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { serializeStructuredData, websiteStructuredData } from "@/lib/seo";
 import "@/app/landing.css";
@@ -124,8 +125,9 @@ export default function HomeView() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(websiteStructuredData) }} />
       <SiteNav />
       <main id="main-content" tabIndex={-1}>
-        <section className="site-hero">
-          <h1 className="site-title">{t.title[0]}<br /><span>{t.title[1]}</span></h1>
+        <section className="site-hero site-hero--home">
+          <HeroAvatars />
+          <h1 className="site-title">{t.title[0]}<span>{t.title[1]}</span></h1>
           <p className="site-lead">{t.lead}</p>
           <div className="site-hero__actions"><PrimaryCta large label={t.start} /><Link href="/learn" className="site-btn site-btn--game site-btn--lg">{t.explore}</Link></div>
           <ul className="site-trust-strip" aria-label={locale === "ar" ? "حول المنصة" : "Platform details"}>{t.trust.map(item => <li key={item}>{item}</li>)}</ul>
