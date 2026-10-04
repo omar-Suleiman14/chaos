@@ -10,7 +10,8 @@ import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { useCardReviews, useLearnActions, useLearnViewer } from "@/lib/learn/data";
 import type { Flashcard, Visibility } from "@/lib/learn/types";
 import { errorMessage } from "@/lib/errors";
-import { useCopy } from "@/lib/i18n";
+import { localeDir } from "@/lib/locale";
+import { useCopy, useLocale } from "@/lib/i18n";
 
 const copy = {
   en: {
@@ -41,6 +42,7 @@ const copy = {
 
 
 export default function FlashcardStudy({ setId, onEdit }: { setId: string; onEdit?: () => void }) {
+  const { locale } = useLocale();
   const t = useCopy(copy);
   const viewer = useLearnViewer();
   const actions = useLearnActions();
@@ -49,7 +51,7 @@ export default function FlashcardStudy({ setId, onEdit }: { setId: string; onEdi
   const [error, setError] = useState("");
   if (version === undefined || reviews === undefined) return <PageSkeleton label={t.loading} />;
   if (!version) return <div className="lx-empty"><p>{t.noPublished}</p>{onEdit && <button type="button" className="ws-btn" onClick={async () => { try { await actions.publishFlashcardStudy(setId); } catch (err) { setError(errorMessage(err)); } }}>{t.publishSnapshot}</button>}{error && <p role="alert">{error}</p>}</div>;
-  return <section aria-label={version.title}>
+  return <section aria-label={version.title} dir={localeDir(locale)}>
     {!viewer?.signedIn && <p className="lx-notice" style={{ fontSize: 14 }}>{t.deviceProgress} <SignInButton mode="modal"><button type="button" className="lx-link">{t.sync}</button></SignInButton>. {t.retained}</p>}
     <StudyRound key={version._id + ":" + (viewer?.id ?? "guest")} setId={setId} cards={version.cards} reviews={reviews} onEdit={onEdit} />
   </section>;
@@ -100,8 +102,8 @@ function StudyRound({ setId, cards: draftCards, reviews, onEdit }: { setId: stri
           <p className="lx-muted" aria-live="polite">{t.card(index + 1, queue.length)}</p>
           <div className="lx-flip">
             <button type="button" className="lx-flip__card" data-flipped={flipped} disabled={pending} onClick={() => setFlipped((f) => !f)} aria-label={flipped ? card.back : `${card.front}. ${t.flip}`}>
-              <span className="lx-flip__face" aria-hidden={flipped}>{card.front}</span>
-              <span className="lx-flip__face lx-flip__face--back" aria-hidden={!flipped}>{card.back}</span>
+              <span className="lx-flip__face" dir="auto" aria-hidden={flipped}>{card.front}</span>
+              <span className="lx-flip__face lx-flip__face--back" dir="auto" aria-hidden={!flipped}>{card.back}</span>
               <span className="lx-flip__hint" aria-hidden>{t.hint}</span>
             </button>
           </div>

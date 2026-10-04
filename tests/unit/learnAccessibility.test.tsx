@@ -80,6 +80,21 @@ describe("lesson reader", () => {
     expect((await axe(document.body, AXE)).violations).toEqual([]);
   });
 
+  it("keeps Arabic regional lesson content RTL inside an English interface", () => {
+    const l = lesson("ar-EG");
+    inWorkspace(<LessonReader lesson={l} />);
+    const article = document.querySelector("article.lx-article");
+    expect(article).toHaveAttribute("dir", "rtl");
+    expect(article).toHaveAttribute("lang", "ar-EG");
+    expect(document.querySelector(".lx-reader-root")).toHaveAttribute("dir", "ltr");
+  });
+
+  it("keeps English lesson content LTR inside an Arabic interface", () => {
+    inWorkspace(<LessonReader lesson={lesson("en")} />, "ar");
+    expect(document.querySelector("article.lx-article")).toHaveAttribute("dir", "ltr");
+    expect(document.querySelector(".lx-reader-root")).toHaveAttribute("dir", "rtl");
+  });
+
   it("opens a citation's source in a dialog and returns focus on Escape", async () => {
     const l = lesson();
     seed(l);

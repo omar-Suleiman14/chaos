@@ -1,5 +1,7 @@
 "use client";
 
+import { contentDirection } from "@/lib/learn/direction";
+
 import { useStableQueries } from "@/lib/stableQueries";
 import dynamic from "next/dynamic";
 import styles from "@/components/learn/editor/EditorLayout.module.css";
@@ -310,7 +312,7 @@ function LessonEditorSession({ id }: { id: string }) {
       <LessonCover meta={{ ...lesson.draft.meta, ...look }} editable={!conflict} onChange={saveLook} />
       <div className="lx-edit__body" data-panel={panelOpen ? "open" : "closed"}
         onPointerDown={event => { if (event.button === 0 && event.target === event.currentTarget && editorRef.current) { event.preventDefault(); focusLessonEnd(editorRef.current); } }}>
-        <div className="lx-edit__doc" dir={lesson.draft.meta.language === "ar" ? "rtl" : "ltr"} lang={lesson.draft.meta.language}
+        <div className="lx-edit__doc" dir={contentDirection(lesson.draft.meta.language)} lang={lesson.draft.meta.language}
           onPointerDown={event => { if (event.button === 0 && event.target === event.currentTarget && editorRef.current) { event.preventDefault(); focusLessonEnd(editorRef.current); } }}>
           <ModerationNotice state={lesson.moderation} note={lesson.moderationNote} owner />
           {(lesson.forkedFrom || lesson.externalRef) && (

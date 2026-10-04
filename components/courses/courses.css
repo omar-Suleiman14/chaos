@@ -73,7 +73,7 @@
 .cp-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-block-start: 16px; }
 .cp-tags span { max-width: 100%; font-size: 12px; padding: 4px 10px; border-radius: 6px; background: var(--s-subtle); color: var(--s-soft); overflow-wrap: anywhere; }
 .cp a:focus-visible { outline: 2px solid var(--s-accent); outline-offset: 4px; }
-.cp[dir="rtl"] .cp-arrow { transform: rotate(180deg); }
+.cp-arrow:dir(rtl), .cb-arrow:dir(rtl) { transform: rotate(180deg); }
 @media (max-width: 480px) {
   .cp-hero, .cp-main { padding-inline: 20px; }
   .cp-hero { padding-block-start: 24px; }
@@ -110,3 +110,6 @@
 .cb-page .cb-add:hover { background: var(--ws-hover, rgba(55,53,47,.06)); color: var(--on-background); }
 @media (max-width: 860px) { .cb-page > .lx-cover { margin-inline: -16px; } }
 @media (hover: none) { .cb-page .cb-lesson__actions { opacity: 1; } }
+
+.cb-title, .cb-desc, .cp-lesson__title, .cp-lesson__desc, .cx-title { text-align: start; }
+.cb-title:dir(rtl), .cp-hero:dir(rtl) h1 { letter-spacing: normal; line-height: 1.5; }

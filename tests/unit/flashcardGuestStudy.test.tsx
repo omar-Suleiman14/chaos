@@ -4,7 +4,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 const mocks = vi.hoisted(() => ({ version: undefined as unknown, review: vi.fn().mockResolvedValue(undefined) }));
 vi.mock("convex/react", () => ({ useQuery: () => mocks.version }));
 vi.mock("@clerk/nextjs", () => ({ SignInButton: ({ children }: { children: React.ReactNode }) => children }));
-vi.mock("@/lib/i18n", () => ({ useCopy: (copy: { en: unknown }) => copy.en }));
+vi.mock("@/lib/i18n", () => ({ useCopy: (copy: { en: unknown }) => copy.en, useLocale: () => ({ locale: "en" }) }));
 vi.mock("@/lib/learn/data", () => ({
   useCardReviews: () => [],
   useLearnActions: () => ({ reviewCard: mocks.review }),

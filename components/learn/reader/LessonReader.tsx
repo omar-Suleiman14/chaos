@@ -1,5 +1,7 @@
 "use client";
 
+import { contentDirection } from "@/lib/learn/direction";
+
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -374,7 +376,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
           {previewDraft && <p className="lx-notice" data-tone="info" style={{ marginBottom: 16 }}>{t.draftPreview}</p>}
           {isOwner && !caps.sharedPublishing && lesson.published && !previewDraft && <p className="lx-notice" style={{ marginBottom: 16 }}>{t.devicePublish}</p>}
           <ModerationNotice state={lesson.moderation} note={isOwner ? lesson.moderationNote : undefined} owner={isOwner} />
-          <article ref={article} onClick={tapBlock} className="lx-article" data-size={prefs.size} data-font={prefs.font} lang={meta.language} dir={meta.language === "ar" ? "rtl" : "ltr"} aria-labelledby="lesson-title">
+          <article ref={article} onClick={tapBlock} className="lx-article" data-size={prefs.size} data-font={prefs.font} lang={meta.language} dir={contentDirection(meta.language)} aria-labelledby="lesson-title">
             {isCoverUrl(meta.coverUrl) && <img className="lx-article__cover" src={meta.coverUrl} alt="" style={{ objectPosition: `center ${meta.coverY ?? 50}%` }} />}
             {meta.icon && <span className="lx-article__icon" aria-hidden><CourseOrLessonIcon icon={meta.icon} size={48} /></span>}
             <h1 id="lesson-title" className="lx-article__title">{meta.title || t.untitled}</h1>
