@@ -12,6 +12,7 @@ async function publishedCourse() {
   const courseId = await owner.mutation(api.courses.create, { title: "Published course" });
   const lessonId = await owner.mutation(api.courses.addLesson, { courseId, title: "Published lesson" });
   await owner.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: 0, document: { schemaVersion: 1, blocks: [{ id: "p", type: "paragraph", text: "Public content", citations: [], conceptIds: [] }] } });
+  await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 1, visibility: "public" });
   await owner.mutation(api.courses.publish, { courseId, visibility: "public" });
   return { t, owner, courseId, lessonId };
 }
@@ -42,4 +43,18 @@ it("excludes restricted creators and rejects malformed catalogue limits", async 
   expect(await t.query(api.courses.getPublic, { courseId })).toBeNull();
   expect(await t.query(api.courses.listPublic, {})).toEqual([]);
   await expect(t.query(api.courses.listPublic, { limit: 1.5 })).rejects.toThrow("VALIDATION_FAILED");
+});
+
+it("blocks unpublished lessons and leaves newer drafts out of course publication", async () => {
+ const { t, owner, courseId, lessonId } = await publishedCourse();
+ const before = await t.query(api.courses.lesson, { courseId, lessonId });
+ const row = await t.run(ctx => ctx.db.get("lessons", lessonId));
+ await owner.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: row!.revision, document: { schemaVersion: 1, blocks: [{ id: "p", type: "paragraph", text: "Private changes", citations: [], conceptIds: [] }] } });
+ expect(await owner.mutation(api.courses.publish, { courseId, visibility: "public" })).toEqual({ ok: true });
+ expect((await t.query(api.courses.lesson, { courseId, lessonId }))?.version.document).toEqual(before?.version.document);
+ const draftLesson = await owner.mutation(api.courses.addLesson, { courseId, title: "Draft" });
+ expect((await owner.mutation(api.courses.publish, { courseId, visibility: "public" })).ok).toBe(false);
+ expect((await t.run(ctx => ctx.db.get("lessons", draftLesson)))?.publishedVersionId).toBeUndefined();
+ await owner.mutation(api.courses.unpublish, { courseId });
+ expect((await t.run(ctx => ctx.db.get("lessons", lessonId)))?.publishedVersionId).toBeDefined();
 });

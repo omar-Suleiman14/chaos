@@ -28,7 +28,7 @@ const copy = {
     publish: "Publish", update: "Publish changes", view: "View course", unpublish: "Unpublish", archive: "Archive",
     publishTitle: "Publish this course", who: "Who can take it", public: "Public", publicHelp: "Anyone can find and take it, free. Recommended.",
     private: "Private", privateHelp: "Only you and people you share lessons with. Part of Chaos Business.", business: "Business only",
-    publishNote: "Every lesson in the course is published with it.", confirm: "Publish", cancel: "Cancel", publishing: "Publishing…",
+    publishNote: "This publishes the course outline and metadata using already published lesson versions. Lesson drafts stay private.", confirm: "Publish", cancel: "Cancel", publishing: "Publishing…",
     problems: "Fix these lessons first:", saved: "Saved", failed: "Couldn't save. Try again.",
   },
   ar: {
