@@ -15,6 +15,7 @@ import { PageSkeleton } from "@/components/workspace/Skeletons";
 import StatusBadge from "@/components/forms/StatusBadge";
 import SourceDetails from "@/components/forms/SourceDetails";
 import BuildTab from "@/components/forms/builder/BuildTab";
+import EmbedPanel from "@/components/forms/builder/EmbedPanel";
 import { FullPreview } from "@/components/forms/builder/FormPreview";
 import QuizLearningLinks from "@/components/learn/editor/QuizLearningLinks";
 import HostLiveButton from "@/components/live/HostLiveButton";
@@ -61,13 +62,15 @@ function preloadTabs() {
 }
 
 /** Every tool is discoverable; the row scrolls on narrow screens. */
+const primaryTabs = ["Questions", "Design", "Settings", "Share"] as const;
+const advancedTabs = ["Logic", "Translate", "Team", "History"] as const;
 const allTabs = ["Questions", "Design", "Logic", "Translate", "Team", "History", "Settings", "Share"] as const;
 type Tab = (typeof allTabs)[number];
 const tabIconByKey = { Questions: ListChecks, Design: Palette, Settings, Share: Share2, Logic: GitBranch, Translate: Languages, Team: Users, History } as const;
 
 const copy = {
   en: {
-    tabs: { Questions: "Questions", Design: "Design", Settings: "Settings", Share: "Share", Logic: "Logic", Translate: "Translate", Team: "Team", History: "History" } as Record<Tab, string>,
+    tabs: { Questions: "Questions", Design: "Theme", Settings: "Settings", Share: "Publish", Logic: "Logic", Translate: "Translate", Team: "Team", History: "History" } as Record<Tab, string>,
     logicAndEndings: " and endings",
     saving: "Saving…", unsaved: "Unsaved changes", saved: "Saved", offline: "Offline — kept on this device", conflict: "Changed elsewhere", notSaved: "Not saved",
     loading: "Loading form...", notFound: "Not found", notFoundHelp: "It was deleted, or you no longer have access.", backToLibrary: "Back to library",
@@ -92,7 +95,7 @@ const copy = {
     fixCount: (n: number) => `${n} thing${n === 1 ? "" : "s"} to fix before publishing`, suggestions: "Suggestions", checks: "Publication checks",
   },
   ar: {
-    tabs: { Questions: "الأسئلة", Design: "التصميم", Settings: "الإعدادات", Share: "المشاركة", Logic: "المنطق", Translate: "الترجمة", Team: "الفريق", History: "السجل" } as Record<Tab, string>,
+    tabs: { Questions: "الأسئلة", Design: "المظهر", Settings: "الإعدادات", Share: "النشر", Logic: "المنطق", Translate: "الترجمة", Team: "الفريق", History: "السجل" } as Record<Tab, string>,
     logicAndEndings: " وشاشات النهاية",
     saving: "جارٍ الحفظ…", unsaved: "تغييرات غير محفوظة", saved: "محفوظ", offline: "غير متصل — محفوظ على هذا الجهاز", conflict: "تغيّر من مكان آخر", notSaved: "لم يُحفظ",
     loading: "جارٍ تحميل النموذج...", notFound: "غير موجود", notFoundHelp: "حُذف، أو لم يعد لديك وصول إليه.", backToLibrary: "العودة إلى المكتبة",
@@ -371,7 +374,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
         </div>
       )}
 
-      <WsTabs tabs={allTabs.map((k) => t.tabs[k])} value={t.tabs[tab]} onChange={(name) => setTab(allTabs.find((k) => t.tabs[k] === name) ?? "Questions")} label={t.builder} icons={tabIcons} />
+      <div className="flex flex-wrap items-center gap-3 mb-4"><div className="flex-1 min-w-0"><WsTabs tabs={primaryTabs.map(k => t.tabs[k])} value={t.tabs[tab]} onChange={name => setTab(primaryTabs.find(k => t.tabs[k] === name) ?? "Questions")} label={t.builder} icons={tabIcons} /></div><WsMenu label={locale === "ar" ? "المزيد" : "More"} trigger={<span>{advancedTabs.some(k => k === tab) ? t.tabs[tab] : locale === "ar" ? "المزيد" : "More"}</span>}>{close => <>{advancedTabs.map(k => <button type="button" role="menuitemradio" aria-checked={tab === k} key={k} onClick={() => { close(); setTab(k); }}>{t.tabs[k]}</button>)}</>}</WsMenu></div>
 
       <div key={tab} className="grid grid-cols-1 gap-6 ws-page" role="tabpanel" aria-label={t.tabs[tab]}>
         {tab === "Questions" && (
@@ -392,10 +395,11 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
         {tab === "Logic" && <LogicTab def={def} change={d.change} readOnly={!canEdit} errors={report.errors} />}
         {tab === "Translate" && <TranslateTab def={def} change={d.change} readOnly={!canEdit} />}
         {tab === "Design" && <DesignTab def={def} change={d.change} readOnly={!canEdit} onFullPreview={() => setPreviewing(true)} announce={announce} />}
-        {tab === "Settings" && (
+        {tab === "Settings" && (<>
           <SettingsTab formId={formId} settings={editableSettings} hasAccessCode={hasAccessCode} groupName={data.groupName} status={data.status}
             published={published} def={def} isOwner={data.role === "owner"} announce={announce} slug={data.slug} shareId={data.shareId} canHideBranding={data.canHideBranding} />
-        )}
+          {published && <EmbedPanel formId={formId} link={`/f/${data.shareId}`} title={def.title} />}
+        </>)}
         {tab === "Share" && <ShareTab formId={formId} shareId={data.shareId} title={def.title} published={published} status={data.status} slug={data.slug} />}
         {tab === "Team" && <TeamTab formId={formId} role={data.role} def={def} />}
         {tab === "History" && <HistoryTab formId={formId} versions={data.versions} canEdit={canEdit} revision={d.revision} beforeRestore={d.save} />}
