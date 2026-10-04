@@ -581,3 +581,8 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-diagram img { max-width: 100%; width: 100%; height: auto; }
 .lx-diagram summary { cursor: pointer; font-size: 13px; color: var(--on-surface-variant); }
 .lx-diagram pre { overflow-x: auto; max-width: 100%; }
+
+/* Incomplete outlines are rendered inside the safe diagram SVG. */
+.lx-diagram img { padding: 20px; background: #f8fafc; border: 1px solid #dce6f0; border-radius: 0; }
+.lx-diagram[data-theme="dark"] img { background: #111923; border-color: #2d4054; }
+@media (max-width: 600px) { .lx-diagram img { padding: 10px; } }
