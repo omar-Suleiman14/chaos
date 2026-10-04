@@ -122,13 +122,14 @@ export default function LessonEditor(props: LessonEditorProps) {
       { key: "callout", title: t.callout, subtext: t.calloutHint, group, icon: <Info size={18} />, aliases: ["note", "tip", "warning", "ملاحظة"], onItemClick: () => { insertOrUpdateBlockForSlashMenu(editor, { type: "callout" }); } },
       { key: "equation", title: t.equation, subtext: t.equationHint, group, icon: <Sigma size={18} />, aliases: ["math", "latex", "formula", "معادلة"], onItemClick: () => { insertOrUpdateBlockForSlashMenu(editor, { type: "equation" }); } },
       { key: "youtube", title: t.youtube, subtext: t.youtubeHint, group, icon: <PlayCircle size={18} />, aliases: ["video", "yt", "فيديو"], onItemClick: () => { insertOrUpdateBlockForSlashMenu(editor, { type: "youtube" }); } },
+      { key: "diagram", title: locale === "ar" ? "مخطط" : "Diagram", subtext: locale === "ar" ? "ارسم العلاقات بصيغة Mermaid" : "Draw relationships with Mermaid", group, icon: <MoveDown size={18} />, aliases: ["diagram", "mermaid", "flowchart", "مخطط"], onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "lessonDiagram" }) },
       { key: "source", title: t.source, subtext: t.sourceHint, group, icon: <BookMarked size={18} />, aliases: ["reference", "pdf", "slides", "مرجع"], onItemClick: () => { insertOrUpdateBlockForSlashMenu(editor, { type: "source" }); } },
       {
         key: "citation", title: t.cite, subtext: t.citeHint, group, icon: <Quote size={18} />, aliases: ["cite", "ref", "page", "استشهاد"],
         onItemClick: () => propsRef.current.onEditCitation(editor.getTextCursorPosition().block.id),
       },
-      { key: "flashcards", title: props.language === "ar" ? "البطاقات" : "Flashcards", subtext: props.language === "ar" ? "أدرج مجموعة بطاقات منشورة" : "Insert a published flashcard set", group, icon: <BookMarked size={18} />, aliases: ["flashcards", "cards", "بطاقات"], onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "lessonFlashcards" }) },
-      { key: "quiz", title: "Quiz", subtext: "Embed a published Chaos quiz", group, icon: <BookMarked size={18} />, aliases: ["quiz", "practice", "assessment"], onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "lessonQuiz" }) },
+      { key: "flashcards", title: locale === "ar" ? "البطاقات" : "Flashcards", subtext: locale === "ar" ? "أنشئ بطاقات أو أرفق مجموعة موجودة" : "Create or attach flashcards", group, icon: <BookMarked size={18} />, aliases: ["flashcards", "cards", "بطاقات"], onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "lessonFlashcards" }) },
+      { key: "quiz", title: locale === "ar" ? "اختبار" : "Quiz / checkpoint", subtext: locale === "ar" ? "أنشئ اختبارًا أو أرفق اختبارًا موجودًا" : "Create or attach a quiz", group, icon: <BookMarked size={18} />, aliases: ["quiz", "checkpoint", "practice", "assessment", "اختبار"], onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "lessonQuiz" }) },
     ] as DefaultReactSuggestionItem[];
   };
 

@@ -1,4 +1,5 @@
 "use client";
+import Diagram from "./Diagram";
 
 import InlineQuiz from "./InlineQuiz";
 import InlineFlashcards from "./InlineFlashcards";
@@ -247,8 +248,14 @@ function BlockBody({ block, props }: { block: Block; props: RendererProps }) {
     }
     case "paragraph": return <p style={align}>{inline}</p>;
     case "quote": return <blockquote>{inline}</blockquote>;
+    case "diagram": case "lessonDiagram": {
+      let text = String(block.props.text ?? "");
+      if (!text) { try { text = JSON.parse(String(block.props.lessonData)).text; } catch { return null; } }
+      return <Diagram text={text} />;
+    }
     case "codeBlock": {
       const lang = String(block.props.language ?? "");
+      if (lang === "mermaid") return <Diagram text={blockText(block)} />;
       return <pre aria-label={t.codeLabel(lang)} data-language={lang}><code>{blockText(block)}</code></pre>;
     }
     case "divider": return <hr />;

@@ -243,6 +243,7 @@ export function toDurableDocument(input: unknown, original?: LessonDocument): Le
       delete props.assetKind; delete props.assetId;
     }
     if (type === "equation") props.display = previous?.type === "equation" ? previous.display : true;
+    if (type === "lessonDiagram") { type = "diagram"; props.lessonData = JSON.stringify({ format: "mermaid", text: props.text ?? "" }); delete props.text; delete props.format; content = undefined; }
     if (type === "codeBlock" && previous?.type === "diagram" && props.language === "mermaid") {
       type = "diagram";
       props.lessonData = JSON.stringify({ format: "mermaid", text: Array.isArray(content) ? inlineText(content as Inline[]) : "" });
@@ -277,7 +278,7 @@ export function fromDurableDocument(document: LessonDocument): Block[] {
     if (b.type === "source") Object.assign(props, { sourceId: b.sourceId, locator: b.label });
     if (b.type === "equation" && b.inline?.some(r => r.href)) throw new Error("Equation links cannot be represented by this editor without data loss.");
     if (b.type === "equation") content = b.inline ? b.inline.map(r => ({ type: "text", text: r.text, styles: r.marks ?? {} })) : [{ type: "text", text: b.text, styles: {} }];
-    if (b.type === "diagram") { type = "codeBlock"; props.language = "mermaid"; content = [{ type: "text", text: b.text, styles: {} }]; }
+    if (b.type === "diagram") { type = "lessonDiagram"; props.format = b.format; props.text = b.text; content = undefined; }
     if (b.type === "table") content = { type: "tableContent", headerRows: b.headerRows, rows: b.rows.map(row => ({ cells: row.map(text => [{ type: "text", text, styles: {} }]) })) };
     if ((b.type === "flashcards" || b.type === "quiz") && b.required) props.required = true;
     if (b.type === "flashcards") { type = "lessonFlashcards"; props.setId = b.setId; }
