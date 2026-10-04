@@ -16,8 +16,13 @@ export const authComponent = createClient<DataModel, typeof schema>(
 
 /* eslint-disable @convex-dev/no-process-env -- deployment-owned authentication configuration */
 export function createAuthOptions(ctx: GenericCtx<DataModel>) {
-  const origin = process.env.CHAOS_APP_URL;
-  const secret = process.env.BETTER_AUTH_SECRET;
+  // The component is always installed, and its adapter builds these options when the module loads, so this
+  // runs on every deploy. Clerk installations don't set Better Auth's variables; give them inert values instead
+  // of failing the deploy. Nothing there can reach Better Auth: http.ts registers no auth routes and
+  // registerMcpClient refuses. The secret is random per load, so it can never be guessed or reused.
+  const enabled = process.env.CHAOS_AUTH_PROVIDER === "betterauth";
+  const origin = enabled ? process.env.CHAOS_APP_URL : "https://better-auth-disabled.invalid";
+  const secret = enabled ? process.env.BETTER_AUTH_SECRET : `${crypto.randomUUID()}${crypto.randomUUID()}`;
   if (!origin || !secret || secret.length < 32)
     throw new Error(
       "Better Auth requires CHAOS_APP_URL and a 32+ character BETTER_AUTH_SECRET",

@@ -56,7 +56,7 @@ Every variable is listed with what it does in [`.env.example`](./.env.example). 
 | `NEXT_PUBLIC_AUTH_PROVIDER` | Build / `.env.local` | `clerk` (default) or `betterauth`. Match the backend mode. |
 | `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY` | `.env.local` | Required only for Clerk mode. |
 | `BETTER_AUTH_SECRET`, `CHAOS_APP_URL` | Convex | Random secret and exact app origin for Better Auth. |
-| `CHAOS_AUTH_PROVIDER` | Convex | `clerk` or `betterauth`, matching the frontend. |
+| `CHAOS_AUTH_PROVIDER` | Convex | `clerk` or `betterauth`, matching the frontend. Required for Clerk too: `npx convex dev` and `convex deploy` refuse to push without it (`npx convex env set CHAOS_AUTH_PROVIDER clerk`). |
 | `CLERK_JWT_ISSUER_DOMAIN` | Convex (`npx convex env set`) | Required for Clerk mode; lets Convex verify sign-ins. |
 
 Optional features switch on when their variables are set: webhooks (`CHAOS_WEBHOOK_KEY`), the ChatGPT app (`CHAOS_MCP_SECRET`, `CHAOS_MCP_CLIENT_IDS`), analytics (`NEXT_PUBLIC_POSTHOG_*`), and your support address (`NEXT_PUBLIC_SUPPORT_EMAIL`, `CHAOS_SUPPORT_EMAIL`). Set Convex variables with `pnpm exec convex env set`; putting them only in `.env.local` does not configure the backend. The MCP shared secret must match in both processes.

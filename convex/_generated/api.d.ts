@@ -9,11 +9,11 @@
  */
 
 import type * as admin from "../admin.js";
-import type * as auth from "../auth.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminModel from "../adminModel.js";
-import type * as authorIndex from "../authorIndex.js";
+import type * as auth from "../auth.js";
 import type * as authIdentity from "../authIdentity.js";
+import type * as authorIndex from "../authorIndex.js";
 import type * as authz from "../authz.js";
 import type * as courseDirectory from "../courseDirectory.js";
 import type * as courseSearchModel from "../courseSearchModel.js";
@@ -136,11 +136,11 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
-  auth: typeof auth;
   adminAnalytics: typeof adminAnalytics;
   adminModel: typeof adminModel;
-  authorIndex: typeof authorIndex;
+  auth: typeof auth;
   authIdentity: typeof authIdentity;
+  authorIndex: typeof authorIndex;
   authz: typeof authz;
   courseDirectory: typeof courseDirectory;
   courseSearchModel: typeof courseSearchModel;
@@ -282,4 +282,6 @@ export declare const internal: FilterApi<
   FunctionReference<any, "internal">
 >;
 
-export declare const components: { betterAuth: import("@convex-dev/better-auth/_generated/component.js").ComponentApi<"betterAuth"> & { refresh: { claim: FunctionReference<"mutation", "internal", { id: string; revokedAt: number }, boolean> } } };
+export declare const components: {
+  betterAuth: import("../betterAuth/_generated/component.js").ComponentApi<"betterAuth">;
+};
