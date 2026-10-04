@@ -30,6 +30,21 @@ export default function PublicAuthors() {
   const index = Math.min(selectedIndex, Math.max(0, results.length - 1));
   const fanned = fannedIndex === index;
   const stage = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!fanned) return;
+    const dismiss = (event: PointerEvent) => {
+      if (!(event.target instanceof Element) || !event.target.closest(".author-stack-card")) setFannedIndex(null);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setFannedIndex(null);
+    };
+    document.addEventListener("pointerdown", dismiss);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", dismiss);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [fanned]);
   // Every avatar in the stack looks toward the mouse (or finger while swiping).
   useEyesFollowPointer(stage);
   // Every card in the stack shies away from the mouse, the nearest most, and follows a phone's tilt

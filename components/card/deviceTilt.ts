@@ -8,6 +8,8 @@ type Listener = (x: number, y: number) => void;
 const listeners = new Set<Listener>();
 let rest: { beta: number; gamma: number } | null = null;
 let started = false, asked = false;
+let granted = false;
+let pendingAsk: (() => void) | null = null;
 const clamp = (v: number) => Math.max(-1, Math.min(1, v));
 
 function orient(e: DeviceOrientationEvent) {
@@ -22,21 +24,30 @@ function orient(e: DeviceOrientationEvent) {
 }
 
 function start() {
-  if (started) return;
+  if (started || !listeners.size) return;
   started = true;
   window.addEventListener("deviceorientation", orient);
 }
 
 /** Calls `listener` as the phone tilts. iOS only allows this after asking, which it does on the first tap. */
 export function onDeviceTilt(listener: Listener): () => void {
+  if (!/^\/(?:en\/|ar\/)?card(?:\/|$)/.test(window.location.pathname)) return () => {};
   listeners.add(listener);
   const Orientation = (window as { DeviceOrientationEvent?: { requestPermission?: () => Promise<string> } }).DeviceOrientationEvent;
   if (Orientation && typeof Orientation.requestPermission === "function") {
-    if (!asked) {
+    if (granted) start();
+    else if (!asked) {
       asked = true;
-      const ask = () => { Orientation.requestPermission!().then((state) => { if (state === "granted") start(); }).catch(() => {}); };
+      const ask = () => { pendingAsk = null; Orientation.requestPermission!().then((state) => { if (state === "granted") { granted = true; start(); } }).catch(() => {}); };
+      pendingAsk = ask;
       window.addEventListener("touchend", ask, { once: true });
     }
   } else if (Orientation) start();
-  return () => { listeners.delete(listener); };
+  return () => {
+    listeners.delete(listener);
+    if (listeners.size) return;
+    window.removeEventListener("deviceorientation", orient);
+    started = false; rest = null;
+    if (pendingAsk) { window.removeEventListener("touchend", pendingAsk); pendingAsk = null; asked = false; }
+  };
 }

@@ -28,14 +28,24 @@ const point = (clientX: number, clientY: number) => window.dispatchEvent(Object.
 const tilt = (beta: number, gamma: number) => window.dispatchEvent(Object.assign(new Event("deviceorientation"), { beta, gamma }));
 
 beforeEach(() => {
+  window.history.replaceState({}, "", "/card");
   frames = [];
   vi.stubGlobal("requestAnimationFrame", (cb: FrameRequestCallback) => { frames.push(cb); return frames.length; });
   vi.stubGlobal("cancelAnimationFrame", () => {});
   vi.stubGlobal("DeviceOrientationEvent", class {});
 });
-afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); });
+afterEach(() => { window.history.replaceState({}, "", "/"); vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe("member card motion", () => {
+  it("does not subscribe to gyro on the landing page", async () => {
+    window.history.replaceState({}, "", "/");
+    const listen = vi.spyOn(window, "addEventListener");
+    const { read } = await load();
+    expect(listen.mock.calls.some(([event]) => event === "deviceorientation")).toBe(false);
+    tilt(40, 0); tilt(40, 12); flush();
+    expect(read("--ry") || 0).toBe(0);
+    listen.mockRestore();
+  });
   it("slides away from a nearby mouse and tips the near edge back, then settles when it's gone", async () => {
     const { read } = await load();
     point(340, 250); // 40px right of the card, level with its middle

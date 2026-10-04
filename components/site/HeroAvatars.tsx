@@ -24,6 +24,20 @@ export default function HeroAvatars() {
   );
   useTilt(stage, cards, true);
   useEffect(() => {
+    const hero = stage.current?.parentElement;
+    const actions = hero?.querySelector<HTMLElement>(".site-hero__actions");
+    if (!hero || !actions) return;
+    const measure = () => {
+      const bottom = actions.getBoundingClientRect().bottom - hero.getBoundingClientRect().top;
+      stage.current?.style.setProperty("--hero-bottom-avatar-top", `${bottom - 44}px`);
+    };
+    const observer = new ResizeObserver(measure);
+    observer.observe(hero);
+    observer.observe(actions);
+    measure();
+    return () => observer.disconnect();
+  }, []);
+  useEffect(() => {
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
     let frame = 0;
     const update = () => {

@@ -30,7 +30,7 @@ export function useTilt(stage: RefObject<HTMLElement | null>, cards?: () => HTML
         if (!el.isConnected) { moving.delete(el); return; }
         for (const k of ["rx", "ry", "tx", "ty"] as const) {
           // Slow, heavy easing so the card drifts rather than snaps.
-          now[k] += (to[k] - now[k]) * 0.12;
+          now[k] += (to[k] - now[k]) * (pageMotion ? 0.09 : 0.12);
           if (Math.abs(to[k] - now[k]) < 0.01) now[k] = to[k]; else active = true;
         }
         el.style.setProperty("--rx", `${now.rx.toFixed(2)}deg`); el.style.setProperty("--ry", `${now.ry.toFixed(2)}deg`);
@@ -58,13 +58,14 @@ export function useTilt(stage: RefObject<HTMLElement | null>, cards?: () => HTML
         const x = Math.max(-0.5, Math.min(0.5, (e.clientX - r.left) / r.width - 0.5)), y = Math.max(-0.5, Math.min(0.5, (e.clientY - r.top) / r.height - 0.5));
         el.style.setProperty("--gx", `${(x + 0.5) * 100}%`); el.style.setProperty("--gy", `${(y + 0.5) * 100}%`);
         // The near edge tips away, and the card slides away from the pointer.
-        aim(el, { rx: -y * 14 * near, ry: x * 20 * near, tx: -x * 44 * near, ty: -y * 44 * near });
+        const strength = near * (pageMotion ? 0.35 : 1);
+        aim(el, { rx: -y * 14 * strength, ry: x * 20 * strength, tx: -x * 44 * strength, ty: -y * 44 * strength });
       }
     };
     const leave = (e: PointerEvent) => { if (!e.relatedTarget) list().forEach((el) => aim(el, REST)); };
     window.addEventListener("pointermove", move, { passive: true });
     document.documentElement.addEventListener("pointerleave", leave);
-    const stopTilt = onDeviceTilt((x, y) => {
+    const stopTilt = pageMotion ? () => {} : onDeviceTilt((x, y) => {
       // A mouse that just moved wins over the tilt for a second.
       if (performance.now() - movedAt > 1000) list().forEach((el) => aim(el, { rx: -y * 10, ry: x * 14, tx: 0, ty: 0 }));
     });
