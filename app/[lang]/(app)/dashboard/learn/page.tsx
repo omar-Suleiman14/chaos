@@ -96,7 +96,7 @@ export default function LearnHome() {
                 <span className="lx-row__icon" aria-hidden><Target size={16} /></span>
                 <div className="lx-row__main"><span className="lx-row__title">{w.concept}</span></div>
                 <Link className="ws-btn ws-btn--sm ws-btn--ghost" href={`/learn/${w.lessonId}${w.blockId ? `#${w.blockId}` : ""}`}>{t.reread}</Link>
-                {w.quizFormId && <Link className="ws-btn ws-btn--sm" href={`/learn/${w.lessonId}?tab=practice`}>{t.practice}</Link>}
+                {w.flashcardBlockId && <Link className="ws-btn ws-btn--sm" href={`/learn/${w.lessonId}#${w.flashcardBlockId}`}>{locale === "ar" ? "راجع البطاقات" : "Review cards"}</Link>}{w.quizHref && <Link className="ws-btn ws-btn--sm" href={w.quizHref}>{t.practice}</Link>}
               </div>
             ))}
           </div>
