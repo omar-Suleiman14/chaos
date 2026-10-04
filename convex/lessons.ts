@@ -77,11 +77,11 @@ export async function buildLessonSearchText(
   return parts.join("\n");
 }
 
-export async function createLessonForActor(ctx: MutationCtx, actor: string, args: { metadata: Doc<"lessons">["metadata"]; document?: Doc<"lessons">["draft"] }) {
+export async function createLessonForActor(ctx: MutationCtx, actor: string, args: { metadata: Doc<"lessons">["metadata"]; document?: Doc<"lessons">["draft"] }, imported = false) {
   metadataCheck(args.metadata);
   const draft = args.document ?? { schemaVersion: 1 as const, blocks: [] };
   assertDocument(draft);
-  await consumeRate(ctx, `learn:create:${actor}`, LEARN_WRITE_LIMITS.creationsPerHour, 3_600_000);
+  if (!imported) await consumeRate(ctx, `learn:create:${actor}`, LEARN_WRITE_LIMITS.creationsPerHour, 3_600_000);
   const now = Date.now();
   const searchText = await buildLessonSearchText(ctx, actor, args.metadata, draft.blocks);
   const lessonId = await authorDb(ctx).insert("lessons", { ownerId: actor, metadata: args.metadata, draft, revision: 0, status: "active", visibility: "private", communityState: "ok", createdAt: now, updatedAt: now, searchText });
