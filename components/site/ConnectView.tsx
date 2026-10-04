@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import McpOutcomes from "./McpOutcomes";
 import Link from "@/components/site/SiteLink";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import LegalPage from "@/components/site/LegalPage";
@@ -44,6 +45,7 @@ export default function ConnectView() {
   return (
     <LegalPage title={t.title}>
       <p>{t.intro}</p>
+      <McpOutcomes />
       <p><strong>{t.urlLabel}</strong></p>
       <p className="site-connect-url"><code dir="ltr">{mcpUrl}</code> <button type="button" className="site-connect-btn" onClick={copyUrl}>{copied ? <Check size={16} aria-hidden /> : <Copy size={16} aria-hidden />}{copied ? t.copied : t.copyUrl}</button></p>
 

@@ -1,5 +1,6 @@
 "use client";
 
+import McpOutcomes from "./McpOutcomes";
 import Link from "@/components/site/SiteLink";
 import LegalPage from "@/components/site/LegalPage";
 import { ChatGptMark } from "@/components/site/marks";
@@ -71,6 +72,7 @@ export default function ChatGptView() {
     <LegalPage title={t.title}>
       <ChatGptMark size={40} className="site-chatgpt-mark" />
       <p>{t.intro}</p>
+      <McpOutcomes />
       <p>{t.connect[0]}<Link href="/connect">{t.connect[1]}</Link>{t.connect[2]}</p>
 
       <h2>{t.tryTitle}</h2>
