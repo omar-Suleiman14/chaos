@@ -5,6 +5,7 @@ import Link from "@/components/site/SiteLink";
 import { ArrowRight, BookOpen, Braces, Download, FileText, GitFork, GraduationCap, ListChecks, Radio, Server, Webhook } from "lucide-react";
 import { PrimaryCta, SiteFooter, SiteNav } from "@/components/site/SiteChrome";
 import { ChatGptMark, NotionMark } from "@/components/site/marks";
+import AudienceJourneys from "@/components/site/AudienceJourneys";
 import OpenTrust from "@/components/site/OpenTrust";
 import ProductDemo from "@/components/site/ProductDemo";
 import { useCopy, useLocale } from "@/lib/i18n";
@@ -156,6 +157,7 @@ export default function HomeView() {
           <p className="site-product-definition">{productDefinition[locale === "ar" ? "ar" : "en"]}</p>
         </section>
 
+        <AudienceJourneys />
         <section id="create" className="site-section" aria-labelledby="create-title">
           <div className="site-section-heading"><h2 id="create-title" className="site-h2">{t.create.title}</h2><p>{t.create.lead}</p></div>
           <Cards items={t.create.items} />
