@@ -1,5 +1,6 @@
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
+import { indexNowAssetTables, withIndexNow, type IndexNowTable } from "./indexNow";
 
 export const authorTables = ["forms", "quizzes", "lessons", "learnCollections"] as const;
 export type AuthorTable = typeof authorTables[number];
@@ -64,12 +65,16 @@ const discoveryFields = new Set(["status", "settings", "publishedVersion", "publ
  */
 export function authorDb(ctx: MutationCtx): Pick<MutationCtx["db"], "insert" | "patch" | "replace" | "delete"> {
   const observe = (method: "insert" | "patch" | "replace" | "delete") => async (...args: unknown[]) => {
-    const result: unknown = await Reflect.apply(ctx.db[method], ctx.db, args);
     const table = args[0] as AuthorTable;
-    const id = (method === "insert" ? result : args[1]) as string;
-    if (method === "patch" && !Object.keys(args[2] as object).some(key => discoveryFields.has(key))) return result;
-    await syncAuthorAsset(ctx, table, id, method === "delete");
-    return result;
+    if (method === "patch" && !Object.keys(args[2] as object).some(key => discoveryFields.has(key))) return Reflect.apply(ctx.db[method], ctx.db, args);
+    const write = async () => {
+      const result: unknown = await Reflect.apply(ctx.db[method], ctx.db, args);
+      await syncAuthorAsset(ctx, table, (method === "insert" ? result : args[1]) as string, method === "delete");
+      return result;
+    };
+    // Public pages whose indexable state changes are queued for IndexNow (convex/indexNow.ts).
+    if (!indexNowAssetTables.includes(table)) return write();
+    return withIndexNow(ctx, table as IndexNowTable, method === "insert" ? null : args[1] as string, write, result => (method === "insert" ? result : args[1]) as string);
   };
   return {
     insert: observe("insert") as MutationCtx["db"]["insert"],

@@ -1,5 +1,6 @@
 import { isCoverUrl } from "@/lib/learn/covers";
 import type { Metadata } from "next";
+import { defaultOgImage } from "@/lib/seo";
 import { excerpt, outline } from "./doc";
 import type { Lesson } from "./types";
 
@@ -23,14 +24,15 @@ export function lessonMetadata(lesson: Lesson | null): Metadata {
   const description = excerpt(meta.description || outline(lesson.published.content).map((h) => h.text).join(" · ") || `A lesson by ${lesson.ownerName} on Chaos.`, 200);
   const path = lessonPath(lesson.id);
   // Social previews can't show SVG, so colour covers are left out.
-  const image = isCoverUrl(meta.coverUrl) && !meta.coverUrl.endsWith(".svg") ? [{ url: meta.coverUrl, alt: title }] : undefined;
+  // Without a photo cover the lesson shares the default Chaos card.
+  const image = isCoverUrl(meta.coverUrl) && !meta.coverUrl.endsWith(".svg") ? [{ url: meta.coverUrl, alt: title }] : [defaultOgImage];
   return {
     title,
     description,
     alternates: { canonical: path },
     authors: [{ name: meta.authorDisplay || lesson.ownerName }],
     openGraph: { title, description, url: path, siteName: "Chaos", type: "article", locale: meta.language === "ar" ? "ar_EG" : "en_US", images: image, publishedTime: new Date(lesson.published.publishedAt).toISOString(), tags: meta.tags },
-    twitter: { card: image ? "summary_large_image" : "summary", title, description },
+    twitter: { card: "summary_large_image", title, description, images: image },
     robots: { index: lessonIndexable(lesson), follow: lessonIndexable(lesson) },
   };
 }

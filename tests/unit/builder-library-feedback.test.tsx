@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import FormBuilderPage from "@/app/dashboard/forms/[formId]/page";
+import FormBuilderPage from "@/app/[lang]/(app)/dashboard/forms/[formId]/page";
 import CreatorLibrary from "@/components/library/CreatorLibrary";
 
 const fixtures = vi.hoisted(() => {
@@ -44,7 +44,7 @@ vi.mock("convex/react", () => ({
   },
   useMutation: () => vi.fn(),
 }));
-vi.mock("@/app/dashboard/forms/[formId]/use-form-draft", () => ({
+vi.mock("@/app/[lang]/(app)/dashboard/forms/[formId]/use-form-draft", () => ({
   useFormDraft: () => fixtures.draftState,
 }));
 vi.mock("@/lib/learn/data", () => ({ useLearnActions: () => ({ createLesson: vi.fn() }) }));

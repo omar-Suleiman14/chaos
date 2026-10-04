@@ -1,8 +1,8 @@
 import { act, renderHook } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
-import { useEditorDraft } from "@/app/dashboard/editor/use-editor-draft";
-import { blankQuestion, type EditorDraft } from "@/app/dashboard/editor/editor-draft";
+import { useEditorDraft } from "@/app/[lang]/(app)/dashboard/editor/use-editor-draft";
+import { blankQuestion, type EditorDraft } from "@/app/[lang]/(app)/dashboard/editor/editor-draft";
 import type { Id } from "@/convex/_generated/dataModel";
 
 const saveDraft = vi.hoisted(() => vi.fn());

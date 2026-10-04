@@ -70,11 +70,21 @@ const nextConfig: NextConfig = {
     // Keep visited workspace pages in the client router cache for 30 s, so Back and sidebar hops
     // re-render at once. Their data comes live from Convex, so nothing shown goes stale.
     staleTimes: { dynamic: 30 },
+    // The root layout is app/[lang]/layout.tsx, so unmatched URLs use app/global-not-found.tsx.
+    globalNotFound: true,
     optimizePackageImports: [
       "lucide-react",
       "date-fns",
       "@clerk/nextjs",
     ],
+  },
+  async redirects() {
+    // One canonical host: www.chaos.fail answers with a permanent 308 to the same path on chaos.fail.
+    return [{ source: "/:path*", has: [{ type: "host", value: "www.chaos.fail" }], destination: "https://chaos.fail/:path*", permanent: true }];
+  },
+  async rewrites() {
+    // IndexNow key file at the site root (app/api/indexnow/key/[key]/route.ts checks it against INDEXNOW_KEY).
+    return [{ source: "/:key([a-zA-Z0-9-]{8,128}).txt", destination: "/api/indexnow/key/:key" }];
   },
   async headers() {
     return [

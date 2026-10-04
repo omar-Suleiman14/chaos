@@ -20,7 +20,7 @@ const copy = {
     product: "Product", ways: "Ways to answer", chatgpt: "Chaos in ChatGPT", connect: "Connect Claude or ChatGPT", compare: "Compare",
     openSource: "Open source", source: "Source code", selfHost: "Self-hosting", api: "API and connections", webhooks: "Webhooks",
     start: "Get started", help: "Support", status: "Status", issues: "Report an issue",
-    legal: "Legal", privacy: "Privacy policy", terms: "Terms and conditions", copyright: "Copyright", security: "Security",
+    legal: "Legal", privacy: "Privacy policy", terms: "Terms and conditions", copyright: "Copyright", security: "Security", siteMap: "Site map",
   },
   ar: {
     getFree: "ابدأ مجانًا", open: "افتح Chaos", logIn: "تسجيل الدخول", skip: "انتقل إلى المحتوى", main: "التنقل الرئيسي", footer: "التذييل",
@@ -30,7 +30,7 @@ const copy = {
     product: "المنتج", ways: "طرق الإجابة", chatgpt: "Chaos في ChatGPT", connect: "اربط Claude أو ChatGPT", compare: "المقارنة",
     openSource: "مفتوح المصدر", source: "الشيفرة المصدرية", selfHost: "الاستضافة الذاتية", api: "API والاتصالات", webhooks: "Webhooks",
     start: "ابدأ الآن", help: "الدعم", status: "حالة الخدمة", issues: "أبلغ عن مشكلة",
-    legal: "قانوني", privacy: "سياسة الخصوصية", terms: "الشروط والأحكام", copyright: "حقوق النشر", security: "الأمان",
+    legal: "قانوني", privacy: "سياسة الخصوصية", terms: "الشروط والأحكام", copyright: "حقوق النشر", security: "الأمان", siteMap: "خريطة الموقع",
   },
 };
 
@@ -178,7 +178,7 @@ export function SiteFooter() {
           </div>
         </nav>
       </div>
-      <p className="site-footer__legal">© {new Date().getFullYear()} chaos</p>
+      <p className="site-footer__legal">© {new Date().getFullYear()} chaos · <Link href="/sitemap">{t.siteMap}</Link></p>
     </footer>
   );
 }

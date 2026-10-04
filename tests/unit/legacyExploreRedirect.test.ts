@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import LegacyExplorePage from "@/app/dashboard/learn/explore/page";
+import LegacyExplorePage from "@/app/[lang]/(app)/dashboard/learn/explore/page";
 
 const redirect = vi.hoisted(() => vi.fn());
 vi.mock("next/navigation", () => ({ redirect }));

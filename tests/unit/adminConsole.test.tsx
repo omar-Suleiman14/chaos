@@ -1,7 +1,7 @@
 ﻿import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
-import AdminPage from "@/app/admin/page";
+import AdminPage from "@/app/[lang]/(app)/admin/page";
 
 const state = vi.hoisted(() => ({
   admin: true,

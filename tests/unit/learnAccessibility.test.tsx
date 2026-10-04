@@ -24,7 +24,7 @@ vi.mock("next/navigation", () => ({
 }));
 
 const { default: LessonReader } = await import("@/components/learn/reader/LessonReader");
-const { default: LearnHome } = await import("@/app/dashboard/learn/page");
+const { default: LearnHome } = await import("@/app/[lang]/(app)/dashboard/learn/page");
 const { default: HandoffDialog } = await import("@/components/learn/reader/HandoffDialog");
 const { default: PublishDialog } = await import("@/components/learn/editor/PublishDialog");
 const { default: ReportDialog } = await import("@/components/learn/reader/ReportDialog");
@@ -162,11 +162,11 @@ describe("dialogs", () => {
 
 describe("Learn pages", () => {
   const pages = [
-    ["Library", () => import("@/app/dashboard/learn/library/page")],
+    ["Library", () => import("@/app/[lang]/(app)/dashboard/learn/library/page")],
     ["Chaos Learn", () => import("@/components/learn/ExploreBrowser")],
-    ["Saved", () => import("@/app/dashboard/learn/saved/page")],
-    ["My courses", () => import("@/app/dashboard/learn/courses/page")],
-    ["Flashcards", () => import("@/app/dashboard/learn/flashcards/page")],
+    ["Saved", () => import("@/app/[lang]/(app)/dashboard/learn/saved/page")],
+    ["My courses", () => import("@/app/[lang]/(app)/dashboard/learn/courses/page")],
+    ["Flashcards", () => import("@/app/[lang]/(app)/dashboard/learn/flashcards/page")],
   ] as const;
   for (const [title, load] of pages) {
     it(`${title} has a heading and no axe violations`, async () => {

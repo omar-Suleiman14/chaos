@@ -2,11 +2,15 @@
 
 import Link from "next/link";
 import { useState, type ComponentProps } from "react";
+import { useLocale } from "@/lib/i18n";
+import { localePath } from "@/lib/locale";
 
 type Props = Omit<ComponentProps<typeof Link>, "href" | "prefetch"> & { href: string };
 
 /** Restore Next's route prefetch after hover, focus or touch intent. */
-export function IntentLink({ href, onMouseEnter, onFocus, onTouchStart, ...props }: Props) {
+export function IntentLink({ href: rawHref, onMouseEnter, onFocus, onTouchStart, ...props }: Props) {
+  // Marketing pages have an address per language (lib/locale.ts).
+  const href = localePath(rawHref, useLocale().locale);
   const [intentHref, setIntentHref] = useState<string | null>(null);
   const eligible = href.startsWith("/") && !href.startsWith("//")
     && (!props.target || props.target === "_self") && !props.download

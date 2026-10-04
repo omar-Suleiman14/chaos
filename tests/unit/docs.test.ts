@@ -1,6 +1,5 @@
-import { readdirSync, existsSync } from "node:fs";
-import { join } from "node:path";
 import { describe, expect, it } from "vitest";
+import { routeFolderExists, topLevelRouteFolders } from "../routeFolders";
 import { articleHeadings, docEntries, docSections, docSlugs, findArticle, flatArticles } from "@/lib/docs";
 import type { DocBlock } from "@/lib/docs";
 import { searchDocs } from "@/lib/docs/search";
@@ -14,7 +13,7 @@ function links(locale: "en" | "ar"): string[] {
 }
 
 /** Top-level app routes that exist on disk, e.g. "pricing", "dashboard". */
-const appRoutes = new Set(readdirSync(join(process.cwd(), "app"), { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name));
+const appRoutes = new Set(topLevelRouteFolders());
 
 describe("docs content", () => {
   it("has the same articles and headings in English and Arabic", () => {
@@ -45,7 +44,7 @@ describe("docs content", () => {
         expect(article, href).toBeDefined();
         if (hash) expect(articleHeadings(article!).map((h) => h.id), href).toContain(hash);
       } else if (parts.length) {
-        expect(appRoutes.has(parts[0]) || existsSync(join(process.cwd(), "app", ...parts)), href).toBe(true);
+        expect(appRoutes.has(parts[0]) || routeFolderExists(parts), href).toBe(true);
       }
     }
   });

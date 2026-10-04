@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/site/SiteLink";
 import { Check, Copy, ExternalLink } from "lucide-react";
 import LegalPage from "@/components/site/LegalPage";
 import { AiMark } from "@/components/site/aiMarks";

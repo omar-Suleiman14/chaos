@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/site/SiteLink";
 import { Check, Minus } from "lucide-react";
 import { PrimaryCta, SiteFooter, SiteNav } from "@/components/site/SiteChrome";
 import { compareAsOf, compareCopy, compareSources } from "@/components/site/compareData";

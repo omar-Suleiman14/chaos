@@ -2,8 +2,8 @@ vi.mock("@/lib/cardFonts", () => ({ cardRuqaa: { variable: "ruqaa" } }));
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
-import SettingsPage from "@/app/dashboard/settings/page";
-import ProfilePage from "@/app/dashboard/card/page";
+import SettingsPage from "@/app/[lang]/(app)/dashboard/settings/page";
+import ProfilePage from "@/app/[lang]/(app)/dashboard/card/page";
 import { defaultPreferences, readPreferences } from "@/lib/preferences";
 
 const mocks = vi.hoisted(() => ({ setMode: vi.fn(), openUserProfile: vi.fn(), signOut: vi.fn(), setListingVisibility: vi.fn() }));

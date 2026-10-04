@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within, waitFor } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
-import ConnectionsPage from "@/app/dashboard/connections/page";
+import ConnectionsPage from "@/app/[lang]/(app)/dashboard/connections/page";
 
 const now = Date.now();
 const NEW_TOKEN = "chaos_" + "b".repeat(64);
@@ -24,7 +24,7 @@ const query = (ref: Parameters<typeof getFunctionName>[0]) => {
 };
 vi.mock("@/lib/convexCache", () => ({ useQuery: (ref: Parameters<typeof getFunctionName>[0]) => query(ref) }));
 vi.mock("@/lib/analytics", () => ({ default: { capture: vi.fn() } }));
-vi.mock("@/app/dashboard/connections/WebhooksSection", () => ({ default: () => null }));
+vi.mock("@/app/[lang]/(app)/dashboard/connections/WebhooksSection", () => ({ default: () => null }));
 vi.mock("@/lib/learn/data", () => ({ useMyLessons: () => [], useFolders: () => [], useCurriculumNodes: () => [] }));
 vi.mock("convex/react", () => ({
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => query(ref),

@@ -12,7 +12,7 @@ vi.mock("@clerk/nextjs/server", () => ({
   clerkMiddleware: (handler: unknown) => handler,
   createRouteMatcher: () => () => false,
 }));
-vi.mock("next/server", () => ({ NextResponse: { next: () => ({ headers: new Headers() }) } }));
+vi.mock("next/server", () => ({ NextResponse: { next: () => ({ headers: new Headers() }), rewrite: () => ({ headers: new Headers() }) } }));
 afterEach(() => { fetch.mockReset(); vi.unstubAllEnvs(); });
 
 describe("public search metadata", () => {
@@ -70,7 +70,7 @@ describe("public search metadata", () => {
   });
 
   it("canonicalizes custom form links to the shared form and keeps classic or failed links noindex", async () => {
-    const { generateMetadata } = await import("@/app/[username]/[quizname]/layout");
+    const { generateMetadata } = await import("@/app/[lang]/(app)/[username]/[quizname]/layout");
     fetch.mockImplementation(async (ref) => getFunctionName(ref) === "links:resolveLink"
       ? { shareId: "shared-form" }
       : { state: "open", title: "Survey", allowIndexing: true });
@@ -83,7 +83,7 @@ describe("public search metadata", () => {
   });
 
   it("keeps failed shared-form metadata noindex", async () => {
-    const { generateMetadata } = await import("@/app/f/[shareId]/layout");
+    const { generateMetadata } = await import("@/app/[lang]/(app)/f/[shareId]/layout");
     fetch.mockRejectedValue(new Error("offline"));
     expect(await generateMetadata({ params: Promise.resolve({ shareId: "share" }) })).toMatchObject({ title: "Form unavailable", robots: { index: false } });
   });
@@ -101,10 +101,19 @@ describe("public search metadata", () => {
     const { default: proxy } = await import("@/proxy");
     const invoke = proxy as unknown as (auth: object, request: object) => Promise<{ headers: Headers }>;
     for (const query of ["edit=private", "resume=private", "embed=1", "lang=ar", ""]) {
-      const result = await invoke({}, { nextUrl: new URL(`https://example.com/f/share?${query}`), headers: new Headers({ "sec-fetch-dest": "document" }) });
+      const result = await invoke({}, { url: `https://example.com/f/share?${query}`, nextUrl: new URL(`https://example.com/f/share?${query}`), cookies: new Map(), headers: new Headers({ "sec-fetch-dest": "document" }) });
       expect(result.headers.get("X-Robots-Tag")).toBe(query && query !== "lang=ar" ? "noindex, nofollow" : null);
     }
   });
 });
 
 vi.mock("@/lib/docs/server",()=>({listPublicDocs:async()=>docSlugs.map(slug=>({slug,updatedAt:1})),getPublicDoc:vi.fn()}));
+
+describe("share images", () => {
+  it("gives every pageMetadata() page the default Chaos card", async () => {
+    const { defaultOgImage } = await import("@/lib/seo");
+    const metadata = pageMetadata("Pricing", "Plans.", "/pricing");
+    expect(metadata.openGraph?.images).toEqual([defaultOgImage]);
+    expect(metadata.twitter).toMatchObject({ card: "summary_large_image", images: [defaultOgImage] });
+  });
+});

@@ -3,7 +3,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
 import { LocaleProvider } from "@/lib/i18n";
-import ResponsesPage from "@/app/dashboard/forms/[formId]/responses/page";
+import ResponsesPage from "@/app/[lang]/(app)/dashboard/forms/[formId]/responses/page";
 
 const now = Date.now();
 const options = [{ id: "a", label: "Paris" }, { id: "b", label: "Lyon" }];

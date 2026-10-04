@@ -5,7 +5,7 @@ import { themeFromPreset } from "@/components/forms/formThemes";
 const fetchQuery = vi.hoisted(() => vi.fn());
 vi.mock("convex/nextjs", () => ({ fetchQuery }));
 
-import FormLayout from "@/app/f/[shareId]/layout";
+import FormLayout from "@/app/[lang]/(app)/f/[shareId]/layout";
 import { useInitialTheme } from "@/components/forms/respond/initial-theme";
 
 function Probe() {

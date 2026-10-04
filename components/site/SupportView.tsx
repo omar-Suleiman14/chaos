@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/site/SiteLink";
 import LegalPage from "@/components/site/LegalPage";
 import { useCopy } from "@/lib/i18n";
 import { repoIssuesUrl, repoUrl, securityPolicyUrl, statusPageUrl, supportEmail } from "@/lib/site";

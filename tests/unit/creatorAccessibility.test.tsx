@@ -3,7 +3,7 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 import { WsConfirm } from "@/components/workspace/primitives";
-import { moveItem } from "@/app/dashboard/editor/editor-draft";
+import { moveItem } from "@/app/[lang]/(app)/dashboard/editor/editor-draft";
 
 function Example({ onConfirm }: { onConfirm: () => void }) {
   const [open, setOpen] = useState(false);

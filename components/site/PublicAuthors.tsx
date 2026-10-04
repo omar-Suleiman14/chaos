@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
 import { usePaginatedQuery } from "convex/react";
-import Link from "next/link";
+import Link from "@/components/site/SiteLink";
 import { ChevronLeft } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useLocale } from "@/lib/i18n";

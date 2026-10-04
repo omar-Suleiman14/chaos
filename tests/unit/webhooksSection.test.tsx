@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
-import WebhooksSection from "@/app/dashboard/connections/WebhooksSection";
+import WebhooksSection from "@/app/[lang]/(app)/dashboard/connections/WebhooksSection";
 
 const now = Date.now();
 const hooks = [{

@@ -8,7 +8,7 @@ import { asBlocks, blockText, walk } from "../../lib/learn/doc";
 
 // Exercise the actual page callback without mounting its unrelated authenticated
 // editor/backend dependencies or exporting production internals just for tests.
-const pagePath = resolve(import.meta.dirname, "../../app/dashboard/learn/lessons/[id]/page.tsx");
+const pagePath = resolve(import.meta.dirname, "../../app/[lang]/(app)/dashboard/learn/lessons/[id]/page.tsx");
 const source = ts.createSourceFile(pagePath, readFileSync(pagePath, "utf8"), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
 let callback: string | undefined;
 function visit(node: ts.Node) {

@@ -33,3 +33,33 @@ export function pluralForm(locale: Locale, count: number, forms: PluralForms): s
   if (rest >= 11) return forms.many ?? forms.other;
   return forms.other;
 }
+
+export const LOCALES: readonly Locale[] = ["en", "ar"];
+
+/**
+ * Public marketing pages with a URL per language: English unprefixed (/pricing), Arabic under
+ * /ar (/ar/pricing). They render statically for each language. Every other page keeps one
+ * address and takes its language from the chaos-lang cookie (proxy.ts, lib/localeRouting.ts).
+ */
+const SITE_PATHS = new Set(["/", "/pricing", "/compare", "/docs", "/learn", "/chatgpt", "/connect", "/support", "/privacy", "/terms", "/copyright", "/sitemap"]);
+
+/** True for a marketing page path without a language prefix, such as "/" or "/docs/first-form". */
+export function isSitePath(path: string): boolean {
+  return SITE_PATHS.has(path) || /^\/docs\/[a-z0-9]+(?:-[a-z0-9]+)*$/.test(path);
+}
+
+/** The address of a page in a language: "/pricing" becomes "/ar/pricing" in Arabic. Other links are returned unchanged. */
+export function localePath(href: string, locale: Locale): string {
+  if (locale !== "ar" || !href.startsWith("/") || href.startsWith("//")) return href;
+  const end = href.search(/[?#]/);
+  const path = end === -1 ? href : href.slice(0, end);
+  if (!isSitePath(path)) return href;
+  return `/ar${path === "/" ? "" : path}${end === -1 ? "" : href.slice(end)}`;
+}
+
+/** Splits a leading /en or /ar off a pathname: "/ar/docs" is { locale: "ar", path: "/docs" }. */
+export function splitLocale(pathname: string): { locale: Locale | null; path: string } {
+  const match = /^\/(en|ar)(?=\/|$)/.exec(pathname);
+  if (!match) return { locale: null, path: pathname };
+  return { locale: match[1] as Locale, path: pathname.slice(match[0].length) || "/" };
+}

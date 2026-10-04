@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen, waitFor } from "@testing-library/react"
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
 import { axe } from "vitest-axe";
-import QuizRoute from "@/app/[username]/[quizname]/page";
+import QuizRoute from "@/app/[lang]/(app)/[username]/[quizname]/page";
 
 const startSession = vi.fn();
 const gradeAnswer = vi.fn();

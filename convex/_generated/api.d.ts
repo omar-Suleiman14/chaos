@@ -45,6 +45,8 @@ import type * as grading from "../grading.js";
 import type * as homework from "../homework.js";
 import type * as homeworkModel from "../homeworkModel.js";
 import type * as homeworkUploadAccess from "../homeworkUploadAccess.js";
+import type * as indexNow from "../indexNow.js";
+import type * as indexNowModel from "../indexNowModel.js";
 import type * as http from "../http.js";
 import type * as integrationContract from "../integrationContract.js";
 import type * as integrationModel from "../integrationModel.js";
@@ -172,6 +174,8 @@ declare const fullApi: ApiFromModules<{
   homework: typeof homework;
   homeworkModel: typeof homeworkModel;
   homeworkUploadAccess: typeof homeworkUploadAccess;
+  indexNow: typeof indexNow;
+  indexNowModel: typeof indexNowModel;
   http: typeof http;
   integrationContract: typeof integrationContract;
   integrationModel: typeof integrationModel;

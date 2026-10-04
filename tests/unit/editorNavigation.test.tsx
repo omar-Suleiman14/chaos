@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
-import EditorPage from "@/app/dashboard/editor/page";
+import EditorPage from "@/app/[lang]/(app)/dashboard/editor/page";
 
 const route = vi.hoisted(() => ({ quizId: "quiz-a", userId: "owner-a" }));
 vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams({ id: route.quizId }), useRouter: () => ({ replace: vi.fn(), push: vi.fn() }) }));

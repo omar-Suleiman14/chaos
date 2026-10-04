@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, expect, it, vi } from "vitest";
+import { topLevelRouteFolders } from "../routeFolders";
 // Next's own compilers for next.config.ts header sources and proxy matchers.
 import { getPathMatch } from "next/dist/shared/lib/router/utils/path-match";
 import * as pageStaticInfo from "next/dist/build/analysis/get-page-static-info";
@@ -179,8 +180,7 @@ describe("route coverage (next.config.ts and proxy.ts)", () => {
   });
 
   it("reserves every top-level app folder except the form routes", () => {
-    const names = readdirSync(join(process.cwd(), "app"), { withFileTypes: true })
-      .filter((d) => d.isDirectory()).map((d) => d.name).filter((n) => n !== "f" && !n.startsWith("["));
+    const names = topLevelRouteFolders().filter((n) => n !== "f" && !n.startsWith("["));
     for (const name of names) expect(APP_SEGMENTS, name).toContain(name);
   });
 });

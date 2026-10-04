@@ -1,6 +1,7 @@
-import { readdirSync, readFileSync, statSync } from "node:fs";
+import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { topLevelRouteFolders } from "../routeFolders";
 
 const readSource = (relativePath: string) =>
   readFileSync(resolve(process.cwd(), relativePath), "utf8");
@@ -47,14 +48,12 @@ describe("authorization helper guard", () => {
     const matcher = /createRouteMatcher\(\[([^\]]*)\]\)/.exec(proxy)?.[1] ?? "";
     for (const route of ["/dashboard(.*)", "/admin(.*)", "/print(.*)"]) expect(matcher).toContain(`"${route}"`);
     // Every page folder under app/ that is not public must be listed above.
-    const publicTop = new Set(["[username]", "f", "sign-in", "sign-up", "docs", "chatgpt", "connect", "pricing", "privacy", "terms", "copyright", "api", "mcp", ".well-known",
+    const publicTop = new Set(["[username]", "f", "sign-in", "sign-up", "docs", "chatgpt", "connect", "pricing", "privacy", "terms", "copyright", "api", "mcp", ".well-known", "opengraph-image",
       // Live game players join with a PIN and no account (host screens live under /dashboard).
-      "play", "compare", "support", "card",
+      "play", "compare", "support", "card", "sitemap",
       // Published lessons, profiles and collections are readable without an account; writing needs sign-in.
       "learn"]);
-    const appDir = resolve(process.cwd(), "app");
-    const folders = readdirSync(appDir).filter((name) => statSync(resolve(appDir, name)).isDirectory());
-    for (const folder of folders) {
+    for (const folder of topLevelRouteFolders()) {
       if (publicTop.has(folder)) continue;
       expect(matcher, `app/${folder} is neither public nor protected`).toContain(`"/${folder}(.*)"`);
     }

@@ -1,7 +1,7 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
-import DashboardLayout from "@/app/dashboard/layout";
+import DashboardLayout from "@/app/[lang]/(app)/dashboard/layout";
 
 const forms = {
   owned: [

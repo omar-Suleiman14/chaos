@@ -19,6 +19,8 @@ const app = defineApp({
     CHAOS_API_READ_RATE_PER_MINUTE: v.optional(v.string()),
     /** Integration API writes allowed per connection per minute (default 60). globalConfig overrides it. */
     CHAOS_API_WRITE_RATE_PER_MINUTE: v.optional(v.string()),
+    /** IndexNow key (8-128 of a-z, A-Z, 0-9, -). Same value as the Next.js INDEXNOW_KEY. Unset disables submissions. */
+    INDEXNOW_KEY: v.optional(v.string()),
   },
 });
 

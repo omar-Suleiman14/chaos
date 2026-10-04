@@ -103,6 +103,7 @@ When hosting a modified version, set `NEXT_PUBLIC_SOURCE_REPO_URL` to the source
 - Webhooks: [`docs/webhooks-v1.md`](./docs/webhooks-v1.md)
 - ChatGPT app: [`docs/chatgpt-app.md`](./docs/chatgpt-app.md)
 - Self-hosting: [`docs/self-hosting.md`](./docs/self-hosting.md)
+- Search indexing (IndexNow): [`docs/indexnow.md`](./docs/indexnow.md)
 - Data lifecycle and migrations: [`docs/data-lifecycle.md`](./docs/data-lifecycle.md), [`docs/migrations.md`](./docs/migrations.md)
 
 ## Contributing

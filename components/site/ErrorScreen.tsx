@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/site/SiteLink";
 import Logo from "@/components/Logo";
 import { useCopy } from "@/lib/i18n";
 import { statusPageUrl } from "@/lib/site";

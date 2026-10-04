@@ -1,6 +1,6 @@
 import { act, renderHook } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import { useFormDraft } from "@/app/dashboard/forms/[formId]/use-form-draft";
+import { useFormDraft } from "@/app/[lang]/(app)/dashboard/forms/[formId]/use-form-draft";
 import { emptyDefinition } from "@/convex/formLogic";
 import type { Id } from "@/convex/_generated/dataModel";
 

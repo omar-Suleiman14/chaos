@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
-import PrintQuizPage from "@/app/print/[quizId]/page";
+import PrintQuizPage from "@/app/[lang]/(app)/print/[quizId]/page";
 
 const results: Record<string, unknown> = {};
 vi.mock("convex/react", () => ({

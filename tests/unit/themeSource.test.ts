@@ -5,7 +5,7 @@ import { themeInitScript } from "@/lib/theme";
 
 describe("theme source", () => {
   it("keeps dashboard shell free of hardcoded hex colors", () => {
-    const source = readFileSync(resolve(process.cwd(), "app/dashboard/DashboardShell.tsx"), "utf8");
+    const source = readFileSync(resolve(process.cwd(), "app/[lang]/(app)/dashboard/DashboardShell.tsx"), "utf8");
     expect(source).not.toMatch(/#[0-9a-f]{3,8}/i);
   });
 

@@ -1,4 +1,5 @@
 import { docsTables } from "./docsModel";
+import { indexNowTables } from "./indexNowModel";
 import { quizForkTables } from "./quizForkModel";
 import { discussionTables } from "./learnDiscussionModel";
 import { proposalTables } from "./lessonProposalModel";
@@ -26,6 +27,7 @@ import { liveTables } from "./liveModel";
 export default defineSchema({
   authIdentityBindings: defineTable({ externalActorId: v.string(), actorId: v.string(), tokenIdentifier: v.string() }).index("by_externalActorId", ["externalActorId"]).index("by_actorId", ["actorId"]),
   ...docsTables,
+  ...indexNowTables,
   ...learnTables,
   ...discussionTables,
   ...proposalTables,

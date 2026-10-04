@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
-import ArchivePage from "@/app/dashboard/archive/page";
+import ArchivePage from "@/app/[lang]/(app)/dashboard/archive/page";
 
 const theme = { accent: "#3595e3", background: "plain", font: "sans", radius: "small" };
 const forms = { owned: [

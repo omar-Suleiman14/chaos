@@ -2,7 +2,7 @@ import { act, fireEvent, render, screen } from "@testing-library/react";
 import { StrictMode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
-import QuizRoute from "@/app/[username]/[quizname]/page";
+import QuizRoute from "@/app/[lang]/(app)/[username]/[quizname]/page";
 
 // Test double for the Convex hooks: queries answer from a table keyed by function name,
 // mutations are plain spies so a test can decide when they settle.

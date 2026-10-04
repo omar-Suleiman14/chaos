@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { WsDialog, WsMenu } from "@/components/workspace/primitives";
 import CommandPalette from "@/components/workspace/CommandPalette";
-import DashboardLayout from "@/app/dashboard/layout";
+import DashboardLayout from "@/app/[lang]/(app)/dashboard/layout";
 import { useModal } from "@/components/workspace/useModal";
 
 const mocks = vi.hoisted(() => ({ push: vi.fn(), toggleTheme: vi.fn() }));

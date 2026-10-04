@@ -5,6 +5,8 @@ import { docFields, docLocale, publishedDoc } from "./docsModel";
 import { docSections } from "../lib/docs/content";
 import type { Doc } from "./_generated/dataModel";
 import { updateDocCopy } from "../lib/docs/copyUpdates";
+import { queueIndexNow } from "./indexNow";
+import { indexNowPaths } from "./indexNowModel";
 
 type Fields = Pick<Doc<"docArticles">, "slug" | "locale" | "sectionId" | "sectionTitle" | "order" | "content">;
 const saveArgs = { ...docFields, expectedRevision: v.optional(v.number()), publish: v.optional(v.boolean()) };
@@ -32,6 +34,8 @@ async function saveForActor(ctx: MutationCtx, actorId: string, args: Fields & { 
   const now = Date.now();
   const patch = { ...fields, revision, updatedAt: now, published: publish ? { ...args.content, sectionId: args.sectionId, sectionTitle: args.sectionTitle, order: args.order } : prior?.published ?? null, publishedAt: publish ? now : prior?.publishedAt ?? null };
   if (prior) await ctx.db.patch("docArticles", prior._id, patch); else await ctx.db.insert("docArticles", patch);
+  // Draft saves and identical republishes leave the public page unchanged, so only real changes reach IndexNow.
+  if (publish && JSON.stringify(prior?.published ?? null) !== JSON.stringify(patch.published)) await queueIndexNow(ctx, [indexNowPaths.doc(args.slug, args.locale)]);
   await ctx.db.insert("adminAudit", { actorId, action: publish ? "publish_doc" : "save_doc", target: `${args.locale}/${args.slug}`, reason: args.content.title, createdAt: now });
   return { slug: args.slug, locale: args.locale, revision, published: publish === true };
 }

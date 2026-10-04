@@ -1,12 +1,12 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 const lookup = vi.hoisted(() => vi.fn());
-vi.mock("@/app/card/[username]/lookup", () => ({ publicCard: lookup }));
-vi.mock("@/app/card/[username]/PublicCard", () => ({ default: () => null }));
+vi.mock("@/app/[lang]/(app)/card/[username]/lookup", () => ({ publicCard: lookup }));
+vi.mock("@/app/[lang]/(app)/card/[username]/PublicCard", () => ({ default: () => null }));
 vi.mock("next/navigation", () => ({
   notFound: () => { throw new Error("404"); },
   permanentRedirect: (path: string) => { throw new Error(`308 ${path}`); },
 }));
-import CardPage, { generateMetadata } from "@/app/card/[username]/page";
+import CardPage, { generateMetadata } from "@/app/[lang]/(app)/card/[username]/page";
 
 describe("public card metadata", () => {
   // Returning the mock makes Vitest treat it as hook cleanup and call it after the test.

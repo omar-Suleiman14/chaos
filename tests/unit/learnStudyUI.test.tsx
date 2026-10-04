@@ -18,7 +18,7 @@ vi.mock("@/lib/learn/data", () => ({
   useLearnActions: () => ({ updateProfile: vi.fn() }), useLearnCapabilities: () => ({ verification: false, quizForks: false, weakAreas: false }), useProgress: () => ({}),
 }));
 import PracticeTab from "@/components/learn/reader/PracticeTab";
-import ProfilePage from "@/app/dashboard/learn/profile/page";
+import ProfilePage from "@/app/[lang]/(app)/dashboard/learn/profile/page";
 import WeakAreas from "@/components/learn/WeakAreas";
 import ProfileView from "@/components/learn/ProfileView";
 
