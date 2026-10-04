@@ -27,9 +27,9 @@ const copy = {
     howTitle: "How it works",
     how: [
       "You connect once by signing in with your Chaos account. If you’re new, the account is created for you.",
-      "New things your assistant creates are published straight away so links work immediately, unless you ask for a draft. Imported content from outside tools always starts as a draft for review, and later edits stay drafts until you choose to publish.",
+      "Forms can be published when you ask; courses and lessons start as drafts and require explicit publication. Imported content from outside tools always starts as a draft for review, and later edits stay drafts until you choose to publish.",
       "ChatGPT can read your forms, results and responses, but only when you ask. It can close, reopen and archive forms, and edit lesson draft blocks. Review changes before publishing.",
-      "Public courses are free to read. Publishing a course also publishes its outlined lessons; request this only after reviewing their drafts.",
+      "Public courses are free to read. Publishing a course uses already published lesson versions and leaves lesson drafts private.",
       "Quizzes use Chaos’s quiz mode: right answers, points and a short explanation for each question.",
     ],
     plan: ["Chaos in ChatGPT is included on ", "every plan", ", including free Personal accounts. See ", "pricing", "."],
