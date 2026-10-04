@@ -52,7 +52,7 @@ export const myVisibility = query({ args: { username: v.string() }, handler: asy
 async function setVisibility(ctx: MutationCtx, studentId: string, username: string, visible: boolean) {
   const author = await userByUsername(ctx, username.trim().toLowerCase()); if (!author) throw new Error("Author unavailable");
   const row = await ctx.db.query("authorStudents").withIndex("by_author_key", q => q.eq("authorId", author.clerkId).eq("key", `user:${studentId}`)).unique();
-  if (!row) throw new Error("No student relationship to update");
+  if (!row) throw new Error("VALIDATION_FAILED: No student relationship to update");
   await ctx.db.patch("authorStudents", row._id, { publicVisible: visible }); return { ok: true };
 }
 export const setPublicVisibility = mutation({ args: { username: v.string(), visible: v.boolean() }, handler: async (ctx, args) => { const { identity } = await requireActiveUser(ctx); return setVisibility(ctx, identity.subject, args.username, args.visible); } });
