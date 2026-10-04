@@ -1,0 +1,5 @@
+"use client";
+import { useLocale } from "@/lib/i18n";
+import { repoUrl } from "@/lib/site";
+import LegalPage from "./LegalPage";
+export default function ChangelogView(){const {locale}=useLocale(),ar=locale==="ar";return <LegalPage title={ar?"سجل التغييرات":"Changelog"}><h2>2026-10-04</h2><ul>{(ar?["الدروس: بطاقات واختبارات داخل المحتوى وإكمال صريح ودعم RTL.","الدورات: وحدات ومخرجات وتقدم ونشر مستقل وتصدير واستيراد.","MCP: إجراءات التعلم وتصنيفات الصلاحيات وسجل أدوات مولّد.","واجهة العمل: إنشاء موحّد وبحث ومراجعة قابلة للتنفيذ."]: ["Lessons: inline cards/checkpoints, explicit completion and RTL support.","Courses: modules, outcomes, progress, independent publication and archive transfer.","MCP: learning actions, permission categories and a generated registry inventory.","Workspace: unified creation, content search and actionable review."]).map(s=><li key={s}>{s}</li>)}</ul><p>{ar?"هذه تغييرات التنفيذ؛ تحقق من نتائج CI لكل إصدار قبل الاستضافة الذاتية.":"These are implementation changes. Check each release’s CI results before self-hosting."}</p><a href={`${repoUrl}/commits/main`}>{ar?"سجل التغييرات الكامل":"Full commit history"}</a></LegalPage>;}

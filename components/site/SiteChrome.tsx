@@ -9,7 +9,7 @@ import { ThemeToggle } from "@/components/ThemeToggle";
 import { ThemeModeSwitch } from "@/components/ThemeModeSwitch";
 import { useCopy, useLocale } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
-import { repoIssuesUrl, repoUrl, statusPageUrl } from "@/lib/site";
+import { repoIssuesUrl, repoUrl } from "@/lib/site";
 
 const copy = {
   en: {
@@ -173,7 +173,7 @@ export function SiteFooter() {
             <Link href="/docs">{t.docs}</Link>
             <Link href="/support">{t.help}</Link>
             <Link href="/faq">{t.faq}</Link>
-            {statusPageUrl && <a href={statusPageUrl}>{t.status}</a>}
+            <Link href="/status">{t.status}</Link><Link href="/changelog">{t.docs === "Docs" ? "Changelog" : "سجل التغييرات"}</Link>
             <a href={repoIssuesUrl}>{t.issues}</a>
           </div>
           <div>
