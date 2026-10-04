@@ -540,16 +540,42 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-course-navigation .ws-btn { display: grid; max-width: 100%; text-align: start; white-space: normal; }
 
 .lx-completion { display: grid; gap: 12px; }
-.lx-completion-sound { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--on-surface-variant); }
 .lx-complete-button:active { transform: scale(.97); }
-.lx-completion-success { display: inline-flex; align-items: center; gap: 10px; color: var(--primary); font-weight: 600; }
-.lx-completion-success svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
-.lx-completion-success[data-animate] circle { stroke-dasharray: 82; animation: lx-success-ring .55s ease-out both; }
-.lx-completion-success[data-animate] path { stroke-dasharray: 30; animation: lx-success-check .35s .4s ease-out both; }
+.lx-completion-success { display: inline-flex; align-items: center; gap: 10px; font-weight: 600; }
+.lx-completion-success svg circle { fill: #007aff; }
+.lx-completion-success svg path { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 
-@keyframes lx-success-ring { from { stroke-dashoffset: 82; transform: rotate(-90deg); transform-origin: center; } to { stroke-dashoffset: 0; transform: rotate(-90deg); transform-origin: center; } }
-@keyframes lx-success-check { from { stroke-dashoffset: 30; } to { stroke-dashoffset: 0; } }
-@media (prefers-reduced-motion: reduce) { .lx-completion-success circle, .lx-completion-success path { animation: none !important; } .lx-complete-button:active { transform: none; } .lx-course-navigation progress { transition: none; } }
+/* Apple Pay–style completion: frosted card, a blue ring traces and fills, a white check draws, then it fades. */
+.lx-hud { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: rgba(0, 0, 0, .12); animation: lx-hud-fade .25s ease-out both; }
+.lx-hud[data-leaving] { animation: lx-hud-out .3s ease-in both; }
+.lx-hud__card {
+  --lx-hud-blue: #007aff;
+  display: grid; justify-items: center; gap: 14px; width: 188px; padding: 30px 20px 22px; border-radius: 24px;
+  background: rgba(250, 250, 252, .82); color: #1d1d1f; -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px);
+  box-shadow: 0 20px 60px -12px rgba(0, 0, 0, .28), 0 0 0 .5px rgba(0, 0, 0, .06);
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", var(--font-cairo), system-ui, sans-serif;
+  animation: lx-hud-in .5s cubic-bezier(.2, 1.3, .4, 1) both;
+}
+.lx-hud[data-leaving] .lx-hud__card { animation: lx-hud-card-out .3s ease-in both; }
+@media (prefers-color-scheme: dark) { .lx-hud__card { --lx-hud-blue: #0a84ff; background: rgba(44, 44, 46, .8); color: #f5f5f7; box-shadow: 0 20px 60px -12px rgba(0, 0, 0, .6), 0 0 0 .5px rgba(255, 255, 255, .08); } }
+.lx-hud__mark { width: 72px; height: 72px; overflow: visible; }
+.lx-hud__ring { fill: none; stroke: var(--lx-hud-blue); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 214; stroke-dashoffset: 214; transform: rotate(-90deg); transform-origin: 36px 36px; animation: lx-hud-ring .5s .12s cubic-bezier(.65, 0, .35, 1) forwards; }
+.lx-hud__fill { fill: var(--lx-hud-blue); transform-origin: 36px 36px; transform: scale(.4); opacity: 0; animation: lx-hud-pop .42s .55s cubic-bezier(.2, 1.4, .4, 1) forwards; }
+.lx-hud__check { fill: none; stroke: #fff; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 44; stroke-dashoffset: 44; animation: lx-hud-check .32s .68s cubic-bezier(.65, 0, .35, 1) forwards; }
+.lx-hud__label { font-size: 17px; font-weight: 600; letter-spacing: -.01em; opacity: 0; animation: lx-hud-fade .3s .85s ease-out forwards; }
+@keyframes lx-hud-fade { from { opacity: 0; } to { opacity: 1; } }
+@keyframes lx-hud-out { to { opacity: 0; } }
+@keyframes lx-hud-in { from { opacity: 0; transform: scale(.86); } to { opacity: 1; transform: scale(1); } }
+@keyframes lx-hud-card-out { to { opacity: 0; transform: scale(.94); } }
+@keyframes lx-hud-ring { to { stroke-dashoffset: 0; } }
+@keyframes lx-hud-pop { to { opacity: 1; transform: scale(1); } }
+@keyframes lx-hud-check { to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .lx-hud, .lx-hud__card, .lx-hud__ring, .lx-hud__fill, .lx-hud__check, .lx-hud__label { animation: none !important; opacity: 1; transform: none; stroke-dashoffset: 0; }
+  .lx-hud__ring { transform: rotate(-90deg); }
+  .lx-complete-button:active { transform: none; }
+  .lx-course-navigation progress { transition: none; }
+}
 
 .lx-course-meter { height: 6px; border-radius: 6px; overflow: hidden; background: var(--ws-line); }
 .lx-course-meter > span { display: block; height: 100%; background: var(--primary); transition: width .7s ease; }

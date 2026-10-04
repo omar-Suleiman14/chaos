@@ -230,7 +230,7 @@ describe("forms: presentation modes and themes", () => {
     await owner.mutation(api.quizFunctions.getOrCreateUser, {});
     const formId = await owner.mutation(api.forms.createForm, {});
     const created = await owner.query(api.forms.getFormForEditor, { formId });
-    expect(created?.draft.theme.preset).toBe("google-forms");
+    expect(created?.draft.theme.preset).toBe("flow");
 
     const definition: FormDefinition = {
       ...sampleDefinition(),

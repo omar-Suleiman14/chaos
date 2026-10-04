@@ -8,8 +8,6 @@
  * @module
  */
 
-import type * as coursePortability from "../coursePortability.js";
-import type * as studentRoster from "../studentRoster.js";
 import type * as admin from "../admin.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminModel from "../adminModel.js";
@@ -18,7 +16,9 @@ import type * as authIdentity from "../authIdentity.js";
 import type * as authorIndex from "../authorIndex.js";
 import type * as authz from "../authz.js";
 import type * as courseDirectory from "../courseDirectory.js";
+import type * as coursePortability from "../coursePortability.js";
 import type * as courseSearchModel from "../courseSearchModel.js";
+import type * as courseStudents from "../courseStudents.js";
 import type * as courses from "../courses.js";
 import type * as crons from "../crons.js";
 import type * as curricula from "../curricula.js";
@@ -47,9 +47,9 @@ import type * as grading from "../grading.js";
 import type * as homework from "../homework.js";
 import type * as homeworkModel from "../homeworkModel.js";
 import type * as homeworkUploadAccess from "../homeworkUploadAccess.js";
+import type * as http from "../http.js";
 import type * as indexNow from "../indexNow.js";
 import type * as indexNowModel from "../indexNowModel.js";
-import type * as http from "../http.js";
 import type * as integrationContract from "../integrationContract.js";
 import type * as integrationModel from "../integrationModel.js";
 import type * as integrations from "../integrations.js";
@@ -123,6 +123,7 @@ import type * as quizModel from "../quizModel.js";
 import type * as respond from "../respond.js";
 import type * as serverUtils from "../serverUtils.js";
 import type * as sourceFingerprint from "../sourceFingerprint.js";
+import type * as studentRoster from "../studentRoster.js";
 import type * as support from "../support.js";
 import type * as usernameModel from "../usernameModel.js";
 import type * as webhookCrypto from "../webhookCrypto.js";
@@ -139,8 +140,6 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
-  studentRoster: typeof studentRoster;
-  coursePortability: typeof coursePortability;
   admin: typeof admin;
   adminAnalytics: typeof adminAnalytics;
   adminModel: typeof adminModel;
@@ -149,7 +148,9 @@ declare const fullApi: ApiFromModules<{
   authorIndex: typeof authorIndex;
   authz: typeof authz;
   courseDirectory: typeof courseDirectory;
+  coursePortability: typeof coursePortability;
   courseSearchModel: typeof courseSearchModel;
+  courseStudents: typeof courseStudents;
   courses: typeof courses;
   crons: typeof crons;
   curricula: typeof curricula;
@@ -178,9 +179,9 @@ declare const fullApi: ApiFromModules<{
   homework: typeof homework;
   homeworkModel: typeof homeworkModel;
   homeworkUploadAccess: typeof homeworkUploadAccess;
+  http: typeof http;
   indexNow: typeof indexNow;
   indexNowModel: typeof indexNowModel;
-  http: typeof http;
   integrationContract: typeof integrationContract;
   integrationModel: typeof integrationModel;
   integrations: typeof integrations;
@@ -254,6 +255,7 @@ declare const fullApi: ApiFromModules<{
   respond: typeof respond;
   serverUtils: typeof serverUtils;
   sourceFingerprint: typeof sourceFingerprint;
+  studentRoster: typeof studentRoster;
   support: typeof support;
   usernameModel: typeof usernameModel;
   webhookCrypto: typeof webhookCrypto;

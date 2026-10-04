@@ -1,6 +1,7 @@
 "use client";
 
 import { useCourseProgress } from "@/lib/learn/courseProgress";
+import { useCourseEnrollment } from "@/lib/learn/courseEnrollment";
 import { contentDirection } from "@/lib/learn/direction";
 
 import { useQuery } from "convex/react";
@@ -18,7 +19,7 @@ import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent as ReactMouseEvent } from "react";
 import {
   ChevronLeft, Bookmark, BookmarkCheck, ExternalLink, Flag, GitFork, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
-  MoreHorizontal, NotebookPen, PenLine, RotateCcw, Share2, ThumbsDown, ThumbsUp, Type, X,
+  Lock, MoreHorizontal, NotebookPen, PenLine, RotateCcw, Share2, ThumbsDown, ThumbsUp, Type, X,
 } from "lucide-react";
 import { WsConfirm, WsMenu, WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -128,6 +129,9 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const actions = useLearnActions();
   const course = useQuery(api.courses.getPublic, courseId ? { courseId } : "skip");
   const courseProgress = useCourseProgress(courseId ?? "");
+  const enrollment = useCourseEnrollment(courseId);
+  const recordCourseLesson = enrollment.recordLesson;
+  useEffect(() => { if (courseId && !previewDraft) recordCourseLesson(lesson.id); }, [courseId, lesson.id, previewDraft, recordCourseLesson]);
   const completesCourse = !!course?.lessons.length && course.lessons.some(l => l.id === lesson.id) && course.lessons.every(l => l.id === lesson.id || courseProgress[l.id]?.completed);
   const phone = useIsPhone();
   const isOwner = viewer?.id === lesson.ownerId;
@@ -470,8 +474,8 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                     <footer className="lx-section" style={{ marginTop: 40, paddingTop: 20, borderTop: "1px solid var(--ws-line)" }}>
                       <div className="lx-actions" style={{ justifyContent: "space-between" }}>
                         <CompletionAction completionSound={completesCourse ? "course_complete" : "lesson_complete"} completed={completed} disabled={remainingActivities > 0}
-                          onComplete={async () => { await actions.setProgress(lesson.id, { state: "completed", percent: 100 }); setJustCompleted(true); }}
-                          onReset={async () => { await actions.setProgress(lesson.id, { state: "not_started", percent: 0 }); setJustCompleted(false); setActivities({}); try { localStorage.removeItem(activityKey); localStorage.removeItem(positionKey); setResumePosition(null); } catch { /* unavailable */ } window.scrollTo({ top: 0, behavior: "auto" }); }} />
+                          onComplete={async () => { await actions.setProgress(lesson.id, { state: "completed", percent: 100 }); setJustCompleted(true); recordCourseLesson(lesson.id, true); }}
+                          onReset={async () => { await actions.setProgress(lesson.id, { state: "not_started", percent: 0 }); setJustCompleted(false); recordCourseLesson(lesson.id, false); setActivities({}); try { localStorage.removeItem(activityKey); localStorage.removeItem(positionKey); setResumePosition(null); } catch { /* unavailable */ } window.scrollTo({ top: 0, behavior: "auto" }); }} />
                         {!isOwner && (
                           <span className="lx-actions" role="group" aria-label={t.helpful}>
                             <span className="lx-muted">{vote ? t.thanks : t.helpful}</span>
@@ -573,6 +577,21 @@ export function UnavailableLesson({ backHref = "/dashboard/learn" }: { backHref?
         <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--on-surface)" }}>{t.unavailable}</h1>
         <p>{t.unavailableBody}</p>
         <Link className="ws-btn" href={backHref}>{t.back}</Link>
+      </div>
+    </div>
+  );
+}
+
+/** Shown instead of a course lesson until the learner starts the course. */
+export function LockedCourseLesson({ courseId, title }: { courseId: string; title: string }) {
+  const { locale } = useLocale(), ar = locale === "ar";
+  return (
+    <div className="lx-page lx-page--narrow" style={{ padding: "64px 16px" }}>
+      <div className="lx-empty">
+        <Lock size={28} aria-hidden />
+        <h1 style={{ fontSize: 20, fontWeight: 700, color: "var(--on-surface)" }} dir="auto">{title}</h1>
+        <p>{ar ? "هذا الدرس جزء من دورة. ابدأ الدورة لفتحه." : "This lesson is part of a course. Start the course to unlock it."}</p>
+        <Link className="ws-btn ws-btn--primary" href={`/learn/courses/${encodeURIComponent(courseId)}`}>{ar ? "اذهب إلى الدورة" : "Go to the course"}</Link>
       </div>
     </div>
   );

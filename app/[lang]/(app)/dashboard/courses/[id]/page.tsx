@@ -10,6 +10,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import CoursePortability from "@/components/courses/CoursePortability";
 import CourseDetailsEditor from "@/components/courses/CourseDetailsEditor";
 import CourseModulesEditor from "@/components/courses/CourseModulesEditor";
+import CourseStudents from "@/components/courses/CourseStudents";
 import { contentDirection } from "@/lib/learn/direction";
 import { localeDir } from "@/lib/locale";
 import { useCopy, useLocale } from "@/lib/i18n";
@@ -130,6 +131,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
         <button type="button" className="cb-add w-full" disabled={busy} onClick={() => void run(async () => { const lessonId = await addLesson({ courseId }); router.push(`/dashboard/learn/lessons/${lessonId}?course=${courseId}`); })}><Plus size={18} aria-hidden /> {t.add}</button>
       </section>
 
+      <CourseStudents courseId={courseId} />
       <CoursePortability courseId={courseId} />
       <CourseDetailsEditor courseId={courseId} details={course.details} />
       <CourseModulesEditor courseId={courseId} modules={course.modules ?? []} lessons={course.lessons} />

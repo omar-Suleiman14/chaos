@@ -125,5 +125,29 @@
 .cp-continue { display: grid; gap: 12px; margin-bottom: 32px; max-width: 480px; }
 .cp-continue .cp-start { margin-bottom: 0; width: fit-content; }
 .cp-continue p, .cp-facts { color: var(--on-surface-variant); font-size: 14px; }
+.cp-lesson[data-locked] { cursor: default; }
+.cp-lesson[data-locked]:hover { border-color: var(--s-line); background: var(--s-card); }
+.cp-lesson[data-locked] .cp-lesson__title, .cp-lesson[data-locked] .cp-lesson__desc { opacity: .6; }
+.cp-lesson__lock { color: var(--s-soft); }
+.cp-enroll { max-width: 520px; }
+.cp-enroll__name { display: grid; gap: 6px; font-size: 14px; font-weight: 600; }
+.cp-enroll__name input { font-weight: 400; }
+.cp-enroll__actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 20px; }
+.cp-enroll__signin { font-size: 14px; font-weight: 600; text-decoration: underline; text-underline-offset: 3px; }
 .cp-outcomes { margin-block: 32px; }
 .cp-outcomes ul { display: grid; gap: 10px; padding-inline-start: 22px; margin-top: 16px; }
+
+/* Course students (dashboard): recent learners with their Card avatar and progress. */
+.cs-students { display: grid; gap: 10px; min-width: 0; }
+.cs-students__scroll { overflow-x: auto; border: 1px solid var(--ws-line); border-radius: 12px; background: var(--ws-card); }
+.cs-table th { position: static; background: transparent; }
+.cs-table tbody tr:last-child td { border-bottom: 0; }
+.cs-who { display: inline-flex; align-items: center; gap: 10px; min-width: 0; color: inherit; text-decoration: none; }
+a.cs-who:hover strong { text-decoration: underline; text-underline-offset: 3px; }
+.cs-avatar { display: grid; place-items: center; width: 30px; height: 30px; flex-shrink: 0; border-radius: 999px; overflow: hidden; }
+.cs-name { display: grid; line-height: 1.25; }
+.cs-name strong { font-weight: 600; }
+.cs-name small { font-size: 12px; color: var(--on-surface-variant); }
+.cs-progress { display: inline-grid; grid-template-columns: 96px auto; align-items: center; gap: 10px; font-size: 13px; font-variant-numeric: tabular-nums; }
+.cs-progress .ws-bars__track { grid-column: auto; height: 6px; }
+.cs-muted { color: var(--on-surface-variant); font-size: 13.5px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }

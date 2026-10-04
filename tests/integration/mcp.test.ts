@@ -102,18 +102,18 @@ describe("ChatGPT app backend", () => {
   it("styles a draft: theme, sound and warnings, on drafts and published forms, with the usual access rules", async () => {
     const t = await setup();
     const created = await t.mutation(internal.mcp.createForm, { userId: owner, input: { ...quizInput, sound: "wood" } });
-    expect(created.theme).toMatchObject({ preset: "google-forms", sound: "wood" });
+    expect(created.theme).toMatchObject({ preset: "flow", sound: "wood" });
     const plain = await t.mutation(internal.mcp.createForm, { userId: owner, input: quizInput });
-    expect(plain.theme).toMatchObject({ preset: "google-forms", sound: "soft" });
+    expect(plain.theme).toMatchObject({ preset: "flow", sound: "soft" });
 
     const rev = (await t.query(internal.mcp.getForm, { userId: owner, id: created.id })) as { revision: number; theme: { preset: string } };
-    expect(rev.theme.preset).toBe("google-forms");
+    expect(rev.theme.preset).toBe("flow");
     const styled = await t.mutation(internal.mcp.updateForm, {
       userId: owner, id: created.id, expectedRevision: rev.revision,
       input: { theme: { accent: "#f0ebf9", font: "serif" } },
     });
     expect(styled.revision).toBe(rev.revision + 1);
-    expect(styled.theme).toMatchObject({ preset: "google-forms", accent: "#f0ebf9", font: "serif", sound: "wood" });
+    expect(styled.theme).toMatchObject({ preset: "flow", accent: "#f0ebf9", font: "serif", sound: "wood" });
     expect(styled.warnings.join(" ")).toMatch(/Accent on page/);
     await expect(t.mutation(internal.mcp.updateForm, { userId: owner, id: created.id, expectedRevision: 1, input: { sound: "pop" } })).rejects.toThrow(/DRAFT_CONFLICT/);
     await expect(t.mutation(internal.mcp.updateForm, { userId: owner, id: created.id, input: { theme: { accent: "nope" } } })).rejects.toThrow(/VALIDATION_FAILED/);

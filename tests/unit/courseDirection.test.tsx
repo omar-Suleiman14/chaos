@@ -9,6 +9,7 @@ vi.mock("convex/react", () => ({
   useConvex: () => ({ query: vi.fn(), mutation: vi.fn() }), useQuery: () => backend.course, useMutation: () => backend.update }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), useParams: () => ({ lang: "en" }) }));
 vi.mock("@/components/learn/editor/PageHeader", () => ({ LessonCover: () => null, PageIconControls: () => null }));
+vi.mock("@/components/courses/CourseStudents", () => ({ default: () => null }));
 const { default: CourseBuilder } = await import("@/app/[lang]/(app)/dashboard/courses/[id]/page");
 beforeEach(() => backend.update.mockReset().mockResolvedValue(null));
 it("sets Arabic course fields RTL in an English interface and saves language changes", async () => {
