@@ -23,7 +23,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...docs.flatMap(doc => sitePage(`/docs/${doc.slug}`, new Date(doc.updatedAt))),
     ...["/chatgpt", "/connect", "/learn", "/forms-quizzes", "/live-games", "/ai", "/open-source"].flatMap(path => sitePage(path)),
     { url: `${siteUrl}/card` },
-    ...["/support", "/privacy", "/terms", "/sitemap"].flatMap(path => sitePage(path)),
+    ...["/status", "/changelog", "/support", "/privacy", "/terms", "/sitemap"].flatMap(path => sitePage(path)),
     ...courses.map(course => ({ url: `${siteUrl}/learn/courses/${encodeURIComponent(course.id)}`, lastModified: new Date(course.updatedAt) })),
     ...lessons.map(lesson => ({ url: `${siteUrl}/learn/${encodeURIComponent(lesson.id)}`, lastModified: new Date(lesson.publishedAt) })),
   ];
