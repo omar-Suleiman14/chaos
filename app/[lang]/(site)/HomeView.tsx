@@ -5,6 +5,7 @@ import Link from "@/components/site/SiteLink";
 import { ArrowRight, BookOpen, Braces, Download, FileText, GitFork, GraduationCap, ListChecks, Radio, Server, Webhook } from "lucide-react";
 import { PrimaryCta, SiteFooter, SiteNav } from "@/components/site/SiteChrome";
 import { ChatGptMark, NotionMark } from "@/components/site/marks";
+import OpenTrust from "@/components/site/OpenTrust";
 import ProductDemo from "@/components/site/ProductDemo";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { serializeStructuredData, websiteStructuredData } from "@/lib/seo";
@@ -213,6 +214,7 @@ export default function HomeView() {
           <Cards items={t.open.items} />
         </section>
 
+        <OpenTrust />
         <section className="site-cta"><h2 className="site-h2">{t.ctaTitle}</h2><p className="site-lead">{t.ctaLead}</p><div className="site-hero__actions"><PrimaryCta large label={t.start} /></div></section>
       </main>
       <SiteFooter />
