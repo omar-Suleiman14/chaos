@@ -8,6 +8,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { LessonActivity, type Activity } from "./ActivityContext";
 import ActivitySummary, { useReadingSeconds } from "./ActivitySummary";
 import CompletionAction from "./CompletionAction";
+import CourseBreadcrumb from "./CourseBreadcrumb";
 import CourseNavigation from "./CourseNavigation";
 import { legacyFlashcardBlocks } from "@/lib/learn/inlineStudy";
 import { isCoverUrl } from "@/lib/learn/covers";
@@ -201,6 +202,10 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
     return () => window.clearInterval(timer);
   }, [lesson.id, active, previewDraft, signedIn]); // eslint-disable-line react-hooks/exhaustive-deps -- timer belongs to the engagement target
 
+  const positionKey = `${activityKey}:position`;
+  const [resumePosition, setResumePosition] = useState<number | null>(null);
+  useEffect(() => { try { const raw = localStorage.getItem(positionKey); const n = raw === null ? NaN : Number(raw); setResumePosition(Number.isFinite(n) && n > .02 && n < .98 ? n : null); } catch { setResumePosition(null); } }, [positionKey]);
+  const restorePosition = () => { const el = article.current; if (!el || resumePosition === null) return; const box = el.getBoundingClientRect(); window.scrollTo({ top: window.scrollY + box.top + box.height * resumePosition - window.innerHeight * .2, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); };
   // Reading progress: percent scrolled and the heading being read, saved as the reader goes.
   const lastSaved = useRef(0);
   useEffect(() => {
@@ -213,13 +218,14 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
       setScrolled(pct);
       if (Date.now() - lastSaved.current > 4000 && pct > 3) {
         lastSaved.current = Date.now();
+        try { localStorage.setItem(positionKey, String(Math.min(1, Math.max(0, (window.innerHeight * .2 - r.top) / Math.max(1, r.height))))); } catch { /* unavailable */ }
         void actions.setProgress(lesson.id, { percent: pct, lastBlockId: active }).catch(err => say(errorMessage(err)));
       }
     };
     onScroll();
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
-  }, [lesson.id, active, previewDraft, actions, signedIn]);
+  }, [lesson.id, active, previewDraft, actions, signedIn, positionKey]);
 
   const resumeHeading = progress?.state === "in_progress" && progress.lastBlockId ? items.find((i) => i.id === progress.lastBlockId) : undefined;
   const lessonSaved = saved.find((s) => s.kind === "lesson" && s.lessonId === lesson.id);
@@ -417,11 +423,12 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
               {lesson.forkedFrom && <ProvenanceLine provenance={lesson.forkedFrom} hrefFor={lessonPath} />}
               {lesson.externalRef && <ExternalRefLine externalRef={lesson.externalRef} />}
             </div>
+            <CourseBreadcrumb courseId={courseId} lessonId={lesson.id} />
             <MobileOutline items={items} active={active} />
-            {resumeHeading && !previewDraft && (
+            {(resumeHeading || resumePosition !== null) && !previewDraft && !completed && (
               <p className="lx-notice" data-tone="info" style={{ marginBottom: 18 }}>
                 <RotateCcw size={16} aria-hidden />
-                <button type="button" className="lx-link" onClick={() => jumpTo(resumeHeading.id)}>{t.resume(resumeHeading.text)}</button>
+                <button type="button" className="lx-link" onClick={() => resumePosition !== null ? restorePosition() : resumeHeading && jumpTo(resumeHeading.id)}>{resumeHeading ? t.resume(resumeHeading.text) : t.resumeTop}</button>
               </p>
             )}
             <div style={{ marginTop: 20 }}>
@@ -460,7 +467,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                       <div className="lx-actions" style={{ justifyContent: "space-between" }}>
                         <CompletionAction completed={completed} disabled={remainingActivities > 0}
                           onComplete={async () => { await actions.setProgress(lesson.id, { state: "completed", percent: 100 }); setJustCompleted(true); }}
-                          onReset={async () => { await actions.setProgress(lesson.id, { state: "not_started", percent: 0 }); setJustCompleted(false); setActivities({}); try { localStorage.removeItem(activityKey); } catch { /* unavailable */ } window.scrollTo({ top: 0, behavior: "auto" }); }} />
+                          onReset={async () => { await actions.setProgress(lesson.id, { state: "not_started", percent: 0 }); setJustCompleted(false); setActivities({}); try { localStorage.removeItem(activityKey); localStorage.removeItem(positionKey); setResumePosition(null); } catch { /* unavailable */ } window.scrollTo({ top: 0, behavior: "auto" }); }} />
                         {!isOwner && (
                           <span className="lx-actions" role="group" aria-label={t.helpful}>
                             <span className="lx-muted">{vote ? t.thanks : t.helpful}</span>

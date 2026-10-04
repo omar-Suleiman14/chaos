@@ -556,3 +556,23 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 @media (prefers-reduced-motion: reduce) { .lx-course-meter > span { transition: none; } }
 
 .lx-activity-summary { margin-top: 16px; color: var(--on-surface-variant); font-size: 14px; overflow-wrap: anywhere; line-height: 1.7; }
+
+.lx-article { min-width: 0; overflow-wrap: anywhere; }
+.lx-reader { padding-bottom: calc(96px + env(safe-area-inset-bottom, 0px)); }
+.lx-sheet { padding-bottom: env(safe-area-inset-bottom, 0px); }
+.lx-toc-trigger { width: 100%; min-height: 44px; display: flex; align-items: center; gap: 8px; text-align: start; padding: 10px 12px; border: 1px solid var(--ws-line); border-radius: 10px; font-size: 13px; }
+.lx-toc-current { margin-inline-start: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; color: var(--on-surface-variant); }
+.lx-outline-drawer { padding-inline: 16px; padding-top: 16px; gap: 12px; overflow-y: auto; }
+.lx-outline-drawer .lx-toc { border: 0; padding-bottom: 24px; }
+.lx-course-breadcrumb { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; margin-block: 12px; min-width: 0; }
+.lx-course-breadcrumb a { overflow-wrap: anywhere; }
+.lx-inline-quiz, .lx-inline-flashcards { box-sizing: border-box; }
+@media (max-width: 560px) {
+  .lx-reader-top__title { min-width: 0; }
+  .lx-inline-quiz, .lx-inline-flashcards { padding: 12px; margin-block: 20px; }
+  .lx-article .lx-actions { flex-wrap: wrap; gap: 10px; }
+  .lx-article .ws-btn { white-space: normal; max-width: 100%; min-height: 44px; }
+  .lx-flip__face { padding-inline: 12px; overflow-wrap: anywhere; }
+  .lx-completion { width: 100%; }
+  .lx-course-navigation .ws-btn { flex: 1 1 100%; }
+}
