@@ -5,6 +5,8 @@ import { contentDirection } from "@/lib/learn/direction";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { LessonActivity, type Activity } from "./ActivityContext";
+import CourseNavigation from "./CourseNavigation";
 import { legacyFlashcardBlocks } from "@/lib/learn/inlineStudy";
 import { isCoverUrl } from "@/lib/learn/covers";
 import Link from "@/components/site/SiteLink";
@@ -109,9 +111,10 @@ export interface LessonReaderProps {
   backHref?: string;
   /** Shown inside the workspace shell (no own top bar chrome duplication). */
   embedded?: boolean;
+  courseId?: string | null;
 }
 
-export default function LessonReader({ lesson, previewDraft, backHref = "/dashboard/learn", embedded }: LessonReaderProps) {
+export default function LessonReader({ lesson, previewDraft, backHref = "/dashboard/learn", embedded, courseId }: LessonReaderProps) {
   const t = useCopy(copy);
   const bt = useBlockCopy();
   const { locale } = useLocale();
@@ -125,6 +128,23 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const view = previewDraft ? { version: lesson.published?.version ?? 0, meta: lesson.draft.meta, content: lesson.draft.content, publishedAt: lesson.draft.updatedAt } : readerView(lesson);
   const attachedDecks = useQuery(api.flashcardStudy.listAttached, { lessonId: lesson.id as Id<"lessons"> });
   const legacyDeckBlocks = legacyFlashcardBlocks(view.content, attachedDecks ?? []);
+  const activityKey = `chaos.lesson.activities:${viewer?.id ?? "guest"}:${lesson.id}:${view.version}`;
+  const [activities, setActivities] = useState<Record<string, Activity>>({});
+  useEffect(() => { try { setActivities(JSON.parse(localStorage.getItem(activityKey) ?? "{}")); } catch { setActivities({}); } }, [activityKey]);
+  const reportActivity = (activity: Activity) => setActivities(current => {
+    const next = { ...current, [`${activity.kind}:${activity.id}`]: activity };
+    try { localStorage.setItem(activityKey, JSON.stringify(next)); } catch { /* device storage unavailable */ }
+    return next;
+  });
+  const requiredKeys = [...walk(asBlocks(view.content))].flatMap(({ block }) => {
+    let props = block.props;
+    try { if (props.lessonData) props = { ...props, ...JSON.parse(String(props.lessonData)) }; } catch { /* incomplete block */ }
+    if (!props.required) return [];
+    if (block.type === "flashcards" || block.type === "lessonFlashcards") return [`flashcards:${props.setId}`];
+    if (block.type === "quiz" || block.type === "lessonQuiz") return [`${props.assetKind ?? (props.asset as { kind?: string })?.kind}:${props.assetId ?? (props.asset as { id?: string })?.id}`];
+    return [];
+  });
+  const remainingActivities = requiredKeys.filter(key => !activities[key]).length;
   const meta = view.meta;
   const items = useMemo(() => outline(view.content), [view.content]);
   const active = useActiveHeading(items);
@@ -376,7 +396,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
           {previewDraft && <p className="lx-notice" data-tone="info" style={{ marginBottom: 16 }}>{t.draftPreview}</p>}
           {isOwner && !caps.sharedPublishing && lesson.published && !previewDraft && <p className="lx-notice" style={{ marginBottom: 16 }}>{t.devicePublish}</p>}
           <ModerationNotice state={lesson.moderation} note={isOwner ? lesson.moderationNote : undefined} owner={isOwner} />
-          <article ref={article} onClick={tapBlock} className="lx-article" data-size={prefs.size} data-font={prefs.font} lang={meta.language} dir={contentDirection(meta.language)} aria-labelledby="lesson-title">
+          <LessonActivity.Provider value={reportActivity}><article ref={article} onClick={tapBlock} className="lx-article" data-size={prefs.size} data-font={prefs.font} lang={meta.language} dir={contentDirection(meta.language)} aria-labelledby="lesson-title">
             {isCoverUrl(meta.coverUrl) && <img className="lx-article__cover" src={meta.coverUrl} alt="" style={{ objectPosition: `center ${meta.coverY ?? 50}%` }} />}
             {meta.icon && <span className="lx-article__icon" aria-hidden><CourseOrLessonIcon icon={meta.icon} size={48} /></span>}
             <h1 id="lesson-title" className="lx-article__title">{meta.title || t.untitled}</h1>
@@ -429,13 +449,14 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                       </ol>
                     </section>
                   )}
+                  {!previewDraft && <PracticeTab lesson={lesson} isOwner={isOwner} onForkQuiz={signedIn && caps.quizForks ? setForkingQuiz : undefined} />}
                   {!previewDraft && (
                     <footer className="lx-section" style={{ marginTop: 40, paddingTop: 20, borderTop: "1px solid var(--ws-line)" }}>
                       <div className="lx-actions" style={{ justifyContent: "space-between" }}>
                         {progress?.state === "completed" ? (
-                          <span className="lx-actions"><span className="lx-badge" data-tone="green"><CheckCircle2 size={13} aria-hidden />{t.completed}</span><button type="button" className="lx-link" onClick={() => actions.setProgress(lesson.id, { state: "not_started" }).catch(err => say(errorMessage(err)))}>{t.reset}</button></span>
+                          <span className="lx-actions"><span className="lx-badge" data-tone="green"><CheckCircle2 size={13} aria-hidden />{t.completed}</span><button type="button" className="lx-link" onClick={() => void actions.setProgress(lesson.id, { state: "not_started", percent: 0 }).then(() => { setActivities({}); try { localStorage.removeItem(activityKey); } catch { /* unavailable */ } window.scrollTo({ top: 0, behavior: "auto" }); }, err => say(errorMessage(err)))}>{t.reset}</button></span>
                         ) : (
-                          <button type="button" className="ws-btn" onClick={() => actions.setProgress(lesson.id, { state: "completed", percent: 100 }).catch(err => say(errorMessage(err)))}><CheckCircle2 size={16} aria-hidden />{t.complete}</button>
+                          <button type="button" className="ws-btn" disabled={remainingActivities > 0} onClick={() => actions.setProgress(lesson.id, { state: "completed", percent: 100 }).catch(err => say(errorMessage(err)))}><CheckCircle2 size={16} aria-hidden />{t.complete}</button>
                         )}
                         {!isOwner && (
                           <span className="lx-actions" role="group" aria-label={t.helpful}>
@@ -445,13 +466,15 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                           </span>
                         )}
                       </div>
+                      {remainingActivities > 0 && progress?.state !== "completed" && <p role="status" className="lx-muted">{locale === "ar" ? `أكمل الأنشطة المطلوبة المتبقية: ${remainingActivities}` : `Complete ${remainingActivities} remaining required activities first.`}</p>}
+                      <CourseNavigation courseId={courseId} lessonId={lesson.id} completed={progress?.state === "completed"} />
                     </footer>
                   )}
                 </>
               ) }
-              <PracticeTab lesson={lesson} isOwner={isOwner} onForkQuiz={signedIn && caps.quizForks ? setForkingQuiz : undefined} />
+
             </div>
-          </article>
+          </article></LessonActivity.Provider>
         </main>
         {panel && !phone && <aside className="lx-reader__side">{sidePanel}</aside>}
       </div>

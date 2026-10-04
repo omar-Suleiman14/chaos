@@ -10,6 +10,7 @@ import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { useCardReviews, useLearnActions, useLearnViewer } from "@/lib/learn/data";
 import type { Flashcard, Visibility } from "@/lib/learn/types";
 import { errorMessage } from "@/lib/errors";
+import { useLessonActivity } from "../reader/ActivityContext";
 import { localeDir } from "@/lib/locale";
 import { useCopy, useLocale } from "@/lib/i18n";
 
@@ -59,6 +60,8 @@ export default function FlashcardStudy({ setId, onEdit }: { setId: string; onEdi
 
 function StudyRound({ setId, cards: draftCards, reviews, onEdit }: { setId: string; cards: Flashcard[]; reviews: { cardId: string; box: number; reviewedAt: number }[]; onEdit?: () => void }) {
   const t = useCopy(copy);
+  const report = useLessonActivity();
+  const reviewed = useRef(new Set<string>());
   const round = useRef<HTMLDivElement>(null);
   const actions = useLearnActions();
   const cards = draftCards;
@@ -72,7 +75,7 @@ function StudyRound({ setId, cards: draftCards, reviews, onEdit }: { setId: stri
   const known = cards.filter((c) => boxOf(c.id) >= 3).length;
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const answer = async (knewIt: boolean) => { if (!card || pending) return; setPending(true); setError(""); try { await actions.reviewCard(setId, card.id, knewIt); setFlipped(false); setIndex(i => i + 1); } catch (err) { setError(errorMessage(err)); } finally { setPending(false); } };
+  const answer = async (knewIt: boolean) => { if (!card || pending) return; setPending(true); setError(""); try { await actions.reviewCard(setId, card.id, knewIt); reviewed.current.add(card.id); if (reviewed.current.size === cards.length) report({ kind: "flashcards", id: setId, known: known + (knewIt && boxOf(card.id) === 2 ? 1 : 0), total: cards.length }); setFlipped(false); setIndex(i => i + 1); } catch (err) { setError(errorMessage(err)); } finally { setPending(false); } };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!round.current?.contains(e.target as Node)) return;

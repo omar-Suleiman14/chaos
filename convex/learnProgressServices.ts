@@ -35,10 +35,10 @@ export async function startStudySession(ctx: MutationCtx, actor: StudyActor, arg
   const old = await readStudyProgress(ctx, actor, args);
   const sessionSeq = (old?.sessionSeq ?? 0) + 1; integer(sessionSeq, 1);
   if (old) await ctx.db.patch("learnProgress", old._id, { sessionSeq, writeSeq: 0, updatedAt: Date.now() });
-  else await ctx.db.insert("learnProgress", { ...args, userKey: actor.tokenIdentifier, key: target.key, sessionSeq, writeSeq: 0, completedBlocks: [], updatedAt: Date.now() });
+  else await ctx.db.insert("learnProgress", { ...args, userKey: actor.tokenIdentifier, key: target.key, sessionSeq, writeSeq: 0, completedBlocks: [], completionAcknowledged: false, updatedAt: Date.now() });
   return sessionSeq;
 }
-export async function completeStudyBlocks(ctx: MutationCtx, actor: StudyActor, args: Target & { sessionSeq: number; writeSeq: number; blockIds: string[] }, staleBehavior: "conflict" | "false" = "conflict") {
+export async function completeStudyBlocks(ctx: MutationCtx, actor: StudyActor, args: Target & { sessionSeq: number; writeSeq: number; blockIds: string[]; completed?: boolean }, staleBehavior: "conflict" | "false" = "conflict") {
   const target = await resolveStudyTarget(ctx, actor, args);
   integer(args.sessionSeq, 1); integer(args.writeSeq, 1);
   if (args.blockIds.length > LEARN_LIMITS.blocks || args.blockIds.some(id => !target.document.blocks.some(block => block.id === id))) throw new Error("Invalid or excessive block completion");
@@ -49,6 +49,17 @@ export async function completeStudyBlocks(ctx: MutationCtx, actor: StudyActor, a
   }
   const completedBlocks = [...new Set([...old.completedBlocks, ...args.blockIds])];
   if (completedBlocks.length > LEARN_LIMITS.blocks) throw new Error("Completion bound exceeded");
-  await ctx.db.patch("learnProgress", old._id, { completedBlocks, writeSeq: args.writeSeq, updatedAt: Date.now() });
+  await ctx.db.patch("learnProgress", old._id, { completedBlocks, ...(args.completed ? { completionAcknowledged: true } : {}), writeSeq: args.writeSeq, updatedAt: Date.now() });
   return { sessionSeq: args.sessionSeq, writeSeq: args.writeSeq, completedBlocks };
+}
+
+/** Restart the reading cycle while preserving exposure evidence and assessment history. */
+export async function resetStudyProgress(ctx: MutationCtx, actor: StudyActor, args: Target & { expectedSessionSeq: number }) {
+  const target = await resolveStudyTarget(ctx, actor, args);
+  const old = await readStudyProgress(ctx, actor, args);
+  if ((old?.sessionSeq ?? 0) !== args.expectedSessionSeq) throw new ConvexError({ code: "PROGRESS_CONFLICT", message: "Another device changed this study session. Refresh before restarting." });
+  const sessionSeq = (old?.sessionSeq ?? 0) + 1;
+  if (old) await ctx.db.patch("learnProgress", old._id, { sessionSeq, writeSeq: 0, completedBlocks: [], previousCompletedBlocks: [...new Set([...(old.previousCompletedBlocks ?? []), ...old.completedBlocks])], completionAcknowledged: false, updatedAt: Date.now() });
+  else { const { expectedSessionSeq: _seq, ...key } = args; await ctx.db.insert("learnProgress", { ...key, userKey: actor.tokenIdentifier, key: target.key, sessionSeq, writeSeq: 0, completedBlocks: [], completionAcknowledged: false, updatedAt: Date.now() }); }
+  return sessionSeq;
 }

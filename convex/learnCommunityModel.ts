@@ -66,6 +66,8 @@ export const communityTables = {
     sessionSeq: v.number(),
     writeSeq: v.number(),
     completedBlocks: v.array(v.string()),
+    previousCompletedBlocks: v.optional(v.array(v.string())),
+    completionAcknowledged: v.optional(v.boolean()),
     updatedAt: v.number(),
   }).index("by_userKey_and_lessonId_and_key", ["userKey", "lessonId", "key"]),
   learnConcepts: defineTable({

@@ -40,7 +40,7 @@ function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error && error.message ? error.message : fallback;
 }
 
-export default function QuizPlayer({ quizId, inline = false }: { quizId?: Id<"quizzes">; inline?: boolean }) {
+export default function QuizPlayer({ quizId, inline = false, onComplete }: { quizId?: Id<"quizzes">; inline?: boolean; onComplete?: () => void }) {
   const playerId = useId().replace(/[^A-Za-z0-9_-]/g, "");
   const params = useParams();
   const username = params.username as string;
@@ -269,6 +269,7 @@ export default function QuizPlayer({ quizId, inline = false }: { quizId?: Id<"qu
     try {
       const result = await completeSession({ sessionId });
       if (!active.current) return;
+      onComplete?.();
       setFinalResults(result.withheld ? { withheld: true } : result);
       try { if (quizMeta?._id) window.localStorage.setItem(`chaos-attempt:${quizMeta._id}`, sessionId); } catch { /* storage unavailable */ }
       if (!result.withheld && result.score / result.totalPoints >= 0.9 && !quizData?.disableAnimations && !prefersReducedMotion()) {

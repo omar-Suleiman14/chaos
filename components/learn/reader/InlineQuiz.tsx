@@ -1,4 +1,5 @@
 "use client";
+import { useLessonActivity } from "./ActivityContext";
 import dynamic from "next/dynamic";
 import { useState } from "react";
 import { useQuery } from "@/lib/convexCache";
@@ -21,6 +22,7 @@ export default function InlineQuiz({
   shareId?: string;
   title?: string;
 }) {
+  const report = useLessonActivity();
   const { locale } = useLocale();
   const ar = locale === "ar";
   const [started, setStarted] = useState(false);
@@ -62,9 +64,9 @@ export default function InlineQuiz({
       <Link className="lx-link" href={details.href}>{ar ? "افتح الاختبار الكامل" : "Open full quiz"}</Link>
       {started && <QueryErrorBoundary key={`${asset.kind}:${asset.id}`}>
         {asset.kind === "form" ? (
-          <Form shareId={details.shareId || shareId || ""} inline studyProgress />
+          <Form shareId={details.shareId || shareId || ""} inline studyProgress onComplete={() => report(asset)} />
         ) : (
-          <Quiz quizId={asset.id as Id<"quizzes">} inline />
+          <Quiz quizId={asset.id as Id<"quizzes">} inline onComplete={() => report(asset)} />
         )}</QueryErrorBoundary>}
     </section>
   );

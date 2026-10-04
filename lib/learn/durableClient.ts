@@ -1,4 +1,4 @@
-﻿import type { ConvexReactClient } from "convex/react";
+import type { ConvexReactClient } from "convex/react";
 import type { Doc, Id } from "../../convex/_generated/dataModel";
 import { api } from "../../convex/_generated/api";
 import { toDurableDocument } from "./chaosDocument";
@@ -19,18 +19,21 @@ export class DurableProgressClient {
   private failures = new Map<string, unknown>();
   constructor(private client: Client) {}
   save(target: ProgressTarget, patch: { state?: string; lastBlockId?: string; percent?: number }): Promise<void> {
-    if (patch.state === "not_started") return Promise.reject(new Error("Progress reset is not supported; existing evidence is preserved."));
     if (patch.percent !== undefined && !Number.isFinite(patch.percent)) return Promise.reject(new Error("Invalid reading percentage."));
     const key = target.lessonId + ":" + target.versionId;
     const count = patch.state === "completed" ? target.blockIds.length : Math.max(patch.lastBlockId ? target.blockIds.indexOf(patch.lastBlockId) : 0, Math.floor(target.blockIds.length * Math.min(100, Math.max(0, patch.percent ?? 0)) / 100));
     const blockIds = target.blockIds.slice(0, Math.max(0, count));
     const next = (this.tails.get(key) ?? Promise.resolve()).catch(() => undefined).then(async () => {
-      if (this.failures.has(key)) throw this.failures.get(key);
+      if (patch.state !== "not_started" && this.failures.has(key)) throw this.failures.get(key);
       const args = { lessonId: target.lessonId, versionId: target.versionId };
       try {
         let row = await this.client.query(api.learnCommunity.getProgress, args);
+        if (patch.state === "not_started") {
+          const sessionSeq = await this.client.mutation(api.learnCommunity.resetProgress, { ...args, expectedSessionSeq: row?.sessionSeq ?? 0 });
+          this.sessions.set(key, sessionSeq); this.failures.delete(key); return;
+        }
         const completed = row?.completedBlocks;
-        if (completed && blockIds.every(id => completed.includes(id))) return;
+        if (completed && blockIds.every(id => completed.includes(id)) && (patch.state !== "completed" || row?.completionAcknowledged === true)) return;
         let sessionSeq = this.sessions.get(key);
         if (sessionSeq === undefined) {
           sessionSeq = await this.client.mutation(api.learnCommunity.startSession, args);
@@ -38,7 +41,7 @@ export class DurableProgressClient {
           row = await this.client.query(api.learnCommunity.getProgress, args);
         }
         if (row?.sessionSeq !== sessionSeq) throw new Error("Progress conflict: another device started a newer study session. Refresh before retrying.");
-        const ok = await this.client.mutation(api.learnCommunity.completeBlocks, { ...args, sessionSeq, writeSeq: row.writeSeq + 1, blockIds });
+        const ok = await this.client.mutation(api.learnCommunity.completeBlocks, { ...args, sessionSeq, writeSeq: row.writeSeq + 1, blockIds, completed: patch.state === "completed" });
         if (!ok) throw new Error("Progress conflict: refresh before retrying.");
       } catch (error) { this.failures.set(key, error); throw error; }
     });
