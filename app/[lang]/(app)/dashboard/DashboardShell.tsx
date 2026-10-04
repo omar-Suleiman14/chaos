@@ -8,7 +8,7 @@ import { useClerk, useUser } from "@/lib/auth/client";
 import { CardOnboarding } from "@/components/card/CardCustomization";
 import MemberAvatar from "@/components/MemberAvatar";
 import { avatarSeed } from "@/lib/avatarSeed";
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Archive, BarChart3, BookOpen, Bookmark, ChevronDown, ChevronUp, FileText, GraduationCap, Home, Layers, Library, Link2, ListChecks, BookOpenText, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, UserCog, X } from "lucide-react";
@@ -136,6 +136,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const getOrCreateUser = useMutation(api.quizFunctions.getOrCreateUser);
   const isAdmin = useQuery(api.quizFunctions.getIsAdmin) === true;
   const account = useQuery(api.quizFunctions.getCurrentUser);
+  const { isAuthenticated: convexSignedIn } = useConvexAuth();
   const [cardStarted, setCardStarted] = useState(false), [cardDismissed, setCardDismissed] = useState(false);
   useEffect(() => { if (account?.cardOnboardingPending) setCardStarted(true); }, [account?.cardOnboardingPending]);
   const forms = useQuery(api.forms.listMyForms);
@@ -296,8 +297,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   };
 
   // A brand-new sign-up waits for account creation so it never flashes an empty dashboard before its Card.
-  // `undefined` is just the account still loading on a normal visit, which shows the dashboard as usual.
-  if (isLoaded && user && account === null) return <div className="workspace-ui mc-customize"><p role={actionError ? "alert" : "status"}>{actionError || (locale === "ar" ? "جارٍ إعداد بطاقتك…" : "Preparing your Card…")}</p>{actionError && <button className="ws-btn" onClick={() => { setActionError(""); void getOrCreateUser({}).catch(error => setActionError(errorMessage(error))); }}>{locale === "ar" ? "حاول مجددًا" : "Try again"}</button>}</div>;
+  // getCurrentUser also returns null before Convex has the sign-in token (every refresh), so only trust
+  // a null once Convex reports the visitor as signed in.
+  if (isLoaded && user && convexSignedIn && account === null) return <div className="workspace-ui mc-customize"><p role={actionError ? "alert" : "status"}>{actionError || (locale === "ar" ? "جارٍ إعداد بطاقتك…" : "Preparing your Card…")}</p>{actionError && <button className="ws-btn" onClick={() => { setActionError(""); void getOrCreateUser({}).catch(error => setActionError(errorMessage(error))); }}>{locale === "ar" ? "حاول مجددًا" : "Try again"}</button>}</div>;
   if (account && !cardDismissed && (account.cardOnboardingPending || cardStarted) && !account.isBanned && !account.suspendedUntil) return <div className="workspace-ui"><CardOnboarding actorId={account.clerkId} onDone={() => setCardDismissed(true)} /></div>;
 
   // The live game host screen is meant for a projector: full window, no workspace chrome.
