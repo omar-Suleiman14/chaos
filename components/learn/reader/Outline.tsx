@@ -1,11 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ListTree } from "lucide-react";
+import { useModal } from "@/components/workspace/useModal";
+import { ListTree, X } from "lucide-react";
 import type { OutlineItem } from "@/lib/learn/doc";
 import { useCopy } from "@/lib/i18n";
 
-const copy = { en: { title: "On this page", nav: "Lesson outline" }, ar: { title: "في هذه الصفحة", nav: "مخطط الدرس" } };
+const copy = { en: { title: "On this page", nav: "Lesson outline", close: "Close outline" }, ar: { title: "في هذه الصفحة", nav: "مخطط الدرس", close: "أغلق المخطط" } };
 
 /** The heading currently being read: the last one above a line a third of the way down the screen. */
 export function useActiveHeading(items: OutlineItem[]): string | undefined {
@@ -78,9 +79,16 @@ export function MobileOutline({ items, active }: { items: OutlineItem[]; active?
   if (!items.length) return null;
   const current = items.find((i) => i.id === active);
   return (
-    <details className="lx-toc-mobile" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
-      <summary><ListTree size={16} aria-hidden /> <span>{t.title}</span>{current && <span dir="auto" className="lx-muted" style={{ marginInlineStart: "auto", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "55%" }}>{current.text}</span>}</summary>
-      <OutlineNav items={items} active={active} onNavigate={() => setOpen(false)} />
-    </details>
+    <div className="lx-toc-mobile">
+      <button type="button" className="lx-toc-trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}><ListTree size={16} aria-hidden /><span>{t.title}</span>{current && <span dir="auto" className="lx-toc-current">{current.text}</span>}</button>
+      {open && <OutlineDrawer items={items} active={active} onClose={() => setOpen(false)} />}
+    </div>
   );
+}
+function OutlineDrawer({ items, active, onClose }: { items: OutlineItem[]; active?: string; onClose: () => void }) {
+  const t = useCopy(copy), panel = useModal<HTMLDivElement>({ onClose });
+  return <><div className="lx-sheet-scrim" data-modal-backdrop onClick={onClose} aria-hidden /><div ref={panel} className="lx-sheet lx-outline-drawer" role="dialog" aria-modal="true" aria-label={t.nav} tabIndex={-1}>
+    <header className="lx-panel__row"><strong>{t.title}</strong><button type="button" className="ws-icon-button" aria-label={t.close} onClick={onClose}><X size={20} aria-hidden /></button></header>
+    <OutlineNav items={items} active={active} onNavigate={onClose} />
+  </div></>;
 }
