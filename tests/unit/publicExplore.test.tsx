@@ -18,7 +18,6 @@ vi.mock("@/lib/learn/data", () => ({
   useLearnViewer: () => ({ signedIn: false }),
 }));
 vi.mock("@/lib/i18n", () => ({ useLocale: () => ({ locale: "en" }) }));
-vi.mock("@/components/site/LearnExample", () => ({ default: () => <div /> }));
 vi.mock("@/components/site/SiteChrome", () => ({
  PrimaryCta: ({children, href}: {children: React.ReactNode; href: string}) => <a href={href}>{children}</a>,
   SiteNav: () => <nav>Explore</nav>,
