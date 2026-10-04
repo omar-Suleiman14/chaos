@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import MemberAvatar from "@/components/MemberAvatar";
 import { useTilt } from "@/components/card/useTilt";
 
@@ -12,8 +12,18 @@ const seeds = [
   "chaos-sky",
 ];
 
+const motionQuery = "(min-width: 901px) and (hover: hover) and (pointer: fine) and (prefers-reduced-motion: no-preference)";
+const subscribeMotion = (update: () => void) => {
+  const media = window.matchMedia(motionQuery);
+  media.addEventListener("change", update);
+  return () => media.removeEventListener("change", update);
+};
+const readMotion = () => window.matchMedia(motionQuery).matches;
+const serverMotion = () => false;
+
 /** Uses the same repel physics as the member cards, with pointer-following eyes. */
 export default function HeroAvatars() {
+  const motion = useSyncExternalStore(subscribeMotion, readMotion, serverMotion);
   const stage = useRef<HTMLDivElement>(null);
   const cards = useCallback(
     () =>
@@ -22,7 +32,7 @@ export default function HeroAvatars() {
       ),
     [],
   );
-  useTilt(stage, cards, true);
+  useTilt(stage, cards, true, motion);
   useEffect(() => {
     const hero = stage.current?.parentElement;
     const actions = hero?.querySelector<HTMLElement>(".site-hero__actions");
@@ -38,7 +48,7 @@ export default function HeroAvatars() {
     return () => observer.disconnect();
   }, []);
   useEffect(() => {
-    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    if (!motion) { stage.current?.style.removeProperty("--hero-scroll-drift"); return; }
     let frame = 0;
     const update = () => {
       frame = 0;
@@ -60,9 +70,9 @@ export default function HeroAvatars() {
       window.removeEventListener("scroll", scroll);
       cancelAnimationFrame(frame);
     };
-  }, []);
+  }, [motion]);
   return (
-    <div ref={stage} className="hero-avatars" aria-hidden="true">
+    <div ref={stage} className="hero-avatars" data-motion={motion} aria-hidden="true">
       {seeds.map((seed, index) => (
         <div className={`hero-avatar hero-avatar--${index + 1}`} key={seed}>
           <div className="hero-avatar__motion">

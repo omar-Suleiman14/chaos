@@ -16,8 +16,9 @@ const REST: Motion = { rx: 0, ry: 0, tx: 0, ty: 0 };
  * The easing runs here, one frame at a time, rather than as a CSS transition: Chrome paints a transitioning
  * layer from a low-resolution snapshot, which blurs the card's text until it settles.
  */
-export function useTilt(stage: RefObject<HTMLElement | null>, cards?: () => HTMLElement[], pageMotion = false) {
+export function useTilt(stage: RefObject<HTMLElement | null>, cards?: () => HTMLElement[], pageMotion = false, enabled = true) {
   useEffect(() => {
+    if (!enabled) return;
     if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
     const list = () => cards?.() ?? (stage.current ? [stage.current] : []);
     const moving = new Map<HTMLElement, { now: Motion; to: Motion }>();
@@ -73,7 +74,7 @@ export function useTilt(stage: RefObject<HTMLElement | null>, cards?: () => HTML
       window.removeEventListener("pointermove", move); document.documentElement.removeEventListener("pointerleave", leave);
       stopTilt(); cancelAnimationFrame(frame);
     };
-  }, [stage, cards, pageMotion]);
+  }, [stage, cards, pageMotion, enabled]);
 }
 
 /**

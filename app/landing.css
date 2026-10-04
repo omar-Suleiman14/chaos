@@ -55,6 +55,9 @@
 @media (max-width: 900px) { .hero-avatar { width: 64px; height: 64px; } .hero-avatar__motion > span, .hero-avatar svg { width: 44px !important; height: 44px !important; } .hero-avatar--1, .hero-avatar--2 { top: 150px; } .hero-avatar--3, .hero-avatar--4 { top: 410px; } .hero-avatar--5 { top: 15px; } }
 @media (max-width: 640px) { .site-hero--home .site-title { font-size: clamp(2rem, 6.6vw, 2.7rem); } .site-hero--home .site-lead { max-width: 29ch; } .hero-avatar--1, .hero-avatar--2 { top: 22px; } .hero-avatar--1 { left: 5%; } .hero-avatar--2 { right: 5%; } .hero-avatar--3, .hero-avatar--4 { top: var(--hero-bottom-avatar-top, 490px); width: 48px; height: 48px; } .hero-avatar--3 { left: 3%; } .hero-avatar--4 { right: 3%; } .hero-avatar--3 .hero-avatar__motion > span, .hero-avatar--3 svg, .hero-avatar--4 .hero-avatar__motion > span, .hero-avatar--4 svg { width: 28px !important; height: 28px !important; } .hero-avatar--5 { top: 8px; } }
 @media (prefers-reduced-motion: reduce) { .hero-avatar__motion { transform: none; } }
+.hero-avatars[data-motion=false] .hero-avatar__motion { transform:none; }
+.hero-avatars[data-motion=false] svg,.hero-avatars[data-motion=false] svg * { animation:none !important; transition:none !important; }
+.hero-avatars[data-motion=false] .mo-eyes { --mo-track-travel:0px !important; }
 .site-title--sm { font-size: clamp(2.2rem, 5vw, 3.8rem); }
 .site-lead { margin: 24px auto 0; max-width: 36rem; font-size: 18px; line-height: 1.7; color: var(--s-soft); text-wrap: pretty; }
 .site-hero__actions { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px; margin-top: 28px; }

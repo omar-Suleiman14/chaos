@@ -37,6 +37,28 @@ beforeEach(() => {
 afterEach(() => { window.history.replaceState({}, "", "/"); vi.unstubAllGlobals(); vi.useRealTimers(); });
 
 describe("member card motion", () => {
+  it.each(["/", "/en", "/ar", "/en/", "/ar/"])("never requests iOS motion permission on home route %s", async path => {
+    vi.resetModules();
+    window.history.replaceState({}, "", path);
+    const permission = vi.fn().mockResolvedValue("granted");
+    vi.stubGlobal("DeviceOrientationEvent", { requestPermission: permission });
+    const { onDeviceTilt } = await import("@/components/card/deviceTilt");
+    const stop = onDeviceTilt(vi.fn());
+    window.dispatchEvent(new Event("touchend"));
+    expect(permission).not.toHaveBeenCalled();
+    stop();
+  });
+  it("cancels a pending motion request if the user navigates home before tapping", async () => {
+    vi.resetModules();
+    const permission = vi.fn().mockResolvedValue("granted");
+    vi.stubGlobal("DeviceOrientationEvent", { requestPermission: permission });
+    const { onDeviceTilt } = await import("@/components/card/deviceTilt");
+    const stop = onDeviceTilt(vi.fn());
+    window.history.replaceState({}, "", "/");
+    window.dispatchEvent(new Event("touchend"));
+    expect(permission).not.toHaveBeenCalled();
+    stop();
+  });
   it("does not subscribe to gyro on the landing page", async () => {
     window.history.replaceState({}, "", "/");
     const listen = vi.spyOn(window, "addEventListener");
