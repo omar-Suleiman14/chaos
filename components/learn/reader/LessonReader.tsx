@@ -1,5 +1,6 @@
 "use client";
 
+import { useCourseProgress } from "@/lib/learn/courseProgress";
 import { contentDirection } from "@/lib/learn/direction";
 
 import { useQuery } from "convex/react";
@@ -125,6 +126,9 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const caps = useLearnCapabilities();
   const viewer = useLearnViewer();
   const actions = useLearnActions();
+  const course = useQuery(api.courses.getPublic, courseId ? { courseId } : "skip");
+  const courseProgress = useCourseProgress(courseId ?? "");
+  const completesCourse = !!course?.lessons.length && course.lessons.some(l => l.id === lesson.id) && course.lessons.every(l => l.id === lesson.id || courseProgress[l.id]?.completed);
   const phone = useIsPhone();
   const isOwner = viewer?.id === lesson.ownerId;
   const signedIn = !!viewer?.signedIn;
@@ -465,7 +469,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                   {!previewDraft && (
                     <footer className="lx-section" style={{ marginTop: 40, paddingTop: 20, borderTop: "1px solid var(--ws-line)" }}>
                       <div className="lx-actions" style={{ justifyContent: "space-between" }}>
-                        <CompletionAction completed={completed} disabled={remainingActivities > 0}
+                        <CompletionAction completionSound={completesCourse ? "course_complete" : "lesson_complete"} completed={completed} disabled={remainingActivities > 0}
                           onComplete={async () => { await actions.setProgress(lesson.id, { state: "completed", percent: 100 }); setJustCompleted(true); }}
                           onReset={async () => { await actions.setProgress(lesson.id, { state: "not_started", percent: 0 }); setJustCompleted(false); setActivities({}); try { localStorage.removeItem(activityKey); localStorage.removeItem(positionKey); setResumePosition(null); } catch { /* unavailable */ } window.scrollTo({ top: 0, behavior: "auto" }); }} />
                         {!isOwner && (
