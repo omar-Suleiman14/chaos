@@ -16,6 +16,7 @@ import { registerTools as registerFormManagementTools } from "./formManagement";
 import { registerCommunityTools } from "./community";
 import { registerQuizForkTools } from "./quizForks";
 import { registerAssessmentTools } from "./assessments";
+import { permissionForTool, requireToolPermission, type McpPermission } from "./permissions";
 import { registerCourseTools } from "./courses";
 import { registerFlashcardTools } from "./flashcards";
 import { registerOrganizationTools } from "./organization";
@@ -182,12 +183,15 @@ export function authRequired(resourceMetadataUrl: string): CallToolResult {
   };
 }
 
-export function createChaosMcpServer(options: { call: McpCaller | null; resourceMetadataUrl: string; admin?: boolean }): McpServer {
+export function createChaosMcpServer(options: { call: McpCaller | null; resourceMetadataUrl: string; admin?: boolean; permissions?: readonly McpPermission[] }): McpServer {
   const server = new McpServer({ name: MCP_SERVER_NAME, version: MCP_SERVER_VERSION, title: "Chaos" }, { instructions });
 
+  const register = server.registerTool.bind(server);
+  server.registerTool = (name, config, callback) => register(name, { ...config, _meta: { ...config._meta, "chaos/permission": permissionForTool(name) } }, callback);
   const run = async (tool: string, input: Record<string, unknown>, summarize: (data: Record<string, unknown>) => string): Promise<CallToolResult> => {
     if (!options.call) return authRequired(options.resourceMetadataUrl);
     try {
+      requireToolPermission(tool, options.permissions);
       const data = (await options.call(tool, input)) as Record<string, unknown>;
       return ok(summarize(data), data);
     } catch (error) {
@@ -197,7 +201,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
 
   // Multi-step tools chain existing, individually authorized calls. Each step is checked by Convex as the
   // connected account; a failure part-way returns what was created so the assistant can report it.
-  const call = async (tool: string, input: Record<string, unknown>) => (await options.call!(tool, input)) as Record<string, unknown>;
+  const call = async (tool: string, input: Record<string, unknown>) => { requireToolPermission(tool, options.permissions); return (await options.call!(tool, input)) as Record<string, unknown>; };
   const flow = async (work: () => Promise<{ text: string; data: Record<string, unknown> }>): Promise<CallToolResult> => {
     if (!options.call) return authRequired(options.resourceMetadataUrl);
     try { const { text, data } = await work(); return ok(text, data); } catch (error) { return problem(error); }
