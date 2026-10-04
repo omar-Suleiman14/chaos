@@ -1,6 +1,6 @@
 // Actor comes only from the secret-protected MCP envelope.
 import { courseModule, courseDetails } from "./learnAssetModel";
-import { setCourseModules, readCourseProgress } from "./courses";
+import { setCourseModules, readCourseProgress, rememberCourse } from "./courses";
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { requireLearnActor } from "./mcpLearn";
@@ -83,3 +83,5 @@ export const unpublish = internalMutation({
 
 export const modules = internalMutation({ args: { userId: v.string(), courseId: v.id("learnCollections"), modules: v.array(courseModule) }, returns: v.object({ ok: v.boolean() }), handler: async (ctx, { userId, ...args }) => { const actor = await requireLearnActor(ctx, userId); await setCourseModules(ctx, args, actor); return { ok: true }; } });
 export const progress = internalQuery({ args: { userId: v.string(), courseId: v.id("learnCollections") }, returns: v.object({ lessons: v.array(v.object({ lessonId: v.id("lessons"), completed: v.boolean(), percent: v.number() })) }), handler: async (ctx, { userId, ...args }) => { const actor = await requireLearnActor(ctx, userId); return { lessons: await readCourseProgress(ctx, args, actor) }; } });
+
+export const remember = internalMutation({ args: { userId: v.string(), courseId: v.string() }, returns: v.object({ ok: v.boolean() }), handler: async (ctx, { userId, ...args }) => { const actor = await requireLearnActor(ctx, userId); await rememberCourse(ctx, args, actor); return { ok: true }; } });

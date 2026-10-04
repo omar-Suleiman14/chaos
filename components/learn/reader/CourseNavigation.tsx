@@ -1,10 +1,14 @@
 "use client";
-import { useQuery } from "convex/react";
+import { useEffect } from "react";
+import { useLearnViewer } from "@/lib/learn/data";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "@/components/site/SiteLink";
 import { useCourseProgress } from "@/lib/learn/courseProgress";
 import { useLocale } from "@/lib/i18n";
 export default function CourseNavigation({ courseId, lessonId, completed }: { courseId?: string | null; lessonId: string; completed: boolean }) {
+  const viewer = useLearnViewer(), remember = useMutation(api.courses.remember);
+  useEffect(() => { if (courseId && viewer?.signedIn) void remember({ courseId }).catch(() => {}); }, [courseId, viewer?.signedIn, remember]);
   const course = useQuery(api.courses.getPublic, courseId ? { courseId } : "skip");
   const progress = useCourseProgress(courseId ?? "");
   const { locale } = useLocale(), ar = locale === "ar";
