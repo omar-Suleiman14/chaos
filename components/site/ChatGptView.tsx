@@ -1,6 +1,7 @@
 "use client";
 
 import inventory from "@/lib/mcp/inventory.json";
+import AiArchitecture from "./AiArchitecture";
 import McpWorkflowDemo from "./McpWorkflowDemo";
 import McpOutcomes from "./McpOutcomes";
 import Link from "@/components/site/SiteLink";
@@ -74,6 +75,7 @@ export default function ChatGptView() {
     <LegalPage title={t.title}>
       <ChatGptMark size={40} className="site-chatgpt-mark" />
       <p>{t.intro}</p>
+      <AiArchitecture />
       <McpWorkflowDemo />
       <McpOutcomes />
       <p className="site-muted">{t.title === "Chaos in ChatGPT" ? `${inventory.count} tools, generated from the public registry.` : `${inventory.count} أداة من سجل الأدوات العام.`}</p>
