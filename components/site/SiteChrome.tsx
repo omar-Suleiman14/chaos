@@ -87,8 +87,13 @@ export function SiteNav({ links: _links = true }: { links?: boolean }) {
     return () => { document.removeEventListener("mousedown", close); document.removeEventListener("keydown", close); };
   }, [open]);
 
+  const { locale } = useLocale();
   const items = [
-    { href: "/learn", label: t.explore },
+    { href: "/learn", label: locale === "ar" ? "تعلّم" : "Learn" },
+    { href: "/forms-quizzes", label: locale === "ar" ? "نماذج واختبارات" : "Forms & Quizzes" },
+    { href: "/live-games", label: locale === "ar" ? "ألعاب مباشرة" : "Live Games" },
+    { href: "/ai", label: "AI / MCP" },
+    { href: "/open-source", label: locale === "ar" ? "مفتوح المصدر" : "Open Source" },
     { href: "/docs", label: t.docs },
     { href: "/pricing", label: t.pricing },
     { href: "/faq", label: t.faq },
