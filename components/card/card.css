@@ -1,13 +1,12 @@
 /* Member card: the card itself, the profile page (/dashboard/card) and the public page (/card/<username>). */
-.mc { display:grid; justify-items:center; gap:16px; min-width:0; }
+.mc { display:grid; justify-items:center; gap:24px; min-width:0; }
 .mc-frame { width:100%; padding:20px; border:1px solid var(--ws-line,var(--outline-variant)); border-radius:12px; background:var(--ws-card,var(--surface-container-low)); }
 .mc-frame__label { display:block; margin-block-end:16px; font-size:12px; font-weight:600; color:var(--on-surface-variant); }
 /* The stage owns size, perspective and the shadow colour (--mc-shadow); .mc-tilt follows the pointer or phone; .mc-card only flips.
    The shadow is a box-shadow on each face, not a filter here: a filter around the 3D card makes Chrome draw the
    tilted card into an in-between image first, which softens the text a second time.
    The stage needs a fixed width capped by max-width: a percentage width collapses to zero when its grid track sizes to content. */
-/* Above the buttons below it: their frosted backgrounds would otherwise draw over a card tilted or pushed onto them. */
-.mc-stage { position:relative; z-index:1; width:340px; max-width:100%; margin-inline:auto; perspective:1400px; --rx:0deg; --ry:0deg; --tx:0px; --ty:0px; --gx:50%; --gy:50%; --mc-shadow:0 24px 32px rgba(0,0,0,.2),0 4px 8px rgba(0,0,0,.1); }
+.mc-stage { width:340px; max-width:100%; margin-inline:auto; perspective:1400px; --rx:0deg; --ry:0deg; --tx:0px; --ty:0px; --gx:50%; --gy:50%; --mc-shadow:0 24px 32px rgba(0,0,0,.2),0 4px 8px rgba(0,0,0,.1); }
 /* Keeping the card sharp while it moves:
    - will-change makes Chrome draw the card once at full resolution and reuse it as it tilts and flips. Without it,
      every new angle triggers a redraw, and Chrome shows a blurry stand-in until each one finishes.
@@ -22,7 +21,9 @@
 .mc-card[data-flipped="true"] .mc-glare { display:none; }
 /* Fade and rise only: a rotating or scaling CSS animation would blur the card until it ends. */
 @keyframes mc-in { from { opacity:0; transform:translateY(24px); } }
-.mc-actions { display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
+/* Above the card's shadow, which would grey the light buttons. The gap above them (.mc-public .mc) keeps
+   a pushed or tilted card from ever reaching them. */
+.mc-actions { position:relative; z-index:1; display:flex; flex-wrap:wrap; justify-content:center; gap:8px; }
 .mc-gap { display:none; }
 .mc-btn { display:inline-flex; align-items:center; justify-content:center; gap:6px; min-width:44px; min-height:44px; padding:8px 12px; border-radius:8px; cursor:pointer; color:var(--on-background); background:var(--ws-card,var(--surface-container-low)); border:1px solid var(--ws-line,var(--outline-variant)); font-size:13px; }
 .mc .mc-btn.mc-btn--wallet { text-decoration:none; background:#000; color:#fff; border-color:#000; }
@@ -53,10 +54,10 @@
 .mc-public__head h1 { font-size:clamp(30px,6vw,44px); font-weight:700; line-height:1.08; letter-spacing:-.035em; margin:0; overflow-wrap:anywhere; }
 .mc-public__head p { font-size:17px; line-height:1.45; color:#6e6e73; margin:10px 0 0; }
 /* As big as the screen allows while the button row below it stays in view. */
-.mc-public .mc-stage { width:min(440px,88vw,max(280px,calc((100dvh - 150px) * .68))); --mc-shadow:0 40px 50px rgba(0,0,0,.18),0 8px 14px rgba(0,0,0,.08); }
+.mc-public .mc-stage { width:min(440px,88vw,max(280px,calc((100dvh - 162px) * .68))); --mc-shadow:0 40px 50px rgba(0,0,0,.18),0 8px 14px rgba(0,0,0,.08); }
 .mc-public .mc-btn { border-radius:999px; padding:10px 18px; font-size:14px; font-weight:500; color:#1d1d1f; background:rgba(255,255,255,.72); border:1px solid rgba(0,0,0,.06); -webkit-backdrop-filter:saturate(180%) blur(20px); backdrop-filter:saturate(180%) blur(20px); }
 .mc-public .mc-btn:hover { background:rgba(255,255,255,.92); }
-.mc-public .mc { gap:16px; position:relative; }
+.mc-public .mc { gap:28px; position:relative; }
 /* Sits in the gap under the link, so a "Link copied" message never pushes the page down. */
 .mc-public .mc-status { position:absolute; inset-inline:0; top:100%; min-height:0; margin-top:2px; font-size:12px; color:#6e6e73; }
 .mc-public .mc-card:focus-visible,.mc-public .mc-btn:focus-visible,.mc-public .mc-cta:focus-visible { outline-color:#0071e3; }
