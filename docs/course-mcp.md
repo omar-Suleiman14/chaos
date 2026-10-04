@@ -2,7 +2,7 @@
 
 The ChatGPT app registers `create_course`, `get_course`, `update_course`, `set_course_outline`, `add_course_lesson`, `publish_course`, `list_courses`, `set_course_archived` and `unpublish_course` as discoverable MCP tools through the existing OAuth permission set (`openid`, `profile`, `email`). IDs are native course/lesson references. Reads and writes enforce the connected account's ownership.
 
-Creation and edits remain drafts. set_course_outline replaces the entire ordered list without deleting lessons. Existing lesson tools edit lesson content. publish_course requires explicit user intent and publishes the outlined lessons as well as the course, using the requested visibility. Visibility and publication permissions are enforced on the server. Failed publication can report lesson-specific problems after other lessons have published; do not retry blindly. Successful repeated publication creates another snapshot.
+Creation and edits remain drafts. set_course_outline replaces the entire ordered list without deleting lessons. Existing lesson tools edit lesson content. publish_course requires explicit user intent and publishes only the course using existing lesson publications, with the requested course visibility. Visibility and publication permissions are enforced on the server. Unpublished or inaccessible lessons produce blockers without publishing lesson drafts or changing course publication. Successful repeated publication creates another snapshot.
 
 The secret-protected HTTP transport supplies the verified actor after existing MCP begin checks. Internal wrappers recheck requireLearnActor and delegate to the current owner helpers. Tool input has no actor field; HTTP dispatch overwrites an injected userId with the envelope actor. No respondent data or source bytes are added. Existing backend publication and outline semantics are preserved.
 
@@ -10,7 +10,7 @@ Regression coverage: [tool definitions](../tests/unit/mcpCourses.test.ts), [regi
 
 ## Examples
 
-Example: "Create a draft course on liver anatomy, add three lesson drafts, and help me write them." This uses `create_course`, `add_course_lesson` and lesson draft tools; publication is a separate explicit request after review. "Publish this reviewed course publicly" uses `publish_course` with `visibility: "public"` and publishes its outlined lessons too. Listing, archive/restore and unpublishing use the corresponding registered course tools. Do not automatically publish or retry publication, or promise a generated shareUrl response.
+Example: "Create a draft course on liver anatomy, add three lesson drafts, and help me write them." This uses `create_course`, `add_course_lesson` and lesson draft tools; publication is a separate explicit request after review. "Publish this reviewed course publicly" uses `publish_course` with `visibility: "public"` after each lesson has been explicitly published. Listing, archive/restore and unpublishing use the corresponding registered course tools. Do not automatically publish or retry publication, or promise a generated shareUrl response.
 
 Course visibility values exactly match the backend: `public`, `restricted`, `private`. `unlisted` is rejected by the MCP schema before dispatch.
 

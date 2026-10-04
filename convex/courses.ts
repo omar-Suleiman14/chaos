@@ -7,7 +7,7 @@ import { v, type Infer } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser, isPaidPlan, creatorRestricted } from "./authz";
-import { createLessonForActor, publishLessonForActor } from "./lessons";
+import { createLessonForActor } from "./lessons";
 import { requireVisibilityAllowed } from "./plans";
 import { visibility } from "./learnModel";
 import { recordAssetPublicationAction } from "./learnPublicationAudit";
@@ -164,7 +164,7 @@ export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publish
     const items: Doc<"learnCollections">["items"] = [];
     const problems: { lessonId: Id<"lessons">; title: string; message: string }[] = [];
     for (const id of ids) {
-      let lesson = await ctx.db.get("lessons", id);
+      const lesson = await ctx.db.get("lessons", id);
       if (!lesson || lesson.ownerId !== actor) {
         // Never disclose metadata from a lesson the course owner no longer owns.
         problems.push({ lessonId: id, title: "Unavailable lesson", message: "Lesson is missing or no longer owned by you. Remove it from the course outline or replace it with an owned lesson." });
@@ -179,12 +179,8 @@ export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publish
         continue;
       }
       const pub = lesson.publishedVersionId ? await ctx.db.get("lessonVersions", lesson.publishedVersionId) : null;
-      const stale = !pub || lesson.visibility !== args.visibility || JSON.stringify(pub.document) !== JSON.stringify(lesson.draft) || JSON.stringify(pub.metadata) !== JSON.stringify(lesson.metadata);
-      if (stale) {
-        const result = await publishLessonForActor(ctx, actor, { lessonId: id, expectedRevision: lesson.revision, visibility: args.visibility, note: "Published with its course" });
-        if (!result.ok) { problems.push({ lessonId: id, title: lesson.metadata.title, message: result.problems.map((p) => p.message).join(" ") }); continue; }
-        lesson = (await ctx.db.get("lessons", id))!;
-      }
+      if (!pub || pub.lessonId !== id) { problems.push({ lessonId: id, title: lesson.metadata.title, message: "Publish this lesson explicitly before adding it to a course publication." }); continue; }
+      if (args.visibility === "public" && (lesson.visibility !== "public" || pub.visibility !== "public")) { problems.push({ lessonId: id, title: pub.metadata.title, message: "This lesson must be explicitly published publicly for a public course." }); continue; }
       items.push({ kind: "lesson", id, versionId: lesson.publishedVersionId! });
     }
     if (problems.length) return { ok: false as const, problems };
