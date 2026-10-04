@@ -5,7 +5,7 @@
  */
 export function parseError(err: unknown, fallback = "Something went wrong. Please try again."): { code: string; message: string } {
   const raw = err instanceof Error ? err.message : typeof err === "string" ? err : "";
-  const withoutStack = raw.split(/\n\s+at /)[0];
+  const withoutStack = raw.split(/\n\s+at /)[0].replace(/\s*Called by client[\s\S]*$/i, "");
   const match = withoutStack.match(/([A-Z][A-Z_]{2,}): ([\s\S]*)$/);
   if (match) return { code: match[1], message: match[2].trim() || fallback };
   const uncaught = withoutStack.match(/Uncaught Error: ([\s\S]*)$/);

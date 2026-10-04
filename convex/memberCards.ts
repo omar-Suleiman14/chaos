@@ -56,7 +56,18 @@ async function customize(ctx: MutationCtx, user: Doc<"users">, args: { name?: st
   if (args.showStudentCards !== undefined) updates.hideStudentCards = !args.showStudentCards;
   if (!args.skip) {
     if (args.name !== undefined) { const name = args.name.trim(); if (!name || name.length > 100) throw new Error("Name must be 1–100 characters"); updates.name = name; updates.profileNameChosen = true; }
-    if (args.username !== undefined) { const username = args.username.trim().toLowerCase(); const problem = usernameProblem(username); if (problem) throw new Error(`INVALID_USERNAME: ${problem}`); await reserveUsername(ctx, user.username, user.clerkId); await reserveUsername(ctx, username, user.clerkId); updates.username = username; updates.usernameChosen = true; }
+    if (args.username !== undefined) {
+      const username = args.username.trim().toLowerCase();
+      // Generated and legacy names remain valid for their existing owner.
+      // Validate a new choice only; keeping a generated name does not make it chosen.
+      if (username !== user.username) {
+        const problem = usernameProblem(username);
+        if (problem) throw new Error(`INVALID_USERNAME: ${problem}`);
+        await reserveUsername(ctx, user.username, user.clerkId);
+        await reserveUsername(ctx, username, user.clerkId);
+        updates.username = username; updates.usernameChosen = true;
+      }
+    }
     if (args.style !== undefined) { if (!Number.isInteger(args.style) || args.style < 0 || args.style > 31) throw new Error("Invalid card style"); updates.cardStyle = args.style; }
     if (args.avatar !== undefined) { if (!Number.isInteger(args.avatar) || args.avatar < 0 || args.avatar > 7) throw new Error("Invalid avatar"); updates.cardAvatarSeed = `${avatarSeed(user.clerkId)}:avatar:${args.avatar}`; }
   }

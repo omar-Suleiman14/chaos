@@ -13,6 +13,16 @@ async function setup() {
   const card = await teacher.query(api.memberCards.mine, {});
   return { t, teacher, student, username: card!.username };
 }
+it("keeps an existing generated username when saving a Card while rejecting new reserved choices", async () => {
+  const { teacher, student } = await setup();
+  const before = (await teacher.query(api.memberCards.mine, {}))!;
+  expect(before.username).toMatch(/^user\d{5}$/);
+  const saved = await teacher.mutation(api.memberCards.customizeCard, { username: before.username, name: "Meya", finishOnboarding: true });
+  expect(saved).toMatchObject({ name: "Meya", username: before.username });
+  expect((await teacher.query(api.quizFunctions.getCurrentUser, {}))?.usernameChosen).not.toBe(true);
+  await expect(student.mutation(api.memberCards.customizeCard, { username: before.username })).rejects.toThrow("INVALID_USERNAME");
+  await expect(teacher.mutation(api.memberCards.customizeCard, { username: "admin" })).rejects.toThrow("INVALID_USERNAME");
+});
 it("shows account Cards by default, keeps guests private and respects student opt-outs", async () => {
   const { t, teacher, student, username } = await setup();
   await t.run(async ctx => {

@@ -26,3 +26,22 @@ it("preserves an existing opt-out and saves changes from the accessible switch",
   fireEvent.click(view.getByRole("button", { name: "Skip for now" }));
   await waitFor(() => expect(state.save).toHaveBeenCalledWith({ skip: true, showStudentCards: true }));
 });
+
+it("does not submit the app-generated username again when saving other card changes", async () => {
+  state.query = {};
+  const view = render(<CardCustomization card={{ ...card, username: "user98049" }} actorId="student" />);
+  fireEvent.click(view.getByRole("button", { name: "Save my Card" }));
+  await waitFor(() => expect(state.save).toHaveBeenCalled());
+  expect(state.save.mock.calls[0][0]).not.toHaveProperty("username");
+});
+
+it("shows a field message without Convex internals when a new username is rejected", async () => {
+  state.query = {};
+  state.save.mockRejectedValue(new Error("[CONVEX M(memberCards:customizeCard)] [Request ID: abc] Server Error\nUncaught Error: INVALID_USERNAME: That username is reserved. Try another. Called by client"));
+  const view = render(<CardCustomization card={card} actorId="student" />);
+  fireEvent.change(view.getByRole("textbox", { name: "Username" }), { target: { value: "admin" } });
+  fireEvent.click(view.getByRole("button", { name: "Save my Card" }));
+  expect(await view.findByRole("alert")).toHaveTextContent("That username is reserved. Try another.");
+  expect(view.getByRole("alert").textContent).not.toMatch(/CONVEX|Request ID|Called by client|INVALID_USERNAME/);
+  expect(view.getByRole("textbox", { name: "Username" })).toHaveAttribute("aria-invalid", "true");
+});

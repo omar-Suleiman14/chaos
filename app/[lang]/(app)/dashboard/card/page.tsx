@@ -74,6 +74,8 @@ export default function ProfilePage() {
     <div className="max-w-3xl w-full mx-auto pb-16 font-sans">
       <div className="ws-page-header"><h1 className="ws-page-title">{t.title}</h1></div>
 
+      <details className="mc-profile-disclosure">
+        <summary><span>{locale === "ar" ? "بطاقتك وبياناتك" : "Your card and identity"}<small dir="auto">{card.name} · @{card.username}</small></span><ChevronRight size={18} aria-hidden /></summary>
       <section className="mc-profile" aria-label={card.name}>
         <MemberCardView data={{ ...card, username: draft.trim().toLowerCase() || card.username, url: `${siteUrl}/card/${card.username}` }} onStyle={(style) => setStyle({ style })} framed={false} />
         <div className="mc-profile__about">
@@ -85,8 +87,8 @@ export default function ProfilePage() {
         </div>
       </section>
 
-      {user?.id && <CardCustomization card={card} actorId={user.id} />}
-      <StudentsRoster />
+      {user?.id && <CardCustomization card={card} actorId={user.id} showPreview={false} />}
+      </details>
       <Section id="account" icon={CircleUser} title={t.account} description={t.accountAbout}>
         <Row id="settings-account" label={user?.fullName || card.name || t.yourAccount} help={user?.primaryEmailAddress?.emailAddress}>
           <button type="button" className="ws-btn ws-btn--sm" onClick={() => clerk.openUserProfile()}>{t.manage}</button>
@@ -119,6 +121,10 @@ export default function ProfilePage() {
           <WsSwitch label={t.motion} hideLabel checked={p.reduceMotion} onChange={(v) => set("reduceMotion", v)} />
         </Row>
       </Section>
+      <details className="mc-profile-disclosure">
+        <summary><span>{locale === "ar" ? "طلابك" : "Your students"}</span><ChevronRight size={18} aria-hidden /></summary>
+        <StudentsRoster />
+      </details>
     </div>
   );
 }
