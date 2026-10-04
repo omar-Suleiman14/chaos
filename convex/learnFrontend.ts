@@ -136,16 +136,21 @@ export const publicProfile = query({
 });
 
 export const embeddedQuiz = query({
- args: {asset: v.union(v.object({kind:v.literal("form"),id:v.id("forms")}),v.object({kind:v.literal("quiz"),id:v.id("quizzes")}))},
- returns: v.union(v.null(),v.object({title:v.string(),shareId:v.union(v.string(),v.null())})),
- handler: async(ctx,{asset})=> {
-  if(asset.kind==="form") { const form=await ctx.db.get("forms",asset.id); if(!form||form.status!=="live"||form.isBanned||form.publishedVersion===undefined||await creatorRestricted(ctx,form.ownerId)) return null;
-   const version=await ctx.db.query("formVersions").withIndex("by_formId_and_version",q=>q.eq("formId",form._id).eq("version",form.publishedVersion!)).unique();
-   return version?.definition.quiz?.enabled ? {title:version.definition.title,shareId:form.shareId} : null;
-  }
-  const quiz=await ctx.db.get("quizzes",asset.id); if(!quiz?.isPublished||quiz.isBanned||!quiz.publishedSnapshot||await creatorRestricted(ctx,quiz.creatorId)) return null;
-  return {title:quiz.publishedSnapshot.title,shareId:null};
- }
+  args: { asset: v.object({ kind: v.union(v.literal("form"), v.literal("quiz")), id: v.string() }) },
+  returns: v.union(v.null(), v.object({ title: v.string(), shareId: v.union(v.string(), v.null()), href: v.string(), questionCount: v.number() })),
+  handler: async (ctx, { asset }) => {
+    if (asset.kind === "form") {
+      const id = ctx.db.normalizeId("forms", asset.id);
+      const form = id ? await ctx.db.get("forms", id) : null;
+      if (!form || form.status !== "live" || form.isBanned || form.publishedVersion === undefined || await creatorRestricted(ctx, form.ownerId)) return null;
+      const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", form._id).eq("version", form.publishedVersion!)).unique();
+      return version?.definition.quiz?.enabled ? { title: version.definition.title, shareId: form.shareId, href: `/f/${encodeURIComponent(form.shareId)}`, questionCount: version.definition.fields.filter(f => f.type !== "section" && f.type !== "statement").length } : null;
+    }
+    const id = ctx.db.normalizeId("quizzes", asset.id);
+    const quiz = id ? await ctx.db.get("quizzes", id) : null;
+    if (!quiz?.isPublished || quiz.isBanned || !quiz.publishedSnapshot || await creatorRestricted(ctx, quiz.creatorId)) return null;
+    return { title: quiz.publishedSnapshot.title, shareId: null, href: `/${encodeURIComponent(quiz.creatorUsername)}/${encodeURIComponent(quiz.slug)}`, questionCount: quiz.publishedSnapshot.questions.length };
+  },
 });
 
 /** Public block metadata; recheck current lifecycle so old lesson versions cannot leak private decks. */

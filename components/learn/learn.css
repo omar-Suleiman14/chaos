@@ -529,3 +529,7 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 
 .lx-edit__doc, .lx-article, .lx-title-input, .lx-desc-input { text-align: start; }
 .lx-article:dir(rtl) h1, .lx-article:dir(rtl) h2, .lx-article:dir(rtl) h3, .lx-article:dir(rtl) h4 { letter-spacing: normal; }
+
+.lx-quiz-editor { min-width: 0; }
+.lx-quiz-editor input, .lx-quiz-editor select { width: 100%; min-width: 0; box-sizing: border-box; }
+.lx-inline-quiz .lx-panel__row { flex-wrap: wrap; }

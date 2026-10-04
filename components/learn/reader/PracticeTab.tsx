@@ -1,5 +1,6 @@
 "use client";
 
+import { inlineQuizKeys } from "@/lib/learn/inlineStudy";
 import InlineQuiz from "./InlineQuiz";
 import Link from "@/components/site/SiteLink";
 import { useRouter } from "next/navigation";
@@ -47,12 +48,13 @@ export default function PracticeTab({ lesson, isOwner }: { lesson: Lesson; isOwn
   const mine = useQuery(api.forms.listMyForms, isOwner ? {} : "skip");
   const editable = new Set([...(mine?.owned ?? []), ...(mine?.shared ?? []).filter((f) => f.role === "editor")].map((f) => f._id as string));
   const attachments = useQuery(api.learnFrontend.attachedQuizzes, { lessonId: lesson.id as Id<"lessons"> });
+  const inline = inlineQuizKeys(lesson.published?.content ?? lesson.draft.content);
   const quizzes = (attachments === undefined ? lesson.quizzes : (attachments ?? []).filter(q => q.kind === "form").map((q, order) => {
     const prior = lesson.quizzes.find(x => x.formId === q.id);
     return { formId: q.id, shareId: q.shareId ?? "", title: q.title, label: prior?.label ?? "", kind: prior?.kind ?? "custom" as QuizKind, order, questionCount: q.questionCount };
-  })).sort((a, b) => a.order - b.order);
+  })).filter(q => !inline.has(`form:${q.formId}`)).sort((a, b) => a.order - b.order);
 
-  const classic = (attachments ?? []).filter(q => q.kind === "quiz");
+  const classic = (attachments ?? []).filter(q => q.kind === "quiz" && !inline.has(`quiz:${q.id}`));
   if (!quizzes.length && !classic.length) return null;
   return (
     <section id="practice" className="lx-section" aria-label={t.title} style={{ marginTop: 32, borderTop: "1px solid var(--ws-line)", paddingTop: 24 }}>
