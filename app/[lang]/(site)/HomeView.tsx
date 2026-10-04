@@ -47,6 +47,12 @@ const copy = {
       ai: { name: "ChatGPT and Claude", title: "Use Chaos from your assistant.", body: "Ask ChatGPT or Claude to make a quiz, write a lesson, build a course or check results. Chaos itself runs no AI.", link: "See how it works" },
       notion: { name: "Notion", soon: "Coming soon" },
     },
+    understand: { title: "Understand", lead: "Use responses and analytics to decide what comes next.", items: [
+      { icon: ListChecks, title: "Responses and analytics", body: "Read aggregate summaries or individual responses when you need them. Keep learner answers private.", href: "/docs/responses", link: "Understand results" },
+      { icon: Download, title: "Exports", body: "Take response data with you as CSV, Excel or JSON.", href: "/docs/export-responses", link: "Export your data" },
+      { icon: Webhook, title: "API and webhooks", body: "Connect results to your own tools through permissioned API access and events.", href: "/docs/integration-api", link: "Connect results" },
+    ] },
+    secondary: ["Branching", "Access codes", "Scheduling", "QR codes", "Embeds", "Versions", "Collaboration", "Themes", "Sounds", "RTL"],
     open: {
       title: "Open", lead: "Your work isn't locked in.",
       items: [
@@ -89,6 +95,12 @@ const copy = {
       ai: { name: "ChatGPT وClaude", title: "استخدم Chaos من مساعدك.", body: "اطلب من ChatGPT أو Claude إنشاء اختبار أو كتابة درس أو بناء دورة أو معرفة النتائج. Chaos نفسه لا يشغّل أي ذكاء اصطناعي.", link: "اعرف كيف يعمل" },
       notion: { name: "Notion", soon: "قريبًا" },
     },
+    understand: { title: "افهم", lead: "استخدم الإجابات والتحليلات لتختار الخطوة التالية.", items: [
+      { icon: ListChecks, title: "الإجابات والتحليلات", body: "اقرأ الملخصات أو الإجابات الفردية عند الحاجة مع الحفاظ على خصوصية المتعلّمين.", href: "/docs/responses", link: "افهم النتائج" },
+      { icon: Download, title: "التصدير", body: "خذ بيانات الإجابات معك بصيغة CSV أو Excel أو JSON.", href: "/docs/export-responses", link: "صدّر بياناتك" },
+      { icon: Webhook, title: "API وWebhooks", body: "اربط النتائج بأدواتك عبر صلاحيات API والأحداث.", href: "/docs/integration-api", link: "اربط النتائج" },
+    ] },
+    secondary: ["التفرّع", "رموز الوصول", "الجدولة", "رموز QR", "التضمين", "الإصدارات", "التعاون", "المظاهر", "الأصوات", "RTL"],
     open: {
       title: "مفتوح", lead: "عملك ليس محبوسًا.",
       items: [
@@ -194,6 +206,8 @@ export default function HomeView() {
           </div>
         </section>
 
+        <section id="understand" className="site-section" aria-labelledby="understand-title"><div className="site-section-heading"><h2 id="understand-title" className="site-h2">{t.understand.title}</h2><p>{t.understand.lead}</p></div><Cards items={t.understand.items} /></section>
+        <section className="site-section" aria-label={locale === "ar" ? "المزيد من الإمكانات" : "More capabilities"}><ul className="site-capability-grid">{t.secondary.map(item => <li key={item}>{item}</li>)}</ul><Link href="/docs" className="site-text-link">{locale === "ar" ? "استكشف كل الإمكانات" : "Explore all capabilities"}</Link></section>
         <section id="open" className="site-section" aria-labelledby="open-title">
           <div className="site-section-heading"><h2 id="open-title" className="site-h2">{t.open.title}</h2><p>{t.open.lead}</p></div>
           <Cards items={t.open.items} />
