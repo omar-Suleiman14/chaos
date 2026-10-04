@@ -5,7 +5,7 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 
 import { useClerk, useUser } from "@/lib/auth/client";
-import { CardOnboarding } from "@/components/card/CardCustomization";
+import { CardOnboarding, CardSetupSkeleton } from "@/components/card/CardCustomization";
 import MemberAvatar from "@/components/MemberAvatar";
 import { avatarSeed } from "@/lib/avatarSeed";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
@@ -299,7 +299,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   // A brand-new sign-up waits for account creation so it never flashes an empty dashboard before its Card.
   // getCurrentUser also returns null before Convex has the sign-in token (every refresh), so only trust
   // a null once Convex reports the visitor as signed in.
-  if (isLoaded && user && convexSignedIn && account === null) return <div className="workspace-ui mc-customize"><p role={actionError ? "alert" : "status"}>{actionError || (locale === "ar" ? "جارٍ إعداد بطاقتك…" : "Preparing your Card…")}</p>{actionError && <button className="ws-btn" onClick={() => { setActionError(""); void getOrCreateUser({}).catch(error => setActionError(errorMessage(error))); }}>{locale === "ar" ? "حاول مجددًا" : "Try again"}</button>}</div>;
+  if (isLoaded && user && convexSignedIn && account === null) return <div className="workspace-ui">{actionError ? <div className="mc-customize"><p role="alert">{actionError}</p><button className="ws-btn" onClick={() => { setActionError(""); void getOrCreateUser({}).catch(error => setActionError(errorMessage(error))); }}>{locale === "ar" ? "حاول مجددًا" : "Try again"}</button></div> : <CardSetupSkeleton />}</div>;
   if (account && !cardDismissed && (account.cardOnboardingPending || cardStarted) && !account.isBanned && !account.suspendedUntil) return <div className="workspace-ui"><CardOnboarding actorId={account.clerkId} onDone={() => setCardDismissed(true)} /></div>;
 
   // The live game host screen is meant for a projector: full window, no workspace chrome.

@@ -8,6 +8,7 @@ import { siteUrl } from "@/lib/site";
 import { type MemberCardData } from "@/lib/memberCard";
 import MemberCardView from "./MemberCardView";
 import MemberAvatar from "@/components/MemberAvatar";
+import { WsSwitch } from "@/components/workspace/primitives";
 
 export default function CardCustomization({ card, actorId, onboarding = false, onDone }: { card: Omit<MemberCardData, "url">; actorId: string; onboarding?: boolean; onDone?: () => void }) {
   const { locale } = useLocale(), ar = locale === "ar";
@@ -27,20 +28,24 @@ export default function CardCustomization({ card, actorId, onboarding = false, o
   return <section className="mc-customize" aria-labelledby="card-customize-title">
     <h1 id="card-customize-title">{ready ? (ar ? "بطاقتك جاهزة" : "Your card is ready") : onboarding ? (ar ? "خصّص بطاقة Chaos الخاصة بك" : "Customize your Chaos Card") : (ar ? "عدّل بطاقتك" : "Edit your Card")}</h1>
     {onboarding && !ready && <p>{ar ? "مرحبًا بك في Chaos. اجعلها بطاقتك، ويمكنك تغيير كل شيء لاحقًا." : "Welcome to Chaos. Make it yours—you can change everything later."}</p>}
-    <MemberCardView data={{ ...card, name, username, style, seed, url: `${siteUrl}/card/${encodeURIComponent(username)}` }} onStyle={ready ? undefined : setStyle} />
-    {ready ? <><p role="status">{ar ? "تم حفظ بطاقتك." : "Your Card is saved."}</p><button className="ws-btn ws-btn--primary" onClick={() => { if (onboarding) onDone?.(); else setReady(false); }}>{onboarding ? (ar ? "تابع إلى Chaos" : "Continue to Chaos") : (ar ? "تعديل" : "Edit")}</button></> : <form onSubmit={e => { e.preventDefault(); void submit(); }} className="mc-customize__form">
+    <div className="mc-customize__layout"><div className="mc-customize__preview"><MemberCardView data={{ ...card, name, username, style, seed, url: `${siteUrl}/card/${encodeURIComponent(username)}` }} onStyle={ready ? undefined : setStyle} /></div>
+    {ready ? <div className="mc-customize__form"><p role="status">{ar ? "تم حفظ بطاقتك." : "Your Card is saved."}</p><button className="ws-btn ws-btn--primary" onClick={() => { if (onboarding) onDone?.(); else setReady(false); }}>{onboarding ? (ar ? "تابع إلى Chaos" : "Continue to Chaos") : (ar ? "تعديل" : "Edit")}</button></div> : <form onSubmit={e => { e.preventDefault(); void submit(); }} className="mc-customize__form">
       <label>{ar ? "الاسم" : "Name"}<input value={name} maxLength={100} required onChange={e => setName(e.target.value)} autoComplete="name" dir="auto" /></label>
       <label>{ar ? "اسم المستخدم" : "Username"}<input value={username} minLength={3} maxLength={64} required onChange={e => setUsername(e.target.value)} autoComplete="username" dir="ltr" spellCheck={false} /></label>
       <fieldset><legend>{ar ? "الصورة الرمزية" : "Avatar"}</legend><div className="mc-customize__avatars">{Array.from({ length: 8 }, (_, index) => <button type="button" key={index} aria-label={ar ? `الصورة ${index + 1}` : `Avatar ${index + 1}`} aria-pressed={avatar === index} onClick={() => setAvatar(index)}><MemberAvatar seed={`${avatarSeed(actorId)}:avatar:${index}`} size={36} /></button>)}</div></fieldset>
-      <label className="mc-customize__visibility"><input type="checkbox" checked={showStudentCards} disabled={!me || busy} onChange={e => setStudentChoice(e.target.checked)} />{ar ? "أظهر بطاقتي لدى معلّميّ" : "Show my Card with my teachers"}</label>
-      <p className="mc-help">{ar ? "تظهر بطاقتك علنًا مع معلّميك تلقائيًا. يمكنك إيقاف ذلك هنا أو في الإعدادات." : "Your Card appears publicly with your teachers by default. Turn this off here or in settings."}</p>
+      <div className="mc-customize__visibility"><div><span id="card-student-label">{ar ? "أظهر بطاقتي لدى معلّميّ" : "Show my Card with my teachers"}</span><p className="mc-help">{ar ? "تظهر بطاقتك علنًا مع معلّميك تلقائيًا. يمكنك إيقاف ذلك هنا أو في الإعدادات." : "Visible publicly by default. You can turn this off here or in settings."}</p></div><WsSwitch label={ar ? "أظهر بطاقتي لدى معلّميّ" : "Show my Card with my teachers"} hideLabel checked={showStudentCards} disabled={!me || busy} onChange={setStudentChoice} /></div>
       {error && <p role="alert">{error}</p>}
       <div className="mc-customize__actions"><button className="ws-btn ws-btn--primary" disabled={busy || !me}>{busy ? (ar ? "جارٍ الحفظ…" : "Saving…") : (ar ? "احفظ بطاقتي" : "Save my Card")}</button>{onboarding && <button type="button" className="ws-btn" disabled={busy} onClick={() => void submit(true)}>{ar ? "تخطَّ الآن" : "Skip for now"}</button>}</div>
-    </form>}
+    </form>}</div>
   </section>;
 }
 
 export function CardOnboarding({ actorId, onDone }: { actorId: string; onDone: () => void }) {
   const card = useQuery(api.memberCards.mine);
-  return card ? <CardCustomization card={card} actorId={actorId} onboarding onDone={onDone} /> : <p role="status">Loading your Card…</p>;
+  return card ? <CardCustomization card={card} actorId={actorId} onboarding onDone={onDone} /> : <CardSetupSkeleton />;
+}
+
+export function CardSetupSkeleton() {
+  const { locale } = useLocale();
+  return <section className="mc-customize mc-customize--loading" aria-busy="true" aria-label={locale === "ar" ? "تحميل إعداد البطاقة" : "Loading card setup"}><div className="mc-customize__skeleton-title" /><div className="mc-customize__layout"><div className="mc-customize__skeleton-card" /><div className="mc-customize__skeleton-fields">{Array.from({ length: 4 }, (_, i) => <div key={i} />)}</div></div></section>;
 }

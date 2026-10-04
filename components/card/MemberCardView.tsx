@@ -38,7 +38,7 @@ export default function MemberCardView({ data, onStyle, framed = true, actions }
     const left = e.detail > 0 && e.clientX < r.left + r.width / 2;
     setTurn((t) => t + (left ? -180 : 180));
   };
-  const cardEl = useRef<HTMLButtonElement>(null);
+  const cardEl = useRef<HTMLSpanElement>(null);
   useFlip(cardEl, turn);
   const [status, setStatus] = useState("");
   const tilt = useRef<HTMLDivElement>(null);
@@ -85,10 +85,12 @@ export default function MemberCardView({ data, onStyle, framed = true, actions }
         {framed && <span className="mc-frame__label">{t.label}</span>}
         <div className="mc-stage" ref={tilt}>
           <div className="mc-tilt">
-            <button type="button" className="mc-card" ref={cardEl} data-flipped={flipped} title={flipped ? t.flipBack : t.flip} onClick={flip} aria-label={`${t.cardOf(data.name)}. ${flipped ? t.flipBack : t.flip}`}>
+            <button type="button" className="mc-card" data-flipped={flipped} title={flipped ? t.flipBack : t.flip} onClick={flip} aria-label={`${t.cardOf(data.name)}. ${flipped ? t.flipBack : t.flip}`}>
+              <span className="mc-rotator" ref={cardEl}>
               <span aria-hidden={flipped} className="mc-face mc-face--front" dangerouslySetInnerHTML={{ __html: front }} />
               <span aria-hidden={!flipped} className="mc-face mc-face--back" dangerouslySetInnerHTML={{ __html: back }} />
               <span className="mc-glare" aria-hidden />
+              </span>
             </button>
           </div>
         </div>

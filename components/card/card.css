@@ -12,7 +12,9 @@
      every new angle triggers a redraw, and Chrome shows a blurry stand-in until each one finishes.
    - No transitions on these transforms: useTilt and useFlip ease them frame by frame. */
 .mc-tilt { width:100%; will-change:transform; transform-style:preserve-3d; transform:translate(var(--tx),var(--ty)) rotateX(var(--rx)) rotateY(var(--ry)); animation:mc-in .9s cubic-bezier(.2,.9,.2,1) backwards; }
-.mc-card { position:relative; display:block; will-change:transform; width:100%; aspect-ratio:340/500; border:0; padding:0; background:none; cursor:pointer; transform-style:preserve-3d; transform:rotateY(var(--flip,0deg)); border-radius:18px; }
+.mc-card { position:relative; display:block; width:100%; aspect-ratio:340/500; border:0; padding:0; background:none; appearance:none; -webkit-appearance:none; cursor:pointer; transform-style:preserve-3d; border-radius:18px; }
+/* Rotate a plain element: native button compositing can flatten the back face on iOS. */
+.mc-rotator { position:absolute; display:block; inset:0; will-change:transform; transform-style:preserve-3d; -webkit-transform-style:preserve-3d; transform:rotateY(var(--flip,0deg)); }
 .mc-face { position:absolute; inset:0; backface-visibility:hidden; -webkit-backface-visibility:hidden; border-radius:18px; overflow:hidden; box-shadow:var(--mc-shadow); }
 .mc-face svg { display:block; width:100%; height:100%; }
 .mc-face--back { transform:rotateY(180deg); }
@@ -87,13 +89,30 @@
 @keyframes mc-student-enter { from { opacity: 0; transform: translateY(5px); } }
 @media(prefers-reduced-motion:reduce) { .mc-student { animation: none; transition: none; } .mc-student:hover, .mc-student:active { transform: none; } }
 
-.mc-customize { max-width: 620px; margin: 24px auto; padding: 20px; }
+.mc-customize { max-width: 900px; margin: 24px auto; padding: clamp(16px,3vw,28px); }
 .mc-customize h1 { font-size: clamp(24px, 5vw, 36px); font-weight: 650; margin-block-end: 12px; }
-.mc-customize__form { display: grid; gap: 16px; }
-.mc-customize__form label { display: grid; gap: 6px; }
-.mc-customize__form .mc-customize__visibility { display:flex; align-items:center; gap:10px; min-height:44px; }
-.mc-customize__form .mc-customize__visibility input { width:18px; min-height:18px; flex:none; }
-.mc-customize input { width: 100%; min-height: 44px; padding: 10px; border: 1px solid var(--ws-line, #888); border-radius: 8px; background: var(--ws-surface, Canvas); color: inherit; }
+.mc-customize > p { margin-block:0 24px; max-width:52ch; color:var(--on-surface-variant); line-height:1.6; }
+.mc-customize__layout { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:32px; align-items:start; }
+.mc-customize__preview { min-width:0; }
+.mc-customize__preview .mc-stage { width:280px; }
+.mc-customize__preview .mc-frame { padding:16px; }
+.mc-customize__preview .mc { gap:14px; }
+.mc-customize__preview .mc-actions { gap:6px; }
+.mc-customize__preview .mc-btn { font-size:12px; padding:8px 10px; }
+.mc-customize__form { display: grid; gap: 20px; }
+.mc-customize__form > label { display: grid; gap: 8px; font-size:14px; font-weight:600; }
+.mc-customize__visibility { display:flex; align-items:center; justify-content:space-between; gap:16px; padding-block:16px; border-block:1px solid var(--ws-line,var(--outline-variant)); font-size:14px; font-weight:600; }
+.mc-customize__visibility .mc-help { margin:6px 0 0; font-weight:400; }
+.mc-customize__visibility .ws-switch { flex:none; min-height:44px; }
+.mc-customize__form > label input { width: 100%; min-height: 46px; padding: 10px 12px; border: 1px solid var(--ws-line, #888); border-radius: 10px; background: var(--ws-card, Canvas); color: inherit; font:inherit; font-weight:400; }
+.mc-customize__form fieldset { border:0; padding:0; margin:0; min-width:0; }
+.mc-customize__form legend { font-size:14px; font-weight:600; margin-block-end:10px; }
 .mc-customize__avatars, .mc-customize__actions { display: flex; gap: 8px; flex-wrap: wrap; }
-.mc-customize__avatars button { min-width: 48px; min-height: 48px; display: grid; place-items: center; border: 2px solid transparent; border-radius: 12px; }
+.mc-customize__avatars button { width:48px; height:48px; display: grid; place-items: center; border: 2px solid transparent; border-radius: 12px; background:var(--ws-card,var(--surface-container)); cursor:pointer; }
 .mc-customize__avatars button[aria-pressed=true] { border-color: currentColor; }
+.mc-customize__skeleton-title { width:65%; height:32px; margin-block-end:24px; }
+.mc-customize__skeleton-card { width:280px; max-width:100%; aspect-ratio:340/500; margin-inline:auto; border-radius:18px; }
+.mc-customize__skeleton-fields { display:grid; gap:24px; }
+.mc-customize__skeleton-fields > div { height:64px; border-radius:10px; }
+.mc-customize--loading .mc-customize__skeleton-title,.mc-customize--loading .mc-customize__skeleton-card,.mc-customize__skeleton-fields > div { background:var(--ws-card,var(--surface-container)); }
+@media (max-width:700px) { .mc-customize__layout { grid-template-columns:minmax(0,1fr); gap:24px; } .mc-customize__preview .mc-stage { width:250px; } .mc-customize__actions > button { flex:1; } }
