@@ -1,0 +1,30 @@
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, expect, it, vi } from "vitest";
+import FlashcardStudy from "@/components/learn/study/FlashcardStudy";
+const mocks = vi.hoisted(() => ({ review: vi.fn() }));
+vi.mock("@/lib/auth/client", () => ({ SignInButton: ({ children }: { children: React.ReactNode }) => children }));
+vi.mock("convex/react", () => ({ useQuery: () => ({ _id: "version", title: "Study", cards: [{ id: "a", front: "First question", back: "First answer" }, { id: "b", front: "Second question", back: "Second answer" }] }) }));
+vi.mock("@/lib/learn/data", () => ({ useLearnViewer: () => ({ signedIn: true, id: "learner" }), useLearnActions: () => ({ reviewCard: mocks.review }), useCardReviews: () => [{ cardId: "a", box: 3, reviewedAt: 0 }] }));
+beforeEach(() => { vi.clearAllMocks(); mocks.review.mockResolvedValue(undefined); });
+it("navigates and flips without changing mastery, then restarts the same round", () => {
+  render(<FlashcardStudy setId="deck" />);
+  expect(screen.getByText("1 of 2 known well")).toBeInTheDocument();
+  expect(screen.getByText("Second question")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Previous card" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Show answer" }));
+  fireEvent.click(screen.getByRole("button", { name: "Next card" }));
+  expect(screen.getByText("First question")).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Show answer" })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Next card" })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: "Previous card" }));
+  fireEvent.click(screen.getByRole("button", { name: "Restart round" }));
+  expect(screen.getByText("Card 1 of 2")).toBeInTheDocument();
+  expect(mocks.review).not.toHaveBeenCalled();
+});
+it("persists an actual answer through the existing shared mastery action", async () => {
+  render(<FlashcardStudy setId="deck" />);
+  fireEvent.click(screen.getByRole("button", { name: "Show answer" }));
+  fireEvent.click(screen.getByRole("button", { name: "Knew it" }));
+  await waitFor(() => expect(mocks.review).toHaveBeenCalledWith("deck", "b", true));
+  await waitFor(() => expect(screen.getByText("Card 2 of 2")).toBeInTheDocument());
+});

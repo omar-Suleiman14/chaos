@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import katex from "katex";
+import FlashcardBlockEditor from "./FlashcardBlockEditor";
+import InlineFlashcards from "../reader/InlineFlashcards";
 import "katex/dist/katex.min.css";
 import { BlockNoteSchema, defaultBlockSpecs, defaultInlineContentSpecs, defaultProps, imageParse } from "@blocknote/core";
 import { createReactBlockSpec, createReactInlineContentSpec, ResizableFileBlockWrapper, SourceBlockWithPreview, useResolveUrl } from "@blocknote/react";
@@ -319,8 +321,9 @@ export const LessonQuiz = createReactBlockSpec(
 export const LessonFlashcards = createReactBlockSpec(
   { type: "lessonFlashcards", propSchema: { setId: { default: "" } }, content: "none" },
   { render: function FlashcardsBlock({ block, editor }) {
-    const t = useCopy({ en: { title: "Flashcards", id: "Flashcard set ID", hint: "Paste the ID of a published flashcard set" }, ar: { title: "البطاقات", id: "معرّف مجموعة البطاقات", hint: "الصق معرّف مجموعة بطاقات منشورة" } });
-    return <div contentEditable={false} className="lx-callout" data-tone="tip"><strong>{t.title}</strong>{editor.isEditable ? <input aria-label={t.id} placeholder={t.hint} value={block.props.setId} onChange={e => editor.updateBlock(block, { props: { setId: e.target.value.trim() } })} /> : <span>{block.props.setId}</span>}</div>;
+    return <div contentEditable={false} className="lx-panel">
+      {editor.isEditable ? <FlashcardBlockEditor setId={block.props.setId} onSelect={setId => editor.updateBlock(block, { props: { setId } })} /> : block.props.setId ? <InlineFlashcards setId={block.props.setId} /> : null}
+    </div>;
   } },
 );
 export const lessonSchema = BlockNoteSchema.create({

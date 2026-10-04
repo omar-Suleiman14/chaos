@@ -518,3 +518,11 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-reader-back, .lx-reader-back:hover { background: transparent; }
 .lx-back-chevron { width: 18px; height: 18px; flex-shrink: 0; }
 @media (pointer: coarse) { .lx-reader-back { min-width: 44px !important; min-height: 44px !important; } }
+
+/* Inline study stays readable inside the 320px lesson flow. */
+.lx-inline-flashcards { margin-block: 24px; padding: clamp(12px, 3vw, 20px); border: 1px solid var(--ws-line); border-radius: 16px; min-width: 0; }
+.lx-inline-flashcards > header { flex-wrap: wrap; gap: 8px; }
+.lx-inline-flashcards .lx-flip__card { overflow-wrap: anywhere; }
+.lx-flashcard-editor { min-width: 0; }
+.lx-flashcard-editor input, .lx-flashcard-editor textarea, .lx-flashcard-editor select { width: 100%; min-width: 0; box-sizing: border-box; }
+.lx-flashcard-editor .lx-actions { flex-wrap: wrap; }

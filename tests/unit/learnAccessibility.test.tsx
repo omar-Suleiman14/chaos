@@ -6,13 +6,13 @@ import type { Lesson } from "@/lib/learn/types";
 import { getFunctionName } from "convex/server";
 
 vi.mock("@clerk/nextjs", () => ({ useUser: () => ({ isLoaded: true, user: { id: "reader", fullName: "Reader One", username: "reader", imageUrl: "" } }) }));
-const backend = vi.hoisted(() => ({ mutation: vi.fn(), query: vi.fn(), loadMore: vi.fn(), page: { results: [], status: "Exhausted" } }));
+const backend = vi.hoisted(() => ({ mutation: vi.fn(), query: vi.fn(), loadMore: vi.fn(), page: { results: [], status: "Exhausted" }, assessments: [] as { kind: "quiz"; id: string; title: string; questionCount: number }[] }));
 vi.mock("convex/react", () => ({
   useConvex: () => backend,
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
   usePaginatedQuery: () => ({ ...backend.page, loadMore: backend.loadMore }),
   useQueries: (requests: Record<string, unknown>) => Object.fromEntries(Object.keys(requests).map(key => [key, { page: [], isDone: true, continueCursor: "" }])),
-  useQuery: (ref: Parameters<typeof getFunctionName>[0], args: unknown) => args === "skip" ? undefined : ["learnCommunity:rank", "learnPersonal:listModuleFollows", "courses:listPublic"].includes(getFunctionName(ref)) ? [] : getFunctionName(ref) === "forms:list" ? { owned: [], shared: [] } : null,
+  useQuery: (ref: Parameters<typeof getFunctionName>[0], args: unknown) => args === "skip" ? undefined : getFunctionName(ref) === "learnFrontend:attachedQuizzes" ? backend.assessments : ["learnCommunity:rank", "learnPersonal:listModuleFollows", "courses:listPublic"].includes(getFunctionName(ref)) ? [] : getFunctionName(ref) === "forms:list" ? { owned: [], shared: [] } : null,
   useMutation: () => backend.mutation,
 }));
 const push = vi.fn();
@@ -61,10 +61,10 @@ const inWorkspace = (ui: React.ReactNode, locale: "en" | "ar" = "en") => render(
 // jsdom has no matchMedia; the reader asks for phone and reduced-motion media queries.
 window.matchMedia ??= ((query: string) => ({ matches: false, media: query, onchange: null, addEventListener: () => {}, removeEventListener: () => {}, addListener: () => {}, removeListener: () => {}, dispatchEvent: () => false })) as typeof window.matchMedia;
 
-beforeEach(() => { localStorage.clear(); push.mockReset(); backend.mutation.mockReset().mockResolvedValue("lesson_created"); backend.query.mockReset().mockResolvedValue(null); });
+beforeEach(() => { backend.assessments = []; localStorage.clear(); push.mockReset(); backend.mutation.mockReset().mockResolvedValue("lesson_created"); backend.query.mockReset().mockResolvedValue(null); });
 
 describe("lesson reader", () => {
-  it("has a labelled article, outline and inline practice, and no axe violations", async () => {
+  it("has a labelled article and outline without an empty Practice section, and no axe violations", async () => {
     const l = lesson();
     seed(l);
     inWorkspace(<LessonReader lesson={l} />);
@@ -72,7 +72,7 @@ describe("lesson reader", () => {
     // Desktop and phone outlines are the same list; CSS shows one at a time.
     const outline = screen.getAllByRole("navigation", { name: "Lesson outline" })[0];
     expect(within(outline).getAllByRole("link").map((a) => a.textContent)).toEqual(["Causes", "Collaterals"]);
-    expect(screen.getByRole("region", { name: "Practice" })).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: "Practice" })).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Lecture 8 · page 23" })).toBeInTheDocument();
     expect(screen.getByRole("note")).toHaveTextContent("Check for varices.");
     expect(screen.getByRole("columnheader", { name: "Site" })).toBeInTheDocument();
@@ -106,10 +106,11 @@ describe("lesson reader", () => {
   });
 
   it("keeps practice inside the lesson without a separate tab", () => {
+    backend.assessments = [{ kind: "quiz", id: "quiz", title: "Checkpoint", questionCount: 3 }];
     const l = lesson(); seed(l); inWorkspace(<LessonReader lesson={l} />);
     expect(screen.queryByRole("tab", { name: "Practice" })).toBeNull();
     expect(screen.getByRole("region", { name: "Practice" })).toBeInTheDocument();
-    expect(screen.getByText("No practice attached yet.")).toBeInTheDocument();
+    expect(screen.getByText("Checkpoint")).toBeInTheDocument();
   });
 });
 

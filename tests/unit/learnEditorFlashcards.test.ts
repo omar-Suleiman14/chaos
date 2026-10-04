@@ -45,17 +45,18 @@ function setup() {
       ],
     },
   };
+  const editor = { document: lesson.draft.content, insertBlocks: vi.fn(), getTextCursorPosition: () => ({ block: lesson.draft.content[0] }), focus: vi.fn() };
   const run = async (operation: () => Promise<unknown>) => {
     try { await operation(); return true; }
     catch (error) { onError(error); return false; }
   };
   const makeFlashcards = runInNewContext(executable, {
-    run, flush, walk, asBlocks, lesson, newId: () => "card-1", blockText,
+    editorRef: { current: editor }, run, flush, walk, asBlocks, lesson, newId: () => "card-1", blockText,
     actions: { createFlashcardSet },
     t: { cardsTitle: (title: string) => `${title} — flashcards`, cardsCreated: "created" },
     say, router: { push },
   }) as () => Promise<boolean>;
-  return { makeFlashcards, resolveCreation, rejectCreation, push, say, onError, flush, createFlashcardSet };
+  return { editor, makeFlashcards, resolveCreation, rejectCreation, push, say, onError, flush, createFlashcardSet };
 }
 
 async function startPendingCreation(state: ReturnType<typeof setup>) {
@@ -63,21 +64,25 @@ async function startPendingCreation(state: ReturnType<typeof setup>) {
   await new Promise<void>(resolve => setImmediate(resolve));
   expect(state.flush).toHaveBeenCalledOnce();
   expect(state.createFlashcardSet).toHaveBeenCalledExactlyOnceWith({
-    title: "Lesson — flashcards", lessonId: "lesson-1",
+    title: "Lesson — flashcards",
     cards: [{ id: "card-1", front: "Question", back: "Answer", blockId: "h" }],
   });
   expect(state.push).not.toHaveBeenCalled();
+  expect(state.editor.insertBlocks).not.toHaveBeenCalled();
   expect(state.say).not.toHaveBeenCalled();
   return { pending };
 }
 
 describe("lesson editor flashcard creation regression", () => {
-  it("waits for delayed creation before announcing success and navigating to the resolved set ID", async () => {
+  it("waits for delayed creation before inserting the resolved deck into the lesson and announcing success", async () => {
     const state = setup();
     const { pending } = await startPendingCreation(state);
     state.resolveCreation("set-42");
     expect(await pending).toBe(true);
-    expect(state.push).toHaveBeenCalledExactlyOnceWith("/dashboard/learn/flashcards/set-42");
+    expect(state.editor.insertBlocks).toHaveBeenCalledExactlyOnceWith([{ type: "lessonFlashcards", props: { setId: "set-42" } }], state.editor.document[0], "after");
+    expect(state.flush).toHaveBeenCalledTimes(2);
+    expect(state.editor.focus).toHaveBeenCalledOnce();
+    expect(state.push).not.toHaveBeenCalled();
     expect(state.say).toHaveBeenCalledExactlyOnceWith("created");
     expect(state.onError).not.toHaveBeenCalled();
   });

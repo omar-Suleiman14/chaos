@@ -236,7 +236,7 @@ function LessonEditorSession({ id }: { id: string }) {
   };
   const sectionOf = (blockId?: string) => {
     let heading: string | undefined;
-    for (const { block } of walk(asBlocks(lesson.draft.content))) { if (block.type === "heading") heading = blockText(block); if (block.id === blockId) break; }
+    for (const { block } of walk(asBlocks(editorRef.current?.document ?? lesson.draft.content))) { if (block.type === "heading") heading = blockText(block); if (block.id === blockId) break; }
     return heading;
   };
   const makeFlashcards = () => run(async () => {
@@ -244,13 +244,18 @@ function LessonEditorSession({ id }: { id: string }) {
     // Plain, predictable: each heading becomes a card whose back is the text under it.
     const cards: { id: string; front: string; back: string; blockId?: string }[] = [];
     let current: { id: string; front: string; back: string; blockId?: string } | null = null;
-    for (const { block } of walk(asBlocks(lesson.draft.content))) {
-      if (block.type === "heading") { current = { id: newId("card"), front: blockText(block), back: "", blockId: block.id }; cards.push(current); }
-      else if (current && current.back.length < 600) { const text = blockText(block); if (text) current.back = `${current.back}\n${text}`.trim(); }
+    for (const { block } of walk(asBlocks(editorRef.current?.document ?? lesson.draft.content))) {
+      if (block.type === "heading") { current = { id: newId("card"), front: blockText(block).slice(0, 2000), back: "", blockId: block.id }; cards.push(current); }
+      else if (current && current.back.length < 600) { const text = blockText(block); if (text) current.back = `${current.back}\n${text}`.trim().slice(0, 600); }
     }
-    const id = await actions.createFlashcardSet({ title: t.cardsTitle(lesson.draft.meta.title || "Lesson"), lessonId: lesson.id, cards: cards.filter((c) => c.front && c.back) });
+    const id = await actions.createFlashcardSet({ title: t.cardsTitle(lesson.draft.meta.title || "Lesson"), cards: cards.filter((c) => c.front && c.back) });
+    const editor = editorRef.current;
+    if (editor) {
+      editor.insertBlocks([{ type: "lessonFlashcards", props: { setId: id } }], editor.getTextCursorPosition().block, "after");
+      await flush();
+      editor.focus();
+    }
     say(t.cardsCreated);
-    router.push(`/dashboard/learn/flashcards/${id}`);
   });
 
   return (
@@ -360,7 +365,7 @@ function LessonEditorSession({ id }: { id: string }) {
               onOpen={async source => { const tab = window.open("about:blank", "_blank"); if (tab) tab.opener = null; try { const url = await media.resolve(source.fileId!); if (tab) tab.location.href = url; } catch (err) { tab?.close(); throw err; } }}
               blockCitations={(native?.draft.blocks ?? []).flatMap(block => block.citations.map(citation => ({ blockId: block.id, citation })))}
               onEditCitation={(blockId, previous) => setCite({ blockId, previous, initial: { sourceId: previous.sourceId, locator: formatLocator(previous.locator) } })} />}
-            {tab === "practice" && <PracticePanel lessonId={lesson.id} quizzes={lesson.quizzes} onChange={(quizzes) => run(() => actions.setQuizzes(lesson.id, quizzes))} onCreateCards={makeFlashcards} onInsertQuiz={assetId => { const editor = editorRef.current; if (!editor) return; editor.insertBlocks([{ type: "lessonQuiz", props: { assetKind: "form", assetId } }], editor.getTextCursorPosition().block, "after"); editor.focus(); }} />}
+            {tab === "practice" && <PracticePanel lessonId={lesson.id} quizzes={lesson.quizzes} onChange={(quizzes) => run(() => actions.setQuizzes(lesson.id, quizzes))} onCreateCards={makeFlashcards} onInsertFlashcards={setId => { const editor = editorRef.current; if (!editor) return; editor.insertBlocks([{ type: "lessonFlashcards", props: { setId } }], editor.getTextCursorPosition().block, "after"); editor.focus(); }} onInsertQuiz={assetId => { const editor = editorRef.current; if (!editor) return; editor.insertBlocks([{ type: "lessonQuiz", props: { assetKind: "form", assetId } }], editor.getTextCursorPosition().block, "after"); editor.focus(); }} />}
           </aside>
         )}
       </div>
