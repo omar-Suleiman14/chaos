@@ -12,7 +12,8 @@ describe("author card directory", () => {
  it("keeps rendering bounded and links to the existing member card", () => {
    const {container} = render(<PublicAuthors/>);
    expect(container.querySelectorAll(".author-stack-card").length).toBeLessThanOrEqual(5);
-   expect(screen.queryByRole("button")).toBeNull();
+   // The only buttons are the stacked cards, which fan the stack out.
+   expect(screen.queryAllByRole("button").every((b) => b.classList.contains("author-stack-card"))).toBe(true);
    expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author0");
    fireEvent.keyDown(screen.getByRole("region", {name: "Author cards"}), {key: "ArrowRight"});
    expect(screen.getByRole("link", {name: /View card of/})).toHaveAttribute("href", "/card/author1");

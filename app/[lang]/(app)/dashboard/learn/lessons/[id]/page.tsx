@@ -15,7 +15,7 @@ import type { Id, Doc } from "@/convex/_generated/dataModel";
 import type { LessonDocument } from "@/convex/learnModel";
 import { detachSource, parseCitationLocator, replaceBlockCitation, sourceIds, sourceView, useLearnMediaClient, type NativeSource, type NativeCitation } from "@/lib/learn/mediaClient";
 import { formatLocator } from "@/lib/learn/chaosDocument";
-import { ChevronLeft, Archive, Check, Copy, Eye, FolderInput, History, Info, Layers, MoreHorizontal, PanelRight, Rocket, RotateCcw, Trash2, Undo2, X } from "lucide-react";
+import { ChevronLeft, Archive, Check, Copy, Eye, FolderInput, History, Info, Layers, MoreHorizontal, PanelRight, RotateCcw, Send, Trash2, Undo2, X } from "lucide-react";
 import { WsConfirm, WsMenu, WsTabs, WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { Select } from "@/components/workspace/Select";
@@ -46,7 +46,7 @@ const LessonEditor = dynamic(() => import("@/components/learn/editor/LessonEdito
 const copy = {
   en: {
     loading: "Opening lesson…", back: "Learn library", titlePh: "Lesson title", descPh: "A one-line summary readers see first (optional)",
-    saving: "Saving…", saved: "Saved on this device", savedCloud: "Saved", preview: "Preview", history: "History", publish: "Publish", publishChanges: "Publish changes", published: "Published",
+    saving: "Saving…", saved: "Saved on this device", savedCloud: "Saved", preview: "Preview", history: "History", publish: "Publish lesson", publishChanges: "Publish changes", published: "Published",
     more: "Lesson actions", discard: "Discard unpublished changes", unpublish: "Unpublish", duplicate: "Duplicate", archive: "Archive", delete: "Delete permanently", move: "Move to folder", noFolder: "No folder",
     panel: "Lesson settings", panelToggle: "Show or hide lesson settings", settingsLabel: "Settings", backCourse: "Course", courses: "Courses", tabs: { details: "Details", sources: "Sources", practice: "Practice" },
     discardTitle: "Discard unpublished changes?", discardBody: "Your draft goes back to the published version. This can’t be undone.",
@@ -60,7 +60,7 @@ const copy = {
   },
   ar: {
     loading: "جارٍ فتح الدرس…", back: "مكتبة Learn", titlePh: "عنوان الدرس", descPh: "ملخص من سطر يراه القرّاء أولًا (اختياري)",
-    saving: "جارٍ الحفظ…", saved: "محفوظ على هذا الجهاز", savedCloud: "محفوظ", preview: "معاينة", history: "السجل", publish: "انشر", publishChanges: "انشر التعديلات", published: "منشور",
+    saving: "جارٍ الحفظ…", saved: "محفوظ على هذا الجهاز", savedCloud: "محفوظ", preview: "معاينة", history: "السجل", publish: "انشر الدرس", publishChanges: "انشر التعديلات", published: "منشور",
     more: "إجراءات الدرس", discard: "تجاهل التعديلات غير المنشورة", unpublish: "إلغاء النشر", duplicate: "تكرار", archive: "أرشفة", delete: "حذف نهائي", move: "انقل إلى مجلد", noFolder: "بلا مجلد",
     panel: "إعدادات الدرس", panelToggle: "أظهر إعدادات الدرس أو أخفها", settingsLabel: "الإعدادات", backCourse: "الدورة", courses: "الدورات", tabs: { details: "التفاصيل", sources: "المصادر", practice: "التدريب" },
     discardTitle: "تجاهل التعديلات غير المنشورة؟", discardBody: "تعود مسودتك إلى النسخة المنشورة. لا يمكن التراجع.",
@@ -270,7 +270,7 @@ function LessonEditorSession({ id }: { id: string }) {
         <Link href={`${lessonPath(lesson.id)}?preview=draft`} className="ws-btn ws-btn--sm ws-btn--ghost" onClick={(e) => { e.preventDefault(); void run(async () => { await flush(); router.push(`${lessonPath(lesson.id)}?preview=draft`); }); }}><Eye size={15} aria-hidden /><span className="lx-phone-label">{t.preview}</span></Link>
         <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" onClick={() => void run(async () => { await flush(); setDialog("history"); })}><History size={15} aria-hidden /><span className="lx-phone-label">{t.history}</span></button>
         <button type="button" className="ws-btn ws-btn--sm ws-btn--primary" disabled={!isOwner || conflict || mediaBusy || uploadCount > 0} onClick={() => void run(async () => { await flush(); setDialog("publish"); })}>
-          <Rocket size={15} aria-hidden />{!lesson.published ? t.publish : changes ? t.publishChanges : t.published}
+          <Send size={15} aria-hidden />{!lesson.published ? t.publish : changes ? t.publishChanges : t.published}
         </button>
         <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={panelOpen} aria-expanded={panelOpen} aria-controls="lesson-settings" aria-label={t.panelToggle} onClick={() => setPanelOpen((o) => !o)}><PanelRight size={15} className="lx-flip" aria-hidden /><span className="lx-phone-label">{t.settingsLabel}</span></button>
         <WsMenu label={t.more} trigger={<MoreHorizontal size={18} />}>
@@ -372,7 +372,7 @@ function LessonEditorSession({ id }: { id: string }) {
         )}
       </div>
 
-      {dialog === "publish" && <PublishDialog lesson={editorLesson} sources={sources} error={error} disabled={conflict || mediaBusy || uploadCount > 0 || ids.some(sourceId => sourceRows[sourceId] === undefined)} onClose={() => setDialog(null)} onPublish={({ visibility, indexing, note }) => run(async () => {
+      {dialog === "publish" && <PublishDialog lesson={editorLesson} inCourse={!!courseId} sources={sources} error={error} disabled={conflict || mediaBusy || uploadCount > 0 || ids.some(sourceId => sourceRows[sourceId] === undefined)} onClose={() => setDialog(null)} onPublish={({ visibility, indexing, note }) => run(async () => {
         await flush();
         actions.setVisibility(lesson.id, visibility);
         await actions.saveDraftMeta(lesson.id, { indexing });

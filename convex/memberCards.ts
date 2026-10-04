@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { mutation, query, internalMutation, internalQuery, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { requireActiveUser } from "./authz";
-import { avatarSeed } from "../lib/avatarSeed";
+import { AVATAR_COUNT, avatarSeed, parseAvatarSeed } from "../lib/avatarSeed";
 import { requireLearnActor } from "./mcpLearn";
 import { usernameProblem } from "./links";
 import { reserveUsername, userByUsername } from "./usernameModel";
@@ -50,8 +50,8 @@ export const setStyle = mutation({
   },
 });
 
-const customization = { name: v.optional(v.string()), username: v.optional(v.string()), style: v.optional(v.number()), avatar: v.optional(v.number()), finishOnboarding: v.optional(v.boolean()), skip: v.optional(v.boolean()), showStudentCards: v.optional(v.boolean()) };
-async function customize(ctx: MutationCtx, user: Doc<"users">, args: { name?: string; username?: string; style?: number; avatar?: number; finishOnboarding?: boolean; skip?: boolean; showStudentCards?: boolean }) {
+const customization = { name: v.optional(v.string()), username: v.optional(v.string()), style: v.optional(v.number()), avatar: v.optional(v.number()), avatarHue: v.optional(v.union(v.number(), v.null())), finishOnboarding: v.optional(v.boolean()), skip: v.optional(v.boolean()), showStudentCards: v.optional(v.boolean()) };
+async function customize(ctx: MutationCtx, user: Doc<"users">, args: { name?: string; username?: string; style?: number; avatar?: number; avatarHue?: number | null; finishOnboarding?: boolean; skip?: boolean; showStudentCards?: boolean }) {
   const updates: Partial<Doc<"users">> = {};
   if (args.showStudentCards !== undefined) updates.hideStudentCards = !args.showStudentCards;
   if (!args.skip) {
@@ -69,7 +69,15 @@ async function customize(ctx: MutationCtx, user: Doc<"users">, args: { name?: st
       }
     }
     if (args.style !== undefined) { if (!Number.isInteger(args.style) || args.style < 0 || args.style > 31) throw new Error("Invalid card style"); updates.cardStyle = args.style; }
-    if (args.avatar !== undefined) { if (!Number.isInteger(args.avatar) || args.avatar < 0 || args.avatar > 7) throw new Error("Invalid avatar"); updates.cardAvatarSeed = `${avatarSeed(user.clerkId)}:avatar:${args.avatar}`; }
+    if (args.avatar !== undefined || args.avatarHue !== undefined) {
+      if (args.avatar !== undefined && (!Number.isInteger(args.avatar) || args.avatar < 0 || args.avatar >= AVATAR_COUNT)) throw new Error("Invalid avatar");
+      if (args.avatarHue != null && (!Number.isInteger(args.avatarHue) || args.avatarHue < 0 || args.avatarHue > 359)) throw new Error("Invalid avatar colour");
+      // Null clears a chosen colour; leaving it out keeps the current one.
+      const current = parseAvatarSeed(user.cardAvatarSeed ?? avatarSeed(user.clerkId));
+      const shape = args.avatar !== undefined ? `${avatarSeed(user.clerkId)}:avatar:${args.avatar}` : current.name;
+      const hue = args.avatarHue === undefined ? current.hue : args.avatarHue ?? undefined;
+      updates.cardAvatarSeed = hue === undefined ? shape : `${shape}:hue:${hue}`;
+    }
   }
   if (args.finishOnboarding || args.skip) { updates.cardOnboardingPending = false; updates.cardOnboardingCompletedAt = Date.now(); }
   await ctx.db.patch("users", user._id, updates);

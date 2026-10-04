@@ -29,6 +29,7 @@ const copy = {
     device: "Until the Learn service is connected, published lessons are readable in this browser only.",
     cancel: "Cancel", publish: "Publish", publishChanges: "Publish changes",
     rights: "Only publish material you have the right to share. Credit sources in the Sources panel.",
+    courseNote: "This publishes only this lesson. The rest of the course stays as it is.",
   },
   ar: {
     first: "انشر الدرس", changes: "انشر التعديلات", lead: "يرى القرّاء النسخة المنشورة. تبقى مسودتك خاصة حتى تنشرها مجددًا.",
@@ -48,14 +49,15 @@ const copy = {
     device: "إلى أن تُربط خدمة Learn، تُقرأ الدروس المنشورة في هذا المتصفح فقط.",
     cancel: "إلغاء", publish: "انشر", publishChanges: "انشر التعديلات",
     rights: "لا تنشر إلا ما يحق لك مشاركته. انسب المصادر في لوحة المصادر.",
+    courseNote: "ينشر هذا الدرس وحده فقط. تبقى بقية الدورة كما هي.",
   },
 };
 
 const visIcon = { private: Lock, public: Globe } as const;
 
-export default function PublishDialog({ lesson, onClose, onPublish, sources = [], error, disabled = false }: {
+export default function PublishDialog({ lesson, onClose, onPublish, sources = [], error, disabled = false, inCourse = false }: {
   lesson: Lesson; onClose: () => void; onPublish: (input: { visibility: Visibility; indexing: IndexingChoice; note: string }) => void | Promise<unknown>;
-  sources?: NativeSource[]; error?: string; disabled?: boolean;
+  sources?: NativeSource[]; error?: string; disabled?: boolean; inCourse?: boolean;
 }) {
   const t = useCopy(copy);
   const caps = useLearnCapabilities();
@@ -80,6 +82,7 @@ export default function PublishDialog({ lesson, onClose, onPublish, sources = []
   return (
     <WsDialog title={first ? t.first : t.changes} description={t.lead} onClose={() => { if (!busy) onClose(); }}>
       <form className="lx-form" onSubmit={async (e) => { e.preventDefault(); if (noTitle || busy || disabled) return; setBusy(true); setFailure(""); try { await onPublish({ visibility, indexing: visibility === "public" ? indexing : "noindex", note }); } catch (err) { setFailure(errorMessage(err)); } finally { setBusy(false); } }}>
+        {inCourse && <p className="lx-notice">{t.courseNote}</p>}
         {!first && <p className="lx-muted">{hasUnpublishedChanges(lesson) ? t.summary(count("added"), count("changed"), count("removed")) : t.noChanges}</p>}
         <fieldset className="lx-field" style={{ border: 0, padding: 0, margin: 0, gap: 6 }}>
           <legend style={{ marginBottom: 6 }}>{t.who}</legend>

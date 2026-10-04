@@ -2,6 +2,8 @@
 
 import CoursesHub from "@/components/courses/CoursesHub";
 import GamesHub from "@/components/live/GamesHub";
+import FlashcardsHub from "@/components/learn/FlashcardsHub";
+import { useLearnActions } from "@/lib/learn/data";
 import { newQuizArgs } from "@/components/live/newGame";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -9,7 +11,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { formIntentHandlers, useQuery } from "@/lib/convexCache";
 import { deleteFormLocally, setFormStatusLocally, useOptimisticMutation } from "@/lib/optimistic";
-import { Archive, ArrowDown, ArrowUp, ArrowUpDown, BarChart3, BookOpen, Check, ChevronDown, Copy, ExternalLink, FileUp, Globe, FileText, GraduationCap, ListChecks, LayoutGrid, LayoutTemplate, List, ListFilter, Lock, Pencil, Plus, Radio, Search, Trash2, Trophy, X, Pin, PinOff } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, ArrowUpDown, BarChart3, BookOpen, Check, ChevronDown, Copy, ExternalLink, FileUp, Globe, FileText, GraduationCap, Layers, ListChecks, LayoutGrid, LayoutTemplate, List, ListFilter, Lock, Pencil, Plus, Radio, Search, Trash2, Trophy, X, Pin, PinOff } from "lucide-react";
 import { useHostLive } from "@/components/live/HostLiveButton";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -32,7 +34,7 @@ import type { UndoToast } from "@/components/workspace/primitives";
 import { usePinned } from "@/components/workspace/usePinned";
 import { useCreateForm } from "@/components/workspace/useCreateForm";
 
-const kinds = ["Forms", "Quizzes", "Courses", "Games"] as const;
+const kinds = ["Forms", "Quizzes", "Flashcards", "Courses", "Games"] as const;
 type Kind = (typeof kinds)[number];
 /** The open tab lives in the address (?tab=games) so links, Back and refresh keep it. */
 const kindFromParam = (value: string | null): Kind => kinds.find((k) => k.toLowerCase() === value) ?? "Forms";
@@ -49,7 +51,7 @@ const statusOrder: Record<Status, number> = { live: 0, draft: 1, closed: 2, arch
 
 const copy = {
   en: {
-    kinds: { Forms: "Forms", Quizzes: "Quizzes", Courses: "Courses", Games: "Games" },
+    kinds: { Forms: "Forms", Quizzes: "Quizzes", Flashcards: "Flashcards", Courses: "Courses", Games: "Games" },
     status_: { live: "Live", draft: "Draft", closed: "Closed", archived: "Archived" },
     sort_: { edited: "Last edited", name: "Name", responses: "Most responses", status: "Status" },
     colName: "Name", colStatus: "Status", colResponses: "Responses", colEdited: "Edited", colActions: "Actions",
@@ -64,7 +66,7 @@ const copy = {
     open: "Open", results: "Results", viewLive: "View live", copyLink: "Copy link", unpin: "Unpin from sidebar", pin: "Pin to sidebar",
     duplicate: "Duplicate", unpublish: "Unpublish", publish: "Publish", archive: "Archive", delete: "Delete",
     oldQuiz: "Old quiz", quiz: "Quiz", form: "Form",
-    games: "Games", library: "Library", newForm: "Form", newFormHelp: "Surveys, sign-ups and feedback", newQuiz: "Quiz", newQuizHelp: "Marked for you; host it live any time", newLesson: "Lesson", newLessonHelp: "A page to teach one thing", newCourse: "Course", newCourseHelp: "Lessons in order, for people to take", newMenu: "Create something new", creating: "Creating…", newLabel: "New", moreWays: "More ways to start", blank: "Blank", fromTemplate: "From a template", import: "Import",
+    games: "Games", library: "Library", newForm: "Form", newFormHelp: "Surveys, sign-ups and feedback", newQuiz: "Quiz", newQuizHelp: "Marked for you; host it live any time", newLesson: "Lesson", newLessonHelp: "A page to teach one thing", newCourse: "Course", newCourseHelp: "Lessons in order, for people to take", newFlashcards: "Flashcard set", newFlashcardsHelp: "Cards to study with spaced review", untitledSet: "Untitled set", newMenu: "Create something new", creating: "Creating…", newLabel: "New", moreWays: "More ways to start", blank: "Blank", fromTemplate: "From a template", import: "Import",
     dismissError: "Dismiss error", filterLibrary: "Filter library", searchLibrary: "Search library", search: "Search",
     filterByStatus: "Filter by status", status: "Status", clearFilter: "Clear filter", sort: "Sort", viewOptions: "View options", gallery: "Gallery", list: "List",
     loadingLibrary: "Loading library...", nothingMatches: "Nothing matches", createFirst: "Create your first form",
@@ -86,7 +88,7 @@ const copy = {
     preview: "Preview", fieldsCount: (n: number) => `${n} fields`, textBlock: "Text block", options: (n: number) => `${n} options`, required: "required", createDraft: "Create draft",
   },
   ar: {
-    kinds: { Forms: "النماذج", Quizzes: "الاختبارات", Courses: "الدورات", Games: "الألعاب" },
+    kinds: { Forms: "النماذج", Quizzes: "الاختبارات", Flashcards: "البطاقات", Courses: "الدورات", Games: "الألعاب" },
     status_: { live: "منشور", draft: "مسودة", closed: "مغلق", archived: "مؤرشف" },
     sort_: { edited: "آخر تعديل", name: "الاسم", responses: "الأكثر ردودًا", status: "الحالة" },
     colName: "الاسم", colStatus: "الحالة", colResponses: "الردود", colEdited: "آخر تعديل", colActions: "الإجراءات",
@@ -101,7 +103,7 @@ const copy = {
     open: "افتح", results: "النتائج", viewLive: "اعرض المنشور", copyLink: "انسخ الرابط", unpin: "إلغاء التثبيت من الشريط الجانبي", pin: "ثبّت في الشريط الجانبي",
     duplicate: "كرّر", unpublish: "ألغِ النشر", publish: "انشر", archive: "أرشِف", delete: "احذف",
     oldQuiz: "اختبار قديم", quiz: "اختبار", form: "نموذج",
-    games: "الألعاب", library: "المكتبة", newForm: "نموذج", newFormHelp: "استبيانات وتسجيل وآراء", newQuiz: "اختبار", newQuizHelp: "يُصحَّح تلقائيًا؛ استضفه مباشرة متى شئت", newLesson: "درس", newLessonHelp: "صفحة تشرح شيئًا واحدًا", newCourse: "دورة", newCourseHelp: "دروس مرتبة يأخذها الناس", newMenu: "أنشئ شيئًا جديدًا", creating: "جارٍ الإنشاء…", newLabel: "جديد", moreWays: "طرق أخرى للبدء", blank: "فارغ", fromTemplate: "من قالب", import: "استيراد",
+    games: "الألعاب", library: "المكتبة", newForm: "نموذج", newFormHelp: "استبيانات وتسجيل وآراء", newQuiz: "اختبار", newQuizHelp: "يُصحَّح تلقائيًا؛ استضفه مباشرة متى شئت", newLesson: "درس", newLessonHelp: "صفحة تشرح شيئًا واحدًا", newCourse: "دورة", newCourseHelp: "دروس مرتبة يأخذها الناس", newFlashcards: "مجموعة بطاقات", newFlashcardsHelp: "بطاقات للمذاكرة بالمراجعة المتباعدة", untitledSet: "مجموعة بلا عنوان", newMenu: "أنشئ شيئًا جديدًا", creating: "جارٍ الإنشاء…", newLabel: "جديد", moreWays: "طرق أخرى للبدء", blank: "فارغ", fromTemplate: "من قالب", import: "استيراد",
     dismissError: "أخفِ الخطأ", filterLibrary: "تصفية المكتبة", searchLibrary: "ابحث في المكتبة", search: "بحث",
     filterByStatus: "تصفية حسب الحالة", status: "الحالة", clearFilter: "امسح التصفية", sort: "ترتيب", viewOptions: "خيارات العرض", gallery: "معرض", list: "قائمة",
     loadingLibrary: "جارٍ تحميل المكتبة...", nothingMatches: "لا نتائج", createFirst: "أنشئ أول نموذج لك",
@@ -160,6 +162,7 @@ export default function CreatorLibrary() {
   const unpublishQuiz = useMutation(api.quizFunctions.unpublishQuiz);
   const duplicateForm = useMutation(api.forms.duplicateForm);
   const createCourse = useMutation(api.courses.create);
+  const learnActions = useLearnActions();
   const deleteForm = useOptimisticMutation(api.forms.deleteForm, deleteFormLocally);
   const deleteTemplate = useMutation(api.forms.deleteTemplate);
   const [error, setError] = useState("");
@@ -368,6 +371,11 @@ export default function CreatorLibrary() {
     catch (err) { setError(err instanceof Error ? err.message : String(err)); }
   };
 
+  const newFlashcards = async () => {
+    try { const id = await learnActions.createFlashcardSet({ title: t.untitledSet }); router.push(`/dashboard/learn/flashcards/${id}?mode=edit`); }
+    catch (err) { setError(errorMessage(err)); }
+  };
+
   // Creation stays within the active Library tab.
   const newMenu = (
     <WsMenu label={t.newMenu} align="end" triggerClassName="ws-btn ws-btn--primary" trigger={<><Plus size={17} /> {busy ? t.creating : t.newLabel} <ChevronDown size={15} aria-hidden /></>}>
@@ -375,6 +383,7 @@ export default function CreatorLibrary() {
         <div className="ws-new-choices">
           {kind === "Forms" && <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(); }}><FileText size={16} /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>}
           {(kind === "Quizzes" || kind === "Games") && <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(newQuizArgs(locale)); }}><ListChecks size={16} /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>}
+          {kind === "Flashcards" && <button type="button" role="menuitem" onClick={() => { close(); void newFlashcards(); }}><Layers size={16} /><span><strong>{t.newFlashcards}</strong><small>{t.newFlashcardsHelp}</small></span></button>}
           {kind === "Courses" && <button type="button" role="menuitem" onClick={() => { close(); void newCourse(); }}><GraduationCap size={16} /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>}
           {kind === "Forms" && <><hr /><button type="button" role="menuitem" onClick={() => { close(); setDialog("templates"); }}><LayoutTemplate size={16} /> {t.fromTemplate}</button></>}
           {(kind === "Forms" || kind === "Quizzes") && <button type="button" role="menuitem" onClick={() => { close(); setDialog("import"); }}><FileUp size={16} /> {t.import}</button>}
@@ -398,8 +407,8 @@ export default function CreatorLibrary() {
       )}
 
       <div className="flex items-end gap-3 flex-wrap mb-6">
-        <div className="flex-1 min-w-[260px] max-sm:basis-full max-sm:min-w-0"><WsTabs tabs={kinds} value={kind} onChange={setKind} label={t.filterLibrary} labels={t.kinds} icons={{ Forms: FileText, Quizzes: GraduationCap, Courses: BookOpen, Games: Trophy }} /></div>
-        {kind !== "Courses" && kind !== "Games" && <>
+        <div className="flex-1 min-w-[260px] max-sm:basis-full max-sm:min-w-0"><WsTabs tabs={kinds} value={kind} onChange={setKind} label={t.filterLibrary} labels={t.kinds} icons={{ Forms: FileText, Quizzes: GraduationCap, Flashcards: Layers, Courses: BookOpen, Games: Trophy }} /></div>
+        {(kind === "Forms" || kind === "Quizzes") && <>
         <label className="ws-search !flex-none w-56 max-sm:!w-full max-sm:!max-w-none max-sm:order-last">
           <span className="sr-only">{t.searchLibrary}</span>
           <Search size={16} aria-hidden="true" />
@@ -437,7 +446,7 @@ export default function CreatorLibrary() {
         </>}
       </div>
 
-      {kind === "Courses" ? <CoursesHub embedded /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
+      {kind === "Courses" ? <CoursesHub embedded /> : kind === "Flashcards" ? <FlashcardsHub embedded /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
         <div className="ws-empty ws-page">
           <span className="ws-empty__art"><Plus size={24} /></span>
           <h2 className="text-xl font-semibold">{search || statuses.length ? t.nothingMatches : t.createFirst}</h2>

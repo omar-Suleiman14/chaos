@@ -1,4 +1,5 @@
 import { blobatar } from "blobatar";
+import { parseAvatarSeed } from "./avatarSeed";
 import { qrMatrix, QR_QUIET_ZONE } from "./qr";
 import { avatarSeed } from "./avatarSeed";
 export { avatarSeed };
@@ -41,6 +42,14 @@ export const CARD_THEMES: CardTheme[] = [
   { name: "Lilac", paper: "#fbf7ff", ink: "#7e22ce", accent: "#a855f7", art: ["#d8b4fe", "#f3e8ff", "#f9a8d4"], hue: 285 },
   { name: "Sky", paper: "#f5faff", ink: "#0369a1", accent: "#0284c7", art: ["#7dd3fc", "#e0f2fe", "#a5b4fc"], hue: 200 },
   { name: "Honey", paper: "#fffbeb", ink: "#92400e", accent: "#d97706", art: ["#fcd34d", "#fef3c7", "#fdba74"], hue: 45 },
+  { name: "Midnight", paper: "#f3f4fb", ink: "#1e1b4b", accent: "#4338ca", art: ["#312e81", "#6366f1", "#0ea5e9"], hue: 240 },
+  { name: "Ember", paper: "#fff6f3", ink: "#7f1d1d", accent: "#dc2626", art: ["#ef4444", "#f97316", "#facc15"], hue: 10 },
+  { name: "Forest", paper: "#f3faf5", ink: "#14532d", accent: "#15803d", art: ["#166534", "#4ade80", "#bef264"], hue: 135 },
+  { name: "Bubblegum", paper: "#fff4fb", ink: "#9d174d", accent: "#db2777", art: ["#f472b6", "#fbcfe8", "#c4b5fd"], hue: 325 },
+  { name: "Slate", paper: "#f8fafc", ink: "#1e293b", accent: "#475569", art: ["#64748b", "#cbd5e1", "#94a3b8"], hue: 215 },
+  { name: "Aurora", paper: "#f4fdfb", ink: "#134e4a", accent: "#0d9488", art: ["#34d399", "#818cf8", "#f0abfc"], hue: 170 },
+  { name: "Sand", paper: "#fdfaf3", ink: "#78350f", accent: "#b45309", art: ["#e7c9a0", "#f5e6cc", "#d6a77a"], hue: 35 },
+  { name: "Cherry", paper: "#fff5f5", ink: "#881337", accent: "#be123c", art: ["#9f1239", "#fb7185", "#fecdd3"], hue: 350 },
 ];
 
 export interface MemberCardData {
@@ -64,7 +73,8 @@ const MONO = "'JetBrains Mono', ui-monospace, 'Cascadia Code', Menlo, Consolas, 
 
 /** Nested blobatar SVG positioned inside the card. The second group is the eyes, tagged so the view can aim them at the pointer. */
 function blob(seed: string, x: number, y: number, size: number): string {
-  const svg = blobatar(seed);
+  const { name, hue } = parseAvatarSeed(seed);
+  const svg = blobatar(name, hue === undefined ? undefined : { hue });
   let groups = 0;
   return svg.replace(/^<svg[^>]*>/, `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 100 100" overflow="visible">`)
     .replace(/<g /g, (g) => (++groups === 2 ? '<g class="mc-eyes" ' : g));

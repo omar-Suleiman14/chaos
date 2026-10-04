@@ -62,7 +62,7 @@ const copy = {
     dismiss: "Dismiss error",
     banned: "Your account is banned.", suspended: (until: string) => `Your account is suspended until ${until}.`,
     paused: "Editing and response collection are paused. Your existing data is preserved.", contact: "Contact support",
-    create: "Create", learn: "Learn", surface: "Workspace", learnHome: "Home", courses: "Courses", newForm: "Form", newFormHelp: "Surveys, sign-ups and feedback", newQuiz: "Quiz", newQuizHelp: "Marked for you; host it live any time", newLessonItem: "Lesson", newLessonHelp: "A page to teach one thing", newCourse: "Course", newCourseHelp: "Lessons in order, for people to take", learnLibrary: "Library", saved: "Saved", flashcards: "Flashcards",
+    create: "Create", learn: "Learn", surface: "Workspace", learnHome: "Home", courses: "Courses", newForm: "Form", newFormHelp: "Surveys, sign-ups and feedback", newQuiz: "Quiz", newQuizHelp: "Marked for you; host it live any time", newLessonItem: "Lesson", newLessonHelp: "A page to teach one thing", newCourse: "Course", newCourseHelp: "Lessons in order, for people to take", newFlashcards: "Flashcard set", newFlashcardsHelp: "Cards to study with spaced review", untitledSet: "Untitled set", learnLibrary: "Library", saved: "Saved", flashcards: "Flashcards",
     newLesson: "New lesson", folders: "Folders", lessons: "Recent lessons", untitledLesson: "Untitled lesson", lesson: "Lesson",
   },
   ar: {
@@ -82,7 +82,7 @@ const copy = {
     dismiss: "إخفاء الخطأ",
     banned: "حسابك محظور.", suspended: (until: string) => `حسابك معلّق حتى ${until}.`,
     paused: "التعديل وجمع الردود متوقفان. بياناتك الحالية محفوظة.", contact: "تواصل مع الدعم",
-    create: "إنشاء", learn: "تعلّم", surface: "مساحة العمل", learnHome: "الرئيسية", courses: "الدورات", newForm: "نموذج", newFormHelp: "استبيانات وتسجيل وآراء", newQuiz: "اختبار", newQuizHelp: "يُصحَّح تلقائيًا؛ استضفه مباشرة متى شئت", newLessonItem: "درس", newLessonHelp: "صفحة تشرح شيئًا واحدًا", newCourse: "دورة", newCourseHelp: "دروس مرتبة يأخذها الناس", learnLibrary: "المكتبة", saved: "المحفوظات", flashcards: "البطاقات",
+    create: "إنشاء", learn: "تعلّم", surface: "مساحة العمل", learnHome: "الرئيسية", courses: "الدورات", newForm: "نموذج", newFormHelp: "استبيانات وتسجيل وآراء", newQuiz: "اختبار", newQuizHelp: "يُصحَّح تلقائيًا؛ استضفه مباشرة متى شئت", newLessonItem: "درس", newLessonHelp: "صفحة تشرح شيئًا واحدًا", newCourse: "دورة", newCourseHelp: "دروس مرتبة يأخذها الناس", newFlashcards: "مجموعة بطاقات", newFlashcardsHelp: "بطاقات للمذاكرة بالمراجعة المتباعدة", untitledSet: "مجموعة بلا عنوان", learnLibrary: "المكتبة", saved: "المحفوظات", flashcards: "البطاقات",
     newLesson: "درس جديد", folders: "المجلدات", lessons: "دروس حديثة", untitledLesson: "درس بلا عنوان", lesson: "الدرس",
   },
 };
@@ -181,6 +181,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     try { const id = await createCourseMutation({ language: locale }); router.push(`/dashboard/courses/${id}`); }
     catch (err) { setActionError(errorMessage(err)); }
   }, [createCourseMutation, locale, router]);
+  const createFlashcards = useCallback(async () => {
+    try { const id = await learnActions.createFlashcardSet({ title: t.untitledSet }); router.push(`/dashboard/learn/flashcards/${id}?mode=edit`); }
+    catch (err) { setActionError(errorMessage(err)); }
+  }, [learnActions, router, t.untitledSet]);
   // As in Max: Ctrl/Cmd+B folds the sidebar into a slim rail, and its edge can be dragged to resize.
   const [collapsed, setCollapsed] = useState(false);
   const [sidebarWidth, setSidebarWidth] = useState(SIDEBAR_DEFAULT);
@@ -341,6 +345,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(newQuizArgs(locale)); }}><ListChecks size={16} aria-hidden="true" /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createLesson(); }}><BookOpenText size={16} aria-hidden="true" /><span><strong>{t.newLessonItem}</strong><small>{t.newLessonHelp}</small></span></button>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createCourse(); }}><GraduationCap size={16} aria-hidden="true" /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>
+                <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createFlashcards(); }}><Layers size={16} aria-hidden="true" /><span><strong>{t.newFlashcards}</strong><small>{t.newFlashcardsHelp}</small></span></button>
               </div>
             )}
           </div>

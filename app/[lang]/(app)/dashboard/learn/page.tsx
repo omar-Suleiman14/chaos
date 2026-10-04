@@ -1,13 +1,14 @@
 "use client";
 
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { ArrowRight, Bookmark, BookOpen, Compass, GraduationCap, Layers, Plus, Target } from "lucide-react";
+import { ArrowRight, Bookmark, BookOpen, BookOpenText, ChevronDown, Compass, GraduationCap, Layers, Plus, Target } from "lucide-react";
 import { EmptyState, LessonCard } from "@/components/learn/ui";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
+import { WsMenu } from "@/components/workspace/primitives";
 import {
   useLearnActions, useLearnCapabilities, useMyLessons, useProgress, usePublicLessons, useRecentLessons, useSaved, useWeakAreas,
 } from "@/lib/learn/data";
@@ -16,7 +17,7 @@ import { useCopy, useLocale } from "@/lib/i18n";
 
 const copy = {
   en: {
-    title: "Learn", lead: "Your lessons, courses and study material in one place.", newLesson: "New lesson", explore: "Explore",
+    title: "Learn", lead: "Your lessons, courses and study material in one place.", newLesson: "New lesson", newLabel: "New", newMenu: "Create something new", lessonItem: "Lesson", lessonHelp: "A page to teach one thing", courseItem: "Course", courseHelp: "Lessons in order, for people to take", setItem: "Flashcard set", setHelp: "Cards to study with spaced review", untitledSet: "Untitled set", explore: "Explore",
     continue: "Continue learning", continueEmpty: "Lessons you start show up here so you can pick up where you left off.",
     courses: "My courses", coursesEmpty: "Courses you start appear here with your next lesson.", browse: "Browse courses", all: "See all",
     saved: "Saved", savedEmpty: "Save lessons or single paragraphs and diagrams while you read.",
@@ -26,7 +27,7 @@ const copy = {
     loading: "Loading Learn…", block: "Saved part", untitled: "Untitled lesson",
   },
   ar: {
-    title: "تعلّم", lead: "دروسك ومقرراتك ومواد مذاكرتك في مكان واحد.", newLesson: "درس جديد", explore: "استكشف",
+    title: "تعلّم", lead: "دروسك ومقرراتك ومواد مذاكرتك في مكان واحد.", newLesson: "درس جديد", newLabel: "جديد", newMenu: "أنشئ شيئًا جديدًا", lessonItem: "درس", lessonHelp: "صفحة تشرح شيئًا واحدًا", courseItem: "دورة", courseHelp: "دروس مرتبة يأخذها الناس", setItem: "مجموعة بطاقات", setHelp: "بطاقات للمذاكرة بالمراجعة المتباعدة", untitledSet: "مجموعة بلا عنوان", explore: "استكشف",
     continue: "تابع التعلّم", continueEmpty: "تظهر هنا الدروس التي تبدأها لتكمل من حيث توقفت.",
     courses: "مقرراتي", coursesEmpty: "تظهر هنا الدورات التي تبدأها مع درسك التالي.", browse: "تصفح المقررات", all: "عرض الكل",
     saved: "المحفوظات", savedEmpty: "احفظ دروسًا أو فقرات ورسومًا منفردة أثناء القراءة.",
@@ -48,6 +49,7 @@ export default function LearnHome() {
   const progress = useProgress();
   const saved = useSaved();
   const courses = useQuery(api.courses.myLearning, {});
+  const createCourse = useMutation(api.courses.create);
   const discover = usePublicLessons({ sort: "recent" });
   const weak = useWeakAreas();
   const [error, setError] = useState("");
@@ -58,6 +60,8 @@ export default function LearnHome() {
   const inProgress = recent.filter(({ lesson }) => progress[lesson.id]?.state === "in_progress").slice(0, 3);
   const recentOther = recent.filter(({ lesson }) => !inProgress.some((r) => r.lesson.id === lesson.id)).slice(0, 6);
   const newLesson = async () => { try { const id = await actions.createLesson({ language: locale }); router.push(`/dashboard/learn/lessons/${id}`); } catch (err) { setError(errorMessage(err)); } };
+  const newCourse = async () => { try { const id = await createCourse({ language: locale }); router.push(`/dashboard/courses/${id}`); } catch (err) { setError(errorMessage(err)); } };
+  const newSet = async () => { try { const id = await actions.createFlashcardSet({ title: t.untitledSet }); router.push(`/dashboard/learn/flashcards/${id}?mode=edit`); } catch (err) { setError(errorMessage(err)); } };
 
   return (
     <div className="lx-page">
@@ -65,7 +69,15 @@ export default function LearnHome() {
         <div><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></div>
         <div className="lx-actions">
           <Link href="/learn" className="ws-btn"><Compass size={16} aria-hidden />{t.explore}</Link>
-          <button type="button" className="ws-btn ws-btn--primary" onClick={newLesson}><Plus size={16} aria-hidden />{t.newLesson}</button>
+          <WsMenu label={t.newMenu} align="end" triggerClassName="ws-btn ws-btn--primary" trigger={<><Plus size={16} aria-hidden />{t.newLabel}<ChevronDown size={15} aria-hidden /></>}>
+            {(close) => (
+              <div className="ws-new-choices">
+                <button type="button" role="menuitem" onClick={() => { close(); void newLesson(); }}><BookOpenText size={16} /><span><strong>{t.lessonItem}</strong><small>{t.lessonHelp}</small></span></button>
+                <button type="button" role="menuitem" onClick={() => { close(); void newCourse(); }}><GraduationCap size={16} /><span><strong>{t.courseItem}</strong><small>{t.courseHelp}</small></span></button>
+                <button type="button" role="menuitem" onClick={() => { close(); void newSet(); }}><Layers size={16} /><span><strong>{t.setItem}</strong><small>{t.setHelp}</small></span></button>
+              </div>
+            )}
+          </WsMenu>
         </div>
       </header>
       {error && <p className="lx-error" role="alert">{error}</p>}

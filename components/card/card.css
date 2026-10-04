@@ -118,6 +118,11 @@
 .mc-customize__avatars, .mc-customize__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .mc-customize__avatars button { width:48px; height:48px; display: grid; place-items: center; border: 2px solid transparent; border-radius: 12px; background:var(--ws-card,var(--surface-container)); cursor:pointer; }
 .mc-customize__avatars button[aria-pressed=true] { border-color: currentColor; }
+.mc-customize__swatches { display: flex; gap: 8px; flex-wrap: wrap; }
+.mc-swatch { width: 32px; height: 32px; border-radius: 999px; border: 2px solid var(--ws-card, var(--surface-container)); box-shadow: 0 0 0 1px var(--ws-line, rgba(127,127,127,.25)); cursor: pointer; padding: 0; }
+.mc-swatch[aria-pressed=true] { box-shadow: 0 0 0 2px currentColor; }
+.mc-swatch--auto { width: auto; padding: 0 12px; font: inherit; font-size: 12px; font-weight: 600; background: var(--ws-card, var(--surface-container)); color: inherit; }
+.mc-swatch--design { width: 40px; border-radius: 10px; }
 .mc-customize__skeleton-title { width:65%; height:32px; margin-block-end:24px; }
 .mc-customize__skeleton-card { width:280px; max-width:100%; aspect-ratio:340/500; margin-inline:auto; border-radius:18px; }
 .mc-customize__skeleton-fields { display:grid; gap:24px; }

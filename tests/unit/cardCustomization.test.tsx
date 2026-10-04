@@ -15,6 +15,7 @@ it("previews and saves the chosen avatar and restores its selection after reload
   state.query = {};
   const seed = `${avatarSeed("student")}:avatar:2`;
   const view = render(<CardCustomization card={{ ...card, seed }} actorId="student" />);
+  fireEvent.click(view.getByRole("button", { name: "Edit" }));
   expect(view.getByRole("button", { name: "Avatar 3" })).toHaveAttribute("aria-pressed", "true");
   fireEvent.click(view.getByRole("button", { name: "Avatar 8" }));
   expect(view.getByTestId("card-preview")).toHaveAttribute("data-seed", `${avatarSeed("student")}:avatar:7`);
@@ -42,6 +43,7 @@ it("preserves an existing opt-out and saves changes from the accessible switch",
 it("does not submit the app-generated username again when saving other card changes", async () => {
   state.query = {};
   const view = render(<CardCustomization card={{ ...card, username: "user98049" }} actorId="student" />);
+  fireEvent.click(view.getByRole("button", { name: "Edit" }));
   fireEvent.click(view.getByRole("button", { name: "Save my Card" }));
   await waitFor(() => expect(state.save).toHaveBeenCalled());
   expect(state.save.mock.calls[0][0]).not.toHaveProperty("username");
@@ -51,9 +53,25 @@ it("shows a field message without Convex internals when a new username is reject
   state.query = {};
   state.save.mockRejectedValue(new Error("[CONVEX M(memberCards:customizeCard)] [Request ID: abc] Server Error\nUncaught Error: INVALID_USERNAME: That username is reserved. Try another. Called by client"));
   const view = render(<CardCustomization card={card} actorId="student" />);
+  fireEvent.click(view.getByRole("button", { name: "Edit" }));
   fireEvent.change(view.getByRole("textbox", { name: "Username" }), { target: { value: "admin" } });
   fireEvent.click(view.getByRole("button", { name: "Save my Card" }));
   expect(await view.findByRole("alert")).toHaveTextContent("That username is reserved. Try another.");
   expect(view.getByRole("alert").textContent).not.toMatch(/CONVEX|Request ID|Called by client|INVALID_USERNAME/);
   expect(view.getByRole("textbox", { name: "Username" })).toHaveAttribute("aria-invalid", "true");
+});
+
+it("opens a saved card as a preview with Edit after a reload, and keeps a chosen avatar colour", async () => {
+  state.query = {};
+  const seed = `${avatarSeed("student")}:avatar:4:hue:200`;
+  const view = render(<CardCustomization card={{ ...card, seed }} actorId="student" />);
+  expect(view.queryByRole("button", { name: "Save my Card" })).toBeNull();
+  fireEvent.click(view.getByRole("button", { name: "Edit" }));
+  expect(view.getByRole("button", { name: "Avatar 5" })).toHaveAttribute("aria-pressed", "true");
+  expect(view.getByRole("button", { name: "Colour 200°" })).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(view.getByRole("button", { name: "Automatic" }));
+  expect(view.getByTestId("card-preview")).toHaveAttribute("data-seed", `${avatarSeed("student")}:avatar:4`);
+  fireEvent.click(view.getByRole("button", { name: "Save my Card" }));
+  await waitFor(() => expect(state.save).toHaveBeenCalledWith(expect.objectContaining({ avatar: 4, avatarHue: null })));
+  expect(await view.findByRole("button", { name: "Edit" })).toBeInTheDocument();
 });

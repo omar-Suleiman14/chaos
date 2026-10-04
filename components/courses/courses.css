@@ -151,3 +151,16 @@ a.cs-who:hover strong { text-decoration: underline; text-underline-offset: 3px; 
 .cs-progress { display: inline-grid; grid-template-columns: 96px auto; align-items: center; gap: 10px; font-size: 13px; font-variant-numeric: tabular-nums; }
 .cs-progress .ws-bars__track { grid-column: auto; height: 6px; }
 .cs-muted { color: var(--on-surface-variant); font-size: 13.5px; max-width: 240px; overflow: hidden; text-overflow: ellipsis; }
+
+/* One outline: lessons, optionally grouped into modules. */
+.cb-outline__head { display: flex; align-items: center; justify-content: space-between; gap: 8px; border-bottom: 1px solid var(--ws-line, rgba(127,127,127,.2)); margin-bottom: 6px; }
+.cb-page .cb-outline__head h2 { border-bottom: 0; margin: 0; }
+.cb-module { margin-top: 14px; }
+.cb-module__head { display: flex; align-items: center; gap: 8px; padding: 2px 8px; }
+.cb-module__title { flex: 1; min-width: 0; font: inherit; font-weight: 650; font-size: 15px; background: transparent; border: 0; border-radius: 6px; padding: 4px 6px; margin-inline-start: -6px; color: inherit; }
+.cb-module__title:hover, .cb-module__title:focus { background: var(--ws-hover, rgba(55,53,47,.06)); outline: none; }
+.cb-module__head .cb-lesson__actions { opacity: .6; }
+.cb-module__quiz { padding: 4px 8px; font-size: 13px; color: var(--on-surface-variant); }
+.cb-module__quiz summary { cursor: pointer; }
+.cb-module__ungrouped { margin: 16px 8px 4px; font-size: 13px; font-weight: 600; color: var(--on-surface-variant); }
+.cb-lesson__actions .ws-select { min-width: 120px; }
