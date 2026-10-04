@@ -1,6 +1,7 @@
 "use client";
 
 import InlineQuiz from "./InlineQuiz";
+import InlineFlashcards from "./InlineFlashcards";
 import { Fragment, useEffect, useState } from "react";
 import { PlayCircle } from "lucide-react";
 import { asBlocks, blockText, cellInlines, formatTimestamp, inlineText, parseAnnotations, youTubeEmbedUrl, type Block, type CitationContent, type Inline, type LinkContent, type StyledText, type TableContent } from "@/lib/learn/doc";
@@ -238,6 +239,11 @@ function BlockBody({ block, props }: { block: Block; props: RendererProps }) {
       let asset: { kind: "form" | "quiz"; id: string } | undefined;
       try { asset = block.props.assetKind && block.props.assetId ? { kind: block.props.assetKind as "form" | "quiz", id: String(block.props.assetId) } : JSON.parse(String(block.props.lessonData)).asset; } catch { return null; }
       return asset && <InlineQuiz asset={asset}/>;
+    }
+    case "flashcards": case "lessonFlashcards": {
+      let setId = typeof block.props.setId === "string" ? block.props.setId : "";
+      if (!setId) { try { setId = JSON.parse(String(block.props.lessonData)).setId; } catch { return null; } }
+      return setId ? <InlineFlashcards setId={setId} /> : null;
     }
     case "paragraph": return <p style={align}>{inline}</p>;
     case "quote": return <blockquote>{inline}</blockquote>;

@@ -124,6 +124,13 @@ export async function publicationProblems(ctx: MutationCtx, lesson: Doc<"lessons
     }
     block.citations.forEach(c => sources.add(c.sourceId));
     if (block.type === "source" || block.type === "image") sources.add(block.sourceId);
+    if (block.type === "flashcards") {
+      const deck = await ctx.db.get("flashcardSets", block.setId);
+      const version = deck?.publishedVersionId ? await ctx.db.get("flashcardVersions", deck.publishedVersionId) : null;
+      if (!deck || deck.archived || deck.visibility !== "public" || await creatorRestricted(ctx, deck.ownerId) || !version || version.setId !== deck._id) {
+        errors.push({ path: `blocks.${block.id}.setId`, code: "FLASHCARDS", message: "Attach an active, publicly published flashcard set." });
+      }
+    }
     if (block.type === "quiz") {
       const asset = block.asset.kind === "form" ? await ctx.db.get("forms", block.asset.id) : await ctx.db.get("quizzes", block.asset.id);
       // Public embeds require an actual published assessment; never snapshot quiz data.

@@ -173,6 +173,12 @@ async function referenceProblem(ctx: Ctx, token: Token, document: LessonDocument
   for (const block of document.blocks) {
     for (const c of block.citations) sources.add(c.sourceId);
     if (block.type === "source" || block.type === "image") sources.add(block.sourceId);
+    if (block.type === "flashcards") {
+      if (!token.scopes.includes("items:read")) return fail(403, "INSUFFICIENT_SCOPE", "Flashcard references need items:read.");
+      if (!(await selected(ctx, token, `flashcards_${block.setId}`))) return missing();
+      const deck = await ctx.db.get("flashcardSets", block.setId);
+      if (!deck || deck.ownerId !== token.ownerId || deck.archived) return missing();
+    }
     if (block.type === "quiz") {
       const ref = `${block.asset.kind}_${block.asset.id}`;
       if (!token.scopes.includes("items:read")) return fail(403, "INSUFFICIENT_SCOPE", "Assessment references need items:read.");

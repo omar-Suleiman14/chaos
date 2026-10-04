@@ -125,6 +125,7 @@ export default function LessonEditor(props: LessonEditorProps) {
         key: "citation", title: t.cite, subtext: t.citeHint, group, icon: <Quote size={18} />, aliases: ["cite", "ref", "page", "استشهاد"],
         onItemClick: () => propsRef.current.onEditCitation(editor.getTextCursorPosition().block.id),
       },
+      { key: "flashcards", title: props.language === "ar" ? "البطاقات" : "Flashcards", subtext: props.language === "ar" ? "أدرج مجموعة بطاقات منشورة" : "Insert a published flashcard set", group, icon: <BookMarked size={18} />, aliases: ["flashcards", "cards", "بطاقات"], onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "lessonFlashcards" }) },
       { key: "quiz", title: "Quiz", subtext: "Embed a published Chaos quiz", group, icon: <BookMarked size={18} />, aliases: ["quiz", "practice", "assessment"], onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "lessonQuiz" }) },
     ] as DefaultReactSuggestionItem[];
   };

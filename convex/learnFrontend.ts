@@ -147,3 +147,16 @@ export const embeddedQuiz = query({
   return {title:quiz.publishedSnapshot.title,shareId:null};
  }
 });
+
+/** Public block metadata; recheck current lifecycle so old lesson versions cannot leak private decks. */
+export const embeddedFlashcards = query({
+  args: { setId: v.string() },
+  returns: v.union(v.null(), v.object({ title: v.string(), cardCount: v.number() })),
+  handler: async (ctx, { setId }) => {
+    const id = ctx.db.normalizeId("flashcardSets", setId);
+    const deck = id ? await ctx.db.get("flashcardSets", id) : null;
+    if (!deck || deck.archived || deck.visibility !== "public" || !deck.publishedVersionId || await creatorRestricted(ctx, deck.ownerId)) return null;
+    const version = await ctx.db.get("flashcardVersions", deck.publishedVersionId);
+    return version?.setId === deck._id ? { title: version.title, cardCount: version.cards.length } : null;
+  },
+});
