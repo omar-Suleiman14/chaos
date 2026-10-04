@@ -183,7 +183,7 @@ export function themeClass(def: FormDefinition): string {
     // Evergreen used to ship with a grain backdrop; saved Evergreen forms drop it too.
     `form-backdrop-${theme.preset === "chaos" && theme.backdrop === "noise" ? "none" : theme.backdrop ?? "none"}`,
     theme.appearance === "auto" ? "form-appearance-auto" : "",
-    theme.chrome ? `form-chrome-${theme.chrome}` : "",
+    themeChrome(def) ? `form-chrome-${themeChrome(def)}` : "",
   ].filter(Boolean).join(" ");
 }
 
@@ -197,7 +197,9 @@ export function themeCover(def: FormDefinition): ThemeCover {
 }
 /** Card and banner chrome of the Google Forms / Microsoft Forms / Flow looks; undefined for every other theme. */
 export function themeChrome(def: FormDefinition): ThemeChrome | undefined {
-  return def.theme.version === 1 ? def.theme.chrome : undefined;
+  if (def.theme.version !== 1) return undefined;
+  // Forms saved on Flow before it had its own chrome still get the Apple look.
+  return def.theme.chrome ?? (def.theme.preset === "flow" ? "apple" : undefined);
 }
 export function themeSound(def: FormDefinition): ThemeSound {
   return def.theme.sound ?? "soft";
