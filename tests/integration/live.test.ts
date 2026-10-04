@@ -56,6 +56,17 @@ async function gameWithPlayers(t: T, names: string[], options: { autoAdvance?: b
 }
 
 describe("live games: create, join, start", () => {
+  it("hides archived quizzes' sessions from history and restores them when unarchived", async () => {
+    const t = createTestConvex();
+    const { owner, formId } = await publishedQuiz(t);
+    const gameId = await owner.mutation(api.live.createGame, { formId });
+    expect((await owner.query(api.live.myGames, {})).map(game => game._id)).toContain(gameId);
+    await owner.mutation(api.forms.setFormStatus, { formId, status: "archived" });
+    expect(await owner.query(api.live.myGames, {})).toEqual([]);
+    expect(await owner.query(api.live.hostView, { gameId })).not.toBeNull();
+    await owner.mutation(api.forms.setFormStatus, { formId, status: "draft" });
+    expect((await owner.query(api.live.myGames, {})).map(game => game._id)).toContain(gameId);
+  });
   it("uses readable answers by default and permits only the host to configure a waiting room", async () => {
     const t = createTestConvex();
     const { owner, formId } = await publishedQuiz(t);

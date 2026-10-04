@@ -16,6 +16,14 @@ async function joined() {
   return { ...f, teamId };
 }
 describe("Business workspaces", () => {
+  it("returns no private teams or invitations while authentication is unavailable", async () => {
+    const { t, owner } = await fixture();
+    const teamId = await owner.mutation(api.businessTeams.create, { name: "Private team" });
+    await owner.mutation(api.businessTeams.invite, { teamId, email: otherCreatorIdentity.email, role: "member" });
+    expect(await t.query(api.businessTeams.list, {})).toEqual([]);
+    expect(await t.query(api.businessTeams.inbox, {})).toEqual([]);
+    await expect(t.mutation(api.businessTeams.create, { name: "Unauthorized" })).rejects.toThrow("Not authenticated");
+  });
   it("keeps Personal single-user and enables free Business without rewriting legacy plans", async () => {
     const { t, owner } = await fixture();
     const formId = await owner.mutation(api.forms.createForm, {});

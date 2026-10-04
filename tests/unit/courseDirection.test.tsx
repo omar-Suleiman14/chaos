@@ -6,6 +6,7 @@ import { LocaleProvider } from "@/lib/i18n";
 
 const backend = vi.hoisted(() => ({ update: vi.fn(), course: { id: "course1", title: "دورة عربية", description: "مقدمة", language: "ar-EG", tags: [], lessons: [], published: false, visibility: "public" } }));
 vi.mock("convex/react", () => ({
+  useConvexAuth: () => ({ isAuthenticated: false }),
   useConvex: () => ({ query: vi.fn(), mutation: vi.fn() }), useQuery: () => backend.course, useMutation: () => backend.update }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), useParams: () => ({ lang: "en" }) }));
 vi.mock("@/components/learn/editor/PageHeader", () => ({ LessonCover: () => null, PageIconControls: () => null }));

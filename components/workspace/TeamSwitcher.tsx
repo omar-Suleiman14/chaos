@@ -1,11 +1,11 @@
 "use client";
 
-import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useConvexAuth, useQuery } from "convex/react";
-import { Users } from "lucide-react";
+import { Users, UserRound, ChevronDown, Check, Plus, Settings } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useCopy } from "@/lib/i18n";
+import { WsMenu } from "./primitives";
 
 const copy = {
   en: { label: "Workspace", personal: "Personal · just you", create: "Create a Business team", settings: "Teams & invitations" },
@@ -16,14 +16,21 @@ export default function TeamSwitcher() {
   const teams = useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip");
   const pathname = usePathname(), router = useRouter(), t = useCopy(copy);
   const selected = pathname.match(/\/dashboard\/teams\/([^/]+)/)?.[1] ?? "";
+  const current = teams?.find(row => row.team._id === selected);
+  const navigate = (href: string, close: () => void) => { close(); router.push(href); };
   return <div className="ws-team-switcher">
-    <label className="ws-team-switcher__label"><Users size={15} aria-hidden="true" />{t.label}
-      <select aria-label={t.label} value={teams?.some(row => row.team._id === selected) ? selected : ""} onChange={event => router.push(event.target.value === "new" ? "/dashboard/teams" : event.target.value ? `/dashboard/teams/${event.target.value}` : "/dashboard")}>
-        <option value="">{t.personal}</option>
-        {teams?.map(row => <option key={row.team._id} value={row.team._id}>{row.team.name} · Business</option>)}
-        <option value="new">{t.create}</option>
-      </select>
-    </label>
-    <Link href="/dashboard/teams">{t.settings}</Link>
+    <WsMenu label={t.label} align="start" triggerClassName="ws-workspace-trigger" trigger={<>
+      <span className="ws-workspace-avatar" aria-hidden="true">{current ? <Users size={17} /> : <UserRound size={17} />}</span>
+      <span className="ws-workspace-title"><small>{t.label}</small><strong>{current?.team.name ?? t.personal}</strong></span>
+      <ChevronDown size={14} aria-hidden="true" />
+    </>}>
+      {close => <>
+        <button type="button" role="menuitemradio" aria-checked={!current} onClick={() => navigate("/dashboard", close)}><UserRound size={16} /><span>{t.personal}</span>{!current && <Check size={14} />}</button>
+        {(teams ?? []).map(row => <button key={row.team._id} type="button" role="menuitemradio" aria-checked={current?.team._id === row.team._id} onClick={() => navigate(`/dashboard/teams/${row.team._id}`, close)}><Users size={16} /><span><strong>{row.team.name}</strong><small>Business</small></span>{current?.team._id === row.team._id && <Check size={14} />}</button>)}
+        <hr />
+        <button type="button" role="menuitem" onClick={() => navigate("/dashboard/teams", close)}><Plus size={16} />{t.create}</button>
+        <button type="button" role="menuitem" onClick={() => navigate("/dashboard/teams", close)}><Settings size={16} />{t.settings}</button>
+      </>}
+    </WsMenu>
   </div>;
 }

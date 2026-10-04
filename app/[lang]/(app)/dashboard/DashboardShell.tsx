@@ -263,7 +263,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const courseItem = (c: NonNullable<typeof myCourses>[number]): SidebarItem => ({ key: c.id, title: c.title || t.untitled, href: `/dashboard/courses/${c.id}`, time: c.updatedAt, pinId: c.id, icon: GraduationCap });
   // Pins are device-local IDs (usePinned); a pinned item that was deleted or archived simply drops out.
   const pinned = pinnedIds.flatMap((id) => {
-    const form = allForms.find((f) => f._id === id);
+    const form = allForms.find((f) => f._id === id && f.status !== "archived");
     if (form) return [formItem(form)];
     const course = myCourses?.find((c) => c.id === id && !c.archived);
     return course ? [courseItem(course)] : [];
@@ -271,7 +271,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const recent: SidebarItem[] = [
     ...(forms?.owned ?? []).filter((f) => f.status !== "archived" && !pinnedIds.includes(f._id)).map(formItem),
     ...(myCourses ?? []).filter((c) => !c.archived && !pinnedIds.includes(c.id)).map(courseItem),
-    ...(myGames ?? []).map((g) => ({ key: g._id, title: g.title || t.untitled, time: g.endedAt ?? g.createdAt, icon: Trophy,
+    ...(myGames ?? []).filter(g => !g.formId || !allForms.some(f => f._id === g.formId && f.status === "archived")).map((g) => ({ key: g._id, title: g.title || t.untitled, time: g.endedAt ?? g.createdAt, icon: Trophy,
       href: g.state !== "ended" ? `/dashboard/live/${g._id}` : g.formId ? `/dashboard/forms/${g.formId}/responses` : g.quizId ? `/dashboard/results?id=${g.quizId}` : "/dashboard?tab=games" })),
   ].sort((a, b) => b.time - a.time);
   // Each section shows a few, then "Show N more" in steps, like a thread list.

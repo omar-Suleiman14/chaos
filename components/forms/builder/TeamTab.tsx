@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import posthog from "@/lib/analytics";
 import { Check, Trash2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -40,7 +40,8 @@ export default function TeamTab({ formId, role, def }: { formId: Id<"forms">; ro
   const t = useCopy(copy);
   const { locale } = useLocale();
   const collaborators = useQuery(api.forms.listCollaborators, { formId });
-  const teams = useQuery(api.businessTeams.list);
+  const { isAuthenticated } = useConvexAuth();
+  const teams = useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip");
   const comments = useQuery(api.forms.listComments, { formId });
   const activity = useQuery(api.forms.listActivity, { formId });
   const invite = useMutation(api.forms.inviteCollaborator);

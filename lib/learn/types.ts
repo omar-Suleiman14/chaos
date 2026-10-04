@@ -256,6 +256,8 @@ export interface DiscussionThread {
 
 export interface Flashcard { id: LearnId; front: string; back: string; blockId?: string }
 export interface FlashcardSet {
+  /** Whether a published snapshot currently exists, independent of visibility. */
+  published?: boolean;
   id: LearnId;
   ownerId: LearnId;
   ownerName: string;

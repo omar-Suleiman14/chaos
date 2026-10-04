@@ -7,7 +7,7 @@ import { emptyDefinition } from "@/convex/formLogic";
 import type { Id } from "@/convex/_generated/dataModel";
 
 const mutation = vi.hoisted(() => vi.fn());
-vi.mock("convex/react", () => ({ useMutation: () => mutation, useQuery: () => undefined }));
+vi.mock("convex/react", () => ({ useConvexAuth: () => ({ isAuthenticated: true }), useMutation: () => mutation, useQuery: () => undefined }));
 vi.mock("@/lib/optimistic", () => ({ useOptimisticMutation: () => vi.fn(), setFormStatusLocally: vi.fn() }));
 vi.mock("@/lib/analytics", () => ({ default: { capture: vi.fn() } }));
 const props: ComponentProps<typeof SettingsTab> = {

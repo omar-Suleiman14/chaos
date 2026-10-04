@@ -115,14 +115,14 @@ describe("native live teams", () => {
     const view = render(<TeamPanel gameId={gameId} frozen={false} maxPlayers={10} players={[{ _id: "player123" as Id<"livePlayers">, nickname: "Alex" }]} />);
     fireEvent.change(screen.getByLabelText("Team name"), { target: { value: "Green" } }); fireEvent.click(screen.getByRole("button", { name: "Create team" }));
     await screen.findByText("Team created."); expect(m.createTeam).toHaveBeenCalledWith({ gameId, name: "Green", maxMembers: 5 });
-    fireEvent.change(screen.getByLabelText("Team"), { target: { value: "team123" } }); fireEvent.click(screen.getByRole("button", { name: "Assign player" }));
+    fireEvent.click(screen.getByLabelText("Team")); fireEvent.click(screen.getByRole("option", { name: "Blue" })); fireEvent.click(screen.getByRole("button", { name: "Assign player" }));
     await screen.findByText("Player assigned."); expect(m.assign).toHaveBeenCalledWith({ gameId, playerId: "player123", teamId: "team123" });
     view.rerender(<TeamPanel gameId={gameId} frozen maxPlayers={10} players={[]} />);
     expect(screen.queryByRole("button", { name: "Create team" })).toBeNull(); expect(screen.getByText("Blue")).toBeInTheDocument();
   });
   it("uses the existing player token and displays a full-team error", async () => {
     m.join.mockRejectedValue(new Error("LIVE_TEAM_FULL")); render(<TeamPanel gameId={gameId} token="player-token" frozen={false} />);
-    fireEvent.change(screen.getByLabelText("Team"), { target: { value: "team123" } }); fireEvent.click(screen.getByRole("button", { name: "Join team" }));
+    fireEvent.click(screen.getByLabelText("Team")); fireEvent.click(screen.getByRole("option", { name: "Blue" })); fireEvent.click(screen.getByRole("button", { name: "Join team" }));
     expect(await screen.findByRole("alert")).toHaveTextContent("team is full"); expect(m.join).toHaveBeenCalledWith({ gameId, token: "player-token", teamId: "team123" });
     expect(m.query).toHaveBeenCalledWith("liveTeams:standings", { gameId, token: "player-token" }); expect(m.createTeam).not.toHaveBeenCalled();
   });
@@ -133,14 +133,14 @@ describe("native version-specific segments", () => {
     m.matrix = { evidence: { version: 1, windowLimit: 500, windowLimited: true, minimumCell: 5 }, suppressed: true, cells: [{ segment: "secret-small-cell", comparison: "completed", count: 1, withinSegmentRate: 1 }] };
     render(<Segments formId={formId} versions={[{ version: 1 }]} publishedVersion={1} parameters={[{ name: "consent", type: "boolean" }]} />);
     expect(screen.getByText(/Results are withheld/)).toBeInTheDocument(); expect(screen.queryByRole("table")).toBeNull(); expect(screen.queryByText("secret-small-cell")).toBeNull();
-    fireEvent.change(screen.getByLabelText("Segment by"), { target: { value: "hidden_parameter:consent" } }); fireEvent.change(screen.getByLabelText("Values (one per line)"), { target: { value: "false\ntrue" } }); fireEvent.click(screen.getByRole("button", { name: "Compare segments" }));
+    fireEvent.click(screen.getByLabelText("Segment by")); fireEvent.click(screen.getByRole("option", { name: "URL parameter: consent" })); fireEvent.change(screen.getByLabelText("Values (one per line)"), { target: { value: "false\ntrue" } }); fireEvent.click(screen.getByRole("button", { name: "Compare segments" }));
     expect(m.query).toHaveBeenLastCalledWith("formSegmentAnalysis:crossTab", { formId, version: 1, segment: { kind: "hidden_parameter", name: "consent", values: [false, true] }, compare: { kind: "status" } });
     expect(m.query.mock.calls.some(([name]) => name === "formSegmentAnalysis:funnel")).toBe(false);
   });
   it("uses published snapshots and validates numeric bins before querying", () => {
     render(<Segments formId={formId} versions={[{ version: 1 }, { version: 2 }]} publishedVersion={1} parameters={[]} />);
-    fireEvent.change(screen.getByLabelText("Published version"), { target: { value: "2" } }); expect(m.query).toHaveBeenCalledWith("forms:getVersion", { formId, version: 2 });
-    fireEvent.change(screen.getByLabelText("Segment by"), { target: { value: "number:n" } }); fireEvent.change(screen.getByLabelText("Numeric cutoffs (comma separated)"), { target: { value: "20,10" } }); fireEvent.click(screen.getByRole("button", { name: "Compare segments" }));
+    fireEvent.click(screen.getByLabelText("Published version")); fireEvent.click(screen.getByRole("option", { name: "2" })); expect(m.query).toHaveBeenCalledWith("forms:getVersion", { formId, version: 2 });
+    fireEvent.click(screen.getByLabelText("Segment by")); fireEvent.click(screen.getByRole("option", { name: "Age" })); fireEvent.change(screen.getByLabelText("Numeric cutoffs (comma separated)"), { target: { value: "20,10" } }); fireEvent.click(screen.getByRole("button", { name: "Compare segments" }));
     expect(screen.getByRole("alert")).toHaveTextContent("Check the cutoffs");
     expect(m.query.mock.calls.some(([, args]) => args?.segment?.kind === "number")).toBe(false);
   });

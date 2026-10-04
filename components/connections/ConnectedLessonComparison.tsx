@@ -1,5 +1,6 @@
 "use client";
 
+import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import { useState } from "react";
 import { useQuery } from "@/lib/convexCache";
 import { api } from "@/convex/_generated/api";
@@ -25,7 +26,7 @@ function Comparison({ id }: { id: Id<"lessons"> }) {
   const meta = (value: typeof row.metadata): LessonMeta => ({ ...value, curricula: [], indexing: value.indexing ?? "noindex" });
   return <div className="space-y-3">
     <p className="text-xs text-muted-foreground">{ar ? `مراجعة المسودة ${row.revision}. لا تنسب المقارنة التعديلات إلى تطبيق معين.` : `Draft revision ${row.revision}. This comparison does not attribute edits to a particular app.`}</p>
-    <label className="block text-sm">{ar ? "قارن المسودة الحالية مع" : "Compare current draft with"}<select className="kb-input mt-1" value={versionId} onChange={event => setVersionId(event.target.value)}><option value="">{ar ? "النسخة المنشورة الحالية" : "Current published version"}</option>{versions?.page.map(version => <option key={version._id} value={version._id}>{ar ? `نسخة ${version.number}` : `Version ${version.number}`}</option>)}</select></label>
+    <label className="block text-sm">{ar ? "قارن المسودة الحالية مع" : "Compare current draft with"}<ChaosSelect className="kb-input mt-1" value={versionId} onChange={event => setVersionId(event.target.value)}><option value="">{ar ? "النسخة المنشورة الحالية" : "Current published version"}</option>{versions?.page.map(version => <option key={version._id} value={version._id}>{ar ? `نسخة ${version.number}` : `Version ${version.number}`}</option>)}</ChaosSelect></label>
     {versions && !versions.isDone && <p className="text-xs text-muted-foreground">{ar ? "تُعرض أحدث 25 نسخة؛ سجل الدرس الكامل متاح في المحرر." : "Showing the latest 25 versions; the lesson editor has the full history."}</p>}
     {!before && <p className="text-xs text-muted-foreground">{ar ? "لا توجد نسخة منشورة للمقارنة. المحتوى المعروض موجود بالفعل في المسودة." : "No published version to compare. Displayed content is already in the draft."}</p>}
     <ChangePreview mode="comparison" before={before ? meta(before.metadata) : null} after={meta(row.metadata)} changes={diffDraftBlocks(before?.document ?? { schemaVersion: 1, blocks: [] } as LessonDocument, row.draft)} />
@@ -40,6 +41,6 @@ export default function ConnectedLessonComparison({ lessons }: { lessons: { id: 
   const id = lessons.find(lesson => lesson.id === selected)?.id ?? lessons[0]?.id;
   return <details onToggle={event => setOpen(event.currentTarget.open)}>
     <summary className="cursor-pointer text-xs text-muted-foreground">{ar ? "قارن تغييرات المسودة المطبقة بالفعل" : "Compare draft changes already applied"}</summary>
-    {open && id && <div className="mt-3 space-y-3"><label className="block text-sm">{ar ? "الدرس" : "Lesson"}<select className="kb-input mt-1" value={id} onChange={event => setSelected(event.target.value)}>{lessons.map(lesson => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}</select></label><Comparison key={id} id={id} /></div>}
+    {open && id && <div className="mt-3 space-y-3"><label className="block text-sm">{ar ? "الدرس" : "Lesson"}<ChaosSelect className="kb-input mt-1" value={id} onChange={event => setSelected(event.target.value)}>{lessons.map(lesson => <option key={lesson.id} value={lesson.id}>{lesson.title}</option>)}</ChaosSelect></label><Comparison key={id} id={id} /></div>}
   </details>;
 }

@@ -53,11 +53,14 @@ export function useCreateForm(onError: (message: string) => void) {
     try {
       const blank = !args.definition && !args.templateId && !args.ownTemplateId;
       const formId = await createForm(blank ? { ...args, definition: { ...blankFromPreferences(), ...(args.title ? { title: args.title } : {}) } } : args);
-      posthog.capture("form_created", {
-        source: args.templateId ? "template" : args.ownTemplateId ? "saved_template" : "blank",
-        uses_custom_defaults: blank && hasCustomDefaults(),
-      });
       router.push(`/dashboard/forms/${formId}`);
+      // Opening the new draft must succeed even if analytics is unavailable.
+      try {
+        posthog.capture("form_created", {
+          source: args.templateId ? "template" : args.ownTemplateId ? "saved_template" : "blank",
+          uses_custom_defaults: blank && hasCustomDefaults(),
+        });
+      } catch { /* Analytics must never interrupt creation. */ }
     } catch (err) {
       onError(errorMessage(err, t.failed));
     } finally {

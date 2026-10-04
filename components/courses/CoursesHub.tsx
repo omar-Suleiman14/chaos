@@ -1,5 +1,7 @@
 "use client";
 
+import { filterLearningRows, LearningLibraryTable, type LearningLibraryProps } from "@/components/library/LearningLibrary";
+import { timeAgo } from "@/lib/timeAgo";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
@@ -15,9 +17,9 @@ import "./courses.css";
 /** Your courses: create, open and browse. Shown as the Library's Courses tab. */
 export default function CoursesHub({
   embedded = false,
-}: {
-  embedded?: boolean;
-}) {
+  view = "gallery",
+  ...filters
+}: LearningLibraryProps) {
   const t = useCopy(courseCopy);
   const { locale } = useLocale();
   const router = useRouter();
@@ -37,10 +39,11 @@ export default function CoursesHub({
     }
   };
   if (courses === undefined) return <PageSkeleton label={t.loading} />;
-  const shown = courses.filter((c) => !c.archived);
+  const shown = filterLearningRows(courses.filter(c => !c.archived).map(c => ({ ...c, count: c.lessons, href: `/dashboard/courses/${c.id}` })), filters);
+  const filtered = !!filters.search || !!filters.statuses?.length;
   return (
     <div>
-      <header className="ws-page-header">
+      {!embedded && <header className="ws-page-header">
         {embedded ? (
           <p className="ws-page-subtitle">{t.subtitle}</p>
         ) : (
@@ -65,7 +68,7 @@ export default function CoursesHub({
             </button>
           )}
         </div>
-      </header>
+      </header>}
       {error && (
         <p role="alert" className="ws-error mb-4">
           {error}
@@ -77,10 +80,10 @@ export default function CoursesHub({
             <Plus size={24} />
           </span>
           <h2 className="text-xl font-semibold">
-            {locale === "ar" ? "أنشئ دورتك الأولى" : "Create your first course"}
+            {filtered ? locale === "ar" ? "لا نتائج" : "Nothing matches" : locale === "ar" ? "أنشئ دورتك الأولى" : "Create your first course"}
           </h2>
           <p className="text-muted-foreground max-w-sm">
-            {locale === "ar"
+            {filtered ? locale === "ar" ? "جرّب اسماً آخر أو امسح البحث والتصفية." : "Try another name, or clear the search and filter." : locale === "ar"
               ? "ابدأ بدورة جديدة وأضف دروسك بالترتيب."
               : "Start a new course and add your lessons in order."}
           </p>
@@ -95,7 +98,7 @@ export default function CoursesHub({
           </button>
         </div>
       )}
-      <div className="cx-grid">
+      {(shown.length > 0 || !embedded) && (view === "list" ? <LearningLibraryTable rows={shown} countLabel={locale === "ar" ? "الدروس" : "Lessons"} {...filters} /> : <div className="cx-grid">
         {!embedded && (
           <button
             type="button"
@@ -124,11 +127,11 @@ export default function CoursesHub({
             </div>
             <div className="cx-body">
               <span className="cx-title" dir="auto">{c.title}</span>
-              <span className="cx-meta">{t.lessons(c.lessons)}</span>
+              <span className="cx-meta">{t.lessons(c.lessons)} · {timeAgo(locale, c.updatedAt)}</span>
             </div>
           </Link>
         ))}
-      </div>
+      </div>)}
     </div>
   );
 }

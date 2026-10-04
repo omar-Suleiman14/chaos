@@ -1,5 +1,6 @@
 "use client";
 
+import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronUp, Clock, CornerDownLeft, Star, Upload, X } from "lucide-react";
 import "./formThemes.css";
@@ -908,12 +909,11 @@ function FieldView({ field, def, language, answers, error, onChange, uploadFile,
         <label htmlFor={`field-${id}`} className="block">{heading}</label>
         {help}
         <div className="form-select">
-          <select id={`field-${id}`} data-field-id={field.id} value={typeof value === "string" ? value : ""} onChange={(e) => { play("select"); commit(e.target.value || undefined); }}
+          <ChaosSelect id={`field-${id}`} data-field-id={field.id} value={typeof value === "string" ? value : ""} onChange={(e) => { play("select"); commit(e.target.value || undefined); }}
             aria-invalid={!!error} aria-describedby={describedBy} className={`form-input ${immersive ? "form-input--lg" : ""}`} autoFocus={autoFocus}>
             <option value="">{t.choose}</option>
             {field.options?.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
-          </select>
-          <ChevronDown size={16} aria-hidden="true" />
+          </ChaosSelect>
         </div>
         {errorText}
       </div>

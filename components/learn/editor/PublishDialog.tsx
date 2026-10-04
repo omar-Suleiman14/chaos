@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Globe, Lock, Search, SearchX, Users } from "lucide-react";
-import { useQuery } from "convex/react";
+import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { Select } from "@/components/workspace/Select";
 import { WsDialog } from "@/components/workspace/primitives";
@@ -66,7 +66,8 @@ export default function PublishDialog({ lesson, onClose, onPublish, sources = []
 }) {
   const t = useCopy(copy);
   const caps = useLearnCapabilities();
-  const teams = useQuery(api.businessTeams.list);
+  const { isAuthenticated } = useConvexAuth();
+  const teams = useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip");
   // "team" is restricted visibility for one Business team: team-only (internal) content.
   const [visibility, setVisibility] = useState<Visibility | "team">(lesson.teamId ? "team" : lesson.published ? lesson.visibility : "public");
   const [teamId, setTeamId] = useState(lesson.teamId ?? "");

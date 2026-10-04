@@ -4,6 +4,7 @@ import type { ObjectType } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
 import { requireActiveUser, creatorRestricted } from "./authz";
+import { getAuthIdentity } from "./authIdentity";
 import { businessMember } from "./businessAccess";
 import { inviteRole, teamAsset, teamRole } from "./businessModel";
 import { consumeRate, randomHex, sha256Hex } from "./serverUtils";
@@ -47,6 +48,7 @@ async function join(ctx: MutationCtx, teamId: Id<"businessTeams">, userId: strin
 }
 const listArgs = {};
 export async function listForActor(ctx: QueryCtx, actorId: string | undefined, args: ObjectType<typeof listArgs>) {
+  if (actorId === undefined && !await getAuthIdentity(ctx)) return [];
   const { identity } = await actorOf(ctx, actorId);
   const memberships = await ctx.db.query("businessMembers").withIndex("by_user", q => q.eq("userId", identity.subject)).take(20);
   const result = [];
@@ -137,6 +139,7 @@ export async function invitationsForActor(ctx: QueryCtx, actorId: string | undef
 export const invitations = query({ args: invitationsArgs, returns: v.array(inviteSummary), handler: (ctx, args) => invitationsForActor(ctx, undefined, args) });
 const inboxArgs = {};
 export async function inboxForActor(ctx: QueryCtx, actorId: string | undefined, args: ObjectType<typeof inboxArgs>) {
+  if (actorId === undefined && !await getAuthIdentity(ctx)) return [];
   const { identity } = await actorOf(ctx, actorId), email = verifiedEmail(identity);
   if (!email) return [];
   const result = [];

@@ -1,5 +1,6 @@
 "use client";
 
+import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import katex from "katex";
 import QuizBlockEditor from "./QuizBlockEditor";
@@ -258,10 +259,10 @@ export const SourceBlock = createReactBlockSpec(
             <BookMarked size={18} aria-hidden />
             {block.props.sourceId ? <span>{t.sourceMissing}</span> : null}
             {editable && (bridge.sources.length ? (
-              <select aria-label={t.sourcePick} value="" onChange={(e) => editor.updateBlock(block, { props: { sourceId: e.target.value } })}>
+              <ChaosSelect aria-label={t.sourcePick} value="" onChange={(e) => editor.updateBlock(block, { props: { sourceId: e.target.value } })}>
                 <option value="" disabled>{t.sourcePick}</option>
                 {bridge.sources.map((s) => <option key={s.id} value={s.id}>{s.title}</option>)}
-              </select>
+              </ChaosSelect>
             ) : <span className="lx-muted">{t.sourceNone}</span>)}
             {editable && <button type="button" className="lx-link" onClick={bridge.manageSources}>{t.sourceAdd}</button>}
           </div>

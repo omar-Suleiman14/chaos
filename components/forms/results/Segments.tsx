@@ -1,5 +1,6 @@
 "use client";
 
+import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import { useState } from "react";
 import { useQuery } from "convex/react";
 import type { FunctionArgs } from "convex/server";
@@ -47,13 +48,13 @@ export default function Segments(props: Props) {
   const [selected, setSelected] = useState<number | null>(null);
   const version = selected ?? props.publishedVersion ?? props.versions[0]?.version;
   if (!version) return <p className="ws-empty">{t.unpublished}</p>;
-  return <section className="grid gap-6"><label className="grid gap-1 max-w-xs">{t.version}<select className="kb-input" value={version} onChange={e => setSelected(Number(e.target.value))}>{props.versions.map(row => <option key={row.version} value={row.version}>{row.version}</option>)}</select></label><QueryErrorBoundary key={version}><VersionSegments formId={props.formId} version={version} parameters={props.parameters} /></QueryErrorBoundary></section>;
+  return <section className="grid gap-6"><label className="grid gap-1 max-w-xs">{t.version}<ChaosSelect className="kb-input" value={version} onChange={e => setSelected(Number(e.target.value))}>{props.versions.map(row => <option key={row.version} value={row.version}>{row.version}</option>)}</ChaosSelect></label><QueryErrorBoundary key={version}><VersionSegments formId={props.formId} version={version} parameters={props.parameters} /></QueryErrorBoundary></section>;
 }
 
 function DimensionInput({ label, value, onChange, definition, parameters }: { label: string; value: Draft; onChange: (draft: Draft) => void; definition: FormDefinition; parameters: Parameter[] }) {
   const t = useCopy(copy);
   const options = [{ key: "language", label: t.language }, { key: "status", label: t.status }, ...definition.fields.flatMap(field => ["choice", "dropdown"].includes(field.type) && field.options?.length && field.options.length <= 20 ? [{ key: `choice:${field.id}`, label: field.label || field.id }] : ["number", "scale", "rating"].includes(field.type) ? [{ key: `number:${field.id}`, label: field.label || field.id }] : []), ...parameters.map(p => ({ key: `hidden_parameter:${p.name}`, label: `${t.parameter}: ${p.name}` }))];
-  return <div className="grid gap-3"><label className="grid gap-1">{label}<select className="kb-input" value={value.key} onChange={e => onChange({ key: e.target.value, input: "" })}>{options.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}</select></label>{value.key.startsWith("number:") && <label className="grid gap-1">{t.boundaries}<input className="kb-input" value={value.input} onChange={e => onChange({ ...value, input: e.target.value })} required /></label>}{value.key.startsWith("hidden_parameter:") && <><label className="grid gap-1">{t.values}<textarea className="kb-input" rows={3} maxLength={10020} value={value.input} onChange={e => onChange({ ...value, input: e.target.value })} required /></label>{parameters.find(p => value.key === `hidden_parameter:${p.name}`)?.type === "boolean" && <span className="ws-muted">{t.booleans}</span>}</>}</div>;
+  return <div className="grid gap-3"><label className="grid gap-1">{label}<ChaosSelect className="kb-input" value={value.key} onChange={e => onChange({ key: e.target.value, input: "" })}>{options.map(option => <option key={option.key} value={option.key}>{option.label}</option>)}</ChaosSelect></label>{value.key.startsWith("number:") && <label className="grid gap-1">{t.boundaries}<input className="kb-input" value={value.input} onChange={e => onChange({ ...value, input: e.target.value })} required /></label>}{value.key.startsWith("hidden_parameter:") && <><label className="grid gap-1">{t.values}<textarea className="kb-input" rows={3} maxLength={10020} value={value.input} onChange={e => onChange({ ...value, input: e.target.value })} required /></label>{parameters.find(p => value.key === `hidden_parameter:${p.name}`)?.type === "boolean" && <span className="ws-muted">{t.booleans}</span>}</>}</div>;
 }
 
 function VersionSegments({ formId, version, parameters }: { formId: Id<"forms">; version: number; parameters: Parameter[] }) {

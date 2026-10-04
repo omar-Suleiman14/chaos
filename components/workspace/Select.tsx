@@ -29,6 +29,8 @@ export interface SelectProps<V extends string = string> {
   className?: string;
   /** Called with true/false as the list opens and closes. */
   onOpenChange?: (open: boolean) => void;
+  /** Additional trigger attributes used by form controls. */
+  triggerProps?: React.ButtonHTMLAttributes<HTMLButtonElement>;
 }
 
 const TYPEAHEAD_MS = 600;
@@ -42,7 +44,7 @@ const TYPEAHEAD_MS = 600;
  * On phones the list opens as a bottom sheet with large rows.
  */
 export function Select<V extends string = string>({
-  value, onChange, options, label, labelledBy, id, placeholder = "", disabled, size = "md", className = "", onOpenChange,
+  value, onChange, options, label, labelledBy, id, placeholder = "", disabled, size = "md", className = "", onOpenChange, triggerProps,
 }: SelectProps<V>) {
   const autoId = useId();
   const listId = `${id ?? autoId}-list`;
@@ -193,6 +195,7 @@ export function Select<V extends string = string>({
   return (
     <>
       <button
+        {...triggerProps}
         ref={button}
         type="button"
         id={id}
@@ -222,7 +225,7 @@ export function Select<V extends string = string>({
             aria-label={label}
             aria-labelledby={label ? undefined : labelledBy ?? id}
             tabIndex={-1}
-            className={`ws-menu ws-glass ws-listbox ${phone ? "ws-listbox--sheet" : ""}`}
+            className={`ws-menu ws-glass ws-listbox ${portalRoot.closest(".workspace-ui") ? "" : "workspace-ui"} ${phone ? "ws-listbox--sheet" : ""}`}
             style={phone ? undefined : { position: "fixed", ...position }}
             // Keep focus on the button while choosing with the pointer.
             onMouseDown={(e) => e.preventDefault()}

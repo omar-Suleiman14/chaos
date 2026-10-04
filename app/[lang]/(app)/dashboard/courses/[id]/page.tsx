@@ -5,7 +5,7 @@ import { Select } from "@/components/workspace/Select";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ExternalLink, Globe, Lock, Send, Users } from "lucide-react";
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import CoursePortability from "@/components/courses/CoursePortability";
@@ -61,7 +61,8 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const [error, setError] = useState(""), [busy, setBusy] = useState(false);
   const [publishing, setPublishing] = useState(false), [visibility, setVisibility] = useState<"public" | "private" | "team">("public"), [teamId, setTeamId] = useState("");
-  const teams = useQuery(api.businessTeams.list);
+  const { isAuthenticated } = useConvexAuth();
+  const teams = useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip");
   const [problems, setProblems] = useState<{ lessonId: string; title: string; message: string }[]>([]);
 
   useEffect(() => {

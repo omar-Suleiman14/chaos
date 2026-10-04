@@ -1,5 +1,6 @@
 "use client";
 
+import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { SignInButton, useAuth } from "@/lib/auth/client";
@@ -61,7 +62,7 @@ function StudentAttempt({ assignmentId }: { assignmentId: Id<"homeworkAssignment
     {error && <p role="alert" className="ws-error">{error}</p>}
     {finished ? <section role="status" className="kb-card-bordered p-6"><h2 className="text-xl font-semibold">{t.done}</h2><p>{t.score}: {finished.score} / {finished.maxScore}</p></section> : !delivery ? <button className="ws-btn w-fit" disabled={busy} onClick={() => void run(async () => { const attemptId = await start({ assignmentId }); await load(attemptId); })}>{busy ? t.busy : t.start}</button> : <>
       {expired && <p role="status">{t.expired}</p>}
-      <div className="flex gap-3 flex-wrap items-end"><label className="grid gap-1">{t.language}<select className="kb-input" value={language} disabled={busy || expired} onChange={e => setLanguage(e.target.value as Language)}>{delivery.definition.languages.map(value => <option key={value} value={value}>{value === "ar" ? "العربية" : "English"}</option>)}</select></label><button className="ws-btn" disabled={busy || expired} onClick={() => void run(() => load(delivery.attemptId))}>{t.refresh}</button></div>
+      <div className="flex gap-3 flex-wrap items-end"><label className="grid gap-1">{t.language}<ChaosSelect className="kb-input" value={language} disabled={busy || expired} onChange={e => setLanguage(e.target.value as Language)}>{delivery.definition.languages.map(value => <option key={value} value={value}>{value === "ar" ? "العربية" : "English"}</option>)}</ChaosSelect></label><button className="ws-btn" disabled={busy || expired} onClick={() => void run(() => load(delivery.attemptId))}>{t.refresh}</button></div>
       <p className="ws-muted">{t.refreshHelp}</p>
       {!delivery.definition.fields.length ? <p role="status">{t.noQuestions}</p> : <fieldset disabled={busy || expired} className="min-w-0"><div className={`ws-respondent-preview ${themeClass(delivery.definition)}`} style={themeStyle(delivery.definition)}><FormRenderer definition={delivery.definition} language={language} answers={answers} files={files} skipCover submitting={busy} submitLabel={t.submit}
         onAnswer={(id, value) => setAnswers(previous => { const next = { ...previous }; if (value === undefined) delete next[id]; else next[id] = value; return next; })}

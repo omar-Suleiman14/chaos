@@ -10,11 +10,11 @@ vi.mock("convex/react", () => ({
 beforeEach(() => { vi.clearAllMocks(); mocks.create.mockResolvedValue("new-form"); });
 it("chooses a titled existing assessment, pages the library and switches type", () => {
   const select = vi.fn(); render(<QuizBlockEditor kind="form" assetId="" onSelect={select} />);
-  fireEvent.change(screen.getByLabelText("Attach existing quiz"), { target: { value: "existing" } });
+  fireEvent.click(screen.getByLabelText("Attach existing quiz")); fireEvent.click(screen.getByRole("option", { name: "Anatomy checkpoint" }));
   expect(select).toHaveBeenCalledWith({ kind: "form", id: "existing" });
   fireEvent.click(screen.getByRole("button", { name: "Load more" }));
   expect(mocks.more).toHaveBeenCalledWith(20);
-  fireEvent.change(screen.getByLabelText("Quiz type"), { target: { value: "quiz" } });
+  fireEvent.click(screen.getByLabelText("Quiz type")); fireEvent.click(screen.getByRole("option", { name: "Classic quiz" }));
   expect(select).toHaveBeenLastCalledWith({ kind: "quiz", id: "" });
 });
 it("creates a quiz draft from the block and offers its question editor without publishing", async () => {

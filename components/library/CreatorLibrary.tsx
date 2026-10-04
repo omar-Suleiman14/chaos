@@ -40,11 +40,11 @@ type Kind = (typeof kinds)[number];
 const kindFromParam = (value: string | null): Kind => kinds.find((k) => k.toLowerCase() === value) ?? "Forms";
 type Status = "live" | "draft" | "closed" | "archived";
 const statusOptions: { id: Status }[] = [{ id: "live" }, { id: "draft" }, { id: "closed" }];
-type SortKey = "edited" | "name" | "responses" | "status";
+type SortKey = "edited" | "name" | "responses" | "status" | "count";
 type SortDir = "asc" | "desc";
 const sortOptions: { id: SortKey }[] = [{ id: "edited" }, { id: "name" }, { id: "responses" }, { id: "status" }];
 /** The direction a column starts in: newest, most and A→Z first. */
-const naturalDir: Record<SortKey, SortDir> = { edited: "desc", responses: "desc", name: "asc", status: "asc" };
+const naturalDir: Record<SortKey, SortDir> = { count: "desc", edited: "desc", responses: "desc", name: "asc", status: "asc" };
 /** Internal marker for the group of forms other people shared; shown as "Shared with you". */
 const SHARED_GROUP = "Shared with you";
 const statusOrder: Record<Status, number> = { live: 0, draft: 1, closed: 2, archived: 3 };
@@ -53,7 +53,7 @@ const copy = {
   en: {
     kinds: { Forms: "Forms", Quizzes: "Quizzes", Flashcards: "Flashcards", Courses: "Courses", Games: "Games" },
     status_: { live: "Live", draft: "Draft", closed: "Closed", archived: "Archived" },
-    sort_: { edited: "Last edited", name: "Name", responses: "Most responses", status: "Status" },
+    sort_: { count: "Most items", edited: "Last edited", name: "Name", responses: "Most responses", status: "Status" },
     colName: "Name", colStatus: "Status", colResponses: "Responses", colEdited: "Edited", colActions: "Actions",
     untitledQuiz: "Untitled quiz", untitledForm: "Untitled form", untitled: "Untitled",
     responseCount: (n: number) => `${n} response${n === 1 ? "" : "s"}`,
@@ -90,7 +90,7 @@ const copy = {
   ar: {
     kinds: { Forms: "النماذج", Quizzes: "الاختبارات", Flashcards: "البطاقات", Courses: "الدورات", Games: "الألعاب" },
     status_: { live: "منشور", draft: "مسودة", closed: "مغلق", archived: "مؤرشف" },
-    sort_: { edited: "آخر تعديل", name: "الاسم", responses: "الأكثر ردودًا", status: "الحالة" },
+    sort_: { count: "\u0627\u0644\u0623\u0643\u062b\u0631 \u0639\u0646\u0627\u0635\u0631", edited: "آخر تعديل", name: "الاسم", responses: "الأكثر ردودًا", status: "الحالة" },
     colName: "الاسم", colStatus: "الحالة", colResponses: "الردود", colEdited: "آخر تعديل", colActions: "الإجراءات",
     untitledQuiz: "اختبار بلا عنوان", untitledForm: "نموذج بلا عنوان", untitled: "بلا عنوان",
     responseCount: (n: number) => n === 0 ? "لا ردود" : pluralForm("ar", n, { one: "ردّ واحد", two: "ردّان", few: `${n} ردود`, many: `${n} ردًّا`, other: `${n} ردّ` }),
@@ -190,7 +190,7 @@ export default function CreatorLibrary() {
       const saved = window.localStorage.getItem("chaos-library-view");
       if (saved === "list" || saved === "gallery") setView(saved);
       const savedSort = window.localStorage.getItem("chaos-library-sort");
-      if (sortOptions.some((o) => o.id === savedSort)) setSort(savedSort as SortKey);
+      if ((savedSort === "count" || sortOptions.some((o) => o.id === savedSort))) setSort(savedSort as SortKey);
       const savedDir = window.localStorage.getItem("chaos-library-sort-dir");
       setDir(savedDir === "asc" || savedDir === "desc" ? savedDir : naturalDir[(savedSort as SortKey) ?? "edited"] ?? "desc");
       const savedStatuses = JSON.parse(window.localStorage.getItem("chaos-library-status") ?? "[]");
@@ -208,12 +208,15 @@ export default function CreatorLibrary() {
     setDir(nextDir);
     try { window.localStorage.setItem("chaos-library-sort", next); window.localStorage.setItem("chaos-library-sort-dir", nextDir); } catch { /* storage unavailable */ }
   };
+  const learningKind = kind === "Flashcards" || kind === "Courses";
+  const activeStatuses = learningKind ? statuses.filter(s => s === "live" || s === "draft") : statuses;
+  const activeSort = learningKind ? (sort === "responses" ? "edited" : sort) : sort === "count" ? "edited" : sort;
   /** Column headers sort: first click in the column's natural order, again to reverse. */
-  const sortBy = (key: SortKey) => chooseSort(key, sort === key ? (dir === "asc" ? "desc" : "asc") : naturalDir[key]);
+  const sortBy = (key: SortKey) => chooseSort(key, activeSort === key ? (dir === "asc" ? "desc" : "asc") : naturalDir[key]);
   const header = (key: SortKey, label: string, numeric?: boolean) => (
-    <th className={numeric ? "ws-num" : undefined} aria-sort={sort === key ? (dir === "asc" ? "ascending" : "descending") : "none"}>
-      <button type="button" className="ws-th-sort" data-active={sort === key} onClick={() => sortBy(key)}>
-        {label}{sort === key ? (dir === "asc" ? <ArrowUp size={13} aria-hidden="true" /> : <ArrowDown size={13} aria-hidden="true" />) : <ArrowUpDown size={13} aria-hidden="true" className="ws-th-sort__idle" />}
+    <th className={numeric ? "ws-num" : undefined} aria-sort={activeSort === key ? (dir === "asc" ? "ascending" : "descending") : "none"}>
+      <button type="button" className="ws-th-sort" data-active={activeSort === key} onClick={() => sortBy(key)}>
+        {label}{activeSort === key ? (dir === "asc" ? <ArrowUp size={13} aria-hidden="true" /> : <ArrowDown size={13} aria-hidden="true" />) : <ArrowUpDown size={13} aria-hidden="true" className="ws-th-sort__idle" />}
       </button>
     </th>
   );
@@ -258,18 +261,19 @@ export default function CreatorLibrary() {
     const q = search.trim().toLowerCase();
     // Ascending comparators; the direction flips them.
     const compare: Record<SortKey, (a: Row, b: Row) => number> = {
+      count: (a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0),
       edited: (a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0),
       name: (a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base", numeric: true }),
       responses: (a, b) => a.responses - b.responses,
       status: (a, b) => statusOrder[a.status] - statusOrder[b.status],
     };
-    const ordered = (a: Row, b: Row) => (dir === "asc" ? 1 : -1) * compare[sort](a, b);
+    const ordered = (a: Row, b: Row) => (dir === "asc" ? 1 : -1) * compare[activeSort](a, b);
     // Archived forms live on the Archive page, never in the library.
     return rows.filter((r) => r.status !== "archived" && (!statuses.length || statuses.includes(r.status)))
       .filter((r) => kind === "Forms" ? r.kind === "form" : r.kind !== "form")
       .filter((r) => !q || r.title.toLowerCase().includes(q) || r.group.toLowerCase().includes(q))
       .sort(ordered);
-  }, [rows, search, kind, statuses, sort, dir]);
+  }, [rows, search, kind, statuses, activeSort, dir]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Row[]>();
@@ -408,17 +412,17 @@ export default function CreatorLibrary() {
 
       <div className="flex items-end gap-3 flex-wrap mb-6">
         <div className="flex-1 min-w-[260px] max-sm:basis-full max-sm:min-w-0"><WsTabs tabs={kinds} value={kind} onChange={setKind} label={t.filterLibrary} labels={t.kinds} icons={{ Forms: FileText, Quizzes: GraduationCap, Flashcards: Layers, Courses: BookOpen, Games: Trophy }} /></div>
-        {(kind === "Forms" || kind === "Quizzes") && <>
+        {kind !== "Games" && <>
         <label className="ws-search !flex-none w-56 max-sm:!w-full max-sm:!max-w-none max-sm:order-last">
           <span className="sr-only">{t.searchLibrary}</span>
           <Search size={16} aria-hidden="true" />
           <input ref={searchRef} value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.search} />
         </label>
-        <WsMenu label={t.filterByStatus} triggerClassName={`ws-btn ws-btn--ghost ws-filter-btn ${statuses.length ? "ws-filter-btn--on" : ""}`}
-          trigger={<><ListFilter size={16} aria-hidden="true" /><span>{statuses.length ? `${t.status} · ${statuses.map((s) => t.status_[s]).join(locale === "ar" ? "، " : ", ")}` : t.status}</span></>}>
+        <WsMenu label={t.filterByStatus} triggerClassName={`ws-btn ws-btn--ghost ws-filter-btn ${activeStatuses.length ? "ws-filter-btn--on" : ""}`}
+          trigger={<><ListFilter size={16} aria-hidden="true" /><span>{activeStatuses.length ? `${t.status} · ${activeStatuses.map((s) => t.status_[s]).join(locale === "ar" ? "، " : ", ")}` : t.status}</span></>}>
           {() => (
             <>
-              {statusOptions.map((o) => (
+              {statusOptions.filter(o => !learningKind || o.id !== "closed").map((o) => (
                 <button key={o.id} type="button" role="menuitemcheckbox" aria-checked={statuses.includes(o.id)} onClick={() => toggleStatus(o.id)}>
                   <span className="ws-status" data-status={o.id}>{t.status_[o.id]}</span>{statuses.includes(o.id) && <Check size={15} className="ms-auto" />}
                 </button>
@@ -427,26 +431,26 @@ export default function CreatorLibrary() {
             </>
           )}
         </WsMenu>
-        {view === "gallery" && <WsMenu label={t.sort} triggerClassName={`ws-btn ws-btn--ghost ws-filter-btn ${sort !== "edited" ? "ws-filter-btn--on" : ""}`}
-          trigger={<><ArrowUpDown size={16} aria-hidden="true" /><span>{t.sort_[sort]}</span></>}>
-          {(close) => sortOptions.map((o) => (
-            <button key={o.id} type="button" role="menuitemradio" aria-checked={sort === o.id} onClick={() => { close(); chooseSort(o.id); }}>
-              {t.sort_[o.id]}{sort === o.id && <Check size={15} className="ms-auto" />}
+        {view === "gallery" && <WsMenu label={t.sort} triggerClassName={`ws-btn ws-btn--ghost ws-filter-btn ${activeSort !== "edited" ? "ws-filter-btn--on" : ""}`}
+          trigger={<><ArrowUpDown size={16} aria-hidden="true" /><span>{t.sort_[activeSort]}</span></>}>
+          {(close) => sortOptions.filter(o => !learningKind || o.id !== "responses").map((o) => (
+            <button key={o.id} type="button" role="menuitemradio" aria-checked={activeSort === o.id} onClick={() => { close(); chooseSort(o.id); }}>
+              {t.sort_[o.id]}{activeSort === o.id && <Check size={15} className="ms-auto" />}
             </button>
           ))}
         </WsMenu>}
-        <WsMenu label={t.viewOptions}>
+        </>}
+        {kind !== "Games" && <WsMenu label={t.viewOptions} triggerClassName="ws-btn ws-btn--ghost" trigger={<>{view === "gallery" ? <LayoutGrid size={16} aria-hidden /> : <List size={16} aria-hidden />}<span>{view === "gallery" ? t.gallery : t.list}</span></>}>
           {(close) => (
             <>
               <button type="button" role="menuitemradio" aria-checked={view === "gallery"} onClick={() => { close(); chooseView("gallery"); }}><LayoutGrid size={16} /> {t.gallery}{view === "gallery" && <Check size={15} className="ms-auto" />}</button>
               <button type="button" role="menuitemradio" aria-checked={view === "list"} onClick={() => { close(); chooseView("list"); }}><List size={16} /> {t.list}{view === "list" && <Check size={15} className="ms-auto" />}</button>
             </>
           )}
-        </WsMenu>
-        </>}
+        </WsMenu>}
       </div>
 
-      {kind === "Courses" ? <CoursesHub embedded /> : kind === "Flashcards" ? <FlashcardsHub embedded /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
+      {kind === "Courses" ? <CoursesHub embedded view={view} search={search} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Flashcards" ? <FlashcardsHub embedded view={view} search={search} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
         <div className="ws-empty ws-page">
           <span className="ws-empty__art"><Plus size={24} /></span>
           <h2 className="text-xl font-semibold">{search || statuses.length ? t.nothingMatches : t.createFirst}</h2>

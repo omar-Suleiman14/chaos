@@ -15,6 +15,8 @@
 .lx-section h3 { font-size: 14px; font-weight: 600; }
 .lx-link { color: var(--primary); font-size: 13px; font-weight: 500; background: none; border: 0; padding: 0; cursor: pointer; text-decoration: none; }
 .lx-link:hover { text-decoration: underline; }
+.lx-back { display: inline-flex; align-items: center; gap: 4px; justify-self: start; }
+.lx-back > svg { width: 14px; height: 14px; flex: none; }
 .lx-link:focus-visible, .lx-card:focus-visible, .lx-row:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; border-radius: 6px; }
 .lx-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .lx-divider { border: 0; border-top: 1px solid var(--ws-line); margin: 0; }
@@ -623,3 +625,9 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-diagram img { padding: 20px; background: #f8fafc; border: 1px solid #dce6f0; border-radius: 0; }
 .lx-diagram[data-theme="dark"] img { background: #111923; border-color: #2d4054; }
 @media (max-width: 600px) { .lx-diagram img { padding: 10px; } }
+
+.ws-flashcard-builder { display: flex; flex-direction: column; gap: 24px; width: 100%; }
+.ws-flashcard-builder .ws-page-header { margin-bottom: 0; }
+.ws-flashcard-form { max-width: 960px; width: 100%; }
+.ws-flashcard-text { min-height: 110px; resize: vertical; }
+.ws-flashcard-form .lx-cards-edit__row { padding: 16px; border: 1px solid var(--ws-line); border-radius: 8px; background: var(--background); }

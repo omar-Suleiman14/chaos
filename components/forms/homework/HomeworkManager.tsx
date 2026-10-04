@@ -1,5 +1,6 @@
 "use client";
 
+import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
@@ -50,16 +51,16 @@ export default function HomeworkManager({ formId }: { formId: Id<"forms"> }) {
     }}>
       <h2 className="text-lg font-semibold">{t.create}</h2>
       <label className="grid gap-1">{t.name}<input className="kb-input" name="title" required maxLength={200} defaultValue={form.title} /></label>
-      <label className="grid gap-1">{t.version}<select className="kb-input" value={versionNumber ?? ""} onChange={e => setVersion(Number(e.target.value))}>{form.versions.map(v => <option key={v.version} value={v.version}>{v.version}</option>)}</select></label>
+      <label className="grid gap-1">{t.version}<ChaosSelect className="kb-input" value={versionNumber ?? ""} onChange={e => setVersion(Number(e.target.value))}>{form.versions.map(v => <option key={v.version} value={v.version}>{v.version}</option>)}</ChaosSelect></label>
       <div className="grid gap-4 sm:grid-cols-2"><label className="grid gap-1">{t.opens}<input className="kb-input" type="datetime-local" name="opens" required /></label><label className="grid gap-1">{t.deadline}<input className="kb-input" type="datetime-local" name="deadline" required /></label></div>
       <label className="grid gap-1">{t.attempts}<input className="kb-input" type="number" name="attempts" min={1} max={10} step={1} defaultValue={1} required /></label>
       <button className="ws-btn w-fit" disabled={busy || !version?.definition.quiz?.enabled}>{busy ? t.creating : t.create}</button>
       {version && !version.definition.quiz?.enabled && <p className="ws-muted">{t.quiz}</p>}
     </form>}
-    {assignments && assignments.length > 0 && <label className="grid gap-1 max-w-md">{t.yours}<select className="kb-input" value={assignmentId ?? ""} onChange={e => { setAssignment((e.target.value || null) as Id<"homeworkAssignments"> | null); setReportStudent(""); setError(""); setStatus(""); }}>
+    {assignments && assignments.length > 0 && <label className="grid gap-1 max-w-md">{t.yours}<ChaosSelect className="kb-input" value={assignmentId ?? ""} onChange={e => { setAssignment((e.target.value || null) as Id<"homeworkAssignments"> | null); setReportStudent(""); setError(""); setStatus(""); }}>
       <option value="">{t.choose}</option>
       {assignments.map(a => <option key={a.id} value={a.id}>{a.title} · v{a.version} · {new Date(a.deadline).toLocaleDateString()}{a.closed ? ` · ${t.closedTag}` : ""}</option>)}
-    </select></label>}
+    </ChaosSelect></label>}
     {assignmentId && <section className="kb-card-bordered grid gap-4 p-5" aria-label={t.manage}>
       <div className="flex gap-3 flex-wrap"><Link className="ws-link" href={`/homework/${assignmentId}`}>{t.link}</Link><button className="ws-btn" type="button" disabled={busy} onClick={() => void run(() => navigator.clipboard.writeText(`${window.location.origin}/homework/${assignmentId}`), t.copied)}>{t.copy}</button></div>
       <form className="flex gap-2 flex-wrap items-end" onSubmit={e => { e.preventDefault(); if (email.trim()) void run(async () => { await enroll({ assignmentId, email: email.trim(), active: true }); setEmail(""); }, t.enrolled); }}>

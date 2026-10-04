@@ -9,11 +9,11 @@ import { useModal } from "./useModal";
 const copy = { en: { close: "Close", undo: "Undo", dismiss: "Dismiss", cancel: "Cancel" }, ar: { close: "إغلاق", undo: "تراجع", dismiss: "إخفاء", cancel: "إلغاء" } };
 
 /** Modal dialog rendered inside the workspace tree so it inherits workspace styling. */
-export function WsDialog({ title, description, onClose, children, wide }: {
-  title: string; description?: string; onClose: () => void; children: React.ReactNode; wide?: boolean;
+export function WsDialog({ title, description, onClose, children, wide, initialFocusRef }: {
+  title: string; description?: string; onClose: () => void; children: React.ReactNode; wide?: boolean; initialFocusRef?: React.RefObject<HTMLElement | null>;
 }) {
   const t = useCopy(copy);
-  const panel = useModal({ onClose });
+  const panel = useModal({ onClose, initialFocusRef });
   const descriptionId = useId();
   return (
     <div className="ws-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>

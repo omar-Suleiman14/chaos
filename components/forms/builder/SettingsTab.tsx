@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { setFormStatusLocally, useOptimisticMutation } from "@/lib/optimistic";
 import posthog from "@/lib/analytics";
 import { Check, ChevronRight, Copy, Globe, KeyRound, Link2, Plus, UserRound, Users, X } from "lucide-react";
@@ -302,7 +302,8 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
   const update = useMutation(api.forms.updateFormSettings);
   const setStatus = useOptimisticMutation(api.forms.setFormStatus, setFormStatusLocally);
   const [s, setS] = useState<EditableSettings>(settings);
-  const teams = useQuery(api.businessTeams.list);
+  const { isAuthenticated } = useConvexAuth();
+  const teams = useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip");
   const [group, setGroup] = useState(groupName ?? "");
   const [code, setCode] = useState<string | undefined>(undefined);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);

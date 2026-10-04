@@ -89,7 +89,7 @@ export function annotationNote(r: Doc<"learnPersonal">): PersonalNote {
   return { id: r.key, lessonId: r.lessonId, blockId: r.blockId, body: r.note, createdAt: r._creationTime, updatedAt: r.updatedAt };
 }
 export function flashcardUi(r: Doc<"flashcardSets">): FlashcardSet {
-  return { id: r._id, ownerId: r.ownerId, ownerName: "Chaos creator", title: r.title, description: "", cards: r.cards, visibility: r.visibility === "restricted" ? "private" : r.visibility, ...(r.visibility === "restricted" && r.audienceTeamId ? { teamId: r.audienceTeamId } : {}), createdAt: r._creationTime, updatedAt: r.updatedAt };
+  return { id: r._id, published: !!r.publishedVersionId, ownerId: r.ownerId, ownerName: "Chaos creator", title: r.title, description: "", cards: r.cards, visibility: r.visibility === "restricted" ? "private" : r.visibility, ...(r.visibility === "restricted" && r.audienceTeamId ? { teamId: r.audienceTeamId } : {}), createdAt: r._creationTime, updatedAt: r.updatedAt };
 }
 export function useLibraryFlashcardRows() {
   const auth = useConvexAuth();

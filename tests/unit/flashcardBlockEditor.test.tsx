@@ -12,7 +12,8 @@ beforeEach(() => { vi.clearAllMocks(); mocks.deck = null; mocks.create.mockResol
 afterEach(() => vi.restoreAllMocks());
 it("attaches an existing deck by title and can load another page", () => {
   const onSelect = vi.fn(); render(<FlashcardBlockEditor setId="" onSelect={onSelect} />);
-  fireEvent.change(screen.getByRole("combobox", { name: "Attach existing" }), { target: { value: "existing" } });
+  fireEvent.click(screen.getByRole("combobox", { name: "Attach existing" }));
+  fireEvent.click(screen.getByRole("option", { name: "Anatomy" }));
   expect(onSelect).toHaveBeenCalledWith("existing");
   fireEvent.click(screen.getByRole("button", { name: "Load more" }));
   expect(mocks.loadMore).toHaveBeenCalledWith(20);

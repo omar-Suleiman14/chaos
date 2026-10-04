@@ -51,10 +51,14 @@ describe("SharePicker", () => {
     expect(fns.onPendingChange).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("tab", { name: "Curricula" }));
-    fireEvent.change(screen.getByRole("combobox", { name: "Institution" }), { target: { value: "i1" } });
-    fireEvent.change(screen.getByRole("combobox", { name: "Program" }), { target: { value: "p1" } });
-    fireEvent.change(screen.getByRole("combobox", { name: "Curriculum version" }), { target: { value: "v1" } });
-    fireEvent.change(screen.getByRole("combobox", { name: "Module or subject" }), { target: { value: "n1" } });
+    fireEvent.click(screen.getByRole("combobox", { name: "Institution" }));
+    fireEvent.click(screen.getByRole("option", { name: "University" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Program" }));
+    fireEvent.click(screen.getByRole("option", { name: "Medicine" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Curriculum version" }));
+    fireEvent.click(screen.getByRole("option", { name: "2026" }));
+    fireEvent.click(screen.getByRole("combobox", { name: "Module or subject" }));
+    fireEvent.click(screen.getByRole("option", { name: "GIT" }));
     fireEvent.click(screen.getByRole("button", { name: "Review lessons" }));
     await waitFor(() => expect(screen.getByRole("button", { name: "Select these lessons" })).toBeEnabled());
     fireEvent.click(screen.getByRole("button", { name: "Select these lessons" }));

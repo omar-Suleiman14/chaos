@@ -1,5 +1,6 @@
 "use client";
 
+import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import { useState } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
@@ -162,7 +163,7 @@ export default function CrmPanel({
       </div>
       <div className="crm-toolbar">
         <SlidersHorizontal size={15} aria-hidden="true" />
-        <select
+        <ChaosSelect
           aria-label="Filter contact stage"
           className="crm-select"
           value={stage}
@@ -177,8 +178,8 @@ export default function CrmPanel({
               {labels[value]}
             </option>
           ))}
-        </select>
-        <select
+        </ChaosSelect>
+        <ChaosSelect
           aria-label="Filter owner in loaded contacts"
           className="crm-select"
           value={owner}
@@ -196,8 +197,8 @@ export default function CrmPanel({
                 {value}
               </option>
             ))}
-        </select>
-        <select
+        </ChaosSelect>
+        <ChaosSelect
           aria-label="Sort loaded contacts"
           className="crm-select"
           value={sort}
@@ -206,7 +207,7 @@ export default function CrmPanel({
           <option value="updated">Last activity (loaded)</option>
           <option value="name">Name (loaded)</option>
           <option value="followup">Follow-up date (loaded)</option>
-        </select>
+        </ChaosSelect>
         <Button className="ms-auto" onClick={() => setEditing("new")}>
           <Plus size={16} /> New contact
         </Button>
@@ -214,7 +215,7 @@ export default function CrmPanel({
       {selectedVisible.length > 0 && (
         <div className="crm-selectionbar">
           <span>{selectedVisible.length} selected</span>
-          <select
+          <ChaosSelect
             className="crm-select"
             aria-label="Move selected contacts to stage"
             value=""
@@ -230,7 +231,7 @@ export default function CrmPanel({
                 {labels[value]}
               </option>
             ))}
-          </select>
+          </ChaosSelect>
           <Button variant="ghost" onClick={() => setSelected([])}>
             Clear selection
           </Button>
@@ -290,7 +291,7 @@ export default function CrmPanel({
                         <CalendarClock size={13} />{" "}
                         {formatDate(contact.nextFollowUp)}
                       </p>
-                      <select
+                      <ChaosSelect
                         className="crm-select"
                         aria-label={`Stage for ${contact.name}`}
                         value={contact.stage}
@@ -304,7 +305,7 @@ export default function CrmPanel({
                             {labels[stage]}
                           </option>
                         ))}
-                      </select>
+                      </ChaosSelect>
                     </article>
                   ))}
                 {!contacts.some((contact) => contact.stage === value) && (
@@ -623,7 +624,7 @@ function ContactEditor({
             <div className="crm-field-grid">
               <label>
                 Stage
-                <select
+                <ChaosSelect
                   className="crm-select"
                   value={stage}
                   onChange={(event) => setStage(event.target.value as Stage)}
@@ -633,7 +634,7 @@ function ContactEditor({
                       {labels[value]}
                     </option>
                   ))}
-                </select>
+                </ChaosSelect>
               </label>
               <label>
                 Owner

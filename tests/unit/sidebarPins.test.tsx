@@ -7,6 +7,7 @@ const forms = {
   owned: [
     { _id: "f1", title: "Application form", status: "live", theme: { accent: "#3595e3" } },
     { _id: "f2", title: "Event registration", status: "draft", theme: { accent: "#23875f" } },
+    { _id: "archived", title: "Archived form", status: "archived", theme: { accent: "#23875f" } },
   ],
   shared: [],
 };
@@ -18,6 +19,7 @@ vi.mock("@/lib/convexCache", () => ({
   useQuery: () => undefined,
 }));
 const courses = [{ id: "course1", title: "Night sky course", description: "", lessons: 2, visibility: "public", published: true, updatedAt: 1, archived: false }];
+const games: { _id: string; title: string; formId: string; state: string; createdAt: number }[] = [];
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/dashboard" }));
 vi.mock("@/components/ThemeProvider", () => ({ useTheme: () => ({ toggleTheme: vi.fn() }) }));
 vi.mock("@clerk/nextjs", () => ({ useUser: () => ({ isLoaded: false }), useClerk: () => ({ signOut: async () => {} }), UserButton: () => null }));
@@ -26,7 +28,7 @@ vi.mock("convex/react", () => ({
   useConvexAuth: () => ({ isAuthenticated: false, isLoading: true }),
   usePaginatedQuery: () => ({ results: [], status: "Exhausted", loadMore: learnBackend.loadMore }),
   useQueries: () => ({}),
-  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? forms : getFunctionName(ref) === "quizFunctions:getMyQuizzes" ? [] : getFunctionName(ref) === "courses:listMine" ? courses : undefined),
+  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? forms : getFunctionName(ref) === "quizFunctions:getMyQuizzes" ? [] : getFunctionName(ref) === "courses:listMine" ? courses : getFunctionName(ref) === "live:myGames" ? games : undefined),
   useMutation: () => vi.fn(),
 }));
 vi.mock("@/components/workspace/useCreateForm", () => ({ useCreateForm: () => ({ create: vi.fn(), busy: false }) }));
@@ -36,10 +38,19 @@ vi.mock("@/components/ThemeToggle", () => ({ ThemeToggle: () => null }));
 beforeEach(() => {
   vi.clearAllMocks();
   localStorage.clear();
+  games.length = 0;
   Object.defineProperty(window, "matchMedia", { configurable: true, writable: true, value: vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })) });
 });
 
 describe("sidebar sections", () => {
+  it("hides archived pinned forms and their live-game sessions from Recent", () => {
+    localStorage.setItem("chaos.ui.pinned", JSON.stringify(["archived"]));
+    games.push({ _id: "old-game", title: "Archived game", formId: "archived", state: "ended", createdAt: 2 });
+    render(<DashboardLayout><p>Page</p></DashboardLayout>);
+    expect(screen.queryByRole("link", { name: "Archived form" })).toBeNull();
+    expect(screen.queryByRole("link", { name: "Archived game" })).toBeNull();
+    expect(screen.queryByRole("navigation", { name: "Pinned" })).toBeNull();
+  });
   it("prefetches visible destinations and prioritizes an intended destination and preserves form focus handlers and link semantics", () => {
     const { container } = render(<DashboardLayout><p>Page</p></DashboardLayout>);
     // Docs opens in a new tab, so it is a plain link outside the prefetch rules.

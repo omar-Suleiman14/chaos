@@ -549,7 +549,8 @@ export const myGames = query({
     const identity = await getAuthIdentity(ctx);
     if (!identity) return [];
     const games = await ctx.db.query("liveGames").withIndex("by_hostId_and_createdAt", (q) => q.eq("hostId", identity.subject)).order("desc").take(30);
-    return games.map((g) => ({
+    const visible = await Promise.all(games.map(async g => g.formId && (await ctx.db.get("forms", g.formId))?.status === "archived" ? null : g));
+    return visible.filter(g => g !== null).map((g) => ({
       _id: g._id, title: g.title, state: g.state, createdAt: g.createdAt, endedAt: g.endedAt ?? null,
       formId: g.formId ?? null, quizId: g.quizId ?? null, questionCount: g.questions.length,
       players: g.activePlayerCount ?? null, savedResponses: g.savedResponses ?? 0,

@@ -31,7 +31,7 @@ describe("Games workspace", () => {
     render(<LocaleProvider initial="en"><GamesPage /></LocaleProvider>);
     expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Games");
     fireEvent.click(screen.getByRole("button", { name: "Create a game" }));
-    await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ quizMode: true, definition: expect.objectContaining({ theme: expect.objectContaining({ preset: "flow" }), quiz: { enabled: true }, fields: [] }) })));
+    await waitFor(() => expect(mocks.create).toHaveBeenCalledWith(expect.objectContaining({ quizMode: true, definition: expect.objectContaining({ theme: expect.objectContaining({ preset: "flow" }), quiz: { enabled: true }, fields: [expect.objectContaining({ type: "choice", label: "" })] }) })));
     expect(mocks.host).not.toHaveBeenCalled();
     expect(mocks.push).toHaveBeenCalledWith("/dashboard/forms/new-game");
   });

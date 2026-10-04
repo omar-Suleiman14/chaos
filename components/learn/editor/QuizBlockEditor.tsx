@@ -1,5 +1,6 @@
 "use client";
 
+import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import { useId, useState } from "react";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -24,13 +25,13 @@ export default function QuizBlockEditor({ kind, assetId, onSelect }: { kind: Kin
     <p className="lx-help">{locale === "ar" ? "إرفاق المادة يحتفظ بالأصل وسجل التعلّم؛ لا ينشئ نسخة." : "Attach the original asset to keep one source and learning history. No copy is created."}</p>
     {error && <p role="alert" className="lx-error">{error}</p>}
     <label htmlFor={`${uid}-kind`}>{t.kind}</label>
-    <select id={`${uid}-kind`} value={kind} disabled={busy} onChange={e => onSelect({ kind: e.target.value as Kind, id: "" })}><option value="form">{t.form}</option><option value="quiz">{t.classic}</option></select>
+    <ChaosSelect id={`${uid}-kind`} value={kind} disabled={busy} onChange={e => onSelect({ kind: e.target.value as Kind, id: "" })}><option value="form">{t.form}</option><option value="quiz">{t.classic}</option></ChaosSelect>
     <label htmlFor={`${uid}-asset`}>{t.attach}</label>
-    <select id={`${uid}-asset`} value={assetId} disabled={busy} onChange={e => onSelect({ kind, id: e.target.value })}>
+    <ChaosSelect id={`${uid}-asset`} value={assetId} disabled={busy} onChange={e => onSelect({ kind, id: e.target.value })}>
       <option value="">{t.choose}</option>
       {assetId && !selected && <option value={assetId}>{t.selected}</option>}
       {page.results.map(q => <option key={q.id} value={q.id}>{q.title}{q.published ? "" : ` · ${t.draft}`}</option>)}
-    </select>
+    </ChaosSelect>
     {page.status === "LoadingFirstPage" && <p role="status">{t.loading}</p>}
     {page.status === "Exhausted" && !page.results.length && <p className="lx-muted">{t.empty}</p>}
     {(page.status === "CanLoadMore" || page.status === "LoadingMore") && <button type="button" className="ws-btn ws-btn--sm" disabled={busy || page.status === "LoadingMore"} onClick={() => page.loadMore(20)}>{t.more}</button>}

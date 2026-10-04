@@ -1,5 +1,6 @@
 "use client";
 
+import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import { useId, useState } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -31,11 +32,11 @@ export default function FlashcardBlockEditor({ setId, onSelect }: { setId: strin
     <p className="lx-help">{locale === "ar" ? "إرفاق المادة يحتفظ بالأصل وسجل التعلّم؛ لا ينشئ نسخة." : "Attach the original asset to keep one source and learning history. No copy is created."}</p>
     {error && <p className="lx-error" role="alert">{error}</p>}
     <label htmlFor={`${uid}-deck`}>{t.attach}</label>
-    <select id={`${uid}-deck`} value={setId} disabled={busy} onChange={e => { onSelect(e.target.value); setError(""); }}>
+    <ChaosSelect id={`${uid}-deck`} value={setId} disabled={busy} onChange={e => { onSelect(e.target.value); setError(""); }}>
       <option value="">{t.choose}</option>
       {setId && !choices.some(d => d._id === setId) && <option value={setId}>{deck?.title || t.loading}</option>}
       {choices.map(d => <option key={d._id} value={d._id}>{d.title}{!d.publishedVersionId || d.visibility !== "public" ? ` · ${t.draft}` : ""}</option>)}
-    </select>
+    </ChaosSelect>
     {page.status === "LoadingFirstPage" && <p role="status">{t.loading}</p>}
     {page.status === "Exhausted" && !choices.length && <p className="lx-muted">{t.empty}</p>}
     {(page.status === "CanLoadMore" || page.status === "LoadingMore") && <button type="button" className="ws-btn ws-btn--sm" disabled={page.status === "LoadingMore"} onClick={() => page.loadMore(20)}>{t.more}</button>}

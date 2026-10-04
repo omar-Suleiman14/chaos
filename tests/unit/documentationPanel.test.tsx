@@ -11,7 +11,7 @@ describe("documentation block authoring", () => {
     fireEvent.change(screen.getByLabelText("Title"), { target: { value: "Connect Chaos" } });
     fireEvent.change(screen.getByLabelText("Slug"), { target: { value: "connect-chaos" } });
     fireEvent.change(screen.getByLabelText("Text"), { target: { value: "Use the HTTP endpoint." } });
-    fireEvent.change(screen.getByLabelText("New block type"), { target: { value: "heading" } });
+    fireEvent.click(screen.getByLabelText("New block type")); fireEvent.click(screen.getByRole("option", { name: "Heading" }));
     fireEvent.click(screen.getByRole("button", { name: "Add block" }));
     fireEvent.change(screen.getAllByLabelText("Text")[1], { target: { value: "Sign in" } });
     fireEvent.change(screen.getByLabelText("Link anchor"), { target: { value: "sign-in" } });
