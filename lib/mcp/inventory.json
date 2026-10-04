@@ -1,5 +1,5 @@
 {
-  "count": 93,
+  "count": 95,
   "names": [
     "add_course_lesson",
     "add_folder_member",
@@ -60,6 +60,7 @@
     "list_lesson_curriculum_mappings",
     "list_lesson_versions",
     "list_lessons",
+    "list_my_students",
     "list_responses",
     "list_themes",
     "move_folder",
@@ -89,6 +90,7 @@
     "set_form_theme",
     "set_game_settings",
     "set_lesson_lifecycle",
+    "set_student_card_visibility",
     "unpublish_course",
     "update_course",
     "update_form",

@@ -10,6 +10,8 @@ const read = { readOnlyHint: true, destructiveHint: false, idempotentHint: true,
 const write = { readOnlyHint: false, destructiveHint: false, idempotentHint: false, openWorldHint: false };
 export function registerCourseTools(server: McpServer, run: (tool: string, input: Record<string, unknown>, summarize: (data: Record<string, unknown>) => string) => Promise<CallToolResult>, securitySchemes: { type: string; scopes: string[] }[], { call, flow }: McpFlow) {
  const meta = { securitySchemes };
+ server.registerTool("list_my_students", { description: "Read your private Students roster with cursor pagination. Includes account cards and guest labels/context, never answers or scores. Anonymous participation stays anonymous; public relationships require student opt-in.", inputSchema: { cursor: z.string().optional(), limit: z.number().int().min(1).max(48).optional() }, annotations: read, _meta: meta }, input => run("list_my_students", input, () => "Private student roster loaded."));
+ server.registerTool("set_student_card_visibility", { description: "Choose whether YOUR real Card appears publicly on an existing teacher's Students section. Default is private. Cannot expose another person's relationship or create a new one.", inputSchema: { username: ref, visible: z.boolean() }, annotations: write, _meta: meta }, input => run("set_student_card_visibility", input, () => "Your student Card visibility updated."));
  const cover = z.union([z.string().url().max(2008), z.string().regex(/^\/covers\/[a-z0-9/_-]+\.(jpg|svg)$/)]);
  const icon = z.string().min(1).max(16);
  server.registerTool("create_full_course", {

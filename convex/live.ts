@@ -1,3 +1,4 @@
+import { recordStudent } from "./studentRoster";
 import { getAuthIdentity } from "./authIdentity";
 // Live games: a host runs a quiz on a shared screen; players join with a PIN and
 // answer on their phones. See convex/liveLogic.ts for the pure rules.
@@ -589,6 +590,7 @@ export const joinGame = mutation({
     await ctx.db.insert("livePlayers", {
       gameId: game._id, nickname, nicknameKey: key, tokenHash, score: 0, streak: 0, correctCount: 0, kicked: false, joinedAt: Date.now(),
     });
+    await recordStudent(ctx, { authorId: game.hostId, guestKey: `live:${game._id}:${tokenHash}`, guestName: nickname, context: game.title });
     await ctx.db.patch("liveGames", game._id, { activePlayerCount: active + 1 });
     const target = game.settings.startWhenPlayers;
     if (game.state === "lobby" && target && active + 1 >= target) await beginCountdown(ctx, game);

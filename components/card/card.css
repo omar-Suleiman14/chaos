@@ -70,3 +70,15 @@
 @media(prefers-reduced-motion:reduce) { .mc-tilt { animation:none; transform:none; } .mc-glare { display:none; } }
 .mc-eyes { transition:transform .35s cubic-bezier(.22,.61,.36,1); }
 .mc-profile .mc-stage { width:240px; }
+
+.mc-students { width: 100%; margin-block: 28px; text-align: start; }
+.mc-students__viewport { height: min(520px, 65vh); overflow: auto; overscroll-behavior: contain; margin-block: 16px; }
+.mc-student { display: grid; grid-template-columns: 36px 1fr; column-gap: 10px; align-content: center; height: 138px; padding: 14px; border: 1px solid; border-radius: 16px; background: var(--ws-surface, Canvas); color: var(--ws-text, CanvasText); text-decoration: none; transition: transform 180ms ease, box-shadow 180ms ease; animation: mc-student-enter 220ms ease-out; }
+.mc-student > :not(.mc-student__avatar) { grid-column: 2; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mc-student__avatar { grid-column: 1; grid-row: 1 / 4; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; color: #fff; }
+.mc-student span:not(.mc-student__avatar), .mc-student small { font-size: 12px; opacity: .75; }
+@media(hover:hover) { .mc-student:hover { transform: perspective(600px) rotateY(-3deg) translateY(-2px); box-shadow: 0 8px 20px #00000014; } }
+.mc-student:active { transform: scale(.98); }
+.mc-students__visibility { display: flex; gap: 10px; align-items: center; min-height: 44px; }
+@keyframes mc-student-enter { from { opacity: 0; transform: translateY(5px); } }
+@media(prefers-reduced-motion:reduce) { .mc-student { animation: none; transition: none; } .mc-student:hover, .mc-student:active { transform: none; } }
