@@ -1,5 +1,5 @@
 {
-  "count": 95,
+  "count": 97,
   "names": [
     "add_course_lesson",
     "add_folder_member",
@@ -17,6 +17,7 @@
     "create_lesson",
     "create_lesson_curriculum_mapping",
     "create_lesson_live_game",
+    "customize_my_card",
     "delete_lesson_blocks",
     "detach_lesson_flashcards",
     "edit_lesson_blocks",
@@ -42,6 +43,7 @@
     "get_lesson_quizzes",
     "get_lesson_sources",
     "get_lesson_version",
+    "get_my_card",
     "get_quiz_fork_lineage",
     "get_results",
     "get_weak_area_actions",

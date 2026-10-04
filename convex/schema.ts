@@ -85,6 +85,10 @@ export default defineSchema({
     hideFromAuthorLists: v.optional(v.boolean()),
     /** Member card colour theme index (lib/memberCard.ts CARD_THEMES). */
     cardStyle: v.optional(v.number()),
+    cardAvatarSeed: v.optional(v.string()),
+    cardOnboardingPending: v.optional(v.boolean()),
+    cardOnboardingCompletedAt: v.optional(v.number()),
+    profileNameChosen: v.optional(v.boolean()),
     isBanned: v.optional(v.boolean()),
     creationMonth: v.optional(v.string()),
     monthlyCreations: v.optional(v.number()),
