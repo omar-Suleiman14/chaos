@@ -295,8 +295,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     );
   };
 
-  // Wait for account creation so a new account never flashes an empty dashboard before its Card.
-  if (isLoaded && user && !account) return <div className="workspace-ui mc-customize"><p role={actionError ? "alert" : "status"}>{actionError || (locale === "ar" ? "جارٍ إعداد بطاقتك…" : "Preparing your Card…")}</p>{actionError && <button className="ws-btn" onClick={() => { setActionError(""); void getOrCreateUser({}).catch(error => setActionError(errorMessage(error))); }}>{locale === "ar" ? "حاول مجددًا" : "Try again"}</button>}</div>;
+  // A brand-new sign-up waits for account creation so it never flashes an empty dashboard before its Card.
+  // `undefined` is just the account still loading on a normal visit, which shows the dashboard as usual.
+  if (isLoaded && user && account === null) return <div className="workspace-ui mc-customize"><p role={actionError ? "alert" : "status"}>{actionError || (locale === "ar" ? "جارٍ إعداد بطاقتك…" : "Preparing your Card…")}</p>{actionError && <button className="ws-btn" onClick={() => { setActionError(""); void getOrCreateUser({}).catch(error => setActionError(errorMessage(error))); }}>{locale === "ar" ? "حاول مجددًا" : "Try again"}</button>}</div>;
   if (account && !cardDismissed && (account.cardOnboardingPending || cardStarted) && !account.isBanned && !account.suspendedUntil) return <div className="workspace-ui"><CardOnboarding actorId={account.clerkId} onDone={() => setCardDismissed(true)} /></div>;
 
   // The live game host screen is meant for a projector: full window, no workspace chrome.
