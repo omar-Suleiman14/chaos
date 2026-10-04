@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import katex from "katex";
 import QuizBlockEditor from "./QuizBlockEditor";
+import Diagram from "../reader/Diagram";
 import InlineQuiz from "../reader/InlineQuiz";
 import FlashcardBlockEditor from "./FlashcardBlockEditor";
 import InlineFlashcards from "../reader/InlineFlashcards";
@@ -314,6 +315,16 @@ export const Citation = createReactInlineContentSpec(
 /* ── Schema ──────────────────────────────────────────────────────────────── */
 
 /** Block types lessons use. Audio and generic file blocks stay out of the slash menu; sources cover documents. */
+export const LessonDiagram = createReactBlockSpec(
+  { type: "lessonDiagram", content: "none", propSchema: { format: { default: "mermaid" }, text: { default: "flowchart LR\n  A[Learn] --> B[Practice] --> C[Understand]" } } },
+  { render: function DiagramBlock({ block, editor }) {
+    const { locale } = useLocale();
+    return <div className="lx-panel" contentEditable={false} onKeyDown={stop}>
+      {editor.isEditable && <label className="lx-form">{locale === "ar" ? "نص المخطط" : "Diagram source"}<textarea dir="ltr" rows={5} maxLength={20000} value={block.props.text} onChange={e => editor.updateBlock(block, { props: { text: e.target.value } })} /></label>}
+      <Diagram text={block.props.text} />
+    </div>;
+  } },
+);
 export const LessonQuiz = createReactBlockSpec(
  { type: "lessonQuiz", propSchema: { required: { default: false }, assetKind: { default: "form", values: ["form", "quiz"] as const }, assetId: { default: "" } }, content: "none" },
  { render: function QuizBlock({ block, editor }) {
@@ -343,6 +354,7 @@ export const lessonSchema = BlockNoteSchema.create({
     equation: Equation(),
     youtube: YouTube(),
     source: SourceBlock(),
+    lessonDiagram: LessonDiagram(),
     lessonQuiz: LessonQuiz(),
     lessonFlashcards: LessonFlashcards(),
   },
