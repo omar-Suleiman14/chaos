@@ -1,4 +1,5 @@
 "use client";
+import QuizLearningLinks from "@/components/learn/editor/QuizLearningLinks";
 
 import { useQuery } from "@/lib/convexCache";
 import { api } from "@/convex/_generated/api";
@@ -302,6 +303,7 @@ function EditorSession() {
 
   return (
     <div className="max-w-4xl mx-auto pb-36 space-y-8 font-sans">
+      {quizId && quiz && <QuizLearningLinks asset={{ kind: "quiz", id: quizId }} title={quiz.title} published={isPublished} />}
       {/* ── HEADER */}
       <div className="chaos-card bg-background p-5 sticky top-14 z-10 flex flex-col gap-4">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
