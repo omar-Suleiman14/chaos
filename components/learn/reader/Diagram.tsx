@@ -28,11 +28,21 @@ export default function Diagram({ text }: { text: string }) {
         root.querySelectorAll(".node").forEach((node, index) => {
           const accent = [colors.blue, colors.purple, colors.green][index % 3];
           node.querySelectorAll("rect, circle, ellipse, polygon, path").forEach(shape => {
-            shape.setAttribute("style", `fill:${colors.surface};stroke:${accent};stroke-width:2;stroke-dasharray:38 10 74 10;stroke-linecap:round`);
+            shape.setAttribute("style", `fill:${colors.surface}!important;stroke:${accent}!important;stroke-width:2!important;stroke-dasharray:38 10 74 10!important;stroke-linecap:round!important`);
           });
           node.setAttribute("class", `${node.getAttribute("class") ?? ""} chaos-diagram-node`);
           (node as SVGElement).style.setProperty("--diagram-accent", accent);
         });
+        root.querySelectorAll("text, tspan, .nodeLabel").forEach(label => {
+          label.setAttribute("style", `fill:${colors.text}!important;color:${colors.text}!important`);
+        });
+        root.querySelectorAll(".flowchart-link, .edgePath path, .relationshipLine").forEach(edge => {
+          edge.setAttribute("style", `stroke:${colors.line}!important;stroke-width:1.8!important;fill:none!important`);
+        });
+        root.querySelectorAll("marker path, marker polygon").forEach(arrow => {
+          arrow.setAttribute("style", `fill:${colors.line}!important;stroke:${colors.line}!important`);
+        });
+        root.querySelectorAll(".labelBkg").forEach(label => label.setAttribute("style", `fill:${colors.surface}!important`));
         const style = parsed.createElementNS("http://www.w3.org/2000/svg", "style");
         style.textContent = `.chaos-diagram-node > rect,.chaos-diagram-node > circle,.chaos-diagram-node > ellipse,.chaos-diagram-node > polygon,.chaos-diagram-node > path{animation:diagram-outline 18s linear infinite;filter:drop-shadow(0 2px 5px ${dark ? "#00000040" : "#277dc512"})} @keyframes diagram-outline{to{stroke-dashoffset:-132}} @media(prefers-reduced-motion:reduce){.chaos-diagram-node > *{animation:none!important}}`;
         root.appendChild(style);
