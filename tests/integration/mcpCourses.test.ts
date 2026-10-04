@@ -25,6 +25,7 @@ it("keeps course and lesson creation as drafts, replaces outlines and publishes 
   await t.mutation(makeFunctionReference<"mutation">("mcpLearn:saveLesson"), { userId, lessonId: id, expectedRevision: 0, document: { schemaVersion: 1, blocks: [{ id: "p", type: "paragraph", text: "Text", citations: [], conceptIds: [] }] } });
  }
  await expect(t.mutation(m("publish"), { userId, courseId, visibility: "private" })).rejects.toThrow("BUSINESS_REQUIRED");
+ for (const id of [lessonId, second.lessonId]) await t.mutation(makeFunctionReference<"mutation">("mcpLearn:publishLesson"), { userId, lessonId: id, expectedRevision: 1, visibility: "public" });
  expect(await t.mutation(m("publish"), { userId, courseId, visibility: "public" })).toEqual({ ok: true });
  const row = await t.run(ctx => ctx.db.get("learnCollections", courseId));
  const snapshot = await t.run(ctx => ctx.db.get("collectionVersions", row!.publishedVersionId!));
@@ -63,6 +64,7 @@ it.each(["review", "hidden", "removed"] as const)("rejects unchanged published l
  const { courseId } = await t.mutation(m("create"), { userId });
  const { lessonId } = await t.mutation(m("addLesson"), { userId, courseId, title: "Moderated lesson" });
  await t.mutation(makeFunctionReference<"mutation">("mcpLearn:saveLesson"), { userId, lessonId, expectedRevision: 0, document: { schemaVersion: 1, blocks: [{ id: "p", type: "paragraph", text: "Text", citations: [], conceptIds: [] }] } });
+ await t.mutation(makeFunctionReference<"mutation">("mcpLearn:publishLesson"), { userId, lessonId, expectedRevision: 1, visibility: "public" });
  expect(await t.mutation(m("publish"), { userId, courseId, visibility: "public" })).toEqual({ ok: true });
  const before = await t.run(ctx => ctx.db.get("learnCollections", courseId));
  const beforeLesson = await t.run(ctx => ctx.db.get("lessons", lessonId));
@@ -120,6 +122,7 @@ it("lists only the actor's courses in pages and archives, restores and unpublish
  await expect(t.mutation(m("unpublish"), { userId: other, courseId: ids[1] })).rejects.toThrow("NOT_FOUND");
  const { lessonId } = await t.mutation(m("addLesson"), { userId, courseId: ids[2] });
  await t.mutation(makeFunctionReference<"mutation">("mcpLearn:saveLesson"), { userId, lessonId, expectedRevision: 0, document: { schemaVersion: 1, blocks: [{ id: "p", type: "paragraph", text: "Text", citations: [], conceptIds: [] }] } });
+ await t.mutation(makeFunctionReference<"mutation">("mcpLearn:publishLesson"), { userId, lessonId, expectedRevision: 1, visibility: "public" });
  expect(await t.mutation(m("publish"), { userId, courseId: ids[2], visibility: "public" })).toEqual({ ok: true });
  expect(await t.mutation(m("unpublish"), { userId, courseId: ids[2] })).toEqual({ ok: true });
  expect((await t.run(ctx => ctx.db.get("learnCollections", ids[2])))?.publishedVersionId).toBeUndefined();

@@ -54,16 +54,15 @@ export default function FlashcardStudy({ setId, onEdit }: { setId: string; onEdi
   if (!version) return <div className="lx-empty"><p>{t.noPublished}</p>{onEdit && <button type="button" className="ws-btn" onClick={async () => { try { await actions.publishFlashcardStudy(setId); } catch (err) { setError(errorMessage(err)); } }}>{t.publishSnapshot}</button>}{error && <p role="alert">{error}</p>}</div>;
   return <section aria-label={version.title} dir={localeDir(locale)}>
     {!viewer?.signedIn && <p className="lx-notice" style={{ fontSize: 14 }}>{t.deviceProgress} <SignInButton mode="modal"><button type="button" className="lx-link">{t.sync}</button></SignInButton>. {t.retained}</p>}
-    <StudyRound key={version._id + ":" + (viewer?.id ?? "guest")} setId={setId} cards={version.cards} reviews={reviews} onEdit={onEdit} />
+    <StudyRound key={version._id + ":" + (viewer?.id ?? "guest")} setId={setId} cards={version.cards} reviews={reviews} onEdit={onEdit} onReview={async (cardId, knewIt) => { await actions.reviewCard(setId, cardId, knewIt); }} />
   </section>;
 }
 
-export function StudyRound({ setId, cards: draftCards, reviews, onEdit, onReview }: { setId: string; cards: Flashcard[]; reviews: { cardId: string; box: number; reviewedAt: number }[]; onEdit?: () => void; onReview?: (cardId: string, knewIt: boolean) => Promise<void> }) {
+export function StudyRound({ setId, cards: draftCards, reviews, onEdit, onReview }: { setId: string; cards: Flashcard[]; reviews: { cardId: string; box: number; reviewedAt: number }[]; onEdit?: () => void; onReview: (cardId: string, knewIt: boolean) => Promise<void> }) {
   const t = useCopy(copy);
   const report = useLessonActivity();
   const reviewed = useRef(new Set<string>());
   const round = useRef<HTMLDivElement>(null);
-  const actions = useLearnActions();
   const cards = draftCards;
   const boxOf = (cardId: string) => reviews.find((r) => r.cardId === cardId)?.box ?? 0;
   // Lowest box first: new and missed cards come back before the ones you know.
@@ -75,7 +74,7 @@ export function StudyRound({ setId, cards: draftCards, reviews, onEdit, onReview
   const known = cards.filter((c) => boxOf(c.id) >= 3).length;
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
-  const answer = async (knewIt: boolean) => { if (!card || pending) return; setPending(true); setError(""); try { await (onReview ? onReview(card.id, knewIt) : actions.reviewCard(setId, card.id, knewIt)); reviewed.current.add(card.id); if (reviewed.current.size === cards.length) report({ kind: "flashcards", id: setId, known: known + (knewIt && boxOf(card.id) === 2 ? 1 : 0), total: cards.length }); setFlipped(false); setIndex(i => i + 1); } catch (err) { setError(errorMessage(err)); } finally { setPending(false); } };
+  const answer = async (knewIt: boolean) => { if (!card || pending) return; setPending(true); setError(""); try { await onReview(card.id, knewIt); reviewed.current.add(card.id); if (reviewed.current.size === cards.length) report({ kind: "flashcards", id: setId, known: known + (knewIt && boxOf(card.id) === 2 ? 1 : !knewIt && boxOf(card.id) >= 3 ? -1 : 0), total: cards.length }); setFlipped(false); setIndex(i => i + 1); } catch (err) { setError(errorMessage(err)); } finally { setPending(false); } };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!round.current?.contains(e.target as Node)) return;

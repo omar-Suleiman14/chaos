@@ -31,13 +31,14 @@ it("creates a course like a form, publishes it publicly with its lessons, and ke
   expect(draft.canPrivate).toBe(false);
   expect(draft.icon).toBe("🩺");
   await expect(owner.mutation(api.courses.publish, { courseId, visibility: "private" })).rejects.toThrow("BUSINESS_REQUIRED");
+  for (const lessonId of [first, second]) await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 1, visibility: "public" });
   expect(await owner.mutation(api.courses.publish, { courseId, visibility: "public" })).toEqual({ ok: true });
 
   const pub = await t.query(api.courses.getPublic, { courseId });
   expect(pub?.lessons.map((l) => l.title)).toEqual(["Portal hypertension", "Lesson 1"]);
   expect(pub?.icon).toBe("🩺");
   expect((await t.query(api.courses.listPublic, {})).map((c) => c.id)).toContain(courseId);
-  // Lessons went public with the course.
+  // Lessons were explicitly published before the course.
   expect((await t.run((ctx) => ctx.db.get("lessons", first)))?.visibility).toBe("public");
 
   // A Business seat can publish privately; the public page then hides it.

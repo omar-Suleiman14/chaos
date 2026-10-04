@@ -5,7 +5,7 @@ import { getCourse, setOutlineCourse } from "./courses";
 import { createLessonForActor } from "./lessons";
 import { lessonDocument, lessonMeta } from "./learnModel";
 import { authorDb } from "./authorIndex";
-import { quizQuestionFields, publicationErrors } from "./quizModel";
+import { quizQuestionFields } from "./quizModel";
 import { consumeCreation } from "./plans";
 import { randomCode } from "./serverUtils";
 const ref = v.object({ kind: v.union(v.literal("form"),v.literal("quiz"),v.literal("flashcards"),v.literal("source")), id:v.string() });
@@ -31,7 +31,8 @@ export const asset = query({args:{asset:ref},handler:async(ctx,{asset})=>{
 }});
 export const importClassicQuiz = mutation({args:{title:v.string(),description:v.optional(v.string()),questions:v.array(v.object(quizQuestionFields))},returns:v.id("quizzes"),handler:async(ctx,args)=>{
  const {identity}=await requireActiveUser(ctx);if(args.questions.length>500||args.title.length>200||new TextEncoder().encode(JSON.stringify(args)).length>300000)throw new Error("IMPORT_LIMIT");
- const errors=publicationErrors(args.title,args.questions);if(errors.length)throw new Error(`INVALID_QUIZ: ${errors.join(" ")}`);
+ // Imports preserve unfinished drafts; publication performs answer-quality validation later.
+ if(args.description && args.description.length>4000)throw new Error("IMPORT_LIMIT");
  await consumeCreation(ctx,identity.subject);const user=await ctx.db.query("users").withIndex("by_clerkId",q=>q.eq("clerkId",identity.subject)).unique();if(!user)throw new Error("ACCOUNT_REQUIRED");
  const now=Date.now();const id=await authorDb(ctx).insert("quizzes",{creatorId:identity.subject,creatorUsername:user.username,title:args.title,description:args.description,slug:`import-${randomCode(20).toLowerCase()}`,isPublished:false,createdAt:now,updatedAt:now});
  for(const question of args.questions)await ctx.db.insert("questions",{...question,quizId:id});return id;

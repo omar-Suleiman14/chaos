@@ -4,6 +4,7 @@ import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useLocale } from "@/lib/i18n";
 import { CARD_THEMES } from "@/lib/memberCard";
+import MemberAvatar from "@/components/MemberAvatar";
 import Link from "@/components/site/SiteLink";
 
 export default function StudentsRoster({ username }: { username?: string }) {
@@ -31,7 +32,7 @@ export default function StudentsRoster({ username }: { username?: string }) {
       <div style={{ height: Math.ceil(results.length / columns) * rowHeight, position: "relative" }}>
         {results.slice(first, last).map((student, offset) => {
           const index = first + offset, theme = CARD_THEMES[student.style % CARD_THEMES.length];
-          const body = <><span className="mc-student__avatar" aria-hidden style={{ background: theme.art[1] }}>{student.name.slice(0, 1).toUpperCase()}</span><strong dir="auto">{student.name}</strong><span dir={student.username ? "ltr" : "auto"}>{student.username ? `@${student.username}` : (ar ? "ضيف" : "Guest")}</span>{student.context && <small dir="auto">{student.context}</small>}</>;
+          const body = <><span className="mc-student__avatar" aria-hidden style={{ background: theme.art[1] }}><MemberAvatar seed={student.seed} size={30} /></span><strong dir="auto">{student.name}</strong><span dir={student.username ? "ltr" : "auto"}>{student.username ? `@${student.username}` : (ar ? "ضيف" : "Guest")}</span>{student.context && <small dir="auto">{student.context}</small>}</>;
           const style = { position: "absolute" as const, top: Math.floor(index / columns) * rowHeight, insetInlineStart: `${(index % columns) * 100 / columns}%`, width: `${100 / columns}%`, padding: 5 };
           return <div key={student.id} style={style}>{student.username ? <Link prefetch={false} className="mc-student" href={`/card/${encodeURIComponent(student.username)}`} style={{ borderColor: theme.art[0] }}>{body}</Link> : <div className="mc-student" style={{ borderColor: theme.art[0] }}>{body}</div>}</div>;
         })}

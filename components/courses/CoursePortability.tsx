@@ -14,14 +14,15 @@ export default function CoursePortability({ courseId }: {courseId:Id<"learnColle
  const exportCourse=()=>run(async()=>{
   const manifest=await client.query(api.coursePortability.manifest,{courseId}),lessons:CourseArchive["lessons"]=[],refs=new Map<string,{kind:"form"|"quiz"|"flashcards"|"source";id:string}>();
   const add=(kind:"form"|"quiz"|"flashcards"|"source",id:string)=>refs.set(`${kind}:${id}`,{kind,id});
-  for(const module of manifest.modules)for(const a of module.assessments)add(a.kind,a.id);
+  for(const courseModuleItem of manifest.modules)for(const a of courseModuleItem.assessments)add(a.kind,a.id);
   for(const lessonId of manifest.lessonIds){const lesson=await client.query(api.coursePortability.lesson,{lessonId});
    for(const d of lesson.decks)if(!lesson.document.blocks.some(b=>b.type==="flashcards"&&b.setId===d.setId))lesson.document.blocks.push({id:`legacy_deck_${lesson.document.blocks.length}`,type:"flashcards",setId:d.setId,citations:[],conceptIds:[]});
    for(const a of lesson.assessments)if(!lesson.document.blocks.some(b=>b.type==="quiz"&&b.asset.kind===a.asset.kind&&b.asset.id===a.asset.id))lesson.document.blocks.push({id:`legacy_quiz_${lesson.document.blocks.length}`,type:"quiz",asset:a.asset,citations:[],conceptIds:[]});
+   if(lesson.document.blocks.length>500)throw new Error("Export would exceed the 500-block lesson limit. Move legacy practice into inline blocks first.");
    lessons.push(lesson);for(const b of lesson.document.blocks){for(const c of b.citations)add("source",c.sourceId);if("sourceId" in b)add("source",b.sourceId);if(b.type==="flashcards")add("flashcards",b.setId);if(b.type==="quiz")add(b.asset.kind,b.asset.id);}
   }
   const assets:CourseArchive["assets"]=[],files:Record<string,Uint8Array>={};let total=0;
-  for(const asset of refs.values()){const a=await client.query(api.coursePortability.asset,{asset});assets.push(a);if(a.kind==="source"&&a.hasFile){const url=await media.resolve(`chaos-source:${a.id}`),blob=await fetch(url).then(r=>r.blob());total+=blob.size;if(total>ARCHIVE_MAX_BYTES)throw new Error("Archive exceeds 150 MiB.");files[`assets/${a.id}`]=new Uint8Array(await blob.arrayBuffer());}}
+  for(const asset of refs.values()){const a=await client.query(api.coursePortability.asset,{asset});assets.push(a);if(a.kind==="source"&&a.hasFile){const url=await media.resolve(`chaos-source:${a.id}`),blob=await fetch(url).then(r=>{if(!r.ok)throw new Error("Source download failed.");return r.blob();});total+=blob.size;if(total>ARCHIVE_MAX_BYTES)throw new Error("Archive exceeds 150 MiB.");files[`assets/${a.id}`]=new Uint8Array(await blob.arrayBuffer());}}
   const bytes=encodeCourseArchive({manifest,lessons,assets},files),url=URL.createObjectURL(new Blob([new Uint8Array(bytes)],{type:"application/zip"})),link=document.createElement("a");link.href=url;link.download="course.zip";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);setMessage(ar?"تم تصدير الدورة.":"Course exported.");
  });
  const importCourse=(file:File)=>run(async()=>{

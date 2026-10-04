@@ -398,7 +398,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
         {tab === "Settings" && (<>
           <SettingsTab formId={formId} settings={editableSettings} hasAccessCode={hasAccessCode} groupName={data.groupName} status={data.status}
             published={published} def={def} isOwner={data.role === "owner"} announce={announce} slug={data.slug} shareId={data.shareId} canHideBranding={data.canHideBranding} />
-          {published && <EmbedPanel formId={formId} link={`/f/${data.shareId}`} title={def.title} />}
+          {published && <EmbedPanel formId={formId} link={`${typeof window === "undefined" ? "" : window.location.origin}/f/${data.shareId}`} title={def.title} />}
         </>)}
         {tab === "Share" && <ShareTab formId={formId} shareId={data.shareId} title={def.title} published={published} status={data.status} slug={data.slug} />}
         {tab === "Team" && <TeamTab formId={formId} role={data.role} def={def} />}
