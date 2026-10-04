@@ -63,8 +63,8 @@ const SERIF = "Georgia, 'Times New Roman', serif";
 const MONO = "'JetBrains Mono', ui-monospace, 'Cascadia Code', Menlo, Consolas, monospace";
 
 /** Nested blobatar SVG positioned inside the card. The second group is the eyes, tagged so the view can aim them at the pointer. */
-function blob(seed: string, x: number, y: number, size: number, hue?: number): string {
-  const svg = blobatar(seed, hue === undefined ? {} : { hue });
+function blob(seed: string, x: number, y: number, size: number): string {
+  const svg = blobatar(seed);
   let groups = 0;
   return svg.replace(/^<svg[^>]*>/, `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 100 100" overflow="visible">`)
     .replace(/<g /g, (g) => (++groups === 2 ? '<g class="mc-eyes" ' : g));
@@ -129,7 +129,7 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
       ${qr(data.url, W / 2 - 92, 65, 184, "#111827", "@@logo")}
       <text x="${W / 2}" y="330" text-anchor="middle" font-family="${SANS}" font-size="16" font-weight="800" fill="${theme.ink}">${ar ? "امسح لترى البطاقة" : "Scan to see this card"}</text>
       <text x="${W / 2}" y="352" text-anchor="middle" font-family="${MONO}" font-size="11" fill="${muted}">${esc(data.url.replace(/^https?:\/\//, ""))}</text>
-      ${blob(avatarSeed(data.username), W / 2 - 26, 372, 52, theme.hue)}
+      ${blob(data.seed, W / 2 - 26, 372, 52)}
       ${footer}</svg>`;
   }
   const name = fitName(data.name);
@@ -146,7 +146,7 @@ function renderCard(data: MemberCardData, side: "front" | "back"): string {
       <rect x="22" y="22" width="${W - 44}" height="270" fill="url(#@@sheen)"/>
     </g>
     <circle cx="${W / 2}" cy="${157}" r="72" fill="${theme.paper}" opacity=".22"/>
-    ${blob(avatarSeed(data.username), W / 2 - 66, 91, 132, theme.hue)}
+    ${blob(data.seed, W / 2 - 66, 91, 132)}
     <text ${tx} y="${H - 156}" font-family="${ar ? RUQAA : SANS}" font-size="${name.size}" font-weight="${ar ? 700 : 800}"${ar ? "" : ` letter-spacing="-.5"`} fill="${theme.accent}">${esc(name.text)}</text>
     <text ${tx} y="${H - 132}" font-family="${ar ? RUQAA : MONO}" font-size="${ar ? 14 : 12.5}" fill="${theme.ink}">${esc(memberTitle(data.seed, data.locale))}</text>
     <text x="${ar ? W - 22 : 22}"${ar ? ` text-anchor="end"` : ""} y="${H - 110}" font-family="${MONO}" font-size="11" fill="${muted}">@${esc(data.username)}</text>

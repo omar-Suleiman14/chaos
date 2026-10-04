@@ -3,12 +3,10 @@
 import { useEffect, useState } from "react";
 import { ChevronRight, CircleUser, SunMoon } from "lucide-react";
 import { useClerk, useUser } from "@/lib/auth/client";
-import { useMutation, useQuery } from "convex/react";
+import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { sfx } from "@/lib/sfx";
-import { siteUrl } from "@/lib/site";
-import { memberTitle } from "@/lib/memberCard";
 import { defaultPreferences, popupOpacityRange, usePreferences } from "@/lib/preferences";
 import { useTheme } from "@/components/ThemeProvider";
 import { ThemeModeSwitch } from "@/components/ThemeModeSwitch";
@@ -18,8 +16,6 @@ import { Row, Section, Segmented, useScrollToHash } from "@/components/workspace
 import type { Locale } from "@/lib/locale";
 import CardCustomization from "@/components/card/CardCustomization";
 import StudentsRoster from "@/components/card/StudentsRoster";
-import MemberCardView from "@/components/card/MemberCardView";
-import UsernameEditor from "@/components/card/UsernameEditor";
 import "@/components/card/card.css";
 
 /* Profile: your card and identity, plus app-wide settings. Content settings stay in /dashboard/settings. */
@@ -59,13 +55,8 @@ export default function ProfilePage() {
   const { mode } = useTheme();
   const { preferences: p, set } = usePreferences();
   const card = useQuery(api.memberCards.mine);
-  const [draft, setDraft] = useState("");
   const [sound, setSound] = useState(false);
   useEffect(() => { const sync = () => setSound(sfx.isEnabled()); sync(); window.addEventListener("chaos-sfx-change", sync); return () => window.removeEventListener("chaos-sfx-change", sync); }, []);
-  const setStyle = useMutation(api.memberCards.setStyle).withOptimisticUpdate((store, { style }) => {
-    const current = store.getQuery(api.memberCards.mine, {});
-    if (current) store.setQuery(api.memberCards.mine, {}, { ...current, style });
-  });
   useScrollToHash(card !== undefined);
   if (card === undefined) return <PageSkeleton label={t.loading} />;
   if (card === null) return <p className="ws-empty p-8">{t.missing}</p>;
@@ -76,18 +67,8 @@ export default function ProfilePage() {
 
       <details className="mc-profile-disclosure">
         <summary><span>{locale === "ar" ? "بطاقتك وبياناتك" : "Your card and identity"}<small dir="auto">{card.name} · @{card.username}</small></span><ChevronRight size={18} aria-hidden /></summary>
-      <section className="mc-profile" aria-label={card.name}>
-        <MemberCardView data={{ ...card, username: draft.trim().toLowerCase() || card.username, url: `${siteUrl}/card/${card.username}` }} onStyle={(style) => setStyle({ style })} framed={false} />
-        <div className="mc-profile__about">
-          <h2>{card.name || `@${card.username}`}</h2>
-          <p className="mc-profile__title">{memberTitle(card.seed, locale)}</p>
-          <p className="mc-help">{t.cardHelp}</p>
-          <div id="settings-username"><UsernameEditor key={card.username} username={card.username} onDraft={setDraft} /></div>
-          <a className="mc-url" href={`/card/${encodeURIComponent(card.username)}`} dir="ltr">{siteUrl}/card/{card.username}</a>
-        </div>
-      </section>
-
-      {user?.id && <CardCustomization card={card} actorId={user.id} showPreview={false} />}
+        <p className="mc-help">{t.cardHelp}</p>
+        {user?.id && <CardCustomization card={card} actorId={user.id} />}
       </details>
       <Section id="account" icon={CircleUser} title={t.account} description={t.accountAbout}>
         <Row id="settings-account" label={user?.fullName || card.name || t.yourAccount} help={user?.primaryEmailAddress?.emailAddress}>

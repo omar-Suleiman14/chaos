@@ -14,7 +14,7 @@ import { localizeMessage } from "@/lib/messages";
 
 export default function CardCustomization({ card, actorId, onboarding = false, showPreview = true, onDone }: { card: Omit<MemberCardData, "url">; actorId: string; onboarding?: boolean; showPreview?: boolean; onDone?: () => void }) {
   const { locale } = useLocale(), ar = locale === "ar";
-  const [name, setName] = useState(card.name), [username, setUsername] = useState(card.username), [style, setStyle] = useState(card.style), [avatar, setAvatar] = useState<number | null>(null);
+  const [name, setName] = useState(card.name), [username, setUsername] = useState(card.username), [style, setStyle] = useState(card.style), [avatar, setAvatar] = useState<number | null>(() => Array.from({ length: 8 }, (_, index) => index).find(index => card.seed === `${avatarSeed(actorId)}:avatar:${index}`) ?? null);
   const [busy, setBusy] = useState(false), [ready, setReady] = useState(false), [error, setError] = useState("");
   const save = useMutation(api.memberCards.customizeCard);
   const me = useQuery(api.quizFunctions.getCurrentUser);

@@ -13,6 +13,15 @@ async function setup() {
 }
 
 describe("card identity and public privacy", () => {
+  it("keeps the selected avatar in private and public cards after provider sync", async () => {
+    const { t, owner } = await setup();
+    const saved = await owner.mutation(api.memberCards.customizeCard, { avatar: 7 });
+    expect(saved.seed).toMatch(/:avatar:7$/);
+    await owner.mutation(api.quizFunctions.getOrCreateUser, {});
+    expect((await owner.query(api.memberCards.mine, {}))?.seed).toBe(saved.seed);
+    expect((await t.query(api.memberCards.byUsername, { username: "casey" }))?.seed).toBe(saved.seed);
+    expect((await owner.query(api.quizFunctions.getCurrentUser, {}))?.cardAvatarSeed).toBe(saved.seed);
+  });
   it("preserves existing cardStyle values and accepts accounts without the optional field", async () => {
     const { t, owner, id } = await setup();
     expect((await owner.query(api.memberCards.mine, {}))?.style).toBe(0);

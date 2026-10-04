@@ -1,14 +1,26 @@
 import { beforeEach, expect, it, vi } from "vitest";
 import { fireEvent, render, waitFor } from "@testing-library/react";
 import CardCustomization, { CardOnboarding } from "@/components/card/CardCustomization";
+import { avatarSeed } from "@/lib/avatarSeed";
 
 const state = vi.hoisted(() => ({ query: undefined as unknown, save: vi.fn() }));
 vi.mock("convex/react", () => ({ useQuery: () => state.query, useMutation: () => state.save }));
 vi.mock("@/lib/i18n", () => ({ useLocale: () => ({ locale: "en" }), useCopy: (copy: { en: unknown }) => copy.en }));
-vi.mock("@/components/card/MemberCardView", () => ({ default: () => <div>Card preview</div> }));
+vi.mock("@/components/card/MemberCardView", () => ({ default: ({ data }: { data: { seed: string } }) => <div data-testid="card-preview" data-seed={data.seed}>Card preview</div> }));
 vi.mock("@/components/MemberAvatar", () => ({ default: () => <span /> }));
 const card = { name: "Student", username: "student", seed: "seed", style: 0, memberSince: 1 };
 beforeEach(() => { state.query = undefined; state.save.mockReset().mockResolvedValue(undefined); });
+
+it("previews and saves the chosen avatar and restores its selection after reload", async () => {
+  state.query = {};
+  const seed = `${avatarSeed("student")}:avatar:2`;
+  const view = render(<CardCustomization card={{ ...card, seed }} actorId="student" />);
+  expect(view.getByRole("button", { name: "Avatar 3" })).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(view.getByRole("button", { name: "Avatar 8" }));
+  expect(view.getByTestId("card-preview")).toHaveAttribute("data-seed", `${avatarSeed("student")}:avatar:7`);
+  fireEvent.click(view.getByRole("button", { name: "Save my Card" }));
+  await waitFor(() => expect(state.save).toHaveBeenCalledWith(expect.objectContaining({ avatar: 7 })));
+});
 
 it("shows a layout skeleton without visible loading text while onboarding loads", () => {
   const view = render(<CardOnboarding actorId="student" onDone={vi.fn()} />);
