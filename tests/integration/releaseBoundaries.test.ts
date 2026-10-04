@@ -39,6 +39,7 @@ describe("respondent account boundaries", () => {
     const { t, owner, formId } = await formFixture();
     const invitee = t.withIdentity({ ...otherCreatorIdentity, emailVerified: true });
     await invitee.mutation(api.quizFunctions.getOrCreateUser, {});
+    await owner.mutation(api.businessTeams.create, { name: "Test team" });
     await owner.mutation(api.forms.inviteCollaborator, { formId, email: otherCreatorIdentity.email, role: "editor" });
     const collaboratorId = (await invitee.query(api.forms.listMyForms, {})).invites![0].collaboratorId;
     await invitee.mutation(api.forms.acceptInvite, { collaboratorId });

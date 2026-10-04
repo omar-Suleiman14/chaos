@@ -1,6 +1,7 @@
 import { getAuthIdentity } from "./authIdentity";
 import type { Doc, Id } from "./_generated/dataModel";
 import { supportEmail } from "./support";
+import { canEditTeamAsset } from "./businessAccess";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 
 type DbCtx = QueryCtx | MutationCtx;
@@ -148,6 +149,7 @@ export function isFormOwner(form: Doc<"forms">, identity: Identity | null): bool
 export async function formRoleFor(ctx: DbCtx, form: Doc<"forms">, identity: Identity | null): Promise<FormRole | null> {
   if (!identity) return null;
   if (form.ownerId === identity.subject) return "owner";
+  if (!form.isBanned && !await creatorRestricted(ctx, form.ownerId) && await canEditTeamAsset(ctx, identity.subject, { kind: "form", id: form._id })) return "editor";
   const collaborators = await ctx.db
     .query("formCollaborators")
     .withIndex("by_formId", (q) => q.eq("formId", form._id))

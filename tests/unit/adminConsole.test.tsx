@@ -115,7 +115,7 @@ it("requires a reason for moderation and displays save failures", async () => {
 });
 it("saves a new CRM contact through the editor", async () => {
   render(<AdminPage />);
-  fireEvent.click(screen.getByRole("button", { name: "Add contact" }));
+  fireEvent.click(screen.getByRole("button", { name: "New contact" }));
   fireEvent.change(screen.getByLabelText("Name"), {
     target: { value: "Maya" },
   });

@@ -2,6 +2,7 @@ import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 import { requireVisibilityAllowed } from "./plans";
+import { canEditTeamAsset } from "./businessAccess";
 import { recordPublicationAction } from "./learnPublicationAudit";
 import { v, ConvexError } from "convex/values";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
@@ -23,7 +24,7 @@ export async function lessonAccessForActor(ctx: QueryCtx | MutationCtx, actor: s
   if (!lesson) throw new Error("NOT_FOUND: Lesson not found or unavailable.");
   if (actor === lesson.ownerId) return lesson;
   const grant = actor ? await ctx.db.query("lessonPermissions").withIndex("by_lessonId_and_userId", q => q.eq("lessonId", id).eq("userId", actor!)).unique() : null;
-  if (grant && (!edit || grant.role === "editor")) {
+  if ((grant && (!edit || grant.role === "editor")) || (actor && await canEditTeamAsset(ctx, actor, { kind: "lesson", id }))) {
     // Explicit policy: Direct grants do NOT bypass platform moderation or creator restriction.
     if (lesson.communityState === "removed" || await creatorRestricted(ctx, lesson.ownerId)) {
       throw new Error("NOT_FOUND: Lesson not found or unauthorized.");

@@ -14,6 +14,7 @@ describe("form invitations require verified email", () => {
         await owner.mutation(api.quizFunctions.getOrCreateUser, {});
         const formId = await owner.mutation(api.forms.createForm, {});
         if (profileFirst) await person.mutation(api.quizFunctions.getOrCreateUser, {});
+        await owner.mutation(api.businessTeams.create, { name: "Test team" });
         await owner.mutation(api.forms.inviteCollaborator, { formId, email: identity.email, role: "editor" });
         const row = (await t.run(ctx => ctx.db.query("formCollaborators").collect()))[0];
         expect(row.userId).toBeUndefined();

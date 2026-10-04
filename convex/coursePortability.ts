@@ -40,7 +40,7 @@ export const importClassicQuiz = mutation({args:{title:v.string(),description:v.
 const importLessonArgs={courseId:v.id("learnCollections"),metadata:lessonMeta,document:lessonDocument};
 export const importLesson = mutation({args:importLessonArgs,returns:v.id("lessons"),handler:async(ctx,args)=>importCourseLesson(ctx,args,(await requireActiveUser(ctx)).identity.subject)});
 export async function importCourseLesson(ctx:MutationCtx,args:Infer<ReturnType<typeof importLessonValidator>>,actor:string){
- const identity={subject:actor};const course=await getCourse(ctx,{courseId:args.courseId},identity.subject);if(course.lessons.length>=100)throw new Error("COURSE_LIMIT");
+ const identity={subject:actor};const course=await getCourse(ctx,{courseId:args.courseId},identity.subject);if(!course.isOwner)throw new Error("NOT_FOUND: Course not found.");if(course.lessons.length>=100)throw new Error("COURSE_LIMIT");
  for(const block of args.document.blocks){
   if(block.type==="flashcards"){const r=await ctx.db.get("flashcardSets",block.setId);if(!r||r.ownerId!==identity.subject)throw new Error("NOT_OWNED");}
   if(block.type==="quiz"){const r=block.asset.kind==="form"?await ctx.db.get("forms",block.asset.id):await ctx.db.get("quizzes",block.asset.id);if(!r||!("ownerId" in r?r.ownerId===identity.subject:r.creatorId===identity.subject))throw new Error("NOT_OWNED");}

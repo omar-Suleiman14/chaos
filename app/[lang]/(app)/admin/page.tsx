@@ -27,10 +27,12 @@ import {
   FileText,
   BarChart3,
   History,
+  Columns3,
 } from "lucide-react";
 
 const adminTabs = [
   { id: "contacts", icon: Users, label: "Contacts" },
+  { id: "pipeline", icon: Columns3, label: "Pipeline" },
   { id: "followups", icon: History, label: "Follow-ups" },
   { id: "overview", icon: BarChart3, label: "Overview" },
   { id: "users", icon: Users, label: "Accounts" },
@@ -167,8 +169,12 @@ function AdminConsole() {
               {message}
             </p>
           )}
-          {tab === "contacts" || tab === "followups" ? (
-            <CrmPanel key={tab} followUps={tab === "followups"} />
+          {tab === "contacts" || tab === "followups" || tab === "pipeline" ? (
+            <CrmPanel
+              key={tab}
+              followUps={tab === "followups"}
+              pipeline={tab === "pipeline"}
+            />
           ) : tab === "docs" ? (
             <DocumentationPanel />
           ) : tab === "overview" ? (

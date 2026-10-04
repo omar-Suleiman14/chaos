@@ -1,6 +1,8 @@
 "use client";
 
 import Link from "next/link";
+import TeamSwitcher from "@/components/workspace/TeamSwitcher";
+import "@/components/workspace/teams.css";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 
@@ -332,6 +334,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               </button>
             )}
           </div>
+          {account && !account.isBanned && !account.suspendedUntil && <TeamSwitcher />}
           <button type="button" className="ws-nav-item ws-reveal-host" onClick={() => setPaletteOpen(true)} title={rail ? `${t.search} (Ctrl K)` : undefined}>
             <Search size={18} aria-hidden="true" /> <span>{t.search}</span> <kbd className="ws-reveal">Ctrl K</kbd>
           </button>

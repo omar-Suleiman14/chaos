@@ -60,6 +60,22 @@ before deploying functions. Changing providers does not merge users by email.
 Bind each verified replacement identity to its existing account before its
 first login, as described in [self-hosting migration](./self-hosting.md#migrating-an-existing-installation).
 
+## Business workspaces and CRM (2026-10-05)
+
+Business adds separate `businessTeams`, `businessMembers`, `businessInvites`,
+`businessShares` and `businessActivity` tables. No existing user, form, lesson,
+course or folder record is rewritten. Existing Personal accounts stay Personal
+until they explicitly create or join a Business workspace. Legacy plan fields and
+direct collaborator/lesson permission rows remain valid and readable. New direct
+collaborator grants require Business membership. Leaving a team does not remove
+independent legacy grants.
+
+The `folderMembers.by_asset` and `adminAudit.by_target` indexes are additive.
+Folder and course sharing reuses existing membership/outline records and checks
+team membership dynamically. Deploying the schema/functions enables the feature;
+there is no backfill or production repair to run. Removing this feature from the
+app leaves old records unchanged, but stops resolving the new team grants.
+
 ## Sessions without a status
 
 Sessions saved before `status` existed have no status. Four reads only look at

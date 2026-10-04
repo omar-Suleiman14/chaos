@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
 import posthog from "@/lib/analytics";
 import { Check, Trash2 } from "lucide-react";
@@ -39,6 +40,7 @@ export default function TeamTab({ formId, role, def }: { formId: Id<"forms">; ro
   const t = useCopy(copy);
   const { locale } = useLocale();
   const collaborators = useQuery(api.forms.listCollaborators, { formId });
+  const teams = useQuery(api.businessTeams.list);
   const comments = useQuery(api.forms.listComments, { formId });
   const activity = useQuery(api.forms.listActivity, { formId });
   const invite = useMutation(api.forms.inviteCollaborator);
@@ -59,7 +61,8 @@ export default function TeamTab({ formId, role, def }: { formId: Id<"forms">; ro
         <section className="chaos-card bg-card p-5 space-y-3" aria-label={t.people}>
           <h2 className="chaos-heading text-sm">{t.people}</h2>
           <DocHint slug="team">{t.peopleHelp} {t.approvalsHint}</DocHint>
-          {role === "owner" && (
+          <Link className="text-sm underline" href="/dashboard/teams">{locale === "ar" ? "الفرق ومساحات العمل · الأعمال مجانية لفترة محدودة" : "Teams & workspaces · Business is free for a limited time"}</Link>
+          {role === "owner" && !!teams?.length && (
             <form className="flex gap-2 flex-wrap" onSubmit={(e) => {
               e.preventDefault();
               setError("");

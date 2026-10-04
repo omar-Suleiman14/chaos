@@ -103,9 +103,13 @@ describe("embedding", () => {
     await expect(stranger.mutation(api.embed.setEmbedSettings, { formId, ...site })).rejects.toThrow(/FORM_NOT_FOUND/);
     expect(await stranger.query(api.embed.getEmbedSettings, { formId })).toBeNull();
 
+    await owner.mutation(api.businessTeams.create, { name: "Test team" });
+
     await owner.mutation(api.forms.inviteCollaborator, { formId, email: otherCreatorIdentity.email, role: "viewer" });
     expect(await stranger.query(api.embed.getEmbedSettings, { formId })).toMatchObject({ canEdit: false });
     await expect(stranger.mutation(api.embed.setEmbedSettings, { formId, ...site })).rejects.toThrow(/FORM_NOT_FOUND/);
+
+    await owner.mutation(api.businessTeams.create, { name: "Test team" });
 
     await owner.mutation(api.forms.inviteCollaborator, { formId, email: otherCreatorIdentity.email, role: "editor" });
     await stranger.mutation(api.embed.setEmbedSettings, { formId, ...site });

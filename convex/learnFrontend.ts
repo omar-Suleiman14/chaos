@@ -1,4 +1,5 @@
 import { getAuthIdentity } from "./authIdentity";
+import { lessonAccessForActor } from "./lessons";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 import { query } from "./_generated/server";
@@ -63,7 +64,8 @@ export const editableLesson = query({
     if (!lesson) return null;
     if (lesson.ownerId === identity.subject) return lesson;
     const grant = await ctx.db.query("lessonPermissions").withIndex("by_lessonId_and_userId", q => q.eq("lessonId", id).eq("userId", identity.subject)).unique();
-    return grant?.role === "editor" ? lesson : null;
+    if (grant?.role === "editor") return lesson;
+    try { return await lessonAccessForActor(ctx, identity.subject, id, true); } catch { return null; }
   },
 });
 

@@ -9,6 +9,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser, isPaidPlan, creatorRestricted } from "./authz";
 import { coursesContainingLesson, createLessonForActor, publishLessonForActor } from "./lessons";
 import { requireVisibilityAllowed } from "./plans";
+import { canEditTeamAsset, hasBusinessWorkspace } from "./businessAccess";
 import { visibility } from "./learnModel";
 import { recordAssetPublicationAction } from "./learnPublicationAudit";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
@@ -21,12 +22,12 @@ import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 const MAX_LESSONS = 100;
 
 /** Signed-in caller, or a server-verified actor (ChatGPT app) when `actor` is given. */
-async function ownedCourse(ctx: QueryCtx | MutationCtx, courseId: Id<"learnCollections">, asActor?: string) {
+async function ownedCourse(ctx: QueryCtx | MutationCtx, courseId: Id<"learnCollections">, asActor?: string, allowEditor = false) {
   let subject = asActor, user: Doc<"users"> | null;
   if (subject === undefined) { const r = await requireActiveUser(ctx); subject = r.identity.subject; user = r.user ?? null; }
   else user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", subject!)).first();
   const row = await ctx.db.get("learnCollections", courseId);
-  if (!row || row.ownerId !== subject) throw new Error("NOT_FOUND: Course not found.");
+  if (!row || (row.ownerId !== subject && (!allowEditor || row.communityState === "removed" || await creatorRestricted(ctx, row.ownerId) || !await canEditTeamAsset(ctx, subject, { kind: "course", id: row._id })))) throw new Error("NOT_FOUND: Course not found.");
   return { row, actor: subject, user };
 }
 const outline = (row: Doc<"learnCollections">) => row.lessonIds ?? row.items.flatMap((i) => (i.kind === "lesson" ? [i.id] : []));
@@ -54,7 +55,7 @@ const lessonRow = v.object({ id: v.id("lessons"), title: v.string(), description
 /** Owner view for the course builder. */
 const getArgs = v.object({ courseId: v.id("learnCollections") });
 export async function getCourse(ctx: QueryCtx, args: Infer<typeof getArgs>, asActor?: string) {
-    const { row, user } = await ownedCourse(ctx, args.courseId, asActor);
+    const { row, user, actor } = await ownedCourse(ctx, args.courseId, asActor, true);
     const version = row.publishedVersionId ? await ctx.db.get("collectionVersions", row.publishedVersionId) : null;
     const lessons: Infer<typeof lessonRow>[] = [];
     for (const id of outline(row)) {
@@ -65,14 +66,14 @@ export async function getCourse(ctx: QueryCtx, args: Infer<typeof getArgs>, asAc
     }
     return {
       id: row._id, title: row.metadata.title, description: row.metadata.description, coverUrl: row.metadata.coverUrl, coverY: row.metadata.coverY, icon: row.metadata.icon, language: row.metadata.language, tags: row.metadata.tags,
-      visibility: row.visibility, published: !!row.publishedVersionId, publishedAt: version?.publishedAt ?? null, canPrivate: isPaidPlan(user ?? null, Date.now()), modules: row.modules ?? [], details: row.details, lessons, revision: row.revision,
+      visibility: row.visibility, published: !!row.publishedVersionId, publishedAt: version?.publishedAt ?? null, isOwner: row.ownerId === actor, canPrivate: isPaidPlan(user ?? null, Date.now()) || await hasBusinessWorkspace(ctx, row.ownerId), modules: row.modules ?? [], details: row.details, lessons, revision: row.revision,
     };
 }
 export const get = query({
   args: getArgs.fields,
   returns: v.object({
     id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), coverY: v.optional(v.number()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()),
-    visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), canPrivate: v.boolean(), modules: v.array(courseModule), details: v.optional(courseDetails), lessons: v.array(lessonRow), revision: v.number(),
+    visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), isOwner: v.boolean(), canPrivate: v.boolean(), modules: v.array(courseModule), details: v.optional(courseDetails), lessons: v.array(lessonRow), revision: v.number(),
   }),
   handler: (ctx, args) => getCourse(ctx, args),
 });
@@ -93,7 +94,7 @@ export const create = mutation({
 
 const updateArgs = v.object({ courseId: v.id("learnCollections"), title: v.optional(v.string()), description: v.optional(v.string()), coverUrl: v.optional(v.union(v.string(), v.null())), coverY: v.optional(v.union(v.number(), v.null())), icon: v.optional(v.union(v.string(), v.null())), language: v.optional(v.string()), tags: v.optional(v.array(v.string())), details: v.optional(courseDetails) });
 export async function updateCourse(ctx: MutationCtx, args: Infer<typeof updateArgs>, asActor?: string) {
-    const { row } = await ownedCourse(ctx, args.courseId, asActor);
+    const { row } = await ownedCourse(ctx, args.courseId, asActor, true);
     const m = { ...row.metadata };
     if (args.title !== undefined) { const t = args.title.trim(); if (!t || t.length > 200) throw new Error("VALIDATION_FAILED: Give the course a title of up to 200 characters."); m.title = t; }
     if (args.description !== undefined) { if (args.description.length > 4000) throw new Error("VALIDATION_FAILED: Keep the description under 4,000 characters."); m.description = args.description; }
@@ -116,10 +117,11 @@ export const update = mutation({
 /** Reorder or remove lessons. Only the owner's active lessons may be listed. */
 const setOutlineArgs = v.object({ courseId: v.id("learnCollections"), lessonIds: v.array(v.id("lessons")) });
 export async function setOutlineCourse(ctx: MutationCtx, args: Infer<typeof setOutlineArgs>, asActor?: string) {
-    const { row, actor } = await ownedCourse(ctx, args.courseId, asActor);
+    const { row, actor } = await ownedCourse(ctx, args.courseId, asActor, true);
     const ids = [...new Set(args.lessonIds)];
     if (ids.length > MAX_LESSONS) throw new Error(`VALIDATION_FAILED: A course holds up to ${MAX_LESSONS} lessons.`);
-    for (const id of ids) { const l = await ctx.db.get("lessons", id); if (!l || l.ownerId !== actor) throw new Error("NOT_FOUND: Lesson not found."); }
+    for (const id of ids) { const l = await ctx.db.get("lessons", id); if (!l || l.ownerId !== row.ownerId) throw new Error("NOT_FOUND: Lesson not found."); }
+    if (actor !== row.ownerId && ids.some(id => !outline(row).includes(id))) throw new Error("Only the owner can add existing lessons to this course.");
     await authorDb(ctx).patch("learnCollections", row._id, { lessonIds: ids, modules: row.modules?.map(m => ({ ...m, lessonIds: ids.filter(id => m.lessonIds.includes(id)) })), updatedAt: Date.now() });
     return null;
 }
@@ -132,11 +134,11 @@ export const setOutline = mutation({
 /** New blank lesson at the end of the course; opens straight in the editor. */
 const addLessonArgs = v.object({ courseId: v.id("learnCollections"), title: v.optional(v.string()) });
 export async function addLessonCourse(ctx: MutationCtx, args: Infer<typeof addLessonArgs>, asActor?: string) {
-    const { row, actor } = await ownedCourse(ctx, args.courseId, asActor);
+    const { row } = await ownedCourse(ctx, args.courseId, asActor, true);
     const current = outline(row);
     if (current.length >= MAX_LESSONS) throw new Error(`VALIDATION_FAILED: A course holds up to ${MAX_LESSONS} lessons.`);
     const title = args.title?.trim().slice(0, 200) || `Lesson ${current.length + 1}`;
-    const lessonId = await createLessonForActor(ctx, actor, { metadata: { title, description: "", language: row.metadata.language, tags: [], indexing: "index" } });
+    const lessonId = await createLessonForActor(ctx, row.ownerId, { metadata: { title, description: "", language: row.metadata.language, tags: [], indexing: "index" } });
     await authorDb(ctx).patch("learnCollections", row._id, { lessonIds: [...current, lessonId], updatedAt: Date.now() });
     return lessonId;
 }
@@ -317,7 +319,8 @@ export const listPublic = query({
 });
 
 export async function setCourseModules(ctx: MutationCtx, args: { courseId: Id<"learnCollections">; modules: Infer<typeof courseModule>[] }, asActor?: string) {
-  const { row, actor } = await ownedCourse(ctx, args.courseId, asActor);
+  const { row, actor: editor } = await ownedCourse(ctx, args.courseId, asActor, true);
+  const actor = row.ownerId;
   if (args.modules.length > 30) throw new Error("VALIDATION_FAILED: A course supports up to 30 modules.");
   const moduleIds = new Set<string>(), seen = new Set<string>(), current = outline(row);
   for (const courseModuleItem of args.modules) {
@@ -325,6 +328,7 @@ export async function setCourseModules(ctx: MutationCtx, args: { courseId: Id<"l
     moduleIds.add(courseModuleItem.id);
     for (const id of courseModuleItem.lessonIds) { if (seen.has(id) || !current.includes(id)) throw new Error("VALIDATION_FAILED: Each outlined lesson belongs to at most one module."); seen.add(id); }
     for (const asset of courseModuleItem.assessments) {
+      if (editor !== row.ownerId && !(row.modules ?? []).some(module => module.assessments.some(existing => existing.kind === asset.kind && existing.id === asset.id))) throw new Error("Only the owner can add assessments to this course.");
       const id = ctx.db.normalizeId(asset.kind === "form" ? "forms" : "quizzes", asset.id);
       if (!id) throw new Error("NOT_FOUND: Assessment not found.");
       if (asset.kind === "form") { const form = await ctx.db.get("forms", id as Id<"forms">); if (!form || form.ownerId !== actor || !form.draft.quiz?.enabled) throw new Error("NOT_FOUND: Quiz not owned by you."); }
@@ -390,7 +394,7 @@ export async function readCourseLesson(ctx: QueryCtx, args: { courseId: string; 
 export const lesson = query({ args: { courseId: v.string(), lessonId: v.string() }, handler: (ctx, args) => readCourseLesson(ctx, args) });
 
 export const addAssessment = mutation({ args: { courseId: v.id("learnCollections"), asset: v.object({ kind: v.union(v.literal("form"), v.literal("quiz")), id: v.string() }), moduleId: v.optional(v.string()) }, returns: v.null(), handler: async (ctx, args) => {
- const { row } = await ownedCourse(ctx, args.courseId);
+ const { row } = await ownedCourse(ctx, args.courseId, undefined, true);
  const modules = [...(row.modules ?? [])];
  const index = args.moduleId ? modules.findIndex(m => m.id === args.moduleId) : modules.findIndex(m => m.id === "final_assessment");
  if (args.moduleId && index < 0) throw new Error("Module changed. Refresh and try again.");

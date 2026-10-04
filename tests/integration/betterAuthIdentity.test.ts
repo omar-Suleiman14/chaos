@@ -64,6 +64,7 @@ it("Better Auth grants require verified email and preserve owner-only publicatio
   const lessonId = await owner.mutation(api.lessons.create, { metadata: { title: "Private", description: "", language: "en", tags: [] }, document: { schemaVersion: 1, blocks: [{ id: "p", type: "paragraph", text: "Secret", citations: [], conceptIds: [] }] } });
   await expect(invited.mutation(api.lessons.publish, { lessonId, expectedRevision: 0, visibility: "public" })).rejects.toThrow();
   const formId = await owner.mutation(api.forms.createForm, {});
+  await owner.mutation(api.businessTeams.create, { name: "Test team" });
   await owner.mutation(api.forms.inviteCollaborator, { formId, email: inviteIdentity.email, role: "editor" });
   const row = (await t.run(ctx => ctx.db.query("formCollaborators").collect()))[0];
   await expect(invited.mutation(api.forms.acceptInvite, { collaboratorId: row._id })).rejects.toThrow("UNAUTHORIZED");

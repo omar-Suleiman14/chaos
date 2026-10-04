@@ -1,4 +1,4 @@
-import { addCrmNote, contactListArgs, contactSaveArgs, listCrmContacts, readCrmNotes, saveCrmContact } from "./crmServices";
+import { addCrmNote, contactListArgs, contactSaveArgs, crmStage, listCrmContacts, readCrmNotes, saveCrmContact } from "./crmServices";
 import { authorDb } from "./authorIndex";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
@@ -9,6 +9,35 @@ import { internal } from "./_generated/api";
 import { isPaidPlan, requireAdmin, requireIdentity } from "./authz";
 
 const DAY = 86_400_000;
+export const contact = query({ args: { contactId: v.id("crmContacts") }, handler: async (ctx, { contactId }) => {
+  await requireAdmin(ctx); return ctx.db.get("crmContacts", contactId);
+} });
+export const contactActivity = query({ args: { contactId: v.id("crmContacts") }, handler: async (ctx, { contactId }) => {
+  await requireAdmin(ctx);
+  return ctx.db.query("adminAudit").withIndex("by_target", q => q.eq("target", String(contactId))).order("desc").take(100);
+} });
+export const setContactStages = mutation({ args: { contactIds: v.array(v.id("crmContacts")), stage: crmStage }, returns: v.null(), handler: async (ctx, args) => {
+  await requireAdmin(ctx); const { subject } = await requireIdentity(ctx);
+  const ids = [...new Set(args.contactIds)];
+  if (!ids.length || ids.length > 48) throw new Error("Select between 1 and 48 contacts.");
+  for (const id of ids) {
+    const contact = await ctx.db.get("crmContacts", id);
+    if (!contact) throw new Error("Contact not found.");
+    if (contact.stage === args.stage) continue;
+    await ctx.db.patch("crmContacts", id, { stage: args.stage, updatedAt: Date.now() });
+    await ctx.db.insert("adminAudit", { actorId: subject, action: "crm_stage_changed", target: String(id), reason: `${contact.stage} → ${args.stage}`, createdAt: Date.now() });
+  }
+  return null;
+} });
+export const completeContactFollowUp = mutation({ args: { contactId: v.id("crmContacts") }, returns: v.null(), handler: async (ctx, { contactId }) => {
+  await requireAdmin(ctx); const { subject } = await requireIdentity(ctx);
+  const contact = await ctx.db.get("crmContacts", contactId);
+  if (!contact) throw new Error("Contact not found.");
+  if (contact.nextFollowUp === undefined) return null;
+  await ctx.db.patch("crmContacts", contactId, { nextFollowUp: undefined, updatedAt: Date.now() });
+  await ctx.db.insert("adminAudit", { actorId: subject, action: "crm_follow_up_completed", target: String(contactId), reason: `Completed follow-up scheduled for ${new Date(contact.nextFollowUp).toISOString().slice(0, 10)}`, createdAt: Date.now() });
+  return null;
+} });
 export const contacts = query({ args: contactListArgs, handler: async (ctx, args) => {
   await requireAdmin(ctx); return listCrmContacts(ctx, args);
 } });

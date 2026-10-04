@@ -4,7 +4,16 @@ import { useState } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
-import { Plus, Search, ArrowUpRight, CalendarClock } from "lucide-react";
+import {
+  Plus,
+  Search,
+  ArrowUpRight,
+  CalendarClock,
+  List,
+  Columns3,
+  CheckCheck,
+  SlidersHorizontal,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -44,34 +53,82 @@ const formatDate = (time?: number) =>
 
 export default function CrmPanel({
   followUps = false,
+  pipeline = false,
 }: {
   followUps?: boolean;
+  pipeline?: boolean;
 }) {
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [stage, setStage] = useState<Stage | "">("");
-  const [editing, setEditing] = useState<Doc<"crmContacts"> | "new" | null>(
+  const [owner, setOwner] = useState("");
+  const [sort, setSort] = useState("updated");
+  const [view, setView] = useState(pipeline ? "pipeline" : "table");
+  const [selected, setSelected] = useState<Id<"crmContacts">[]>([]);
+  const [editing, setEditing] = useState<Id<"crmContacts"> | "new" | null>(
     null,
   );
-  const {
-    results: visible,
-    status,
-    loadMore,
-  } = usePaginatedQuery(
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  const changeStages = useMutation(api.admin.setContactStages);
+  const { results, status, loadMore } = usePaginatedQuery(
     api.admin.contacts,
     { search: search || undefined, stage: stage || undefined, followUps },
     { initialNumItems: 48 },
   );
+  const contacts = results
+    .filter(
+      (contact) =>
+        !owner ||
+        (owner === "unassigned" ? !contact.owner : contact.owner === owner),
+    )
+    .toSorted((a, b) =>
+      sort === "name"
+        ? a.name.localeCompare(b.name)
+        : sort === "followup"
+          ? (a.nextFollowUp ?? Infinity) - (b.nextFollowUp ?? Infinity)
+          : b.updatedAt - a.updatedAt,
+    );
+  const selectedVisible = selected.filter((id) =>
+    contacts.some((contact) => contact._id === id),
+  );
+  const allSelected =
+    contacts.length > 0 && selectedVisible.length === contacts.length;
+  const toggle = (id: Id<"crmContacts">) =>
+    setSelected((current) =>
+      current.includes(id)
+        ? current.filter((value) => value !== id)
+        : [...current, id].slice(-48),
+    );
+  async function move(ids: Id<"crmContacts">[], stage: Stage) {
+    setBusy(true);
+    setError("");
+    try {
+      await changeStages({ contactIds: ids, stage });
+      setSelected([]);
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Could not change stage.",
+      );
+    } finally {
+      setBusy(false);
+    }
+  }
   return (
-    <section className="crm-panel">
-      <div className="crm-toolbar">
+    <section
+      className="crm-panel"
+      aria-label={followUps ? "Follow-ups" : "Contact relationships"}
+    >
+      <div className="crm-searchbar">
         <form
           onSubmit={(event) => {
             event.preventDefault();
             setSearch(searchInput.trim());
+            setSelected([]);
           }}
           className="flex gap-2"
         >
+          <Search size={16} aria-hidden="true" />
           <Input
             value={searchInput}
             onChange={(event) => setSearchInput(event.target.value)}
@@ -82,15 +139,37 @@ export default function CrmPanel({
             }
             aria-label="Search contacts"
           />
-          <Button type="submit" variant="outline" aria-label="Search">
-            <Search size={16} />
+          <Button type="submit" variant="ghost">
+            Search
           </Button>
         </form>
+        <div className="crm-view-switch" aria-label="Contact view">
+          <Button
+            variant={view === "table" ? "secondary" : "ghost"}
+            aria-pressed={view === "table"}
+            onClick={() => setView("table")}
+          >
+            <List size={15} /> Table
+          </Button>
+          <Button
+            variant={view === "pipeline" ? "secondary" : "ghost"}
+            aria-pressed={view === "pipeline"}
+            onClick={() => setView("pipeline")}
+          >
+            <Columns3 size={15} /> Pipeline
+          </Button>
+        </div>
+      </div>
+      <div className="crm-toolbar">
+        <SlidersHorizontal size={15} aria-hidden="true" />
         <select
           aria-label="Filter contact stage"
           className="crm-select"
           value={stage}
-          onChange={(event) => setStage(event.target.value as Stage | "")}
+          onChange={(event) => {
+            setStage(event.target.value as Stage | "");
+            setSelected([]);
+          }}
         >
           <option value="">All stages</option>
           {stages.map((value) => (
@@ -99,75 +178,238 @@ export default function CrmPanel({
             </option>
           ))}
         </select>
-        <Button onClick={() => setEditing("new")}>
-          <Plus size={16} /> Add contact
+        <select
+          aria-label="Filter owner in loaded contacts"
+          className="crm-select"
+          value={owner}
+          onChange={(event) => {
+            setOwner(event.target.value);
+            setSelected([]);
+          }}
+        >
+          <option value="">All owners (loaded)</option>
+          <option value="unassigned">Unassigned</option>
+          {[...new Set(results.map((contact) => contact.owner).filter(Boolean))]
+            .sort()
+            .map((value) => (
+              <option key={value} value={value}>
+                {value}
+              </option>
+            ))}
+        </select>
+        <select
+          aria-label="Sort loaded contacts"
+          className="crm-select"
+          value={sort}
+          onChange={(event) => setSort(event.target.value)}
+        >
+          <option value="updated">Last activity (loaded)</option>
+          <option value="name">Name (loaded)</option>
+          <option value="followup">Follow-up date (loaded)</option>
+        </select>
+        <Button className="ms-auto" onClick={() => setEditing("new")}>
+          <Plus size={16} /> New contact
         </Button>
       </div>
-      <div className="crm-table-scroll">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Contact</TableHead>
-              <TableHead>Organization</TableHead>
-              <TableHead>Stage</TableHead>
-              <TableHead>Owner</TableHead>
-              <TableHead>Follow-up</TableHead>
-              <TableHead>Source</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {visible.map((contact) => (
-              <TableRow key={contact._id}>
-                <TableCell>
-                  <button
-                    className="crm-contact-name"
-                    onClick={() => setEditing(contact)}
-                  >
-                    <MemberAvatar
-                      seed={contact.email || contact.name}
-                      size={30}
-                    />
-                    <span>
-                      <strong>{contact.name}</strong>
-                      <small>{contact.email || "No email added"}</small>
-                    </span>
-                    <ArrowUpRight size={14} />
-                  </button>
-                </TableCell>
-                <TableCell>{contact.organization || "—"}</TableCell>
-                <TableCell>
-                  <Tag tone={tones[contact.stage]}>{labels[contact.stage]}</Tag>
-                </TableCell>
-                <TableCell>{contact.owner || "Unassigned"}</TableCell>
-                <TableCell>
-                  <span className="inline-flex items-center gap-2">
-                    <CalendarClock size={14} />
-                    {formatDate(contact.nextFollowUp)}
-                  </span>
-                </TableCell>
-                <TableCell>{contact.source || "—"}</TableCell>
-              </TableRow>
+      {selectedVisible.length > 0 && (
+        <div className="crm-selectionbar">
+          <span>{selectedVisible.length} selected</span>
+          <select
+            className="crm-select"
+            aria-label="Move selected contacts to stage"
+            value=""
+            disabled={busy}
+            onChange={(event) => {
+              if (event.target.value)
+                void move(selectedVisible, event.target.value as Stage);
+            }}
+          >
+            <option value="">Move to stage…</option>
+            {stages.map((value) => (
+              <option key={value} value={value}>
+                {labels[value]}
+              </option>
             ))}
-            {!visible.length && (
+          </select>
+          <Button variant="ghost" onClick={() => setSelected([])}>
+            Clear selection
+          </Button>
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="text-destructive p-4">
+          {error}
+        </p>
+      )}
+      {view === "pipeline" ? (
+        <div className="crm-board">
+          {stages.map((value) => (
+            <section
+              key={value}
+              className="crm-board-column"
+              aria-label={`${labels[value]} stage`}
+            >
+              <header>
+                <Tag tone={tones[value]}>{labels[value]}</Tag>
+                <span>
+                  {contacts.filter((contact) => contact.stage === value).length}{" "}
+                  loaded
+                </span>
+              </header>
+              <div className="crm-board-cards">
+                {contacts
+                  .filter((contact) => contact.stage === value)
+                  .map((contact) => (
+                    <article key={contact._id} className="crm-board-card">
+                      <button
+                        className="crm-contact-name"
+                        onClick={() => setEditing(contact._id)}
+                      >
+                        <MemberAvatar
+                          seed={contact.email || contact.name}
+                          size={30}
+                        />
+                        <span>
+                          <strong>{contact.name}</strong>
+                          <small>
+                            {contact.organization ||
+                              contact.email ||
+                              "No organization"}
+                          </small>
+                        </span>
+                      </button>
+                      <p>{contact.owner || "Unassigned"}</p>
+                      <p
+                        className={
+                          contact.nextFollowUp &&
+                          contact.nextFollowUp < Date.now()
+                            ? "crm-overdue"
+                            : ""
+                        }
+                      >
+                        <CalendarClock size={13} />{" "}
+                        {formatDate(contact.nextFollowUp)}
+                      </p>
+                      <select
+                        className="crm-select"
+                        aria-label={`Stage for ${contact.name}`}
+                        value={contact.stage}
+                        disabled={busy}
+                        onChange={(event) =>
+                          void move([contact._id], event.target.value as Stage)
+                        }
+                      >
+                        {stages.map((stage) => (
+                          <option key={stage} value={stage}>
+                            {labels[stage]}
+                          </option>
+                        ))}
+                      </select>
+                    </article>
+                  ))}
+                {!contacts.some((contact) => contact.stage === value) && (
+                  <p className="crm-board-empty">No loaded contacts</p>
+                )}
+              </div>
+            </section>
+          ))}
+        </div>
+      ) : (
+        <div className="crm-table-scroll">
+          <Table>
+            <TableHeader>
               <TableRow>
-                <TableCell colSpan={6}>
-                  <div className="crm-empty" role="status">
-                    {status === "LoadingFirstPage"
-                      ? "Loading contacts…"
-                      : followUps
-                        ? "No scheduled follow-ups match these filters."
-                        : "No contacts match. Add a contact or save an account to the CRM."}
-                  </div>
-                </TableCell>
+                <TableHead>
+                  <input
+                    type="checkbox"
+                    aria-label="Select loaded contacts (up to 48)"
+                    checked={allSelected}
+                    onChange={() =>
+                      setSelected(
+                        allSelected
+                          ? []
+                          : contacts.slice(0, 48).map((contact) => contact._id),
+                      )
+                    }
+                  />
+                </TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Organization</TableHead>
+                <TableHead>Stage</TableHead>
+                <TableHead>Owner</TableHead>
+                <TableHead>Follow-up</TableHead>
+                <TableHead>Last activity</TableHead>
               </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {contacts.map((contact) => (
+                <TableRow
+                  key={contact._id}
+                  data-selected={selected.includes(contact._id)}
+                >
+                  <TableCell>
+                    <input
+                      type="checkbox"
+                      aria-label={`Select ${contact.name}`}
+                      checked={selected.includes(contact._id)}
+                      onChange={() => toggle(contact._id)}
+                    />
+                  </TableCell>
+                  <TableCell>
+                    <button
+                      className="crm-contact-name"
+                      onClick={() => setEditing(contact._id)}
+                    >
+                      <MemberAvatar
+                        seed={contact.email || contact.name}
+                        size={28}
+                      />
+                      <span>
+                        <strong>{contact.name}</strong>
+                        <small>{contact.email || "No email added"}</small>
+                      </span>
+                      <ArrowUpRight size={14} />
+                    </button>
+                  </TableCell>
+                  <TableCell>{contact.organization || "—"}</TableCell>
+                  <TableCell>
+                    <Tag tone={tones[contact.stage]}>
+                      {labels[contact.stage]}
+                    </Tag>
+                  </TableCell>
+                  <TableCell>{contact.owner || "Unassigned"}</TableCell>
+                  <TableCell>
+                    <span
+                      className={`inline-flex items-center gap-2 ${contact.nextFollowUp && contact.nextFollowUp < Date.now() ? "crm-overdue" : ""}`}
+                    >
+                      <CalendarClock size={14} />
+                      {formatDate(contact.nextFollowUp)}
+                    </span>
+                  </TableCell>
+                  <TableCell>{formatDate(contact.updatedAt)}</TableCell>
+                </TableRow>
+              ))}
+              {!contacts.length && (
+                <TableRow>
+                  <TableCell colSpan={7}>
+                    <div className="crm-empty" role="status">
+                      {status === "LoadingFirstPage"
+                        ? "Loading contacts…"
+                        : "No contacts match. Add a contact or save an account to the CRM."}
+                    </div>
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </div>
+      )}
       <footer className="crm-table-footer">
         <span>
-          {visible.length} {followUps ? "scheduled follow-ups" : "contacts"}{" "}
-          loaded
+          {contacts.length} shown · {results.length} loaded
+          {status !== "Exhausted"
+            ? " ? Load more to include more contacts in this view"
+            : ""}
         </span>
         {status === "CanLoadMore" || status === "LoadingMore" ? (
           <Button
@@ -178,7 +420,11 @@ export default function CrmPanel({
             {status === "LoadingMore" ? "Loading…" : "Load more"}
           </Button>
         ) : (
-          <span>All matching contacts loaded</span>
+          <span>
+            {status === "LoadingFirstPage"
+              ? "Loading…"
+              : "All matching contacts loaded"}
+          </span>
         )}
       </footer>
       <Dialog
@@ -189,21 +435,91 @@ export default function CrmPanel({
       >
         <DialogContent className="workspace-ui crm-contact-dialog">
           <DialogTitle>
-            {editing === "new" ? "New contact" : editing?.name}
+            {editing === "new" ? "New contact" : "Contact details"}
           </DialogTitle>
           <DialogDescription>
-            Keep account relationships, follow-ups and notes together.
+            Account relationship, pipeline, follow-ups and activity.
           </DialogDescription>
-          {editing && (
-            <ContactEditor
-              key={editing === "new" ? "new" : editing._id}
-              contact={editing === "new" ? undefined : editing}
-              onSaved={() => setEditing(null)}
-            />
+          {editing === "new" ? (
+            <ContactEditor onSaved={() => setEditing(null)} />
+          ) : (
+            editing && (
+              <ContactDetail
+                key={editing}
+                contactId={editing}
+                onSaved={() => setEditing(null)}
+              />
+            )
           )}
         </DialogContent>
       </Dialog>
     </section>
+  );
+}
+
+function ContactDetail({
+  contactId,
+  onSaved,
+}: {
+  contactId: Id<"crmContacts">;
+  onSaved: () => void;
+}) {
+  const contact = useQuery(api.admin.contact, { contactId });
+  const complete = useMutation(api.admin.completeContactFollowUp);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
+  if (contact === undefined)
+    return (
+      <p role="status" className="p-5">
+        Loading contact…
+      </p>
+    );
+  if (contact === null) return <p className="p-5">Contact no longer exists.</p>;
+  return (
+    <div className="crm-detail-body">
+      <div className="crm-detail-summary">
+        <MemberAvatar seed={contact.email || contact.name} size={44} />
+        <div>
+          <h2>{contact.name}</h2>
+          <p>{contact.organization || contact.email}</p>
+          <Tag tone={tones[contact.stage]}>{labels[contact.stage]}</Tag>
+        </div>
+      </div>
+      {contact.nextFollowUp !== undefined && (
+        <div className="crm-followup">
+          <CalendarClock size={16} />
+          <span>Follow up {formatDate(contact.nextFollowUp)}</span>
+          <Button
+            variant="outline"
+            disabled={busy}
+            onClick={async () => {
+              setBusy(true);
+              setError("");
+              try {
+                await complete({ contactId });
+              } catch (error) {
+                setError(
+                  error instanceof Error
+                    ? error.message
+                    : "Could not complete follow-up.",
+                );
+              } finally {
+                setBusy(false);
+              }
+            }}
+          >
+            <CheckCheck size={15} />
+            {busy ? "Saving?" : "Complete"}
+          </Button>
+        </div>
+      )}
+      {error && (
+        <p role="alert" className="text-destructive p-5">
+          {error}
+        </p>
+      )}
+      <ContactEditor contact={contact} onSaved={onSaved} />
+    </div>
   );
 }
 
@@ -226,6 +542,11 @@ function ContactEditor({
       ? new Date(contact.nextFollowUp).toLocaleDateString("en-CA")
       : "",
   );
+  const [savedFollowUp, setSavedFollowUp] = useState(contact?.nextFollowUp);
+  if (savedFollowUp !== contact?.nextFollowUp) {
+    setSavedFollowUp(contact?.nextFollowUp);
+    setFollowUp(contact?.nextFollowUp ? new Date(contact.nextFollowUp).toLocaleDateString("en-CA") : "");
+  }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   async function submit(event: React.FormEvent) {
@@ -353,6 +674,7 @@ function ContactEditor({
 function ContactNotes({ contactId }: { contactId: Id<"crmContacts"> }) {
   const notes = useQuery(api.admin.contactNotes, { contactId });
   const addNote = useMutation(api.admin.addContactNote);
+  const activity = useQuery(api.admin.contactActivity, { contactId });
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -392,19 +714,15 @@ function ContactNotes({ contactId }: { contactId: Id<"crmContacts"> }) {
           </p>
         )}
       </form>
-      {notes === undefined ? (
-        <p role="status">Loading notes…</p>
-      ) : !notes.length ? (
-        <p className="text-muted-foreground">No notes yet.</p>
-      ) : (
-        notes.map((note) => (
-          <article key={note._id} className="crm-note">
-            <p>{note.body}</p>
-            <small>
-              {new Date(note.createdAt).toLocaleString()} · {note.actorId}
-            </small>
-          </article>
-        ))
+      {notes === undefined || activity === undefined ? <p role="status">Loading activity…</p> : (
+        <ol className="crm-timeline">
+          {[
+            ...notes.map(note => ({ id: note._id, title: "Note", body: note.body, createdAt: note.createdAt, actorId: note.actorId })),
+            ...activity.filter(event => event.action !== "crm_note_added").map(event => ({ id: event._id, title: event.action.replace(/^crm_/, "").replaceAll("_", " "), body: event.reason, createdAt: event.createdAt, actorId: event.actorId })),
+          ].toSorted((a, b) => b.createdAt - a.createdAt).map(event => (
+            <li key={event.id}><strong>{event.title}</strong><p className="whitespace-pre-wrap break-words">{event.body}</p><small>{new Date(event.createdAt).toLocaleString()} · {event.actorId}</small></li>
+          ))}
+        </ol>
       )}
     </DetailSection>
   );

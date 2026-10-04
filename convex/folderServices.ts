@@ -2,6 +2,8 @@ import type { Infer } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 
 import type { QueryCtx, MutationCtx } from "./_generated/server";
+import { canEditTeamAsset } from "./businessAccess";
+import { creatorRestricted } from "./authz";
 
 import {
   folderAsset,
@@ -16,7 +18,7 @@ const reader = (ctx: Ctx) => ctx.db;
 const writer = (ctx: MutationCtx) => ctx.db;
 export async function owned(ctx: Ctx, id: FolderId, ownerId: string) {
   const folder = await reader(ctx).get("folders", id);
-  if (!folder || folder.ownerId !== ownerId)
+  if (!folder || (folder.ownerId !== ownerId && (await creatorRestricted(ctx, folder.ownerId) || !await canEditTeamAsset(ctx, ownerId, { kind: "folder", id }))))
     throw new Error("FOLDER_NOT_FOUND");
   return folder;
 }
@@ -70,6 +72,7 @@ export async function createFolderForActor(
   ownerId: string,
   args: { name: string; parentId: FolderId | null },
 ) {
+  if (args.parentId) ownerId = (await owned(ctx, args.parentId, ownerId)).ownerId;
   await parentDepth(ctx, args.parentId, ownerId);
   const now = Date.now();
   return await writer(ctx).insert("folders", {
@@ -86,7 +89,7 @@ export async function listFolderForActor(
   ownerId: string,
   args: { parentId: FolderId | null; paginationOpts: PaginationOptions },
 ) {
-  if (args.parentId) await owned(ctx, args.parentId, ownerId);
+  if (args.parentId) ownerId = (await owned(ctx, args.parentId, ownerId)).ownerId;
   return await reader(ctx)
     .query("folders")
     .withIndex("by_ownerId_and_parentId", (q) =>
@@ -100,7 +103,9 @@ export async function moveFolderForActor(
   ownerId: string,
   args: { folderId: FolderId; parentId: FolderId | null },
 ) {
-  await owned(ctx, args.folderId, ownerId);
+  if ((await owned(ctx, args.folderId, ownerId)).ownerId !== ownerId) throw new Error("Only the folder owner can move it.");
+  // A folder lives under its owner's tree, so it can only move into one of the owner's own folders.
+  if (args.parentId && (await owned(ctx, args.parentId, ownerId)).ownerId !== ownerId) throw new Error("Move it into one of your own folders.");
   const depth = await parentDepth(ctx, args.parentId, ownerId, args.folderId);
   const queue = [{ id: args.folderId, depth: depth + 1 }];
   const seen = new Set<string>();
@@ -133,7 +138,7 @@ export async function listMembersFolderForActor(
   ownerId: string,
   args: { folderId: FolderId; paginationOpts: PaginationOptions },
 ) {
-  await owned(ctx, args.folderId, ownerId);
+  ownerId = (await owned(ctx, args.folderId, ownerId)).ownerId;
   return await reader(ctx)
     .query("folderMembers")
     .withIndex("by_ownerId_and_folderId_and_asset", (q) =>
@@ -147,7 +152,12 @@ export async function addMemberFolderForActor(
   ownerId: string,
   args: { folderId: FolderId; asset: Infer<typeof folderAsset> },
 ) {
-  await owned(ctx, args.folderId, ownerId);
+  const actorId = ownerId;
+  ownerId = (await owned(ctx, args.folderId, ownerId)).ownerId;
+  if (actorId !== ownerId) {
+    const asset = args.asset.kind === "collection" ? { kind: "course" as const, id: args.asset.id } : args.asset;
+    if ((asset.kind !== "form" && asset.kind !== "lesson" && asset.kind !== "course") || !await canEditTeamAsset(ctx, actorId, asset)) throw new Error("Only accessible team resources can be added to this folder.");
+  }
   await assetOwned(ctx, args.asset, ownerId);
   const existing = await reader(ctx)
     .query("folderMembers")

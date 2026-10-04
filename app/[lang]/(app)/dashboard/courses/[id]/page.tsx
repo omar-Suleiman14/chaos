@@ -90,7 +90,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
         {course.published && dirty && <span className="cb-note">{t.changes}</span>}
         <span className="cb-top__spacer" />
         {course.published && <Link className="ws-btn ws-btn--ghost ws-btn--sm" href={`/learn/courses/${course.id}`} target="_blank"><ExternalLink size={15} aria-hidden /> {t.view}</Link>}
-        <button type="button" className="ws-btn ws-btn--primary" disabled={busy || !course.lessons.length} onClick={() => { setProblems([]); setPublishing(true); }}><Send size={15} aria-hidden />{course.published ? t.update : t.publish}</button>
+        {course.isOwner && <button type="button" className="ws-btn ws-btn--primary" disabled={busy || !course.lessons.length} onClick={() => { setProblems([]); setPublishing(true); }}><Send size={15} aria-hidden />{course.published ? t.update : t.publish}</button>}
       </div>
       {error && <p role="alert" className="ws-error">{error}</p>}
 
@@ -105,18 +105,18 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
 
       <CourseModulesEditor courseId={courseId} modules={course.modules ?? []} lessons={course.lessons} onError={setError} />
 
-      <CourseStudents courseId={courseId} />
+      {course.isOwner && <CourseStudents courseId={courseId} />}
       <CourseDetailsEditor courseId={courseId} details={course.details} />
 
       <section className="cb-section grid gap-4" aria-labelledby="cb-settings">
         <h2 id="cb-settings">{t.settings}</h2>
         <div className="cb-row"><span id="cb-language-label" className="font-semibold">{t.language}</span><Select labelledBy="cb-language-label" value={course.language} disabled={busy} onChange={language => save({ courseId, language })} options={[{ value: "en", label: "English" }, { value: "ar", label: "العربية" }, ...(["en", "ar"].includes(course.language) ? [] : [{ value: course.language, label: course.language }])]} /><span className="cb-note">{t.languageHelp}</span></div>
         <div className="cb-row"><label htmlFor="cb-tags">{t.tags}</label><input id="cb-tags" dir="auto" className="kb-input" value={tags} onChange={(e) => setTags(e.target.value)} onBlur={() => save({ courseId, tags: tags.split(",") })} /><span className="cb-note">{t.tagsHelp}</span></div>
-        <CoursePortability courseId={courseId} />
-        <div className="flex gap-2 flex-wrap">
+        {course.isOwner && <CoursePortability courseId={courseId} />}
+        {course.isOwner && <div className="flex gap-2 flex-wrap">
           {course.published && <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(() => unpublish({ courseId }))}>{t.unpublish}</button>}
           <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(async () => { await setArchived({ courseId, archived: true }); router.push("/dashboard?tab=courses"); })}>{t.archive}</button>
-        </div>
+        </div>}
       </section>
 
       {publishing && <WsDialog onClose={() => setPublishing(false)} title={t.publishTitle}>

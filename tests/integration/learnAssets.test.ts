@@ -44,6 +44,7 @@ describe("Learn collections and reusable cards", () => {
     const t = createTestConvex(); const owner = t.withIdentity(creatorIdentity); const other = t.withIdentity(otherCreatorIdentity);
     await owner.mutation(api.quizFunctions.getOrCreateUser, {}); await other.mutation(api.quizFunctions.getOrCreateUser, {});
     const lessonId = await owner.mutation(api.lessons.create, { metadata, document });
+    await owner.mutation(api.businessTeams.create, { name: "Test team" });
     await owner.mutation(api.lessonPermissions.set, { lessonId, userId: otherCreatorIdentity.subject, role: "editor" });
     await other.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: 0, document });
     await expect(other.mutation(api.lessons.publish, { lessonId, expectedRevision: 1, visibility: "public" })).rejects.toThrow("owner");

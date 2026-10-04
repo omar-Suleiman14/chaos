@@ -15,13 +15,16 @@ export const rename = mutation({ args: { folderId: v.id("folders"), name: v.stri
   await ctx.db.patch("folders", args.folderId, { name, updatedAt: Date.now() }); return null;
 } });
 export const remove = mutation({ args: { folderId: v.id("folders") }, returns: v.null(), handler: async (ctx, args) => {
-  const { identity } = await requireActiveUser(ctx); await owned(ctx, args.folderId, identity.subject);
+  const { identity } = await requireActiveUser(ctx);
+  if ((await owned(ctx, args.folderId, identity.subject)).ownerId !== identity.subject) throw new Error("Only the folder owner can remove it.");
   const child = await ctx.db.query("folders").withIndex("by_ownerId_and_parentId", q => q.eq("ownerId", identity.subject).eq("parentId", args.folderId)).first();
   const member = await ctx.db.query("folderMembers").withIndex("by_ownerId_and_folderId_and_asset", q => q.eq("ownerId", identity.subject).eq("folderId", args.folderId)).first();
   if (child || member) throw new Error("FOLDER_NOT_EMPTY"); await ctx.db.delete("folders", args.folderId); return null;
 } });
 export const removeMember = mutation({ args: { memberId: v.id("folderMembers") }, returns: v.null(), handler: async (ctx, args) => {
   const { identity } = await requireActiveUser(ctx); const member = await ctx.db.get("folderMembers", args.memberId);
-  if (!member || member.ownerId !== identity.subject) throw new Error("FOLDER_MEMBER_NOT_FOUND"); await owned(ctx, member.folderId, identity.subject);
+  if (!member) throw new Error("FOLDER_MEMBER_NOT_FOUND");
+  // Team editors of a shared folder may remove items too; anyone else learns nothing about the folder.
+  try { await owned(ctx, member.folderId, identity.subject); } catch { throw new Error("FOLDER_MEMBER_NOT_FOUND"); }
   await ctx.db.delete("folderMembers", member._id); return null;
 } });

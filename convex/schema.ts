@@ -1,4 +1,5 @@
 import { docsTables } from "./docsModel";
+import { businessTables } from "./businessModel";
 import { indexNowTables } from "./indexNowModel";
 import { quizForkTables } from "./quizForkModel";
 import { discussionTables } from "./learnDiscussionModel";
@@ -31,6 +32,7 @@ export default defineSchema({
   authorStudentCounts: defineTable({ authorId: v.string(), count: v.number() }).index("by_author", ["authorId"]),
   authIdentityBindings: defineTable({ externalActorId: v.string(), actorId: v.string(), tokenIdentifier: v.string() }).index("by_externalActorId", ["externalActorId"]).index("by_actorId", ["actorId"]),
   ...docsTables,
+  ...businessTables,
   ...indexNowTables,
   ...learnTables,
   ...discussionTables,
@@ -63,7 +65,7 @@ export default defineSchema({
   }).index("by_clerkId", ["clerkId"]),
   adminAudit: defineTable({
     actorId: v.string(), action: v.string(), target: v.string(), reason: v.string(), createdAt: v.number(),
-  }),
+  }).index("by_target", ["target"]),
   crmContacts: defineTable({
     name: v.string(), email: v.string(), organization: v.string(),
     userId: v.optional(v.id("users")),

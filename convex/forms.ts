@@ -1,6 +1,7 @@
 import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { consumeCreation } from "./plans";
+import { requireBusinessWorkspace } from "./businessAccess";
 import { deleteUploadRecord } from "./formResults";
 import { supportEmail } from "./support";
 import { v } from "convex/values";
@@ -548,6 +549,7 @@ export const inviteCollaborator = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const { form, identity } = await requireFormRole(ctx, args.formId, "owner");
+    await requireBusinessWorkspace(ctx, identity.subject);
     const email = args.email.trim().toLowerCase();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) || email.length > 320) throw new Error("INVALID_EMAIL: Enter a valid email address.");
     if (identity.email?.toLowerCase() === email) throw new Error("INVALID_EMAIL: You already own this form.");

@@ -10,6 +10,8 @@ const list = makeFunctionReference<"query">("mcpFormManagement:collaborators"), 
 async function setup() {
  const t=convexTest(schema,modules); const formId=await t.run(async ctx=>{
   for(const user of ["owner","other"]) await ctx.db.insert("users",{clerkId:user,name:user,username:user,email:`${user}@example.com`,createdAt:0});
+  const teamId=await ctx.db.insert("businessTeams", { name: "Business", ownerId: "owner", createdAt: 0 });
+  await ctx.db.insert("businessMembers", { teamId, userId: "owner", role: "owner", joinedAt: 0 });
   const draft=emptyDefinition("Analytics export"); draft.fields=[{id:"q",type:"text",label:"Question",required:false}];
   const id=await ctx.db.insert("forms",{ownerId:"owner",title:draft.title,shareId:"management",status:"draft",draft,draftRevision:1,settings:defaultFormSettings,responseCount:1,partialCount:0,createdAt:0,updatedAt:0});
   await ctx.db.insert("formVersions",{formId:id,version:1,definition:draft,publishedAt:0,publishedBy:"owner",draftRevision:1});

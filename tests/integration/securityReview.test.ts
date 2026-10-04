@@ -125,6 +125,7 @@ describe("security review: every form operation refuses the wrong person", () =>
     expect((await owner.query(api.formResults.getResponse, { responseId }))?.spam).toBe(false);
 
     // A viewer reads but cannot edit; an editor edits but cannot change owner settings or delete.
+    await owner.mutation(api.businessTeams.create, { name: "Test team" });
     await owner.mutation(api.forms.inviteCollaborator, { formId, email: collaboratorIdentity.email, role: "viewer" });
     const collaborator = t.withIdentity(collaboratorIdentity);
     await collaborator.mutation(api.quizFunctions.getOrCreateUser, {});
@@ -132,6 +133,7 @@ describe("security review: every form operation refuses the wrong person", () =>
     await expect(collaborator.mutation(api.forms.saveFormDraft, { formId, expectedRevision: revision, definition: definition() })).rejects.toThrow();
     await expect(collaborator.mutation(api.formResults.setSpam, { formId, responseIds: [responseId], spam: true })).rejects.toThrow();
     await expect(collaborator.mutation(api.embed.setEmbedSettings, { formId, enabled: true, origins: [], anyOrigin: true })).rejects.toThrow();
+    await owner.mutation(api.businessTeams.create, { name: "Test team" });
     await owner.mutation(api.forms.inviteCollaborator, { formId, email: collaboratorIdentity.email, role: "editor" });
     await collaborator.mutation(api.forms.saveFormDraft, { formId, expectedRevision: revision, definition: definition() });
     for (const call of [
@@ -409,6 +411,7 @@ describe("integration review: credentials", () => {
   it("never reaches beyond the granting person's own items, even forms they can edit as a collaborator", async () => {
     const t = createTestConvex();
     const { owner, formId } = await ownerWithForm(t);
+    await owner.mutation(api.businessTeams.create, { name: "Test team" });
     await owner.mutation(api.forms.inviteCollaborator, { formId, email: collaboratorIdentity.email, role: "editor" });
     const collaborator = t.withIdentity(collaboratorIdentity);
     await collaborator.mutation(api.quizFunctions.getOrCreateUser, {});

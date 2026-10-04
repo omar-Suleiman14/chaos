@@ -12,6 +12,10 @@ describe("public plan catalog", () => {
     expect(planCatalog.free.priceEgp).toBe(0);
     expect(planCatalog.pro.billingUnit).toBe("active-seat-month");
     expect(planCatalog.pro.proposedPriceEgp).toBe(50);
+    expect(planCatalog.free.users).toBe(1);
+    expect(planCatalog.free.collaboration).toBe(false);
+    expect(planCatalog.pro.collaboration).toBe(true);
+    expect(planCatalog.pro.promotion).toEqual({ active: true, discountPercent: 100, priceEgp: 0, limitedTime: true });
   });
 
   it("does not advertise active checkout or a made-up storage allowance", () => {

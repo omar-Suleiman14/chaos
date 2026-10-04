@@ -67,6 +67,7 @@ describe("forms: drafts and publication", () => {
   it("lets invited editors edit but not change settings", async () => {
     const t = createTestConvex();
     const { owner, formId } = await publishedForm(t);
+    await owner.mutation(api.businessTeams.create, { name: "Test team" });
     await owner.mutation(api.forms.inviteCollaborator, { formId, email: otherCreatorIdentity.email, role: "editor" });
     const editor = t.withIdentity({ ...otherCreatorIdentity, emailVerified: true });
     const form = await editor.query(api.forms.getFormForEditor, { formId });

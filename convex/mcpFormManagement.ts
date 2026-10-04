@@ -5,6 +5,7 @@ import { internalQuery, internalMutation, internalAction, type QueryCtx, type Mu
 import type { Id } from "./_generated/dataModel";
 import { requireLearnActor } from "./mcpLearn";
 import { matchesAccountFormCollaborator } from "./authz";
+import { requireBusinessWorkspace } from "./businessAccess";
 import { getAnalysisForActor, exportResponsesForActor } from "./formResults";
 import { logActivity, notify } from "./serverUtils";
 import { buildXlsx, safeFilename } from "../lib/xlsx";
@@ -34,6 +35,7 @@ export const collaborators = internalQuery({ args, returns: v.object({ members: 
 } });
 export const changeCollaborator = internalMutation({ args: { ...args, expectedMembershipRevision: v.string(), email: v.string(), role: v.union(v.literal("editor"), v.literal("viewer"), v.null()) }, returns: v.object({ membershipRevision: v.string() }), handler: async (ctx, input) => {
   const form = await owned(ctx, input.userId, input.formId), rows = await members(ctx, input.formId);
+  if (input.role !== null) await requireBusinessWorkspace(ctx, input.userId);
   if (input.expectedMembershipRevision.length > 40_000 || snapshot(rows) !== input.expectedMembershipRevision) throw new ConvexError({ code: "MEMBERSHIP_CONFLICT", message: "Reload collaborators before changing access." });
   const email = input.email.trim().toLowerCase();
   if (email.length > 320 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error("INVALID_EMAIL");

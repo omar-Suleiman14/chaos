@@ -18,7 +18,7 @@ export const folderTables = {
   }).index("by_ownerId_and_parentId", ["ownerId", "parentId"]),
   folderMembers: defineTable({
     ownerId: v.string(), folderId: v.id("folders"), asset: folderAsset, createdAt: v.number(),
-  }).index("by_ownerId_and_folderId_and_asset", ["ownerId", "folderId", "asset"]),
+  }).index("by_ownerId_and_folderId_and_asset", ["ownerId", "folderId", "asset"]).index("by_asset", ["asset"]),
 };
 export const folderDoc = docValidator("folders", folderTables.folders);
 export const folderMemberDoc = docValidator("folderMembers", folderTables.folderMembers);

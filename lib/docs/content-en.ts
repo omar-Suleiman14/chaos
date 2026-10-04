@@ -609,7 +609,7 @@ export const sectionsEn: DocSection[] = [
         title: "Collaborators and comments",
         summary: "Invite editors and viewers, and leave notes.",
         blocks: [
-          { type: "p", text: "Open **More**, then **Team** in the builder." },
+          { type: "p", text: "Personal is for a single user. First create or join a free [Business team](/dashboard/teams) to collaborate. In the team workspace, share forms, lessons, courses or folders with everyone on the team. Owners manage ownership and administrators manage invitations and members. Removing a member revokes their team access immediately. Email invitations appear in Chaos after email verification; share the invitation link yourself. Links expire after seven days and can be used once. For individual form roles, open **More**, then **Team** in the builder." },
           { type: "heading", id: "invite", text: "Invite someone" },
           {
             type: "steps",
@@ -1191,14 +1191,14 @@ export const sectionsEn: DocSection[] = [
       {
         slug: "plans",
         title: "Plans",
-        summary: "Personal use is free. Business pricing is per person.",
+        summary: "Personal is for one user. Business teams are free for a limited time.",
         blocks: [
-          { type: "p", text: "Personal use is free, with every feature and no monthly caps. Business is planned at 50 EGP per person per month for people who create or manage content; respondents, students and Live players use it free. Checkout is not live and nobody is automatically charged. Every account allows up to 10 MiB per form upload and 25 MiB per teaching source file; these are not total storage allowances. See [Pricing](/pricing)." },
+          { type: "p", text: "Personal is free for one user, without team sharing. Business includes teams, roles and shared editing, normally 50 EGP per active seat per month, discounted by 100% to 0 for a limited time. Anyone can create a Business team. There is no checkout and there are no charges. Respondents, students and Live players are free. Every account allows up to 10 MiB per form upload and 25 MiB per teaching source file; these are not total storage allowances. See [Pricing](/pricing)." },
           { type: "heading", id: "free", text: "Personal" },
           { type: "p", text: "Unlimited forms, quizzes, lessons, courses and responses, live games, exports, use from ChatGPT or Claude, and no Chaos branding. Rate limits and security checks still apply." },
           { type: "heading", id: "pro", text: "Business" },
-          { type: "list", items: ["The same product, licensed for business use.", "50 EGP per person per month, only for people who create or manage content."] },
-          { type: "p", text: "Businesses can contact Support to get started until checkout is available." },
+          { type: "list", items: ["Shared workspaces with owner, admin and member roles; invitations by verified email or single-use link.", "Edit shared forms, lessons, courses and folders together. 50 EGP per active seat per month, discounted to 0 for a limited time."] },
+          { type: "p", text: "Open [Teams & workspaces](/dashboard/teams) to create a free Business team, invite members and share your content." },
           { type: "tip", text: "Questions about a plan? See [Support](/support)." },
         ],
       },
