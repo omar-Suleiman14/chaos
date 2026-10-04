@@ -31,7 +31,7 @@
 .site-ui .site-btn--game { background: var(--s-card); color: var(--s-text); border-color: var(--s-line-strong); }
 .site-ui .site-btn--game:hover { background: var(--s-subtle); }
 .site-text-link { display: inline-flex; min-height: 44px; align-items: center; gap: 9px; font-size: 15px; font-weight: 550; transition: color 160ms; }
-.site-hero { max-width: 1120px; margin: auto; padding: 88px 28px 60px; text-align: center; }
+.site-hero { max-width: 1120px; margin: auto; padding: calc(88px + 10vh) 28px 60px; text-align: center; }
 .site-title { font-size: clamp(2.65rem, 5.6vw, 4.6rem); font-weight: 600; line-height: 1.1; letter-spacing: -.055em; text-wrap: balance; }
 .site-title > span { color: var(--s-accent); }
 .site-title--sm { font-size: clamp(2.2rem, 5vw, 3.8rem); }
@@ -146,7 +146,7 @@
   .site-nav__actions { gap: 3px; }
   .site-nav__actions .site-btn--ghost { padding: 0 9px; }
   .site-nav__actions > .site-btn--primary { display: none; }
-  .site-hero { padding: 54px 22px 36px; }
+  .site-hero { padding: calc(54px + 6vh) 22px 36px; }
   .site-title { font-size: clamp(2.25rem, 9vw, 3.3rem); }
   .site-lead { font-size: 16px; line-height: 1.65; margin-top: 20px; }
   .site-desktop-break { display: none; }

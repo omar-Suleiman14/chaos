@@ -2,11 +2,9 @@
 
 import { productDefinition } from "@/lib/product";
 import Link from "@/components/site/SiteLink";
-import { ArrowRight, BookOpen, Braces, Download, FileText, GitFork, GraduationCap, ListChecks, Radio, Server, Webhook } from "lucide-react";
+import { ArrowRight, BookOpen, Braces, Download, FileText, GraduationCap, ListChecks, Radio, Server, Webhook } from "lucide-react";
 import { PrimaryCta, SiteFooter, SiteNav } from "@/components/site/SiteChrome";
 import { ChatGptMark, NotionMark } from "@/components/site/marks";
-import AudienceJourneys from "@/components/site/AudienceJourneys";
-import OpenTrust from "@/components/site/OpenTrust";
 import ProductDemo from "@/components/site/ProductDemo";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { serializeStructuredData, websiteStructuredData } from "@/lib/seo";
@@ -35,7 +33,6 @@ const copy = {
       title: "Learn", lead: "Put lessons in order, share them, and see what people still find hard.",
       items: [
         { icon: GraduationCap, title: "Courses", body: "Lessons in a clear order, free for anyone to take when public.", href: "/learn", link: "Browse courses" },
-        { icon: GitFork, title: "Community courses", body: "Browse public courses, save lessons that help, and keep the original author credited.", href: "/learn", link: "Browse courses" },
         { icon: ListChecks, title: "Practice and progress", body: "Quizzes and flashcards attached to lessons, with progress and weak areas for each learner.", href: "/docs/progress", link: "How progress works" },
       ],
     },
@@ -49,12 +46,6 @@ const copy = {
       ai: { name: "ChatGPT and Claude", title: "Use Chaos from your assistant.", body: "Ask ChatGPT or Claude to make a quiz, write a lesson, build a course or check results. Chaos itself runs no AI.", link: "See how it works" },
       notion: { name: "Notion", soon: "Coming soon" },
     },
-    understand: { title: "Understand", lead: "Use responses and analytics to decide what comes next.", items: [
-      { icon: ListChecks, title: "Responses and analytics", body: "Read aggregate summaries or individual responses when you need them. Keep learner answers private.", href: "/docs/responses", link: "Understand results" },
-      { icon: Download, title: "Exports", body: "Take response data with you as CSV, Excel or JSON.", href: "/docs/export-responses", link: "Export your data" },
-      { icon: Webhook, title: "API and webhooks", body: "Connect results to your own tools through permissioned API access and events.", href: "/docs/integration-api", link: "Connect results" },
-    ] },
-    secondary: ["Branching", "Access codes", "Scheduling", "QR codes", "Embeds", "Versions", "Collaboration", "Themes", "Sounds", "RTL"],
     open: {
       title: "Open", lead: "Your work isn't locked in.",
       items: [
@@ -83,7 +74,6 @@ const copy = {
       title: "تعلّم", lead: "رتّب الدروس وشاركها واعرف ما يصعب على الناس.",
       items: [
         { icon: GraduationCap, title: "الدورات", body: "دروس بترتيب واضح، مجانية لأي أحد حين تكون عامة.", href: "/learn", link: "تصفّح الدورات" },
-        { icon: GitFork, title: "دورات المجتمع", body: "تصفّح الدورات العامة واحفظ الدروس التي تفيدك. يبقى اسم المؤلف الأصلي.", href: "/learn", link: "تصفّح الدورات" },
         { icon: ListChecks, title: "التدريب والتقدّم", body: "اختبارات وبطاقات مرتبطة بالدروس، مع التقدّم ونقاط الضعف لكل متعلم.", href: "/docs/progress", link: "كيف يعمل التقدّم" },
       ],
     },
@@ -97,12 +87,6 @@ const copy = {
       ai: { name: "ChatGPT وClaude", title: "استخدم Chaos من مساعدك.", body: "اطلب من ChatGPT أو Claude إنشاء اختبار أو كتابة درس أو بناء دورة أو معرفة النتائج. Chaos نفسه لا يشغّل أي ذكاء اصطناعي.", link: "اعرف كيف يعمل" },
       notion: { name: "Notion", soon: "قريبًا" },
     },
-    understand: { title: "افهم", lead: "استخدم الإجابات والتحليلات لتختار الخطوة التالية.", items: [
-      { icon: ListChecks, title: "الإجابات والتحليلات", body: "اقرأ الملخصات أو الإجابات الفردية عند الحاجة مع الحفاظ على خصوصية المتعلّمين.", href: "/docs/responses", link: "افهم النتائج" },
-      { icon: Download, title: "التصدير", body: "خذ بيانات الإجابات معك بصيغة CSV أو Excel أو JSON.", href: "/docs/export-responses", link: "صدّر بياناتك" },
-      { icon: Webhook, title: "API وWebhooks", body: "اربط النتائج بأدواتك عبر صلاحيات API والأحداث.", href: "/docs/integration-api", link: "اربط النتائج" },
-    ] },
-    secondary: ["التفرّع", "رموز الوصول", "الجدولة", "رموز QR", "التضمين", "الإصدارات", "التعاون", "المظاهر", "الأصوات", "RTL"],
     open: {
       title: "مفتوح", lead: "عملك ليس محبوسًا.",
       items: [
@@ -157,7 +141,6 @@ export default function HomeView() {
           <p className="site-product-definition">{productDefinition[locale === "ar" ? "ar" : "en"]}</p>
         </section>
 
-        <AudienceJourneys />
         <section id="create" className="site-section" aria-labelledby="create-title">
           <div className="site-section-heading"><h2 id="create-title" className="site-h2">{t.create.title}</h2><p>{t.create.lead}</p></div>
           <Cards items={t.create.items} />
@@ -209,14 +192,11 @@ export default function HomeView() {
           </div>
         </section>
 
-        <section id="understand" className="site-section" aria-labelledby="understand-title"><div className="site-section-heading"><h2 id="understand-title" className="site-h2">{t.understand.title}</h2><p>{t.understand.lead}</p></div><Cards items={t.understand.items} /></section>
-        <section className="site-section" aria-label={locale === "ar" ? "المزيد من الإمكانات" : "More capabilities"}><ul className="site-capability-grid">{t.secondary.map(item => <li key={item}>{item}</li>)}</ul><Link href="/docs" className="site-text-link">{locale === "ar" ? "استكشف كل الإمكانات" : "Explore all capabilities"}</Link></section>
         <section id="open" className="site-section" aria-labelledby="open-title">
           <div className="site-section-heading"><h2 id="open-title" className="site-h2">{t.open.title}</h2><p>{t.open.lead}</p></div>
           <Cards items={t.open.items} />
         </section>
 
-        <OpenTrust />
         <section className="site-cta"><h2 className="site-h2">{t.ctaTitle}</h2><p className="site-lead">{t.ctaLead}</p><div className="site-hero__actions"><PrimaryCta large label={t.start} /></div></section>
       </main>
       <SiteFooter />
