@@ -545,34 +545,30 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-completion-success svg circle { fill: #007aff; }
 .lx-completion-success svg path { fill: none; stroke: #fff; stroke-width: 2.4; stroke-linecap: round; stroke-linejoin: round; }
 
-/* Apple Pay–style completion: frosted card, a blue ring traces and fills, a white check draws, then it fades. */
-.lx-hud { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; background: rgba(0, 0, 0, .12); animation: lx-hud-fade .25s ease-out both; }
-.lx-hud[data-leaving] { animation: lx-hud-out .3s ease-in both; }
-.lx-hud__card {
+/* Apple Pay–style completion: the page frosts over, a blue circle springs in, a white check
+   draws, the label fades in, then everything fades away. No card, so it sits well on any page. */
+.lx-hud {
   --lx-hud-blue: #007aff;
-  display: grid; justify-items: center; gap: 14px; width: 188px; padding: 30px 20px 22px; border-radius: 24px;
-  background: rgba(250, 250, 252, .82); color: #1d1d1f; -webkit-backdrop-filter: saturate(180%) blur(24px); backdrop-filter: saturate(180%) blur(24px);
-  box-shadow: 0 20px 60px -12px rgba(0, 0, 0, .28), 0 0 0 .5px rgba(0, 0, 0, .06);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", Inter, "Segoe UI", var(--font-cairo), system-ui, sans-serif;
-  animation: lx-hud-in .5s cubic-bezier(.2, 1.3, .4, 1) both;
+  position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; align-content: center; gap: 18px;
+  background: rgba(250, 250, 252, .55); -webkit-backdrop-filter: blur(18px) saturate(160%); backdrop-filter: blur(18px) saturate(160%);
+  color: #1d1d1f; cursor: default;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Display", Inter, "Segoe UI", var(--font-cairo), system-ui, sans-serif;
+  animation: lx-hud-fade .22s ease-out both;
 }
-.lx-hud[data-leaving] .lx-hud__card { animation: lx-hud-card-out .3s ease-in both; }
-@media (prefers-color-scheme: dark) { .lx-hud__card { --lx-hud-blue: #0a84ff; background: rgba(44, 44, 46, .8); color: #f5f5f7; box-shadow: 0 20px 60px -12px rgba(0, 0, 0, .6), 0 0 0 .5px rgba(255, 255, 255, .08); } }
-.lx-hud__mark { width: 72px; height: 72px; overflow: visible; }
-.lx-hud__ring { fill: none; stroke: var(--lx-hud-blue); stroke-width: 3; stroke-linecap: round; stroke-dasharray: 214; stroke-dashoffset: 214; transform: rotate(-90deg); transform-origin: 36px 36px; animation: lx-hud-ring .5s .12s cubic-bezier(.65, 0, .35, 1) forwards; }
-.lx-hud__fill { fill: var(--lx-hud-blue); transform-origin: 36px 36px; transform: scale(.4); opacity: 0; animation: lx-hud-pop .42s .55s cubic-bezier(.2, 1.4, .4, 1) forwards; }
-.lx-hud__check { fill: none; stroke: #fff; stroke-width: 5; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 44; stroke-dashoffset: 44; animation: lx-hud-check .32s .68s cubic-bezier(.65, 0, .35, 1) forwards; }
-.lx-hud__label { font-size: 17px; font-weight: 600; letter-spacing: -.01em; opacity: 0; animation: lx-hud-fade .3s .85s ease-out forwards; }
+.dark .lx-hud { --lx-hud-blue: #0a84ff; background: rgba(0, 0, 0, .5); color: #f5f5f7; }
+.lx-hud[data-leaving] { animation: lx-hud-out .32s ease-in both; }
+.lx-hud__mark { width: 96px; height: 96px; overflow: visible; filter: drop-shadow(0 10px 24px color-mix(in srgb, var(--lx-hud-blue) 35%, transparent)); animation: lx-hud-pop .5s cubic-bezier(.2, 1.35, .4, 1) both; }
+.lx-hud__fill { fill: var(--lx-hud-blue); }
+.lx-hud__check { fill: none; stroke: #fff; stroke-width: 6; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 44; stroke-dashoffset: 44; opacity: 0; animation: lx-hud-check .34s .22s cubic-bezier(.65, 0, .35, 1) forwards; }
+.lx-hud__label { font-size: 20px; font-weight: 600; letter-spacing: -.015em; opacity: 0; animation: lx-hud-rise .3s .4s ease-out forwards; }
 @keyframes lx-hud-fade { from { opacity: 0; } to { opacity: 1; } }
 @keyframes lx-hud-out { to { opacity: 0; } }
-@keyframes lx-hud-in { from { opacity: 0; transform: scale(.86); } to { opacity: 1; transform: scale(1); } }
-@keyframes lx-hud-card-out { to { opacity: 0; transform: scale(.94); } }
-@keyframes lx-hud-ring { to { stroke-dashoffset: 0; } }
-@keyframes lx-hud-pop { to { opacity: 1; transform: scale(1); } }
-@keyframes lx-hud-check { to { stroke-dashoffset: 0; } }
+@keyframes lx-hud-pop { from { opacity: 0; transform: scale(.5); } to { opacity: 1; transform: scale(1); } }
+/* Opacity switches on with the stroke, so the round line caps never show a dot before the check draws. */
+@keyframes lx-hud-check { 0% { opacity: 1; stroke-dashoffset: 44; } 100% { opacity: 1; stroke-dashoffset: 0; } }
+@keyframes lx-hud-rise { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) {
-  .lx-hud, .lx-hud__card, .lx-hud__ring, .lx-hud__fill, .lx-hud__check, .lx-hud__label { animation: none !important; opacity: 1; transform: none; stroke-dashoffset: 0; }
-  .lx-hud__ring { transform: rotate(-90deg); }
+  .lx-hud, .lx-hud__mark, .lx-hud__check, .lx-hud__label { animation: none !important; opacity: 1; transform: none; stroke-dashoffset: 0; }
   .lx-complete-button:active { transform: none; }
   .lx-course-navigation progress { transition: none; }
 }
