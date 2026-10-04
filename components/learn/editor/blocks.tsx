@@ -2,6 +2,8 @@
 
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import katex from "katex";
+import QuizBlockEditor from "./QuizBlockEditor";
+import InlineQuiz from "../reader/InlineQuiz";
 import FlashcardBlockEditor from "./FlashcardBlockEditor";
 import InlineFlashcards from "../reader/InlineFlashcards";
 import "katex/dist/katex.min.css";
@@ -315,7 +317,9 @@ export const Citation = createReactInlineContentSpec(
 export const LessonQuiz = createReactBlockSpec(
  { type: "lessonQuiz", propSchema: { assetKind: { default: "form", values: ["form", "quiz"] as const }, assetId: { default: "" } }, content: "none" },
  { render: function QuizBlock({ block, editor }) {
-  return <div contentEditable={false} className="lx-callout" data-tone="info"><strong>Quiz</strong>{editor.isEditable ? <div className="lx-form"><select aria-label="Quiz type" value={block.props.assetKind} onChange={e=>editor.updateBlock(block,{props:{assetKind:e.target.value as "form"|"quiz"}})}><option value="form">Quiz form</option><option value="quiz">Classic quiz</option></select><input aria-label="Quiz ID" placeholder="Paste the ID of a published quiz" value={block.props.assetId} onChange={e=>editor.updateBlock(block,{props:{assetId:e.target.value.trim()}})}/></div> : <span>{block.props.assetId}</span>}</div>;
+  return <div contentEditable={false} className="lx-panel">
+    {editor.isEditable ? <QuizBlockEditor kind={block.props.assetKind} assetId={block.props.assetId} onSelect={asset => editor.updateBlock(block, { props: { assetKind: asset.kind, assetId: asset.id } })} /> : block.props.assetId ? <InlineQuiz asset={{ kind: block.props.assetKind, id: block.props.assetId }} /> : null}
+  </div>;
  } }
 );
 export const LessonFlashcards = createReactBlockSpec(

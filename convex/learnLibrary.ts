@@ -71,3 +71,19 @@ export const collection = query({
     return ctx.db.get("collectionVersions", row.publishedVersionId);
   },
 });
+
+/** Lightweight owner picker; pagination never loads assessment questions or responses. */
+export const quizChoices = query({
+  args: { kind: v.union(v.literal("form"), v.literal("quiz")), paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(v.object({ id: v.string(), title: v.string(), published: v.boolean() })),
+  handler: async (ctx, args) => {
+    pageSize(args.paginationOpts.numItems);
+    const { identity } = await requireActiveUser(ctx);
+    if (args.kind === "form") {
+      const result = await ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", q => q.eq("ownerId", identity.subject)).order("desc").paginate(args.paginationOpts);
+      return { ...result, page: result.page.filter(f => f.status !== "archived" && !f.isBanned && f.draft.quiz?.enabled).map(f => ({ id: f._id, title: f.title, published: f.status === "live" && f.publishedVersion !== undefined })) };
+    }
+    const result = await ctx.db.query("quizzes").withIndex("by_creator_createdAt", q => q.eq("creatorId", identity.subject)).order("desc").paginate(args.paginationOpts);
+    return { ...result, page: result.page.filter(q => !q.isBanned).map(q => ({ id: q._id, title: q.title, published: q.isPublished && !!q.publishedSnapshot })) };
+  },
+});

@@ -5,6 +5,8 @@ import { useQuery } from "@/lib/convexCache";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useLocale } from "@/lib/i18n";
+import Link from "@/components/site/SiteLink";
+import QueryErrorBoundary from "@/components/forms/QueryErrorBoundary";
 import { localeDir } from "@/lib/locale";
 const Form = dynamic(() =>
   import("@/components/forms/respond/RespondPage").then((m) => m.RespondToForm),
@@ -41,7 +43,7 @@ export default function InlineQuiz({
   return (
     <section className="lx-inline-quiz" aria-label={title || details.title} dir={localeDir(locale)}>
       <header className="lx-panel__row">
-        <strong dir="auto">{title || details.title}</strong>
+        <div><strong dir="auto">{title || details.title}</strong><p className="lx-muted">{ar ? `${details.questionCount} سؤال` : `${details.questionCount} questions`}</p></div>
         <button
           type="button"
           className="ws-btn ws-btn--primary"
@@ -57,12 +59,13 @@ export default function InlineQuiz({
               : "Start practice"}
         </button>
       </header>
-      {started &&
-        (asset.kind === "form" ? (
+      <Link className="lx-link" href={details.href}>{ar ? "افتح الاختبار الكامل" : "Open full quiz"}</Link>
+      {started && <QueryErrorBoundary key={`${asset.kind}:${asset.id}`}>
+        {asset.kind === "form" ? (
           <Form shareId={details.shareId || shareId || ""} inline studyProgress />
         ) : (
           <Quiz quizId={asset.id as Id<"quizzes">} inline />
-        ))}
+        )}</QueryErrorBoundary>}
     </section>
   );
 }

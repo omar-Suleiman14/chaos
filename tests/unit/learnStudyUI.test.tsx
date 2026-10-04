@@ -22,7 +22,7 @@ import ProfilePage from "@/app/[lang]/(app)/dashboard/learn/profile/page";
 import WeakAreas from "@/components/learn/WeakAreas";
 import ProfileView from "@/components/learn/ProfileView";
 
-const lesson = { id: "lesson", quizzes: [] } as unknown as Lesson;
+const lesson = { id: "lesson", quizzes: [], draft: { content: [] } } as unknown as Lesson;
 const wrap = (ui: React.ReactNode) => render(<LocaleProvider initial="en">{ui}</LocaleProvider>);
 beforeEach(() => { state.push.mockReset(); state.query.mockReset(); state.mutation.mockReset(); state.reads = { "learnFrontend:attachedQuizzes": [], "forms:listMyForms": { owned: [], shared: [] } }; });
 describe("durable study UI", () => {
@@ -33,6 +33,12 @@ describe("durable study UI", () => {
     wrap(<PracticeTab lesson={lesson} isOwner={false} />);
     fireEvent.click(screen.getByRole("button", { name: "Copy to my library" }));
     await waitFor(() => expect(state.push).toHaveBeenCalledWith(kind === "form" ? "/dashboard/forms/new-draft" : "/dashboard/editor?id=new-draft"));
+  });
+  it("omits a legacy practice attachment already embedded in the published lesson", () => {
+    state.reads["learnFrontend:attachedQuizzes"] = [{ kind: "form", id: "original", title: "Published", shareId: "public", href: "/f/public", questionCount: 1 }];
+    const embedded = { ...lesson, published: { content: [{ id: "quiz", type: "lessonQuiz", props: { assetKind: "form", assetId: "original" }, children: [] }] } } as unknown as Lesson;
+    wrap(<PracticeTab lesson={embedded} isOwner={false} />);
+    expect(screen.queryByRole("region", { name: "Practice" })).toBeNull();
   });
   it("shows fork failure and keeps the current route", async () => {
     state.reads["learnFrontend:attachedQuizzes"] = [{ kind: "form", id: "original", title: "Published", shareId: "public", href: "/f/public", questionCount: 1 }];

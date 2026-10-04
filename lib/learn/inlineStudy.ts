@@ -23,3 +23,17 @@ export function legacyFlashcardBlocks(content: unknown, decks: { setId: string }
   }
   return blocks;
 }
+
+/** An assessment placed in the lesson should not also appear in the legacy Practice list. */
+export function inlineQuizKeys(content: unknown): Set<string> {
+  const keys = new Set<string>();
+  for (const { block } of walk(asBlocks(content))) {
+    if (block.type !== "lessonQuiz" && block.type !== "quiz") continue;
+    let kind = block.props.assetKind, id = block.props.assetId;
+    if (!kind || !id) {
+      try { const asset = JSON.parse(String(block.props.lessonData)).asset; kind = asset?.kind; id = asset?.id; } catch { continue; }
+    }
+    if ((kind === "form" || kind === "quiz") && typeof id === "string" && id) keys.add(`${kind}:${id}`);
+  }
+  return keys;
+}
