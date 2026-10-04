@@ -26,7 +26,9 @@ export default function PublicAuthors() {
   const ar = locale === "ar";
   const { results, status, loadMore } = usePaginatedQuery(api.publicAuthors.browse, {}, { initialNumItems: 24 });
   const [selectedIndex, setIndex] = useState(0);
+  const [fannedIndex, setFannedIndex] = useState<number | null>(null);
   const index = Math.min(selectedIndex, Math.max(0, results.length - 1));
+  const fanned = fannedIndex === index;
   const stage = useRef<HTMLDivElement>(null);
   // Every avatar in the stack looks toward the mouse (or finger while swiping).
   useEyesFollowPointer(stage);
@@ -90,14 +92,19 @@ export default function PublicAuthors() {
       <Link href="/learn" className="authors-back"><ChevronLeft size={18} />{ar ? "الدورات" : "Courses"}</Link>
       <header><p className="authors-eyebrow">{ar ? "مجتمع Chaos" : "The Chaos community"}</p><h1>{ar ? "تعرّف على المؤلفين" : "Discover authors"}</h1><p>{ar ? "أشخاص يشاركون الدروس والدورات والاختبارات. اسحب لتصفّح البطاقات. اضغط على بطاقة لفتحها." : "Meet the people sharing lessons, courses and quizzes. Swipe or drag to browse. Tap a card to open it."}</p></header>
       {status === "LoadingFirstPage" ? <p className="authors-state" role="status">{ar ? "جارٍ تحميل المؤلفين…" : "Loading authors…"}</p> : !results.length ? <p className="authors-state" role="status">{status === "Exhausted" ? (ar ? "لا يوجد مؤلفون بمحتوى عام بعد." : "No authors with public content yet.") : (ar ? "جارٍ البحث عن المؤلفين…" : "Finding authors…")}</p> : <>
-        <div className="author-scene"><div ref={stage} className="author-stack" role="region" aria-roledescription="carousel" aria-label={ar ? "بطاقات المؤلفين" : "Author cards"} tabIndex={0}
+        <div className="author-scene"><div ref={stage} className="author-stack" data-fanned={fanned} role="region" aria-roledescription="carousel" aria-label={ar ? "بطاقات المؤلفين" : "Author cards"} tabIndex={0}
           onKeyDown={event => { if (event.key === "ArrowRight") { event.preventDefault(); next(); } else if (event.key === "ArrowLeft") { event.preventDefault(); previous(); } else if (event.key === "Home") { event.preventDefault(); setIndex(0); } }}
           onPointerDown={event => { suppressClick.current = false; gesture.current = { x: event.clientX, y: event.clientY }; }}
           onPointerUp={event => { if (!gesture.current) return; const delta = event.clientX - gesture.current.x; const vertical = event.clientY - gesture.current.y; gesture.current = null; suppressClick.current = Math.abs(delta) > 12 || Math.abs(vertical) > 12; if (Math.abs(delta) > 45 && Math.abs(delta) > Math.abs(vertical)) { if (delta < 0) next(); else previous(); } }}
           onPointerCancel={() => { gesture.current = null; suppressClick.current = true; }}
           onClickCapture={event => { if (suppressClick.current) { event.preventDefault(); event.stopPropagation(); suppressClick.current = false; } }}
           onDragStart={event => event.preventDefault()}>
-          {cards.map(({author, position}) => { const depth = Math.abs(position); return <Link key={author.username} href={`/card/${encodeURIComponent(author.username)}`} aria-label={`${ar ? "عرض بطاقة" : "View card of"} ${author.name}`} tabIndex={position === 0 ? 0 : -1} draggable={false} className="author-stack-card" aria-hidden={position !== 0} style={{ "--depth": depth, "--position": position, "--lean": `${position * 3}deg`, "--turn": `${position * -12}deg`, zIndex: 5 - depth } as CSSProperties} data-active={position === 0}><AuthorArt author={author} locale={locale} /></Link>; })}
+          {cards.map(({ author, position }) => {
+            const depth = Math.abs(position);
+            const style = { "--depth": depth, "--position": position, "--lean": `${position * 3}deg`, "--turn": `${position * -12}deg`, zIndex: 5 - depth } as CSSProperties;
+            return position === 0 ? <Link key={author.username} href={`/card/${encodeURIComponent(author.username)}`} aria-label={`${ar ? "عرض بطاقة" : "View card of"} ${author.name}`} draggable={false} className="author-stack-card" style={style} data-active="true"><AuthorArt author={author} locale={locale} /></Link> :
+              <button key={author.username} type="button" className="author-stack-card" style={style} data-active="false" aria-expanded={fanned} aria-label={ar ? `${fanned ? "ضم البطاقات" : "افرد البطاقات"}: ${author.name}` : `${fanned ? "Close" : "Fan out"} author cards: ${author.name}`} onClick={() => setFannedIndex(fanned ? null : index)}><AuthorArt author={author} locale={locale} /></button>;
+          })}
         </div>
           {current && <StudentOrbit key={current.username} username={current.username} />}
         </div>

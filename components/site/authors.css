@@ -10,6 +10,8 @@
 .author-stack { position: relative; width: min(100%, 700px); height: clamp(460px, 62vw, 580px); margin: 16px auto 0; perspective: 1200px; touch-action: pan-y; outline-offset: 4px; }
 .author-stack-card { position: absolute; width: clamp(250px, 58vw, 320px); inset-inline-start: 50%; top: 80px; margin-inline-start: calc(clamp(250px, 58vw, 320px) / -2); transform: translateX(calc(var(--position) * clamp(28px, 6vw, 64px))) translateY(calc(var(--depth) * 6px)) translateZ(calc(var(--depth) * -90px)) rotateY(var(--turn)) rotateZ(var(--lean)); transform-origin: center bottom; transition: transform 420ms cubic-bezier(.22,.8,.3,1), opacity 320ms; opacity: calc(1 - var(--depth) * .12); border-radius: 18px; backface-visibility: hidden; pointer-events: none; }
 .author-stack-card[data-active=true] { transform: translateZ(0); pointer-events: auto; cursor: grab; }
+.author-stack-card[data-active=false] { pointer-events:auto; cursor:pointer; padding:0; border:0; background:none; color:inherit; }
+.author-stack[data-fanned=true] .author-stack-card[data-active=false] { transform:translateX(calc(var(--position) * clamp(36px, 8vw, 80px))) translateY(calc(var(--depth) * -6px)) translateZ(calc(var(--depth) * -70px)) rotateY(calc(var(--position) * -8deg)) rotateZ(calc(var(--position) * 5deg)); opacity:1; }
 /* Each card's art moves away from the mouse (the nearest card most) and follows a phone's tilt; useTilt sets the
    variables on each card frame by frame, while the card itself keeps its place in the stack. */
 .author-art { border-radius: 18px; box-shadow: 0 16px 42px rgb(0 0 0 / .18); will-change: transform; transform: perspective(1200px) translate(var(--tx, 0px), var(--ty, 0px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); }
@@ -19,6 +21,7 @@
 .authors-state { padding: 120px 16px; color: var(--on-surface-variant); }
 @media (max-width: 480px) { .authors-page { padding: 20px 16px 48px; } .authors-page header { margin-top: 12px; } .author-stack { height: 455px; } .author-stack-card { top: 65px; } }
 @media (prefers-reduced-motion: reduce) { .author-stack-card { transition: none; transform: translateX(calc(var(--position) * 28px)) scale(calc(1 - var(--depth) * .04)); } .author-stack-card[data-active=true] { transform: none; } }
+@media (prefers-reduced-motion: reduce) { .author-stack[data-fanned=true] .author-stack-card[data-active=false] { transform:translateX(calc(var(--position) * 36px)) scale(calc(1 - var(--depth) * .04)); } }
 
 .author-stack-card[data-active=true]:active { cursor: grabbing; }
 .author-stack-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 5px; }
