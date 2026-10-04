@@ -387,3 +387,13 @@ export async function readCourseLesson(ctx: QueryCtx, args: { courseId: string; 
  return { lessonId: lesson._id, ownerId: lesson.ownerId, ownerName: course.ownerName, createdAt: lesson.createdAt, version };
 }
 export const lesson = query({ args: { courseId: v.string(), lessonId: v.string() }, handler: (ctx, args) => readCourseLesson(ctx, args) });
+
+export const addAssessment = mutation({ args: { courseId: v.id("learnCollections"), asset: v.object({ kind: v.union(v.literal("form"), v.literal("quiz")), id: v.string() }), moduleId: v.optional(v.string()) }, returns: v.null(), handler: async (ctx, args) => {
+ const { row } = await ownedCourse(ctx, args.courseId);
+ const modules = [...(row.modules ?? [])];
+ const index = args.moduleId ? modules.findIndex(m => m.id === args.moduleId) : modules.findIndex(m => m.id === "final_assessment");
+ if (args.moduleId && index < 0) throw new Error("Module changed. Refresh and try again.");
+ if (index < 0) modules.push({ id: "final_assessment", title: row.metadata.language.startsWith("ar") ? "التقييم النهائي" : "Final assessment", lessonIds: [], assessments: [args.asset] });
+ else if (!modules[index].assessments.some(a => a.kind === args.asset.kind && a.id === args.asset.id)) modules[index] = { ...modules[index], assessments: [...modules[index].assessments, args.asset] };
+ return setCourseModules(ctx, { courseId: args.courseId, modules });
+} });

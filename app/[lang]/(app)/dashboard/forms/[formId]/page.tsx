@@ -16,6 +16,7 @@ import StatusBadge from "@/components/forms/StatusBadge";
 import SourceDetails from "@/components/forms/SourceDetails";
 import BuildTab from "@/components/forms/builder/BuildTab";
 import { FullPreview } from "@/components/forms/builder/FormPreview";
+import QuizLearningLinks from "@/components/learn/editor/QuizLearningLinks";
 import HostLiveButton from "@/components/live/HostLiveButton";
 import { WsMenu, WsSwitch, WsTabs, WsUndoToast } from "@/components/workspace/primitives";
 import type { UndoToast } from "@/components/workspace/primitives";
@@ -313,6 +314,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
         </div>
       </header>
 
+      {data.role === "owner" && canEdit && quiz && <QuizLearningLinks asset={{ kind: "form", id: formId }} title={def.title} published={published} />}
       {canEdit && quiz && <div className="ws-next-step"><span className="flex-1 text-sm">{t.gameGuide}</span><Link href="/dashboard?tab=games" className="ws-btn ws-btn--sm">{t.gameGuideLink}</Link></div>}
       {canEdit && !published && !guide.dismissed && (() => {
         const steps = [
