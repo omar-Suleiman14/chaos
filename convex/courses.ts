@@ -349,3 +349,31 @@ export async function readCourseProgress(ctx: QueryCtx, args: { courseId: string
   return result;
 }
 export const myProgress = query({ args: { courseId: v.string() }, returns: v.array(v.object({ lessonId: v.id("lessons"), completed: v.boolean(), percent: v.number() })), handler: (ctx, args) => readCourseProgress(ctx, args) });
+
+export async function rememberCourse(ctx: MutationCtx, args: { courseId: string }, asActor?: string) {
+  const identity = asActor ? { subject: asActor } : await getAuthIdentity(ctx);
+  if (!identity) throw new Error("UNAUTHENTICATED");
+  const course = await readPublicCourse(ctx, args, identity.subject);
+  if (!course) throw new Error("NOT_FOUND: Course unavailable.");
+  const actor = await canonicalCommunityActor(ctx, identity.subject);
+  const row = await ctx.db.query("learnCourseActivity").withIndex("by_userKey_and_courseId", q => q.eq("userKey", actor.tokenIdentifier).eq("courseId", course.id)).unique();
+  if (row) await ctx.db.patch("learnCourseActivity", row._id, { updatedAt: Date.now() });
+  else await ctx.db.insert("learnCourseActivity", { userKey: actor.tokenIdentifier, courseId: course.id, updatedAt: Date.now() });
+  return null;
+}
+export const remember = mutation({ args: { courseId: v.string() }, returns: v.null(), handler: (ctx, args) => rememberCourse(ctx, args) });
+export const myLearning = query({ args: {}, handler: async ctx => {
+  const identity = await getAuthIdentity(ctx);
+  if (!identity) return [];
+  const actor = await canonicalCommunityActor(ctx, identity.subject);
+  const rows = await ctx.db.query("learnCourseActivity").withIndex("by_userKey_and_updatedAt", q => q.eq("userKey", actor.tokenIdentifier)).order("desc").take(20);
+  const results = [];
+  for (const row of rows) {
+    const course = await readPublicCourse(ctx, { courseId: row.courseId }, identity.subject);
+    if (!course) continue;
+    const progress = await readCourseProgress(ctx, { courseId: course.id }, identity.subject);
+    const target = course.lessons.find(l => progress.some(p => p.lessonId === l.id && !p.completed && p.percent > 0)) ?? course.lessons.find(l => !progress.some(p => p.lessonId === l.id && p.completed)) ?? course.lessons[0];
+    results.push({ id: course.id, title: course.title, completed: progress.filter(p => p.completed).length, total: course.lessons.length, nextLessonId: target?.id });
+  }
+  return results;
+} });

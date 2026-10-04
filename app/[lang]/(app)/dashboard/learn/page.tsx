@@ -1,13 +1,15 @@
 "use client";
 
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { ArrowRight, Bookmark, BookOpen, Compass, GraduationCap, Layers, Plus, Target } from "lucide-react";
 import { EmptyState, LessonCard } from "@/components/learn/ui";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import {
-  useCurriculumNodes, useLearnActions, useLearnCapabilities, useMyCourses, useMyLessons, useProgress, usePublicLessons, useRecentLessons, useSaved, useWeakAreas,
+  useLearnActions, useLearnCapabilities, useMyLessons, useProgress, usePublicLessons, useRecentLessons, useSaved, useWeakAreas,
 } from "@/lib/learn/data";
 import { errorMessage } from "@/lib/errors";
 import { useCopy, useLocale } from "@/lib/i18n";
@@ -16,7 +18,7 @@ const copy = {
   en: {
     title: "Learn", lead: "Your lessons, courses and study material in one place.", newLesson: "New lesson", explore: "Explore",
     continue: "Continue learning", continueEmpty: "Lessons you start show up here so you can pick up where you left off.",
-    courses: "My courses", coursesEmpty: "Save the modules you study to reach their lessons quickly.", browse: "Browse courses", all: "See all",
+    courses: "My courses", coursesEmpty: "Courses you start appear here with your next lesson.", browse: "Browse courses", all: "See all",
     saved: "Saved", savedEmpty: "Save lessons or single paragraphs and diagrams while you read.",
     recent: "Recently opened", mine: "Your lessons", mineEmpty: "Write a lesson from scratch: headings, images, videos, equations and sources.",
     discover: "New in Explore", discoverEmpty: "No public lessons yet. Publish one to start the collection.",
@@ -26,7 +28,7 @@ const copy = {
   ar: {
     title: "تعلّم", lead: "دروسك ومقرراتك ومواد مذاكرتك في مكان واحد.", newLesson: "درس جديد", explore: "استكشف",
     continue: "تابع التعلّم", continueEmpty: "تظهر هنا الدروس التي تبدأها لتكمل من حيث توقفت.",
-    courses: "مقرراتي", coursesEmpty: "احفظ الوحدات التي تدرسها لتصل إلى دروسها بسرعة.", browse: "تصفح المقررات", all: "عرض الكل",
+    courses: "مقرراتي", coursesEmpty: "تظهر هنا الدورات التي تبدأها مع درسك التالي.", browse: "تصفح المقررات", all: "عرض الكل",
     saved: "المحفوظات", savedEmpty: "احفظ دروسًا أو فقرات ورسومًا منفردة أثناء القراءة.",
     recent: "فُتحت مؤخرًا", mine: "دروسك", mineEmpty: "اكتب درسًا من الصفر: عناوين وصور وفيديو ومعادلات ومصادر.",
     discover: "جديد في الاستكشاف", discoverEmpty: "لا دروس عامة بعد. انشر درسًا لتبدأ المجموعة.",
@@ -45,12 +47,10 @@ export default function LearnHome() {
   const recent = useRecentLessons(12);
   const progress = useProgress();
   const saved = useSaved();
-  const courses = useMyCourses();
-  const nodes = useCurriculumNodes();
+  const courses = useQuery(api.courses.myLearning, {});
   const discover = usePublicLessons({ sort: "recent" });
   const weak = useWeakAreas();
   const [error, setError] = useState("");
-  const byId = useMemo(() => new Map((nodes ?? []).map((n) => [n.id, n])), [nodes]);
 
   if (!mine || !recent || !progress || !saved || !courses || !discover) return <PageSkeleton label={t.loading} />;
 
@@ -77,6 +77,15 @@ export default function LearnHome() {
         ) : <p className="lx-muted">{t.continueEmpty}</p>}
       </section>
 
+      <section className="lx-section" aria-labelledby="learn-courses">
+        <header><h2 id="learn-courses">{t.courses}</h2><Link className="lx-link" href="/learn/courses">{courses.length ? t.all : t.browse}</Link></header>
+        {courses.length ? (
+          <div className="lx-level-grid">
+            {courses.slice(0, 6).map(c => <Link key={c.id} className="lx-node" href={c.nextLessonId ? `/learn/${c.nextLessonId}?course=${c.id}` : `/learn/courses/${c.id}`}><GraduationCap size={18} aria-hidden /><span dir="auto">{c.title}<small>{c.completed} / {c.total} · {t.continue}</small></span></Link>)}
+          </div>
+        ) : <EmptyState icon={GraduationCap} title={t.courses} body={t.coursesEmpty}><Link className="ws-btn" href="/learn/courses">{t.browse}</Link></EmptyState>}
+      </section>
+
       {caps.weakAreas && weak && weak.length > 0 && (
         <section className="lx-section" aria-labelledby="learn-review">
           <header><h2 id="learn-review">{t.review}</h2></header>
@@ -93,32 +102,6 @@ export default function LearnHome() {
           </div>
         </section>
       )}
-
-      <section className="lx-section" aria-labelledby="learn-courses">
-        <header><h2 id="learn-courses">{t.courses}</h2><Link className="lx-link" href="/dashboard/learn/courses">{courses.length ? t.all : t.browse}</Link></header>
-        {courses.length ? (
-          <div className="lx-level-grid">
-            {courses.slice(0, 6).map((c) => {
-              const mod = byId.get(c.moduleId);
-              const version = byId.get(c.versionId);
-              if (!mod) return null;
-              return (
-                <Link key={c.moduleId} className="lx-node" href={`/dashboard/learn/courses/browse?node=${c.moduleId}`}>
-                  <GraduationCap size={18} aria-hidden />
-                  <span>{mod.name}{mod.code ? ` · ${mod.code}` : ""}<small>{version?.name}</small></span>
-                </Link>
-              );
-            })}
-          </div>
-        ) : <EmptyState icon={GraduationCap} title={t.courses} body={t.coursesEmpty}><Link className="ws-btn" href="/dashboard/learn/courses">{t.browse}</Link></EmptyState>}
-      </section>
-
-      <section className="lx-section" aria-labelledby="learn-mine">
-        <header><h2 id="learn-mine">{t.mine}</h2>{mine.length > 0 && <Link className="lx-link" href="/dashboard/learn/library">{t.all}</Link>}</header>
-        {mine.length ? (
-          <div className="lx-grid">{mine.slice(0, 6).map((l) => <LessonCard key={l.id} lesson={l} href={`/dashboard/learn/lessons/${l.id}`} showStatus />)}</div>
-        ) : <EmptyState icon={BookOpen} title={t.mine} body={t.mineEmpty}><button type="button" className="ws-btn ws-btn--primary" onClick={newLesson}><Plus size={16} aria-hidden />{t.newLesson}</button></EmptyState>}
-      </section>
 
       <section className="lx-section" aria-labelledby="learn-saved">
         <header><h2 id="learn-saved">{t.saved}</h2>{saved.length > 0 && <Link className="lx-link" href="/dashboard/learn/saved">{t.all}</Link>}</header>
@@ -141,6 +124,13 @@ export default function LearnHome() {
           <div className="lx-grid">{recentOther.map(({ lesson }) => <LessonCard key={lesson.id} lesson={lesson} href={hrefFor(lesson.id, lesson.ownerId)} progress={progress[lesson.id]} />)}</div>
         </section>
       )}
+
+      <section className="lx-section" aria-labelledby="learn-mine">
+        <header><h2 id="learn-mine">{t.mine}</h2>{mine.length > 0 && <Link className="lx-link" href="/dashboard/learn/library">{t.all}</Link>}</header>
+        {mine.length ? (
+          <div className="lx-grid">{mine.slice(0, 6).map((l) => <LessonCard key={l.id} lesson={l} href={`/dashboard/learn/lessons/${l.id}`} showStatus />)}</div>
+        ) : <EmptyState icon={BookOpen} title={t.mine} body={t.mineEmpty}><button type="button" className="ws-btn ws-btn--primary" onClick={newLesson}><Plus size={16} aria-hidden />{t.newLesson}</button></EmptyState>}
+      </section>
 
       <section className="lx-section" aria-labelledby="learn-discover">
         <header><h2 id="learn-discover">{t.discover}</h2><Link className="lx-link" href="/learn">{t.explore}</Link></header>

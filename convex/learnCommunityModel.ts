@@ -41,6 +41,7 @@ export const qualityStatus = v.union(
  * existing subject-based lessonAccess contract. No evidence files or AI calls.
  */
 export const communityTables = {
+  learnCourseActivity: defineTable({ userKey: v.string(), courseId: v.id("learnCollections"), updatedAt: v.number() }).index("by_userKey_and_courseId", ["userKey", "courseId"]).index("by_userKey_and_updatedAt", ["userKey", "updatedAt"]),
   learnCommunityStats: defineTable({
     lessonId: v.id("lessons"),
     ...counters.fields,
