@@ -58,3 +58,11 @@ Check dependency advisories with `pnpm audit` and `pnpm audit --prod`. Report un
 ## Issues
 
 Use the templates: **Bug report** for something broken, **Feature request** for something new. For planned work the maintainers use the **Task** template, which lists the outcome, current state, acceptance criteria and how to verify it.
+
+## Find planned work and report problems
+
+The current roadmap lives in [GitHub issues](https://github.com/omar-Suleiman14/chaos/issues) and [milestones](https://github.com/omar-Suleiman14/chaos/milestones). Milestones group Learn/courses, MCP/portability, public product/trust and Chaos Cards. Issues describe the outcome, current state, acceptance criteria and verification; pull requests link their issue.
+
+Use the **Bug report** template for a reproducible problem, including browser, language, expected/actual behavior and a minimal example without real respondent data. Use **Feature request** for a desired outcome and who needs it. Use **Task** for agreed implementation work. Check existing issues first; link duplicates instead of opening parallel work. Security reports use the private reporting process in SECURITY.md.
+
+After changing MCP registration, run `pnpm mcp:inventory`. CI checks the generated inventory and advertised count. Validate schema/auth/privacy changes with meaningful boundary tests and the complete user flow. Mark verification pending when an implementation is awaiting its agreed test pass.

@@ -108,7 +108,7 @@ When hosting a modified version, set `NEXT_PUBLIC_SOURCE_REPO_URL` to the source
 
 ## Contributing
 
-Contributions are welcome. Start with [`CONTRIBUTING.md`](./CONTRIBUTING.md), and please follow the [Code of Conduct](./CODE_OF_CONDUCT.md). Report security problems privately as described in [`SECURITY.md`](./SECURITY.md), not in public issues.
+Find planned work in [issues](https://github.com/omar-Suleiman14/chaos/issues) and [milestones](https://github.com/omar-Suleiman14/chaos/milestones). Use the issue chooser for bug reports and feature requests. Contributions are welcome. Start with [`CONTRIBUTING.md`](./CONTRIBUTING.md), and please follow the [Code of Conduct](./CODE_OF_CONDUCT.md). Report security problems privately as described in [`SECURITY.md`](./SECURITY.md), not in public issues.
 
 ## License
 
