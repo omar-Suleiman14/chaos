@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import inventory from "@/lib/mcp/inventory.json";
+import McpWorkflowDemo from "./McpWorkflowDemo";
 import McpOutcomes from "./McpOutcomes";
 import Link from "@/components/site/SiteLink";
 import { Check, Copy, ExternalLink } from "lucide-react";
@@ -46,6 +47,7 @@ export default function ConnectView() {
   return (
     <LegalPage title={t.title}>
       <p>{t.intro}</p>
+      <McpWorkflowDemo />
       <McpOutcomes />
       <p className="site-muted">{inventory.count} MCP tools</p>
       <p><strong>{t.urlLabel}</strong></p>
