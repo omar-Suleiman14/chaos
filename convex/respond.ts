@@ -1,3 +1,4 @@
+import { recordStudent } from "./studentRoster";
 import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { homeworkUploadAccess } from "./homeworkUploadAccess";
@@ -428,6 +429,7 @@ export const submitResponse = mutation({
     if (args.final) {
       const response = (await ctx.db.get("formResponses", responseId))!;
       if (!spam) {
+        await recordStudent(ctx, { authorId: form.ownerId, studentId: response.respondentId, guestKey: String(responseId), context: form.title });
         await countResponse(ctx, form, response, def, 1);
         await afterCompletion(ctx, form, response, def);
         await emitWebhookEvent(ctx, form.ownerId, "response.completed", `form_${form._id}`, () => formResponseData(form, response, def));

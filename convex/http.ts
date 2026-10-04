@@ -317,6 +317,8 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "create_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:create"), { ...input, userId }); break;
       case "set_course_modules": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:modules"), { ...input, userId }); break;
       case "get_weak_area_actions": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:weakAreas"), { userId }); break;
+      case "list_my_students": result = await ctx.runQuery(makeFunctionReference<"query">("studentRoster:mcpList"), { ...input, userId }); break;
+      case "set_student_card_visibility": result = await ctx.runMutation(makeFunctionReference<"mutation">("studentRoster:mcpVisibility"), { ...input, userId }); break;
       case "export_course_manifest": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCourses:exportManifest"), { ...input, userId }); break;
       case "import_course_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:importLesson"), { ...input, userId }); break;
       case "get_course_lesson": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCourses:lesson"), { ...input, userId }); break;

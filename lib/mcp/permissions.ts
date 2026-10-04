@@ -2,7 +2,7 @@ export const MCP_PERMISSIONS = ["read_content", "edit_content", "publish_content
 export type McpPermission = (typeof MCP_PERMISSIONS)[number];
 /** Categories are separate from identity scopes; provider-issued grants can map here later. */
 export function permissionForTool(tool: string): McpPermission {
- if (["list_responses", "export_form_responses"].includes(tool)) return "individual_responses";
+ if (["list_responses", "export_form_responses", "list_my_students"].includes(tool)) return "individual_responses";
  if (tool.includes("collaborator")) return "collaborators";
  if (["get_results", "get_form_advanced_analytics"].includes(tool)) return "aggregate_analytics";
  if (tool.startsWith("publish_") || tool === "host_game") return "publish_content";

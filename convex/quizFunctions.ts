@@ -1,3 +1,4 @@
+import { recordStudent } from "./studentRoster";
 import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { setOwnedUsername } from "./links";
@@ -1140,6 +1141,7 @@ export const completeQuizSession = mutation({
       : session.totalPoints;
     if (session.status === "in_progress") {
       await ctx.db.patch("quizSessions", args.sessionId, { status: "completed", totalPoints, completedAt: Date.now() });
+      await recordStudent(ctx, { authorId: activeQuiz.creatorId, guestKey: String(session._id), guestName: session.playerName, context: activeQuiz.title });
       await emitQuizAttemptEvent(ctx, args.sessionId, "response.completed");
     }
     // Idempotent: a repeated call returns the stored result.

@@ -16,6 +16,7 @@ import { WsSwitch } from "@/components/workspace/primitives";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { Row, Section, Segmented, useScrollToHash } from "@/components/workspace/settingsUi";
 import type { Locale } from "@/lib/locale";
+import StudentsRoster from "@/components/card/StudentsRoster";
 import MemberCardView from "@/components/card/MemberCardView";
 import UsernameEditor from "@/components/card/UsernameEditor";
 import "@/components/card/card.css";
@@ -83,6 +84,7 @@ export default function ProfilePage() {
         </div>
       </section>
 
+      <StudentsRoster />
       <Section id="account" icon={CircleUser} title={t.account} description={t.accountAbout}>
         <Row id="settings-account" label={user?.fullName || card.name || t.yourAccount} help={user?.primaryEmailAddress?.emailAddress}>
           <button type="button" className="ws-btn ws-btn--sm" onClick={() => clerk.openUserProfile()}>{t.manage}</button>

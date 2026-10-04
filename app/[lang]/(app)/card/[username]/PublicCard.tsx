@@ -7,6 +7,7 @@ import { api } from "@/convex/_generated/api";
 import { useCopy } from "@/lib/i18n";
 import { siteUrl } from "@/lib/site";
 import { CARD_THEMES, type MemberCardData } from "@/lib/memberCard";
+import StudentsRoster from "@/components/card/StudentsRoster";
 import MemberCardView from "@/components/card/MemberCardView";
 import "@/components/card/card.css";
 
@@ -39,6 +40,7 @@ export default function PublicCard({ username, initialCard }: { username: string
         <h1 className="sr-only" id="card-title">{card.name || `@${card.username}`}</h1>
         <MemberCardView data={{ ...card, url: `${siteUrl}/card/${card.username}` }} framed={false}
           actions={<Link className="mc-cta" href="/dashboard/card" prefetch={false}>{t.join}<ArrowRight size={18} aria-hidden className="rtl:rotate-180" /></Link>} />
+        <StudentsRoster username={username} />
         <Link className="mc-public__brand" href="/">{t.brand}</Link>
       </div>
     </main>
