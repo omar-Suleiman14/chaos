@@ -54,6 +54,10 @@
 .hero-avatar--5 { top: 22px; left: 50%; transform: translateX(-50%) rotate(8deg); }
 @media (max-width: 900px) { .hero-avatar { width: 64px; height: 64px; } .hero-avatar__motion > span, .hero-avatar svg { width: 44px !important; height: 44px !important; } .hero-avatar--1, .hero-avatar--2 { top: 150px; } .hero-avatar--3, .hero-avatar--4 { top: 410px; } .hero-avatar--5 { top: 15px; } }
 @media (max-width: 640px) { .site-hero--home .site-title { font-size: clamp(2rem, 6.6vw, 2.7rem); } .site-hero--home .site-lead { max-width: 29ch; } .hero-avatar--1, .hero-avatar--2 { top: 22px; } .hero-avatar--1 { left: 5%; } .hero-avatar--2 { right: 5%; } .hero-avatar--3, .hero-avatar--4 { top: var(--hero-bottom-avatar-top, 490px); width: 48px; height: 48px; } .hero-avatar--3 { left: 3%; } .hero-avatar--4 { right: 3%; } .hero-avatar--3 .hero-avatar__motion > span, .hero-avatar--3 svg, .hero-avatar--4 .hero-avatar__motion > span, .hero-avatar--4 svg { width: 28px !important; height: 28px !important; } .hero-avatar--5 { top: 8px; } }
+@media (max-width:640px) {
+  .hero-avatar--1,.hero-avatar--2 { top:var(--hero-side-avatar-top,180px); width:48px; height:48px; }
+  .hero-avatar--1 .hero-avatar__motion > span,.hero-avatar--1 svg,.hero-avatar--2 .hero-avatar__motion > span,.hero-avatar--2 svg { width:28px !important; height:28px !important; }
+}
 @media (prefers-reduced-motion: reduce) { .hero-avatar__motion { transform: none; } }
 .hero-avatars[data-motion=false] .hero-avatar__motion { transform:none; }
 .hero-avatars[data-motion=false] svg,.hero-avatars[data-motion=false] svg * { animation:none !important; transition:none !important; }

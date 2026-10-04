@@ -36,14 +36,20 @@ export default function HeroAvatars() {
   useEffect(() => {
     const hero = stage.current?.parentElement;
     const actions = hero?.querySelector<HTMLElement>(".site-hero__actions");
+    const title = hero?.querySelector<HTMLElement>(".site-title");
     if (!hero || !actions) return;
     const measure = () => {
       const bottom = actions.getBoundingClientRect().bottom - hero.getBoundingClientRect().top;
       stage.current?.style.setProperty("--hero-bottom-avatar-top", `${bottom - 44}px`);
+      if (title) {
+        const titleBottom = title.getBoundingClientRect().bottom - hero.getBoundingClientRect().top;
+        stage.current?.style.setProperty("--hero-side-avatar-top", `${titleBottom - 52}px`);
+      }
     };
     const observer = new ResizeObserver(measure);
     observer.observe(hero);
     observer.observe(actions);
+    if (title) observer.observe(title);
     measure();
     return () => observer.disconnect();
   }, []);
