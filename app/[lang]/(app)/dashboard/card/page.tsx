@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ChevronRight, CircleUser, SunMoon } from "lucide-react";
 import { useClerk, useUser } from "@/lib/auth/client";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCopy, useLocale } from "@/lib/i18n";
+import { sfx } from "@/lib/sfx";
 import { siteUrl } from "@/lib/site";
 import { memberTitle } from "@/lib/memberCard";
 import { defaultPreferences, popupOpacityRange, usePreferences } from "@/lib/preferences";
@@ -57,6 +58,8 @@ export default function ProfilePage() {
   const { preferences: p, set } = usePreferences();
   const card = useQuery(api.memberCards.mine);
   const [draft, setDraft] = useState("");
+  const [sound, setSound] = useState(false);
+  useEffect(() => { const sync = () => setSound(sfx.isEnabled()); sync(); window.addEventListener("chaos-sfx-change", sync); return () => window.removeEventListener("chaos-sfx-change", sync); }, []);
   const setStyle = useMutation(api.memberCards.setStyle).withOptimisticUpdate((store, { style }) => {
     const current = store.getQuery(api.memberCards.mine, {});
     if (current) store.setQuery(api.memberCards.mine, {}, { ...current, style });
@@ -96,6 +99,7 @@ export default function ProfilePage() {
         <Row id="settings-appearance" label={t.appearance} help={t.appearanceHelp} isDefault={mode === "system"}>
           <ThemeModeSwitch showLabels />
         </Row>
+        <Row id="settings-sounds" label={locale === "ar" ? "أصوات الواجهة" : "Interface sounds"} help={locale === "ar" ? "إعداد مشترك للدروس والاختبارات والألعاب." : "Shared across lessons, quizzes and live games."}><WsSwitch checked={sound} onChange={value => sfx.setEnabled(value)} label={locale === "ar" ? "أصوات الواجهة" : "Interface sounds"} /></Row>
         <Row id="settings-language" label={t.language} help={t.languageHelp}>
           <Segmented<Locale> label={t.language} value={locale} onChange={setLocale} options={[{ id: "en", label: "English" }, { id: "ar", label: "العربية" }]} />
         </Row>
