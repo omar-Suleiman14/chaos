@@ -7,6 +7,7 @@ import { ArrowDown, ArrowLeft, ArrowUp, ExternalLink, Globe, Lock, Plus, Trash2 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import CourseDetailsEditor from "@/components/courses/CourseDetailsEditor";
 import CourseModulesEditor from "@/components/courses/CourseModulesEditor";
 import { contentDirection } from "@/lib/learn/direction";
 import { localeDir } from "@/lib/locale";
@@ -128,6 +129,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
         <button type="button" className="cb-add w-full" disabled={busy} onClick={() => void run(async () => { const lessonId = await addLesson({ courseId }); router.push(`/dashboard/learn/lessons/${lessonId}?course=${courseId}`); })}><Plus size={18} aria-hidden /> {t.add}</button>
       </section>
 
+      <CourseDetailsEditor courseId={courseId} details={course.details} />
       <CourseModulesEditor courseId={courseId} modules={course.modules ?? []} lessons={course.lessons} />
 
       <section className="cb-section grid gap-4" aria-labelledby="cb-settings">

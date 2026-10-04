@@ -121,3 +121,9 @@
 .cp-module header { margin-bottom: 12px; }
 .cp-module header p { color: var(--on-surface-variant); font-size: 13px; }
 @media(max-width: 560px) { .cb-module-assignments label { grid-template-columns: minmax(0,1fr); } }
+
+.cp-continue { display: grid; gap: 12px; margin-bottom: 32px; max-width: 480px; }
+.cp-continue .cp-start { margin-bottom: 0; width: fit-content; }
+.cp-continue p, .cp-facts { color: var(--on-surface-variant); font-size: 14px; }
+.cp-outcomes { margin-block: 32px; }
+.cp-outcomes ul { display: grid; gap: 10px; padding-inline-start: 22px; margin-top: 16px; }

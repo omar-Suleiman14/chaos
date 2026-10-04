@@ -1,5 +1,5 @@
 // Actor comes only from the secret-protected MCP envelope.
-import { courseModule } from "./learnAssetModel";
+import { courseModule, courseDetails } from "./learnAssetModel";
 import { setCourseModules, readCourseProgress } from "./courses";
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
@@ -16,14 +16,14 @@ export const create = internalMutation({
 });
 export const read = internalQuery({
  args: { userId: v.string(), courseId: v.id("learnCollections") },
- returns: v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), coverY: v.optional(v.number()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()), visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), canPrivate: v.boolean(), modules: v.array(courseModule), lessons: v.array(v.object({ id: v.id("lessons"), title: v.string(), description: v.string(), published: v.boolean(), changed: v.boolean(), blocks: v.number() })), revision: v.number() }),
+ returns: v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), coverY: v.optional(v.number()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()), visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), canPrivate: v.boolean(), modules: v.array(courseModule), details: v.optional(courseDetails), lessons: v.array(v.object({ id: v.id("lessons"), title: v.string(), description: v.string(), published: v.boolean(), changed: v.boolean(), blocks: v.number() })), revision: v.number() }),
  handler: async (ctx, { userId, ...input }) => {
  const actor = await requireLearnActor(ctx, userId);
  return await getCourse(ctx, input, actor);
  },
 });
 export const update = internalMutation({
- args: { userId: v.string(), courseId: v.id("learnCollections"), title: v.optional(v.string()), description: v.optional(v.string()), coverUrl: v.optional(v.union(v.string(), v.null())), coverY: v.optional(v.union(v.number(), v.null())), icon: v.optional(v.union(v.string(), v.null())), language: v.optional(v.string()), tags: v.optional(v.array(v.string())) },
+ args: { userId: v.string(), courseId: v.id("learnCollections"), title: v.optional(v.string()), description: v.optional(v.string()), coverUrl: v.optional(v.union(v.string(), v.null())), coverY: v.optional(v.union(v.number(), v.null())), icon: v.optional(v.union(v.string(), v.null())), language: v.optional(v.string()), tags: v.optional(v.array(v.string())), details: v.optional(courseDetails) },
  returns: v.object({ ok: v.boolean() }),
  handler: async (ctx, { userId, ...input }) => {
  const actor = await requireLearnActor(ctx, userId);
