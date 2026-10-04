@@ -1,11 +1,12 @@
 "use client";
 
+import { productDefinition } from "@/lib/product";
 import Link from "@/components/site/SiteLink";
 import { ArrowRight, BookOpen, Braces, Download, FileText, GitFork, GraduationCap, ListChecks, Radio, Server, Webhook } from "lucide-react";
 import { PrimaryCta, SiteFooter, SiteNav } from "@/components/site/SiteChrome";
 import { ChatGptMark, NotionMark } from "@/components/site/marks";
 import ProductDemo from "@/components/site/ProductDemo";
-import { useCopy } from "@/lib/i18n";
+import { useCopy, useLocale } from "@/lib/i18n";
 import { serializeStructuredData, websiteStructuredData } from "@/lib/seo";
 import "@/app/landing.css";
 
@@ -119,6 +120,7 @@ function Cards({ items }: { items: Card[] }) {
 
 export default function HomeView() {
   const t = useCopy(copy);
+  const { locale } = useLocale();
   return (
     <div className="site-ui">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeStructuredData(websiteStructuredData) }} />
@@ -137,6 +139,7 @@ export default function HomeView() {
             <span className="site-flow__arrow" aria-hidden="true" />
             <span className="site-flow__node site-flow__node--muted">{t.flow.practice}</span>
           </figure>
+          <p className="site-product-definition">{productDefinition[locale === "ar" ? "ar" : "en"]}</p>
         </section>
 
         <section id="create" className="site-section" aria-labelledby="create-title">

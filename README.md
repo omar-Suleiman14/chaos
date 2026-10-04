@@ -2,7 +2,7 @@
 
 Turn what you know into something people can use.
 
-Chaos is where you create, teach, learn and test: forms, quizzes, lessons and courses, with quizzes you can run as live games. It works in English and Arabic, connects to Max, ChatGPT and Claude, and runs no AI itself. It runs at [chaos.fail](https://chaos.fail), and you can host your own copy.
+Chaos is an open platform for creating, teaching, learning and testing. Build lessons and courses, create forms and quizzes, turn quizzes into live games, and connect ChatGPT or Claude to work directly on your content. It works in English and Arabic and runs no AI itself. Try [chaos.fail](https://chaos.fail), or host your own copy.
 
 ## What it does
 

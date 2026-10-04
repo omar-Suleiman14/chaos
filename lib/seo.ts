@@ -3,7 +3,7 @@ import { siteUrl } from "@/lib/site";
 import { localePath, type Locale } from "@/lib/locale";
 
 /** About 155 characters, so search results show it whole. */
-export const siteDescription = "Create forms, quizzes, lessons, courses and live games in one free, open-source workspace. English and Arabic, with MCP, an API, webhooks and self-hosting.";
+export const siteDescription = "An open platform to create, teach, learn and test. Build lessons, courses, forms and quizzes, teach live and connect ChatGPT or Claude. English and Arabic.";
 
 /** The generic share card, app/opengraph-image/route.tsx. Pages with their own picture (a course or lesson cover) replace it. */
 export const defaultOgImageAlt = "Chaos: Create. Teach. Learn. Test. Forms, quizzes, lessons, courses and live games.";

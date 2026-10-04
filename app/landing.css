@@ -312,3 +312,5 @@ html[lang="ar"] .site-ui :is(h1, h2, h3, .site-brand) { letter-spacing: 0; }
 .site-partner--soon { opacity: .75; }
 .site-soon { display: inline-flex; margin-top: 24px !important; padding: 2px 10px; border-radius: 999px; background: var(--s-subtle); font-size: 13px !important; font-weight: 600; color: var(--s-soft); }
 @media (max-width: 900px) { .site-features:has(> :nth-child(3):last-child), .site-partners:has(> :nth-child(3):last-child) { grid-template-columns: 1fr; } }
+
+.site-product-definition { max-width: 780px; margin: 24px auto 0; color: var(--site-muted); font-size: 16px; line-height: 1.65; }
