@@ -377,3 +377,13 @@ export const myLearning = query({ args: {}, handler: async ctx => {
   }
   return results;
 } });
+
+export async function readCourseLesson(ctx: QueryCtx, args: { courseId: string; lessonId: string }, asActor?: string) {
+ const course = await readPublicCourse(ctx, { courseId: args.courseId }, asActor);
+ const item = course?.lessons.find(l => l.id === args.lessonId);
+ if (!course || !item) return null;
+ const lesson = await ctx.db.get("lessons", item.id), version = await ctx.db.get("lessonVersions", item.versionId);
+ if (!lesson || !version) return null;
+ return { lessonId: lesson._id, ownerId: lesson.ownerId, ownerName: course.ownerName, createdAt: lesson.createdAt, version };
+}
+export const lesson = query({ args: { courseId: v.string(), lessonId: v.string() }, handler: (ctx, args) => readCourseLesson(ctx, args) });

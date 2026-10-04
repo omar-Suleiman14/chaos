@@ -16,9 +16,9 @@ export async function resolveStudyTarget(ctx: QueryCtx | MutationCtx, actor: { s
   const lesson = await lessonAccessForActor(ctx, actor.subject, args.lessonId);
   if ((args.versionId !== undefined) === (args.revision !== undefined)) throw new Error("Choose exactly one version or draft revision");
   if (args.versionId) {
-    if (lesson.publishedVersionId !== args.versionId) await lessonAccessForActor(ctx, actor.subject, args.lessonId, true);
     const version = await ctx.db.get("lessonVersions", args.versionId);
     if (!version || version.lessonId !== args.lessonId) throw new Error("Version not accessible");
+    if (lesson.publishedVersionId !== args.versionId && (lesson.visibility !== "public" || version.visibility !== "public")) await lessonAccessForActor(ctx, actor.subject, args.lessonId, true);
     return { key: `v:${args.versionId}`, document: version.document };
   }
   integer(args.revision!);

@@ -590,3 +590,10 @@ export function useCollectionSnapshotLessons(id: string): Lesson[] | undefined {
   if (snapshot === undefined || items.some(i => versions[i.id] === undefined)) return undefined;
   return items.flatMap(i => { const version = versions[i.id]; if (!version || version instanceof Error) return []; return [publicUiLesson({ lessonId: i.id, ownerId: "", ownerName: version.metadata.authorDisplay ?? "Chaos creator", createdAt: version.publishedAt, version })]; });
 }
+
+export function useCourseLesson(courseId: string | null, lessonId: string): Lesson | null | undefined {
+ const viewer = useLearnViewer();
+ const result = useQuery(api.courses.lesson, courseId ? { courseId, lessonId } : "skip");
+ useEffect(() => { if (result && viewer?.signedIn) rememberProgress(viewer.id, result); }, [result, viewer?.id, viewer?.signedIn]);
+ return !courseId ? undefined : result === undefined ? undefined : result ? publicUiLesson(result) : null;
+}
