@@ -3,7 +3,7 @@
 // voice several "packs" that match form themes. Every sound runs through a
 // compressor and a short synthetic room so tones blend instead of clicking.
 
-export type SfxName = "tap" | "select" | "deselect" | "next" | "back" | "start" | "correct" | "wrong" | "finish" | "error" | "toggle" | "pop";
+export type SfxName = "tap" | "select" | "deselect" | "next" | "back" | "start" | "correct" | "wrong" | "finish" | "error" | "toggle" | "pop" | "lesson_complete" | "course_complete";
 export type SfxPack = "soft" | "pop" | "wood" | "arcade" | "off";
 
 interface Engine { ac: AudioContext; out: AudioNode; wet: GainNode; master: GainNode }
@@ -213,6 +213,8 @@ function build(voice: (e: Engine, v: Voice) => void, scale: number, gain: number
     correct: play([[0, N.E5], [0.09, N.A5, 0.8]], 0.55, 0.9),
     wrong: play([[0, N.E4], [0.11, N.C4, 0.5]], 0.35, 0.8),
     error: play([[0, N.D4], [0.08, N.D4]], 0.16, 0.7),
+    lesson_complete: play([[0, N.E5, 0.2], [0.13, N.A5, 0.3]], 0.3, 0.55),
+    course_complete: play([[0, N.E5, 0.2], [0.13, N.A5, 0.22], [0.26, N.C6, 0.3]], 0.3, 0.55),
     finish: play([[0, N.C5], [0.08, N.E5], [0.16, N.G5], [0.24, N.C6], [0.36, N.E6, 1.2]], 0.7, 0.85),
   };
 }
@@ -231,6 +233,8 @@ function reducedData(): boolean {
 export const sfx = {
   isEnabled,
   setEnabled,
+  /** Invoke from a click before asynchronous work so mobile Safari allows the later chime. */
+  unlock: () => { if (!isEnabled()) return; try { const e = getEngine(); if (e?.ac.state === "suspended") void e.ac.resume().catch(() => {}); } catch { /* no audio device */ } },
   /** Pack used when `play` is called without one (the legacy quiz player). */
   setDefaultPack: (pack: SfxPack) => { defaultPack = pack; },
   play: (name: SfxName, pack: SfxPack = defaultPack) => {

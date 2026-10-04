@@ -17,7 +17,7 @@ export default function CourseNavigation({ courseId, lessonId, completed }: { co
   return <nav className="lx-course-navigation" aria-label={ar ? "التنقل في الدورة" : "Course navigation"}>
     <Link href={`/learn/courses/${course.id}`} dir="auto">{course.title}</Link>
     <p className="lx-muted" aria-live="polite">{ar ? `${count} / ${course.lessons.length} دروس مكتملة` : `${count} / ${course.lessons.length} lessons completed`}</p>
-    <progress value={count} max={course.lessons.length} aria-label={ar ? "تقدم الدورة" : "Course progress"} />
+    <div className="lx-course-meter" role="progressbar" aria-valuenow={count} aria-valuemin={0} aria-valuemax={course.lessons.length} aria-label={ar ? "تقدم الدورة" : "Course progress"}><span style={{ width: `${count / Math.max(1, course.lessons.length) * 100}%` }} /></div>
     <div className="lx-actions">{previous && <Link className="ws-btn ws-btn--ghost" href={href(previous.id)}>{ar ? "الدرس السابق" : "Previous lesson"}<bdi>{previous.title}</bdi></Link>}{next && <Link className="ws-btn ws-btn--primary" href={href(next.id)}>{ar ? "تابع إلى الدرس التالي" : "Continue to next lesson"}<bdi>{next.title}</bdi></Link>}</div>
   </nav>;
 }
