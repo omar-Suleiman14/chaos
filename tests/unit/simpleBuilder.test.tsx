@@ -2,9 +2,10 @@ import { useState } from "react";
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FieldEditor from "@/components/forms/builder/FieldEditor";
+import BuildTab from "@/components/forms/builder/BuildTab";
 import FormRenderer from "@/components/forms/FormRenderer";
 import { blankField, emptyDefinition } from "@/convex/formLogic";
-import type { Answers, FormField } from "@/convex/formLogic";
+import type { Answers, FormDefinition, FormField } from "@/convex/formLogic";
 
 vi.mock("@/lib/sfx", () => ({ sfx: { play: vi.fn() } }));
 vi.mock("@/components/forms/formThemes.css", () => ({}));
@@ -33,6 +34,28 @@ describe("question editor", () => {
     expect(required).not.toBeChecked();
     fireEvent.click(required);
     expect(screen.getByRole("switch", { name: "Required" })).toBeChecked();
+  });
+});
+
+function Builder({ initial }: { initial: FormDefinition }) {
+  const [def, setDef] = useState(initial);
+  return <BuildTab def={def} change={(updater) => setDef(updater)} readOnly={false} notice={vi.fn()} />;
+}
+
+describe("adding questions", () => {
+  it("adds a ready-to-type single-choice question in one click and shows its type beside it", () => {
+    render(<Builder initial={emptyDefinition("Example")} />);
+    expect(screen.getByText("Start with your first question")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Add question" }));
+    expect(screen.getByPlaceholderText("Type your question")).toHaveFocus();
+    expect(screen.getByRole("combobox", { name: "Question type" })).toHaveTextContent("Single choice");
+    expect(screen.getByRole("textbox", { name: "Options 2" })).toHaveValue("Option 2");
+  });
+
+  it("adds the next option when Enter is pressed in an option", () => {
+    render(<Builder initial={{ ...emptyDefinition("Example"), fields: [blankField("choice")] }} />);
+    fireEvent.keyDown(screen.getByRole("textbox", { name: "Options 2" }), { key: "Enter" });
+    expect(screen.getByRole("textbox", { name: "Options 3" })).toHaveValue("Option 3");
   });
 });
 

@@ -6,7 +6,7 @@ import { useMutation } from "convex/react";
 import posthog from "@/lib/analytics";
 import { api } from "@/convex/_generated/api";
 import { errorMessage } from "@/lib/errors";
-import { emptyDefinition } from "@/convex/formLogic";
+import { blankField, emptyDefinition } from "@/convex/formLogic";
 import { themeFromPreset } from "@/components/forms/formThemes";
 import { useCopy } from "@/lib/i18n";
 import { defaultPreferences, readPreferences } from "@/lib/preferences";
@@ -30,6 +30,8 @@ function blankFromPreferences() {
   def.languages = [p.newFormLanguage];
   def.theme = { ...themeFromPreset(p.newFormPreset), sound: p.newFormSound ? (themeFromPreset(p.newFormPreset).sound ?? "soft") : "off" };
   if (p.newFormSound && def.theme.sound === "off") def.theme.sound = "soft";
+  // Like Google Forms, a new form opens with one single-choice question ready to type into.
+  def.fields = [blankField("choice")];
   return def;
 }
 
@@ -49,11 +51,11 @@ export function useCreateForm(onError: (message: string) => void) {
     if (busy) return;
     setBusy(true);
     try {
-      const blank = !args.definition && !args.templateId && !args.ownTemplateId && hasCustomDefaults();
-      const formId = await createForm(blank ? { ...args, definition: blankFromPreferences() } : args);
+      const blank = !args.definition && !args.templateId && !args.ownTemplateId;
+      const formId = await createForm(blank ? { ...args, definition: { ...blankFromPreferences(), ...(args.title ? { title: args.title } : {}) } } : args);
       posthog.capture("form_created", {
         source: args.templateId ? "template" : args.ownTemplateId ? "saved_template" : "blank",
-        uses_custom_defaults: blank,
+        uses_custom_defaults: blank && hasCustomDefaults(),
       });
       router.push(`/dashboard/forms/${formId}`);
     } catch (err) {

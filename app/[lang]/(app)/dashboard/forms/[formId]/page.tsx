@@ -87,7 +87,7 @@ const copy = {
     kindQuiz: "quiz", kindForm: "form",
     role: (role: string, kind: string) => `You are ${role === "editor" ? "an editor" : "a viewer"} of this ${kind}. `,
     createdFrom: (kind: string, label: string) => `Created from ${kind === "integration" ? "a connected app" : kind}: ${label}`,
-    guideLabel: "Getting started", step1: "Add your first question", step1Action: "Add a question", step2: "Choose how it looks", step2Action: "Open Design", step3: "Publish to get a link you can share", step3Action: "Publish",
+    guideLabel: "Getting started", step1: "Type your first question", step1Action: "Show me", step2: "Choose how it looks", step2Action: "Open Theme", step3: "Publish to get a link you can share", step3Action: "Publish",
     stepOf: (i: number, n: number) => `Step ${i} of ${n}`, hideGuide: "Hide getting started", addQuestionLabel: "Add a question",
     recovery: (ago: string) => `Unsaved edits from ${ago} were found on this device.`, restore: "Restore them", discard: "Discard",
     conflictMsg: (kind: string) => `Someone else changed this ${kind}. Your edits are kept here until you choose.`, loadTheirs: "Load their version", keepMine: "Keep mine (overwrite)", retry: "Retry",
@@ -113,7 +113,7 @@ const copy = {
     kindQuiz: "الاختبار", kindForm: "النموذج",
     role: (role: string, kind: string) => `أنت ${role === "editor" ? "محرر" : "مشاهد"} في هذا ${kind === "الاختبار" ? "الاختبار" : "النموذج"}. `,
     createdFrom: (kind: string, label: string) => `أُنشئ من ${{ integration: "تطبيق متصل", template: "قالب", import: "استيراد", copy: "نسخة" }[kind] ?? kind}: ${label}`,
-    guideLabel: "البدء", step1: "أضف سؤالك الأول", step1Action: "أضف سؤالًا", step2: "اختر شكل النموذج", step2Action: "افتح التصميم", step3: "انشر لتحصل على رابط تشاركه", step3Action: "انشر",
+    guideLabel: "البدء", step1: "اكتب سؤالك الأول", step1Action: "أرني", step2: "اختر شكل النموذج", step2Action: "افتح المظهر", step3: "انشر لتحصل على رابط تشاركه", step3Action: "انشر",
     stepOf: (i: number, n: number) => `الخطوة ${i} من ${n}`, hideGuide: "أخفِ دليل البدء", addQuestionLabel: "أضف سؤالًا",
     recovery: (ago: string) => `وُجدت تعديلات غير محفوظة على هذا الجهاز من ${ago}.`, restore: "استعدها", discard: "تجاهلها",
     conflictMsg: (kind: string) => `غيّر شخص آخر هذا ${kind === "quiz" ? "الاختبار" : "النموذج"}. تبقى تعديلاتك هنا حتى تقرر.`, loadTheirs: "حمّل نسخته", keepMine: "أبقِ نسختي (استبدال)", retry: "أعد المحاولة",
@@ -326,7 +326,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
       {canEdit && quiz && <div className="ws-next-step"><span className="flex-1 text-sm">{t.gameGuide}</span><Link href="/dashboard?tab=games" className="ws-btn ws-btn--sm">{t.gameGuideLink}</Link></div>}
       {canEdit && !published && !guide.dismissed && (() => {
         const steps = [
-          { done: def.fields.some((f) => f.type !== "section" && f.type !== "statement"), text: t.step1, action: t.step1Action, run: () => { setTab("Questions"); requestAnimationFrame(() => document.querySelector(`[aria-label='${t.addQuestionLabel}']`)?.scrollIntoView({ behavior: "smooth", block: "center" })); } },
+          { done: def.fields.some((f) => f.type !== "section" && f.type !== "statement" && f.label.trim() !== ""), text: t.step1, action: t.step1Action, run: () => { setTab("Questions"); requestAnimationFrame(() => { const first = document.querySelector<HTMLInputElement>("[role=tabpanel] ol input.kb-input"); if (first) first.focus(); else document.querySelector(`[aria-label='${t.addQuestionLabel}']`)?.scrollIntoView({ behavior: "smooth", block: "center" }); }); } },
           { done: guide.seenDesign, text: t.step2, action: t.step2Action, run: () => setTab("Design") },
           { done: false, text: t.step3, action: t.step3Action, run: () => void handlePublish() },
         ];

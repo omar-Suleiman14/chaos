@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronRight, Copy, GitBranch, Plus, Trash2, X } from "lucide-react";
 import { blankField, fieldTypes, isAnswerable, newId, optionTypes } from "@/convex/formLogic";
 import type { Choice, FieldType, FormDefinition, FormField } from "@/convex/formLogic";
@@ -89,6 +89,14 @@ function ChoiceList({ kind, items, onChange, prefix, withScores }: { kind: "opti
   const label = t[kind];
   const [asText, setAsText] = useState(false);
   const [text, setText] = useState("");
+  const list = useRef<HTMLUListElement>(null);
+  // Enter in an option adds the next one and moves to it, so a list can be typed without the mouse.
+  const addAfter = (i: number) => {
+    const next = [...items];
+    next.splice(i + 1, 0, { id: newId(prefix), label: t.newItem(kind, items.length + 1) });
+    onChange(next);
+    requestAnimationFrame(() => { const input = list.current?.querySelectorAll("input:not([type=number])")[i + 1] as HTMLInputElement | undefined; input?.focus(); input?.select(); });
+  };
   return (
     <div className="space-y-2">
       <div className="flex items-center justify-between">
@@ -100,10 +108,12 @@ function ChoiceList({ kind, items, onChange, prefix, withScores }: { kind: "opti
       {asText ? (
         <textarea value={text} onChange={(e) => setText(e.target.value)} rows={Math.min(12, Math.max(4, items.length + 1))} className="kb-input text-sm" aria-label={t.onePerLine(label)} />
       ) : (
-        <ul className="space-y-1">
+        <ul className="space-y-1" ref={list}>
           {items.map((c, i) => (
             <li key={c.id} className="flex gap-2 items-center ws-reveal-host">
-              <input value={c.label} onChange={(e) => onChange(items.map((x) => (x.id === c.id ? { ...x, label: e.target.value } : x)))} className="kb-input py-1.5 text-sm flex-1" aria-label={t.itemN(label, i + 1)} />
+              <input value={c.label} onChange={(e) => onChange(items.map((x) => (x.id === c.id ? { ...x, label: e.target.value } : x)))} className="kb-input py-1.5 text-sm flex-1" aria-label={t.itemN(label, i + 1)}
+                onFocus={(e) => { if (/^(Option|Row|Column|خيار|صف|عمود) \d+$/.test(c.label)) e.currentTarget.select(); }}
+                onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); addAfter(i); } }} />
               {withScores && (
                 <input type="number" value={c.score ?? ""} placeholder={t.score} aria-label={t.scoreFor(c.label)} className="kb-input py-1.5 text-sm w-20"
                   onChange={(e) => onChange(items.map((x) => (x.id === c.id ? (e.target.value === "" ? (({ score: _s, ...rest }) => rest)(x) : { ...x, score: Number(e.target.value) }) : x)))} />
@@ -115,7 +125,7 @@ function ChoiceList({ kind, items, onChange, prefix, withScores }: { kind: "opti
         </ul>
       )}
       {!asText && (
-        <button type="button" onClick={() => onChange([...items, { id: newId(prefix), label: t.newItem(kind, items.length + 1) }])} className="ws-link-quiet flex items-center gap-1">
+        <button type="button" onClick={() => addAfter(items.length - 1)} className="ws-link-quiet flex items-center gap-1">
           <Plus size={14} /> {t.addItem(kind)}
         </button>
       )}
@@ -128,7 +138,7 @@ function ChoiceList({ kind, items, onChange, prefix, withScores }: { kind: "opti
  * options and "Required". Type changes, limits, scores and images live under
  * "More options"; moving, duplicating and deleting live in the "…" menu.
  */
-export default function FieldEditor({ field, index, def, onChange, onDuplicate, onRemove, onMove, readOnly }: {
+export default function FieldEditor({ field, index, def, onChange, onDuplicate, onRemove, onMove, readOnly, autoFocus }: {
   field: FormField;
   index: number;
   def: FormDefinition;
@@ -137,6 +147,7 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
   onRemove: () => void;
   onMove: (delta: number) => void;
   readOnly?: boolean;
+  autoFocus?: boolean;
 }) {
   const t = useCopy(copy);
   const labels = useBuilderLabels();
@@ -160,11 +171,18 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
 
   return (
     <fieldset disabled={readOnly} className="space-y-4">
-      <label className="block">
-        <span className="sr-only">{name}</span>
-        <input value={field.label} onChange={(e) => set({ label: e.target.value })} className="kb-input !text-[17px] font-medium" maxLength={500}
-          placeholder={field.type === "section" ? t.sectionTitle : field.type === "statement" ? t.headingOptional : t.typeQuestion} />
-      </label>
+      {/* As in Google Forms: the question and its type side by side, so changing type is one click away. */}
+      <div className="flex flex-wrap items-start gap-2">
+        <label className="block flex-1 min-w-[min(100%,16rem)]">
+          <span className="sr-only">{name}</span>
+          <input value={field.label} onChange={(e) => set({ label: e.target.value })} className="kb-input !text-[17px] font-medium" maxLength={500} autoFocus={autoFocus}
+            placeholder={field.type === "section" ? t.sectionTitle : field.type === "statement" ? t.headingOptional : t.typeQuestion} />
+        </label>
+        {field.type !== "section" && (
+          <Select label={t.questionType} className="w-full sm:w-52 flex" value={field.type} onChange={(v) => onChange(convertField(field, v))}
+            options={fieldTypes.filter((ft) => ft !== "section").map((ft) => ({ value: ft, label: labels.fieldType(ft) }))} />
+        )}
+      </div>
       {showDescription || field.description || field.type === "statement" ? (
         <label className="block">
           <span className="sr-only">{field.type === "statement" ? t.text : t.description}</span>
@@ -239,11 +257,6 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
       <details className="ws-field-more">
         <summary><ChevronRight size={15} className="rtl:rotate-180" /> {t.moreOptions}</summary>
         <div className="space-y-4 pt-3">
-          <label className="block">
-            <span className={labelClass}>{t.questionType}</span>
-            <Select className="mt-1 w-full max-w-xs flex" value={field.type} onChange={(v) => onChange(convertField(field, v))}
-              options={fieldTypes.map((ft) => ({ value: ft, label: labels.fieldType(ft) }))} />
-          </label>
           {(field.type === "choice" || field.type === "dropdown" || field.type === "multi_choice") && (
             <label className="flex items-center gap-2 text-sm"><input type="checkbox" checked={scores} onChange={(e) => { setScores(e.target.checked); if (!e.target.checked) set({ options: field.options?.map(({ score: _s, ...o }) => o) }); }} /> {t.giveScores}</label>
           )}
@@ -304,14 +317,13 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
             <GitBranch size={15} /> {field.showIf ? t.shownConditionally : t.logic}
           </button>
         )}
+        <button type="button" className="ws-icon-button" onClick={onDuplicate} aria-label={field.type === "section" ? t.duplicateSection : t.duplicate} title={field.type === "section" ? t.duplicateSection : t.duplicate}><Copy size={16} /></button>
+        <button type="button" className="ws-icon-button hover:text-[var(--error)]" onClick={onRemove} aria-label={field.type === "section" ? t.removeSectionHeading : t.delete} title={field.type === "section" ? t.removeSectionHeading : t.delete}><Trash2 size={16} /></button>
         <WsMenu label={t.actionsFor(field.label || labels.fieldType(field.type))} triggerClassName="ws-icon-button">
           {(close) => (
             <>
               <button type="button" role="menuitem" onClick={() => { close(); onMove(-1); }}><ArrowUp size={16} /> {t.moveUp}</button>
               <button type="button" role="menuitem" onClick={() => { close(); onMove(1); }}><ArrowDown size={16} /> {t.moveDown}</button>
-              <button type="button" role="menuitem" onClick={() => { close(); onDuplicate(); }}><Copy size={16} /> {field.type === "section" ? t.duplicateSection : t.duplicate}</button>
-              <hr />
-              <button type="button" role="menuitem" className="text-[var(--error)]" onClick={() => { close(); onRemove(); }}><Trash2 size={16} /> {field.type === "section" ? t.removeSectionHeading : t.delete}</button>
             </>
           )}
         </WsMenu>

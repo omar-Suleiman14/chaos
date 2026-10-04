@@ -6,7 +6,7 @@ import {
   Minus, Phone, Plus, SlidersHorizontal, SquareChevronDown, Star, Type, Text as TextIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { blankField, fieldTypes, isAnswerable } from "@/convex/formLogic";
+import { blankField, isAnswerable } from "@/convex/formLogic";
 import type { FieldType, FormDefinition } from "@/convex/formLogic";
 import { copyFields, duplicateSection, insertAfter, moveField, removeFields } from "@/lib/formBuilder";
 import { useBuilderLabels } from "@/components/forms/formThemeLabels";
@@ -16,7 +16,8 @@ import FieldEditor from "./FieldEditor";
 
 const copy = {
   en: {
-    insertHere: "Insert here", addQuestion: "Add a question", fewerTypes: "Fewer types", moreTypes: "More types", cancel: "Cancel",
+    insertHere: "Add a question here", addQuestion: "Add a question", addQuestionButton: "Add question", addText: "Add text", addSection: "Add section",
+    emptyTitle: "Start with your first question", emptyBody: "Type the question, then the answers. You can change its type at any time.",
     intro: "Introduction", introQuiz: "Add an introduction: what the quiz covers, how long it takes…", introForm: "Add an introduction: why you are asking, how long it takes…",
     bulk: "Bulk actions", selected: (n: number) => `${n} selected`, required: "Required", optional: "Optional", duplicate: "Duplicate", moveToEnd: "Move to end", delete: "Delete", clear: "Clear",
     select: (name: string) => `Select ${name}`, textBlock: "Text block", untitled: "Untitled", branching: "Has branching",
@@ -24,7 +25,8 @@ const copy = {
     deleted: (n: number) => (n === 1 ? "Question deleted" : `${n} questions deleted`),
   },
   ar: {
-    insertHere: "أضف هنا", addQuestion: "أضف سؤالًا", fewerTypes: "أنواع أقل", moreTypes: "أنواع أخرى", cancel: "إلغاء",
+    insertHere: "أضف سؤالًا هنا", addQuestion: "أضف سؤالًا", addQuestionButton: "أضف سؤالًا", addText: "أضف نصًا", addSection: "أضف قسمًا",
+    emptyTitle: "ابدأ بسؤالك الأول", emptyBody: "اكتب السؤال ثم الإجابات. يمكنك تغيير نوعه في أي وقت.",
     intro: "المقدمة", introQuiz: "أضف مقدمة: ما يغطيه الاختبار وكم يستغرق…", introForm: "أضف مقدمة: لماذا تسأل وكم يستغرق…",
     bulk: "إجراءات جماعية", selected: (n: number) => `المحدد: ${n}`, required: "مطلوب", optional: "اختياري", duplicate: "تكرار", moveToEnd: "نقل إلى النهاية", delete: "حذف", clear: "إلغاء التحديد",
     select: (name: string) => `تحديد ${name}`, textBlock: "كتلة نص", untitled: "بلا عنوان", branching: "فيه تفرّع",
@@ -39,37 +41,22 @@ const fieldIcons: Record<FieldType, LucideIcon> = {
   matrix: Grid3x3, file: FileUp, statement: TextIcon, section: Minus,
 };
 
-/** The types most people need; the rest wait behind "More types". */
-const everydayTypes: FieldType[] = ["text", "textarea", "choice", "multi_choice", "rating", "email"];
+/**
+ * One click adds a ready-to-type question, as in Google Forms. It copies the type of the
+ * question above (single choice to start); the type can be changed on the question itself.
+ */
+function nextType(def: FormDefinition, afterIndex: number): FieldType {
+  for (let i = Math.min(afterIndex, def.fields.length - 1); i >= 0; i--) if (isAnswerable(def.fields[i])) return def.fields[i].type;
+  return "choice";
+}
 
-function AddField({ onAdd, compact }: { onAdd: (type: FieldType) => void; compact?: boolean }) {
+function AddBar({ onAdd }: { onAdd: (type?: FieldType) => void }) {
   const t = useCopy(copy);
-  const labels = useBuilderLabels();
-  const [open, setOpen] = useState(!compact);
-  const [all, setAll] = useState(false);
-  if (!open) {
-    return (
-      <button type="button" onClick={() => setOpen(true)} className="w-full text-xs text-muted-foreground hover:text-foreground py-1 flex items-center justify-center gap-1 opacity-60 hover:opacity-100">
-        <Plus size={12} /> {t.insertHere}
-      </button>
-    );
-  }
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5" role="group" aria-label={t.addQuestion}>
-      {(all ? fieldTypes : everydayTypes).map((type) => {
-        const Icon = fieldIcons[type];
-        return (
-          <button key={type} type="button" onClick={() => { onAdd(type); if (compact) setOpen(false); }}
-            className="flex items-center gap-2.5 rounded-lg px-3 min-h-12 text-[15px] font-medium text-start transition-colors hover:bg-[var(--ws-hover)] active:scale-[0.98]">
-            <span className="grid place-items-center w-8 h-8 rounded-md bg-[var(--ws-active)] text-[var(--ws-text-soft)]"><Icon size={16} /></span>
-            {labels.fieldType(type)}
-          </button>
-        );
-      })}
-      <button type="button" onClick={() => setAll(!all)} aria-expanded={all} className="ws-link-quiet flex items-center gap-1.5 px-3 min-h-12">
-        {all ? t.fewerTypes : <><Plus size={15} /> {t.moreTypes}</>}
-      </button>
-      {compact && <button type="button" onClick={() => setOpen(false)} className="ws-link-quiet px-3 min-h-12">{t.cancel}</button>}
+    <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t.addQuestion}>
+      <button type="button" className="ws-btn ws-btn--primary" onClick={() => onAdd()}><Plus size={17} /> {t.addQuestionButton}</button>
+      <button type="button" className="ws-btn ws-btn--ghost" onClick={() => onAdd("statement")}><TextIcon size={16} /> {t.addText}</button>
+      <button type="button" className="ws-btn ws-btn--ghost" onClick={() => onAdd("section")}><Minus size={16} /> {t.addSection}</button>
     </div>
   );
 }
@@ -88,13 +75,13 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
   const step = (updater: (d: FormDefinition) => FormDefinition) => rawChange(updater, { checkpoint: true });
   const [expanded, setExpanded] = useState<string | null>(def.fields[0]?.id ?? null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [insertAt, setInsertAt] = useState<number | null>(null);
+  const [focusId, setFocusId] = useState<string | null>(null);
 
-  const add = (type: FieldType, afterIndex: number) => {
-    const field = blankField(type);
+  const add = (afterIndex: number, type?: FieldType) => {
+    const field = blankField(type ?? nextType(def, afterIndex));
     step((d) => insertAfter(d, afterIndex, [field]));
     setExpanded(field.id);
-    setInsertAt(null);
+    setFocusId(field.id);
   };
   const remove = (ids: Set<string>) => {
     const count = def.fields.filter((f) => ids.has(f.id)).length;
@@ -172,26 +159,28 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
                       onDuplicate={() => step((d) => (field.type === "section" ? duplicateSection(d, field.id) : insertAfter(d, index, copyFields([field]))))}
                       onRemove={() => remove(new Set([field.id]))}
                       onMove={(delta) => step((d) => moveField(d, index, index + delta))}
+                      autoFocus={focusId === field.id}
                     />
                   </div>
                 )}
               </div>
-              {!readOnly && (insertAt === index ? <div className="py-2"><AddField compact onAdd={(t) => add(t, index)} /></div> : (
-                <button type="button" onClick={() => setInsertAt(index)} className="w-full text-[13px] text-muted-foreground hover:text-foreground py-1.5 opacity-0 hover:opacity-100 focus-visible:opacity-100 transition-opacity flex items-center justify-center gap-1">
+              {!readOnly && index < def.fields.length - 1 && (
+                <button type="button" onClick={() => add(index)} className="w-full text-[13px] text-muted-foreground hover:text-foreground py-1.5 opacity-0 hover:opacity-100 focus-visible:opacity-100 transition-opacity flex items-center justify-center gap-1">
                   <Plus size={14} /> {t.insertHere}
                 </button>
-              ))}
+              )}
             </li>
           );
         })}
       </ol>
 
-      {!readOnly && (
-        <div className="chaos-card bg-card p-5 space-y-3">
-          <p className="text-[15px] font-semibold">{t.addQuestion}</p>
-          <AddField onAdd={(t) => add(t, def.fields.length - 1)} />
+      {!readOnly && (def.fields.length === 0 ? (
+        <div className="chaos-card bg-card p-6 space-y-3 text-center grid justify-items-center">
+          <p className="text-lg font-semibold">{t.emptyTitle}</p>
+          <p className="text-sm text-muted-foreground max-w-sm">{t.emptyBody}</p>
+          <AddBar onAdd={(type) => add(def.fields.length - 1, type)} />
         </div>
-      )}
+      ) : <AddBar onAdd={(type) => add(def.fields.length - 1, type)} />)}
     </div>
   );
 }
