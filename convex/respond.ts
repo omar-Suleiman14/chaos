@@ -20,7 +20,8 @@ import { ruleHolds, visibleFieldIds } from "./formLogic";
 import { gradeQuiz, publicQuizDefinition } from "./formQuiz";
 import { emitWebhookEvent, formResponseData } from "./webhookEvents";
 import { releasedDefinition, releasedFieldIds, nextFieldReleaseAt, releasedAnswers, assertReleasedAnswers } from "./formRelease";
-import { captureHidden, captureTypedHidden, checkEmailRules } from "./formRespondent";
+import { captureHidden, captureTypedHidden } from "./formRespondent";
+import { teamOrEmailCheck } from "./businessAccess";
 
 export const DEFAULT_FORM_RESPONSE_LIMIT = planLimits.free.responsesPerForm;
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -120,7 +121,7 @@ export const getPublicForm = query({
     const identity = await getAuthIdentity(ctx);
     if (form.settings.access === "signed_in" && !identity) return { state: "sign_in" as const, ...base };
     if (form.settings.access === "signed_in") {
-      const check = checkEmailRules(form.settings, identity);
+      const check = await teamOrEmailCheck(ctx, form.settings, identity);
       // The allow-list stays private; the respondent only learns which account they used.
       if (check !== "ok") return { state: "restricted" as const, ...base, reason: check, email: identity?.email ?? null };
     }
@@ -207,9 +208,9 @@ async function assertCanCollect(ctx: MutationCtx, form: Doc<"forms"> | null, acc
   const identity = await getAuthIdentity(ctx);
   if (form.settings.access === "signed_in" && !identity) throw new Error("SIGN_IN_REQUIRED: Sign in to respond to this form.");
   if (form.settings.access === "signed_in") {
-    const check = checkEmailRules(form.settings, identity);
+    const check = await teamOrEmailCheck(ctx, form.settings, identity);
     if (check === "unverified") throw new Error("EMAIL_UNVERIFIED: Sign in with a verified email address to respond to this form.");
-    if (check === "not_allowed") throw new Error("EMAIL_NOT_ALLOWED: This form only accepts responses from certain email addresses.");
+    if (check === "not_allowed") throw new Error(form.settings.audienceTeamId ? "TEAM_ONLY: Only members of this team can respond." : "EMAIL_NOT_ALLOWED: This form only accepts responses from certain email addresses.");
   }
   if (form.settings.access === "code" && !(await accessCodeMatches(ctx, form, accessCode))) throw new Error("ACCESS_CODE_REQUIRED: Enter the access code for this form.");
   return { form, identity };

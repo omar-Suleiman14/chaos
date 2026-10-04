@@ -8,11 +8,6 @@
  * @module
  */
 
-import type {
-  ApiFromModules,
-  FilterApi,
-  FunctionReference,
-} from "convex/server";
 import type * as admin from "../admin.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminModel from "../adminModel.js";
@@ -110,6 +105,7 @@ import type * as liveTeams from "../liveTeams.js";
 import type * as mcp from "../mcp.js";
 import type * as mcpAdvancedForms from "../mcpAdvancedForms.js";
 import type * as mcpAssessments from "../mcpAssessments.js";
+import type * as mcpBusiness from "../mcpBusiness.js";
 import type * as mcpCards from "../mcpCards.js";
 import type * as mcpContract from "../mcpContract.js";
 import type * as mcpCourses from "../mcpCourses.js";
@@ -144,14 +140,12 @@ import type * as webhookModel from "../webhookModel.js";
 import type * as webhookUrl from "../webhookUrl.js";
 import type * as webhooks from "../webhooks.js";
 
-/**
- * A utility for referencing Convex functions in your app's API.
- *
- * Usage:
- * ```js
- * const myFunctionReference = api.myModule.myFunction;
- * ```
- */
+import type {
+  ApiFromModules,
+  FilterApi,
+  FunctionReference,
+} from "convex/server";
+
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   adminAnalytics: typeof adminAnalytics;
@@ -250,6 +244,7 @@ declare const fullApi: ApiFromModules<{
   mcp: typeof mcp;
   mcpAdvancedForms: typeof mcpAdvancedForms;
   mcpAssessments: typeof mcpAssessments;
+  mcpBusiness: typeof mcpBusiness;
   mcpCards: typeof mcpCards;
   mcpContract: typeof mcpContract;
   mcpCourses: typeof mcpCourses;
@@ -284,10 +279,28 @@ declare const fullApi: ApiFromModules<{
   webhookUrl: typeof webhookUrl;
   webhooks: typeof webhooks;
 }>;
+
+/**
+ * A utility for referencing Convex functions in your app's public API.
+ *
+ * Usage:
+ * ```js
+ * const myFunctionReference = api.myModule.myFunction;
+ * ```
+ */
 export declare const api: FilterApi<
   typeof fullApi,
   FunctionReference<any, "public">
 >;
+
+/**
+ * A utility for referencing Convex functions in your app's internal API.
+ *
+ * Usage:
+ * ```js
+ * const myFunctionReference = internal.myModule.myFunction;
+ * ```
+ */
 export declare const internal: FilterApi<
   typeof fullApi,
   FunctionReference<any, "internal">

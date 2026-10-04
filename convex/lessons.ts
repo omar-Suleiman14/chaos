@@ -2,7 +2,7 @@ import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 import { requireVisibilityAllowed } from "./plans";
-import { canEditTeamAsset } from "./businessAccess";
+import { canEditTeamAsset, resolveAudienceTeam, teamAudienceAllows } from "./businessAccess";
 import { recordPublicationAction } from "./learnPublicationAudit";
 import { v, ConvexError } from "convex/values";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
@@ -31,7 +31,7 @@ export async function lessonAccessForActor(ctx: QueryCtx | MutationCtx, actor: s
     }
     return lesson;
   }
-  if (!edit && lesson.status === "active" && lesson.visibility === "public" && lesson.communityState === "ok" && lesson.publishedVersionId && !await creatorRestricted(ctx, lesson.ownerId)) return lesson;
+  if (!edit && lesson.status === "active" && (lesson.visibility === "public" || await teamAudienceAllows(ctx, lesson, actor)) && lesson.communityState === "ok" && lesson.publishedVersionId && !await creatorRestricted(ctx, lesson.ownerId)) return lesson;
   throw new Error("NOT_FOUND: Lesson not found or unauthorized.");
 }
 function revisionCheck(lesson: Doc<"lessons">, expected: number) {
@@ -174,7 +174,7 @@ export async function publicationProblems(ctx: MutationCtx, lesson: Doc<"lessons
   return errors;
 }
 const problemValidator = v.object({ path: v.string(), code: v.string(), message: v.string() });
-export const publish = mutation({ args: { lessonId: v.id("lessons"), expectedRevision: v.number(), visibility, note: v.optional(v.string()) }, returns: v.union(v.object({ ok: v.literal(false), problems: v.array(problemValidator) }), v.object({ ok: v.literal(true), versionId: v.id("lessonVersions"), revision: v.number() })), handler: async (ctx, args) => {
+export const publish = mutation({ args: { lessonId: v.id("lessons"), expectedRevision: v.number(), visibility, teamId: v.optional(v.id("businessTeams")), note: v.optional(v.string()) }, returns: v.union(v.object({ ok: v.literal(false), problems: v.array(problemValidator) }), v.object({ ok: v.literal(true), versionId: v.id("lessonVersions"), revision: v.number() })), handler: async (ctx, args) => {
   const { identity } = await requireActiveUser(ctx);
   return publishLessonForActor(ctx, identity.subject, args);
 } });
@@ -189,7 +189,7 @@ export async function coursesContainingLesson(ctx: QueryCtx | MutationCtx, owner
  * be published on their own. Once it is, publishing a lesson also updates the live course.
  * `viaCourse` is set by course publishing, which publishes every lesson as one action.
  */
-export async function publishLessonForActor(ctx: MutationCtx, actor: string, args: { lessonId: Id<"lessons">; expectedRevision: number; visibility: Doc<"lessons">["visibility"]; note?: string }, viaCourse = false) {
+export async function publishLessonForActor(ctx: MutationCtx, actor: string, args: { lessonId: Id<"lessons">; expectedRevision: number; visibility: Doc<"lessons">["visibility"]; teamId?: Id<"businessTeams">; note?: string }, viaCourse = false) {
   const lesson = await lessonAccessForActor(ctx, actor, args.lessonId, true);
   if (actor !== lesson.ownerId) throw new Error("Only the owner can publish");
   revisionCheck(lesson, args.expectedRevision);
@@ -199,6 +199,7 @@ export async function publishLessonForActor(ctx: MutationCtx, actor: string, arg
   const draftCourse = courses.find(c => !c.publishedVersionId);
   if (draftCourse) throw new Error(`COURSE_UNPUBLISHED: Publish the course "${draftCourse.metadata.title}" first. Its lessons go live with it.`);
   await requireVisibilityAllowed(ctx, lesson.ownerId, args.visibility);
+  const audienceTeamId = await resolveAudienceTeam(ctx, actor, args.visibility, args.teamId, lesson.audienceTeamId);
   const problems = await publicationProblems(ctx, lesson);
   if (problems.length) return { ok: false as const, problems };
   if (!viaCourse) await consumeRate(ctx, `learn:publish:${actor}`, LEARN_WRITE_LIMITS.publicationsPerHour, 3_600_000);
@@ -206,7 +207,7 @@ export async function publishLessonForActor(ctx: MutationCtx, actor: string, arg
   const curriculumMappings = (await ctx.db.query("lessonCurriculumMappings").withIndex("by_lessonId_and_nodeId", q => q.eq("lessonId", lesson._id)).take(100)).map(({ versionId, nodeId, conceptKeys, blockIds }) => ({ versionId, nodeId, conceptKeys, blockIds }));
   const versionId = await ctx.db.insert("lessonVersions", { ...(args.note?.trim() ? { note: args.note.trim() } : {}), visibility: args.visibility, curriculumMappings, lessonId: lesson._id, number: (last?.number ?? 0) + 1, metadata: lesson.metadata, document: lesson.draft, authorId: actor, publishedAt: Date.now() });
   const searchText = await buildLessonSearchText(ctx, actor, lesson.metadata, lesson.draft.blocks);
-  await authorDb(ctx).patch("lessons", lesson._id, { publishedVersionId: versionId, visibility: args.visibility, searchText, revision: lesson.revision + 1, updatedAt: Date.now() });
+  await authorDb(ctx).patch("lessons", lesson._id, { publishedVersionId: versionId, visibility: args.visibility, audienceTeamId, searchText, revision: lesson.revision + 1, updatedAt: Date.now() });
   await enqueueLearnWebhookEvent(ctx, { event: "lesson.published", lessonId: lesson._id, versionId, operationId: `version:${versionId}`, revision: lesson.revision + 1 });
   await recordPublicationAction(ctx, { lessonId: lesson._id, actorId: actor, action: "publish", revision: lesson.revision + 1, versionId, beforeVisibility: lesson.visibility, afterVisibility: args.visibility, reason: args.note?.trim() || "Explicitly published an immutable lesson version." });
   // Point each live course that already contains this lesson at the new version.

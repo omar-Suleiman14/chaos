@@ -1,4 +1,5 @@
 import { getAuthIdentity } from "./authIdentity";
+import { resolveAudienceTeam, teamAudienceAllows } from "./businessAccess";
 import { v, ConvexError, type Infer } from "convex/values";
 import { mutation, query, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
@@ -29,14 +30,15 @@ export async function saveFlashcardSet(ctx: MutationCtx, actor: string, args: { 
   validate(args.title, args.cards);
   await ctx.db.patch("flashcardSets", row._id, { title: args.title, cards: args.cards, revision: row.revision + 1, updatedAt: Date.now() }); return row.revision + 1;
 }
-export async function publishFlashcardSet(ctx: MutationCtx, actor: string, args: { setId: Id<"flashcardSets">; expectedRevision: number; visibility: Visibility }) {
+export async function publishFlashcardSet(ctx: MutationCtx, actor: string, args: { setId: Id<"flashcardSets">; expectedRevision: number; visibility: Visibility; teamId?: Id<"businessTeams"> }) {
   const row = await ctx.db.get("flashcardSets", args.setId);
   if (!row || row.ownerId !== actor) throw new Error(NOT_FOUND);
   checkRevision(row.revision, args.expectedRevision);
   validate(row.title, row.cards); if (!row.cards.length) throw new Error("EMPTY: Cannot publish empty cards");
+  const audienceTeamId = await resolveAudienceTeam(ctx, actor, args.visibility, args.teamId, row.audienceTeamId);
   const last = await ctx.db.query("flashcardVersions").withIndex("by_setId_and_number", q => q.eq("setId", row._id)).order("desc").first();
   const versionId = await ctx.db.insert("flashcardVersions", { setId: row._id, title: row.title, cards: row.cards, number: (last?.number ?? 0) + 1, publishedAt: Date.now() });
-  await ctx.db.patch("flashcardSets", row._id, { publishedVersionId: versionId, visibility: args.visibility, revision: row.revision + 1, updatedAt: Date.now() });
+  await ctx.db.patch("flashcardSets", row._id, { publishedVersionId: versionId, visibility: args.visibility, audienceTeamId, revision: row.revision + 1, updatedAt: Date.now() });
   await recordAssetPublicationAction(ctx, { asset: { kind: "flashcards", id: row._id }, actorId: actor, action: "publish", revision: row.revision + 1, versionId, beforeVisibility: row.visibility, afterVisibility: args.visibility, reason: "Published an immutable flashcard version." });
   return versionId;
 }
@@ -44,17 +46,17 @@ export async function setFlashcardLifecycle(ctx: MutationCtx, actor: string, arg
   const row = await ctx.db.get("flashcardSets", args.setId);
   if (!row || row.ownerId !== actor) throw new Error(NOT_FOUND);
   checkRevision(row.revision, args.expectedRevision);
-  await ctx.db.patch("flashcardSets", row._id, { ...(args.action === "unpublish" ? { visibility: "private" as const, publishedVersionId: undefined } : { archived: args.action === "archive" }), revision: row.revision + 1, updatedAt: Date.now() });
+  await ctx.db.patch("flashcardSets", row._id, { ...(args.action === "unpublish" ? { visibility: "private" as const, audienceTeamId: undefined, publishedVersionId: undefined } : { archived: args.action === "archive" }), revision: row.revision + 1, updatedAt: Date.now() });
   await recordAssetPublicationAction(ctx, { asset: { kind: "flashcards", id: row._id }, actorId: actor, action: args.action === "restore" ? "reactivate" : args.action, revision: row.revision + 1, ...(row.publishedVersionId ? { versionId: row.publishedVersionId } : {}), beforeVisibility: row.visibility, afterVisibility: args.action === "unpublish" ? "private" : row.visibility, reason: `Owner requested ${args.action}; immutable history is retained.` });
   return row.revision + 1;
 }
 
 export const create = mutation({ args: { title: v.string(), cards }, returns: v.id("flashcardSets"), handler: async (ctx, args) => createFlashcardSet(ctx, (await requireActiveUser(ctx)).identity.subject, args) });
 export const save = mutation({ args: { setId: v.id("flashcardSets"), expectedRevision: v.number(), title: v.string(), cards }, returns: v.number(), handler: async (ctx, args) => saveFlashcardSet(ctx, (await requireActiveUser(ctx)).identity.subject, args) });
-export const publish = mutation({ args: { setId: v.id("flashcardSets"), expectedRevision: v.number(), visibility }, returns: v.id("flashcardVersions"), handler: async (ctx, args) => publishFlashcardSet(ctx, (await requireActiveUser(ctx)).identity.subject, args) });
+export const publish = mutation({ args: { setId: v.id("flashcardSets"), expectedRevision: v.number(), visibility, teamId: v.optional(v.id("businessTeams")) }, returns: v.id("flashcardVersions"), handler: async (ctx, args) => publishFlashcardSet(ctx, (await requireActiveUser(ctx)).identity.subject, args) });
 export const getPublished = query({ args: { setId: v.id("flashcardSets") }, returns: v.union(schema.doc("flashcardVersions"), v.null()), handler: async (ctx, args) => {
   const row = await ctx.db.get("flashcardSets", args.setId); const identity = await getAuthIdentity(ctx);
-  if (!row || row.archived || (row.ownerId !== identity?.subject && (row.visibility !== "public" || await creatorRestricted(ctx, row.ownerId)))) throw new Error("Flashcards not found or unauthorized");
+  if (!row || row.archived || (row.ownerId !== identity?.subject && ((row.visibility !== "public" && !await teamAudienceAllows(ctx, row, identity?.subject)) || await creatorRestricted(ctx, row.ownerId)))) throw new Error("Flashcards not found or unauthorized");
   return row.publishedVersionId ? ctx.db.get("flashcardVersions", row.publishedVersionId) : null;
 } });
 export const fork = mutation({ args: { setId: v.id("flashcardSets"), versionId: v.id("flashcardVersions") }, returns: v.id("flashcardSets"), handler: async (ctx, args) => {

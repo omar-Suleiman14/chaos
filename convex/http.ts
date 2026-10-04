@@ -325,6 +325,19 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "get_student_card_preferences": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCards:studentPreferences"), { userId }); break;
       case "set_student_card_preferences": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCards:setStudentPreferences"), { ...input, userId }); break;
       case "set_author_listing_visibility": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCards:listing"), { ...input, userId }); break;
+      case "list_teams": result = await ctx.runQuery(makeFunctionReference<"query">("mcpBusiness:listTeams"), { userId }); break;
+      case "create_team": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpBusiness:createTeam"), { ...input, userId }); break;
+      case "rename_team": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpBusiness:renameTeam"), { ...input, userId }); break;
+      case "list_team_members": result = await ctx.runQuery(makeFunctionReference<"query">("mcpBusiness:listMembers"), { ...input, userId }); break;
+      case "invite_team_member": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpBusiness:inviteMember"), { ...input, userId }); break;
+      case "list_team_invitations": result = await ctx.runQuery(makeFunctionReference<"query">("mcpBusiness:listInvitations"), { ...input, userId }); break;
+      case "revoke_team_invitation": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpBusiness:revokeInvitation"), { ...input, userId }); break;
+      case "accept_team_invitation": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpBusiness:acceptInvitation"), { ...input, userId }); break;
+      case "change_team_member_role": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpBusiness:changeMemberRole"), { ...input, userId }); break;
+      case "remove_team_member": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpBusiness:removeMember"), { ...input, userId }); break;
+      case "list_team_resources": result = await ctx.runQuery(makeFunctionReference<"query">("mcpBusiness:listResources"), { ...input, userId }); break;
+      case "share_with_team": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpBusiness:share"), { ...input, userId }); break;
+      case "unshare_from_team": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpBusiness:unshare"), { ...input, userId }); break;
       case "list_crm_contacts": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCrm:list"), { ...input, userId }); break;
       case "get_crm_contact": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCrm:get"), { ...input, userId }); break;
       case "save_crm_contact": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCrm:save"), { ...input, userId }); break;
@@ -415,7 +428,7 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "host_game": {
         const language = input.language;
         if (language !== undefined && language !== "en" && language !== "ar") return error(400, "VALIDATION_FAILED", "language must be en or ar.");
-        result = await ctx.runMutation(internal.mcp.hostGame, { userId, id, language, ...gameSettings() });
+        result = await ctx.runMutation(internal.mcp.hostGame, { userId, id, language, ...(typeof input.teamId === "string" ? { teamId: input.teamId as Id<"businessTeams"> } : {}), ...gameSettings() });
         break;
       }
       case "set_game_settings": result = await ctx.runMutation(internal.mcp.setGameSettings, { userId, id, ...gameSettings() }); break;

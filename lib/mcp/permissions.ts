@@ -5,6 +5,7 @@ export function permissionForTool(tool: string): McpPermission {
  if (["list_crm_contacts", "get_crm_contact", "save_crm_contact", "add_crm_note"].includes(tool)) return "admin_crm";
  if (["list_responses", "export_form_responses", "list_my_students"].includes(tool)) return "individual_responses";
  if (tool.includes("collaborator")) return "collaborators";
+ if (["invite_team_member", "revoke_team_invitation", "accept_team_invitation", "change_team_member_role", "remove_team_member", "share_with_team", "unshare_from_team"].includes(tool)) return "collaborators";
  if (["get_results", "get_form_advanced_analytics"].includes(tool)) return "aggregate_analytics";
  if (tool.startsWith("publish_") || tool === "host_game") return "publish_content";
  if (tool.startsWith("delete_") || ["unpublish_course", "set_course_archived", "set_form_status", "set_lesson_lifecycle", "set_flashcard_set_lifecycle", "restart_lesson_progress", "restore_lesson_version", "end_game", "edit_lesson_blocks"].includes(tool)) return "destructive";

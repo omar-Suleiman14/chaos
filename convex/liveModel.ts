@@ -65,6 +65,8 @@ export const liveTables = {
     lastActivityAt: v.number(),
     createdAt: v.number(),
     activePlayerCount: v.optional(v.number()),
+    /** Team-only game: copied from the quiz; only signed-in members of this team may join. */
+    audienceTeamId: v.optional(v.id("businessTeams")),
     /** The question whose sharded answer counters and single check loop are initialized. */
     answerCounterQuestion: v.optional(v.number()),
     endedAt: v.optional(v.number()),

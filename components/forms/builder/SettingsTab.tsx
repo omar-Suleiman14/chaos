@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { setFormStatusLocally, useOptimisticMutation } from "@/lib/optimistic";
 import posthog from "@/lib/analytics";
-import { Check, ChevronRight, Copy, Globe, KeyRound, Link2, Plus, UserRound, X } from "lucide-react";
+import { Check, ChevronRight, Copy, Globe, KeyRound, Link2, Plus, UserRound, Users, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { FormDefinition, Rule } from "@/convex/formLogic";
@@ -18,6 +18,7 @@ import { WsSwitch } from "@/components/workspace/primitives";
 import FallbackBoundary from "@/components/FallbackBoundary";
 import { HIDDEN_FIELD_LIMITS, hiddenFieldNameError } from "@/convex/formRespondent";
 import DocHint from "@/components/forms/DocHint";
+import { Select } from "@/components/workspace/Select";
 import RuleEditor from "./RuleEditor";
 
 type EditableSettings = Omit<FormSettings, "accessCodeHash">;
@@ -97,7 +98,7 @@ const copy = {
     linkName: "Link name", linkNamePlaceholder: "my-form", saveLink: "Save link", cancel: "Cancel", change: "Change",
     ownerOnly: "Only the owner can change the link, collection, access and privacy settings.",
     anyone: "Anyone", anyoneRow: "Anyone with the link", anyoneHelp: "Anonymous. Chaos can't limit anonymous people to one response.",
-    signedIn: "Signed in", signedInRow: "Signed-in people", signedInHelp: "People signed in to Chaos. Their responses are linked to their account.",
+    signedIn: "Signed in", signedInRow: "Signed-in people", signedInHelp: "People signed in to Chaos. Their responses are linked to their account.", team: "My team", teamRow: "Your team only", teamHelp: "Only signed-in members of your Business team can respond. Live games of this quiz are team-only too.", whichTeam: "Team",
     withCode: "With a code", withCodeRow: "People with a code", withCodeHelp: "People you give an access code to, for example invited guests.",
     sharing: "Sharing", publishForLink: "Publish to get a link people can open.", notPublished: "Not published", status: "Status", close: "Close", reopen: "Reopen", restore: "Restore",
     whoCanRespond: "Who can respond", accessCode: "Access code", keepCode: "Leave empty to keep the current code.", chooseCode: "Choose a code",
@@ -144,7 +145,7 @@ const copy = {
     linkName: "اسم الرابط", linkNamePlaceholder: "نموذجي", saveLink: "احفظ الرابط", cancel: "إلغاء", change: "غيّر",
     ownerOnly: "المالك وحده يغيّر إعدادات الرابط والتجميع والوصول والخصوصية.",
     anyone: "أي شخص", anyoneRow: "أي شخص لديه الرابط", anyoneHelp: "مجهول الهوية. لا يستطيع Chaos حصر المجهولين بردّ واحد.",
-    signedIn: "مسجّلو الدخول", signedInRow: "المسجّلون في Chaos", signedInHelp: "من سجّلوا الدخول إلى Chaos. تُربط ردودهم بحساباتهم.",
+    signedIn: "مسجّلو الدخول", signedInRow: "المسجّلون في Chaos", signedInHelp: "من سجّلوا الدخول إلى Chaos. تُربط ردودهم بحساباتهم.", team: "فريقي", teamRow: "فريقك فقط", teamHelp: "لا يرد إلا أعضاء فريق الأعمال المسجّلون. وتصبح الألعاب المباشرة لهذا الاختبار للفريق فقط أيضًا.", whichTeam: "الفريق",
     withCode: "برمز", withCodeRow: "من لديهم رمز", withCodeHelp: "من تعطيهم رمز وصول، مثل الضيوف المدعوين.",
     sharing: "المشاركة", publishForLink: "انشر النموذج لتحصل على رابط يفتحه الناس.", notPublished: "غير منشور", status: "الحالة", close: "أغلق", reopen: "أعد الفتح", restore: "استعد",
     whoCanRespond: "من يستطيع الرد", accessCode: "رمز الوصول", keepCode: "اتركه فارغًا للإبقاء على الرمز الحالي.", chooseCode: "اختر رمزًا",
@@ -301,6 +302,7 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
   const update = useMutation(api.forms.updateFormSettings);
   const setStatus = useOptimisticMutation(api.forms.setFormStatus, setFormStatusLocally);
   const [s, setS] = useState<EditableSettings>(settings);
+  const teams = useQuery(api.businessTeams.list);
   const [group, setGroup] = useState(groupName ?? "");
   const [code, setCode] = useState<string | undefined>(undefined);
   const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
@@ -361,12 +363,15 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
     return <p className="text-sm text-muted-foreground max-w-2xl">{t.ownerOnly}</p>;
   }
 
+  // "team" is signed-in access limited to one Business team (team-only forms, quizzes and games).
   const accessOptions = [
     { id: "public" as const, label: t.anyone, row: t.anyoneRow, icon: Globe, help: t.anyoneHelp },
     { id: "signed_in" as const, label: t.signedIn, row: t.signedInRow, icon: UserRound, help: t.signedInHelp },
+    ...(teams?.length || s.audienceTeamId ? [{ id: "team" as const, label: t.team, row: t.teamRow, icon: Users, help: t.teamHelp }] : []),
     { id: "code" as const, label: t.withCode, row: t.withCodeRow, icon: KeyRound, help: t.withCodeHelp },
   ];
-  const access = accessOptions.find((a) => a.id === s.access) ?? accessOptions[0];
+  const accessId = s.access === "signed_in" && s.audienceTeamId ? "team" : s.access;
+  const access = accessOptions.find((a) => a.id === accessId) ?? accessOptions[0];
   // Same rules as the server (convex/formRespondent.ts), shown before saving.
   const hiddenError = (() => {
     const names = s.hiddenFields ?? [];
@@ -406,13 +411,22 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
         <Row label={access.row} help={access.help} isDefault={s.access === "public"}>
           <div className="ws-segmented" role="group" aria-label={t.whoCanRespond}>
             {accessOptions.map((a) => (
-              <button key={a.id} type="button" aria-pressed={s.access === a.id} title={a.help}
-                onClick={() => { set("access", a.id); if (a.id !== "signed_in") { set("onePerPerson", false); set("allowedEmails", undefined); set("allowedDomains", undefined); } }}>
+              <button key={a.id} type="button" aria-pressed={accessId === a.id} title={a.help}
+                onClick={() => {
+                  set("access", a.id === "team" ? "signed_in" : a.id);
+                  set("audienceTeamId", a.id === "team" ? s.audienceTeamId ?? teams?.[0]?.team._id : undefined);
+                  if (a.id !== "signed_in" && a.id !== "team") { set("onePerPerson", false); set("allowedEmails", undefined); set("allowedDomains", undefined); }
+                }}>
                 <a.icon size={14} aria-hidden="true" /> {a.label}
               </button>
             ))}
           </div>
         </Row>
+        {accessId === "team" && teams && teams.length > 1 && (
+          <Row label={t.whichTeam} isDefault={false}>
+            <Select label={t.whichTeam} value={s.audienceTeamId ?? ""} onChange={(v) => set("audienceTeamId", v as Id<"businessTeams">)} options={teams.map((row) => ({ value: row.team._id, label: row.team.name }))} />
+          </Row>
+        )}
         {s.access === "code" && (
           <Row label={t.accessCode} help={hasAccessCode ? t.keepCode : undefined} isDefault={false}>
             <input value={code ?? ""} onChange={(e) => setCode(e.target.value || undefined)} className="kb-input w-48" minLength={6} maxLength={100} autoComplete="off"

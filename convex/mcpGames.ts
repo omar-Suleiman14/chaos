@@ -137,7 +137,7 @@ export function registerMcpGames(createDraft: CreateDraft) {
       },
     }),
     hostGame: internalMutation({
-      args: { userId: v.string(), id: v.string(), language: v.optional(languageValidator), theme: v.optional(v.any()), timeLimitSec: v.optional(v.number()), showAnswerLabels: v.optional(v.boolean()), autoAdvance: v.optional(v.boolean()), breakSec: v.optional(v.number()), startWhenPlayers: v.optional(v.number()) },
+      args: { userId: v.string(), id: v.string(), teamId: v.optional(v.id("businessTeams")), language: v.optional(languageValidator), theme: v.optional(v.any()), timeLimitSec: v.optional(v.number()), showAnswerLabels: v.optional(v.boolean()), autoAdvance: v.optional(v.boolean()), breakSec: v.optional(v.number()), startWhenPlayers: v.optional(v.number()) },
       returns: gameOutput,
       handler: async (ctx, args) => {
         await requireAccount(ctx, args.userId, true);
@@ -146,7 +146,7 @@ export function registerMcpGames(createDraft: CreateDraft) {
         const id = await createGameForAccount(ctx, args.userId, {
           ...("formId" in target ? { formId: target.formId } : { quizId: target.quizId }),
           language: args.language, timeLimitSec: args.timeLimitSec, showAnswerLabels: args.showAnswerLabels,
-          autoAdvance: args.autoAdvance, breakSec: args.breakSec, startWhenPlayers: args.startWhenPlayers,
+          autoAdvance: args.autoAdvance, breakSec: args.breakSec, startWhenPlayers: args.startWhenPlayers, teamId: args.teamId,
           ...(args.theme === undefined ? {} : { theme: applyThemePatch(target.theme, themePatch(args.theme)) }),
         });
         return view((await ctx.db.get("liveGames", id))!);

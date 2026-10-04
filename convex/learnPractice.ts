@@ -3,7 +3,7 @@ import { mutation, query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { gradeQuiz } from "./formQuiz";
 import { requireActiveUser } from "./authz";
-import { checkEmailRules } from "./formRespondent";
+import { teamOrEmailCheck } from "./businessAccess";
 import {
   assertNow,
   DAY,
@@ -314,7 +314,7 @@ export const selectPractice = query({
             form.settings.closesAt === undefined &&
             form.settings.access !== "code" &&
             (form.settings.access !== "signed_in" ||
-              checkEmailRules(form.settings, identity) === "ok") &&
+              (await teamOrEmailCheck(ctx, form.settings, identity)) === "ok") &&
             (cap === null || form.responseCount < cap);
           if (allowed && form.settings.onePerPerson) {
             const prior = await ctx.db

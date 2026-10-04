@@ -1,4 +1,5 @@
 import { recordStudent } from "./studentRoster";
+import { businessMember } from "./businessAccess";
 import { getAuthIdentity } from "./authIdentity";
 // Live games: a host runs a quiz on a shared screen; players join with a PIN and
 // answer on their phones. See convex/liveLogic.ts for the pure rules.
@@ -233,6 +234,7 @@ export const createGame = mutation({
     autoAdvance: v.optional(v.boolean()),
     breakSec: v.optional(v.number()),
     startWhenPlayers: v.optional(v.number()),
+    teamId: v.optional(v.id("businessTeams")),
   },
   returns: v.id("liveGames"),
   handler: async (ctx, args) => {
@@ -241,7 +243,7 @@ export const createGame = mutation({
   },
 });
 
-export async function createGameForAccount(ctx: MutationCtx, userId: string, args: { formId?: Id<"forms">; quizId?: Id<"quizzes">; language?: "en" | "ar"; theme?: FormTheme; timeLimitSec?: number; showAnswerLabels?: boolean; autoAdvance?: boolean; breakSec?: number; startWhenPlayers?: number }) {
+export async function createGameForAccount(ctx: MutationCtx, userId: string, args: { formId?: Id<"forms">; quizId?: Id<"quizzes">; teamId?: Id<"businessTeams">; language?: "en" | "ar"; theme?: FormTheme; timeLimitSec?: number; showAnswerLabels?: boolean; autoAdvance?: boolean; breakSec?: number; startWhenPlayers?: number }) {
   if (!!args.formId === !!args.quizId) throw new Error("LIVE_INVALID: Choose one quiz to host.");
   const timeLimitSec = args.timeLimitSec ?? DEFAULT_TIME_LIMIT;
   validateTimeLimit(timeLimitSec);
@@ -258,6 +260,9 @@ export async function createGameForAccount(ctx: MutationCtx, userId: string, arg
   let language = args.language ?? "en";
   let formVersion: number | undefined;
   let theme = args.theme;
+  // Team-only: chosen by the host, or carried over from a team-only quiz.
+  let audienceTeamId = args.teamId;
+  if (audienceTeamId && !await businessMember(ctx, audienceTeamId, userId)) throw new Error("TEAM_ACCESS_REQUIRED: You can only host for a team you belong to.");
   if (args.formId) {
     const form = await ctx.db.get("forms", args.formId);
     if (!form) throw new Error("FORM_NOT_FOUND: Form not found or you do not have access.");
@@ -278,6 +283,7 @@ export async function createGameForAccount(ctx: MutationCtx, userId: string, arg
     ({ questions, skipped } = questionsFromForm(def, language));
     title = def.title || form.title;
     formVersion = version.version;
+    if (form.settings.access === "signed_in" && form.settings.audienceTeamId) audienceTeamId ??= form.settings.audienceTeamId;
   } else {
     const quiz = await ctx.db.get("quizzes", args.quizId!);
     if (!quiz || quiz.creatorId !== userId) throw new Error("Quiz not found or unauthorized");
@@ -318,6 +324,7 @@ export async function createGameForAccount(ctx: MutationCtx, userId: string, arg
     lastActivityAt: now,
     createdAt: now,
     activePlayerCount: 0,
+    ...(audienceTeamId ? { audienceTeamId } : {}),
   });
 }
 /** 0 turns auto-start off. */
@@ -567,6 +574,10 @@ export const joinGame = mutation({
       // Returned, not thrown, so the counter write that slows PIN guessing is kept.
       await consumeRate(ctx, `live-miss:${pin.slice(0, 2)}`, 60, 60_000);
       return { status: "not_found" as const };
+    }
+    if (game.audienceTeamId) {
+      const identity = await getAuthIdentity(ctx);
+      if (!identity || !await businessMember(ctx, game.audienceTeamId, identity.subject)) throw new Error("LIVE_TEAM_ONLY: Only members of this team can join. Sign in with your team account.");
     }
     const tokenHash = await sha256Hex(args.token);
     const existing = await ctx.db.query("livePlayers").withIndex("by_gameId_and_tokenHash", (q) => q.eq("gameId", game._id).eq("tokenHash", tokenHash)).unique();

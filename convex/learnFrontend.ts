@@ -1,4 +1,5 @@
 import { getAuthIdentity } from "./authIdentity";
+import { teamAudienceAllows } from "./businessAccess";
 import { lessonAccessForActor } from "./lessons";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
@@ -23,9 +24,11 @@ export const publicLesson = query({
     const id = ctx.db.normalizeId("lessons", args.id);
     if (!id) return null;
     const lesson = await ctx.db.get("lessons", id);
-    if (!lesson || lesson.status !== "active" || lesson.visibility !== "public" || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) return null;
+    // Team-only lessons read like public ones for members of their team.
+    const team = !!lesson && await teamAudienceAllows(ctx, lesson, (await getAuthIdentity(ctx))?.subject);
+    if (!lesson || lesson.status !== "active" || (lesson.visibility !== "public" && !team) || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) return null;
     const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
-    if (!version || version.lessonId !== id || (version.visibility !== undefined && version.visibility !== "public")) return null;
+    if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) return null;
     const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
     return { lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", ...(lesson.createdWith ? { createdWith: lesson.createdWith } : {}), createdAt: lesson.createdAt, version };
   },
@@ -36,15 +39,16 @@ export const publicLessonsBatch = query({
   args: { ids: v.array(v.string()) },
   returns: v.array(v.object({ lessonId: v.id("lessons"), ownerId: v.string(), ownerName: v.string(), createdWith: v.optional(createdWith), createdAt: v.number(), version: schema.doc("lessonVersions") })),
   handler: async (ctx, args) => {
-    const results = [];
+    const results = [], viewer = (await getAuthIdentity(ctx))?.subject;
     for (const rawId of args.ids.slice(0, 50)) {
       if (!rawId || rawId.length > 100) continue;
       const id = ctx.db.normalizeId("lessons", rawId);
       if (!id) continue;
       const lesson = await ctx.db.get("lessons", id);
-      if (!lesson || lesson.status !== "active" || lesson.visibility !== "public" || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) continue;
+      const team = !!lesson && await teamAudienceAllows(ctx, lesson, viewer);
+      if (!lesson || lesson.status !== "active" || (lesson.visibility !== "public" && !team) || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) continue;
       const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
-      if (!version || version.lessonId !== id || (version.visibility !== undefined && version.visibility !== "public")) continue;
+      if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) continue;
       const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
       results.push({ lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", ...(lesson.createdWith ? { createdWith: lesson.createdWith } : {}), createdAt: lesson.createdAt, version });
     }
@@ -162,7 +166,7 @@ export const embeddedFlashcards = query({
   handler: async (ctx, { setId }) => {
     const id = ctx.db.normalizeId("flashcardSets", setId);
     const deck = id ? await ctx.db.get("flashcardSets", id) : null;
-    if (!deck || deck.archived || deck.visibility !== "public" || !deck.publishedVersionId || await creatorRestricted(ctx, deck.ownerId)) return null;
+    if (!deck || deck.archived || (deck.visibility !== "public" && !await teamAudienceAllows(ctx, deck, (await getAuthIdentity(ctx))?.subject)) || !deck.publishedVersionId || await creatorRestricted(ctx, deck.ownerId)) return null;
     const version = await ctx.db.get("flashcardVersions", deck.publishedVersionId);
     return version?.setId === deck._id ? { title: version.title, cardCount: version.cards.length } : null;
   },

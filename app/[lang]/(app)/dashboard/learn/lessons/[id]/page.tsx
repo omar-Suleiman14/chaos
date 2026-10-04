@@ -372,11 +372,11 @@ function LessonEditorSession({ id }: { id: string }) {
         )}
       </div>
 
-      {dialog === "publish" && <PublishDialog lesson={editorLesson} inCourse={!!courseId} sources={sources} error={error} disabled={conflict || mediaBusy || uploadCount > 0 || ids.some(sourceId => sourceRows[sourceId] === undefined)} onClose={() => setDialog(null)} onPublish={({ visibility, indexing, note }) => run(async () => {
+      {dialog === "publish" && <PublishDialog lesson={editorLesson} inCourse={!!courseId} sources={sources} error={error} disabled={conflict || mediaBusy || uploadCount > 0 || ids.some(sourceId => sourceRows[sourceId] === undefined)} onClose={() => setDialog(null)} onPublish={({ visibility, teamId, indexing, note }) => run(async () => {
         await flush();
-        actions.setVisibility(lesson.id, visibility);
+        actions.setVisibility(lesson.id, visibility, teamId);
         await actions.saveDraftMeta(lesson.id, { indexing });
-        actions.setVisibility(lesson.id, visibility);
+        actions.setVisibility(lesson.id, visibility, teamId);
         const v = await actions.publish(lesson.id, note);
         setDialog(null);
         say(t.publishedToast(v));

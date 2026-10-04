@@ -163,6 +163,8 @@ export interface Lesson {
   /** `updatedAt` of the draft that was last published; a newer draft means unpublished changes. */
   publishedDraftAt?: number;
   visibility: Visibility;
+  /** Set when the lesson is team-only (restricted to one Business team). */
+  teamId?: string;
   folderId?: LearnId;
   sources: LessonSource[];
   quizzes: AttachedQuiz[];
@@ -262,6 +264,8 @@ export interface FlashcardSet {
   lessonId?: LearnId;
   cards: Flashcard[];
   visibility: Visibility;
+  /** Set when the set is team-only (restricted to one Business team). */
+  teamId?: string;
   forkedFrom?: Provenance;
   /** Per-card study state for the current person: 0 = new, higher = known better. */
   createdAt: number;

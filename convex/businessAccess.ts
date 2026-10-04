@@ -2,6 +2,7 @@ import type { Infer } from "convex/values";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { teamAsset } from "./businessModel";
+import { checkEmailRules, type EmailCheck } from "./formRespondent";
 
 type Ctx = Pick<QueryCtx | MutationCtx, "db">;
 export async function businessMember(ctx: Ctx, teamId: Id<"businessTeams">, userId: string) {
@@ -45,4 +46,25 @@ export async function canEditTeamAsset(ctx: Ctx, userId: string, asset: Infer<ty
     }
   }
   return false;
+}
+
+/**
+ * Team-only ("internal") content is restricted visibility bound to one Business team.
+ * Only that team's members can read it; owners keep their usual access.
+ */
+export async function teamAudienceAllows(ctx: Ctx, row: { visibility?: string; audienceTeamId?: Id<"businessTeams"> }, userId: string | null | undefined) {
+  return row.visibility === "restricted" && !!row.audienceTeamId && !!userId && !!await businessMember(ctx, row.audienceTeamId, userId);
+}
+/** The team a restricted publication is for. The publisher must belong to it; other visibilities carry no team. */
+export async function resolveAudienceTeam(ctx: Ctx, actor: string, visibility: string, teamId?: Id<"businessTeams">, current?: Id<"businessTeams">) {
+  if (visibility !== "restricted") return undefined;
+  const id = teamId ?? current;
+  if (!id) throw new Error("TEAM_REQUIRED: Choose the team that can see this.");
+  if (!await businessMember(ctx, id, actor)) throw new Error("TEAM_ACCESS_REQUIRED: You can only share with a team you belong to.");
+  return id;
+}
+/** Signed-in form access: the team rule (team-only forms, quizzes and games) and then any email rules. */
+export async function teamOrEmailCheck(ctx: Ctx, settings: { audienceTeamId?: Id<"businessTeams">; allowedEmails?: string[]; allowedDomains?: string[] }, identity: { subject: string; email?: string; emailVerified?: boolean } | null): Promise<EmailCheck> {
+  if (settings.audienceTeamId && (!identity || !await businessMember(ctx, settings.audienceTeamId, identity.subject))) return "not_allowed";
+  return checkEmailRules(settings, identity);
 }

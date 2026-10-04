@@ -13,9 +13,10 @@ Chaos is an open platform for creating, teaching, learning and testing. Build le
 - **Learning.** Public courses and community lessons, saved lessons, progress and weak areas, and copies that keep the original author credited.
 - **Live games.** Host a quiz on a big screen; people join from their phones with a PIN, answer against the clock and watch the leaderboard.
 - **Results you can use.** Live summaries and charts, every response in detail, CSV, Excel and JSON export, webhooks and an HTTP API.
+- **Business teams.** Teams with owner, admin and member roles edit shared forms, lessons, courses and folders together, and publish team-only lessons, courses, flashcards, forms, quizzes and live games. Free for a limited time.
 - **A look for every form.** 18 themes (including Google Forms and Microsoft Forms styles), four ways to answer (page, sections, one at a time, swipe), optional sounds, your own colours and logo.
 
-**Also included:** English and Arabic with right-to-left layouts, 21 templates, collaborators with roles, version history and undo, opening and closing times with time zones, response limits and access codes, respondent edits with history, links, QR codes and embedding, use from ChatGPT or Claude through MCP, a Max integration, and step-by-step guides at [`/docs`](https://chaos.fail/docs).
+**Also included:** English and Arabic with right-to-left layouts, 21 templates, collaborators with roles, team-only (internal) publishing, version history and undo, opening and closing times with time zones, response limits and access codes, respondent edits with history, links, QR codes and embedding, use from ChatGPT or Claude through MCP, a Max integration, and step-by-step guides at [`/docs`](https://chaos.fail/docs).
 
 ## Stack
 
@@ -102,6 +103,7 @@ When hosting a modified version, set `NEXT_PUBLIC_SOURCE_REPO_URL` to the source
 - Integration API: [`docs/integration-api-v1.md`](./docs/integration-api-v1.md)
 - Webhooks: [`docs/webhooks-v1.md`](./docs/webhooks-v1.md)
 - ChatGPT app: [`docs/chatgpt-app.md`](./docs/chatgpt-app.md)
+- Business teams and team-only content: [`docs/business-teams.md`](./docs/business-teams.md)
 - Self-hosting: [`docs/self-hosting.md`](./docs/self-hosting.md)
 - Search indexing (IndexNow): [`docs/indexnow.md`](./docs/indexnow.md)
 - Data lifecycle and migrations: [`docs/data-lifecycle.md`](./docs/data-lifecycle.md), [`docs/migrations.md`](./docs/migrations.md)
@@ -115,5 +117,5 @@ Find planned work in [issues](https://github.com/omar-Suleiman14/chaos/issues) a
 [GNU Affero General Public License v3.0 or later](./LICENSE). If you run a modified version for others over a network, you must offer them its source.
 
 <!-- mcp-inventory:start -->
-The public MCP registry currently exposes **104 tools**. See the [generated inventory](docs/mcp-tool-inventory.md) and [connection guide](https://chaos.fail/connect).
+The public MCP registry currently exposes **117 tools**. See the [generated inventory](docs/mcp-tool-inventory.md) and [connection guide](https://chaos.fail/connect).
 <!-- mcp-inventory:end -->

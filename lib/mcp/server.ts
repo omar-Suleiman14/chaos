@@ -22,6 +22,7 @@ import { permissionForTool, requireToolPermission, type McpPermission } from "./
 import { registerCourseTools } from "./courses";
 import { registerFlashcardTools } from "./flashcards";
 import { registerOrganizationTools } from "./organization";
+import { registerTeamTools } from "./teams";
 
 export type McpCaller = (tool: string, input: Record<string, unknown>) => Promise<unknown>;
 
@@ -43,6 +44,7 @@ const instructions = `Chaos (chaos.fail) is where this person builds forms, surv
 - Flashcards: create_flashcard_set makes a private set; get_flashcard_set returns cards and revision; save_flashcard_set replaces the whole card list, so keep card IDs. publish_flashcard_set makes an immutable version only on request; attach_lesson_flashcards links that version to an owned lesson. set_flashcard_set_lifecycle archives, restores or unpublishes.
 - get_learn_capabilities lists the lesson, course, flashcard, game and folder tools with limits; call it when unsure what Chaos can do.
 - Lessons: search_lessons/list_lessons use scope owned for drafts or public for published discovery. get_lesson draft and get_lesson_outline with outlineFrom draft require edit permission; outlines default to published. get_lesson and get_lesson_outline return bounded pages: offset 0?500, limit 1?100; follow nextOffset until null instead of claiming the first page is complete. Keep stable block IDs and use the current expectedRevision for edits; on conflict reload before making a reviewed change.
+- Teams: Personal is one user. Business teams (free for a limited time) share editing: list_teams, create_team, invite_team_member (returns a single-use link; Chaos sends no email), list_team_members, change_team_member_role, remove_team_member, share_with_team and list_team_resources. Team-only (internal) content: publish_lesson, publish_course and publish_flashcard_set with visibility restricted and teamId; set_form_response_controls with access signed_in and audienceTeamId for forms and quizzes; host_game with teamId. Only members of that team can read, respond or join. Invite, remove or change roles only on explicit request.
 - Folders: list_folders and list_folder_contents use paginationOpts and continueCursor, including empty partial pages. create_folder creates an owned private folder; add_folder_member requires ownership of both folder and asset; move_folder needs explicit relocation intent. Folder changes never publish content.
 - A quiz is a form with quizMode on. For "make a quiz about what we discussed", write the questions from the conversation yourself: mostly single_choice with 3–4 options, set correctAnswers to the exact option label, and give points.
 - Write like a real teacher or organiser, not a brochure. Each question is one short, direct sentence (usually under 15 words) that tests one fact or asks one thing. Options are 1–5 words, parallel in form, and every wrong option is plausible; no "All of the above", joke options or filler. Leave question descriptions empty unless a hint is truly needed. A quiz explanation, if any, is one plain sentence saying why the answer is right. Titles are 2–6 words; the intro is one sentence or empty. No emojis, exclamation marks, hype ("ultimate", "fun-filled", "dive into", "journey", "test your knowledge") or restating the question in the options.
@@ -254,8 +256,8 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
 
   server.registerTool("host_game", {
     title: "Open a live game lobby",
-    description: "Create a joinable lobby from the account owner's already published quiz (form_… or quiz_…). Snapshots the published questions and theme; draft changes are not used. Refuses drafts, closed/archived forms and quizzes without eligible choices/correct answers. Never publishes or starts the first question. Creates a new room each call, so do not automatically retry after an uncertain response. Host only on explicit request. Pro required.",
-    inputSchema: { id: itemId, language: z.enum(["en", "ar"]).optional(), theme: formFields.theme, timeLimitSec: timerField, showAnswerLabels: labelsField, ...autoplayFields },
+    description: "Create a joinable lobby from the account owner's already published quiz (form_… or quiz_…). Snapshots the published questions and theme; draft changes are not used. Refuses drafts, closed/archived forms and quizzes without eligible choices/correct answers. Never publishes or starts the first question. teamId makes the game team-only: only signed-in members of that Business team can join; a team-only quiz makes its games team-only automatically. Creates a new room each call, so do not automatically retry after an uncertain response. Host only on explicit request. Pro required.",
+    inputSchema: { id: itemId, teamId: z.string().min(1).max(100).optional(), language: z.enum(["en", "ar"]).optional(), theme: formFields.theme, timeLimitSec: timerField, showAnswerLabels: labelsField, ...autoplayFields },
     outputSchema: gameShape,
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true, idempotentHint: false },
     _meta: meta("Opening a game lobby…", "Lobby ready"),
@@ -466,6 +468,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
   registerCardTools(server, run, securitySchemes);
   registerLearnTools(server, run, securitySchemes, { call, flow });
   registerOrganizationTools(server, run, securitySchemes);
+  registerTeamTools(server, run, securitySchemes);
   registerCourseTools(server, run, securitySchemes, { call, flow });
   registerFlashcardTools(server, run, securitySchemes, { call, flow });
   registerQuizForkTools(server, run, securitySchemes);

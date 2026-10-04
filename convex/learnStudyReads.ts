@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { teamOrEmailCheck } from "./businessAccess";
 import { mutation, query, type QueryCtx } from "./_generated/server";
 import { creatorRestricted, requireActiveUser } from "./authz";
 import { assessmentRef } from "./quizForkModel";
@@ -52,7 +53,9 @@ export const forkSource = query({
     if (asset.kind === "form") {
       const form = await ctx.db.get("forms", asset.id);
       if (!form || form.isBanned || await creatorRestricted(ctx, form.ownerId) || form.publishedVersion === undefined) return null;
-      if (form.ownerId !== identity.subject && (form.status !== "live" || form.settings.access !== "public" || form.settings.allowedEmails?.length || form.settings.allowedDomains?.length)) return null;
+      // Public quizzes, or a team-only quiz for a member of its team.
+      const open = form.settings.access === "public" || (form.settings.access === "signed_in" && !!form.settings.audienceTeamId && await teamOrEmailCheck(ctx, form.settings, identity) === "ok");
+      if (form.ownerId !== identity.subject && (form.status !== "live" || !open || form.settings.allowedEmails?.length || form.settings.allowedDomains?.length)) return null;
       const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", form._id).eq("version", form.publishedVersion!)).unique();
       return version?.definition.quiz?.enabled ? { formVersionId: version._id } : null;
     }

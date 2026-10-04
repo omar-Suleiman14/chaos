@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Select } from "@/components/workspace/Select";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ExternalLink, Globe, Lock, Send } from "lucide-react";
+import { ArrowLeft, ExternalLink, Globe, Lock, Send, Users } from "lucide-react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -27,7 +27,7 @@ const copy = {
     titlePh: "Course title", descPh: "What will people learn? One or two sentences.",
     language: "Course language", languageHelp: "Sets reading direction. New lessons inherit this language.", settings: "Settings", tags: "Topics", tagsHelp: "Comma separated, up to 12.",
     publish: "Publish course", update: "Publish course changes", view: "View course", unpublish: "Unpublish", archive: "Archive",
-    publishTitle: "Publish this course", who: "Who can take it", public: "Public", publicHelp: "Anyone can find and take it, free. Recommended.",
+    publishTitle: "Publish this course", who: "Who can take it", public: "Public", publicHelp: "Anyone can find and take it, free. Recommended.", team: "Your team", teamHelp: "Only members of your Business team can take it. Its lessons become team-only too.",
     private: "Private", privateHelp: "Only you and people you share lessons with. Part of Chaos Business.", business: "Business only",
     publishNote: "Publishing the course also publishes any of its lessons that have unpublished changes, with the visibility you pick here. To publish just one lesson, use Publish inside that lesson.", confirm: "Publish", cancel: "Cancel", publishing: "Publishing…",
     problems: "Fix these lessons first:", saved: "Saved", failed: "Couldn't save. Try again.",
@@ -37,7 +37,7 @@ const copy = {
     titlePh: "عنوان الدورة", descPh: "ماذا سيتعلم الناس؟ جملة أو جملتان.",
     language: "لغة الدورة", languageHelp: "تحدد اتجاه القراءة. ترث الدروس الجديدة هذه اللغة.", settings: "الإعدادات", tags: "المواضيع", tagsHelp: "مفصولة بفواصل، حتى 12.",
     publish: "انشر الدورة", update: "انشر تغييرات الدورة", view: "اعرض الدورة", unpublish: "ألغِ النشر", archive: "أرشف",
-    publishTitle: "انشر هذه الدورة", who: "من يمكنه أخذها", public: "عامة", publicHelp: "يمكن لأي أحد إيجادها وأخذها مجانًا. موصى به.",
+    publishTitle: "انشر هذه الدورة", who: "من يمكنه أخذها", public: "عامة", publicHelp: "يمكن لأي أحد إيجادها وأخذها مجانًا. موصى به.", team: "فريقك", teamHelp: "لا يأخذها إلا أعضاء فريق الأعمال. وتصبح دروسها للفريق فقط أيضًا.",
     private: "خاصة", privateHelp: "أنت ومن تشاركهم الدروس فقط. جزء من Chaos للأعمال.", business: "للأعمال فقط",
     publishNote: "نشر الدورة ينشر أيضًا أي درس فيها به تغييرات غير منشورة، بالظهور الذي تختاره هنا. لنشر درس واحد فقط، استخدم «انشر» داخل ذلك الدرس.", confirm: "انشر", cancel: "إلغاء", publishing: "جارٍ النشر…",
     problems: "أصلح هذه الدروس أولًا:", saved: "حُفظ", failed: "تعذر الحفظ. حاول مجددًا.",
@@ -60,13 +60,14 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
   const [look, setLook] = useState<PageLook | null>(null);
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const [error, setError] = useState(""), [busy, setBusy] = useState(false);
-  const [publishing, setPublishing] = useState(false), [visibility, setVisibility] = useState<"public" | "private">("public");
+  const [publishing, setPublishing] = useState(false), [visibility, setVisibility] = useState<"public" | "private" | "team">("public"), [teamId, setTeamId] = useState("");
+  const teams = useQuery(api.businessTeams.list);
   const [problems, setProblems] = useState<{ lessonId: string; title: string; message: string }[]>([]);
 
   useEffect(() => {
     if (course && loadedId !== course.id) {
       setLoadedId(course.id); setTitle(course.title); setDesc(course.description); setLook(null); setTags(course.tags.join(", "));
-      setVisibility(course.visibility === "public" ? "public" : "private");
+      setVisibility(course.visibility === "public" ? "public" : course.teamId ? "team" : "private"); setTeamId(course.teamId ?? "");
     }
   }, [course, loadedId]);
 
@@ -123,13 +124,15 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
         <div className="grid gap-4">
           <fieldset className="cb-vis"><legend className="text-sm font-semibold mb-1">{t.who}</legend>
             <label><input type="radio" name="vis" checked={visibility === "public"} onChange={() => setVisibility("public")} /><span><Globe size={14} aria-hidden /> <strong>{t.public}</strong><span className="block cb-note">{t.publicHelp}</span></span></label>
+            {!!teams?.length && <label><input type="radio" name="vis" checked={visibility === "team"} onChange={() => setVisibility("team")} /><span><Users size={14} aria-hidden /> <strong>{t.team}</strong><span className="block cb-note">{t.teamHelp}</span></span></label>}
+            {visibility === "team" && teams && teams.length > 1 && <Select label={t.team} value={teamId || teams[0].team._id} onChange={setTeamId} options={teams.map((row) => ({ value: row.team._id, label: row.team.name }))} />}
             <label data-disabled={!course.canPrivate}><input type="radio" name="vis" disabled={!course.canPrivate} checked={visibility === "private"} onChange={() => setVisibility("private")} /><span><Lock size={14} aria-hidden /> <strong>{t.private}</strong>{!course.canPrivate && <span className="cb-status ms-2">{t.business}</span>}<span className="block cb-note">{t.privateHelp}</span></span></label>
           </fieldset>
           <p className="cb-note">{t.publishNote}</p>
           {problems.length > 0 && <div className="cb-problems" role="alert"><strong>{t.problems}</strong><ul className="list-disc ps-5 mt-1">{problems.map((p) => <li key={p.lessonId}><Link href={`/dashboard/learn/lessons/${p.lessonId}?course=${course.id}`} className="underline">{p.title}</Link>: {p.message}</li>)}</ul></div>}
           <div className="flex justify-end gap-2">
             <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setPublishing(false)}>{t.cancel}</button>
-            <button type="button" className="ws-btn ws-btn--primary" disabled={busy} onClick={() => void run(async () => { const r = await publish({ courseId, visibility }); if (r.ok) setPublishing(false); else setProblems(r.problems); })}>{busy ? t.publishing : t.confirm}</button>
+            <button type="button" className="ws-btn ws-btn--primary" disabled={busy} onClick={() => void run(async () => { const r = await publish({ courseId, ...(visibility === "team" ? { visibility: "restricted" as const, teamId: (teamId || teams?.[0]?.team._id) as Id<"businessTeams"> } : { visibility }) }); if (r.ok) setPublishing(false); else setProblems(r.problems); })}>{busy ? t.publishing : t.confirm}</button>
           </div>
         </div>
       </WsDialog>}

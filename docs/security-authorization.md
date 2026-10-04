@@ -77,3 +77,11 @@ still require acceptance checks against your intended deployment.
 ## Better Auth installations
 
 Better Auth stores credentials and sessions in a Convex component. Backend JWTs use the Convex HTTP-actions issuer and `convex` audience. MCP OAuth access tokens use the app issuer and `/mcp` resource audience; ID tokens and website tokens are rejected. MCP clients require PKCE, explicit consent, exact registered redirects and an operator allowlist. Account migration uses operator-verified identity bindings, never matching email. Unverified email cannot authorize an invitation. See [Better Auth](./better-auth.md) for configuration and email-recovery limitations.
+
+## Business teams
+
+Team membership is checked on the server whenever team content is read. A
+team-only lesson, course, flashcard set, form, quiz or live game can only be
+read, answered or joined by a signed-in member of its `audienceTeamId` team.
+Owners keep owner access. Discovery and search stay public-only. See
+[`business-teams.md`](./business-teams.md).

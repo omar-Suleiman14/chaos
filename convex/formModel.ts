@@ -154,6 +154,8 @@ export const formSettingsValidator = v.object({
   /** With signed-in access: only these verified emails / exact email domains may respond. */
   allowedEmails: v.optional(v.array(v.string())),
   allowedDomains: v.optional(v.array(v.string())),
+  /** With signed-in access: only members of this Business team may respond (team-only forms, quizzes and games). */
+  audienceTeamId: v.optional(v.id("businessTeams")),
 });
 
 export const defaultFormSettings: Infer<typeof formSettingsValidator> = {

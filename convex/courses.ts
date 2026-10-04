@@ -9,7 +9,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser, isPaidPlan, creatorRestricted } from "./authz";
 import { coursesContainingLesson, createLessonForActor, publishLessonForActor } from "./lessons";
 import { requireVisibilityAllowed } from "./plans";
-import { canEditTeamAsset, hasBusinessWorkspace } from "./businessAccess";
+import { canEditTeamAsset, hasBusinessWorkspace, resolveAudienceTeam, teamAudienceAllows } from "./businessAccess";
 import { visibility } from "./learnModel";
 import { recordAssetPublicationAction } from "./learnPublicationAudit";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
@@ -66,14 +66,14 @@ export async function getCourse(ctx: QueryCtx, args: Infer<typeof getArgs>, asAc
     }
     return {
       id: row._id, title: row.metadata.title, description: row.metadata.description, coverUrl: row.metadata.coverUrl, coverY: row.metadata.coverY, icon: row.metadata.icon, language: row.metadata.language, tags: row.metadata.tags,
-      visibility: row.visibility, published: !!row.publishedVersionId, publishedAt: version?.publishedAt ?? null, isOwner: row.ownerId === actor, canPrivate: isPaidPlan(user ?? null, Date.now()) || await hasBusinessWorkspace(ctx, row.ownerId), modules: row.modules ?? [], details: row.details, lessons, revision: row.revision,
+      visibility: row.visibility, published: !!row.publishedVersionId, publishedAt: version?.publishedAt ?? null, isOwner: row.ownerId === actor, ...(row.visibility === "restricted" && row.audienceTeamId ? { teamId: row.audienceTeamId } : {}), canPrivate: isPaidPlan(user ?? null, Date.now()) || await hasBusinessWorkspace(ctx, row.ownerId), modules: row.modules ?? [], details: row.details, lessons, revision: row.revision,
     };
 }
 export const get = query({
   args: getArgs.fields,
   returns: v.object({
     id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), coverY: v.optional(v.number()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()),
-    visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), isOwner: v.boolean(), canPrivate: v.boolean(), modules: v.array(courseModule), details: v.optional(courseDetails), lessons: v.array(lessonRow), revision: v.number(),
+    visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), isOwner: v.boolean(), teamId: v.optional(v.id("businessTeams")), canPrivate: v.boolean(), modules: v.array(courseModule), details: v.optional(courseDetails), lessons: v.array(lessonRow), revision: v.number(),
   }),
   handler: (ctx, args) => getCourse(ctx, args),
 });
@@ -152,10 +152,11 @@ export const addLesson = mutation({
  * Publish the course and every lesson in it with the course's visibility, as one action.
  * Lessons with unpublished changes are published first; problems come back per lesson.
  */
-const publishArgs = v.object({ courseId: v.id("learnCollections"), visibility });
+const publishArgs = v.object({ courseId: v.id("learnCollections"), visibility, teamId: v.optional(v.id("businessTeams")) });
 export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publishArgs>, asActor?: string) {
     const { row, actor } = await ownedCourse(ctx, args.courseId, asActor);
     await requireVisibilityAllowed(ctx, actor, args.visibility);
+    const audienceTeamId = await resolveAudienceTeam(ctx, actor, args.visibility, args.teamId, row.audienceTeamId);
     if (row.communityState !== "ok") throw new Error("MODERATED: This course is under review and can't be published right now.");
     for (const courseModuleItem of row.modules ?? []) for (const asset of courseModuleItem.assessments) {
       if (asset.kind === "form") { const id = ctx.db.normalizeId("forms", asset.id); const form = id ? await ctx.db.get("forms", id) : null; if (!form || form.ownerId !== actor || form.status !== "live" || form.isBanned || form.publishedVersion === undefined) throw new Error("ASSESSMENT_UNPUBLISHED: Publish each module quiz before publishing this course."); }
@@ -182,9 +183,9 @@ export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publish
       }
       let pub = lesson.publishedVersionId ? await ctx.db.get("lessonVersions", lesson.publishedVersionId) : null;
       const changed = !pub || pub.lessonId !== id || JSON.stringify(pub.document) !== JSON.stringify(lesson.draft) || JSON.stringify(pub.metadata) !== JSON.stringify(lesson.metadata);
-      const wrongVisibility = !!pub && (lesson.visibility !== args.visibility || (pub.visibility ?? "public") !== args.visibility);
+      const wrongVisibility = !!pub && (lesson.visibility !== args.visibility || (pub.visibility ?? "public") !== args.visibility || lesson.audienceTeamId !== audienceTeamId);
       if (changed || wrongVisibility) {
-        const result = await publishLessonForActor(ctx, actor, { lessonId: id, expectedRevision: lesson.revision, visibility: args.visibility }, true);
+        const result = await publishLessonForActor(ctx, actor, { lessonId: id, expectedRevision: lesson.revision, visibility: args.visibility, teamId: audienceTeamId }, true);
         if (!result.ok) { problems.push({ lessonId: id, title: lesson.metadata.title, message: result.problems.map(p => p.message).join(" ") }); continue; }
         pub = await ctx.db.get("lessonVersions", result.versionId);
       }
@@ -193,7 +194,7 @@ export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publish
     if (problems.length) return { ok: false as const, problems };
     const last = await ctx.db.query("collectionVersions").withIndex("by_collectionId_and_number", (q) => q.eq("collectionId", row._id)).order("desc").first();
     const versionId = await ctx.db.insert("collectionVersions", { collectionId: row._id, number: (last?.number ?? 0) + 1, metadata: row.metadata, modules: row.modules, details: row.details, items, publishedAt: Date.now() });
-    await authorDb(ctx).patch("learnCollections", row._id, { items, searchText: await courseSearchText(ctx, row.ownerId, row.metadata, items), publishedVersionId: versionId, visibility: args.visibility, revision: row.revision + 1, updatedAt: Date.now() });
+    await authorDb(ctx).patch("learnCollections", row._id, { items, searchText: await courseSearchText(ctx, row.ownerId, row.metadata, items), publishedVersionId: versionId, visibility: args.visibility, audienceTeamId, revision: row.revision + 1, updatedAt: Date.now() });
     await enqueueLearnWebhookEvent(ctx, { event: "collection.published", collectionId: row._id, versionId, operationId: `publish:${versionId}`, revision: row.revision + 1 });
     await recordAssetPublicationAction(ctx, { asset: { kind: "collection", id: row._id }, actorId: actor, action: "publish", revision: row.revision + 1, versionId, beforeVisibility: row.visibility, afterVisibility: args.visibility, reason: "Published the course." });
     return { ok: true as const };
@@ -236,7 +237,7 @@ export async function readPublicCourse(ctx: QueryCtx, args: { courseId: string }
     const row = id ? await ctx.db.get("learnCollections", id) : null;
     if (!row || !row.publishedVersionId || row.archived || row.communityState === "removed" || row.communityState === "hidden") return null;
     const identity = asActor ? { subject: asActor } : await getAuthIdentity(ctx);
-    if (identity?.subject !== row.ownerId && (row.visibility !== "public" || row.communityState !== "ok")) return null;
+    if (identity?.subject !== row.ownerId && ((row.visibility !== "public" && !await teamAudienceAllows(ctx, row, identity?.subject)) || row.communityState !== "ok")) return null;
     const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", row.ownerId)).first();
     if (!owner || owner.isBanned || owner.suspendedUntil) return null;
     const version = await ctx.db.get("collectionVersions", row.publishedVersionId);
@@ -246,10 +247,10 @@ export async function readPublicCourse(ctx: QueryCtx, args: { courseId: string }
       if (item.kind !== "lesson") continue;
       const lesson = await ctx.db.get("lessons", item.id);
       if (!lesson || lesson.status !== "active" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) continue;
-      const ownsLesson = identity?.subject === lesson.ownerId;
-      if (!ownsLesson && (lesson.visibility !== "public" || lesson.communityState !== "ok")) continue;
+      const ownsLesson = identity?.subject === lesson.ownerId, team = await teamAudienceAllows(ctx, lesson, identity?.subject);
+      if (!ownsLesson && ((lesson.visibility !== "public" && !team) || lesson.communityState !== "ok")) continue;
       const lv = await ctx.db.get("lessonVersions", item.versionId);
-      if (lv && lv.lessonId === item.id && (ownsLesson || lv.visibility === undefined || lv.visibility === "public")) lessons.push({ id: item.id, versionId: item.versionId, title: lv.metadata.title, description: lv.metadata.description, blocks: lv.document.blocks.length });
+      if (lv && lv.lessonId === item.id && (ownsLesson || team || lv.visibility === undefined || lv.visibility === "public")) lessons.push({ id: item.id, versionId: item.versionId, title: lv.metadata.title, description: lv.metadata.description, blocks: lv.document.blocks.length });
     }
     return { id: row._id, title: version.metadata.title, description: version.metadata.description, coverUrl: version.metadata.coverUrl, icon: version.metadata.icon, language: version.metadata.language, tags: version.metadata.tags, details: version.details, modules: (version.modules ?? []).map(m => ({ ...m, lessonIds: m.lessonIds.filter(id => lessons.some(l => l.id === id)) })), ownerName: owner.name, ownerUsername: owner.username, publishedAt: version.publishedAt, lessons };
 }

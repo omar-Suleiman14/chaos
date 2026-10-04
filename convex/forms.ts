@@ -1,7 +1,7 @@
 import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { consumeCreation } from "./plans";
-import { requireBusinessWorkspace } from "./businessAccess";
+import { businessMember, requireBusinessWorkspace } from "./businessAccess";
 import { deleteUploadRecord } from "./formResults";
 import { supportEmail } from "./support";
 import { v } from "convex/values";
@@ -356,6 +356,10 @@ export async function applyFormSettingsForActor(ctx: MutationCtx, form: Doc<"for
     checkHiddenParameters(hiddenParameters ?? [], hiddenFields ?? []);
     const rules = normalizeEmailRules(s.allowedEmails, s.allowedDomains);
     if ((rules.emails.length || rules.domains.length) && s.access !== "signed_in") throw new Error("INVALID_SETTINGS: Email and domain limits only work when respondents sign in.");
+    if (s.audienceTeamId && s.audienceTeamId !== form.settings.audienceTeamId) {
+      if (s.access !== "signed_in") throw new Error("INVALID_SETTINGS: Team-only forms need respondents to sign in.");
+      if (!await businessMember(ctx, s.audienceTeamId, actorId)) throw new Error("TEAM_ACCESS_REQUIRED: You can only limit a form to a team you belong to.");
+    }
     // Eligibility is the owner's plan, read here; the client flag alone never hides branding.
     if (s.hideBranding && !form.settings.hideBranding && !(await ownerHasPro(ctx, form.ownerId))) throw new Error("PRO_REQUIRED: Removing Chaos branding needs Pro.");
     await authorDb(ctx).patch("forms", form._id, {
@@ -367,6 +371,7 @@ export async function applyFormSettingsForActor(ctx: MutationCtx, form: Doc<"for
         hideBranding: s.hideBranding || undefined,
         allowedEmails: rules.emails.length ? rules.emails : undefined,
         allowedDomains: rules.domains.length ? rules.domains : undefined,
+        audienceTeamId: s.access === "signed_in" ? s.audienceTeamId : undefined,
       },
       groupName: args.groupName === undefined ? form.groupName : args.groupName.trim() || undefined,
       updatedAt: Date.now(),

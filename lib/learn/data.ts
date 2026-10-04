@@ -89,7 +89,7 @@ function uiLesson(row: Doc<"lessons">, version?: Doc<"lessonVersions"> | null): 
   const draft = { meta: uiMeta(row.metadata), content: fromDurableDocument(row.draft), updatedAt: row.updatedAt };
   return { id: row._id, ownerId: row.ownerId, ownerName: row.metadata.authorDisplay ?? "Chaos creator", draft,
     ...(version ? { published: { version: version.number, meta: { ...uiMeta(version.metadata), curricula: (version.curriculumMappings ?? []).map(m => ({ moduleId: m.nodeId, versionId: m.versionId, path: [], versionLabel: "" })) }, content: fromDurableDocument(version.document), publishedAt: version.publishedAt }, publishedDraftAt: JSON.stringify(row.draft) === JSON.stringify(version.document) && JSON.stringify(row.metadata) === JSON.stringify(version.metadata) ? row.updatedAt : version.publishedAt } : {}),
-    visibility: row.visibility === "public" ? "public" : "private", sources: [], quizzes: [],
+    visibility: row.visibility === "public" ? "public" : "private", ...(row.visibility === "restricted" && row.audienceTeamId ? { teamId: row.audienceTeamId } : {}), sources: [], quizzes: [],
     moderation: row.communityState === "review" ? "under_review" : row.communityState === "hidden" ? "restricted" : row.communityState === "removed" ? "removed" : "ok",
     quality: "none", stats: { views: 0, saves: 0, helpful: 0, notHelpful: 0, forks: 0 }, archived: row.status === "archived", createdAt: row.createdAt, updatedAt: row.updatedAt,
     ...(row.createdWith ? { createdWith: row.createdWith } : {}),
@@ -366,7 +366,7 @@ export function useLearnActions() {
       async reloadDraft(id: string) { requireSignIn(); const row = await service.reload(id); return uiLesson(row); },
       async recoverDraft(id: string, recoveryId: string) { requireSignIn(); return uiLesson(await service.recover(id, recoveryId as Id<"lessonDraftRecovery">)); },
       saveDraftMeta(id: string, patch: Partial<LessonMeta>) { requireSignIn(); return service.saveMeta(id, { ...patch, ...(patch.tags ? { tags: cleanTags(patch.tags) } : {}) }); },
-      setVisibility(id: string, visibility: Visibility) { requireSignIn(); service.setVisibility(id, visibility); },
+      setVisibility(id: string, visibility: Visibility, teamId?: string) { requireSignIn(); service.setVisibility(id, teamId ? `team:${teamId}` : visibility); },
       setSources(_id: string, _sources: LessonSource[]) { void _id; void _sources; throw new LearnError("Source editing must use the durable source API. No device-local sources were saved."); },
       setQuizzes(_id: string, _quizzes: AttachedQuiz[]) { void _id; void _quizzes; throw new LearnError("Assessment attachment editing is not wired yet. Existing server relationships are unchanged."); },
       publish(id: string, note?: string) { requireSignIn(); return service.publish(id, note); },
@@ -515,9 +515,9 @@ export function useLearnActions() {
       async publishFlashcardStudy(id: string) {
         requireSignIn(); const row = await client.query(api.learnLibrary.flashcard, { id });
         if (!row) throw new LearnError("NOT_FOUND");
-        return client.mutation(api.flashcards.publish, { setId: row._id, expectedRevision: row.revision, visibility: row.visibility });
+        return client.mutation(api.flashcards.publish, { setId: row._id, expectedRevision: row.revision, visibility: row.visibility, ...(row.audienceTeamId ? { teamId: row.audienceTeamId } : {}) });
       },
-      updateFlashcardSet(id: string, patch: Partial<Pick<FlashcardSet, "title" | "description" | "cards" | "visibility" | "lessonId">>) { requireSignIn(); return library.updateFlashcards(id, patch); },
+      updateFlashcardSet(id: string, patch: Partial<Pick<FlashcardSet, "title" | "description" | "cards" | "visibility" | "teamId" | "lessonId">>) { requireSignIn(); return library.updateFlashcards(id, patch); },
       async deleteFlashcardSet(id: string) {
         requireSignIn(); const row = await client.query(api.learnLibrary.flashcard, { id });
         if (!row) throw new LearnError("NOT_FOUND");

@@ -1,4 +1,5 @@
 import { getAuthIdentity } from "./authIdentity";
+import { teamAudienceAllows } from "./businessAccess";
 import { ConvexError, v } from "convex/values";
 import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
@@ -11,7 +12,7 @@ const DAY = 86_400_000;
 async function accessibleVersion(ctx: QueryCtx | MutationCtx, versionId: Id<"flashcardVersions">, actor: string) {
   const version = await ctx.db.get("flashcardVersions", versionId);
   const set = version && await ctx.db.get("flashcardSets", version.setId);
-  if (!version || !set || set.archived || (set.ownerId !== actor && (set.visibility !== "public" || set.publishedVersionId !== versionId || await creatorRestricted(ctx, set.ownerId)))) throw new Error("NOT_FOUND: Flashcards not found or unauthorized");
+  if (!version || !set || set.archived || (set.ownerId !== actor && ((set.visibility !== "public" && !await teamAudienceAllows(ctx, set, actor)) || set.publishedVersionId !== versionId || await creatorRestricted(ctx, set.ownerId)))) throw new Error("NOT_FOUND: Flashcards not found or unauthorized");
   return version;
 }
 /** Self-reported retrieval evidence, never server-graded concept mastery. */
@@ -94,7 +95,7 @@ export async function listAttachedFlashcards(ctx: QueryCtx, viewer: string | und
   if (!lesson || lesson.status !== "active") throw new Error("NOT_FOUND: Lesson not found or unauthorized");
   const owner = viewer !== undefined && lesson.ownerId === viewer;
   const grant = viewer !== undefined && await ctx.db.query("lessonPermissions").withIndex("by_lessonId_and_userId", q => q.eq("lessonId", lessonId).eq("userId", viewer)).unique();
-  if (!owner && !grant && (lesson.visibility !== "public" || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId))) throw new Error("NOT_FOUND: Lesson not found or unauthorized");
+  if (!owner && !grant && ((lesson.visibility !== "public" && !await teamAudienceAllows(ctx, lesson, viewer)) || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId))) throw new Error("NOT_FOUND: Lesson not found or unauthorized");
   const rows = await ctx.db.query("lessonFlashcards").withIndex("by_lessonId_and_order", q => q.eq("lessonId", lessonId)).take(50);
   const result = [];
   for (const row of rows) {

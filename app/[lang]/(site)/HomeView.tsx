@@ -2,7 +2,7 @@
 
 import { productDefinition } from "@/lib/product";
 import Link from "@/components/site/SiteLink";
-import { ArrowRight, BookOpen, Braces, Download, FileText, GraduationCap, ListChecks, Radio, Server, Webhook } from "lucide-react";
+import { ArrowRight, BookOpen, Braces, Download, FileText, GraduationCap, ListChecks, Radio, Server, Users, Webhook } from "lucide-react";
 import { PrimaryCta, SiteFooter, SiteNav } from "@/components/site/SiteChrome";
 import { ChatGptMark, NotionMark } from "@/components/site/marks";
 import ProductDemo from "@/components/site/ProductDemo";
@@ -40,6 +40,10 @@ const copy = {
     play: {
       title: "Play", lead: "Put any quiz on the big screen. People join on their phones with a PIN, answer, and see the leaderboard after each round.",
       link: "Host a live game", href: "/docs/live-games",
+    },
+    teams: {
+      title: "Work as a team", lead: "Business teams edit forms, lessons and courses together, and publish quizzes, courses, flashcards and live games only your team can open. Free for a limited time.",
+      link: "See Business teams", href: "/teams",
     },
     connect: {
       title: "Connect", lead: "Chaos works on its own and connects to the tools you already use.",
@@ -81,6 +85,10 @@ const copy = {
     play: {
       title: "العب", lead: "اعرض أي اختبار على الشاشة الكبيرة. ينضم الناس من هواتفهم برمز، ويجيبون، ويرون لوحة الصدارة بعد كل جولة.",
       link: "استضف لعبة مباشرة", href: "/docs/live-games",
+    },
+    teams: {
+      title: "اعملوا كفريق", lead: "تعدّل فرق الأعمال النماذج والدروس والدورات معًا، وتنشر اختبارات ودورات وبطاقات وألعابًا مباشرة لا يفتحها إلا فريقك. مجانًا لفترة محدودة.",
+      link: "تعرّف على فرق الأعمال", href: "/teams",
     },
     connect: {
       title: "اربط", lead: "يعمل Chaos وحده، ويتصل بالأدوات التي تستخدمها.",
@@ -159,6 +167,14 @@ export default function HomeView() {
             <h2 id="play-title" className="site-h2"><Radio size={30} aria-hidden="true" className="site-h2-icon" />{t.play.title}</h2>
             <p>{t.play.lead}</p>
             <Link href={t.play.href} className="site-text-link">{t.play.link} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>
+          </div>
+        </section>
+
+        <section id="teams" className="site-section" aria-labelledby="teams-title">
+          <div className="site-section-heading">
+            <h2 id="teams-title" className="site-h2"><Users size={30} aria-hidden="true" className="site-h2-icon" />{t.teams.title}</h2>
+            <p>{t.teams.lead}</p>
+            <Link href={t.teams.href} className="site-text-link">{t.teams.link} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>
           </div>
         </section>
 

@@ -65,6 +65,7 @@ const responseControls = v.object({
   onePerPerson: v.optional(v.boolean()), allowEditAfterSubmit: v.optional(v.boolean()), allowEditAfterClose: v.optional(v.boolean()),
   collectPartial: v.optional(v.boolean()), allowResumeLink: v.optional(v.boolean()), hideBranding: v.optional(v.boolean()),
   hiddenFields: v.optional(v.array(v.string())), hiddenParameters: v.optional(v.array(hiddenParameterValidator)), allowedEmails: v.optional(v.array(v.string())), allowedDomains: v.optional(v.array(v.string())),
+  audienceTeamId: v.optional(v.union(v.id("businessTeams"), v.null())),
 });
 export const getResponseControls = internalQuery({ args: { userId: v.string(), formId: v.id("forms") }, returns: v.object({ settings: formSettingsValidator.omit("accessCodeHash"), hasAccessCode: v.boolean(), settingsRevision: v.number() }), handler: async (ctx, args) => {
   await requireLearnActor(ctx, args.userId);
@@ -87,6 +88,7 @@ export const setResponseControls = internalMutation({ args: { userId: v.string()
     closesAt: p.closesAt === null ? undefined : p.closesAt ?? form.settings.closesAt,
     responseLimit: p.responseLimit === null ? undefined : p.responseLimit ?? form.settings.responseLimit,
     retentionDays: p.retentionDays === null ? undefined : p.retentionDays ?? form.settings.retentionDays,
+    audienceTeamId: p.audienceTeamId === null ? undefined : p.audienceTeamId ?? form.settings.audienceTeamId,
   };
   await applyFormSettingsForActor(ctx, form, args.userId, { settings, accessCode: args.accessCode });
   return { settingsRevision: (form.settingsRevision ?? 0) + 1 };

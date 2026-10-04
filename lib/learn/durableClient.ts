@@ -54,7 +54,7 @@ export class DurableLessonClient {
   private rows = new Map<string, Doc<"lessons">>();
   private tails = new Map<string, Promise<unknown>>();
   private failures = new Map<string, unknown>();
-  private visibility = new Map<string, "private" | "public">();
+  private visibility = new Map<string, string>();
   constructor(private client: Client) {}
   observe(row: Doc<"lessons">) { if (!this.rows.has(row._id)) this.rows.set(row._id, row); }
   /** Explicitly abandon the frozen baseline only after all earlier operations settle. */
@@ -106,12 +106,15 @@ export class DurableLessonClient {
     });
   }
   setVisibility(id: string, visibility: string) {
-    if (visibility !== "private" && visibility !== "public") throw new Error("Unlisted publishing is not supported by this backend. Choose private or public.");
+    // team:<teamId> publishes as restricted to that Business team.
+    if (visibility !== "private" && visibility !== "public" && !/^team:[a-z0-9]+$/.test(visibility)) throw new Error("Unlisted publishing is not supported by this backend. Choose private or public.");
     this.visibility.set(id, visibility);
   }
   publish(id: string, note?: string) {
     return this.enqueue(id, async row => {
-      const result = await this.client.mutation(api.lessons.publish, { lessonId: row._id, expectedRevision: row.revision, ...(note?.trim() ? { note: note.trim() } : {}), visibility: this.visibility.get(id) ?? (row.publishedVersionId && row.visibility === "private" ? "private" : "public") });
+      const chosen = this.visibility.get(id) ?? (row.visibility === "restricted" && row.audienceTeamId ? `team:${row.audienceTeamId}` : row.publishedVersionId && row.visibility === "private" ? "private" : "public");
+      const team = chosen.startsWith("team:") ? chosen.slice(5) as Id<"businessTeams"> : undefined;
+      const result = await this.client.mutation(api.lessons.publish, { lessonId: row._id, expectedRevision: row.revision, ...(note?.trim() ? { note: note.trim() } : {}), visibility: team ? "restricted" : chosen as "private" | "public", ...(team ? { teamId: team } : {}) });
       if (!result.ok) throw new PreflightError(result.problems.map(p => p.path + ": " + p.message).join("\n"));
       this.rows.set(id, { ...row, revision: result.revision, publishedVersionId: result.versionId });
       const version = await this.client.query(api.lessons.getPublished, { lessonId: row._id });

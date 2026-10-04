@@ -1,5 +1,7 @@
 "use client";
 
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import FlashcardStudy from "@/components/learn/study/FlashcardStudy";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
@@ -19,7 +21,7 @@ import { useCopy } from "@/lib/i18n";
 const copy = {
   en: {
     back: "Flashcards", modes: { study: "Study", edit: "Edit" }, loading: "Loading set…",
-    title: "Title", description: "Description", visibility: "Who can see it", vis: { private: "Only me", unlisted: "Anyone with the link", public: "Public" } as Record<Visibility, string>,
+    title: "Title", description: "Description", visibility: "Who can see it", teamOnly: (name: string) => `Team only · ${name}`, vis: { private: "Only me", unlisted: "Anyone with the link", public: "Public" } as Record<Visibility, string>,
     front: "Front", back2: "Back", add: "Add card", remove: "Remove card", up: "Move up", down: "Move down", fromLesson: "From lesson",
     flip: "Show answer", hint: "Space or Enter to flip · 1 Again · 2 Knew it", again: "Again", knew: "Knew it",
     progress: (done: number, total: number) => `${done} of ${total} known well`, finished: "Round done. Cards you missed come back first.", restart: "Start another round", reset: "Reset progress",
@@ -29,7 +31,7 @@ const copy = {
   },
   ar: {
     back: "البطاقات", modes: { study: "ذاكر", edit: "عدّل" }, loading: "جارٍ تحميل المجموعة…",
-    title: "العنوان", description: "الوصف", visibility: "من يستطيع رؤيتها", vis: { private: "أنا فقط", unlisted: "كل من لديه الرابط", public: "عامة" } as Record<Visibility, string>,
+    title: "العنوان", description: "الوصف", visibility: "من يستطيع رؤيتها", teamOnly: (name: string) => `للفريق فقط · ${name}`, vis: { private: "أنا فقط", unlisted: "كل من لديه الرابط", public: "عامة" } as Record<Visibility, string>,
     front: "الوجه", back2: "الظهر", add: "أضف بطاقة", remove: "أزل البطاقة", up: "لأعلى", down: "لأسفل", fromLesson: "من الدرس",
     flip: "اعرض الإجابة", hint: "المسافة أو Enter للقلب · 1 مرة أخرى · 2 عرفتها", again: "مرة أخرى", knew: "عرفتها",
     progress: (done: number, total: number) => `${done} من ${total} محفوظة جيدًا`, finished: "انتهت الجولة. تعود البطاقات التي أخطأتها أولًا.", restart: "ابدأ جولة أخرى", reset: "صفّر التقدم",
@@ -73,30 +75,32 @@ function FlashcardSetPage() {
       </header>
       {error && <p className="lx-error" role="alert">{error}</p>}
       {owner && <WsTabs tabs={["study", "edit"] as const} value={mode} onChange={setMode} label={set.title} labels={t.modes} />}
-      {mode === "edit" && owner ? <EditCards setId={set.id} title={set.title} description={set.description} cards={set.cards} visibility={set.visibility} onError={setError} />
+      {mode === "edit" && owner ? <EditCards setId={set.id} title={set.title} description={set.description} cards={set.cards} visibility={set.visibility} teamId={set.teamId} onError={setError} />
         : <FlashcardStudy setId={set.id} onEdit={owner ? () => setMode("edit") : undefined} />}
       {confirm && <WsConfirm title={t.deleteTitle} body={t.deleteBody} confirmLabel={t.deleteSet} onClose={() => setConfirm(false)} onConfirm={() => run(async () => { await actions.deleteFlashcardSet(set.id); router.push("/dashboard/learn/flashcards"); })} />}
     </div>
   );
 }
 
-function EditCards({ setId, title, cards, visibility, onError }: { setId: string; title: string; description: string; cards: Flashcard[]; visibility: Visibility; onError: (m: string) => void }) {
+function EditCards({ setId, title, cards, visibility, teamId, onError }: { setId: string; title: string; description: string; cards: Flashcard[]; visibility: Visibility; teamId?: string; onError: (m: string) => void }) {
   const t = useCopy(copy);
   const actions = useLearnActions();
   const [draftTitle, setTitle] = useState(title);
   const [draftCards, setCards] = useState(cards);
-  const [draftVisibility, setVisibility] = useState(visibility);
+  // "team:<id>" is team-only: published for members of that Business team.
+  const [draftVisibility, setVisibility] = useState<string>(teamId ? `team:${teamId}` : visibility);
+  const teams = useQuery(api.businessTeams.list);
   const [pending, setPending] = useState(false);
   const move = (i: number, d: number) => { const next = [...draftCards]; [next[i], next[i+d]] = [next[i+d],next[i]]; setCards(next); };
   return <form className="lx-form" onSubmit={async e => {
     e.preventDefault(); if (pending) return;
     setPending(true); onError("");
-    try { await actions.updateFlashcardSet(setId, { title: draftTitle, cards: draftCards, visibility: draftVisibility }); }
+    try { await actions.updateFlashcardSet(setId, { title: draftTitle, cards: draftCards, ...(draftVisibility.startsWith("team:") ? { teamId: draftVisibility.slice(5) } : { visibility: draftVisibility as Visibility }) }); }
     catch (err) { onError(errorMessage(err)); }
     finally { setPending(false); }
   }}><fieldset disabled={pending} style={{ border: 0, padding: 0, display: "grid", gap: 16 }}>
     <label className="lx-field">{t.title}<input className="lx-input" value={draftTitle} maxLength={160} onChange={e => setTitle(e.target.value)} /></label>
-    <label className="lx-field">{t.visibility}<Select label={t.visibility} value={draftVisibility} onChange={v => setVisibility(v as Visibility)} options={(["private", "public"] as const).map(v => ({ value: v, label: t.vis[v] }))} /></label>
+    <label className="lx-field">{t.visibility}<Select label={t.visibility} value={draftVisibility} onChange={setVisibility} options={[{ value: "private", label: t.vis.private }, ...(teams ?? []).map(row => ({ value: `team:${row.team._id}`, label: t.teamOnly(row.team.name) })), { value: "public", label: t.vis.public }]} /></label>
     <div className="lx-cards-edit">{draftCards.map((c,i) => <div key={c.id} className="lx-cards-edit__row">
       <span className="lx-muted">{i+1}</span>
       <textarea className="lx-textarea" value={c.front} aria-label={t.front} placeholder={t.front} maxLength={1000} onChange={e => setCards(draftCards.map(x => x.id === c.id ? {...x,front:e.target.value} : x))} />

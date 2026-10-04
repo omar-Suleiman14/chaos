@@ -89,7 +89,7 @@ export function annotationNote(r: Doc<"learnPersonal">): PersonalNote {
   return { id: r.key, lessonId: r.lessonId, blockId: r.blockId, body: r.note, createdAt: r._creationTime, updatedAt: r.updatedAt };
 }
 export function flashcardUi(r: Doc<"flashcardSets">): FlashcardSet {
-  return { id: r._id, ownerId: r.ownerId, ownerName: "Chaos creator", title: r.title, description: "", cards: r.cards, visibility: r.visibility === "restricted" ? "private" : r.visibility, createdAt: r._creationTime, updatedAt: r.updatedAt };
+  return { id: r._id, ownerId: r.ownerId, ownerName: "Chaos creator", title: r.title, description: "", cards: r.cards, visibility: r.visibility === "restricted" ? "private" : r.visibility, ...(r.visibility === "restricted" && r.audienceTeamId ? { teamId: r.audienceTeamId } : {}), createdAt: r._creationTime, updatedAt: r.updatedAt };
 }
 export function useLibraryFlashcardRows() {
   const auth = useConvexAuth();
@@ -176,7 +176,7 @@ export class DurableLibraryClient {
       return this.client.mutation(api.flashcardStudy.review, { versionId: version._id, cardId, rating: knewIt ? "good" : "again", eventId: key(), expectedRevision: state.revision });
     });
   }
-  async updateFlashcards(id: string, patch: Partial<Pick<FlashcardSet, "title" | "description" | "cards" | "visibility" | "lessonId">>) {
+  async updateFlashcards(id: string, patch: Partial<Pick<FlashcardSet, "title" | "description" | "cards" | "visibility" | "teamId" | "lessonId">>) {
     patch = structuredClone(patch);
     return this.queue(id, async () => {
       if (patch.description !== undefined || patch.lessonId !== undefined) throw new Error("Flashcard descriptions and lesson links are not supported by this backend.");
@@ -187,7 +187,11 @@ export class DurableLibraryClient {
       if (patch.title !== undefined || patch.cards !== undefined) revision = await this.client.mutation(api.flashcards.save, { setId: row._id, expectedRevision: revision, title: patch.title ?? row.title, cards: patch.cards?.map(c => ({ id: c.id, front: c.front, back: c.back, conceptIds: row.cards.find(old => old.id === c.id)?.conceptIds ?? [] })) ?? row.cards });
       this.sets.set(id, { ...row, revision, title: patch.title ?? row.title, cards: patch.cards?.map(c => ({ id: c.id, front: c.front, back: c.back, conceptIds: row.cards.find(old => old.id === c.id)?.conceptIds ?? [] })) ?? row.cards });
       if (patch.visibility === "unlisted") throw new Error("Unlisted flashcards are not supported. Choose private or public.");
-      if (patch.visibility) {
+      if (patch.teamId) {
+        // Team-only: published, readable by members of that Business team.
+        await this.client.mutation(api.flashcards.publish, { setId: row._id, expectedRevision: revision, visibility: "restricted", teamId: patch.teamId as Id<"businessTeams"> });
+        this.sets.set(id, { ...this.sets.get(id)!, revision: revision + 1, visibility: "restricted", audienceTeamId: patch.teamId as Id<"businessTeams"> });
+      } else if (patch.visibility) {
         if (patch.visibility === "private") await this.client.mutation(api.flashcards.setLifecycle, { setId: row._id, expectedRevision: revision, action: "unpublish" });
         else await this.client.mutation(api.flashcards.publish, { setId: row._id, expectedRevision: revision, visibility: patch.visibility });
         this.sets.set(id, { ...this.sets.get(id)!, revision: revision + 1, visibility: patch.visibility });

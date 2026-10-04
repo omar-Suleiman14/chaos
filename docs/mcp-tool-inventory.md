@@ -2,8 +2,9 @@
 
 Generated from the public MCP registry with `pnpm mcp:inventory`. Admin documentation and CRM tools are excluded; see [MCP permissions](mcp-permissions.md) for administrator access.
 
-104 tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
+117 tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
 
+- `accept_team_invitation`
 - `add_course_lesson`
 - `add_folder_member`
 - `add_lesson_blocks`
@@ -11,6 +12,7 @@ Generated from the public MCP registry with `pnpm mcp:inventory`. Admin document
 - `attach_lesson_flashcards`
 - `attach_lesson_quiz`
 - `change_form_collaborator`
+- `change_team_member_role`
 - `create_course`
 - `create_flashcard_set`
 - `create_folder`
@@ -20,6 +22,7 @@ Generated from the public MCP registry with `pnpm mcp:inventory`. Admin document
 - `create_lesson`
 - `create_lesson_curriculum_mapping`
 - `create_lesson_live_game`
+- `create_team`
 - `customize_my_card`
 - `delete_lesson_blocks`
 - `detach_lesson_flashcards`
@@ -55,6 +58,7 @@ Generated from the public MCP registry with `pnpm mcp:inventory`. Admin document
 - `get_weak_area_actions`
 - `host_game`
 - `import_course_lesson`
+- `invite_team_member`
 - `list_courses`
 - `list_curriculum_institutions`
 - `list_curriculum_nodes`
@@ -72,6 +76,10 @@ Generated from the public MCP registry with `pnpm mcp:inventory`. Admin document
 - `list_public_authors`
 - `list_public_student_cards`
 - `list_responses`
+- `list_team_invitations`
+- `list_team_members`
+- `list_team_resources`
+- `list_teams`
 - `list_themes`
 - `move_folder`
 - `move_lesson_blocks`
@@ -80,8 +88,11 @@ Generated from the public MCP registry with `pnpm mcp:inventory`. Admin document
 - `publish_form`
 - `publish_lesson`
 - `remember_course`
+- `remove_team_member`
+- `rename_team`
 - `restart_lesson_progress`
 - `restore_lesson_version`
+- `revoke_team_invitation`
 - `save_flashcard_set`
 - `save_lesson`
 - `save_lesson_draft`
@@ -103,7 +114,9 @@ Generated from the public MCP registry with `pnpm mcp:inventory`. Admin document
 - `set_lesson_lifecycle`
 - `set_student_card_preferences`
 - `set_student_card_visibility`
+- `share_with_team`
 - `unpublish_course`
+- `unshare_from_team`
 - `update_course`
 - `update_form`
 - `update_lesson_blocks`

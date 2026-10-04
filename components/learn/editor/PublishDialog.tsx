@@ -1,7 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Globe, Lock, Search, SearchX } from "lucide-react";
+import { Globe, Lock, Search, SearchX, Users } from "lucide-react";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import { Select } from "@/components/workspace/Select";
 import { WsDialog } from "@/components/workspace/primitives";
 import { diffDocuments } from "@/lib/learn/doc";
 import { hasUnpublishedChanges, useLearnCapabilities } from "@/lib/learn/data";
@@ -18,6 +21,7 @@ const copy = {
       unlisted: ["Anyone with the link", "Not listed in Explore or search results."],
       public: ["Public", "Listed in Explore and Learn search, and anyone can save or copy it with credit."],
     } as Record<Visibility, [string, string]>,
+    team: ["Your team", "Only members of your Business team can read it. Not listed in Explore."] as [string, string], whichTeam: "Team",
     search: "Search engines", idx: {
       index: ["Allow Google and others to show it", "Only public lessons in good standing can be indexed."],
       noindex: ["Keep it out of search engines", "People can still find it inside Chaos if it is public."],
@@ -38,6 +42,7 @@ const copy = {
       unlisted: ["كل من لديه الرابط", "لا يظهر في الاستكشاف أو نتائج البحث."],
       public: ["عام", "يظهر في الاستكشاف وبحث Learn، ويمكن لأي أحد حفظه أو نسخه مع نسبته إليك."],
     } as Record<Visibility, [string, string]>,
+    team: ["فريقك", "لا يقرؤه إلا أعضاء فريق الأعمال. لا يظهر في الاستكشاف."] as [string, string], whichTeam: "الفريق",
     search: "محركات البحث", idx: {
       index: ["اسمح لـ Google وغيره بعرضه", "لا تُفهرس إلا الدروس العامة غير المقيّدة."],
       noindex: ["أبقه خارج محركات البحث", "يظل بالإمكان إيجاده داخل Chaos إن كان عامًا."],
@@ -56,12 +61,16 @@ const copy = {
 const visIcon = { private: Lock, public: Globe } as const;
 
 export default function PublishDialog({ lesson, onClose, onPublish, sources = [], error, disabled = false, inCourse = false }: {
-  lesson: Lesson; onClose: () => void; onPublish: (input: { visibility: Visibility; indexing: IndexingChoice; note: string }) => void | Promise<unknown>;
+  lesson: Lesson; onClose: () => void; onPublish: (input: { visibility: Visibility; teamId?: string; indexing: IndexingChoice; note: string }) => void | Promise<unknown>;
   sources?: NativeSource[]; error?: string; disabled?: boolean; inCourse?: boolean;
 }) {
   const t = useCopy(copy);
   const caps = useLearnCapabilities();
-  const [visibility, setVisibility] = useState<Visibility>(lesson.published ? lesson.visibility : "public");
+  const teams = useQuery(api.businessTeams.list);
+  // "team" is restricted visibility for one Business team: team-only (internal) content.
+  const [visibility, setVisibility] = useState<Visibility | "team">(lesson.teamId ? "team" : lesson.published ? lesson.visibility : "public");
+  const [teamId, setTeamId] = useState(lesson.teamId ?? "");
+  const chosenTeam = teamId || teams?.[0]?.team._id || "";
   const [indexing, setIndexing] = useState<IndexingChoice>(lesson.draft.meta.indexing);
   const [note, setNote] = useState("");
   const [busy, setBusy] = useState(false);
@@ -81,12 +90,15 @@ export default function PublishDialog({ lesson, onClose, onPublish, sources = []
 
   return (
     <WsDialog title={first ? t.first : t.changes} description={t.lead} onClose={() => { if (!busy) onClose(); }}>
-      <form className="lx-form" onSubmit={async (e) => { e.preventDefault(); if (noTitle || busy || disabled) return; setBusy(true); setFailure(""); try { await onPublish({ visibility, indexing: visibility === "public" ? indexing : "noindex", note }); } catch (err) { setFailure(errorMessage(err)); } finally { setBusy(false); } }}>
+      <form className="lx-form" onSubmit={async (e) => { e.preventDefault(); if (noTitle || busy || disabled) return; setBusy(true); setFailure(""); try { await onPublish({ visibility: visibility === "team" ? "private" : visibility, ...(visibility === "team" ? { teamId: chosenTeam } : {}), indexing: visibility === "public" ? indexing : "noindex", note }); } catch (err) { setFailure(errorMessage(err)); } finally { setBusy(false); } }}>
         {inCourse && <p className="lx-notice">{t.courseNote}</p>}
         {!first && <p className="lx-muted">{hasUnpublishedChanges(lesson) ? t.summary(count("added"), count("changed"), count("removed")) : t.noChanges}</p>}
         <fieldset className="lx-field" style={{ border: 0, padding: 0, margin: 0, gap: 6 }}>
           <legend style={{ marginBottom: 6 }}>{t.who}</legend>
-          {(["private", "public"] as const).map((v) => option("visibility", v, visibility, setVisibility, t.vis[v], visIcon[v], busy))}
+          {option<Visibility | "team">("visibility", "private", visibility, setVisibility, t.vis.private, Lock, busy)}
+          {!!teams?.length && option<Visibility | "team">("visibility", "team", visibility, setVisibility, t.team, Users, busy)}
+          {visibility === "team" && teams && teams.length > 1 && <Select label={t.whichTeam} value={chosenTeam} onChange={setTeamId} options={teams.map((row) => ({ value: row.team._id, label: row.team.name }))} />}
+          {option<Visibility | "team">("visibility", "public", visibility, setVisibility, t.vis.public, Globe, busy)}
         </fieldset>
         <fieldset className="lx-field" style={{ border: 0, padding: 0, margin: 0, gap: 6 }}>
           <legend style={{ marginBottom: 6 }}>{t.search}</legend>
