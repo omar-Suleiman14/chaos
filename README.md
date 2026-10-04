@@ -115,5 +115,5 @@ Find planned work in [issues](https://github.com/omar-Suleiman14/chaos/issues) a
 [GNU Affero General Public License v3.0 or later](./LICENSE). If you run a modified version for others over a network, you must offer them its source.
 
 <!-- mcp-inventory:start -->
-The public MCP registry currently exposes **102 tools**. See the [generated inventory](docs/mcp-tool-inventory.md) and [connection guide](https://chaos.fail/connect).
+The public MCP registry currently exposes **104 tools**. See the [generated inventory](docs/mcp-tool-inventory.md) and [connection guide](https://chaos.fail/connect).
 <!-- mcp-inventory:end -->

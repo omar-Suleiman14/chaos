@@ -40,6 +40,40 @@ export function registerCardTools(
   };
   const meta = { securitySchemes };
   server.registerTool(
+    "get_student_card_preferences",
+    {
+      description:
+        "Read YOUR global student Card visibility preference. Public by default; visible=false hides your Card from every teacher's public page and the authors carousel. Individual teacher opt-outs can still apply when globally enabled.",
+      inputSchema: {},
+      outputSchema: { visible: z.boolean() },
+      annotations: read,
+      _meta: meta,
+    },
+    (input) =>
+      run(
+        "get_student_card_preferences",
+        input,
+        () => "Your student Card preference loaded.",
+      ),
+  );
+  server.registerTool(
+    "set_student_card_preferences",
+    {
+      description:
+        "Set YOUR global student Card visibility. Public by default; visible=false opts out of all teachers' public student Cards. visible=true restores the default without clearing individual teacher opt-outs. This is the same preference as settings and the card creation checkbox.",
+      inputSchema: { visible: z.boolean() },
+      outputSchema: { ok: z.boolean() },
+      annotations: { ...read, readOnlyHint: false, openWorldHint: true },
+      _meta: meta,
+    },
+    (input) =>
+      run(
+        "set_student_card_preferences",
+        input,
+        () => "Your student Card preference updated.",
+      ),
+  );
+  server.registerTool(
     "list_public_authors",
     {
       description:
@@ -69,7 +103,7 @@ export function registerCardTools(
     "list_public_student_cards",
     {
       description:
-        "Read only the student Cards explicitly opted into display around an author's Card. Defaults to eight, matching the floating previews; use cursor pagination for more. No guests, private contexts, answers or grades. Visibility is controlled by each student.",
+        "Read all eligible student Cards for a teacher, public by default unless opted out globally or per teacher. Defaults to 24 per page; follow cursors until isDone to reach every student. No guests, private contexts, answers or grades. Visibility is controlled by each student.",
       inputSchema: { username: ref, ...page },
       outputSchema: {
         page: z.array(
@@ -98,7 +132,7 @@ export function registerCardTools(
     "get_student_card_visibility",
     {
       description:
-        "Read YOUR own student-Card opt-in for an existing teacher relationship. visible=null means no relationship; false means private; true means your Card can float around this author's public Card. Never reads another student's preference.",
+        "Read YOUR own student-Card visibility for an existing teacher relationship. visible=null means no relationship; false means opted out globally or for this teacher; true means your Card can float around this author's public Card. Never reads another student's preference.",
       inputSchema: { username: ref },
       outputSchema: { visible: z.boolean().nullable() },
       annotations: read,
@@ -115,7 +149,7 @@ export function registerCardTools(
     "set_author_listing_visibility",
     {
       description:
-        "Choose whether YOUR account appears in the public author carousel and directory. Only authors with public publications are listed. Hiding your listing does not unpublish content or disable direct Card links. Does not change any student's opt-in.",
+        "Choose whether YOUR account appears in the public author carousel and directory. Only authors with public publications are listed. Hiding your listing does not unpublish content or disable direct Card links. Does not change any student's visibility.",
       inputSchema: { visible: z.boolean() },
       outputSchema: { ok: z.boolean() },
       annotations: { ...read, readOnlyHint: false, openWorldHint: true },

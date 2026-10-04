@@ -15,20 +15,20 @@ export async function recordStudent(ctx: MutationCtx, input: { authorId: string;
   const existing = await ctx.db.query("authorStudents").withIndex("by_author_key", q => q.eq("authorId", input.authorId).eq("key", key)).unique();
   const fields = { context: input.context.slice(0, 200), updatedAt: Date.now(), ...(input.guestName ? { guestName: input.guestName.slice(0, 80) } : {}) };
   if (existing) { await ctx.db.patch("authorStudents", existing._id, fields); return; }
-  await ctx.db.insert("authorStudents", { authorId: input.authorId, key, studentId: input.studentId, publicVisible: false, ...fields });
+  await ctx.db.insert("authorStudents", { authorId: input.authorId, key, studentId: input.studentId, publicVisible: true, ...fields });
   const count = await ctx.db.query("authorStudentCounts").withIndex("by_author", q => q.eq("authorId", input.authorId)).unique();
   if (count) await ctx.db.patch("authorStudentCounts", count._id, { count: count.count + 1 });
   else await ctx.db.insert("authorStudentCounts", { authorId: input.authorId, count: 1 });
 }
 export async function pageFor(ctx: QueryCtx, authorId: string, options: { numItems: number; cursor: string | null }, isPublic = false) {
-  const rows = isPublic
-    ? ctx.db.query("authorStudents").withIndex("by_author_public_updated", q => q.eq("authorId", authorId).eq("publicVisible", true))
-    : ctx.db.query("authorStudents").withIndex("by_author_updated", q => q.eq("authorId", authorId));
+  // Include legacy rows created under the former private-by-default policy.
+  // Explicit opt-outs are distinct from that old default and are applied below.
+  const rows = ctx.db.query("authorStudents").withIndex("by_author_updated", q => q.eq("authorId", authorId));
   const result = await rows.order("desc").paginate({ ...options, numItems: Math.min(48, Math.max(1, options.numItems)), maximumBytesRead: 500_000 });
   const mapped = await Promise.all(result.page.map(async row => {
     const user = row.studentId ? await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", row.studentId!)).first() : null;
     const visible = user && !user.isBanned && !user.suspendedUntil;
-    if (isPublic && !visible) return null;
+    if (isPublic && (!visible || user.hideStudentCards || row.publicHidden)) return null;
     return { id: row._id, name: visible ? user.name : row.guestName || `Guest ${row._id.slice(-6)}`, username: visible ? user.username : null,
       seed: visible ? user.cardAvatarSeed ?? avatarSeed(user.clerkId) : avatarSeed(row._id), style: visible ? user.cardStyle ?? 0 : 0, context: isPublic ? null : row.context };
   }));
@@ -47,14 +47,24 @@ export const myVisibility = query({ args: { username: v.string() }, handler: asy
   const identity = await getAuthIdentity(ctx); if (!identity) return null;
   const author = await userByUsername(ctx, args.username.trim().toLowerCase()); if (!author) return null;
   const row = await ctx.db.query("authorStudents").withIndex("by_author_key", q => q.eq("authorId", author.clerkId).eq("key", `user:${identity.subject}`)).unique();
-  return row ? row.publicVisible : null;
+  if (!row) return null;
+  const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", identity.subject)).first();
+  return !user?.hideStudentCards && !row.publicHidden;
 } });
 async function setVisibility(ctx: MutationCtx, studentId: string, username: string, visible: boolean) {
   const author = await userByUsername(ctx, username.trim().toLowerCase()); if (!author) throw new Error("Author unavailable");
   const row = await ctx.db.query("authorStudents").withIndex("by_author_key", q => q.eq("authorId", author.clerkId).eq("key", `user:${studentId}`)).unique();
   if (!row) throw new Error("VALIDATION_FAILED: No student relationship to update");
-  await ctx.db.patch("authorStudents", row._id, { publicVisible: visible }); return { ok: true };
+  await ctx.db.patch("authorStudents", row._id, { publicVisible: visible, publicHidden: !visible }); return { ok: true };
 }
+export async function setGlobalStudentVisibility(ctx: MutationCtx, userId: string, visible: boolean) {
+  const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", userId)).unique();
+  if (!user) throw new Error("ACCOUNT_REQUIRED: Sign in first.");
+  await ctx.db.patch("users", user._id, { hideStudentCards: !visible }); return { ok: true };
+}
+export const setGlobalVisibility = mutation({ args: { visible: v.boolean() }, handler: async (ctx, args) => {
+  const { identity } = await requireActiveUser(ctx); return setGlobalStudentVisibility(ctx, identity.subject, args.visible);
+} });
 export const setPublicVisibility = mutation({ args: { username: v.string(), visible: v.boolean() }, handler: async (ctx, args) => { const { identity } = await requireActiveUser(ctx); return setVisibility(ctx, identity.subject, args.username, args.visible); } });
 export const mcpList = internalQuery({ args: { userId: v.string(), cursor: v.optional(v.string()), limit: v.optional(v.number()) }, handler: async (ctx, args) => { await requireLearnActor(ctx, args.userId); return pageFor(ctx, args.userId, { cursor: args.cursor ?? null, numItems: args.limit ?? 24 }); } });
 export const mcpVisibility = internalMutation({ args: { userId: v.string(), username: v.string(), visible: v.boolean() }, handler: async (ctx, args) => { await requireLearnActor(ctx, args.userId); return setVisibility(ctx, args.userId, args.username, args.visible); } });

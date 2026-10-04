@@ -50,9 +50,10 @@ export const setStyle = mutation({
   },
 });
 
-const customization = { name: v.optional(v.string()), username: v.optional(v.string()), style: v.optional(v.number()), avatar: v.optional(v.number()), finishOnboarding: v.optional(v.boolean()), skip: v.optional(v.boolean()) };
-async function customize(ctx: MutationCtx, user: Doc<"users">, args: { name?: string; username?: string; style?: number; avatar?: number; finishOnboarding?: boolean; skip?: boolean }) {
+const customization = { name: v.optional(v.string()), username: v.optional(v.string()), style: v.optional(v.number()), avatar: v.optional(v.number()), finishOnboarding: v.optional(v.boolean()), skip: v.optional(v.boolean()), showStudentCards: v.optional(v.boolean()) };
+async function customize(ctx: MutationCtx, user: Doc<"users">, args: { name?: string; username?: string; style?: number; avatar?: number; finishOnboarding?: boolean; skip?: boolean; showStudentCards?: boolean }) {
   const updates: Partial<Doc<"users">> = {};
+  if (args.showStudentCards !== undefined) updates.hideStudentCards = !args.showStudentCards;
   if (!args.skip) {
     if (args.name !== undefined) { const name = args.name.trim(); if (!name || name.length > 100) throw new Error("Name must be 1–100 characters"); updates.name = name; updates.profileNameChosen = true; }
     if (args.username !== undefined) { const username = args.username.trim().toLowerCase(); const problem = usernameProblem(username); if (problem) throw new Error(`INVALID_USERNAME: ${problem}`); await reserveUsername(ctx, user.username, user.clerkId); await reserveUsername(ctx, username, user.clerkId); updates.username = username; updates.usernameChosen = true; }

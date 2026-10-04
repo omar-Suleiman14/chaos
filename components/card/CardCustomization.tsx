@@ -14,10 +14,13 @@ export default function CardCustomization({ card, actorId, onboarding = false, o
   const [name, setName] = useState(card.name), [username, setUsername] = useState(card.username), [style, setStyle] = useState(card.style), [avatar, setAvatar] = useState<number | null>(null);
   const [busy, setBusy] = useState(false), [ready, setReady] = useState(false), [error, setError] = useState("");
   const save = useMutation(api.memberCards.customizeCard);
+  const me = useQuery(api.quizFunctions.getCurrentUser);
+  const [studentChoice, setStudentChoice] = useState<boolean | null>(null);
+  const showStudentCards = studentChoice ?? !me?.hideStudentCards;
   const seed = avatar === null ? card.seed : `${avatarSeed(actorId)}:avatar:${avatar}`;
   async function submit(skip = false) {
     setBusy(true); setError("");
-    try { await save(skip ? { skip: true } : { name, username, style, ...(avatar === null ? {} : { avatar }), finishOnboarding: onboarding }); if (skip) onDone?.(); else setReady(true); }
+    try { await save(skip ? { skip: true, ...(studentChoice === null ? {} : { showStudentCards }) } : { name, username, style, ...(avatar === null ? {} : { avatar }), showStudentCards, finishOnboarding: onboarding }); if (skip) onDone?.(); else setReady(true); }
     catch (e) { setError(e instanceof Error ? e.message : (ar ? "تعذر الحفظ" : "Couldn't save")); }
     finally { setBusy(false); }
   }
@@ -29,8 +32,10 @@ export default function CardCustomization({ card, actorId, onboarding = false, o
       <label>{ar ? "الاسم" : "Name"}<input value={name} maxLength={100} required onChange={e => setName(e.target.value)} autoComplete="name" dir="auto" /></label>
       <label>{ar ? "اسم المستخدم" : "Username"}<input value={username} minLength={3} maxLength={64} required onChange={e => setUsername(e.target.value)} autoComplete="username" dir="ltr" spellCheck={false} /></label>
       <fieldset><legend>{ar ? "الصورة الرمزية" : "Avatar"}</legend><div className="mc-customize__avatars">{Array.from({ length: 8 }, (_, index) => <button type="button" key={index} aria-label={ar ? `الصورة ${index + 1}` : `Avatar ${index + 1}`} aria-pressed={avatar === index} onClick={() => setAvatar(index)}><MemberAvatar seed={`${avatarSeed(actorId)}:avatar:${index}`} size={36} /></button>)}</div></fieldset>
+      <label className="mc-customize__visibility"><input type="checkbox" checked={showStudentCards} disabled={!me || busy} onChange={e => setStudentChoice(e.target.checked)} />{ar ? "أظهر بطاقتي لدى معلّميّ" : "Show my Card with my teachers"}</label>
+      <p className="mc-help">{ar ? "تظهر بطاقتك علنًا مع معلّميك تلقائيًا. يمكنك إيقاف ذلك هنا أو في الإعدادات." : "Your Card appears publicly with your teachers by default. Turn this off here or in settings."}</p>
       {error && <p role="alert">{error}</p>}
-      <div className="mc-customize__actions"><button className="ws-btn ws-btn--primary" disabled={busy}>{busy ? (ar ? "جارٍ الحفظ…" : "Saving…") : (ar ? "احفظ بطاقتي" : "Save my Card")}</button>{onboarding && <button type="button" className="ws-btn" disabled={busy} onClick={() => void submit(true)}>{ar ? "تخطَّ الآن" : "Skip for now"}</button>}</div>
+      <div className="mc-customize__actions"><button className="ws-btn ws-btn--primary" disabled={busy || !me}>{busy ? (ar ? "جارٍ الحفظ…" : "Saving…") : (ar ? "احفظ بطاقتي" : "Save my Card")}</button>{onboarding && <button type="button" className="ws-btn" disabled={busy} onClick={() => void submit(true)}>{ar ? "تخطَّ الآن" : "Skip for now"}</button>}</div>
     </form>}
   </section>;
 }

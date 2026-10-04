@@ -25,6 +25,7 @@ const copy = {
     preferencesHelp: "Settings for your forms, quizzes and library. They save on this device as you change them.",
     profile: "Profile and app", profileAbout: "Your card, username, account and how Chaos looks.", profileRow: "Profile", profileHelp: "Account, appearance, glass and motion.",
     authorListing: "Show me in author lists", authorListingHelp: "People can find you in the public author directory and creator search. Your published links and card remain available when this is off.", authorListingError: "Could not save your author visibility. Try again.",
+    studentCards: "Show my Card with my teachers", studentCardsHelp: "Public by default. Turn this off to hide your student Card from all teachers' pages and the authors carousel.", studentCardsError: "Could not save your student Card visibility. Try again.",
     resetTheme: "Reset theme", layoutHelp: "Choose whether people see all questions, one at a time, or in steps.",
     account: "Account", accountAbout: "Who you are in Chaos, and the name in your links.", yourAccount: "Your account", manage: "Manage account",
     username: "Username", usernameHelp: (url: string) => `Used in custom links, like ${url}.`, chooseOne: "Choose one", yourname: "yourname",
@@ -56,6 +57,7 @@ const copy = {
   },
   ar: {
     authorListing: "أظهرني في قوائم المؤلفين", authorListingHelp: "يمكن للآخرين العثور عليك في دليل المؤلفين العام والبحث عن المنشئين. تظل روابط منشوراتك وبطاقتك متاحة عند إيقاف هذا الخيار.", authorListingError: "تعذر حفظ ظهورك في قوائم المؤلفين. حاول مجددًا.",
+    studentCards: "أظهر بطاقتي لدى معلّميّ", studentCardsHelp: "تظهر علنًا تلقائيًا. أوقف هذا الخيار لإخفاء بطاقة الطالب عن صفحات جميع معلّميك ودليل المؤلفين.", studentCardsError: "تعذر حفظ ظهور بطاقة الطالب. حاول مجددًا.",
     title: "الإعدادات", loading: "جارٍ التحميل…", saving: "جارٍ الحفظ…", saved: "تم الحفظ", savedDot: "تم الحفظ.", save: "احفظ", open: "افتح", read: "اقرأ", reset: "إعادة الضبط",
     preferencesHelp: "إعدادات نماذجك واختباراتك ومكتبتك. تُحفظ على هذا الجهاز عند تعديلها.",
     profile: "الملف والتطبيق", profileAbout: "بطاقتك واسم المستخدم والحساب وشكل Chaos.", profileRow: "الملف الشخصي", profileHelp: "الحساب والمظهر والزجاج والحركة.",
@@ -140,6 +142,9 @@ export default function SettingsPage() {
   const labels = useBuilderLabels();
   const me = useQuery(api.quizFunctions.getCurrentUser);
   const setListingVisibility = useMutation(api.publicAuthors.setListingVisibility);
+  const setStudentVisibility = useMutation(api.studentRoster.setGlobalVisibility);
+  const [studentSaving, setStudentSaving] = useState(false);
+  const [studentStatus, setStudentStatus] = useState("");
   const [listingSaving, setListingSaving] = useState(false);
   const [listingStatus, setListingStatus] = useState("");
   const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
@@ -166,6 +171,16 @@ export default function SettingsPage() {
             }} />
         </Row>
         <p className="ws-row__help py-2" role="status" aria-live="polite">{listingStatus}</p>
+        <Row id="settings-student-cards" label={t.studentCards} help={t.studentCardsHelp}>
+          <WsSwitch label={t.studentCards} hideLabel checked={!me?.hideStudentCards} disabled={!me || studentSaving}
+            onChange={async visible => {
+              setStudentSaving(true); setStudentStatus(t.saving);
+              try { await setStudentVisibility({ visible }); setStudentStatus(t.saved); }
+              catch { setStudentStatus(t.studentCardsError); }
+              finally { setStudentSaving(false); }
+            }} />
+        </Row>
+        <p className="ws-row__help py-2" role="status" aria-live="polite">{studentStatus}</p>
       </Section>
 
 

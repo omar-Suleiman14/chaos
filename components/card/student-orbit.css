@@ -1,45 +1,14 @@
 .student-orbit {
   position: absolute;
-  inset: 0;
+  inset: 12px 0 100px;
   z-index: 2;
   pointer-events: none;
 }
 .student-orbit__slot {
   position: absolute;
-  width: 76px;
+  display: grid;
+  justify-items: center;
   perspective: 700px;
-}
-.student-orbit__slot[data-slot="0"] {
-  left: 12%;
-  top: 8%;
-}
-.student-orbit__slot[data-slot="1"] {
-  right: 12%;
-  top: 12%;
-}
-.student-orbit__slot[data-slot="2"] {
-  left: 2%;
-  top: 38%;
-}
-.student-orbit__slot[data-slot="3"] {
-  right: 2%;
-  top: 43%;
-}
-.student-orbit__slot[data-slot="4"] {
-  left: 12%;
-  top: 70%;
-}
-.student-orbit__slot[data-slot="5"] {
-  right: 12%;
-  top: 73%;
-}
-.student-orbit__slot[data-slot="6"] {
-  left: 1%;
-  top: 3%;
-}
-.student-orbit__slot[data-slot="7"] {
-  right: 1%;
-  top: 4%;
 }
 .student-orbit__float {
   animation: student-drift 7s ease-in-out var(--delay) infinite;
@@ -57,7 +26,7 @@
   text-decoration: none;
   box-shadow: 0 5px 14px #00000016;
   pointer-events: auto;
-  transform: translate(var(--tx, 0px), var(--ty, 0px)) rotateX(var(--rx, 0deg))
+  transform: translate(calc(var(--tx, 0px) * .3), calc(var(--ty, 0px) * .3)) rotateX(var(--rx, 0deg))
     rotateY(var(--ry, 0deg)) rotateZ(var(--lean));
 }
 .student-orbit__art {
@@ -113,8 +82,8 @@
   }
 }
 @media (max-width: 600px) {
-  .student-orbit__slot {
-    width: 54px;
+  .student-orbit__wing {
+    width: 64px;
   }
   .student-orbit__card {
     width: 54px;
@@ -130,32 +99,6 @@
   .student-orbit__handle {
     font-size: 5px;
   }
-  .student-orbit__slot[data-slot] {
-    left: 0;
-    right: auto;
-  }
-  .student-orbit__slot[data-slot="1"],
-  .student-orbit__slot[data-slot="3"],
-  .student-orbit__slot[data-slot="5"] {
-    left: auto;
-    right: 0;
-  }
-  .student-orbit__slot[data-slot="0"],
-  .student-orbit__slot[data-slot="1"] {
-    top: 3%;
-  }
-  .student-orbit__slot[data-slot="2"],
-  .student-orbit__slot[data-slot="3"] {
-    top: 32%;
-  }
-  .student-orbit__slot[data-slot="4"],
-  .student-orbit__slot[data-slot="5"] {
-    top: 61%;
-  }
-  .student-orbit__slot[data-slot="6"],
-  .student-orbit__slot[data-slot="7"] {
-    display: none;
-  }
 }
 @media (prefers-reduced-motion: reduce) {
   .student-orbit__float {
@@ -163,5 +106,39 @@
   }
   .student-orbit__card {
     transform: none;
+  }
+}
+
+.student-orbit__wing {
+  position: absolute;
+  inset-block: 0;
+  width: 24%;
+  overflow-y: auto;
+  overflow-x: hidden;
+  pointer-events: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #8885 transparent;
+}
+.student-orbit__wing[data-side="0"] {
+  left: 0;
+}
+.student-orbit__wing[data-side="1"] {
+  right: 0;
+}
+.student-orbit__wing:focus-visible {
+  outline: 2px solid #0071e3;
+  outline-offset: 2px;
+}
+.student-orbit__rows {
+  position: relative;
+  min-height: 100%;
+}
+.author-scene .student-orbit {
+  inset-block: 32px 12px;
+}
+@media (max-width: 600px) {
+  .student-orbit__wing {
+    width: 64px;
   }
 }

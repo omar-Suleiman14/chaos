@@ -25,7 +25,7 @@ import { webhookTables } from "./webhookModel";
 import { liveTables } from "./liveModel";
 
 export default defineSchema({
-  authorStudents: defineTable({ authorId: v.string(), key: v.string(), studentId: v.optional(v.string()), guestName: v.optional(v.string()), context: v.string(), publicVisible: v.boolean(), updatedAt: v.number() }).index("by_author_key", ["authorId", "key"]).index("by_author_updated", ["authorId", "updatedAt"]).index("by_author_public_updated", ["authorId", "publicVisible", "updatedAt"]),
+  authorStudents: defineTable({ authorId: v.string(), key: v.string(), studentId: v.optional(v.string()), guestName: v.optional(v.string()), context: v.string(), publicVisible: v.boolean(), publicHidden: v.optional(v.boolean()), updatedAt: v.number() }).index("by_author_key", ["authorId", "key"]).index("by_author_updated", ["authorId", "updatedAt"]).index("by_author_public_updated", ["authorId", "publicVisible", "updatedAt"]),
   /** A learner who pressed Start on a course: a signed-in account or a device-scoped guest. Feeds the author's course analytics. */
   courseEnrollments: defineTable({ courseId: v.id("learnCollections"), ownerId: v.string(), key: v.string(), studentId: v.optional(v.string()), guestName: v.optional(v.string()), completedLessonIds: v.array(v.id("lessons")), lastLessonId: v.optional(v.id("lessons")), enrolledAt: v.number(), updatedAt: v.number(), completedAt: v.optional(v.number()) }).index("by_course_key", ["courseId", "key"]).index("by_course_updated", ["courseId", "updatedAt"]),
   authorStudentCounts: defineTable({ authorId: v.string(), count: v.number() }).index("by_author", ["authorId"]),
@@ -93,6 +93,8 @@ export default defineSchema({
     publicAuthorAssets: v.optional(v.number()),
     /** Opt out of public author directories; direct published links stay available. */
     hideFromAuthorLists: v.optional(v.boolean()),
+    /** Public student Cards are enabled unless the account opts out. */
+    hideStudentCards: v.optional(v.boolean()),
     /** Member card colour theme index (lib/memberCard.ts CARD_THEMES). */
     cardStyle: v.optional(v.number()),
     cardAvatarSeed: v.optional(v.string()),

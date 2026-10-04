@@ -41,17 +41,22 @@ describe("MCP Cards and CRM trusted transport", () => {
     expect((await send("add_crm_note", { contactId, body: "Denied" })).status).toBe(403);
   });
 
-  it("reads public Cards and only opted-in students, never guest or private study context", async () => {
+  it("reads public Cards and students by default, never guest or private study context", async () => {
     const { t, send } = await setup();
     const initial = await (await send("list_public_student_cards", { username: "teacher" })).json();
-    expect(initial.result.page).toEqual([]);
-    expect((await (await send("get_student_card_visibility", { username: "teacher", userId: adminId }, studentId)).json()).result.visible).toBe(false);
+    expect(initial.result.page).toHaveLength(1);
+    expect((await (await send("get_student_card_visibility", { username: "teacher", userId: adminId }, studentId)).json()).result.visible).toBe(true);
     expect((await send("set_student_card_visibility", { username: "teacher", visible: true, userId: studentId }, adminId)).status).toBe(400);
     expect((await send("set_student_card_visibility", { username: "teacher", visible: true }, studentId)).status).toBe(200);
     const publicRows = await (await send("list_public_student_cards", { username: "teacher" })).json();
     expect(publicRows.result.page).toHaveLength(1);
     expect(publicRows.result.page[0]).toMatchObject({ username: "learner", context: null, seed: "learner-chosen" });
     expect(JSON.stringify(publicRows)).not.toContain("Private");
+    expect((await (await send("get_student_card_preferences", {}, studentId)).json()).result.visible).toBe(true);
+    expect((await send("set_student_card_preferences", { visible: false, userId: adminId }, studentId)).status).toBe(200);
+    expect((await (await send("list_public_student_cards", { username: "teacher" })).json()).result.page).toEqual([]);
+    await send("customize_my_card", { showStudentCards: true, skip: true }, studentId);
+    expect((await (await send("list_public_student_cards", { username: "teacher" })).json()).result.page).toHaveLength(1);
     const card = await (await send("get_public_card", { username: "teacher" })).json();
     expect(card.result.card.seed).toBe("teacher-chosen"); expect(card.result.card).not.toHaveProperty("email");
     expect((await (await send("list_public_authors", {})).json()).result.page).toHaveLength(1);

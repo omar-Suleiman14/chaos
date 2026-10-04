@@ -4,14 +4,18 @@
 .authors-eyebrow { text-transform: uppercase; letter-spacing: .1em; font-size: 11px; font-weight: 600; color: var(--on-surface-variant); }
 .authors-page h1 { font-size: clamp(30px, 5vw, 48px); font-weight: 650; letter-spacing: -.035em; margin: 8px 0 12px; }
 .authors-page header > p:last-child { font-size: 15px; line-height: 1.7; color: var(--on-surface-variant); }
-.author-scene { position:relative; width:min(100%,900px); margin-inline:auto; }
+.author-scene { --author-card-width:320px; position:relative; width:min(100%,calc(var(--author-card-width) + (var(--fan-count, 5) - 1) * 120px + 200px)); margin-inline:auto; }
 .author-scene .student-orbit { z-index:6; }
+.author-scene .author-stack { z-index:7; pointer-events:none; }
+.author-scene .student-orbit__wing { width:min(24%,calc((100% - var(--author-card-width)) / 2 - 16px)); }
 @media (max-width:600px) { .author-scene .author-stack-card { width:calc(100vw - 180px); margin-inline-start:calc((100vw - 180px) / -2); } .author-scene .author-stack { height:390px; } }
 .author-stack { position: relative; width: min(100%, 700px); height: clamp(460px, 62vw, 580px); margin: 16px auto 0; perspective: 1200px; touch-action: pan-y; outline-offset: 4px; }
 .author-stack-card { position: absolute; width: clamp(250px, 58vw, 320px); inset-inline-start: 50%; top: 80px; margin-inline-start: calc(clamp(250px, 58vw, 320px) / -2); transform: translateX(calc(var(--position) * clamp(28px, 6vw, 64px))) translateY(calc(var(--depth) * 6px)) translateZ(calc(var(--depth) * -90px)) rotateY(var(--turn)) rotateZ(var(--lean)); transform-origin: center bottom; transition: transform 420ms cubic-bezier(.22,.8,.3,1), opacity 320ms; opacity: calc(1 - var(--depth) * .12); border-radius: 18px; backface-visibility: hidden; pointer-events: none; }
 .author-stack-card[data-active=true] { transform: translateZ(0); pointer-events: auto; cursor: grab; }
 .author-stack-card[data-active=false] { pointer-events:auto; cursor:pointer; padding:0; border:0; background:none; color:inherit; }
-.author-stack[data-fanned=true] .author-stack-card[data-active=false] { transform:translateX(calc(var(--position) * clamp(36px, 8vw, 80px))) translateY(calc(var(--depth) * -6px)) translateZ(calc(var(--depth) * -70px)) rotateY(calc(var(--position) * -8deg)) rotateZ(calc(var(--position) * 5deg)); opacity:1; }
+.author-stack[data-fanned=true] .author-stack-card[data-active=false] { transform:translateX(calc(var(--position) * clamp(40px, 10vw, 120px))) translateY(calc(var(--depth) * -14px)) translateZ(calc(var(--depth) * -35px)) rotateY(calc(var(--position) * -5deg)) rotateZ(calc(var(--position) * 9deg)); opacity:1; }
+.author-scene .author-stack { width:min(100%,calc(var(--author-card-width) + (var(--fan-count, 5) - 1) * 120px)); }
+@media (max-width:600px) { .author-scene { --author-card-width:calc(100vw - 180px); } .author-scene .student-orbit__wing { width:64px; } }
 /* Each card's art moves away from the mouse (the nearest card most) and follows a phone's tilt; useTilt sets the
    variables on each card frame by frame, while the card itself keeps its place in the stack. */
 .author-art { border-radius: 18px; box-shadow: 0 16px 42px rgb(0 0 0 / .18); will-change: transform; transform: perspective(1200px) translate(var(--tx, 0px), var(--ty, 0px)) rotateX(var(--rx, 0deg)) rotateY(var(--ry, 0deg)); }

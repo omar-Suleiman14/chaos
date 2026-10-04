@@ -1,5 +1,5 @@
 {
-  "count": 102,
+  "count": 104,
   "names": [
     "add_course_lesson",
     "add_folder_member",
@@ -47,6 +47,7 @@
     "get_public_card",
     "get_quiz_fork_lineage",
     "get_results",
+    "get_student_card_preferences",
     "get_student_card_visibility",
     "get_weak_area_actions",
     "host_game",
@@ -97,6 +98,7 @@
     "set_form_theme",
     "set_game_settings",
     "set_lesson_lifecycle",
+    "set_student_card_preferences",
     "set_student_card_visibility",
     "unpublish_course",
     "update_course",

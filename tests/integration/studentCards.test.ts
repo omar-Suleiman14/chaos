@@ -13,7 +13,7 @@ async function setup() {
   const card = await teacher.query(api.memberCards.mine, {});
   return { t, teacher, student, username: card!.username };
 }
-it("keeps guests private and allows only the learner to opt in their actual Card", async () => {
+it("shows account Cards by default, keeps guests private and respects student opt-outs", async () => {
   const { t, teacher, student, username } = await setup();
   await t.run(async ctx => {
     await recordStudent(ctx, { authorId: creatorIdentity.subject, studentId: otherCreatorIdentity.subject, context: "Anatomy" });
@@ -24,7 +24,7 @@ it("keeps guests private and allows only the learner to opt in their actual Card
   expect(await teacher.query(api.studentRoster.count, {})).toBe(2);
   const privateRows = await teacher.query(api.studentRoster.mine, { paginationOpts });
   expect(privateRows.page.find(row => row.name === "Guest learner")?.username).toBeNull();
-  expect((await t.query(api.studentRoster.publicStudents, { username, paginationOpts })).page).toEqual([]);
+  expect((await t.query(api.studentRoster.publicStudents, { username, paginationOpts })).page).toHaveLength(1);
   await expect(teacher.mutation(api.studentRoster.setPublicVisibility, { username, visible: true })).rejects.toThrow("No student relationship");
   await student.mutation(api.studentRoster.setPublicVisibility, { username, visible: true });
   const visible = (await t.query(api.studentRoster.publicStudents, { username, paginationOpts })).page;
@@ -38,6 +38,44 @@ it("pages beyond 100 relationships without duplication and bounds each request",
   const ids: string[] = []; let cursor: string | null = null, done = false;
   while (!done) { const page: FunctionReturnType<typeof api.studentRoster.mine> = await teacher.query(api.studentRoster.mine, { paginationOpts: { numItems: 100, cursor } }); expect(page.page.length).toBeLessThanOrEqual(48); ids.push(...page.page.map(row => row.id)); cursor = page.continueCursor; done = page.isDone; }
   expect(new Set(ids).size).toBe(125); expect(ids.length).toBe(125);
+});
+it("applies account opt-out to old and new teacher relationships and saves it even when onboarding is skipped", async () => {
+  const { t, teacher, student, username } = await setup();
+  const paginationOpts = { numItems: 24, cursor: null };
+  await t.run(async ctx => {
+    await recordStudent(ctx, { authorId: creatorIdentity.subject, studentId: otherCreatorIdentity.subject, context: "Lesson" });
+    const row = await ctx.db.query("authorStudents").first();
+    await ctx.db.patch(row!._id, { publicVisible: false }); // Former default, without an explicit opt-out.
+  });
+  expect((await t.query(api.studentRoster.publicStudents, { username, paginationOpts })).page).toHaveLength(1);
+  await student.mutation(api.memberCards.customizeCard, { skip: true, showStudentCards: false });
+  expect((await student.query(api.quizFunctions.getCurrentUser, {}))?.hideStudentCards).toBe(true);
+  expect((await t.query(api.studentRoster.publicStudents, { username, paginationOpts })).page).toEqual([]);
+  await student.mutation(api.studentRoster.setPublicVisibility, { username, visible: true });
+  expect(await student.query(api.studentRoster.myVisibility, { username })).toBe(false); // Global opt-out wins.
+  await student.mutation(api.studentRoster.setGlobalVisibility, { visible: true });
+  expect((await t.query(api.studentRoster.publicStudents, { username, paginationOpts })).page).toHaveLength(1);
+  await student.mutation(api.studentRoster.setPublicVisibility, { username, visible: false });
+  await student.mutation(api.studentRoster.setGlobalVisibility, { visible: false });
+  await student.mutation(api.studentRoster.setGlobalVisibility, { visible: true });
+  expect((await t.query(api.studentRoster.publicStudents, { username, paginationOpts })).page).toEqual([]); // Individual opt-out is retained.
+  await expect(teacher.mutation(api.studentRoster.setPublicVisibility, { username, visible: false })).rejects.toThrow("No student relationship");
+});
+it("pages through every eligible public student without an eight-card cap", async () => {
+  const { t, username } = await setup();
+  await t.run(async ctx => {
+    for (let i = 0; i < 61; i++) {
+      await ctx.db.insert("users", { clerkId: `student-${i}`, name: `Student ${i}`, username: `student-${i}`, email: `${i}@example.com`, createdAt: 0 });
+      await recordStudent(ctx, { authorId: creatorIdentity.subject, studentId: `student-${i}`, context: "Private lesson context" });
+    }
+  });
+  const ids = new Set<string>(); let cursor: string | null = null, done = false;
+  while (!done) {
+    const result: FunctionReturnType<typeof api.studentRoster.publicStudents> = await t.query(api.studentRoster.publicStudents, { username, paginationOpts: { numItems: 24, cursor } });
+    for (const row of result.page) { ids.add(row.id); expect(row.context).toBeNull(); }
+    cursor = result.continueCursor; done = result.isDone;
+  }
+  expect(ids.size).toBe(61);
 });
 it("persists skippable new-account onboarding and chosen identity across provider sync", async () => {
   const { teacher } = await setup();

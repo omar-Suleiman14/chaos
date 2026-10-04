@@ -3,7 +3,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import { requireLearnActor } from "./mcpLearn";
 import { browsePublicAuthors } from "./publicAuthors";
 import { readPublicCard } from "./memberCards";
-import { pageFor } from "./studentRoster";
+import { pageFor, setGlobalStudentVisibility } from "./studentRoster";
 import { userByUsername } from "./usernameModel";
 
 const actor = { userId: v.string() };
@@ -40,7 +40,7 @@ export const students = internalQuery({
   args: { ...actor, ...page, username: v.string() },
   handler: async (ctx, args) => {
     await requireLearnActor(ctx, args.userId);
-    const opts = pagination(args, 8);
+    const opts = pagination(args, 24);
     const author = await userByUsername(
       ctx,
       args.username.trim().toLowerCase(),
@@ -66,7 +66,13 @@ export const visibility = internalQuery({
           )
           .unique()
       : null;
-    return { visible: row?.publicVisible ?? null };
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .unique();
+    return {
+      visible: row ? !row.publicHidden && !user?.hideStudentCards : null,
+    };
   },
 });
 export const listing = internalMutation({
@@ -82,5 +88,23 @@ export const listing = internalMutation({
       hideFromAuthorLists: !args.visible,
     });
     return { ok: true };
+  },
+});
+export const studentPreferences = internalQuery({
+  args: actor,
+  handler: async (ctx, args) => {
+    await requireLearnActor(ctx, args.userId);
+    const user = await ctx.db
+      .query("users")
+      .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
+      .unique();
+    return { visible: !user?.hideStudentCards };
+  },
+});
+export const setStudentPreferences = internalMutation({
+  args: { ...actor, visible: v.boolean() },
+  handler: async (ctx, args) => {
+    await requireLearnActor(ctx, args.userId);
+    return setGlobalStudentVisibility(ctx, args.userId, args.visible);
   },
 });

@@ -90,6 +90,8 @@
 .mc-customize h1 { font-size: clamp(24px, 5vw, 36px); font-weight: 650; margin-block-end: 12px; }
 .mc-customize__form { display: grid; gap: 16px; }
 .mc-customize__form label { display: grid; gap: 6px; }
+.mc-customize__form .mc-customize__visibility { display:flex; align-items:center; gap:10px; min-height:44px; }
+.mc-customize__form .mc-customize__visibility input { width:18px; min-height:18px; flex:none; }
 .mc-customize input { width: 100%; min-height: 44px; padding: 10px; border: 1px solid var(--ws-line, #888); border-radius: 8px; background: var(--ws-surface, Canvas); color: inherit; }
 .mc-customize__avatars, .mc-customize__actions { display: flex; gap: 8px; flex-wrap: wrap; }
 .mc-customize__avatars button { min-width: 48px; min-height: 48px; display: grid; place-items: center; border: 2px solid transparent; border-radius: 12px; }
