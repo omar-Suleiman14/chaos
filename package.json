@@ -19,7 +19,9 @@
     "test": "npm-run-all --sequential test:unit test:integration",
     "test:unit": "vitest run --config vitest.unit.config.mts",
     "test:integration": "vitest run --config vitest.integration.config.mts",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "mcp:inventory": "tsx scripts/mcp-inventory.ts",
+    "mcp:inventory:check": "tsx scripts/mcp-inventory.ts --check"
   },
   "dependencies": {
     "@better-auth/oauth-provider": "~1.6.15",
@@ -81,6 +83,7 @@
     "prettier": "^3.9.9",
     "shadcn": "^4.21.0",
     "tailwindcss": "^4.3.3",
+    "tsx": "^4.23.15",
     "typescript": "^6.0.2",
     "vite": "^8.3.1",
     "vitest": "^5.0.2",
