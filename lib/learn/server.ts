@@ -1,4 +1,5 @@
 import type { Lesson } from "./types";
+import { cache } from "react";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import { lessonDocumentToEditorBlocks, type LessonEditorBlock } from "@/lib/lessonBlockAdapter";
@@ -19,8 +20,9 @@ function metadataBlocks(blocks: LessonEditorBlock[]): unknown[] {
  * Uses an anonymous backend read so private owner/editor access never affects crawlers.
  * `undefined` means no backend URL; `null` means unavailable/private/moderated content.
  * This projection supports metadata only; client hooks own reader/editor rendering.
+ * Cached per request, so generateMetadata and the page share one backend read.
  */
-export async function fetchPublicLesson(id: string): Promise<Lesson | null | undefined> {
+export const fetchPublicLesson = cache(async (id: string): Promise<Lesson | null | undefined> => {
   const backend = client();
   if (!backend) return undefined;
   const result = await backend.query(api.learnFrontend.publicLesson, { id });
@@ -35,7 +37,7 @@ export async function fetchPublicLesson(id: string): Promise<Lesson | null | und
     draft: { meta, content, updatedAt: published.publishedAt }, published, publishedDraftAt: published.publishedAt,
     visibility: "public", sources: [], quizzes: [], stats: { views: 0, saves: 0, helpful: 0, notHelpful: 0, forks: 0 },
     moderation: "ok", quality: "none", createdAt: result.createdAt, updatedAt: published.publishedAt };
-}
+});
 
 /** Published, explicitly indexable lesson ids. Preview deployments return no entries. */
 export async function listIndexableLessons(): Promise<{ id: string; publishedAt: number }[]> {
@@ -54,11 +56,11 @@ export async function listIndexableLessons(): Promise<{ id: string; publishedAt:
 }
 
 /** Server read of a published public course for the course page, metadata and sitemap. */
-export async function fetchPublicCourse(id: string) {
+export const fetchPublicCourse = cache(async (id: string) => {
   const backend = client();
   if (!backend) return undefined;
   try { return await backend.query(api.courses.getPublic, { courseId: id }); } catch { return null; }
-}
+});
 
 /** Public courses for the sitemap; empty on preview deployments or when the backend is unreachable. */
 export async function listPublicCourses(): Promise<{ id: string; updatedAt: number }[]> {

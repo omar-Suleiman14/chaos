@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/site/SiteLink";
 import { useState } from "react";
 import { usePublicIdentity } from "@/lib/learn/studyClient";
 import { BadgeCheck, Flag, Layers, PenLine } from "lucide-react";

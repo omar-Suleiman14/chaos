@@ -1,7 +1,7 @@
 "use client";
 
 import InlineQuiz from "./InlineQuiz";
-import Link from "next/link";
+import Link from "@/components/site/SiteLink";
 import { useRouter } from "next/navigation";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useQuery } from "convex/react";

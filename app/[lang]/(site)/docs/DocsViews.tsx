@@ -1,6 +1,6 @@
 "use client";
 
-import { IntentLink as Link } from "@/components/IntentLink";
+import Link from "@/components/site/SiteLink";
 import { Fragment, useEffect, useState } from "react";
 import { ArrowLeft, ArrowRight, Lightbulb } from "lucide-react";
 import { useCopy, useLocale } from "@/lib/i18n";

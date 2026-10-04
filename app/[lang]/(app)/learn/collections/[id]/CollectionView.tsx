@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/site/SiteLink";
 import { ArrowLeft, FolderOpen } from "lucide-react";
 import { EmptyState, LessonCard } from "@/components/learn/ui";
 import { PageSkeleton } from "@/components/workspace/Skeletons";

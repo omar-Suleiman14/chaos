@@ -1,7 +1,7 @@
 "use client";
 
 import { isCoverUrl } from "@/lib/learn/covers";
-import Link from "next/link";
+import Link from "@/components/site/SiteLink";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent as ReactMouseEvent } from "react";
 import {

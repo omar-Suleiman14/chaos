@@ -8,7 +8,7 @@ import { api } from "@/convex/_generated/api";
 import { useTheme } from "@/components/ThemeProvider";
 import FallbackBoundary from "@/components/FallbackBoundary";
 import type { DocSearchEntry } from "@/lib/docs";
-import { useDocs } from "@/lib/docs/provider";
+import { DocsProvider, useDocs } from "@/lib/docs/provider";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { buildIndex, searchIndex, splitByRanges, stripStopwords } from "@/lib/search";
 import type { Range, SearchDoc, SearchResult, Snippet } from "@/lib/search";
@@ -79,7 +79,14 @@ function navigate(router: { push: (href: string) => void }, href: string) {
   if (hash && path === window.location.pathname) setTimeout(() => window.dispatchEvent(new HashChangeEvent("hashchange")), 0);
 }
 
-export default function CommandPalette({ open, onClose, items, onNew }: { open: boolean; onClose: () => void; items: PaletteItem[]; onNew: () => void }) {
+type PaletteProps = { open: boolean; onClose: () => void; items: PaletteItem[]; onNew: () => void };
+
+/** The guides catalog is subscribed here, once the palette is first opened, not on every page. */
+export default function CommandPalette(props: PaletteProps) {
+  return <DocsProvider><Palette {...props} /></DocsProvider>;
+}
+
+function Palette({ open, onClose, items, onNew }: PaletteProps) {
   const router = useRouter();
   const { toggleTheme } = useTheme();
   const { locale } = useLocale();

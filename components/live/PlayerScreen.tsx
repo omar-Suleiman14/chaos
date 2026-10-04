@@ -202,7 +202,7 @@ function JoinForm({ t, initialPin, onJoined }: { t: Copy; initialPin: string; on
       {error && <p className="live-error" role="alert">{error}</p>}
       <button type="submit" className="live-btn live-btn--primary w-full" disabled={busy || pin.length !== 6 || !nickname.trim()}>{busy ? t.joining : t.join}</button>
       </form>
-      <div className="live-create-callout"><Link href="/dashboard?tab=games">{t.createGame} <span aria-hidden="true">↗</span></Link><p>{t.hostHelp}</p></div>
+      <div className="live-create-callout"><Link href="/dashboard?tab=games" prefetch={false}>{t.createGame} <span aria-hidden="true">↗</span></Link><p>{t.hostHelp}</p></div>
       </div>
     </div>
   );

@@ -28,9 +28,9 @@ function LiveDocs({ children, seed }: { children: ReactNode; seed?: { locale: Lo
 }
 /** Docs pages pass the catalog the server already fetched, so guides render without waiting for the socket. */
 export function SeededDocs({ seed, children }: { seed: { locale: Locale; rows: Rows }; children: ReactNode }) {
-  return process.env.NEXT_PUBLIC_CONVEX_URL ? <LiveDocs seed={seed}>{children}</LiveDocs> : <>{children}</>;
+  return process.env.NEXT_PUBLIC_CONVEX_URL ? <LiveDocs seed={seed}>{children}</LiveDocs> : <DocsContext.Provider value={{ sections: [], loading: false }}>{children}</DocsContext.Provider>;
 }
-/** One live public catalog subscription persists across app navigation. No bundled article fallback. */
+/** A live public catalog subscription for the dashboard command palette. Docs pages use SeededDocs. No bundled article fallback. */
 export function DocsProvider({ children }: { children: ReactNode }) {
   return process.env.NEXT_PUBLIC_CONVEX_URL ? <LiveDocs>{children}</LiveDocs> : <DocsContext.Provider value={{ sections: [], loading: false }}>{children}</DocsContext.Provider>;
 }

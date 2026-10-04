@@ -7,12 +7,13 @@ import { formMetadata, pageMetadata, serializeStructuredData, websiteStructuredD
 import { siteOrigin, siteUrl } from "@/lib/site";
 
 const fetch = vi.hoisted(() => vi.fn());
+const clerkPaths = vi.hoisted((): string[] => []);
 vi.mock("convex/nextjs", () => ({ fetchQuery: fetch }));
 vi.mock("@clerk/nextjs/server", () => ({
-  clerkMiddleware: (handler: unknown) => handler,
+  clerkMiddleware: (handler: (auth: object, req: unknown) => unknown) => (req: { nextUrl: URL }) => { clerkPaths.push(req.nextUrl.pathname); return handler({ protect: async () => {} }, req); },
   createRouteMatcher: () => () => false,
 }));
-vi.mock("next/server", () => ({ NextResponse: { next: () => ({ headers: new Headers() }), rewrite: () => ({ headers: new Headers() }) } }));
+vi.mock("next/server", () => ({ NextResponse: { next: () => ({ headers: new Headers(), cookies: new Map() }), rewrite: () => ({ headers: new Headers(), cookies: new Map() }), redirect: () => ({ headers: new Headers(), cookies: new Map() }) } }));
 afterEach(() => { fetch.mockReset(); vi.unstubAllEnvs(); });
 
 describe("public search metadata", () => {
@@ -99,7 +100,7 @@ describe("public search metadata", () => {
 
   it("marks response-capability and embed URLs noindex without changing normal links", async () => {
     const { default: proxy } = await import("@/proxy");
-    const invoke = proxy as unknown as (auth: object, request: object) => Promise<{ headers: Headers }>;
+    const invoke = (_auth: object, request: object) => (proxy as unknown as (request: object, event: object) => Promise<{ headers: Headers }>)(request, {});
     for (const query of ["edit=private", "resume=private", "embed=1", "lang=ar", ""]) {
       const result = await invoke({}, { url: `https://example.com/f/share?${query}`, nextUrl: new URL(`https://example.com/f/share?${query}`), cookies: new Map(), headers: new Headers({ "sec-fetch-dest": "document" }) });
       expect(result.headers.get("X-Robots-Tag")).toBe(query && query !== "lang=ar" ? "noindex, nofollow" : null);
@@ -115,5 +116,17 @@ describe("share images", () => {
     const metadata = pageMetadata("Pricing", "Plans.", "/pricing");
     expect(metadata.openGraph?.images).toEqual([defaultOgImage]);
     expect(metadata.twitter).toMatchObject({ card: "summary_large_image", images: [defaultOgImage] });
+  });
+});
+
+describe("proxy and Clerk", () => {
+  it("serves prerendered marketing pages without Clerk's middleware and keeps it everywhere else", async () => {
+    const { default: proxy } = await import("@/proxy");
+    const call = (path: string) => (proxy as unknown as (request: object, event: object) => Promise<unknown>)({ url: `https://example.com${path}`, nextUrl: new URL(`https://example.com${path}`), cookies: new Map(), headers: new Headers() }, {});
+    clerkPaths.length = 0;
+    for (const path of ["/", "/pricing", "/ar/docs/first-form", "/sitemap"]) await call(path);
+    expect(clerkPaths).toEqual([]);
+    for (const path of ["/dashboard", "/f/share", "/learn/abc"]) await call(path);
+    expect(clerkPaths).toEqual(["/dashboard", "/f/share", "/learn/abc"]);
   });
 });

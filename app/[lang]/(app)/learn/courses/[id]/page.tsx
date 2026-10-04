@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import Link from "next/link";
+import Link from "@/components/site/SiteLink";
 import { notFound } from "next/navigation";
 import { ArrowRight } from "lucide-react";
 import { fetchPublicCourse } from "@/lib/learn/server";

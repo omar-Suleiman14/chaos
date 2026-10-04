@@ -15,11 +15,14 @@ import { LocaleProvider } from "@/lib/i18n";
 import { isLocale, LOCALES, localeDir } from "@/lib/locale";
 
 /* ── Fonts ─────────────────────────────────────────────── */
+// Space Grotesk and Space Mono appear only in the form builder, some dashboard labels and one form
+// theme, so they are not preloaded: browsers fetch them on the pages that use them.
 const spaceGrotesk = Space_Grotesk({
   subsets: ["latin"],
   weight: ["500", "600", "700"],
   variable: "--font-grotesk",
   display: "swap",
+  preload: false,
 });
 
 const inter = Inter({
@@ -34,6 +37,7 @@ const spaceMono = Space_Mono({
   weight: ["400", "700"],
   variable: "--font-space-mono",
   display: "swap",
+  preload: false,
 });
 
 // Max's typeface: the creator workspace uses it so Chaos reads as part of Max,

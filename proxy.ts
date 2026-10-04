@@ -1,10 +1,10 @@
 import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
-import { NextResponse, type NextRequest } from "next/server";
+import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { decideFraming } from "@/lib/embed";
 import { shortHostRedirect } from "@/lib/site";
-import { LOCALE_COOKIE, type Locale } from "@/lib/locale";
+import { isSitePath, LOCALE_COOKIE, splitLocale, type Locale } from "@/lib/locale";
 import { routeLocale, type LocaleRoute } from "@/lib/localeRouting";
 import type { EmbedPolicy, EmbedTarget } from "@/lib/embed";
 
@@ -46,14 +46,8 @@ function continueWith(req: NextRequest, route: LocaleRoute): NextResponse {
   return rememberLocale(NextResponse.next(), route.action === "pass" ? route.setLocale : undefined);
 }
 
-const clerkProxy = clerkMiddleware(async (auth, req) => {
-  // The short share host (NEXT_PUBLIC_SHORT_SHARE_ORIGIN) only redirects; pages live on the canonical site.
-  const short = shortHostRedirect(req.url);
-  if (short) return NextResponse.redirect(short, 301);
-  const route = localeRoute(req);
-  const redirect = localeRedirect(req, route);
-  if (redirect) return redirect;
-  if (isProtectedRoute(req)) await auth.protect();
+/** The response for a page that may render: language segment, framing and robots headers. */
+async function finish(req: NextRequest, route: LocaleRoute): Promise<NextResponse> {
   // Framing: every response here gets X-Frame-Options: DENY and frame-ancestors 'none',
   // except a published form whose creator allows the framing site (lib/embed.ts).
   const headers = await decideFraming(req.nextUrl.pathname, req.headers.get("sec-fetch-dest"), lookupPolicy);
@@ -65,14 +59,41 @@ const clerkProxy = clerkMiddleware(async (auth, req) => {
     response.headers.set("X-Robots-Tag", "noindex, nofollow");
   }
   return response;
+}
+
+/** Redirects that apply before any authentication: the short share host, then the page's language address. */
+function earlyRedirect(req: NextRequest, route: LocaleRoute): NextResponse | null {
+  // The short share host (NEXT_PUBLIC_SHORT_SHARE_ORIGIN) only redirects; pages live on the canonical site.
+  const short = shortHostRedirect(req.url);
+  if (short) return NextResponse.redirect(short, 301);
+  return localeRedirect(req, route);
+}
+
+const clerkProxy = clerkMiddleware(async (auth, req) => {
+  const route = localeRoute(req);
+  const redirect = earlyRedirect(req, route);
+  if (redirect) return redirect;
+  if (isProtectedRoute(req)) await auth.protect();
+  return finish(req, route);
 });
+
+/**
+ * Marketing pages are prerendered, so the server never reads a session for them and Clerk's
+ * middleware has nothing to do there. Skipping it avoids Clerk's handshake redirect (two extra
+ * round trips before a cached page, whenever a signed-in visitor's short-lived token has expired).
+ * The browser's Clerk client still shows the signed-in state. Every other page keeps the middleware:
+ * ClerkProvider's `dynamic` mode reads the session while rendering them.
+ */
+async function chaosProxy(req: NextRequest, event: NextFetchEvent) {
+  if (!isSitePath(splitLocale(req.nextUrl.pathname).path)) return clerkProxy(req, event);
+  const route = localeRoute(req);
+  return earlyRedirect(req, route) ?? finish(req, route);
+}
 
 export default process.env.NEXT_PUBLIC_AUTH_PROVIDER === "betterauth" ? async function betterAuthProxy(req: NextRequest) {
   if (req.nextUrl.pathname.startsWith("/api/auth/")) return NextResponse.next();
-  const short = shortHostRedirect(req.url);
-  if (short) return NextResponse.redirect(short, 301);
   const route = localeRoute(req);
-  const redirect = localeRedirect(req, route);
+  const redirect = earlyRedirect(req, route);
   if (redirect) return redirect;
   if (isProtectedRoute(req)) {
     // This is a navigation hint only. Convex verifies JWTs and ownership on every request.
@@ -83,12 +104,8 @@ export default process.env.NEXT_PUBLIC_AUTH_PROVIDER === "betterauth" ? async fu
       return NextResponse.redirect(login);
     }
   }
-  const headers = await decideFraming(req.nextUrl.pathname, req.headers.get("sec-fetch-dest"), lookupPolicy);
-  const response = continueWith(req, route);
-  for (const [key, value] of Object.entries(headers)) response.headers.set(key, value);
-  if ((process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production") || ["edit", "resume", "embed"].some(key => req.nextUrl.searchParams.has(key))) response.headers.set("X-Robots-Tag", "noindex, nofollow");
-  return response;
-} : clerkProxy;
+  return finish(req, route);
+} : chaosProxy;
 
 export const config = {
   matcher: [

@@ -2,7 +2,7 @@
 
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FunctionReturnType } from "convex/server";
-import Link from "next/link";
+import Link from "@/components/site/SiteLink";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import posthog from "@/lib/analytics";

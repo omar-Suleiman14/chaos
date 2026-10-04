@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/site/SiteLink";
 import { useParams } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { useFlashcardSet } from "@/lib/learn/data";

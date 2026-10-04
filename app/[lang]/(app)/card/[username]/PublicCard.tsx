@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/site/SiteLink";
 import { ArrowRight } from "lucide-react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -38,7 +38,7 @@ export default function PublicCard({ username, initialCard }: { username: string
       <div className="mc-public__inner">
         <h1 className="sr-only" id="card-title">{card.name || `@${card.username}`}</h1>
         <MemberCardView data={{ ...card, url: `${siteUrl}/card/${card.username}` }} framed={false}
-          actions={<Link className="mc-cta" href="/dashboard/card">{t.join}<ArrowRight size={18} aria-hidden className="rtl:rotate-180" /></Link>} />
+          actions={<Link className="mc-cta" href="/dashboard/card" prefetch={false}>{t.join}<ArrowRight size={18} aria-hidden className="rtl:rotate-180" /></Link>} />
         <Link className="mc-public__brand" href="/">{t.brand}</Link>
       </div>
     </main>

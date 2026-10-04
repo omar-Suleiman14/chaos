@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/site/SiteLink";
 import { Suspense, useState, useEffect } from "react";
 import { usePaginatedQuery, useMutation } from "convex/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -218,7 +218,6 @@ function Explore() {
                 key={course.id}
                 href={"/learn/courses/" + course.id}
                 className="cx-card"
-                prefetch={true}
               >
                 <div
                   className="cx-cover"
