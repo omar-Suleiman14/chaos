@@ -1,5 +1,5 @@
 {
-  "count": 91,
+  "count": 93,
   "names": [
     "add_course_lesson",
     "add_folder_member",
@@ -21,6 +21,7 @@
     "detach_lesson_flashcards",
     "edit_lesson_blocks",
     "end_game",
+    "export_course_manifest",
     "export_form_responses",
     "fork_lesson",
     "fork_quiz",
@@ -45,6 +46,7 @@
     "get_results",
     "get_weak_area_actions",
     "host_game",
+    "import_course_lesson",
     "list_courses",
     "list_curriculum_institutions",
     "list_curriculum_nodes",

@@ -1,6 +1,8 @@
 // Actor comes only from the secret-protected MCP envelope.
 import { courseModule, courseDetails } from "./learnAssetModel";
 import { setCourseModules, readCourseProgress, rememberCourse, readCourseLesson } from "./courses";
+import { exportCourseManifest, importCourseLesson } from "./coursePortability";
+import { lessonDocument, lessonMeta } from "./learnModel";
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { requireLearnActor } from "./mcpLearn";
@@ -87,3 +89,6 @@ export const progress = internalQuery({ args: { userId: v.string(), courseId: v.
 export const remember = internalMutation({ args: { userId: v.string(), courseId: v.string() }, returns: v.object({ ok: v.boolean() }), handler: async (ctx, { userId, ...args }) => { const actor = await requireLearnActor(ctx, userId); await rememberCourse(ctx, args, actor); return { ok: true }; } });
 
 export const lesson = internalQuery({ args: { userId: v.string(), courseId: v.string(), lessonId: v.string() }, handler: async (ctx, { userId, ...args }) => { const actor = await requireLearnActor(ctx, userId); const result = await readCourseLesson(ctx, args, actor); return { lesson: result ? { lessonId: result.lessonId, versionId: result.version._id, title: result.version.metadata.title, document: result.version.document } : null }; } });
+
+export const exportManifest=internalQuery({args:{userId:v.string(),courseId:v.id("learnCollections")},handler:async(ctx,{userId,courseId})=>({manifest:await exportCourseManifest(ctx,courseId,await requireLearnActor(ctx,userId))})});
+export const importLesson=internalMutation({args:{userId:v.string(),courseId:v.id("learnCollections"),metadata:lessonMeta,document:lessonDocument},returns:v.object({lessonId:v.id("lessons")}),handler:async(ctx,{userId,...args})=>({lessonId:await importCourseLesson(ctx,args,await requireLearnActor(ctx,userId))})});

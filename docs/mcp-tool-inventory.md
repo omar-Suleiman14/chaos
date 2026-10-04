@@ -2,7 +2,7 @@
 
 Generated from the public MCP registry with `pnpm mcp:inventory`. Admin documentation tools are excluded.
 
-91 tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
+93 tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
 
 - `add_course_lesson`
 - `add_folder_member`
@@ -24,6 +24,7 @@ Generated from the public MCP registry with `pnpm mcp:inventory`. Admin document
 - `detach_lesson_flashcards`
 - `edit_lesson_blocks`
 - `end_game`
+- `export_course_manifest`
 - `export_form_responses`
 - `fork_lesson`
 - `fork_quiz`
@@ -48,6 +49,7 @@ Generated from the public MCP registry with `pnpm mcp:inventory`. Admin document
 - `get_results`
 - `get_weak_area_actions`
 - `host_game`
+- `import_course_lesson`
 - `list_courses`
 - `list_curriculum_institutions`
 - `list_curriculum_nodes`
