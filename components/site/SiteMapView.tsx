@@ -19,7 +19,7 @@ const copy = {
     connections: "Connections", chatgpt: "Chaos in ChatGPT", connect: "Connect Claude or ChatGPT", api: "API and connections", webhooks: "Webhooks",
     yourAccount: "Your account", signUp: "Create an account", signIn: "Log in", open: "Open Chaos",
     openSource: "Open source", source: "Source code", selfHost: "Self-hosting", issues: "Report an issue",
-    help: "Help", support: "Support", allDocs: "All documentation", status: "Service status", security: "Security",
+    help: "Help", support: "Support", faq: "FAQ", allDocs: "All documentation", status: "Service status", security: "Security",
     legal: "Legal", privacy: "Privacy policy", terms: "Terms and conditions", copyright: "Copyright",
   },
   ar: {
@@ -30,7 +30,7 @@ const copy = {
     connections: "الاتصالات", chatgpt: "Chaos في ChatGPT", connect: "اربط Claude أو ChatGPT", api: "API والاتصالات", webhooks: "Webhooks",
     yourAccount: "حسابك", signUp: "أنشئ حسابًا", signIn: "تسجيل الدخول", open: "افتح Chaos",
     openSource: "مفتوح المصدر", source: "الشيفرة المصدرية", selfHost: "الاستضافة الذاتية", issues: "أبلغ عن مشكلة",
-    help: "المساعدة", support: "الدعم", allDocs: "كل الأدلة", status: "حالة الخدمة", security: "الأمان",
+    help: "المساعدة", support: "الدعم", faq: "الأسئلة الشائعة", allDocs: "كل الأدلة", status: "حالة الخدمة", security: "الأمان",
     legal: "قانوني", privacy: "سياسة الخصوصية", terms: "الشروط والأحكام", copyright: "حقوق النشر",
   },
 };
@@ -67,7 +67,7 @@ export default function SiteMapView({ docs }: { docs: SiteMapDocSection[] }) {
   const account: Column[] = [
     { title: t.yourAccount, items: [{ label: t.signUp, href: "/sign-up" }, { label: t.signIn, href: "/sign-in" }, { label: t.open, href: "/dashboard" }] },
     { title: t.openSource, items: [{ label: t.source, href: repoUrl, external: true }, { label: t.selfHost, href: "/docs/self-hosting" }, { label: t.issues, href: repoIssuesUrl, external: true }] },
-    { title: t.help, items: [{ label: t.support, href: "/support" }, { label: t.allDocs, href: "/docs" }, ...(statusPageUrl ? [{ label: t.status, href: statusPageUrl, external: true }] : []), { label: t.security, href: "/support#security" }] },
+    { title: t.help, items: [{ label: t.support, href: "/support" }, { label: t.faq, href: "/faq" }, { label: t.allDocs, href: "/docs" }, ...(statusPageUrl ? [{ label: t.status, href: statusPageUrl, external: true }] : []), { label: t.security, href: "/support#security" }] },
     { title: t.legal, items: [{ label: t.privacy, href: "/privacy" }, { label: t.terms, href: "/terms" }, { label: t.copyright, href: "/copyright" }] },
   ];
   const guides: Column[] = docs.map((section) => ({ title: section.title, items: section.articles.map((article) => ({ label: article.title, href: `/docs/${article.slug}` })) }));

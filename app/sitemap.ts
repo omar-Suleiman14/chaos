@@ -19,7 +19,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // A backend outage (or a build without one) keeps the static pages instead of failing.
   const [lessons, courses, docs] = await Promise.all([listIndexableLessons().catch(() => []), listPublicCourses().catch(() => []), listPublicDocs().catch(() => [])]);
   return [
-    ...["/", "/pricing", "/compare", "/docs"].flatMap(path => sitePage(path)),
+    ...["/", "/pricing", "/compare", "/docs", "/faq"].flatMap(path => sitePage(path)),
     ...docs.flatMap(doc => sitePage(`/docs/${doc.slug}`, new Date(doc.updatedAt))),
     ...["/chatgpt", "/connect", "/learn"].flatMap(path => sitePage(path)),
     { url: `${siteUrl}/card` },

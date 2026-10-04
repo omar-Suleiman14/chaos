@@ -18,8 +18,8 @@ const copy = {
     menu: "Menu", closeMenu: "Close menu", language: "Language",
     tagline: "Forms, quizzes, live games and Learn. One open-source workspace.",
     product: "Product", ways: "Ways to answer", chatgpt: "Chaos in ChatGPT", connect: "Connect Claude or ChatGPT", compare: "Compare",
-    openSource: "Open source", source: "Source code", selfHost: "Self-hosting", api: "API and connections", webhooks: "Webhooks",
-    start: "Get started", help: "Support", status: "Status", issues: "Report an issue",
+    openSource: "Build and connect", source: "Source code", selfHost: "Self-hosting", api: "API and connections", webhooks: "Webhooks",
+    start: "Get started", help: "Support", faq: "FAQ", status: "Status", issues: "Report an issue",
     legal: "Legal", privacy: "Privacy policy", terms: "Terms and conditions", copyright: "Copyright", security: "Security", siteMap: "Site map",
   },
   ar: {
@@ -28,8 +28,8 @@ const copy = {
     menu: "القائمة", closeMenu: "إغلاق القائمة", language: "اللغة",
     tagline: "نماذج واختبارات وألعاب مباشرة وLearn. مساحة عمل واحدة مفتوحة المصدر.",
     product: "المنتج", ways: "طرق الإجابة", chatgpt: "Chaos في ChatGPT", connect: "اربط Claude أو ChatGPT", compare: "المقارنة",
-    openSource: "مفتوح المصدر", source: "الشيفرة المصدرية", selfHost: "الاستضافة الذاتية", api: "API والاتصالات", webhooks: "Webhooks",
-    start: "ابدأ الآن", help: "الدعم", status: "حالة الخدمة", issues: "أبلغ عن مشكلة",
+    openSource: "البناء والربط", source: "الشيفرة المصدرية", selfHost: "الاستضافة الذاتية", api: "API والاتصالات", webhooks: "Webhooks",
+    start: "ابدأ الآن", help: "الدعم", faq: "الأسئلة الشائعة", status: "حالة الخدمة", issues: "أبلغ عن مشكلة",
     legal: "قانوني", privacy: "سياسة الخصوصية", terms: "الشروط والأحكام", copyright: "حقوق النشر", security: "الأمان", siteMap: "خريطة الموقع",
   },
 };
@@ -91,6 +91,7 @@ export function SiteNav({ links: _links = true }: { links?: boolean }) {
     { href: "/learn", label: t.explore },
     { href: "/docs", label: t.docs },
     { href: "/pricing", label: t.pricing },
+    { href: "/faq", label: t.faq },
   ];
 
   return (
@@ -149,13 +150,12 @@ export function SiteFooter() {
             <Link href="/#features">{t.features}</Link>
             <Link href="/learn">{t.explore}</Link>
             <Link href="/compare">{t.compare}</Link>
-            <Link href="/chatgpt">{t.chatgpt}</Link>
-            <Link href="/connect">{t.connect}</Link>
             <Link href="/pricing">{t.pricing}</Link>
-            <Link href="/docs">{t.docs}</Link>
           </div>
           <div>
             <h2>{t.openSource}</h2>
+            <Link href="/chatgpt">{t.chatgpt}</Link>
+            <Link href="/connect">{t.connect}</Link>
             <a href={repoUrl}>{t.source}</a>
             <Link href="/docs/self-hosting">{t.selfHost}</Link>
             <Link href="/docs/integration-api">{t.api}</Link>
@@ -165,7 +165,9 @@ export function SiteFooter() {
             <h2>{t.start}</h2>
             <Link href="/dashboard">{t.open}</Link>
             <Link href="/play">{t.play}</Link>
+            <Link href="/docs">{t.docs}</Link>
             <Link href="/support">{t.help}</Link>
+            <Link href="/faq">{t.faq}</Link>
             {statusPageUrl && <a href={statusPageUrl}>{t.status}</a>}
             <a href={repoIssuesUrl}>{t.issues}</a>
           </div>
