@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { Select } from "@/components/workspace/Select";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowDown, ArrowLeft, ArrowUp, ExternalLink, Globe, Lock, Plus, Trash2 } from "lucide-react";
@@ -138,7 +139,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
 
       <section className="cb-section grid gap-4" aria-labelledby="cb-settings">
         <h2 id="cb-settings">{t.settings}</h2>
-        <div className="cb-row"><label htmlFor="cb-language">{t.language}</label><select id="cb-language" className="kb-input" value={course.language} disabled={busy} onChange={e => save({ courseId, language: e.target.value })}><option value="en">English</option><option value="ar">العربية</option>{!["en", "ar"].includes(course.language) && <option value={course.language}>{course.language}</option>}</select><span className="cb-note">{t.languageHelp}</span></div>
+        <div className="cb-row"><span id="cb-language-label" className="font-semibold">{t.language}</span><Select labelledBy="cb-language-label" value={course.language} disabled={busy} onChange={language => save({ courseId, language })} options={[{ value: "en", label: "English" }, { value: "ar", label: "العربية" }, ...(["en", "ar"].includes(course.language) ? [] : [{ value: course.language, label: course.language }])]} /><span className="cb-note">{t.languageHelp}</span></div>
         <div className="cb-row"><label htmlFor="cb-tags">{t.tags}</label><input id="cb-tags" dir="auto" className="kb-input" value={tags} onChange={(e) => setTags(e.target.value)} onBlur={() => save({ courseId, tags: tags.split(",") })} /><span className="cb-note">{t.tagsHelp}</span></div>
         <div className="flex gap-2 flex-wrap">
           {course.published && <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(() => unpublish({ courseId }))}>{t.unpublish}</button>}

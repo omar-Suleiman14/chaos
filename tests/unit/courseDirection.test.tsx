@@ -20,6 +20,7 @@ it("sets Arabic course fields RTL in an English interface and saves language cha
   expect(title).toHaveAttribute("dir", "rtl");
   expect(title).toHaveAttribute("lang", "ar-EG");
   expect(document.querySelector(".cb-page")).toHaveAttribute("dir", "ltr");
-  fireEvent.change(screen.getByRole("combobox", { name: "Course language" }), { target: { value: "en" } });
+  fireEvent.click(screen.getByRole("combobox", { name: "Course language" }));
+  fireEvent.click(await screen.findByRole("option", { name: "English" }));
   await waitFor(() => expect(backend.update).toHaveBeenCalledWith({ courseId: "course1", language: "en" }));
 });

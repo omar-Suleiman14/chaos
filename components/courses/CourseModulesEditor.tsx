@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { Select } from "@/components/workspace/Select";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -23,7 +24,7 @@ export default function CourseModulesEditor({ courseId, modules, lessons }: { co
       {module.assessments.map((asset, i) => <div className="lx-actions" key={`${asset.kind}:${asset.id}`}><Link className="lx-link" href={asset.kind === "form" ? `/dashboard/forms/${asset.id}` : `/dashboard/editor?id=${asset.id}`}>{ar ? `عدّل اختبار الوحدة ${i + 1}` : `Edit module assessment ${i + 1}`}</Link><button type="button" className="lx-link" disabled={busy} onClick={() => void commit(draft.map(m => m.id === module.id ? { ...m, assessments: m.assessments.filter(a => a.id !== asset.id || a.kind !== asset.kind) } : m))}>{ar ? "احذف الاختبار من الوحدة" : "Remove assessment"}</button></div>)}
       <details><summary>{ar ? "أضف اختبارًا للوحدة" : "Add module assessment"}</summary><AssessmentPicker disabled={busy} onAdd={asset => { if (!module.assessments.some(a => a.kind === asset.kind && a.id === asset.id)) void commit(draft.map(m => m.id === module.id ? { ...m, assessments: [...m.assessments, asset] } : m)); }} /></details>
     </div>)}
-    {draft.length > 0 && <div className="cb-module-assignments">{lessons.map(lesson => <label key={lesson.id}><span dir="auto">{lesson.title}</span><select className="kb-input" disabled={busy} value={draft.find(m => m.lessonIds.includes(lesson.id))?.id ?? ""} onChange={e => void commit(draft.map(m => ({ ...m, lessonIds: [...m.lessonIds.filter(id => id !== lesson.id), ...(m.id === e.target.value ? [lesson.id] : [])] })))}><option value="">{ar ? "خارج الوحدات" : "Outside modules"}</option>{draft.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}</select></label>)}</div>}
+    {draft.length > 0 && <div className="cb-module-assignments">{lessons.map(lesson => <label key={lesson.id}><span dir="auto">{lesson.title}</span><Select label={lesson.title} disabled={busy} value={draft.find(m => m.lessonIds.includes(lesson.id))?.id ?? ""} onChange={next => void commit(draft.map(m => ({ ...m, lessonIds: [...m.lessonIds.filter(id => id !== lesson.id), ...(m.id === next ? [lesson.id] : [])] })))} options={[{ value: "", label: ar ? "خارج الوحدات" : "Outside modules" }, ...draft.map(m => ({ value: m.id, label: m.title }))]} /></label>)}</div>}
   </section>;
 }
 function AssessmentPicker({ onAdd, disabled }: { onAdd: (asset: Asset) => void; disabled: boolean }) {
