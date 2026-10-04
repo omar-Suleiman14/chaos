@@ -3,7 +3,7 @@
 import { useId, useState } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
-import { useCopy } from "@/lib/i18n";
+import { useCopy, useLocale } from "@/lib/i18n";
 import { errorMessage } from "@/lib/errors";
 import Link from "@/components/site/SiteLink";
 
@@ -13,6 +13,7 @@ const copy = {
 };
 
 export default function FlashcardBlockEditor({ setId, onSelect }: { setId: string; onSelect: (id: string) => void }) {
+  const { locale } = useLocale();
   const t = useCopy(copy);
   const uid = useId();
   const page = usePaginatedQuery(api.learnLibrary.flashcards, {}, { initialNumItems: 20 });
@@ -27,6 +28,7 @@ export default function FlashcardBlockEditor({ setId, onSelect }: { setId: strin
   const choices = page.results.filter(d => !d.archived);
   const valid = !!title.trim() && cards.length > 0 && cards.every(c => c.front.trim() && c.back.trim());
   return <div className="lx-form lx-flashcard-editor" onKeyDown={e => e.stopPropagation()}>
+    <p className="lx-help">{locale === "ar" ? "إرفاق المادة يحتفظ بالأصل وسجل التعلّم؛ لا ينشئ نسخة." : "Attach the original asset to keep one source and learning history. No copy is created."}</p>
     {error && <p className="lx-error" role="alert">{error}</p>}
     <label htmlFor={`${uid}-deck`}>{t.attach}</label>
     <select id={`${uid}-deck`} value={setId} disabled={busy} onChange={e => { onSelect(e.target.value); setError(""); }}>

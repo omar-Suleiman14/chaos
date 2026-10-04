@@ -21,6 +21,7 @@ export default function QuizBlockEditor({ kind, assetId, onSelect }: { kind: Kin
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const selected = page.results.find(q => q.id === assetId);
   return <div className="lx-form lx-quiz-editor" dir={localeDir(locale)} onKeyDown={e => e.stopPropagation()}>
+    <p className="lx-help">{locale === "ar" ? "إرفاق المادة يحتفظ بالأصل وسجل التعلّم؛ لا ينشئ نسخة." : "Attach the original asset to keep one source and learning history. No copy is created."}</p>
     {error && <p role="alert" className="lx-error">{error}</p>}
     <label htmlFor={`${uid}-kind`}>{t.kind}</label>
     <select id={`${uid}-kind`} value={kind} disabled={busy} onChange={e => onSelect({ kind: e.target.value as Kind, id: "" })}><option value="form">{t.form}</option><option value="quiz">{t.classic}</option></select>
