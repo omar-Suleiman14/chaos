@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import inventory from "@/lib/mcp/inventory.json";
+import AiArchitecture from "./AiArchitecture";
 import McpWorkflowDemo from "./McpWorkflowDemo";
 import McpOutcomes from "./McpOutcomes";
 import Link from "@/components/site/SiteLink";
@@ -47,6 +48,7 @@ export default function ConnectView() {
   return (
     <LegalPage title={t.title}>
       <p>{t.intro}</p>
+      <AiArchitecture />
       <McpWorkflowDemo />
       <McpOutcomes />
       <p className="site-muted">{inventory.count} MCP tools</p>
