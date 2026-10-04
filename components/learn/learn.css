@@ -538,3 +538,19 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-course-navigation progress { width: 100%; accent-color: var(--primary); }
 .lx-course-navigation .lx-actions { flex-wrap: wrap; }
 .lx-course-navigation .ws-btn { display: grid; max-width: 100%; text-align: start; white-space: normal; }
+
+.lx-completion { display: grid; gap: 12px; }
+.lx-completion-sound { display: flex; gap: 8px; align-items: center; font-size: 13px; color: var(--on-surface-variant); }
+.lx-complete-button:active { transform: scale(.97); }
+.lx-completion-success { display: inline-flex; align-items: center; gap: 10px; color: var(--primary); font-weight: 600; }
+.lx-completion-success svg { fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.lx-completion-success[data-animate] circle { stroke-dasharray: 82; animation: lx-success-ring .55s ease-out both; }
+.lx-completion-success[data-animate] path { stroke-dasharray: 30; animation: lx-success-check .35s .4s ease-out both; }
+
+@keyframes lx-success-ring { from { stroke-dashoffset: 82; transform: rotate(-90deg); transform-origin: center; } to { stroke-dashoffset: 0; transform: rotate(-90deg); transform-origin: center; } }
+@keyframes lx-success-check { from { stroke-dashoffset: 30; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .lx-completion-success circle, .lx-completion-success path { animation: none !important; } .lx-complete-button:active { transform: none; } .lx-course-navigation progress { transition: none; } }
+
+.lx-course-meter { height: 6px; border-radius: 6px; overflow: hidden; background: var(--ws-line); }
+.lx-course-meter > span { display: block; height: 100%; background: var(--primary); transition: width .7s ease; }
+@media (prefers-reduced-motion: reduce) { .lx-course-meter > span { transition: none; } }

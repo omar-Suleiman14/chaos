@@ -6,6 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { LessonActivity, type Activity } from "./ActivityContext";
+import CompletionAction from "./CompletionAction";
 import CourseNavigation from "./CourseNavigation";
 import { legacyFlashcardBlocks } from "@/lib/learn/inlineStudy";
 import { isCoverUrl } from "@/lib/learn/covers";
@@ -13,7 +14,7 @@ import Link from "@/components/site/SiteLink";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent as ReactMouseEvent } from "react";
 import {
-  ChevronLeft, Bookmark, BookmarkCheck, CheckCircle2, ExternalLink, Flag, GitFork, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
+  ChevronLeft, Bookmark, BookmarkCheck, ExternalLink, Flag, GitFork, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
   MoreHorizontal, NotebookPen, PenLine, RotateCcw, Share2, ThumbsDown, ThumbsUp, Type, X,
 } from "lucide-react";
 import { WsConfirm, WsMenu, WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
@@ -453,11 +454,9 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                   {!previewDraft && (
                     <footer className="lx-section" style={{ marginTop: 40, paddingTop: 20, borderTop: "1px solid var(--ws-line)" }}>
                       <div className="lx-actions" style={{ justifyContent: "space-between" }}>
-                        {progress?.state === "completed" ? (
-                          <span className="lx-actions"><span className="lx-badge" data-tone="green"><CheckCircle2 size={13} aria-hidden />{t.completed}</span><button type="button" className="lx-link" onClick={() => void actions.setProgress(lesson.id, { state: "not_started", percent: 0 }).then(() => { setActivities({}); try { localStorage.removeItem(activityKey); } catch { /* unavailable */ } window.scrollTo({ top: 0, behavior: "auto" }); }, err => say(errorMessage(err)))}>{t.reset}</button></span>
-                        ) : (
-                          <button type="button" className="ws-btn" disabled={remainingActivities > 0} onClick={() => actions.setProgress(lesson.id, { state: "completed", percent: 100 }).catch(err => say(errorMessage(err)))}><CheckCircle2 size={16} aria-hidden />{t.complete}</button>
-                        )}
+                        <CompletionAction completed={progress?.state === "completed"} disabled={remainingActivities > 0}
+                          onComplete={() => actions.setProgress(lesson.id, { state: "completed", percent: 100 })}
+                          onReset={async () => { await actions.setProgress(lesson.id, { state: "not_started", percent: 0 }); setActivities({}); try { localStorage.removeItem(activityKey); } catch { /* unavailable */ } window.scrollTo({ top: 0, behavior: "auto" }); }} />
                         {!isOwner && (
                           <span className="lx-actions" role="group" aria-label={t.helpful}>
                             <span className="lx-muted">{vote ? t.thanks : t.helpful}</span>
