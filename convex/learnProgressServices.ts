@@ -35,7 +35,7 @@ export async function startStudySession(ctx: MutationCtx, actor: StudyActor, arg
   const target = await resolveStudyTarget(ctx, actor, args);
   const old = await readStudyProgress(ctx, actor, args);
   const lesson = await ctx.db.get("lessons", args.lessonId);
-  if (lesson) await recordStudent(ctx, { authorId: lesson.ownerId, studentId: actor.subject, context: lesson.title });
+  if (lesson) await recordStudent(ctx, { authorId: lesson.ownerId, studentId: actor.subject, context: lesson.metadata.title });
   const sessionSeq = (old?.sessionSeq ?? 0) + 1; integer(sessionSeq, 1);
   if (old) await ctx.db.patch("learnProgress", old._id, { sessionSeq, writeSeq: 0, updatedAt: Date.now() });
   else await ctx.db.insert("learnProgress", { ...args, userKey: actor.tokenIdentifier, key: target.key, sessionSeq, writeSeq: 0, completedBlocks: [], completionAcknowledged: false, updatedAt: Date.now() });

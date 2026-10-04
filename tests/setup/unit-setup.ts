@@ -1,4 +1,4 @@
-import { afterEach } from "vitest";
+import { afterEach, vi } from "vitest";
 import { cleanup } from "@testing-library/react";
 import "@testing-library/jest-dom/vitest";
 
@@ -20,3 +20,5 @@ if (typeof window !== "undefined" && !window.matchMedia) {
 if (typeof window !== "undefined" && !("ResizeObserver" in window)) {
   (window as unknown as { ResizeObserver: unknown }).ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
 }
+
+vi.mock("@/lib/cardFonts", () => ({ cardRuqaa: { variable: "test-ruqaa" } }));

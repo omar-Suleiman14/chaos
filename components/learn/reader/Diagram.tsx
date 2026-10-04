@@ -26,12 +26,14 @@ export default function Diagram({ text }: { text: string }) {
         const parsed = new DOMParser().parseFromString(rendered, "image/svg+xml");
         const root = parsed.documentElement;
         root.querySelectorAll(".node").forEach((node, index) => {
-          const accent = [colors.blue, colors.purple, colors.green][index % 3];
+          const fill = (dark ? ["#1a2c3f", "#2c2440", "#18352f"] : ["#eaf3fc", "#f1ebfa", "#e8f5ed"])[index % 3];
+          const outline = dark ? "#8c9aa9" : "#9ba8b6";
           node.querySelectorAll("rect, circle, ellipse, polygon, path").forEach(shape => {
-            shape.setAttribute("style", `fill:${colors.surface}!important;stroke:${accent}!important;stroke-width:2!important;stroke-dasharray:38 10 74 10!important;stroke-linecap:round!important`);
+            if (shape.tagName.toLowerCase() === "rect") { shape.setAttribute("rx", "24"); shape.setAttribute("ry", "24"); }
+            shape.setAttribute("style", `fill:${fill}!important;stroke:${outline}!important;stroke-width:1.5!important;stroke-dasharray:5 7!important;stroke-linecap:round!important;filter:none!important`);
           });
           node.setAttribute("class", `${node.getAttribute("class") ?? ""} chaos-diagram-node`);
-          (node as SVGElement).style.setProperty("--diagram-accent", accent);
+          (node as SVGElement).style.setProperty("--diagram-fill", fill);
         });
         root.querySelectorAll("text, tspan, .nodeLabel").forEach(label => {
           label.setAttribute("style", `fill:${colors.text}!important;color:${colors.text}!important`);
@@ -44,7 +46,10 @@ export default function Diagram({ text }: { text: string }) {
         });
         root.querySelectorAll(".labelBkg").forEach(label => label.setAttribute("style", `fill:${colors.surface}!important`));
         const style = parsed.createElementNS("http://www.w3.org/2000/svg", "style");
-        style.textContent = `.chaos-diagram-node > rect,.chaos-diagram-node > circle,.chaos-diagram-node > ellipse,.chaos-diagram-node > polygon,.chaos-diagram-node > path{animation:diagram-outline 18s linear infinite;filter:drop-shadow(0 2px 5px ${dark ? "#00000040" : "#277dc512"})} @keyframes diagram-outline{to{stroke-dashoffset:-132}} @media(prefers-reduced-motion:reduce){.chaos-diagram-node > *{animation:none!important}}`;
+        // Mermaid's node shadows can be attached to either a shape or its parent group.
+        root.querySelectorAll("[filter]").forEach(element => element.removeAttribute("filter"));
+        style.textContent = `.node,.node *{filter:none!important;text-shadow:none!important;box-shadow:none!important}.chaos-diagram-node > rect,.chaos-diagram-node > circle,.chaos-diagram-node > ellipse,.chaos-diagram-node > polygon,.chaos-diagram-node > path{animation:diagram-background 12s ease-in-out infinite alternate} @keyframes diagram-background{from{fill-opacity:.85}to{fill-opacity:1}} @media(prefers-reduced-motion:reduce){.chaos-diagram-node > *{animation:none!important}}`;
+
         root.appendChild(style);
         const svg = new XMLSerializer().serializeToString(root);
         if (live) { setImage(`data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`); setError(false); }

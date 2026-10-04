@@ -15,7 +15,9 @@ vi.mock("@/lib/convexCache", () => ({ useQuery: (ref: never) => {
     default: return {};
   }
 } }));
-vi.mock("convex/react", () => ({ useMutation: () => vi.fn() }));
+vi.mock("convex/react", () => ({
+  useQuery: (ref: never, args: unknown) => args === "skip" ? undefined : [],
+  usePaginatedQuery: () => ({ results: [], status: "Exhausted", loadMore: vi.fn() }), useMutation: () => vi.fn() }));
 
 beforeEach(() => { localStorage.clear(); route.quizId = "quiz-a"; route.userId = "owner-a"; });
 

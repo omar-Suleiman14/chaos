@@ -56,7 +56,7 @@ const getArgs = v.object({ courseId: v.id("learnCollections") });
 export async function getCourse(ctx: QueryCtx, args: Infer<typeof getArgs>, asActor?: string) {
     const { row, user } = await ownedCourse(ctx, args.courseId, asActor);
     const version = row.publishedVersionId ? await ctx.db.get("collectionVersions", row.publishedVersionId) : null;
-    const lessons = [];
+    const lessons: Infer<typeof lessonRow>[] = [];
     for (const id of outline(row)) {
       const lesson = await ctx.db.get("lessons", id);
       if (!lesson || lesson.status !== "active") continue;
@@ -155,7 +155,7 @@ export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publish
     const { row, actor } = await ownedCourse(ctx, args.courseId, asActor);
     await requireVisibilityAllowed(ctx, actor, args.visibility);
     if (row.communityState !== "ok") throw new Error("MODERATED: This course is under review and can't be published right now.");
-    for (const module of row.modules ?? []) for (const asset of module.assessments) {
+    for (const courseModuleItem of row.modules ?? []) for (const asset of courseModuleItem.assessments) {
       if (asset.kind === "form") { const id = ctx.db.normalizeId("forms", asset.id); const form = id ? await ctx.db.get("forms", id) : null; if (!form || form.ownerId !== actor || form.status !== "live" || form.isBanned || form.publishedVersion === undefined) throw new Error("ASSESSMENT_UNPUBLISHED: Publish each module quiz before publishing this course."); }
       else { const id = ctx.db.normalizeId("quizzes", asset.id); const quiz = id ? await ctx.db.get("quizzes", id) : null; if (!quiz || quiz.creatorId !== actor || !quiz.isPublished || quiz.isBanned || !quiz.publishedSnapshot) throw new Error("ASSESSMENT_UNPUBLISHED: Publish each module quiz before publishing this course."); }
     }
@@ -180,7 +180,7 @@ export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publish
       }
       const pub = lesson.publishedVersionId ? await ctx.db.get("lessonVersions", lesson.publishedVersionId) : null;
       if (!pub || pub.lessonId !== id) { problems.push({ lessonId: id, title: lesson.metadata.title, message: "Publish this lesson explicitly before adding it to a course publication." }); continue; }
-      if (args.visibility === "public" && (lesson.visibility !== "public" || pub.visibility !== "public")) { problems.push({ lessonId: id, title: pub.metadata.title, message: "This lesson must be explicitly published publicly for a public course." }); continue; }
+      if (args.visibility === "public" && (lesson.visibility !== "public" || pub.visibility !== undefined && pub.visibility !== "public")) { problems.push({ lessonId: id, title: pub.metadata.title, message: "This lesson must be explicitly published publicly for a public course." }); continue; }
       items.push({ kind: "lesson", id, versionId: lesson.publishedVersionId! });
     }
     if (problems.length) return { ok: false as const, problems };
@@ -234,7 +234,7 @@ export async function readPublicCourse(ctx: QueryCtx, args: { courseId: string }
     if (!owner || owner.isBanned || owner.suspendedUntil) return null;
     const version = await ctx.db.get("collectionVersions", row.publishedVersionId);
     if (!version || version.collectionId !== row._id) return null;
-    const lessons = [];
+    const lessons: { id: Id<"lessons">; versionId: Id<"lessonVersions">; title: string; description: string; blocks: number }[] = [];
     for (const item of version.items) {
       if (item.kind !== "lesson") continue;
       const lesson = await ctx.db.get("lessons", item.id);
@@ -315,11 +315,11 @@ export async function setCourseModules(ctx: MutationCtx, args: { courseId: Id<"l
   const { row, actor } = await ownedCourse(ctx, args.courseId, asActor);
   if (args.modules.length > 30) throw new Error("VALIDATION_FAILED: A course supports up to 30 modules.");
   const moduleIds = new Set<string>(), seen = new Set<string>(), current = outline(row);
-  for (const module of args.modules) {
-    if (!/^[a-zA-Z0-9_-]{1,100}$/.test(module.id) || moduleIds.has(module.id) || !module.title.trim() || module.title.length > 200 || module.assessments.length > 20) throw new Error("VALIDATION_FAILED: Invalid or duplicate module.");
-    moduleIds.add(module.id);
-    for (const id of module.lessonIds) { if (seen.has(id) || !current.includes(id)) throw new Error("VALIDATION_FAILED: Each outlined lesson belongs to at most one module."); seen.add(id); }
-    for (const asset of module.assessments) {
+  for (const courseModuleItem of args.modules) {
+    if (!/^[a-zA-Z0-9_-]{1,100}$/.test(courseModuleItem.id) || moduleIds.has(courseModuleItem.id) || !courseModuleItem.title.trim() || courseModuleItem.title.length > 200 || courseModuleItem.assessments.length > 20) throw new Error("VALIDATION_FAILED: Invalid or duplicate module.");
+    moduleIds.add(courseModuleItem.id);
+    for (const id of courseModuleItem.lessonIds) { if (seen.has(id) || !current.includes(id)) throw new Error("VALIDATION_FAILED: Each outlined lesson belongs to at most one module."); seen.add(id); }
+    for (const asset of courseModuleItem.assessments) {
       const id = ctx.db.normalizeId(asset.kind === "form" ? "forms" : "quizzes", asset.id);
       if (!id) throw new Error("NOT_FOUND: Assessment not found.");
       if (asset.kind === "form") { const form = await ctx.db.get("forms", id as Id<"forms">); if (!form || form.ownerId !== actor || !form.draft.quiz?.enabled) throw new Error("NOT_FOUND: Quiz not owned by you."); }

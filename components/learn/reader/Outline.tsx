@@ -76,6 +76,7 @@ export function Outline({ items, active }: { items: OutlineItem[]; active?: stri
 export function MobileOutline({ items, active }: { items: OutlineItem[]; active?: string }) {
   const t = useCopy(copy);
   const [open, setOpen] = useState(false);
+  useEffect(() => { const media = window.matchMedia("(min-width: 1100px)"); const close = () => { if (media.matches) setOpen(false); }; media.addEventListener("change", close); return () => media.removeEventListener("change", close); }, []);
   if (!items.length) return null;
   const current = items.find((i) => i.id === active);
   return (

@@ -24,7 +24,7 @@ vi.mock("next/navigation", () => ({
   useParams: () => ({ formId: "form-1" }),
   useRouter: () => ({ push: vi.fn(), replace: vi.fn() }),
   usePathname: () => "/dashboard",
-  useSearchParams: () => new URLSearchParams(),
+  useSearchParams: () => new URLSearchParams("tab=forms"),
 }));
 vi.mock("@/convex/_generated/api", () => ({
   api: {
@@ -47,7 +47,7 @@ vi.mock("convex/react", () => ({
 vi.mock("@/app/[lang]/(app)/dashboard/forms/[formId]/use-form-draft", () => ({
   useFormDraft: () => fixtures.draftState,
 }));
-vi.mock("@/lib/learn/data", () => ({ useLearnActions: () => ({ createLesson: vi.fn() }) }));
+vi.mock("@/lib/learn/data", () => ({ useMyLessons: () => [], useLearnActions: () => ({ createLesson: vi.fn() }) }));
 vi.mock("@/components/workspace/useCreateForm", () => ({
   useCreateForm: () => ({ create: vi.fn(), busy: false }),
 }));

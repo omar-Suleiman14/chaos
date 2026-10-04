@@ -18,7 +18,7 @@ function sitePage(path: string, lastModified?: Date): MetadataRoute.Sitemap {
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   // A backend outage (or a build without one) keeps the static pages instead of failing.
   const [lessons, courses, docs] = await Promise.all([listIndexableLessons().catch(() => []), listPublicCourses().catch(() => []), listPublicDocs().catch(() => [])]);
-  return [
+  const entries: MetadataRoute.Sitemap = [
     ...["/", "/pricing", "/compare", "/docs", "/faq"].flatMap(path => sitePage(path)),
     ...docs.flatMap(doc => sitePage(`/docs/${doc.slug}`, new Date(doc.updatedAt))),
     ...["/chatgpt", "/connect", "/learn", "/forms-quizzes", "/live-games", "/ai", "/open-source"].flatMap(path => sitePage(path)),
@@ -27,4 +27,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...courses.map(course => ({ url: `${siteUrl}/learn/courses/${encodeURIComponent(course.id)}`, lastModified: new Date(course.updatedAt) })),
     ...lessons.map(lesson => ({ url: `${siteUrl}/learn/${encodeURIComponent(lesson.id)}`, lastModified: new Date(lesson.publishedAt) })),
   ];
+  return [...new Map(entries.map(entry => [entry.url, entry])).values()];
 }

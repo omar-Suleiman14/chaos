@@ -3,7 +3,7 @@ import { encodeCourseArchive, decodeCourseArchive, remapCourseDocument, type Cou
 import type { Id } from "@/convex/_generated/dataModel";
 const lessonId="old_lesson" as Id<"lessons">;
 const metadata={title:"Example",description:"",language:"en",tags:[]};
-const data:CourseArchive={manifest:{format:"chaos-course",version:1,metadata,modules:[],lessonIds:[lessonId]},lessons:[{id:lessonId,metadata,document:{schemaVersion:1,blocks:[{id:"cards",type:"flashcards",setId:"old_deck" as Id<"flashcardSets">,citations:[],conceptIds:[]}]},assessments:[],decks:[]}],assets:[{kind:"flashcards",id:"old_deck",title:"Cards",cards:[{id:"card",front:"Front",back:"Back",conceptIds:[]}]}]};
+const data:CourseArchive={manifest:{details:undefined,format:"chaos-course",version:1,metadata,modules:[],lessonIds:[lessonId]},lessons:[{id:lessonId,metadata,document:{schemaVersion:1,blocks:[{id:"cards",type:"flashcards",setId:"old_deck" as Id<"flashcardSets">,citations:[],conceptIds:[]}]},assessments:[],decks:[]}],assets:[{kind:"flashcards",id:"old_deck",title:"Cards",cards:[{id:"card",front:"Front",back:"Back",conceptIds:[]}]}]};
 it("round trips a versioned course and remaps shared assets without changing structure",()=>{
  const result=decodeCourseArchive(encodeCourseArchive(data,{})).data;
  expect(result).toEqual(data);

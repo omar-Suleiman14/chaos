@@ -1,10 +1,12 @@
+vi.mock("@/lib/learn/mediaClient", () => ({ useLearnMediaClient: () => ({ resolve: vi.fn(), upload: vi.fn() }) }));
 import { Suspense } from "react";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "@/lib/i18n";
 
 const backend = vi.hoisted(() => ({ update: vi.fn(), course: { id: "course1", title: "دورة عربية", description: "مقدمة", language: "ar-EG", tags: [], lessons: [], published: false, visibility: "public" } }));
-vi.mock("convex/react", () => ({ useQuery: () => backend.course, useMutation: () => backend.update }));
+vi.mock("convex/react", () => ({
+  useConvex: () => ({ query: vi.fn(), mutation: vi.fn() }), useQuery: () => backend.course, useMutation: () => backend.update }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), useParams: () => ({ lang: "en" }) }));
 vi.mock("@/components/learn/editor/PageHeader", () => ({ LessonCover: () => null, PageIconControls: () => null }));
 const { default: CourseBuilder } = await import("@/app/[lang]/(app)/dashboard/courses/[id]/page");

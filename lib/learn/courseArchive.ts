@@ -1,5 +1,6 @@
 import { zipSync, unzipSync, strToU8, strFromU8 } from "fflate";
 import type { FunctionReturnType } from "convex/server";
+import { lessonDocumentSchema, lessonMetadataSchema } from "@/lib/mcp/learn";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { LessonDocument } from "@/convex/learnModel";
@@ -16,6 +17,14 @@ export function decodeCourseArchive(bytes: Uint8Array): { data: CourseArchive; f
  if(!files["course.json"])throw new Error("Missing course.json.");
  const data=JSON.parse(strFromU8(files["course.json"])) as CourseArchive;
  if(!data||data.manifest?.format!=="chaos-course"||data.manifest.version!==1||!Array.isArray(data.lessons)||data.lessons.length>100||!Array.isArray(data.assets)||data.assets.length>1000||!Array.isArray(data.manifest.lessonIds)||data.manifest.lessonIds.length!==data.lessons.length||new Set(data.lessons.map(l=>l.id)).size!==data.lessons.length||data.manifest.lessonIds.some(id=>!data.lessons.some(l=>l.id===id)))throw new Error("Unsupported or invalid Chaos course archive.");
+ // Validate all lesson content and references before creating any private import rows.
+ lessonMetadataSchema.parse(data.manifest.metadata);
+ if(!Array.isArray(data.manifest.modules)||data.manifest.modules.length>30)throw new Error("Invalid course modules.");
+ const refs=new Map<string,string>();
+ for(const asset of data.assets){if(!asset||!["source","form","quiz","flashcards"].includes(asset.kind)||typeof asset.id!=="string"||!/^[a-zA-Z0-9_-]{1,100}$/.test(asset.id)||refs.has(`${asset.kind}:${asset.id}`))throw new Error("Invalid or duplicate archived asset.");refs.set(`${asset.kind}:${asset.id}`,asset.id);if(asset.kind==="source"&&asset.hasFile&&!files[`assets/${asset.id}`])throw new Error("Missing archived source file.");}
+ for(const lesson of data.lessons){lessonMetadataSchema.parse(lesson.metadata);lessonDocumentSchema.parse(lesson.document);remapCourseDocument(lesson.document,refs);}
+ const lessonIds=new Set(data.manifest.lessonIds),moduleIds=new Set<string>(),assigned=new Set<string>();
+ for(const item of data.manifest.modules){if(!item||typeof item.id!=="string"||!/^[a-zA-Z0-9_-]{1,100}$/.test(item.id)||moduleIds.has(item.id)||typeof item.title!=="string"||!item.title.trim()||item.title.length>200||!Array.isArray(item.lessonIds)||item.lessonIds.length>100||!Array.isArray(item.assessments)||item.assessments.length>20)throw new Error("Invalid archived module.");moduleIds.add(item.id);for(const id of item.lessonIds){if(!lessonIds.has(id as Id<"lessons">)||assigned.has(id))throw new Error("Invalid lesson assignment.");assigned.add(id);}for(const asset of item.assessments){if(!["form","quiz"].includes(asset.kind)||!refs.has(`${asset.kind}:${asset.id}`))throw new Error("Missing module assessment.");}}
  return {data,files};
 }
 export function remapCourseDocument(document: LessonDocument, ids: Map<string,string>): LessonDocument {

@@ -8,6 +8,8 @@
  * @module
  */
 
+import type * as coursePortability from "../coursePortability.js";
+import type * as studentRoster from "../studentRoster.js";
 import type * as admin from "../admin.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminModel from "../adminModel.js";
@@ -137,6 +139,8 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  studentRoster: typeof studentRoster;
+  coursePortability: typeof coursePortability;
   admin: typeof admin;
   adminAnalytics: typeof adminAnalytics;
   adminModel: typeof adminModel;

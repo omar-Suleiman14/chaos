@@ -300,9 +300,8 @@ describe("Learn community and private learning state", () => {
         versionId: published.versionId,
       }),
     ).toBeNull();
-    await expect(other.query(ref("getProgress"), key)).rejects.toThrow(
-      "unauthorized",
-    );
+    // Older public versions remain readable for frozen course publications.
+    expect(await other.query(ref("getProgress"), key)).toMatchObject({ completedBlocks: ["one", "two"] });
     // Valid ID from this deployment but belongs to another lesson.
     const foreignLesson = await owner.mutation(api.lessons.create, {
       metadata,
