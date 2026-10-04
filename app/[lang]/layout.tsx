@@ -121,8 +121,8 @@ export default async function RootLayout({ children, params }: Readonly<{ childr
           <FrameGuard />
           <ProductAnalytics />
           <AuthProvider locale={locale}>
-            <AnalyticsIdentity />
             <ConvexClientProvider>
+              <AnalyticsIdentity />
               {children}
             </ConvexClientProvider>
           </AuthProvider>
