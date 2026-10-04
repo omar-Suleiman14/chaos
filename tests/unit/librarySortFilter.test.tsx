@@ -22,12 +22,12 @@ vi.mock("convex/react", () => ({
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? forms : getFunctionName(ref) === "quizFunctions:getMyQuizzes" ? [] : undefined),
   useMutation: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:setFormStatus" ? setFormStatus : vi.fn()),
 }));
-vi.mock("@/lib/learn/data", () => ({ useMyLessons: () => [], useLearnActions: () => ({ createLesson: vi.fn() }) }));
+vi.mock("@/lib/learn/data", () => ({ useLearnActions: () => ({ createLesson: vi.fn() }) }));
 vi.mock("@/components/workspace/useCreateForm", () => ({ useCreateForm: () => ({ create: vi.fn(), busy: false }) }));
 vi.mock("./FormThumb", () => ({ default: () => null }));
 
 beforeEach(() => {
-  route.tab = "forms";
+  route.tab = "";
   localStorage.clear();
   localStorage.setItem("chaos-library-view", "list");
   Element.prototype.scrollIntoView = vi.fn();
@@ -74,24 +74,25 @@ describe("library sort and filter", () => {
 });
 
 describe("library New menu", () => {
-  it("offers all content creation plus form templates and import in Forms", () => {
+  it("offers only form creation, templates and import in Forms", () => {
     render(<CreatorLibrary />);
     const triggers = screen.getAllByRole("button", { name: "Create something new" });
     expect(triggers).toHaveLength(1);
     fireEvent.click(triggers[0]);
     const items = screen.getAllByRole("menuitem").map((item) => (item.textContent ?? "").trim());
-    expect(items).toHaveLength(6);
-    for (const [i, label] of ["Form", "Quiz", "Course", "Lesson", "From a template", "Import"].entries()) expect(items[i]).toMatch(new RegExp(`^${label}`));
+    expect(items).toHaveLength(3);
+    for (const [i, label] of ["Form", "From a template", "Import"].entries()) expect(items[i]).toMatch(new RegExp(`^${label}`));
   });
 });
 
 describe("tab-specific creation", () => {
-  it("offers all content creation and import in Quizzes", () => {
+  it("offers only quiz creation and import in Quizzes", () => {
     route.tab = "quizzes";
     render(<CreatorLibrary />);
     fireEvent.click(screen.getAllByRole("button", { name: "Create something new" })[0]);
     const items = screen.getAllByRole("menuitem");
-    expect(items).toHaveLength(5);
-    for (const [index, label] of ["Form", "Quiz", "Course", "Lesson", "Import"].entries()) expect(items[index]).toHaveTextContent(new RegExp(`^${label}`));
+    expect(items).toHaveLength(2);
+    expect(items[0]).toHaveTextContent(/^Quiz/);
+    expect(items[1]).toHaveTextContent("Import");
   });
 });

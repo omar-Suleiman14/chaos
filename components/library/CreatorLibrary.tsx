@@ -1,7 +1,5 @@
 "use client";
 
-import WorkspaceOverview from "./WorkspaceOverview";
-import { useLearnActions } from "@/lib/learn/data";
 import CoursesHub from "@/components/courses/CoursesHub";
 import GamesHub from "@/components/live/GamesHub";
 import { newQuizArgs } from "@/components/live/newGame";
@@ -34,10 +32,10 @@ import type { UndoToast } from "@/components/workspace/primitives";
 import { usePinned } from "@/components/workspace/usePinned";
 import { useCreateForm } from "@/components/workspace/useCreateForm";
 
-const kinds = ["Recent", "Forms", "Quizzes", "Lessons", "Courses", "Games"] as const;
+const kinds = ["Forms", "Quizzes", "Courses", "Games"] as const;
 type Kind = (typeof kinds)[number];
 /** The open tab lives in the address (?tab=games) so links, Back and refresh keep it. */
-const kindFromParam = (value: string | null): Kind => kinds.find((k) => k.toLowerCase() === value) ?? "Recent";
+const kindFromParam = (value: string | null): Kind => kinds.find((k) => k.toLowerCase() === value) ?? "Forms";
 type Status = "live" | "draft" | "closed" | "archived";
 const statusOptions: { id: Status }[] = [{ id: "live" }, { id: "draft" }, { id: "closed" }];
 type SortKey = "edited" | "name" | "responses" | "status";
@@ -51,7 +49,7 @@ const statusOrder: Record<Status, number> = { live: 0, draft: 1, closed: 2, arch
 
 const copy = {
   en: {
-    kinds: { Recent: "Recent", Lessons: "Lessons", Forms: "Forms", Quizzes: "Quizzes", Courses: "Courses", Games: "Games" },
+    kinds: { Forms: "Forms", Quizzes: "Quizzes", Courses: "Courses", Games: "Games" },
     status_: { live: "Live", draft: "Draft", closed: "Closed", archived: "Archived" },
     sort_: { edited: "Last edited", name: "Name", responses: "Most responses", status: "Status" },
     colName: "Name", colStatus: "Status", colResponses: "Responses", colEdited: "Edited", colActions: "Actions",
@@ -88,7 +86,7 @@ const copy = {
     preview: "Preview", fieldsCount: (n: number) => `${n} fields`, textBlock: "Text block", options: (n: number) => `${n} options`, required: "required", createDraft: "Create draft",
   },
   ar: {
-    kinds: { Recent: "حديث", Lessons: "الدروس", Forms: "النماذج", Quizzes: "الاختبارات", Courses: "الدورات", Games: "الألعاب" },
+    kinds: { Forms: "النماذج", Quizzes: "الاختبارات", Courses: "الدورات", Games: "الألعاب" },
     status_: { live: "منشور", draft: "مسودة", closed: "مغلق", archived: "مؤرشف" },
     sort_: { edited: "آخر تعديل", name: "الاسم", responses: "الأكثر ردودًا", status: "الحالة" },
     colName: "الاسم", colStatus: "الحالة", colResponses: "الردود", colEdited: "آخر تعديل", colActions: "الإجراءات",
@@ -154,7 +152,6 @@ export default function CreatorLibrary() {
   const t = useCopy(copy);
   const { locale } = useLocale();
   const router = useRouter();
-  const learnActions = useLearnActions();
   const forms = useQuery(api.forms.listMyForms);
   const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
   const templates = useQuery(api.forms.listTemplates);
@@ -174,7 +171,7 @@ export default function CreatorLibrary() {
   const pathname = usePathname();
   const params = useSearchParams();
   const kind = kindFromParam(params.get("tab"));
-  const setKind = (next: Kind) => router.replace(next === "Recent" ? pathname : `${pathname}?tab=${next.toLowerCase()}`, { scroll: false });
+  const setKind = (next: Kind) => router.replace(next === "Forms" ? pathname : `${pathname}?tab=${next.toLowerCase()}`, { scroll: false });
   const [view, setView] = useState<"gallery" | "list">("gallery");
   /** No statuses chosen means everything except archived, the everyday view. */
   const [statuses, setStatuses] = useState<Status[]>([]);
@@ -376,10 +373,9 @@ export default function CreatorLibrary() {
     <WsMenu label={t.newMenu} align="end" triggerClassName="ws-btn ws-btn--primary" trigger={<><Plus size={17} /> {busy ? t.creating : t.newLabel} <ChevronDown size={15} aria-hidden /></>}>
       {(close) => (
         <div className="ws-new-choices">
-          {<button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(); }}><FileText size={16} /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>}
-          {<button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(newQuizArgs(locale)); }}><ListChecks size={16} /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>}
-          {<button type="button" role="menuitem" onClick={() => { close(); void newCourse(); }}><GraduationCap size={16} /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>}
-          <button type="button" role="menuitem" onClick={() => { close(); void learnActions.createLesson({ language: locale }).then(id => router.push(`/dashboard/learn/lessons/${id}`)).catch(e => setError(errorMessage(e))); }}><BookOpen size={16}/><span><strong>{t.newLesson}</strong><small>{t.newLessonHelp}</small></span></button>
+          {kind === "Forms" && <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(); }}><FileText size={16} /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>}
+          {(kind === "Quizzes" || kind === "Games") && <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(newQuizArgs(locale)); }}><ListChecks size={16} /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>}
+          {kind === "Courses" && <button type="button" role="menuitem" onClick={() => { close(); void newCourse(); }}><GraduationCap size={16} /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>}
           {kind === "Forms" && <><hr /><button type="button" role="menuitem" onClick={() => { close(); setDialog("templates"); }}><LayoutTemplate size={16} /> {t.fromTemplate}</button></>}
           {(kind === "Forms" || kind === "Quizzes") && <button type="button" role="menuitem" onClick={() => { close(); setDialog("import"); }}><FileUp size={16} /> {t.import}</button>}
         </div>
@@ -441,7 +437,7 @@ export default function CreatorLibrary() {
         </>}
       </div>
 
-      {kind === "Recent" || kind === "Lessons" ? <WorkspaceOverview search={search} lessonsOnly={kind === "Lessons"} /> : kind === "Courses" ? <CoursesHub embedded /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
+      {kind === "Courses" ? <CoursesHub embedded /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
         <div className="ws-empty ws-page">
           <span className="ws-empty__art"><Plus size={24} /></span>
           <h2 className="text-xl font-semibold">{search || statuses.length ? t.nothingMatches : t.createFirst}</h2>
