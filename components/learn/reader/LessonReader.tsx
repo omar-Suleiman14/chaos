@@ -6,6 +6,7 @@ import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { LessonActivity, type Activity } from "./ActivityContext";
+import ActivitySummary, { useReadingSeconds } from "./ActivitySummary";
 import CompletionAction from "./CompletionAction";
 import CourseNavigation from "./CourseNavigation";
 import { legacyFlashcardBlocks } from "@/lib/learn/inlineStudy";
@@ -156,6 +157,9 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const saved = useSaved() ?? [];
   const vote = useVote(lesson.id);
   const progress = useProgress()?.[lesson.id];
+  const [justCompleted, setJustCompleted] = useState(false);
+  const completed = progress?.state === "completed" || justCompleted;
+  const readingSeconds = useReadingSeconds(`${activityKey}:seconds`, !previewDraft && !completed);
   const [prefs, setPrefs] = useReaderPrefs();
   const [panel, setPanel] = useState<"discussion" | null>(null);
   const [tab, setTab] = useState<"lesson" | "practice">("lesson");
@@ -454,9 +458,9 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                   {!previewDraft && (
                     <footer className="lx-section" style={{ marginTop: 40, paddingTop: 20, borderTop: "1px solid var(--ws-line)" }}>
                       <div className="lx-actions" style={{ justifyContent: "space-between" }}>
-                        <CompletionAction completed={progress?.state === "completed"} disabled={remainingActivities > 0}
-                          onComplete={() => actions.setProgress(lesson.id, { state: "completed", percent: 100 })}
-                          onReset={async () => { await actions.setProgress(lesson.id, { state: "not_started", percent: 0 }); setActivities({}); try { localStorage.removeItem(activityKey); } catch { /* unavailable */ } window.scrollTo({ top: 0, behavior: "auto" }); }} />
+                        <CompletionAction completed={completed} disabled={remainingActivities > 0}
+                          onComplete={async () => { await actions.setProgress(lesson.id, { state: "completed", percent: 100 }); setJustCompleted(true); }}
+                          onReset={async () => { await actions.setProgress(lesson.id, { state: "not_started", percent: 0 }); setJustCompleted(false); setActivities({}); try { localStorage.removeItem(activityKey); } catch { /* unavailable */ } window.scrollTo({ top: 0, behavior: "auto" }); }} />
                         {!isOwner && (
                           <span className="lx-actions" role="group" aria-label={t.helpful}>
                             <span className="lx-muted">{vote ? t.thanks : t.helpful}</span>
@@ -466,7 +470,8 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                         )}
                       </div>
                       {remainingActivities > 0 && progress?.state !== "completed" && <p role="status" className="lx-muted">{locale === "ar" ? `أكمل الأنشطة المطلوبة المتبقية: ${remainingActivities}` : `Complete ${remainingActivities} remaining required activities first.`}</p>}
-                      <CourseNavigation courseId={courseId} lessonId={lesson.id} completed={progress?.state === "completed"} />
+                      {completed && <ActivitySummary seconds={readingSeconds} activities={Object.values(activities)} />}
+                      <CourseNavigation courseId={courseId} lessonId={lesson.id} completed={completed} />
                     </footer>
                   )}
                 </>

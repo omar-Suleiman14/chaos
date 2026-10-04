@@ -554,3 +554,5 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-course-meter { height: 6px; border-radius: 6px; overflow: hidden; background: var(--ws-line); }
 .lx-course-meter > span { display: block; height: 100%; background: var(--primary); transition: width .7s ease; }
 @media (prefers-reduced-motion: reduce) { .lx-course-meter > span { transition: none; } }
+
+.lx-activity-summary { margin-top: 16px; color: var(--on-surface-variant); font-size: 14px; overflow-wrap: anywhere; line-height: 1.7; }
