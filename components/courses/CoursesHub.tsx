@@ -123,7 +123,7 @@ export default function CoursesHub({
               </span>
             </div>
             <div className="cx-body">
-              <span className="cx-title">{c.title}</span>
+              <span className="cx-title" dir="auto">{c.title}</span>
               <span className="cx-meta">{t.lessons(c.lessons)}</span>
             </div>
           </Link>

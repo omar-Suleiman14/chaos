@@ -5,6 +5,7 @@ import { useQuery } from "@/lib/convexCache";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useLocale } from "@/lib/i18n";
+import { localeDir } from "@/lib/locale";
 const Form = dynamic(() =>
   import("@/components/forms/respond/RespondPage").then((m) => m.RespondToForm),
 );
@@ -38,9 +39,9 @@ export default function InlineQuiz({
       </p>
     );
   return (
-    <section className="lx-inline-quiz" aria-label={title || details.title}>
+    <section className="lx-inline-quiz" aria-label={title || details.title} dir={localeDir(locale)}>
       <header className="lx-panel__row">
-        <strong>{title || details.title}</strong>
+        <strong dir="auto">{title || details.title}</strong>
         <button
           type="button"
           className="ws-btn ws-btn--primary"

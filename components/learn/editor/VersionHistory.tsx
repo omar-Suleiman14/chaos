@@ -1,5 +1,7 @@
 "use client";
 
+import { contentDirection } from "@/lib/learn/direction";
+
 import { useMemo, useState } from "react";
 import { History, RotateCcw } from "lucide-react";
 import { WsConfirm, WsDialog } from "@/components/workspace/primitives";
@@ -82,7 +84,7 @@ export default function VersionHistory({ lesson, onClose, onRestore, disabled = 
                   ))}
                 </div>
               ) : (
-                <div className="lx-article" style={{ fontSize: 15, maxHeight: "55dvh", overflow: "auto", border: "1px solid var(--ws-line)", borderRadius: 10, padding: 16 }} lang={current.meta.language} dir={current.meta.language === "ar" ? "rtl" : "ltr"}>
+                <div className="lx-article" style={{ fontSize: 15, maxHeight: "55dvh", overflow: "auto", border: "1px solid var(--ws-line)", borderRadius: 10, padding: 16 }} lang={current.meta.language} dir={contentDirection(current.meta.language)}>
                   <h2 style={{ fontSize: 22, fontWeight: 700, marginBottom: 10 }}>{current.meta.title}</h2>
                   <BlockRenderer content={current.content} sources={lesson.sources} />
                 </div>

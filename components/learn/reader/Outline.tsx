@@ -51,7 +51,7 @@ export function OutlineNav({ items, active, onNavigate }: { items: OutlineItem[]
   return (
     <nav className="lx-toc" aria-label={t.nav}>
       {items.map((item) => (
-        <a key={item.id} href={`#${item.id}`} data-level={item.level} aria-current={active === item.id ? "location" : undefined}
+        <a key={item.id} dir="auto" href={`#${item.id}`} data-level={item.level} aria-current={active === item.id ? "location" : undefined}
           onClick={(e) => { e.preventDefault(); jumpTo(item.id); onNavigate?.(); }}>
           {item.text}
         </a>
@@ -79,7 +79,7 @@ export function MobileOutline({ items, active }: { items: OutlineItem[]; active?
   const current = items.find((i) => i.id === active);
   return (
     <details className="lx-toc-mobile" open={open} onToggle={(e) => setOpen((e.target as HTMLDetailsElement).open)}>
-      <summary><ListTree size={16} aria-hidden /> <span>{t.title}</span>{current && <span className="lx-muted" style={{ marginInlineStart: "auto", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "55%" }}>{current.text}</span>}</summary>
+      <summary><ListTree size={16} aria-hidden /> <span>{t.title}</span>{current && <span dir="auto" className="lx-muted" style={{ marginInlineStart: "auto", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", maxWidth: "55%" }}>{current.text}</span>}</summary>
       <OutlineNav items={items} active={active} onNavigate={() => setOpen(false)} />
     </details>
   );

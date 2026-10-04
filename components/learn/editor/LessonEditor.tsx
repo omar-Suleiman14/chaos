@@ -1,5 +1,7 @@
 "use client";
 
+import { contentDirection } from "@/lib/learn/direction";
+
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -132,7 +134,7 @@ export default function LessonEditor(props: LessonEditorProps) {
 
   return (
     <EditorBridge.Provider value={bridge}>
-      <div className="lx-editor" dir={props.language === "ar" ? "rtl" : "ltr"} lang={props.language}
+      <div className="lx-editor" dir={contentDirection(props.language)} lang={props.language}
         onPointerDown={event => {
           if (props.editable === false || event.button !== 0 || !isBlankEditorTarget(event.target)) return;
           event.preventDefault();

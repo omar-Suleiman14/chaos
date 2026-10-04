@@ -1,3 +1,4 @@
+import { contentDirection } from "@/lib/learn/direction";
 import type { Metadata } from "next";
 import Link from "@/components/site/SiteLink";
 import { notFound } from "next/navigation";
@@ -36,14 +37,14 @@ export default async function PublicCoursePage({ params }: Props) {
     hasPart: course.lessons.map((l, i) => ({ "@type": "LearningResource", position: i + 1, name: l.title, url: `${siteUrl}/learn/${l.id}` })),
   };
   const first = course.lessons[0];
-  const ar = course.language.startsWith("ar");
+  const ar = course.language.toLowerCase().split(/[-_]/)[0] === "ar";
   const labels = ar
     ? { explore: "Chaos Learn · دورة مجانية", by: "بقلم", lessons: "الدروس", start: "ابدأ الدورة", empty: "لا توجد دروس متاحة للقراءة في هذه الدورة حاليًا.", count: `${course.lessons.length} ${course.lessons.length === 1 ? "درس" : "دروس"}` }
     : { explore: "Chaos Learn · Free course", by: "By", lessons: "Lessons", start: "Start the course", empty: "There are no readable lessons in this course right now.", count: `${course.lessons.length} ${course.lessons.length === 1 ? "lesson" : "lessons"}` };
   return (
     <div className="site-ui">
       <SiteNav />
-      <main id="main-content" tabIndex={-1} className="cp" dir={ar ? "rtl" : "ltr"} lang={course.language}>
+      <main id="main-content" tabIndex={-1} className="cp" dir={contentDirection(course.language)} lang={course.language}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <header className="cp-hero">
         <Link href="/learn" className="cp-kicker">{labels.explore}</Link>
@@ -55,7 +56,7 @@ export default async function PublicCoursePage({ params }: Props) {
         {course.icon && <span className="cp-icon" aria-hidden="true"><CourseOrLessonIcon icon={course.icon} size={48} /></span>}
         <h1>{course.title}</h1>
         {course.description && <p>{course.description}</p>}
-        <div className="cp-by"><span>{labels.by} <Link href={`/card/${course.ownerUsername}`}>{course.ownerName || `@${course.ownerUsername}`}</Link></span><span aria-hidden="true">·</span><span>{labels.count}</span></div>
+        <div className="cp-by"><span>{labels.by} <Link href={`/card/${course.ownerUsername}`}><bdi>{course.ownerName || `@${course.ownerUsername}`}</bdi></Link></span><span aria-hidden="true">·</span><span>{labels.count}</span></div>
         {course.tags.length > 0 && <div className="cp-tags">{course.tags.map((t) => <span key={t}>{t}</span>)}</div>}
       </header>
       <section className="cp-main" aria-labelledby="course-lessons">
@@ -67,7 +68,7 @@ export default async function PublicCoursePage({ params }: Props) {
             <li key={l.id}>
               <Link className="cp-lesson" href={`/learn/${l.id}?course=${course.id}`}>
                 <span className="cp-lesson__no">{i + 1}</span>
-                <span><span className="cp-lesson__title">{l.title}</span>{l.description && <span className="cp-lesson__desc block">{l.description}</span>}</span>
+                <span><span className="cp-lesson__title" dir="auto">{l.title}</span>{l.description && <span className="cp-lesson__desc block" dir="auto">{l.description}</span>}</span>
                 <ArrowRight size={18} className="cp-arrow" aria-hidden />
               </Link>
             </li>

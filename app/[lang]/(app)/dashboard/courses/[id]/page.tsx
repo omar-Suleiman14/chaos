@@ -7,7 +7,9 @@ import { ArrowDown, ArrowLeft, ArrowUp, ExternalLink, Globe, Lock, Plus, Trash2 
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { useCopy } from "@/lib/i18n";
+import { contentDirection } from "@/lib/learn/direction";
+import { localeDir } from "@/lib/locale";
+import { useCopy, useLocale } from "@/lib/i18n";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { WsDialog } from "@/components/workspace/primitives";
 import { LessonCover, PageIconControls, type PageLook } from "@/components/learn/editor/PageHeader";
@@ -20,7 +22,7 @@ const copy = {
     titlePh: "Course title", descPh: "What will people learn? One or two sentences.", lessons: "Lessons", add: "Add a lesson", empty: "No lessons yet. Add the first one.",
     up: "Move up", down: "Move down", remove: "Remove from course", unpublishedLesson: "Not published yet", changedLesson: "Edited since publishing", livelesson: "Published",
     blocks: (n: number) => `${n} ${n === 1 ? "block" : "blocks"}`,
-    settings: "Details", tags: "Topics", tagsHelp: "Comma separated, up to 12.",
+    language: "Course language", languageHelp: "Sets reading direction. New lessons inherit this language.", settings: "Details", tags: "Topics", tagsHelp: "Comma separated, up to 12.",
     publish: "Publish", update: "Publish changes", view: "View course", unpublish: "Unpublish", archive: "Archive",
     publishTitle: "Publish this course", who: "Who can take it", public: "Public", publicHelp: "Anyone can find and take it, free. Recommended.",
     private: "Private", privateHelp: "Only you and people you share lessons with. Part of Chaos Business.", business: "Business only",
@@ -32,7 +34,7 @@ const copy = {
     titlePh: "عنوان الدورة", descPh: "ماذا سيتعلم الناس؟ جملة أو جملتان.", lessons: "الدروس", add: "أضف درسًا", empty: "لا دروس بعد. أضف أول درس.",
     up: "انقل لأعلى", down: "انقل لأسفل", remove: "احذف من الدورة", unpublishedLesson: "لم يُنشر بعد", changedLesson: "عُدّل بعد النشر", livelesson: "منشور",
     blocks: (n: number) => `${n} ${n === 1 ? "كتلة" : "كتل"}`,
-    settings: "التفاصيل", tags: "المواضيع", tagsHelp: "مفصولة بفواصل، حتى 12.",
+    language: "لغة الدورة", languageHelp: "تحدد اتجاه القراءة. ترث الدروس الجديدة هذه اللغة.", settings: "التفاصيل", tags: "المواضيع", tagsHelp: "مفصولة بفواصل، حتى 12.",
     publish: "انشر", update: "انشر التغييرات", view: "اعرض الدورة", unpublish: "ألغِ النشر", archive: "أرشف",
     publishTitle: "انشر هذه الدورة", who: "من يمكنه أخذها", public: "عامة", publicHelp: "يمكن لأي أحد إيجادها وأخذها مجانًا. موصى به.",
     private: "خاصة", privateHelp: "أنت ومن تشاركهم الدروس فقط. جزء من Chaos للأعمال.", business: "للأعمال فقط",
@@ -47,6 +49,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
   const { id } = use(params);
   const courseId = id as Id<"learnCollections">;
   const t = useCopy(copy);
+  const { locale } = useLocale();
   const router = useRouter();
   const course = useQuery(api.courses.get, { courseId });
   const update = useMutation(api.courses.update), setOutline = useMutation(api.courses.setOutline), addLesson = useMutation(api.courses.addLesson);
@@ -81,9 +84,9 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
   const dirty = !course.published || course.lessons.some((l) => l.changed);
 
   return (
-    <div className="cb cb-page">
+    <div className="cb cb-page" dir={localeDir(locale)}>
       <div className="cb-top">
-        <Link href="/dashboard?tab=courses" className="ws-btn ws-btn--ghost ws-btn--sm"><ArrowLeft size={16} aria-hidden /> {t.back}</Link>
+        <Link href="/dashboard?tab=courses" className="ws-btn ws-btn--ghost ws-btn--sm"><ArrowLeft size={16} className="cb-arrow" aria-hidden /> {t.back}</Link>
         <span className="cb-status" data-live={course.published}>{course.published ? t.live : t.draft}</span>
         {course.published && dirty && <span className="cb-note">{t.changes}</span>}
         <span className="cb-top__spacer" />
@@ -96,8 +99,8 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
       <section className="cb-hero">
         <PageIconControls meta={page} editable onChange={saveLook} />
         <div className="cb-hero__body">
-          <input className="cb-title" aria-label={t.titlePh} placeholder={t.titlePh} value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} onBlur={() => title.trim() && title !== course.title && save({ courseId, title })} />
-          <textarea className="cb-desc" aria-label={t.descPh} placeholder={t.descPh} rows={2} value={desc} maxLength={4000} onChange={(e) => setDesc(e.target.value)} onBlur={() => desc !== course.description && save({ courseId, description: desc })} />
+          <input dir={contentDirection(course.language)} lang={course.language} className="cb-title" aria-label={t.titlePh} placeholder={t.titlePh} value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} onBlur={() => title.trim() && title !== course.title && save({ courseId, title })} />
+          <textarea dir={contentDirection(course.language)} lang={course.language} className="cb-desc" aria-label={t.descPh} placeholder={t.descPh} rows={2} value={desc} maxLength={4000} onChange={(e) => setDesc(e.target.value)} onBlur={() => desc !== course.description && save({ courseId, description: desc })} />
         </div>
       </section>
 
@@ -109,7 +112,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
               <li key={l.id} className="cb-lesson">
                 <span className="cb-lesson__no">{i + 1}</span>
                 <div className="min-w-0">
-                  <Link className="cb-lesson__title truncate" href={`/dashboard/learn/lessons/${l.id}?course=${course.id}`}>{l.title}</Link>
+                  <Link dir="auto" className="cb-lesson__title truncate" href={`/dashboard/learn/lessons/${l.id}?course=${course.id}`}>{l.title}</Link>
                   <span className="cb-lesson__meta">{!l.published ? t.unpublishedLesson : l.changed ? t.changedLesson : t.livelesson} · {t.blocks(l.blocks)}</span>
                 </div>
                 <div className="cb-lesson__actions">
@@ -126,7 +129,8 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
 
       <section className="cb-section grid gap-4" aria-labelledby="cb-settings">
         <h2 id="cb-settings">{t.settings}</h2>
-        <div className="cb-row"><label htmlFor="cb-tags">{t.tags}</label><input id="cb-tags" className="kb-input" value={tags} onChange={(e) => setTags(e.target.value)} onBlur={() => save({ courseId, tags: tags.split(",") })} /><span className="cb-note">{t.tagsHelp}</span></div>
+        <div className="cb-row"><label htmlFor="cb-language">{t.language}</label><select id="cb-language" className="kb-input" value={course.language} disabled={busy} onChange={e => save({ courseId, language: e.target.value })}><option value="en">English</option><option value="ar">العربية</option>{!["en", "ar"].includes(course.language) && <option value={course.language}>{course.language}</option>}</select><span className="cb-note">{t.languageHelp}</span></div>
+        <div className="cb-row"><label htmlFor="cb-tags">{t.tags}</label><input id="cb-tags" dir="auto" className="kb-input" value={tags} onChange={(e) => setTags(e.target.value)} onBlur={() => save({ courseId, tags: tags.split(",") })} /><span className="cb-note">{t.tagsHelp}</span></div>
         <div className="flex gap-2 flex-wrap">
           {course.published && <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(() => unpublish({ courseId }))}>{t.unpublish}</button>}
           <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(async () => { await setArchived({ courseId, archived: true }); router.push("/dashboard?tab=courses"); })}>{t.archive}</button>
