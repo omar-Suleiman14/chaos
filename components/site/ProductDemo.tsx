@@ -22,7 +22,7 @@ const copy = {
     ],
     next: "OK", finish: "That’s me", back: "Previous question", again: "Play it again", done: "That’s more like you.", doneBody: "Good questions deserve a little personality. Make yours next.",
     progress: (n: number) => `${n} of 3`, keyboard: "press Enter ↵", choose: "Choose an answer", gameTitle: "How many sides does a hexagon have?", gameNote: "Try a round. Pick an answer, then see the reveal.",
-    gameOptions: ["Four", "Five", "Six", "Eight"], correct: "You got it!", wrong: "Six sides make a hexagon.", reveal: "In a hosted game, the timer and host control the reveal. Fast correct answers earn more points.", score: "+1,000 points", gamePreview: "Live game preview", previewPin: "GAME PIN", players: "24 players", round: "Question 1 / 1", allThemes: "All 18 themes",
+    gameOptions: ["Four", "Five", "Six", "Eight"], correct: "You got it!", wrong: "Six sides make a hexagon.", reveal: "In a hosted game, the timer and host control the reveal. Fast correct answers earn more points.", score: "+1,000 points", gamePreview: "Live game preview", previewPin: "GAME PIN", players: "24 players", round: "Question 1 / 1", allThemes: "All 19 themes",
   },
   ar: {
     label: "معاينة Chaos", form: "نموذج", game: "لعبة مباشرة", theme: "المظهر", caption: "معاينة فقط. لا تُرسل الإجابات.",
@@ -33,7 +33,7 @@ const copy = {
     ],
     next: "حسنًا", finish: "هذا أنا", back: "السؤال السابق", again: "جرّب مجددًا", done: "الآن يشبهك أكثر.", doneBody: "تستحق الأسئلة الجيدة بعض الشخصية. اصنع أسئلتك الآن.",
     progress: (n: number) => `${n} من 3`, keyboard: "اضغط Enter ↵", choose: "اختر إجابة", gameTitle: "كم ضلعًا للمسدّس؟", gameNote: "جرّب جولة. اختر إجابة ثم شاهد النتيجة.",
-    gameOptions: ["أربعة", "خمسة", "ستة", "ثمانية"], correct: "إجابة صحيحة!", wrong: "للمسدّس ستة أضلاع.", reveal: "في اللعبة المباشرة يتحكم المؤقت والمضيف في كشف الإجابة. تكسب الإجابات الصحيحة السريعة نقاطًا أكثر.", score: "+١٬٠٠٠ نقطة", gamePreview: "معاينة لعبة مباشرة", previewPin: "رمز اللعبة", players: "24 لاعبًا", round: "السؤال 1 / 1", allThemes: "المظاهر الـ18",
+    gameOptions: ["أربعة", "خمسة", "ستة", "ثمانية"], correct: "إجابة صحيحة!", wrong: "للمسدّس ستة أضلاع.", reveal: "في اللعبة المباشرة يتحكم المؤقت والمضيف في كشف الإجابة. تكسب الإجابات الصحيحة السريعة نقاطًا أكثر.", score: "+١٬٠٠٠ نقطة", gamePreview: "معاينة لعبة مباشرة", previewPin: "رمز اللعبة", players: "24 لاعبًا", round: "السؤال 1 / 1", allThemes: "المظاهر الـ19",
   },
 };
 

@@ -1,5 +1,5 @@
-import type { FormDefinition, FormField, FormTheme } from "./formLogic";
-import { googleFormsTheme, microsoftFormsTheme, FORM_SCHEMA_VERSION } from "./formLogic";
+import type { FormDefinition, FormField } from "./formLogic";
+import { flowTheme, FORM_SCHEMA_VERSION } from "./formLogic";
 
 // Built-in, bilingual starting points. Identifiers are fixed so templates are
 // deterministic; forms created from them are independent copies.
@@ -37,18 +37,11 @@ function definition(title: string, titleAr: string, description: string, descrip
     presentation: "page",
     fields,
     endings: [],
-    theme: { ...googleFormsTheme },
+    theme: { ...flowTheme },
     translations: { ar: { title: titleAr, description: descriptionAr } },
     ...extra,
   };
 }
-
-
-// Palettes of built-in presets that live in components/forms/formThemes.ts, which Convex cannot import.
-// tests/unit/templates.test.ts checks that they stay equal to the presets.
-const OCEAN: FormTheme = { version: 1, preset: "ocean", accent: "#126e79", background: "plain", font: "sans", radius: "large", pageColor: "#e9f5f4", surfaceColor: "#ffffff", textColor: "#183a40", layout: "card", cover: "classic", backdrop: "gradient", buttons: "pill", appearance: "auto", sound: "off" };
-const GARDEN: FormTheme = { version: 1, preset: "garden", accent: "#366b4a", background: "plain", font: "serif", radius: "small", pageColor: "#eef2e8", surfaceColor: "#fbfcf6", textColor: "#263629", layout: "flat", cover: "minimal", backdrop: "dots", buttons: "outline", appearance: "auto", sound: "off" };
-const TERRACOTTA: FormTheme = { version: 1, preset: "terracotta", accent: "#a94e39", background: "plain", font: "serif", radius: "small", pageColor: "#f5e9df", surfaceColor: "#fffaf4", textColor: "#3b2923", layout: "card", cover: "editorial", backdrop: "noise", buttons: "outline", appearance: "fixed", sound: "off" };
 
 const agreement = ["Strongly disagree", "Disagree", "Neutral", "Agree", "Strongly agree"];
 const agreementAr = ["أعارض بشدة", "أعارض", "محايد", "أوافق", "أوافق بشدة"];
@@ -267,7 +260,7 @@ export const builtInTemplates: { id: string; name: string; category: string; des
         field({ id: "why", type: "textarea", label: "Why do you want this role? Keep it to a few sentences.", required: true, max: 1500 }, { label: "لماذا تريد هذه الوظيفة؟ يكفي بضع جمل." }),
         field({ id: "start", type: "date", label: "Earliest date you could start" }, { label: "أقرب تاريخ يمكنك المباشرة فيه" }),
       ],
-      { theme: { ...microsoftFormsTheme }, endings: [{ id: "received", title: "Application received", message: "Thank you for applying. We will be in touch.", translations: { ar: { title: "استلمنا طلبك", message: "شكرًا لتقدمك. سنتواصل معك." } } }] },
+      { theme: { ...flowTheme }, endings: [{ id: "received", title: "Application received", message: "Thank you for applying. We will be in touch.", translations: { ar: { title: "استلمنا طلبك", message: "شكرًا لتقدمك. سنتواصل معك." } } }] },
     ),
   },
   {
@@ -310,7 +303,7 @@ export const builtInTemplates: { id: string; name: string; category: string; des
         field({ id: "change", type: "textarea", label: "What one thing would you change?" }, { label: "ما الشيء الوحيد الذي تودّ تغييره؟" }),
         field({ id: "recommend", type: "choice", label: "Would you recommend this course to another student?", required: true, options: opts("y", ["Yes", "Not sure", "No"]) }, { label: "هل تنصح طالبًا آخر بهذا المقرر؟", options: ["نعم", "لست متأكدًا", "لا"] }),
       ],
-      { theme: { ...microsoftFormsTheme } },
+      { theme: { ...flowTheme } },
     ),
   },
   {
@@ -330,7 +323,7 @@ export const builtInTemplates: { id: string; name: string; category: string; des
           { label: "ما المواضيع التي تودّ أن نقدّمها لاحقًا؟", options: ["مهارات التيسير", "البيانات والتقارير", "تخطيط المشاريع", "الكتابة الواضحة", "إدارة الفريق"] }),
         field({ id: "more", type: "textarea", label: "Anything else?" }, { label: "أي ملاحظة أخرى؟" }),
       ],
-      { theme: { ...OCEAN } },
+      { theme: { ...flowTheme } },
     ),
   },
   {
@@ -355,7 +348,7 @@ export const builtInTemplates: { id: string; name: string; category: string; des
         field({ id: "consent", type: "multi_choice", label: "I agree to a short background check and to follow the safeguarding rules.", required: true, options: opts("c", ["I agree"]) },
           { label: "أوافق على فحص خلفية مختصر وعلى الالتزام بقواعد السلامة وحماية الأطفال.", options: ["أوافق"] }),
       ],
-      { theme: { ...GARDEN } },
+      { theme: { ...flowTheme } },
     ),
   },
   {
@@ -403,7 +396,7 @@ export const builtInTemplates: { id: string; name: string; category: string; des
         field({ id: "shot", type: "file", label: "Screenshot or screen recording", max: 3 }, { label: "لقطة شاشة أو تسجيل للشاشة" }),
         field({ id: "email", type: "email", label: "Email, if we may ask you questions" }, { label: "البريد الإلكتروني، إذا سمحت لنا بالتواصل معك" }),
       ],
-      { theme: { ...microsoftFormsTheme, accent: "#a4262c" } },
+      { theme: { ...flowTheme } },
     ),
   },
   {
@@ -423,7 +416,7 @@ export const builtInTemplates: { id: string; name: string; category: string; des
         field({ id: "enps", type: "scale", label: "How likely are you to recommend working here to a friend?", required: true, min: 0, max: 10, minLabel: "Not likely", maxLabel: "Very likely" }, { label: "ما احتمال أن تنصح صديقًا بالعمل هنا؟", minLabel: "مستبعد", maxLabel: "مؤكد" }),
         field({ id: "change", type: "textarea", label: "If you could change one thing about work right now, what would it be?", max: 2000 }, { label: "لو استطعت تغيير شيء واحد في العمل الآن، فما هو؟" }),
       ],
-      { theme: { ...googleFormsTheme, accent: "#00796b" } },
+      { theme: { ...flowTheme } },
     ),
   },
   {
@@ -448,7 +441,7 @@ export const builtInTemplates: { id: string; name: string; category: string; des
           { label: "ما الذي تودّ مناقشته؟", options: ["المستوى الدراسي", "القراءة والكتابة", "الرياضيات", "الأصدقاء والسلوك", "الواجبات", "أمر آخر"] }),
         field({ id: "notes", type: "textarea", label: "Anything the teacher should know beforehand?" }, { label: "هل هناك ما يجب أن يعرفه المعلم قبل اللقاء؟" }),
       ],
-      { theme: { ...TERRACOTTA } },
+      { theme: { ...flowTheme } },
     ),
   },
   {
@@ -471,7 +464,7 @@ export const builtInTemplates: { id: string; name: string; category: string; des
         field({ id: "q9", type: "choice", label: "What is the smallest prime number?", required: true, options: opts("i", ["0", "1", "2", "3"]), quiz: { correctOptionIds: ["i3"], points: 1 } }, { label: "ما أصغر عدد أولي؟", options: ["0", "1", "2", "3"] }),
         field({ id: "q10", type: "choice", label: "Which is the largest ocean?", required: true, options: opts("j", ["Atlantic", "Indian", "Arctic", "Pacific"]), quiz: { correctOptionIds: ["j4"], points: 1 } }, { label: "ما أكبر محيطات العالم؟", options: ["الأطلسي", "الهندي", "المتجمد الشمالي", "الهادئ"] }),
       ],
-      { quiz: { enabled: true }, theme: { ...googleFormsTheme, accent: "#1a73e8" } },
+      { quiz: { enabled: true }, theme: { ...flowTheme } },
     ),
   },
   {
@@ -494,7 +487,7 @@ export const builtInTemplates: { id: string; name: string; category: string; des
         field({ id: "v9", type: "choice", label: "rapid", required: true, options: opts("i", ["slow", "fast", "narrow", "silent"]), quiz: { correctOptionIds: ["i2"], points: 1 } }, { label: "ما معنى كلمة rapid؟", options: ["بطيء", "سريع", "ضيق", "صامت"] }),
         field({ id: "v10", type: "choice", label: "conceal", required: true, options: opts("j", ["hide", "repair", "explain", "borrow"]), quiz: { correctOptionIds: ["j1"], points: 1 } }, { label: "ما معنى كلمة conceal؟", options: ["يُخفي", "يُصلح", "يشرح", "يستعير"] }),
       ],
-      { quiz: { enabled: true }, theme: { ...googleFormsTheme, accent: "#b45309" } },
+      { quiz: { enabled: true }, theme: { ...flowTheme } },
     ),
   },
   {
@@ -514,7 +507,7 @@ export const builtInTemplates: { id: string; name: string; category: string; des
           { label: "أي مجال يحتاج أكبر اهتمام؟", options: ["التخطيط والتقدير", "مراجعة الشيفرة والجودة", "التواصل", "الاجتماعات", "الأدوات والإصدارات"] }),
         field({ id: "kudos", type: "textarea", label: "Shout-out to a teammate (optional)" }, { label: "كلمة شكر لأحد الزملاء (اختياري)" }),
       ],
-      { theme: { ...microsoftFormsTheme, accent: "#5c2d91" } },
+      { theme: { ...flowTheme } },
     ),
   },
   {

@@ -47,8 +47,8 @@ describe("form themes", () => {
     }
   });
 
-  it("only the two look-alike presets set page chrome", () => {
-    expect(themePresets.filter((p) => p.theme.chrome).map((p) => p.id).sort()).toEqual(["google-forms", "microsoft-forms"]);
+  it("only Flow and the two look-alike presets set page chrome", () => {
+    expect(themePresets.filter((p) => p.theme.chrome).map((p) => p.id).sort()).toEqual(["flow", "google-forms", "microsoft-forms"]);
   });
 
   it("never bundles Segoe: the font stack is system fonts only", async () => {

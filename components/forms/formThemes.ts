@@ -195,7 +195,7 @@ export function themeFollowsAppearance(theme: FormTheme): boolean {
 export function themeCover(def: FormDefinition): ThemeCover {
   return def.theme.version === 1 ? def.theme.cover ?? "none" : "none";
 }
-/** Card and banner chrome of the Google Forms / Microsoft Forms looks; undefined for every other theme. */
+/** Card and banner chrome of the Google Forms / Microsoft Forms / Flow looks; undefined for every other theme. */
 export function themeChrome(def: FormDefinition): ThemeChrome | undefined {
   return def.theme.version === 1 ? def.theme.chrome : undefined;
 }

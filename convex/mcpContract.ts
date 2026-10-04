@@ -98,7 +98,7 @@ export const MCP_RADII = ["none", "small", "large"] as const;
 export const MCP_BUTTONS = ["solid", "soft", "pill", "outline", "brutal"] as const satisfies readonly ThemeButtons[];
 export const MCP_COVERS = ["none", "classic", "split", "poster", "minimal", "editorial", "scroll", "terminal", "arcade"] as const satisfies readonly ThemeCover[];
 export const MCP_BACKDROPS = ["none", "dots", "grid", "gradient", "aurora", "noise", "stripes", "scanlines"] as const satisfies readonly ThemeBackdrop[];
-export const MCP_CHROMES = ["google", "microsoft"] as const satisfies readonly ThemeChrome[];
+export const MCP_CHROMES = ["google", "microsoft", "apple"] as const satisfies readonly ThemeChrome[];
 export const MCP_LAYOUTS = ["flat", "card", "focus"] as const;
 export const MCP_APPEARANCES = ["fixed", "auto"] as const;
 export const MCP_SOUNDS = ["off", "soft", "pop", "wood", "arcade"] as const satisfies readonly ThemeSound[];
@@ -127,7 +127,7 @@ export interface McpThemePatch {
   backdrop?: ThemeBackdrop;
   layout?: (typeof MCP_LAYOUTS)[number];
   appearance?: (typeof MCP_APPEARANCES)[number];
-  /** Optional page chrome of the Google Forms / Microsoft Forms looks. Applying a preset without it clears it. */
+  /** Optional page chrome of the Google Forms / Microsoft Forms / Flow looks. Applying a preset without it clears it. */
   chrome?: ThemeChrome;
 }
 

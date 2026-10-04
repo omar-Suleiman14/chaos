@@ -432,9 +432,9 @@ function PagedFlow({ flow, props, showHeader }: { flow: Flow; props: FormRendere
       </div>
     );
   }
-  if (chrome === "google") {
+  if (chrome === "google" || chrome === "apple") {
     return (
-      <div ref={topRef} className="form-page-body form-page-body--chrome" data-chrome="google">
+      <div ref={topRef} className="form-page-body form-page-body--chrome" data-chrome={chrome}>
         <div className="form-layout-flat">
           {logo}
           {header}

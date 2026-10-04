@@ -99,7 +99,7 @@ export const themeValidator = v.object({
   buttons: v.optional(v.union(v.literal("solid"), v.literal("outline"), v.literal("pill"), v.literal("brutal"), v.literal("soft"))),
   appearance: v.optional(v.union(v.literal("fixed"), v.literal("auto"))),
   sound: v.optional(v.union(v.literal("soft"), v.literal("pop"), v.literal("arcade"), v.literal("wood"), v.literal("off"))),
-  chrome: v.optional(v.union(v.literal("google"), v.literal("microsoft"))),
+  chrome: v.optional(v.union(v.literal("google"), v.literal("microsoft"), v.literal("apple"))),
 });
 
 export const definitionValidator = v.object({

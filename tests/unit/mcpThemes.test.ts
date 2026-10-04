@@ -31,6 +31,6 @@ describe("MCP themes: look-alike presets", () => {
   });
 
   it("rejects an unknown chrome value", () => {
-    expect("errors" in parseThemePatch({ chrome: "apple" })).toBe(true);
+    expect("errors" in parseThemePatch({ chrome: "windows" })).toBe(true);
   });
 });

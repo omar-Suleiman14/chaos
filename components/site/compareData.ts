@@ -4,7 +4,7 @@
  * Every Chaos cell maps to code, checked on the "as of" date:
  * - answer modes: convex/formLogic.ts `Presentation` (page, sections, conversational, swipe)
  * - live games and player caps: convex/live.ts, convex/liveLogic.ts (500 players on every plan)
- * - 18 themes: components/forms/formThemes.ts `themePresets`
+ * - 19 themes: components/forms/formThemes.ts `themePresets`
  * - ChatGPT app (MCP): convex/mcp.ts, app/mcp (every plan, drafts first)
  * - integration API and webhooks: convex/http.ts, convex/integrations.ts, convex/webhooks.ts
  * - exports: components/forms/results/Export.tsx (CSV, XLSX, JSON)
@@ -29,7 +29,7 @@ export const compareCopy = {
       ["Main use", "Forms, surveys, quizzes and live games", "Forms and quizzes", "Forms and quizzes", "Conversational forms and quizzes", "Live quizzes and learning games"],
       ["Ways to answer", "Page, sections, one at a time or swipe", "Page and sections", "Page and sections", "One question at a time", "Hosted rounds and self-paced play"],
       ["Live game with PIN and leaderboard", "Yes (room cap 500 players)", "Not a live-game host", "Presentation mode", "Not a live-game host", "Yes"],
-      ["Design controls", "18 themes, colours, fonts and backdrops", "Colours, fonts and header", "Themes and backgrounds", "Themes, media and question layouts", "Game themes, branding by plan"],
+      ["Design controls", "19 themes, colours, fonts and backdrops", "Colours, fonts and header", "Themes and backgrounds", "Themes, media and question layouts", "Game themes, branding by plan"],
       ["Motion and feedback", "Question transitions, sounds and live reveals", "Page flow", "Page flow", "Conversational question flow", "Timers, reveals and podium"],
       ["Open source and self-hostable", "Yes (AGPL)", "No", "No", "No", "No"],
       ["Operated from ChatGPT", "Chaos app (MCP): drafts, publish on request, live games, results", "Not compared", "Not compared", "Not compared", "Not compared"],
@@ -45,7 +45,7 @@ export const compareCopy = {
       ["الاستخدام الأساسي", "نماذج واستطلاعات واختبارات وألعاب مباشرة", "نماذج واختبارات", "نماذج واختبارات", "نماذج محادثة واختبارات", "اختبارات وألعاب تعليمية مباشرة"],
       ["طرق الإجابة", "صفحة أو أقسام أو سؤال في كل مرة أو سحب", "صفحة وأقسام", "صفحة وأقسام", "سؤال في كل مرة", "جولات مباشرة ولعب فردي"],
       ["لعبة مباشرة برمز ولوحة متصدرين", "نعم (حد الغرفة 500 لاعب)", "ليس مضيف ألعاب", "وضع عرض تقديمي", "ليس مضيف ألعاب", "نعم"],
-      ["خيارات التصميم", "18 مظهرًا وألوان وخطوط وخلفيات", "ألوان وخطوط وترويسة", "مظاهر وخلفيات", "مظاهر ووسائط وتخطيطات", "مظاهر وهوية حسب الخطة"],
+      ["خيارات التصميم", "19 مظهرًا وألوان وخطوط وخلفيات", "ألوان وخطوط وترويسة", "مظاهر وخلفيات", "مظاهر ووسائط وتخطيطات", "مظاهر وهوية حسب الخطة"],
       ["الحركة والتفاعل", "انتقالات وأصوات وكشف الإجابات", "صفحات", "صفحات", "تدفق أسئلة المحادثة", "مؤقت وكشف النتائج ومنصة"],
       ["مفتوح المصدر ويمكن استضافته", "نعم (AGPL)", "لا", "لا", "لا", "لا"],
       ["التشغيل من ChatGPT", "تطبيق Chaos ‏(MCP): مسودات، ونشر عند الطلب، وألعاب مباشرة، ونتائج", "لم نقارن", "لم نقارن", "لم نقارن", "لم نقارن"],

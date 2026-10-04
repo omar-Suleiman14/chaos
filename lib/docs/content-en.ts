@@ -29,7 +29,7 @@ export const sectionsEn: DocSection[] = [
             type: "steps",
             items: [
               "Open the **Design** tab.",
-              "Pick a theme. New forms start with **Lilac**, a lilac page with separate white question cards.",
+              "Pick a theme. New forms start with **Flow**: a large title on a light grey page and a rounded white card for each question.",
               "Pick a **Mode**: everything on one page, or one question at a time. See [Ways to answer](/docs/answer-modes).",
             ],
           },
@@ -294,7 +294,7 @@ export const sectionsEn: DocSection[] = [
         blocks: [
           { type: "p", text: "A theme sets the colours, type and shape of what people see. It never changes what you see in Chaos. Open the **Design** tab to work on it. The preview beside it updates as you go." },
           { type: "heading", id: "choose", text: "Choose a theme" },
-          { type: "p", text: "There are 18 themes. **Lilac** is the default. **Paper** is still there if you want the plainer card look. **Evergreen** is the bold green look Chaos started with. Others include **Soft grid**, **Spotlight**, **Terracotta**, **Ocean**, **Midnight**, **Garden**, **Neon**, **Aurora**, **Candy**, **Terminal**, **Newsprint**, **Arcade**, **Velvet** and **Sunset**." },
+          { type: "p", text: "There are 19 themes. **Flow** is the default: forms as if Apple made them, with a large title, rounded question cards, blue checkmarks and a dark mode that follows the device. It matches the Flow look of live games. **Lilac** looks like Google Forms. **Paper** is still there if you want the plainer card look. **Evergreen** is the bold green look Chaos started with. Others include **Soft grid**, **Spotlight**, **Terracotta**, **Ocean**, **Midnight**, **Garden**, **Neon**, **Aurora**, **Candy**, **Terminal**, **Newsprint**, **Arcade**, **Velvet** and **Sunset**." },
           { type: "steps", items: ["Open **Design**.", "Under **Theme**, press a tile.", "Check the preview. On a phone, press **Preview** for a full-screen view."] },
           { type: "heading", id: "look-alikes", text: "Lilac and Banner themes" },
           { type: "p", text: "**Lilac** has a lilac page, a white title card with a coloured strip on top, one card per question, underlined text boxes, round radio buttons and a **Submit** button on the left with **Clear form** on the right. Its type is Roboto, and Arabic text uses Cairo." },

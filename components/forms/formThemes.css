@@ -621,3 +621,104 @@ textarea.form-input { resize: vertical; min-height: 5rem; }
   .form-chrome-microsoft .form-column { padding: 20px 16px; }
   .form-chrome-microsoft .form-title-card + .form-column { margin-top: 0; }
 }
+
+/* Flow: forms as if Apple made them. iOS grouped layout: a large title on the grouped
+   background, each question on its own rounded card, list-row choices with a blue
+   checkmark, filled inputs, a segmented control for scales and a large rounded button.
+   Matches the Flow live-game look (components/live/apple.css). */
+.form-theme.form-chrome-apple {
+  --form-font-body: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", Inter, "Segoe UI", var(--font-cairo), var(--font-plex-arabic), system-ui, sans-serif;
+  --form-font-heading: -apple-system, BlinkMacSystemFont, "SF Pro Display", "SF Pro Text", Inter, "Segoe UI", var(--font-cairo), var(--font-plex-arabic), system-ui, sans-serif;
+  --form-error: #ff3b30;
+  --form-muted: rgba(60, 60, 67, .6);
+  --form-line: rgba(60, 60, 67, .18);
+  --form-line-strong: rgba(60, 60, 67, .29);
+  --form-fill: rgba(118, 118, 128, .12);
+  --form-soft: color-mix(in srgb, var(--form-accent) 12%, transparent);
+  --form-radius: 12px;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -.01em;
+}
+.dark .form-theme.form-chrome-apple.form-appearance-auto {
+  --form-page: #000000; --form-surface: #1c1c1e; --form-text: #ffffff; --form-accent: #0a84ff; --form-on-accent: #ffffff;
+  --form-error: #ff453a; --form-muted: rgba(235, 235, 245, .6); --form-line: rgba(84, 84, 88, .6); --form-line-strong: rgba(84, 84, 88, .9);
+  --form-fill: rgba(118, 118, 128, .24);
+}
+.form-chrome-apple .form-page-body.form-page-body--chrome { max-width: 640px; padding: 28px 16px 4rem; }
+.form-chrome-apple .form-cover-logo { max-height: 44px; margin-bottom: 16px; border-radius: 10px; }
+
+/* Large title */
+.form-chrome-apple .form-title-card { margin: 0 4px 22px; padding: 0; background: none; border: 0; }
+.form-chrome-apple .form-title-card .form-page-title { font-size: clamp(28px, 6vw, 34px); font-weight: 700; letter-spacing: -.025em; line-height: 1.12; }
+.form-chrome-apple .form-title-card p { margin-top: 8px; font-size: 17px; line-height: 1.45; color: var(--form-muted); }
+
+/* Progress */
+.form-chrome-apple .form-progress-track { height: 4px; border-radius: 999px; background: var(--form-fill); overflow: hidden; }
+.form-chrome-apple .form-progress-track > span { background: var(--form-accent); border-radius: inherit; }
+
+/* Grouped cards */
+.form-chrome-apple .form-q-stack { display: grid; gap: 20px; }
+.form-chrome-apple .form-q-stack > * { margin: 0; }
+.form-chrome-apple .form-q-card { padding: 16px 20px; border-radius: 18px; background: var(--form-surface); }
+.form-chrome-apple .form-q-card:not([data-answerable]) { padding: 4px 4px 0; background: none; }
+.form-chrome-apple .form-section-title { border: 0; padding: 12px 0 0; font-size: 22px; font-weight: 700; letter-spacing: -.02em; }
+.form-chrome-apple .form-field { gap: 10px; }
+.form-chrome-apple .form-q-label { font-size: 17px; font-weight: 600; line-height: 1.35; letter-spacing: -.015em; }
+.form-chrome-apple .form-q-description { font-size: 15px; line-height: 1.4; color: var(--form-muted); }
+.form-chrome-apple .form-required { color: var(--form-muted); font-weight: 400; }
+.form-chrome-apple .form-error-text { padding: 0; background: none; color: var(--form-error); font-size: 13px; font-weight: 500; }
+.form-chrome-apple .form-image { border-radius: 12px; }
+
+/* Filled text fields */
+.form-chrome-apple .form-input:not(.form-input--line) { padding: 12px 14px; border: 0; border-radius: 12px; background: var(--form-fill); font-size: 17px; box-shadow: none; }
+.form-chrome-apple .form-input:not(.form-input--line):hover { border: 0; }
+.form-chrome-apple .form-input:not(.form-input--line):focus { box-shadow: 0 0 0 3px color-mix(in srgb, var(--form-accent) 35%, transparent); }
+.form-chrome-apple .form-input[aria-invalid="true"]:not(.form-input--line) { box-shadow: 0 0 0 2px color-mix(in srgb, var(--form-error) 60%, transparent); }
+.form-chrome-apple .form-input::placeholder { color: var(--form-muted); opacity: .8; }
+.form-chrome-apple .form-input--line { color: var(--form-text); border-bottom-color: var(--form-line-strong); }
+.form-chrome-apple .form-input--line:focus { border-bottom-color: var(--form-accent); }
+
+/* Choices: an inset list. Single choice puts a checkmark on the trailing edge; multiple choice uses selection circles. */
+.form-chrome-apple .form-q-card .form-choices:not(.form-choices--immersive) { gap: 0; margin-inline: -20px; }
+.form-chrome-apple .form-q-card .form-choices:not(.form-choices--immersive) .form-choice {
+  min-height: 46px; padding: 11px 20px; border: 0; border-radius: 0; background: none; box-shadow: none; font-size: 17px; line-height: 1.3;
+}
+.form-chrome-apple .form-q-card .form-choices:not(.form-choices--immersive) .form-choice + .form-choice::before {
+  content: ""; position: absolute; top: 0; inset-inline: 20px 0; height: .5px; background: var(--form-line);
+}
+.form-chrome-apple .form-q-card .form-choices:not(.form-choices--immersive) .form-choice:has(.form-choice-mark--box) + .form-choice::before { inset-inline-start: 56px; }
+.form-chrome-apple .form-q-card .form-choice:hover { background: none; }
+.form-chrome-apple .form-q-card .form-choice:active { transform: none; background: var(--form-fill); }
+.form-chrome-apple .form-q-card .form-choice[data-checked="true"] { background: none; box-shadow: none; }
+.form-chrome-apple .form-q-card .form-choice:has(input:focus-visible) { outline-offset: -3px; border-radius: 10px; }
+.form-chrome-apple .form-choice-mark:not(.form-choice-mark--box) { order: 2; margin-inline-start: auto; width: 22px; height: 22px; border: 0; background: none; color: transparent; transform: none; }
+.form-chrome-apple .form-choice-mark:not(.form-choice-mark--box) svg { width: 18px; height: 18px; stroke-width: 2.6; }
+.form-chrome-apple .form-choice[data-checked="true"] .form-choice-mark:not(.form-choice-mark--box) { background: none; color: var(--form-accent); transform: none; animation: form-pop .3s var(--form-ease) both; }
+.form-chrome-apple .form-choice-mark--box { width: 22px; height: 22px; border: 1.5px solid var(--form-line-strong); border-radius: 999px; }
+.form-chrome-apple .form-choice[data-checked="true"] .form-choice-mark--box { border-color: var(--form-accent); background: var(--form-accent); color: #fff; transform: none; }
+.form-chrome-apple .form-choices--immersive .form-choice { border: 0; border-radius: 14px; background: var(--form-surface); box-shadow: none; font-size: 17px; }
+.form-chrome-apple .form-choices--immersive .form-choice[data-checked="true"] { box-shadow: 0 0 0 2px var(--form-accent); background: var(--form-surface); }
+.form-chrome-apple .form-choice-key { border: 0; border-radius: 999px; background: var(--form-fill); color: var(--form-text); font-weight: 600; }
+.form-chrome-apple .form-choice[data-checked="true"] .form-choice-key { background: var(--form-accent); color: #fff; }
+
+/* Scales: a segmented control. Stars stay stars, in the accent. */
+.form-chrome-apple .form-scale { flex-wrap: nowrap; gap: 2px; padding: 2px; border-radius: 10px; background: var(--form-fill); overflow-x: auto; }
+.form-chrome-apple .form-scale-cell { flex: 1 0 36px; min-height: 34px; border: 0; border-radius: 8px; background: none; font-size: 15px; font-weight: 500; font-variant-numeric: tabular-nums; transform: none; transition: background .2s ease, box-shadow .2s ease; }
+.form-chrome-apple .form-scale-cell:hover { transform: none; }
+.form-chrome-apple .form-scale-cell[data-checked="true"] { background: var(--form-surface); color: var(--form-text); box-shadow: 0 3px 8px rgba(0, 0, 0, .12), 0 3px 1px rgba(0, 0, 0, .04); transform: none; font-weight: 600; }
+.dark .form-chrome-apple.form-appearance-auto .form-scale-cell[data-checked="true"] { background: #636366; }
+.form-chrome-apple .form-star[data-filled="true"] { color: var(--form-accent); }
+.form-chrome-apple .form-drop, .form-chrome-apple .form-rank-item { border-radius: 12px; }
+
+/* Buttons */
+.form-chrome-apple .form-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 24px; }
+.form-chrome-apple .form-actions-start { display: flex; flex: 1; gap: 12px; align-items: center; }
+.form-chrome-apple .form-btn { min-height: 50px; padding: 0 28px; border: 0; border-radius: 14px; font-size: 17px; font-weight: 600; letter-spacing: -.01em; box-shadow: none; }
+.form-chrome-apple .form-btn:hover:not(:disabled) { transform: none; box-shadow: none; filter: brightness(1.08); }
+.form-chrome-apple .form-btn:active:not(:disabled) { transform: scale(.98); opacity: .85; filter: none; }
+.form-chrome-apple .form-btn-ghost { background: var(--form-fill); color: var(--form-accent); }
+.form-chrome-apple .form-btn-ghost:hover:not(:disabled) { background: var(--form-fill); filter: brightness(.97); }
+.form-chrome-apple .form-btn-sm { min-height: 32px; padding: 0 12px; border-radius: 999px; font-size: 15px; }
+.form-chrome-apple .form-btn-arrow { display: none; }
+.form-chrome-apple .form-actions-start .form-btn:not(.form-btn-ghost) { flex: 1; max-width: 360px; }
+@media (max-width: 560px) { .form-chrome-apple .form-actions-start .form-btn:not(.form-btn-ghost) { max-width: none; } }

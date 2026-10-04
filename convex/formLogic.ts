@@ -134,8 +134,8 @@ export const themePresetIds = [
 export type ThemePresetId = (typeof themePresetIds)[number];
 /** "roboto" loads Roboto (Google Forms style); "segoe" is the Segoe UI system stack and bundles nothing. Both fall back to Cairo for Arabic. */
 export type ThemeFont = "sans" | "serif" | "mono" | "display" | "rounded" | "editorial" | "elegant" | "roboto" | "segoe";
-/** Page chrome that some looks add on top of the palette: question cards with a title strip, or a banner header with numbered questions. Absent means the usual layouts. */
-export type ThemeChrome = "google" | "microsoft";
+/** Page chrome that some looks add on top of the palette: question cards with a title strip, a banner header with numbered questions, or iOS grouped cards. Absent means the usual layouts. */
+export type ThemeChrome = "google" | "microsoft" | "apple";
 /** Start screen shown before the first question; absent or "none" skips it. */
 export type ThemeCover = "none" | "classic" | "split" | "poster" | "minimal" | "terminal" | "arcade" | "editorial" | "scroll";
 export type ThemeBackdrop = "none" | "dots" | "grid" | "gradient" | "aurora" | "noise" | "stripes" | "scanlines";
@@ -172,11 +172,11 @@ export const chaosTheme: FormTheme = {
   // Sound is opt-in: new forms are silent until the creator turns it on in Design.
   cover: "poster", backdrop: "none", buttons: "brutal", appearance: "auto", sound: "off",
 };
-/** Flow, the clean Apple-style look live games use by default; new forms and quizzes start with it. */
+/** Flow: forms as if Apple made them, matching the Flow live-game look. The default for new forms, quizzes and templates. */
 export const flowTheme: FormTheme = {
   version: 1, preset: "flow", accent: "#007aff", background: "plain", font: "segoe", radius: "large",
-  pageColor: "#f2f2f7", surfaceColor: "#ffffff", textColor: "#1d1d1f", layout: "card",
-  cover: "none", backdrop: "none", buttons: "solid", appearance: "auto", sound: "off",
+  pageColor: "#f2f2f7", surfaceColor: "#ffffff", textColor: "#1d1d1f", layout: "flat",
+  cover: "none", backdrop: "none", buttons: "solid", appearance: "auto", sound: "off", chrome: "apple",
 };
 /** Paper, the Google Forms look. */
 export const paperTheme: FormTheme = {

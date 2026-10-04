@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { builtInTemplates } from "@/convex/formTemplates";
-import { checkDefinition, googleFormsTheme, isRtl, missingTranslations } from "@/convex/formLogic";
-import { contrastIssues, themeFromPreset } from "@/components/forms/formThemes";
+import { checkDefinition, flowTheme, isRtl, missingTranslations } from "@/convex/formLogic";
+import { contrastIssues } from "@/components/forms/formThemes";
 
 describe("built-in templates", () => {
   it("offers at least 20 templates with unique ids and names", () => {
@@ -34,19 +34,9 @@ describe("built-in templates", () => {
     expect(contrastIssues(template.definition.theme)).toEqual([]);
   });
 
-  it("uses the Google Forms style for most templates", () => {
-    const google = builtInTemplates.filter((t) => t.definition.theme.preset === "google-forms");
-    expect(google.length).toBeGreaterThan(builtInTemplates.length / 2);
-    expect(builtInTemplates.find((t) => t.id === "feedback")!.definition.theme).toEqual(googleFormsTheme);
-  });
-
-  it("keeps copied preset palettes equal to the presets", () => {
-    for (const template of builtInTemplates) {
-      const theme = template.definition.theme;
-      if (theme.preset === "ocean" || theme.preset === "garden" || theme.preset === "terracotta") {
-        expect(theme).toEqual({ ...themeFromPreset(theme.preset), sound: "off" });
-      }
-    }
+  it("starts every template on Flow", () => {
+    expect(builtInTemplates.every((t) => t.definition.theme.preset === "flow")).toBe(true);
+    expect(builtInTemplates.find((t) => t.id === "feedback")!.definition.theme).toEqual(flowTheme);
   });
 
   it("gives the quizzes a complete answer key", () => {
