@@ -316,3 +316,5 @@ html[lang="ar"] .site-ui :is(h1, h2, h3, .site-brand) { letter-spacing: 0; }
 .site-product-definition { max-width: 780px; margin: 24px auto 0; color: var(--site-muted); font-size: 16px; line-height: 1.65; }
 
 .site-trust-strip { list-style: none; padding: 0; margin: 22px auto; display: flex; justify-content: center; gap: 12px 24px; flex-wrap: wrap; font-size: 14px; color: var(--site-muted); }
+
+.site-capability-grid { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(auto-fit,minmax(130px,1fr)); gap: 14px; }.site-capability-grid li { padding: 14px; border: 1px solid var(--site-border); border-radius: 12px; }
