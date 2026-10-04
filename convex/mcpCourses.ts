@@ -1,4 +1,6 @@
 // Actor comes only from the secret-protected MCP envelope.
+import { courseModule } from "./learnAssetModel";
+import { setCourseModules, readCourseProgress } from "./courses";
 import { v } from "convex/values";
 import { internalMutation, internalQuery } from "./_generated/server";
 import { requireLearnActor } from "./mcpLearn";
@@ -14,7 +16,7 @@ export const create = internalMutation({
 });
 export const read = internalQuery({
  args: { userId: v.string(), courseId: v.id("learnCollections") },
- returns: v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), coverY: v.optional(v.number()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()), visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), canPrivate: v.boolean(), lessons: v.array(v.object({ id: v.id("lessons"), title: v.string(), description: v.string(), published: v.boolean(), changed: v.boolean(), blocks: v.number() })), revision: v.number() }),
+ returns: v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), coverY: v.optional(v.number()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()), visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), canPrivate: v.boolean(), modules: v.array(courseModule), lessons: v.array(v.object({ id: v.id("lessons"), title: v.string(), description: v.string(), published: v.boolean(), changed: v.boolean(), blocks: v.number() })), revision: v.number() }),
  handler: async (ctx, { userId, ...input }) => {
  const actor = await requireLearnActor(ctx, userId);
  return await getCourse(ctx, input, actor);
@@ -78,3 +80,6 @@ export const unpublish = internalMutation({
  await unpublishCourse(ctx, input, actor); return { ok: true };
  },
 });
+
+export const modules = internalMutation({ args: { userId: v.string(), courseId: v.id("learnCollections"), modules: v.array(courseModule) }, returns: v.object({ ok: v.boolean() }), handler: async (ctx, { userId, ...args }) => { const actor = await requireLearnActor(ctx, userId); await setCourseModules(ctx, args, actor); return { ok: true }; } });
+export const progress = internalQuery({ args: { userId: v.string(), courseId: v.id("learnCollections") }, returns: v.object({ lessons: v.array(v.object({ lessonId: v.id("lessons"), completed: v.boolean(), percent: v.number() })) }), handler: async (ctx, { userId, ...args }) => { const actor = await requireLearnActor(ctx, userId); return { lessons: await readCourseProgress(ctx, args, actor) }; } });
