@@ -11,7 +11,7 @@ export const LESSON_CUSTOM_BLOCK_TYPES = [
   "lessonYoutube",
   "lessonEquation",
   "lessonTable",
-  "lessonQuiz",
+  "lessonQuiz", "lessonFlashcards", "flashcards",
   "image", "source", "diagram", "youtube", "equation", "table", "quiz",
 ] as const;
 export type LessonEditorInline = { type: "text"; text: string; styles?: Record<string, string | boolean> } | { type: "link"; href: string; content: { type: "text"; text: string; styles?: Record<string, string | boolean> }[] };
@@ -68,6 +68,7 @@ const common = {
 };
 const text = { ...common, text: str, inline: inline.optional() };
 const blockSchema = z.discriminatedUnion("type", [
+  z.strictObject({ ...common, type: z.literal("flashcards"), setId: id.transform(v => v as Id<"flashcardSets">) }),
   z.strictObject({ ...text, type: z.literal("callout"), tone: z.enum(["info", "tip", "warning", "clinical", "key"]) }),
   z.strictObject({ ...text, type: z.literal("code"), language: str }),
   z.strictObject({ ...text, type: z.literal("quote") }),
@@ -163,7 +164,7 @@ const customFields: Record<string, string[]> = {
   image: ["sourceId", "alt", "caption", "credit", "creditUrl", "figureKind", "annotations", "name", "showPreview", "previewWidth"],
   youtube: ["videoId", "start", "end", "caption"],
   equation: ["text", "display"], source: ["sourceId", "label"],
-  diagram: ["format", "text"], table: ["headerRows"], quiz: [],
+  diagram: ["format", "text"], table: ["headerRows"], quiz: [], flashcards: ["setId"],
 };
 const customTypes: Record<string, string> = {
   lessonImage: "image",
@@ -173,6 +174,7 @@ const customTypes: Record<string, string> = {
   lessonEquation: "equation",
   lessonTable: "table",
   lessonQuiz: "quiz",
+  lessonFlashcards: "flashcards", flashcards: "flashcards",
   image: "image", source: "source", diagram: "diagram", youtube: "youtube", equation: "equation", table: "table", quiz: "quiz",
 };
 function problem(

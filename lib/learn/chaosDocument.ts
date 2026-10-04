@@ -18,6 +18,7 @@ export type Locator =
 export interface ChaosCitation { sourceId: string; locator: Locator }
 interface Common { id: string; parentId?: string; citations: ChaosCitation[]; conceptIds: string[] }
 export type ChaosBlock =
+  | (Common & { type: "flashcards"; setId: string })
   | (Common & { type: "paragraph"; text: string })
   | (Common & { type: "heading"; text: string; level: 1 | 2 | 3 })
   | (Common & { type: "list"; text: string; style: "bullet" | "number" | "check"; checked?: boolean })
@@ -90,6 +91,7 @@ export function toChaosDocument(content: unknown, options: ToChaosOptions = {}):
       const text = inline ? inlineText(inline) : "";
       const p = block.props;
       switch (block.type) {
+        case "lessonFlashcards": case "flashcards": out.push({ ...common, type: "flashcards", setId: String(p.setId ?? "") }); break;
         case "paragraph": out.push({ ...common, type: "paragraph", text }); break;
         case "heading": out.push({ ...common, type: "heading", text, level: Math.min(3, Math.max(1, Number(p.level) || 1)) as 1 | 2 | 3 }); break;
         case "bulletListItem": out.push({ ...common, type: "list", style: "bullet", text }); break;
@@ -151,6 +153,7 @@ export function fromChaosDocument(document: ChaosDocument, imageUrl: (sourceId: 
     const withCites = (text: string) => [...textContent(text), ...(cites.length ? [{ type: "text", text: " ", styles: {} }, ...cites] : [])] as Inline[];
     let block: Block;
     switch (b.type) {
+      case "flashcards": block = { id: b.id, type: "lessonFlashcards", props: { setId: b.setId }, children: [] }; break;
       case "paragraph": block = { id: b.id, type: "paragraph", props: {}, content: withCites(b.text), children: [] }; break;
       case "heading": block = { id: b.id, type: "heading", props: { level: b.level }, content: withCites(b.text), children: [] }; break;
       case "list": block = { id: b.id, type: b.style === "bullet" ? "bulletListItem" : b.style === "number" ? "numberedListItem" : "checkListItem", props: b.style === "check" ? { checked: !!b.checked } : {}, content: withCites(b.text), children: [] }; break;
@@ -228,6 +231,11 @@ export function toDurableDocument(input: unknown, original?: LessonDocument): Le
       props.label = props.locator ?? props.label ?? "";
       delete props.locator;
     }
+    if (type === "lessonFlashcards" || type === "flashcards") {
+      type = "lessonFlashcards";
+      props.lessonData = JSON.stringify({ setId: props.setId });
+      delete props.setId;
+    }
     if (type === "lessonQuiz" || type === "quiz") {
       type = "lessonQuiz";
       const kind = props.assetKind; const id = props.assetId;
@@ -271,6 +279,7 @@ export function fromDurableDocument(document: LessonDocument): Block[] {
     if (b.type === "equation") content = b.inline ? b.inline.map(r => ({ type: "text", text: r.text, styles: r.marks ?? {} })) : [{ type: "text", text: b.text, styles: {} }];
     if (b.type === "diagram") { type = "codeBlock"; props.language = "mermaid"; content = [{ type: "text", text: b.text, styles: {} }]; }
     if (b.type === "table") content = { type: "tableContent", headerRows: b.headerRows, rows: b.rows.map(row => ({ cells: row.map(text => [{ type: "text", text, styles: {} }]) })) };
+    if (b.type === "flashcards") { type = "lessonFlashcards"; props.setId = b.setId; }
     if (b.type === "quiz") { type = "lessonQuiz"; Object.assign(props, { assetKind: b.asset.kind, assetId: b.asset.id }); }
     return { id: b.id, type, props, ...(content === undefined ? {} : { content }), children: visit(item.children) };
   });

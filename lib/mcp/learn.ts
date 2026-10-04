@@ -16,6 +16,7 @@ const common = { id: blockId, parentId: blockId.optional(), citations: z.array(c
 const inline = z.object({ text: z.string(), marks: z.object({ bold: z.boolean().optional(), italic: z.boolean().optional(), underline: z.boolean().optional(), strike: z.boolean().optional(), code: z.boolean().optional(), textColor: z.string().optional(), backgroundColor: z.string().optional() }).optional(), href: z.string().optional() });
 const text = { ...common, text: z.string().max(LEARN_LIMITS.text), inline: z.array(inline).optional() };
 export const learnBlockSchema = z.discriminatedUnion("type", [
+  z.object({ ...common, type: z.literal("flashcards"), setId: ref }),
   z.object({ ...text, type: z.literal("callout"), tone: z.enum(["info", "tip", "warning", "clinical", "key"]) }),
   z.object({ ...text, type: z.literal("code"), language: z.string() }),
   z.object({ ...text, type: z.literal("quote") }),

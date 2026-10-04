@@ -316,6 +316,13 @@ export const LessonQuiz = createReactBlockSpec(
   return <div contentEditable={false} className="lx-callout" data-tone="info"><strong>Quiz</strong>{editor.isEditable ? <div className="lx-form"><select aria-label="Quiz type" value={block.props.assetKind} onChange={e=>editor.updateBlock(block,{props:{assetKind:e.target.value as "form"|"quiz"}})}><option value="form">Quiz form</option><option value="quiz">Classic quiz</option></select><input aria-label="Quiz ID" placeholder="Paste the ID of a published quiz" value={block.props.assetId} onChange={e=>editor.updateBlock(block,{props:{assetId:e.target.value.trim()}})}/></div> : <span>{block.props.assetId}</span>}</div>;
  } }
 );
+export const LessonFlashcards = createReactBlockSpec(
+  { type: "lessonFlashcards", propSchema: { setId: { default: "" } }, content: "none" },
+  { render: function FlashcardsBlock({ block, editor }) {
+    const t = useCopy({ en: { title: "Flashcards", id: "Flashcard set ID", hint: "Paste the ID of a published flashcard set" }, ar: { title: "البطاقات", id: "معرّف مجموعة البطاقات", hint: "الصق معرّف مجموعة بطاقات منشورة" } });
+    return <div contentEditable={false} className="lx-callout" data-tone="tip"><strong>{t.title}</strong>{editor.isEditable ? <input aria-label={t.id} placeholder={t.hint} value={block.props.setId} onChange={e => editor.updateBlock(block, { props: { setId: e.target.value.trim() } })} /> : <span>{block.props.setId}</span>}</div>;
+  } },
+);
 export const lessonSchema = BlockNoteSchema.create({
   blockSpecs: {
     ...defaultBlockSpecs,
@@ -326,6 +333,7 @@ export const lessonSchema = BlockNoteSchema.create({
     youtube: YouTube(),
     source: SourceBlock(),
     lessonQuiz: LessonQuiz(),
+    lessonFlashcards: LessonFlashcards(),
   },
   inlineContentSpecs: { ...defaultInlineContentSpecs, citation: Citation },
 });
