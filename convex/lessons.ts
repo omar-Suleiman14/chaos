@@ -177,16 +177,30 @@ export const publish = mutation({ args: { lessonId: v.id("lessons"), expectedRev
   const { identity } = await requireActiveUser(ctx);
   return publishLessonForActor(ctx, identity.subject, args);
 } });
-export async function publishLessonForActor(ctx: MutationCtx, actor: string, args: { lessonId: Id<"lessons">; expectedRevision: number; visibility: Doc<"lessons">["visibility"]; note?: string }) {
+/** The owner's non-archived courses whose draft outline includes this lesson. */
+export async function coursesContainingLesson(ctx: QueryCtx | MutationCtx, ownerId: string, lessonId: Id<"lessons">) {
+  const courses = await ctx.db.query("learnCollections").withIndex("by_ownerId_and_updatedAt", q => q.eq("ownerId", ownerId)).order("desc").take(500);
+  return courses.filter(c => !c.archived && (c.lessonIds ?? c.items.flatMap(i => (i.kind === "lesson" ? [i.id] : []))).includes(lessonId));
+}
+
+/**
+ * Lessons in a course go live with the course: until the course is published, its lessons can't
+ * be published on their own. Once it is, publishing a lesson also updates the live course.
+ * `viaCourse` is set by course publishing, which publishes every lesson as one action.
+ */
+export async function publishLessonForActor(ctx: MutationCtx, actor: string, args: { lessonId: Id<"lessons">; expectedRevision: number; visibility: Doc<"lessons">["visibility"]; note?: string }, viaCourse = false) {
   const lesson = await lessonAccessForActor(ctx, actor, args.lessonId, true);
   if (actor !== lesson.ownerId) throw new Error("Only the owner can publish");
   revisionCheck(lesson, args.expectedRevision);
   if (lesson.communityState !== "ok" || lesson.status !== "active") throw new Error("Resolve moderation or archive state before publishing");
   if (args.note !== undefined && args.note.length > 2000) throw new Error("Version note must contain at most 2000 characters");
+  const courses = viaCourse ? [] : await coursesContainingLesson(ctx, lesson.ownerId, lesson._id);
+  const draftCourse = courses.find(c => !c.publishedVersionId);
+  if (draftCourse) throw new Error(`COURSE_UNPUBLISHED: Publish the course "${draftCourse.metadata.title}" first. Its lessons go live with it.`);
   await requireVisibilityAllowed(ctx, lesson.ownerId, args.visibility);
   const problems = await publicationProblems(ctx, lesson);
   if (problems.length) return { ok: false as const, problems };
-  await consumeRate(ctx, `learn:publish:${actor}`, LEARN_WRITE_LIMITS.publicationsPerHour, 3_600_000);
+  if (!viaCourse) await consumeRate(ctx, `learn:publish:${actor}`, LEARN_WRITE_LIMITS.publicationsPerHour, 3_600_000);
   const last = await ctx.db.query("lessonVersions").withIndex("by_lessonId_and_number", q => q.eq("lessonId", lesson._id)).order("desc").first();
   const curriculumMappings = (await ctx.db.query("lessonCurriculumMappings").withIndex("by_lessonId_and_nodeId", q => q.eq("lessonId", lesson._id)).take(100)).map(({ versionId, nodeId, conceptKeys, blockIds }) => ({ versionId, nodeId, conceptKeys, blockIds }));
   const versionId = await ctx.db.insert("lessonVersions", { ...(args.note?.trim() ? { note: args.note.trim() } : {}), visibility: args.visibility, curriculumMappings, lessonId: lesson._id, number: (last?.number ?? 0) + 1, metadata: lesson.metadata, document: lesson.draft, authorId: actor, publishedAt: Date.now() });
@@ -194,6 +208,14 @@ export async function publishLessonForActor(ctx: MutationCtx, actor: string, arg
   await authorDb(ctx).patch("lessons", lesson._id, { publishedVersionId: versionId, visibility: args.visibility, searchText, revision: lesson.revision + 1, updatedAt: Date.now() });
   await enqueueLearnWebhookEvent(ctx, { event: "lesson.published", lessonId: lesson._id, versionId, operationId: `version:${versionId}`, revision: lesson.revision + 1 });
   await recordPublicationAction(ctx, { lessonId: lesson._id, actorId: actor, action: "publish", revision: lesson.revision + 1, versionId, beforeVisibility: lesson.visibility, afterVisibility: args.visibility, reason: args.note?.trim() || "Explicitly published an immutable lesson version." });
+  // Point each live course that already contains this lesson at the new version.
+  for (const course of courses) {
+    const live = course.publishedVersionId ? await ctx.db.get("collectionVersions", course.publishedVersionId) : null;
+    if (!live || !live.items.some(i => i.kind === "lesson" && i.id === lesson._id)) continue;
+    const items = live.items.map(i => (i.kind === "lesson" && i.id === lesson._id ? { ...i, versionId } : i));
+    await ctx.db.patch("collectionVersions", live._id, { items });
+    await authorDb(ctx).patch("learnCollections", course._id, { items, updatedAt: Date.now() });
+  }
   return { ok: true as const, versionId, revision: lesson.revision + 1 };
 }
 

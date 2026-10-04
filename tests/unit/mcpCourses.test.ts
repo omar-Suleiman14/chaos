@@ -30,7 +30,7 @@ it("registers course review annotations and strips client actor injection", asyn
   expect(byName[name].outputSchema).toBeDefined();
  }
  expect(byName.publish_course.description).toContain("Only on explicit user request");
- expect(byName.publish_course.description).toContain("Never publishes lesson drafts");
+ expect(byName.publish_course.description).toContain("all its lessons together");
  expect(byName.publish_course.description).toContain("do not automatically retry");
  expect(byName.create_course.description).toContain("Never publishes");
  expect(byName.add_course_lesson.description).toContain("Does not publish");
@@ -94,7 +94,7 @@ it("create_full_course builds the course, every lesson with its blocks, then pub
   const result = await client.callTool({ name: "create_full_course", arguments: { title: "Stars", publish: true, icon: "🔭", coverUrl: "/covers/webb/carina.jpg", userId: "foreign", lessons: [{ title: "One", document: doc }, { title: "Two", document: doc }] } });
   expect(result.isError).toBeFalsy();
   expect(result.structuredContent).toMatchObject({ courseId: "course1", lessonIds: ["lesson1", "lesson2"], published: true });
-  expect(call.mock.calls.map(([t]) => t)).toEqual(["create_course", "update_course", "add_course_lesson", "save_lesson_draft", "add_course_lesson", "save_lesson_draft", "get_lesson", "publish_lesson", "get_lesson", "publish_lesson", "publish_course"]);
+  expect(call.mock.calls.map(([t]) => t)).toEqual(["create_course", "update_course", "add_course_lesson", "save_lesson_draft", "add_course_lesson", "save_lesson_draft", "publish_course"]);
   expect(call).toHaveBeenCalledWith("update_course", { courseId: "course1", coverUrl: "/covers/webb/carina.jpg", icon: "🔭" });
   expect(call).toHaveBeenLastCalledWith("publish_course", { courseId: "course1", visibility: "public" });
   for (const [, input] of call.mock.calls) expect(input).not.toHaveProperty("userId");

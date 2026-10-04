@@ -68,7 +68,6 @@ it("queues a published course and its lessons once each", async () => {
   const lessonId = await owner.mutation(api.courses.addLesson, { courseId, title: "Lesson" });
   const lesson = await owner.query(api.lessons.getDraft, { lessonId });
   await owner.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: lesson.revision, document, metadata: { ...lesson.metadata, indexing: "index" } });
-  await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 1, visibility: "public" });
   await owner.mutation(api.courses.publish, { courseId, visibility: "public" });
   expect(await queued(t)).toEqual([`https://chaos.fail/learn/${lessonId}`, `https://chaos.fail/learn/courses/${courseId}`].sort());
   await clear(t);

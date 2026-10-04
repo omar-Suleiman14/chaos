@@ -1,7 +1,9 @@
 "use client";
 
 import { useEffect } from "react";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
 import LessonReader, { LockedCourseLesson, UnavailableLesson } from "@/components/learn/reader/LessonReader";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { useLearnViewer, useLesson, useCourseLesson } from "@/lib/learn/data";
@@ -17,6 +19,10 @@ export default function LessonPage({ id, initialLesson }: { id: string; initialL
   const params = useSearchParams();
   const preview = params.get("preview") === "draft";
   const courseId = preview ? null : params.get("course");
+  // Lessons in a published course open inside it, so the course's Start step applies to plain links too.
+  const router = useRouter();
+  const homeCourse = useQuery(api.courses.courseForLesson, preview || courseId ? "skip" : { lessonId: id });
+  useEffect(() => { if (homeCourse) router.replace(`/learn/${id}?course=${homeCourse}`); }, [homeCourse, id, router]);
   const liveLesson = useLesson(courseId ? undefined : id);
   const courseLesson = useCourseLesson(courseId, id);
   const lesson = courseId ? courseLesson : liveLesson !== undefined ? liveLesson : initialLesson;
@@ -25,7 +31,7 @@ export default function LessonPage({ id, initialLesson }: { id: string; initialL
   const isOwner = !!lesson && lesson.ownerId === viewer?.id;
   const title = lesson ? (preview && isOwner ? lesson.draft : lesson.published ?? lesson.draft).meta.title : "";
   useEffect(() => { if (title) document.title = `${title} · Chaos`; }, [title]);
-  if (lesson === undefined) return <PageSkeleton label={t.loading} />;
+  if (lesson === undefined || homeCourse) return <PageSkeleton label={t.loading} />;
   // Removed lessons stay visible to their owner (with the moderation notice) and nobody else.
   if (lesson === null || (!isOwner && (lesson.moderation === "removed" || lesson.moderation === "unavailable"))) return <UnavailableLesson backHref={viewer?.signedIn ? "/dashboard/learn" : "/"} />;
   if (!isOwner && !lesson.published) return <UnavailableLesson backHref={viewer?.signedIn ? "/dashboard/learn" : "/"} />;

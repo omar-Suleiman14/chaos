@@ -30,7 +30,7 @@ const copy = {
     publish: "Publish", update: "Publish changes", view: "View course", unpublish: "Unpublish", archive: "Archive",
     publishTitle: "Publish this course", who: "Who can take it", public: "Public", publicHelp: "Anyone can find and take it, free. Recommended.",
     private: "Private", privateHelp: "Only you and people you share lessons with. Part of Chaos Business.", business: "Business only",
-    publishNote: "This publishes the course outline and metadata using already published lesson versions. Lesson drafts stay private.", confirm: "Publish", cancel: "Cancel", publishing: "Publishing…",
+    publishNote: "This publishes the course and all its lessons together, with the same visibility. Learners start the course to unlock its lessons.", confirm: "Publish", cancel: "Cancel", publishing: "Publishing…",
     problems: "Fix these lessons first:", saved: "Saved", failed: "Couldn't save. Try again.",
   },
   ar: {
@@ -42,12 +42,12 @@ const copy = {
     publish: "انشر", update: "انشر التغييرات", view: "اعرض الدورة", unpublish: "ألغِ النشر", archive: "أرشف",
     publishTitle: "انشر هذه الدورة", who: "من يمكنه أخذها", public: "عامة", publicHelp: "يمكن لأي أحد إيجادها وأخذها مجانًا. موصى به.",
     private: "خاصة", privateHelp: "أنت ومن تشاركهم الدروس فقط. جزء من Chaos للأعمال.", business: "للأعمال فقط",
-    publishNote: "ينشر هذا مخطط الدورة وبياناتها باستخدام نسخ الدروس المنشورة بالفعل. تبقى مسودات الدروس خاصة.", confirm: "انشر", cancel: "إلغاء", publishing: "جارٍ النشر…",
+    publishNote: "ينشر هذا الدورة وكل دروسها معًا وبنفس الظهور. يبدأ المتعلمون الدورة لفتح دروسها.", confirm: "انشر", cancel: "إلغاء", publishing: "جارٍ النشر…",
     problems: "أصلح هذه الدروس أولًا:", saved: "حُفظ", failed: "تعذر الحفظ. حاول مجددًا.",
   },
 };
 
-const message = (err: unknown) => (err instanceof Error ? err.message.replace(/^.*?(BUSINESS_REQUIRED|VALIDATION_FAILED|EMPTY|MODERATED|NOT_FOUND): /, "") : String(err));
+const message = (err: unknown) => (err instanceof Error ? err.message.replace(/^.*?(BUSINESS_REQUIRED|VALIDATION_FAILED|EMPTY|MODERATED|NOT_FOUND|ASSESSMENT_UNPUBLISHED): /, "") : String(err));
 
 export default function CourseBuilder({ params }: { params: Promise<{ id: string }> }) {
   const { id } = use(params);

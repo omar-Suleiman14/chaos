@@ -31,7 +31,6 @@ it("creates a course like a form, publishes it publicly with its lessons, and ke
   expect(draft.canPrivate).toBe(false);
   expect(draft.icon).toBe("🩺");
   await expect(owner.mutation(api.courses.publish, { courseId, visibility: "private" })).rejects.toThrow("BUSINESS_REQUIRED");
-  for (const lessonId of [first, second]) await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 1, visibility: "public" });
   expect(await owner.mutation(api.courses.publish, { courseId, visibility: "public" })).toEqual({ ok: true });
 
   const pub = await t.query(api.courses.getPublic, { courseId });

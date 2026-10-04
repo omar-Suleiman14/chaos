@@ -39,7 +39,6 @@ it("indexes published courses, excludes drafts and revoked creators", async () =
     (await t.query(api.courseDirectory.browse, { ...args, text: undefined }))
       .page,
   ).toEqual([]);
-  await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 1, visibility: "public" });
   expect(
     await owner.mutation(api.courses.publish, {
       courseId,

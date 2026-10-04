@@ -17,7 +17,6 @@ async function publishedCourse() {
   const second = await teacher.mutation(api.courses.addLesson, { courseId, title: "Portal hypertension" });
   for (const lessonId of [first, second]) {
     await teacher.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: 0, document: { schemaVersion: 1, blocks: [paragraph("p", "Text")] } });
-    await teacher.mutation(api.lessons.publish, { lessonId, expectedRevision: 1, visibility: "public" });
   }
   expect(await teacher.mutation(api.courses.publish, { courseId, visibility: "public" })).toEqual({ ok: true });
   return { t, teacher, student, courseId, first, second };

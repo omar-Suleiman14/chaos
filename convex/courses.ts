@@ -7,7 +7,7 @@ import { v, type Infer } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser, isPaidPlan, creatorRestricted } from "./authz";
-import { createLessonForActor } from "./lessons";
+import { coursesContainingLesson, createLessonForActor, publishLessonForActor } from "./lessons";
 import { requireVisibilityAllowed } from "./plans";
 import { visibility } from "./learnModel";
 import { recordAssetPublicationAction } from "./learnPublicationAudit";
@@ -147,8 +147,8 @@ export const addLesson = mutation({
 });
 
 /**
- * Publish the course and every lesson in it with the course's visibility. Lessons with
- * unpublished changes are published first; problems come back per lesson.
+ * Publish the course and every lesson in it with the course's visibility, as one action.
+ * Lessons with unpublished changes are published first; problems come back per lesson.
  */
 const publishArgs = v.object({ courseId: v.id("learnCollections"), visibility });
 export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publishArgs>, asActor?: string) {
@@ -178,10 +178,15 @@ export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publish
         problems.push({ lessonId: id, title: lesson.metadata.title, message: "Lesson is under moderation. Resolve its moderation state or remove it from the course outline before publishing." });
         continue;
       }
-      const pub = lesson.publishedVersionId ? await ctx.db.get("lessonVersions", lesson.publishedVersionId) : null;
-      if (!pub || pub.lessonId !== id) { problems.push({ lessonId: id, title: lesson.metadata.title, message: "Publish this lesson explicitly before adding it to a course publication." }); continue; }
-      if (args.visibility === "public" && (lesson.visibility !== "public" || pub.visibility !== undefined && pub.visibility !== "public")) { problems.push({ lessonId: id, title: pub.metadata.title, message: "This lesson must be explicitly published publicly for a public course." }); continue; }
-      items.push({ kind: "lesson", id, versionId: lesson.publishedVersionId! });
+      let pub = lesson.publishedVersionId ? await ctx.db.get("lessonVersions", lesson.publishedVersionId) : null;
+      const changed = !pub || pub.lessonId !== id || JSON.stringify(pub.document) !== JSON.stringify(lesson.draft) || JSON.stringify(pub.metadata) !== JSON.stringify(lesson.metadata);
+      const wrongVisibility = !!pub && (lesson.visibility !== args.visibility || (pub.visibility ?? "public") !== args.visibility);
+      if (changed || wrongVisibility) {
+        const result = await publishLessonForActor(ctx, actor, { lessonId: id, expectedRevision: lesson.revision, visibility: args.visibility }, true);
+        if (!result.ok) { problems.push({ lessonId: id, title: lesson.metadata.title, message: result.problems.map(p => p.message).join(" ") }); continue; }
+        pub = await ctx.db.get("lessonVersions", result.versionId);
+      }
+      items.push({ kind: "lesson", id, versionId: pub!._id });
     }
     if (problems.length) return { ok: false as const, problems };
     const last = await ctx.db.query("collectionVersions").withIndex("by_collectionId_and_number", (q) => q.eq("collectionId", row._id)).order("desc").first();
@@ -392,4 +397,16 @@ export const addAssessment = mutation({ args: { courseId: v.id("learnCollections
  if (index < 0) modules.push({ id: "final_assessment", title: row.metadata.language.startsWith("ar") ? "التقييم النهائي" : "Final assessment", lessonIds: [], assessments: [args.asset] });
  else if (!modules[index].assessments.some(a => a.kind === args.asset.kind && a.id === args.asset.id)) modules[index] = { ...modules[index], assessments: [...modules[index].assessments, args.asset] };
  return setCourseModules(ctx, { courseId: args.courseId, modules });
+} });
+
+/** The published course a lesson belongs to, so a plain lesson link can open it inside its course. */
+export const courseForLesson = query({ args: { lessonId: v.string() }, returns: v.union(v.null(), v.id("learnCollections")), handler: async (ctx, args) => {
+  const id = ctx.db.normalizeId("lessons", args.lessonId);
+  const lesson = id ? await ctx.db.get("lessons", id) : null;
+  if (!lesson) return null;
+  for (const course of await coursesContainingLesson(ctx, lesson.ownerId, lesson._id)) {
+    if (!course.items.some(i => i.kind === "lesson" && i.id === lesson._id)) continue;
+    if (await readPublicCourse(ctx, { courseId: course._id })) return course._id;
+  }
+  return null;
 } });
