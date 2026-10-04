@@ -113,3 +113,11 @@
 
 .cb-title, .cb-desc, .cp-lesson__title, .cp-lesson__desc, .cx-title { text-align: start; }
 .cb-title:dir(rtl), .cp-hero:dir(rtl) h1 { letter-spacing: normal; line-height: 1.5; }
+
+.cb-modules { display: grid; gap: 16px; }
+.cb-module-assignments { display: grid; gap: 12px; }
+.cb-module-assignments label { display: grid; grid-template-columns: minmax(0, 1fr) minmax(100px, 1fr); gap: 12px; align-items: center; }
+.cp-modules { display: grid; gap: 32px; }
+.cp-module header { margin-bottom: 12px; }
+.cp-module header p { color: var(--on-surface-variant); font-size: 13px; }
+@media(max-width: 560px) { .cb-module-assignments label { grid-template-columns: minmax(0,1fr); } }

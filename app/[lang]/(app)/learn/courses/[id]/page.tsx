@@ -1,3 +1,4 @@
+import CourseOutline from "@/components/courses/CourseOutline";
 import { contentDirection } from "@/lib/learn/direction";
 import type { Metadata } from "next";
 import Link from "@/components/site/SiteLink";
@@ -63,17 +64,7 @@ export default async function PublicCoursePage({ params }: Props) {
         {first && <Link className="cp-start site-btn site-btn--primary" href={`/learn/${first.id}?course=${course.id}`}>{labels.start} <ArrowRight size={18} className="cp-arrow" aria-hidden /></Link>}
         <h2 id="course-lessons" className="cp-outline-title">{labels.lessons}</h2>
         {!first && <p className="cx-state">{labels.empty}</p>}
-        <ol className="cp-lessons">
-          {course.lessons.map((l, i) => (
-            <li key={l.id}>
-              <Link className="cp-lesson" href={`/learn/${l.id}?course=${course.id}`}>
-                <span className="cp-lesson__no">{i + 1}</span>
-                <span><span className="cp-lesson__title" dir="auto">{l.title}</span>{l.description && <span className="cp-lesson__desc block" dir="auto">{l.description}</span>}</span>
-                <ArrowRight size={18} className="cp-arrow" aria-hidden />
-              </Link>
-            </li>
-          ))}
-        </ol>
+        <CourseOutline course={course} />
       </section>
       </main>
       <SiteFooter />

@@ -1,3 +1,5 @@
+import { courseModule } from "./learnAssetModel";
+import { canonicalCommunityActor } from "./learnCommunityIntegrations";
 import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { courseSearchText } from "./courseSearchModel";
@@ -63,14 +65,14 @@ export async function getCourse(ctx: QueryCtx, args: Infer<typeof getArgs>, asAc
     }
     return {
       id: row._id, title: row.metadata.title, description: row.metadata.description, coverUrl: row.metadata.coverUrl, coverY: row.metadata.coverY, icon: row.metadata.icon, language: row.metadata.language, tags: row.metadata.tags,
-      visibility: row.visibility, published: !!row.publishedVersionId, publishedAt: version?.publishedAt ?? null, canPrivate: isPaidPlan(user ?? null, Date.now()), lessons, revision: row.revision,
+      visibility: row.visibility, published: !!row.publishedVersionId, publishedAt: version?.publishedAt ?? null, canPrivate: isPaidPlan(user ?? null, Date.now()), modules: row.modules ?? [], lessons, revision: row.revision,
     };
 }
 export const get = query({
   args: getArgs.fields,
   returns: v.object({
     id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), coverY: v.optional(v.number()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()),
-    visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), canPrivate: v.boolean(), lessons: v.array(lessonRow), revision: v.number(),
+    visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), canPrivate: v.boolean(), modules: v.array(courseModule), lessons: v.array(lessonRow), revision: v.number(),
   }),
   handler: (ctx, args) => getCourse(ctx, args),
 });
@@ -117,7 +119,7 @@ export async function setOutlineCourse(ctx: MutationCtx, args: Infer<typeof setO
     const ids = [...new Set(args.lessonIds)];
     if (ids.length > MAX_LESSONS) throw new Error(`VALIDATION_FAILED: A course holds up to ${MAX_LESSONS} lessons.`);
     for (const id of ids) { const l = await ctx.db.get("lessons", id); if (!l || l.ownerId !== actor) throw new Error("NOT_FOUND: Lesson not found."); }
-    await authorDb(ctx).patch("learnCollections", row._id, { lessonIds: ids, updatedAt: Date.now() });
+    await authorDb(ctx).patch("learnCollections", row._id, { lessonIds: ids, modules: row.modules?.map(m => ({ ...m, lessonIds: ids.filter(id => m.lessonIds.includes(id)) })), updatedAt: Date.now() });
     return null;
 }
 export const setOutline = mutation({
@@ -152,6 +154,10 @@ export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publish
     const { row, actor } = await ownedCourse(ctx, args.courseId, asActor);
     await requireVisibilityAllowed(ctx, actor, args.visibility);
     if (row.communityState !== "ok") throw new Error("MODERATED: This course is under review and can't be published right now.");
+    for (const module of row.modules ?? []) for (const asset of module.assessments) {
+      if (asset.kind === "form") { const id = ctx.db.normalizeId("forms", asset.id); const form = id ? await ctx.db.get("forms", id) : null; if (!form || form.ownerId !== actor || form.status !== "live" || form.isBanned || form.publishedVersion === undefined) throw new Error("ASSESSMENT_UNPUBLISHED: Publish each module quiz before publishing this course."); }
+      else { const id = ctx.db.normalizeId("quizzes", asset.id); const quiz = id ? await ctx.db.get("quizzes", id) : null; if (!quiz || quiz.creatorId !== actor || !quiz.isPublished || quiz.isBanned || !quiz.publishedSnapshot) throw new Error("ASSESSMENT_UNPUBLISHED: Publish each module quiz before publishing this course."); }
+    }
     const ids = outline(row);
     if (!ids.length) throw new Error("EMPTY: Add at least one lesson before publishing.");
     const items: Doc<"learnCollections">["items"] = [];
@@ -182,7 +188,7 @@ export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publish
     }
     if (problems.length) return { ok: false as const, problems };
     const last = await ctx.db.query("collectionVersions").withIndex("by_collectionId_and_number", (q) => q.eq("collectionId", row._id)).order("desc").first();
-    const versionId = await ctx.db.insert("collectionVersions", { collectionId: row._id, number: (last?.number ?? 0) + 1, metadata: row.metadata, items, publishedAt: Date.now() });
+    const versionId = await ctx.db.insert("collectionVersions", { collectionId: row._id, number: (last?.number ?? 0) + 1, metadata: row.metadata, modules: row.modules, items, publishedAt: Date.now() });
     await authorDb(ctx).patch("learnCollections", row._id, { items, searchText: await courseSearchText(ctx, row.ownerId, row.metadata, items), publishedVersionId: versionId, visibility: args.visibility, revision: row.revision + 1, updatedAt: Date.now() });
     await enqueueLearnWebhookEvent(ctx, { event: "collection.published", collectionId: row._id, versionId, operationId: `publish:${versionId}`, revision: row.revision + 1 });
     await recordAssetPublicationAction(ctx, { asset: { kind: "collection", id: row._id }, actorId: actor, action: "publish", revision: row.revision + 1, versionId, beforeVisibility: row.visibility, afterVisibility: args.visibility, reason: "Published the course." });
@@ -221,14 +227,11 @@ export const setArchived = mutation({
 const publicLesson = v.object({ id: v.id("lessons"), versionId: v.id("lessonVersions"), title: v.string(), description: v.string(), blocks: v.number() });
 
 /** Anyone can read a published public course (owner and granted readers for private ones). */
-export const getPublic = query({
-  args: { courseId: v.string() },
-  returns: v.union(v.null(), v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()), ownerName: v.string(), ownerUsername: v.string(), publishedAt: v.number(), lessons: v.array(publicLesson) })),
-  handler: async (ctx, args) => {
+export async function readPublicCourse(ctx: QueryCtx, args: { courseId: string }, asActor?: string) {
     const id = ctx.db.normalizeId("learnCollections", args.courseId);
     const row = id ? await ctx.db.get("learnCollections", id) : null;
     if (!row || !row.publishedVersionId || row.archived || row.communityState === "removed" || row.communityState === "hidden") return null;
-    const identity = await getAuthIdentity(ctx);
+    const identity = asActor ? { subject: asActor } : await getAuthIdentity(ctx);
     if (identity?.subject !== row.ownerId && (row.visibility !== "public" || row.communityState !== "ok")) return null;
     const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", row.ownerId)).first();
     if (!owner || owner.isBanned || owner.suspendedUntil) return null;
@@ -244,8 +247,12 @@ export const getPublic = query({
       const lv = await ctx.db.get("lessonVersions", item.versionId);
       if (lv && lv.lessonId === item.id && (ownsLesson || lv.visibility === undefined || lv.visibility === "public")) lessons.push({ id: item.id, versionId: item.versionId, title: lv.metadata.title, description: lv.metadata.description, blocks: lv.document.blocks.length });
     }
-    return { id: row._id, title: version.metadata.title, description: version.metadata.description, coverUrl: version.metadata.coverUrl, icon: version.metadata.icon, language: version.metadata.language, tags: version.metadata.tags, ownerName: owner.name, ownerUsername: owner.username, publishedAt: version.publishedAt, lessons };
-  },
+    return { id: row._id, title: version.metadata.title, description: version.metadata.description, coverUrl: version.metadata.coverUrl, icon: version.metadata.icon, language: version.metadata.language, tags: version.metadata.tags, modules: (version.modules ?? []).map(m => ({ ...m, lessonIds: m.lessonIds.filter(id => lessons.some(l => l.id === id)) })), ownerName: owner.name, ownerUsername: owner.username, publishedAt: version.publishedAt, lessons };
+}
+export const getPublic = query({
+  args: { courseId: v.string() },
+  returns: v.union(v.null(), v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()), modules: v.array(courseModule), ownerName: v.string(), ownerUsername: v.string(), publishedAt: v.number(), lessons: v.array(publicLesson) })),
+  handler: (ctx, args) => readPublicCourse(ctx, args),
 });
 
 /** Public course catalogue for Explore and the sitemap, newest first. */
@@ -306,3 +313,38 @@ export const listPublic = query({
     return result;
   },
 });
+
+export async function setCourseModules(ctx: MutationCtx, args: { courseId: Id<"learnCollections">; modules: Infer<typeof courseModule>[] }, asActor?: string) {
+  const { row, actor } = await ownedCourse(ctx, args.courseId, asActor);
+  if (args.modules.length > 30) throw new Error("VALIDATION_FAILED: A course supports up to 30 modules.");
+  const moduleIds = new Set<string>(), seen = new Set<string>(), current = outline(row);
+  for (const module of args.modules) {
+    if (!/^[a-zA-Z0-9_-]{1,100}$/.test(module.id) || moduleIds.has(module.id) || !module.title.trim() || module.title.length > 200 || module.assessments.length > 20) throw new Error("VALIDATION_FAILED: Invalid or duplicate module.");
+    moduleIds.add(module.id);
+    for (const id of module.lessonIds) { if (seen.has(id) || !current.includes(id)) throw new Error("VALIDATION_FAILED: Each outlined lesson belongs to at most one module."); seen.add(id); }
+    for (const asset of module.assessments) {
+      const id = ctx.db.normalizeId(asset.kind === "form" ? "forms" : "quizzes", asset.id);
+      if (!id) throw new Error("NOT_FOUND: Assessment not found.");
+      if (asset.kind === "form") { const form = await ctx.db.get("forms", id as Id<"forms">); if (!form || form.ownerId !== actor || !form.draft.quiz?.enabled) throw new Error("NOT_FOUND: Quiz not owned by you."); }
+      else { const quiz = await ctx.db.get("quizzes", id as Id<"quizzes">); if (!quiz || quiz.creatorId !== actor) throw new Error("NOT_FOUND: Quiz not owned by you."); }
+    }
+  }
+  await authorDb(ctx).patch("learnCollections", row._id, { modules: args.modules.map(m => ({ ...m, title: m.title.trim() })), lessonIds: [...args.modules.flatMap(m => m.lessonIds), ...current.filter(id => !seen.has(id))], updatedAt: Date.now() });
+  return null;
+}
+export const setModules = mutation({ args: { courseId: v.id("learnCollections"), modules: v.array(courseModule) }, returns: v.null(), handler: (ctx, args) => setCourseModules(ctx, args) });
+export async function readCourseProgress(ctx: QueryCtx, args: { courseId: string }, asActor?: string) {
+  const identity = asActor ? { subject: asActor } : await getAuthIdentity(ctx);
+  if (!identity) return [];
+  const course = await readPublicCourse(ctx, args, identity.subject);
+  if (!course) return [];
+  const actor = await canonicalCommunityActor(ctx, identity.subject);
+  const result = [];
+  for (const lesson of course.lessons) {
+    const row = await ctx.db.query("learnProgress").withIndex("by_userKey_and_lessonId_and_key", q => q.eq("userKey", actor.tokenIdentifier).eq("lessonId", lesson.id).eq("key", `v:${lesson.versionId}`)).unique();
+    const count = row?.completedBlocks.length ?? 0;
+    result.push({ lessonId: lesson.id, completed: row?.completionAcknowledged === true || (row?.completionAcknowledged === undefined && lesson.blocks > 0 && count >= lesson.blocks), percent: lesson.blocks ? Math.min(100, Math.round(count / lesson.blocks * 100)) : 0 });
+  }
+  return result;
+}
+export const myProgress = query({ args: { courseId: v.string() }, returns: v.array(v.object({ lessonId: v.id("lessons"), completed: v.boolean(), percent: v.number() })), handler: (ctx, args) => readCourseProgress(ctx, args) });
