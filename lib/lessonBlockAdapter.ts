@@ -68,7 +68,7 @@ const common = {
 };
 const text = { ...common, text: str, inline: inline.optional() };
 const blockSchema = z.discriminatedUnion("type", [
-  z.strictObject({ ...common, type: z.literal("flashcards"), setId: id.transform(v => v as Id<"flashcardSets">) }),
+  z.strictObject({ ...common, type: z.literal("flashcards"), required: z.boolean().optional(), setId: id.transform(v => v as Id<"flashcardSets">) }),
   z.strictObject({ ...text, type: z.literal("callout"), tone: z.enum(["info", "tip", "warning", "clinical", "key"]) }),
   z.strictObject({ ...text, type: z.literal("code"), language: str }),
   z.strictObject({ ...text, type: z.literal("quote") }),
@@ -135,7 +135,7 @@ const blockSchema = z.discriminatedUnion("type", [
   }),
   z.strictObject({
     ...common,
-    type: z.literal("quiz"),
+    type: z.literal("quiz"), required: z.boolean().optional(),
     asset: z.discriminatedUnion("kind", [
       z.strictObject({
         kind: z.literal("form"),
@@ -164,7 +164,7 @@ const customFields: Record<string, string[]> = {
   image: ["sourceId", "alt", "caption", "credit", "creditUrl", "figureKind", "annotations", "name", "showPreview", "previewWidth"],
   youtube: ["videoId", "start", "end", "caption"],
   equation: ["text", "display"], source: ["sourceId", "label"],
-  diagram: ["format", "text"], table: ["headerRows"], quiz: [], flashcards: ["setId"],
+  diagram: ["format", "text"], table: ["headerRows"], quiz: ["required"], flashcards: ["setId", "required"],
 };
 const customTypes: Record<string, string> = {
   lessonImage: "image",

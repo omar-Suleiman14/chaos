@@ -533,3 +533,8 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-quiz-editor { min-width: 0; }
 .lx-quiz-editor input, .lx-quiz-editor select { width: 100%; min-width: 0; box-sizing: border-box; }
 .lx-inline-quiz .lx-panel__row { flex-wrap: wrap; }
+
+.lx-course-navigation { display: grid; gap: 12px; margin-top: 24px; min-width: 0; }
+.lx-course-navigation progress { width: 100%; accent-color: var(--primary); }
+.lx-course-navigation .lx-actions { flex-wrap: wrap; }
+.lx-course-navigation .ws-btn { display: grid; max-width: 100%; text-align: start; white-space: normal; }

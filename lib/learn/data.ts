@@ -221,7 +221,7 @@ export function useProgress(): Record<string, LessonProgress> | undefined {
     if (row instanceof Error) throw row;
     if (!row) continue;
     const count = row.completedBlocks.length, total = target.blockIds.length;
-    result[target.lessonId] = { lessonId: target.lessonId, state: total > 0 && count >= total ? "completed" : "in_progress", percent: total ? Math.round(count * 100 / total) : 0, lastBlockId: row.completedBlocks.at(-1), updatedAt: row.updatedAt };
+    result[target.lessonId] = { lessonId: target.lessonId, state: row.completionAcknowledged === true || (row.completionAcknowledged === undefined && total > 0 && count >= total) ? "completed" : count === 0 ? "not_started" : "in_progress", percent: total ? Math.round(count * 100 / total) : 0, lastBlockId: row.completedBlocks.at(-1), updatedAt: row.updatedAt };
   }
   return result;
 }
@@ -423,7 +423,6 @@ export function useLearnActions() {
         const key = me + ":" + lessonId;
         const target = progressTargets.get(key);
         if (!target) return Promise.reject(new LearnError("Open the published lesson before recording progress."));
-        if (patch.state === "not_started") return Promise.reject(new LearnError("Progress reset is not supported by the durable backend; existing evidence is preserved."));
         return progressService.save(target, patch);
       },
 

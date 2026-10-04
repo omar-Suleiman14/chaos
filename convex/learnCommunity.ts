@@ -2,7 +2,7 @@ import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { consumeRate } from "./serverUtils";
 import { v } from "convex/values";
-import { resolveStudyTarget, readStudyProgress, startStudySession, completeStudyBlocks } from "./learnProgressServices";
+import { resolveStudyTarget, readStudyProgress, startStudySession, completeStudyBlocks, resetStudyProgress } from "./learnProgressServices";
 import { docValidator } from "convex/server";
 import {
   mutation,
@@ -211,9 +211,13 @@ export const startSession = mutation({
   handler: async (ctx, args) => startStudySession(ctx, await actor(ctx), args),
 });
 export const completeBlocks = mutation({
-  args: { ...progressKey, sessionSeq: v.number(), writeSeq: v.number(), blockIds: v.array(v.string()) },
+  args: { ...progressKey, sessionSeq: v.number(), writeSeq: v.number(), blockIds: v.array(v.string()), completed: v.optional(v.boolean()) },
   returns: v.boolean(),
   handler: async (ctx, args) => (await completeStudyBlocks(ctx, await actor(ctx), args, "false")) !== false,
+});
+export const resetProgress = mutation({
+  args: { ...progressKey, expectedSessionSeq: v.number() }, returns: v.number(),
+  handler: async (ctx, args) => resetStudyProgress(ctx, await actor(ctx), args),
 });
 export const getProgress = query({
   args: progressKey, returns: v.union(progressDoc, v.null()),
@@ -337,7 +341,7 @@ export const learningEvidence = query({
       )
       .unique();
     const completedMappedBlocks = [...mapped].filter((id) =>
-      progress?.completedBlocks.includes(id),
+      (progress?.completedBlocks.includes(id) || progress?.previousCompletedBlocks?.includes(id)),
     ).length;
     return {
       state: completedMappedBlocks

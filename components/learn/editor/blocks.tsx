@@ -14,7 +14,7 @@ import { codeBlockOptions } from "@blocknote/code-block";
 import { AlertTriangle, BookMarked, FileText, Image as ImageIcon, Info, Lightbulb, Link2, PlayCircle, Presentation, Stethoscope, Star, Video } from "lucide-react";
 import { formatTimestamp, parseTimestamp, parseYouTube } from "@/lib/learn/doc";
 import type { LessonSource, SourceKind } from "@/lib/learn/types";
-import { useCopy } from "@/lib/i18n";
+import { useCopy, useLocale } from "@/lib/i18n";
 
 /** What custom blocks need from the lesson around them (its sources, dialogs owned by the editor page). */
 export interface LessonEditorBridge {
@@ -315,17 +315,21 @@ export const Citation = createReactInlineContentSpec(
 
 /** Block types lessons use. Audio and generic file blocks stay out of the slash menu; sources cover documents. */
 export const LessonQuiz = createReactBlockSpec(
- { type: "lessonQuiz", propSchema: { assetKind: { default: "form", values: ["form", "quiz"] as const }, assetId: { default: "" } }, content: "none" },
+ { type: "lessonQuiz", propSchema: { required: { default: false }, assetKind: { default: "form", values: ["form", "quiz"] as const }, assetId: { default: "" } }, content: "none" },
  { render: function QuizBlock({ block, editor }) {
+  const { locale } = useLocale();
   return <div contentEditable={false} className="lx-panel">
+    {editor.isEditable && <label><input type="checkbox" checked={block.props.required} onChange={e => editor.updateBlock(block, { props: { required: e.target.checked } })} /> {locale === "ar" ? "مطلوب لإكمال الدرس" : "Required to complete the lesson"}</label>}
     {editor.isEditable ? <QuizBlockEditor kind={block.props.assetKind} assetId={block.props.assetId} onSelect={asset => editor.updateBlock(block, { props: { assetKind: asset.kind, assetId: asset.id } })} /> : block.props.assetId ? <InlineQuiz asset={{ kind: block.props.assetKind, id: block.props.assetId }} /> : null}
   </div>;
  } }
 );
 export const LessonFlashcards = createReactBlockSpec(
-  { type: "lessonFlashcards", propSchema: { setId: { default: "" } }, content: "none" },
+  { type: "lessonFlashcards", propSchema: { setId: { default: "" }, required: { default: false } }, content: "none" },
   { render: function FlashcardsBlock({ block, editor }) {
+    const { locale } = useLocale();
     return <div contentEditable={false} className="lx-panel">
+      {editor.isEditable && <label><input type="checkbox" checked={block.props.required} onChange={e => editor.updateBlock(block, { props: { required: e.target.checked } })} /> {locale === "ar" ? "مطلوب لإكمال الدرس" : "Required to complete the lesson"}</label>}
       {editor.isEditable ? <FlashcardBlockEditor setId={block.props.setId} onSelect={setId => editor.updateBlock(block, { props: { setId } })} /> : block.props.setId ? <InlineFlashcards setId={block.props.setId} /> : null}
     </div>;
   } },

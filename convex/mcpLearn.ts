@@ -1,3 +1,5 @@
+import { readStudyProgress, resetStudyProgress } from "./learnProgressServices";
+import { canonicalCommunityActor } from "./learnCommunityIntegrations";
 // userId is supplied only by the secret-protected OAuth transport.
 import { v } from "convex/values";
 import { learnCapabilityLimits, mcpToolGroups } from "./learnCapabilityModel";
@@ -108,3 +110,17 @@ export const getLessonVersion = internalQuery({ args: { ...actor, lessonId: v.id
   const blocks = version.document.blocks.slice(offset, offset + limit);
   return { versionId: version._id, metadata: version.metadata, document: { schemaVersion: 1 as const, blocks }, totalBlocks: version.document.blocks.length, nextOffset: offset + blocks.length < version.document.blocks.length ? offset + blocks.length : null };
 } });
+
+export const getProgress = internalQuery({
+  args: { ...actor, lessonId: v.id("lessons"), versionId: v.id("lessonVersions") },
+  returns: v.object({ sessionSeq: v.number(), completedBlockIds: v.array(v.string()), completed: v.boolean() }),
+  handler: async (ctx, args) => {
+    await requireLearnActor(ctx, args.userId);
+    const row = await readStudyProgress(ctx, await canonicalCommunityActor(ctx, args.userId), args);
+    return { sessionSeq: row?.sessionSeq ?? 0, completedBlockIds: row?.completedBlocks ?? [], completed: row?.completionAcknowledged ?? false };
+  },
+});
+export const restartProgress = internalMutation({
+  args: { ...actor, lessonId: v.id("lessons"), versionId: v.id("lessonVersions"), expectedSessionSeq: v.number() }, returns: v.object({ sessionSeq: v.number() }),
+  handler: async (ctx, args) => { await requireLearnActor(ctx, args.userId); return { sessionSeq: await resetStudyProgress(ctx, await canonicalCommunityActor(ctx, args.userId), { lessonId: args.lessonId, versionId: args.versionId, expectedSessionSeq: args.expectedSessionSeq }) }; },
+});

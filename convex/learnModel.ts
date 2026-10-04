@@ -19,7 +19,7 @@ export const imageAnnotations = v.object({ v: v.literal(1), items: v.array(v.obj
 const common = { id: v.string(), parentId: v.optional(v.string()), citations: v.array(citation), conceptIds: v.array(v.string()), presentation: v.optional(v.object({ alignment: v.optional(v.union(v.literal("left"), v.literal("center"), v.literal("right"), v.literal("justify"))), textColor: v.optional(v.string()), backgroundColor: v.optional(v.string()) })) };
 const text = { ...common, text: v.string(), inline: v.optional(v.array(lessonInline)) };
 export const lessonBlock = v.union(
-  v.object({ ...common, type: v.literal("flashcards"), setId: v.id("flashcardSets") }),
+  v.object({ ...common, type: v.literal("flashcards"), required: v.optional(v.boolean()), setId: v.id("flashcardSets") }),
   v.object({ ...text, type: v.literal("callout"), tone: v.union(v.literal("info"), v.literal("tip"), v.literal("warning"), v.literal("clinical"), v.literal("key")) }),
   v.object({ ...text, type: v.literal("code"), language: v.string() }),
   v.object({ ...text, type: v.literal("quote") }),
@@ -34,7 +34,7 @@ export const lessonBlock = v.union(
   v.object({ ...text, type: v.literal("equation"), display: v.boolean() }),
   v.object({ ...common, type: v.literal("table"), rows: v.array(v.array(v.string())), headerRows: v.number() }),
   v.object({ ...common, type: v.literal("source"), sourceId: v.id("learnSources"), label: v.string() }),
-  v.object({ ...common, type: v.literal("quiz"), asset: v.union(v.object({ kind: v.literal("form"), id: v.id("forms") }), v.object({ kind: v.literal("quiz"), id: v.id("quizzes") })) })
+  v.object({ ...common, type: v.literal("quiz"), required: v.optional(v.boolean()), asset: v.union(v.object({ kind: v.literal("form"), id: v.id("forms") }), v.object({ kind: v.literal("quiz"), id: v.id("quizzes") })) })
 );
 export const lessonDocument = v.object({ schemaVersion: v.literal(1), blocks: v.array(lessonBlock) });
 export type LessonDocument = Infer<typeof lessonDocument>;

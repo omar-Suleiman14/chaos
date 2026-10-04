@@ -77,10 +77,10 @@ function readHidden(names: string[]): Record<string, string> | undefined {
 interface Receipt { receiptCode: string; endingId: string | null; editToken?: string; submittedAt: number; answers: Answers; language: Language; quizScore?: number | null; quizMaxScore?: number | null }
 
 /** The respondent experience for one form; also served at custom links (chaos.fail/<username>/<slug>). */
-export function RespondToForm({ shareId, inline = false, studyProgress = false }: { shareId: string; inline?: boolean; studyProgress?: boolean }) {
+export function RespondToForm({ shareId, inline = false, studyProgress = false, onComplete }: { shareId: string; inline?: boolean; studyProgress?: boolean; onComplete?: () => void }) {
   return (
     <Suspense fallback={<RespondLoading />}>
-      <RespondPage key={shareId} shareId={shareId} inline={inline} studyProgress={studyProgress} />
+      <RespondPage key={shareId} shareId={shareId} inline={inline} studyProgress={studyProgress} onComplete={onComplete} />
     </Suspense>
   );
 }
@@ -90,7 +90,7 @@ export function RespondLoading() {
   return <Shell embed={false}><FormLoading /></Shell>;
 }
 
-function RespondPage({ shareId, inline = false, studyProgress = false }: { shareId: string; inline?: boolean; studyProgress?: boolean }) {
+function RespondPage({ shareId, inline = false, studyProgress = false, onComplete }: { shareId: string; inline?: boolean; studyProgress?: boolean; onComplete?: () => void }) {
   const search = useSearchParams();
   const embed = inline || search.get("embed") === "1";
   const resumeToken = inline ? null : search.get("resume");
@@ -175,6 +175,7 @@ function RespondPage({ shareId, inline = false, studyProgress = false }: { share
       editToken={editToken}
       editing={editing ?? null}
       studyProgress={studyProgress}
+      onComplete={onComplete}
     />
   );
 }
@@ -192,11 +193,11 @@ function ReloadAt({ at }: { at: number }) {
 
 type OpenForm = Extract<FunctionReturnType<typeof api.respond.getPublicForm>, { state: "open" }>;
 
-function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, editToken, editing, studyProgress }: {
+function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, editToken, editing, studyProgress, onComplete }: {
   form: OpenForm; shareId: string; embed: boolean; accessCode?: string; resumeToken: string | null;
   resumed: { answers: Answers; language: Language; version: number } | null;
   editToken: string | null; editing: { answers: Answers; language: Language; definition: FormDefinition; receiptCode: string } | null;
-  studyProgress: boolean;
+  studyProgress: boolean; onComplete?: () => void;
 }) {
   const def = (editing?.definition ?? form.definition) as FormDefinition;
   const storageKey = `chaos-form:${shareId}:v${form.version}`;
@@ -341,6 +342,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
         honeypot: honeypot || undefined, hidden: progress.hidden,
       });
       const r: Receipt = { receiptCode: result.receiptCode, endingId: result.endingId, editToken: token, submittedAt: Date.now(), answers: progress.answers, language: progress.language, quizScore: result.quizScore, quizMaxScore: result.quizMaxScore };
+      if (result.status === "completed") onComplete?.();
       setStudyResponseId(result.status === "completed" ? result.responseId : null);
       posthog.capture("form_response_submitted", { language: progress.language, form_type: def.quiz?.enabled ? "quiz" : "form" });
       setReceipt(r);
