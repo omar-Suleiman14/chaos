@@ -19,7 +19,7 @@ const copy = {
   en: {
     title: ["Turn what you know", "into something people can use."],
     lead: "Create lessons, courses, quizzes and forms. Teach live, let students study, and connect the AI tools you already use.",
-    start: "Start free", explore: "See how it works", trust: ["Open source", "Self-hostable", "English + Arabic", "MCP connected"],
+    start: "Start free", explore: "Explore courses", trust: ["Open source", "Self-hostable", "English + Arabic", "MCP connected"],
     flow: { label: "How it fits together", source: "Notes, a PDF or an idea", lesson: "Lesson", outputs: ["Quiz", "Flashcards", "Course"], practice: "Practice or a live game" },
     create: {
       title: "Create", lead: "Write, edit and arrange your content in one place.",
@@ -60,7 +60,7 @@ const copy = {
   ar: {
     title: ["حوّل ما تعرفه", "إلى شيء يستفيد منه الناس."],
     lead: "أنشئ دروسًا ودورات واختبارات ونماذج. درّس مباشرةً واترك الطلاب يذاكرون واربط أدوات الذكاء الاصطناعي التي تستخدمها.",
-    start: "ابدأ مجانًا", explore: "شاهد كيف يعمل", trust: ["مفتوح المصدر", "استضافة ذاتية", "العربية والإنجليزية", "متصل بـ MCP"],
+    start: "ابدأ مجانًا", explore: "استكشف الدورات", trust: ["مفتوح المصدر", "استضافة ذاتية", "العربية والإنجليزية", "متصل بـ MCP"],
     flow: { label: "كيف يترابط كل شيء", source: "ملاحظات أو ملف PDF أو فكرة", lesson: "درس", outputs: ["اختبار", "بطاقات", "دورة"], practice: "تدريب أو لعبة مباشرة" },
     create: {
       title: "أنشئ", lead: "اكتب محتواك وعدّله ورتّبه في مكان واحد.",
@@ -127,7 +127,7 @@ export default function HomeView() {
         <section className="site-hero">
           <h1 className="site-title">{t.title[0]}<br /><span>{t.title[1]}</span></h1>
           <p className="site-lead">{t.lead}</p>
-          <div className="site-hero__actions"><PrimaryCta large label={t.start} /><Link href="#demo" className="site-btn site-btn--game site-btn--lg">{t.explore}</Link></div>
+          <div className="site-hero__actions"><PrimaryCta large label={t.start} /><Link href="/learn" className="site-btn site-btn--game site-btn--lg">{t.explore}</Link></div>
           <ul className="site-trust-strip" aria-label={locale === "ar" ? "حول المنصة" : "Platform details"}>{t.trust.map(item => <li key={item}>{item}</li>)}</ul>
           <figure className="site-flow" aria-label={t.flow.label}>
             <span className="site-flow__node site-flow__node--muted">{t.flow.source}</span>
