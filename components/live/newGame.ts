@@ -11,7 +11,7 @@ export function newQuizArgs(locale: Locale) {
 }
 
 /** A blank live-game quiz: one question at a time, quiz scoring on. Pass to useCreateForm's create(). */
-export function newGameArgs(locale: Locale, preset: ThemePresetId = "paper") {
+export function newGameArgs(locale: Locale, preset: ThemePresetId = "flow") {
   const title = locale === "ar" ? "لعبة بلا عنوان" : "Untitled game";
   const definition = {
     ...emptyDefinition(title), theme: themeFromPreset(preset),

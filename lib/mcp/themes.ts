@@ -11,7 +11,7 @@ const compact = (value: string) => value.toLowerCase().replace(/[^a-z0-9]+/g, ""
 
 /** Other names people use for a look. "chaos" and "evergreen" are the same preset. */
 const ALIASES: Record<string, string> = {
-  evergreen: "chaos", googleforms: "google-forms", google: "google-forms", googleformsstyle: "google-forms", paper: "paper", typeform: "spotlight", microsoftforms: "microsoft-forms", microsoft: "microsoft-forms", microsoftformsstyle: "microsoft-forms",
+  evergreen: "chaos", apple: "flow", googleforms: "google-forms", google: "google-forms", googleformsstyle: "google-forms", paper: "paper", typeform: "spotlight", microsoftforms: "microsoft-forms", microsoft: "microsoft-forms", microsoftformsstyle: "microsoft-forms",
 };
 
 /** Find a preset by id or display name, ignoring case, spaces and hyphens. */
@@ -67,7 +67,7 @@ export function themeCatalog() {
       accent: p.theme.accent, pageColor: p.theme.pageColor ?? null, textColor: p.theme.textColor ?? null,
       dark: p.theme.background === "dark",
       font: p.theme.font, buttons: p.theme.buttons ?? "solid", cover: p.theme.cover ?? "none", layout: p.theme.layout ?? "flat",
-      isDefault: p.id === "google-forms",
+      isDefault: p.id === "flow",
     })),
     options: {
       fonts: fontOptions.map((o) => ({ id: o.id, name: o.label })),

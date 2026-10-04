@@ -74,7 +74,7 @@ export const endingValidator = v.object({
 export const themeValidator = v.object({
   version: v.optional(v.literal(1)),
   preset: v.optional(v.union(
-    v.literal("chaos"), v.literal("paper"), v.literal("soft-grid"), v.literal("spotlight"),
+    v.literal("flow"), v.literal("chaos"), v.literal("paper"), v.literal("soft-grid"), v.literal("spotlight"),
     v.literal("terracotta"), v.literal("ocean"), v.literal("midnight"), v.literal("garden"),
     v.literal("neon"), v.literal("aurora"), v.literal("candy"), v.literal("terminal"),
     v.literal("newsprint"), v.literal("arcade"), v.literal("sunset"), v.literal("velvet"), v.literal("google-forms"), v.literal("microsoft-forms"), v.literal("custom"),

@@ -71,7 +71,7 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
 
   const createGame = () => {
     setError("");
-    void create(newGameArgs(locale, preset ?? "paper"));
+    void create(newGameArgs(locale, preset ?? "flow"));
   };
   const reportHost = async (target: Parameters<typeof host.start>[0]) => {
     setError("");

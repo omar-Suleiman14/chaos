@@ -74,7 +74,7 @@ describe("app settings", () => {
 
   it("can search all theme defaults and reset without changing the workspace appearance", () => {
     render(<SettingsPage />);
-    fireEvent.click(screen.getByRole("button", { name: "All themes (18)" }));
+    fireEvent.click(screen.getByRole("button", { name: "All themes (19)" }));
     fireEvent.change(screen.getByRole("searchbox", { name: "Search themes" }), { target: { value: "sunset" } });
     fireEvent.click(screen.getByRole("radio", { name: "Sunset" }));
     expect(readPreferences().newFormPreset).toBe("sunset");
@@ -82,7 +82,7 @@ describe("app settings", () => {
     expect(screen.getByRole("radio", { name: "Sunset" })).toBeChecked();
     fireEvent.click(screen.getByRole("button", { name: "Reset theme" }));
     expect(readPreferences().newFormPreset).toBe(defaultPreferences.newFormPreset);
-    expect(screen.getByRole("radio", { name: "Lilac" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Flow" })).toBeChecked();
     expect(mocks.setMode).not.toHaveBeenCalled();
   });
 

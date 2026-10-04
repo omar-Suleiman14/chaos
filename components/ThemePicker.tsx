@@ -17,7 +17,7 @@ const copy = {
     label: "المظهر",
     expand: "كل المظاهر", collapse: "مظاهر أقل", search: "ابحث عن مظهر", empty: "لا توجد مظاهر تطابق بحثك.",
     names: {
-      "google-forms": "ليلكي", "microsoft-forms": "شريط",
+      flow: "انسيابي", "google-forms": "ليلكي", "microsoft-forms": "شريط",
       paper: "ورقي", chaos: "أخضر داكن", "soft-grid": "شبكة ناعمة", spotlight: "تسليط الضوء", terracotta: "طيني",
       ocean: "محيط", midnight: "منتصف الليل", garden: "حديقة", neon: "نيون", aurora: "شفق",
       candy: "حلوى", terminal: "طرفية", newsprint: "صحيفة", arcade: "ألعاب", velvet: "مخمل", sunset: "غروب",
@@ -31,7 +31,7 @@ export function useThemeName() {
   return (id: ThemePresetId) => t.names[id] ?? themePresets.find((p) => p.id === id)?.name ?? id;
 }
 
-const compactIds: readonly ThemePresetId[] = ["chaos", "terracotta", "ocean", "midnight", "velvet", "arcade"];
+const compactIds: readonly ThemePresetId[] = ["flow", "chaos", "terracotta", "ocean", "midnight", "velvet"];
 
 /** Themes picked on this device, most recent first. Lists show them first. */
 const RECENT_KEY = "chaos.ui.recent-themes";

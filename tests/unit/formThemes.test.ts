@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   contrastIssues, contrastRatio, customTheme, darkVariant, isHex, onAccent, randomPalette, themeClass, themeFollowsAppearance, themeFromPreset, themePresets, themeStyle,
 } from "@/components/forms/formThemes";
-import { checkDefinition, chaosTheme, defaultTheme, googleFormsTheme, microsoftFormsTheme, paperTheme, emptyDefinition, themePresetIds } from "@/convex/formLogic";
+import { checkDefinition, chaosTheme, defaultTheme, flowTheme, googleFormsTheme, microsoftFormsTheme, paperTheme, emptyDefinition, themePresetIds } from "@/convex/formLogic";
 import type { FormDefinition } from "@/convex/formLogic";
 
 function withTheme(theme: FormDefinition["theme"]): FormDefinition {
@@ -25,8 +25,9 @@ describe("form themes", () => {
     for (const preset of themePresets) expect(contrastIssues(themeFromPreset(preset.id)), preset.id).toEqual([]);
   });
 
-  it("starts new forms on the Lilac, silent and without a start screen, and keeps Paper as a preset", () => {
-    expect(emptyDefinition().theme).toEqual(googleFormsTheme);
+  it("starts new forms on Flow, silent and without a start screen, and keeps Lilac and Paper as presets", () => {
+    expect(emptyDefinition().theme).toEqual(flowTheme);
+    expect(flowTheme).toMatchObject({ preset: "flow", cover: "none", sound: "off", accent: "#007aff", pageColor: "#f2f2f7" });
     expect(googleFormsTheme).toMatchObject({ preset: "google-forms", cover: "none", sound: "off", chrome: "google", pageColor: "#f0ebf8", accent: "#673ab7", font: "roboto" });
     expect(themePresets.find((p) => p.id === "paper")).toBeTruthy();
     expect(paperTheme.chrome).toBeUndefined();

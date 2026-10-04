@@ -1,11 +1,12 @@
 import type { FormDefinition, FormTheme, ThemeBackdrop, ThemeButtons, ThemeChrome, ThemeCover, ThemeFont, ThemePresetId, ThemeSound } from "@/convex/formLogic";
-import { chaosTheme, googleFormsTheme, microsoftFormsTheme, paperTheme } from "@/convex/formLogic";
+import { chaosTheme, flowTheme, googleFormsTheme, microsoftFormsTheme, paperTheme } from "@/convex/formLogic";
 
 type Palette = Omit<FormTheme, "version" | "preset" | "logoUrl">;
 
 export interface ThemePreset { id: ThemePresetId; name: string; inspiration: string; theme: Palette }
 
 export const themePresets: ThemePreset[] = [
+  { id: "flow", name: "Flow", inspiration: "Clean and calm, like Apple's apps", theme: { ...omitMeta(flowTheme), sound: "soft" } },
   { id: "google-forms", name: "Lilac", inspiration: "A lilac page with separate white question cards.", theme: omitMeta(googleFormsTheme) },
   { id: "microsoft-forms", name: "Banner", inspiration: "A full-width title banner above a clean question column.", theme: omitMeta(microsoftFormsTheme) },
   { id: "paper", name: "Paper", inspiration: "Google Forms inspired", theme: { ...omitMeta(paperTheme), sound: "soft" } },
@@ -179,7 +180,8 @@ export function themeClass(def: FormDefinition): string {
     `form-preset-${theme.preset ?? "custom"}`,
     `form-font-${theme.font}`,
     `form-buttons-${theme.buttons ?? "solid"}`,
-    `form-backdrop-${theme.backdrop ?? "none"}`,
+    // Evergreen used to ship with a grain backdrop; saved Evergreen forms drop it too.
+    `form-backdrop-${theme.preset === "chaos" && theme.backdrop === "noise" ? "none" : theme.backdrop ?? "none"}`,
     theme.appearance === "auto" ? "form-appearance-auto" : "",
     theme.chrome ? `form-chrome-${theme.chrome}` : "",
   ].filter(Boolean).join(" ");

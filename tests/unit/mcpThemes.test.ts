@@ -4,11 +4,12 @@ import { applyThemePatch, parseThemePatch } from "@/convex/mcpContract";
 import { googleFormsTheme } from "@/convex/formLogic";
 
 describe("MCP themes: look-alike presets", () => {
-  it("lists both presets and marks Lilac as the default", () => {
+  it("lists both presets and marks Flow as the default", () => {
     const { presets } = themeCatalog();
-    expect(presets.find((p) => p.id === "google-forms")).toMatchObject({ name: "Lilac", isDefault: true, description: "A lilac page with separate white question cards." });
+    expect(presets.find((p) => p.id === "google-forms")).toMatchObject({ name: "Lilac", isDefault: false, description: "A lilac page with separate white question cards." });
     expect(presets.find((p) => p.id === "microsoft-forms")).toMatchObject({ name: "Banner", isDefault: false });
     expect(presets.filter((p) => p.isDefault)).toHaveLength(1);
+    expect(presets.find((p) => p.id === "flow")).toMatchObject({ name: "Flow", isDefault: true });
   });
 
   it("finds them by id, name and common short names", () => {

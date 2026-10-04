@@ -68,12 +68,12 @@ describe("ChatGPT app contract", () => {
     expect(normalizeSound("x")).toBeUndefined();
   });
 
-  it("defaults new forms to the Google Forms style with sound on, and applies the theme and sound given", () => {
+  it("defaults new forms to the Flow style with sound on, and applies the theme and sound given", () => {
     const def = toDefinition({ title: "T", questions: [] });
-    expect(def.theme).toMatchObject({ preset: "google-forms", sound: "soft" });
+    expect(def.theme).toMatchObject({ preset: "flow", sound: "soft" });
     expect(toDefinition({ title: "T", questions: [], sound: "off" }).theme.sound).toBe("off");
     const styled = toDefinition({ title: "T", questions: [], sound: "arcade" });
-    expect(styled.theme).toMatchObject({ preset: "google-forms", sound: "arcade" });
+    expect(styled.theme).toMatchObject({ preset: "flow", sound: "arcade" });
   });
 
   it("keeps logo and sound when the look changes, keeps the preset when properties are overridden", () => {
@@ -112,7 +112,7 @@ describe("ChatGPT app contract", () => {
 
   it("exposes the theme in the model's view", () => {
     const view = fromDefinition(toDefinition({ title: "T", questions: [] }));
-    expect(view.theme).toMatchObject({ preset: "google-forms", sound: "soft", font: "roboto", chrome: "google", hasLogo: false });
+    expect(view.theme).toMatchObject({ preset: "flow", sound: "soft", font: "segoe", hasLogo: false });
   });
 
   it("clears logic that points at removed questions so publishing is not blocked", () => {

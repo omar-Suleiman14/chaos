@@ -14,13 +14,13 @@ describe("compact theme choices", () => {
   // Picks are remembered as recent themes; each test starts with none.
   beforeEach(() => localStorage.clear());
 
-  it("keeps a selected preset visible, expands all 18, searches, and keeps a newly selected preset on collapse", () => {
+  it("keeps a selected preset visible, expands all 19, searches, and keeps a newly selected preset on collapse", () => {
     render(<Picker />);
     expect(screen.getByRole("radio", { name: "Paper" })).toBeChecked();
     expect(screen.getAllByRole("radio")).toHaveLength(7);
     expect(screen.queryByText("Aa")).toBeNull();
-    fireEvent.click(screen.getByRole("button", { name: "All themes (18)" }));
-    expect(screen.getAllByRole("radio")).toHaveLength(19);
+    fireEvent.click(screen.getByRole("button", { name: "All themes (19)" }));
+    expect(screen.getAllByRole("radio")).toHaveLength(20);
     fireEvent.change(screen.getByRole("searchbox", { name: "Search themes" }), { target: { value: "Banner" } });
     expect(screen.getAllByRole("radio")).toHaveLength(2);
     fireEvent.click(screen.getByRole("radio", { name: "Banner" }));
@@ -41,8 +41,8 @@ describe("compact theme choices", () => {
     expect(screen.getByRole("radio", { name: "Use quiz theme" })).toHaveFocus();
     expect(screen.getByRole("radio", { name: "Use quiz theme" })).toBeChecked();
     fireEvent.keyDown(document.activeElement!, { key: "End" });
-    expect(screen.getByRole("radio", { name: "Arcade" })).toHaveFocus();
-    expect(screen.getByRole("radio", { name: "Arcade" })).toBeChecked();
+    expect(screen.getByRole("radio", { name: "Velvet" })).toHaveFocus();
+    expect(screen.getByRole("radio", { name: "Velvet" })).toBeChecked();
     expect(within(screen.getByRole("radiogroup")).getAllByRole("radio").filter((node) => node.tabIndex === 0)).toHaveLength(1);
   });
 
@@ -52,7 +52,7 @@ describe("compact theme choices", () => {
     fireEvent.keyDown(screen.getByRole("radio", { name: "منتصف الليل" }), { key: "ArrowLeft" });
     expect(change).toHaveBeenCalledWith("velvet");
     expect(screen.getByRole("radio", { name: "مخمل" })).toHaveFocus();
-    fireEvent.click(screen.getByRole("button", { name: "كل المظاهر (18)" }));
+    fireEvent.click(screen.getByRole("button", { name: "كل المظاهر (19)" }));
     fireEvent.change(screen.getByRole("searchbox", { name: "ابحث عن مظهر" }), { target: { value: "شفق" } });
     expect(screen.getAllByRole("radio")).toHaveLength(1);
     expect(screen.getByRole("radio", { name: "شفق" })).toBeInTheDocument();

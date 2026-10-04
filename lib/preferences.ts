@@ -22,7 +22,7 @@ export interface Preferences {
 export const defaultPreferences: Preferences = {
   reduceMotion: false,
   popupOpacity: 85,
-  newFormPreset: "google-forms",
+  newFormPreset: "flow",
   newFormMode: "page",
   newFormLanguage: "en",
   newFormSound: false,

@@ -28,6 +28,7 @@ const ar = {
     gt: "أكبر من", gte: "لا يقل عن", lt: "أصغر من", lte: "لا يزيد على",
   } as Record<ConditionOp, string>,
   themes: {
+    flow: ["انسيابي", "نظيف وهادئ، مثل تطبيقات Apple"],
     "google-forms": ["ليلكي", "خلفية ليلكية وبطاقات بيضاء للأسئلة."],
     "microsoft-forms": ["شريط", "شريط عنوان بعرض الصفحة وأسئلة مرتبة تحته."],
     paper: ["ورق", "مستوحى من Google Forms"],

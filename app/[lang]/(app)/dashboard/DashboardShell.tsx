@@ -11,7 +11,7 @@ import { avatarSeed } from "@/lib/avatarSeed";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, BarChart3, BookOpen, Bookmark, ChevronUp, FileText, GraduationCap, Home, Layers, Library, Link2, ListChecks, BookOpenText, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, UserCog, X } from "lucide-react";
+import { Archive, BarChart3, BookOpen, Bookmark, ChevronDown, ChevronUp, FileText, GraduationCap, Home, Layers, Library, Link2, ListChecks, BookOpenText, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, UserCog, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -400,6 +400,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                       <button key={section} type="button" className="ws-section-toggle ws-section-toggle--folded" onClick={() => fold(section)} aria-expanded="false" aria-label={t.openLabel(sectionNames[section], list.length)}>
                         <span>{sectionNames[section]} ({list.length})</span>
                         <span className="ws-section-toggle__rule" aria-hidden="true" />
+                        <ChevronDown size={15} aria-hidden="true" />
                       </button>
                     ))}
                   </div>

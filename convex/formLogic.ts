@@ -128,7 +128,7 @@ export interface Ending {
 }
 
 export const themePresetIds = [
-  "chaos", "paper", "soft-grid", "spotlight", "terracotta", "ocean", "midnight", "garden",
+  "flow", "chaos", "paper", "soft-grid", "spotlight", "terracotta", "ocean", "midnight", "garden",
   "neon", "aurora", "candy", "terminal", "newsprint", "arcade", "sunset", "velvet", "google-forms", "microsoft-forms",
 ] as const;
 export type ThemePresetId = (typeof themePresetIds)[number];
@@ -170,16 +170,22 @@ export const chaosTheme: FormTheme = {
   version: 1, preset: "chaos", accent: "#2f5333", background: "plain", font: "display", radius: "none",
   pageColor: "#f0efea", surfaceColor: "#ffffff", textColor: "#111111", layout: "flat",
   // Sound is opt-in: new forms are silent until the creator turns it on in Design.
-  cover: "poster", backdrop: "noise", buttons: "brutal", appearance: "auto", sound: "off",
+  cover: "poster", backdrop: "none", buttons: "brutal", appearance: "auto", sound: "off",
 };
-/** Paper, the Google Forms look; new forms and templates start with it. */
+/** Flow, the clean Apple-style look live games use by default; new forms and quizzes start with it. */
+export const flowTheme: FormTheme = {
+  version: 1, preset: "flow", accent: "#007aff", background: "plain", font: "segoe", radius: "large",
+  pageColor: "#f2f2f7", surfaceColor: "#ffffff", textColor: "#1d1d1f", layout: "card",
+  cover: "none", backdrop: "none", buttons: "solid", appearance: "auto", sound: "off",
+};
+/** Paper, the Google Forms look. */
 export const paperTheme: FormTheme = {
   version: 1, preset: "paper", accent: "#6942b5", background: "plain", font: "sans", radius: "small",
   pageColor: "#f0ebf8", surfaceColor: "#ffffff", textColor: "#202124", layout: "card",
   cover: "classic", backdrop: "none", buttons: "solid", appearance: "auto", sound: "off",
 };
 
-/** Google Forms style, the default for new forms and templates. Looks like Google Forms; not affiliated with Google. */
+/** Google Forms style. Looks like Google Forms; not affiliated with Google. */
 export const googleFormsTheme: FormTheme = {
   version: 1, preset: "google-forms", accent: "#673ab7", background: "plain", font: "roboto", radius: "small",
   pageColor: "#f0ebf8", surfaceColor: "#ffffff", textColor: "#202124", layout: "flat",
@@ -246,7 +252,7 @@ export function emptyDefinition(title = "Untitled form"): FormDefinition {
     presentation: "page",
     fields: [],
     endings: [],
-    theme: { ...googleFormsTheme },
+    theme: { ...flowTheme },
   };
 }
 

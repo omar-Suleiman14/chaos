@@ -1,6 +1,6 @@
 /* The default live-game look, in the style of Apple's apps. Creators can choose another theme.
    Follows the device's light or dark setting. Answer colours keep matching the host screen's shapes. */
-.live-apple {
+.live-root.live-apple {
   --live-bg: #f2f2f7;
   --live-surface: #ffffff;
   --live-line: rgba(60, 60, 67, .16);
@@ -20,70 +20,70 @@
   color-scheme: light;
 }
 @media (prefers-color-scheme: dark) {
-  .live-apple {
+  .live-root.live-apple {
     --live-bg: #000000; --live-surface: #1c1c1e; --live-line: rgba(84, 84, 88, .55); --live-text: #ffffff; --live-muted: rgba(235, 235, 245, .6);
     --live-accent: #0a84ff; --live-fill: rgba(118, 118, 128, .24); --live-good: #30d158; --live-bad: #ff453a; --form-soft: rgba(10, 132, 255, .18);
     --ios-red: #ff453a; --ios-blue: #0a84ff; --ios-orange: #ff9f0a; --ios-green: #30d158;
     color-scheme: dark;
   }
 }
-.live-apple :focus-visible { outline: 3px solid color-mix(in srgb, var(--live-accent) 55%, transparent); outline-offset: 2px; }
+.live-root.live-apple :focus-visible { outline: 3px solid color-mix(in srgb, var(--live-accent) 55%, transparent); outline-offset: 2px; }
 
 /* Frosted top bar. */
-.live-apple .live-bar { position: sticky; top: 0; z-index: 10; padding: 10px 16px; background: color-mix(in srgb, var(--live-bg) 78%, transparent); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: .5px solid var(--live-line); }
-.live-apple[data-joining="true"] .live-bar { padding: 10px 16px; }
-.live-apple .live-brand { font-size: 17px; font-weight: 600; }
-.live-apple .live-brand > span { border: 0; padding: 2px 8px; border-radius: 999px; background: var(--live-fill); font-size: 11px; letter-spacing: .04em; }
+.live-root.live-apple .live-bar { position: sticky; top: 0; z-index: 10; padding: 10px 16px; background: color-mix(in srgb, var(--live-bg) 78%, transparent); -webkit-backdrop-filter: saturate(180%) blur(20px); backdrop-filter: saturate(180%) blur(20px); border-bottom: .5px solid var(--live-line); }
+.live-root.live-apple[data-joining="true"] .live-bar { padding: 10px 16px; }
+.live-root.live-apple .live-brand { font-size: 17px; font-weight: 600; }
+.live-root.live-apple .live-brand > span { border: 0; padding: 2px 8px; border-radius: 999px; background: var(--live-fill); font-size: 11px; letter-spacing: .04em; }
 
 /* Buttons: tinted capsules; primary is filled. */
-.live-apple .live-icon-btn, .live-apple .live-btn { border: 0; border-radius: 999px; background: var(--live-fill); color: var(--live-accent); font-weight: 600; font-size: 15px; min-height: 36px; padding: 0 14px; }
-.live-apple .live-icon-btn { padding: 0; width: 36px; min-width: 36px; }
-.live-apple .live-btn--primary, .live-apple .live-join-form .live-btn--primary { min-height: 52px; padding: 0 24px; border-radius: 14px; background: var(--live-accent); color: #fff; font-size: 17px; font-weight: 600; transition: transform .15s ease, opacity .15s ease; }
-.live-apple .live-btn--primary:active:not(:disabled) { transform: scale(.98); opacity: .85; }
-.live-apple .live-join-form .live-btn--primary:not(:disabled):hover { filter: none; transform: none; }
-.live-apple .live-btn:disabled { opacity: .35; }
+.live-root.live-apple .live-icon-btn, .live-root.live-apple .live-btn { border: 0; border-radius: 999px; background: var(--live-fill); color: var(--live-accent); font-weight: 600; font-size: 15px; min-height: 36px; padding: 0 14px; }
+.live-root.live-apple .live-icon-btn { padding: 0; width: 36px; min-width: 36px; }
+.live-root.live-apple .live-btn--primary, .live-root.live-apple .live-join-form .live-btn--primary { min-height: 52px; padding: 0 24px; border-radius: 14px; background: var(--live-accent); color: #fff; font-size: 17px; font-weight: 600; transition: transform .15s ease, opacity .15s ease; }
+.live-root.live-apple .live-btn--primary:active:not(:disabled) { transform: scale(.98); opacity: .85; }
+.live-root.live-apple .live-join-form .live-btn--primary:not(:disabled):hover { filter: none; transform: none; }
+.live-root.live-apple .live-btn:disabled { opacity: .35; }
 
 /* Join: large title and an inset grouped form. */
-.live-apple .live-join-main { padding: 28px 20px 56px; }
-.live-apple .live-join-layout { max-width: 420px; gap: 24px; }
-.live-apple .live-join-eyebrow { color: var(--live-muted); text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 500; margin-bottom: 4px; }
-.live-apple .live-join-story h1 { font-family: inherit; font-size: 34px; font-weight: 700; letter-spacing: -.025em; line-height: 1.1; }
-.live-apple .live-join-story > .live-muted { font-size: 17px; margin-top: 8px; }
-.live-apple .live-join-form { gap: 16px; padding: 0; background: none; border: 0; box-shadow: none; animation: none; }
-.live-apple .live-join-form .live-field { gap: 6px; }
-.live-apple .live-join-form .live-field > span:first-child { font-size: 13px; font-weight: 400; text-transform: uppercase; letter-spacing: .02em; color: var(--live-muted); padding-inline: 16px; }
-.live-apple .live-join-form .live-field > span:last-child { font-size: 13px; color: var(--live-muted); padding-inline: 16px; }
-.live-apple .live-join-form .live-input { min-height: 52px; border: 0; border-radius: 12px; background: var(--live-surface); color: var(--live-text); font-size: 17px; font-weight: 400; padding: 0 16px; }
-.live-apple .live-join-form .live-input--pin { font-size: 28px; font-weight: 600; letter-spacing: .25em; text-align: center; font-variant-numeric: tabular-nums; min-height: 64px; }
-.live-apple .live-join-form .live-input:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--live-accent) 35%, transparent); }
-.live-apple .live-create-callout { margin-top: 28px; }
-.live-apple .live-create-callout a { color: var(--live-accent); font-weight: 500; font-size: 15px; }
-.live-apple .live-create-callout p { font-size: 13px; }
-.live-apple .live-error { border: 0; padding: 0 16px; color: var(--live-bad); font-weight: 500; font-size: 15px; }
+.live-root.live-apple .live-join-main { padding: 28px 20px 56px; }
+.live-root.live-apple .live-join-layout { max-width: 420px; gap: 24px; }
+.live-root.live-apple .live-join-eyebrow { color: var(--live-muted); text-transform: none; letter-spacing: 0; font-size: 15px; font-weight: 500; margin-bottom: 4px; }
+.live-root.live-apple .live-join-story h1 { font-family: inherit; font-size: 34px; font-weight: 700; letter-spacing: -.025em; line-height: 1.1; }
+.live-root.live-apple .live-join-story > .live-muted { font-size: 17px; margin-top: 8px; }
+.live-root.live-apple .live-join-form { gap: 16px; padding: 0; background: none; border: 0; box-shadow: none; animation: none; }
+.live-root.live-apple .live-join-form .live-field { gap: 6px; }
+.live-root.live-apple .live-join-form .live-field > span:first-child { font-size: 13px; font-weight: 400; text-transform: uppercase; letter-spacing: .02em; color: var(--live-muted); padding-inline: 16px; }
+.live-root.live-apple .live-join-form .live-field > span:last-child { font-size: 13px; color: var(--live-muted); padding-inline: 16px; }
+.live-root.live-apple .live-join-form .live-input { min-height: 52px; border: 0; border-radius: 12px; background: var(--live-surface); color: var(--live-text); font-size: 17px; font-weight: 400; padding: 0 16px; }
+.live-root.live-apple .live-join-form .live-input--pin { font-size: 28px; font-weight: 600; letter-spacing: .25em; text-align: center; font-variant-numeric: tabular-nums; min-height: 64px; }
+.live-root.live-apple .live-join-form .live-input:focus { outline: none; box-shadow: 0 0 0 3px color-mix(in srgb, var(--live-accent) 35%, transparent); }
+.live-root.live-apple .live-create-callout { margin-top: 28px; }
+.live-root.live-apple .live-create-callout a { color: var(--live-accent); font-weight: 500; font-size: 15px; }
+.live-root.live-apple .live-create-callout p { font-size: 13px; }
+.live-root.live-apple .live-error { border: 0; padding: 0 16px; color: var(--live-bad); font-weight: 500; font-size: 15px; }
 
 /* In game. */
-.live-apple .live-card { border: 0; border-radius: 16px; background: var(--live-surface); }
-.live-apple .live-player-question__heading h1 { font-family: inherit; font-size: clamp(22px, 5.5vw, 28px); font-weight: 700; letter-spacing: -.02em; line-height: 1.25; }
-.live-apple .live-tile { border: 0; border-radius: 18px; background: var(--live-surface); padding: 14px 16px; font-size: 17px; font-weight: 500; box-shadow: 0 1px 2px rgba(0, 0, 0, .04); transition: transform .12s ease, box-shadow .15s ease; }
-.live-apple button.live-tile:active:not(:disabled) { transform: scale(.98); }
-.live-apple button.live-tile:hover:not(:disabled) { background: var(--live-surface); box-shadow: 0 0 0 2px var(--live-line); }
-.live-apple .live-tile--selected, .live-apple button.live-tile.live-tile--selected:hover { background: var(--form-soft); box-shadow: 0 0 0 2px var(--live-accent); }
-.live-apple .live-tile__key { border: 0; border-radius: 999px; width: 32px; height: 32px; flex-basis: 32px; color: #fff; font-size: 15px; font-weight: 600; }
-.live-apple .live-tile[data-shape="triangle"] .live-tile__key { background: var(--ios-red); }
-.live-apple .live-tile[data-shape="diamond"] .live-tile__key { background: var(--ios-blue); }
-.live-apple .live-tile[data-shape="circle"] .live-tile__key { background: var(--ios-orange); }
-.live-apple .live-tile[data-shape="square"] .live-tile__key { background: var(--ios-green); }
+.live-root.live-apple .live-card { border: 0; border-radius: 16px; background: var(--live-surface); }
+.live-root.live-apple .live-player-question__heading h1 { font-family: inherit; font-size: clamp(22px, 5.5vw, 28px); font-weight: 700; letter-spacing: -.02em; line-height: 1.25; }
+.live-root.live-apple .live-tile { border: 0; border-radius: 18px; background: var(--live-surface); padding: 14px 16px; font-size: 17px; font-weight: 500; box-shadow: 0 1px 2px rgba(0, 0, 0, .04); transition: transform .12s ease, box-shadow .15s ease; }
+.live-root.live-apple button.live-tile:active:not(:disabled) { transform: scale(.98); }
+.live-root.live-apple button.live-tile:hover:not(:disabled) { background: var(--live-surface); box-shadow: 0 0 0 2px var(--live-line); }
+.live-root.live-apple .live-tile--selected, .live-root.live-apple button.live-tile.live-tile--selected:hover { background: var(--form-soft); box-shadow: 0 0 0 2px var(--live-accent); }
+.live-root.live-apple .live-tile__key { border: 0; border-radius: 999px; width: 32px; height: 32px; flex-basis: 32px; color: #fff; font-size: 15px; font-weight: 600; }
+.live-root.live-apple .live-tile[data-shape="triangle"] .live-tile__key { background: var(--ios-red); }
+.live-root.live-apple .live-tile[data-shape="diamond"] .live-tile__key { background: var(--ios-blue); }
+.live-root.live-apple .live-tile[data-shape="circle"] .live-tile__key { background: var(--ios-orange); }
+.live-root.live-apple .live-tile[data-shape="square"] .live-tile__key { background: var(--ios-green); }
 /* Symbols-only answers: the whole tile is the colour, with a white shape. */
-.live-apple .live-tile--phone[data-labelled="false"] { color: #fff; }
-.live-apple .live-tile--phone[data-labelled="false"][data-shape="triangle"] { background: var(--ios-red); }
-.live-apple .live-tile--phone[data-labelled="false"][data-shape="diamond"] { background: var(--ios-blue); }
-.live-apple .live-tile--phone[data-labelled="false"][data-shape="circle"] { background: var(--ios-orange); }
-.live-apple .live-tile--phone[data-labelled="false"][data-shape="square"] { background: var(--ios-green); }
-.live-apple .live-tile--phone[data-labelled="false"] .live-tile__key { background: none; }
-.live-apple .live-tile--phone[data-labelled="false"].live-tile--selected { box-shadow: 0 0 0 3px var(--live-text); }
-.live-apple .live-result { border: 0; border-radius: 22px; font-family: inherit; font-weight: 700; letter-spacing: -.02em; }
-.live-apple .live-result--good { background: color-mix(in srgb, var(--live-good) 16%, var(--live-surface)); color: var(--live-good); }
-.live-apple .live-result--bad { background: color-mix(in srgb, var(--live-bad) 12%, var(--live-surface)); color: var(--live-bad); }
-.live-apple .live-result > span:not(:first-of-type) { color: var(--live-text); }
-.live-apple .live-timer__ring { color: var(--live-accent); }
-.live-apple .live-timer--low .live-timer__ring { color: var(--live-bad); }
+.live-root.live-apple .live-tile--phone[data-labelled="false"] { color: #fff; }
+.live-root.live-apple .live-tile--phone[data-labelled="false"][data-shape="triangle"] { background: var(--ios-red); }
+.live-root.live-apple .live-tile--phone[data-labelled="false"][data-shape="diamond"] { background: var(--ios-blue); }
+.live-root.live-apple .live-tile--phone[data-labelled="false"][data-shape="circle"] { background: var(--ios-orange); }
+.live-root.live-apple .live-tile--phone[data-labelled="false"][data-shape="square"] { background: var(--ios-green); }
+.live-root.live-apple .live-tile--phone[data-labelled="false"] .live-tile__key { background: none; }
+.live-root.live-apple .live-tile--phone[data-labelled="false"].live-tile--selected { box-shadow: 0 0 0 3px var(--live-text); }
+.live-root.live-apple .live-result { border: 0; border-radius: 22px; font-family: inherit; font-weight: 700; letter-spacing: -.02em; }
+.live-root.live-apple .live-result--good { background: color-mix(in srgb, var(--live-good) 16%, var(--live-surface)); color: var(--live-good); }
+.live-root.live-apple .live-result--bad { background: color-mix(in srgb, var(--live-bad) 12%, var(--live-surface)); color: var(--live-bad); }
+.live-root.live-apple .live-result > span:not(:first-of-type) { color: var(--live-text); }
+.live-root.live-apple .live-timer__ring { color: var(--live-accent); }
+.live-root.live-apple .live-timer--low .live-timer__ring { color: var(--live-bad); }

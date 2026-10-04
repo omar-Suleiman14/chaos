@@ -170,7 +170,7 @@ export default function SettingsPage() {
 
 
       <Section id="new-forms" icon={Palette} title={t.newForms} description={t.newFormsAbout}>
-        <Row id="settings-new-theme" label={t.theme} help={labels.themeName(p.newFormPreset)} isDefault={p.newFormPreset === "google-forms"} stack>
+        <Row id="settings-new-theme" label={t.theme} help={labels.themeName(p.newFormPreset)} isDefault={p.newFormPreset === defaultPreferences.newFormPreset} stack>
           <ThemePicker label={t.themeLabel} value={p.newFormPreset} onChange={(id) => set("newFormPreset", id)} />
           {p.newFormPreset !== defaultPreferences.newFormPreset && <button type="button" className="ws-btn ws-btn--sm mt-3" onClick={() => set("newFormPreset", defaultPreferences.newFormPreset)}>{t.resetTheme}</button>}
         </Row>
