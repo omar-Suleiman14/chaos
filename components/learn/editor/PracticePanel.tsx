@@ -31,7 +31,7 @@ const copy = {
   },
 };
 
-export default function PracticePanel({ lessonId, onCreateCards, onInsertQuiz }: { lessonId: string; quizzes: AttachedQuiz[]; onChange: (quizzes: AttachedQuiz[]) => void; onCreateCards: () => void; onInsertQuiz?: (id: string) => void }) {
+export default function PracticePanel({ lessonId, onCreateCards, onInsertQuiz, onInsertFlashcards }: { lessonId: string; quizzes: AttachedQuiz[]; onChange: (quizzes: AttachedQuiz[]) => void; onCreateCards: () => void; onInsertQuiz?: (id: string) => void; onInsertFlashcards?: (id: string) => void }) {
   const t = useCopy(copy);
   const forms = useQuery(api.forms.listMyForms);
   const relationships = useQuery(api.learnCollections.listAssessments, { lessonId: lessonId as Id<"lessons"> });
@@ -91,7 +91,7 @@ export default function PracticePanel({ lessonId, onCreateCards, onInsertQuiz }:
       ) : <p className="lx-muted">{t.none} <Link className="lx-link" href="/dashboard?tab=games">{t.create}</Link></p>)}
       <hr className="lx-divider" />
       <div className="lx-panel__row"><strong style={{ display: "flex", gap: 6, alignItems: "center" }}><Layers size={14} aria-hidden />{t.cards}</strong><button type="button" className="ws-btn ws-btn--sm" onClick={onCreateCards}><Plus size={14} aria-hidden />{t.newCards}</button></div>
-      {decks.map((d) => <Link key={d.id} className="lx-row" href={`/dashboard/learn/flashcards/${d.id}`}><span className="lx-row__main"><span className="lx-row__title">{d.title}</span><span className="lx-row__sub">{t.cardsCount(d.cards.length)}</span></span></Link>)}
+      {decks.map((d) => <div key={d.id} className="lx-panel"><Link className="lx-row" href={`/dashboard/learn/flashcards/${d.id}`}><span className="lx-row__main"><span className="lx-row__title">{d.title}</span><span className="lx-row__sub">{t.cardsCount(d.cards.length)}</span></span></Link>{onInsertFlashcards && <button type="button" className="ws-btn ws-btn--sm" onClick={() => onInsertFlashcards(d.id)}>{t.attach === "Attach a quiz" ? "Insert into lesson" : "أدرج داخل الدرس"}</button>}</div>)}
     </div>
   );
 }

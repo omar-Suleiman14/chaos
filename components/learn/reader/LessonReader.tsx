@@ -1,5 +1,9 @@
 "use client";
 
+import { useQuery } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import { legacyFlashcardBlocks } from "@/lib/learn/inlineStudy";
 import { isCoverUrl } from "@/lib/learn/covers";
 import Link from "@/components/site/SiteLink";
 import { useRouter } from "next/navigation";
@@ -117,6 +121,8 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const isOwner = viewer?.id === lesson.ownerId;
   const signedIn = !!viewer?.signedIn;
   const view = previewDraft ? { version: lesson.published?.version ?? 0, meta: lesson.draft.meta, content: lesson.draft.content, publishedAt: lesson.draft.updatedAt } : readerView(lesson);
+  const attachedDecks = useQuery(api.flashcardStudy.listAttached, { lessonId: lesson.id as Id<"lessons"> });
+  const legacyDeckBlocks = legacyFlashcardBlocks(view.content, attachedDecks ?? []);
   const meta = view.meta;
   const items = useMemo(() => outline(view.content), [view.content]);
   const active = useActiveHeading(items);
@@ -398,6 +404,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                     onCite={(sourceId, locator) => { const source = lesson.sources.find((s) => s.id === sourceId); if (source) setOpenSource({ source, locator }); }}
                     onOpenImage={(block, url) => setLightbox({ url, alt: String(block.props.alt ?? ""), caption: String(block.props.caption ?? "") || undefined })}
                     blockAside={blockAside} blockAfter={blockAfter} activeBlockId={tappedBlock} />
+                  <BlockRenderer content={legacyDeckBlocks} sources={lesson.sources} />
                   {lesson.sources.length > 0 && (
                     <section className="lx-section" style={{ marginTop: 40 }} aria-labelledby="lesson-sources">
                       <h2 id="lesson-sources" style={{ fontSize: "1.2em" }}>{t.sources}</h2>
@@ -440,7 +447,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                   )}
                 </>
               ) }
-              <section id="practice" className="lx-section" aria-label={t.tabs.practice} style={{ marginTop: 32, borderTop: "1px solid var(--ws-line)", paddingTop: 24 }}><h2>{t.tabs.practice}</h2><PracticeTab lesson={lesson} isOwner={isOwner} onForkQuiz={signedIn && caps.quizForks ? setForkingQuiz : undefined} /></section>
+              <PracticeTab lesson={lesson} isOwner={isOwner} onForkQuiz={signedIn && caps.quizForks ? setForkingQuiz : undefined} />
             </div>
           </article>
         </main>
