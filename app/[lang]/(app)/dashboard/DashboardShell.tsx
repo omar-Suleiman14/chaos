@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 
 import { useClerk, useUser } from "@/lib/auth/client";
+import { CardOnboarding } from "@/components/card/CardCustomization";
 import MemberAvatar from "@/components/MemberAvatar";
 import { avatarSeed } from "@/lib/avatarSeed";
 import { useMutation, useQuery } from "convex/react";
@@ -135,6 +136,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const getOrCreateUser = useMutation(api.quizFunctions.getOrCreateUser);
   const isAdmin = useQuery(api.quizFunctions.getIsAdmin) === true;
   const account = useQuery(api.quizFunctions.getCurrentUser);
+  const [cardStarted, setCardStarted] = useState(false), [cardDismissed, setCardDismissed] = useState(false);
+  useEffect(() => { if (account?.cardOnboardingPending) setCardStarted(true); }, [account?.cardOnboardingPending]);
   const forms = useQuery(api.forms.listMyForms);
   const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
   const myCourses = useQuery(api.courses.listMine);
@@ -291,6 +294,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
       </IntentLink>
     );
   };
+
+  if (account && !cardDismissed && (account.cardOnboardingPending || cardStarted) && !account.isBanned && !account.suspendedUntil) return <div className="workspace-ui"><CardOnboarding actorId={account.clerkId} onDone={() => setCardDismissed(true)} /></div>;
 
   // The live game host screen is meant for a projector: full window, no workspace chrome.
   if (pathname.startsWith("/dashboard/live/")) return <>{children}</>;

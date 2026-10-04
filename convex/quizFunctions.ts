@@ -78,7 +78,7 @@ export const getOrCreateUser = mutation({
 
       // Update fields if changed
       const updates: Record<string, unknown> = {};
-      if (identity.name && identity.name !== existing.name) updates.name = identity.name;
+      if (!existing.profileNameChosen && identity.name && identity.name !== existing.name) updates.name = identity.name;
       if (identity.email && identity.email !== existing.email) updates.email = identity.email;
       if (identity.pictureUrl && identity.pictureUrl !== existing.imageUrl) updates.imageUrl = identity.pictureUrl;
 
@@ -114,6 +114,7 @@ export async function insertNewUser(ctx: MutationCtx, profile: { clerkId: string
     email: profile.email,
     username,
     imageUrl: profile.imageUrl,
+    cardOnboardingPending: true,
     // Every new account receives one 30-day Pro trial.
     plan: "pro",
     planExpiresAt,
