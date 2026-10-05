@@ -272,10 +272,13 @@ it("links quizzes idempotently and reuses normal Live eligibility", async () => 
   });
   const asset = { kind: "form", id: formId };
   const attach = makeFunctionReference<"mutation">("mcpAssessments:attach"), live = makeFunctionReference<"mutation">("mcpAssessments:createLive");
-  await expect(t.mutation(live, { userId, lessonId, asset })).rejects.toThrow("Linked assessment not found");
+  await expect(t.mutation(live, { userId, lessonId, asset })).rejects.toThrow("attach_lesson_quiz first");
   await expect(t.mutation(attach, { userId: otherId, lessonId, asset, label: "Quiz", order: 0 })).rejects.toThrow("unauthorized");
   const link = await t.mutation(attach, { userId, lessonId, asset, label: "Quiz", order: 0 });
   expect(await t.mutation(attach, { userId, lessonId, asset, label: "Quiz renamed", order: 1 })).toEqual(link);
+  // Assistants often call a create_form quiz kind "quiz"; the form ID still resolves to the same link.
+  expect(await t.mutation(attach, { userId, lessonId, asset: { kind: "quiz", id: formId }, label: "Quiz", order: 1 })).toEqual(link);
+  await expect(t.mutation(attach, { userId, lessonId, asset: { kind: "quiz", id: "not-an-id" }, label: "Quiz", order: 1 })).rejects.toThrow("NOT_FOUND");
   await expect(t.mutation(live, { userId, lessonId, asset })).rejects.toThrow("LIVE_NO_QUESTIONS");
   await t.run(async ctx => {
     const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", formId).eq("version", 1)).unique();

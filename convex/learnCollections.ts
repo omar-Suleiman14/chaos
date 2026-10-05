@@ -67,12 +67,13 @@ export const getPublished = query({ args: { collectionId: v.id("learnCollections
 } });
 export async function attachAssessmentForActor(ctx: MutationCtx, actor: string, args: { lessonId: Id<"lessons">; asset: Doc<"lessonAssessments">["asset"]; label: string; order: number }) {
   const lesson = await lessonAccessForActor(ctx, actor, args.lessonId, true);
-  if (lesson.ownerId !== actor || !args.label.trim() || args.label.length > 200 || !Number.isSafeInteger(args.order) || args.order < 0 || args.order > 1000) throw new Error("Invalid assessment relationship");
-  if (args.asset.kind === "form") { const form = await ctx.db.get("forms", args.asset.id); if (!form || form.ownerId !== actor || !form.draft.quiz?.enabled) throw new Error("Assessment must be an owned quiz form"); }
-  else { const quiz = await ctx.db.get("quizzes", args.asset.id); if (!quiz || quiz.creatorId !== actor) throw new Error("Assessment must be an owned quiz"); }
+  if (lesson.ownerId !== actor) throw new Error("FORBIDDEN: Only the lesson owner can attach assessments.");
+  if (!args.label.trim() || args.label.length > 200 || !Number.isSafeInteger(args.order) || args.order < 0 || args.order > 1000) throw new Error("VALIDATION_FAILED: Give a label up to 200 characters and an order from 0 to 1000.");
+  if (args.asset.kind === "form") { const form = await ctx.db.get("forms", args.asset.id); if (!form || form.ownerId !== actor) throw new Error("NOT_FOUND: Quiz form not found in your library."); if (!form.draft.quiz?.enabled) throw new Error("VALIDATION_FAILED: That form is not a quiz; turn on quiz mode first."); }
+  else { const quiz = await ctx.db.get("quizzes", args.asset.id); if (!quiz || quiz.creatorId !== actor) throw new Error("NOT_FOUND: Quiz not found in your library."); }
   const prior = await ctx.db.query("lessonAssessments").withIndex("by_lessonId_and_asset", q => q.eq("lessonId", lesson._id).eq("asset", args.asset)).unique();
   if (prior) { await ctx.db.patch("lessonAssessments", prior._id, { label: args.label, order: args.order }); return prior._id; }
-  if ((await ctx.db.query("lessonAssessments").withIndex("by_lessonId_and_order", q => q.eq("lessonId", lesson._id)).take(51)).length >= 50) throw new Error("At most 50 assessments per lesson");
+  if ((await ctx.db.query("lessonAssessments").withIndex("by_lessonId_and_order", q => q.eq("lessonId", lesson._id)).take(51)).length >= 50) throw new Error("VALIDATION_FAILED: At most 50 assessments per lesson.");
   return ctx.db.insert("lessonAssessments", args);
 }
 export const attachAssessment = mutation({ args: { lessonId: v.id("lessons"), asset: schema.tables.lessonAssessments.validator.fields.asset, label: v.string(), order: v.number() }, returns: v.id("lessonAssessments"), handler: async (ctx, args) => attachAssessmentForActor(ctx, (await requireActiveUser(ctx)).identity.subject, args) });
