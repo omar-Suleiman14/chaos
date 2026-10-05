@@ -35,7 +35,9 @@
 .site-title { font-size: clamp(2.65rem, 5.6vw, 4.6rem); font-weight: 600; line-height: 1.1; letter-spacing: -.055em; text-wrap: balance; }
 .site-title > span { color: var(--s-accent); }
 .site-hero--home { position: relative; max-width: 1240px; }
-.site-hero--home .site-title { max-width: 10.6em; margin-inline: auto; font-size: clamp(2.25rem, 5.8vw, 5.5rem); line-height: 1.3; letter-spacing: -.05em; }
+/* Sized by viewport height too, so the buttons stay on the first screen of a laptop. */
+.site-hero--home .site-title { max-width: 10.6em; margin-inline: auto; font-size: clamp(2.25rem, min(4.6vw, 8.4vh), 4.5rem); line-height: 1.15; letter-spacing: -.05em; }
+@media (min-width: 901px) { .site-hero--home { padding-top: calc(120px + 3vh); } }
 .site-hero--home .site-title > span { display: block; max-width: 8.6em; margin-inline: auto; text-wrap: balance; }
 .site-hero--home:lang(ar) .site-title { font-family: var(--font-cairo), var(--font-plex-arabic), sans-serif; line-height: 1.55; letter-spacing: normal; }
 .site-hero--home .site-lead { max-width: 34rem; text-wrap: pretty; }
