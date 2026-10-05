@@ -650,3 +650,27 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 @keyframes lx-termcard-in { from { opacity: 0; transform: translateY(-3px) scale(.98); } }
 @media (prefers-reduced-motion: reduce) { .lx-termcard { animation: none; } }
 @media print { .lx-termcard { display: none; } .lx-term { text-decoration: none; } }
+
+/* Course navigation at the end of a lesson: an "Up next" card, and pulling past the end opens it. */
+.lx-upnext-wrap { display: grid; gap: 10px; margin-top: 4px; transition: transform .45s cubic-bezier(.2, .9, .3, 1.2); will-change: transform; }
+.lx-upnext-wrap[data-pulling] { transition: transform .08s linear; }
+.lx-upnext { display: flex; align-items: center; gap: 16px; padding: 16px 18px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--ws-line)); background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 14%, var(--surface-bright)), var(--surface-bright)); color: var(--on-surface); text-decoration: none; transition: border-color .2s, transform .2s, box-shadow .2s; }
+.lx-upnext:hover { border-color: color-mix(in srgb, var(--primary) 60%, transparent); box-shadow: var(--ws-shadow-lg); transform: translateY(-1px); }
+.lx-upnext:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.lx-upnext__text { display: grid; gap: 3px; min-width: 0; flex: 1; }
+.lx-upnext__label { font-size: 12px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lx-upnext__title { font-size: 17px; font-weight: 600; line-height: 1.35; }
+.lx-upnext__arrow { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: var(--on-primary, #fff); transition: transform .2s; }
+.lx-upnext:hover .lx-upnext__arrow { transform: translateX(3px); }
+.lx-upnext:hover .lx-upnext__arrow:dir(rtl) { transform: translateX(-3px); }
+.lx-prevlesson { display: inline-flex; align-items: center; gap: 4px; justify-self: start; max-width: 100%; padding: 6px 4px; font-size: 13px; color: var(--on-surface-variant); text-decoration: none; }
+.lx-prevlesson:hover { color: var(--on-surface); }
+.lx-prevlesson span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lx-pullnext { display: grid; justify-items: center; gap: 8px; height: 0; overflow: visible; padding-top: 36px; margin-bottom: 90px; pointer-events: none; font-size: 13px; color: var(--on-surface-variant); transition: opacity .2s; }
+.lx-pullnext svg { transform: rotate(-90deg); }
+.lx-pullnext svg[data-going] { animation: lx-pull-spin .7s linear infinite; }
+.lx-pullnext__track { fill: none; stroke: var(--ws-line); stroke-width: 3; }
+.lx-pullnext__ring { fill: none; stroke: var(--primary); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset .08s linear; }
+@keyframes lx-pull-spin { to { transform: rotate(270deg); } }
+@media (prefers-reduced-motion: reduce) { .lx-upnext-wrap, .lx-upnext, .lx-upnext__arrow { transition: none; } .lx-pullnext svg[data-going] { animation: none; } }
+@media print { .lx-pullnext { display: none; } }
