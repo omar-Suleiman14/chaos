@@ -47,8 +47,8 @@ export function WsConfirm({ title, body, confirmLabel, danger = true, onConfirm,
 }
 
 /** Small dropdown menu anchored to a "…" button. */
-export function WsMenu({ label, children, align = "end", trigger, triggerClassName = "ws-icon-button" }: {
-  label: string; children: (close: () => void) => React.ReactNode; align?: "start" | "end"; trigger?: React.ReactNode; triggerClassName?: string;
+export function WsMenu({ label, children, align = "end", trigger, triggerClassName = "ws-icon-button", menuClassName }: {
+  label: string; children: (close: () => void) => React.ReactNode; align?: "start" | "end"; trigger?: React.ReactNode; triggerClassName?: string; menuClassName?: string;
 }) {
   const [open, setOpen] = useState(false);
   const root = useRef<HTMLDivElement>(null);
@@ -115,7 +115,7 @@ export function WsMenu({ label, children, align = "end", trigger, triggerClassNa
         {trigger ?? <MoreHorizontal size={18} />}
       </button>
       {open && portalRoot && createPortal(
-        <div ref={menu} id={id} role="menu" aria-label={label} className="ws-menu ws-glass" style={{ position: "fixed", ...position, maxHeight: "calc(100dvh - 16px)", overflowY: "auto" }}
+        <div ref={menu} id={id} role="menu" aria-label={label} className={`ws-menu ws-glass${menuClassName ? ` ${menuClassName}` : ""}`} style={{ position: "fixed", ...position, maxHeight: "calc(100dvh - 16px)", overflowY: "auto" }}
           onKeyDown={(e) => {
             if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); return; }
             if (e.key === "Tab") { triggerRef.current?.focus(); close(); return; }

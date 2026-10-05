@@ -101,8 +101,9 @@ const savedItem = { href: "/dashboard/learn/saved", key: "saved", icon: Bookmark
 const workspaceItems = [
   { href: "/dashboard/archive", key: "archive", icon: Archive },
   { href: "/dashboard/connections", key: "connections", icon: Link2 },
-  { href: "/dashboard/settings", key: "settings", icon: Settings },
 ] as const;
+/** Settings live in the workspace menu; the collapsed rail hides that menu, so it keeps this link. */
+const settingsItem = { href: "/dashboard/settings", key: "settings", icon: Settings } as const;
 
 /** Personal learning routes share the workspace shell; Explore is public. */
 const learnItems = [
@@ -126,7 +127,7 @@ function pageLabel(pathname: string, t: Copy): string {
   if (pathname === "/dashboard/forms") return t.library;
   if (pathname.startsWith("/dashboard/courses")) return t.courses;
   if (pathname.startsWith("/dashboard/card")) return t.myCard;
-  const item = [libraryItem, legacyResultsItem, ...workspaceItems].find((i) => (i.href === "/dashboard" ? pathname === i.href : pathname.startsWith(i.href)));
+  const item = [libraryItem, legacyResultsItem, ...workspaceItems, settingsItem].find((i) => (i.href === "/dashboard" ? pathname === i.href : pathname.startsWith(i.href)));
   return item ? t[item.key] : t.dashboard;
 }
 
@@ -424,6 +425,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
           <div className="ws-sidebar__footer">
             {workspaceItems.map(link)}
+            {rail && link(settingsItem)}
             {isAdmin && (
               <IntentLink href="/admin" className="ws-nav-item ws-nav-item--danger" aria-current={pathname === "/admin" ? "page" : undefined} title={rail ? t.admin : undefined}>
                 <Shield size={18} aria-hidden="true" /> <span>{t.admin}</span>

@@ -2,9 +2,9 @@
 
 import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useCopy } from "@/lib/i18n";
@@ -34,7 +34,10 @@ function TeamContents({ teamId, name, role }: { teamId: Id<"businessTeams">; nam
   const rename = useMutation(api.businessTeams.rename), invite = useMutation(api.businessTeams.invite), revoke = useMutation(api.businessTeams.revokeInvite);
   const changeRole = useMutation(api.businessTeams.changeRole), remove = useMutation(api.businessTeams.removeMember);
   const share = useMutation(api.businessTeams.share), unshare = useMutation(api.businessTeams.unshare);
-  const [tab, setTab] = useState("workspace"), [teamName, setTeamName] = useState(name);
+  // The workspace menu links straight to settings with ?tab=settings.
+  const wanted = useSearchParams().get("tab") === "settings" ? "settings" : "workspace";
+  const [tab, setTab] = useState<string>(wanted), [teamName, setTeamName] = useState(name);
+  useEffect(() => setTab(wanted), [wanted]);
   const [email, setEmail] = useState(""), [inviteRole, setInviteRole] = useState<"member" | "admin">("member");
   const [link, setLink] = useState(""), [copied, setCopied] = useState(false);
   const [assetId, setAssetId] = useState(""), [folderId, setFolderId] = useState<Id<"folders"> | null>(null);

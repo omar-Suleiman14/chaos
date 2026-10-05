@@ -1,11 +1,27 @@
 .ws-team-switcher { margin: 4px 12px 14px; }
-.ws-workspace-trigger { display: flex; align-items: center; gap: 10px; width: 100%; padding: 9px 8px; border: 0; border-radius: 8px; background: transparent; color: var(--on-background); text-align: start; cursor: pointer; }
+.ws-workspace-trigger { display: flex; align-items: center; gap: 10px; width: 100%; padding: 7px 8px; border: 1px solid transparent; border-radius: 10px; background: transparent; color: var(--on-background); cursor: pointer; text-align: start; transition: background .15s, border-color .15s; }
 .ws-workspace-trigger:hover, .ws-workspace-trigger[aria-expanded="true"] { background: var(--ws-hover); }
+.ws-workspace-trigger[aria-expanded="true"] { border-color: var(--ws-line); }
 .ws-workspace-trigger:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-.ws-workspace-avatar { display: grid; place-items: center; flex: none; width: 32px; height: 32px; border-radius: 8px; background: var(--ws-active); color: var(--primary); }
-.ws-workspace-title { display: flex; flex-direction: column; gap: 2px; flex: 1; min-width: 0; }
-.ws-workspace-title small { font-size: 10px; color: var(--on-surface-variant); }
-.ws-workspace-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; font-weight: 500; }
+.ws-workspace-avatar { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 8px; background: var(--ws-active); color: var(--primary); }
+.ws-workspace-avatar[data-large] { width: 38px; height: 38px; border-radius: 10px; }
+.ws-workspace-title { display: flex; flex-direction: column; gap: 1px; flex: 1; min-width: 0; }
+.ws-workspace-title strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 13.5px; font-weight: 600; }
+.ws-workspace-title small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 11.5px; font-weight: 400; color: var(--on-surface-variant); }
+.ws-workspace-chevron { flex: none; color: var(--on-surface-variant); }
+/* The open menu: who you are working as, the workspaces to switch to, then settings. */
+.ws-workspace-menu { width: 280px; max-width: calc(100vw - 16px); padding: 6px; border-radius: 14px; }
+.ws-workspace-menu .ws-workspace-menu__head { display: flex; align-items: center; gap: 10px; padding: 8px 8px 6px; }
+.ws-workspace-menu .ws-workspace-menu__head strong { font-size: 14.5px; }
+.ws-workspace-menu hr { margin: 6px 4px; }
+.ws-workspace-menu .ws-workspace-menu__label { padding: 4px 10px 2px; font-size: 11.5px; font-weight: 500; color: var(--on-surface-variant); }
+.ws-workspace-menu button { min-height: 40px; border-radius: 9px; }
+.ws-workspace-menu button[role="menuitemradio"] { min-height: 48px; padding-block: 5px; }
+.ws-workspace-menu button > svg { flex: none; color: var(--on-surface-variant); }
+.ws-workspace-menu button[aria-current="page"] { background: var(--ws-active); }
+.ws-workspace-menu .ws-workspace-check { margin-inline-start: auto; color: var(--primary) !important; }
+.ws-workspace-menu .ws-workspace-menu__add { color: var(--on-surface-variant); }
+.ws-workspace-menu .ws-workspace-menu__icon { display: grid; place-items: center; flex: none; width: 30px; height: 30px; border-radius: 8px; border: 1px dashed var(--ws-line-strong); }
 .ws-teams-page { display: flex; flex-direction: column; gap: 24px; width: 100%; }
 .ws-team-card { display: flex; flex-direction: column; gap: 12px; border: 0; border-top: 1px solid var(--ws-line); border-radius: 0; padding: 20px 0; background: transparent; }
 .ws-team-card h2 { font-size: 16px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
