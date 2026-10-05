@@ -16,7 +16,7 @@ const copy = {
     explore: "Explore Chaos", account: "Account and help", docs: "Documentation",
     product: "Product", home: "Home", ways: "Ways to answer", themes: "Themes", features: "Features", pricing: "Pricing", compare: "Compare",
     learn: "Learn", courses: "Explore courses", authors: "Discover authors", play: "Join a game",
-    connections: "Connections", chatgpt: "Chaos in ChatGPT", connect: "Connect Claude or ChatGPT", api: "API and connections", webhooks: "Webhooks",
+    connections: "Connections", chatgpt: "Chaos in ChatGPT", claude: "Chaos in Claude", connect: "Connect Claude or ChatGPT", api: "API and connections", webhooks: "Webhooks",
     yourAccount: "Your account", signUp: "Create an account", signIn: "Log in", open: "Open Chaos",
     openSource: "Open source", source: "Source code", selfHost: "Self-hosting", issues: "Report an issue",
     help: "Help", support: "Support", faq: "FAQ", allDocs: "All documentation", status: "Service status", security: "Security",
@@ -27,7 +27,7 @@ const copy = {
     explore: "استكشف Chaos", account: "الحساب والمساعدة", docs: "الدليل",
     product: "المنتج", home: "الرئيسية", ways: "طرق الإجابة", themes: "المظاهر", features: "المزايا", pricing: "الأسعار", compare: "المقارنة",
     learn: "Learn", courses: "استكشف الدورات", authors: "اكتشف المؤلفين", play: "انضم إلى لعبة",
-    connections: "الاتصالات", chatgpt: "Chaos في ChatGPT", connect: "اربط Claude أو ChatGPT", api: "API والاتصالات", webhooks: "Webhooks",
+    connections: "الاتصالات", chatgpt: "Chaos في ChatGPT", claude: "Chaos في Claude", connect: "اربط Claude أو ChatGPT", api: "API والاتصالات", webhooks: "Webhooks",
     yourAccount: "حسابك", signUp: "أنشئ حسابًا", signIn: "تسجيل الدخول", open: "افتح Chaos",
     openSource: "مفتوح المصدر", source: "الشيفرة المصدرية", selfHost: "الاستضافة الذاتية", issues: "أبلغ عن مشكلة",
     help: "المساعدة", support: "الدعم", faq: "الأسئلة الشائعة", allDocs: "كل الأدلة", status: "حالة الخدمة", security: "الأمان",
@@ -62,7 +62,7 @@ export default function SiteMapView({ docs }: { docs: SiteMapDocSection[] }) {
   const explore: Column[] = [
     { title: t.product, items: [{ label: t.home, href: "/" }, { label: t.ways, href: "/#modes" }, { label: t.themes, href: "/#themes" }, { label: t.features, href: "/#features" }, { label: t.pricing, href: "/pricing" }, { label: t.compare, href: "/compare" }] },
     { title: t.learn, items: [{ label: t.courses, href: "/learn" }, { label: t.authors, href: "/card" }, { label: t.play, href: "/play" }] },
-    { title: t.connections, items: [{ label: t.chatgpt, href: "/chatgpt" }, { label: t.connect, href: "/connect" }, { label: t.api, href: "/docs/integration-api" }, { label: t.webhooks, href: "/docs/webhooks" }] },
+    { title: t.connections, items: [{ label: t.claude, href: "/claude" }, { label: t.chatgpt, href: "/chatgpt" }, { label: t.connect, href: "/connect" }, { label: t.api, href: "/docs/integration-api" }, { label: t.webhooks, href: "/docs/webhooks" }] },
   ];
   const account: Column[] = [
     { title: t.yourAccount, items: [{ label: t.signUp, href: "/sign-up" }, { label: t.signIn, href: "/sign-in" }, { label: t.open, href: "/dashboard" }] },

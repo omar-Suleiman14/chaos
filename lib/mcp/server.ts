@@ -25,20 +25,20 @@ import { registerCourseTools } from "./courses";
 import { registerFlashcardTools } from "./flashcards";
 import { registerOrganizationTools } from "./organization";
 import { registerTeamTools } from "./teams";
+import { chaosIntegration } from "@/lib/integrations";
 
 export type McpCaller = (tool: string, input: Record<string, unknown>) => Promise<unknown>;
 
-export const MCP_SERVER_NAME = "chaos";
-export const MCP_SERVER_VERSION = "1.1.0";
+export const MCP_SERVER_NAME = chaosIntegration.id;
+export const MCP_SERVER_VERSION = chaosIntegration.version;
 
 /** Chaos uses one permission set; Clerk issues the standard OpenID scopes. */
 export const MCP_SCOPES = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "betterauth" ? ["profile", "email"] : ["openid", "profile", "email"];
 const securitySchemes = [{ type: "oauth2", scopes: MCP_SCOPES }];
 
-const instructions = `Chaos (chaos.fail) is where this person builds forms, surveys, quizzes, Learn lessons and courses, organises owned content in folders, and reads authorized published material and requested answers.
+const baseInstructions = `Chaos (chaos.fail) is where this person builds forms, surveys, quizzes, Learn lessons and courses, organises owned content in folders, and reads authorized published material and requested answers.
 - The Chaos app is free on every plan.
 - Cards: list_public_authors browses the opted-in author directory; get_public_card resolves current usernames and retained aliases. list_public_student_cards pages through all eligible students, public by default unless opted out. Follow cursors until isDone. get_student_card_preferences and set_student_card_preferences read/change the global default for this person; customize_my_card also accepts showStudentCards. get_student_card_visibility and set_student_card_visibility concern only this person's existing teacher relationship. set_author_listing_visibility controls only this person's directory listing. The card fan animation is a browser interaction at https://chaos.fail/card.
-- Administrator connections expose the same platform overview/refresh, account and content moderation, platform inventories, Business teams and audit activity as the admin UI under admin_operations. Inventory tools return metadata only. Moderate accounts/content only on explicit request and provide the requested reason; never retry uncertain moderation writes. No admin membership grants/revocations or legacy plan controls are available. CRM remains separately authorized under admin_crm. Administrator connections also expose CRM tools: list_crm_contacts, get_crm_contact, save_crm_contact, add_crm_note, get_crm_activity, set_crm_contact_stages and complete_crm_follow_up. These contain private contact information. Read an existing contact before saving and preserve fields the administrator did not ask to change, including its linked account and follow-up date. CRM writes are audited; they never send messages. Do not retry creation or note additions after uncertain success.
 - The person has chosen that new things go live: create_form, create_game_draft, create_lesson, create_full_course and create_flashcard_set publish as soon as they are created (lessons, courses and flashcards as public). Pass publish false only when the person asks for a draft or private work. If publishing is blocked, the result lists the problems and the item stays a draft: tell the person what to fix. Later edits to existing content are drafts until publish_form, publish_lesson or publish_course. Folders are private organisation, not publishable content.
 - Work only on content the person selected or asked to find. Authorization is enforced for the connected account; never supply an actor/userId or infer permission from a reference. Folder membership and source metadata do not grant content access. Only request source metadata through the supported tools; no source file bytes are exposed here.
 - Forms return shareUrl: share it only when returned and published. Lesson and course tools do not return shareUrl. After publish_lesson returns ok true, use the lessonId from a verified create/get response to construct https://chaos.fail/learn/<lessonId>. After publish_course returns ok true, use courseId from verified create_course (or id from get_course) to construct https://chaos.fail/learn/courses/<courseId>. Never invent IDs, claim draft links are public, or imply private/restricted links grant access. Visibility values are public, restricted and private; restricted/private require Business.
@@ -64,6 +64,10 @@ const instructions = `Chaos (chaos.fail) is where this person builds forms, surv
 - Games run themselves by default: each question ends on its timer, the answer and then the leaderboard show for breakSec seconds (default 5), and the next question starts. startWhenPlayers makes the lobby count down 5-4-3-2-1 and start once that many have joined. Pass these to host_game when the host mentions them ("start when 20 join", "10 seconds between questions", "I'll click through myself" = autoAdvance false).
 - set_game_settings changes a lobby's theme, timer (5–240 seconds), answer labels and startWhenPlayers; autoAdvance and breakSec can change at any time, so "pause the game" is autoAdvance false and "carry on" is autoAdvance true. It does not change the source quiz. Themes use the same presets as forms.
 - advance_game moves exactly one state using from and questionIndex from get_game; with autoplay on it is only needed to start without waiting or to skip ahead. Starting needs a joined player. Advancing a question closes it and reveals the answer, so do it only when the host asks. Retries with the same from/index do not advance again. end_game stops the room and saves collected responses through the ordinary live-game workflow; never stop a room without the host's request.`;
+
+/** Only verified administrator connections are told about admin and CRM tools; everyone else never sees them. */
+const adminInstructions = `- Administrator connections expose the same platform overview/refresh, account and content moderation, platform inventories, Business teams and audit activity as the admin UI under admin_operations. Inventory tools return metadata only. Moderate accounts/content only on explicit request and provide the requested reason; never retry uncertain moderation writes. No admin membership grants/revocations or legacy plan controls are available. CRM remains separately authorized under admin_crm. Administrator connections also expose CRM tools: list_crm_contacts, get_crm_contact, save_crm_contact, add_crm_note, get_crm_activity, set_crm_contact_stages and complete_crm_follow_up. These contain private contact information. Read an existing contact before saving and preserve fields the administrator did not ask to change, including its linked account and follow-up date. CRM writes are audited; they never send messages. Do not retry creation or note additions after uncertain success.`;
+
 
 const question = z.object({
   id: z.string().optional().describe("Keep the id from get_form when editing an existing question; omit for new questions."),
@@ -193,7 +197,14 @@ export function authRequired(resourceMetadataUrl: string): CallToolResult {
 }
 
 export function createChaosMcpServer(options: { call: McpCaller | null; resourceMetadataUrl: string; admin?: boolean; permissions?: readonly McpPermission[] }): McpServer {
-  const server = new McpServer({ name: MCP_SERVER_NAME, version: MCP_SERVER_VERSION, title: "Chaos" }, { instructions });
+  const server = new McpServer({
+    name: MCP_SERVER_NAME, version: MCP_SERVER_VERSION, title: chaosIntegration.name, websiteUrl: chaosIntegration.siteUrl,
+    // Clients that show server icons display the Chaos mark instead of a generic MCP icon.
+    icons: [
+      { src: `${chaosIntegration.siteUrl}${chaosIntegration.logoPath}`, mimeType: "image/svg+xml", sizes: ["any"] },
+      { src: `${chaosIntegration.siteUrl}/api/plugins/chaos-icon-512.png`, mimeType: "image/png", sizes: ["512x512"] },
+    ],
+  }, { instructions: options.admin ? `${baseInstructions}\n${adminInstructions}` : baseInstructions });
 
   const register = server.registerTool.bind(server);
   server.registerTool = (name, config, callback) => register(name, { ...config, _meta: { ...config._meta, "chaos/permission": permissionForTool(name) } }, callback);

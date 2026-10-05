@@ -17,7 +17,7 @@ const copy = {
     explore: "Explore", modes: "Modes", themes: "Themes", features: "Features", docs: "Docs", pricing: "Pricing", play: "Join a game",
     menu: "Menu", closeMenu: "Close menu", language: "Language",
     tagline: "Forms, quizzes, live games and Learn. One open-source workspace.",
-    product: "Product", ways: "Ways to answer", chatgpt: "Chaos in ChatGPT", connect: "Connect Claude or ChatGPT", compare: "Compare",
+    product: "Product", ways: "Ways to answer", chatgpt: "Chaos in ChatGPT", claude: "Chaos in Claude", connect: "Connect Claude or ChatGPT", compare: "Compare",
     openSource: "Build and connect", source: "Source code", selfHost: "Self-hosting", api: "API and connections", webhooks: "Webhooks",
     start: "Get started", help: "Support", faq: "FAQ", status: "Status", issues: "Report an issue",
     legal: "Legal", privacy: "Privacy policy", terms: "Terms and conditions", copyright: "Copyright", security: "Security", siteMap: "Site map",
@@ -27,7 +27,7 @@ const copy = {
     explore: "استكشف", modes: "طرق العرض", themes: "المظاهر", features: "المزايا", docs: "الدليل", pricing: "الأسعار", play: "انضم إلى لعبة",
     menu: "القائمة", closeMenu: "إغلاق القائمة", language: "اللغة",
     tagline: "نماذج واختبارات وألعاب مباشرة وLearn. مساحة عمل واحدة مفتوحة المصدر.",
-    product: "المنتج", ways: "طرق الإجابة", chatgpt: "Chaos في ChatGPT", connect: "اربط Claude أو ChatGPT", compare: "المقارنة",
+    product: "المنتج", ways: "طرق الإجابة", chatgpt: "Chaos في ChatGPT", claude: "Chaos في Claude", connect: "اربط Claude أو ChatGPT", compare: "المقارنة",
     openSource: "البناء والربط", source: "الشيفرة المصدرية", selfHost: "الاستضافة الذاتية", api: "API والاتصالات", webhooks: "Webhooks",
     start: "ابدأ الآن", help: "الدعم", faq: "الأسئلة الشائعة", status: "حالة الخدمة", issues: "أبلغ عن مشكلة",
     legal: "قانوني", privacy: "سياسة الخصوصية", terms: "الشروط والأحكام", copyright: "حقوق النشر", security: "الأمان", siteMap: "خريطة الموقع",
@@ -155,6 +155,7 @@ export function SiteFooter() {
           </div>
           <div>
             <h2>{t.openSource}</h2>
+            <Link href="/claude">{t.claude}</Link>
             <Link href="/chatgpt">{t.chatgpt}</Link>
             <Link href="/connect">{t.connect}</Link>
             <a href={repoUrl}>{t.source}</a>

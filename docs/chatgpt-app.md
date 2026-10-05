@@ -34,7 +34,9 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 | OpenAI domain verification | `app/.well-known/openai-apps-challenge/route.ts` |
 | Backend functions | `convex/mcp.ts`; MCP game wrappers in `convex/mcpGames.ts`; Learn lesson wrappers in `convex/mcpLearn.ts`; course wrappers in `convex/mcpCourses.ts`; flashcard wrappers in `convex/mcpFlashcards.ts`; assessment wrappers in `convex/mcpAssessments.ts`; organization/folder wrappers in `convex/mcpOrganization.ts`; advanced form wrappers in `convex/mcpAdvancedForms.ts`, `convex/mcpFormManagement.ts`; translation and validation in `convex/mcpContract.ts` |
 | Theme presets for the tools (resolved on the Next.js side, because Convex cannot import `components/`) | `lib/mcp/themes.ts`, palettes in `components/forms/formThemes.ts` |
-| Public help page | `app/chatgpt/page.tsx` → https://chaos.fail/chatgpt |
+| Public pages | `app/[lang]/(site)/chatgpt/page.tsx` → https://chaos.fail/chatgpt and `app/[lang]/(site)/claude/page.tsx` → https://chaos.fail/claude (both `components/site/IntegrationView.tsx`) |
+| Shared integration metadata (name, logo, URLs, version) | `lib/integrations/index.ts` |
+| Downloadable Claude and ChatGPT plugin packages | `lib/integrations/packages.ts`, served by `app/api/plugins/[file]/route.tsx`; see [AI integrations](./ai-integrations.md) |
 | Tests | `tests/unit/mcpContract.test.ts`, `tests/unit/mcpServer.test.ts`, `tests/unit/mcpGames.test.ts`, `tests/unit/mcpCourses.test.ts`, `tests/unit/mcpCommunity.test.ts`, `tests/integration/mcp.test.ts`, `tests/integration/mcpGames.test.ts`, `tests/integration/mcpCourses.test.ts`, `tests/integration/learnMcp.test.ts`, `tests/integration/learnOrganizationMcp.test.ts` |
 
 ### Tools
@@ -254,7 +256,7 @@ The exact same Chaos MCP server (`https://chaos.fail/mcp`) works across ChatGPT,
    - Your OAuth grant is securely stored by Claude Code.
 3. **Verify with the `/mcp` command**:
    - Inside any Claude Code session, type `/mcp`.
-   - You will see `chaos` listed as connected with 69 tools.
+   - You will see `chaos` listed as connected with the public tool set (see [the inventory](./mcp-tool-inventory.md)).
    - Use `/mcp` to manage, inspect, or refresh available tools.
 4. **Try commands across Forms, Quizzes, Lessons, and Courses**:
    - **Forms**: `"Create a Chaos feedback form for our workshop with a 1-5 rating and an open feedback question."`
@@ -263,6 +265,9 @@ The exact same Chaos MCP server (`https://chaos.fail/mcp`) works across ChatGPT,
    - **Courses**: `"Create a complete course on Human Biology with 3 lessons (Cardiovascular, Respiratory, Digestive) and publish it in Chaos."`
 
 ## 2c. Connect and test in Claude Desktop
+
+The quickest path is **Add Chaos to Claude** on https://chaos.fail/claude, which opens the connector dialog with the name and URL filled in. The same page offers **Download Chaos for Claude**, a plugin ZIP generated from `lib/integrations` ([details](./ai-integrations.md)). By hand:
+
 
 1. Open **Customize → Connectors → + Add → Add custom connector** in Claude or Claude Desktop.
 2. Name the connection `Chaos`, enter `https://chaos.fail/mcp`, and continue through the detected OAuth settings.

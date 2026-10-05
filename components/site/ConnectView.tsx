@@ -10,13 +10,14 @@ import { Check, Copy, ExternalLink } from "lucide-react";
 import LegalPage from "@/components/site/LegalPage";
 import { AiMark } from "@/components/site/aiMarks";
 import { useCopy } from "@/lib/i18n";
-import { siteUrl } from "@/lib/site";
+import { chaosIntegration, integrationPlatforms, integrationPlatformList, packageDownloadPath } from "@/lib/integrations";
+import { IntegrationLockup } from "./IntegrationView";
 
-const mcpUrl = `${siteUrl}/mcp`;
+const mcpUrl = chaosIntegration.mcpUrl;
 // claude.ai opens its "Add custom connector" dialog with these values filled in; the person still confirms.
-const claudeLink = `https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=Chaos&connectorUrl=${encodeURIComponent(mcpUrl)}`;
+const claudeLink = integrationPlatforms.claude.connectUrl;
 // ChatGPT has no prefill link yet, so this opens its settings and the steps say what to choose.
-const chatGptLink = "https://chatgpt.com/#settings/Connectors";
+const chatGptLink = integrationPlatforms.chatgpt.connectUrl;
 
 const copy = {
   en: {
@@ -27,7 +28,12 @@ const copy = {
     claudeSteps: ["Open the link. Claude shows “Add custom connector” with Chaos and the URL already filled in.", "Check the values and choose Add.", "Choose Connect and sign in to Chaos. Your connector appears under Connectors."],
     chatgptTitle: "ChatGPT", chatgptButton: "Open ChatGPT settings",
     chatgptSteps: ["Copy the URL above, then open ChatGPT settings.", "Go to Apps › Advanced settings and turn on Developer mode (Plus, Pro, Business, Enterprise and Education).", "Choose Create. Name it Chaos, paste the URL, pick OAuth, and choose Create.", "Sign in to Chaos when asked. Chaos then appears in your connected apps."],
-    more: ["What the assistant can do, and privacy: ", "Chaos in ChatGPT", "."],
+    more: ["What the assistant can do, and privacy: ", "."],
+    cards: {
+      claude: { title: "Chaos for Claude", body: "One-click connector for Claude on the web, desktop and mobile, plus a plugin package." },
+      chatgpt: { title: "Chaos for ChatGPT", body: "Add Chaos as a ChatGPT app, or install the plugin package in Codex." },
+    },
+    open: "Set up", download: "Download",
   },
   ar: {
     title: "اربط Chaos بـ Claude أو ChatGPT",
@@ -37,7 +43,12 @@ const copy = {
     claudeSteps: ["افتح الرابط. يعرض Claude نافذة «إضافة موصّل مخصص» وفيها اسم Chaos والرابط جاهزين.", "راجع القيم واختر إضافة.", "اختر اتصال وسجّل الدخول إلى Chaos. يظهر الموصّل في قائمة الموصّلات."],
     chatgptTitle: "ChatGPT", chatgptButton: "افتح إعدادات ChatGPT",
     chatgptSteps: ["انسخ الرابط أعلاه، ثم افتح إعدادات ChatGPT.", "اذهب إلى التطبيقات › الإعدادات المتقدمة وفعّل وضع المطوّر (Plus وPro وBusiness وEnterprise وEducation).", "اختر إنشاء. سمّه Chaos، والصق الرابط، واختر OAuth، ثم اختر إنشاء.", "سجّل الدخول إلى Chaos عند الطلب. سيظهر Chaos في تطبيقاتك المتصلة."],
-    more: ["ما يستطيع المساعد فعله والخصوصية: ", "Chaos في ChatGPT", "."],
+    more: ["ما يستطيع المساعد فعله والخصوصية: ", "."],
+    cards: {
+      claude: { title: "Chaos لـ Claude", body: "موصّل بنقرة واحدة لـ Claude على الويب وسطح المكتب والهاتف، مع حزمة إضافة." },
+      chatgpt: { title: "Chaos لـ ChatGPT", body: "أضف Chaos كتطبيق في ChatGPT، أو ثبّت حزمة الإضافة في Codex." },
+    },
+    open: "الإعداد", download: "تنزيل",
   },
 };
 
@@ -48,6 +59,19 @@ export default function ConnectView() {
   return (
     <LegalPage title={t.title}>
       <p>{t.intro}</p>
+      <div className="site-int-cards">
+        {integrationPlatformList.map((platform) => (
+          <article key={platform.id}>
+            <IntegrationLockup platform={platform.id} size={30} />
+            <h2>{t.cards[platform.id].title}</h2>
+            <p>{t.cards[platform.id].body}</p>
+            <div className="site-int-cards__actions">
+              <Link className="site-btn site-btn--primary" href={platform.pagePath}>{t.open}</Link>
+              <a className="site-btn site-btn--outline" href={packageDownloadPath(platform)} download={platform.packageFile}>{t.download}</a>
+            </div>
+          </article>
+        ))}
+      </div>
       <AiArchitecture />
       <McpWorkflowDemo />
       <McpOutcomes />
@@ -63,7 +87,7 @@ export default function ConnectView() {
       <p><a className="site-connect-btn" href={chatGptLink} target="_blank" rel="noopener noreferrer">{t.chatgptButton}<ExternalLink size={14} aria-hidden /></a></p>
       <ol>{t.chatgptSteps.map((step) => <li key={step}>{step}</li>)}</ol>
 
-      <p>{t.more[0]}<Link href="/chatgpt">{t.more[1]}</Link>{t.more[2]}</p>
+      <p>{t.more[0]}<Link href="/claude">Claude</Link> · <Link href="/chatgpt">ChatGPT</Link>{t.more[1]}</p>
     </LegalPage>
   );
 }

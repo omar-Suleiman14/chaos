@@ -8,6 +8,7 @@ import { createChaosMcpServer, McpToolError } from "@/lib/mcp/server";
 import type { McpCaller } from "@/lib/mcp/server";
 import { resourceMetadataUrl, resourceUrl, verifyBetterAuthMcpToken } from "@/lib/mcp/oauth";
 import { detectAiClient, type CreatedWith } from "@/lib/aiClients";
+import { chaosIntegration } from "@/lib/integrations";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -155,7 +156,7 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   // Stateless server: no standalone SSE stream.
   if (!(request.headers.get("accept") ?? "").includes("text/event-stream")) {
-    return withCors(Response.json({ name: "Chaos", mcp: resourceUrl(request), docs: "https://chaos.fail" }));
+    return withCors(Response.json({ name: chaosIntegration.name, mcp: resourceUrl(request), docs: chaosIntegration.docsUrl, icon: `${chaosIntegration.siteUrl}${chaosIntegration.logoPath}` }));
   }
   return withCors(new Response(null, { status: 405, headers: { Allow: "POST, OPTIONS" } }));
 }

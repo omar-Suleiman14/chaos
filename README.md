@@ -2,7 +2,7 @@
 
 Turn what you know into something people can use.
 
-Chaos is an open platform for creating, teaching, learning and testing. Build lessons and courses, create forms and quizzes, turn quizzes into live games, and connect ChatGPT or Claude to work directly on your content. It works in English and Arabic and runs no AI itself. Try [chaos.fail](https://chaos.fail), or host your own copy.
+Chaos is an open platform for creating, teaching, learning and testing. Build lessons and courses, create forms and quizzes, turn quizzes into live games, and connect [Claude](https://chaos.fail/claude) or [ChatGPT](https://chaos.fail/chatgpt) to work directly on your content. It works in English and Arabic and runs no AI itself. Try [chaos.fail](https://chaos.fail), or host your own copy.
 
 ## What it does
 
@@ -88,11 +88,11 @@ When hosting a modified version, set `NEXT_PUBLIC_SOURCE_REPO_URL` to the source
 
 | Path | What's there |
 |---|---|
-| `app/` | Pages and routes: landing, `/docs`, `/pricing`, the workspace (`/dashboard`), public forms (`/f/[shareId]`, `/[username]/[slug]`), live games (`/play`), `/mcp` for ChatGPT |
+| `app/` | Pages and routes: landing, `/docs`, `/pricing`, the workspace (`/dashboard`), public forms (`/f/[shareId]`, `/[username]/[slug]`), live games (`/play`), `/mcp` for Claude and ChatGPT, `/claude` and `/chatgpt` integration pages, `/api/plugins/*` plugin downloads |
 | `components/` | UI: the form renderer and builder (`components/forms`), workspace pieces, site chrome |
 | `convex/` | Backend: schema (`schema.ts`, `formModel.ts`), forms and responses (`forms.ts`, `respond.ts`, `formResults.ts`), grading (`grading.ts`, `formQuiz.ts`), integrations, webhooks, crons |
 | `lib/` | Shared helpers: i18n (`i18n.tsx`, `locale.ts`), docs content (`lib/docs`), search, analytics |
-| `docs/` | Developer docs: integration API, webhooks, ChatGPT app, self-hosting, migrations, data lifecycle |
+| `docs/` | Developer docs: integration API, webhooks, ChatGPT app, AI integrations, self-hosting, migrations, data lifecycle |
 | `tests/` | Unit, integration and end-to-end tests |
 
 ## Documentation
@@ -103,6 +103,7 @@ When hosting a modified version, set `NEXT_PUBLIC_SOURCE_REPO_URL` to the source
 - Integration API: [`docs/integration-api-v1.md`](./docs/integration-api-v1.md)
 - Webhooks: [`docs/webhooks-v1.md`](./docs/webhooks-v1.md)
 - ChatGPT app: [`docs/chatgpt-app.md`](./docs/chatgpt-app.md)
+- Claude and ChatGPT pages and plugin packages: [`docs/ai-integrations.md`](./docs/ai-integrations.md)
 - Business teams and team-only content: [`docs/business-teams.md`](./docs/business-teams.md)
 - Self-hosting: [`docs/self-hosting.md`](./docs/self-hosting.md)
 - Search indexing (IndexNow): [`docs/indexnow.md`](./docs/indexnow.md)

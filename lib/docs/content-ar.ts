@@ -1055,7 +1055,7 @@ export const sectionsAr: DocSection[] = [
         blocks: [
           { type: "p", text: "يستطيع ChatGPT وClaude Desktop وClaude Code وغيرهم من المساعدين الذين يدعمون بروتوكول MCP العمل مباشرةً داخل حسابك في Chaos: إنشاء نماذج واختبارات ودروس ودورات ومجموعات بطاقات ونشرها واستضافة ألعاب مباشرة ومعرفة النتائج. وهو مجاني في كل الخطط. Chaos نفسه لا يشغّل أي نماذج ذكاء اصطناعي؛ مساعدك هو من يكتب." },
           { type: "heading", id: "connect", text: "اربطه" },
-          { type: "p", text: "يعمل نفس عنوان خادم MCP البعيد لـ Chaos (**https://chaos.fail/mcp**) ونفس اتصال OAuth مع كل من ChatGPT وClaude." },
+          { type: "p", text: "يعمل نفس عنوان خادم MCP البعيد لـ Chaos (**https://chaos.fail/mcp**) ونفس اتصال OAuth مع كل من ChatGPT وClaude. أسرع طريقة هي صفحة [Chaos في Claude](/claude) أو [Chaos في ChatGPT](/chatgpt): في كل منهما زر بنقرة واحدة وإضافة Chaos للتنزيل وإعدادات يدوية جاهزة للنسخ." },
           {
             type: "steps",
             items: [
@@ -1065,6 +1065,8 @@ export const sectionsAr: DocSection[] = [
             ],
           },
           { type: "p", text: "يسألك مساعدك دائمًا قبل إجراء أي تعديلات. وإن أُضيفت أدوات جديدة لاحقًا فيمكنك استخدام **Refresh** في ChatGPT أو الأمر `/mcp` في Claude لتحديث القائمة." },
+          { type: "heading", id: "plugins", text: "تنزيل الإضافات" },
+          { type: "p", text: "تفضّل حزمة جاهزة؟ زر **نزّل Chaos لـ Claude** في [صفحة Claude](/claude) يعطيك ملف ZIP لإضافة Claude ترفعه من إعدادات الإضافات في Claude أو تحمّله في Claude Code عبر `claude --plugin-dir`. وزر **نزّل Chaos لـ ChatGPT** في [صفحة ChatGPT](/chatgpt) يعطيك ملف ZIP لإضافة OpenAI في Codex. تحمل الحزمتان اسم Chaos وشعاره وتشيران إلى عنوان Chaos نفسه، ولا تحتويان على مفاتيح أو كلمات مرور: ما زلت تسجّل الدخول بحسابك في Chaos. لا يحتاج Claude Desktop إلى امتداد منفصل؛ فالموصّلات التي تضيفها في Claude تظهر فيه أيضًا." },
           { type: "heading", id: "can", text: "ما يستطيع فعله" },
           {
             type: "list",
@@ -1096,7 +1098,7 @@ export const sectionsAr: DocSection[] = [
             ],
           },
           { type: "heading", id: "privacy", text: "الخصوصية" },
-          { type: "p", text: "ما يقرؤه مساعدك يُرسل إلى OpenAI أو Anthropic بحسب المساعد الذي تستخدمه. اطلب منه قراءة الإجابات الفردية فقط إن كان مسموحًا لك بمشاركتها. لفصل الاتصال أزل Chaos من إعدادات ChatGPT أو شغّل `/mcp` في Claude. للمزيد راجع [صفحة ChatGPT](/chatgpt)." },
+          { type: "p", text: "ما يقرؤه مساعدك يُرسل إلى OpenAI أو Anthropic بحسب المساعد الذي تستخدمه. اطلب منه قراءة الإجابات الفردية فقط إن كان مسموحًا لك بمشاركتها. لفصل الاتصال أزل Chaos من إعدادات ChatGPT أو شغّل `/mcp` في Claude. للمزيد راجع [صفحة Claude](/claude) و[صفحة ChatGPT](/chatgpt)." },
         ],
       },
     ],

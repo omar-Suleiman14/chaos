@@ -120,6 +120,6 @@ export const config = {
     // Every path that could be a public form address, even one that looks like a file
     // (a username may contain dots). Must equal EMBED_PROXY_MATCHER in lib/embed.ts;
     // next.config.ts leaves exactly these paths to this proxy.
-    "/((?!(?:ai|forms\\-quizzes|live\\-games|open\\-source|teams|status|changelog|admin|api|app|ar|auth|card|compare|chatgpt|connect|dashboard|docs|en|help|homework|learn|login|logout|mcp|play|pricing|print|privacy|copyright|faq|settings|sign\\-in|sign\\-up|signin|signup|sitemap|static|support|terms|trpc|_next|\\.well\\-known|opengraph\\-image)/)[A-Za-z0-9_.\\-]{1,64}/[A-Za-z0-9_\\-]{1,64})",
+    "/((?!(?:ai|forms\\-quizzes|live\\-games|open\\-source|teams|status|changelog|admin|api|app|ar|auth|card|compare|chatgpt|claude|connect|dashboard|docs|en|help|homework|learn|login|logout|mcp|play|pricing|print|privacy|copyright|faq|settings|sign\\-in|sign\\-up|signin|signup|sitemap|static|support|terms|trpc|_next|\\.well\\-known|opengraph\\-image)/)[A-Za-z0-9_.\\-]{1,64}/[A-Za-z0-9_\\-]{1,64})",
   ],
 };

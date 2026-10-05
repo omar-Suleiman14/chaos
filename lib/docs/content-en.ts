@@ -1049,7 +1049,7 @@ export const sectionsEn: DocSection[] = [
         blocks: [
           { type: "p", text: "ChatGPT, Claude Desktop, Claude Code, and other assistants supporting the Model Context Protocol (MCP) work directly with your Chaos account: create forms, quizzes, lessons, courses and flashcard sets, publish them, host live games, and summarize results. It's free on every plan. Chaos itself runs no AI models; your assistant does the writing." },
           { type: "heading", id: "connect", text: "Connect it" },
-          { type: "p", text: "The same Chaos remote MCP server URL (**https://chaos.fail/mcp**) and OAuth connection work with both ChatGPT and Claude." },
+          { type: "p", text: "The same Chaos remote MCP server URL (**https://chaos.fail/mcp**) and OAuth connection work with both ChatGPT and Claude. The quickest way in is the [Chaos in Claude](/claude) or [Chaos in ChatGPT](/chatgpt) page: each has a one-click button, a downloadable Chaos plugin and copy-ready manual settings." },
           {
             type: "steps",
             items: [
@@ -1058,6 +1058,8 @@ export const sectionsEn: DocSection[] = [
               "**In Claude or Claude Desktop**: open **Customize → Connectors**, choose **+ Add → Add custom connector**, enter **Chaos** and **https://chaos.fail/mcp**, and continue. Choose OAuth sign-in and complete the Chaos connection, then enable it for your conversation. Workspace owners may need to add it in organization settings first. Use the remote connector UI rather than a local Desktop configuration file. See [Claude's remote connector guide](https://support.claude.com/en/articles/11175166-get-started-with-custom-connectors-using-remote-mcp).",
             ],
           },
+          { type: "heading", id: "plugins", text: "Plugin downloads" },
+          { type: "p", text: "Prefer a package? **Download Chaos for Claude** on [the Claude page](/claude) gives a Claude plugin ZIP to upload in Claude's plugin settings or load in Claude Code with `claude --plugin-dir`. **Download Chaos for ChatGPT** on [the ChatGPT page](/chatgpt) gives an OpenAI plugin ZIP for Codex. Both carry the Chaos name and logo, point at the same Chaos address and contain no keys or passwords: you still sign in with your Chaos account. Claude Desktop needs no separate extension; connectors you add in Claude show up there too." },
           { type: "p", text: "Your assistant asks for confirmation before making write changes. If Chaos adds new tools later, use **Refresh** in ChatGPT or `/mcp` in Claude to reload." },
           { type: "heading", id: "can", text: "What it can do" },
           {
@@ -1090,7 +1092,7 @@ export const sectionsEn: DocSection[] = [
             ],
           },
           { type: "heading", id: "privacy", text: "Privacy" },
-          { type: "p", text: "What your assistant reads is sent to OpenAI or Anthropic according to the assistant you use. Ask it to read individual answers only when you are allowed to share them. To disconnect, remove Chaos from your apps in ChatGPT or run `/mcp` in Claude. More on [the ChatGPT page](/chatgpt)." },
+          { type: "p", text: "What your assistant reads is sent to OpenAI or Anthropic according to the assistant you use. Ask it to read individual answers only when you are allowed to share them. To disconnect, remove Chaos from your apps in ChatGPT or run `/mcp` in Claude. More on [the Claude page](/claude) and [the ChatGPT page](/chatgpt)." },
         ],
       },
     ],
