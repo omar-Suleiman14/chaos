@@ -722,3 +722,16 @@ textarea.form-input { resize: vertical; min-height: 5rem; }
 .form-chrome-apple .form-btn-arrow { display: none; }
 .form-chrome-apple .form-actions-start .form-btn:not(.form-btn-ghost) { flex: 1; max-width: 360px; }
 @media (max-width: 560px) { .form-chrome-apple .form-actions-start .form-btn:not(.form-btn-ghost) { max-width: none; } }
+
+/* Minimal inline view (a quiz inside a lesson): only the questions, in the form's own colours, sized to its
+   content. No toolbar, progress bar, cover or full-height stage. */
+.form-shell--minimal { border-radius: 12px; overflow: hidden; --form-stage-h: 0px; }
+.form-minimal-main { width: 100%; }
+.form-shell--minimal .form-stage, .form-shell--minimal .form-cover { min-height: 0; }
+.form-shell--minimal .form-focus { display: block; padding: 1.25rem 1.25rem 1.5rem; --form-scroll: 2.5rem; }
+.form-shell--minimal .form-focus-inner { max-width: none; }
+.form-shell--minimal .form-swipe { height: 26rem; }
+.form-shell--minimal .form-progress-bar, .form-shell--minimal .form-progress-track, .form-shell--minimal .form-stage-nav { display: none; }
+.form-shell--minimal .form-ending, .form-shell--minimal .form-ending--stage { min-height: 0; padding: 1.5rem 1.25rem; }
+.form-shell--minimal .form-message { padding: 1.25rem; }
+.form-shell--minimal .form-mode-page, .form-shell--minimal .form-mode-sections { --form-stage-h: auto; padding: 1.25rem; }

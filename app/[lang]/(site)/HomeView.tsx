@@ -5,6 +5,7 @@ import Link from "@/components/site/SiteLink";
 import { ArrowRight, BookOpen, Braces, Download, FileText, GraduationCap, ListChecks, Radio, Server, Users, Webhook } from "lucide-react";
 import { PrimaryCta, SiteFooter, SiteNav } from "@/components/site/SiteChrome";
 import { ChatGptMark, NotionMark } from "@/components/site/marks";
+import { AiMark } from "@/components/site/aiMarks";
 import ProductDemo from "@/components/site/ProductDemo";
 import HeroAvatars from "@/components/site/HeroAvatars";
 import { useCopy, useLocale } from "@/lib/i18n";
@@ -193,12 +194,15 @@ export default function HomeView() {
             </article>
             <article className="site-partner">
               <div className="site-partner__head">
-                <span className="site-partner__mark"><ChatGptMark size={26} /></span>
+                <span className="site-partner__marks">
+                  <span className="site-partner__mark"><ChatGptMark size={26} /></span>
+                  <span className="site-partner__mark"><AiMark client="claude" size={26} /></span>
+                </span>
                 <span className="site-partner__name">{t.connect.ai.name}</span>
               </div>
               <h3>{t.connect.ai.title}</h3>
               <p>{t.connect.ai.body}</p>
-              <Link href="/chatgpt" className="site-text-link">{t.connect.ai.link} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>
+              <Link href="/connect" className="site-text-link">{t.connect.ai.link} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>
             </article>
             <article className="site-partner site-partner--soon" aria-label={`${t.connect.notion.name}: ${t.connect.notion.soon}`}>
               <div className="site-partner__head">

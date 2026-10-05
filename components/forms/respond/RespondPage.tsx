@@ -1,7 +1,7 @@
 "use client";
 
 import { copyText } from "@/lib/clipboard";
-import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Suspense, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { FunctionReturnType } from "convex/server";
 import Link from "@/components/site/SiteLink";
 import { useSearchParams } from "next/navigation";
@@ -78,10 +78,13 @@ function readHidden(names: string[]): Record<string, string> | undefined {
 interface Receipt { receiptCode: string; endingId: string | null; editToken?: string; submittedAt: number; answers: Answers; language: Language; quizScore?: number | null; quizMaxScore?: number | null }
 
 /** The respondent experience for one form; also served at custom links (chaos.fail/<username>/<slug>). */
-export function RespondToForm({ shareId, inline = false, studyProgress = false, onComplete }: { shareId: string; inline?: boolean; studyProgress?: boolean; onComplete?: () => void }) {
+/** `minimal` (inline only): just the questions, without the toolbar, progress bar, cover or full-height stage. */
+export function RespondToForm({ shareId, inline = false, minimal = false, studyProgress = false, onComplete }: { shareId: string; inline?: boolean; minimal?: boolean; studyProgress?: boolean; onComplete?: () => void }) {
   return (
     <Suspense fallback={<RespondLoading />}>
-      <RespondPage key={shareId} shareId={shareId} inline={inline} studyProgress={studyProgress} onComplete={onComplete} />
+      <MinimalContext.Provider value={inline && minimal}>
+        <RespondPage key={shareId} shareId={shareId} inline={inline} studyProgress={studyProgress} onComplete={onComplete} />
+      </MinimalContext.Provider>
     </Suspense>
   );
 }
@@ -203,6 +206,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   const def = (editing?.definition ?? form.definition) as FormDefinition;
   const storageKey = `chaos-form:${shareId}:v${form.version}`;
   const receiptKey = `chaos-receipt:${shareId}`;
+  const minimal = useContext(MinimalContext);
   const submit = useMutation(api.respond.submitResponse);
   const update = useMutation(api.respond.updateSubmission);
   const saveResume = useMutation(api.respond.saveResumeDraft);
@@ -459,7 +463,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
             uploadFile={uploadFile}
             files={files}
             resuming={restored}
-            skipCover={!!editing}
+            skipCover={!!editing || minimal}
             onProgress={(id) => setProgress((p) => (p ? { ...p, lastFieldId: id } : p))}
             footer={
               <div className="space-y-3 text-xs form-muted" dir={dir}>
@@ -559,7 +563,11 @@ function FormLoading() {
 }
 
 /** `plain` hides the Chaos brand (Pro, enforced by the server); Privacy and Terms links stay. */
+/** Set by RespondToForm; read by Shell and the renderer so every state (gates, endings) stays minimal. */
+const MinimalContext = createContext(false);
+
 function Shell({ children, embed, def, languageSwitch, immersive, plain }: { children: React.ReactNode; embed: boolean; def?: FormDefinition; languageSwitch?: React.ReactNode; immersive?: boolean; plain?: boolean }) {
+  const minimal = useContext(MinimalContext);
   const initialTheme = useInitialTheme();
   const themed = useMemo(() => def ?? (initialTheme ? { ...fallbackDefinition, theme: initialTheme } : fallbackDefinition), [def, initialTheme]);
   const fullBleed = !embed && !!def && !!immersive;
@@ -603,16 +611,16 @@ function Shell({ children, embed, def, languageSwitch, immersive, plain }: { chi
   }, [embed]);
 
   return (
-    <div ref={shell} className={`form-shell ${embed ? "form-shell--embed" : "min-h-[100dvh]"} ${themeClass(themed)}`} style={themeStyle(themed)}>
-      <div className={`form-chrome ${embed ? "form-chrome--embed" : ""}`}>
+    <div ref={shell} className={`form-shell ${embed ? "form-shell--embed" : "min-h-[100dvh]"} ${minimal ? "form-shell--minimal" : ""} ${themeClass(themed)}`} style={themeStyle(themed)}>
+      {!minimal && <div className={`form-chrome ${embed ? "form-chrome--embed" : ""}`}>
         {!embed && !plain ? <Link href="/" className="form-chrome-brand form-heading"><Logo size={22} /> chaos</Link> : <span />}
         <div className="flex items-center gap-1.5">
           {languageSwitch}
           <SoundToggle def={themed} />
           {themeFollowsAppearance(themed.theme) && <ThemeToggle className="form-chrome-btn" />}
         </div>
-      </div>
-      <main className={fullBleed ? "w-full" : `mx-auto w-full max-w-2xl px-5 ${embed ? "pt-16 pb-8" : "pt-24 pb-16"}`}>{children}</main>
+      </div>}
+      <main className={minimal ? "form-minimal-main" : fullBleed ? "w-full" : `mx-auto w-full max-w-2xl px-5 ${embed ? "pt-16 pb-8" : "pt-24 pb-16"}`}>{children}</main>
     </div>
   );
 }

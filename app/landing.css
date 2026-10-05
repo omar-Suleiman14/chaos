@@ -227,8 +227,10 @@ html.dark:has(.site-ui), html.dark:has(.site-ui) body { background: #171716; }
 .site-lang-btn { padding: 0 11px; gap: 7px; }
 .site-login__icon { display: none; }
 .site-menu { display: none; }
-/* A full-width sheet under the header (the sticky header is its containing block). Solid, not glass:
-   the header is already a backdrop-filter root, so a blur inside it would only see the header. */
+/* A full-width glass sheet under the header (the sticky header is its containing block). A backdrop-filter
+   inside another one only blurs that ancestor, so while the menu is open the header drops its own blur
+   and turns solid; the sheet then blurs the page itself. */
+.site-nav-wrap:has(.site-menu__panel) { background: var(--s-bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
 .site-menu__panel { position: absolute; inset-block-start: 100%; inset-inline: 0; z-index: 50; display: grid; gap: 0; max-height: calc(100dvh - 100%); overflow-y: auto; overscroll-behavior: contain; padding: 6px 16px 18px; border-bottom: 1px solid var(--s-line); box-shadow: 0 24px 40px -24px #0006; animation: site-sheet-in 160ms var(--s-ease) both; }
 .site-menu__panel > a { display: flex; align-items: center; min-height: 48px; padding: 0 4px; border-bottom: 1px solid var(--s-line); color: var(--s-soft); font-size: 16px; }
 .site-menu__panel > a:hover, .site-menu__panel > a:focus-visible { color: var(--s-text); }
@@ -355,3 +357,6 @@ html[lang="ar"] .site-ui :is(h1, h2, h3, .site-brand) { letter-spacing: 0; }
 .site-mcp-demo__panes { display:grid;grid-template-columns:1fr 1fr;gap:24px; }.site-mcp-demo__panes>div { border:1px solid var(--site-border);border-radius:16px;padding:20px; }.site-mcp-demo li { opacity:.45; }.site-mcp-demo li[data-active] { opacity:1; }.site-mcp-demo__draft { min-height:280px; }@media(max-width:640px){.site-mcp-demo__panes{grid-template-columns:1fr;}}
 
 .site-audiences { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:28px; }.site-audiences article { border:1px solid var(--site-border);border-radius:18px;padding:24px; }.site-audiences .site-text-link { display:block;margin-top:16px; }@media(max-width:640px){.site-audiences{grid-template-columns:1fr;}}
+/* Two assistants on one card: the marks overlap a little, like stacked avatars. */
+.site-partner__marks { display: inline-flex; }
+.site-partner__marks .site-partner__mark + .site-partner__mark { margin-inline-start: -10px; box-shadow: 0 0 0 3px var(--s-card); }

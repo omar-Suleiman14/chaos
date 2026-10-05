@@ -18,7 +18,7 @@ export default function CardCustomization({ card, actorId, onboarding = false, s
   const [name, setName] = useState(card.name), [username, setUsername] = useState(card.username), [style, setStyle] = useState(card.style), [avatar, setAvatar] = useState<number | null>(() => Array.from({ length: AVATAR_COUNT }, (_, index) => index).find(index => parseAvatarSeed(card.seed).name === `${avatarSeed(actorId)}:avatar:${index}`) ?? null);
   const [hue, setHue] = useState<number | null>(() => parseAvatarSeed(card.seed).hue ?? null);
   // A saved card opens as a preview with Edit; only onboarding starts in the form.
-  const [busy, setBusy] = useState(false), [ready, setReady] = useState(!onboarding), [justSaved, setJustSaved] = useState(false), [error, setError] = useState("");
+  const [busy, setBusy] = useState(false), [ready, setReady] = useState(!onboarding), [justSaved, setJustSaved] = useState(false);
   const save = useMutation(api.memberCards.customizeCard);
   const me = useQuery(api.quizFunctions.getCurrentUser);
   const [studentChoice, setStudentChoice] = useState<boolean | null>(null);
@@ -29,14 +29,14 @@ export default function CardCustomization({ card, actorId, onboarding = false, s
   const [errorField, setErrorField] = useState<string | null>(null);
   const Heading = onboarding ? "h1" : "h2";
   async function submit(skip = false) {
-    if (!skip && !name.trim()) { setErrorField("name"); setError(ar ? "أدخل اسمك." : "Enter your name."); return; }
-    setBusy(true); setError(""); setErrorField(null);
+    if (!skip && !name.trim()) { setErrorField("name"); toast.error(ar ? "أدخل اسمك." : "Enter your name.", { id: "card-save" }); return; }
+    setBusy(true); setErrorField(null);
     try { await save(skip ? { skip: true, ...(studentChoice === null ? {} : { showStudentCards }) } : { name, ...(username.trim().toLowerCase() === card.username ? {} : { username }), style, ...(avatar === null ? {} : { avatar }), avatarHue: hue, showStudentCards, finishOnboarding: onboarding }); if (skip) onDone?.(); else { setReady(true); setJustSaved(true); toast.success(ar ? "تم حفظ بطاقتك" : "Your card is saved", { id: "card-save" }); } }
     catch (e) {
       const parsed = parseError(e);
       if (["INVALID_USERNAME", "USERNAME_TAKEN", "USERNAME_CONFLICT"].includes(parsed.code)) {
         setErrorField("username");
-        setError(parsed.code === "INVALID_USERNAME" ? localizeMessage(locale, parsed.message) : (ar ? "اسم المستخدم مستخدم بالفعل. اختر اسمًا آخر." : "That username is already in use. Choose another."));
+        toast.error(parsed.code === "INVALID_USERNAME" ? localizeMessage(locale, parsed.message) : (ar ? "اسم المستخدم مستخدم بالفعل. اختر اسمًا آخر." : "That username is already in use. Choose another."), { id: "card-save" });
       } else toast.error(parsed.code === "NETWORK" ? (ar ? "تحقق من اتصالك وحاول مجددًا." : "Check your connection and try again.") : (ar ? "تعذر حفظ البطاقة. حاول مجددًا." : "Couldn't save your card. Please try again."), { id: "card-save" });
     }
     finally { setBusy(false); }
@@ -46,10 +46,8 @@ export default function CardCustomization({ card, actorId, onboarding = false, s
     {onboarding && !ready && <p>{ar ? "مرحبًا بك في Chaos. اجعلها بطاقتك، ويمكنك تغيير كل شيء لاحقًا." : "Welcome to Chaos. Make it yours—you can change everything later."}</p>}
     <div className="mc-customize__layout" data-preview={showPreview}>{showPreview && <div className="mc-customize__preview"><MemberCardView data={{ ...card, name, username, style, seed, url: `${siteUrl}/card/${encodeURIComponent(username)}` }} onStyle={ready ? undefined : setStyle} /></div>}
     {ready ? <div className="mc-customize__form"><button className="ws-btn ws-btn--primary" onClick={() => { if (onboarding) onDone?.(); else { setReady(false); setJustSaved(false); } }}>{onboarding ? (ar ? "تابع إلى Chaos" : "Continue to Chaos") : (ar ? "تعديل" : "Edit")}</button></div> : <form onSubmit={e => { e.preventDefault(); void submit(); }} className="mc-customize__form">
-      <label>{ar ? "الاسم" : "Name"}<input value={name} maxLength={100} required onChange={e => { setName(e.target.value); if (errorField === "name") { setError(""); setErrorField(null); } }} autoComplete="name" dir="auto" aria-invalid={errorField === "name"} aria-describedby={errorField === "name" ? "card-name-error" : undefined} /></label>
-      {error && errorField === "name" && <p id="card-name-error" className="mc-help" role="alert">{error}</p>}
-      <label>{ar ? "اسم المستخدم" : "Username"}<input value={username} minLength={3} maxLength={30} required onChange={e => { setUsername(e.target.value); if (errorField === "username") { setError(""); setErrorField(null); } }} autoComplete="username" autoCapitalize="none" dir="ltr" spellCheck={false} aria-invalid={errorField === "username"} aria-describedby={errorField === "username" ? "card-username-error" : undefined} /></label>
-      {error && errorField === "username" && <p id="card-username-error" className="mc-help" role="alert">{error}</p>}
+      <label>{ar ? "الاسم" : "Name"}<input value={name} maxLength={100} required onChange={e => { setName(e.target.value); if (errorField === "name") setErrorField(null); }} autoComplete="name" dir="auto" aria-invalid={errorField === "name"} /></label>
+      <label>{ar ? "اسم المستخدم" : "Username"}<input value={username} minLength={3} maxLength={30} required onChange={e => { setUsername(e.target.value); if (errorField === "username") setErrorField(null); }} autoComplete="username" autoCapitalize="none" dir="ltr" spellCheck={false} aria-invalid={errorField === "username"} /></label>
       <fieldset><legend>{ar ? "الصورة الرمزية" : "Avatar"}</legend><div className="mc-customize__avatars">{Array.from({ length: AVATAR_COUNT }, (_, index) => <button type="button" key={index} aria-label={ar ? `الصورة ${index + 1}` : `Avatar ${index + 1}`} aria-pressed={avatar === index} onClick={() => setAvatar(index)}><MemberAvatar seed={withHue(`${avatarSeed(actorId)}:avatar:${index}`)} size={36} /></button>)}</div></fieldset>
       <fieldset><legend>{ar ? "لون الصورة" : "Avatar colour"}</legend><div className="mc-customize__swatches">
         <button type="button" className="mc-swatch mc-swatch--auto" aria-pressed={hue === null} aria-label={ar ? "تلقائي" : "Automatic"} title={ar ? "تلقائي" : "Automatic"} onClick={() => setHue(null)}>{ar ? "تلقائي" : "Auto"}</button>

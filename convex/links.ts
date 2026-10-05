@@ -3,7 +3,7 @@ import { authorDb } from "./authorIndex";
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
-import { userByUsername, reserveUsername } from "./usernameModel";
+import { userByUsername, reserveUsername, usernameOwner } from "./usernameModel";
 import { requireActiveUser, requireFormRole } from "./authz";
 
 /**
@@ -126,5 +126,38 @@ export const backfillUsernameAliases = internalMutation({
       else await reserveUsername(ctx, row.creatorUsername, row.creatorId);
     }
     return { cursor: page.continueCursor, done: page.isDone, processed: page.page.length };
+  },
+});
+
+/**
+ * Repair: accounts whose username later became a page address (such as claude or chatgpt) get a generated
+ * name and are asked to choose again; the reserved name is released so nobody holds it. Run with dryRun
+ * first (see docs/migrations.md). The account, its content and its /f/ links are unchanged.
+ */
+export const releaseReservedUsernames = internalMutation({
+  args: { dryRun: v.boolean() },
+  returns: v.object({ changed: v.number(), changedIds: v.array(v.id("users")) }),
+  handler: async (ctx, args) => {
+    const changedIds = [];
+    for (const name of RESERVED) {
+      if (!USERNAME.test(name)) continue;
+      const users = await ctx.db.query("users").withIndex("by_username", (q) => q.eq("username", name)).take(100);
+      for (const user of users) {
+        changedIds.push(user._id);
+        if (args.dryRun) continue;
+        let next = "";
+        for (let attempt = 0; attempt < 12 && !next; attempt++) {
+          const candidate = "user" + Math.floor(10000 + Math.random() * 90000);
+          if (await usernameOwner(ctx, candidate) === null) next = candidate;
+        }
+        if (!next) throw new Error("USERNAME_UNAVAILABLE: Run the repair again.");
+        await reserveUsername(ctx, next, user.clerkId);
+        await ctx.db.patch("users", user._id, { username: next, usernameChosen: false, cardOnboardingPending: true });
+      }
+      if (args.dryRun) continue;
+      const alias = await ctx.db.query("usernameAliases").withIndex("by_username", (q) => q.eq("username", name)).unique();
+      if (alias) await ctx.db.delete("usernameAliases", alias._id);
+    }
+    return { changed: changedIds.length, changedIds };
   },
 });

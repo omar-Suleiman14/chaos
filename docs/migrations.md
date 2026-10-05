@@ -3,7 +3,7 @@
 Convex applies `convex/schema.ts` when you deploy. Every field added since the first release is
 optional, so an old row is still valid and nothing has to be rewritten to keep working. The risk is
 not a load failure. It is an old row being read the wrong way. This page lists what changed, how
-old rows are read today, the two repair functions that exist, and how to go back.
+old rows are read today, the repair functions that exist, and how to go back.
 
 Nothing in this repository runs a migration by itself, and none has been run against production.
 Running one needs the owner's approval (see "Running a repair").
@@ -103,6 +103,15 @@ Arguments: `{ "dryRun": true, "batchSize": 100, "cursor": null }`. The result is
 `{ scanned, changed, changedIds, isDone, continueCursor }`; repeat with `continueCursor` until
 `isDone`.
 
+### Reserved usernames (`convex/links.ts`)
+
+- `links:releaseReservedUsernames`. A username that later became a page address (for example
+  `claude` or `chatgpt`, added with the integration pages) is moved to a generated `userNNNNN`
+  name, marked not chosen so the person picks a new one, and the reserved name's alias is released.
+  The account, its content and its `/f/` links are unchanged; custom links under the old name stop
+  resolving because that path is now a page. Takes `{ "dryRun": true }` and returns
+  `{ changed, changedIds }`. New accounts can never take a reserved name (`usernameProblem`).
+
 ### Running a repair
 
 1. Take a backup (Convex dashboard, Settings, Backups) or `npx convex export`.
@@ -118,6 +127,7 @@ Convex has no automatic migration history, so the position for each repair is:
 | Repair | What it wrote | Roll back |
 | --- | --- | --- |
 | `backfillSessionStatus` | `status` on rows that had none | Save `changedIds` from the run. To undo, patch those ids back to `status: undefined`. The app reads correctly either way; the counts simply return to excluding those sessions. Restoring from the backup taken in step 1 also works. |
+| `releaseReservedUsernames` | `username`, `usernameChosen`, `cardOnboardingPending` on the listed users; deletes the reserved name's `usernameAliases` row | Save `changedIds` and their old usernames from the dry run. The old name cannot be given back while it is a page address. |
 | `repairQuestionTypes` | `type` on the listed questions and in `publishedSnapshot` | Save `changedIds`. To undo, patch those question ids back to `type: "mcq"`, and the `snapshot:` ids inside their quiz's `publishedSnapshot`. No answer data was removed, so this is lossless. |
 
 A schema change that has already been deployed cannot be un-deployed against existing rows. If a

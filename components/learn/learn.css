@@ -691,3 +691,14 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 @keyframes lx-resume-in { from { opacity: 0; transform: translateY(-4px); } }
 @media (max-width: 480px) { .lx-resume__go { padding: 6px; } .lx-resume__go > :not(svg) { display: none; } }
 @media (prefers-reduced-motion: reduce) { .lx-resume { animation: none; } .lx-resume__go { transition: none; } }
+
+/* A quiz inside a lesson: a slim header, then the questions (minimal) or the whole form (full). */
+.lx-inline-quiz { display: grid; gap: 12px; }
+.lx-inline-quiz__head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px 16px; }
+.lx-inline-quiz__title { display: grid; gap: 2px; min-width: 0; }
+.lx-inline-quiz__title strong { font-size: 15px; }
+.lx-inline-quiz__title span { font-size: 13px; }
+.lx-inline-quiz__views { display: inline-flex; flex: none; padding: 3px; border-radius: 9px; background: var(--ws-hover); }
+.lx-inline-quiz__views button { min-height: 30px; padding: 0 12px; border: 0; border-radius: 7px; background: none; color: var(--on-surface-variant); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
+.lx-inline-quiz__views button[aria-pressed="true"] { background: var(--ws-card); color: var(--on-surface); box-shadow: 0 1px 4px rgba(0, 0, 0, .12); }
+.lx-inline-quiz__views button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { api } from "@/convex/_generated/api";
+import { api, internal } from "@/convex/_generated/api";
 import { createTestConvex } from "./setup";
 import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
 import { emptyDefinition } from "@/convex/formLogic";
@@ -73,4 +73,26 @@ describe("custom links", () => {
     await owner.mutation(api.quizFunctions.getOrCreateUser, {});
     expect(await owner.query(api.links.getMyLinkIdentity, {})).toEqual({ username: "omar", chosen: true });
   });
+
+  it("never lets anyone use claude or chatgpt, and moves an existing holder to a generated name", async () => {
+    const { t, owner } = await setup();
+    for (const username of ["claude", "chatgpt", "Claude"]) {
+      await expect(owner.mutation(api.links.chooseUsername, { username })).rejects.toThrow(/INVALID_USERNAME/);
+    }
+    // An account that took "claude" before it became a page.
+    const holder = await t.run(async (ctx) => {
+      const user = (await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", creatorIdentity.subject)).unique())!;
+      await ctx.db.patch("users", user._id, { username: "claude", usernameChosen: true });
+      await ctx.db.insert("usernameAliases", { username: "claude", ownerId: user.clerkId, createdAt: Date.now() });
+      return user._id;
+    });
+    expect(await t.mutation(internal.links.releaseReservedUsernames, { dryRun: true })).toEqual({ changed: 1, changedIds: [holder] });
+    expect(await owner.query(api.links.getMyLinkIdentity, {})).toMatchObject({ username: "claude" });
+    await t.mutation(internal.links.releaseReservedUsernames, { dryRun: false });
+    const after = await owner.query(api.links.getMyLinkIdentity, {});
+    expect(after).toMatchObject({ chosen: false });
+    expect(after!.username).toMatch(/^user\d{5}$/);
+    expect(await t.run((ctx) => ctx.db.query("usernameAliases").withIndex("by_username", (q) => q.eq("username", "claude")).unique())).toBeNull();
+  });
 });
+
