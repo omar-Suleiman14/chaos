@@ -1,8 +1,9 @@
 ﻿import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
-import { creatorRestricted, isPaidPlan, requireAdmin } from "./authz";
+import { creatorRestricted, isPaidPlan } from "./authz";
+import { requireAdminForActor } from "./adminAccess";
 import { emptyMetrics, metricsValidator } from "./adminModel";
 
 async function start(ctx: MutationCtx) {
@@ -28,14 +29,15 @@ async function start(ctx: MutationCtx) {
     });
   await ctx.scheduler.runAfter(0, internal.adminAnalytics.scan, { startedAt });
 }
+export async function refreshForActor(ctx: MutationCtx, actorId?: string) {
+  await requireAdminForActor(ctx, actorId);
+  await start(ctx);
+  return null;
+}
 export const refresh = mutation({
   args: {},
   returns: v.null(),
-  handler: async (ctx) => {
-    await requireAdmin(ctx);
-    await start(ctx);
-    return null;
-  },
+  handler: ctx => refreshForActor(ctx),
 });
 export const refreshScheduled = internalMutation({
   args: {},
@@ -45,6 +47,11 @@ export const refreshScheduled = internalMutation({
     return null;
   },
 });
+export async function overviewForActor(ctx: QueryCtx, actorId?: string) {
+  await requireAdminForActor(ctx, actorId);
+  const stats = await ctx.db.query("adminMetrics").withIndex("by_key", q => q.eq("key", "platform")).unique();
+  return stats ? { counts: stats.counts, running: stats.running, completedAt: stats.completedAt ?? null } : null;
+}
 export const overview = query({
   args: {},
   returns: v.union(
@@ -55,20 +62,7 @@ export const overview = query({
       completedAt: v.union(v.number(), v.null()),
     }),
   ),
-  handler: async (ctx) => {
-    await requireAdmin(ctx);
-    const stats = await ctx.db
-      .query("adminMetrics")
-      .withIndex("by_key", (q) => q.eq("key", "platform"))
-      .unique();
-    return stats
-      ? {
-          counts: stats.counts,
-          running: stats.running,
-          completedAt: stats.completedAt ?? null,
-        }
-      : null;
-  },
+  handler: ctx => overviewForActor(ctx),
 });
 /** One bounded page per transaction; does not load answers or drafts into the UI. */
 export const scan = internalMutation({

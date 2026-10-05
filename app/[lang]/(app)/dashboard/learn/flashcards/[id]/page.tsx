@@ -25,8 +25,8 @@ const copy = {
     front: "Front", back2: "Back", add: "Add card", remove: "Remove card", up: "Move up", down: "Move down", fromLesson: "From lesson",
     flip: "Show answer", hint: "Space or Enter to flip · 1 Again · 2 Knew it", again: "Again", knew: "Knew it",
     progress: (done: number, total: number) => `${done} of ${total} known well`, finished: "Round done. Cards you missed come back first.", restart: "Start another round", reset: "Reset progress",
-    noCards: "This set has no cards yet.", addFirst: "Add cards", fork: "Copy to my sets", forked: "Copied to your sets", deleteSet: "Delete set",
-    deleteTitle: "Delete this set?", deleteBody: "The cards and your study progress are deleted. This can’t be undone.", card: (i: number, n: number) => `Card ${i} of ${n}`,
+    noCards: "This set has no cards yet.", addFirst: "Add cards", fork: "Copy to my sets", forked: "Copied to your sets", deleteSet: "Archive set",
+    deleteTitle: "Archive this set?", deleteBody: "The set moves to Archive. Your cards and study progress are preserved, and you can restore it there.", card: (i: number, n: number) => `Card ${i} of ${n}`,
     boxLabel: (b: number) => `Review level ${b} of 5`, save: "Save draft", publish: "Save and publish",
   },
   ar: {
@@ -36,8 +36,8 @@ const copy = {
     front: "الوجه", back2: "الظهر", add: "أضف بطاقة", remove: "أزل البطاقة", up: "لأعلى", down: "لأسفل", fromLesson: "من الدرس",
     flip: "اعرض الإجابة", hint: "المسافة أو Enter للقلب · 1 مرة أخرى · 2 عرفتها", again: "مرة أخرى", knew: "عرفتها",
     progress: (done: number, total: number) => `${done} من ${total} محفوظة جيدًا`, finished: "انتهت الجولة. تعود البطاقات التي أخطأتها أولًا.", restart: "ابدأ جولة أخرى", reset: "صفّر التقدم",
-    noCards: "لا بطاقات في هذه المجموعة بعد.", addFirst: "أضف بطاقات", fork: "انسخ إلى مجموعاتي", forked: "نُسخت إلى مجموعاتك", deleteSet: "احذف المجموعة",
-    deleteTitle: "حذف هذه المجموعة؟", deleteBody: "تُحذف البطاقات وتقدّمك في المذاكرة. لا يمكن التراجع.", card: (i: number, n: number) => `البطاقة ${i} من ${n}`,
+    noCards: "لا بطاقات في هذه المجموعة بعد.", addFirst: "أضف بطاقات", fork: "انسخ إلى مجموعاتي", forked: "نُسخت إلى مجموعاتك", deleteSet: "أرشف المجموعة",
+    deleteTitle: "أرشفة هذه المجموعة؟", deleteBody: "تنتقل المجموعة إلى الأرشيف مع حفظ البطاقات وتقدّم المذاكرة. يمكنك استعادتها من هناك.", card: (i: number, n: number) => `البطاقة ${i} من ${n}`,
     boxLabel: (b: number) => `مستوى المراجعة ${b} من 5`,
   },
 };
@@ -110,7 +110,7 @@ function EditCards({ setId, title, cards, visibility, teamId, onError, onSaved }
       <span><button type="button" className="ws-icon-button" disabled={i===0} aria-label={t.up} onClick={() => move(i,-1)}><ArrowUp size={13} /></button><button type="button" className="ws-icon-button" disabled={i===draftCards.length-1} aria-label={t.down} onClick={() => move(i,1)}><ArrowDown size={13} /></button><button type="button" className="ws-icon-button" aria-label={t.remove} onClick={() => setCards(draftCards.filter(x=>x.id!==c.id))}><Trash2 size={13} /></button></span>
     </div>)}</div>
     <button type="button" className="ws-btn" onClick={() => setCards([...draftCards,{id:newId("card"),front:"",back:""}])}><Plus size={15} />{t.add}</button>
-    <button type="submit" className="ws-btn ws-btn--primary" disabled={!draftTitle.trim() || draftCards.some(c => !c.front.trim() || !c.back.trim())}>{draftVisibility === "public" ? t.publish : t.save}</button>
+    <button type="submit" className="ws-btn ws-btn--primary" disabled={!draftTitle.trim() || draftCards.some(c => !c.front.trim() || !c.back.trim())}>{draftVisibility === "public" || draftVisibility.startsWith("team:") ? t.publish : t.save}</button>
   </fieldset></form>;
 }
 

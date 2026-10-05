@@ -119,6 +119,7 @@ function pageLabel(pathname: string, t: Copy): string {
     const match = [...learnItems].reverse().find((i) => pathname === i.href || (i.href !== "/dashboard/learn" && pathname.startsWith(i.href)));
     return match && match.key !== "learnHome" ? t[match.key] : t.learn;
   }
+  if (pathname.startsWith("/admin")) return t.admin;
   if (pathname.startsWith("/dashboard/editor")) return t.legacyEditor;
   if (/^\/dashboard\/forms\/[^/]+\/responses/.test(pathname)) return t.results;
   if (/^\/dashboard\/forms\/[^/]+$/.test(pathname)) return t.builder;
@@ -247,7 +248,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const paletteItems = useMemo<PaletteItem[]>(() => [
     ...(forms?.owned ?? []).map((f) => ({ id: f._id, title: f.title, kind: f.quizMode ? "quiz" as const : "form" as const, href: f.status === "archived" ? "/dashboard/archive" : `/dashboard/forms/${f._id}`, archived: f.status === "archived" })),
     ...(forms?.shared ?? []).map((f) => ({ id: f._id, title: f.title, kind: f.quizMode ? "quiz" as const : "form" as const, href: f.status === "archived" ? "/dashboard/archive" : `/dashboard/forms/${f._id}`, archived: f.status === "archived" })),
-    ...(quizzes ?? []).map((q) => ({ id: q._id, title: q.title, kind: "legacy" as const, href: `/dashboard/editor?id=${q._id}` })),
+    ...(quizzes ?? []).filter(q => !q.archived).map((q) => ({ id: q._id, title: q.title, kind: "legacy" as const, href: `/dashboard/editor?id=${q._id}` })),
     ...(myLessons ?? []).map((l) => ({ id: l.id, title: l.draft.meta.title, kind: "lesson" as const, href: `/dashboard/learn/lessons/${l.id}`, body: [l.draft.meta.description, l.draft.meta.tags.join(" ")].join(" ") })),
     ...(learnFolders ?? []).filter((f) => !f.archived).map((f) => ({ id: f.id, title: f.name, kind: "folder" as const, href: `/dashboard/learn/library?folder=${f.id}` })),
   ], [forms, quizzes, myLessons, learnFolders]);
@@ -285,7 +286,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     return next;
   });
 
-  const wide = pathname.startsWith("/dashboard/forms/") || pathname.startsWith("/dashboard/editor") || pathname.startsWith("/dashboard/learn/lessons/");
+  const wide = pathname.startsWith("/admin") || pathname.startsWith("/dashboard/learn/flashcards/") || pathname.startsWith("/dashboard/forms/") || pathname.startsWith("/dashboard/editor") || pathname.startsWith("/dashboard/learn/lessons/");
   const isActive = (href: string) => (href === "/dashboard" ? pathname === href || pathname === "/dashboard/forms" : href === "/dashboard/learn" ? pathname === href : pathname.startsWith(href));
 
   const rail = collapsed && !mobile;

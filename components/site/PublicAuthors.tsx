@@ -10,7 +10,6 @@ import { cardRuqaa } from "@/lib/cardFonts";
 import { memberCardSvg } from "@/lib/memberCard";
 import { useEyesFollowPointer } from "@/components/card/useEyesFollowPointer";
 import { useTilt } from "@/components/card/useTilt";
-import StudentOrbit from "@/components/card/StudentOrbit";
 import { SiteNav, SiteFooter } from "./SiteChrome";
 import "@/app/landing.css";
 import "./authors.css";
@@ -121,7 +120,6 @@ export default function PublicAuthors() {
               <button key={author.username} type="button" className="author-stack-card" style={style} data-active="false" aria-expanded={fanned} aria-label={ar ? `${fanned ? "ضم البطاقات" : "افرد البطاقات"}: ${author.name}` : `${fanned ? "Close" : "Fan out"} author cards: ${author.name}`} onClick={() => setFannedIndex(fanned ? null : index)}><AuthorArt author={author} locale={locale} /></button>;
           })}
         </div>
-          {current && <StudentOrbit key={current.username} username={current.username} />}
         </div>
         <p className="sr-only" aria-live="polite" aria-atomic="true">{current?.name} @{current?.username}</p>
         <p className="authors-hint">{ar ? "اسحب البطاقة يمينًا أو يسارًا، أو استخدم مفاتيح الأسهم." : "Swipe or drag the card, or use the arrow keys."}</p>

@@ -155,6 +155,7 @@ export const addLesson = mutation({
 const publishArgs = v.object({ courseId: v.id("learnCollections"), visibility, teamId: v.optional(v.id("businessTeams")) });
 export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publishArgs>, asActor?: string) {
     const { row, actor } = await ownedCourse(ctx, args.courseId, asActor);
+    if (row.archived) throw new Error("COURSE_ARCHIVED: Restore this course before publishing.");
     await requireVisibilityAllowed(ctx, actor, args.visibility);
     const audienceTeamId = await resolveAudienceTeam(ctx, actor, args.visibility, args.teamId, row.audienceTeamId);
     if (row.communityState !== "ok") throw new Error("MODERATED: This course is under review and can't be published right now.");

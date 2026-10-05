@@ -3,8 +3,8 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
 import CreatorLibrary from "@/components/library/CreatorLibrary";
 
-const state = vi.hoisted(() => ({ tab: "forms", push: vi.fn(), create: vi.fn(), capture: vi.fn() }));
-vi.mock("next/navigation", () => ({ useRouter: () => ({ push: state.push, replace: vi.fn() }), usePathname: () => "/dashboard", useSearchParams: () => new URLSearchParams(`tab=${state.tab}`) }));
+const state = vi.hoisted(() => ({ tab: "forms", push: vi.fn(), replace: vi.fn(), create: vi.fn(), capture: vi.fn() }));
+vi.mock("next/navigation", () => ({ useRouter: () => ({ push: state.push, replace: state.replace }), usePathname: () => "/dashboard", useSearchParams: () => new URLSearchParams(state.tab ? `tab=${state.tab}` : "") }));
 vi.mock("@/lib/analytics", () => ({ default: { capture: state.capture } }));
 vi.mock("convex/react", () => ({
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => {
@@ -47,3 +47,23 @@ it.each([
 });
 
 it("keeps Games without a library view control", () => { state.tab = "games"; render(<CreatorLibrary />); expect(screen.queryByRole("button", { name: "View options" })).toBeNull(); expect(screen.queryByRole("textbox", { name: "Search library" })).toBeNull(); });
+
+it("remembers the selected tab when Library is reopened without a tab in its address", () => {
+  state.tab = "flashcards";
+  const view = render(<CreatorLibrary />);
+  expect(localStorage.getItem("chaos-library-tab")).toBe("flashcards");
+  view.unmount();
+  state.tab = "";
+  render(<CreatorLibrary />);
+  expect(screen.getByRole("tab", { name: "Flashcards" })).toHaveAttribute("aria-selected", "true");
+});
+it("lets an explicit tab link override the remembered tab and remembers Forms too", () => {
+  localStorage.setItem("chaos-library-tab", "courses");
+  state.tab = "forms";
+  render(<CreatorLibrary />);
+  expect(screen.getByRole("tab", { name: "Forms" })).toHaveAttribute("aria-selected", "true");
+  expect(localStorage.getItem("chaos-library-tab")).toBe("forms");
+  fireEvent.click(screen.getByRole("tab", { name: "Courses" }));
+  expect(localStorage.getItem("chaos-library-tab")).toBe("courses");
+  expect(state.replace).toHaveBeenCalledWith("/dashboard?tab=courses", { scroll: false });
+});

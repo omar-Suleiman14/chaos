@@ -158,6 +158,7 @@ export default function CreatorLibrary() {
   const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
   const templates = useQuery(api.forms.listTemplates);
   const deleteQuiz = useMutation(api.quizFunctions.deleteQuiz);
+  const setQuizArchived = useMutation(api.quizFunctions.setQuizArchived);
   const publishQuiz = useMutation(api.quizFunctions.publishQuiz);
   const unpublishQuiz = useMutation(api.quizFunctions.unpublishQuiz);
   const duplicateForm = useMutation(api.forms.duplicateForm);
@@ -173,8 +174,28 @@ export default function CreatorLibrary() {
   const [search, setSearch] = useState("");
   const pathname = usePathname();
   const params = useSearchParams();
-  const kind = kindFromParam(params.get("tab"));
-  const setKind = (next: Kind) => router.replace(next === "Forms" ? pathname : `${pathname}?tab=${next.toLowerCase()}`, { scroll: false });
+  const tabParam = params.get("tab");
+  const [rememberedKind, setRememberedKind] = useState<Kind>("Forms");
+  const kind = tabParam ? kindFromParam(tabParam) : rememberedKind;
+  const setKind = (next: Kind) => {
+    setRememberedKind(next);
+    try { window.localStorage.setItem("chaos-library-tab", next.toLowerCase()); } catch { /* storage unavailable */ }
+    const query = new URLSearchParams(params.toString());
+    query.set("tab", next.toLowerCase());
+    router.replace(`${pathname}?${query}`, { scroll: false });
+  };
+  useEffect(() => {
+    try {
+      if (tabParam) {
+        const next = kindFromParam(tabParam);
+        setRememberedKind(next);
+        window.localStorage.setItem("chaos-library-tab", next.toLowerCase());
+      } else {
+        const saved = window.localStorage.getItem("chaos-library-tab");
+        if (saved) setRememberedKind(kindFromParam(saved));
+      }
+    } catch { /* storage unavailable */ }
+  }, [tabParam]);
   const [view, setView] = useState<"gallery" | "list">("gallery");
   /** No statuses chosen means everything except archived, the everyday view. */
   const [statuses, setStatuses] = useState<Status[]>([]);
@@ -245,7 +266,7 @@ export default function CreatorLibrary() {
     }));
     const legacy: Row[] = (quizzes ?? []).map((q) => ({
       key: q._id, kind: "legacy", title: q.title || t.untitledQuiz, href: `/dashboard/editor?id=${q._id}`, resultsHref: `/dashboard/results?id=${q._id}`,
-      status: q.isPublished ? "live" : "draft", meta: t.playCount(q.sessionCount), responses: q.sessionCount, group: q.groupName || "",
+      status: q.archived ? "archived" : q.isPublished ? "live" : "draft", meta: t.playCount(q.sessionCount), responses: q.sessionCount, group: q.groupName || "",
       shareUrl: q.isPublished ? `${origin}/${q.creatorUsername}/${q.slug}` : undefined, quizId: q._id, owned: true, canHost: q.isPublished,
     }));
     const shared: Row[] = (forms?.shared ?? []).map((f) => ({
@@ -297,16 +318,17 @@ export default function CreatorLibrary() {
   };
   /** Archive hides a form from people answering and from the library; responses are kept. Undo puts it back. */
   const archive = async (row: Row) => {
-    if (!row.formId) return;
+    if (!row.formId && !row.quizId) return;
     const before = row.status;
     const next = row.status === "archived" ? (row.published ? "closed" : "draft") : "archived";
     // The row moves at once (optimistic update); the toast and hint follow the tap, not the round trip.
     const id = Date.now();
     setToast({ id, text: next === "archived" ? t.archived(row.title) : t.restored(row.title),
-      undo: () => { setStatus({ formId: row.formId!, status: before }).catch((e) => setError(errorMessage(e))); } });
+      undo: () => { const pending = row.formId ? setStatus({ formId: row.formId, status: before }) : setQuizArchived({ quizId: row.quizId!, archived: false }); pending.catch((e) => setError(errorMessage(e))); } });
     if (next === "archived") setNotice(t.findInArchive);
     try {
-      await setStatus({ formId: row.formId, status: next });
+      if (row.formId) await setStatus({ formId: row.formId, status: next });
+      else await setQuizArchived({ quizId: row.quizId!, archived: next === "archived" });
     } catch (e) {
       setToast((current) => (current?.id === id ? null : current));
       setNotice("");
@@ -356,13 +378,11 @@ export default function CreatorLibrary() {
           {row.status === "live" ? <Lock size={14} /> : <Globe size={14} />} {row.status === "live" ? t.unpublish : t.publish}
         </button>
       )}
-      {row.formId && row.owned && (
+      {(row.formId || row.quizId) && row.owned && (
         <button type="button" role="menuitem" onClick={() => { close(); void archive(row); }}>
           <Archive size={14} /> {t.archive}
         </button>
       )}
-      {/* Forms are deleted only from the Archive; old quizzes can't be archived, so they keep Delete. */}
-      {row.owned && row.kind === "legacy" && <><hr /><button type="button" role="menuitem" className="ws-menu__danger" onClick={() => { close(); setConfirming(row); }}><Trash2 size={14} /> {t.delete}</button></>}
     </>
   );
 

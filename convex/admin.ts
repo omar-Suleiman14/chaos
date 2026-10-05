@@ -1,9 +1,10 @@
 import { addCrmNote, contactListArgs, contactSaveArgs, crmStage, listCrmContacts, readCrmNotes, saveCrmContact } from "./crmServices";
 import { authorDb } from "./authorIndex";
-import { v } from "convex/values";
+import { v, type ObjectType } from "convex/values";
+import { adminIdentity, requireAdminForActor } from "./adminAccess";
 import { paginationOptsValidator } from "convex/server";
 import { mutation, query, internalMutation } from "./_generated/server";
-import type { MutationCtx } from "./_generated/server";
+import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { isPaidPlan, requireAdmin, requireIdentity } from "./authz";
@@ -12,12 +13,17 @@ const DAY = 86_400_000;
 export const contact = query({ args: { contactId: v.id("crmContacts") }, handler: async (ctx, { contactId }) => {
   await requireAdmin(ctx); return ctx.db.get("crmContacts", contactId);
 } });
-export const contactActivity = query({ args: { contactId: v.id("crmContacts") }, handler: async (ctx, { contactId }) => {
-  await requireAdmin(ctx);
+export const contactActivityArgs = { contactId: v.id("crmContacts") };
+export async function contactActivityForActor(ctx: QueryCtx, args: ObjectType<typeof contactActivityArgs>, actorId?: string) {
+  const { contactId } = args;
+  await requireAdminForActor(ctx, actorId);
   return ctx.db.query("adminAudit").withIndex("by_target", q => q.eq("target", String(contactId))).order("desc").take(100);
-} });
-export const setContactStages = mutation({ args: { contactIds: v.array(v.id("crmContacts")), stage: crmStage }, returns: v.null(), handler: async (ctx, args) => {
-  await requireAdmin(ctx); const { subject } = await requireIdentity(ctx);
+
+}
+export const contactActivity = query({ args: contactActivityArgs, handler: (ctx, args) => contactActivityForActor(ctx, args) });
+export const setContactStagesArgs = { contactIds: v.array(v.id("crmContacts")), stage: crmStage };
+export async function setContactStagesForActor(ctx: MutationCtx, args: ObjectType<typeof setContactStagesArgs>, actorId?: string) {
+  await requireAdminForActor(ctx, actorId); const { subject } = await adminIdentity(ctx, actorId);
   const ids = [...new Set(args.contactIds)];
   if (!ids.length || ids.length > 48) throw new Error("Select between 1 and 48 contacts.");
   for (const id of ids) {
@@ -28,16 +34,22 @@ export const setContactStages = mutation({ args: { contactIds: v.array(v.id("crm
     await ctx.db.insert("adminAudit", { actorId: subject, action: "crm_stage_changed", target: String(id), reason: `${contact.stage} → ${args.stage}`, createdAt: Date.now() });
   }
   return null;
-} });
-export const completeContactFollowUp = mutation({ args: { contactId: v.id("crmContacts") }, returns: v.null(), handler: async (ctx, { contactId }) => {
-  await requireAdmin(ctx); const { subject } = await requireIdentity(ctx);
+
+}
+export const setContactStages = mutation({ args: setContactStagesArgs, returns: v.null(), handler: (ctx, args) => setContactStagesForActor(ctx, args) });
+export const completeContactFollowUpArgs = { contactId: v.id("crmContacts") };
+export async function completeContactFollowUpForActor(ctx: MutationCtx, args: ObjectType<typeof completeContactFollowUpArgs>, actorId?: string) {
+  const { contactId } = args;
+  await requireAdminForActor(ctx, actorId); const { subject } = await adminIdentity(ctx, actorId);
   const contact = await ctx.db.get("crmContacts", contactId);
   if (!contact) throw new Error("Contact not found.");
   if (contact.nextFollowUp === undefined) return null;
   await ctx.db.patch("crmContacts", contactId, { nextFollowUp: undefined, updatedAt: Date.now() });
   await ctx.db.insert("adminAudit", { actorId: subject, action: "crm_follow_up_completed", target: String(contactId), reason: `Completed follow-up scheduled for ${new Date(contact.nextFollowUp).toISOString().slice(0, 10)}`, createdAt: Date.now() });
   return null;
-} });
+
+}
+export const completeContactFollowUp = mutation({ args: completeContactFollowUpArgs, returns: v.null(), handler: (ctx, args) => completeContactFollowUpForActor(ctx, args) });
 export const contacts = query({ args: contactListArgs, handler: async (ctx, args) => {
   await requireAdmin(ctx); return listCrmContacts(ctx, args);
 } });
@@ -92,14 +104,60 @@ const pageFields = {
   ),
 };
 
-export const users = query({
-  args: {
+async function inventoryOwner(ctx: QueryCtx, ownerId: string) {
+  const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", ownerId)).first();
+  return { ownerName: owner?.name || ownerId, ownerEmail: owner?.email ?? "" };
+}
+
+const learningRow = v.object({
+  id: v.string(), title: v.string(), ownerId: v.string(), ownerName: v.string(), ownerEmail: v.string(),
+  status: v.union(v.literal("draft"), v.literal("live"), v.literal("archived")),
+  createdAt: v.number(), updatedAt: v.number(), count: v.number(),
+});
+
+/** Platform inventory exposes metadata only, including unpublished and archived assets. */
+export const learningContentArgs = { kind: v.union(v.literal("courses"), v.literal("lessons"), v.literal("flashcards")), paginationOpts: paginationOptsValidator };
+export async function learningContentForActor(ctx: QueryCtx, args: ObjectType<typeof learningContentArgs>, actorId?: string) {
+  const { kind, paginationOpts } = args;
+    await requireAdminForActor(ctx, actorId);
+    const options = { ...paginationOpts, maximumBytesRead: 2_000_000 };
+    if (kind === "courses") {
+      const result = await ctx.db.query("learnCollections").order("desc").paginate(options);
+      return { ...result, page: await Promise.all(result.page.map(async row => ({ ...(await inventoryOwner(ctx, row.ownerId)), id: String(row._id), title: row.metadata.title, ownerId: row.ownerId, status: row.archived ? "archived" as const : row.publishedVersionId ? "live" as const : "draft" as const, createdAt: row.createdAt, updatedAt: row.updatedAt, count: row.lessonIds?.length ?? row.items.filter(item => item.kind === "lesson").length }))) };
+    }
+    if (kind === "lessons") {
+      const result = await ctx.db.query("lessons").order("desc").paginate(options);
+      return { ...result, page: await Promise.all(result.page.map(async row => ({ ...(await inventoryOwner(ctx, row.ownerId)), id: String(row._id), title: row.metadata.title, ownerId: row.ownerId, status: row.status === "archived" ? "archived" as const : row.publishedVersionId ? "live" as const : "draft" as const, createdAt: row.createdAt, updatedAt: row.updatedAt, count: 0 }))) };
+    }
+    const result = await ctx.db.query("flashcardSets").order("desc").paginate(options);
+    return { ...result, page: await Promise.all(result.page.map(async row => ({ ...(await inventoryOwner(ctx, row.ownerId)), id: String(row._id), title: row.title, ownerId: row.ownerId, status: row.archived ? "archived" as const : row.publishedVersionId ? "live" as const : "draft" as const, createdAt: row._creationTime, updatedAt: row.updatedAt, count: row.cards.length }))) };
+
+}
+export const learningContent = query({ args: learningContentArgs, returns: v.object({ page: v.array(learningRow), ...pageFields }), handler: (ctx, args) => learningContentForActor(ctx, args) });
+
+export const teamsArgs = { paginationOpts: paginationOptsValidator };
+export async function teamsForActor(ctx: QueryCtx, args: ObjectType<typeof teamsArgs>, actorId?: string) {
+  const { paginationOpts } = args;
+    await requireAdminForActor(ctx, actorId);
+    const result = await ctx.db.query("businessTeams").order("desc").paginate({ ...paginationOpts, maximumBytesRead: 2_000_000 });
+    const page = await Promise.all(result.page.map(async row => {
+      const [members, shares] = await Promise.all([
+        ctx.db.query("businessMembers").withIndex("by_team_user", q => q.eq("teamId", row._id)).collect(),
+        ctx.db.query("businessShares").withIndex("by_team_asset", q => q.eq("teamId", row._id)).collect(),
+      ]);
+      return { ...(await inventoryOwner(ctx, row.ownerId)), id: row._id, name: row.name, ownerId: row.ownerId, createdAt: row.createdAt, members: members.length, sharedResources: shares.length };
+    }));
+    return { ...result, page };
+
+}
+export const teams = query({ args: teamsArgs, returns: v.object({ page: v.array(v.object({ id: v.id("businessTeams"), name: v.string(), ownerId: v.string(), ownerName: v.string(), ownerEmail: v.string(), createdAt: v.number(), members: v.number(), sharedResources: v.number() })), ...pageFields }), handler: (ctx, args) => teamsForActor(ctx, args) });
+
+export const usersArgs = {
     paginationOpts: paginationOptsValidator,
     email: v.optional(v.string()),
-  },
-  returns: v.object({ page: v.array(userRow), ...pageFields }),
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+  };
+export async function usersForActor(ctx: QueryCtx, args: ObjectType<typeof usersArgs>, actorId?: string) {
+    await requireAdminForActor(ctx, actorId);
     const email = args.email?.trim();
     const source = email
       ? ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email))
@@ -127,17 +185,16 @@ export const users = query({
         planExpiresAt: u.planExpiresAt ?? null,
       })),
     };
-  },
-});
 
-export const content = query({
-  args: {
+}
+export const users = query({ args: usersArgs, returns: v.object({ page: v.array(userRow), ...pageFields }), handler: (ctx, args) => usersForActor(ctx, args) });
+
+export const contentArgs = {
     kind: v.union(v.literal("forms"), v.literal("quizzes")),
     paginationOpts: paginationOptsValidator,
-  },
-  returns: v.object({ page: v.array(contentRow), ...pageFields }),
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+  };
+export async function contentForActor(ctx: QueryCtx, args: ObjectType<typeof contentArgs>, actorId?: string) {
+    await requireAdminForActor(ctx, actorId);
     if (args.kind === "forms") {
       const result = await ctx.db
         .query("forms")
@@ -166,22 +223,24 @@ export const content = query({
         id: String(q._id),
         title: q.title,
         ownerId: q.creatorId,
-        status: q.isPublished ? "live" : "draft",
+        status: q.archived ? "archived" : q.isPublished ? "live" : "draft",
         held: !!q.isBanned,
         responses: null,
         createdAt: q.createdAt,
       })),
     };
-  },
-});
+
+}
+export const content = query({ args: contentArgs, returns: v.object({ page: v.array(contentRow), ...pageFields }), handler: (ctx, args) => contentForActor(ctx, args) });
 
 async function audit(
   ctx: MutationCtx,
   action: string,
   target: string,
   reason: string,
+  actorId?: string,
 ) {
-  const identity = await requireIdentity(ctx);
+  const identity = await adminIdentity(ctx, actorId);
   await ctx.db.insert("adminAudit", {
     actorId: identity.subject,
     action,
@@ -197,17 +256,15 @@ function reasonText(reason: string) {
   return text;
 }
 
-export const moderateUser = mutation({
-  args: {
+export const moderateUserArgs = {
     userId: v.id("users"),
     state: stateValidator,
     days: v.optional(v.number()),
     reason: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
-    const identity = await requireIdentity(ctx);
+  };
+export async function moderateUserForActor(ctx: MutationCtx, args: ObjectType<typeof moderateUserArgs>, actorId?: string) {
+    await requireAdminForActor(ctx, actorId);
+    const identity = await adminIdentity(ctx, actorId);
     const user = await ctx.db.get("users", args.userId);
     if (!user) throw new Error("User not found");
     if (user.clerkId === identity.subject && args.state !== "active")
@@ -232,10 +289,11 @@ export const moderateUser = mutation({
         internal.admin.expireSuspension,
         { userId: user._id, expiresAt: suspendedUntil },
       );
-    await audit(ctx, `account_${args.state}`, user.clerkId, reason);
+    await audit(ctx, `account_${args.state}`, user.clerkId, reason, actorId);
     return null;
-  },
-});
+
+}
+export const moderateUser = mutation({ args: moderateUserArgs, returns: v.null(), handler: (ctx, args) => moderateUserForActor(ctx, args) });
 
 export async function grantPlan(
   ctx: MutationCtx,
@@ -348,15 +406,13 @@ export const sweepExpiries = internalMutation({
   },
 });
 
-export const moderateContent = mutation({
-  args: {
+export const moderateContentArgs = {
     targetId: v.union(v.id("forms"), v.id("quizzes")),
     hold: v.boolean(),
     reason: v.string(),
-  },
-  returns: v.null(),
-  handler: async (ctx, args) => {
-    await requireAdmin(ctx);
+  };
+export async function moderateContentForActor(ctx: MutationCtx, args: ObjectType<typeof moderateContentArgs>, actorId?: string) {
+    await requireAdminForActor(ctx, actorId);
     const reason = reasonText(args.reason);
     const formId = ctx.db.normalizeId("forms", args.targetId);
     const quizId = ctx.db.normalizeId("quizzes", args.targetId);
@@ -391,25 +447,16 @@ export const moderateContent = mutation({
       args.hold ? "content_held" : "content_released",
       String(item._id),
       reason,
+      actorId,
     );
     return null;
-  },
-});
 
-export const activity = query({
-  args: {},
-  returns: v.array(
-    v.object({
-      id: v.string(),
-      actorId: v.string(),
-      action: v.string(),
-      target: v.string(),
-      reason: v.string(),
-      createdAt: v.number(),
-    }),
-  ),
-  handler: async (ctx) => {
-    await requireAdmin(ctx);
+}
+export const moderateContent = mutation({ args: moderateContentArgs, returns: v.null(), handler: (ctx, args) => moderateContentForActor(ctx, args) });
+
+export const activityArgs = {};
+export async function activityForActor(ctx: QueryCtx, _args: ObjectType<typeof activityArgs>, actorId?: string) {
+    await requireAdminForActor(ctx, actorId);
     return (await ctx.db.query("adminAudit").order("desc").take(50)).map(
       (a) => ({
         id: String(a._id),
@@ -420,8 +467,18 @@ export const activity = query({
         createdAt: a.createdAt,
       }),
     );
-  },
-});
+
+}
+export const activity = query({ args: activityArgs, returns: v.array(
+    v.object({
+      id: v.string(),
+      actorId: v.string(),
+      action: v.string(),
+      target: v.string(),
+      reason: v.string(),
+      createdAt: v.number(),
+    }),
+  ), handler: (ctx, args) => activityForActor(ctx, args) });
 
 export const bulkPlan = mutation({
   args: {

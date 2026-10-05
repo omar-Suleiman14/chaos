@@ -9,8 +9,10 @@
  */
 
 import type * as admin from "../admin.js";
+import type * as adminAccess from "../adminAccess.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
 import type * as adminModel from "../adminModel.js";
+import type * as archive from "../archive.js";
 import type * as auth from "../auth.js";
 import type * as authIdentity from "../authIdentity.js";
 import type * as authorIndex from "../authorIndex.js";
@@ -103,6 +105,7 @@ import type * as liveModel from "../liveModel.js";
 import type * as liveTeamModel from "../liveTeamModel.js";
 import type * as liveTeams from "../liveTeams.js";
 import type * as mcp from "../mcp.js";
+import type * as mcpAdmin from "../mcpAdmin.js";
 import type * as mcpAdvancedForms from "../mcpAdvancedForms.js";
 import type * as mcpAssessments from "../mcpAssessments.js";
 import type * as mcpBusiness from "../mcpBusiness.js";
@@ -148,8 +151,10 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   admin: typeof admin;
+  adminAccess: typeof adminAccess;
   adminAnalytics: typeof adminAnalytics;
   adminModel: typeof adminModel;
+  archive: typeof archive;
   auth: typeof auth;
   authIdentity: typeof authIdentity;
   authorIndex: typeof authorIndex;
@@ -242,6 +247,7 @@ declare const fullApi: ApiFromModules<{
   liveTeamModel: typeof liveTeamModel;
   liveTeams: typeof liveTeams;
   mcp: typeof mcp;
+  mcpAdmin: typeof mcpAdmin;
   mcpAdvancedForms: typeof mcpAdvancedForms;
   mcpAssessments: typeof mcpAssessments;
   mcpBusiness: typeof mcpBusiness;

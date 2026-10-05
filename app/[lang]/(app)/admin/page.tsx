@@ -2,7 +2,7 @@
 import DocumentationPanel from "@/components/admin/DocumentationPanel";
 import Link from "next/link";
 import { useState } from "react";
-import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import MemberAvatar from "@/components/MemberAvatar";
@@ -16,12 +16,13 @@ import {
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import CrmPanel from "@/components/admin/CrmPanel";
-import SidebarNavItem from "@/components/admin/crm/SidebarNavItem";
+import { WsTabs } from "@/components/workspace/primitives";
+import PlatformContent from "@/components/admin/PlatformContent";
+import PlatformTeams from "@/components/admin/PlatformTeams";
 import "@/components/admin/crm/crm.css";
 import { supportEmail } from "@/lib/site";
 import {
   Shield,
-  ArrowLeft,
   Search,
   Users,
   FileText,
@@ -30,17 +31,10 @@ import {
   Columns3,
 } from "lucide-react";
 
-const adminTabs = [
-  { id: "contacts", icon: Users, label: "Contacts" },
-  { id: "pipeline", icon: Columns3, label: "Pipeline" },
-  { id: "followups", icon: History, label: "Follow-ups" },
-  { id: "overview", icon: BarChart3, label: "Overview" },
-  { id: "users", icon: Users, label: "Accounts" },
-  { id: "forms", icon: FileText, label: "Forms" },
-  { id: "quizzes", icon: FileText, label: "Legacy quizzes" },
-  { id: "docs", icon: FileText, label: "Documentation" },
-  { id: "activity", icon: History, label: "Activity" },
-];
+const adminTabs = ["overview", "users", "content", "teams", "docs", "activity", "relationships"] as const;
+type AdminTab = (typeof adminTabs)[number];
+const adminLabels: Record<AdminTab, string> = { overview: "Overview", users: "Accounts", content: "Content", teams: "Teams", docs: "Documentation", activity: "Activity", relationships: "Relationships" };
+const adminIcons = { overview: BarChart3, users: Users, content: FileText, teams: Users, docs: FileText, activity: History, relationships: Columns3 };
 const date = (time: number) => new Date(time).toLocaleString();
 type User = FunctionReturnType<typeof api.admin.users>["page"][number];
 type Content = FunctionReturnType<typeof api.admin.content>["page"][number];
@@ -75,7 +69,8 @@ function Notice({ title, text }: { title: string; text: string }) {
   );
 }
 function AdminGate() {
-  const admin = useQuery(api.quizFunctions.getIsAdmin);
+  const { isAuthenticated } = useConvexAuth();
+  const admin = useQuery(api.quizFunctions.getIsAdmin, isAuthenticated ? {} : "skip");
   if (admin === undefined)
     return (
       <Notice
@@ -93,7 +88,9 @@ function AdminGate() {
   return <AdminConsole />;
 }
 function AdminConsole() {
-  const [tab, setTab] = useState("contacts");
+  const [tab, setTab] = useState<AdminTab>("overview");
+  const [contentKind, setContentKind] = useState("forms");
+  const [relationshipTab, setRelationshipTab] = useState("contacts");
   const [action, setAction] = useState<Action | null>(null);
   const [reason, setReason] = useState("");
   const [days, setDays] = useState(7);
@@ -124,72 +121,33 @@ function AdminConsole() {
     }
   }
   return (
-    <div className="workspace-ui chaos-admin bg-background text-foreground">
-      <aside className="crm-sidebar">
-        <div className="crm-brand">
-          <Shield size={28} />
-          <div>
-            <strong>Chaos</strong>
-            <small>Admin workspace</small>
-          </div>
-        </div>
-        <nav aria-label="Admin sections">
-          <p className="crm-nav-heading">Relationships & operations</p>
-          {adminTabs.map(({ id, icon, label }) => (
-            <SidebarNavItem
-              key={id}
-              icon={icon}
-              label={label}
-              active={tab === id}
-              onClick={() => setTab(id)}
-            />
-          ))}
-        </nav>
-        <Link href="/dashboard" className="crm-sidebar-footer">
-          <ArrowLeft size={16} />
-          Back to workspace
-        </Link>
-      </aside>
-      <div className="crm-admin-body">
-        <header className="crm-admin-header">
-          <div>
-            <h1>{adminTabs.find((item) => item.id === tab)?.label}</h1>
-            <p>Chaos / Administration</p>
-          </div>
-          <a
-            className="text-sm text-muted-foreground"
-            href={`mailto:${supportEmail}`}
-          >
-            Support
-          </a>
+    <div className="ws-admin chaos-admin text-foreground">
+      <div className="ws-admin-body">
+        <header className="ws-page-header">
+          <div><h1 className="ws-page-title">Administration</h1><p className="ws-page-subtitle">Manage Chaos accounts, content and shared workspaces.</p></div>
+          <a className="ws-btn ws-btn--ghost" href={`mailto:${supportEmail}`}>Support</a>
         </header>
-        <main className="crm-admin-main space-y-7">
+        <WsTabs tabs={adminTabs} value={tab} onChange={setTab} label="Admin sections" labels={adminLabels} icons={adminIcons} />
+        <main className="ws-admin-main space-y-7">
           {message && (
             <p role="status" className="rounded-lg bg-muted p-3 text-sm">
               {message}
             </p>
           )}
-          {tab === "contacts" || tab === "followups" || tab === "pipeline" ? (
-            <CrmPanel
-              key={tab}
-              followUps={tab === "followups"}
-              pipeline={tab === "pipeline"}
-            />
-          ) : tab === "docs" ? (
-            <DocumentationPanel />
-          ) : tab === "overview" ? (
+          {tab === "relationships" ? <>
+            <p className="ws-page-subtitle">Contacts and follow-ups for organizations using Chaos. Linked accounts stay connected to the platform.</p>
+            <WsTabs tabs={["contacts", "pipeline", "followups"]} value={relationshipTab} onChange={setRelationshipTab} label="Relationship tools" labels={{ contacts: "Contacts", pipeline: "Pipeline", followups: "Follow-ups" }} />
+            <CrmPanel key={relationshipTab} followUps={relationshipTab === "followups"} pipeline={relationshipTab === "pipeline"} />
+          </> : tab === "docs" ? <DocumentationPanel /> : tab === "overview" ? <>
+            <section className="ws-admin-shortcuts" aria-label="Platform operations">
+              {[{ id: "users", label: "Accounts", help: "Find users and review account restrictions", icon: Users }, { id: "content", label: "Content", help: "Forms, quizzes, lessons, courses and flashcards", icon: FileText }, { id: "teams", label: "Teams", help: "Review Business workspaces and collaboration", icon: Users }, { id: "activity", label: "Activity", help: "Review moderation and administrative changes", icon: History }].map(item => <button key={item.id} className="ws-tile" onClick={() => setTab(item.id as AdminTab)}><item.icon size={20} aria-hidden /><strong>{item.label}</strong><span>{item.help}</span></button>)}
+            </section>
             <Overview />
-          ) : tab === "users" ? (
-            <UsersPanel choose={choose} />
-          ) : tab === "activity" ? (
-            <Activity />
-          ) : (
-            <ContentPanel
-              key={tab}
-              kind={tab as "forms" | "quizzes"}
-              choose={choose}
-            />
-          )}
+          </> : tab === "users" ? <UsersPanel choose={choose} /> : tab === "teams" ? <PlatformTeams /> : tab === "activity" ? <Activity /> : <>
+            <WsTabs tabs={["forms", "quizzes", "courses", "lessons", "flashcards"]} value={contentKind} onChange={setContentKind} label="Content types" labels={{ forms: "Forms & quizzes", quizzes: "Legacy quizzes", courses: "Courses", lessons: "Lessons", flashcards: "Flashcards" }} />
+            {contentKind === "forms" || contentKind === "quizzes" ? <ContentPanel key={contentKind} kind={contentKind} choose={choose} /> : <PlatformContent key={contentKind} kind={contentKind as "courses" | "lessons" | "flashcards"} />}
+          </>}
+
         </main>
       </div>
       <Dialog
@@ -317,22 +275,7 @@ function Overview() {
           </div>
         ))}
       </div>
-      <div className="rounded-xl border p-5">
-        <h3 className="font-semibold">Product analytics</h3>
-        <p className="text-sm text-muted-foreground mt-2">
-          PostHog receives screen names, errors and a few counts, such as
-          submitted responses. It never receives answers, form content, URLs or
-          recordings.
-        </p>
-        <a
-          href="https://eu.posthog.com"
-          target="_blank"
-          rel="noreferrer"
-          className="text-sm underline inline-block mt-3"
-        >
-          Open PostHog
-        </a>
-      </div>
+
     </section>
   );
 }
@@ -452,7 +395,7 @@ function UsersPanel({ choose }: { choose: ChooseAction }) {
                   disabled={saving !== null}
                   onClick={() => addToCrm(user)}
                 >
-                  {saving === user._id ? "Saving…" : "Add to CRM"}
+                  {saving === user._id ? "Saving…" : "Add to relationships"}
                 </Button>
                 {user.state !== "active" && (
                   <Button

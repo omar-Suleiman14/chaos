@@ -108,7 +108,7 @@ export async function canViewQuizAsRespondent(ctx: DbCtx, quiz: Doc<"quizzes">):
   const identity = await getAuthIdentity(ctx);
   const ownerOrAdmin =
     !!identity && (quiz.creatorId === identity.subject || (await isAdmin(ctx)));
-  if (quiz.isBanned || await creatorRestricted(ctx, quiz.creatorId)) return ownerOrAdmin;
+  if (quiz.archived || quiz.isBanned || await creatorRestricted(ctx, quiz.creatorId)) return ownerOrAdmin;
   if (quiz.isPublished) return true;
   return ownerOrAdmin;
 }

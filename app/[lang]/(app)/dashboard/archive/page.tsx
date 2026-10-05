@@ -1,14 +1,15 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@/lib/convexCache";
+import { useMemo, useRef, useState } from "react";
+import { useConvexAuth, usePaginatedQuery } from "convex/react";
 import { deleteFormLocally, setFormStatusLocally, useOptimisticMutation } from "@/lib/optimistic";
 import { Archive, ArchiveRestore, ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { LibrarySkeleton } from "@/components/workspace/Skeletons";
-import { WsDialog, WsMenu, WsUndoToast } from "@/components/workspace/primitives";
+import { WsDialog, WsMenu, WsTabs, WsUndoToast } from "@/components/workspace/primitives";
+import LearningArchive from "@/components/library/LearningArchive";
 import type { UndoToast } from "@/components/workspace/primitives";
 import { errorMessage } from "@/lib/errors";
 import { formatNumber, pluralForm, useCopy, useLocale } from "@/lib/i18n";
@@ -46,7 +47,21 @@ type SortKey = "name" | "responses" | "archived";
 export default function ArchivePage() {
   const t = useCopy(copy);
   const { locale } = useLocale();
-  const forms = useQuery(api.forms.listMyForms);
+  const [tab, setTab] = useState<"forms" | "quizzes" | "courses" | "lessons" | "flashcards">("forms");
+  return <div>
+    <div className="ws-page-header"><div><h1 className="ws-page-title">{t.title}</h1><p className="ws-page-subtitle">{locale === "ar" ? "استعد المحتوى المؤرشف إلى مكتبتك. النماذج وحدها تدعم الحذف النهائي." : "Restore archived content to your library. Forms also support permanent deletion."}</p></div></div>
+    <WsTabs tabs={["forms", "quizzes", "courses", "lessons", "flashcards"] as const} value={tab} onChange={setTab} label={locale === "ar" ? "أنواع المحتوى المؤرشف" : "Archived content types"}
+      labels={locale === "ar" ? { forms: "النماذج", quizzes: "الاختبارات", courses: "الدورات", lessons: "الدروس", flashcards: "البطاقات" } : { forms: "Forms", quizzes: "Quizzes", courses: "Courses", lessons: "Lessons", flashcards: "Flashcards" }} />
+    <div className="mt-6">{tab === "forms" ? <FormsArchive key={tab} quizzes={false} /> : tab === "quizzes" ? <div className="space-y-8"><section><h2 className="ws-section-title mb-3">{locale === "ar" ? "اختبارات النماذج" : "Quiz forms"}</h2><FormsArchive key={tab} quizzes /></section><LearningArchive kind="legacy_quizzes" title={locale === "ar" ? "الاختبارات الكلاسيكية" : "Classic quizzes"} /></div> : <LearningArchive key={tab} kind={tab} />}</div>
+  </div>;
+}
+
+function FormsArchive({ quizzes }: { quizzes: boolean }) {
+  const t = useCopy(copy);
+  const { locale } = useLocale();
+  const { isAuthenticated } = useConvexAuth();
+  const { results, status, loadMore } = usePaginatedQuery(api.archive.list, isAuthenticated ? { kind: quizzes ? "quizzes" : "forms" } : "skip", { initialNumItems: 25 });
+  const forms = status === "LoadingFirstPage" ? undefined : { owned: results.map(row => ({ _id: row.id as Id<"forms">, title: row.title, responseCount: row.count, updatedAt: row.updatedAt, publishedVersion: row.published ? 1 : undefined, theme: { accent: row.accent ?? "#3595e3" } })) };
   const setStatus = useOptimisticMutation(api.forms.setFormStatus, setFormStatusLocally);
   const deleteForm = useOptimisticMutation(api.forms.deleteForm, deleteFormLocally);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "archived", dir: "desc" });
@@ -56,7 +71,7 @@ export default function ArchivePage() {
   const toastId = useRef(0);
 
   const rows = useMemo(() => {
-    const list = (forms?.owned ?? []).filter((f) => f.status === "archived");
+    const list = forms?.owned ?? [];
     const compare = {
       name: (a: (typeof list)[number], b: (typeof list)[number]) => (a.title || "").localeCompare(b.title || "", undefined, { sensitivity: "base", numeric: true }),
       responses: (a: (typeof list)[number], b: (typeof list)[number]) => a.responseCount - b.responseCount,
@@ -102,12 +117,6 @@ export default function ArchivePage() {
 
   return (
     <div className="font-sans">
-      <div className="ws-page-header">
-        <div>
-          <h1 className="ws-page-title">{t.title}</h1>
-          <p className="ws-page-subtitle">{t.subtitle}</p>
-        </div>
-      </div>
       {error && <p role="alert" className="mb-4 text-sm text-[var(--error)]">{error}</p>}
 
       {forms === undefined ? <LibrarySkeleton label={t.loading} view="list" count={4} /> :rows.length === 0 ? (
@@ -115,7 +124,6 @@ export default function ArchivePage() {
           <span className="ws-empty__art"><Archive size={24} /></span>
           <h2 className="text-xl font-semibold">{t.nothing}</h2>
           <p className="text-muted-foreground max-w-sm">{t.nothingBody}</p>
-          <Link href="/dashboard" className="ws-btn mt-3">{t.backToLibrary}</Link>
         </div>
       ) : (
         <div className="ws-table-wrap ws-page">
@@ -156,6 +164,8 @@ export default function ArchivePage() {
           </table>
         </div>
       )}
+
+      {(status === "CanLoadMore" || status === "LoadingMore") && <button type="button" className="ws-btn mt-4" disabled={status === "LoadingMore"} onClick={() => loadMore(25)}>{status === "LoadingMore" ? t.loading : locale === "ar" ? "حمّل المزيد" : "Load more"}</button>}
 
       {confirming && (
         <WsDialog title={t.confirmTitle(confirming.title)} onClose={() => setConfirming(null)}>

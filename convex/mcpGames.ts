@@ -97,7 +97,7 @@ async function source(ctx: Ctx, userId: string, ref: string) {
   const id = ctx.db.normalizeId("quizzes", match[2]);
   const quiz = id ? await ctx.db.get("quizzes", id) : null;
   if (!quiz || quiz.creatorId !== userId) fail("NOT_FOUND", "No owned quiz with that id in this account.");
-  if (!quiz.isPublished || quiz.isBanned) fail("LIVE_NOT_PUBLISHED", "Publish this quiz before hosting.");
+  if (quiz.archived || !quiz.isPublished || quiz.isBanned) fail("LIVE_NOT_PUBLISHED", "Publish this quiz before hosting.");
   return { quizId: quiz._id, theme: emptyDefinition().theme };
 }
 

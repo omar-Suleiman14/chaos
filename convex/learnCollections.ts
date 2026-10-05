@@ -45,6 +45,7 @@ export const replaceItems = mutation({ args: { collectionId: v.id("learnCollecti
 } });
 export const publish = mutation({ args: { collectionId: v.id("learnCollections"), expectedRevision: v.number(), visibility }, returns: v.id("collectionVersions"), handler: async (ctx, args) => {
   const row = await owned(ctx, args.collectionId); revision(row, args.expectedRevision);
+  if (row.archived) throw new Error("COURSE_ARCHIVED: Restore this course before publishing.");
   await requireVisibilityAllowed(ctx, row.ownerId, args.visibility);
   if (!row.items.length || row.communityState !== "ok") throw new Error("Collection is empty or moderated");
   for (const item of row.items) {

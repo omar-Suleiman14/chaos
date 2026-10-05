@@ -118,5 +118,26 @@
     "update_form",
     "update_lesson_blocks",
     "upsert_form_file_question"
+  ],
+  "administratorCount": 18,
+  "administratorNames": [
+    "add_crm_note",
+    "complete_crm_follow_up",
+    "get_admin_overview",
+    "get_crm_activity",
+    "get_crm_contact",
+    "list_admin_activity",
+    "list_admin_content",
+    "list_admin_learning_content",
+    "list_admin_teams",
+    "list_admin_users",
+    "list_crm_contacts",
+    "list_documentation",
+    "moderate_admin_content",
+    "moderate_admin_user",
+    "refresh_admin_analytics",
+    "save_crm_contact",
+    "save_documentation",
+    "set_crm_contact_stages"
   ]
 }

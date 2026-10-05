@@ -453,3 +453,21 @@
     gap: 14px;
   }
 }
+
+/* Administration shares the Chaos workspace shell. */
+.ws-admin.chaos-admin { display: block; min-height: auto; }
+.ws-admin-body { width: 100%; min-width: 0; }
+.ws-admin-body > .ws-tabs { margin-bottom: 24px; }
+.ws-admin-main { padding-top: 24px; }
+.ws-admin-shortcuts { display: grid; grid-template-columns: repeat(auto-fit, minmax(190px, 1fr)); gap: 12px; }
+.ws-admin-shortcuts .ws-tile { align-items: start; gap: 10px; }
+.ws-admin-shortcuts span { font-size: 12px; color: var(--on-surface-variant); line-height: 1.5; }
+.ws-admin .crm-contact-layout { min-height: auto; }
+
+.ws-admin .crm-panel { border: 0; border-radius: 0; overflow: visible; }
+.ws-admin .crm-searchbar { padding: 0 0 16px; border-bottom: 0; }
+.ws-admin .crm-searchbar form { max-width: 540px; padding: 0 10px; border: 1px solid var(--ws-line); border-radius: 6px; background: var(--ws-hover); }
+.ws-admin .crm-toolbar { padding: 0 0 18px; border-bottom: 0; gap: 10px; }
+.ws-admin .crm-table-scroll { border-block: 1px solid var(--ws-line); }
+.ws-admin .crm-table-footer { padding: 12px 0; }
+.ws-admin .crm-panel > .ws-empty { min-height: 180px; }

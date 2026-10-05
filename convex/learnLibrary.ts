@@ -68,7 +68,7 @@ export const collection = query({
   handler: async (ctx, args) => {
     const id = ctx.db.normalizeId("learnCollections", args.id);
     const row = id && await ctx.db.get("learnCollections", id), identity = await getAuthIdentity(ctx);
-    if (!row || !row.publishedVersionId || (row.ownerId !== identity?.subject && ((row.visibility !== "public" && !await teamAudienceAllows(ctx, row, identity?.subject)) || row.communityState !== "ok" || await creatorRestricted(ctx, row.ownerId)))) return null;
+    if (!row || row.archived || !row.publishedVersionId || (row.ownerId !== identity?.subject && ((row.visibility !== "public" && !await teamAudienceAllows(ctx, row, identity?.subject)) || row.communityState !== "ok" || await creatorRestricted(ctx, row.ownerId)))) return null;
     return ctx.db.get("collectionVersions", row.publishedVersionId);
   },
 });
@@ -85,6 +85,6 @@ export const quizChoices = query({
       return { ...result, page: result.page.filter(f => f.status !== "archived" && !f.isBanned && f.draft.quiz?.enabled).map(f => ({ id: f._id, title: f.title, published: f.status === "live" && f.publishedVersion !== undefined })) };
     }
     const result = await ctx.db.query("quizzes").withIndex("by_creator_createdAt", q => q.eq("creatorId", identity.subject)).order("desc").paginate(args.paginationOpts);
-    return { ...result, page: result.page.filter(q => !q.isBanned).map(q => ({ id: q._id, title: q.title, published: q.isPublished && !!q.publishedSnapshot })) };
+    return { ...result, page: result.page.filter(q => !q.archived && !q.isBanned).map(q => ({ id: q._id, title: q.title, published: q.isPublished && !!q.publishedSnapshot })) };
   },
 });

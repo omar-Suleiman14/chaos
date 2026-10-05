@@ -17,6 +17,7 @@ vi.mock("next/link", () => ({
   }) => <a href={href}>{children}</a>,
 }));
 vi.mock("convex/react", () => ({
+  useConvexAuth: () => ({ isAuthenticated: true }),
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => {
     const name = getFunctionName(ref);
     if (name === "quizFunctions:getIsAdmin") return state.admin;
@@ -26,8 +27,8 @@ vi.mock("convex/react", () => ({
   useMutation:
     (ref: Parameters<typeof getFunctionName>[0]) => (args: unknown) =>
       state.mutate(getFunctionName(ref), args),
-  usePaginatedQuery: (ref: Parameters<typeof getFunctionName>[0]) =>
-    getFunctionName(ref) === "admin:contacts"
+  usePaginatedQuery: (ref: Parameters<typeof getFunctionName>[0], args: { kind?: string }) =>
+    getFunctionName(ref) === "admin:learningContent" ? { results: [{ id: "content1", title: `Chaos ${args.kind}`, ownerId: "c1", ownerName: "Alice", ownerEmail: "alice@example.com", status: "draft", count: 2, updatedAt: 10 }], status: "Exhausted", loadMore: vi.fn() } : getFunctionName(ref) === "admin:teams" ? { results: [{ id: "team1", name: "Chaos Team", ownerId: "c1", ownerName: "Alice", ownerEmail: "alice@example.com", members: 3, sharedResources: 4, createdAt: 10 }], status: "Exhausted", loadMore: vi.fn() } : getFunctionName(ref) === "admin:contacts"
       ? { results: [], status: "Exhausted", loadMore: vi.fn() }
       : {
           results: [
@@ -68,16 +69,16 @@ it("hides privileged controls from non-admins", () => {
   render(<AdminPage />);
   expect(screen.getByText("Admin access required")).toBeInTheDocument();
   expect(
-    screen.queryByRole("button", { name: "Accounts" }),
+    screen.queryByRole("tab", { name: "Accounts" }),
   ).not.toBeInTheDocument();
 });
 it("removes plan controls and adds accounts to persistent CRM", async () => {
   render(<AdminPage />);
-  fireEvent.click(screen.getByRole("button", { name: "Accounts" }));
+  fireEvent.click(screen.getByRole("tab", { name: "Accounts" }));
   expect(
     screen.queryByText(/Grant Pro|Upgrade \/ renew|Downgrade/),
   ).not.toBeInTheDocument();
-  fireEvent.click(screen.getAllByRole("button", { name: "Add to CRM" })[0]);
+  fireEvent.click(screen.getAllByRole("button", { name: "Add to relationships" })[0]);
   await waitFor(() =>
     expect(state.mutate).toHaveBeenCalledWith("admin:saveContact", {
       name: "Alice",
@@ -96,7 +97,7 @@ it("removes plan controls and adds accounts to persistent CRM", async () => {
 it("requires a reason for moderation and displays save failures", async () => {
   state.mutate.mockRejectedValue(new Error("Server unavailable"));
   render(<AdminPage />);
-  fireEvent.click(screen.getByRole("button", { name: "Accounts" }));
+  fireEvent.click(screen.getByRole("tab", { name: "Accounts" }));
   fireEvent.click(screen.getAllByRole("button", { name: "Ban" })[0]);
   expect(screen.getByRole("button", { name: "Confirm" })).toBeDisabled();
   fireEvent.change(screen.getByLabelText("Reason for the activity log"), {
@@ -115,6 +116,7 @@ it("requires a reason for moderation and displays save failures", async () => {
 });
 it("saves a new CRM contact through the editor", async () => {
   render(<AdminPage />);
+  fireEvent.click(screen.getByRole("tab", { name: "Relationships" }));
   fireEvent.click(screen.getByRole("button", { name: "New contact" }));
   fireEvent.change(screen.getByLabelText("Name"), {
     target: { value: "Maya" },
@@ -140,4 +142,31 @@ it("saves a new CRM contact through the editor", async () => {
   await waitFor(() =>
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
   );
+});
+
+it("starts with Chaos operations and keeps relationships secondary", () => {
+  render(<AdminPage />);
+  expect(screen.getByRole("tab", { name: "Overview" })).toHaveAttribute("aria-selected", "true");
+  expect(screen.getByRole("region", { name: "Platform operations" })).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "New contact" })).toBeNull();
+});
+it.each(["Courses", "Lessons", "Flashcards"])("shows %s in platform content", label => {
+  render(<AdminPage />);
+  fireEvent.click(screen.getByRole("tab", { name: "Content" }));
+  fireEvent.click(screen.getByRole("tab", { name: label }));
+  expect(screen.getByRole("table")).toHaveTextContent(`Chaos ${label.toLowerCase()}`);
+  expect(screen.getByRole("table")).toHaveTextContent("Alice");
+  fireEvent.change(screen.getByRole("textbox", { name: "Search loaded learning content" }), { target: { value: "missing" } });
+  expect(screen.queryByRole("table")).toBeNull();
+  expect(screen.getByRole("heading", { name: "No matching content" })).toBeInTheDocument();
+});
+it("shows real team ownership and collaboration counts", () => {
+  render(<AdminPage />);
+  fireEvent.click(screen.getByRole("tab", { name: "Teams" }));
+  const table = screen.getByRole("table");
+  expect(table).toHaveTextContent("Chaos Team");
+  expect(table).toHaveTextContent("Alice");
+  expect(screen.getByRole("columnheader", { name: "Members" })).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "3" })).toBeInTheDocument();
+  expect(screen.getByRole("cell", { name: "4" })).toBeInTheDocument();
 });

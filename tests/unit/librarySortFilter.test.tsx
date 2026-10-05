@@ -18,9 +18,10 @@ const forms = {
 const route = vi.hoisted(() => ({ tab: "" }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), usePathname: () => "/dashboard", useSearchParams: () => new URLSearchParams(route.tab ? `tab=${route.tab}` : "") }));
 const setFormStatus = vi.hoisted(() => vi.fn(async () => null));
+const classic = vi.hoisted(() => ({ rows: [] as Record<string, unknown>[], archive: vi.fn(async () => ({ updatedAt: 1 })) }));
 vi.mock("convex/react", () => ({
-  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? forms : getFunctionName(ref) === "quizFunctions:getMyQuizzes" ? [] : undefined),
-  useMutation: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:setFormStatus" ? setFormStatus : vi.fn()),
+  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? forms : getFunctionName(ref) === "quizFunctions:getMyQuizzes" ? classic.rows : undefined),
+  useMutation: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:setFormStatus" ? setFormStatus : getFunctionName(ref) === "quizFunctions:setQuizArchived" ? classic.archive : vi.fn()),
 }));
 vi.mock("@/lib/learn/data", () => ({ useLearnActions: () => ({ createLesson: vi.fn() }) }));
 vi.mock("@/components/workspace/useCreateForm", () => ({ useCreateForm: () => ({ create: vi.fn(), busy: false }) }));
@@ -28,6 +29,7 @@ vi.mock("./FormThumb", () => ({ default: () => null }));
 
 beforeEach(() => {
   route.tab = "";
+  classic.rows = []; classic.archive.mockClear();
   localStorage.clear();
   localStorage.setItem("chaos-library-view", "list");
   Element.prototype.scrollIntoView = vi.fn();
@@ -36,6 +38,22 @@ beforeEach(() => {
 const names = () => within(screen.getByRole("table")).getAllByRole("link").map((a) => a.textContent?.trim());
 
 describe("library sort and filter", () => {
+  it("archives classic quizzes with draft restoration and hides archived quizzes", async () => {
+    route.tab = "quizzes";
+    classic.rows = [
+      { _id: "classic-live", title: "Classic quiz", isPublished: true, sessionCount: 3, updatedAt: 4 },
+      { _id: "classic-old", title: "Archived quiz", archived: true, isPublished: false, sessionCount: 8, updatedAt: 2 },
+    ];
+    render(<CreatorLibrary />);
+    expect(screen.queryByText("Archived quiz")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Actions for Classic quiz" }));
+    expect(screen.queryByRole("menuitem", { name: "Delete" })).toBeNull();
+    fireEvent.click(screen.getByRole("menuitem", { name: "Archive" }));
+    await screen.findByText(/Archived.*Classic quiz/);
+    expect(classic.archive).toHaveBeenCalledWith({ quizId: "classic-live", archived: true });
+    fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+    expect(classic.archive).toHaveBeenLastCalledWith({ quizId: "classic-live", archived: false });
+  });
   it("sorts from the column headers, and a second click reverses", () => {
     render(<CreatorLibrary />);
     expect(names()).toEqual(["BBeta survey", "AAlpha form"]);

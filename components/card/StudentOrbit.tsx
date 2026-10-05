@@ -75,11 +75,11 @@ export default function StudentOrbit({ username }: { username: string }) {
       ref={stage}
       className="student-orbit"
       role="group"
-      aria-label={locale === "ar" ? "?????? ??????" : "Student cards"}
+      aria-label={locale === "ar" ? "بطاقات الطلاب" : "Student cards"}
     >
       <p className="sr-only">
         {locale === "ar"
-          ? "???? ???????? ????? ??????? ???? ???? ??????."
+          ? "مرّر البطاقات بجانب المعلم لتصفّح جميع الطلاب."
           : "Scroll the cards beside the teacher to browse all students."}
       </p>
       {sides.map((students, side) => {
@@ -96,7 +96,7 @@ export default function StudentOrbit({ username }: { username: string }) {
             data-side={side}
             tabIndex={students.length ? 0 : -1}
             aria-label={
-              locale === "ar" ? "???? ?????? ??????" : "Browse student cards"
+              locale === "ar" ? "تصفّح بطاقات الطلاب" : "Browse student cards"
             }
             onScroll={(event) => {
               const top = event.currentTarget.scrollTop;
@@ -170,7 +170,7 @@ export default function StudentOrbit({ username }: { username: string }) {
       {(status === "LoadingMore" || status === "LoadingFirstPage") && (
         <span className="sr-only" role="status">
           {locale === "ar"
-            ? "???? ????? ?????? ??????"
+            ? "جارٍ تحميل بطاقات الطلاب"
             : "Loading student cards"}
         </span>
       )}

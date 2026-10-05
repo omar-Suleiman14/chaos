@@ -145,6 +145,7 @@ export default defineSchema({
     creatorId: v.string(),        // clerkId
     creatorUsername: v.string(),   // cached for URL routing
     isPublished: v.boolean(),
+    archived: v.optional(v.boolean()),
     publishedSnapshot: v.optional(quizSnapshot),
     // Draft revision (updatedAt) last published; later edits are unpublished changes.
     publishedAt: v.optional(v.number()),
@@ -173,6 +174,7 @@ export default defineSchema({
   })
     // eslint-disable-next-line @convex-dev/no-duplicate-indexes -- sorted by _creationTime; removing it needs a migration
     .index("by_creator", ["creatorId"])
+    .index("by_creator_archived", ["creatorId", "archived"])
     .index("by_creator_createdAt", ["creatorId", "createdAt"])
     .index("by_slug", ["slug"])
     .index("by_creator_slug", ["creatorUsername", "slug"]),

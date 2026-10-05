@@ -1,7 +1,10 @@
-export const MCP_PERMISSIONS = ["read_content", "edit_content", "publish_content", "aggregate_analytics", "individual_responses", "collaborators", "destructive", "admin_crm"] as const;
+import { ADMIN_CRM_TOOLS, ADMIN_PLATFORM_TOOLS } from "./admin";
+export const MCP_PERMISSIONS = ["read_content", "edit_content", "publish_content", "aggregate_analytics", "individual_responses", "collaborators", "destructive", "admin_crm", "admin_operations"] as const;
 export type McpPermission = (typeof MCP_PERMISSIONS)[number];
 /** Categories are separate from identity scopes; provider-issued grants can map here later. */
 export function permissionForTool(tool: string): McpPermission {
+ if ((ADMIN_PLATFORM_TOOLS as readonly string[]).includes(tool) || ["list_documentation", "save_documentation"].includes(tool)) return "admin_operations";
+ if ((ADMIN_CRM_TOOLS as readonly string[]).includes(tool)) return "admin_crm";
  if (["list_crm_contacts", "get_crm_contact", "save_crm_contact", "add_crm_note"].includes(tool)) return "admin_crm";
  if (["list_responses", "export_form_responses", "list_my_students"].includes(tool)) return "individual_responses";
  if (tool.includes("collaborator")) return "collaborators";

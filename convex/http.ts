@@ -338,6 +338,18 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "list_team_resources": result = await ctx.runQuery(makeFunctionReference<"query">("mcpBusiness:listResources"), { ...input, userId }); break;
       case "share_with_team": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpBusiness:share"), { ...input, userId }); break;
       case "unshare_from_team": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpBusiness:unshare"), { ...input, userId }); break;
+      case "get_admin_overview": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdmin:overview"), { ...input, userId }); break;
+      case "refresh_admin_analytics": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdmin:refresh"), { ...input, userId }); break;
+      case "list_admin_users": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdmin:users"), { ...input, userId }); break;
+      case "list_admin_content": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdmin:content"), { ...input, userId }); break;
+      case "list_admin_learning_content": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdmin:learningContent"), { ...input, userId }); break;
+      case "list_admin_teams": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdmin:teams"), { ...input, userId }); break;
+      case "list_admin_activity": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdmin:activity"), { ...input, userId }); break;
+      case "moderate_admin_user": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdmin:moderateUser"), { ...input, userId }); break;
+      case "moderate_admin_content": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdmin:moderateContent"), { ...input, userId }); break;
+      case "get_crm_activity": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdmin:contactActivity"), { ...input, userId }); break;
+      case "set_crm_contact_stages": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdmin:setContactStages"), { ...input, userId }); break;
+      case "complete_crm_follow_up": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdmin:completeContactFollowUp"), { ...input, userId }); break;
       case "list_crm_contacts": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCrm:list"), { ...input, userId }); break;
       case "get_crm_contact": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCrm:get"), { ...input, userId }); break;
       case "save_crm_contact": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCrm:save"), { ...input, userId }); break;
@@ -451,6 +463,7 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
     }
     return respond({ status: 200, body: { result } });
   } catch (caught) {
+    if (["get_admin_overview", "refresh_admin_analytics", "list_admin_users", "list_admin_content", "list_admin_learning_content", "list_admin_teams", "list_admin_activity", "moderate_admin_user", "moderate_admin_content", "get_crm_activity", "set_crm_contact_stages", "complete_crm_follow_up"].includes(b.tool) && caught instanceof Error && /ArgumentValidationError|Validator error/.test(caught.message)) return error(400, "VALIDATION_FAILED", "Invalid administrator arguments; use IDs returned by Chaos tools.");
     if (["list_public_authors", "get_public_card", "list_public_student_cards", "get_student_card_visibility", "get_student_card_preferences", "set_student_card_preferences", "set_author_listing_visibility", "list_crm_contacts", "get_crm_contact", "save_crm_contact", "add_crm_note"].includes(b.tool) && caught instanceof Error) {
       if (/ArgumentValidationError|Validator error/.test(caught.message)) return error(400, "VALIDATION_FAILED", "Invalid card or CRM arguments; use IDs returned by Chaos tools.");
       if (caught.message.startsWith("CONFLICT:")) return error(409, "CONFLICT", caught.message.slice(9).trim());

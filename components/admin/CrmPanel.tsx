@@ -10,8 +10,6 @@ import {
   Search,
   ArrowUpRight,
   CalendarClock,
-  List,
-  Columns3,
   CheckCheck,
   SlidersHorizontal,
 } from "lucide-react";
@@ -64,7 +62,7 @@ export default function CrmPanel({
   const [stage, setStage] = useState<Stage | "">("");
   const [owner, setOwner] = useState("");
   const [sort, setSort] = useState("updated");
-  const [view, setView] = useState(pipeline ? "pipeline" : "table");
+  const view = pipeline ? "pipeline" : "table";
   const [selected, setSelected] = useState<Id<"crmContacts">[]>([]);
   const [editing, setEditing] = useState<Id<"crmContacts"> | "new" | null>(
     null,
@@ -144,22 +142,7 @@ export default function CrmPanel({
             Search
           </Button>
         </form>
-        <div className="crm-view-switch" aria-label="Contact view">
-          <Button
-            variant={view === "table" ? "secondary" : "ghost"}
-            aria-pressed={view === "table"}
-            onClick={() => setView("table")}
-          >
-            <List size={15} /> Table
-          </Button>
-          <Button
-            variant={view === "pipeline" ? "secondary" : "ghost"}
-            aria-pressed={view === "pipeline"}
-            onClick={() => setView("pipeline")}
-          >
-            <Columns3 size={15} /> Pipeline
-          </Button>
-        </div>
+
       </div>
       <div className="crm-toolbar">
         <SlidersHorizontal size={15} aria-hidden="true" />
@@ -188,7 +171,7 @@ export default function CrmPanel({
             setSelected([]);
           }}
         >
-          <option value="">All owners (loaded)</option>
+          <option value="">All owners</option>
           <option value="unassigned">Unassigned</option>
           {[...new Set(results.map((contact) => contact.owner).filter(Boolean))]
             .sort()
@@ -204,9 +187,9 @@ export default function CrmPanel({
           value={sort}
           onChange={(event) => setSort(event.target.value)}
         >
-          <option value="updated">Last activity (loaded)</option>
-          <option value="name">Name (loaded)</option>
-          <option value="followup">Follow-up date (loaded)</option>
+          <option value="updated">Last activity</option>
+          <option value="name">Name</option>
+          <option value="followup">Follow-up date</option>
         </ChaosSelect>
         <Button className="ms-auto" onClick={() => setEditing("new")}>
           <Plus size={16} /> New contact
@@ -315,6 +298,11 @@ export default function CrmPanel({
             </section>
           ))}
         </div>
+      ) : !contacts.length ? (
+        <div className="ws-empty" role="status">
+          <h2>{status === "LoadingFirstPage" ? "Loading contacts..." : search || stage || owner ? "No contacts match" : followUps ? "No follow-ups due" : "No contacts yet"}</h2>
+          <p>{status === "LoadingFirstPage" ? "" : search || stage || owner ? "Try another search or clear the filters." : followUps ? "Scheduled follow-ups will appear here." : "Add an organization contact, or add someone from Accounts."}</p>
+        </div>
       ) : (
         <div className="crm-table-scroll">
           <Table>
@@ -390,17 +378,7 @@ export default function CrmPanel({
                   <TableCell>{formatDate(contact.updatedAt)}</TableCell>
                 </TableRow>
               ))}
-              {!contacts.length && (
-                <TableRow>
-                  <TableCell colSpan={7}>
-                    <div className="crm-empty" role="status">
-                      {status === "LoadingFirstPage"
-                        ? "Loading contacts…"
-                        : "No contacts match. Add a contact or save an account to the CRM."}
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
+
             </TableBody>
           </Table>
         </div>

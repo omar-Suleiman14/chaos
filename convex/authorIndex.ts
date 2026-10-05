@@ -17,7 +17,7 @@ async function eligibility(ctx: MutationCtx, table: AuthorTable, id: string) {
     }
     case "quizzes": {
       const row = await ctx.db.get("quizzes", id as Id<"quizzes">);
-      return row ? { ownerId: row.creatorId, eligible: row.isPublished && !row.isBanned && !!row.publishedSnapshot } : null;
+      return row ? { ownerId: row.creatorId, eligible: row.isPublished && !row.archived && !row.isBanned && !!row.publishedSnapshot } : null;
     }
     case "lessons": {
       const row = await ctx.db.get("lessons", id as Id<"lessons">);

@@ -1,8 +1,8 @@
 # MCP tool inventory
 
-Generated from the public MCP registry with `pnpm mcp:inventory`. Admin documentation and CRM tools are excluded; see [MCP permissions](mcp-permissions.md) for administrator access.
+Generated from the public and administrator MCP registries with `pnpm mcp:inventory`. Administrator tools are advertised only to verified administrator connections; see [MCP permissions](mcp-permissions.md).
 
-117 tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
+117 public tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
 
 - `accept_team_invitation`
 - `add_course_lesson`
@@ -121,3 +121,26 @@ Generated from the public MCP registry with `pnpm mcp:inventory`. Admin document
 - `update_form`
 - `update_lesson_blocks`
 - `upsert_form_file_question`
+
+## Administrator tools
+
+18 additional tools mirror the administration UI. Every call rechecks current backend authorization.
+
+- `add_crm_note`
+- `complete_crm_follow_up`
+- `get_admin_overview`
+- `get_crm_activity`
+- `get_crm_contact`
+- `list_admin_activity`
+- `list_admin_content`
+- `list_admin_learning_content`
+- `list_admin_teams`
+- `list_admin_users`
+- `list_crm_contacts`
+- `list_documentation`
+- `moderate_admin_content`
+- `moderate_admin_user`
+- `refresh_admin_analytics`
+- `save_crm_contact`
+- `save_documentation`
+- `set_crm_contact_stages`

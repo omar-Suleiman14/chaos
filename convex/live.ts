@@ -287,7 +287,7 @@ export async function createGameForAccount(ctx: MutationCtx, userId: string, arg
   } else {
     const quiz = await ctx.db.get("quizzes", args.quizId!);
     if (!quiz || quiz.creatorId !== userId) throw new Error("Quiz not found or unauthorized");
-    if (!quiz.isPublished || quiz.isBanned) throw new Error("LIVE_NOT_PUBLISHED: Publish this quiz before hosting it live.");
+    if (quiz.archived || !quiz.isPublished || quiz.isBanned) throw new Error("LIVE_NOT_PUBLISHED: Publish this quiz before hosting it live.");
     let list: LegacyQuestionLike[] = quiz.publishedSnapshot?.questions ?? [];
     if (!quiz.publishedSnapshot) {
       const rows = await ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", quiz._id)).take(500);

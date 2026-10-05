@@ -1,6 +1,10 @@
 "use client";
 
-import { filterLearningRows, LearningLibraryTable, type LearningLibraryProps } from "@/components/library/LearningLibrary";
+import { filterLearningRows, LearningLibraryActions, LearningLibraryTable, type LearningLibraryProps } from "@/components/library/LearningLibrary";
+import { WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
+import { useMutation } from "convex/react";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { useState } from "react";
 import { errorMessage } from "@/lib/errors";
 import Link from "next/link";
@@ -32,11 +36,36 @@ export default function FlashcardsHub({ embedded = false, view = "gallery", ...f
   const router = useRouter();
   const sets = useFlashcardSets();
   const actions = useLearnActions();
+  const lifecycle = useMutation(api.flashcards.setLifecycle);
+  const [toast, setToast] = useState<UndoToast | null>(null);
   const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   if (!sets) return <PageSkeleton label={t.loading} />;
-  const shown = filterLearningRows(sets.map(s => ({ ...s, title: s.title || t.untitled, count: s.cards.length, href: `/dashboard/learn/flashcards/${s.id}` })), filters);
+  const shown = filterLearningRows(sets.map(s => ({ ...s, title: s.title || t.untitled, count: s.cards.length, href: `/dashboard/learn/flashcards/${s.id}?mode=edit` })), filters);
   const create = async () => { setPending(true); setError(""); try { const id = await actions.createFlashcardSet({ title: t.untitled }); router.push(`/dashboard/learn/flashcards/${id}?mode=edit`); } catch (err) { setError(errorMessage(err)); } finally { setPending(false); } };
+  const archive = async (set: typeof shown[number]) => {
+    if (pending) return;
+    setPending(true); setError("");
+    try {
+      const revision = await actions.deleteFlashcardSet(set.id);
+      setToast({ id: Date.now(), text: locale === "ar" ? "تمت أرشفة البطاقات" : "Flashcards archived", undo: () => {
+        setPending(true);
+        void lifecycle({ setId: set.id as Id<"flashcardSets">, expectedRevision: revision, action: "restore" }).catch(err => setError(errorMessage(err))).finally(() => setPending(false));
+      } });
+    } catch (err) { setError(errorMessage(err)); }
+    finally { setPending(false); }
+  };
+  const duplicate = async (set: typeof shown[number]) => {
+    if (pending) return;
+    setPending(true); setError("");
+    try {
+      const id = await actions.createFlashcardSet({ title: `${set.title} (${locale === "ar" ? "نسخة" : "copy"})`, cards: set.cards });
+      router.push(`/dashboard/learn/flashcards/${id}?mode=edit`);
+    } catch (err) { setError(errorMessage(err)); }
+    finally { setPending(false); }
+  };
+  const rowActions = (set: typeof shown[number]) => <LearningLibraryActions row={set} editHref={set.href}
+    studyHref={set.published ? `/dashboard/learn/flashcards/${set.id}` : undefined} disabled={pending} onArchive={() => void archive(set)} onDuplicate={() => void duplicate(set)} />;
   return (
     <div className={embedded ? undefined : "lx-page"}>
       {!embedded && <header className="lx-hero">
@@ -44,17 +73,21 @@ export default function FlashcardsHub({ embedded = false, view = "gallery", ...f
         <div className="lx-actions"><button type="button" className="ws-btn ws-btn--primary" disabled={pending} onClick={create}><Plus size={16} aria-hidden />{t.create}</button></div>
       </header>}
       {error && <p className="lx-error" role="alert">{error}</p>}
-      {!shown.length ? <EmptyState level={2} icon={Layers} title={filters.search || filters.statuses?.length ? locale === "ar" ? "\u0644\u0627 \u0646\u062a\u0627\u0626\u062c" : "Nothing matches" : t.empty} body={filters.search || filters.statuses?.length ? locale === "ar" ? "\u062c\u0631\u0651\u0628 \u0627\u0633\u0645\u0627\u064b \u0622\u062e\u0631 \u0623\u0648 \u0627\u0645\u0633\u062d \u0627\u0644\u0628\u062d\u062b \u0648\u0627\u0644\u062a\u0635\u0641\u064a\u0629." : "Try another name, or clear the search and filter." : t.emptyBody}><button type="button" className="ws-btn" onClick={create}><Plus size={16} aria-hidden />{t.create}</button></EmptyState> : view === "list" ? <LearningLibraryTable rows={shown} countLabel={locale === "ar" ? "\u0627\u0644\u0628\u0637\u0627\u0642\u0627\u062a" : "Cards"} {...filters} /> : (
+      {!shown.length ? <EmptyState level={2} icon={Layers} title={filters.search || filters.statuses?.length ? locale === "ar" ? "\u0644\u0627 \u0646\u062a\u0627\u0626\u062c" : "Nothing matches" : t.empty} body={filters.search || filters.statuses?.length ? locale === "ar" ? "\u062c\u0631\u0651\u0628 \u0627\u0633\u0645\u0627\u064b \u0622\u062e\u0631 \u0623\u0648 \u0627\u0645\u0633\u062d \u0627\u0644\u0628\u062d\u062b \u0648\u0627\u0644\u062a\u0635\u0641\u064a\u0629." : "Try another name, or clear the search and filter." : t.emptyBody}><button type="button" className="ws-btn" onClick={create}><Plus size={16} aria-hidden />{t.create}</button></EmptyState> : view === "list" ? <LearningLibraryTable rows={shown} renderActions={rowActions} countLabel={locale === "ar" ? "\u0627\u0644\u0628\u0637\u0627\u0642\u0627\u062a" : "Cards"} {...filters} /> : (
         <div className="lx-grid">
           {shown.map((s) => (
             <article key={s.id} className="lx-card">
+              <div className="flex items-start justify-between gap-2">
               <span className="lx-card__meta"><Layers size={13} aria-hidden />{t.cards(s.cards.length)} · {timeAgo(locale, s.updatedAt)}{s.forkedFrom ? ` · ${t.copied}` : ""}</span>
-              <h2><Link className="lx-card__link" href={`/dashboard/learn/flashcards/${s.id}`}>{s.title || t.untitled}</Link></h2>
+              <div className="lx-card__menu" onClick={event => event.stopPropagation()}>{rowActions(s)}</div>
+              </div>
+              <h2><Link className="lx-card__link" href={s.href}>{s.title || t.untitled}</Link></h2>
               {s.description && <p>{s.description}</p>}
             </article>
           ))}
         </div>
       )}
+      <WsUndoToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

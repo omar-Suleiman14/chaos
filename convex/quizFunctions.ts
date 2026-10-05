@@ -308,6 +308,7 @@ export const updateQuiz = mutation({
     const quiz = await requireQuizOwner(ctx, args.quizId);
 
     if (args.isPublished === true) {
+      if (quiz.archived) throw new Error("QUIZ_ARCHIVED: Restore this quiz before publishing.");
       if (quiz.isBanned) throw new Error("CONTENT_HELD: This quiz is held by an administrator.");
       const questions = await draftQuestions(ctx, args.quizId);
       const errors = publicationErrors(args.title ?? quiz.title, questions);
@@ -631,6 +632,7 @@ export const publishQuiz = mutation({
   returns: v.object({ updatedAt: v.number(), publishedAt: v.number() }),
   handler: async (ctx, args) => {
     const quiz = await requireQuizOwner(ctx, args.quizId);
+    if (quiz.archived) throw new Error("QUIZ_ARCHIVED: Restore this quiz before publishing.");
     if (quiz.isBanned) throw new Error("CONTENT_HELD: This quiz is held by an administrator.");
     if (args.expectedUpdatedAt !== undefined && args.expectedUpdatedAt !== quiz.updatedAt) {
       throw new Error("DRAFT_CONFLICT: This quiz changed elsewhere. Reload before publishing.");
@@ -660,6 +662,21 @@ export const unpublishQuiz = mutation({
     const updatedAt = Math.max(Date.now(), quiz.updatedAt + 1);
     await authorDb(ctx).patch("quizzes", quiz._id, { isPublished: false, updatedAt, publishedAt: quiz.publishedAt ?? updatedAt });
     if (quiz.isPublished) await emitQuizStatusEvent(ctx, quiz._id, "form.closed");
+    return { updatedAt };
+  },
+});
+
+/** Retain questions, snapshots and attempts; restoring never republishes the quiz. */
+export const setQuizArchived = mutation({
+  args: { quizId: v.id("quizzes"), archived: v.boolean() },
+  returns: v.object({ updatedAt: v.number() }),
+  handler: async (ctx, { quizId, archived }) => {
+    const quiz = await requireQuizOwner(ctx, quizId);
+    if (!!quiz.archived === archived) return { updatedAt: quiz.updatedAt };
+    await preservePublishedQuiz(ctx, quiz);
+    const updatedAt = Math.max(Date.now(), quiz.updatedAt + 1);
+    await authorDb(ctx).patch("quizzes", quizId, { archived, isPublished: false, updatedAt });
+    if (quiz.isPublished) await emitQuizStatusEvent(ctx, quizId, "form.closed");
     return { updatedAt };
   },
 });
@@ -919,7 +936,7 @@ export const startQuizSession = mutation({
 
     const quiz = await ctx.db.get("quizzes", args.quizId);
     // Missing, unpublished, banned and restricted look the same, so a quiz ID doesn't reveal private state.
-    if (!quiz || !quiz.isPublished || quiz.isBanned || await creatorRestricted(ctx, quiz.creatorId)) {
+    if (!quiz || quiz.archived || !quiz.isPublished || quiz.isBanned || await creatorRestricted(ctx, quiz.creatorId)) {
       throw new Error("QUIZ_UNAVAILABLE: This quiz isn't available.");
     }
 
@@ -1007,7 +1024,7 @@ export const gradeAnswer = mutation({
     const existingAnswer = session.answers.find((answer) => answer.questionId === args.questionId);
     const sessionQuiz = await ctx.db.get("quizzes", session.quizId);
     // Unpublishing or moderation stops attempts already in progress.
-    if (!sessionQuiz || !sessionQuiz.isPublished || sessionQuiz.isBanned) throw new Error("QUIZ_UNAVAILABLE: This quiz isn't available.");
+    if (!sessionQuiz || sessionQuiz.archived || !sessionQuiz.isPublished || sessionQuiz.isBanned) throw new Error("QUIZ_UNAVAILABLE: This quiz isn't available.");
     const withheld = resultsWithheld(sessionQuiz);
     if (existingAnswer && withheld) {
       return { isCorrect: false, pointsEarned: 0, totalPointsPossible: question.points, alreadyAnswered: true, withheld: true, correctAnswer: undefined, explanation: undefined };
@@ -1031,7 +1048,7 @@ export const gradeAnswer = mutation({
     }
 
     const activeQuiz = await ctx.db.get("quizzes", session.quizId);
-    if (!activeQuiz || activeQuiz.isBanned || await creatorRestricted(ctx, activeQuiz.creatorId)) throw new Error("QUIZ_UNAVAILABLE");
+    if (!activeQuiz || activeQuiz.archived || activeQuiz.isBanned || await creatorRestricted(ctx, activeQuiz.creatorId)) throw new Error("QUIZ_UNAVAILABLE");
 
     // Resolve creator/global settings for grading and post-answer reveal rules.
     const quiz = await ctx.db.get("quizzes", session.quizId);
@@ -1134,7 +1151,7 @@ export const completeQuizSession = mutation({
     if (session.source === "live") throw new Error("SESSION_CLOSED: Use the live game to complete this attempt.");
 
     const activeQuiz = await ctx.db.get("quizzes", session.quizId);
-    if (!activeQuiz || activeQuiz.isBanned || await creatorRestricted(ctx, activeQuiz.creatorId)) throw new Error("QUIZ_UNAVAILABLE");
+    if (!activeQuiz || activeQuiz.archived || activeQuiz.isBanned || await creatorRestricted(ctx, activeQuiz.creatorId)) throw new Error("QUIZ_UNAVAILABLE");
     // A newly completed snapshot attempt includes unanswered questions in its
     // denominator. Existing completed scores and legacy attempts stay intact.
     const totalPoints = session.status === "in_progress" && session.questionSnapshot

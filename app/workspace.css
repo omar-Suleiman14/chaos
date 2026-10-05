@@ -1,9 +1,8 @@
 /* ============================================================
    WORKSPACE THEME
    The creator side of Chaos (dashboard, editors, results, admin) is styled
-   as part of Max: the same Notion-like neutrals, hairline borders, Cairo
-   typeface, blue accent and #121212 dark mode, so moving between the two
-   products feels seamless. Everything respondents see (quiz player, public
+   with Chaos neutrals, hairline borders, Cairo typeface, a blue accent
+   and #121212 dark mode. Everything respondents see (quiz player, public
    forms, builder previews) keeps its own theme: nothing here applies inside
    `.ws-respondent-preview`.
    ============================================================ */
