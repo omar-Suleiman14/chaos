@@ -18,7 +18,7 @@ import { toast } from "@/lib/toast";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { WsDialog } from "@/components/workspace/primitives";
-import { LessonCover, PageIconControls, type PageLook } from "@/components/learn/editor/PageHeader";
+import { LessonCover, type PageLook } from "@/components/learn/editor/PageHeader";
 import "@/components/learn/learn.css";
 import "@/components/courses/courses.css";
 
@@ -81,10 +81,10 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
   // Every change reports back: a failure always, a success when it changes what learners see.
   const run = async (work: () => Promise<unknown>) => { setBusy(true); try { await work(); } catch (err) { toast.error(message(err)); } finally { setBusy(false); } };
   const save = (patch: Parameters<typeof update>[0]) => void run(() => update(patch));
-  const page: PageLook = look ?? { coverUrl: course.coverUrl, coverY: course.coverY, icon: course.icon };
+  const page: PageLook = look ?? { coverUrl: course.coverUrl, coverY: course.coverY };
   const saveLook = (patch: Partial<PageLook>) => {
     setLook({ ...page, ...patch });
-    save({ courseId, ...("coverUrl" in patch ? { coverUrl: patch.coverUrl ?? null } : {}), ...("coverY" in patch ? { coverY: patch.coverY ?? null } : {}), ...("icon" in patch ? { icon: patch.icon ?? null } : {}) });
+    save({ courseId, ...("coverUrl" in patch ? { coverUrl: patch.coverUrl ?? null } : {}), ...("coverY" in patch ? { coverY: patch.coverY ?? null } : {}) });
   };
   const dirty = !course.published || course.lessons.some((l) => l.changed);
 
@@ -99,9 +99,8 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
         {course.isOwner && <button type="button" className="ws-btn ws-btn--primary" disabled={busy || !course.lessons.length} onClick={() => { setProblems([]); setPublishing(true); }}><Send size={15} aria-hidden />{course.published ? t.update : t.publish}</button>}
       </div>
 
-      <LessonCover meta={page} editable onChange={saveLook} />
+      <LessonCover id={course.id} meta={page} editable onChange={saveLook} />
       <section className="cb-hero">
-        <PageIconControls meta={page} editable onChange={saveLook} />
         <div className="cb-hero__body">
           <input dir={contentDirection(course.language)} lang={course.language} className="cb-title" aria-label={t.titlePh} placeholder={t.titlePh} value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} onBlur={() => title.trim() && title !== course.title && save({ courseId, title })} />
           <textarea dir={contentDirection(course.language)} lang={course.language} className="cb-desc" aria-label={t.descPh} placeholder={t.descPh} rows={2} value={desc} maxLength={4000} onChange={(e) => setDesc(e.target.value)} onBlur={() => desc !== course.description && save({ courseId, description: desc })} />

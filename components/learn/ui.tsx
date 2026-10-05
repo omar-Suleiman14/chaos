@@ -1,6 +1,6 @@
 "use client";
 
-import { isCoverUrl } from "@/lib/learn/covers";
+import { defaultCover, isCoverUrl } from "@/lib/learn/covers";
 import MemberAvatar from "@/components/MemberAvatar";
 import { avatarSeed } from "@/lib/avatarSeed";
 import Link from "next/link";
@@ -196,7 +196,7 @@ export function LessonCard({ lesson, href, progress, footer, showStatus, current
   const meta = view.meta;
   return (
     <article className="lx-card">
-      {isCoverUrl(meta.coverUrl) && <div className="lx-card__cover" style={{ backgroundImage: `url("${meta.coverUrl.replace(/"/g, "%22")}")`, backgroundPosition: `center ${meta.coverY ?? 50}%` }} aria-hidden />}
+      <div className="lx-card__cover" style={{ backgroundImage: `url("${(isCoverUrl(meta.coverUrl) ? meta.coverUrl : defaultCover(lesson.id)).replace(/"/g, "%22")}")`, backgroundPosition: `center ${meta.coverY ?? 50}%` }} aria-hidden />
       <div className="lx-card__meta">
         <span><BookOpen size={13} aria-hidden />{t.minutes(readingMinutes(view.content))}</span>
         {showStatus ? <LessonStatus lesson={lesson} /> : <span>{t.by(meta.authorDisplay || lesson.ownerName)}</span>}

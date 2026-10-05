@@ -39,7 +39,7 @@ export function PrimaryCta({ large = false, label, href = "/dashboard", classNam
   const { isSignedIn, isLoaded } = useUser();
   const t = useCopy(copy);
   const className = `site-btn site-btn--primary ${large ? "site-btn--lg" : ""} ${extra}`;
-  if (isLoaded && isSignedIn) return <Link href={href} className={className}>{label ?? t.open}</Link>;
+  if (isLoaded && isSignedIn) return <Link href={href} className={`${className} site-btn--open`}>{label ?? t.open}</Link>;
   return <SignUpButton mode="modal" forceRedirectUrl={href} signInForceRedirectUrl={href}><button type="button" className={className}>{label ?? t.getFree}</button></SignUpButton>;
 }
 

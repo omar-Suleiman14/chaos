@@ -263,7 +263,7 @@ html[dir="rtl"] .site-arrow { transform: scaleX(-1); }
 .site-pricing-fine { max-width: 880px; margin: 32px auto 0; padding: 0 28px; text-align: center; font-size: 14px; line-height: 1.7; color: var(--s-muted); }
 .site-pricing-end { padding-bottom: 96px; }
 @media (max-width: 900px) {
-  .site-menu { display: block; }
+  .site-menu { display: flex; align-items: center; }
   .site-nav__actions > .site-lang-btn,
   .site-nav__actions > .site-btn--primary { display: none; }
 }
@@ -360,3 +360,15 @@ html[lang="ar"] .site-ui :is(h1, h2, h3, .site-brand) { letter-spacing: 0; }
 /* Two assistants on one card: the marks overlap a little, like stacked avatars. */
 .site-partner__marks { display: inline-flex; }
 .site-partner__marks .site-partner__mark + .site-partner__mark { margin-inline-start: -10px; box-shadow: 0 0 0 3px var(--s-card); }
+/* Header icons (theme, log in, menu): one size, one stroke, one hover, so the row reads as a set. */
+.site-nav__actions :is(.site-icon-btn, .site-login) svg { width: 19px; height: 19px; stroke-width: 1.75; }
+.site-nav__actions .site-icon-btn { width: 40px !important; height: 40px !important; transition: background 150ms, color 150ms; }
+.site-nav__actions .site-icon-btn:hover { background: var(--s-subtle) !important; color: var(--s-text) !important; }
+@media (max-width: 640px) {
+  .site-nav__actions .site-login { width: 40px; min-height: 40px; color: var(--s-soft); }
+  .site-nav__actions .site-login:hover { color: var(--s-text); }
+}
+/* Signed in, smaller screens keep a compact Open Chaos in the header instead of hiding it. */
+@media (max-width: 900px) {
+  .site-nav__actions > .site-btn--primary.site-btn--open { display: inline-flex; min-height: 36px; padding: 0 12px; font-size: 13px; margin-inline-end: 2px; }
+}

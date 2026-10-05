@@ -1,62 +1,44 @@
 "use client";
 
 import { useState } from "react";
+import { Check, Copy } from "lucide-react";
 import { copyText } from "@/lib/clipboard";
-import inventory from "@/lib/mcp/inventory.json";
-import AiArchitecture from "./AiArchitecture";
-import McpWorkflowDemo from "./McpWorkflowDemo";
-import McpOutcomes from "./McpOutcomes";
 import Link from "@/components/site/SiteLink";
-import { Check, Copy, ExternalLink } from "lucide-react";
 import LegalPage from "@/components/site/LegalPage";
-import { AiMark } from "@/components/site/aiMarks";
 import { useCopy } from "@/lib/i18n";
-import { chaosIntegration, integrationPlatforms, integrationPlatformList, packageDownloadPath } from "@/lib/integrations";
+import { chaosIntegration, integrationPlatformList, packageDownloadPath } from "@/lib/integrations";
 import { IntegrationLockup } from "./IntegrationView";
-
-const mcpUrl = chaosIntegration.mcpUrl;
-// claude.ai opens its "Add custom connector" dialog with these values filled in; the person still confirms.
-const claudeLink = integrationPlatforms.claude.connectUrl;
-// ChatGPT has no prefill link yet, so this opens its settings and the steps say what to choose.
-const chatGptLink = integrationPlatforms.chatgpt.connectUrl;
 
 const copy = {
   en: {
-    title: "Connect Chaos to Claude or ChatGPT",
-    intro: "Optional. Connect once and your assistant can create and edit forms, quizzes, lessons and courses in your Chaos account. Lessons it creates show “Created with Claude” or “Created with ChatGPT” next to your name.",
-    urlLabel: "Chaos connector URL", copyUrl: "Copy URL", copied: "Copied",
-    claudeTitle: "Claude", claudeButton: "Add to Claude",
-    claudeSteps: ["Open the link. Claude shows “Add custom connector” with Chaos and the URL already filled in.", "Check the values and choose Add.", "Choose Connect and sign in to Chaos. Your connector appears under Connectors."],
-    chatgptTitle: "ChatGPT", chatgptButton: "Open ChatGPT settings",
-    chatgptSteps: ["Copy the URL above, then open ChatGPT settings.", "Go to Apps › Advanced settings and turn on Developer mode (Plus, Pro, Business, Enterprise and Education).", "Choose Create. Name it Chaos, paste the URL, pick OAuth, and choose Create.", "Sign in to Chaos when asked. Chaos then appears in your connected apps."],
-    more: ["What the assistant can do, and privacy: ", "."],
+    title: "Connect Chaos to your assistant",
+    intro: "Pick your assistant. You sign in with your Chaos account once, and it can make and manage your forms, quizzes, lessons and courses. Optional, on every plan.",
     cards: {
-      claude: { title: "Chaos for Claude", body: "One-click connector for Claude on the web, desktop and mobile, plus a plugin package." },
-      chatgpt: { title: "Chaos for ChatGPT", body: "Add Chaos as a ChatGPT app, or install the plugin package in Codex." },
+      claude: { title: "Claude", body: "One click on the web, desktop and phone." },
+      chatgpt: { title: "ChatGPT", body: "Add Chaos as an app in a few steps." },
     },
-    open: "Set up", download: "Download",
+    open: "Set up", download: "Download plugin",
+    otherTitle: "Another assistant?", otherBody: "Any app that supports remote MCP servers can connect. Add this address and sign in with OAuth when asked.",
+    copyUrl: "Copy", copied: "Copied",
   },
   ar: {
-    title: "اربط Chaos بـ Claude أو ChatGPT",
-    intro: "اختياري. اربطه مرة واحدة ليتمكن مساعدك من إنشاء النماذج والاختبارات والدروس والدورات وتعديلها في حسابك. وتظهر عبارة «أُنشئ باستخدام Claude» أو «أُنشئ باستخدام ChatGPT» بجانب اسمك في الدروس التي ينشئها.",
-    urlLabel: "رابط موصّل Chaos", copyUrl: "نسخ الرابط", copied: "تم النسخ",
-    claudeTitle: "Claude", claudeButton: "أضف إلى Claude",
-    claudeSteps: ["افتح الرابط. يعرض Claude نافذة «إضافة موصّل مخصص» وفيها اسم Chaos والرابط جاهزين.", "راجع القيم واختر إضافة.", "اختر اتصال وسجّل الدخول إلى Chaos. يظهر الموصّل في قائمة الموصّلات."],
-    chatgptTitle: "ChatGPT", chatgptButton: "افتح إعدادات ChatGPT",
-    chatgptSteps: ["انسخ الرابط أعلاه، ثم افتح إعدادات ChatGPT.", "اذهب إلى التطبيقات › الإعدادات المتقدمة وفعّل وضع المطوّر (Plus وPro وBusiness وEnterprise وEducation).", "اختر إنشاء. سمّه Chaos، والصق الرابط، واختر OAuth، ثم اختر إنشاء.", "سجّل الدخول إلى Chaos عند الطلب. سيظهر Chaos في تطبيقاتك المتصلة."],
-    more: ["ما يستطيع المساعد فعله والخصوصية: ", "."],
+    title: "اربط Chaos بمساعدك",
+    intro: "اختر مساعدك. تسجّل الدخول بحسابك في Chaos مرة واحدة، ويستطيع بعدها إنشاء نماذجك واختباراتك ودروسك ودوراتك وإدارتها. اختياري ومتاح في كل الخطط.",
     cards: {
-      claude: { title: "Chaos لـ Claude", body: "موصّل بنقرة واحدة لـ Claude على الويب وسطح المكتب والهاتف، مع حزمة إضافة." },
-      chatgpt: { title: "Chaos لـ ChatGPT", body: "أضف Chaos كتطبيق في ChatGPT، أو ثبّت حزمة الإضافة في Codex." },
+      claude: { title: "Claude", body: "نقرة واحدة على الويب وسطح المكتب والهاتف." },
+      chatgpt: { title: "ChatGPT", body: "أضف Chaos كتطبيق في خطوات قليلة." },
     },
-    open: "الإعداد", download: "تنزيل",
+    open: "الإعداد", download: "نزّل الإضافة",
+    otherTitle: "مساعد آخر؟", otherBody: "يمكن لأي تطبيق يدعم خوادم MCP البعيدة الاتصال. أضف هذا العنوان وسجّل الدخول عبر OAuth عند الطلب.",
+    copyUrl: "نسخ", copied: "تم النسخ",
   },
 };
 
+/** One choice per assistant; each platform page has the full setup, examples and security notes. */
 export default function ConnectView() {
   const t = useCopy(copy);
   const [copied, setCopied] = useState(false);
-  const copyUrl = () => void copyText(mcpUrl).then((ok) => { if (!ok) return; setCopied(true); setTimeout(() => setCopied(false), 2000); });
+  const copyUrl = () => void copyText(chaosIntegration.mcpUrl).then((ok) => { if (!ok) return; setCopied(true); setTimeout(() => setCopied(false), 2000); });
   return (
     <LegalPage title={t.title}>
       <p>{t.intro}</p>
@@ -73,22 +55,12 @@ export default function ConnectView() {
           </article>
         ))}
       </div>
-      <AiArchitecture />
-      <McpWorkflowDemo />
-      <McpOutcomes />
-      <p className="site-muted">{inventory.count} MCP tools</p>
-      <p><strong>{t.urlLabel}</strong></p>
-      <p className="site-connect-url"><code dir="ltr">{mcpUrl}</code> <button type="button" className="site-connect-btn" onClick={copyUrl}>{copied ? <Check size={16} aria-hidden /> : <Copy size={16} aria-hidden />}{copied ? t.copied : t.copyUrl}</button></p>
-
-      <h2 className="site-connect-title"><AiMark client="claude" size={22} />{t.claudeTitle}</h2>
-      <p><a className="site-connect-btn" href={claudeLink} target="_blank" rel="noopener noreferrer">{t.claudeButton}<ExternalLink size={14} aria-hidden /></a></p>
-      <ol>{t.claudeSteps.map((step) => <li key={step}>{step}</li>)}</ol>
-
-      <h2 className="site-connect-title"><AiMark client="chatgpt" size={22} />{t.chatgptTitle}</h2>
-      <p><a className="site-connect-btn" href={chatGptLink} target="_blank" rel="noopener noreferrer">{t.chatgptButton}<ExternalLink size={14} aria-hidden /></a></p>
-      <ol>{t.chatgptSteps.map((step) => <li key={step}>{step}</li>)}</ol>
-
-      <p>{t.more[0]}<Link href="/claude">Claude</Link> · <Link href="/chatgpt">ChatGPT</Link>{t.more[1]}</p>
+      <h2>{t.otherTitle}</h2>
+      <p>{t.otherBody}</p>
+      <p className="site-connect-url">
+        <code dir="ltr">{chaosIntegration.mcpUrl}</code>
+        <button type="button" className="site-connect-btn" onClick={copyUrl}>{copied ? <Check size={16} aria-hidden /> : <Copy size={16} aria-hidden />}{copied ? t.copied : t.copyUrl}</button>
+      </p>
     </LegalPage>
   );
 }

@@ -93,7 +93,8 @@ describe("Learn community and private learning state", () => {
     });
     const result = await t.query(ref("get"), { lessonId });
     expect(result.document).toEqual(document);
-    expect(result.metadata).toEqual(metadata);
+    // New lessons get a gallery cover.
+    expect(result.metadata).toEqual({ ...metadata, coverUrl: expect.stringMatching(/^\/covers\//) });
     expect(result).not.toHaveProperty("draft");
     expect(result).not.toHaveProperty("ownerId");
     await owner.mutation(api.lessons.setLifecycle, {

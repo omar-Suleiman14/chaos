@@ -434,38 +434,24 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-cover__actions button + button { border-inline-start: 1px solid rgba(55, 53, 47, .12); }
 .lx-cover__actions button:hover { background: rgba(55, 53, 47, .08); }
 
-.lx-cover-picker, .lx-emoji-picker { position: absolute; z-index: 40; border: 1px solid var(--ws-line); border-radius: 10px; color: var(--on-surface); box-shadow: 0 12px 32px -8px rgba(0, 0, 0, .28); }
+.lx-cover-picker { position: absolute; z-index: 40; border: 1px solid var(--ws-line); border-radius: 10px; color: var(--on-surface); box-shadow: 0 12px 32px -8px rgba(0, 0, 0, .28); }
 .lx-cover-picker { top: calc(100% - 4px); inset-inline-end: 16px; width: min(540px, calc(100vw - 32px)); }
 .lx-cover-picker__tabs { display: flex; align-items: center; gap: 4px; padding: 6px 8px 0; border-bottom: 1px solid var(--ws-line); }
 .lx-cover-picker__tabs button { height: 34px; padding: 0 8px; border: 0; background: none; color: var(--on-surface-variant); font-size: 14px; cursor: pointer; border-bottom: 2px solid transparent; }
 .lx-cover-picker__tabs button[aria-selected="true"] { color: var(--on-surface); border-bottom-color: var(--on-surface); }
-.lx-cover-picker__tabs .lx-cover-picker__remove { margin-inline-start: auto; }
+.lx-cover-picker__tabs .lx-cover-picker__random { display: inline-flex; align-items: center; gap: 5px; margin-inline-start: auto; }
 .lx-cover-picker__body { max-height: min(420px, 60vh); overflow: auto; padding: 12px; display: grid; gap: 16px; }
 .lx-cover-picker__body h4 { font-size: 12px; font-weight: 500; color: var(--on-surface-variant); margin: 0 0 8px; }
 .lx-cover-picker__grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 8px; }
 .lx-cover-picker__grid button { aspect-ratio: 16 / 10; border: 0; border-radius: 4px; background-size: cover; background-position: center; cursor: pointer; transition: opacity .12s ease; }
 .lx-cover-picker__grid button:hover { opacity: .82; }
+.lx-cover-picker__grid button[aria-pressed="true"] { outline: 2px solid var(--primary); outline-offset: 2px; }
 .lx-cover-picker__link { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
 .lx-cover-picker__link small { grid-column: 1 / -1; color: var(--on-surface-variant); }
 
-.lx-page-top { position: relative; }
-.lx-page-icon-wrap { position: relative; width: max-content; }
-.lx-page-icon { display: inline-flex; align-items: center; justify-content: center; min-width: 64px; min-height: 64px; font-size: 56px; line-height: 1.1; padding: 6px; border: 0; border-radius: 8px; background: none; cursor: pointer; color: var(--primary); }
-.lx-page-icon:hover:not(:disabled) { background: var(--ws-hover, rgba(55, 53, 47, .08)); }
-.lx-page-top[data-cover="true"][data-icon="true"] .lx-page-icon-wrap { margin-top: -48px; }
-.lx-page-add { display: flex; gap: 4px; min-height: 30px; margin-top: 8px; opacity: 0; transition: opacity .15s ease; }
-.lx-edit__doc:hover .lx-page-add, .lx-page-add:focus-within { opacity: 1; }
-.lx-page-add button { display: inline-flex; align-items: center; gap: 6px; height: 28px; padding: 0 8px; border: 0; border-radius: 6px; background: none; color: var(--on-surface-variant); font-size: 14px; cursor: pointer; }
-.lx-page-add button:hover { background: var(--ws-hover, rgba(55, 53, 47, .08)); }
-.lx-emoji-picker { top: calc(100% + 4px); inset-inline-start: 0; width: min(360px, calc(100vw - 32px)); }
-.lx-emoji-picker__grid { display: grid; grid-template-columns: repeat(8, minmax(0, 1fr)); gap: 4px; padding: 8px; max-height: 260px; overflow: auto; }
-.lx-emoji-picker__grid button { display: grid; place-items: center; aspect-ratio: 1; border: 0; border-radius: 6px; background: none; color: var(--on-surface); font-size: 20px; cursor: pointer; }
-.lx-emoji-picker__grid button:hover { background: var(--ws-hover, rgba(55, 53, 47, .08)); color: var(--primary); }
-.lx-article__icon { display: inline-flex; align-items: center; font-size: 56px; line-height: 1.1; margin-bottom: 8px; color: var(--primary); }
-@media (hover: none) { .lx-page-add, .lx-cover__actions { opacity: 1; } }
-.lx-article__cover + .lx-article__icon { position: relative; margin-top: -60px; padding-inline-start: 12px; }
+@media (hover: none) { .lx-cover__actions { opacity: 1; } }
 /* Touch screens have no hover: keep the page-top and cover controls visible. */
-@media (hover: none) { .lx-page-add, .lx-cover__actions { opacity: 1; } }
+@media (hover: none) { .lx-cover__actions { opacity: 1; } }
 
 /* Editor popups (/ menu, formatting toolbar, block and colour menus) use the workspace glass. BlockNote
    renders them inside .bn-container, which the editor makes transparent, so they need their own surface.

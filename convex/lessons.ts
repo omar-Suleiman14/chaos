@@ -1,4 +1,5 @@
 import { getAuthIdentity } from "./authIdentity";
+import { randomCover } from "../lib/learn/covers";
 import { authorDb } from "./authorIndex";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 import { requireVisibilityAllowed } from "./plans";
@@ -84,8 +85,12 @@ export async function createLessonForActor(ctx: MutationCtx, actor: string, args
   assertDocument(draft);
   if (!imported) await consumeRate(ctx, `learn:create:${actor}`, LEARN_WRITE_LIMITS.creationsPerHour, 3_600_000);
   const now = Date.now();
-  const searchText = await buildLessonSearchText(ctx, actor, args.metadata, draft.blocks);
-  const lessonId = await authorDb(ctx).insert("lessons", { ownerId: actor, metadata: args.metadata, draft, revision: 0, status: "active", visibility: "private", communityState: "ok", createdAt: now, updatedAt: now, searchText });
+  // Every new lesson gets a cover, different from the owner's recent lessons so a course's lessons don't repeat.
+  const metadata = args.metadata.coverUrl || imported ? args.metadata : { ...args.metadata, coverUrl: randomCover(
+    (await ctx.db.query("lessons").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", actor)).order("desc").take(40)).map((lesson) => lesson.metadata.coverUrl),
+  ) };
+  const searchText = await buildLessonSearchText(ctx, actor, metadata, draft.blocks);
+  const lessonId = await authorDb(ctx).insert("lessons", { ownerId: actor, metadata, draft, revision: 0, status: "active", visibility: "private", communityState: "ok", createdAt: now, updatedAt: now, searchText });
   await recordPublicationAction(ctx, { lessonId, actorId: actor, action: "create", revision: 0, afterVisibility: "private", reason: "Created an editable private draft." });
   return lessonId;
 }

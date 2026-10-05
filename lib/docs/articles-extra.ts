@@ -24,7 +24,7 @@ export const extraArticles: Record<Locale, DocArticle[]> = {
       blocks: [
         { type: "p", text: "A lesson is a page you write once and people read at their own pace. Press **New → Lesson**." },
         { type: "heading", id: "write", text: "Write" },
-        { type: "list", items: ["Type **/** for blocks: headings, lists, tables, images, YouTube, equations, callouts, sources and citations.", "Select text to format it, or to ask ChatGPT or Claude about it. That opens your own assistant with the lesson as context; nothing in the lesson changes.", "Hover above the title for **Add icon** and **Add cover**. Covers come from a gallery or any https image link, and you can reposition them."] },
+        { type: "list", items: ["Type **/** for blocks: headings, lists, tables, images, YouTube, equations, callouts, sources and citations.", "Select text to format it, or to ask ChatGPT or Claude about it. That opens your own assistant with the lesson as context; nothing in the lesson changes.", "Every lesson starts with its own cover. Use **Change cover** to pick from the gallery or paste any https image link, **Random** for another one, and **Reposition** to move it."] },
         { type: "heading", id: "sources", text: "Sources and citations" },
         { type: "p", text: "Add sources in the **Sources** panel, then cite them from any sentence. Readers see a small label and can open the source. Source files start private; you choose whether readers can see the title or open the file." },
         { type: "heading", id: "practice", text: "Practice" },
@@ -38,8 +38,8 @@ export const extraArticles: Record<Locale, DocArticle[]> = {
       title: "Build a course",
       summary: "Lessons in a clear order, for people to take.",
       blocks: [
-        { type: "p", text: "A course is an ordered list of your lessons with its own cover, icon and description. Press **New → Course**." },
-        { type: "steps", items: ["Give it a title and a one-line description.", "Hover above the title for **Add cover** and **Add icon**.", "Press **Add a lesson** for each lesson, and use the arrows to reorder.", "Press **Publish**. Every lesson in the course is published with it."] },
+        { type: "p", text: "A course is an ordered list of your lessons with its own cover and description. Press **New → Course**." },
+        { type: "steps", items: ["Give it a title and a one-line description.", "It starts with a random cover; use **Change cover** to pick another. Each lesson you add gets a different one.", "Press **Add a lesson** for each lesson, and use the arrows to reorder.", "Press **Publish**. Every lesson in the course is published with it."] },
         { type: "p", text: "Public courses are free for anyone to take and appear in [Learn](/learn). Private courses are part of Business. Archive a course to hide it; its lessons stay." },
       ],
     },
@@ -130,7 +130,7 @@ export const extraArticles: Record<Locale, DocArticle[]> = {
       blocks: [
         { type: "p", text: "الدرس صفحة تكتبها مرة ويقرؤها الناس بالسرعة المناسبة لهم. اضغط **جديد ← درس**." },
         { type: "heading", id: "write", text: "الكتابة" },
-        { type: "list", items: ["اكتب **/** للكتل: عناوين وقوائم وجداول وصور ويوتيوب ومعادلات وتنبيهات ومصادر واستشهادات.", "حدّد نصًا لتنسيقه، أو لتسأل ChatGPT أو Claude عنه. يفتح ذلك مساعدك أنت مع الدرس كسياق؛ ولا يتغير شيء في الدرس.", "مرّر فوق العنوان لترى **أضف أيقونة** و**أضف غلافًا**. تأتي الأغلفة من معرض أو من أي رابط صورة https، ويمكنك تغيير موضعها."] },
+        { type: "list", items: ["اكتب **/** للكتل: عناوين وقوائم وجداول وصور ويوتيوب ومعادلات وتنبيهات ومصادر واستشهادات.", "حدّد نصًا لتنسيقه، أو لتسأل ChatGPT أو Claude عنه. يفتح ذلك مساعدك أنت مع الدرس كسياق؛ ولا يتغير شيء في الدرس.", "يبدأ كل درس بغلافه الخاص. استخدم **غيّر الغلاف** للاختيار من المعرض أو لصق أي رابط صورة https، و**عشوائي** لغلاف آخر، و**غيّر الموضع** لتحريكه."] },
         { type: "heading", id: "sources", text: "المصادر والاستشهادات" },
         { type: "p", text: "أضف المصادر في لوحة **المصادر**، ثم استشهد بها من أي جملة. يرى القراء علامة صغيرة ويمكنهم فتح المصدر. ملفات المصادر خاصة في البداية؛ وأنت تقرر إن كان القراء يرون العنوان أو يفتحون الملف." },
         { type: "heading", id: "practice", text: "التدريب" },
@@ -144,8 +144,8 @@ export const extraArticles: Record<Locale, DocArticle[]> = {
       title: "ابنِ دورة",
       summary: "دروس بترتيب واضح يأخذها الناس.",
       blocks: [
-        { type: "p", text: "الدورة قائمة مرتبة من دروسك، لها غلاف وأيقونة ووصف. اضغط **جديد ← دورة**." },
-        { type: "steps", items: ["اكتب عنوانًا ووصفًا من سطر واحد.", "مرّر فوق العنوان لترى **أضف غلافًا** و**أضف أيقونة**.", "اضغط **أضف درسًا** لكل درس، واستخدم الأسهم لإعادة الترتيب.", "اضغط **نشر**. يُنشر كل درس في الدورة معها."] },
+        { type: "p", text: "الدورة قائمة مرتبة من دروسك، لها غلاف ووصف. اضغط **جديد ← دورة**." },
+        { type: "steps", items: ["اكتب عنوانًا ووصفًا من سطر واحد.", "تبدأ بغلاف عشوائي؛ استخدم **غيّر الغلاف** لاختيار غيره. ويحصل كل درس تضيفه على غلاف مختلف.", "اضغط **أضف درسًا** لكل درس، واستخدم الأسهم لإعادة الترتيب.", "اضغط **نشر**. يُنشر كل درس في الدورة معها."] },
         { type: "p", text: "الدورات العامة مجانية لأي أحد وتظهر في [تعلّم](/learn). الدورات الخاصة جزء من خطة الأعمال. أرشف دورة لإخفائها؛ وتبقى دروسها." },
       ],
     },

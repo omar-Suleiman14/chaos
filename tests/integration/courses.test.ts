@@ -68,3 +68,15 @@ it("gives a course a Notion-style cover and icon, owner only", async () => {
   const cleared = await owner.query(api.courses.get, { courseId });
   expect(cleared.coverUrl).toBeUndefined(); expect(cleared.coverY).toBeUndefined(); expect(cleared.icon).toBeUndefined();
 });
+
+it("gives every new course a cover and its lessons different ones", async () => {
+  const t = createTestConvex(), owner = t.withIdentity(creatorIdentity);
+  await owner.mutation(api.quizFunctions.getOrCreateUser, {});
+  const courseId = await owner.mutation(api.courses.create, { title: "Neuroanatomy" });
+  for (let i = 0; i < 8; i++) await owner.mutation(api.courses.addLesson, { courseId });
+  const course = await owner.query(api.courses.get, { courseId });
+  expect(course.coverUrl).toMatch(/^\/covers\//);
+  const covers = await t.run(async (ctx) => Promise.all(course.lessons.map(async (l) => (await ctx.db.get("lessons", l.id))!.metadata.coverUrl)));
+  expect(covers.every((c) => c?.startsWith("/covers/"))).toBe(true);
+  expect(new Set(covers).size).toBe(covers.length);
+});

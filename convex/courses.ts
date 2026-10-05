@@ -1,4 +1,5 @@
 import { courseModule, courseDetails } from "./learnAssetModel";
+import { randomCover } from "../lib/learn/covers";
 import { canonicalCommunityActor } from "./learnCommunityIntegrations";
 import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
@@ -82,7 +83,7 @@ export async function createCourse(ctx: MutationCtx, args: { title?: string; lan
     const identity = { subject: actor ?? (await requireActiveUser(ctx)).identity.subject };
     const title = (args.title ?? "").trim().slice(0, 200) || "Untitled course";
     const now = Date.now();
-    const id = await authorDb(ctx).insert("learnCollections", { ownerId: identity.subject, metadata: { title, description: "", language: args.language?.slice(0, 35) || "en", tags: [] }, items: [], lessonIds: [], revision: 0, visibility: "public", communityState: "ok", createdAt: now, updatedAt: now });
+    const id = await authorDb(ctx).insert("learnCollections", { ownerId: identity.subject, metadata: { title, description: "", language: args.language?.slice(0, 35) || "en", tags: [], coverUrl: randomCover() }, items: [], lessonIds: [], revision: 0, visibility: "public", communityState: "ok", createdAt: now, updatedAt: now });
     await recordAssetPublicationAction(ctx, { asset: { kind: "collection", id }, actorId: identity.subject, action: "create", revision: 0, afterVisibility: "public", reason: "Created a course draft." });
     return id;
 }

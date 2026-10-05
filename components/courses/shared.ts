@@ -1,3 +1,4 @@
+import { defaultCover, isCoverUrl } from "@/lib/learn/covers";
 import type React from "react";
 
 export const courseCopy = {
@@ -15,9 +16,8 @@ export const courseCopy = {
 
 /** Deterministic cover gradient when a course has no image. */
 export function coverStyle(id: string, url?: string): React.CSSProperties {
-  if (url) return { ["--cx-cover" as string]: `url("${url.replace(/"/g, "")}")` };
-  let h = 0; for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
-  const a = h % 360, b = (a + 70) % 360;
-  return { ["--cx-cover" as string]: `linear-gradient(135deg, hsl(${a} 70% 55%), hsl(${b} 75% 45%))` };
+  // No saved cover: the item's stable default picture, so no course or lesson card is bare.
+  const src = isCoverUrl(url) ? url : defaultCover(id);
+  return { ["--cx-cover" as string]: `url("${src.replace(/"/g, "")}")` };
 }
 

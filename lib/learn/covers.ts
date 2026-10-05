@@ -325,10 +325,168 @@ export const coverGallery: CoverImage[] = [
     title: "Garden at Sainte-Adresse",
     source: "https://commons.wikimedia.org/wiki/File:Garden_at_Sainte-Adresse_MET_DT48.jpg",
     license: "CC0"
+  },
+  {
+    category: "nasa",
+    src: "/covers/nasa/orion-nebula.jpg",
+    title: "Orion Nebula",
+    source: "https://commons.wikimedia.org/wiki/File:Hubble_Space_Telescope_Reveals_Dramatic_Features_of_the_Orion_Nebula_in_Exquisite_Detail_(2006-01-1831).tiff",
+    license: "Public domain"
+  },
+  {
+    category: "nasa",
+    src: "/covers/nasa/space-shuttle-challenger-1983.jpg",
+    title: "Space Shuttle Challenger, 1983",
+    source: "https://commons.wikimedia.org/wiki/File:Space_Shuttle_Challenger_(04-04-1983).JPEG",
+    license: "Public domain"
+  },
+  {
+    category: "nasa",
+    src: "/covers/nasa/apollo-17-at-tracy-s-rock.jpg",
+    title: "Apollo 17 at Tracy's Rock",
+    source: "https://commons.wikimedia.org/wiki/File:Apollo_17_Harrison_H._Schmitt_and_Tracy%27s_Rock_-_AS17-140-21493%2BAS17-140-21497_2025.jpg",
+    license: "Public domain"
+  },
+  {
+    category: "nasa",
+    src: "/covers/nasa/atlantis-over-earth.jpg",
+    title: "Space Shuttle Atlantis over Earth",
+    source: "https://commons.wikimedia.org/wiki/File:STS115_Atlantis_undock_ISS_edit2.jpg",
+    license: "Public domain"
+  },
+  {
+    category: "nasa",
+    src: "/covers/nasa/apollo-11-rollout.jpg",
+    title: "Apollo 11 rollout",
+    source: "https://commons.wikimedia.org/wiki/File:Apollo_11_rollout_(KSC-69PC-0234).jpg",
+    license: "Public domain"
+  },
+  {
+    category: "webb",
+    src: "/covers/webb/cosmic-cliffs-in-the-carina-nebula.jpg",
+    title: "Cosmic Cliffs in the Carina Nebula",
+    source: "https://commons.wikimedia.org/wiki/File:%E2%80%9CCosmic_Cliffs%E2%80%9D_in_the_Carina_Nebula_(NIRCam_and_MIRI_Composite_Image).png",
+    license: "Public domain"
+  },
+  {
+    category: "webb",
+    src: "/covers/webb/tarantula-nebula.jpg",
+    title: "Tarantula Nebula",
+    source: "https://commons.wikimedia.org/wiki/File:Tarantula_Nebula_by_JWST.jpg",
+    license: "Public domain"
+  },
+  {
+    category: "webb",
+    src: "/covers/webb/neptune-and-its-rings.jpg",
+    title: "Neptune and its rings",
+    source: "https://commons.wikimedia.org/wiki/File:Neptune_Close_Up_(NIRCam).jpg",
+    license: "Public domain"
+  },
+  {
+    category: "webb",
+    src: "/covers/webb/the-orion-bar.jpg",
+    title: "The Orion Bar",
+    source: "https://commons.wikimedia.org/wiki/File:Orion_Bar_Collage_(NIRCam_and_MIRI_Images)_(2023-129).jpg",
+    license: "Public domain"
+  },
+  {
+    category: "rijksmuseum",
+    src: "/covers/rijksmuseum/the-threatened-swan.jpg",
+    title: "The Threatened Swan",
+    source: "https://commons.wikimedia.org/wiki/File:De_bedreigde_zwaan_Rijksmuseum_SK-A-4.jpeg",
+    license: "CC0"
+  },
+  {
+    category: "rijksmuseum",
+    src: "/covers/rijksmuseum/the-jewish-bride.jpg",
+    title: "The Jewish Bride",
+    source: "https://commons.wikimedia.org/wiki/File:Rembrandt_Harmensz._van_Rijn_-_Portret_van_een_paar_als_oudtestamentische_figuren,_genaamd_%27Het_Joodse_bruidje%27_-_Google_Art_Project.jpg",
+    license: "Public domain"
+  },
+  {
+    category: "rijksmuseum",
+    src: "/covers/rijksmuseum/the-windmill-at-wijk-bij-duurstede.jpg",
+    title: "The Windmill at Wijk bij Duurstede",
+    source: "https://commons.wikimedia.org/wiki/File:De_molen_bij_Wijk_bij_Duurstede_Rijksmuseum_SK-C-211.jpeg",
+    license: "Public domain"
+  },
+  {
+    category: "japanese",
+    src: "/covers/japanese/evening-snow-at-kanbara.jpg",
+    title: "Evening Snow at Kanbara",
+    source: "https://commons.wikimedia.org/wiki/File:%E6%9D%B1%E6%B5%B7%E9%81%93%E4%BA%94%E5%8D%81%E4%B8%89%E6%AC%A1%E4%B9%8B%E5%86%85_%E8%92%B2%E5%8E%9F_%E5%A4%9C%E3%81%AE%E9%9B%AA-Evening_Snow_at_Kanbara,_from_the_series_%22Fifty-three_Stations_of_the_T%C5%8Dkaid%C5%8D%22_MET_DP109333.jpg",
+    license: "Public domain"
+  },
+  {
+    category: "japanese",
+    src: "/covers/japanese/kajikazawa-in-kai-province.jpg",
+    title: "Kajikazawa in Kai Province",
+    source: "https://commons.wikimedia.org/wiki/File:Kajikazawa_in_Kai_province.jpg",
+    license: "Public domain"
+  },
+  {
+    category: "japanese",
+    src: "/covers/japanese/ejiri-in-suruga-province.jpg",
+    title: "Ejiri in Suruga Province",
+    source: "https://commons.wikimedia.org/wiki/File:Ejiri_in_the_Suruga_province.jpg",
+    license: "Public domain"
+  },
+  {
+    category: "met",
+    src: "/covers/met/the-gulf-stream.jpg",
+    title: "The Gulf Stream",
+    source: "https://commons.wikimedia.org/wiki/File:Winslow_Homer_-_The_Gulf_Stream_-_Metropolitan_Museum_of_Art.jpg",
+    license: "Public domain"
+  },
+  {
+    category: "met",
+    src: "/covers/met/the-oxbow.jpg",
+    title: "The Oxbow",
+    source: "https://commons.wikimedia.org/wiki/File:Cole_Thomas_The_Oxbow_(The_Connecticut_River_near_Northampton_1836).jpg",
+    license: "Public domain"
+  },
+  {
+    category: "met",
+    src: "/covers/met/la-grenouillere.jpg",
+    title: "La Grenouillère",
+    source: "https://commons.wikimedia.org/wiki/File:Claude_Monet_La_Grenouill%C3%A9re.jpg",
+    license: "Public domain"
+  },
+  {
+    category: "met",
+    src: "/covers/met/whalers.jpg",
+    title: "Whalers",
+    source: "https://commons.wikimedia.org/wiki/File:Whalers_MET_DP169567.jpg",
+    license: "CC0"
+  },
+  {
+    category: "met",
+    src: "/covers/met/merced-river-yosemite-valley.jpg",
+    title: "Merced River, Yosemite Valley",
+    source: "https://commons.wikimedia.org/wiki/File:Bierstadt_Albert_Merced_River_Yosemite_Valley.jpg",
+    license: "Public domain"
   }
 ];
 
 /** Lesson covers are https links or one of the bundled gallery images. */
 export function isCoverUrl(url: string | undefined): url is string {
   return !!url && (url.startsWith("https://") || /^\/covers\/[a-z0-9/_-]+\.(jpg|svg)$/.test(url));
+}
+
+/** Covers chosen automatically: the gallery pictures and gradients, not the flat colours. */
+export const autoCovers = coverGallery.filter((c) => c.category !== "color" || c.src.includes("gradient-")).map((c) => c.src);
+
+/** The cover an item shows when it has none saved: stable for its id, so it never changes between visits. */
+export function defaultCover(id: string): string {
+  let h = 0;
+  for (const c of id) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+  return autoCovers[h % autoCovers.length];
+}
+
+/** A random cover, avoiding ones already in use nearby (other lessons of the same course, for example). */
+export function randomCover(avoid: Iterable<string | undefined> = [], random: () => number = Math.random): string {
+  const used = new Set(avoid);
+  const free = autoCovers.filter((src) => !used.has(src));
+  const pool = free.length ? free : autoCovers;
+  return pool[Math.floor(random() * pool.length)];
 }

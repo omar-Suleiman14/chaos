@@ -9,7 +9,6 @@ import { api } from "@/convex/_generated/api";
 import { useLearnViewer } from "@/lib/learn/data";
 import { useLocale } from "@/lib/i18n";
 import { coverStyle, courseCopy } from "@/components/courses/shared";
-import { CourseOrLessonIcon } from "./icons";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { Select } from "@/components/workspace/Select";
 import "@/components/courses/courses.css";
@@ -220,11 +219,6 @@ function Explore() {
                   <span className="cx-cover__badge">
                     {ar ? "دورة" : "Course"}
                   </span>
-                  {course.icon && (
-                    <span className="cx-card__icon">
-                      <CourseOrLessonIcon icon={course.icon} size={24} />
-                    </span>
-                  )}
                 </div>
                 <div className="cx-body">
                   <span className="cx-title">{course.title}</span>

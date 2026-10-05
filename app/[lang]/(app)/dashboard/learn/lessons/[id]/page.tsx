@@ -25,7 +25,7 @@ import type { AssistRequest } from "@/components/learn/editor/LessonEditor";
 import type { LessonEditorType } from "@/components/learn/editor/blocks";
 import { focusLessonEnd } from "@/components/learn/editor/focusEnd";
 import { MetadataPanel } from "@/components/learn/editor/MetadataPanel";
-import { LessonCover, PageIconControls } from "@/components/learn/editor/PageHeader";
+import { LessonCover } from "@/components/learn/editor/PageHeader";
 import PracticePanel from "@/components/learn/editor/PracticePanel";
 import GlossaryPanel from "@/components/learn/editor/GlossaryPanel";
 import PublishDialog from "@/components/learn/editor/PublishDialog";
@@ -123,7 +123,7 @@ function LessonEditorSession({ id }: { id: string }) {
   const [cite, setCite] = useState<{ blockId: string; previous?: NativeCitation; initial?: { sourceId: string; locator: string } } | null>(null);
   const [handoff, setHandoff] = useState<HandoffContext | null>(null);
   const [title, setTitle] = useState<string>();
-  /** Cover and icon edits, shown at once and saved with the rest of the metadata. */
+  /** Cover edits, shown at once and saved with the rest of the metadata. */
   const [look, setLook] = useState<Partial<LessonMeta>>({});
   const [description, setDescription] = useState<string>();
   const pending = useRef<{ content?: unknown[]; meta?: Partial<LessonMeta>; timer?: ReturnType<typeof setTimeout> }>({});
@@ -313,7 +313,7 @@ function LessonEditorSession({ id }: { id: string }) {
       {sourceError && <p className="lx-error" role="alert">Source {sourceError} is unavailable or its metadata access was revoked. Its stable reference remains in the draft.</p>}
       {uploadCount > 0 && <p className="lx-help" role="status">Uploading {uploadCount} image(s) to private Chaos sources…</p>}
 
-      <LessonCover meta={{ ...lesson.draft.meta, ...look }} editable={!conflict} onChange={saveLook} />
+      <LessonCover id={lesson.id} meta={{ ...lesson.draft.meta, ...look }} editable={!conflict} onChange={saveLook} />
       <div className="lx-edit__body" data-panel={panelOpen ? "open" : "closed"}
         onPointerDown={event => { if (event.button === 0 && event.target === event.currentTarget && editorRef.current) { event.preventDefault(); focusLessonEnd(editorRef.current); } }}>
         <div className="lx-edit__doc" dir={contentDirection(lesson.draft.meta.language)} lang={lesson.draft.meta.language}
@@ -325,7 +325,6 @@ function LessonEditorSession({ id }: { id: string }) {
               {lesson.externalRef && <ExternalRefLine externalRef={lesson.externalRef} />}
             </div>
           )}
-          <PageIconControls meta={{ ...lesson.draft.meta, ...look }} editable={!conflict} onChange={saveLook} />
           <textarea className="lx-title-input" rows={1} value={title ?? ""} placeholder={t.titlePh} aria-label={t.titlePh} maxLength={200}
             onChange={(e) => { setTitle(e.target.value.replace(/\n/g, " ")); saveMeta({ title: e.target.value.replace(/\n/g, " ") }); }}
             onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }} />

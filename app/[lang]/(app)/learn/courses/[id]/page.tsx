@@ -7,8 +7,7 @@ import { notFound } from "next/navigation";
 import { fetchPublicCourse } from "@/lib/learn/server";
 import { pageMetadata } from "@/lib/seo";
 import { siteUrl } from "@/lib/site";
-import { coverStyle } from "@/components/courses/shared";
-import { CourseOrLessonIcon } from "@/components/learn/icons";
+import { defaultCover, isCoverUrl } from "@/lib/learn/covers";
 import { SiteFooter, SiteNav } from "@/components/site/SiteChrome";
 import "@/app/landing.css";
 import "@/components/courses/courses.css";
@@ -52,11 +51,8 @@ export default async function PublicCoursePage({ params }: Props) {
       <header className="cp-hero">
         <Link href="/learn" className="cp-kicker">{labels.explore}</Link>
         {/* A real image, like the lesson cover, so the picture isn't cut down to a thin band. */}
-        {course.coverUrl
-          // eslint-disable-next-line @next/next/no-img-element -- covers can be any https URL a creator pastes
-          ? <img className="cp-cover cp-cover--image" src={course.coverUrl} alt="" />
-          : <div className="cp-cover" style={coverStyle(course.id)} aria-hidden="true" />}
-        {course.icon && <span className="cp-icon" aria-hidden="true"><CourseOrLessonIcon icon={course.icon} size={48} /></span>}
+        {/* eslint-disable-next-line @next/next/no-img-element -- covers can be any https URL a creator pastes */}
+        <img className="cp-cover cp-cover--image" src={isCoverUrl(course.coverUrl) ? course.coverUrl : defaultCover(course.id)} alt="" />
         <h1>{course.title}</h1>
         {course.description && <p>{course.description}</p>}
         {course.details && <p className="cp-facts">{({ all: ar ? "كل المستويات" : "All levels", beginner: ar ? "مبتدئ" : "Beginner", intermediate: ar ? "متوسط" : "Intermediate", advanced: ar ? "متقدم" : "Advanced" })[course.details.level]}{course.details.estimatedMinutes ? ` · ${course.details.estimatedMinutes} ${ar ? "دقيقة" : "min"}` : ""}</p>}

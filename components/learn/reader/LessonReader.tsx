@@ -14,7 +14,7 @@ import CompletionAction from "./CompletionAction";
 import CourseBreadcrumb from "./CourseBreadcrumb";
 import CourseNavigation from "./CourseNavigation";
 import { legacyFlashcardBlocks } from "@/lib/learn/inlineStudy";
-import { isCoverUrl } from "@/lib/learn/covers";
+import { defaultCover, isCoverUrl } from "@/lib/learn/covers";
 import Link from "@/components/site/SiteLink";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent as ReactMouseEvent } from "react";
@@ -37,7 +37,6 @@ import type { AttachedQuiz, Lesson, LessonSource } from "@/lib/learn/types";
 import { formatDate, useCopy, useLocale } from "@/lib/i18n";
 import { sourceIcon, sourceLabel, useBlockCopy } from "../editor/blocks";
 import { CurriculumBadges, ExternalRefLine, ModerationNotice, ProvenanceLine, QualityBadge, VerificationBadges } from "../ui";
-import { CourseOrLessonIcon } from "../icons";
 import { AiMark } from "@/components/site/aiMarks";
 import BlockRenderer from "./BlockRenderer";
 import { GlossaryContext, TermCard, type OpenTerm } from "./Glossary";
@@ -424,8 +423,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
           {isOwner && !caps.sharedPublishing && lesson.published && !previewDraft && <p className="lx-notice" style={{ marginBottom: 16 }}>{t.devicePublish}</p>}
           <ModerationNotice state={lesson.moderation} note={isOwner ? lesson.moderationNote : undefined} owner={isOwner} />
           <LessonActivity.Provider value={reportActivity}><article ref={article} onClick={tapBlock} className="lx-article" data-size={prefs.size} data-font={prefs.font} lang={meta.language} dir={contentDirection(meta.language)} aria-labelledby="lesson-title">
-            {isCoverUrl(meta.coverUrl) && <img className="lx-article__cover" src={meta.coverUrl} alt="" style={{ objectPosition: `center ${meta.coverY ?? 50}%` }} />}
-            {meta.icon && <span className="lx-article__icon" aria-hidden><CourseOrLessonIcon icon={meta.icon} size={48} /></span>}
+            <img className="lx-article__cover" src={isCoverUrl(meta.coverUrl) ? meta.coverUrl : defaultCover(lesson.id)} alt="" style={{ objectPosition: `center ${meta.coverY ?? 50}%` }} />
             <h1 id="lesson-title" className="lx-article__title">{meta.title || t.untitled}</h1>
             {meta.description && <p className="lx-article__lead">{meta.description}</p>}
             <div className="lx-article__byline">
