@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ArrowLeft, ArrowRight, Check, RotateCcw, Trophy } from "lucide-react";
+import Link from "@/components/site/SiteLink";
 import { ThemePicker } from "@/components/ThemePicker";
 import { emptyDefinition } from "@/convex/formLogic";
 import type { ThemePresetId } from "@/convex/formLogic";
@@ -20,7 +21,7 @@ const copy = {
       { title: "And who’s coming along?", options: ["My team", "My class", "Everyone’s invited"] },
       { title: "One last thing. Make it…", options: ["Quiet and considered", "Bright and playful", "Unmistakably mine"] },
     ],
-    next: "OK", finish: "That’s me", back: "Previous question", again: "Play it again", done: "That’s more like you.", doneBody: "Good questions deserve a little personality. Make yours next.",
+    next: "OK", finish: "That’s me", back: "Previous question", again: "Play it again", done: "That’s more like you.", doneBody: "Good questions deserve a little personality. Make yours next.", recap: ["Your day", "Coming along", "The feel"], make: "Make your own form",
     progress: (n: number) => `${n} of 3`, keyboard: "press Enter ↵", choose: "Choose an answer", gameTitle: "How many sides does a hexagon have?", gameNote: "Try a round. Pick an answer, then see the reveal.",
     gameOptions: ["Four", "Five", "Six", "Eight"], correct: "You got it!", wrong: "Six sides make a hexagon.", reveal: "In a hosted game, the timer and host control the reveal. Fast correct answers earn more points.", score: "+1,000 points", gamePreview: "Live game preview", previewPin: "GAME PIN", players: "24 players", round: "Question 1 / 1", allThemes: "All 19 themes",
   },
@@ -31,7 +32,7 @@ const copy = {
       { title: "ومَن سيشاركنا؟", options: ["فريقي", "صفي", "الجميع مدعو"] },
       { title: "لمسة أخيرة. اجعله…", options: ["هادئًا ومتأنيًا", "مشرقًا ومرحًا", "يشبهني تمامًا"] },
     ],
-    next: "حسنًا", finish: "هذا أنا", back: "السؤال السابق", again: "جرّب مجددًا", done: "الآن يشبهك أكثر.", doneBody: "تستحق الأسئلة الجيدة بعض الشخصية. اصنع أسئلتك الآن.",
+    next: "حسنًا", finish: "هذا أنا", back: "السؤال السابق", again: "جرّب مجددًا", done: "الآن يشبهك أكثر.", doneBody: "تستحق الأسئلة الجيدة بعض الشخصية. اصنع أسئلتك الآن.", recap: ["يومك", "مَن معك", "الطابع"], make: "اصنع نموذجك",
     progress: (n: number) => `${n} من 3`, keyboard: "اضغط Enter ↵", choose: "اختر إجابة", gameTitle: "كم ضلعًا للمسدّس؟", gameNote: "جرّب جولة. اختر إجابة ثم شاهد النتيجة.",
     gameOptions: ["أربعة", "خمسة", "ستة", "ثمانية"], correct: "إجابة صحيحة!", wrong: "للمسدّس ستة أضلاع.", reveal: "في اللعبة المباشرة يتحكم المؤقت والمضيف في كشف الإجابة. تكسب الإجابات الصحيحة السريعة نقاطًا أكثر.", score: "+١٬٠٠٠ نقطة", gamePreview: "معاينة لعبة مباشرة", previewPin: "رمز اللعبة", players: "24 لاعبًا", round: "السؤال 1 / 1", allThemes: "المظاهر الـ19",
   },
@@ -66,14 +67,19 @@ export default function ProductDemo() {
   return (
     <section className="site-demo site-demo--new" aria-label={t.label}>
       <div className="site-demo__top"><div className="site-demo__switch" aria-label={t.label}><button type="button" aria-pressed={mode === "form"} onClick={() => setMode("form")}>{t.form}</button><button type="button" aria-pressed={mode === "game"} onClick={() => setMode("game")}>{t.game}</button></div></div>
-      {mode === "form" ? <div className={`site-demo__stage ${themeClass(definition)}`} style={themeStyle(definition)}>
+      {mode === "form" ? <div className={`site-demo__stage ${themeClass(definition)}`} style={themeStyle(definition)} data-finished={finished || undefined}>
         <div className="site-demo__stage-top"><span>{t.eyebrow}</span><span>{finished ? <Check size={18} /> : t.progress(step + 1)}</span></div>
         <form className="site-demo__conversation" onSubmit={(e) => { e.preventDefault(); advance(); }}>
           <div key={finished ? "done" : step} className="site-demo__scene" data-direction={direction}>
+            {finished && <span className="site-demo__done-badge" aria-hidden="true"><Check size={20} strokeWidth={2.5} /></span>}
             <h2 className="form-heading" ref={heading} tabIndex={-1}>{finished ? t.done : question.title}</h2>
-            {finished ? <p className="form-muted">{t.doneBody}</p> : <fieldset><legend className="sr-only">{question.title}</legend>{question.options.map((answer, i) => <label key={answer} className="site-demo__answer" data-selected={answers[step] === i}><input className="sr-only" type="radio" name={`demo-${step}`} checked={answers[step] === i} onChange={() => setAnswers((old) => ({ ...old, [step]: i }))} /><span className="site-demo__key" aria-hidden="true">{String.fromCharCode(65 + i)}</span><span>{answer}</span>{answers[step] === i && <Check size={18} aria-hidden="true" />}</label>)}</fieldset>}
+            {finished ? <>
+              <p className="form-muted">{t.doneBody}</p>
+              {/* The answers just given, read back like a form's summary page. */}
+              <ul className="site-demo__recap">{t.questions.map((q, i) => <li key={q.title} style={{ animationDelay: `${120 + i * 70}ms` }}><span className="form-muted">{t.recap[i]}</span><strong>{q.options[answers[i] ?? 0]}</strong></li>)}</ul>
+            </> : <fieldset><legend className="sr-only">{question.title}</legend>{question.options.map((answer, i) => <label key={answer} className="site-demo__answer" data-selected={answers[step] === i}><input className="sr-only" type="radio" name={`demo-${step}`} checked={answers[step] === i} onChange={() => setAnswers((old) => ({ ...old, [step]: i }))} /><span className="site-demo__key" aria-hidden="true">{String.fromCharCode(65 + i)}</span><span>{answer}</span>{answers[step] === i && <Check size={18} aria-hidden="true" />}</label>)}</fieldset>}
           </div>
-          <div className="site-demo__controls">{finished ? <button type="button" className="form-btn" onClick={reset}><RotateCcw size={16} />{t.again}</button> : <><button type="submit" className="form-btn" disabled={!selected}>{step === 2 ? t.finish : t.next}<Check size={18} /></button><span className="form-muted">{t.keyboard}</span>{step > 0 && <button type="button" className="site-demo__back" aria-label={t.back} onClick={() => { setDirection(-1); setStep(step - 1); requestAnimationFrame(() => heading.current?.focus()); }}><ArrowLeft size={18} className="site-arrow" /></button>}</>}</div>
+          <div className="site-demo__controls">{finished ? <><Link href="/dashboard" className="form-btn">{t.make}<ArrowRight size={17} className="site-arrow" /></Link><button type="button" className="site-demo__again" onClick={reset}><RotateCcw size={15} />{t.again}</button></> : <><button type="submit" className="form-btn" disabled={!selected}>{step === 2 ? t.finish : t.next}<Check size={18} /></button><span className="form-muted">{t.keyboard}</span>{step > 0 && <button type="button" className="site-demo__back" aria-label={t.back} onClick={() => { setDirection(-1); setStep(step - 1); requestAnimationFrame(() => heading.current?.focus()); }}><ArrowLeft size={18} className="site-arrow" /></button>}</>}</div>
         </form>
         <div className="site-demo__meter" aria-hidden="true"><span style={{ width: `${finished ? 100 : step / 3 * 100}%` }} /></div>
         <div className="site-demo__orb" aria-hidden="true"><span /><span /><span /></div>

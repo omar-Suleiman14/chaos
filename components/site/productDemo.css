@@ -57,3 +57,18 @@
   .live-root.site-demo__game { padding: 22px 16px; min-height: 500px; }.site-demo__game-top > span:last-child { display: none; }.site-demo__game .live-tile--host { min-height: 80px; font-size: 15px; gap: 9px; padding: 12px; }.site-demo__game .live-tile--host svg { width: 26px; }
 }
 @media(prefers-reduced-motion: reduce) { .site-demo--new *, .site-demo--new *::before, .site-demo--new *::after { animation: none !important; transition: none !important; } }
+/* The finish: a check, the heading, the answers read back, then two clear next steps. */
+.site-demo__done-badge { display: grid; place-items: center; width: 40px; height: 40px; margin-bottom: 18px; border-radius: 50%; background: var(--form-accent); color: var(--form-on-accent, #fff); animation: demo-badge-in 520ms cubic-bezier(.34, 1.56, .64, 1) both; }
+.site-demo__stage[data-finished] .site-demo__scene h2 { margin-bottom: 12px; }
+.site-demo__recap { display: grid; gap: 8px; max-width: 440px; margin: 24px 0 0; padding: 0; list-style: none; }
+.site-demo__recap li { display: flex; align-items: baseline; justify-content: space-between; gap: 16px; padding: 12px 16px; border: 1px solid var(--form-line); border-radius: max(6px, var(--form-radius, 10px)); background: color-mix(in srgb, var(--form-surface) 70%, transparent); animation: conversation-enter 520ms cubic-bezier(.16, 1, .3, 1) both; }
+.site-demo__recap span { flex: none; font-size: 12px; }
+.site-demo__recap strong { min-width: 0; font-size: 15px; font-weight: 600; text-align: end; overflow-wrap: anywhere; }
+.site-demo__controls a.form-btn { display: inline-flex; align-items: center; gap: 8px; text-decoration: none; }
+.site-demo__again { display: inline-flex; align-items: center; gap: 7px; min-height: 44px; padding: 0 14px; border: 1px solid var(--form-line-strong); border-radius: 999px; background: transparent; color: inherit; font: inherit; font-size: 14px; cursor: pointer; transition: background 150ms, border-color 150ms; }
+.site-demo__again:hover { border-color: var(--form-accent); background: var(--form-soft); }
+.site-demo__again:focus-visible { outline: 2px solid var(--form-accent); outline-offset: 2px; }
+.site-demo__stage[data-finished] .site-demo__orb { opacity: .45; transform: rotate(-18deg) scale(1.12); transition: opacity 600ms ease, transform 900ms cubic-bezier(.16, 1, .3, 1); }
+.site-demo__orb { transition: opacity 400ms ease, transform 600ms ease; }
+@keyframes demo-badge-in { from { opacity: 0; transform: scale(.4); } }
+@media (max-width: 640px) { .site-demo__controls:has(.site-demo__again) { flex-wrap: wrap; } .site-demo__recap li { padding: 10px 12px; } }
