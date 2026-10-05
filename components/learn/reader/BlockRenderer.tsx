@@ -10,6 +10,8 @@ import { resolveLearnFileUrl as resolveFileUrl } from "@/lib/learn/data";
 import type { Highlight, LessonSource } from "@/lib/learn/types";
 import { calloutIcon, renderMath, sourceIcon, sourceLabel, useBlockCopy, type CalloutTone } from "../editor/blocks";
 import { useCopy } from "@/lib/i18n";
+import { TermText } from "./Glossary";
+import type { GlossaryEntry } from "@/lib/learn/glossary";
 
 const copy = {
   en: { play: (range: string) => `Play video${range ? `, ${range}` : ""}`, enlarge: "View full screen", codeLabel: (lang: string) => `Code${lang && lang !== "text" ? `, ${lang}` : ""}`, source: "Open source" },
@@ -54,19 +56,21 @@ function styled(text: StyledText, key: string, children: React.ReactNode = text.
 }
 
 /** Wraps the parts of `text` (starting at `at` in the block's plain text) that fall inside highlight ranges. */
-function withMarks(text: string, at: number, ranges: { start: number; end: number; h: Highlight }[], key: string): React.ReactNode {
+function withMarks(text: string, at: number, ranges: { start: number; end: number; h: Highlight }[], key: string, terms?: Set<GlossaryEntry>): React.ReactNode {
+  // Glossary terms are marked inside plain and highlighted text alike.
+  const plain = (piece: string, k: string) => terms ? <TermText key={k} text={piece} seen={terms} keyPrefix={k} /> : piece;
   const hits = ranges.filter((r) => r.end > at && r.start < at + text.length);
-  if (!hits.length) return text;
+  if (!hits.length) return plain(text, `${key}-p`);
   const parts: React.ReactNode[] = [];
   let cursor = 0;
   for (const r of hits) {
     const s = Math.max(0, r.start - at);
     const e = Math.min(text.length, r.end - at);
-    if (s > cursor) parts.push(text.slice(cursor, s));
-    if (e > Math.max(s, cursor)) parts.push(<mark key={`${key}-${r.h.id}-${s}`} className="lx-hl" data-color={r.h.color} data-highlight-id={r.h.id}>{text.slice(Math.max(s, cursor), e)}</mark>);
+    if (s > cursor) parts.push(plain(text.slice(cursor, s), `${key}-p${cursor}`));
+    if (e > Math.max(s, cursor)) parts.push(<mark key={`${key}-${r.h.id}-${s}`} className="lx-hl" data-color={r.h.color} data-highlight-id={r.h.id}>{plain(text.slice(Math.max(s, cursor), e), `${key}-m${s}`)}</mark>);
     cursor = Math.max(cursor, e);
   }
-  if (cursor < text.length) parts.push(text.slice(cursor));
+  if (cursor < text.length) parts.push(plain(text.slice(cursor), `${key}-p${cursor}`));
   return parts;
 }
 
@@ -86,6 +90,8 @@ export function locateHighlights(text: string, highlights: Highlight[]) {
 
 function Inlines({ content, sources, highlights = [], onCite, keyPrefix }: { content: Inline[]; sources: LessonSource[]; highlights?: Highlight[]; onCite?: RendererProps["onCite"]; keyPrefix: string }) {
   const ranges = locateHighlights(inlineText(content), highlights);
+  // Each glossary term is marked once per block; links and code stay untouched.
+  const terms = new Set<GlossaryEntry>();
   // Start offset of every run in the block's plain text, for placing highlights.
   const starts: number[][] = [];
   let offset = 0;
@@ -99,7 +105,7 @@ function Inlines({ content, sources, highlights = [], onCite, keyPrefix }: { con
         const key = `${keyPrefix}-${i}`;
         if (c.type === "text") {
           const t = c as StyledText;
-          return styled(t, key, withMarks(t.text, starts[i][0], ranges, key));
+          return styled(t, key, withMarks(t.text, starts[i][0], ranges, key, t.styles?.code ? undefined : terms));
         }
         if (c.type === "link") {
           const l = c as LinkContent;

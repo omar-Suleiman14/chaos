@@ -128,6 +128,13 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 | `get_lesson_quizzes` | List assessment references linked to a lesson | true | false | false |
 | `create_lesson_live_game` | Create a live game room from a lesson's assessment | false | false | **true** |
 
+#### Glossary tools
+
+| Tool | What it does | readOnly | destructive | openWorld |
+|---|---|---|---|---|
+| `set_lesson_glossary` | Add or update look-up definitions, translations and explanations for terms in a lesson | false | false | false |
+| `get_lesson_glossary` | Read a lesson's look-up glossary | true | false | false |
+
 #### Organization tools
 
 | Tool | What it does | readOnly | destructive | openWorld |

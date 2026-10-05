@@ -26,6 +26,7 @@ import { focusLessonEnd } from "@/components/learn/editor/focusEnd";
 import { MetadataPanel } from "@/components/learn/editor/MetadataPanel";
 import { LessonCover, PageIconControls } from "@/components/learn/editor/PageHeader";
 import PracticePanel from "@/components/learn/editor/PracticePanel";
+import GlossaryPanel from "@/components/learn/editor/GlossaryPanel";
 import PublishDialog from "@/components/learn/editor/PublishDialog";
 import SourcesPanel from "@/components/learn/editor/SourcesPanel";
 import VersionHistory from "@/components/learn/editor/VersionHistory";
@@ -48,7 +49,7 @@ const copy = {
     loading: "Opening lesson…", back: "Learn library", titlePh: "Lesson title", descPh: "A one-line summary readers see first (optional)",
     saving: "Saving…", saved: "Saved on this device", savedCloud: "Saved", preview: "Preview", history: "History", publish: "Publish lesson", publishChanges: "Publish changes", published: "Published",
     more: "Lesson actions", discard: "Discard unpublished changes", unpublish: "Unpublish", duplicate: "Duplicate", archive: "Archive", delete: "Delete permanently", move: "Move to folder", noFolder: "No folder",
-    panel: "Lesson settings", panelToggle: "Show or hide lesson settings", settingsLabel: "Settings", backCourse: "Course", courses: "Courses", tabs: { details: "Details", sources: "Sources", practice: "Practice" },
+    panel: "Lesson settings", panelToggle: "Show or hide lesson settings", settingsLabel: "Settings", backCourse: "Course", courses: "Courses", tabs: { details: "Details", sources: "Sources", practice: "Practice", glossary: "Words" },
     discardTitle: "Discard unpublished changes?", discardBody: "Your draft goes back to the published version. This can’t be undone.",
     deleteTitle: "Delete this lesson?", deleteBody: "The lesson, its versions and its discussion are deleted. Saved copies in other people’s libraries stop working. This can’t be undone.",
     unpublishTitle: "Unpublish this lesson?", unpublishBody: "Readers lose access, including through published courses that contain this lesson. It leaves Explore. Your draft and version history stay.",
@@ -62,7 +63,7 @@ const copy = {
     loading: "جارٍ فتح الدرس…", back: "مكتبة Learn", titlePh: "عنوان الدرس", descPh: "ملخص من سطر يراه القرّاء أولًا (اختياري)",
     saving: "جارٍ الحفظ…", saved: "محفوظ على هذا الجهاز", savedCloud: "محفوظ", preview: "معاينة", history: "السجل", publish: "انشر الدرس", publishChanges: "انشر التعديلات", published: "منشور",
     more: "إجراءات الدرس", discard: "تجاهل التعديلات غير المنشورة", unpublish: "إلغاء النشر", duplicate: "تكرار", archive: "أرشفة", delete: "حذف نهائي", move: "انقل إلى مجلد", noFolder: "بلا مجلد",
-    panel: "إعدادات الدرس", panelToggle: "أظهر إعدادات الدرس أو أخفها", settingsLabel: "الإعدادات", backCourse: "الدورة", courses: "الدورات", tabs: { details: "التفاصيل", sources: "المصادر", practice: "التدريب" },
+    panel: "إعدادات الدرس", panelToggle: "أظهر إعدادات الدرس أو أخفها", settingsLabel: "الإعدادات", backCourse: "الدورة", courses: "الدورات", tabs: { details: "التفاصيل", sources: "المصادر", practice: "التدريب", glossary: "الكلمات" },
     discardTitle: "تجاهل التعديلات غير المنشورة؟", discardBody: "تعود مسودتك إلى النسخة المنشورة. لا يمكن التراجع.",
     deleteTitle: "حذف هذا الدرس؟", deleteBody: "يُحذف الدرس وإصداراته ونقاشه. تتوقف النسخ المحفوظة في مكتبات الآخرين. لا يمكن التراجع.",
     unpublishTitle: "إلغاء نشر هذا الدرس؟", unpublishBody: "يفقد القرّاء الوصول، بما في ذلك من الدورات المنشورة التي تتضمن الدرس. يخرج من الاستكشاف وتبقى المسودة وسجل الإصدارات.",
@@ -74,7 +75,7 @@ const copy = {
   },
 };
 
-type Tab = "details" | "sources" | "practice";
+type Tab = "details" | "sources" | "practice" | "glossary";
 const assistToHandoff: Record<string, HandoffAction> = { explain: "explain", simplify: "simplify", expand: "ask", rewrite: "ask", organize: "ask", example: "example", quiz: "quiz" };
 
 export default function LessonEditorPage() {
@@ -352,7 +353,7 @@ function LessonEditorSession({ id }: { id: string }) {
         {panelOpen && (
           <aside id="lesson-settings" className="lx-edit__side" aria-label={t.panel} onKeyDown={(e) => { if (e.key === "Escape") setPanelOpen(false); }}>
             <div className="lx-edit__side-head"><strong>{t.panel}</strong><button type="button" className="ws-icon-button" aria-label={t.panelToggle} onClick={() => setPanelOpen(false)}><X size={16} aria-hidden /></button></div>
-            <WsTabs tabs={["details", "sources", "practice"] as const} value={tab} onChange={setTab} label={t.panel} labels={{ details: t.tabs.details, sources: `${t.tabs.sources}${lesson.sources.length ? ` (${lesson.sources.length})` : ""}`, practice: `${t.tabs.practice}${lesson.quizzes.length ? ` (${lesson.quizzes.length})` : ""}` }} />
+            <WsTabs tabs={["details", "sources", "practice", "glossary"] as const} value={tab} onChange={setTab} label={t.panel} labels={{ details: t.tabs.details, sources: `${t.tabs.sources}${lesson.sources.length ? ` (${lesson.sources.length})` : ""}`, practice: `${t.tabs.practice}${lesson.quizzes.length ? ` (${lesson.quizzes.length})` : ""}`, glossary: t.tabs.glossary }} />
             {tab === "details" && (
               <>
                 <MetadataPanel meta={editorLesson.draft.meta} onChange={saveMeta} lessonId={lesson.id} content={editorLesson.draft.content} isOwner={isOwner} disabled={mediaBusy || conflict || uploadCount > 0} beforeMapping={async () => { if (conflict) throw new Error("Reload the draft first."); await flush(); }} />
@@ -367,6 +368,7 @@ function LessonEditorSession({ id }: { id: string }) {
               onOpen={async source => { const tab = window.open("about:blank", "_blank"); if (tab) tab.opener = null; try { const url = await media.resolve(source.fileId!); if (tab) tab.location.href = url; } catch (err) { tab?.close(); throw err; } }}
               blockCitations={(native?.draft.blocks ?? []).flatMap(block => block.citations.map(citation => ({ blockId: block.id, citation })))}
               onEditCitation={(blockId, previous) => setCite({ blockId, previous, initial: { sourceId: previous.sourceId, locator: formatLocator(previous.locator) } })} />}
+            {tab === "glossary" && <GlossaryPanel lessonId={lesson.id} />}
             {tab === "practice" && <PracticePanel lessonId={lesson.id} quizzes={lesson.quizzes} onChange={(quizzes) => run(() => actions.setQuizzes(lesson.id, quizzes))} onCreateCards={makeFlashcards} onInsertFlashcards={setId => { const editor = editorRef.current; if (!editor) return; editor.insertBlocks([{ type: "lessonFlashcards", props: { setId } }], editor.getTextCursorPosition().block, "after"); editor.focus(); }} onInsertQuiz={assetId => { const editor = editorRef.current; if (!editor) return; editor.insertBlocks([{ type: "lessonQuiz", props: { assetKind: "form", assetId } }], editor.getTextCursorPosition().block, "after"); editor.focus(); }} />}
           </aside>
         )}

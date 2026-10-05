@@ -631,3 +631,22 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .ws-flashcard-form { max-width: 960px; width: 100%; }
 .ws-flashcard-text { min-height: 110px; resize: vertical; }
 .ws-flashcard-form .lx-cards-edit__row { padding: 16px; border: 1px solid var(--ws-line); border-radius: 8px; background: var(--background); }
+
+/* Glossary look-up: terms the author defined, opened like Look Up on Apple devices. */
+.lx-term { cursor: pointer; border-radius: 3px; text-decoration: underline dotted color-mix(in srgb, var(--primary) 70%, transparent); text-decoration-thickness: 1.5px; text-underline-offset: 3px; transition: background .15s; }
+.lx-term:hover, .lx-term:focus-visible { background: var(--ws-accent-soft); outline: none; }
+.lx-term:focus-visible { box-shadow: 0 0 0 2px var(--primary); }
+.lx-termcard { position: fixed; z-index: 61; width: min(340px, calc(100vw - 16px)); max-height: min(420px, calc(100vh - 16px)); overflow-y: auto; padding: 14px 16px; border-radius: 14px; background: var(--surface-bright); border: 1px solid var(--ws-line-strong); box-shadow: var(--ws-shadow-lg); color: var(--on-surface); font-size: 14px; line-height: 1.5; outline: none; animation: lx-termcard-in .14s ease-out; }
+.lx-termcard header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; margin-bottom: 8px; }
+.lx-termcard header strong { display: block; font-size: 19px; line-height: 1.25; }
+.lx-termcard__say { display: block; font-size: 13px; color: var(--on-surface-variant); }
+.lx-termcard header button { display: inline-flex; padding: 4px; border: 0; border-radius: 6px; background: none; color: var(--on-surface-variant); cursor: pointer; }
+.lx-termcard header button:hover, .lx-termcard header button:focus-visible { background: var(--ws-hover); outline: none; }
+.lx-termcard section + section { margin-top: 10px; padding-top: 10px; border-top: 1px solid var(--ws-line); }
+.lx-termcard h4 { margin: 0 0 2px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--on-surface-variant); }
+.lx-termcard p { margin: 0; }
+.lx-termcard p + p { margin-top: 4px; }
+.lx-termcard__word { font-size: 18px; font-weight: 600; }
+@keyframes lx-termcard-in { from { opacity: 0; transform: translateY(-3px) scale(.98); } }
+@media (prefers-reduced-motion: reduce) { .lx-termcard { animation: none; } }
+@media print { .lx-termcard { display: none; } .lx-term { text-decoration: none; } }

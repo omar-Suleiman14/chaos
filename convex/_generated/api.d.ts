@@ -93,6 +93,8 @@ import type * as learnStudyIntegrations from "../learnStudyIntegrations.js";
 import type * as learnStudyReads from "../learnStudyReads.js";
 import type * as learnValidation from "../learnValidation.js";
 import type * as learnWebhookEvents from "../learnWebhookEvents.js";
+import type * as lessonGlossary from "../lessonGlossary.js";
+import type * as lessonGlossaryModel from "../lessonGlossaryModel.js";
 import type * as lessonPermissions from "../lessonPermissions.js";
 import type * as lessonProposalModel from "../lessonProposalModel.js";
 import type * as lessonProposals from "../lessonProposals.js";
@@ -235,6 +237,8 @@ declare const fullApi: ApiFromModules<{
   learnStudyReads: typeof learnStudyReads;
   learnValidation: typeof learnValidation;
   learnWebhookEvents: typeof learnWebhookEvents;
+  lessonGlossary: typeof lessonGlossary;
+  lessonGlossaryModel: typeof lessonGlossaryModel;
   lessonPermissions: typeof lessonPermissions;
   lessonProposalModel: typeof lessonProposalModel;
   lessonProposals: typeof lessonProposals;

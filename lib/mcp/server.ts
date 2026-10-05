@@ -19,6 +19,7 @@ import { registerTools as registerFormManagementTools } from "./formManagement";
 import { registerCommunityTools } from "./community";
 import { registerQuizForkTools } from "./quizForks";
 import { registerAssessmentTools } from "./assessments";
+import { registerGlossaryTools } from "./glossary";
 import { permissionForTool, requireToolPermission, type McpPermission } from "./permissions";
 import { registerCourseTools } from "./courses";
 import { registerFlashcardTools } from "./flashcards";
@@ -43,6 +44,7 @@ const instructions = `Chaos (chaos.fail) is where this person builds forms, surv
 - Forms return shareUrl: share it only when returned and published. Lesson and course tools do not return shareUrl. After publish_lesson returns ok true, use the lessonId from a verified create/get response to construct https://chaos.fail/learn/<lessonId>. After publish_course returns ok true, use courseId from verified create_course (or id from get_course) to construct https://chaos.fail/learn/courses/<courseId>. Never invent IDs, claim draft links are public, or imply private/restricted links grant access. Visibility values are public, restricted and private; restricted/private require Business.
 - Courses: create_course creates a draft; add_course_lesson creates a blank lesson draft; use lesson tools to write it. get_course reads the owner's outline and metadata. update_course edits draft metadata. set_course_outline replaces the full ordered list, so read get_course first and preserve wanted lessons. publish_course publishes the course and all its lessons together; lessons in an unpublished course can't be published on their own. Inspect blockers when ok is false. Do not automatically retry course/lesson creation or publication after uncertain success. list_courses lists the person's courses; set_course_archived archives or restores one; unpublish_course takes a course offline. Course covers are update_course coverUrl; lesson covers are metadata.coverUrl and an optional Lucide icon or emoji metadata.icon on create_lesson/save_lesson_draft.
 - Flashcards: create_flashcard_set makes a private set; get_flashcard_set returns cards and revision; save_flashcard_set replaces the whole card list, so keep card IDs. publish_flashcard_set makes an immutable version only on request; attach_lesson_flashcards links that version to an owned lesson. set_flashcard_set_lifecycle archives, restores or unpublishes.
+- Glossary: after writing or substantially editing a lesson, call set_lesson_glossary without being asked for the technical, rare or easily confused words a learner may not know. Give a short definition, the translation and the meaning explained in the learner's language (Arabic unless the person says otherwise). Readers tap highlighted terms for a look-up card.
 - get_learn_capabilities lists the lesson, course, flashcard, game and folder tools with limits; call it when unsure what Chaos can do.
 - Lessons: search_lessons/list_lessons use scope owned for drafts or public for published discovery. get_lesson draft and get_lesson_outline with outlineFrom draft require edit permission; outlines default to published. get_lesson and get_lesson_outline return bounded pages: offset 0?500, limit 1?100; follow nextOffset until null instead of claiming the first page is complete. Keep stable block IDs and use the current expectedRevision for edits; on conflict reload before making a reviewed change.
 - Teams: Personal is one user. Business teams (free for a limited time) share editing: list_teams, create_team, invite_team_member (returns a single-use link; Chaos sends no email), list_team_members, change_team_member_role, remove_team_member, share_with_team and list_team_resources. Team-only (internal) content: publish_lesson, publish_course and publish_flashcard_set with visibility restricted and teamId; set_form_response_controls with access signed_in and audienceTeamId for forms and quizzes; host_game with teamId. Only members of that team can read, respond or join. Invite, remove or change roles only on explicit request.
@@ -478,5 +480,6 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
   registerAdvancedFormTools(server, run, securitySchemes);
   registerFormManagementTools(server, run, securitySchemes);
   registerAssessmentTools(server, run, securitySchemes);
+  registerGlossaryTools(server, run, securitySchemes);
   return server;
 }

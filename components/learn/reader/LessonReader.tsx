@@ -39,6 +39,8 @@ import { CurriculumBadges, ExternalRefLine, ModerationNotice, ProvenanceLine, Qu
 import { CourseOrLessonIcon } from "../icons";
 import { AiMark } from "@/components/site/aiMarks";
 import BlockRenderer from "./BlockRenderer";
+import { GlossaryContext, TermCard, type OpenTerm } from "./Glossary";
+import { findEntry, glossaryMatcher } from "@/lib/learn/glossary";
 import DiscussionPanel from "./DiscussionPanel";
 import HandoffDialog, { type HandoffContext } from "./HandoffDialog";
 import Lightbox from "./Lightbox";
@@ -161,6 +163,10 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const active = useActiveHeading(items);
   const author = usePerson(lesson.ownerId);
   const highlights = useHighlights(lesson.id) ?? [];
+  const glossaryEntries = useQuery(api.lessonGlossary.get, { lessonId: lesson.id });
+  const [openTerm, setOpenTerm] = useState<OpenTerm | null>(null);
+  const closeTerm = useCallback(() => setOpenTerm(null), []);
+  const glossary = useMemo(() => ({ matcher: glossaryMatcher(glossaryEntries ?? []), open: setOpenTerm }), [glossaryEntries]);
   const notes = useNotes(lesson.id) ?? [];
   const threads = useThreads(lesson.id) ?? [];
   const saved = useSaved() ?? [];
@@ -268,7 +274,8 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const onSelectionAction = (action: SelectionAction) => {
     if (!selection) return;
     const { text, blockId, offset } = selection;
-    if (action.startsWith("highlight:")) {
+    if (action === "lookup") { const entry = findEntry(glossary.matcher, text); if (entry) setOpenTerm({ entry, rect: selection.rect }); }
+    else if (action.startsWith("highlight:")) {
       guard(async () => { await actions.addHighlight({ lessonId: lesson.id, blockId, quote: text, offset, color: action.slice(10) as "yellow" }); say(t.highlightSaved); });
     } else if (action === "save") guard(async () => { await actions.saveBlock(lesson, blockId, text); say(t.savedToast); });
     else if (action === "note") guard(() => setEditingNote({ blockId, body: `“${excerpt(text, 120)}” ` }));
@@ -442,10 +449,12 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
             <div style={{ marginTop: 20 }}>
               {(
                 <>
+                  <GlossaryContext.Provider value={glossary}>
                   <BlockRenderer content={view.content} sources={lesson.sources} highlights={highlights}
                     onCite={(sourceId, locator) => { const source = lesson.sources.find((s) => s.id === sourceId); if (source) setOpenSource({ source, locator }); }}
                     onOpenImage={(block, url) => setLightbox({ url, alt: String(block.props.alt ?? ""), caption: String(block.props.caption ?? "") || undefined })}
                     blockAside={blockAside} blockAfter={blockAfter} activeBlockId={tappedBlock} />
+                  </GlossaryContext.Provider>
                   <BlockRenderer content={legacyDeckBlocks} sources={lesson.sources} />
                   {lesson.sources.length > 0 && (
                     <section className="lx-section" style={{ marginTop: 40 }} aria-labelledby="lesson-sources">
@@ -501,8 +510,9 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
       {panel && !phone && <NarrowPanel onClose={() => setPanel(null)}>{sidePanel}</NarrowPanel>}
 
       {selection && tab === "lesson" && (
-        <SelectionToolbar selection={selection} onAction={onSelectionAction} canWrite={signedIn} aiLabel={t.aiOff} />
+        <SelectionToolbar selection={selection} onAction={onSelectionAction} canWrite={signedIn} aiLabel={t.aiOff} canLookUp={!!findEntry(glossary.matcher, selection.text)} />
       )}
+      {openTerm && <TermCard term={openTerm} onClose={closeTerm} />}
       {handoff && <HandoffDialog input={handoff} onClose={() => setHandoff(null)} />}
       {reporting && <ReportDialog target={{ kind: "lesson", id: lesson.id }} title={meta.title} onClose={() => setReporting(false)} />}
       {lightbox && <Lightbox {...lightbox} onClose={() => setLightbox(null)} />}

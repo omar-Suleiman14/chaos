@@ -309,6 +309,8 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "fork_quiz": result = await ctx.runMutation(makeFunctionReference<"mutation">("quizForks:mcpFork"), { ...input, userId }); break;
       case "get_quiz_fork_lineage": result = await ctx.runQuery(makeFunctionReference<"query">("quizForks:mcpLineage"), { ...input, userId }); break;
       case "attach_lesson_quiz": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAssessments:attach"), { ...input, userId }); break;
+      case "set_lesson_glossary": result = await ctx.runMutation(makeFunctionReference<"mutation">("lessonGlossary:mcpSet"), { ...input, userId }); break;
+      case "get_lesson_glossary": result = await ctx.runQuery(makeFunctionReference<"query">("lessonGlossary:mcpGet"), { ...input, userId }); break;
       case "get_lesson_quizzes": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAssessments:list"), { ...input, userId }); break;
       case "create_lesson_live_game": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAssessments:createLive"), { ...input, userId }); break;
       case "get_learn_capabilities": result = await ctx.runQuery(makeFunctionReference<"query">("mcpLearn:getCapabilities"), { ...input, userId }); break;

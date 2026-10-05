@@ -287,3 +287,17 @@ it("links quizzes idempotently and reuses normal Live eligibility", async () => 
   const room = await t.mutation(live, { userId, lessonId, asset });
   expect(await t.run(ctx => ctx.db.get("liveGames", room.gameId))).toMatchObject({ formId, state: "lobby" });
 });
+
+it("keeps a live lesson glossary that merges by term and respects lesson access", async () => {
+  const { t, lessonId } = await setup();
+  const set = makeFunctionReference<"mutation">("lessonGlossary:mcpSet"), read = makeFunctionReference<"query">("lessonGlossary:mcpGet");
+  await t.mutation(set, { userId, lessonId, terms: [{ term: "Afterload", definition: "Pressure the heart pumps against.", translation: "الحمل اللاحق", language: "ar" }, { term: "Preload", definition: "Stretch before contraction." }] });
+  expect(await t.mutation(set, { userId, lessonId, terms: [{ term: "afterload", definition: "Resistance to ejection.", aliases: ["afterloads", "Afterload"] }], remove: ["preload"] })).toEqual({ terms: ["afterload"] });
+  expect((await t.query(read, { userId, lessonId })).entries).toEqual([{ term: "afterload", definition: "Resistance to ejection.", aliases: ["afterloads"] }]);
+  await expect(t.mutation(set, { userId: otherId, lessonId, terms: [{ term: "x", definition: "y" }] })).rejects.toThrow("unauthorized");
+  await expect(t.mutation(set, { userId, lessonId, terms: [{ term: "x", definition: " " }] })).rejects.toThrow("VALIDATION_FAILED");
+  await expect(t.query(read, { userId, lessonId: "nope" })).rejects.toThrow("NOT_FOUND");
+  // Readers without access get an empty list instead of an error.
+  expect(await t.query(api.lessonGlossary.get, { lessonId })).toEqual([]);
+  expect(await t.withIdentity({ subject: userId }).query(api.lessonGlossary.get, { lessonId })).toHaveLength(1);
+});

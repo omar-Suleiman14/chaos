@@ -1,25 +1,25 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { Bookmark, GraduationCap, HelpCircle, Lightbulb, MessageSquare, MessageSquarePlus, NotebookPen, Sparkles, Wand2 } from "lucide-react";
+import { BookA, Bookmark, GraduationCap, HelpCircle, Lightbulb, MessageSquare, MessageSquarePlus, NotebookPen, Sparkles, Wand2 } from "lucide-react";
 import type { HighlightColor } from "@/lib/learn/types";
 import { useCopy } from "@/lib/i18n";
 
 const copy = {
   en: {
-    label: "Selection actions", explain: "Explain", simplify: "Simplify", example: "Example", quiz: "Quiz me", save: "Save", note: "Note", discuss: "Discuss",
+    label: "Selection actions", lookUp: "Look Up", explain: "Explain", simplify: "Simplify", example: "Example", quiz: "Quiz me", save: "Save", note: "Note", discuss: "Discuss",
     highlight: (c: string) => `Highlight ${c}`, colors: { yellow: "yellow", green: "green", blue: "blue", pink: "pink" } as Record<HighlightColor, string>,
     chatgpt: "Ask ChatGPT", claude: "Ask Claude", hint: "Text selected. Press Alt+Enter for actions.",
   },
   ar: {
-    label: "إجراءات التحديد", explain: "اشرح", simplify: "بسّط", example: "مثال", quiz: "اختبرني", save: "احفظ", note: "ملاحظة", discuss: "ناقش",
+    label: "إجراءات التحديد", lookUp: "ابحث عن المعنى", explain: "اشرح", simplify: "بسّط", example: "مثال", quiz: "اختبرني", save: "احفظ", note: "ملاحظة", discuss: "ناقش",
     highlight: (c: string) => `تظليل ${c}`, colors: { yellow: "أصفر", green: "أخضر", blue: "أزرق", pink: "وردي" } as Record<HighlightColor, string>,
     chatgpt: "اسأل ChatGPT", claude: "اسأل Claude", hint: "حُدّد نص. اضغط Alt+Enter للإجراءات.",
   },
 };
 
 export interface TextSelection { text: string; blockId: string; offset: number; rect: DOMRect }
-export type SelectionAction = "explain" | "simplify" | "example" | "quiz" | "save" | "note" | "discuss" | "chatgpt" | "claude" | `highlight:${HighlightColor}`;
+export type SelectionAction = "lookup" | "explain" | "simplify" | "example" | "quiz" | "save" | "note" | "discuss" | "chatgpt" | "claude" | `highlight:${HighlightColor}`;
 
 const COLORS: HighlightColor[] = ["yellow", "green", "blue", "pink"];
 const SWATCH: Record<HighlightColor, string> = { yellow: "#facc15", green: "#4ade80", blue: "#60a5fa", pink: "#f472b6" };
@@ -59,8 +59,10 @@ export function useTextSelection(root: React.RefObject<HTMLElement | null>): [Te
   return [selection, () => { document.getSelection()?.removeAllRanges(); setSelection(null); }];
 }
 
-export default function SelectionToolbar({ selection, onAction, canWrite, aiLabel }: {
+export default function SelectionToolbar({ selection, onAction, canWrite, aiLabel, canLookUp }: {
   selection: TextSelection; onAction: (action: SelectionAction) => void; canWrite: boolean;
+  /** The selection is a glossary term, so Look Up can open its card. */
+  canLookUp?: boolean;
   /** When in-product AI is off, Explain/Simplify/Example/Quiz go to an external assistant; the label says so. */
   aiLabel?: string;
 }) {
@@ -98,6 +100,7 @@ export default function SelectionToolbar({ selection, onAction, canWrite, aiLabe
           if (e.key === "ArrowRight" || e.key === "ArrowLeft") { e.preventDefault(); const step = (e.key === "ArrowRight") !== rtl ? 1 : -1; buttons[(i + step + buttons.length) % buttons.length]?.focus(); }
           if (e.key === "Escape") { e.preventDefault(); (document.getSelection()?.anchorNode?.parentElement as HTMLElement | null)?.closest<HTMLElement>("[data-block-id]")?.focus(); }
         }}>
+        {canLookUp && <>{item("lookup", BookA, t.lookUp)}<span className="lx-seltools__sep" aria-hidden /></>}
         {item("explain", Lightbulb, t.explain)}
         {item("simplify", Wand2, t.simplify)}
         {item("example", Sparkles, t.example)}

@@ -24,6 +24,7 @@ import { formTables } from "./formModel";
 import { integrationTables } from "./integrationModel";
 import { webhookTables } from "./webhookModel";
 import { liveTables } from "./liveModel";
+import { glossaryTables } from "./lessonGlossaryModel";
 
 export default defineSchema({
   authorStudents: defineTable({ authorId: v.string(), key: v.string(), studentId: v.optional(v.string()), guestName: v.optional(v.string()), context: v.string(), publicVisible: v.boolean(), publicHidden: v.optional(v.boolean()), updatedAt: v.number() }).index("by_author_key", ["authorId", "key"]).index("by_author_updated", ["authorId", "updatedAt"]).index("by_author_public_updated", ["authorId", "publicVisible", "updatedAt"]),
@@ -53,6 +54,7 @@ export default defineSchema({
   ...integrationTables,
   ...webhookTables,
   ...liveTables,
+  ...glossaryTables,
 
   adminMetrics: defineTable({ key: v.string(), counts: metricsValidator, pending: metricsValidator, running: v.boolean(), startedAt: v.number(), completedAt: v.optional(v.number()), phase: v.union(v.literal("users"), v.literal("forms"), v.literal("quizzes"), v.literal("quizSessions")), cursor: v.union(v.string(), v.null()) }).index("by_key", ["key"]),
   adminBulkJobs: defineTable({ actorId: v.string(), plan: v.union(v.literal("free"), v.literal("pro")), reason: v.string(), cutoff: v.number(), processed: v.number(), done: v.boolean() }),
