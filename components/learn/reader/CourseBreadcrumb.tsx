@@ -1,10 +1,11 @@
 "use client";
-import { useQuery } from "convex/react";
+import { useKeptQuery } from "@/lib/queryCache";
+
 import { api } from "@/convex/_generated/api";
 import Link from "@/components/site/SiteLink";
 import { useLocale } from "@/lib/i18n";
 export default function CourseBreadcrumb({ courseId, lessonId }: { courseId?: string | null; lessonId: string }) {
-  const course = useQuery(api.courses.getPublic, courseId ? { courseId } : "skip");
+  const course = useKeptQuery(api.courses.getPublic, courseId ? { courseId } : "skip");
   const { locale } = useLocale();
   if (!course) return null;
   const index = course.lessons.findIndex(l => l.id === lessonId);

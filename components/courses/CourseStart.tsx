@@ -8,6 +8,7 @@ import { useCourseProgress } from "@/lib/learn/courseProgress";
 import { savedGuestName, useCourseEnrollment } from "@/lib/learn/courseEnrollment";
 import { useLocale } from "@/lib/i18n";
 import Link from "@/components/site/SiteLink";
+import { prefetchLesson } from "@/lib/learn/prefetch";
 import { ArrowRight } from "lucide-react";
 
 const copy = {
@@ -35,6 +36,9 @@ export default function CourseStart({ course }: { course: NonNullable<FunctionRe
   const count = course.lessons.filter(l => progress[l.id]?.completed).length;
   const active = course.lessons.find(l => !progress[l.id]?.completed && (progress[l.id]?.percent ?? 0) > 0);
   const target = active ?? course.lessons.find(l => !progress[l.id]?.completed) ?? course.lessons[0];
+  // Enrolled readers almost always press Continue next, so its lesson starts loading now.
+  const targetId = state?.enrolled ? target?.id : undefined;
+  useEffect(() => { if (targetId) prefetchLesson(targetId); }, [targetId]);
   if (!target) return null;
   const href = `/learn/${target.id}?course=${course.id}`;
   const meter = <><p aria-live="polite">{t.done(count, course.lessons.length)}</p><div className="lx-course-meter" role="progressbar" aria-label={t.progress} aria-valuemin={0} aria-valuemax={course.lessons.length} aria-valuenow={count}><span style={{ width: `${count / course.lessons.length * 100}%` }} /></div></>;

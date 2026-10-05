@@ -1,5 +1,6 @@
 import type { Lesson } from "./types";
 import { cache } from "react";
+import { unstable_cache } from "next/cache";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import { lessonDocumentToEditorBlocks, type LessonEditorBlock } from "@/lib/lessonBlockAdapter";
@@ -23,8 +24,27 @@ function metadataBlocks(blocks: LessonEditorBlock[]): unknown[] {
  * Cached per request, so generateMetadata and the page share one backend read.
  */
 export const fetchPublicLesson = cache(async (id: string): Promise<Lesson | null | undefined> => {
+  if (!client()) return undefined;
+  return cachedLesson(id).catch(() => null);
+});
+
+/**
+ * Published lessons and courses are shared across requests for a minute, so opening one doesn't wait
+ * on the backend each time; the reader's live subscription shows newer edits as soon as it connects.
+ * Only found items are kept: a miss throws, which unstable_cache never stores, so something published
+ * a moment ago is never stuck behind a cached "not found".
+ */
+const PUBLIC_TTL = 60;
+class Missing extends Error {}
+const cachedLesson = unstable_cache(async (id: string) => {
+  const lesson = await readPublicLesson(id);
+  if (!lesson) throw new Missing(id);
+  return lesson;
+}, ["public-lesson"], { revalidate: PUBLIC_TTL });
+
+async function readPublicLesson(id: string): Promise<Lesson | null> {
   const backend = client();
-  if (!backend) return undefined;
+  if (!backend) return null;
   const result = await backend.query(api.learnFrontend.publicLesson, { id });
   if (!result) return null;
   const converted = lessonDocumentToEditorBlocks(result.version.document);
@@ -37,7 +57,7 @@ export const fetchPublicLesson = cache(async (id: string): Promise<Lesson | null
     draft: { meta, content, updatedAt: published.publishedAt }, published, publishedDraftAt: published.publishedAt,
     visibility: "public", sources: [], quizzes: [], stats: { views: 0, saves: 0, helpful: 0, notHelpful: 0, forks: 0 },
     moderation: "ok", quality: "none", createdAt: result.createdAt, updatedAt: published.publishedAt };
-});
+}
 
 /** Published, explicitly indexable lesson ids. Preview deployments return no entries. */
 export async function listIndexableLessons(): Promise<{ id: string; publishedAt: number }[]> {
@@ -57,10 +77,14 @@ export async function listIndexableLessons(): Promise<{ id: string; publishedAt:
 
 /** Server read of a published public course for the course page, metadata and sitemap. */
 export const fetchPublicCourse = cache(async (id: string) => {
-  const backend = client();
-  if (!backend) return undefined;
-  try { return await backend.query(api.courses.getPublic, { courseId: id }); } catch { return null; }
+  if (!client()) return undefined;
+  return cachedCourse(id).catch(() => null);
 });
+const cachedCourse = unstable_cache(async (id: string) => {
+  const course = await client()!.query(api.courses.getPublic, { courseId: id });
+  if (!course) throw new Missing(id);
+  return course;
+}, ["public-course"], { revalidate: PUBLIC_TTL });
 
 /** Public courses for the sitemap; empty on preview deployments or when the backend is unreachable. */
 export async function listPublicCourses(): Promise<{ id: string; updatedAt: number }[]> {

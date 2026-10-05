@@ -1,4 +1,5 @@
 "use client";
+import { useKeptQuery } from "@/lib/queryCache";
 import { useQuery } from "@/lib/convexCache";
 
 import { saveGuestProgress, saveGuestReview, useGuestStudy } from "./guestStudy";
@@ -121,7 +122,8 @@ export function useLesson(id: string | undefined): Lesson | null | undefined {
   const viewer = useLearnViewer();
   const editable = useQuery(api.learnFrontend.editableLesson, auth.isAuthenticated && id ? { id } : "skip");
   const published = useQuery(api.lessons.getPublished, editable ? { lessonId: editable._id } : "skip");
-  const result = useQuery(api.learnFrontend.publicLesson, id ? { id } : "skip");
+  // Kept warm after the reader closes, so returning to a lesson (or opening a prefetched one) is instant.
+  const result = useKeptQuery(api.learnFrontend.publicLesson, id ? { id } : "skip");
   useEffect(() => {
     if (editable && viewer?.signedIn) durableRows.set(viewer.id + ":" + editable._id, editable);
     const version = editable && published ? { lessonId: editable._id, version: published } : result;

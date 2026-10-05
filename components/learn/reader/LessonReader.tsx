@@ -1,5 +1,6 @@
 "use client";
 
+import { useKeptQuery } from "@/lib/queryCache";
 import { useCourseProgress } from "@/lib/learn/courseProgress";
 import { useCourseEnrollment } from "@/lib/learn/courseEnrollment";
 import { contentDirection } from "@/lib/learn/direction";
@@ -129,7 +130,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const caps = useLearnCapabilities();
   const viewer = useLearnViewer();
   const actions = useLearnActions();
-  const course = useQuery(api.courses.getPublic, courseId ? { courseId } : "skip");
+  const course = useKeptQuery(api.courses.getPublic, courseId ? { courseId } : "skip");
   const courseProgress = useCourseProgress(courseId ?? "");
   const enrollment = useCourseEnrollment(courseId);
   const recordCourseLesson = enrollment.recordLesson;

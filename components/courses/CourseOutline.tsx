@@ -2,6 +2,7 @@
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import Link from "@/components/site/SiteLink";
+import { prefetchLesson } from "@/lib/learn/prefetch";
 import InlineQuiz from "@/components/learn/reader/InlineQuiz";
 import { useCourseProgress } from "@/lib/learn/courseProgress";
 import { useLocale } from "@/lib/i18n";
@@ -22,7 +23,7 @@ export default function CourseOutline({ course }: { course: NonNullable<Function
         const body = <><span className="cp-lesson__no" aria-label={progress[id]?.completed ? (ar ? "مكتمل" : "Completed") : undefined}>{progress[id]?.completed ? "✓" : index + 1}</span><span><span className="cp-lesson__title" dir="auto">{lesson.title}</span>{lesson.description && <span className="cp-lesson__desc block" dir="auto">{lesson.description}</span>}</span></>;
         return locked
           ? <div className="cp-lesson" data-locked="true" aria-disabled="true">{body}<Lock size={16} className="cp-lesson__lock" aria-label={ar ? "مقفل حتى تبدأ الدورة" : "Locked until you start the course"} /></div>
-          : <Link className="cp-lesson" href={`/learn/${id}?course=${course.id}`}>{body}</Link>;
+          : <Link className="cp-lesson" href={`/learn/${id}?course=${course.id}`} onPointerEnter={() => prefetchLesson(id)} onFocus={() => prefetchLesson(id)}>{body}</Link>;
       })()}</li>; })}</ol>
       {module.assessments.map(asset => <InlineQuiz key={`${asset.kind}:${asset.id}`} asset={asset} />)}
     </section>;

@@ -4,6 +4,8 @@ import { outline } from "@/lib/learn/doc";
 
 const query = vi.hoisted(() => vi.fn());
 vi.mock("convex/browser", () => ({ ConvexHttpClient: class { query = query; } }));
+// Outside a Next request there is no data cache; read straight through.
+vi.mock("next/cache", () => ({ unstable_cache: <T,>(fn: T) => fn }));
 beforeEach(() => { query.mockReset(); vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "https://example.convex.cloud"); vi.stubEnv("VERCEL_ENV", "production"); });
 afterEach(() => vi.unstubAllEnvs());
 
