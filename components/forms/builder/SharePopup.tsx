@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { copyText } from "@/lib/clipboard";
+import { toast } from "@/lib/toast";
 import { useMutation, useQuery } from "convex/react";
 import { Check, Code2, Copy, ExternalLink, Link2, Mail, QrCode, Share2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { WsDialog, WsSwitch } from "@/components/workspace/primitives";
 import { embedSnippet } from "@/lib/embed";
-import { errorMessage } from "@/lib/errors";
 import { useCopy } from "@/lib/i18n";
 import { shortShareUrl } from "@/lib/site";
 import QrShare from "./QrShare";
@@ -42,7 +43,7 @@ type Tab = "link" | "qr" | "embed";
 function CopyField({ value, multiline, label }: { value: string; multiline?: boolean; label: string }) {
   const t = useCopy(copy);
   const [copied, setCopied] = useState(false);
-  const doCopy = () => navigator.clipboard?.writeText(value).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); });
+  const doCopy = () => copyText(value).then((ok) => { if (!ok) return; setCopied(true); setTimeout(() => setCopied(false), 1500); });
   return (
     <div className="ws-share__copy">
       {multiline
@@ -105,13 +106,13 @@ function EmbedTab({ formId, link, title, appOrigin }: { formId: Id<"forms">; lin
   const t = useCopy(copy);
   const current = useQuery(api.embed.getEmbedSettings, { formId });
   const save = useMutation(api.embed.setEmbedSettings);
-  const [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   if (!current) return null;
   const on = current.enabled && (current.anyOrigin || current.origins.length > 0);
   const toggle = async (next: boolean) => {
-    setBusy(true); setError("");
+    setBusy(true);
     try { await save({ formId, enabled: next, anyOrigin: next ? true : current.anyOrigin, origins: current.origins }); }
-    catch (e) { setError(errorMessage(e)); }
+    catch (e) { toast.error(e); }
     finally { setBusy(false); }
   };
   const src = `${link}${link.includes("?") ? "&" : "?"}embed=1`;
@@ -122,7 +123,6 @@ function EmbedTab({ formId, link, title, appOrigin }: { formId: Id<"forms">; lin
       {on && !current.anyOrigin && <p className="text-xs text-[var(--on-surface-variant)]">{t.limited}</p>}
       {on ? <CopyField multiline value={embedSnippet({ src, title, appOrigin, autoResize: true })} label={t.tabs.embed} /> : <p className="text-sm">{t.embedOff}</p>}
       {current.canEdit && <p className="text-xs text-[var(--on-surface-variant)]">{t.allowHelp}</p>}
-      {error && <p role="alert" className="text-sm text-[var(--error)]">{error}</p>}
     </div>
   );
 }

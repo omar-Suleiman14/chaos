@@ -10,7 +10,6 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { BREAKS, TIME_LIMITS } from "@/convex/liveLogic";
 import { qrSvg } from "@/lib/qr";
 import { sfx } from "@/lib/sfx";
-import { parseError } from "@/lib/errors";
 import { formatNumber, useCopy, useLocale } from "@/lib/i18n";
 import { WsConfirm } from "@/components/workspace/primitives";
 import { Select } from "@/components/workspace/Select";
@@ -20,6 +19,8 @@ import { gameSound, gameThemeProps } from "./GameTheme";
 import { ThemePicker } from "@/components/ThemePicker";
 import { themeFromPreset } from "@/components/forms/formThemes";
 import TeamPanel, { TEAMS_ENABLED } from "./TeamPanel";
+import { toast } from "@/lib/toast";
+import { copyText } from "@/lib/clipboard";
 
 const copy = {
   en: {
@@ -78,7 +79,6 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
   const pack = gameSound(game?.theme);
   const offset = useServerClock();
   const calm = usePrefersReducedMotion();
-  const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const [announce, setAnnounce] = useState("");
@@ -96,11 +96,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
   const origin = typeof window !== "undefined" ? window.location.origin : "https://chaos.fail";
   const joinUrl = game ? `${origin}/play?pin=${game.pin}` : "";
   const qr = useMemo(() => (joinUrl ? qrSvg(joinUrl) : ""), [joinUrl]);
-  const [copied, setCopied] = useState("");
-  const copyJoinLink = async () => {
-    try { await navigator.clipboard.writeText(joinUrl); setCopied(t.linkCopied); } catch { setCopied(t.copyFailed); }
-    window.setTimeout(() => setCopied(""), 2500);
-  };
+  const copyJoinLink = () => copyText(joinUrl, { success: t.linkCopied, failure: t.copyFailed });
 
   // Sounds and announcements follow state changes.
   const lastState = useRef<string>("");
@@ -141,8 +137,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
     if (pending.current) return;
     pending.current = true;
     setBusy(true);
-    setError("");
-    try { await fn(); } catch (e) { setError(parseError(e).message); } finally { pending.current = false; setBusy(false); }
+    try { await fn(); } catch (e) { toast.error(e, { id: "live-host" }); } finally { pending.current = false; setBusy(false); }
   }, []);
   const [confirming, setConfirming] = useState<{ body: string; label: string; run: () => void } | null>(null);
 
@@ -194,7 +189,6 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
       </header>
 
       <main className="live-main" id="live-main">
-        {error && <p className="live-error" role="alert">{error}</p>}
         {TEAMS_ENABLED && <TeamPanel gameId={gameId} frozen={game.state !== "lobby" || game.startsAt != null} maxPlayers={game.settings.maxPlayers} players={game.players} />}
 
         {game.state === "lobby" && game.startsAt && (
@@ -217,7 +211,6 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
                 <button type="button" className="live-copy-link" title={t.copyLink} aria-label={`${t.copyLink}: ${joinUrl}`} onClick={() => void copyJoinLink()}>
                   <span dir="ltr">{joinUrl.replace(/^https?:\/\//, "")}</span><Copy size={18} aria-hidden="true" />
                 </button>
-                <p className="live-muted" role="status">{copied}</p>
               </div>
               <figure className="flex flex-col items-center gap-2 m-0">
                 <div className="live-qr" role="img" aria-label={t.scan} dangerouslySetInnerHTML={{ __html: qr }} />

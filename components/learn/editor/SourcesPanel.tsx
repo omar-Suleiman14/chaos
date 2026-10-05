@@ -1,12 +1,12 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "@/lib/toast";
 import { PenLine, Plus, Trash2 } from "lucide-react";
 import { Select } from "@/components/workspace/Select";
 import { citations } from "@/lib/learn/doc";
 import { SOURCE_FILE_ACCEPT, type NativeSource, type NativeCitation } from "@/lib/learn/mediaClient";
 import { formatLocator } from "@/lib/learn/chaosDocument";
-import { errorMessage } from "@/lib/errors";
 import type { SourceKind } from "@/lib/learn/types";
 import { useCopy } from "@/lib/i18n";
 import { sourceIcon, useBlockCopy } from "./blocks";
@@ -53,7 +53,7 @@ export default function SourcesPanel({ sources, content, onSave, onRemove, onOpe
 
   const perform = async (operation: () => Promise<unknown>) => {
     setBusy(true); setError("");
-    try { await operation(); } catch (err) { setError(errorMessage(err)); } finally { setBusy(false); }
+    try { await operation(); } catch (err) { toast.error(err); } finally { setBusy(false); }
   };
   const save = () => perform(async () => {
     if (!editing) return;

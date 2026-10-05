@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@/lib/toast";
 import { useEffect } from "react";
 import { useMutation } from "convex/react";
 import { Check, ChevronDown, ChevronUp, CircleCheck, Circle, Printer, Tag, Trash2, X } from "lucide-react";
@@ -105,7 +106,7 @@ export function ResponseDetail({ responseId, formId, tags, position, onPrevious,
                     const on = r.tags.includes(tag);
                     return (
                       <button key={tag} type="button" role="menuitemcheckbox" aria-checked={on}
-                        onClick={() => { void setTags({ formId, responseIds: [r._id], ...(on ? { remove: tag } : { add: tag }) }); }}>
+                        onClick={() => { setTags({ formId, responseIds: [r._id], ...(on ? { remove: tag } : { add: tag }) }).catch((error) => toast.error(error)); }}>
                         <span className="flex-1 truncate">{tag}</span>{on && <Check size={15} aria-hidden="true" />}
                       </button>
                     );
@@ -133,7 +134,7 @@ export function ResponseDetail({ responseId, formId, tags, position, onPrevious,
             {r.tags.map((tag) => (
               <span key={tag} className="ws-pill ws-tag">
                 {tag}
-                {r.canEdit && <button type="button" data-print-hide aria-label={t.removeTag(tag)} onClick={() => void setTags({ formId, responseIds: [r._id], remove: tag })}><X size={12} /></button>}
+                {r.canEdit && <button type="button" data-print-hide aria-label={t.removeTag(tag)} onClick={() => setTags({ formId, responseIds: [r._id], remove: tag }).catch((error) => toast.error(error))}><X size={12} /></button>}
               </span>
             ))}
           </div>

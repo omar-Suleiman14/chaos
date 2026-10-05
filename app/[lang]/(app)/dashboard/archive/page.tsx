@@ -1,17 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import { useConvexAuth, usePaginatedQuery } from "convex/react";
 import { deleteFormLocally, setFormStatusLocally, useOptimisticMutation } from "@/lib/optimistic";
 import { Archive, ArchiveRestore, ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { LibrarySkeleton } from "@/components/workspace/Skeletons";
-import { WsDialog, WsMenu, WsTabs, WsUndoToast } from "@/components/workspace/primitives";
+import { WsDialog, WsMenu, WsTabs } from "@/components/workspace/primitives";
+import { toast } from "@/lib/toast";
 import LearningArchive from "@/components/library/LearningArchive";
-import type { UndoToast } from "@/components/workspace/primitives";
-import { errorMessage } from "@/lib/errors";
 import { formatNumber, pluralForm, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
 
@@ -66,9 +65,6 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
   const deleteForm = useOptimisticMutation(api.forms.deleteForm, deleteFormLocally);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "archived", dir: "desc" });
   const [confirming, setConfirming] = useState<{ id: Id<"forms">; title: string; responses: number } | null>(null);
-  const [toast, setToast] = useState<UndoToast | null>(null);
-  const [error, setError] = useState("");
-  const toastId = useRef(0);
 
   const rows = useMemo(() => {
     const list = forms?.owned ?? [];
@@ -81,28 +77,23 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
   }, [forms, sort]);
 
   const restore = async (id: Id<"forms">, title: string, published: boolean) => {
-    setError("");
     // The row leaves at once (optimistic update), so the toast follows the tap rather than the round trip.
-    const toast = ++toastId.current;
-    setToast({ id: toast, text: t.restoredToast(title), undo: () => { setStatus({ formId: id, status: "archived" }).catch((e) => setError(errorMessage(e))); } });
+    const toastId = toast.success(t.restoredToast(title), { undo: () => { setStatus({ formId: id, status: "archived" }).catch((e) => toast.error(e)); } });
     try {
       await setStatus({ formId: id, status: published ? "closed" : "draft" });
     } catch (e) {
-      setToast((current) => (current?.id === toast ? null : current));
-      setError(errorMessage(e));
+      toast.error(e, { id: toastId });
     }
   };
   const remove = async () => {
     if (!confirming) return;
     const { id, title } = confirming;
     setConfirming(null);
-    const toast = ++toastId.current;
-    setToast({ id: toast, text: t.deletedToast(title) });
+    const toastId = toast.success(t.deletedToast(title));
     try {
       await deleteForm({ formId: id });
     } catch (e) {
-      setToast((current) => (current?.id === toast ? null : current));
-      setError(errorMessage(e));
+      toast.error(e, { id: toastId });
     }
   };
 
@@ -117,7 +108,6 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
 
   return (
     <div className="font-sans">
-      {error && <p role="alert" className="mb-4 text-sm text-[var(--error)]">{error}</p>}
 
       {forms === undefined ? <LibrarySkeleton label={t.loading} view="list" count={4} /> :rows.length === 0 ? (
         <div className="ws-empty ws-page">
@@ -178,7 +168,6 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
           </div>
         </WsDialog>
       )}
-      <WsUndoToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

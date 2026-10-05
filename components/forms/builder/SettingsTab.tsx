@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "@/lib/toast";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { setFormStatusLocally, useOptimisticMutation } from "@/lib/optimistic";
 import posthog from "@/lib/analytics";
@@ -92,7 +93,7 @@ const copy = {
   en: {
     statusWords: { draft: "Moved back to draft", live: "Reopened", closed: "Form closed", archived: "Archived" },
     statusText: { draft: "Draft", live: "Live", closed: "Closed", archived: "Archived" },
-    copyFailed: "Could not copy the link.", linkNow: (url: string) => `Link is now ${url}`, linkRemoved: "Custom link removed",
+    copyFailed: "Could not copy the link.", copied: "Link copied", linkNow: (url: string) => `Link is now ${url}`, linkRemoved: "Custom link removed",
     link: "Link", copyLink: "Copy link", customLink: "Custom link", customLinkHelp: "An address with your name, like a profile link.",
     chooseUsername: "Choose your username", usernameHelp: "It appears in all your custom links. You can change it later.", usernamePlaceholder: "yourname",
     linkName: "Link name", linkNamePlaceholder: "my-form", saveLink: "Save link", cancel: "Cancel", change: "Change",
@@ -139,7 +140,7 @@ const copy = {
   ar: {
     statusWords: { draft: "أُعيد النموذج إلى مسودة", live: "أُعيد فتح النموذج", closed: "أُغلق النموذج", archived: "أُرشف النموذج" },
     statusText: { draft: "مسودة", live: "منشور", closed: "مغلق", archived: "مؤرشف" },
-    copyFailed: "تعذّر نسخ الرابط.", linkNow: (url: string) => `الرابط الآن ${url}`, linkRemoved: "أُزيل الرابط المخصص",
+    copyFailed: "تعذّر نسخ الرابط.", copied: "تم نسخ الرابط", linkNow: (url: string) => `الرابط الآن ${url}`, linkRemoved: "أُزيل الرابط المخصص",
     link: "الرابط", copyLink: "انسخ الرابط", customLink: "رابط مخصص", customLinkHelp: "عنوان يحمل اسمك، مثل رابط الملف الشخصي.",
     chooseUsername: "اختر اسم المستخدم", usernameHelp: "يظهر في كل روابطك المخصصة. يمكنك تغييره لاحقًا.", usernamePlaceholder: "اسمك",
     linkName: "اسم الرابط", linkNamePlaceholder: "نموذجي", saveLink: "احفظ الرابط", cancel: "إلغاء", change: "غيّر",
@@ -221,7 +222,7 @@ function CustomLink({ formId, slug, shareId, title, announce }: {
   const live = slug && me ? `${origin}/${me.username}/${slug}` : `${origin}/f/${shareId}`;
 
   const copyLink = async () => {
-    try { await navigator.clipboard.writeText(live); setCopied(true); setTimeout(() => setCopied(false), 1600); } catch { setError(t.copyFailed); }
+    try { await navigator.clipboard.writeText(live); setCopied(true); setTimeout(() => setCopied(false), 1600); toast.success(t.copied, { id: "copy-link" }); } catch { toast.error(t.copyFailed, { id: "copy-link" }); }
   };
   const save = async () => {
     setError("");
@@ -230,7 +231,7 @@ function CustomLink({ formId, slug, shareId, title, announce }: {
       const before = slug;
       const saved = await setFormSlug({ formId, slug: draft });
       setEditing(false);
-      announce?.(t.linkNow(`${host}/${me?.chosen ? me.username : username.toLowerCase()}/${saved}`), () => { setFormSlug({ formId, slug: before }).catch(() => {}); });
+      announce?.(t.linkNow(`${host}/${me?.chosen ? me.username : username.toLowerCase()}/${saved}`), () => { setFormSlug({ formId, slug: before }).catch((e) => toast.error(e)); });
     } catch (e) { setError(errorMessage(e)); }
   };
   const turnOff = async () => {
@@ -238,8 +239,8 @@ function CustomLink({ formId, slug, shareId, title, announce }: {
     try {
       await setFormSlug({ formId, slug: null });
       setEditing(false);
-      announce?.(t.linkRemoved, () => { if (before) setFormSlug({ formId, slug: before }).catch(() => {}); });
-    } catch (e) { setError(errorMessage(e)); }
+      announce?.(t.linkRemoved, () => { if (before) setFormSlug({ formId, slug: before }).catch((e) => toast.error(e)); });
+    } catch (e) { toast.error(e); }
   };
 
   return (
@@ -306,7 +307,6 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
   const teams = useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip");
   const [group, setGroup] = useState(groupName ?? "");
   const [code, setCode] = useState<string | undefined>(undefined);
-  const [message, setMessage] = useState<{ kind: "ok" | "error"; text: string } | null>(null);
   const [saving, setSaving] = useState(false);
   const serverJson = JSON.stringify(settings);
   const previousServer = useRef(serverJson);
@@ -328,18 +328,17 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
     return next;
   });
 
-  const fail = (e: unknown) => setMessage({ kind: "error", text: errorMessage(e) });
+  const fail = (e: unknown) => { toast.error(e); };
   const changeStatus = (next: typeof status) => {
     const before = status;
     setStatus({ formId, status: next })
       .then(() => { posthog.capture("form_status_changed", { status: next }); announce?.(t.statusWords[next], () => { setStatus({ formId, status: before }).catch(fail); }); })
       .catch(fail);
   };
-  const discard = () => { setS(JSON.parse(serverJson)); setGroup(groupName ?? ""); setCode(undefined); setMessage(null); };
+  const discard = () => { setS(JSON.parse(serverJson)); setGroup(groupName ?? ""); setCode(undefined); };
 
   const save = async () => {
     setSaving(true);
-    setMessage(null);
     // What was saved before, so the save can be undone (an access code can't be read back).
     const before = { settings: JSON.parse(serverJson) as EditableSettings, group: groupName ?? "" };
     const codeChanged = code !== undefined;
@@ -354,7 +353,7 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
       announce?.(codeChanged ? t.savedCode : t.saved,
         codeChanged ? null : () => { update({ formId, settings: before.settings, groupName: before.group }).catch(fail); });
     } catch (err) {
-      setMessage({ kind: "error", text: errorMessage(err) });
+      toast.error(err, { id: "form-settings" });
     } finally {
       setSaving(false);
     }
@@ -557,10 +556,9 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
         </section>
       </details>
 
-      {(dirty || message) && (
+      {dirty && (
         <div className="ws-savebar" role="region" aria-label={t.unsaved}>
-          {message ? <span role={message.kind === "error" ? "alert" : "status"} className={`text-sm ${message.kind === "error" ? "text-[var(--error)]" : ""}`}>{message.text}</span>
-            : <span className="text-sm text-muted-foreground">{t.unsavedChanges}</span>}
+          <span className="text-sm text-muted-foreground">{t.unsavedChanges}</span>
           <span className="ms-auto flex gap-2">
             {dirty && !saving && <button type="button" onClick={discard} className="ws-btn ws-btn--ghost">{t.discard}</button>}
             <button type="button" onClick={save} disabled={!dirty || saving || !!hiddenError} className="ws-btn ws-btn--primary">{saving ? t.saving : t.save}</button>

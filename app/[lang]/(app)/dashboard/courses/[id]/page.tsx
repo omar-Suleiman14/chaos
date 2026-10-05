@@ -14,6 +14,7 @@ import CourseModulesEditor from "@/components/courses/CourseModulesEditor";
 import CourseStudents from "@/components/courses/CourseStudents";
 import { contentDirection } from "@/lib/learn/direction";
 import { localeDir } from "@/lib/locale";
+import { toast } from "@/lib/toast";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { WsDialog } from "@/components/workspace/primitives";
@@ -27,6 +28,7 @@ const copy = {
     titlePh: "Course title", descPh: "What will people learn? One or two sentences.",
     language: "Course language", languageHelp: "Sets reading direction. New lessons inherit this language.", settings: "Settings", tags: "Topics", tagsHelp: "Comma separated, up to 12.",
     publish: "Publish course", update: "Publish course changes", view: "View course", unpublish: "Unpublish", archive: "Archive",
+    publishedToast: "Course published", unpublishedToast: "Course unpublished", unpublishedHelp: "Learners can no longer open it.", archivedToast: "Course archived", archivedHelp: "Find it in the Archive.",
     publishTitle: "Publish this course", who: "Who can take it", public: "Public", publicHelp: "Anyone can find and take it, free. Recommended.", team: "Your team", teamHelp: "Only members of your Business team can take it. Its lessons become team-only too.",
     private: "Private", privateHelp: "Only you and people you share lessons with. Part of Chaos Business.", business: "Business only",
     publishNote: "Publishing the course also publishes any of its lessons that have unpublished changes, with the visibility you pick here. To publish just one lesson, use Publish inside that lesson.", confirm: "Publish", cancel: "Cancel", publishing: "Publishing…",
@@ -37,6 +39,7 @@ const copy = {
     titlePh: "عنوان الدورة", descPh: "ماذا سيتعلم الناس؟ جملة أو جملتان.",
     language: "لغة الدورة", languageHelp: "تحدد اتجاه القراءة. ترث الدروس الجديدة هذه اللغة.", settings: "الإعدادات", tags: "المواضيع", tagsHelp: "مفصولة بفواصل، حتى 12.",
     publish: "انشر الدورة", update: "انشر تغييرات الدورة", view: "اعرض الدورة", unpublish: "ألغِ النشر", archive: "أرشف",
+    publishedToast: "تم نشر الدورة", unpublishedToast: "أُلغي نشر الدورة", unpublishedHelp: "لم يعد بإمكان المتعلمين فتحها.", archivedToast: "تمت أرشفة الدورة", archivedHelp: "ستجدها في الأرشيف.",
     publishTitle: "انشر هذه الدورة", who: "من يمكنه أخذها", public: "عامة", publicHelp: "يمكن لأي أحد إيجادها وأخذها مجانًا. موصى به.", team: "فريقك", teamHelp: "لا يأخذها إلا أعضاء فريق الأعمال. وتصبح دروسها للفريق فقط أيضًا.",
     private: "خاصة", privateHelp: "أنت ومن تشاركهم الدروس فقط. جزء من Chaos للأعمال.", business: "للأعمال فقط",
     publishNote: "نشر الدورة ينشر أيضًا أي درس فيها به تغييرات غير منشورة، بالظهور الذي تختاره هنا. لنشر درس واحد فقط، استخدم «انشر» داخل ذلك الدرس.", confirm: "انشر", cancel: "إلغاء", publishing: "جارٍ النشر…",
@@ -59,7 +62,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
   // Cover and icon show the change at once; the server copy catches up.
   const [look, setLook] = useState<PageLook | null>(null);
   const [loadedId, setLoadedId] = useState<string | null>(null);
-  const [error, setError] = useState(""), [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
   const [publishing, setPublishing] = useState(false), [visibility, setVisibility] = useState<"public" | "private" | "team">("public"), [teamId, setTeamId] = useState("");
   const { isAuthenticated } = useConvexAuth();
   const teams = useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip");
@@ -75,7 +78,8 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
   if (course === undefined) return <PageSkeleton label={t.loading} />;
   if (course === null) return <p className="ws-empty">{t.missing}</p>;
 
-  const run = async (work: () => Promise<unknown>) => { setError(""); setBusy(true); try { await work(); } catch (err) { setError(message(err)); } finally { setBusy(false); } };
+  // Every change reports back: a failure always, a success when it changes what learners see.
+  const run = async (work: () => Promise<unknown>) => { setBusy(true); try { await work(); } catch (err) { toast.error(message(err)); } finally { setBusy(false); } };
   const save = (patch: Parameters<typeof update>[0]) => void run(() => update(patch));
   const page: PageLook = look ?? { coverUrl: course.coverUrl, coverY: course.coverY, icon: course.icon };
   const saveLook = (patch: Partial<PageLook>) => {
@@ -94,7 +98,6 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
         {course.published && <Link className="ws-btn ws-btn--ghost ws-btn--sm" href={`/learn/courses/${course.id}`} target="_blank"><ExternalLink size={15} aria-hidden /> {t.view}</Link>}
         {course.isOwner && <button type="button" className="ws-btn ws-btn--primary" disabled={busy || !course.lessons.length} onClick={() => { setProblems([]); setPublishing(true); }}><Send size={15} aria-hidden />{course.published ? t.update : t.publish}</button>}
       </div>
-      {error && <p role="alert" className="ws-error">{error}</p>}
 
       <LessonCover meta={page} editable onChange={saveLook} />
       <section className="cb-hero">
@@ -105,7 +108,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
         </div>
       </section>
 
-      <CourseModulesEditor courseId={courseId} modules={course.modules ?? []} lessons={course.lessons} onError={setError} />
+      <CourseModulesEditor courseId={courseId} modules={course.modules ?? []} lessons={course.lessons} />
 
       {course.isOwner && <CourseStudents courseId={courseId} />}
       <CourseDetailsEditor courseId={courseId} details={course.details} />
@@ -116,8 +119,12 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
         <div className="cb-row"><label htmlFor="cb-tags">{t.tags}</label><input id="cb-tags" dir="auto" className="kb-input" value={tags} onChange={(e) => setTags(e.target.value)} onBlur={() => save({ courseId, tags: tags.split(",") })} /><span className="cb-note">{t.tagsHelp}</span></div>
         {course.isOwner && <CoursePortability courseId={courseId} />}
         {course.isOwner && <div className="flex gap-2 flex-wrap">
-          {course.published && <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(() => unpublish({ courseId }))}>{t.unpublish}</button>}
-          <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(async () => { await setArchived({ courseId, archived: true }); router.push("/dashboard?tab=courses"); })}>{t.archive}</button>
+          {course.published && <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(async () => { await unpublish({ courseId }); toast.success(t.unpublishedToast, { description: t.unpublishedHelp }); })}>{t.unpublish}</button>}
+          <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(async () => {
+            await setArchived({ courseId, archived: true });
+            toast(t.archivedToast, { description: t.archivedHelp, undo: () => { setArchived({ courseId, archived: false }).catch((err) => toast.error(message(err))); } });
+            router.push("/dashboard?tab=courses");
+          })}>{t.archive}</button>
         </div>}
       </section>
 
@@ -133,7 +140,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
           {problems.length > 0 && <div className="cb-problems" role="alert"><strong>{t.problems}</strong><ul className="list-disc ps-5 mt-1">{problems.map((p) => <li key={p.lessonId}><Link href={`/dashboard/learn/lessons/${p.lessonId}?course=${course.id}`} className="underline">{p.title}</Link>: {p.message}</li>)}</ul></div>}
           <div className="flex justify-end gap-2">
             <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setPublishing(false)}>{t.cancel}</button>
-            <button type="button" className="ws-btn ws-btn--primary" disabled={busy} onClick={() => void run(async () => { const r = await publish({ courseId, ...(visibility === "team" ? { visibility: "restricted" as const, teamId: (teamId || teams?.[0]?.team._id) as Id<"businessTeams"> } : { visibility }) }); if (r.ok) setPublishing(false); else setProblems(r.problems); })}>{busy ? t.publishing : t.confirm}</button>
+            <button type="button" className="ws-btn ws-btn--primary" disabled={busy} onClick={() => void run(async () => { const r = await publish({ courseId, ...(visibility === "team" ? { visibility: "restricted" as const, teamId: (teamId || teams?.[0]?.team._id) as Id<"businessTeams"> } : { visibility }) }); if (r.ok) { setPublishing(false); toast.success(t.publishedToast, { action: { label: t.view, onClick: () => window.open(`/learn/courses/${course.id}`, "_blank", "noopener") } }); } else setProblems(r.problems); })}>{busy ? t.publishing : t.confirm}</button>
           </div>
         </div>
       </WsDialog>}

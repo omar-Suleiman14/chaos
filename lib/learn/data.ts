@@ -12,7 +12,7 @@ import { DurableLessonClient, DurableProgressClient, durableMetadata } from "./d
 import { fromDurableDocument, toDurableDocument } from "./chaosDocument";
 import { useUser } from "@/lib/auth/client";
 import { documentText, excerpt as makeExcerpt } from "./doc";
-import { emptyPersonal, newId, personal, readState, serverState, subscribe, updatePersonal, writeState } from "./localStore";
+import { emptyPersonal, personal, readState, serverState, subscribe, updatePersonal, writeState } from "./localStore";
 import type { LearnState, PersonalState } from "./localStore";
 import { searchLessons } from "./search";
 import { StudyClient, studyReads, useStudyCapabilities } from "./studyClient";
@@ -554,9 +554,6 @@ export type LearnActions = ReturnType<typeof useLearnActions>;
 /** Plain text of a lesson for search and previews. */
 export const lessonText = (lesson: Lesson) => documentText((lesson.published ?? lesson.draft).content);
 
-let toastSeq = 0;
-/** Ids for undo toasts. */
-export const nextToastId = () => ++toastSeq;
 
 export const hasUnpublishedChanges = (lesson: Lesson) => !!lesson.published && lesson.draft.updatedAt !== lesson.publishedDraftAt;
 

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { useMutation } from "convex/react";
 import posthog from "@/lib/analytics";
 import { api } from "@/convex/_generated/api";
-import { errorMessage } from "@/lib/errors";
+import { toast } from "@/lib/toast";
 import { blankField, emptyDefinition } from "@/convex/formLogic";
 import { themeFromPreset } from "@/components/forms/formThemes";
 import { useCopy } from "@/lib/i18n";
@@ -41,7 +41,8 @@ type CreateArgs = Parameters<ReturnType<typeof useMutation<typeof api.forms.crea
  * Create a draft from a blank page, template/import or the Games entry point,
  * then open the shared builder. Games use quiz mode in the same content model.
  */
-export function useCreateForm(onError: (message: string) => void) {
+/** Creates a form and opens it; failures show as an error toast. */
+export function useCreateForm() {
   const t = useCopy(copy);
   const router = useRouter();
   const createForm = useMutation(api.forms.createForm);
@@ -62,7 +63,7 @@ export function useCreateForm(onError: (message: string) => void) {
         });
       } catch { /* Analytics must never interrupt creation. */ }
     } catch (err) {
-      onError(errorMessage(err, t.failed));
+      toast.error(err, { fallback: t.failed });
     } finally {
       setBusy(false);
     }

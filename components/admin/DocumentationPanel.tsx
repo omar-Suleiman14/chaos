@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { DocBlock } from "@/lib/docs/types";
+import { toast } from "@/lib/toast";
 
 type EditableType = Exclude<DocBlock["type"], "keys">;
 const blockNames: Record<EditableType, string> = { p: "Paragraph", heading: "Heading", tip: "Tip", steps: "Numbered steps", list: "Bullet list" };
@@ -53,26 +54,28 @@ export default function DocumentationPanel() {
   const [advanced, setAdvanced] = useState(false);
   const [rawBlocks, setRawBlocks] = useState("");
   const [addType, setAddType] = useState<EditableType>("p");
-  const [status, setStatus] = useState("");
   const [busy, setBusy] = useState(false);
   const edit = (article: NonNullable<typeof articles>[number] | null) => {
     setSelected(article?.slug ?? null); setSlug(article?.slug ?? ""); setTitle(article?.content.title ?? ""); setSummary(article?.content.summary ?? "");
     setSectionId(article?.sectionId ?? "getting-started"); setSectionTitle(article?.sectionTitle ?? "Getting started"); setOrder(article?.order ?? articles?.length ?? 0); setRevision(article?.revision);
-    setBlocks(article?.content.blocks ?? [{ type: "p", text: "" }]); setAdvanced(false); setStatus("");
+    setBlocks(article?.content.blocks ?? [{ type: "p", text: "" }]); setAdvanced(false);
   };
   const updateBlock = (index: number, block: DocBlock) => setBlocks(current => current.map((item, at) => at === index ? block : item));
   const moveBlock = (index: number, direction: -1 | 1) => setBlocks(current => { const moved = [...current]; const destination = index + direction; if (destination < 0 || destination >= moved.length) return current; [moved[index], moved[destination]] = [moved[destination], moved[index]]; return moved; });
   const toggleAdvanced = () => {
     if (!advanced) { setRawBlocks(JSON.stringify(blocks, null, 2)); setAdvanced(true); return; }
-    try { setBlocks(parseBlocks(rawBlocks)); setAdvanced(false); setStatus(""); } catch (error) { setStatus(error instanceof Error ? error.message : "Invalid block JSON."); }
+    try { setBlocks(parseBlocks(rawBlocks)); setAdvanced(false); } catch (error) { toast.error(error, { fallback: "Invalid block JSON.", id: "doc-blocks" }); }
   };
   const submit = async (publish: boolean) => {
-    setBusy(true); setStatus("");
+    setBusy(true);
+    const id = toast.loading(publish ? "Publishing guide…" : "Saving draft…");
     try {
       const parsed = advanced ? parseBlocks(rawBlocks) : blocks;
       const result = await save({ locale, slug, sectionId, sectionTitle, order, content: { title, summary, blocks: parsed }, expectedRevision: revision, publish });
-      setSelected(slug); setRevision(result.revision); setStatus(publish ? "Published. The guide is available in Docs and app search." : "Draft saved. Publish when the guide is ready.");
-    } catch (error) { setStatus(error instanceof Error ? error.message : "Could not save this guide."); } finally { setBusy(false); }
+      setSelected(slug); setRevision(result.revision);
+      if (publish) toast.success("Guide published", { id, description: "It’s live in Docs and app search." });
+      else toast.success("Draft saved", { id, description: "Publish when the guide is ready." });
+    } catch (error) { toast.error(error, { id, fallback: "Could not save this guide." }); } finally { setBusy(false); }
   };
   return <section className="space-y-6">
     <div className="flex flex-wrap items-center justify-between gap-3"><h2 className="text-xl font-semibold">Documentation</h2><div className="flex gap-3"><ChaosSelect aria-label="Documentation language" className="border rounded-md p-2 bg-background" value={locale} onChange={event => { setLocale(event.target.value as "en" | "ar"); edit(null); }}><option value="en">English</option><option value="ar">العربية</option></ChaosSelect><Button onClick={() => edit(null)}>Create guide</Button></div></div>
@@ -98,7 +101,6 @@ export default function DocumentationPanel() {
         </div>}
         <p id="doc-block-help" className="text-sm text-muted-foreground">Write text directly, add headings with stable link anchors, and put each list item on its own line. Bold, code and links work in text. Admins can also author guides through the Chaos MCP connection.</p>
         <div className="flex gap-3"><Button type="submit" variant="outline" disabled={busy}>Save draft</Button><Button type="button" disabled={busy} onClick={() => void submit(true)}>Publish guide</Button>{selected && <a href={`/docs/${selected}`} target="_blank" rel="noreferrer" className="self-center underline">View guide</a>}</div>
-        {status && <p role="status">{status}</p>}
       </form>
     </div>
   </section>;

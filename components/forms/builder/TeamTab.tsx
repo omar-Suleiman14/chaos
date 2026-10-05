@@ -9,6 +9,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { FormDefinition } from "@/convex/formLogic";
 import { errorMessage } from "@/lib/errors";
+import { toast } from "@/lib/toast";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { localizeActivityAction, localizeActivityDetail, localizeMessage } from "@/lib/messages";
 import { timeAgo } from "@/lib/timeAgo";
@@ -21,6 +22,7 @@ const copy = {
     activityHelp: "Edits, publishing, sharing and settings changes, newest first.", commentsHelp: "Notes for collaborators. Respondents never see them.",
     emailAddress: "Email address", role: "Role", editor: "Editor", viewer: "Viewer", invite: "Invite",
     inviteNote: "No email is sent. Tell them to sign in with this address.",
+    invitedToast: (email: string) => `Invited ${email}`, roleChanged: "Role changed", removedToast: "Collaborator removed",
     invited: " · invited", makeViewer: "Make viewer", makeEditor: "Make editor", remove: (email: string) => `Remove ${email}`, onlyYou: "Only you.",
     activity: "Activity", comments: "Comments", showResolved: "Show resolved", leaveNote: "Leave a note for collaborators", comment: "Comment",
     aboutQuestion: "About question", wholeForm: "Whole form", on: (label: string) => ` · on “${label}”`, reopen: "Reopen", resolve: "Resolve",
@@ -30,6 +32,7 @@ const copy = {
     activityHelp: "التعديلات والنشر والمشاركة وتغييرات الإعدادات، الأحدث أولًا.", commentsHelp: "ملاحظات للمتعاونين. لا يراها المجيبون أبدًا.",
     emailAddress: "البريد الإلكتروني", role: "الدور", editor: "محرر", viewer: "مشاهد", invite: "ادعُ",
     inviteNote: "لا تُرسل رسالة. أخبرهم أن يسجلوا الدخول بهذا البريد.",
+    invitedToast: (email: string) => `تمت دعوة ${email}`, roleChanged: "تغيّر الدور", removedToast: "أُزيل المتعاون",
     invited: " · مدعو", makeViewer: "اجعله مشاهدًا", makeEditor: "اجعله محررًا", remove: (email: string) => `أزل ${email}`, onlyYou: "أنت فقط.",
     activity: "النشاط", comments: "التعليقات", showResolved: "أظهر المحلولة", leaveNote: "اترك ملاحظة للمتعاونين", comment: "علّق",
     aboutQuestion: "عن السؤال", wholeForm: "النموذج كله", on: (label: string) => ` · على «${label}»`, reopen: "أعد الفتح", resolve: "علّم كمحلول",
@@ -67,7 +70,7 @@ export default function TeamTab({ formId, role, def }: { formId: Id<"forms">; ro
             <form className="flex gap-2 flex-wrap" onSubmit={(e) => {
               e.preventDefault();
               setError("");
-              invite({ formId, email, role: inviteRole }).then(() => { posthog.capture("collaborator_invited", { role: inviteRole }); setEmail(""); }).catch((err) => setError(localizeMessage(locale, errorMessage(err))));
+              invite({ formId, email, role: inviteRole }).then(() => { posthog.capture("collaborator_invited", { role: inviteRole }); toast.success(t.invitedToast(email)); setEmail(""); }).catch((err) => setError(localizeMessage(locale, errorMessage(err))));
             }}>
               <input type="email" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="colleague@example.com" className="kb-input flex-1 min-w-48" aria-label={t.emailAddress} />
               <Select label={t.role} value={inviteRole} onChange={setInviteRole}
@@ -84,10 +87,10 @@ export default function TeamTab({ formId, role, def }: { formId: Id<"forms">; ro
                 <span className="text-xs text-muted-foreground">{c.role === "editor" ? t.editor : t.viewer}{c.joined ? "" : t.invited}</span>
                 {role === "owner" && (
                   <>
-                    <button type="button" className="text-xs underline" onClick={() => invite({ formId, email: c.email, role: c.role === "editor" ? "viewer" : "editor" }).catch((e) => setError(localizeMessage(locale, errorMessage(e))))}>
+                    <button type="button" className="text-xs underline" onClick={() => invite({ formId, email: c.email, role: c.role === "editor" ? "viewer" : "editor" }).then(() => toast.success(t.roleChanged), (e) => toast.error(e))}>
                       {c.role === "editor" ? t.makeViewer : t.makeEditor}
                     </button>
-                    <button type="button" onClick={() => removeCollaborator({ collaboratorId: c._id }).catch((e) => setError(localizeMessage(locale, errorMessage(e))))} aria-label={t.remove(c.email)}><Trash2 size={14} /></button>
+                    <button type="button" onClick={() => removeCollaborator({ collaboratorId: c._id }).then(() => toast.success(t.removedToast), (e) => toast.error(e))} aria-label={t.remove(c.email)}><Trash2 size={14} /></button>
                   </>
                 )}
               </li>
@@ -119,7 +122,7 @@ export default function TeamTab({ formId, role, def }: { formId: Id<"forms">; ro
         <form className="space-y-2" onSubmit={(e) => {
           e.preventDefault();
           if (!body.trim()) return;
-          addComment({ formId, body, fieldId: fieldId || undefined }).then(() => setBody("")).catch((err) => setError(localizeMessage(locale, errorMessage(err))));
+          addComment({ formId, body, fieldId: fieldId || undefined }).then(() => setBody("")).catch((err) => toast.error(err));
         }}>
           <textarea value={body} onChange={(e) => setBody(e.target.value)} rows={3} className="kb-input text-sm" placeholder={t.leaveNote} aria-label={t.comment} maxLength={5000} />
           <div className="flex gap-2">

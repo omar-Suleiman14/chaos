@@ -17,7 +17,7 @@ export function WsDialog({ title, description, onClose, children, wide, initialF
   const descriptionId = useId();
   return (
     <div className="ws-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title} aria-describedby={description ? descriptionId : undefined} className={`ws-dialog ${wide ? "ws-dialog--wide" : ""}`}>
+      <div ref={panel} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title} aria-describedby={description ? descriptionId : undefined} className={`ws-dialog ws-glass ${wide ? "ws-dialog--wide" : ""}`}>
         <div className="ws-dialog__header">
           <div>
             <h2 className="ws-dialog__title">{title}</h2>
@@ -204,28 +204,6 @@ export function WsSwitch({ checked, onChange, label, disabled, hideLabel }: { ch
   );
 }
 
-export type UndoToast = { id: number; text: string; undo?: () => void };
-
-/** A short message at the bottom of the screen, with Undo when the action can be reversed. */
-export function WsUndoToast({ toast, onClose }: { toast: UndoToast | null; onClose: () => void }) {
-  const t = useCopy(copy);
-  const close = useRef(onClose);
-  useLayoutEffect(() => { close.current = onClose; });
-  useEffect(() => {
-    if (!toast) return;
-    const timer = setTimeout(() => close.current(), toast.undo ? 7000 : 4000);
-    return () => clearTimeout(timer);
-  }, [toast]);
-  if (!toast) return null;
-  return (
-    <div key={toast.id} className="ws-toast" role="status">
-      <span>{toast.text}</span>
-      {toast.undo && <button type="button" onClick={() => { toast.undo?.(); close.current(); }}>{t.undo}</button>}
-      <button type="button" className="ws-toast__close" aria-label={t.dismiss} onClick={() => close.current()}><X size={16} /></button>
-    </div>
-  );
-}
-
 /**
  * Quick tooltips for icon-only controls (.ws-icon-button, or anything with
  * data-tip): after a short hover or on keyboard focus, never on touch. Uses the
@@ -281,5 +259,5 @@ export function WsTooltips() {
     };
   }, []);
   if (!tip) return null;
-  return <div className="ws-tooltip" data-below={tip.below} style={{ left: tip.x, top: tip.y }} aria-hidden="true">{tip.text}</div>;
+  return <div className="ws-tooltip ws-glass" data-below={tip.below} style={{ left: tip.x, top: tip.y }} aria-hidden="true">{tip.text}</div>;
 }

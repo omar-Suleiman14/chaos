@@ -8,6 +8,7 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useCopy } from "@/lib/i18n";
+import { toast } from "@/lib/toast";
 import QuizBlockEditor from "@/components/learn/editor/QuizBlockEditor";
 type Asset = { kind: "form" | "quiz"; id: string };
 export type CourseModule = { id: string; title: string; lessonIds: Id<"lessons">[]; assessments: Asset[] };
@@ -31,12 +32,13 @@ const copy = {
 };
 
 /** One outline for the course: lessons in order, optionally grouped into modules. */
-export default function CourseModulesEditor({ courseId, modules, lessons, onError }: { courseId: Id<"learnCollections">; modules: CourseModule[]; lessons: Lesson[]; onError: (message: string) => void }) {
+export default function CourseModulesEditor({ courseId, modules, lessons }: { courseId: Id<"learnCollections">; modules: CourseModule[]; lessons: Lesson[] }) {
   const t = useCopy(copy), router = useRouter();
   const saveModules = useMutation(api.courses.setModules), setOutline = useMutation(api.courses.setOutline), addLesson = useMutation(api.courses.addLesson);
   const [draft, setDraft] = useState(modules), [busy, setBusy] = useState(false);
   useEffect(() => setDraft(modules), [modules]);
-  const run = async (work: () => Promise<unknown>) => { setBusy(true); onError(""); try { await work(); } catch (err) { onError(err instanceof Error ? err.message : String(err)); } finally { setBusy(false); } };
+  // Outline changes show at once; a failed save puts the server's order back and says why.
+  const run = async (work: () => Promise<unknown>) => { setBusy(true); try { await work(); } catch (err) { setDraft(modules); toast.error(err); } finally { setBusy(false); } };
   const commit = (next: CourseModule[]) => { setDraft(next); return run(() => saveModules({ courseId, modules: next })); };
 
   const ids = lessons.map((l) => l.id);

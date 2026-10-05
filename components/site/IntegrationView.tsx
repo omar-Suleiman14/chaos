@@ -8,6 +8,8 @@ import { AlertCircle, Check, Copy, Download, ExternalLink, Loader2, ShieldCheck 
 import inventory from "@/lib/mcp/inventory.json";
 import { chaosIntegration as chaos, integrationPlatforms, packageDownloadPath, type IntegrationPlatform, type IntegrationPlatformId } from "@/lib/integrations";
 import { useLocale } from "@/lib/i18n";
+import { copyText } from "@/lib/clipboard";
+import { toast } from "@/lib/toast";
 import { SiteFooter, SiteNav } from "./SiteChrome";
 import Link from "./SiteLink";
 import { AiMark } from "./aiMarks";
@@ -147,12 +149,7 @@ export function IntegrationLockup({ platform, size = 44 }: { platform: Integrati
 function CopyButton({ value, t }: { value: string; t: Copy }) {
   const [state, setState] = useState<"idle" | "done" | "failed">("idle");
   const run = async () => {
-    try {
-      await navigator.clipboard.writeText(value);
-      setState("done");
-    } catch {
-      setState("failed");
-    }
+    setState((await copyText(value)) ? "done" : "failed");
     setTimeout(() => setState("idle"), 2000);
   };
   return (
@@ -181,8 +178,10 @@ function DownloadButton({ platform, t, primary }: { platform: IntegrationPlatfor
       link.remove();
       setTimeout(() => URL.revokeObjectURL(url), 10_000);
       setState("done");
+      toast.success(t.downloaded, { id: "plugin-download", description: platform.packageFile });
     } catch {
       setState("failed");
+      toast.error(t.downloadFailed, { id: "plugin-download" });
     }
     setTimeout(() => setState("idle"), 3000);
   };

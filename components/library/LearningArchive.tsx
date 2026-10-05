@@ -1,13 +1,13 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "@/lib/toast";
 import { useConvexAuth, useMutation, usePaginatedQuery } from "convex/react";
 import { Archive, ArchiveRestore } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { LibrarySkeleton } from "@/components/workspace/Skeletons";
 import { useLocale } from "@/lib/i18n";
-import { errorMessage } from "@/lib/errors";
 import { timeAgo } from "@/lib/timeAgo";
 
 type Row = { id: string; title: string; count: number; updatedAt: number; restore: () => Promise<unknown> };
@@ -37,13 +37,11 @@ function ArchivedTable({ kind, title, rows, status, loadMore }: { kind: Learning
   const { locale } = useLocale();
   const ar = locale === "ar";
   const [pending, setPending] = useState<string | null>(null);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
   const run = async (row: Row) => {
     if (pending) return;
-    setPending(row.id); setError(""); setNotice("");
-    try { await row.restore(); setNotice(ar ? `تمت استعادة «${row.title}» إلى مكتبتك` : `Restored “${row.title}” to your library`); }
-    catch (err) { setError(errorMessage(err)); }
+    setPending(row.id);
+    try { await row.restore(); toast.success(ar ? `تمت استعادة «${row.title}» إلى مكتبتك` : `Restored “${row.title}” to your library`); }
+    catch (err) { toast.error(err); }
     finally { setPending(null); }
   };
   const restoreLabel = ar ? "استعادة" : "Restore";
@@ -51,8 +49,6 @@ function ArchivedTable({ kind, title, rows, status, loadMore }: { kind: Learning
   if (title && !rows.length && status !== "CanLoadMore") return null;
   return <section className="space-y-4">
     {title && <h2 className="ws-section-title mb-3">{title}</h2>}
-    {error && <p role="alert" className="ws-error">{error}</p>}
-    {notice && <p role="status" className="ws-page-subtitle">{notice}</p>}
     {!rows.length ? <div className="ws-empty ws-page"><span className="ws-empty__art"><Archive size={24} aria-hidden /></span><h2>{ar ? "لا شيء مؤرشف" : "Nothing archived"}</h2><p>{ar ? "أرشِف من قائمة «…» في المكتبة، وسيبقى هنا حتى تستعيده." : "Archive from the “…” menu in the library. It waits here until you restore it."}</p></div>
       : <div className="ws-table-wrap ws-page"><table className="ws-table"><thead><tr><th>{ar ? "الاسم" : "Name"}</th>{kind !== "legacy_quizzes" && <th>{kind === "courses" ? ar ? "الدروس" : "Lessons" : kind === "lessons" ? ar ? "الكتل" : "Blocks" : ar ? "البطاقات" : "Cards"}</th>}<th>{ar ? "آخر تعديل" : "Edited"}</th><th>{ar ? "الإجراءات" : "Actions"}</th></tr></thead><tbody>
         {rows.map(row => <tr key={row.id}><td><span className="font-medium" dir="auto">{row.title || (ar ? "بلا عنوان" : "Untitled")}</span></td>{kind !== "legacy_quizzes" && <td className="ws-num">{row.count}</td>}<td className="text-muted-foreground">{timeAgo(locale, row.updatedAt)}</td><td><button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" aria-label={`${restoreLabel} ${row.title}`} disabled={pending !== null} onClick={() => void run(row)}><ArchiveRestore size={15} aria-hidden />{pending === row.id ? ar ? "جارٍ الاستعادة..." : "Restoring..." : restoreLabel}</button></td></tr>)}

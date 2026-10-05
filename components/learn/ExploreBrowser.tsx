@@ -1,5 +1,6 @@
 "use client";
 import Link from "@/components/site/SiteLink";
+import { toast } from "@/lib/toast";
 import { Suspense, useState, useEffect } from "react";
 import { usePaginatedQuery, useMutation } from "convex/react";
 import { useRouter, useSearchParams } from "next/navigation";
@@ -24,7 +25,6 @@ function Explore() {
   const [topic, setTopic] = useState(params.get("topic") ?? "");
   const sort = query ? "relevant" : "recent";
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   const create = useMutation(api.courses.create);
   useEffect(() => {
     const timer = setTimeout(() => setQuery(search.trim()), 250);
@@ -83,12 +83,11 @@ function Explore() {
             disabled={busy}
             onClick={async () => {
               setBusy(true);
-              setError("");
               try {
                 const id = await create({ language: locale });
                 router.push("/dashboard/courses/" + id);
               } catch (e) {
-                setError(e instanceof Error ? e.message : String(e));
+                toast.error(e);
               } finally {
                 setBusy(false);
               }
@@ -100,11 +99,6 @@ function Explore() {
         )}
         <Link href="/card" className="ws-btn ws-btn--ghost">{ar ? "تعرّف على المؤلفين" : "Discover authors"}</Link>
       </header>
-      {error && (
-        <p role="alert" className="lx-error">
-          {error}
-        </p>
-      )}
       <search
         className="lx-form"
         aria-label={ar ? "البحث عن الدورات" : "Search courses"}

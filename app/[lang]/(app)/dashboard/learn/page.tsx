@@ -1,10 +1,10 @@
 "use client";
 
 import { useMutation, useQuery } from "convex/react";
+import { toast } from "@/lib/toast";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
 import { ArrowRight, Bookmark, BookOpen, BookOpenText, ChevronDown, Compass, GraduationCap, Layers, Plus, Target } from "lucide-react";
 import { EmptyState, LessonCard } from "@/components/learn/ui";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
@@ -12,7 +12,6 @@ import { WsMenu } from "@/components/workspace/primitives";
 import {
   useLearnActions, useLearnCapabilities, useMyLessons, useProgress, usePublicLessons, useRecentLessons, useSaved, useWeakAreas,
 } from "@/lib/learn/data";
-import { errorMessage } from "@/lib/errors";
 import { useCopy, useLocale } from "@/lib/i18n";
 
 const copy = {
@@ -52,16 +51,15 @@ export default function LearnHome() {
   const createCourse = useMutation(api.courses.create);
   const discover = usePublicLessons({ sort: "recent" });
   const weak = useWeakAreas();
-  const [error, setError] = useState("");
 
   if (!mine || !recent || !progress || !saved || !courses || !discover) return <PageSkeleton label={t.loading} />;
 
   const hrefFor = (id: string, ownerId: string) => mine.some((l) => l.id === id && l.ownerId === ownerId) ? `/dashboard/learn/lessons/${id}` : `/learn/${id}`;
   const inProgress = recent.filter(({ lesson }) => progress[lesson.id]?.state === "in_progress").slice(0, 3);
   const recentOther = recent.filter(({ lesson }) => !inProgress.some((r) => r.lesson.id === lesson.id)).slice(0, 6);
-  const newLesson = async () => { try { const id = await actions.createLesson({ language: locale }); router.push(`/dashboard/learn/lessons/${id}`); } catch (err) { setError(errorMessage(err)); } };
-  const newCourse = async () => { try { const id = await createCourse({ language: locale }); router.push(`/dashboard/courses/${id}`); } catch (err) { setError(errorMessage(err)); } };
-  const newSet = async () => { try { const id = await actions.createFlashcardSet({ title: t.untitledSet }); router.push(`/dashboard/learn/flashcards/${id}?mode=edit`); } catch (err) { setError(errorMessage(err)); } };
+  const newLesson = async () => { try { const id = await actions.createLesson({ language: locale }); router.push(`/dashboard/learn/lessons/${id}`); } catch (err) { toast.error(err); } };
+  const newCourse = async () => { try { const id = await createCourse({ language: locale }); router.push(`/dashboard/courses/${id}`); } catch (err) { toast.error(err); } };
+  const newSet = async () => { try { const id = await actions.createFlashcardSet({ title: t.untitledSet }); router.push(`/dashboard/learn/flashcards/${id}?mode=edit`); } catch (err) { toast.error(err); } };
 
   return (
     <div className="lx-page">
@@ -80,7 +78,6 @@ export default function LearnHome() {
           </WsMenu>
         </div>
       </header>
-      {error && <p className="lx-error" role="alert">{error}</p>}
 
       <section className="lx-section" aria-labelledby="learn-continue">
         <header><h2 id="learn-continue">{t.continue}</h2></header>

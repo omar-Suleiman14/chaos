@@ -1,6 +1,7 @@
 "use client";
 
 import { useStableQueries } from "@/lib/stableQueries";
+import { toast } from "@/lib/toast";
 import { useMemo, useState } from "react";
 import { GraduationCap, Tags, X } from "lucide-react";
 import { Select } from "@/components/workspace/Select";
@@ -8,7 +9,6 @@ import { usePaginatedQuery, useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { asBlocks, blockText, walk } from "@/lib/learn/doc";
-import { errorMessage } from "@/lib/errors";
 import type { LessonMeta } from "@/lib/learn/types";
 import { useCopy } from "@/lib/i18n";
 
@@ -88,7 +88,6 @@ function CurriculumAssociations({ lessonId, content, beforeMapping, disabled }: 
   const [nodeId, setNode] = useState("");
   const [coverage, setCoverage] = useState<string[]>([]);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   const institutions = usePaginatedQuery(api.curricula.listInstitutions, {}, { initialNumItems: 20 });
   const programs = usePaginatedQuery(api.curricula.listPrograms, institutionId ? { institutionId: institutionId as Id<"curriculumInstitutions"> } : "skip", { initialNumItems: 20 });
   const versions = usePaginatedQuery(api.curricula.listVersions, programId ? { programId: programId as Id<"curriculumPrograms"> } : "skip", { initialNumItems: 20 });
@@ -103,8 +102,8 @@ function CurriculumAssociations({ lessonId, content, beforeMapping, disabled }: 
     return chain.join(" › ");
   };
   const perform = async (operation: () => Promise<unknown>) => {
-    setBusy(true); setError("");
-    try { await beforeMapping?.(); await operation(); } catch (err) { setError(errorMessage(err)); } finally { setBusy(false); }
+    setBusy(true); 
+    try { await beforeMapping?.(); await operation(); } catch (err) { toast.error(err); } finally { setBusy(false); }
   };
   const more = (page: { status: string; loadMore: (count: number) => void }) => page.status === "CanLoadMore" && <button type="button" className="lx-link" disabled={busy || disabled} onClick={() => page.loadMore(20)}>Load more</button>;
   return <div className="lx-field">
@@ -133,7 +132,6 @@ function CurriculumAssociations({ lessonId, content, beforeMapping, disabled }: 
         setCoverage([]); setNode("");
       })}>Save association</button>
     </fieldset>}
-    {error && <p className="lx-error" role="alert">{error}</p>}
     <small>{t.curriculaHelp}</small>
   </div>;
 }

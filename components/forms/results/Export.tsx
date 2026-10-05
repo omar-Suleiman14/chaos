@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "@/lib/toast";
 import { useConvex } from "convex/react";
 import { Braces, Download, FileSpreadsheet, FileText } from "lucide-react";
 import posthog from "@/lib/analytics";
@@ -8,7 +9,6 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { csvCell } from "@/convex/formLogic";
 import { buildXlsx, downloadBlob, safeFilename } from "@/lib/xlsx";
-import { errorMessage } from "@/lib/errors";
 import { useCopy } from "@/lib/i18n";
 import Link from "next/link";
 import { WsSwitch } from "@/components/workspace/primitives";
@@ -22,7 +22,6 @@ export function ExportTab({ formId, title }: { formId: Id<"forms">; title: strin
   const [includePartial, setIncludePartial] = useState(false);
   const [includeSpam, setIncludeSpam] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState("");
 
   const collect = async () => {
     const rows: NonNullable<Awaited<ReturnType<typeof fetchPage>>>["rows"] = [];
@@ -45,7 +44,6 @@ export function ExportTab({ formId, title }: { formId: Id<"forms">; title: strin
 
   const run = async (kind: "csv" | "xlsx" | "json") => {
     setBusy(kind);
-    setError("");
     try {
       const { columns, rows, hidden } = await collect();
       const name = `${safeFilename(title)}-responses`;
@@ -64,7 +62,7 @@ export function ExportTab({ formId, title }: { formId: Id<"forms">; title: strin
       else downloadBlob("﻿" + [header, ...table].map((row) => row.map(csvCell).join(",")).join("\r\n"), `${name}.csv`, "text/csv;charset=utf-8");
       posthog.capture("form_responses_exported", { format: kind, includes_partial: includePartial, includes_spam: includeSpam });
     } catch (err) {
-      setError(errorMessage(err, t.exportFailed));
+      toast.error(err, { fallback: t.exportFailed });
     } finally {
       setBusy(null);
     }
@@ -99,7 +97,6 @@ export function ExportTab({ formId, title }: { formId: Id<"forms">; title: strin
           </li>
         ))}
       </ul>
-      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
       <DocHint slug="webhooks">{t.automate} <Link href="/dashboard/connections" className="underline underline-offset-2">{t.connections}</Link> ·</DocHint>
     </section>
   );

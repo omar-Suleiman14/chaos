@@ -5,6 +5,7 @@ import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useLocale } from "@/lib/i18n";
 import { parseError } from "@/lib/errors";
+import { toast } from "@/lib/toast";
 
 /** `onDraft` lets the card preview the typed username (and its avatar) before saving. */
 export default function UsernameEditor({ username, onDraft }: { username: string; onDraft?: (value: string) => void }) {
@@ -20,14 +21,16 @@ export default function UsernameEditor({ username, onDraft }: { username: string
     setBusy(true); setStatus("");
     try {
       const saved = await choose({ username: value });
-      setValue(saved); setStatus(ar ? "تم حفظ اسم المستخدم." : "Username saved.");
+      setValue(saved); toast.success(ar ? "تم حفظ اسم المستخدم" : "Username saved", { description: `@${saved}` });
     } catch (error) {
       const parsed = parseError(error);
       const messages: Record<string, string> = {
         INVALID_USERNAME: "استخدم من ٣ إلى ٣٠ حرفًا إنجليزيًا أو رقمًا أو نقطة أو شرطة. الأسماء المحجوزة غير متاحة.",
         USERNAME_TAKEN: "اسم المستخدم محجوز. اختر اسمًا آخر.",
       };
-      setStatus(ar ? messages[parsed.code] || "تعذر الحفظ. حاول مجددًا." : parsed.message);
+      // A name that's taken or invalid is about the field, so it stays under it; anything else is a failed save.
+      if (parsed.code in messages) setStatus(ar ? messages[parsed.code] : parsed.message);
+      else toast.error(ar ? "تعذر حفظ اسم المستخدم. حاول مجددًا." : parsed.message);
     } finally { setBusy(false); }
   }}>
     <label htmlFor="card-username">{ar ? "اسم المستخدم" : "Username"}</label>

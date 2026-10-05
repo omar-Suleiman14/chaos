@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { copyText } from "@/lib/clipboard";
 import { useLocale } from "@/lib/i18n";
 const examples = {
  en: [
@@ -17,5 +18,5 @@ const examples = {
 };
 export default function McpOutcomes() {
  const { locale } = useLocale(), ar = locale === "ar", [copied, setCopied] = useState(-1);
- return <section><h2>{ar ? "ما الذي يمكنك إنجازه؟" : "What can you make?"}</h2><p>{ar ? "طلبات جاهزة لـ ChatGPT وClaude بعد ربط حسابك. هذه أمثلة لتجربتها." : "Copy a prompt into ChatGPT or Claude after connecting your account. These are examples to try."}</p>{examples[ar ? "ar" : "en"].map(([title,prompt],i) => <article className="lx-panel" key={title}><h3>{title}</h3><p>{prompt}</p><button className="site-connect-btn" type="button" onClick={() => void navigator.clipboard?.writeText(prompt).then(() => setCopied(i)).catch(() => {})}>{copied === i ? (ar ? "تم النسخ" : "Copied") : (ar ? "انسخ الطلب" : "Copy prompt")}</button></article>)}</section>;
+ return <section><h2>{ar ? "ما الذي يمكنك إنجازه؟" : "What can you make?"}</h2><p>{ar ? "طلبات جاهزة لـ ChatGPT وClaude بعد ربط حسابك. هذه أمثلة لتجربتها." : "Copy a prompt into ChatGPT or Claude after connecting your account. These are examples to try."}</p>{examples[ar ? "ar" : "en"].map(([title,prompt],i) => <article className="lx-panel" key={title}><h3>{title}</h3><p>{prompt}</p><button className="site-connect-btn" type="button" onClick={() => void copyText(prompt).then((ok) => { if (ok) setCopied(i); })}>{copied === i ? (ar ? "تم النسخ" : "Copied") : (ar ? "انسخ الطلب" : "Copy prompt")}</button></article>)}</section>;
 }

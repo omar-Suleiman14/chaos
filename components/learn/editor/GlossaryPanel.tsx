@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "@/lib/toast";
 import { useMutation, useQuery } from "convex/react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { Pencil, Plus, X } from "lucide-react";
@@ -12,12 +13,12 @@ const copy = {
   en: {
     lead: "Words readers can tap for a definition and its meaning in Arabic. Assistants connected to Chaos add these for you; changes show to readers right away.",
     term: "Word or phrase", definition: "Definition", translation: "Arabic translation", explanation: "Meaning in Arabic", aliases: "Other forms (comma-separated)",
-    add: "Add word", save: "Save word", cancel: "Cancel", edit: (term: string) => `Edit ${term}`, remove: (term: string) => `Remove ${term}`, loading: "Loading glossary…", empty: "No words yet.",
+    add: "Add word", save: "Save word", cancel: "Cancel", edit: (term: string) => `Edit ${term}`, remove: (term: string) => `Remove ${term}`, loading: "Loading glossary…", empty: "No words yet.", saved: "Words saved", failed: "Could not save the words.",
   },
   ar: {
     lead: "كلمات يضغط عليها القرّاء ليروا تعريفها ومعناها بالعربية. يضيفها المساعدون المتصلون بـ Chaos تلقائيًا، وتظهر التغييرات للقرّاء فورًا.",
     term: "الكلمة أو العبارة", definition: "التعريف", translation: "الترجمة العربية", explanation: "المعنى بالعربية", aliases: "صيغ أخرى (مفصولة بفواصل)",
-    add: "أضف كلمة", save: "احفظ الكلمة", cancel: "إلغاء", edit: (term: string) => `عدّل ${term}`, remove: (term: string) => `احذف ${term}`, loading: "جارٍ تحميل المسرد…", empty: "لا كلمات بعد.",
+    add: "أضف كلمة", save: "احفظ الكلمة", cancel: "إلغاء", edit: (term: string) => `عدّل ${term}`, remove: (term: string) => `احذف ${term}`, loading: "جارٍ تحميل المسرد…", empty: "لا كلمات بعد.", saved: "حُفظت الكلمات", failed: "تعذّر حفظ الكلمات.",
   },
 };
 type Draft = { term: string; definition: string; translation: string; explanation: string; aliases: string };
@@ -30,11 +31,10 @@ export default function GlossaryPanel({ lessonId }: { lessonId: string }) {
   const [draft, setDraft] = useState<Draft | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   const write = async (next: GlossaryEntry[]) => {
-    setBusy(true); setError("");
-    try { await save({ lessonId: lessonId as Id<"lessons">, entries: next }); setDraft(null); setEditing(null); }
-    catch (err) { setError(err instanceof Error ? err.message.replace(/^.*VALIDATION_FAILED: /, "") : "Could not save the glossary."); }
+    setBusy(true);
+    try { await save({ lessonId: lessonId as Id<"lessons">, entries: next }); setDraft(null); setEditing(null); toast.success(t.saved); }
+    catch (err) { toast.error(err, { fallback: t.failed }); }
     finally { setBusy(false); }
   };
   const submit = () => {
@@ -53,7 +53,6 @@ export default function GlossaryPanel({ lessonId }: { lessonId: string }) {
   return (
     <div className="lx-form">
       <p className="lx-help" style={{ fontSize: 13 }}>{t.lead}</p>
-      {error && <p className="lx-error" role="alert">{error}</p>}
       {entries === undefined ? <p className="lx-muted" role="status">{t.loading}</p> : !entries.length && !draft && <p className="lx-muted">{t.empty}</p>}
       {entries?.map(e => (
         <div key={e.term} className="lx-panel" style={{ gap: 4, padding: 10 }}>

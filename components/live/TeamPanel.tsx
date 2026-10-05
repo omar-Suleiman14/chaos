@@ -8,6 +8,8 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { formatNumber, useCopy, useLocale } from "@/lib/i18n";
 import QueryErrorBoundary from "@/components/forms/QueryErrorBoundary";
 
+import { toast } from "@/lib/toast";
+
 const copy = {
   en: { title: "Teams", loading: "Loading teams…", empty: "No teams yet.", name: "Team name", capacity: "Maximum members", create: "Create team", player: "Player", team: "Team", choose: "Choose a team", assign: "Assign player", join: "Join team", rank: "Rank", members: "Members", score: "Score", frozen: "Teams are locked once the countdown starts.", created: "Team created.", assigned: "Player assigned.", joined: "You joined the team.", failed: "Could not update the team. Try again.", full: "This team is full. Choose another team.", busy: "Saving…" },
   ar: { title: "الفرق", loading: "جارٍ تحميل الفرق…", empty: "لا توجد فرق بعد.", name: "اسم الفريق", capacity: "الحد الأقصى للأعضاء", create: "إنشاء فريق", player: "اللاعب", team: "الفريق", choose: "اختر فريقًا", assign: "تعيين اللاعب", join: "الانضمام للفريق", rank: "الترتيب", members: "الأعضاء", score: "الدرجة", frozen: "تُقفل الفرق عند بدء العد التنازلي.", created: "تم إنشاء الفريق.", assigned: "تم تعيين اللاعب.", joined: "انضممت إلى الفريق.", failed: "تعذر تحديث الفريق. حاول مجددًا.", full: "هذا الفريق مكتمل. اختر فريقًا آخر.", busy: "جارٍ الحفظ…" },
@@ -26,17 +28,16 @@ function Teams(props: HostProps | PlayerProps) {
   const t = useCopy(copy), { locale } = useLocale();
   const teams = useQuery(api.liveTeams.standings, props.token === undefined ? { gameId: props.gameId } : { gameId: props.gameId, token: props.token });
   const create = useMutation(api.liveTeams.create), assign = useMutation(api.liveTeams.assign), join = useMutation(api.liveTeams.join);
-  const [busy, setBusy] = useState(false), [error, setError] = useState(""), [status, setStatus] = useState("");
+  const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   async function run(work: () => Promise<unknown>, message: string) {
     if (pending.current || props.frozen) return;
-    pending.current = true; setBusy(true); setError(""); setStatus("");
-    try { await work(); setStatus(message); } catch (e) { const message = e instanceof Error ? e.message : ""; setError(message.includes("LIVE_TEAMS_FROZEN") ? t.frozen : message.includes("LIVE_TEAM_FULL") ? t.full : t.failed); }
+    pending.current = true; setBusy(true);
+    try { await work(); toast.success(message, { id: "live-team" }); } catch (e) { const text = e instanceof Error ? e.message : ""; toast.error(text.includes("LIVE_TEAMS_FROZEN") ? t.frozen : text.includes("LIVE_TEAM_FULL") ? t.full : t.failed, { id: "live-team" }); }
     finally { pending.current = false; setBusy(false); }
   }
   return <section className="live-card grid gap-4 w-full" aria-label={t.title}>
     <h2 className="text-xl font-bold">{t.title}</h2>
-    {error && <p role="alert" className="live-error">{error}</p>}{status && <p role="status">{status}</p>}
     {teams === undefined ? <p role="status">{t.loading}</p> : !teams.length ? <p className="live-muted">{t.empty}</p> : <div className="overflow-x-auto"><table className="w-full text-start"><thead><tr>{[t.rank, t.team, t.members, t.score].map(label => <th key={label} scope="col" className="text-start p-2">{label}</th>)}</tr></thead><tbody>{teams.map(team => <tr key={team.teamId}><td className="p-2">{formatNumber(locale, team.rank)}</td><th className="text-start p-2" scope="row">{team.name}{!!team.players?.length && <span className="block live-muted text-sm font-normal">{team.players.join(", ")}</span>}</th><td className="p-2">{formatNumber(locale, team.members)}</td><td className="p-2">{formatNumber(locale, team.score)}</td></tr>)}</tbody></table></div>}
     {props.frozen ? <p className="live-muted">{t.frozen}</p> : props.token === undefined ? <>
       <form className="grid gap-3 sm:grid-cols-2" onSubmit={e => { e.preventDefault(); const data = new FormData(e.currentTarget); void run(() => create({ gameId: props.gameId, name: String(data.get("name")).trim(), maxMembers: Number(data.get("capacity")) }), t.created); }}>

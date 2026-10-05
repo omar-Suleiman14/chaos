@@ -377,15 +377,19 @@
 .ws-pill--green { background: color-mix(in srgb, var(--ws-success) 14%, transparent); color: var(--ws-success); }
 .ws-dot { width: 6px; height: 6px; border-radius: 999px; background: currentColor; }
 
-/* Glass: every popup surface reads --popup-opacity (Settings > Glass, set on <html>).
-   Lower opacity gets a stronger blur so text stays readable. Not used on /f/* pages. */
+/* Glass: every popup surface (menus, dropdowns, dialogs, sheets, popovers, toasts) is .ws-glass and reads
+   --popup-opacity (Settings > Glass, set on <html>). Lower opacity gets a stronger blur so text stays
+   readable. Outside the workspace there is no --ws-card, so --glass-surface supplies the colour.
+   Not used on /f/* pages, which carry the form's own theme. */
+:root { --glass-surface: #ffffff; }
+.dark { --glass-surface: #1c1c1c; }
 .ws-glass {
-  background: color-mix(in srgb, var(--ws-card, var(--surface-container-lowest, #fff)) calc(var(--popup-opacity, 0.85) * 100%), transparent);
+  background: color-mix(in srgb, var(--ws-card, var(--glass-surface)) calc(var(--popup-opacity, 0.85) * 100%), transparent);
   -webkit-backdrop-filter: blur(calc(14px + (1 - var(--popup-opacity, 0.85)) * 40px)) saturate(1.6);
   backdrop-filter: blur(calc(14px + (1 - var(--popup-opacity, 0.85)) * 40px)) saturate(1.6);
 }
 @media (prefers-reduced-transparency: reduce) {
-  .ws-glass { background: var(--ws-card, var(--surface-container-lowest, #fff)); -webkit-backdrop-filter: none; backdrop-filter: none; }
+  .ws-glass { background: var(--ws-card, var(--glass-surface)); -webkit-backdrop-filter: none; backdrop-filter: none; }
 }
 .ws-slider { display: inline-flex; align-items: center; gap: 12px; }
 .ws-slider input[type="range"] { width: 150px; accent-color: var(--primary); }
@@ -395,7 +399,7 @@
 /* The dim fades in by colour, not opacity: an opacity animation makes the overlay the
    backdrop root, and the glass inside it would blur nothing but the flat dim. */
 .ws-overlay { position: fixed; inset: 0; z-index: 80; display: grid; place-items: start center; padding: 10vh 16px 16px; background: var(--ws-overlay); animation: ws-dim 180ms ease both; overflow-y: auto; }
-.ws-dialog { width: min(720px, 100%); border: 1px solid var(--ws-line); border-radius: 12px; background: var(--background); box-shadow: var(--ws-shadow-lg); animation: ws-pop 240ms var(--ws-spring) both; }
+.ws-dialog { width: min(720px, 100%); border: 1px solid var(--ws-line); border-radius: 12px; box-shadow: var(--ws-shadow-lg); animation: ws-pop 240ms var(--ws-spring) both; }
 .ws-dialog--wide { width: min(980px, 100%); }
 .ws-dialog__header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; padding: 18px 20px 10px; }
 .ws-dialog__title { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
@@ -587,13 +591,77 @@ html.dark:has(.workspace-ui), html.dark:has(.workspace-ui) body { background: #1
 .ws-field-more[open] > summary svg { transform: rotate(90deg); }
 .ws-field-more > summary:hover { color: var(--on-background); }
 
-/* Undo toast: bottom centre, above the phone home bar. */
-.ws-toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom)); z-index: 90; display: flex; align-items: center; gap: 4px; max-width: calc(100vw - 32px); padding-block: 6px; padding-inline: 18px 6px; border-radius: 10px; background: var(--on-background); color: var(--background); font-size: 15px; box-shadow: var(--ws-shadow-lg); transform: translateX(-50%); animation: ws-toast-in 180ms ease-out both; }
-.ws-toast > span { padding-inline-end: 8px; }
-.ws-toast button { min-height: 40px; padding: 0 12px; border-radius: 7px; font-weight: 600; color: inherit; }
-.ws-toast button:hover { background: color-mix(in srgb, var(--background) 16%, transparent); }
-.ws-toast .ws-toast__close { padding: 0 10px; opacity: 0.7; }
-@keyframes ws-toast-in { from { opacity: 0; transform: translate(-50%, 8px); } }
+/* ── Toasts (components/Toaster.tsx) ─────────────────────────────────────
+   One stack for the whole app, bottom end corner, full width on phones. It lives
+   outside .workspace-ui (it also serves the site and Learn), so it carries its own
+   colours. The newest toast sits in front; older ones peek out above it and fan
+   out on hover or focus. Motion composes --toast-x/y/scale from the component
+   with the enter and exit offsets here. */
+.chaos-toaster {
+  --toast-fg: #2f2e2b; --toast-muted: #6f6e6a; --toast-line: rgba(55, 53, 47, .12); --toast-hover: rgba(55, 53, 47, .07);
+  --toast-success: #23875f; --toast-error: #c23b33; --toast-warning: #d9730d; --toast-info: #3595e3;
+  position: fixed; z-index: 95; bottom: calc(20px + env(safe-area-inset-bottom)); inset-inline-end: 20px; width: 224px; max-width: calc(100vw - 24px);
+  transition: height 300ms cubic-bezier(.2, .8, .2, 1); outline: none; font-family: inherit;
+}
+.dark .chaos-toaster {
+  --toast-fg: #ececea; --toast-muted: #a3a29e; --toast-line: rgba(255, 255, 255, .1); --toast-hover: rgba(255, 255, 255, .08);
+  --toast-success: #4cb782; --toast-error: #eb746b; --toast-warning: #f0a04b; --toast-info: #5aaef0;
+}
+.chaos-toaster ol { position: relative; height: 100%; margin: 0; padding: 0; list-style: none; }
+.chaos-toast {
+  --toast-enter: 0px;
+  position: absolute; bottom: 0; inset-inline: 0; overflow: hidden; border: 1px solid var(--toast-line); border-radius: 10px; color: var(--toast-fg);
+  box-shadow: 0 10px 28px -10px rgba(0, 0, 0, .3), 0 2px 6px rgba(0, 0, 0, .06);
+  transform-origin: 50% 100%; touch-action: pan-y; user-select: none; outline: none;
+  transform: translate(var(--toast-x, 0px), calc(var(--toast-y, 0px) + var(--toast-enter))) scale(var(--toast-scale, 1));
+  opacity: var(--toast-opacity, 1);
+  transition: transform 400ms cubic-bezier(.21, 1.02, .73, 1), opacity 300ms ease, height 300ms ease, box-shadow 200ms;
+}
+.chaos-toast:not([data-mounted]) { --toast-enter: calc(100% + 24px); opacity: 0; }
+.chaos-toast[data-leaving] { --toast-enter: 24px; opacity: 0; transition-duration: 200ms; pointer-events: none; }
+.chaos-toast[data-swiping] { transition: none; cursor: grabbing; }
+.chaos-toast:focus-visible { box-shadow: 0 0 0 2px var(--toast-info), 0 10px 28px -10px rgba(0, 0, 0, .3); }
+/* One line by default; the chevron opens the full title and description downwards, never wider. */
+.chaos-toast__body { display: flex; align-items: center; gap: 8px; min-height: 40px; padding-block: 8px; padding-inline: 12px 6px; transition: opacity 200ms; }
+.chaos-toast__body[data-open] { align-items: flex-start; }
+.chaos-toast__body[data-dim] { opacity: 0; }
+.chaos-toast__icon { flex: none; }
+.chaos-toast[data-kind="success"] .chaos-toast__icon { color: var(--toast-success); }
+.chaos-toast[data-kind="error"] .chaos-toast__icon { color: var(--toast-error); }
+.chaos-toast[data-kind="warning"] .chaos-toast__icon { color: var(--toast-warning); }
+.chaos-toast[data-kind="info"] .chaos-toast__icon { color: var(--toast-info); }
+.chaos-toast[data-kind="default"] .chaos-toast__icon { color: var(--toast-muted); }
+.chaos-toast[data-kind="loading"] .chaos-toast__icon { color: var(--toast-muted); animation: chaos-toast-spin 900ms linear infinite; }
+.chaos-toast__text { display: grid; gap: 3px; flex: 1; min-width: 0; }
+.chaos-toast__text strong { overflow: hidden; font-size: 13px; font-weight: 600; line-height: 1.4; white-space: nowrap; text-overflow: ellipsis; }
+.chaos-toast__body[data-open] .chaos-toast__text strong { white-space: normal; overflow-wrap: anywhere; }
+.chaos-toast__text p { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--toast-muted); overflow-wrap: anywhere; }
+.chaos-toast__action { flex: none; min-height: 26px; padding: 0 8px; border: 1px solid var(--toast-line); border-radius: 6px; background: var(--toast-hover); color: var(--toast-fg); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.chaos-toast__action:hover { background: color-mix(in srgb, var(--toast-fg) 14%, transparent); }
+.chaos-toast__more { display: grid; place-items: center; flex: none; width: 24px; height: 24px; border: 0; border-radius: 6px; background: none; color: var(--toast-muted); cursor: pointer; transition: transform 200ms ease, background 150ms; }
+.chaos-toast__more:hover, .chaos-toast__more:focus-visible { background: var(--toast-hover); color: var(--toast-fg); outline: none; }
+.chaos-toast__more[aria-expanded="true"] { transform: rotate(180deg); }
+/* The status icon turns into a close button on hover or keyboard focus; on touch, swipe the toast away. */
+.chaos-toast__lead { position: relative; display: grid; flex: none; width: 16px; height: 16px; }
+.chaos-toast__body[data-open] .chaos-toast__lead { margin-top: 2px; }
+.chaos-toast__lead > * { grid-area: 1 / 1; transition: opacity 150ms; }
+.chaos-toast__close { display: grid; place-items: center; width: 22px; height: 22px; margin: -3px; padding: 0; border: 0; border-radius: 6px; background: var(--toast-hover); color: var(--toast-fg); cursor: pointer; opacity: 0; }
+.chaos-toast:hover .chaos-toast__close, .chaos-toast__close:focus-visible { opacity: 1; }
+.chaos-toast:hover .chaos-toast__icon, .chaos-toast:has(.chaos-toast__close:focus-visible) .chaos-toast__icon { opacity: 0; }
+.chaos-toast__close:focus-visible { outline: 2px solid var(--toast-info); outline-offset: 0; }
+@media (hover: none) { .chaos-toast__close { pointer-events: none; } }
+.chaos-toast__action:focus-visible { outline: 2px solid var(--toast-info); outline-offset: 1px; }
+@keyframes chaos-toast-spin { to { transform: rotate(360deg); } }
+@media (max-width: 640px) {
+  /* Centred above the home bar on phones, same compact width. */
+  .chaos-toaster { inset-inline: 0; margin-inline: auto; bottom: calc(12px + env(safe-area-inset-bottom)); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .chaos-toaster, .chaos-toast { transition: opacity 150ms ease; }
+  .chaos-toast:not([data-mounted]), .chaos-toast[data-leaving] { --toast-enter: 0px; }
+  .chaos-toast[data-kind="loading"] .chaos-toast__icon { animation: none; }
+}
+@media print { .chaos-toaster { display: none; } }
 
 /* Sidebar: Ctrl/Cmd+B hides it entirely, and its edge can be dragged to resize, as in Max. */
 @media (min-width: 861px) {
@@ -677,7 +745,7 @@ html.dark:has(.workspace-ui), html.dark:has(.workspace-ui) body { background: #1
 .ws-timeline__time { font-size: 12px; font-variant-numeric: tabular-nums; color: var(--on-surface-variant); }
 .ws-avatar { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: 999px; background: var(--ws-accent-soft); color: var(--primary); font-size: 10px; font-weight: 700; }
 
-.ws-tooltip { position: fixed; z-index: 120; max-width: 240px; padding: 5px 9px; border-radius: 6px; background: var(--on-background); color: var(--background); font-size: 12.5px; font-weight: 500; line-height: 1.35; pointer-events: none; transform: translate(-50%, 0); animation: ws-tip-in 120ms ease-out both; }
+.ws-tooltip { position: fixed; z-index: 120; max-width: 240px; padding: 5px 9px; border: 1px solid var(--ws-line-strong, rgba(127, 127, 127, .3)); border-radius: 7px; color: var(--on-background); box-shadow: 0 6px 18px -6px rgba(0, 0, 0, .3); font-size: 12.5px; font-weight: 500; line-height: 1.35; pointer-events: none; transform: translate(-50%, 0); animation: ws-tip-in 120ms ease-out both; }
 .ws-tooltip[data-below="false"] { transform: translate(-50%, -100%); }
 @keyframes ws-tip-in { from { opacity: 0; } }
 /* One next step at a time for a new form. */
@@ -1011,7 +1079,7 @@ body.noise-bg:has(.workspace-ui)::before { display: none; }
 
 /* Sidebar "New" menu: form/quiz or course. */
 .ws-new-menu { position: relative; }
-.ws-new-menu__list { position: absolute; z-index: 40; inset-inline: 0; top: calc(100% + 4px); display: grid; gap: 2px; padding: 6px; border-radius: 12px; background: var(--surface-container, #1d1d1f); border: 1px solid var(--ws-line, rgba(127,127,127,.25)); box-shadow: 0 16px 40px -12px rgba(0,0,0,.5); }
+.ws-new-menu__list { position: absolute; z-index: 40; inset-inline: 0; top: calc(100% + 4px); display: grid; gap: 2px; padding: 6px; border-radius: 12px; border: 1px solid var(--ws-line, rgba(127,127,127,.25)); box-shadow: 0 16px 40px -12px rgba(0,0,0,.5); }
 .ws-new-menu__item { display: flex; align-items: flex-start; gap: 10px; padding: 9px 10px; border-radius: 8px; background: transparent; border: 0; color: inherit; text-align: start; cursor: pointer; font: inherit; }
 .ws-new-menu__item:hover, .ws-new-menu__item:focus-visible { background: var(--ws-active, rgba(127,127,127,.15)); outline: none; }
 .ws-new-menu__item svg { margin-top: 2px; flex: none; }

@@ -1,12 +1,12 @@
 "use client";
 
 import { ChaosSelect } from "@/components/workspace/ChaosSelect";
+import { toast } from "@/lib/toast";
 import { useId, useState } from "react";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { localeDir } from "@/lib/locale";
-import { errorMessage } from "@/lib/errors";
 import Link from "@/components/site/SiteLink";
 
 type Kind = "form" | "quiz";
@@ -19,11 +19,10 @@ export default function QuizBlockEditor({ kind, assetId, onSelect }: { kind: Kin
   const page = usePaginatedQuery(api.learnLibrary.quizChoices, { kind }, { initialNumItems: 20 });
   const create = useMutation(api.forms.createForm);
   const [creating, setCreating] = useState(false), [title, setTitle] = useState("");
-  const [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const selected = page.results.find(q => q.id === assetId);
   return <div className="lx-form lx-quiz-editor" dir={localeDir(locale)} onKeyDown={e => e.stopPropagation()}>
     <p className="lx-help">{locale === "ar" ? "إرفاق المادة يحتفظ بالأصل وسجل التعلّم؛ لا ينشئ نسخة." : "Attach the original asset to keep one source and learning history. No copy is created."}</p>
-    {error && <p role="alert" className="lx-error">{error}</p>}
     <label htmlFor={`${uid}-kind`}>{t.kind}</label>
     <ChaosSelect id={`${uid}-kind`} value={kind} disabled={busy} onChange={e => onSelect({ kind: e.target.value as Kind, id: "" })}><option value="form">{t.form}</option><option value="quiz">{t.classic}</option></ChaosSelect>
     <label htmlFor={`${uid}-asset`}>{t.attach}</label>
@@ -40,9 +39,9 @@ export default function QuizBlockEditor({ kind, assetId, onSelect }: { kind: Kin
     {!creating ? <button type="button" className="ws-btn ws-btn--sm" disabled={busy} onClick={() => setCreating(true)}>{t.create}</button> : <>
       <label htmlFor={`${uid}-title`}>{t.title}</label><input dir="auto" id={`${uid}-title`} maxLength={200} value={title} disabled={busy} onChange={e => setTitle(e.target.value)} />
       <div className="lx-actions"><button type="button" className="ws-btn ws-btn--primary" disabled={busy || !title.trim()} onClick={async () => {
-        setBusy(true); setError("");
+        setBusy(true);
         try { const id = await create({ title: title.trim(), quizMode: true }); onSelect({ kind: "form", id }); setCreating(false); setTitle(""); }
-        catch (err) { setError(errorMessage(err)); }
+        catch (err) { toast.error(err); }
         finally { setBusy(false); }
       }}>{t.save}</button><button type="button" className="lx-link" disabled={busy} onClick={() => setCreating(false)}>{t.cancel}</button></div>
     </>}

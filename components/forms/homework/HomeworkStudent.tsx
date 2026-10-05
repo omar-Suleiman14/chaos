@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@/lib/toast";
 import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
@@ -34,7 +35,7 @@ function StudentAttempt({ assignmentId }: { assignmentId: Id<"homeworkAssignment
   const [delivery, setDelivery] = useState<Delivery | null>(null), [receipt, setReceipt] = useState<Receipt | null>(null);
   const [answers, setAnswers] = useState<Answers>({}), [files, setFiles] = useState<Record<string, UploadedFile>>({});
   const [language, setLanguage] = useState<Language>(locale);
-  const [error, setError] = useState(""), [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const [receivedAt, setReceivedAt] = useState(0);
   const [now, setNow] = useState(() => Date.now());
@@ -53,20 +54,19 @@ function StudentAttempt({ assignmentId }: { assignmentId: Id<"homeworkAssignment
   }
   async function run(work: () => Promise<void>) {
     if (pending.current) return;
-    pending.current = true; setBusy(true); setError("");
-    try { await work(); } catch (e) { setError(homeworkError(e, t)); }
+    pending.current = true; setBusy(true);
+    try { await work(); } catch (e) { toast.error(homeworkError(e, t), { id: "homework" }); }
     finally { pending.current = false; setBusy(false); }
   }
   return <>
     <header><h1 className="ws-page-title">{delivery?.title ?? t.title}</h1>{delivery && <p className="ws-page-subtitle">{t.due}: {formatDateTime(locale, delivery.deadline)} · {t.remaining}: {delivery.attemptsRemaining}</p>}</header>
-    {error && <p role="alert" className="ws-error">{error}</p>}
     {finished ? <section role="status" className="kb-card-bordered p-6"><h2 className="text-xl font-semibold">{t.done}</h2><p>{t.score}: {finished.score} / {finished.maxScore}</p></section> : !delivery ? <button className="ws-btn w-fit" disabled={busy} onClick={() => void run(async () => { const attemptId = await start({ assignmentId }); await load(attemptId); })}>{busy ? t.busy : t.start}</button> : <>
       {expired && <p role="status">{t.expired}</p>}
       <div className="flex gap-3 flex-wrap items-end"><label className="grid gap-1">{t.language}<ChaosSelect className="kb-input" value={language} disabled={busy || expired} onChange={e => setLanguage(e.target.value as Language)}>{delivery.definition.languages.map(value => <option key={value} value={value}>{value === "ar" ? "العربية" : "English"}</option>)}</ChaosSelect></label><button className="ws-btn" disabled={busy || expired} onClick={() => void run(() => load(delivery.attemptId))}>{t.refresh}</button></div>
       <p className="ws-muted">{t.refreshHelp}</p>
       {!delivery.definition.fields.length ? <p role="status">{t.noQuestions}</p> : <fieldset disabled={busy || expired} className="min-w-0"><div className={`ws-respondent-preview ${themeClass(delivery.definition)}`} style={themeStyle(delivery.definition)}><FormRenderer definition={delivery.definition} language={language} answers={answers} files={files} skipCover submitting={busy} submitLabel={t.submit}
         onAnswer={(id, value) => setAnswers(previous => { const next = { ...previous }; if (value === undefined) delete next[id]; else next[id] = value; return next; })}
-        onSubmit={() => void run(async () => { if (serverNow() > delivery.deadline) { setError(t.expired); return; } setReceipt(await submit({ attemptId: delivery.attemptId, answers, language })); })}
+        onSubmit={() => void run(async () => { if (serverNow() > delivery.deadline) { toast.error(t.expired, { id: "homework" }); return; } setReceipt(await submit({ attemptId: delivery.attemptId, answers, language })); })}
         uploadFile={async (field, file) => {
           if (serverNow() > delivery.deadline) throw new Error(t.expired);
           if (!file.size || file.size > 10 * 1024 * 1024) throw new Error(t.fileSize);

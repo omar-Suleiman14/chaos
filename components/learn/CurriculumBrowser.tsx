@@ -1,13 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import { toast } from "@/lib/toast";
 import { useMemo, useState } from "react";
 import { BookmarkMinus, BookmarkPlus, Building2, CalendarRange, ChevronRight, GraduationCap, History, Layers3, Library, Plus, School } from "lucide-react";
 import { EmptyState, LessonCard } from "@/components/learn/ui";
 import { isListed, useCurriculumNodes, useLearnActions, useLearnCapabilities, useLearnViewer, useMyCourses, useMyLessons, useProgress, usePublicLessons } from "@/lib/learn/data";
 import { ancestors } from "@/lib/learn/search";
 import { CURRICULUM_LEVELS, type CurriculumKind, type CurriculumNode } from "@/lib/learn/types";
-import { errorMessage } from "@/lib/errors";
 import { useCopy } from "@/lib/i18n";
 
 const copy = {
@@ -66,7 +66,6 @@ export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
   const publicLessons = usePublicLessons(nodeId ? { moduleId: nodeId } : {});
   const allPublic = usePublicLessons({});
   const [adding, setAdding] = useState<{ name: string; code: string } | null>(null);
-  const [error, setError] = useState("");
   const byId = useMemo(() => Object.fromEntries((nodes ?? []).map((n) => [n.id, n])), [nodes]);
   if (!nodes) return null;
 
@@ -93,8 +92,8 @@ export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
     if (!adding?.name.trim() || !kind) return;
     try {
       actions.addCurriculumNode({ kind, name: adding.name, parentId: node?.id, code: adding.code.trim() || undefined, current: kind === "version" && !children.some((c) => c.current) ? true : undefined, order: children.length });
-      setAdding(null); setError("");
-    } catch (err) { setError(errorMessage(err)); }
+      setAdding(null);
+    } catch (err) { toast.error(err); }
   };
 
   const followed = node?.kind === "module" && courses.some((c) => c.moduleId === node.id);
@@ -104,7 +103,6 @@ export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
   return (
     <div className="lx-page">
       <Breadcrumbs trail={trail} rootLabel={t.all} />
-      {error && <p className="lx-error" role="alert">{error}</p>}
       {node && (
         <header className="lx-hero">
           <div>
@@ -113,7 +111,7 @@ export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
           </div>
           {node.kind === "module" && version && viewer?.signedIn && (
             <div className="lx-actions">
-              <button type="button" className={`ws-btn ${followed ? "" : "ws-btn--primary"}`} aria-pressed={followed} onClick={async () => { setError(""); try { await (followed ? actions.unfollowCourse(node.id) : actions.followCourse(node.id, version.id)); } catch (err) { setError(errorMessage(err)); } }}>
+              <button type="button" className={`ws-btn ${followed ? "" : "ws-btn--primary"}`} aria-pressed={followed} onClick={async () => {  try { await (followed ? actions.unfollowCourse(node.id) : actions.followCourse(node.id, version.id)); } catch (err) { toast.error(err); } }}>
                 {followed ? <BookmarkMinus size={16} aria-hidden /> : <BookmarkPlus size={16} aria-hidden />}{followed ? t.unfollow : t.follow}
               </button>
             </div>
@@ -148,7 +146,6 @@ export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
               <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setAdding(null)}>{t.cancel}</button>
             </form>
           )}
-          {error && <p className="lx-error" role="alert">{error}</p>}
           {children.length ? (
             <div className="lx-level-grid">
               {children.map((c) => {

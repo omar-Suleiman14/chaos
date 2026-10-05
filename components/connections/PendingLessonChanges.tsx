@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "@/lib/toast";
 import { useMutation } from "convex/react";
 import { useQuery } from "@/lib/convexCache";
 import { api } from "@/convex/_generated/api";
@@ -39,17 +40,15 @@ export default function PendingLessonChanges() {
   const accept = useMutation(api.lessonProposals.accept);
   const reject = useMutation(api.lessonProposals.reject);
   const [busy, setBusy] = useState<string | null>(null);
-  const [error, setError] = useState("");
   if (!pending?.length) return null;
   const run = async (id: string, work: () => Promise<unknown>) => {
-    setBusy(id); setError("");
-    try { await work(); } catch (err) { setError(t.error(err instanceof Error ? err.message : String(err))); } finally { setBusy(null); }
+    setBusy(id);
+    try { await work(); } catch (err) { toast.error(t.error(err instanceof Error ? err.message : String(err))); } finally { setBusy(null); }
   };
   return (
     <section className="space-y-3" aria-labelledby="pending-lesson-changes">
       <h2 id="pending-lesson-changes" className="text-base font-semibold">{t.title}</h2>
       <p className="text-sm text-muted-foreground">{t.lead}</p>
-      {error && <p className="text-sm text-destructive" role="alert">{error}</p>}
       {pending.map((p) => (
         <div key={p.id} className="space-y-2">
           {!p.current && <p className="text-xs text-muted-foreground">{t.stale}</p>}

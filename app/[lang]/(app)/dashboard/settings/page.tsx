@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { useMutation, useQuery } from "convex/react";
+import { toast } from "@/lib/toast";
 import { ChevronRight, Keyboard, Library, LifeBuoy, Palette, Timer, UserRound } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { presentationLabels } from "@/convex/formLogic";
@@ -12,7 +13,6 @@ import { ThemePicker } from "@/components/ThemePicker";
 import { defaultPreferences, usePreferences } from "@/lib/preferences";
 import type { Preferences } from "@/lib/preferences";
 import { WsSwitch } from "@/components/workspace/primitives";
-import { errorMessage } from "@/lib/errors";
 import { useCopy } from "@/lib/i18n";
 import { supportEmail } from "@/lib/site";
 import { Row, Section, Segmented, useScrollToHash } from "@/components/workspace/settingsUi";
@@ -21,7 +21,7 @@ import { Row, Section, Segmented, useScrollToHash } from "@/components/workspace
 
 const copy = {
   en: {
-    title: "Settings", loading: "Loading…", saving: "Saving…", saved: "Saved", savedDot: "Saved.", save: "Save", open: "Open", read: "Read", reset: "Reset",
+    title: "Settings", loading: "Loading…", saving: "Saving…", saved: "Saved", quizDefaultsSaved: "Quiz defaults saved", listingShown: "You’re listed with authors", listingHidden: "Hidden from author lists", studentCardsShown: "Your Card shows with your teachers", studentCardsHidden: "Your Card is hidden from teachers", savedDot: "Saved.", save: "Save", open: "Open", read: "Read", reset: "Reset",
     preferencesHelp: "Settings for your forms, quizzes and library. They save on this device as you change them.",
     profile: "Profile and app", profileAbout: "Your card, username, account and how Chaos looks.", profileRow: "Profile", profileHelp: "Account, appearance, glass and motion.",
     authorListing: "Show me in author lists", authorListingHelp: "People can find you in the public author directory and creator search. Your published links and card remain available when this is off.", authorListingError: "Could not save your author visibility. Try again.",
@@ -58,7 +58,7 @@ const copy = {
   ar: {
     authorListing: "أظهرني في قوائم المؤلفين", authorListingHelp: "يمكن للآخرين العثور عليك في دليل المؤلفين العام والبحث عن المنشئين. تظل روابط منشوراتك وبطاقتك متاحة عند إيقاف هذا الخيار.", authorListingError: "تعذر حفظ ظهورك في قوائم المؤلفين. حاول مجددًا.",
     studentCards: "أظهر بطاقتي لدى معلّميّ", studentCardsHelp: "تظهر علنًا تلقائيًا. أوقف هذا الخيار لإخفاء بطاقة الطالب عن صفحات جميع معلّميك ودليل المؤلفين.", studentCardsError: "تعذر حفظ ظهور بطاقة الطالب. حاول مجددًا.",
-    title: "الإعدادات", loading: "جارٍ التحميل…", saving: "جارٍ الحفظ…", saved: "تم الحفظ", savedDot: "تم الحفظ.", save: "احفظ", open: "افتح", read: "اقرأ", reset: "إعادة الضبط",
+    title: "الإعدادات", loading: "جارٍ التحميل…", saving: "جارٍ الحفظ…", saved: "تم الحفظ", quizDefaultsSaved: "حُفظت إعدادات الاختبار الافتراضية", listingShown: "أنت ظاهر في قوائم المؤلفين", listingHidden: "أنت مخفي من قوائم المؤلفين", studentCardsShown: "بطاقتك ظاهرة لدى معلّميك", studentCardsHidden: "بطاقتك مخفية عن المعلّمين", savedDot: "تم الحفظ.", save: "احفظ", open: "افتح", read: "اقرأ", reset: "إعادة الضبط",
     preferencesHelp: "إعدادات نماذجك واختباراتك ومكتبتك. تُحفظ على هذا الجهاز عند تعديلها.",
     profile: "الملف والتطبيق", profileAbout: "بطاقتك واسم المستخدم والحساب وشكل Chaos.", profileRow: "الملف الشخصي", profileHelp: "الحساب والمظهر والزجاج والحركة.",
     resetTheme: "أعد ضبط المظهر", layoutHelp: "اختر عرض كل الأسئلة أو سؤال واحد في كل مرة أو تقسيمها إلى خطوات.",
@@ -97,7 +97,6 @@ function QuizDefaults({ t }: { t: Copy }) {
   const settings = useQuery(api.quizFunctions.getTeacherSettings);
   const update = useMutation(api.quizFunctions.updateTeacherSettings);
   const [local, setLocal] = useState<NonNullable<typeof settings> | null>(null);
-  const [state, setState] = useState("");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   useEffect(() => { if (settings && !local) setLocal(settings); }, [settings, local]);
   if (!local) return <p className="ws-row__help py-3">{t.loading}</p>;
@@ -105,8 +104,8 @@ function QuizDefaults({ t }: { t: Copy }) {
     const next = { ...local, [key]: value };
     setLocal(next);
     if (timer.current) clearTimeout(timer.current);
-    setState(t.saving);
-    timer.current = setTimeout(() => { update(next).then(() => setState(t.saved)).catch((e) => setState(errorMessage(e))); }, 500);
+    // One toast for the whole burst of edits, updated in place once the debounced save lands.
+    timer.current = setTimeout(() => { update(next).then(() => toast.success(t.quizDefaultsSaved, { id: "quiz-defaults" }), (e) => toast.error(e, { id: "quiz-defaults" })); }, 500);
   };
   const number = (key: "defaultMcqTimer" | "defaultWrittenTimer" | "defaultPointsPerQuestion" | "passingThreshold" | "halfMarkThreshold", label: string, suffix: string, min: number, max: number, help?: string) => (
     <Row label={label} help={help}>
@@ -132,7 +131,6 @@ function QuizDefaults({ t }: { t: Copy }) {
       </Row>
       {local.displayMode === "pass_fail" && number("passingThreshold", t.passMark, "%", 0, 100)}
       {number("halfMarkThreshold", t.halfMarks, "%", 0, 100, t.halfMarksHelp)}
-      <p className="ws-row__help py-2" role="status">{state}</p>
     </>
   );
 }
@@ -144,9 +142,7 @@ export default function SettingsPage() {
   const setListingVisibility = useMutation(api.publicAuthors.setListingVisibility);
   const setStudentVisibility = useMutation(api.studentRoster.setGlobalVisibility);
   const [studentSaving, setStudentSaving] = useState(false);
-  const [studentStatus, setStudentStatus] = useState("");
   const [listingSaving, setListingSaving] = useState(false);
-  const [listingStatus, setListingStatus] = useState("");
   const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
   const { preferences: p, set } = usePreferences();
   const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
@@ -164,23 +160,20 @@ export default function SettingsPage() {
           <WsSwitch label={t.authorListing} hideLabel checked={!me?.hideFromAuthorLists} disabled={!me || listingSaving}
             onChange={async (visible) => {
               setListingSaving(true);
-              setListingStatus(t.saving);
-              try { await setListingVisibility({ visible }); setListingStatus(t.saved); }
-              catch { setListingStatus(t.authorListingError); }
+              try { await setListingVisibility({ visible }); toast.success(visible ? t.listingShown : t.listingHidden, { id: "author-listing" }); }
+              catch { toast.error(t.authorListingError, { id: "author-listing" }); }
               finally { setListingSaving(false); }
             }} />
         </Row>
-        <p className="ws-row__help py-2" role="status" aria-live="polite">{listingStatus}</p>
         <Row id="settings-student-cards" label={t.studentCards} help={t.studentCardsHelp}>
           <WsSwitch label={t.studentCards} hideLabel checked={!me?.hideStudentCards} disabled={!me || studentSaving}
             onChange={async visible => {
-              setStudentSaving(true); setStudentStatus(t.saving);
-              try { await setStudentVisibility({ visible }); setStudentStatus(t.saved); }
-              catch { setStudentStatus(t.studentCardsError); }
+              setStudentSaving(true);
+              try { await setStudentVisibility({ visible }); toast.success(visible ? t.studentCardsShown : t.studentCardsHidden, { id: "student-cards" }); }
+              catch { toast.error(t.studentCardsError, { id: "student-cards" }); }
               finally { setStudentSaving(false); }
             }} />
         </Row>
-        <p className="ws-row__help py-2" role="status" aria-live="polite">{studentStatus}</p>
       </Section>
 
 

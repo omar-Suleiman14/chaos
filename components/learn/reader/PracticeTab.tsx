@@ -1,6 +1,7 @@
 "use client";
 
 import { inlineQuizKeys } from "@/lib/learn/inlineStudy";
+import { toast } from "@/lib/toast";
 import InlineQuiz from "./InlineQuiz";
 import Link from "@/components/site/SiteLink";
 import { useRouter } from "next/navigation";
@@ -18,7 +19,7 @@ const copy = {
   en: {
     title: "Practice", lead: "Quizzes for this lesson.", empty: "No practice attached yet.", emptyOwner: "Attach existing Chaos quizzes from the lesson editor’s Practice panel.",
     kinds: { quick_review: "Quick review", hard: "Hard questions", past_exam: "Past exam style", custom: "Practice" } as Record<QuizKind, string>,
-    take: "Start", host: "Host live", edit: "Edit quiz", copyQuiz: "Copy to my library", questions: (n: number) => `${n} questions`,
+    take: "Start", host: "Host live", edit: "Edit quiz", copyQuiz: "Copy to my library", copyFailed: "Could not copy the quiz.", questions: (n: number) => `${n} questions`,
     cards: "Flashcards", cardsCount: (n: number) => `${n} cards`, study: "Study",
     liveHelp: "Host live runs this quiz as a Chaos Live game: players join at /play with a PIN.",
     forkHelp: "Copies go to your library as drafts and keep a link back to this quiz.",
@@ -26,7 +27,7 @@ const copy = {
   ar: {
     title: "التدريب", lead: "اختبارات لهذا الدرس.", empty: "لا تدريب مرفق بعد.", emptyOwner: "أرفق اختبارات Chaos الموجودة من لوحة التدريب في محرر الدرس.",
     kinds: { quick_review: "مراجعة سريعة", hard: "أسئلة صعبة", past_exam: "بنمط الامتحانات السابقة", custom: "تدريب" } as Record<QuizKind, string>,
-    take: "ابدأ", host: "استضف مباشرة", edit: "عدّل الاختبار", copyQuiz: "انسخ إلى مكتبتي", questions: (n: number) => `${n} سؤال`,
+    take: "ابدأ", host: "استضف مباشرة", edit: "عدّل الاختبار", copyQuiz: "انسخ إلى مكتبتي", copyFailed: "تعذّر نسخ الاختبار.", questions: (n: number) => `${n} سؤال`,
     cards: "البطاقات", cardsCount: (n: number) => `${n} بطاقة`, study: "ادرس",
     liveHelp: "«استضف مباشرة» يشغّل هذا الاختبار كلعبة Chaos Live: ينضم اللاعبون عبر /play برمز.",
     forkHelp: "تذهب النسخ إلى مكتبتك كمسودات وتحتفظ برابط إلى هذا الاختبار.",
@@ -43,7 +44,6 @@ export default function PracticeTab({ lesson, isOwner }: { lesson: Lesson; isOwn
   const study = useStudyActions();
   const capabilities = useStudyCapabilities();
   const [copying, setCopying] = useState<string | null>(null);
-  const [error, setError] = useState("");
   // Owners can host live and edit only quizzes they still own or edit.
   const mine = useQuery(api.forms.listMyForms, isOwner ? {} : "skip");
   const editable = new Set([...(mine?.owned ?? []), ...(mine?.shared ?? []).filter((f) => f.role === "editor")].map((f) => f._id as string));
@@ -61,7 +61,6 @@ export default function PracticeTab({ lesson, isOwner }: { lesson: Lesson; isOwn
     <h2>{t.title}</h2>
     <div className="lx-practice">
       <p className="lx-help">{t.lead}</p>
-      {error && <p className="lx-error" role="alert">{error}</p>}
       {quizzes.map((quiz) => (
         <article key={quiz.formId} className="lx-quiz-card">
           <span className="lx-row__icon" data-kind="quiz" aria-hidden><Target size={16} /></span>
@@ -75,15 +74,15 @@ export default function PracticeTab({ lesson, isOwner }: { lesson: Lesson; isOwn
               <>
                 <Link className="ws-btn ws-btn--sm ws-btn--ghost" href={`/dashboard/forms/${quiz.formId}`}><PenLine size={14} aria-hidden />{t.edit}</Link>
                 <button type="button" className="ws-btn ws-btn--sm" disabled={host.busy} title={t.liveHelp}
-                  onClick={async () => { setError(""); const message = await host.start({ formId: quiz.formId as Id<"forms"> }); if (message) setError(message); }}>
+                  onClick={() => void host.start({ formId: quiz.formId as Id<"forms"> })}>
                   <Radio size={14} aria-hidden />{host.label}
                 </button>
               </>
             )}
             <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" title={t.forkHelp} disabled={!capabilities.quizForks || copying !== null} onClick={async () => {
-              setError(""); setCopying(quiz.formId);
+              setCopying(quiz.formId);
               try { const id = await study.forkQuiz(quiz.formId); router.push(`/dashboard/forms/${encodeURIComponent(id)}`); }
-              catch (err) { setError(err instanceof Error ? err.message : "Could not copy quiz."); }
+              catch (err) { toast.error(err, { fallback: t.copyFailed }); }
               finally { setCopying(null); }
             }}><GitFork size={14} aria-hidden />{t.copyQuiz}</button>
           </div>
@@ -95,9 +94,9 @@ export default function PracticeTab({ lesson, isOwner }: { lesson: Lesson; isOwn
         <div className="lx-quiz-card__main"><strong>{quiz.title}</strong><span className="lx-muted">{t.questions(quiz.questionCount)}</span></div>
         <div className="lx-actions">
           <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" title={t.forkHelp} disabled={!capabilities.quizForks || copying !== null} onClick={async () => {
-            setError(""); setCopying(quiz.id);
+            setCopying(quiz.id);
             try { const result = await study.forkAssessment({ kind: "quiz", id: quiz.id as Id<"quizzes"> }); router.push(result.href); }
-            catch (err) { setError(err instanceof Error ? err.message : "Could not copy quiz."); }
+            catch (err) { toast.error(err, { fallback: t.copyFailed }); }
             finally { setCopying(null); }
           }}><GitFork size={14} aria-hidden />{t.copyQuiz}</button>
         </div>

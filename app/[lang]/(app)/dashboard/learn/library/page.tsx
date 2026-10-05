@@ -8,15 +8,15 @@ import {
   Archive, ArchiveRestore, BookOpen, ChevronRight, Copy, FileText, Folder, FolderInput, FolderOpen, FolderPlus, Globe, Layers, Pencil, Pin, PinOff, Plus, Search, Target, X,
 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
-import { WsDialog, WsMenu, WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
+import { WsDialog, WsMenu } from "@/components/workspace/primitives";
+import { toast } from "@/lib/toast";
 import { Select } from "@/components/workspace/Select";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { EmptyState, LessonStatus } from "@/components/learn/ui";
 import { search } from "@/lib/search";
 import {
-  useLibraryCollections, useArchivedLessons, useFlashcardSets, useFolderItems, useFolders, useLearnActions, useLearnCapabilities, useMyLessons, usePinnedFolders, nextToastId } from "@/lib/learn/data";
+  useLibraryCollections, useArchivedLessons, useFlashcardSets, useFolderItems, useFolders, useLearnActions, useLearnCapabilities, useMyLessons, usePinnedFolders } from "@/lib/learn/data";
 import type { Folder as FolderT, LibraryItemKind, Visibility } from "@/lib/learn/types";
-import { errorMessage } from "@/lib/errors";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
 
@@ -78,11 +78,8 @@ function Library() {
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [dialog, setDialog] = useState<Dialog | null>(null);
-  const [toast, setToast] = useState<UndoToast | null>(null);
-  const [error, setError] = useState("");
   const byId = useMemo(() => new Map((folders ?? []).map((f) => [f.id, f])), [folders]);
-  const say = (text: string, undo?: () => void) => setToast({ id: nextToastId(), text, undo });
-  const run = async (fn: () => unknown | Promise<unknown>) => { setError(""); try { await fn(); } catch (err) { setError(errorMessage(err)); } };
+  const run = async (fn: () => unknown | Promise<unknown>) => { try { await fn(); } catch (err) { toast.error(err); } };
 
   if (!folders || !items || !lessons) return <PageSkeleton label={t.loading} />;
   const folder = folderId ? byId.get(folderId) : undefined;
@@ -155,7 +152,6 @@ function Library() {
         </label>
         <label className="lx-panel__row" style={{ gap: 6 }}><input type="checkbox" checked={showArchived} onChange={(e) => setShowArchived(e.target.checked)} /> {t.archived}</label>
       </div>
-      {error && <p className="lx-error" role="alert">{error}</p>}
 
       {results ? (
         <section className="lx-section" aria-live="polite">
@@ -215,7 +211,7 @@ function Library() {
                           <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(async () => { const id = await actions.duplicateLesson(l.id); router.push(`/dashboard/learn/lessons/${id}`); }); }}><Copy size={15} />{t.duplicate}</button>
                           {l.archived
                             ? <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(() => actions.archiveLesson(l.id, false)); }}><ArchiveRestore size={15} />{t.restore}</button>
-                            : <button role="menuitem" className="ws-menu__row ws-menu__danger" onClick={() => { close(); run(async () => { await actions.archiveLesson(l.id); say(t.archivedToast(l.draft.meta.title), () => actions.archiveLesson(l.id, false)); }); }}><Archive size={15} />{t.archive}</button>}
+                            : <button role="menuitem" className="ws-menu__row ws-menu__danger" onClick={() => { close(); run(async () => { await actions.archiveLesson(l.id); toast(t.archivedToast(l.draft.meta.title), { undo: () => { void run(() => actions.archiveLesson(l.id, false)); } }); }); }}><Archive size={15} />{t.archive}</button>}
                         </>
                       )}
                     </WsMenu>
@@ -259,7 +255,6 @@ function Library() {
           onClose={() => setDialog(null)} onSubmit={(value) => run(async () => { if (!value) return; const [kind, refId, ...title] = value.split(":"); await actions.addToFolder({ folderId, kind: kind as "form", refId, title: title.join(":") }); setDialog(null); })} />
       )}
       {dialog?.kind === "collection" && <CollectionDialog folder={dialog.folder} device={false} t={t} onClose={() => setDialog(null)} onSave={(collection) => run(async () => { if (!collection) return; const id = await actions.createLibraryCollection({ title: dialog.folder.name, description: collection.description, language: locale, folderId: dialog.folder.id, visibility: collection.visibility }); setDialog(null); router.push(`/learn/collections/${id}`); })} />}
-      <WsUndoToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

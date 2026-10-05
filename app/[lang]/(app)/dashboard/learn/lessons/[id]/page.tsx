@@ -16,7 +16,8 @@ import type { LessonDocument } from "@/convex/learnModel";
 import { detachSource, parseCitationLocator, replaceBlockCitation, sourceIds, sourceView, useLearnMediaClient, type NativeSource, type NativeCitation } from "@/lib/learn/mediaClient";
 import { formatLocator } from "@/lib/learn/chaosDocument";
 import { ChevronLeft, Archive, Check, Copy, Eye, FolderInput, History, Info, Layers, MoreHorizontal, PanelRight, RotateCcw, Send, Trash2, Undo2, X } from "lucide-react";
-import { WsConfirm, WsMenu, WsTabs, WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
+import { WsConfirm, WsMenu, WsTabs } from "@/components/workspace/primitives";
+import { toast } from "@/lib/toast";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { Select } from "@/components/workspace/Select";
 import { CitationDialog, ImageDetailsDialog, type ImageDetails } from "@/components/learn/editor/EditorDialogs";
@@ -33,7 +34,7 @@ import VersionHistory from "@/components/learn/editor/VersionHistory";
 import HandoffDialog, { type HandoffContext } from "@/components/learn/reader/HandoffDialog";
 import { UnavailableLesson } from "@/components/learn/reader/LessonReader";
 import { ExternalRefLine, LessonStatus, ModerationNotice, ProvenanceLine } from "@/components/learn/ui";
-import { hasUnpublishedChanges, useFolders, useLearnActions, useLearnCapabilities, useLearnViewer, useLesson, useCanEditLesson, useLessonRecovery, nextToastId } from "@/lib/learn/data";
+import { hasUnpublishedChanges, useFolders, useLearnActions, useLearnCapabilities, useLearnViewer, useLesson, useCanEditLesson, useLessonRecovery } from "@/lib/learn/data";
 import { asBlocks, blockText, walk } from "@/lib/learn/doc";
 import { newId } from "@/lib/learn/data";
 import { lessonPath } from "@/lib/learn/seo";
@@ -53,7 +54,7 @@ const copy = {
     discardTitle: "Discard unpublished changes?", discardBody: "Your draft goes back to the published version. This can’t be undone.",
     deleteTitle: "Delete this lesson?", deleteBody: "The lesson, its versions and its discussion are deleted. Saved copies in other people’s libraries stop working. This can’t be undone.",
     unpublishTitle: "Unpublish this lesson?", unpublishBody: "Readers lose access, including through published courses that contain this lesson. It leaves Explore. Your draft and version history stay.",
-    publishedToast: (v: number) => `Published version ${v}`, restoredToast: (v: number) => `Version ${v} copied into your draft`, archivedToast: "Lesson archived", duplicated: "Duplicate created", moved: "Moved",
+    publishedToast: (v: number) => `Published version ${v}`, restoredToast: (v: number) => `Version ${v} copied into your draft`, archivedToast: "Lesson archived", unarchivedToast: "Lesson restored", unpublishedToast: "Lesson unpublished", discardedToast: "Draft changes discarded", deletedToast: "Lesson deleted", conflictToast: "Another device changed this lesson", duplicated: "Duplicate created", moved: "Moved",
     tip: "Type / for blocks: headings, lists, tables, images, YouTube, equations, callouts, sources and citations. Select text to format it or ask ChatGPT or Claude about it.",
     cardsCreated: "Flashcards made from your headings", makeCards: "Make flashcards from headings", cardsTitle: (title: string) => `${title} — flashcards`,
     notOwner: "Only the author can edit this lesson.",
@@ -67,7 +68,7 @@ const copy = {
     discardTitle: "تجاهل التعديلات غير المنشورة؟", discardBody: "تعود مسودتك إلى النسخة المنشورة. لا يمكن التراجع.",
     deleteTitle: "حذف هذا الدرس؟", deleteBody: "يُحذف الدرس وإصداراته ونقاشه. تتوقف النسخ المحفوظة في مكتبات الآخرين. لا يمكن التراجع.",
     unpublishTitle: "إلغاء نشر هذا الدرس؟", unpublishBody: "يفقد القرّاء الوصول، بما في ذلك من الدورات المنشورة التي تتضمن الدرس. يخرج من الاستكشاف وتبقى المسودة وسجل الإصدارات.",
-    publishedToast: (v: number) => `نُشر الإصدار ${v}`, restoredToast: (v: number) => `نُسخ الإصدار ${v} إلى مسودتك`, archivedToast: "أُرشف الدرس", duplicated: "أُنشئت نسخة", moved: "نُقل",
+    publishedToast: (v: number) => `نُشر الإصدار ${v}`, restoredToast: (v: number) => `نُسخ الإصدار ${v} إلى مسودتك`, archivedToast: "أُرشف الدرس", unarchivedToast: "استُعيد الدرس", unpublishedToast: "أُلغي نشر الدرس", discardedToast: "تم تجاهل تغييرات المسودة", deletedToast: "حُذف الدرس", conflictToast: "غيّر جهاز آخر هذا الدرس", duplicated: "أُنشئت نسخة", moved: "نُقل",
     tip: "اكتب / لإضافة كتل: عناوين وقوائم وجداول وصور وYouTube ومعادلات وتنبيهات ومصادر واستشهادات. حدّد نصًا للتنسيق والمساعدة.",
     cardsCreated: "أُنشئت بطاقات من عناوينك", makeCards: "أنشئ بطاقات من العناوين", cardsTitle: (title: string) => `${title} — بطاقات`,
     notOwner: "لا يعدّل هذا الدرس إلا كاتبه.",
@@ -117,7 +118,6 @@ function LessonEditorSession({ id }: { id: string }) {
   const courseId = useSearchParams().get("course");
   const [tab, setTab] = useState<Tab>("details");
   const [dialog, setDialog] = useState<null | "publish" | "history" | "discard" | "delete" | "unpublish">(null);
-  const [toast, setToast] = useState<UndoToast | null>(null);
   const [error, setError] = useState("");
   const [image, setImage] = useState<{ blockId: string; editor: LessonEditorType; initial: ImageDetails } | null>(null);
   const [cite, setCite] = useState<{ blockId: string; previous?: NativeCitation; initial?: { sourceId: string; locator: string } } | null>(null);
@@ -130,7 +130,7 @@ function LessonEditorSession({ id }: { id: string }) {
   const actionRef = useRef(actions);
   useEffect(() => { actionRef.current = actions; }, [actions]);
   const flushTail = useRef<Promise<void>>(Promise.resolve());
-  const say = (text: string, undo?: () => void) => setToast({ id: nextToastId(), text, undo });
+  const say = (text: string) => toast.success(text);
 
   useEffect(() => {
     if (lesson && title === undefined) { setTitle(lesson.draft.meta.title); setDescription(lesson.draft.meta.description); }
@@ -166,7 +166,10 @@ function LessonEditorSession({ id }: { id: string }) {
       const data = err && typeof err === "object" && "data" in err ? err.data as { code?: string; currentRevision?: number } : undefined;
       const stale = data?.code === "REVISION_CONFLICT";
       setConflict(stale);
-      setError(stale ? "Another device saved a newer revision (" + data?.currentRevision + "). This editor has stopped writes. Compare your retained draft with server recovery before reloading." : errorMessage(err));
+      const message = stale ? "Another device saved a newer revision (" + data?.currentRevision + "). This editor has stopped writes. Compare your retained draft with server recovery before reloading." : errorMessage(err);
+      // The recovery panel stays under the header; the toast makes sure the failure is noticed.
+      setError(message);
+      toast.error(stale ? t.conflictToast : err, { id: "lesson-editor" });
       try { setRetained(localStorage.getItem(recoveryKey) ?? JSON.stringify({ content: pending.current.content, meta: pending.current.meta })); } catch { setRetained(JSON.stringify(pending.current)); }
       return false;
     }
@@ -281,7 +284,7 @@ function LessonEditorSession({ id }: { id: string }) {
               {lesson.published && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); setDialog("unpublish"); }}><RotateCcw size={15} />{t.unpublish}</button>}
               <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(async () => { await flush(); const copyId = await actions.duplicateLesson(lesson.id); say(t.duplicated); router.push(`/dashboard/learn/lessons/${copyId}`); }); }}><Copy size={15} />{t.duplicate}</button>
               <button role="menuitem" className="ws-menu__row" onClick={() => { close(); makeFlashcards(); }}><Layers size={15} />{t.makeCards}</button>
-              <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(async () => { await flush(); await actions.archiveLesson(lesson.id); say(t.archivedToast, () => { void run(() => actions.archiveLesson(lesson.id, false)); }); router.push("/dashboard/learn/library"); }); }}><Archive size={15} />{t.archive}</button>
+              <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(async () => { await flush(); await actions.archiveLesson(lesson.id); toast(t.archivedToast, { undo: () => { void run(async () => { await actions.archiveLesson(lesson.id, false); toast.success(t.unarchivedToast); }); } }); router.push("/dashboard/learn/library"); }); }}><Archive size={15} />{t.archive}</button>
               <button role="menuitem" className="ws-menu__row ws-menu__danger" onClick={() => { close(); setDialog("delete"); }}><Trash2 size={15} />{t.delete}</button>
             </>
           )}
@@ -384,16 +387,15 @@ function LessonEditorSession({ id }: { id: string }) {
         say(t.publishedToast(v));
       })} />}
       {dialog === "history" && <VersionHistory lesson={editorLesson} error={error} disabled={conflict || mediaBusy || uploadCount > 0} onClose={() => setDialog(null)} onRestore={(v) => run(async () => { await flush(); await actions.restoreVersion(lesson.id, v); const restored = await actions.reloadDraft(lesson.id); setRecoveredContent(restored.draft.content); setEditorContent(restored.draft.content); setTitle(restored.draft.meta.title); setLook({}); setDescription(restored.draft.meta.description); setDialog(null); setEditorKey((k) => k + 1); say(t.restoredToast(v)); })} />}
-      {dialog === "discard" && <WsConfirm title={t.discardTitle} body={t.discardBody} confirmLabel={t.discard} onClose={() => setDialog(null)} onConfirm={() => run(async () => { await flush(); await actions.discardDraft(lesson.id); const restored = await actions.reloadDraft(lesson.id); setRecoveredContent(restored.draft.content); setTitle(restored.draft.meta.title); setLook({}); setDescription(restored.draft.meta.description); setEditorKey((k) => k + 1); })} />}
-      {dialog === "unpublish" && <WsConfirm title={t.unpublishTitle} body={t.unpublishBody} confirmLabel={t.unpublish} onClose={() => setDialog(null)} onConfirm={() => run(() => actions.unpublish(lesson.id))} />}
-      {dialog === "delete" && <WsConfirm title={t.deleteTitle} body={t.deleteBody} confirmLabel={t.delete} onClose={() => setDialog(null)} onConfirm={() => run(async () => { await actions.deleteLesson(lesson.id); router.push("/dashboard/learn/library"); })} />}
+      {dialog === "discard" && <WsConfirm title={t.discardTitle} body={t.discardBody} confirmLabel={t.discard} onClose={() => setDialog(null)} onConfirm={() => run(async () => { await flush(); await actions.discardDraft(lesson.id); const restored = await actions.reloadDraft(lesson.id); setRecoveredContent(restored.draft.content); setTitle(restored.draft.meta.title); setLook({}); setDescription(restored.draft.meta.description); setEditorKey((k) => k + 1); toast.success(t.discardedToast); })} />}
+      {dialog === "unpublish" && <WsConfirm title={t.unpublishTitle} body={t.unpublishBody} confirmLabel={t.unpublish} onClose={() => setDialog(null)} onConfirm={() => run(async () => { await actions.unpublish(lesson.id); toast.success(t.unpublishedToast); })} />}
+      {dialog === "delete" && <WsConfirm title={t.deleteTitle} body={t.deleteBody} confirmLabel={t.delete} onClose={() => setDialog(null)} onConfirm={() => run(async () => { await actions.deleteLesson(lesson.id); toast.success(t.deletedToast); router.push("/dashboard/learn/library"); })} />}
       {image && <ImageDetailsDialog initial={image.initial} onClose={() => setImage(null)} onSave={(value) => { image.editor.updateBlock(image.blockId, { props: value }); setImage(null); }} />}
       {cite && <CitationDialog sources={sources} initial={cite.initial} onClose={() => setCite(null)} onManageSources={() => { setPanelOpen(true); setTab("sources"); }} onDone={async value => {
         await nativeEdit(async row => replaceBlockCitation(row.draft, cite.blockId, { sourceId: value.sourceId as Id<"learnSources">, locator: parseCitationLocator(value.locator) }, cite.previous));
         setCite(null);
       }} />}
       {handoff && <HandoffDialog input={handoff} onClose={() => setHandoff(null)} />}
-      <WsUndoToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

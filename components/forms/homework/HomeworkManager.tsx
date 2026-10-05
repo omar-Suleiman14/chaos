@@ -1,6 +1,7 @@
 "use client";
 
 import { ChaosSelect } from "@/components/workspace/ChaosSelect";
+import { toast } from "@/lib/toast";
 import Link from "next/link";
 import { useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
@@ -28,12 +29,12 @@ export default function HomeworkManager({ formId }: { formId: Id<"forms"> }) {
   const assignments = useQuery(api.homework.listForForm, { formId });
   const roster = useQuery(api.homework.roster, assignmentId ? { assignmentId } : "skip");
   const [reportStudent, setReportStudent] = useState("");
-  const [error, setError] = useState(""), [status, setStatus] = useState(""), [busy, setBusy] = useState(false);
+  const [busy, setBusy] = useState(false);
   const pending = useRef(false);
   const run = async (work: () => Promise<unknown>, message: string) => {
     if (pending.current) return;
-    pending.current = true; setBusy(true); setError(""); setStatus("");
-    try { await work(); setStatus(message); } catch (e) { setError(homeworkError(e, t)); }
+    pending.current = true; setBusy(true);
+    try { await work(); toast.success(message); } catch (e) { toast.error(homeworkError(e, t)); }
     finally { pending.current = false; setBusy(false); }
   };
   if (form === undefined) return <p role="status">{t.loading}</p>;
@@ -41,12 +42,11 @@ export default function HomeworkManager({ formId }: { formId: Id<"forms"> }) {
   if (form.role !== "owner") return <p className="ws-empty">{t.ownerOnly}</p>;
   return <div className="grid gap-6">
     <header><Link className="ws-link-quiet" href={`/dashboard/forms/${formId}/responses`}>{t.back}</Link><h1 className="ws-page-title">{t.title} · {form.title}</h1><p className="ws-page-subtitle">{t.pinned}</p></header>
-    {error && <p role="alert" className="ws-error">{error}</p>}{status && <p role="status">{status}</p>}
     {!form.versions.length ? <p className="ws-empty">{t.published}</p> : <form className="kb-card-bordered grid gap-4 p-5" onSubmit={e => {
       e.preventDefault(); const fields = new FormData(e.currentTarget);
-      if (!version?.definition.quiz?.enabled) { setError(t.quiz); return; }
+      if (!version?.definition.quiz?.enabled) { toast.error(t.quiz); return; }
       const opensAt = new Date(String(fields.get("opens"))).getTime(), deadline = new Date(String(fields.get("deadline"))).getTime();
-      if (!Number.isFinite(opensAt) || !Number.isFinite(deadline) || deadline <= Math.max(opensAt, Date.now())) { setError(t.dates); return; }
+      if (!Number.isFinite(opensAt) || !Number.isFinite(deadline) || deadline <= Math.max(opensAt, Date.now())) { toast.error(t.dates); return; }
       void run(async () => { const id = await create({ formId, versionId: version._id, title: String(fields.get("title")).trim(), opensAt, deadline, maxAttempts: Number(fields.get("attempts")) }); setAssignment(id); setReportStudent(""); }, t.saved);
     }}>
       <h2 className="text-lg font-semibold">{t.create}</h2>
@@ -57,7 +57,7 @@ export default function HomeworkManager({ formId }: { formId: Id<"forms"> }) {
       <button className="ws-btn w-fit" disabled={busy || !version?.definition.quiz?.enabled}>{busy ? t.creating : t.create}</button>
       {version && !version.definition.quiz?.enabled && <p className="ws-muted">{t.quiz}</p>}
     </form>}
-    {assignments && assignments.length > 0 && <label className="grid gap-1 max-w-md">{t.yours}<ChaosSelect className="kb-input" value={assignmentId ?? ""} onChange={e => { setAssignment((e.target.value || null) as Id<"homeworkAssignments"> | null); setReportStudent(""); setError(""); setStatus(""); }}>
+    {assignments && assignments.length > 0 && <label className="grid gap-1 max-w-md">{t.yours}<ChaosSelect className="kb-input" value={assignmentId ?? ""} onChange={e => { setAssignment((e.target.value || null) as Id<"homeworkAssignments"> | null); setReportStudent(""); }}>
       <option value="">{t.choose}</option>
       {assignments.map(a => <option key={a.id} value={a.id}>{a.title} · v{a.version} · {new Date(a.deadline).toLocaleDateString()}{a.closed ? ` · ${t.closedTag}` : ""}</option>)}
     </ChaosSelect></label>}

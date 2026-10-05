@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { toast } from "@/lib/toast";
 import { SignInButton } from "@/lib/auth/client";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -9,7 +10,6 @@ import { Check, RotateCcw, X } from "lucide-react";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { useCardReviews, useLearnActions, useLearnViewer } from "@/lib/learn/data";
 import type { Flashcard, Visibility } from "@/lib/learn/types";
-import { errorMessage } from "@/lib/errors";
 import { useLessonActivity } from "../reader/ActivityContext";
 import { localeDir } from "@/lib/locale";
 import { useCopy, useLocale } from "@/lib/i18n";
@@ -49,9 +49,8 @@ export default function FlashcardStudy({ setId, onEdit }: { setId: string; onEdi
   const actions = useLearnActions();
   const version = useQuery(api.flashcards.getPublished, { setId: setId as Id<"flashcardSets"> });
   const reviews = useCardReviews(setId);
-  const [error, setError] = useState("");
   if (version === undefined || reviews === undefined) return <PageSkeleton label={t.loading} />;
-  if (!version) return <div className="lx-empty"><p>{t.noPublished}</p>{onEdit && <button type="button" className="ws-btn" onClick={async () => { try { await actions.publishFlashcardStudy(setId); } catch (err) { setError(errorMessage(err)); } }}>{t.publishSnapshot}</button>}{error && <p role="alert">{error}</p>}</div>;
+  if (!version) return <div className="lx-empty"><p>{t.noPublished}</p>{onEdit && <button type="button" className="ws-btn" onClick={async () => { try { await actions.publishFlashcardStudy(setId); } catch (err) { toast.error(err); } }}>{t.publishSnapshot}</button>}</div>;
   return <section aria-label={version.title} dir={localeDir(locale)}>
     {!viewer?.signedIn && <p className="lx-notice" style={{ fontSize: 14 }}>{t.deviceProgress} <SignInButton mode="modal"><button type="button" className="lx-link">{t.sync}</button></SignInButton>. {t.retained}</p>}
     <StudyRound key={version._id + ":" + (viewer?.id ?? "guest")} setId={setId} cards={version.cards} reviews={reviews} onEdit={onEdit} onReview={async (cardId, knewIt) => { await actions.reviewCard(setId, cardId, knewIt); }} />
@@ -73,8 +72,7 @@ export function StudyRound({ setId, cards: draftCards, reviews, onEdit, onReview
   const card = cards.find((c) => c.id === queue[index]);
   const known = cards.filter((c) => boxOf(c.id) >= 3).length;
   const [pending, setPending] = useState(false);
-  const [error, setError] = useState("");
-  const answer = async (knewIt: boolean) => { if (!card || pending) return; setPending(true); setError(""); try { await onReview(card.id, knewIt); reviewed.current.add(card.id); if (reviewed.current.size === cards.length) report({ kind: "flashcards", id: setId, known: known + (knewIt && boxOf(card.id) === 2 ? 1 : !knewIt && boxOf(card.id) >= 3 ? -1 : 0), total: cards.length }); setFlipped(false); setIndex(i => i + 1); } catch (err) { setError(errorMessage(err)); } finally { setPending(false); } };
+  const answer = async (knewIt: boolean) => { if (!card || pending) return; setPending(true); try { await onReview(card.id, knewIt); reviewed.current.add(card.id); if (reviewed.current.size === cards.length) report({ kind: "flashcards", id: setId, known: known + (knewIt && boxOf(card.id) === 2 ? 1 : !knewIt && boxOf(card.id) >= 3 ? -1 : 0), total: cards.length }); setFlipped(false); setIndex(i => i + 1); } catch (err) { toast.error(err); } finally { setPending(false); } };
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (!round.current?.contains(e.target as Node)) return;
@@ -91,7 +89,6 @@ export function StudyRound({ setId, cards: draftCards, reviews, onEdit, onReview
   if (!cards.length) return <div className="lx-empty"><p>{t.noCards}</p>{onEdit && <button type="button" className="ws-btn" onClick={onEdit}>{t.addFirst}</button>}</div>;
   return (
     <div ref={round} tabIndex={0} className="lx-section" style={{ gap: 16 }}>
-      {error && <p className="lx-error" role="alert">{error}</p>}
       <div className="lx-panel__row"><span className="lx-muted" role="status">{t.progress(known, cards.length)}</span>
         <button type="button" className="lx-link" disabled={pending} onClick={() => { setIndex(0); setFlipped(false); setQueue(order()); }}><RotateCcw size={12} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} /> {t.reset}</button>
       </div>

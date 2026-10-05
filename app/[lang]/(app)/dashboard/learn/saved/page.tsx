@@ -3,13 +3,13 @@
 import Link from "next/link";
 import { useState } from "react";
 import { Bookmark, BookOpen, Highlighter, Lock, NotebookPen, X } from "lucide-react";
-import { WsTabs, WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
+import { WsTabs } from "@/components/workspace/primitives";
+import { toast } from "@/lib/toast";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { EmptyState } from "@/components/learn/ui";
-import { useAllHighlights, useLearnActions, useLearnCapabilities, useLessonTitles, useNotes, useSaved, nextToastId } from "@/lib/learn/data";
+import { useAllHighlights, useLearnActions, useLearnCapabilities, useLessonTitles, useNotes, useSaved } from "@/lib/learn/data";
 import { excerpt } from "@/lib/learn/doc";
 import { useCopy, useLocale } from "@/lib/i18n";
-import { errorMessage } from "@/lib/errors";
 import { timeAgo } from "@/lib/timeAgo";
 
 const copy = {
@@ -42,10 +42,8 @@ export default function SavedPage() {
   const saved = useSaved();
   const notes = useNotes();
   const actions = useLearnActions();
-  const [error, setError] = useState("");
   const [pending, setPending] = useState(false);
   const [tab, setTab] = useState<Tab>("lessons");
-  const [toast, setToast] = useState<UndoToast | null>(null);
   const highlights = useAllHighlights() ?? [];
   const titles = useLessonTitles();
   const titleOf = (id: string) => titles?.(id) || t.untitled;
@@ -56,7 +54,7 @@ export default function SavedPage() {
   const counts = { lessons: lessons.length, parts: parts.length, highlights: highlights.length, notes: notes.length };
   const icons = { lessons: BookOpen, parts: Bookmark, highlights: Highlighter, notes: NotebookPen };
   const removeRow = (label: string, onRemove: () => unknown | Promise<unknown>) => (
-    <button type="button" className="ws-icon-button" aria-label={`${t.remove}: ${label}`} disabled={pending} onClick={async () => { setPending(true); setError(""); try { await onRemove(); setToast({ id: nextToastId(), text: t.removed }); } catch (err) { setError(errorMessage(err)); } finally { setPending(false); } }}><X size={15} /></button>
+    <button type="button" className="ws-icon-button" aria-label={`${t.remove}: ${label}`} disabled={pending} onClick={async () => { setPending(true); try { await onRemove(); toast.success(t.removed); } catch (err) { toast.error(err); } finally { setPending(false); } }}><X size={15} /></button>
   );
 
   const list = tab === "lessons" ? lessons.map((s) => (
@@ -97,12 +95,10 @@ export default function SavedPage() {
   return (
     <div className="lx-page lx-page--narrow">
       <header className="lx-hero"><div><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></div></header>
-      {error && <p className="lx-error" role="alert">{error}</p>}
       <p className="lx-notice"><Lock size={15} aria-hidden /><span>{t.private}{caps.deviceSync ? "" : ` ${t.device}`}</span></p>
       <WsTabs tabs={["lessons", "parts", "highlights", "notes"] as const} value={tab} onChange={setTab} label={t.title} icons={icons}
         labels={{ lessons: `${t.tabs.lessons} (${counts.lessons})`, parts: `${t.tabs.parts} (${counts.parts})`, highlights: `${t.tabs.highlights} (${counts.highlights})`, notes: `${t.tabs.notes} (${counts.notes})` }} />
       {list.length ? <div className="lx-list">{list}</div> : <EmptyState level={2} icon={icons[tab]} title={t.empty[tab]} body={t.emptyBody[tab]} />}
-      <WsUndoToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { copyText } from "@/lib/clipboard";
+import { toast } from "@/lib/toast";
 import Link from "next/link";
 import { useConvex, useMutation, useQuery } from "convex/react";
 import posthog from "@/lib/analytics";
@@ -8,7 +10,6 @@ import { Copy, Download } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { downloadBlob, safeFilename } from "@/lib/xlsx";
-import { errorMessage } from "@/lib/errors";
 import QrShare from "./QrShare";
 import { useCopy, useLocale } from "@/lib/i18n";
 import EmbedPanel from "./EmbedPanel";
@@ -53,7 +54,7 @@ function CopyBox({ label, value, multiline }: { label: string; value: string; mu
         {multiline
           ? <textarea readOnly value={value} rows={3} className="kb-input font-mono text-xs flex-1" onFocus={(e) => e.target.select()} aria-label={label} />
           : <input readOnly value={value} className="kb-input font-mono text-xs flex-1" onFocus={(e) => e.target.select()} aria-label={label} />}
-        <button type="button" className="kb-btn kb-btn-ghost text-xs" onClick={() => navigator.clipboard?.writeText(value).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); })}>
+        <button type="button" className="kb-btn kb-btn-ghost text-xs" onClick={() => void copyText(value).then((ok) => { if (!ok) return; setCopied(true); setTimeout(() => setCopied(false), 1500); })}>
           <Copy size={14} /> {copied ? t.copied : t.copy}
         </button>
       </div>
@@ -69,7 +70,6 @@ export default function ShareTab({ formId, shareId, title, published, status, sl
   const saveAsTemplate = useMutation(api.forms.saveAsTemplate);
   const [origin, setOrigin] = useState("");
   const [templateName, setTemplateName] = useState(title);
-  const [message, setMessage] = useState("");
   useEffect(() => setOrigin(window.location.origin), []);
   // The custom link when there is one; /f/<id> always keeps working too.
   const path = slug && me ? `/${me.username}/${slug}` : `/f/${shareId}`;
@@ -108,14 +108,13 @@ export default function ShareTab({ formId, shareId, title, published, status, sl
       <section className="chaos-card bg-card p-5 space-y-3" aria-label={t.portability}>
         <h2 className="chaos-heading text-sm">{t.exportReuse}</h2>
         <p className="text-xs text-muted-foreground">{t.exportNote}</p>
-        <button type="button" className="kb-btn kb-btn-ghost text-xs" onClick={() => exportDefinition().catch((e) => setMessage(errorMessage(e)))}><Download size={14} /> {t.download}</button>
+        <button type="button" className="kb-btn kb-btn-ghost text-xs" onClick={() => exportDefinition().catch((e) => toast.error(e))}><Download size={14} /> {t.download}</button>
         <div className="flex gap-2 items-end flex-wrap pt-2 border-t border-foreground/10">
           <label className="text-sm flex-1 min-w-48">{t.saveAsTemplate}
             <input value={templateName} onChange={(e) => setTemplateName(e.target.value)} className="kb-input mt-1" maxLength={120} />
           </label>
-          <button type="button" className="kb-btn kb-btn-ghost text-xs" onClick={() => saveAsTemplate({ formId, name: templateName, category: "Custom" }).then(() => { posthog.capture("form_template_saved"); setMessage(t.savedTemplate); }).catch((e) => setMessage(errorMessage(e)))}>{t.saveTemplate}</button>
+          <button type="button" className="kb-btn kb-btn-ghost text-xs" onClick={() => saveAsTemplate({ formId, name: templateName, category: "Custom" }).then(() => { posthog.capture("form_template_saved"); toast.success(t.savedTemplate); }).catch((e) => toast.error(e))}>{t.saveTemplate}</button>
         </div>
-        {message && <p role="status" className="text-sm">{message}</p>}
       </section>
 
       <section className="chaos-card bg-card p-5 space-y-2 text-sm" aria-label={t.connectedApps}>

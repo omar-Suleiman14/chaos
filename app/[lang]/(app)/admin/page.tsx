@@ -1,5 +1,6 @@
 "use client";
 import DocumentationPanel from "@/components/admin/DocumentationPanel";
+import { toast } from "@/lib/toast";
 import Link from "next/link";
 import { useState } from "react";
 import { useConvexAuth, useMutation, usePaginatedQuery, useQuery } from "convex/react";
@@ -96,13 +97,11 @@ function AdminConsole() {
   const [days, setDays] = useState(7);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
-  const [message, setMessage] = useState("");
   const choose: ChooseAction = (next) => {
     setAction(next);
     setReason("");
     setDays(7);
     setError("");
-    setMessage("");
   };
   async function confirm() {
     if (!action) return;
@@ -110,7 +109,7 @@ function AdminConsole() {
     setError("");
     try {
       await action.run(reason, days);
-      setMessage(`${action.title}: saved.`);
+      toast.success(`${action.title}: saved`);
       setAction(null);
     } catch (e) {
       setError(
@@ -129,11 +128,6 @@ function AdminConsole() {
         </header>
         <WsTabs tabs={adminTabs} value={tab} onChange={setTab} label="Admin sections" labels={adminLabels} icons={adminIcons} />
         <main className="ws-admin-main space-y-7">
-          {message && (
-            <p role="status" className="rounded-lg bg-muted p-3 text-sm">
-              {message}
-            </p>
-          )}
           {tab === "relationships" ? <>
             <p className="ws-page-subtitle">Contacts and follow-ups for organizations using Chaos. Linked accounts stay connected to the platform.</p>
             <WsTabs tabs={["contacts", "pipeline", "followups"]} value={relationshipTab} onChange={setRelationshipTab} label="Relationship tools" labels={{ contacts: "Contacts", pipeline: "Pipeline", followups: "Follow-ups" }} />
@@ -214,13 +208,12 @@ function AdminConsole() {
 function Overview() {
   const report = useQuery(api.adminAnalytics.overview);
   const refresh = useMutation(api.adminAnalytics.refresh);
-  const [error, setError] = useState("");
   const update = async () => {
-    setError("");
     try {
       await refresh({});
-    } catch {
-      setError("Could not refresh analytics. Try again.");
+      toast.info("Refreshing analytics", { description: "Totals update when the scan finishes." });
+    } catch (e) {
+      toast.error(e, { fallback: "Could not refresh analytics. Try again." });
     }
   };
   if (report === undefined) return <p role="status">Loading analytics…</p>;
@@ -235,7 +228,6 @@ function Overview() {
         <Button onClick={update} disabled={report?.running}>
           Refresh analytics
         </Button>
-        {error && <p role="alert">{error}</p>}
       </div>
     );
   const stats = report.counts;
@@ -266,7 +258,6 @@ function Overview() {
       <Button variant="outline" onClick={update} disabled={report.running}>
         {report.running ? "Refreshing..." : "Refresh analytics"}
       </Button>
-      {error && <p role="alert">{error}</p>}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         {metrics.map(([label, value]) => (
           <div key={label} className="rounded-xl border p-5">

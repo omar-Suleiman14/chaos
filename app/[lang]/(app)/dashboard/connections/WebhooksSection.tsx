@@ -1,5 +1,6 @@
 "use client";
 
+import { copyText } from "@/lib/clipboard";
 import { useState } from "react";
 import Link from "next/link";
 import { useMutation } from "convex/react";
@@ -12,6 +13,7 @@ import LoadingState from "@/components/LoadingState";
 import { webhookEventTypes } from "@/convex/webhookModel";
 import type { AttemptOutcome, WebhookEventType, WebhookSentEvent } from "@/convex/webhookModel";
 import { errorMessage } from "@/lib/errors";
+import { toast } from "@/lib/toast";
 import { formatDateTime, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
 import { learnWebhookLabel } from "@/lib/learnWebhookLabels";
@@ -68,7 +70,7 @@ const copy = {
       invalid_url: "Address not allowed", internal_error: "Chaos could not send it",
     } as Record<AttemptOutcome, string>,
     attempts: (n: number) => (n === 1 ? "1 attempt" : `${n} attempts`), nextRetry: (at: string) => `next try ${at}`,
-    resend: "Resend", expired: "Too old to resend", ms: (n: number) => `${n} ms`, attemptN: (n: number) => `#${n}`,
+    resend: "Resend", resent: "Delivery queued again", created: "Webhook created", expired: "Too old to resend", ms: (n: number) => `${n} ms`, attemptN: (n: number) => `#${n}`,
     retention: "History is kept for 30 days. Delivery contents are erased after 7 days, or 24 hours if they contain answers.",
   },
   ar: {
@@ -119,7 +121,7 @@ const copy = {
       invalid_url: "العنوان غير مسموح", internal_error: "تعذّر على Chaos الإرسال",
     } as Record<AttemptOutcome, string>,
     attempts: (n: number) => (n === 1 ? "محاولة واحدة" : n === 2 ? "محاولتان" : `${n} محاولات`), nextRetry: (at: string) => `المحاولة التالية ${at}`,
-    resend: "أعد الإرسال", expired: "أقدم من أن يُعاد", ms: (n: number) => `${n} ملّي ثانية`, attemptN: (n: number) => `#${n}`,
+    resend: "أعد الإرسال", resent: "أُعيدت جدولة الإرسال", created: "أُنشئ الويب هوك", expired: "أقدم من أن يُعاد", ms: (n: number) => `${n} ملّي ثانية`, attemptN: (n: number) => `#${n}`,
     retention: "يُحفظ السجل 30 يومًا. يُمحى محتوى الإرسال بعد 7 أيام، أو بعد 24 ساعة إن احتوى إجابات.",
   },
 };
@@ -165,7 +167,7 @@ function SecretBox({ secret, note, onDone }: { secret: string; note?: string; on
       <p className="text-sm text-muted-foreground">{t.secretHelp}{note ? ` ${note}` : ""}</p>
       <div className="flex gap-2">
         <input readOnly dir="ltr" value={secret} className="kb-input font-mono text-xs flex-1" onFocus={(e) => e.target.select()} aria-label={t.secretField} />
-        <button type="button" className="kb-btn kb-btn-ghost text-xs" onClick={() => navigator.clipboard?.writeText(secret).then(() => setCopied(true))}><Copy size={14} /> {copied ? t.copied : t.copy}</button>
+        <button type="button" className="kb-btn kb-btn-ghost text-xs" onClick={() => void copyText(secret).then((ok) => { if (ok) setCopied(true); })}><Copy size={14} /> {copied ? t.copied : t.copy}</button>
       </div>
       <button type="button" className="text-xs underline" onClick={onDone}>{t.saved}</button>
     </section>
@@ -177,7 +179,6 @@ function DeliveryHistory({ subscriptionId, active, now }: { subscriptionId: Id<"
   const { locale } = useLocale();
   const rows = useQuery(api.webhooks.listDeliveries, { subscriptionId });
   const resend = useMutation(api.webhooks.resendDelivery);
-  const [error, setError] = useState("");
   if (rows === undefined) return <LoadingState label={t.loading} />;
   if (!rows.length) return <p className="text-xs text-muted-foreground">{t.noDeliveries}</p>;
   return (
@@ -198,7 +199,7 @@ function DeliveryHistory({ subscriptionId, active, now }: { subscriptionId: Id<"
                 {d.containsAnswers && <span className="text-muted-foreground">{t.withAnswers}</span>}
                 <span className="ms-auto">
                   {finished && (canResend
-                    ? <button type="button" className="underline" onClick={() => resend({ deliveryId: d._id }).catch((e) => setError(errorMessage(e)))}>{t.resend}</button>
+                    ? <button type="button" className="underline" onClick={() => resend({ deliveryId: d._id }).then(() => toast.success(t.resent), (e) => toast.error(e))}>{t.resend}</button>
                     : !d.payloadAvailable || d.payloadExpiresAt <= now ? <span className="text-muted-foreground">{t.expired}</span> : null)}
                 </span>
               </div>
@@ -221,7 +222,6 @@ function DeliveryHistory({ subscriptionId, active, now }: { subscriptionId: Id<"
         })}
       </ul>
       <p className="text-[11px] text-muted-foreground">{t.retention}</p>
-      {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
     </div>
   );
 }
@@ -244,15 +244,12 @@ export default function WebhooksSection() {
   const [includeAnswers, setIncludeAnswers] = useState(false);
   const [secret, setSecret] = useState<{ value: string; note?: string } | null>(null);
   const [open, setOpen] = useState<Id<"webhookSubscriptions"> | null>(null);
-  const [notice, setNotice] = useState("");
   const [pending, setPending] = useState<{ kind: "rotate" | "delete"; id: Id<"webhookSubscriptions">; url: string } | null>(null);
   const [error, setError] = useState("");
   const [now] = useState(() => Date.now());
 
   const run = (action: Promise<unknown>, done?: string) => {
-    setError("");
-    setNotice("");
-    action.then(() => done && setNotice(done)).catch((e) => setError(errorMessage(e)));
+    action.then(() => { if (done) toast.success(done); }).catch((e) => toast.error(e));
   };
 
   const submit = async () => {
@@ -265,6 +262,7 @@ export default function WebhooksSection() {
       setDescription("");
       setRefs([]);
       setIncludeAnswers(false);
+      toast.success(t.created);
     } catch (err) {
       setError(errorMessage(err));
     }
@@ -363,8 +361,6 @@ export default function WebhooksSection() {
           })}
         </ul>
       )}
-      {notice && <p role="status" className="text-sm text-muted-foreground">{notice}</p>}
-      {error && !creating && <p role="alert" className="text-sm text-destructive">{error}</p>}
       {pending && (
         <WsConfirm
           title={pending.kind === "rotate" ? t.rotate : t.remove}

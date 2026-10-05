@@ -1,12 +1,12 @@
 "use client";
 
 import { useRef, useState } from "react";
+import { toast } from "@/lib/toast";
 import { useMutation, useQuery } from "convex/react";
 import { format, isToday, isYesterday } from "date-fns";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useBuilderLabels } from "@/components/forms/formThemeLabels";
-import { errorMessage } from "@/lib/errors";
 import { formatDate, useCopy, useLocale } from "@/lib/i18n";
 
 const copy = {
@@ -42,7 +42,6 @@ export default function HistoryTab({ formId, versions, canEdit, revision, before
   const [selected, setSelected] = useState<number | null>(versions[0]?.version ?? null);
   const version = useQuery(api.forms.getVersion, selected !== null ? { formId, version: selected } : "skip");
   const restore = useMutation(api.forms.restoreVersion);
-  const [message, setMessage] = useState("");
   const [restoring, setRestoring] = useState(false);
   const busy = useRef(false);
 
@@ -92,13 +91,12 @@ export default function HistoryTab({ formId, versions, canEdit, revision, before
                   if (busy.current) return;
                   busy.current = true;
                   setRestoring(true);
-                  setMessage("");
                   try {
-                    if (!(await beforeRestore())) { setMessage(t.saveFirst); return; }
+                    if (!(await beforeRestore())) { toast.warning(t.saveFirst); return; }
                     await restore({ formId, version: version.version, expectedRevision: revision() });
-                    setMessage(t.copied(version.version));
+                    toast.success(t.copied(version.version));
                   } catch (err) {
-                    setMessage(errorMessage(err));
+                    toast.error(err);
                   } finally {
                     busy.current = false;
                     setRestoring(false);
@@ -106,7 +104,6 @@ export default function HistoryTab({ formId, versions, canEdit, revision, before
                 }}>{t.copyIntoDraft}</button>
               )}
             </div>
-            {message && <p role="status" className="text-sm">{message}</p>}
             <ol className="list-decimal ps-5 space-y-1 text-sm">
               {version.definition.fields.map((f) => (
                 <li key={f.id}>{f.label || <em>{t.textBlock}</em>} <span className="text-xs text-muted-foreground">({labels.fieldType(f.type)}{f.required ? t.required : ""}{f.showIf ? t.conditional : ""})</span></li>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { copyText } from "@/lib/clipboard";
 import inventory from "@/lib/mcp/inventory.json";
 import AiArchitecture from "./AiArchitecture";
 import McpWorkflowDemo from "./McpWorkflowDemo";
@@ -55,7 +56,7 @@ const copy = {
 export default function ConnectView() {
   const t = useCopy(copy);
   const [copied, setCopied] = useState(false);
-  const copyUrl = () => void navigator.clipboard?.writeText(mcpUrl).then(() => { setCopied(true); setTimeout(() => setCopied(false), 2000); }).catch(() => {});
+  const copyUrl = () => void copyText(mcpUrl).then((ok) => { if (!ok) return; setCopied(true); setTimeout(() => setCopied(false), 2000); });
   return (
     <LegalPage title={t.title}>
       <p>{t.intro}</p>

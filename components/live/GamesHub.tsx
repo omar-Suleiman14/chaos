@@ -60,23 +60,19 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
   const [preset, setPreset] = useState<ThemePresetId>();
   const [timeLimitSec, setTimeLimitSec] = useState<number>(DEFAULT_TIME_LIMIT);
   const [showAnswerLabels, setShowAnswerLabels] = useState(true);
-  const [error, setError] = useState("");
   const [search, setSearch] = useState("");
   const [shown, setShown] = useState({ published: 12, drafts: 12 });
   const matches = (title: string) => search.trim().toLocaleLowerCase().split(/\s+/).every(word => title.toLocaleLowerCase().includes(word));
-  const { create, busy } = useCreateForm(setError);
+  const { create, busy } = useCreateForm();
   const host = useHostLive();
   const quizzes = forms ? [...forms.owned, ...forms.shared.filter((f) => f.role === "editor")].filter((f) => f.quizMode && f.status !== "archived") : [];
   const loaded = forms !== undefined && legacy !== undefined;
 
   const createGame = () => {
-    setError("");
     void create(newGameArgs(locale, preset ?? "flow"));
   };
   const reportHost = async (target: Parameters<typeof host.start>[0]) => {
-    setError("");
-    const message = await host.start({ ...target, timeLimitSec, showAnswerLabels, ...(preset ? { theme: themeFromPreset(preset) } : {}) });
-    if (message) setError(message);
+    await host.start({ ...target, timeLimitSec, showAnswerLabels, ...(preset ? { theme: themeFromPreset(preset) } : {}) });
   };
   const quizRows = (published: boolean) => {
     const key = published ? "published" : "drafts";
@@ -106,7 +102,6 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
       <div><h1 className="ws-page-title">{t.title}</h1><p className="games-help">{t.lead}</p></div>
       <div className="games-actions"><Link href="/docs/live-games" className="ws-btn"><BookOpen size={16} aria-hidden="true" />{t.guide}</Link><button type="button" className="ws-btn ws-btn--primary" disabled={busy} onClick={createGame}><Plus size={18} aria-hidden="true" />{busy ? t.creating : t.create}</button></div>
     </header>}
-    {error && <p className="text-destructive" role="alert">{error}</p>}
     <section className="games-session" aria-labelledby="games-session-title">
       <h2 id="games-session-title">{t.setup}</h2><p className="games-help">{t.setupHelp}</p>
       <div className="games-session__fields">

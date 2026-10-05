@@ -1,12 +1,13 @@
 "use client";
 
+import { copyText } from "@/lib/clipboard";
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { Copy } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { WsSwitch } from "@/components/workspace/primitives";
-import { errorMessage } from "@/lib/errors";
+import { toast } from "@/lib/toast";
 import { useCopy } from "@/lib/i18n";
 import { EMBED_HEIGHT_MESSAGE, MAX_EMBED_ORIGINS, embedSnippet, normalizeEmbedOrigins } from "@/lib/embed";
 
@@ -19,7 +20,7 @@ const copy = {
     sitesHelp: `One address per line, for example https://example.com or https://*.example.com for every subdomain. Up to ${MAX_EMBED_ORIGINS}.`,
     any: "Any site",
     anyHelp: "Any website can show this form. Fine for a public form that anyone may answer; list sites instead if you want to control where it appears.",
-    save: "Save", saving: "Saving…", saved: "Saved.",
+    save: "Save", saving: "Saving…", saved: "Embed settings saved",
     invalid: (v: string) => `"${v}" is not a website address like https://example.com.`,
     tooMany: `List at most ${MAX_EMBED_ORIGINS} sites.`,
     needSites: "Add at least one site, or choose Any site.",
@@ -41,7 +42,7 @@ const copy = {
     sitesHelp: `عنوان واحد في كل سطر، مثل https://example.com أو https://*.example.com لكل النطاقات الفرعية. حتى ${MAX_EMBED_ORIGINS} موقعًا.`,
     any: "أي موقع",
     anyHelp: "يمكن لأي موقع عرض هذا النموذج. مناسب لنموذج عام يجيب عنه أي شخص، وإن أردت التحكم في مكان ظهوره فأضف المواقع بدلًا من ذلك.",
-    save: "حفظ", saving: "جارٍ الحفظ…", saved: "تم الحفظ.",
+    save: "حفظ", saving: "جارٍ الحفظ…", saved: "تم حفظ إعدادات التضمين",
     invalid: (v: string) => `"${v}" ليس عنوان موقع مثل https://example.com.`,
     tooMany: `أضف ${MAX_EMBED_ORIGINS} موقعًا على الأكثر.`,
     needSites: "أضف موقعًا واحدًا على الأقل، أو اختر أي موقع.",
@@ -98,9 +99,9 @@ export default function EmbedPanel({ formId, link, title }: { formId: Id<"forms"
     try {
       const saved = await save({ formId, enabled, anyOrigin, origins: result.origins });
       setSites((local) => local === sites ? saved.origins.join("\n") : local);
-      setStatus({ ok: true, text: t.saved });
+      toast.success(t.saved, { id: "embed-save" });
     } catch (e) {
-      setStatus({ ok: false, text: errorMessage(e) });
+      toast.error(e, { id: "embed-save" });
     } finally {
       setBusy(false);
     }
@@ -157,7 +158,7 @@ export default function EmbedPanel({ formId, link, title }: { formId: Id<"forms"
             <p className="chaos-heading text-[10px] text-muted-foreground">{t.code}</p>
             <div className="flex gap-2 items-start">
               <textarea readOnly value={snippet} rows={autoResize ? 6 : 3} dir="ltr" className="kb-input font-mono text-xs flex-1" onFocus={(e) => e.target.select()} aria-label={t.code} />
-              <button type="button" className="kb-btn kb-btn-ghost text-xs" onClick={() => navigator.clipboard?.writeText(snippet).then(() => { setCopied(true); setTimeout(() => setCopied(false), 1500); })}>
+              <button type="button" className="kb-btn kb-btn-ghost text-xs" onClick={() => void copyText(snippet).then((ok) => { if (!ok) return; setCopied(true); setTimeout(() => setCopied(false), 1500); })}>
                 <Copy size={14} /> {copied ? t.copied : t.copy}
               </button>
             </div>

@@ -1,5 +1,6 @@
 "use client";
 
+import { copyText } from "@/lib/clipboard";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "convex/react";
 import { useQuery } from "@/lib/convexCache";
@@ -12,6 +13,7 @@ import { learnIntegrationScopes, legacyIntegrationScopes } from "@/convex/integr
 import type { IntegrationScope, LegacyIntegrationScope } from "@/convex/integrationModel";
 import { learnScopeLabel } from "@/lib/integrationScopeLabels";
 import { errorMessage } from "@/lib/errors";
+import { toast } from "@/lib/toast";
 import { useCopy, useLocale } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
@@ -69,7 +71,7 @@ const copy = {
     confirmRotate: (label: string) => `Make a new token for “${label}”?\n\nThe current token keeps working for 24 hours so you can update the app. After that only the new token works.`,
     rotatedHelp: (when: string) => `Paste it into the other app now. The old token stops working ${when}.`,
     oldTokenUntil: (when: string) => `old token works until ${when}`,
-    stopOldToken: "Stop old token now",
+    stopOldToken: "Stop old token now", accessSaved: "Access updated", rotatedToast: "New token created", oldStopped: "Old token stopped", revokedToast: "Connection revoked",
     confirmStopOld: "Stop the old token now? Any app still using it loses access immediately.",
     ownItemsOnly: "A connection reaches only items you own. Forms and quizzes that others share with you are not included; their owner has to connect them.",
     allYours: "All your forms and quizzes.", shared: (titles: string) => `Shared: ${titles}`, deletedItem: "Deleted item", noItems: "No forms or quizzes selected (only drafts it creates).",
@@ -114,7 +116,7 @@ const copy = {
     confirmRotate: (label: string) => `إنشاء رمز جديد لـ «${label}»؟\n\nيبقى الرمز الحالي صالحًا 24 ساعة لتحدّث التطبيق. بعدها يعمل الرمز الجديد فقط.`,
     rotatedHelp: (when: string) => `الصقه في التطبيق الآخر الآن. يتوقف الرمز القديم ${when}.`,
     oldTokenUntil: (when: string) => `الرمز القديم صالح حتى ${when}`,
-    stopOldToken: "أوقف الرمز القديم الآن",
+    stopOldToken: "أوقف الرمز القديم الآن", accessSaved: "حُدّث الوصول", rotatedToast: "أُنشئ رمز جديد", oldStopped: "أُوقف الرمز القديم", revokedToast: "أُلغي الاتصال",
     confirmStopOld: "إيقاف الرمز القديم الآن؟ أي تطبيق ما زال يستخدمه يفقد الوصول فورًا.",
     ownItemsOnly: "يصل الاتصال فقط إلى العناصر التي تملكها. النماذج والاختبارات التي يشاركها معك آخرون غير مشمولة؛ على مالكها أن يربطها.",
     allYours: "كل نماذجك واختباراتك.", shared: (titles: string) => `المشارَك: ${titles}`, deletedItem: "عنصر محذوف", noItems: "لم يُحدد أي نموذج أو اختبار (المسودات التي ينشئها فقط).",
@@ -206,10 +208,10 @@ export default function ConnectionsPage() {
     setRefs([]);
     // Lessons are a separate, explicit grant (convex/learnIntegrations.ts). The token already exists, so a failure here is reported, not rolled back.
     if (lessonRefs.length && canSelectLessons(scopes)) {
-      try { await setLessonSelection({ tokenId: result.tokenId, lessonIds: lessonIds(lessonRefs) }); } catch (err) { setError(t.lessonsNotSaved(errorMessage(err))); }
+      try { await setLessonSelection({ tokenId: result.tokenId, lessonIds: lessonIds(lessonRefs) }); } catch (err) { toast.error(t.lessonsNotSaved(errorMessage(err))); }
     }
     if (scopes.includes("collections:read") && collectionIds(lessonRefs).length) {
-      try { await setCollectionSelection({ tokenId: result.tokenId, collectionIds: collectionIds(lessonRefs) }); } catch (err) { setError(t.lessonsNotSaved(errorMessage(err))); }
+      try { await setCollectionSelection({ tokenId: result.tokenId, collectionIds: collectionIds(lessonRefs) }); } catch (err) { toast.error(t.lessonsNotSaved(errorMessage(err))); }
     }
     setLessonRefs([]);
     setSaving(false);
@@ -218,7 +220,6 @@ export default function ConnectionsPage() {
   const saveEdit = async (c: { _id: Id<"integrationTokens">; access: "all" | "selected"; scopes: IntegrationScope[]; items: { ref: string }[] }) => {
     if (saving) return;
     setSaving(true);
-    setError("");
     try {
       if (editRefs.length + editLessonRefs.length + sourceIdsFromRefs(c.items.map(item => item.ref)).length > 500) throw new Error("Select at most 500 items.");
       // updateConnection replaces itemRefs with forms and quizzes only, so lesson and source grants are written again right after.
@@ -230,8 +231,9 @@ export default function ConnectionsPage() {
         await setSourceSelection({ tokenId: c._id, sourceIds: sourceIds as Id<"learnSources">[] });
       }
       setEditing(null);
+      toast.success(t.accessSaved);
     } catch (err) {
-      setError(errorMessage(err));
+      toast.error(err);
     } finally { setSaving(false); }
   };
 
@@ -239,15 +241,15 @@ export default function ConnectionsPage() {
   const [confirming, setConfirming] = useState<{ title: string; body: string; label: string; run: () => void } | null>(null);
 
   const rotateToken = async (tokenId: Id<"integrationTokens">) => {
-    setError("");
     try {
       const result = await rotate({ tokenId });
       posthog.capture("integration_token_rotated");
       setSecret(result.token);
       setSecretNote(t.rotatedHelp(timeAgo(locale, result.previousTokenExpiresAt)));
       setCopied(false);
+      toast.success(t.rotatedToast);
     } catch (err) {
-      setError(errorMessage(err));
+      toast.error(err);
     }
   };
 
@@ -299,7 +301,7 @@ export default function ConnectionsPage() {
           <p className="text-sm text-muted-foreground">{secretNote ?? t.tokenHelp}</p>
           <div className="flex gap-2">
             <input readOnly dir="ltr" value={secret} className="kb-input font-mono text-xs flex-1" onFocus={(e) => e.target.select()} aria-label={t.tokenField} />
-            <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => navigator.clipboard?.writeText(secret).then(() => setCopied(true))}><Copy size={14} /> {copied ? t.copied : t.copy}</button>
+            <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => void copyText(secret).then((ok) => { if (ok) setCopied(true); })}><Copy size={14} /> {copied ? t.copied : t.copy}</button>
           </div>
           <button type="button" className="text-xs underline" onClick={() => { setSecret(null); setSecretNote(null); setCopied(false); }}>{t.saved}</button>
         </section>
@@ -368,7 +370,7 @@ export default function ConnectionsPage() {
                       <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => setConfirming({ title: t.rotate, body: t.confirmRotate(c.label), label: t.rotate, run: () => void rotateToken(c._id) })}>{t.rotate}</button>
                     )}
                     {!inactive && c.previousTokenExpiresAt && (
-                      <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => setConfirming({ title: t.stopOldToken, body: t.confirmStopOld, label: t.stopOldToken, run: () => { stopOld({ tokenId: c._id }).catch((e) => setError(errorMessage(e))); } })}>{t.stopOldToken}</button>
+                      <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => setConfirming({ title: t.stopOldToken, body: t.confirmStopOld, label: t.stopOldToken, run: () => { stopOld({ tokenId: c._id }).then(() => toast.success(t.oldStopped), (e) => toast.error(e)); } })}>{t.stopOldToken}</button>
                     )}
                     {!c.revokedAt && (
                       <button type="button" className="ws-btn ws-btn--danger ws-btn--sm" onClick={() => setRevoking({ id: c._id, label: c.label })}>{t.revoke}</button>
@@ -415,7 +417,6 @@ export default function ConnectionsPage() {
           })}
         </ul>
       )}
-      {error && !creating && <p role="alert" className="text-sm text-destructive">{error}</p>}
 
       {confirming && (
         <WsConfirm title={confirming.title} body={confirming.body} confirmLabel={confirming.label} onClose={() => setConfirming(null)} onConfirm={confirming.run} />
@@ -427,7 +428,7 @@ export default function ConnectionsPage() {
           body={t.confirmRevoke(revoking.label)}
           confirmLabel={t.revoke}
           onClose={() => setRevoking(null)}
-          onConfirm={() => { revoke({ tokenId: revoking.id }).then(() => posthog.capture("integration_connection_revoked")).catch((e) => setError(errorMessage(e))); }}
+          onConfirm={() => { revoke({ tokenId: revoking.id }).then(() => { posthog.capture("integration_connection_revoked"); toast.success(t.revokedToast); }).catch((e) => toast.error(e)); }}
         />
       )}
 

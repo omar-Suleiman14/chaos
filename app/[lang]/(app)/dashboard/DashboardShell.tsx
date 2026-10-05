@@ -24,6 +24,7 @@ import { useCreateForm } from "@/components/workspace/useCreateForm";
 import { newQuizArgs } from "@/components/live/newGame";
 import { useLearnActions } from "@/lib/learn/data";
 import { errorMessage } from "@/lib/errors";
+import { toast } from "@/lib/toast";
 import { useModal } from "@/components/workspace/useModal";
 import { WsTooltips } from "@/components/workspace/primitives";
 import { IntentLink } from "@/components/IntentLink";
@@ -147,7 +148,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
   const myCourses = useQuery(api.courses.listMine);
   const myGames = useQuery(api.live.myGames);
-  const [actionError, setActionError] = useState("");
+  /** Only for first-time account setup, which blocks the workspace; actions report through toasts. */
+  const [initError, setInitError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
   const [mobile, setMobile] = useState(false);
   const menuTrigger = useRef<HTMLButtonElement>(null);
@@ -164,7 +166,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     else setTimeout(() => void loadPalette(), 3000);
   }, []);
   const [scrolled, setScrolled] = useState(false);
-  const { create, busy } = useCreateForm(setActionError);
+  const { create, busy } = useCreateForm();
   const router = useRouter();
   const myLessons = useMyLessons();
   const learnFolders = useFolders();
@@ -178,16 +180,16 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const learnActions = useLearnActions();
   const createLesson = useCallback(async () => {
     try { const id = await learnActions.createLesson({ language: locale }); router.push(`/dashboard/learn/lessons/${id}`); }
-    catch (err) { setActionError(errorMessage(err)); }
+    catch (err) { toast.error(err); }
   }, [learnActions, locale, router]);
   const createCourseMutation = useMutation(api.courses.create);
   const createCourse = useCallback(async () => {
     try { const id = await createCourseMutation({ language: locale }); router.push(`/dashboard/courses/${id}`); }
-    catch (err) { setActionError(errorMessage(err)); }
+    catch (err) { toast.error(err); }
   }, [createCourseMutation, locale, router]);
   const createFlashcards = useCallback(async () => {
     try { const id = await learnActions.createFlashcardSet({ title: t.untitledSet }); router.push(`/dashboard/learn/flashcards/${id}?mode=edit`); }
-    catch (err) { setActionError(errorMessage(err)); }
+    catch (err) { toast.error(err); }
   }, [learnActions, router, t.untitledSet]);
   // As in Max: Ctrl/Cmd+B folds the sidebar into a slim rail, and its edge can be dragged to resize.
   const [collapsed, setCollapsed] = useState(false);
@@ -221,7 +223,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   useEffect(() => {
     if (isLoaded && user) {
       getOrCreateUser().catch((err: unknown) => {
-        setActionError(errorMessage(err, t.initFailed));
+        setInitError(errorMessage(err, t.initFailed));
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation ref is stable in behavior
@@ -307,7 +309,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   // A brand-new sign-up waits for account creation so it never flashes an empty dashboard before its Card.
   // getCurrentUser also returns null before Convex has the sign-in token (every refresh), so only trust
   // a null once Convex reports the visitor as signed in.
-  if (isLoaded && user && convexSignedIn && account === null) return <div className="workspace-ui">{actionError ? <div className="mc-customize"><p role="alert">{actionError}</p><button className="ws-btn" onClick={() => { setActionError(""); void getOrCreateUser({}).catch(error => setActionError(errorMessage(error))); }}>{locale === "ar" ? "حاول مجددًا" : "Try again"}</button></div> : <CardSetupSkeleton />}</div>;
+  if (isLoaded && user && convexSignedIn && account === null) return <div className="workspace-ui">{initError ? <div className="mc-customize"><p role="alert">{initError}</p><button className="ws-btn" onClick={() => { setInitError(""); void getOrCreateUser({}).catch(error => setInitError(errorMessage(error))); }}>{locale === "ar" ? "حاول مجددًا" : "Try again"}</button></div> : <CardSetupSkeleton />}</div>;
   if (account && !cardDismissed && (account.cardOnboardingPending || cardStarted) && !account.isBanned && !account.suspendedUntil) return <div className="workspace-ui"><CardOnboarding actorId={account.clerkId} onDone={() => setCardDismissed(true)} /></div>;
 
   // The live game host screen is meant for a projector: full window, no workspace chrome.
@@ -345,7 +347,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               <span className="ws-plus" aria-hidden="true"><Plus size={14} strokeWidth={2.6} /></span> <span>{busy ? t.creating : t.new}</span>
             </button>
             {newOpen && (
-              <div role="menu" className="ws-new-menu__list" onKeyDown={(e) => { if (e.key === "Escape") setNewOpen(false); }}>
+              <div role="menu" className="ws-new-menu__list ws-glass" onKeyDown={(e) => { if (e.key === "Escape") setNewOpen(false); }}>
                 <button type="button" role="menuitem" autoFocus className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(); }}><FileText size={16} aria-hidden="true" /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(newQuizArgs(locale)); }}><ListChecks size={16} aria-hidden="true" /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createLesson(); }}><BookOpenText size={16} aria-hidden="true" /><span><strong>{t.newLessonItem}</strong><small>{t.newLessonHelp}</small></span></button>
@@ -498,14 +500,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </header>
 
           <main id="workspace-content" tabIndex={-1} className={`ws-content ${wide ? "ws-content--wide" : ""}`}>
-            {actionError && (
-              <div role="alert" className="chaos-card border-destructive mb-6 flex items-start justify-between gap-4 p-4 text-sm text-destructive">
-                <span>{actionError}</span>
-                <button type="button" onClick={() => setActionError("")} aria-label={t.dismiss} className="shrink-0">
-                  <X size={16} />
-                </button>
-              </div>
-            )}
             <div key={pathname} className="ws-page">{(account?.isBanned || account?.suspendedUntil) && <div role="status" className="mb-5 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">{account.isBanned ? t.banned : t.suspended(new Date(account.suspendedUntil!).toLocaleString(dateLocale(locale)))} {t.paused} <a className="underline" href={`mailto:${supportEmail}`}>{t.contact}</a>.</div>}{children}</div>
           </main>
         </div>

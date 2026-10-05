@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
+import { toast } from "@/lib/toast";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useLocale } from "@/lib/i18n";
@@ -15,7 +16,6 @@ export default function StudentsRoster({ username }: { username?: string }) {
   const count = useQuery(api.studentRoster.count, username ? "skip" : {});
   const visibility = useQuery(api.studentRoster.myVisibility, username ? { username } : "skip");
   const setVisible = useMutation(api.studentRoster.setPublicVisibility);
-  const [error, setError] = useState("");
   const viewport = useRef<HTMLDivElement>(null);
   const [width, setWidth] = useState(320), [top, setTop] = useState(0);
   useEffect(() => { const el = viewport.current; if (!el) return; const resize = new ResizeObserver(([entry]) => setWidth(entry.contentRect.width)); resize.observe(el); return () => resize.disconnect(); }, []);
@@ -26,8 +26,7 @@ export default function StudentsRoster({ username }: { username?: string }) {
   return <section className="mc-students" aria-label={ar ? "الطلاب" : "Students"}>
     <h2>{ar ? "الطلاب" : "Students"}{!username && count !== undefined ? ` · ${count.toLocaleString(locale)}` : ""}</h2>
     <p className="mc-help">{username ? (ar ? "تظهر هنا فقط البطاقات التي وافق أصحابها على عرضها." : "Only students who choose to show their Card appear here.") : (ar ? "قائمتك خاصة. يبقى المشاركون المجهولون ضيوفًا دون حسابات عامة." : "Your roster is private. Anonymous participants remain guests without public profiles.")}</p>
-    {username && visibility !== undefined && visibility !== null && <label className="mc-students__visibility"><input type="checkbox" checked={visibility} onChange={e => { const visible = e.target.checked; void setVisible({ username, visible }).catch(() => setError(ar ? "تعذر حفظ الإعداد." : "Couldn't save this setting.")); }} />{ar ? "اعرض بطاقتي هنا علنًا" : "Show my Card here publicly"}</label>}
-    {error && <p role="alert">{error}</p>}
+    {username && visibility !== undefined && visibility !== null && <label className="mc-students__visibility"><input type="checkbox" checked={visibility} onChange={e => { const visible = e.target.checked; void setVisible({ username, visible }).catch(() => toast.error(ar ? "تعذر حفظ الإعداد." : "Couldn't save this setting.")); }} />{ar ? "اعرض بطاقتي هنا علنًا" : "Show my Card here publicly"}</label>}
     <div ref={viewport} className="mc-students__viewport" onScroll={e => setTop(e.currentTarget.scrollTop)} tabIndex={0} aria-label={ar ? "قائمة الطلاب" : "Student list"}>
       <div style={{ height: Math.ceil(results.length / columns) * rowHeight, position: "relative" }}>
         {results.slice(first, last).map((student, offset) => {

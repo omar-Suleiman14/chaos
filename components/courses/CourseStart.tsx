@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import { toast } from "@/lib/toast";
 import type { FunctionReturnType } from "convex/server";
 import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
@@ -30,7 +31,7 @@ export default function CourseStart({ course }: { course: NonNullable<FunctionRe
   const { state, signedIn, enroll } = useCourseEnrollment(course.id);
   const [name, setName] = useState("");
   useEffect(() => setName(savedGuestName()), []);
-  const [busy, setBusy] = useState(false), [error, setError] = useState("");
+  const [busy, setBusy] = useState(false);
   const count = course.lessons.filter(l => progress[l.id]?.completed).length;
   const active = course.lessons.find(l => !progress[l.id]?.completed && (progress[l.id]?.percent ?? 0) > 0);
   const target = active ?? course.lessons.find(l => !progress[l.id]?.completed) ?? course.lessons[0];
@@ -43,9 +44,9 @@ export default function CourseStart({ course }: { course: NonNullable<FunctionRe
     return <div className="cp-continue"><Link className="cp-start site-btn site-btn--primary" href={href}>{finished ? t.review : started ? t.continue : t.start}<ArrowRight size={18} className="cp-arrow" aria-hidden /></Link>{meter}</div>;
   }
   const start = async () => {
-    setBusy(true); setError("");
+    setBusy(true); 
     try { await enroll(signedIn ? undefined : name); router.push(href); }
-    catch (err) { setError(err instanceof Error ? err.message.replace(/^.*?(VALIDATION_FAILED|NOT_FOUND|RATE_LIMITED): /, "") : String(err)); setBusy(false); }
+    catch (err) { toast.error(err); setBusy(false); }
   };
   return <form className="cp-continue cp-enroll" onSubmit={e => { e.preventDefault(); void start(); }}>
     <p>{t.locked}</p>
@@ -54,6 +55,5 @@ export default function CourseStart({ course }: { course: NonNullable<FunctionRe
       <button type="submit" className="cp-start site-btn site-btn--primary" disabled={busy || state === undefined}>{busy ? t.starting : signedIn ? t.start : t.guest}<ArrowRight size={18} className="cp-arrow" aria-hidden /></button>
       {!signedIn && <Link className="cp-enroll__signin" href={`/sign-in?callbackUrl=${encodeURIComponent(`/learn/courses/${course.id}`)}`}>{t.signIn}</Link>}
     </div>
-    {error && <p role="alert" className="lx-error">{error}</p>}
   </form>;
 }

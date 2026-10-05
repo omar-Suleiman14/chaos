@@ -4,6 +4,7 @@ import { getFunctionName } from "convex/server";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useHostLive } from "@/components/live/HostLiveButton";
 import HostScreen from "@/components/live/HostScreen";
+import { toast, toastStore } from "@/lib/toast";
 
 const mocks = vi.hoisted(() => ({ create: vi.fn(), countdown: vi.fn(), push: vi.fn(), now: vi.fn(), view: null as Record<string, unknown> | null }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }) }));
@@ -25,7 +26,7 @@ describe("host async controls", () => {
     let settle!: (id: string) => void;
     mocks.create.mockImplementation(() => new Promise<string>((resolve) => { settle = resolve; }));
     const { result } = renderHook(() => useHostLive());
-    let first!: Promise<string | null>;
+    let first!: Promise<boolean>;
     await act(async () => {
       first = result.current.start({ formId: "form" as Id<"forms"> });
       await result.current.start({ formId: "form" as Id<"forms"> });
@@ -39,7 +40,10 @@ describe("host async controls", () => {
   it("unlocks creation after a rejected request", async () => {
     mocks.create.mockRejectedValueOnce(new Error("Offline")).mockResolvedValue("game");
     const { result } = renderHook(() => useHostLive());
-    await act(async () => { expect(await result.current.start({ quizId: "quiz" as Id<"quizzes"> })).toContain("Offline"); });
+    toast.dismiss();
+    await act(async () => { expect(await result.current.start({ quizId: "quiz" as Id<"quizzes"> })).toBe(false); });
+    // The failure is reported once, as an error toast.
+    expect(toastStore.get().filter(item => !item.leaving)).toMatchObject([{ kind: "error", title: "Offline" }]);
     await act(async () => { await result.current.start({ quizId: "quiz" as Id<"quizzes"> }); });
     expect(mocks.create).toHaveBeenCalledTimes(2);
     expect(result.current.busy).toBe(false);

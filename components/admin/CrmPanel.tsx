@@ -2,6 +2,7 @@
 
 import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import { useState } from "react";
+import { toast } from "@/lib/toast";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { Doc, Id } from "@/convex/_generated/dataModel";
 import { api } from "@/convex/_generated/api";
@@ -68,7 +69,6 @@ export default function CrmPanel({
     null,
   );
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   const changeStages = useMutation(api.admin.setContactStages);
   const { results, status, loadMore } = usePaginatedQuery(
     api.admin.contacts,
@@ -101,14 +101,12 @@ export default function CrmPanel({
     );
   async function move(ids: Id<"crmContacts">[], stage: Stage) {
     setBusy(true);
-    setError("");
     try {
       await changeStages({ contactIds: ids, stage });
       setSelected([]);
+      toast.success(ids.length === 1 ? "Stage changed" : `Moved ${ids.length} contacts`);
     } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Could not change stage.",
-      );
+      toast.error(error, { fallback: "Could not change stage." });
     } finally {
       setBusy(false);
     }
@@ -219,11 +217,6 @@ export default function CrmPanel({
             Clear selection
           </Button>
         </div>
-      )}
-      {error && (
-        <p role="alert" className="text-destructive p-4">
-          {error}
-        </p>
       )}
       {view === "pipeline" ? (
         <div className="crm-board">
@@ -446,7 +439,6 @@ function ContactDetail({
   const contact = useQuery(api.admin.contact, { contactId });
   const complete = useMutation(api.admin.completeContactFollowUp);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   if (contact === undefined)
     return (
       <p role="status" className="p-5">
@@ -473,15 +465,11 @@ function ContactDetail({
             disabled={busy}
             onClick={async () => {
               setBusy(true);
-              setError("");
               try {
                 await complete({ contactId });
+                toast.success("Follow-up completed");
               } catch (error) {
-                setError(
-                  error instanceof Error
-                    ? error.message
-                    : "Could not complete follow-up.",
-                );
+                toast.error(error, { fallback: "Could not complete follow-up." });
               } finally {
                 setBusy(false);
               }
@@ -491,11 +479,6 @@ function ContactDetail({
             {busy ? "Saving?" : "Complete"}
           </Button>
         </div>
-      )}
-      {error && (
-        <p role="alert" className="text-destructive p-5">
-          {error}
-        </p>
       )}
       <ContactEditor contact={contact} onSaved={onSaved} />
     </div>
@@ -527,11 +510,9 @@ function ContactEditor({
     setFollowUp(contact?.nextFollowUp ? new Date(contact.nextFollowUp).toLocaleDateString("en-CA") : "");
   }
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
-    setError("");
     try {
       await save({
         id: contact?._id,
@@ -547,10 +528,9 @@ function ContactEditor({
           : undefined,
       });
       onSaved();
+      toast.success("Contact saved");
     } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Could not save contact.",
-      );
+      toast.error(error, { fallback: "Could not save contact." });
     } finally {
       setBusy(false);
     }
@@ -633,11 +613,6 @@ function ContactEditor({
               </label>
             </div>
           </DetailSection>
-          {error && (
-            <p role="alert" className="text-destructive px-5 py-2">
-              {error}
-            </p>
-          )}
           <div className="flex justify-end p-5">
             <Button type="submit" disabled={busy}>
               {busy ? "Saving…" : "Save contact"}
@@ -656,16 +631,15 @@ function ContactNotes({ contactId }: { contactId: Id<"crmContacts"> }) {
   const activity = useQuery(api.admin.contactActivity, { contactId });
   const [body, setBody] = useState("");
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   async function submit(event: React.FormEvent) {
     event.preventDefault();
     setBusy(true);
-    setError("");
     try {
       await addNote({ contactId, body });
       setBody("");
+      toast.success("Note added");
     } catch (error) {
-      setError(error instanceof Error ? error.message : "Could not save note.");
+      toast.error(error, { fallback: "Could not save note." });
     } finally {
       setBusy(false);
     }
@@ -687,11 +661,6 @@ function ContactNotes({ contactId }: { contactId: Id<"crmContacts"> }) {
         <Button type="submit" variant="outline" disabled={busy || !body.trim()}>
           {busy ? "Saving…" : "Add note"}
         </Button>
-        {error && (
-          <p role="alert" className="text-destructive">
-            {error}
-          </p>
-        )}
       </form>
       {notes === undefined || activity === undefined ? <p role="status">Loading activity…</p> : (
         <ol className="crm-timeline">

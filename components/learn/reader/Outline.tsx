@@ -88,7 +88,7 @@ export function MobileOutline({ items, active }: { items: OutlineItem[]; active?
 }
 function OutlineDrawer({ items, active, onClose }: { items: OutlineItem[]; active?: string; onClose: () => void }) {
   const t = useCopy(copy), panel = useModal<HTMLDivElement>({ onClose });
-  return <><div className="lx-sheet-scrim" data-modal-backdrop onClick={onClose} aria-hidden /><div ref={panel} className="lx-sheet lx-outline-drawer" role="dialog" aria-modal="true" aria-label={t.nav} tabIndex={-1}>
+  return <><div className="lx-sheet-scrim" data-modal-backdrop onClick={onClose} aria-hidden /><div ref={panel} className="lx-sheet lx-outline-drawer ws-glass" role="dialog" aria-modal="true" aria-label={t.nav} tabIndex={-1}>
     <header className="lx-panel__row"><strong>{t.title}</strong><button type="button" className="ws-icon-button" aria-label={t.close} onClick={onClose}><X size={20} aria-hidden /></button></header>
     <OutlineNav items={items} active={active} onNavigate={onClose} />
   </div></>;

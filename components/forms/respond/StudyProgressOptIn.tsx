@@ -1,5 +1,6 @@
 "use client";
 
+import { toast } from "@/lib/toast";
 import { useRef, useState } from "react";
 import { useMutation } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -16,19 +17,17 @@ export function StudyProgressOptIn({ responseId, language }: {
   const pending = useRef(false);
   const [saving, setSaving] = useState(false);
   const [evidenceCount, setEvidenceCount] = useState<number | null>(null);
-  const [error, setError] = useState("");
   const ar = language === "ar";
 
   const save = async () => {
     if (pending.current || evidenceCount !== null) return;
     pending.current = true;
     setSaving(true);
-    setError("");
     try {
       const result = await ingest({ formResponseId: responseId });
       setEvidenceCount(result.evidenceCount);
     } catch (err) {
-      setError(parseError(err, ar ? "تعذّر استخدام هذه المحاولة. يجب أن تكون إجابة اختبار مكتملة مرتبطة بحسابك الحالي." : "This attempt could not be used. It must be a completed quiz response linked to your current account.").message);
+      toast.error(parseError(err, ar ? "تعذّر استخدام هذه المحاولة. يجب أن تكون إجابة اختبار مكتملة مرتبطة بحسابك الحالي." : "This attempt could not be used. It must be a completed quiz response linked to your current account.").message);
     } finally {
       pending.current = false;
       setSaving(false);
@@ -47,7 +46,6 @@ export function StudyProgressOptIn({ responseId, language }: {
           <button type="button" className="form-btn form-btn-ghost form-btn-sm" disabled={saving} onClick={() => void save()}>
             {saving ? ar ? "جارٍ الحفظ…" : "Saving…" : ar ? "استخدم هذه المحاولة للتقدّم الدراسي" : "Use this attempt for study progress"}
           </button>
-          {error && <p role="alert">{error}</p>}
         </>
       )}
     </div>

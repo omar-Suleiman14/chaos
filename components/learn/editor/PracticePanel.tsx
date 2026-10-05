@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { toast } from "@/lib/toast";
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -37,7 +38,6 @@ export default function PracticePanel({ lessonId, onCreateCards, onInsertQuiz, o
   const relationships = useQuery(api.learnCollections.listAssessments, { lessonId: lessonId as Id<"lessons"> });
   const save = useMutation(studyReads.saveFormAttachments);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
   const [labels, setLabels] = useState<Record<string, string>>({});
   const decks = useLessonFlashcards(lessonId) ?? [];
   const mine = (forms?.owned ?? []).filter((f) => f.quizMode && f.status !== "archived");
@@ -49,12 +49,12 @@ export default function PracticePanel({ lessonId, onCreateCards, onInsertQuiz, o
   const byId = new Map(mine.map((f) => [f._id as string, f]));
   const change = async (next: AttachedQuiz[]) => {
     if (busy || relationships === undefined) return;
-    setBusy(true); setError("");
+    setBusy(true); 
     const classicCount = relationships.filter(row => row.asset.kind === "quiz").length;
     try {
       await save({ lessonId: lessonId as Id<"lessons">, expected: quizzes.map(q => ({ id: q.formId as Id<"forms">, label: q.label, order: q.order })), attachments: next.map((q, i) => ({ id: q.formId as Id<"forms">, label: q.label.trim() || q.title.trim() || "Practice", order: classicCount + i })) });
       setLabels(values => Object.fromEntries(Object.entries(values).filter(([id, label]) => next.find(q => q.formId === id)?.label !== label)));
-    } catch (err) { setError(err instanceof Error ? err.message : "Could not save practice."); }
+    } catch (err) { toast.error(err, { fallback: "Could not save practice." }); }
     finally { setBusy(false); }
   };
   const move = (i: number, d: number) => { const next = [...quizzes]; [next[i], next[i + d]] = [next[i + d], next[i]]; change(next); };
@@ -62,7 +62,6 @@ export default function PracticePanel({ lessonId, onCreateCards, onInsertQuiz, o
   return (
     <div className="lx-form">
       <p className="lx-help" style={{ fontSize: 13 }}>{t.lead}</p>
-      {error && <p className="lx-error" role="alert">{error}</p>}
       {relationships === undefined && <p className="lx-muted" role="status">{t.loading}</p>}
       {quizzes.map((q, i) => {
         const form = byId.get(q.formId);

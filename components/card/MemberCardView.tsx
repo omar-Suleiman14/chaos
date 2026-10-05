@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { Download, RefreshCw, Send, Wallet } from "lucide-react";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { CARD_THEMES, memberCardGrain, memberCardPng, memberCardSvg, withGrainImage, type MemberCardData } from "@/lib/memberCard";
+import { toast } from "@/lib/toast";
 import "./card.css";
 import { useEyesFollowPointer } from "./useEyesFollowPointer";
 import { useFlip, useTilt } from "./useTilt";
@@ -40,7 +41,6 @@ export default function MemberCardView({ data, onStyle, framed = true, actions }
   };
   const cardEl = useRef<HTMLSpanElement>(null);
   useFlip(cardEl, turn);
-  const [status, setStatus] = useState("");
   const tilt = useRef<HTMLDivElement>(null);
   const root = useRef<HTMLDivElement>(null);
   useEyesFollowPointer(root);
@@ -54,7 +54,8 @@ export default function MemberCardView({ data, onStyle, framed = true, actions }
   const front = paint(memberCardSvg(card, "front"));
   const back = paint(memberCardSvg(card, "back"));
 
-  const say = (text: string) => { setStatus(text); window.setTimeout(() => setStatus(""), 2500); };
+  const say = (text: string) => toast.success(text, { id: "card" });
+  const fail = () => toast.error(t.failed, { id: "card" });
   // Both sides, as two PNGs: the front to show, the back with its scannable code.
   const sides = async () => Promise.all((["front", "back"] as const).map(async (side) =>
     new File([await memberCardPng(card, side)], `chaos-card-${data.username}-${side}.png`, { type: "image/png" })));
@@ -67,7 +68,7 @@ export default function MemberCardView({ data, onStyle, framed = true, actions }
         // Some browsers drop a second download started in the same tick.
         await new Promise((r) => window.setTimeout(r, 250));
       }
-    } catch { say(t.failed); }
+    } catch { fail(); }
   };
   const share = async () => {
     try {
@@ -76,7 +77,7 @@ export default function MemberCardView({ data, onStyle, framed = true, actions }
       if (navigator.canShare?.({ files: [files[0]] })) { await navigator.share({ files: [files[0]], title: t.cardOf(data.name), url: data.url }); say(t.shared); return; }
       if (navigator.share) { await navigator.share({ title: t.cardOf(data.name), url: data.url }); say(t.shared); return; }
       await navigator.clipboard.writeText(data.url); say(t.copied);
-    } catch (err) { if (!(err instanceof DOMException && err.name === "AbortError")) say(t.failed); }
+    } catch (err) { if (!(err instanceof DOMException && err.name === "AbortError")) fail(); }
   };
 
   return (
@@ -96,14 +97,13 @@ export default function MemberCardView({ data, onStyle, framed = true, actions }
         </div>
       </div>
       <div className="mc-actions" role="group" aria-label={t.label}>
-        {onStyle && <button type="button" className="mc-btn" title={t.shuffle} aria-label={t.shuffle} onClick={() => void Promise.resolve().then(() => onStyle((data.style + 1) % CARD_THEMES.length)).catch(() => say(t.failed))}><RefreshCw size={18} aria-hidden /><span>{t.shuffle}</span></button>}
+        {onStyle && <button type="button" className="mc-btn" title={t.shuffle} aria-label={t.shuffle} onClick={() => void Promise.resolve().then(() => onStyle((data.style + 1) % CARD_THEMES.length)).catch(fail)}><RefreshCw size={18} aria-hidden /><span>{t.shuffle}</span></button>}
         <span className="mc-gap" />
         <button type="button" className="mc-btn" title={t.download} aria-label={t.download} onClick={() => void download()}><Download size={18} aria-hidden /><span>{t.download}</span></button>
         <button type="button" className="mc-btn" title={t.share} aria-label={t.share} onClick={() => void share()}><Send size={18} aria-hidden /><span>{t.share}</span></button>
         {wallet.google && <a className="mc-btn mc-btn--wallet" href={`${walletBase}/google`} target="_blank" rel="noopener"><Wallet size={18} aria-hidden /><span>{t.google}</span></a>}
         {actions}
       </div>
-      <p className="mc-status" role="status">{status}</p>
     </div>
   );
 }

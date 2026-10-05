@@ -148,9 +148,9 @@ describe.each([
     let resolve!: () => void;
     setClipboard({ writeText: () => new Promise<void>((done) => { resolve = done; }) });
     copy();
-    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
-    expect(screen.queryByText(/Link copied/)).not.toBeInTheDocument();
+    // The error stays until the retry has an outcome, which then takes its place.
     await act(async () => resolve());
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
     expect(screen.getByRole("status")).toHaveTextContent("Link copied");
   });
 });

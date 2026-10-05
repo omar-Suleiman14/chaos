@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { toast } from "@/lib/toast";
 import { CheckCircle2, CornerDownRight, Flag, MessageSquare, RotateCcw, Trash2, X } from "lucide-react";
 import { useLearnActions, useLearnViewer, useThreads } from "@/lib/learn/data";
 import type { DiscussionThread, Lesson } from "@/lib/learn/types";
@@ -36,19 +37,17 @@ export default function DiscussionPanel({ lesson, draftAnchor, onClearAnchor, on
   const actions = useLearnActions();
   const [filter, setFilter] = useState<"open" | "resolved" | "all">("open");
   const [body, setBody] = useState("");
-  const [error, setError] = useState("");
   const [reporting, setReporting] = useState<{ id: string; title: string } | null>(null);
   const shown = threads.filter((th) => filter === "all" || (filter === "resolved") === th.resolved);
   const signedIn = !!viewer?.signedIn;
 
   const post = async () => {
-    setError("");
     try {
       await actions.startThread({ lessonId: lesson.id, blockId: draftAnchor?.blockId, anchorExcerpt: draftAnchor?.excerpt, body });
       setBody("");
       onClearAnchor();
       setFilter("open");
-    } catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+    } catch (err) { toast.error(err); }
   };
 
   return (
@@ -75,7 +74,6 @@ export default function DiscussionPanel({ lesson, draftAnchor, onClearAnchor, on
               </div>
             ) : <span className="lx-muted">{t.newTitle}</span>}
             <textarea className="lx-textarea" rows={2} value={body} onChange={(e) => setBody(e.target.value)} placeholder={t.placeholder} aria-label={t.placeholder} maxLength={4000} />
-            {error && <p className="lx-error" role="alert">{error}</p>}
             <div className="lx-actions" style={{ justifyContent: "flex-end" }}><button type="submit" className="ws-btn ws-btn--primary ws-btn--sm" disabled={!body.trim()}>{t.post}</button></div>
           </>
         ) : <span className="lx-muted">{t.signIn}</span>}

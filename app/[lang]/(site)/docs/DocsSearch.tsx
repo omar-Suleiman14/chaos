@@ -103,7 +103,7 @@ export default function DocsSearch({ global = false, inline = false }: { global?
         {global && !query && <kbd className="docs-search__hint" aria-hidden="true" dir="ltr">Ctrl K</kbd>}
       </label>
       {showPanel && (
-        <ul id={listId} role="listbox" aria-label={t.resultsLabel} className="docs-results">
+        <ul id={listId} role="listbox" aria-label={t.resultsLabel} className="docs-results site-glass">
           {results.length === 0 && <li className="docs-results__empty" role="presentation">{t.noResults(query.trim())}</li>}
           {results.map((result, index) => (
             <li key={result.entry.href} id={`${listId}-${index}`} role="option" aria-selected={index === current} data-active={index === current}

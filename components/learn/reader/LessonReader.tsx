@@ -21,19 +21,19 @@ import {
   ChevronLeft, Bookmark, BookmarkCheck, ExternalLink, Flag, GitFork, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
   Lock, MoreHorizontal, NotebookPen, PenLine, RotateCcw, Share2, ThumbsDown, ThumbsUp, Type, X,
 } from "lucide-react";
-import { WsConfirm, WsMenu, WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
+import { WsConfirm, WsMenu } from "@/components/workspace/primitives";
+import { toast } from "@/lib/toast";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { useIsPhone } from "@/components/workspace/useIsPhone";
 import { useModal } from "@/components/workspace/useModal";
 import {
-  isListed, readerView, useHighlights, useLearnActions, useLearnCapabilities, useLearnViewer, useNotes, usePerson, useProgress, useSaved, useThreads, useVote, nextToastId } from "@/lib/learn/data";
+  isListed, readerView, useHighlights, useLearnActions, useLearnCapabilities, useLearnViewer, useNotes, usePerson, useProgress, useSaved, useThreads, useVote } from "@/lib/learn/data";
 import { blockText, excerpt, findBlock, outline, readingMinutes, walk, asBlocks, type Block } from "@/lib/learn/doc";
 import { resolveLearnFileUrl as resolveFileUrl } from "@/lib/learn/data";
 import { lessonPath } from "@/lib/learn/seo";
 import type { HandoffAction, HandoffTarget } from "@/lib/learn/handoff";
 import type { AttachedQuiz, Lesson, LessonSource } from "@/lib/learn/types";
 import { formatDate, useCopy, useLocale } from "@/lib/i18n";
-import { errorMessage } from "@/lib/errors";
 import { sourceIcon, sourceLabel, useBlockCopy } from "../editor/blocks";
 import { CurriculumBadges, ExternalRefLine, ModerationNotice, ProvenanceLine, QualityBadge, VerificationBadges } from "../ui";
 import { CourseOrLessonIcon } from "../icons";
@@ -62,7 +62,7 @@ const copy = {
     blockMenu: "Actions for this part", saveBlock: "Save this part", note: "Add private note", discuss: "Discuss this part", copyPart: "Copy link to this part",
     explainImage: "Explain image", askImage: "Ask about this", savedToast: "Saved to your Learn library", noteSaved: "Note saved (only you can see it)",
     highlightSaved: "Highlighted (only you can see it)", removeHighlight: "Remove highlight", highlightRemoved: "Highlight removed",
-    noteTitle: "Private note", notePh: "Only you can see this note.", noteSave: "Save note", noteCancel: "Cancel", noteDelete: "Delete note",
+    noteTitle: "Private note", notePh: "Only you can see this note.", noteSave: "Save note", noteCancel: "Cancel", noteDelete: "Delete note", noteDeleted: "Note deleted", copyFailed: "Could not copy the link",
     signIn: "Sign in to save, highlight and take notes.", signInAction: "Sign in",
     aiOff: "opens outside Chaos", forked: "Copied to your library", devicePublish: "Publishing is on this device only until the Learn service is connected.",
     draftPreview: "Preview of your unpublished draft. Readers see the published version.",
@@ -82,7 +82,7 @@ const copy = {
     blockMenu: "إجراءات لهذا الجزء", saveBlock: "احفظ هذا الجزء", note: "أضف ملاحظة خاصة", discuss: "ناقش هذا الجزء", copyPart: "انسخ رابط هذا الجزء",
     explainImage: "اشرح الصورة", askImage: "اسأل عن هذا", savedToast: "حُفظ في مكتبة Learn", noteSaved: "حُفظت الملاحظة (لا يراها غيرك)",
     highlightSaved: "ظُلّل النص (لا يراه غيرك)", removeHighlight: "أزل التظليل", highlightRemoved: "أُزيل التظليل",
-    noteTitle: "ملاحظة خاصة", notePh: "لا يرى هذه الملاحظة غيرك.", noteSave: "احفظ الملاحظة", noteCancel: "إلغاء", noteDelete: "احذف الملاحظة",
+    noteTitle: "ملاحظة خاصة", notePh: "لا يرى هذه الملاحظة غيرك.", noteSave: "احفظ الملاحظة", noteCancel: "إلغاء", noteDelete: "احذف الملاحظة", noteDeleted: "حُذفت الملاحظة", copyFailed: "تعذّر نسخ الرابط",
     signIn: "سجّل الدخول للحفظ والتظليل وكتابة الملاحظات.", signInAction: "تسجيل الدخول",
     aiOff: "يُفتح خارج Chaos", forked: "نُسخ إلى مكتبتك", devicePublish: "النشر على هذا الجهاز فقط إلى أن تُربط خدمة Learn.",
     draftPreview: "معاينة لمسودتك غير المنشورة. يرى القرّاء النسخة المنشورة.",
@@ -181,7 +181,6 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const [handoff, setHandoff] = useState<HandoffContext | null>(null);
   const [reporting, setReporting] = useState(false);
   const [lightbox, setLightbox] = useState<{ url: string; alt: string; caption?: string } | null>(null);
-  const [toast, setToast] = useState<UndoToast | null>(null);
   const [editingNote, setEditingNote] = useState<{ id?: string; blockId: string; body: string } | null>(null);
   const [discussAnchor, setDiscussAnchor] = useState<{ blockId: string; excerpt: string }>();
   const [scrolled, setScrolled] = useState(0);
@@ -197,7 +196,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
     setTappedBlock((current) => (current === id ? undefined : id));
   };
   const [selection, clearSelection] = useTextSelection(article);
-  const say = (text: string, undo?: () => void) => setToast({ id: nextToastId(), text, undo });
+  const say = (text: string) => toast.success(text);
 
   // Only visible published-block engagement is eligible for a server view.
   useEffect(() => {
@@ -211,7 +210,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
       if (rect.bottom <= 0 || rect.top >= window.innerHeight) return;
       if (++seconds < 15) return;
       window.clearInterval(timer);
-      void actions.recordView(lesson.id, { blockId, engagedSeconds: seconds }).catch(err => say(errorMessage(err)));
+      void actions.recordView(lesson.id, { blockId, engagedSeconds: seconds }).catch(err => toast.error(err, { id: "lesson-sync" }));
     }, 1000);
     return () => window.clearInterval(timer);
   }, [lesson.id, active, previewDraft, signedIn]); // eslint-disable-line react-hooks/exhaustive-deps -- timer belongs to the engagement target
@@ -233,7 +232,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
       if (Date.now() - lastSaved.current > 4000 && pct > 3) {
         lastSaved.current = Date.now();
         try { localStorage.setItem(positionKey, String(Math.min(1, Math.max(0, (window.innerHeight * .2 - r.top) / Math.max(1, r.height))))); } catch { /* unavailable */ }
-        void actions.setProgress(lesson.id, { percent: pct, lastBlockId: active }).catch(err => say(errorMessage(err)));
+        void actions.setProgress(lesson.id, { percent: pct, lastBlockId: active }).catch(err => toast.error(err, { id: "lesson-sync" }));
       }
     };
     onScroll();
@@ -269,7 +268,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
     setHandoff({ lessonTitle: meta.title || t.untitled, selection: text, section: sectionOf(blockId), context: contextOf(blockId), sources: citationsIn(blockId), publicUrl, target, action, imageAlt });
   };
 
-  const guard = async (fn: () => unknown | Promise<unknown>) => { if (!signedIn) { say(t.signIn); return; } try { await fn(); } catch (err) { say(errorMessage(err)); } };
+  const guard = async (fn: () => unknown | Promise<unknown>) => { if (!signedIn) { toast.info(t.signIn); return; } try { await fn(); } catch (err) { toast.error(err); } };
 
   const onSelectionAction = (action: SelectionAction) => {
     if (!selection) return;
@@ -286,7 +285,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   };
 
   const copyLink = async (hash?: string) => {
-    try { await navigator.clipboard.writeText(`${window.location.origin}${lessonPath(lesson.id)}${hash ? `#${hash}` : ""}`); say(t.linkCopied); } catch { /* clipboard unavailable */ }
+    try { await navigator.clipboard.writeText(`${window.location.origin}${lessonPath(lesson.id)}${hash ? `#${hash}` : ""}`); say(t.linkCopied); } catch { toast.error(t.copyFailed); }
   };
 
   const openSourceTarget = async (source: LessonSource, locator: string) => {
@@ -336,7 +335,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
             <header><span><NotebookPen size={12} aria-hidden /> {t.noteTitle}</span>
               <span className="lx-actions" style={{ gap: 2 }}>
                 <button type="button" className="ws-icon-button" aria-label={t.edit} onClick={() => setEditingNote({ id: n.id, blockId: n.blockId, body: n.body })}><PenLine size={13} /></button>
-                <button type="button" className="ws-icon-button" aria-label={t.noteDelete} onClick={() => guard(async () => { const copyOf = n; await actions.deleteNote(n.id); say(t.noteDelete, () => { void guard(() => actions.upsertNote({ lessonId: copyOf.lessonId, blockId: copyOf.blockId, body: copyOf.body })); }); })}><X size={13} /></button>
+                <button type="button" className="ws-icon-button" aria-label={t.noteDelete} onClick={() => guard(async () => { const copyOf = n; await actions.deleteNote(n.id); toast(t.noteDeleted, { undo: () => { void guard(() => actions.upsertNote({ lessonId: copyOf.lessonId, blockId: copyOf.blockId, body: copyOf.body })); } }); })}><X size={13} /></button>
               </span>
             </header>
             <p style={{ whiteSpace: "pre-wrap" }}>{n.body}</p>
@@ -520,8 +519,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
         <SourceSheet source={openSource.source} locator={openSource.locator} onOpen={() => void openSourceTarget(openSource.source, openSource.locator)} onClose={() => setOpenSource(null)} noLink={t.noSourceLink} openLabel={t.openSource} />
       )}
       {forkingQuiz && <WsConfirm title={t.forkQuizTitle} body={t.forkQuizBody(lesson.ownerName)} confirmLabel={t.fork} danger={false} onClose={() => setForkingQuiz(null)}
-        onConfirm={() => { void actions.forkQuiz(forkingQuiz.formId, { lessonId: lesson.id }).then((id) => router.push(`/dashboard/forms/${id}`), (err) => say(errorMessage(err))); }} />}
-      <WsUndoToast toast={toast} onClose={() => setToast(null)} />
+        onConfirm={() => { void actions.forkQuiz(forkingQuiz.formId, { lessonId: lesson.id }).then((id) => router.push(`/dashboard/forms/${id}`), (err) => toast.error(err)); }} />}
     </div>
   );
 }
@@ -545,7 +543,7 @@ function PhoneSheet({ children, onClose }: { children: React.ReactNode; onClose:
   return (
     <>
       <div className="lx-sheet-scrim" data-modal-backdrop onClick={onClose} aria-hidden />
-      <div ref={panel} className="lx-sheet" role="dialog" aria-modal="true" tabIndex={-1}>{children}</div>
+      <div ref={panel} className="lx-sheet ws-glass" role="dialog" aria-modal="true" tabIndex={-1}>{children}</div>
     </>
   );
 }
@@ -556,7 +554,7 @@ function SourceSheet({ source, locator, onOpen, onClose, noLink, openLabel }: { 
   const Icon = sourceIcon[source.kind];
   return (
     <div className="ws-overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-      <div ref={panel} className="ws-dialog" role="dialog" aria-modal="true" aria-label={source.title} tabIndex={-1}>
+      <div ref={panel} className="ws-dialog ws-glass" role="dialog" aria-modal="true" aria-label={source.title} tabIndex={-1}>
         <div className="ws-dialog__header">
           <h2 className="ws-dialog__title" style={{ display: "flex", gap: 8, alignItems: "center" }}><Icon size={18} aria-hidden />{sourceLabel(source, locator)}</h2>
           <button type="button" data-close className="ws-icon-button" onClick={onClose} aria-label="Close"><X size={16} /></button>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { toast } from "@/lib/toast";
 import { useCopy } from "@/lib/i18n";
 import { Download, Maximize2, X } from "lucide-react";
 import { qrPng, qrSvg } from "@/lib/qr";
@@ -37,7 +38,6 @@ const copy = {
 export default function QrShare({ link, title, published }: { link: string; title: string; published: boolean }) {
   const t = useCopy(copy);
   const [big, setBig] = useState(false);
-  const [error, setError] = useState("");
   const svg = useMemo(() => (published && link ? qrSvg(link) : ""), [published, link]);
   const src = svg ? `data:image/svg+xml;utf8,${encodeURIComponent(svg)}` : "";
   const name = `${safeFilename(title)}-qr`;
@@ -66,11 +66,10 @@ export default function QrShare({ link, title, published }: { link: string; titl
       <p className="text-xs font-mono break-all" dir="ltr">{link}</p>
       <p className="text-xs text-muted-foreground">{t.hint}</p>
       <div className="flex gap-2 flex-wrap">
-        <button type="button" className="kb-btn kb-btn-ghost text-xs" onClick={() => qrPng(link).then((b) => downloadBlob(b, `${name}.png`, "image/png")).catch(() => setError(t.error))}><Download size={14} /> {t.png}</button>
+        <button type="button" className="kb-btn kb-btn-ghost text-xs" onClick={() => qrPng(link).then((b) => downloadBlob(b, `${name}.png`, "image/png")).catch(() => toast.error(t.error))}><Download size={14} /> {t.png}</button>
         <button type="button" className="kb-btn kb-btn-ghost text-xs" onClick={() => downloadBlob(svg, `${name}.svg`, "image/svg+xml")}><Download size={14} /> {t.svg}</button>
         <button type="button" className="kb-btn kb-btn-ghost text-xs" onClick={() => setBig(true)}><Maximize2 size={14} /> {t.large}</button>
       </div>
-      {error && <p role="status" className="text-sm">{error}</p>}
       {big && (
         <div role="dialog" aria-modal="true" aria-label={t.dialog} className="fixed inset-0 z-50 bg-white text-black flex flex-col items-center justify-center gap-4 p-6">
           <button type="button" className="kb-btn kb-btn-ghost text-xs absolute top-4 end-4" onClick={() => setBig(false)}><X size={14} /> {t.close}</button>

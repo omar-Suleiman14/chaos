@@ -9,6 +9,7 @@ import "@/app/workspace.css";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
 import FrameGuard from "@/components/FrameGuard";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import Toaster from "@/components/Toaster";
 import { AuthProvider } from "@/lib/auth/client";
 import { themeInitScript } from "@/lib/theme";
 import { LocaleProvider } from "@/lib/i18n";
@@ -126,6 +127,7 @@ export default async function RootLayout({ children, params }: Readonly<{ childr
               {children}
             </ConvexClientProvider>
           </AuthProvider>
+          <Toaster />
         </ThemeProvider>
         </LocaleProvider>
       </body>

@@ -1,8 +1,7 @@
 "use client";
 
 import { filterLearningRows, LearningLibraryActions, LearningLibraryTable, type LearningLibraryProps } from "@/components/library/LearningLibrary";
-import { WsUndoToast, type UndoToast } from "@/components/workspace/primitives";
-import { errorMessage } from "@/lib/errors";
+import { toast } from "@/lib/toast";
 import { timeAgo } from "@/lib/timeAgo";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -28,17 +27,15 @@ export default function CoursesHub({
   const courses = useQuery(api.courses.listMine);
   const create = useMutation(api.courses.create);
   const setArchived = useMutation(api.courses.setArchived);
-  const [toast, setToast] = useState<UndoToast | null>(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const ar = locale === "ar";
   const newCourse = async () => {
     setBusy(true);
-    setError("");
     try {
       const id = await create({ language: locale });
       router.push(`/dashboard/courses/${id}`);
-    } catch {
-      setError(t.failed);
+    } catch (err) {
+      toast.error(err, { fallback: t.failed });
       setBusy(false);
     }
   };
@@ -47,14 +44,14 @@ export default function CoursesHub({
   const filtered = !!filters.search || !!filters.statuses?.length;
   const archive = async (course: typeof shown[number]) => {
     if (busy) return;
-    setBusy(true); setError("");
+    setBusy(true);
     try {
       await setArchived({ courseId: course.id, archived: true });
-      setToast({ id: Date.now(), text: locale === "ar" ? "تمت أرشفة الدورة" : "Course archived", undo: () => {
+      toast(ar ? "تمت أرشفة الدورة" : "Course archived", { description: course.title, undo: () => {
         setBusy(true);
-        void setArchived({ courseId: course.id, archived: false }).catch(err => setError(errorMessage(err))).finally(() => setBusy(false));
+        void toast.promise(setArchived({ courseId: course.id, archived: false }), { loading: ar ? "جارٍ الاستعادة…" : "Restoring…", success: ar ? "استُعيدت الدورة" : "Course restored" }).catch(() => {}).finally(() => setBusy(false));
       } });
-    } catch (err) { setError(errorMessage(err)); }
+    } catch (err) { toast.error(err); }
     finally { setBusy(false); }
   };
   const rowActions = (course: typeof shown[number]) => <LearningLibraryActions row={course} disabled={busy}
@@ -87,11 +84,6 @@ export default function CoursesHub({
           )}
         </div>
       </header>}
-      {error && (
-        <p role="alert" className="ws-error mb-4">
-          {error}
-        </p>
-      )}
       {embedded && shown.length === 0 && (
         <div className="ws-empty ws-page">
           <span className="ws-empty__art">
@@ -149,7 +141,6 @@ export default function CoursesHub({
           </article>
         ))}
       </div>)}
-      <WsUndoToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

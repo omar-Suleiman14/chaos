@@ -9,6 +9,7 @@ import {
   type CSSProperties,
 } from "react";
 import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { toast } from "@/lib/toast";
 import { api } from "@/convex/_generated/api";
 import { useLocale } from "@/lib/i18n";
 import { CARD_THEMES } from "@/lib/memberCard";
@@ -183,7 +184,6 @@ export function StudentVisibility({ username }: { username: string }) {
   const { locale } = useLocale();
   const visibility = useQuery(api.studentRoster.myVisibility, { username });
   const setVisible = useMutation(api.studentRoster.setPublicVisibility);
-  const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   if (visibility == null) return null;
   return (
@@ -196,15 +196,12 @@ export function StudentVisibility({ username }: { username: string }) {
           onChange={async (event) => {
             const visible = event.target.checked;
             setSaving(true);
-            setError("");
             try {
               await setVisible({ username, visible });
             } catch {
-              setError(
-                locale === "ar"
+              toast.error(locale === "ar"
                   ? "تعذر حفظ الإعداد."
-                  : "Couldn't save this setting.",
-              );
+                  : "Couldn't save this setting.");
             } finally {
               setSaving(false);
             }
@@ -214,7 +211,6 @@ export function StudentVisibility({ username }: { username: string }) {
           ? "اعرض بطاقتي هنا علنًا"
           : "Show my Card here publicly"}
       </label>
-      {error && <p role="alert">{error}</p>}
     </div>
   );
 }

@@ -29,12 +29,12 @@ describe("app settings", () => {
     expect(toggle).toHaveAttribute("aria-checked", "true");
     fireEvent.click(toggle);
     expect(mocks.setListingVisibility).toHaveBeenCalledWith({ visible: false });
-    await waitFor(() => expect(screen.getByText("Could not save your author visibility. Try again.")).toHaveAttribute("role", "status"));
+    await waitFor(() => expect(screen.getByRole("alert")).toHaveTextContent("Could not save your author visibility. Try again."));
     expect(toggle).toBeEnabled();
     expect(toggle).toHaveAttribute("aria-checked", "true");
     mocks.setListingVisibility.mockResolvedValueOnce(null);
     fireEvent.click(toggle);
-    await waitFor(() => expect(screen.getByText("Saved")).toHaveAttribute("role", "status"));
+    await waitFor(() => expect(screen.getByRole("status")).toHaveTextContent("Hidden from author lists"));
   });
   it("applies sounds and new-form defaults as they change", () => {
     render(<SettingsPage />);

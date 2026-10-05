@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { toast } from "@/lib/toast";
 import { useMutation, usePaginatedQuery } from "convex/react";
 import { ArrowUpDown, Bookmark, Check, ChevronDown, Search, Trash2, X } from "lucide-react";
 import { useQuery } from "@/lib/convexCache";
@@ -9,7 +10,6 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { WsConfirm, WsDialog, WsMenu } from "@/components/workspace/primitives";
 import { LibrarySkeleton } from "@/components/workspace/Skeletons";
-import { errorMessage } from "@/lib/errors";
 import { formatDateTime, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
 import { resultsCopy } from "./copy";
@@ -71,7 +71,6 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
   const [viewName, setViewName] = useState("");
   const [tagDialog, setTagDialog] = useState<ResponseId[] | null>(null);
   const [tagInput, setTagInput] = useState("");
-  const [error, setError] = useState("");
   const list = useRef<HTMLUListElement>(null);
 
   // Search as you type, a moment after typing stops.
@@ -91,7 +90,7 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
   const deleteView = useMutation(api.formResults.deleteView);
   const canEdit = role !== "viewer";
   const ids = [...selected];
-  const act = (p: Promise<unknown>, after?: () => void) => p.then(() => { setSelected(new Set()); after?.(); }).catch((e) => setError(errorMessage(e)));
+  const act = (p: Promise<unknown>, after?: () => void) => p.then(() => { setSelected(new Set()); after?.(); }).catch((e) => toast.error(e));
   const toggle = (id: ResponseId) => setSelected((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const filtered = Object.values(filter).some((v) => v !== undefined);
   const openIndex = openId ? results.findIndex((r) => r._id === openId) : -1;
@@ -170,7 +169,7 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
                     <button type="button" role="menuitem" className="flex-1" onClick={() => { close(); setFilter(v.filter); setSearchText(v.filter.search ?? ""); }}>
                       <span className="truncate">{v.name}</span>
                     </button>
-                    <button type="button" role="menuitem" className="ws-menu__icon" aria-label={t.deleteView(v.name)} onClick={() => { void deleteView({ viewId: v._id }).catch((e) => setError(errorMessage(e))); }}>
+                    <button type="button" role="menuitem" className="ws-menu__icon" aria-label={t.deleteView(v.name)} onClick={() => { void deleteView({ viewId: v._id }).catch((e) => toast.error(e)); }}>
                       <Trash2 size={14} aria-hidden="true" />
                     </button>
                   </div>
@@ -183,12 +182,6 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="ws-inline-error">
-          <span>{error}</span>
-          <button type="button" className="ws-icon-button" aria-label={t.close} onClick={() => setError("")}><X size={15} /></button>
-        </div>
-      )}
 
       {canEdit && selected.size > 0 && (
         <div className="ws-bulkbar" role="toolbar" aria-label={t.bulkLabel}>
@@ -289,7 +282,7 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
           <form className="grid gap-3" onSubmit={(e) => {
             e.preventDefault();
             if (!viewName.trim()) return;
-            saveView({ formId, name: viewName, filter }).then(() => { setViewName(""); setSavingView(false); }).catch((err) => setError(errorMessage(err)));
+            saveView({ formId, name: viewName, filter }).then(() => { toast.success(t.viewSaved(viewName)); setViewName(""); setSavingView(false); }).catch((err) => toast.error(err));
           }}>
             <label className="grid gap-1.5 text-sm font-medium">{t.viewName}
               <input className="kb-input" value={viewName} maxLength={60} onChange={(e) => setViewName(e.target.value)} autoFocus />

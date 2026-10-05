@@ -9,13 +9,13 @@ import {
   backdropOptions, buttonOptions, contrastIssues, coverOptions, customTheme, fontOptions, isHex, isThemeEdited, randomPalette, resetTheme, soundOptions, themeFromPreset, themePresets,
 } from "@/components/forms/formThemes";
 import type { FormDefinition, FormTheme, Language, Presentation } from "@/convex/formLogic";
-import { errorMessage } from "@/lib/errors";
 import { useBuilderLabels } from "@/components/forms/formThemeLabels";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { sfx } from "@/lib/sfx";
 import { PreviewSurface } from "./FormPreview";
 import { useIsPhone } from "@/components/workspace/useIsPhone";
 import { WsSwitch } from "@/components/workspace/primitives";
+import { toast } from "@/lib/toast";
 
 const copy = {
   en: {
@@ -29,7 +29,7 @@ const copy = {
     darkMode: "Dark mode", asDesigned: "Always as designed", followDevice: "Follow device", font: "Font", buttons: "Buttons and corners", next: "Next", corners: "Corners",
     square: "Square", soft: "Soft", round: "Round", pageLayout: "Page layout", open: "Open", card: "Card", spacious: "Spacious", background: "Background",
     logo: "Logo", logoHint: "https://… (HTTPS image address)", logoAddress: "Logo address", savedThemes: "Saved themes", applied: (n: string) => `Applied ${n}`,
-    deleteSaved: (n: string) => `Delete saved theme ${n}`, saveHint: "Save this design to reuse it on another form or quiz.", themeName: "Theme name", themeSaved: "Theme saved.", save: "Save",
+    deleteSaved: (n: string) => `Delete saved theme ${n}`, saveHint: "Save this design to reuse it on another form or quiz.", themeName: "Theme name", themeSaved: "Theme saved", themeDeleted: "Theme deleted", save: "Save",
     preview: "Preview", previewLanguage: "Preview language", device: "Device", desktop: "Desktop", phone: "Phone", restartPreview: "Restart preview", fullScreen: "Full-screen preview",
   },
   ar: {
@@ -43,7 +43,7 @@ const copy = {
     darkMode: "الوضع الداكن", asDesigned: "كما صُمم دائمًا", followDevice: "حسب الجهاز", font: "الخط", buttons: "الأزرار والزوايا", next: "التالي", corners: "الزوايا",
     square: "حادة", soft: "ناعمة", round: "مستديرة", pageLayout: "تخطيط الصفحة", open: "مفتوح", card: "بطاقة", spacious: "واسع", background: "الخلفية",
     logo: "الشعار", logoHint: "https://… (رابط صورة HTTPS)", logoAddress: "رابط الشعار", savedThemes: "المظاهر المحفوظة", applied: (n: string) => `طُبّق ${n}`,
-    deleteSaved: (n: string) => `احذف المظهر المحفوظ ${n}`, saveHint: "احفظ هذا التصميم لتستخدمه في نموذج أو اختبار آخر.", themeName: "اسم المظهر", themeSaved: "حُفظ المظهر.", save: "احفظ",
+    deleteSaved: (n: string) => `احذف المظهر المحفوظ ${n}`, saveHint: "احفظ هذا التصميم لتستخدمه في نموذج أو اختبار آخر.", themeName: "اسم المظهر", themeSaved: "حُفظ المظهر", themeDeleted: "حُذف المظهر", save: "احفظ",
     preview: "معاينة", previewLanguage: "لغة المعاينة", device: "الجهاز", desktop: "الحاسوب", phone: "الهاتف", restartPreview: "أعد تشغيل المعاينة", fullScreen: "معاينة بملء الشاشة",
   },
 };
@@ -125,7 +125,6 @@ export default function DesignTab({ def, change, readOnly, onFullPreview, announ
   const saveTheme = useMutation(api.forms.saveTheme);
   const deleteTheme = useMutation(api.forms.deleteTheme);
   const [themeName, setThemeName] = useState("");
-  const [themeMessage, setThemeMessage] = useState("");
   const theme = def.theme;
   const v1 = theme.version === 1;
   const issues = contrastIssues(theme);
@@ -353,7 +352,7 @@ export default function DesignTab({ def, change, readOnly, onFullPreview, announ
                       <span>{saved.name}</span>
                     </button>
                     <button type="button" className="ws-icon-button" aria-label={t.deleteSaved(saved.name)}
-                      onClick={() => deleteTheme({ themeId: saved._id }).catch((error) => setThemeMessage(errorMessage(error)))}><Trash2 size={14} /></button>
+                      onClick={() => deleteTheme({ themeId: saved._id }).then(() => toast.success(t.themeDeleted, { description: saved.name }), (error) => toast.error(error))}><Trash2 size={14} /></button>
                   </li>
                 ))}
               </ul>
@@ -362,10 +361,8 @@ export default function DesignTab({ def, change, readOnly, onFullPreview, announ
               <input className="kb-input" value={themeName} maxLength={80} placeholder={t.themeName} aria-label={t.themeName} onChange={(event) => setThemeName(event.target.value)} />
               <button type="button" className="ws-btn shrink-0" disabled={!themeName.trim()}
                 onClick={() => saveTheme({ name: themeName, theme: customTheme(def.theme) })
-                  .then(() => { setThemeName(""); setThemeMessage(t.themeSaved); })
-                  .catch((error) => setThemeMessage(errorMessage(error)))}>{t.save}</button>
+                  .then(() => { toast.success(t.themeSaved, { description: themeName.trim() }); setThemeName(""); }, (error) => toast.error(error))}>{t.save}</button>
             </div>
-            {themeMessage && <p role="status" className="text-xs">{themeMessage}</p>}
           </section>
         </details>
       </fieldset>

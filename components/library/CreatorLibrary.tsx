@@ -28,9 +28,9 @@ import dynamic from "next/dynamic";
 
 // Spreadsheet parsing loads only when someone opens that import mode.
 const SheetImport = dynamic(() => import("@/components/forms/SheetImport"));
-import { WsDialog, WsMenu, WsTabs, WsUndoToast } from "@/components/workspace/primitives";
+import { WsDialog, WsMenu, WsTabs } from "@/components/workspace/primitives";
+import { toast } from "@/lib/toast";
 import { LibrarySkeleton } from "@/components/workspace/Skeletons";
-import type { UndoToast } from "@/components/workspace/primitives";
 import { usePinned } from "@/components/workspace/usePinned";
 import { useCreateForm } from "@/components/workspace/useCreateForm";
 
@@ -166,9 +166,7 @@ export default function CreatorLibrary() {
   const learnActions = useLearnActions();
   const deleteForm = useOptimisticMutation(api.forms.deleteForm, deleteFormLocally);
   const deleteTemplate = useMutation(api.forms.deleteTemplate);
-  const [error, setError] = useState("");
-  const [notice, setNotice] = useState("");
-  const { create, busy } = useCreateForm(setError);
+  const { create, busy } = useCreateForm();
   const hostLive = useHostLive();
   const [dialog, setDialog] = useState<"none" | "templates" | "import">("none");
   const [search, setSearch] = useState("");
@@ -202,7 +200,6 @@ export default function CreatorLibrary() {
   const [sort, setSort] = useState<SortKey>("edited");
   const [dir, setDir] = useState<SortDir>("desc");
   const setStatus = useOptimisticMutation(api.forms.setFormStatus, setFormStatusLocally);
-  const [toast, setToast] = useState<UndoToast | null>(null);
   const [confirming, setConfirming] = useState<Row | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
@@ -218,11 +215,6 @@ export default function CreatorLibrary() {
       if (Array.isArray(savedStatuses)) setStatuses(savedStatuses.filter((s): s is Status => statusOptions.some((o) => o.id === s)));
     } catch { /* storage unavailable */ }
   }, []);
-  useEffect(() => {
-    if (!notice) return;
-    const timer = setTimeout(() => setNotice(""), 2400);
-    return () => clearTimeout(timer);
-  }, [notice]);
 
   const chooseSort = (next: SortKey, nextDir: SortDir = naturalDir[next]) => {
     setSort(next);
@@ -304,16 +296,14 @@ export default function CreatorLibrary() {
 
   const { toggle: togglePin, isPinned } = usePinned();
   const copyLink = async (url: string) => {
-    setError("");
-    setNotice("");
     try {
       if (typeof navigator.clipboard?.writeText !== "function") {
         throw new Error(t.clipboardUnavailable);
       }
       await navigator.clipboard.writeText(url);
-      setNotice(t.linkCopied);
+      toast.success(t.linkCopied, { id: "copy-link" });
     } catch (e) {
-      setError(errorMessage(e, t.copyFailed));
+      toast.error(e, { fallback: t.copyFailed, id: "copy-link" });
     }
   };
   /** Archive hides a form from people answering and from the library; responses are kept. Undo puts it back. */
@@ -321,18 +311,16 @@ export default function CreatorLibrary() {
     if (!row.formId && !row.quizId) return;
     const before = row.status;
     const next = row.status === "archived" ? (row.published ? "closed" : "draft") : "archived";
-    // The row moves at once (optimistic update); the toast and hint follow the tap, not the round trip.
-    const id = Date.now();
-    setToast({ id, text: next === "archived" ? t.archived(row.title) : t.restored(row.title),
-      undo: () => { const pending = row.formId ? setStatus({ formId: row.formId, status: before }) : setQuizArchived({ quizId: row.quizId!, archived: false }); pending.catch((e) => setError(errorMessage(e))); } });
-    if (next === "archived") setNotice(t.findInArchive);
+    // The row moves at once (optimistic update); the toast follows the tap, not the round trip.
+    const id = toast(next === "archived" ? t.archived(row.title) : t.restored(row.title), {
+      description: next === "archived" ? t.findInArchive : undefined,
+      undo: () => { const pending = row.formId ? setStatus({ formId: row.formId, status: before }) : setQuizArchived({ quizId: row.quizId!, archived: false }); pending.catch((e) => toast.error(e)); },
+    });
     try {
       if (row.formId) await setStatus({ formId: row.formId, status: next });
       else await setQuizArchived({ quizId: row.quizId!, archived: next === "archived" });
     } catch (e) {
-      setToast((current) => (current?.id === id ? null : current));
-      setNotice("");
-      setError(errorMessage(e));
+      toast.error(e, { id });
     }
   };
   const remove = async (row: Row) => {
@@ -340,13 +328,13 @@ export default function CreatorLibrary() {
     try {
       if (row.formId) {
         const pending = deleteForm({ formId: row.formId });
-        setNotice(t.deleted);
-        await pending;
+        const id = toast.success(t.deleted, { description: row.title });
+        await pending.catch((e) => { toast.error(e, { id }); });
       } else if (row.quizId) {
         await deleteQuiz({ quizId: row.quizId });
-        setNotice(t.deleted);
+        toast.success(t.deleted, { description: row.title });
       }
-    } catch (e) { setNotice(""); setError(errorMessage(e)); }
+    } catch (e) { toast.error(e); }
   };
 
   const actions = (row: Row, close: () => void) => (
@@ -358,7 +346,7 @@ export default function CreatorLibrary() {
       {row.canHost && (
         <button type="button" role="menuitem" disabled={hostLive.busy} onClick={() => {
           close();
-          void hostLive.start(row.formId ? { formId: row.formId } : { quizId: row.quizId! }).then((message) => { if (message) setError(message); });
+          void hostLive.start(row.formId ? { formId: row.formId } : { quizId: row.quizId! });
         }}>
           <Radio size={14} /> {hostLive.label}
         </button>
@@ -369,12 +357,12 @@ export default function CreatorLibrary() {
         </button>
       )}
       {row.formId && row.owned && (
-        <button type="button" role="menuitem" onClick={() => { close(); duplicateForm({ formId: row.formId! }).then((id) => router.push(`/dashboard/forms/${id}`)).catch((e) => setError(errorMessage(e))); }}>
+        <button type="button" role="menuitem" onClick={() => { close(); duplicateForm({ formId: row.formId! }).then((id) => router.push(`/dashboard/forms/${id}`)).catch((e) => toast.error(e)); }}>
           <Copy size={14} /> {t.duplicate}
         </button>
       )}
       {row.quizId && (
-        <button type="button" role="menuitem" onClick={() => { close(); (row.status === "live" ? unpublishQuiz : publishQuiz)({ quizId: row.quizId! }).catch((e) => setError(errorMessage(e))); }}>
+        <button type="button" role="menuitem" onClick={() => { close(); (row.status === "live" ? unpublishQuiz : publishQuiz)({ quizId: row.quizId! }).catch((e) => toast.error(e)); }}>
           {row.status === "live" ? <Lock size={14} /> : <Globe size={14} />} {row.status === "live" ? t.unpublish : t.publish}
         </button>
       )}
@@ -392,12 +380,12 @@ export default function CreatorLibrary() {
   const loading = forms === undefined || quizzes === undefined;
   const newCourse = async () => {
     try { const id = await createCourse({ language: locale }); router.push(`/dashboard/courses/${id}`); }
-    catch (err) { setError(err instanceof Error ? err.message : String(err)); }
+    catch (err) { toast.error(err); }
   };
 
   const newFlashcards = async () => {
     try { const id = await learnActions.createFlashcardSet({ title: t.untitledSet }); router.push(`/dashboard/learn/flashcards/${id}?mode=edit`); }
-    catch (err) { setError(errorMessage(err)); }
+    catch (err) { toast.error(err); }
   };
 
   // Creation stays within the active Library tab.
@@ -423,12 +411,6 @@ export default function CreatorLibrary() {
         {newMenu}
       </div>
 
-      {error && (
-        <div role="alert" className="chaos-card border-destructive p-3 mb-4 flex items-center justify-between gap-4">
-          <p className="text-sm font-semibold text-destructive">{error}</p>
-          <button type="button" onClick={() => setError("")} aria-label={t.dismissError} className="ws-icon-button"><X size={15} /></button>
-        </div>
-      )}
 
       <div className="flex items-end gap-3 flex-wrap mb-6">
         <div className="flex-1 min-w-[260px] max-sm:basis-full max-sm:min-w-0"><WsTabs tabs={kinds} value={kind} onChange={setKind} label={t.filterLibrary} labels={t.kinds} icons={{ Forms: FileText, Quizzes: GraduationCap, Flashcards: Layers, Courses: BookOpen, Games: Trophy }} /></div>
@@ -532,9 +514,7 @@ export default function CreatorLibrary() {
           </table>
         </div>
       )}
-      <WsUndoToast toast={toast} onClose={() => setToast(null)} />
 
-      {notice && <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 ws-pill !min-h-9 !px-4 !text-[13px] !bg-[var(--on-background)] !text-[var(--background)] shadow-lg" role="status" style={{ animation: "ws-pop 220ms var(--ws-spring) both" }}>{notice}</div>}
 
       {dialog === "templates" && (
         <WsDialog title={t.templatesTitle} description={t.templatesDesc} onClose={() => setDialog("none")} wide>
@@ -555,7 +535,7 @@ export default function CreatorLibrary() {
                   <span className="text-[11px] text-muted-foreground">{t.fields(tpl.fieldCount)}</span>
                   <div className="flex gap-2 mt-1">
                     <button type="button" onClick={() => { setDialog("none"); void create({ ownTemplateId: tpl._id }); }} disabled={busy} className="ws-btn ws-btn--primary ws-btn--sm flex-1">{t.use}</button>
-                    <button type="button" onClick={() => deleteTemplate({ templateId: tpl._id }).catch((e) => setError(errorMessage(e)))} className="ws-btn ws-btn--ghost ws-btn--sm" aria-label={t.deleteTemplate(tpl.name)}><Trash2 size={14} /></button>
+                    <button type="button" onClick={() => deleteTemplate({ templateId: tpl._id }).catch((e) => toast.error(e))} className="ws-btn ws-btn--ghost ws-btn--sm" aria-label={t.deleteTemplate(tpl.name)}><Trash2 size={14} /></button>
                   </div>
                 </div>
               ))}

@@ -8,6 +8,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { FormTheme } from "@/convex/formLogic";
 import { parseError } from "@/lib/errors";
+import { toast } from "@/lib/toast";
 import { useCopy, useLocale } from "@/lib/i18n";
 
 const copy = {
@@ -29,7 +30,7 @@ const copy = {
   },
 };
 
-/** Creates a live game for a quiz-mode form or an old quiz and opens the host screen. */
+/** Creates a live game for a quiz-mode form or an old quiz and opens the host screen; problems show as a toast. */
 export function useHostLive() {
   const t = useCopy(copy);
   const { locale } = useLocale();
@@ -37,17 +38,18 @@ export function useHostLive() {
   const create = useMutation(api.live.createGame);
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
-  const start = async (target: ({ formId: Id<"forms"> } | { quizId: Id<"quizzes"> }) & { theme?: FormTheme; timeLimitSec?: number; showAnswerLabels?: boolean }): Promise<string | null> => {
-    if (pending.current) return null;
+  const start = async (target: ({ formId: Id<"forms"> } | { quizId: Id<"quizzes"> }) & { theme?: FormTheme; timeLimitSec?: number; showAnswerLabels?: boolean }): Promise<boolean> => {
+    if (pending.current) return false;
     pending.current = true;
     setBusy(true);
     try {
       const gameId = await create({ ...target, language: locale });
       router.push(`/dashboard/live/${gameId}`);
-      return null;
+      return true;
     } catch (e) {
-      const { code, message } = parseError(e);
-      return t.errors[code] ?? message;
+      const { code } = parseError(e);
+      if (t.errors[code]) toast.error(t.errors[code], { id: "host-live" }); else toast.error(e, { id: "host-live" });
+      return false;
     } finally {
       pending.current = false;
       setBusy(false);
@@ -56,11 +58,11 @@ export function useHostLive() {
   return { start, busy, label: busy ? t.starting : t.host };
 }
 
-export default function HostLiveButton({ formId, onError, className = "ws-btn" }: { formId: Id<"forms">; onError: (message: string) => void; className?: string }) {
+export default function HostLiveButton({ formId, className = "ws-btn" }: { formId: Id<"forms">; className?: string }) {
   const { start, busy, label } = useHostLive();
   return (
     <button type="button" className={className} disabled={busy} aria-label={label}
-      onClick={async () => { const error = await start({ formId }); if (error) onError(error); }}>
+      onClick={() => void start({ formId })}>
       <Radio size={16} aria-hidden="true" /><span className="ws-phone-hide">{label}</span>
     </button>
   );

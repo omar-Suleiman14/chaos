@@ -1,5 +1,6 @@
 "use client";
 
+import { copyText } from "@/lib/clipboard";
 import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { FunctionReturnType } from "convex/server";
 import Link from "@/components/site/SiteLink";
@@ -510,7 +511,7 @@ function CopyField({ value, label, copiedLabel, copied: copiedProp, onCopied }: 
   return (
     <div className="flex gap-2 items-center" dir="ltr">
       <input readOnly value={value} className="form-input text-xs flex-1 !py-2" onFocus={(e) => e.target.select()} aria-label={label} />
-      <button type="button" className="form-btn form-btn-ghost form-btn-sm" onClick={() => { navigator.clipboard?.writeText(value).then(() => { setCopied(true); onCopied?.(); }); }}>
+      <button type="button" className="form-btn form-btn-ghost form-btn-sm" onClick={() => { void copyText(value).then((ok) => { if (!ok) return; setCopied(true); onCopied?.(); }); }}>
         <Copy size={14} /> {copied || copiedProp ? copiedLabel : label}
       </button>
     </div>

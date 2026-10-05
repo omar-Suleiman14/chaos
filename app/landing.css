@@ -229,7 +229,7 @@ html.dark:has(.site-ui), html.dark:has(.site-ui) body { background: #171716; }
 .site-menu { display: none; }
 /* A full-width sheet under the header (the sticky header is its containing block). Solid, not glass:
    the header is already a backdrop-filter root, so a blur inside it would only see the header. */
-.site-menu__panel { position: absolute; inset-block-start: 100%; inset-inline: 0; z-index: 50; display: grid; gap: 0; max-height: calc(100dvh - 100%); overflow-y: auto; overscroll-behavior: contain; padding: 6px 16px 18px; background: var(--s-bg); border-bottom: 1px solid var(--s-line); box-shadow: 0 24px 40px -24px #0006; animation: site-sheet-in 160ms var(--s-ease) both; }
+.site-menu__panel { position: absolute; inset-block-start: 100%; inset-inline: 0; z-index: 50; display: grid; gap: 0; max-height: calc(100dvh - 100%); overflow-y: auto; overscroll-behavior: contain; padding: 6px 16px 18px; border-bottom: 1px solid var(--s-line); box-shadow: 0 24px 40px -24px #0006; animation: site-sheet-in 160ms var(--s-ease) both; }
 .site-menu__panel > a { display: flex; align-items: center; min-height: 48px; padding: 0 4px; border-bottom: 1px solid var(--s-line); color: var(--s-soft); font-size: 16px; }
 .site-menu__panel > a:hover, .site-menu__panel > a:focus-visible { color: var(--s-text); }
 .site-menu__row { display: flex; align-items: center; gap: 10px; padding-top: 14px; }

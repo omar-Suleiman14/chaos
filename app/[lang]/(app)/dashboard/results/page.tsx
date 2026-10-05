@@ -28,7 +28,7 @@ import LoadingState from "@/components/LoadingState";
 import { csvCell } from "@/convex/formLogic";
 import { parseMultiAnswer } from "@/convex/grading";
 import { buildXlsx, downloadBlob, safeFilename } from "@/lib/xlsx";
-import { errorMessage } from "@/lib/errors";
+import { toast } from "@/lib/toast";
 import { useCopy, useLocale } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
@@ -39,7 +39,7 @@ const copy = {
     searchQuizzes: "search quizzes...", quizName: "Quiz Name", status: "Status", submissions: "Submissions", avgScoreShort: "Avg Score", created: "Created",
     noQuizzes: "{t.noQuizzes}", live: "LIVE", draft: "Draft",
     loadingDashboard: "Loading dashboard...", hdrPlayer: "Player Name", hdrScore: "Score", hdrTotalMarks: "Total Marks", hdrPercentage: "Percentage", hdrCompletedAt: "Completed At",
-    correct: "Correct", incorrect: "Incorrect", releaseFailed: "Could not change result release.",
+    correct: "Correct", incorrect: "Incorrect", releaseFailed: "Could not change result release.", released: "Results released", withheldToast: "Results withheld",
     backAll: "Back to all", quizAnalytics: "Quiz Analytics", displayingAll: "Displaying all complete submissions.",
     withheldNote: " Scores are held: respondents see them after you release results.",
     editSettings: "Edit settings", releaseResults: "Release results", holdAgain: "Hold results again",
@@ -48,10 +48,10 @@ const copy = {
     questionBreakdown: "Question breakdown", thPlayer: "Player Name", thScore: "Score", thTimeStarted: "Time Started", thAction: "Action",
     noSubmissions: "{t.noSubmissions}", view: "View",
     loadingSubmission: "Loading submission details...", notFound: "Submission not found", goBack: "Go back",
-    overrideFailed: "Score override could not be saved. Please try again.",
+    overrideFailed: "Score override could not be saved. Please try again.", overrideSaved: "Score updated",
     backSubmissions: "Back to submissions", completed: "Completed", scoreLabel: "Score", marksLabel: "Marks",
     answerLabel: "Answer", noAnswer: "(No answer)", keywords: "Grading keywords", noneKeywords: "None (full marks unless reviewed)",
-    reviewed: "Reviewed", autoGrade: (n: number, total: number) => `automatic grade was ${n}/${total}`, restore: "Restore", restoreFailed: "Could not restore the automatic grade.",
+    reviewed: "Reviewed", autoGrade: (n: number, total: number) => `automatic grade was ${n}/${total}`, restore: "Restore", restoreFailed: "Could not restore the automatic grade.", restored: "Automatic grade restored",
     marksUnit: "marks", overrideTitle: "Override Score", overrideAria: "Change marks for this answer",
     loadingResults: "Loading results...",
   },
@@ -60,7 +60,7 @@ const copy = {
     searchQuizzes: "ابحث في الاختبارات...", quizName: "اسم الاختبار", status: "الحالة", submissions: "التسليمات", avgScoreShort: "متوسط الدرجة", created: "تاريخ الإنشاء",
     noQuizzes: "لا توجد اختبارات.", live: "منشور", draft: "مسودة",
     loadingDashboard: "جارٍ تحميل لوحة النتائج...", hdrPlayer: "اسم اللاعب", hdrScore: "الدرجة", hdrTotalMarks: "مجموع النقاط", hdrPercentage: "النسبة", hdrCompletedAt: "وقت الإكمال",
-    correct: "صحيحة", incorrect: "خاطئة", releaseFailed: "تعذّر تغيير حالة إعلان النتائج.",
+    correct: "صحيحة", incorrect: "خاطئة", releaseFailed: "تعذّر تغيير حالة إعلان النتائج.", released: "أُعلنت النتائج", withheldToast: "حُجبت النتائج",
     backAll: "العودة إلى الكل", quizAnalytics: "تحليلات الاختبار", displayingAll: "تُعرض كل التسليمات المكتملة.",
     withheldNote: " الدرجات محجوبة: يراها المجيبون بعد أن تعلن النتائج.",
     editSettings: "عدّل الإعدادات", releaseResults: "أعلن النتائج", holdAgain: "احجب النتائج مجددًا",
@@ -69,10 +69,10 @@ const copy = {
     questionBreakdown: "تفصيل الأسئلة", thPlayer: "اسم اللاعب", thScore: "الدرجة", thTimeStarted: "وقت البدء", thAction: "الإجراء",
     noSubmissions: "لا توجد تسليمات بعد. شارك الرابط.", view: "عرض",
     loadingSubmission: "جارٍ تحميل تفاصيل التسليم...", notFound: "التسليم غير موجود", goBack: "رجوع",
-    overrideFailed: "تعذّر حفظ تعديل الدرجة. حاول مرة أخرى.",
+    overrideFailed: "تعذّر حفظ تعديل الدرجة. حاول مرة أخرى.", overrideSaved: "تم تحديث الدرجة",
     backSubmissions: "العودة إلى التسليمات", completed: "أُكمل", scoreLabel: "الدرجة", marksLabel: "النقاط",
     answerLabel: "الإجابة", noAnswer: "(بلا إجابة)", keywords: "كلمات التصحيح", noneKeywords: "لا توجد (نقاط كاملة ما لم تتم المراجعة)",
-    reviewed: "روجعت", autoGrade: (n: number, total: number) => `الدرجة التلقائية كانت ${n}/${total}`, restore: "استعادة", restoreFailed: "تعذّرت استعادة الدرجة التلقائية.",
+    reviewed: "روجعت", autoGrade: (n: number, total: number) => `الدرجة التلقائية كانت ${n}/${total}`, restore: "استعادة", restoreFailed: "تعذّرت استعادة الدرجة التلقائية.", restored: "استُعيدت الدرجة التلقائية",
     marksUnit: "نقاط", overrideTitle: "تعديل الدرجة", overrideAria: "غيّر نقاط هذه الإجابة",
     loadingResults: "جارٍ تحميل النتائج...",
   },
@@ -199,7 +199,6 @@ function QuizDetailView({ quizId }: { quizId: Id<"quizzes"> }) {
   const enhanced = useQuery(api.quizFunctions.getQuizStatsEnhanced, { quizId });
   const [selectedSessionId, setSelectedSessionId] = useState<Id<"quizSessions"> | null>(null);
   const setResultsReleased = useMutation(api.quizFunctions.setResultsReleased);
-  const [releaseError, setReleaseError] = useState("");
 
   if (quiz === undefined || sessions === undefined) {
     return <LoadingState label={t.loadingDashboard} />;
@@ -265,11 +264,11 @@ function QuizDetailView({ quizId }: { quizId: Id<"quizzes"> }) {
 
   const withheld = quiz?.resultRelease === "manual" && quiz.resultsReleasedAt === undefined;
   const toggleRelease = async () => {
-    setReleaseError("");
     try {
       await setResultsReleased({ quizId, released: withheld });
+      toast.success(withheld ? t.released : t.withheldToast);
     } catch (err) {
-      setReleaseError(errorMessage(err, t.releaseFailed));
+      toast.error(err, { fallback: t.releaseFailed });
     }
   };
 
@@ -287,7 +286,6 @@ function QuizDetailView({ quizId }: { quizId: Id<"quizzes"> }) {
             {t.displayingAll}
             {withheld && t.withheldNote}
           </p>
-          {releaseError && <p role="alert" className="text-sm text-destructive mt-1">{releaseError}</p>}
         </div>
 
         <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
@@ -475,7 +473,6 @@ function SubmissionDetailView({
 
   const [editingId, setEditingId] = useState<Id<"questions"> | null>(null);
   const [editVal, setEditVal] = useState("");
-  const [overrideError, setOverrideError] = useState("");
 
   if (detail === undefined) {
     return <LoadingState label={t.loadingSubmission} />;
@@ -496,12 +493,12 @@ function SubmissionDetailView({
     const val = parseInt(editVal);
     if (!isNaN(val) && val >= 0) {
       haptics.select();
-      setOverrideError("");
       try {
         await overrideScore({ sessionId, questionId, newPoints: val });
         setEditingId(null);
+        toast.success(t.overrideSaved);
       } catch (err) {
-        setOverrideError(errorMessage(err, t.overrideFailed));
+        toast.error(err, { fallback: t.overrideFailed });
         haptics.error();
       }
     }
@@ -536,11 +533,6 @@ function SubmissionDetailView({
       </div>
 
       <div className="space-y-4">
-        {overrideError && (
-          <div role="alert" className="border-2 border-destructive bg-destructive/10 p-4 text-sm font-semibold text-destructive">
-            {overrideError}
-          </div>
-        )}
         {detail.answerDetails?.map((ans, i) => {
           const isCorrect = ans.isCorrect;
           const isPartial = !isCorrect && ans.pointsEarned > 0;
@@ -566,7 +558,7 @@ function SubmissionDetailView({
                     {ans.originalPointsEarned !== undefined && ans.originalPointsEarned !== ans.pointsEarned && (
                       <p className="text-[10px] text-muted-foreground mt-1">
                         {t.reviewed}{ans.reviewedAt ? ` ${timeAgo(locale, ans.reviewedAt)}` : ""} · {t.autoGrade(ans.originalPointsEarned, ans.totalPoints)}{" "}
-                        <button className="underline hover:text-foreground" onClick={() => overrideScore({ sessionId, questionId: ans.questionId, newPoints: ans.originalPointsEarned! }).catch((err: unknown) => setOverrideError(errorMessage(err, t.restoreFailed)))}>
+                        <button className="underline hover:text-foreground" onClick={() => overrideScore({ sessionId, questionId: ans.questionId, newPoints: ans.originalPointsEarned! }).then(() => toast.success(t.restored), (err: unknown) => toast.error(err, { fallback: t.restoreFailed }))}>
                           {t.restore}
                         </button>
                       </p>

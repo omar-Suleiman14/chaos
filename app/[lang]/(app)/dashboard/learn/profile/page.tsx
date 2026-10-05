@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { toast } from "@/lib/toast";
 import { useState } from "react";
 import { BadgeCheck, Clock, ExternalLink, ShieldCheck, XCircle } from "lucide-react";
 import { Select } from "@/components/workspace/Select";
@@ -63,7 +64,6 @@ export default function LearnProfilePage() {
   const [submitting, setSubmitting] = useState(false);
   const [claimMessage, setClaimMessage] = useState("");
   const [claimError, setClaimError] = useState("");
-  const [message, setMessage] = useState("");
   if (!viewer || person === undefined) return <PageSkeleton label={t.loading} />;
   const current = { name: person?.name ?? viewer.name, bio: person?.bio ?? "" };
 
@@ -73,10 +73,10 @@ export default function LearnProfilePage() {
         <div><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></div>
         <div className="lx-actions"><Link className="ws-btn" href="/dashboard/learn/weak-areas">{t.weakAreas}</Link><Link className="ws-btn" href={`/learn/people/${encodeURIComponent(viewer.id)}`}><ExternalLink size={15} aria-hidden />{t.view}</Link></div>
       </header>
-      <form className="lx-form lx-panel" onSubmit={async (e) => { e.preventDefault(); try { await actions.updateProfile({ name: (name ?? current.name).trim() || current.name, bio: bio ?? current.bio }); setMessage(t.saved); } catch (err) { setMessage(errorMessage(err)); } }}>
+      <form className="lx-form lx-panel" onSubmit={async (e) => { e.preventDefault(); try { await actions.updateProfile({ name: (name ?? current.name).trim() || current.name, bio: bio ?? current.bio }); toast.success(t.saved); } catch (err) { toast.error(err); } }}>
         <label className="lx-field">{t.name}<input className="lx-input" value={name ?? current.name} maxLength={80} onChange={(e) => setName(e.target.value)} /></label>
         <label className="lx-field">{t.bio}<textarea className="lx-textarea" rows={3} value={bio ?? current.bio} placeholder={t.bioPh} maxLength={600} onChange={(e) => setBio(e.target.value)} /></label>
-        <div className="lx-actions" style={{ justifyContent: "flex-end" }}>{message && <span className="lx-muted" role="status">{message}</span>}<button type="submit" className="ws-btn ws-btn--primary">{t.save}</button></div>
+        <div className="lx-actions" style={{ justifyContent: "flex-end" }}><button type="submit" className="ws-btn ws-btn--primary">{t.save}</button></div>
       </form>
 
       <section className="lx-section" aria-labelledby="verify-title">

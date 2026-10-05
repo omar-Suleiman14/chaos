@@ -20,8 +20,8 @@ import SharePopup from "@/components/forms/builder/SharePopup";
 import { FullPreview } from "@/components/forms/builder/FormPreview";
 import QuizLearningLinks from "@/components/learn/editor/QuizLearningLinks";
 import HostLiveButton from "@/components/live/HostLiveButton";
-import { WsMenu, WsSwitch, WsTabs, WsUndoToast } from "@/components/workspace/primitives";
-import type { UndoToast } from "@/components/workspace/primitives";
+import { WsMenu, WsSwitch, WsTabs } from "@/components/workspace/primitives";
+import { toast } from "@/lib/toast";
 import { formatScheduleTime } from "@/convex/formSchedule";
 import { checkDefinition } from "@/convex/formLogic";
 import type { FormDefinition } from "@/convex/formLogic";
@@ -152,11 +152,11 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
   const publish = useMutation(api.forms.publishForm);
   const reject = useMutation(api.forms.rejectPublication);
   const [tab, setTab] = useState<Tab>("Questions");
-  const [notice, setNotice] = useState<{ kind: "ok" | "error"; text: string; list?: string[] } | null>(null);
+  /** What blocks publishing, listed until fixed; every other outcome is a toast. */
+  const [problems, setProblems] = useState<string[] | null>(null);
   const [publishing, setPublishing] = useState(false);
   const [previewing, setPreviewing] = useState(false);
   const [sharing, setSharing] = useState(false);
-  const [toast, setToast] = useState<UndoToast | null>(null);
   const { toggle: togglePin, isPinned } = usePinned();
   useEffect(preloadTabs, []);
 
@@ -201,48 +201,47 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
   const save = saveLabel(d.saveState, dirty, t);
 
   const handlePublish = async () => {
-    setNotice(null);
+    setProblems(null);
     if (report.errors.length) {
-      setNotice({ kind: "error", text: t.fixBefore, list: report.errors.map((e) => localizeMessage(locale, e)) });
+      setProblems(report.errors.map((e) => localizeMessage(locale, e)));
+      toast.error(t.fixBefore, { id: "publish" });
       return;
     }
     setPublishing(true);
     try {
       if (!(await d.save())) {
-        setNotice({ kind: "error", text: t.saveFirst });
+        toast.error(t.saveFirst, { id: "publish" });
         return;
       }
       const result = await publish({ formId, expectedRevision: d.revision() });
       posthog.capture("form_published", { outcome: result.outcome, form_type: quiz ? "quiz" : "form" });
       // First time it goes live: offer the link, QR code and embed right away.
       if (result.outcome !== "approval_requested" && !published) setSharing(true);
-      setNotice(result.outcome === "approval_requested"
-        ? { kind: "ok", text: t.requested }
-        : { kind: "ok", text: t.published(result.version) });
+      if (result.outcome === "approval_requested") toast.info(t.requested, { id: "publish" });
+      else toast.success(t.published(result.version), { id: "publish" });
     } catch (err) {
       const { code, message: rawMessage } = parseError(err);
-      const message = localizeMessage(locale, rawMessage);
-      setNotice(code === "PUBLICATION_BLOCKED" ? { kind: "error", text: t.fixBefore, list: message.split("\n").filter(Boolean) } : { kind: "error", text: message });
+      if (code === "PUBLICATION_BLOCKED") { setProblems(localizeMessage(locale, rawMessage).split("\n").filter(Boolean)); toast.error(t.fixBefore, { id: "publish" }); }
+      else toast.error(err, { id: "publish" });
     } finally {
       setPublishing(false);
     }
   };
 
   const copyLink = async () => {
-    setNotice(null);
     try {
       if (typeof navigator.clipboard?.writeText !== "function") {
         throw new Error(t.noClipboard);
       }
       await navigator.clipboard.writeText(`${window.location.origin}/f/${data.shareId}`);
-      setNotice({ kind: "ok", text: t.linkCopied });
+      toast.success(t.linkCopied, { id: "copy-link" });
     } catch (err) {
-      setNotice({ kind: "error", text: localizeMessage(locale, parseError(err, t.copyFailed).message) });
+      toast.error(err, { fallback: t.copyFailed, id: "copy-link" });
     }
   };
 
   /** Tell people what just happened; draft changes undo through the draft history by default. */
-  const announce = (text: string, undo: (() => void) | null = d.undo) => setToast({ id: Date.now(), text, undo: undo ?? undefined });
+  const announce = (text: string, undo: (() => void) | null = d.undo) => toast(text, { undo: undo ?? undefined });
   const { hasAccessCode, accessCodeHash: _hash, ...editableSettings } = data.settings;
   const kindLabel = quiz ? "quiz" : "form";
   const tabIcons = Object.fromEntries(allTabs.map((k) => [t.tabs[k], tabIconByKey[k]]));
@@ -273,7 +272,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
             <Link href={`/dashboard/forms/${formId}/responses`} aria-label={t.results(data.responseCount)} className="ws-btn ws-btn--ghost"><BarChart3 size={17} /><span className="ws-phone-hide">{t.results(data.responseCount)}</span></Link>
             <button type="button" onClick={() => setPreviewing(true)} aria-label={t.preview} className="ws-btn"><Play size={16} /><span className="ws-phone-hide">{t.preview}</span></button>
             {published && data.status === "live" && <button type="button" onClick={() => setSharing(true)} aria-label={t.share} className="ws-btn"><Share2 size={16} /><span className="ws-phone-hide">{t.share}</span></button>}
-            {canEdit && quiz && published && data.status !== "archived" && <HostLiveButton formId={formId}onError={(text) => setNotice({ kind: "error", text })} />}
+            {canEdit && quiz && published && data.status !== "archived" && <HostLiveButton formId={formId} />}
             {canEdit && (
               <button type="button" onClick={handlePublish} disabled={publishing || (data.approvalPending && needsApproval)} className="ws-btn ws-btn--primary">
                 {publishing ? t.publishing : needsApproval ? (data.approvalPending ? t.awaiting : t.requestPublication) : published ? (data.hasUnpublishedChanges || dirty ? t.publishChanges : <><Check size={16} /> {t.publishedLabel}</>) : t.publish}
@@ -366,16 +365,16 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
         <div className="chaos-card border-primary p-4 flex flex-wrap items-center gap-3 text-sm">
           <span className="flex-1">{t.approvalMsg(data.approval.requestedByName, timeAgo(locale, data.approval.requestedAt))}</span>
           <button type="button" className="ws-btn ws-btn--primary ws-btn--sm" onClick={handlePublish}>{t.approve}</button>
-          <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => reject({ formId }).catch((e) => setNotice({ kind: "error", text: localizeMessage(locale, parseError(e).message) }))}>{t.decline}</button>
+          <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => reject({ formId }).catch((e) => toast.error(e))}>{t.decline}</button>
         </div>
       )}
-      {notice && (
-        <div role={notice.kind === "error" ? "alert" : "status"} className={`chaos-card p-4 text-sm flex gap-3 ws-page ${notice.kind === "error" ? "border-destructive" : "border-primary"}`}>
+      {problems && (
+        <div role="alert" className="chaos-card p-4 text-sm flex gap-3 ws-page border-destructive">
           <div className="flex-1">
-            <p>{notice.text}</p>
-            {notice.list && <ul className="list-disc ps-5 mt-2 space-y-1">{notice.list.map((e) => <li key={e}>{e}</li>)}</ul>}
+            <p>{t.fixBefore}</p>
+            <ul className="list-disc ps-5 mt-2 space-y-1">{problems.map((e) => <li key={e}>{e}</li>)}</ul>
           </div>
-          <button type="button" onClick={() => setNotice(null)} aria-label={t.dismiss} className="ws-icon-button"><X size={15} /></button>
+          <button type="button" onClick={() => setProblems(null)} aria-label={t.dismiss} className="ws-icon-button"><X size={15} /></button>
         </div>
       )}
 
@@ -394,7 +393,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
                 {report.warnings.length > 0 && <ul className="mt-2 text-sm text-muted-foreground list-disc ps-5 space-y-1">{report.warnings.map((e) => <li key={e}>{localizeMessage(locale, e)}</li>)}</ul>}
               </details>
             )}
-            <BuildTab def={def} change={d.change} readOnly={!canEdit} notice={(text) => setNotice({ kind: "ok", text })} announce={announce} />
+            <BuildTab def={def} change={d.change} readOnly={!canEdit} notice={(text) => toast.success(text)} announce={announce} />
           </div>
         )}
         {tab === "Logic" && <LogicTab def={def} change={d.change} readOnly={!canEdit} errors={report.errors} />}
@@ -411,7 +410,6 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
       </div>
       {previewing && <FullPreview def={def} onClose={() => setPreviewing(false)} />}
       {sharing && <SharePopup formId={formId} shareId={data.shareId} slug={data.slug} title={def.title} quiz={quiz} onClose={() => setSharing(false)} />}
-      <WsUndoToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 }

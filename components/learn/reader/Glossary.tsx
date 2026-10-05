@@ -67,7 +67,7 @@ export function TermCard({ term, onClose }: { term: OpenTerm; onClose: () => voi
   const language = entry.language ?? "ar";
   const other = entry.translation || entry.explanation;
   return (
-    <div ref={card} className="lx-termcard" role="dialog" aria-label={entry.term} tabIndex={-1} style={pos}>
+    <div ref={card} className="lx-termcard ws-glass" role="dialog" aria-label={entry.term} tabIndex={-1} style={pos}>
       <header>
         <div><strong dir="auto">{entry.term}</strong>{entry.pronunciation && <span className="lx-termcard__say" dir="auto">{entry.pronunciation}</span>}</div>
         <button type="button" onClick={onClose} aria-label={t.close}><X size={15} aria-hidden /></button>
