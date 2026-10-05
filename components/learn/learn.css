@@ -325,7 +325,8 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-version-switch { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; padding: 10px 12px; border-radius: 10px; background: var(--ws-canvas-subtle); border: 1px solid var(--ws-line); }
 
 /* Flashcards */
-.lx-flip { perspective: 1200px; width: 100%; max-width: 560px; margin-inline: auto; }
+/* .lx-flip also mirrors arrow icons in RTL (svg.lx-flip); only the flashcard container gets the box. */
+.lx-flip:not(svg) { perspective: 1200px; width: 100%; max-width: 560px; margin-inline: auto; }
 .lx-flip__card { position: relative; aspect-ratio: 3 / 2; transform-style: preserve-3d; transition: transform .45s var(--ws-spring); cursor: pointer; border: 0; background: none; width: 100%; padding: 0; font: inherit; color: inherit; }
 .lx-flip__card[data-flipped="true"] { transform: rotateY(180deg); }
 .lx-flip__face { position: absolute; inset: 0; backface-visibility: hidden; display: grid; place-items: center; padding: 28px; border-radius: 16px; border: 1px solid var(--ws-line-strong); background: var(--ws-card); box-shadow: var(--ws-shadow-md); font-size: clamp(17px, 2.4vw, 22px); line-height: 1.5; text-align: center; overflow: auto; white-space: pre-wrap; }
@@ -553,8 +554,6 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 
 .lx-course-navigation { display: grid; gap: 12px; margin-top: 24px; min-width: 0; }
 .lx-course-navigation progress { width: 100%; accent-color: var(--primary); }
-.lx-course-navigation .lx-actions { flex-wrap: wrap; }
-.lx-course-navigation .ws-btn { display: grid; max-width: 100%; text-align: start; white-space: normal; }
 
 .lx-completion { display: grid; gap: 12px; }
 .lx-complete-button:active { transform: scale(.97); }
@@ -601,7 +600,17 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-sheet { padding-bottom: env(safe-area-inset-bottom, 0px); }
 .lx-toc-trigger { width: 100%; min-height: 44px; display: flex; align-items: center; gap: 8px; text-align: start; padding: 10px 12px; border: 1px solid var(--ws-line); border-radius: 10px; font-size: 13px; }
 .lx-toc-current { margin-inline-start: auto; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 50%; color: var(--on-surface-variant); }
-.lx-outline-drawer { padding-inline: 16px; padding-top: 16px; gap: 12px; overflow-y: auto; }
+.lx-outline-drawer { align-content: start; padding-inline: 16px; padding-bottom: env(safe-area-inset-bottom); gap: 4px; overflow-y: auto; overscroll-behavior: contain;
+  transform: translateY(100%); transition: transform 420ms cubic-bezier(.32, .72, 0, 1); will-change: transform; }
+.lx-outline-drawer[data-shown] { transform: translateY(var(--sheet-drag, 0px)); }
+.lx-outline-drawer:not([data-shown]) { transition-duration: 260ms; transition-timing-function: cubic-bezier(.4, 0, 1, 1); }
+.lx-outline-drawer[data-dragging] { transition: none; }
+.lx-outline-drawer__head { position: sticky; top: 0; z-index: 1; background: inherit; margin-inline: -16px; padding: 8px 16px 4px; touch-action: none; cursor: grab; }
+.lx-outline-drawer[data-dragging] .lx-outline-drawer__head { cursor: grabbing; }
+.lx-outline-drawer__grab { display: block; width: 36px; height: 5px; margin: 0 auto 8px; border-radius: 999px; background: var(--ws-line-strong); }
+.lx-outline-scrim { opacity: 0; transition: opacity 300ms ease; }
+.lx-outline-scrim[data-shown] { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .lx-outline-drawer, .lx-outline-scrim { transition: none; } }
 .lx-outline-drawer .lx-toc { border: 0; padding-bottom: 24px; }
 .lx-course-breadcrumb { display: flex; flex-wrap: wrap; gap: 8px; font-size: 13px; margin-block: 12px; min-width: 0; }
 .lx-course-breadcrumb a { overflow-wrap: anywhere; }
@@ -613,7 +622,6 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
   .lx-article .ws-btn { white-space: normal; max-width: 100%; min-height: 44px; }
   .lx-flip__face { padding-inline: 12px; overflow-wrap: anywhere; }
   .lx-completion { width: 100%; }
-  .lx-course-navigation .ws-btn { flex: 1 1 100%; }
 }
 
 .lx-diagram { display: grid; gap: 12px; margin-block: 16px; min-width: 0; }
@@ -651,26 +659,35 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 @media (prefers-reduced-motion: reduce) { .lx-termcard { animation: none; } }
 @media print { .lx-termcard { display: none; } .lx-term { text-decoration: none; } }
 
-/* Course navigation at the end of a lesson: an "Up next" card, and pulling past the end opens it. */
-.lx-upnext-wrap { display: grid; gap: 10px; margin-top: 4px; transition: transform .45s cubic-bezier(.2, .9, .3, 1.2); will-change: transform; }
-.lx-upnext-wrap[data-pulling] { transition: transform .08s linear; }
-.lx-upnext { display: flex; align-items: center; gap: 16px; padding: 16px 18px; border-radius: 16px; border: 1px solid color-mix(in srgb, var(--primary) 30%, var(--ws-line)); background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 14%, var(--surface-bright)), var(--surface-bright)); color: var(--on-surface); text-decoration: none; transition: border-color .2s, transform .2s, box-shadow .2s; }
-.lx-upnext:hover { border-color: color-mix(in srgb, var(--primary) 60%, transparent); box-shadow: var(--ws-shadow-lg); transform: translateY(-1px); }
-.lx-upnext:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
-.lx-upnext__text { display: grid; gap: 3px; min-width: 0; flex: 1; }
-.lx-upnext__label { font-size: 12px; font-weight: 600; letter-spacing: .03em; text-transform: uppercase; color: var(--primary); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lx-upnext__title { font-size: 17px; font-weight: 600; line-height: 1.35; }
-.lx-upnext__arrow { display: grid; place-items: center; flex: none; width: 40px; height: 40px; border-radius: 50%; background: var(--primary); color: var(--on-primary, #fff); transition: transform .2s; }
-.lx-upnext:hover .lx-upnext__arrow { transform: translateX(3px); }
-.lx-upnext:hover .lx-upnext__arrow:dir(rtl) { transform: translateX(-3px); }
-.lx-prevlesson { display: inline-flex; align-items: center; gap: 4px; justify-self: start; max-width: 100%; padding: 6px 4px; font-size: 13px; color: var(--on-surface-variant); text-decoration: none; }
-.lx-prevlesson:hover { color: var(--on-surface); }
-.lx-prevlesson span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lx-pullnext { display: grid; justify-items: center; gap: 8px; height: 0; overflow: visible; padding-top: 36px; margin-bottom: 90px; pointer-events: none; font-size: 13px; color: var(--on-surface-variant); transition: opacity .2s; }
-.lx-pullnext svg { transform: rotate(-90deg); }
-.lx-pullnext svg[data-going] { animation: lx-pull-spin .7s linear infinite; }
-.lx-pullnext__track { fill: none; stroke: var(--ws-line); stroke-width: 3; }
-.lx-pullnext__ring { fill: none; stroke: var(--primary); stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset .08s linear; }
-@keyframes lx-pull-spin { to { transform: rotate(270deg); } }
-@media (prefers-reduced-motion: reduce) { .lx-upnext-wrap, .lx-upnext, .lx-upnext__arrow { transition: none; } .lx-pullnext svg[data-going] { animation: none; } }
-@media print { .lx-pullnext { display: none; } }
+/* Course navigation at the end of a lesson: progress, then a docs-style pager. */
+.lx-course-navigation__head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 4px 16px; }
+.lx-course-navigation__head a { font-weight: 600; color: var(--on-surface); text-decoration: none; }
+.lx-course-navigation__head a:hover { text-decoration: underline; text-underline-offset: 3px; }
+.lx-course-navigation__head p { margin: 0; font-size: 13px; }
+.lx-pager { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; margin-top: 20px; }
+.lx-pager a { display: grid; align-content: start; gap: 4px; min-width: 0; padding: 14px 16px; border: 1px solid var(--ws-line); border-radius: 10px; color: var(--on-surface); text-decoration: none; transition: border-color 140ms, background 140ms; }
+.lx-pager a:hover { border-color: var(--ws-line-strong); background: var(--ws-hover); }
+.lx-pager a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.lx-pager small { display: inline-flex; align-items: center; gap: 6px; min-width: 0; color: var(--on-surface-variant); font-size: 12px; }
+.lx-pager bdi { font-size: 15px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.lx-pager__next { grid-column: 2; text-align: end; }
+.lx-pager__next small { justify-content: flex-end; }
+@media (max-width: 640px) { .lx-pager { grid-template-columns: 1fr; gap: 10px; } .lx-pager__next { grid-column: 1; } }
+
+/* "Continue where you left off": a quiet card with the section to return to. */
+.lx-resume { position: relative; display: flex; align-items: stretch; margin: 4px 0 20px; border: 1px solid var(--ws-line); border-radius: 12px; background: var(--ws-card); transition: border-color .15s, box-shadow .15s; animation: lx-resume-in .3s var(--ws-spring, ease) both; }
+.lx-resume:hover { border-color: var(--ws-line-strong); box-shadow: 0 6px 18px -10px rgba(0, 0, 0, .25); }
+.lx-resume__main { display: flex; flex: 1; align-items: center; gap: 12px; min-width: 0; padding: 10px 12px; border: 0; border-radius: inherit; background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; }
+.lx-resume__main:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.lx-resume__icon { display: grid; place-items: center; flex: none; width: 34px; height: 34px; border-radius: 9px; background: var(--ws-accent-soft); color: var(--primary); }
+.lx-resume__text { display: grid; gap: 1px; flex: 1; min-width: 0; }
+.lx-resume__text small { font-size: 12px; color: var(--on-surface-variant); }
+.lx-resume__text strong { overflow: hidden; font-size: 14.5px; font-weight: 600; line-height: 1.35; white-space: nowrap; text-overflow: ellipsis; }
+.lx-resume__go { display: inline-flex; align-items: center; gap: 5px; flex: none; padding: 6px 12px; border-radius: 999px; background: var(--on-surface); color: var(--surface, #fff); font-size: 13px; font-weight: 600; transition: transform .15s; }
+.lx-resume__main:hover .lx-resume__go { transform: translateX(2px); }
+.lx-resume__main:hover .lx-resume__go:dir(rtl) { transform: translateX(-2px); }
+.lx-resume__close { display: grid; place-items: center; flex: none; width: 34px; margin: 6px; margin-inline-start: 0; border: 0; border-radius: 8px; background: none; color: var(--on-surface-variant); cursor: pointer; }
+.lx-resume__close:hover, .lx-resume__close:focus-visible { background: var(--ws-hover); color: var(--on-surface); outline: none; }
+@keyframes lx-resume-in { from { opacity: 0; transform: translateY(-4px); } }
+@media (max-width: 480px) { .lx-resume__go { padding: 6px; } .lx-resume__go > :not(svg) { display: none; } }
+@media (prefers-reduced-motion: reduce) { .lx-resume { animation: none; } .lx-resume__go { transition: none; } }

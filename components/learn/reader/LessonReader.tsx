@@ -18,8 +18,8 @@ import Link from "@/components/site/SiteLink";
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent as ReactMouseEvent } from "react";
 import {
-  ChevronLeft, Bookmark, BookmarkCheck, ExternalLink, Flag, GitFork, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
-  Lock, MoreHorizontal, NotebookPen, PenLine, RotateCcw, Share2, ThumbsDown, ThumbsUp, Type, X,
+  ArrowRight, BookOpen, ChevronLeft, Bookmark, BookmarkCheck, ExternalLink, Flag, GitFork, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
+  Lock, MoreHorizontal, NotebookPen, PenLine, Share2, ThumbsDown, ThumbsUp, Type, X,
 } from "lucide-react";
 import { WsConfirm, WsMenu } from "@/components/workspace/primitives";
 import { toast } from "@/lib/toast";
@@ -58,7 +58,7 @@ const copy = {
     font: "Typeface", fonts: { sans: "Sans", serif: "Serif" }, appearance: "Appearance",
     tabs: { lesson: "Lesson", practice: "Practice" }, sources: "Sources", openSource: "Open", noSourceLink: "No link or file for this source.",
     helpful: "Was this lesson helpful?", yes: "Helpful", no: "Not helpful", thanks: "Thanks for the feedback.",
-    complete: "Mark as completed", completed: "Completed", reset: "Start over", resume: (s: string) => `Continue where you left off: “${s}”`, resumeTop: "Continue where you left off",
+    complete: "Mark as completed", completed: "Completed", reset: "Start over", resumeLabel: "Continue where you left off", resumeTop: "Your last reading position", resumeGo: "Resume", resumeDismiss: "Dismiss",
     blockMenu: "Actions for this part", saveBlock: "Save this part", note: "Add private note", discuss: "Discuss this part", copyPart: "Copy link to this part",
     explainImage: "Explain image", askImage: "Ask about this", savedToast: "Saved to your Learn library", noteSaved: "Note saved (only you can see it)",
     highlightSaved: "Highlighted (only you can see it)", removeHighlight: "Remove highlight", highlightRemoved: "Highlight removed",
@@ -78,7 +78,7 @@ const copy = {
     font: "الخط", fonts: { sans: "بلا زوائد", serif: "بزوائد" }, appearance: "المظهر",
     tabs: { lesson: "الدرس", practice: "التدريب" }, sources: "المصادر", openSource: "افتح", noSourceLink: "لا رابط أو ملف لهذا المصدر.",
     helpful: "هل كان هذا الدرس مفيدًا؟", yes: "مفيد", no: "غير مفيد", thanks: "شكرًا على رأيك.",
-    complete: "علّم كمكتمل", completed: "مكتمل", reset: "ابدأ من جديد", resume: (s: string) => `تابع من حيث توقفت: «${s}»`, resumeTop: "تابع من حيث توقفت",
+    complete: "علّم كمكتمل", completed: "مكتمل", reset: "ابدأ من جديد", resumeLabel: "تابع من حيث توقفت", resumeTop: "آخر موضع قرأته", resumeGo: "تابع", resumeDismiss: "إخفاء",
     blockMenu: "إجراءات لهذا الجزء", saveBlock: "احفظ هذا الجزء", note: "أضف ملاحظة خاصة", discuss: "ناقش هذا الجزء", copyPart: "انسخ رابط هذا الجزء",
     explainImage: "اشرح الصورة", askImage: "اسأل عن هذا", savedToast: "حُفظ في مكتبة Learn", noteSaved: "حُفظت الملاحظة (لا يراها غيرك)",
     highlightSaved: "ظُلّل النص (لا يراه غيرك)", removeHighlight: "أزل التظليل", highlightRemoved: "أُزيل التظليل",
@@ -217,6 +217,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
 
   const positionKey = `${activityKey}:position`;
   const [resumePosition, setResumePosition] = useState<number | null>(null);
+  const [resumeHidden, setResumeHidden] = useState(false);
   useEffect(() => { try { const raw = localStorage.getItem(positionKey); const n = raw === null ? NaN : Number(raw); setResumePosition(Number.isFinite(n) && n > .02 && n < .98 ? n : null); } catch { setResumePosition(null); } }, [positionKey]);
   const restorePosition = () => { const el = article.current; if (!el || resumePosition === null) return; const box = el.getBoundingClientRect(); window.scrollTo({ top: window.scrollY + box.top + box.height * resumePosition - window.innerHeight * .2, behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" }); };
   // Reading progress: percent scrolled and the heading being read, saved as the reader goes.
@@ -439,11 +440,18 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
             </div>
             <CourseBreadcrumb courseId={courseId} lessonId={lesson.id} />
             <MobileOutline items={items} active={active} />
-            {(resumeHeading || resumePosition !== null) && !previewDraft && !completed && (
-              <p className="lx-notice" data-tone="info" style={{ marginBottom: 18 }}>
-                <RotateCcw size={16} aria-hidden />
-                <button type="button" className="lx-link" onClick={() => resumePosition !== null ? restorePosition() : resumeHeading && jumpTo(resumeHeading.id)}>{resumeHeading ? t.resume(resumeHeading.text) : t.resumeTop}</button>
-              </p>
+            {(resumeHeading || resumePosition !== null) && !previewDraft && !completed && !resumeHidden && (
+              <div className="lx-resume">
+                <button type="button" className="lx-resume__main" onClick={() => { if (resumePosition !== null) restorePosition(); else if (resumeHeading) jumpTo(resumeHeading.id); setResumeHidden(true); }}>
+                  <span className="lx-resume__icon" aria-hidden><BookOpen size={17} /></span>
+                  <span className="lx-resume__text">
+                    <small>{t.resumeLabel}</small>
+                    <strong dir="auto">{resumeHeading?.text ?? t.resumeTop}</strong>
+                  </span>
+                  <span className="lx-resume__go"><span>{t.resumeGo}</span><ArrowRight size={15} className="lx-flip" aria-hidden /></span>
+                </button>
+                <button type="button" className="lx-resume__close" aria-label={t.resumeDismiss} onClick={() => setResumeHidden(true)}><X size={15} aria-hidden /></button>
+              </div>
             )}
             <div style={{ marginTop: 20 }}>
               {(

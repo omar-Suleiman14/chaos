@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useModal } from "@/components/workspace/useModal";
 import { ListTree, X } from "lucide-react";
 import type { OutlineItem } from "@/lib/learn/doc";
@@ -86,10 +86,57 @@ export function MobileOutline({ items, active }: { items: OutlineItem[]; active?
     </div>
   );
 }
+/** Slide-up time; closing waits for it before the sheet leaves the page. */
+const SHEET_MS = 260;
+
+/**
+ * Bottom sheet on phones: slides up on a spring with the page dimming behind it, and slides back down to
+ * close (the close button, the scrim, Escape, a chosen section, or a drag down on the handle).
+ */
 function OutlineDrawer({ items, active, onClose }: { items: OutlineItem[]; active?: string; onClose: () => void }) {
-  const t = useCopy(copy), panel = useModal<HTMLDivElement>({ onClose });
-  return <><div className="lx-sheet-scrim" data-modal-backdrop onClick={onClose} aria-hidden /><div ref={panel} className="lx-sheet lx-outline-drawer ws-glass" role="dialog" aria-modal="true" aria-label={t.nav} tabIndex={-1}>
-    <header className="lx-panel__row"><strong>{t.title}</strong><button type="button" className="ws-icon-button" aria-label={t.close} onClick={onClose}><X size={20} aria-hidden /></button></header>
-    <OutlineNav items={items} active={active} onNavigate={onClose} />
-  </div></>;
+  const t = useCopy(copy);
+  const [shown, setShown] = useState(false);
+  const [drag, setDrag] = useState<{ start: number; y: number; at: number; pointer: number; height: number } | null>(null);
+  const closing = useRef(false);
+  const close = () => {
+    if (closing.current) return;
+    closing.current = true;
+    setDrag(null);
+    setShown(false);
+    window.setTimeout(onClose, matchMedia("(prefers-reduced-motion: reduce)").matches ? 0 : SHEET_MS);
+  };
+  const panel = useModal<HTMLDivElement>({ onClose: close });
+  useEffect(() => {
+    // Mount below the screen, then slide up on the next frame.
+    const frame = requestAnimationFrame(() => setShown(true));
+    panel.current?.querySelector<HTMLElement>('[aria-current="location"]')?.scrollIntoView?.({ block: "center" });
+    return () => cancelAnimationFrame(frame);
+  }, [panel]);
+  const offset = drag ? Math.max(0, drag.y - drag.start) : 0;
+  const height = drag?.height ?? 1;
+  return <>
+    <div className="lx-sheet-scrim lx-outline-scrim" data-shown={shown || undefined} data-modal-backdrop onClick={close} aria-hidden
+      style={drag ? { opacity: Math.max(0, 1 - offset / height) } : undefined} />
+    <div ref={panel} className="lx-sheet lx-outline-drawer ws-glass" role="dialog" aria-modal="true" aria-label={t.nav} tabIndex={-1}
+      data-shown={shown || undefined} data-dragging={drag ? true : undefined} style={{ "--sheet-drag": `${offset}px` } as React.CSSProperties}>
+      <header className="lx-outline-drawer__head"
+        onPointerDown={(e) => {
+          if (e.button !== 0 || (e.target as HTMLElement).closest("button")) return;
+          e.currentTarget.setPointerCapture(e.pointerId);
+          setDrag({ start: e.clientY, y: e.clientY, at: performance.now(), pointer: e.pointerId, height: panel.current?.offsetHeight || 1 });
+        }}
+        onPointerMove={(e) => { if (drag?.pointer === e.pointerId) setDrag({ ...drag, y: e.clientY }); }}
+        onPointerUp={() => {
+          if (!drag) return;
+          // A short fast flick or a pull past a quarter of the sheet closes it; anything less springs back.
+          const speed = offset / Math.max(1, performance.now() - drag.at);
+          if (offset > height / 4 || (offset > 24 && speed > 0.6)) close(); else setDrag(null);
+        }}
+        onPointerCancel={() => setDrag(null)}>
+        <span className="lx-outline-drawer__grab" aria-hidden />
+        <div className="lx-panel__row"><strong>{t.title}</strong><button type="button" className="ws-icon-button" aria-label={t.close} onClick={close}><X size={20} aria-hidden /></button></div>
+      </header>
+      <OutlineNav items={items} active={active} onNavigate={close} />
+    </div>
+  </>;
 }
