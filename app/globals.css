@@ -269,8 +269,8 @@
     box-sizing: border-box;
   }
   /* Square corners are part of the original Chaos theme (legacy quiz player,
-     pre-preset forms). The workspace, the site and themed forms set their own. */
-  *:not(.workspace-ui, .workspace-ui *, .form-theme, .form-theme *, .site-ui, .site-ui *, .live-root, .live-root *, .mc-public, .mc-public *, [class^="cl-"], [class^="cl-"] *),
+     pre-preset forms). The workspace, the site, themed forms and toasts set their own. */
+  *:not(.workspace-ui, .workspace-ui *, .form-theme, .form-theme *, .site-ui, .site-ui *, .live-root, .live-root *, .mc-public, .mc-public *, .chaos-toaster, .chaos-toaster *, [class^="cl-"], [class^="cl-"] *),
   .ws-respondent-preview:not(.form-theme),
   .ws-respondent-preview:not(.form-theme) * {
     border-radius: 0 !important;
