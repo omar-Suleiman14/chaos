@@ -17,8 +17,8 @@ export function formFields(count: number, options: FieldOptions = {}): FormDefin
     const showIf = options.conditional && i >= 4 && i % 4 === 0
       ? { match: "all" as const, conditions: [{ fieldId: `q${i - 4}`, op: "equals" as const, value: "a" }] }
       : undefined;
-    const imageUrl = options.images && i % 3 === 0 ? `https://images.example.com/perf/${i}.jpg` : undefined;
-    const base = { id, label: `Question ${i + 1}: describe the mechanism in your own words`, required: i % 2 === 0, ...(showIf ? { showIf } : {}), ...(imageUrl ? { imageUrl } : {}) };
+    const image = options.images && i % 3 === 0 ? { url: `https://images.example.com/perf/${i}.jpg`, alt: `Diagram ${i}` } : undefined;
+    const base = { id, label: `Question ${i + 1}: describe the mechanism in your own words`, required: i % 2 === 0, ...(showIf ? { showIf } : {}), ...(image ? { image } : {}) };
     switch (i % 5) {
       case 0: case 1:
         fields.push({ ...base, type: i % 5 === 0 ? "choice" : "multi_choice", options: [{ id: "a", label: "Alpha" }, { id: "b", label: "Beta" }, { id: "c", label: "Gamma" }, { id: "d", label: "Delta" }],
@@ -63,3 +63,16 @@ export function lessonBlocks(count: number, opts: { quizFormId?: Id<"forms">; pr
 
 export const lessonDoc = (count: number, opts?: Parameters<typeof lessonBlocks>[1]): LessonDocument => ({ schemaVersion: 1, blocks: lessonBlocks(count, opts) });
 export const lessonMeta = (title: string) => ({ title, description: `${title}, perf fixture`, language: "en", tags: ["perf"] });
+
+/** A complete, valid answer set for a definition from formFields(): every branch taken, so every field is shown. */
+export function formAnswers(def: FormDefinition, seed = 0): Record<string, string | number | string[]> {
+  const answers: Record<string, string | number | string[]> = {};
+  for (const [i, f] of def.fields.entries()) {
+    if (f.type === "choice") answers[f.id] = "a";
+    else if (f.type === "multi_choice") answers[f.id] = (seed + i) % 2 ? ["a", "b"] : ["a"];
+    else if (f.type === "rating") answers[f.id] = 1 + ((seed + i) % 5);
+    else if (f.type === "text") answers[f.id] = `Answer ${seed}-${i}`;
+    else if (f.type === "textarea") answers[f.id] = `A longer explanation from respondent ${seed} about question ${i}, with enough words to look real.`;
+  }
+  return answers;
+}

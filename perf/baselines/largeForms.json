@@ -1,0 +1,248 @@
+{
+  "suite": "largeForms",
+  "tolerance": {
+    "bytes": 0
+  },
+  "metrics": {
+    "forms.max.editor.bytesRead": {
+      "budget": 34038,
+      "unit": "bytes"
+    },
+    "forms.max.editor.databaseQueries": {
+      "budget": 3,
+      "unit": "count"
+    },
+    "forms.max.editor.documentsRead": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "forms.max.editor.payloadBytes": {
+      "budget": 40438,
+      "unit": "bytes"
+    },
+    "forms.max.publish.bytesWritten": {
+      "budget": 67610,
+      "unit": "bytes"
+    },
+    "forms.max.publish.documentsWritten": {
+      "budget": 3,
+      "unit": "count"
+    },
+    "forms.max.r25.analysis.bytesRead": {
+      "budget": 309234,
+      "unit": "bytes"
+    },
+    "forms.max.r25.analysis.databaseQueries": {
+      "budget": 6,
+      "unit": "count"
+    },
+    "forms.max.r25.analysis.documentsRead": {
+      "budget": 29,
+      "unit": "count"
+    },
+    "forms.max.r25.analysis.payloadBytes": {
+      "budget": 300303,
+      "unit": "bytes"
+    },
+    "forms.max.r25.responsesPage.bytesRead": {
+      "budget": 268418,
+      "unit": "bytes"
+    },
+    "forms.max.r25.responsesPage.databaseQueries": {
+      "budget": 3,
+      "unit": "count"
+    },
+    "forms.max.r25.responsesPage.documentsRead": {
+      "budget": 27,
+      "unit": "count"
+    },
+    "forms.max.r25.responsesPage.payloadBytes": {
+      "budget": 9485,
+      "unit": "bytes"
+    },
+    "forms.max.respondent.bytesRead": {
+      "budget": 67939,
+      "unit": "bytes"
+    },
+    "forms.max.respondent.databaseQueries": {
+      "budget": 5,
+      "unit": "count"
+    },
+    "forms.max.respondent.documentsRead": {
+      "budget": 4,
+      "unit": "count"
+    },
+    "forms.max.respondent.payloadBytes": {
+      "budget": 40291,
+      "unit": "bytes"
+    },
+    "forms.max.save.bytesWritten": {
+      "budget": 33968,
+      "unit": "bytes"
+    },
+    "forms.max.submit.bytesWritten": {
+      "budget": 48447,
+      "unit": "bytes"
+    },
+    "forms.q10.editor.bytesRead": {
+      "budget": 2787,
+      "unit": "bytes"
+    },
+    "forms.q10.editor.databaseQueries": {
+      "budget": 3,
+      "unit": "count"
+    },
+    "forms.q10.editor.documentsRead": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "forms.q10.editor.payloadBytes": {
+      "budget": 3438,
+      "unit": "bytes"
+    },
+    "forms.q10.publish.bytesWritten": {
+      "budget": 5108,
+      "unit": "bytes"
+    },
+    "forms.q10.publish.documentsWritten": {
+      "budget": 3,
+      "unit": "count"
+    },
+    "forms.q10.r50.analysis.bytesRead": {
+      "budget": 49719,
+      "unit": "bytes"
+    },
+    "forms.q10.r50.analysis.databaseQueries": {
+      "budget": 6,
+      "unit": "count"
+    },
+    "forms.q10.r50.analysis.documentsRead": {
+      "budget": 54,
+      "unit": "count"
+    },
+    "forms.q10.r50.analysis.payloadBytes": {
+      "budget": 34243,
+      "unit": "bytes"
+    },
+    "forms.q10.r50.responsesPage.bytesRead": {
+      "budget": 25937,
+      "unit": "bytes"
+    },
+    "forms.q10.r50.responsesPage.databaseQueries": {
+      "budget": 3,
+      "unit": "count"
+    },
+    "forms.q10.r50.responsesPage.documentsRead": {
+      "budget": 27,
+      "unit": "count"
+    },
+    "forms.q10.r50.responsesPage.payloadBytes": {
+      "budget": 9621,
+      "unit": "bytes"
+    },
+    "forms.q10.respondent.bytesRead": {
+      "budget": 5437,
+      "unit": "bytes"
+    },
+    "forms.q10.respondent.databaseQueries": {
+      "budget": 5,
+      "unit": "count"
+    },
+    "forms.q10.respondent.documentsRead": {
+      "budget": 4,
+      "unit": "count"
+    },
+    "forms.q10.respondent.payloadBytes": {
+      "budget": 3292,
+      "unit": "bytes"
+    },
+    "forms.q10.save.bytesWritten": {
+      "budget": 2717,
+      "unit": "bytes"
+    },
+    "forms.q10.submit.bytesWritten": {
+      "budget": 4831,
+      "unit": "bytes"
+    },
+    "forms.q100.editor.bytesRead": {
+      "budget": 18908,
+      "unit": "bytes"
+    },
+    "forms.q100.editor.databaseQueries": {
+      "budget": 3,
+      "unit": "count"
+    },
+    "forms.q100.editor.documentsRead": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "forms.q100.editor.payloadBytes": {
+      "budget": 22537,
+      "unit": "bytes"
+    },
+    "forms.q100.publish.bytesWritten": {
+      "budget": 37349,
+      "unit": "bytes"
+    },
+    "forms.q100.publish.documentsWritten": {
+      "budget": 3,
+      "unit": "count"
+    },
+    "forms.q100.r50.analysis.bytesRead": {
+      "budget": 291519,
+      "unit": "bytes"
+    },
+    "forms.q100.r50.analysis.databaseQueries": {
+      "budget": 6,
+      "unit": "count"
+    },
+    "forms.q100.r50.analysis.documentsRead": {
+      "budget": 54,
+      "unit": "count"
+    },
+    "forms.q100.r50.analysis.payloadBytes": {
+      "budget": 276496,
+      "unit": "bytes"
+    },
+    "forms.q100.r50.responsesPage.bytesRead": {
+      "budget": 153438,
+      "unit": "bytes"
+    },
+    "forms.q100.r50.responsesPage.databaseQueries": {
+      "budget": 3,
+      "unit": "count"
+    },
+    "forms.q100.r50.responsesPage.documentsRead": {
+      "budget": 27,
+      "unit": "count"
+    },
+    "forms.q100.r50.responsesPage.payloadBytes": {
+      "budget": 9621,
+      "unit": "bytes"
+    },
+    "forms.q100.respondent.bytesRead": {
+      "budget": 37678,
+      "unit": "bytes"
+    },
+    "forms.q100.respondent.databaseQueries": {
+      "budget": 5,
+      "unit": "count"
+    },
+    "forms.q100.respondent.documentsRead": {
+      "budget": 4,
+      "unit": "count"
+    },
+    "forms.q100.respondent.payloadBytes": {
+      "budget": 22390,
+      "unit": "bytes"
+    },
+    "forms.q100.save.bytesWritten": {
+      "budget": 18838,
+      "unit": "bytes"
+    },
+    "forms.q100.submit.bytesWritten": {
+      "budget": 27420,
+      "unit": "bytes"
+    }
+  }
+}
