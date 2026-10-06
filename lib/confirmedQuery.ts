@@ -112,6 +112,14 @@ let scope: string | null = (() => {
   } catch { return null; }
 })();
 const scopeListeners = new Set<() => void>();
+/**
+ * True when this browser certainly has no Clerk session (no session marker cookie), so public pages
+ * can treat the visitor as signed out before the sign-in library loads. Never true for Better Auth.
+ */
+export function signedOutForSure(): boolean {
+  if (typeof document === "undefined" || process.env.NEXT_PUBLIC_AUTH_PROVIDER === "betterauth") return false;
+  return sessionMarker() === null;
+}
 /** The account the device cache currently belongs to (checked against the session cookie), or null. */
 export function cacheScope(): string | null { return scope; }
 export function setCacheScope(userId: string | null) {

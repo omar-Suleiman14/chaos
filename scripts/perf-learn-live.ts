@@ -25,8 +25,8 @@ const pages: { name: string; url: string; ready: string }[] = [
   { name: "explore", url: `${base}/learn`, ready: "a[href*='/learn/courses/']" },
   { name: "course", url: `${learn}/learn/courses/${COURSE}`, ready: ".cp-main" },
   { name: "lesson", url: `${learn}/learn/${LESSON}`, ready: "#lesson-title" },
-  { name: "course lesson, plain link", url: `${learn}/learn/${COURSE_LESSON}`, ready: "#lesson-title" },
-  { name: "course lesson, course link", url: `${learn}/learn/${COURSE_LESSON}?course=${COURSE}`, ready: "#lesson-title" },
+  { name: "course lesson, plain link", url: `${learn}/learn/${COURSE_LESSON}`, ready: "#lesson-title, .lx-empty h1" },
+  { name: "course lesson, course link", url: `${learn}/learn/${COURSE_LESSON}?course=${COURSE}`, ready: "#lesson-title, .lx-empty h1" },
   { name: "docs", url: `${docs}/`, ready: "main h1" },
 ];
 
@@ -36,7 +36,8 @@ const median = (values: number[]) => { const s = [...values].sort((a, b) => a - 
 const probe = (ready: string) => `(() => {
   const w = window; w.__perf = { busyMs: 0, readyAt: null };
   let busySince = null;
-  const busy = () => !!document.querySelector('[aria-busy="true"], .ws-skeleton, [role="status"]:not(:empty)');
+  // Screen-reader-only announcements are not something a visitor waits on.
+  const busy = () => [...document.querySelectorAll('[aria-busy="true"], .ws-skeleton, [role="status"]:not(:empty)')].some((e) => !e.matches('.sr-only'));
   const tick = () => {
     const now = performance.now();
     const b = busy();

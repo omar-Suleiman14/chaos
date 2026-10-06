@@ -3,7 +3,7 @@ import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useLearnViewer } from "./data";
-import { cacheScope } from "@/lib/confirmedQuery";
+import { cacheScope, signedOutForSure } from "@/lib/confirmedQuery";
 
 const noSubscribe = () => () => {};
 
@@ -55,6 +55,9 @@ function knownEnrolled(courseId: string): boolean {
   return learnerKeys().some((key) => memo[key]?.includes(courseId));
 }
 
+const NOT_ENROLLED = { enrolled: false, owner: false };
+function hasGuestToken() { try { return !!localStorage.getItem(TOKEN_KEY); } catch { return false; } }
+
 export function savedGuestName() { try { return localStorage.getItem(NAME_KEY) ?? ""; } catch { return ""; } }
 
 /** Whether the viewer has started a course; owners always count as enrolled. undefined while loading. */
@@ -83,6 +86,12 @@ export function useCourseEnrollment(courseId: string | null | undefined) {
   useEffect(() => { if (courseId && learner && state) rememberEnrolled(learner, courseId, state.enrolled); }, [courseId, learner, state]);
   // The server render and hydration see no memo, so markup matches; the browser then applies it.
   const optimistic = useSyncExternalStore(noSubscribe, () => !!courseId && knownEnrolled(courseId), () => false);
+  // A signed-out visitor who never started a course on this device can't be enrolled: say so now
+  // instead of after the sign-in library and the enrollment check.
+  // Read once on arrival: the guest token this hook creates a moment later must not undo it.
+  const [neverStarted, setNeverStarted] = useState(false);
+  useEffect(() => { setNeverStarted(!!courseId && signedOutForSure() && !hasGuestToken()); }, [courseId]);
   const live = noStorage ? { enrolled: false, owner: false } : ready ? state : undefined;
-  return { state: live === undefined && optimistic ? { enrolled: true, owner: false } : live, signedIn, enroll, recordLesson };
+  const early = optimistic ? { enrolled: true, owner: false } : neverStarted ? NOT_ENROLLED : undefined;
+  return { state: live === undefined ? early : live, signedIn, enroll, recordLesson };
 }
