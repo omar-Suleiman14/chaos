@@ -2,6 +2,7 @@ import type { Locale } from "../locale";
 import { sectionsAr } from "./content-ar";
 import { sectionsEn } from "./content-en";
 import { extraArticles } from "./articles-extra";
+import { assistantArticles } from "./articles-assistants";
 import { docStructure } from "./structure";
 import type { DocArticle, DocBlock, DocSection } from "./types";
 
@@ -9,7 +10,7 @@ export type { DocArticle, DocBlock, DocSection } from "./types";
 
 /** Articles from every source, grouped by lib/docs/structure.ts. Anything unplaced is appended so it stays reachable. */
 function grouped(locale: Locale, sections: DocSection[]): DocSection[] {
-  const all = [...sections.flatMap((section) => section.articles), ...extraArticles[locale]];
+  const all = [...sections.flatMap((section) => section.articles), ...extraArticles[locale], ...assistantArticles[locale]];
   const bySlug = new Map(all.map((article) => [article.slug, article]));
   const placed = new Set<string>();
   const result = docStructure.map((group) => ({

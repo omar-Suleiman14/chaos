@@ -18,7 +18,9 @@ describe("database documentation", () => {
     const t = await createTestConvexWithAdmin(creatorIdentity.subject);
     const actor = t.withIdentity(creatorIdentity);
     await actor.mutation(api.docs.save, fields);
-    expect(await t.query(api.docs.listPublished, { locale: "en" })).toEqual([]);
+    // The draft stays private: its slug is not served, even though bundled guides are.
+    expect((await t.query(api.docs.listPublished, { locale: "en" })).some(doc => doc.slug === fields.slug)).toBe(false);
+    expect(await t.query(api.docs.getPublished, { slug: fields.slug, locale: "en" })).toBeNull();
     await actor.mutation(api.docs.save, { ...fields, expectedRevision: 0, publish: true });
     expect(await t.query(api.docs.getPublished, { slug: fields.slug, locale: "en" })).toMatchObject({ title: "Connect Chaos", sectionTitle: "Connections" });
     await actor.mutation(api.docs.save, { ...fields, sectionTitle: "New section", content: { ...fields.content, title: "Draft title" }, expectedRevision: 1, publish: false });
@@ -65,5 +67,17 @@ describe("database documentation", () => {
     expect(await t.mutation(internal.docs.refreshCopy, { locale: "en" })).toEqual({ updated: 0, nextCursor: null });
     expect(await t.mutation(internal.docs.refreshCopy, { locale: "ar" })).toEqual({ updated: 1, nextCursor: null });
     expect(await t.run(ctx => ctx.db.get("docArticles", id))).toMatchObject({ published: null, revision: 4, content: { title: "أسعار مخصصة", summary: "الاستخدام الشخصي مجاني. اشتراك الأعمال لكل شخص.", blocks: [{ type: "list", items: ["50 جنيهًا شهريًا لكل شخص ينشئ المحتوى أو يديره.", "نص أضافه المسؤول"] }] } });
+  });
+  it("serves bundled guides that have no stored row, never retired ones, and lets stored rows win", async () => {
+    const t = await createTestConvexWithAdmin(creatorIdentity.subject);
+    const empty = await t.query(api.docs.listPublished, { locale: "en" });
+    expect(empty.map(doc => doc.slug)).toEqual(expect.arrayContaining(["claude", "chatgpt"]));
+    expect(empty.some(doc => doc.slug === "chatgpt-app")).toBe(false);
+    expect(await t.query(api.docs.getPublished, { slug: "chatgpt-app", locale: "en" })).toBeNull();
+    expect(await t.query(api.docs.getPublished, { slug: "claude", locale: "ar" })).toMatchObject({ title: "Claude" });
+    const actor = t.withIdentity(creatorIdentity);
+    await actor.mutation(api.docs.save, { ...fields, slug: "claude", content: { ...fields.content, title: "Edited by an admin" }, publish: true });
+    expect(await t.query(api.docs.getPublished, { slug: "claude", locale: "en" })).toMatchObject({ title: "Edited by an admin" });
+    expect((await t.query(api.docs.listPublished, { locale: "en" })).filter(doc => doc.slug === "claude")).toHaveLength(1);
   });
 });

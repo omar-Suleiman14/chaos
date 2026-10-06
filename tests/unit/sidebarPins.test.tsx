@@ -60,7 +60,7 @@ describe("sidebar sections", () => {
     expect(links.length).toBeGreaterThan(2);
     for (const link of links) expect(link).toHaveAttribute("data-prefetch", link.getAttribute("aria-current") === "page" ? "false" : "auto");
     expect(intent.warmForm).not.toHaveBeenCalled();
-    const docs = screen.getByRole("link", { name: "Archive" });
+    const docs = screen.getByRole("link", { name: "Connections" });
     fireEvent.mouseEnter(docs);
     expect(docs).toHaveAttribute("data-prefetch", "true");
     const form = within(screen.getByRole("navigation", { name: "Recent" })).getByRole("link", { name: "Event registration" });

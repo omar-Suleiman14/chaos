@@ -1,19 +1,18 @@
 "use client";
 
 import Link from "next/link";
-import TeamSwitcher from "@/components/workspace/TeamSwitcher";
+import AccountMenu from "@/components/workspace/AccountMenu";
 import "@/components/workspace/teams.css";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 
 import { useClerk, useUser } from "@/lib/auth/client";
 import { CardOnboarding, CardSetupSkeleton } from "@/components/card/CardCustomization";
-import MemberAvatar from "@/components/MemberAvatar";
 import { avatarSeed } from "@/lib/avatarSeed";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, BarChart3, BookOpen, Bookmark, ChevronDown, ChevronUp, FileText, GraduationCap, Home, Layers, Library, Link2, ListChecks, BookOpenText, LogOut, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, UserCog, X } from "lucide-react";
+import { Archive, BarChart3, BookOpen, Bookmark, ChevronDown, ChevronUp, FileText, GraduationCap, Home, Layers, Library, Link2, ListChecks, BookOpenText, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -100,10 +99,10 @@ const libraryItem = { href: "/dashboard", key: "library", icon: Library } as con
 const legacyResultsItem = { href: "/dashboard/results", key: "legacyResults", icon: BarChart3 } as const;
 const savedItem = { href: "/dashboard/learn/saved", key: "saved", icon: Bookmark } as const;
 const workspaceItems = [
-  { href: "/dashboard/archive", key: "archive", icon: Archive },
   { href: "/dashboard/connections", key: "connections", icon: Link2 },
 ] as const;
-/** Settings live in the workspace menu; the collapsed rail hides that menu, so it keeps this link. */
+/** Archive and Settings live in the account menu at the bottom of the sidebar. */
+const archiveItem = { href: "/dashboard/archive", key: "archive", icon: Archive } as const;
 const settingsItem = { href: "/dashboard/settings", key: "settings", icon: Settings } as const;
 
 /** Personal learning routes share the workspace shell; Explore is public. */
@@ -128,7 +127,7 @@ function pageLabel(pathname: string, t: Copy): string {
   if (pathname === "/dashboard/forms") return t.library;
   if (pathname.startsWith("/dashboard/courses")) return t.courses;
   if (pathname.startsWith("/dashboard/card")) return t.myCard;
-  const item = [libraryItem, legacyResultsItem, ...workspaceItems, settingsItem].find((i) => (i.href === "/dashboard" ? pathname === i.href : pathname.startsWith(i.href)));
+  const item = [libraryItem, legacyResultsItem, ...workspaceItems, archiveItem, settingsItem].find((i) => (i.href === "/dashboard" ? pathname === i.href : pathname.startsWith(i.href)));
   return item ? t[item.key] : t.dashboard;
 }
 
@@ -338,7 +337,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               </button>
             )}
           </div>
-          {account && !account.isBanned && !account.suspendedUntil && <TeamSwitcher />}
           <button type="button" className="ws-nav-item ws-reveal-host" onClick={() => setPaletteOpen(true)} title={rail ? `${t.search} (Ctrl K)` : undefined}>
             <Search size={18} aria-hidden="true" /> <span>{t.search}</span> <kbd className="ws-reveal">Ctrl K</kbd>
           </button>
@@ -427,7 +425,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
 
           <div className="ws-sidebar__footer">
             {workspaceItems.map(link)}
-            {rail && link(settingsItem)}
             {isAdmin && (
               <IntentLink href="/admin" className="ws-nav-item ws-nav-item--danger" aria-current={pathname === "/admin" ? "page" : undefined} title={rail ? t.admin : undefined}>
                 <Shield size={18} aria-hidden="true" /> <span>{t.admin}</span>
@@ -437,29 +434,10 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             <a href="/docs" target="_blank" rel="noopener" className="ws-nav-item" title={rail ? t.docs : undefined}>
               <BookOpen size={18} aria-hidden="true" /> <span>{t.docs}</span>
             </a>
-            {/* Phones: Clerk's account popover opens outside the drawer, which the drawer treats as a
-                click away and hides. A plain row signs out without it. */}
-            {mobile ? (
-              <>
-                {/* Profile holds the app settings (appearance, language, account). */}
-                <IntentLink href="/dashboard/card" className="ws-nav-item" aria-current={pathname.startsWith("/dashboard/card") ? "page" : undefined}>
-                  {account ? <MemberAvatar seed={account.cardAvatarSeed ?? avatarSeed(account.clerkId)} size={20} /> : <UserCog size={18} aria-hidden="true" />}
-                  <span>{user?.fullName || t.myCard}</span>
-                  <small className="ms-auto text-[13px] text-muted-foreground">{t.myCard}</small>
-                </IntentLink>
-                <button type="button" className="ws-nav-item" onClick={() => void clerk.signOut({ redirectUrl: "/" })}>
-                  <LogOut size={18} aria-hidden="true" /> <span>{t.signOut}</span>
-                </button>
-              </>
-            ) : (
-              <div className="ws-user">
-                <IntentLink href="/dashboard/card" className="ws-user__card" title={t.myCard} aria-label={t.myCard}>
-                  {account && <MemberAvatar seed={account.cardAvatarSeed ?? avatarSeed(account.clerkId)} size={28} />}
-                  <span className="truncate text-[13px] text-muted-foreground">{user?.fullName || user?.username || ""}</span>
-                </IntentLink>
-                <button type="button" className="ws-icon-button" title={t.account} aria-label={t.account} onClick={() => clerk.openUserProfile()}><UserCog size={16} aria-hidden="true" /></button>
-                <button type="button" className="ws-icon-button" title={t.signOut} aria-label={t.signOut} onClick={() => void clerk.signOut({ redirectUrl: "/" })}><LogOut size={16} aria-hidden="true" /></button>
-              </div>
+            {account && !account.isBanned && !account.suspendedUntil && (
+              <AccountMenu compact={rail}
+                user={{ name: user?.fullName || user?.username || account.name || t.myCard, email: user?.primaryEmailAddress?.emailAddress ?? account.email, imageUrl: user && "hasImage" in user && user.hasImage ? user.imageUrl : undefined, avatarSeed: account.cardAvatarSeed ?? avatarSeed(account.clerkId) }}
+                onManageAccount={() => clerk.openUserProfile()} onSignOut={() => void clerk.signOut({ redirectUrl: "/" })} />
             )}
           </div>
           {!mobile && !rail && (

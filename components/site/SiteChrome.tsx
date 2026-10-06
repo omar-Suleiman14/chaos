@@ -120,7 +120,7 @@ export function SiteNav({ links: _links = true }: { links?: boolean }) {
               {open ? <X size={20} aria-hidden="true" /> : <Menu size={20} aria-hidden="true" />}
             </button>
             {open && (
-              <div id="site-menu-panel" className="site-glass site-menu__panel">
+              <div id="site-menu-panel" className="site-menu__panel">
                 {items.map((item) => <Link key={item.href} href={item.href} onClick={() => setOpen(false)}>{item.label}</Link>)}
                 <div className="site-menu__row"><LanguageChoice /><PrimaryCta className="site-menu__cta" /></div>
               </div>

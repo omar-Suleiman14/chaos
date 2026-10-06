@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import TeamsHome from "@/components/workspace/TeamsHome";
-import TeamSwitcher from "@/components/workspace/TeamSwitcher";
+import AccountMenu from "@/components/workspace/AccountMenu";
 import TeamWorkspace from "@/components/workspace/TeamWorkspace";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -29,7 +29,7 @@ it("waits for Convex authentication before loading teams and invitations", () =>
 });
 
 it("keeps the switcher and team detail safe while authentication initializes", () => {
-  render(<><TeamSwitcher /><TeamWorkspace teamId={"team" as Id<"businessTeams">} /></>);
+  render(<><AccountMenu user={{ name: "Omar Suleiman", email: "omar@example.com" }} onManageAccount={vi.fn()} onSignOut={vi.fn()} /><TeamWorkspace teamId={"team" as Id<"businessTeams">} /></>);
   expect(auth.queries.mock.calls.every(([args]) => args === "skip")).toBe(true);
   expect(screen.getByRole("status")).toHaveTextContent("Loading team");
 });
@@ -38,10 +38,10 @@ it("switches workspaces through the Chaos menu and marks the current team", () =
   auth.ready = true;
   auth.path = "/dashboard/teams/team";
   auth.rows = [{ team: { _id: "team", name: "Chaos Team" }, role: "owner" }];
-  const { container } = render(<TeamSwitcher />);
+  const { container } = render(<AccountMenu user={{ name: "Omar Suleiman", email: "omar@example.com" }} onManageAccount={vi.fn()} onSignOut={vi.fn()} />);
   expect(container.querySelector("select")).toBeNull();
-  expect(screen.getByRole("button", { name: "Workspace" })).toHaveTextContent("Chaos Team");
-  fireEvent.click(screen.getByRole("button", { name: "Workspace" }));
+  expect(screen.getByRole("button", { name: "Account" })).toHaveTextContent("Chaos Team");
+  fireEvent.click(screen.getByRole("button", { name: "Account" }));
   expect(screen.getByRole("menuitemradio", { name: /Chaos Team/ })).toHaveAttribute("aria-checked", "true");
   fireEvent.click(screen.getByRole("menuitemradio", { name: /Personal/ }));
   expect(auth.push).toHaveBeenCalledWith("/dashboard");

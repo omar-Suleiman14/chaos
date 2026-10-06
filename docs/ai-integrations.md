@@ -8,6 +8,7 @@ Chaos is a hosted remote MCP server at **`https://chaos.fail/mcp`** (Streamable 
 |---|---|
 | [`/claude`](https://chaos.fail/claude) | Chaos for Claude: one-click connector, plugin download, Claude Code command, manual settings, security notes |
 | [`/chatgpt`](https://chaos.fail/chatgpt) | Chaos for ChatGPT: app setup, plugin download, manual settings, security notes |
+| [`/docs/claude`](https://chaos.fail/docs/claude), [`/docs/chatgpt`](https://chaos.fail/docs/chatgpt) | One guide per assistant (`lib/docs/articles-assistants.ts`); `/docs/chatgpt-app` redirects to `/docs/chatgpt`. Bundled guides with no stored row are served straight from source by `docs:listPublished` |
 | [`/connect`](https://chaos.fail/connect) | Integration cards for every platform plus the combined step-by-step guide |
 
 Both platform pages render `components/site/IntegrationView.tsx` with a `platform` prop, so they share one layout (hero, connect, what it can do, manual setup, security) and differ only in copy. Styles live in `components/site/integrations.css`.

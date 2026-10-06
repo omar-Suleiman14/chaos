@@ -17,7 +17,7 @@ export const docStructure: { id: string; title: Record<Locale, string>; slugs: s
   },
   { id: "learn", title: { en: "Learn", ar: "تعلّم" }, slugs: ["community", "progress", "forking"] },
   { id: "play", title: { en: "Play", ar: "العب" }, slugs: ["live-games"] },
-  { id: "connect", title: { en: "Connect", ar: "اربط" }, slugs: ["connections", "max", "chatgpt-app", "notion"] },
+  { id: "connect", title: { en: "Connect", ar: "اربط" }, slugs: ["connections", "max", "claude", "chatgpt", "notion"] },
   { id: "developers", title: { en: "Developers", ar: "للمطورين" }, slugs: ["integration-api", "mcp", "webhooks", "self-hosting"] },
   {
     id: "account", title: { en: "Account", ar: "الحساب" },

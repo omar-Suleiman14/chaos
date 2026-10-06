@@ -80,7 +80,12 @@ const nextConfig: NextConfig = {
   },
   async redirects() {
     // One canonical host: www.chaos.fail answers with a permanent 308 to the same path on chaos.fail.
-    return [{ source: "/:path*", has: [{ type: "host", value: "www.chaos.fail" }], destination: "https://chaos.fail/:path*", permanent: true }];
+    return [
+      { source: "/:path*", has: [{ type: "host", value: "www.chaos.fail" }], destination: "https://chaos.fail/:path*", permanent: true },
+      // The combined ChatGPT and Claude guide became one guide per assistant (lib/docs/articles-assistants.ts).
+      { source: "/docs/chatgpt-app", destination: "/docs/chatgpt", permanent: true },
+      { source: "/ar/docs/chatgpt-app", destination: "/ar/docs/chatgpt", permanent: true },
+    ];
   },
   async rewrites() {
     // IndexNow key file at the site root (app/api/indexnow/key/[key]/route.ts checks it against INDEXNOW_KEY).

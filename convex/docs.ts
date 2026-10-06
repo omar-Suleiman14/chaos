@@ -42,8 +42,30 @@ async function saveForActor(ctx: MutationCtx, actorId: string, args: Fields & { 
 async function listAdmin(ctx: QueryCtx, locale: "en" | "ar") {
   return (await ctx.db.query("docArticles").withIndex("by_locale_and_order", q => q.eq("locale", locale)).take(200)).map(row => ({ slug: row.slug, locale: row.locale, sectionId: row.sectionId, sectionTitle: row.sectionTitle, order: row.order, content: row.content, revision: row.revision, published: row.published !== null }));
 }
-export const listPublished = query({ args: { locale: docLocale }, returns: v.array(publishedDoc), handler: async (ctx, { locale }) => (await ctx.db.query("docArticles").withIndex("by_locale_and_order", q => q.eq("locale", locale)).take(200)).flatMap(row => row.published ? [{ slug: row.slug, locale: row.locale, ...row.published, updatedAt: row.publishedAt! }] : []).sort((a, b) => a.order - b.order) });
-export const getPublished = query({ args: { slug: v.string(), locale: docLocale }, returns: v.union(publishedDoc, v.null()), handler: async (ctx, args) => { const row = await ctx.db.query("docArticles").withIndex("by_slug_and_locale", q => q.eq("slug", args.slug).eq("locale", args.locale)).unique(); return row?.published ? { slug: row.slug, locale: row.locale, ...row.published, updatedAt: row.publishedAt! } : null; } });
+/** Guides whose address now redirects elsewhere (next.config.ts); never served, even if a row is left. */
+const RETIRED = new Set(["chatgpt-app"]);
+/** When the bundled guides last changed; stands in for publishedAt on guides with no stored row yet. */
+const SOURCE_UPDATED_AT = Date.UTC(2026, 9, 6);
+/**
+ * Guides in the source (lib/docs) that have no stored row yet, in reading order. Stored rows win, so
+ * admin edits are kept; a new guide in the source goes live with the deploy instead of waiting for docs:seed.
+ */
+function sourceDocs(locale: "en" | "ar", stored: Set<string>) {
+  return docSections[locale].flatMap(section => section.articles.map(article => ({ section, article })))
+    .map(({ section, article }, order) => ({ slug: article.slug, locale, sectionId: section.id, sectionTitle: section.title, order, title: article.title, summary: article.summary, blocks: article.blocks, updatedAt: SOURCE_UPDATED_AT }))
+    .filter(doc => !stored.has(doc.slug) && !RETIRED.has(doc.slug));
+}
+export const listPublished = query({ args: { locale: docLocale }, returns: v.array(publishedDoc), handler: async (ctx, { locale }) => {
+  const rows = await ctx.db.query("docArticles").withIndex("by_locale_and_order", q => q.eq("locale", locale)).take(200);
+  const published = rows.flatMap(row => row.published && !RETIRED.has(row.slug) ? [{ slug: row.slug, locale: row.locale, ...row.published, updatedAt: row.publishedAt! }] : []);
+  return [...published, ...sourceDocs(locale, new Set(rows.map(row => row.slug)))].sort((a, b) => a.order - b.order);
+} });
+export const getPublished = query({ args: { slug: v.string(), locale: docLocale }, returns: v.union(publishedDoc, v.null()), handler: async (ctx, args) => {
+  if (RETIRED.has(args.slug)) return null;
+  const row = await ctx.db.query("docArticles").withIndex("by_slug_and_locale", q => q.eq("slug", args.slug).eq("locale", args.locale)).unique();
+  if (row) return row.published ? { slug: row.slug, locale: row.locale, ...row.published, updatedAt: row.publishedAt! } : null;
+  return sourceDocs(args.locale, new Set()).find(doc => doc.slug === args.slug) ?? null;
+} });
 export const adminList = query({ args: { locale: docLocale }, returns: v.array(adminRow), handler: async (ctx, args) => { await requireAdmin(ctx); return listAdmin(ctx, args.locale); } });
 export const save = mutation({ args: saveArgs, returns: saved, handler: async (ctx, args) => { await requireAdmin(ctx); const identity = await requireIdentity(ctx); await adminActor(ctx, identity.subject); return saveForActor(ctx, identity.subject, args); } });
 export const mcpList = internalQuery({ args: { userId: v.string(), locale: docLocale }, returns: v.array(adminRow), handler: async (ctx, args) => { await adminActor(ctx, args.userId); return listAdmin(ctx, args.locale); } });

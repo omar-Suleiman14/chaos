@@ -275,7 +275,7 @@ export default function ConnectionsPage() {
       <div className="cx-dev flex flex-wrap items-end justify-between gap-3">
         <div>
           <h2 className="cx-dev__title">{t.developer}</h2>
-          <p className="cx-dev__lead">{t.developerLead} <a className="underline" href="/docs/integration-api" target="_blank" rel="noopener">{t.apiDocs}</a> · <a className="underline" href="/docs/chatgpt-app" target="_blank" rel="noopener">{t.mcpDocs}</a></p>
+          <p className="cx-dev__lead">{t.developerLead} <a className="underline" href="/docs/integration-api" target="_blank" rel="noopener">{t.apiDocs}</a> · <a className="underline" href="/docs/mcp" target="_blank" rel="noopener">{t.mcpDocs}</a></p>
         </div>
         {!creating && <button type="button" onClick={() => { setCreating(true); setSecret(null); }} className="ws-btn ws-btn--primary"><Plus size={16} /> {t.newConnection}</button>}
       </div>

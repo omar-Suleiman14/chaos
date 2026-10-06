@@ -88,7 +88,7 @@ export const extraArticles: Record<Locale, DocArticle[]> = {
       blocks: [
         { type: "p", text: "MCP (Model Context Protocol) is a standard way for an assistant to use an app. Chaos runs an MCP server at `https://chaos.fail/mcp`. You sign in with your Chaos account; the assistant can then do what you can do, and nothing more." },
         { type: "list", items: ["Create forms, quizzes, lessons, courses and flashcards. New things are published straight away unless you ask for a draft.", "Edit drafts, publish, and run live games.", "Read results, and read individual answers only when you ask."] },
-        { type: "p", text: "Setup steps for ChatGPT and Claude: [ChatGPT and Claude](/docs/chatgpt-app). Chaos itself runs no AI; the assistant does the writing." },
+        { type: "p", text: "Setup steps: [Claude](/docs/claude) and [ChatGPT](/docs/chatgpt). Chaos itself runs no AI; the assistant does the writing." },
       ],
     },
     {
@@ -194,7 +194,7 @@ export const extraArticles: Record<Locale, DocArticle[]> = {
       blocks: [
         { type: "p", text: "MCP (بروتوكول سياق النماذج) طريقة قياسية ليستخدم المساعد تطبيقًا ما. يشغّل Chaos خادم MCP على `https://chaos.fail/mcp`. تسجّل الدخول بحسابك في Chaos؛ ثم يستطيع المساعد فعل ما تستطيعه أنت، لا أكثر." },
         { type: "list", items: ["إنشاء النماذج والاختبارات والدروس والدورات والبطاقات. تُنشر الأشياء الجديدة فورًا ما لم تطلب مسودة.", "تعديل المسودات والنشر وتشغيل الألعاب المباشرة.", "قراءة النتائج، وقراءة الإجابات الفردية فقط حين تطلب."] },
-        { type: "p", text: "خطوات الإعداد لـ ChatGPT وClaude: [ChatGPT وClaude](/docs/chatgpt-app). Chaos نفسه لا يشغّل أي ذكاء اصطناعي؛ المساعد هو من يكتب." },
+        { type: "p", text: "خطوات الإعداد: [Claude](/docs/claude) و[ChatGPT](/docs/chatgpt). Chaos نفسه لا يشغّل أي ذكاء اصطناعي؛ المساعد هو من يكتب." },
       ],
     },
     {

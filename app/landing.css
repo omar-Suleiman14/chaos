@@ -227,11 +227,8 @@ html.dark:has(.site-ui), html.dark:has(.site-ui) body { background: #171716; }
 .site-lang-btn { padding: 0 11px; gap: 7px; }
 .site-login__icon { display: none; }
 .site-menu { display: none; }
-/* A full-width glass sheet under the header (the sticky header is its containing block). A backdrop-filter
-   inside another one only blurs that ancestor, so while the menu is open the header drops its own blur
-   and turns solid; the sheet then blurs the page itself. */
-.site-nav-wrap:has(.site-menu__panel) { background: var(--s-bg); -webkit-backdrop-filter: none; backdrop-filter: none; }
-.site-menu__panel { position: absolute; inset-block-start: 100%; inset-inline: 0; z-index: 50; display: grid; gap: 0; max-height: calc(100dvh - 100%); overflow-y: auto; overscroll-behavior: contain; padding: 6px 16px 18px; border-bottom: 1px solid var(--s-line); box-shadow: 0 24px 40px -24px #0006; animation: site-sheet-in 160ms var(--s-ease) both; }
+/* A full-width solid sheet under the header (the sticky header is its containing block). */
+.site-menu__panel { background: var(--s-bg); position: absolute; inset-block-start: 100%; inset-inline: 0; z-index: 50; display: grid; gap: 0; max-height: calc(100dvh - 100%); overflow-y: auto; overscroll-behavior: contain; padding: 6px 16px 18px; border-bottom: 1px solid var(--s-line); box-shadow: 0 24px 40px -24px #0006; animation: site-sheet-in 160ms var(--s-ease) both; }
 .site-menu__panel > a { display: flex; align-items: center; min-height: 48px; padding: 0 4px; border-bottom: 1px solid var(--s-line); color: var(--s-soft); font-size: 16px; }
 .site-menu__panel > a:hover, .site-menu__panel > a:focus-visible { color: var(--s-text); }
 .site-menu__row { display: flex; align-items: center; gap: 10px; padding-top: 14px; }
@@ -362,7 +359,7 @@ html[lang="ar"] .site-ui :is(h1, h2, h3, .site-brand) { letter-spacing: 0; }
 .site-partner__marks .site-partner__mark + .site-partner__mark { margin-inline-start: -10px; box-shadow: 0 0 0 3px var(--s-card); }
 /* Header icons (theme, log in, menu): one size, one stroke, one hover, so the row reads as a set. */
 .site-nav__actions :is(.site-icon-btn, .site-login) svg { width: 19px; height: 19px; stroke-width: 1.75; }
-.site-nav__actions .site-icon-btn { width: 40px !important; height: 40px !important; transition: background 150ms, color 150ms; }
+.site-nav__actions .site-icon-btn { display: inline-grid !important; place-items: center; width: 40px !important; height: 40px !important; padding: 0 !important; transition: background 150ms, color 150ms; }
 .site-nav__actions .site-icon-btn:hover { background: var(--s-subtle) !important; color: var(--s-text) !important; }
 @media (max-width: 640px) {
   .site-nav__actions .site-login { width: 40px; min-height: 40px; color: var(--s-soft); }
@@ -370,5 +367,5 @@ html[lang="ar"] .site-ui :is(h1, h2, h3, .site-brand) { letter-spacing: 0; }
 }
 /* Signed in, smaller screens keep a compact Open Chaos in the header instead of hiding it. */
 @media (max-width: 900px) {
-  .site-nav__actions > .site-btn--primary.site-btn--open { display: inline-flex; min-height: 36px; padding: 0 12px; font-size: 13px; margin-inline-end: 2px; }
+  .site-nav__actions > .site-btn--primary.site-btn--open { display: inline-flex; min-height: 32px; padding: 0 11px; border-radius: 8px; font-size: 12.5px; margin-inline-end: 2px; }
 }

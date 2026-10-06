@@ -35,7 +35,7 @@ Chaos (${chaos.siteUrl}) is where this person builds forms, quizzes, lessons, co
 `;
 }
 
-function readme(platform: string, install: string[], extra = "") {
+function readme(platform: string, docs: string, install: string[], extra = "") {
   return `# ${chaos.name} for ${platform}
 
 ${chaos.longDescription}
@@ -54,16 +54,16 @@ ${extra}
 
 ${chaos.prompts.map((prompt) => `- "${prompt}"`).join("\n")}
 
-Version ${chaos.version}. Help: ${chaos.docsUrl} or ${chaos.supportEmail}. Privacy: ${chaos.privacyUrl}. Terms: ${chaos.termsUrl}.
+Version ${chaos.version}. Help: ${docs} or ${chaos.supportEmail}. Privacy: ${chaos.privacyUrl}. Terms: ${chaos.termsUrl}.
 `;
 }
 
-const common = (platform: string, logo: LogoAssets, install: string[], extra?: string): PackageFiles => ({
+const common = (platform: string, docs: string, logo: LogoAssets, install: string[], extra?: string): PackageFiles => ({
   ".mcp.json": mcpConfig(),
   [`skills/${chaos.id}/SKILL.md`]: skill(platform),
   "assets/logo.svg": logo.svg,
   "assets/logo.png": logo.png512,
-  "README.md": readme(platform, install, extra),
+  "README.md": readme(platform, docs, install, extra),
 });
 
 /** A Claude plugin: .claude-plugin/plugin.json plus the remote connector. Upload the ZIP in Claude or install it in Claude Code. */
@@ -75,17 +75,17 @@ export function claudePackage(logo: LogoAssets): PackageFiles {
       version: chaos.version,
       description: chaos.description,
       author: { name: chaos.developer, email: chaos.supportEmail, url: chaos.siteUrl },
-      homepage: chaos.docsUrl,
+      homepage: integrationPlatforms.claude.docsUrl,
       repository: chaos.repoUrl,
       license: chaos.license,
       keywords: chaos.keywords,
       icon: "./assets/logo.png",
-      documentationUrl: chaos.docsUrl,
+      documentationUrl: integrationPlatforms.claude.docsUrl,
       supportUrl: `${chaos.siteUrl}/support`,
       privacyPolicyUrl: chaos.privacyUrl,
       termsOfServiceUrl: chaos.termsUrl,
     }),
-    ...common("Claude", logo, [
+    ...common("Claude", integrationPlatforms.claude.docsUrl, logo, [
       "In Claude, open the plugin settings (Customize, then Plugins), choose to upload a plugin, and pick this ZIP.",
       "Turn on Chaos and choose Connect. Sign in to Chaos and allow access.",
       "In Claude Code, unzip it and start Claude Code with `claude --plugin-dir <folder>`, then run `/mcp` to sign in.",
@@ -101,7 +101,7 @@ export function chatGptPackage(logo: LogoAssets): PackageFiles {
       version: chaos.version,
       description: chaos.description,
       author: { name: chaos.developer, email: chaos.supportEmail, url: chaos.siteUrl },
-      homepage: chaos.docsUrl,
+      homepage: integrationPlatforms.chatgpt.docsUrl,
       repository: chaos.repoUrl,
       license: chaos.license,
       keywords: chaos.keywords,
@@ -124,7 +124,7 @@ export function chatGptPackage(logo: LogoAssets): PackageFiles {
       },
     }),
     "assets/icon.png": logo.png128,
-    ...common("ChatGPT", logo, [
+    ...common("ChatGPT", integrationPlatforms.chatgpt.docsUrl, logo, [
       "Unzip it to `~/plugins/chaos`.",
       "Add the entry below to `~/.agents/plugins/marketplace.json`, then install Chaos from the plugin directory in Codex.",
       "Sign in to Chaos when asked and allow access.",

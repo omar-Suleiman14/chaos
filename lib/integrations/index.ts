@@ -22,7 +22,8 @@ export const chaosIntegration = {
   brandColor: "#e9482b",
   siteUrl,
   mcpUrl: `${siteUrl}/mcp`,
-  docsUrl: `${siteUrl}/docs/chatgpt-app`,
+  /** Where to start: the page that sends people to each assistant's guide. */
+  docsUrl: `${siteUrl}/connect`,
   privacyUrl: `${siteUrl}/privacy`,
   termsUrl: `${siteUrl}/terms`,
   supportEmail,
@@ -50,6 +51,8 @@ export type IntegrationPlatform = {
   pagePath: `/${string}`;
   /** File name of the generated package, served from /api/plugins/<file>. */
   packageFile: string;
+  /** This assistant's guide in the Chaos docs. */
+  docsUrl: string;
   /** Where the person adds Chaos. Claude opens its "Add custom connector" dialog prefilled. */
   connectUrl: string;
 };
@@ -61,6 +64,7 @@ export const integrationPlatforms: Record<IntegrationPlatformId, IntegrationPlat
     vendor: "Anthropic",
     pagePath: "/claude",
     packageFile: "chaos-for-claude.zip",
+    docsUrl: `${siteUrl}/docs/claude`,
     connectUrl: `https://claude.ai/customize/connectors?modal=add-custom-connector&connectorName=${encodeURIComponent(chaosIntegration.name)}&connectorUrl=${encodeURIComponent(chaosIntegration.mcpUrl)}`,
   },
   chatgpt: {
@@ -69,6 +73,7 @@ export const integrationPlatforms: Record<IntegrationPlatformId, IntegrationPlat
     vendor: "OpenAI",
     pagePath: "/chatgpt",
     packageFile: "chaos-for-chatgpt.zip",
+    docsUrl: `${siteUrl}/docs/chatgpt`,
     // ChatGPT has no prefill link, so this opens its settings and the steps say what to choose.
     connectUrl: "https://chatgpt.com/#settings/Connectors",
   },
