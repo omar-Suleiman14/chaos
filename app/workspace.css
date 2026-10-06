@@ -252,7 +252,8 @@
 }
 /* Only the middle scrolls; on short phone screens the fixed rows must not squash into each other. */
 .ws-sidebar > :not(.ws-sidebar__scroll) { flex-shrink: 0; }
-.ws-sidebar__scroll { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: thin; }
+.ws-sidebar__scroll { display: flex; flex-direction: column; gap: 1px; flex: 1 1 auto; min-height: 0; overflow-y: auto; overflow-x: hidden; overscroll-behavior: contain; scrollbar-width: none; }
+.ws-sidebar__scroll::-webkit-scrollbar { display: none; }
 .ws-brand { display: flex; align-items: center; gap: 10px; min-height: 40px; padding: 0 6px; margin-bottom: 6px; font-weight: 700; font-size: 16px; letter-spacing: -0.01em; color: var(--on-background); border-radius: 5px; transition: background 100ms ease; }
 .ws-brand:hover { background: var(--ws-hover); }
 .ws-brand small { margin-inline-start: auto; color: var(--on-surface-variant); font-size: 11px; font-weight: 500; }
@@ -1126,3 +1127,14 @@ body.noise-bg:has(.workspace-ui)::before { display: none; }
 .cache-state[data-cache-state="cached"] { opacity: 0.55; }
 .cache-state[data-cache-state="cached"] button[aria-haspopup="menu"] { pointer-events: none; }
 @media (prefers-reduced-motion: reduce) { .cache-state { transition: none; } }
+
+/* Search lives in the top bar (Ctrl/Cmd+K anywhere). Phones show just the icon. */
+.ws-topbar__search { display: inline-flex; align-items: center; gap: 8px; height: 34px; min-width: 200px; padding: 0 8px 0 10px; border: 1px solid var(--ws-line); border-radius: 9px; background: var(--ws-card); color: var(--on-surface-variant); font: inherit; font-size: 13.5px; cursor: pointer; transition: border-color .15s, background .15s; margin-inline-end: 6px; }
+.ws-topbar__search:hover { border-color: var(--ws-line-strong); background: var(--ws-hover); }
+.ws-topbar__search:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.ws-topbar__search kbd { margin-inline-start: auto; padding: 1px 6px; border: 1px solid var(--ws-line); border-radius: 5px; font-size: 11px; font-family: inherit; }
+@media (max-width: 640px) {
+  .ws-topbar__search { min-width: 0; width: 36px; height: 36px; justify-content: center; padding: 0; border-color: transparent; background: transparent; margin: 0; }
+  .ws-topbar__search span, .ws-topbar__search kbd { display: none; }
+}
+.ws-workspace-menu .ws-account__admin, .ws-workspace-menu .ws-account__admin > svg { color: var(--error) !important; }

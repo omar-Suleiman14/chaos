@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { Archive, BarChart3, BookOpen, Bookmark, BookOpenText, ChevronDown, FileText, Folder, GraduationCap, IdCard, Keyboard, Layers, Library, Link2, ListChecks, Moon, Plus, Search, Settings, Sparkles, Trophy, Users } from "lucide-react";
+import { Archive, BarChart3, BookOpen, Bookmark, ChevronDown, FileText, Folder, GraduationCap, IdCard, Keyboard, Layers, Library, Link2, ListChecks, Moon, Plus, Search, Settings, Sparkles, Trophy, Users } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useTheme } from "@/components/ThemeProvider";
 import FallbackBoundary from "@/components/FallbackBoundary";
@@ -17,7 +17,7 @@ import type { SettingsEntry } from "@/lib/settingsIndex";
 import { useModal } from "./useModal";
 
 export interface PaletteItem { id: string; title: string; kind: "form" | "quiz" | "legacy" | "lesson" | "folder" | "course" | "flashcards" | "game" | "team"; href: string; accent?: string; archived?: boolean; body?: string }
-export type PaletteCreate = "form" | "quiz" | "lesson" | "course" | "flashcards";
+export type PaletteCreate = "form" | "quiz" | "course" | "flashcards";
 
 type Entry = { key: string; group: string; label: string; hint?: string; icon: React.ReactNode; run: () => void; titleRanges?: Range[]; snippet?: Snippet; keepOpen?: boolean };
 type IndexRow = { id: string; title: string; status: "draft" | "live" | "closed" | "archived"; quiz: boolean; text: string };
@@ -130,7 +130,6 @@ function Palette({ open, onClose, items, onCreate }: PaletteProps) {
     return [
       make("new", t.newForm, "create blank draft add start form survey", <Plus size={16} />, () => { onClose(); onCreate("form"); }, t.newHint),
       make("quiz", t.newQuiz, "create quiz questions scores test", <ListChecks size={16} />, () => { onClose(); onCreate("quiz"); }, t.newHint),
-      make("lesson", t.newLesson, "create lesson write page", <BookOpenText size={16} />, () => { onClose(); onCreate("lesson"); }, t.newHint),
       make("course", t.newCourse, "create course lessons modules", <GraduationCap size={16} />, () => { onClose(); onCreate("course"); }, t.newHint),
       make("flashcards", t.newFlashcards, "create flashcards cards deck study", <Layers size={16} />, () => { onClose(); onCreate("flashcards"); }, t.newHint),
       make("library", t.library, "library all forms quizzes lessons courses home", <Library size={16} />, go("/dashboard")),

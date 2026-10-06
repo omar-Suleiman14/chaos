@@ -6,7 +6,6 @@ import { ArrowRight, BookOpen, Braces, Download, FileText, GraduationCap, ListCh
 import { PrimaryCta, SiteFooter, SiteNav } from "@/components/site/SiteChrome";
 import { ChatGptMark, NotionMark } from "@/components/site/marks";
 import { AiMark } from "@/components/site/aiMarks";
-import ProductDemo from "@/components/site/ProductDemo";
 import HeroAvatars from "@/components/site/HeroAvatars";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { serializeStructuredData, websiteStructuredData } from "@/lib/seo";
@@ -156,7 +155,6 @@ export default function HomeView() {
           <div className="site-section-heading"><h2 id="create-title" className="site-h2">{t.create.title}</h2><p>{t.create.lead}</p></div>
           <Cards items={t.create.items} />
         </section>
-        <div id="demo" className="site-demo-wrap site-demo-wrap--section"><ProductDemo /></div>
 
         <section id="learn" className="site-section" aria-labelledby="learn-title">
           <div className="site-section-heading"><h2 id="learn-title" className="site-h2">{t.learn.title}</h2><p>{t.learn.lead}</p></div>

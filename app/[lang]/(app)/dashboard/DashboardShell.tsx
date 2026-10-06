@@ -12,7 +12,7 @@ import { avatarSeed } from "@/lib/avatarSeed";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, BarChart3, BookOpen, Bookmark, ChevronDown, ChevronUp, FileText, GraduationCap, Home, Layers, Library, Link2, ListChecks, BookOpenText, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Shield, Trophy, X } from "lucide-react";
+import { Archive, BarChart3, Bookmark, ChevronDown, ChevronUp, FileText, GraduationCap, Home, Layers, Library, Link2, ListChecks, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Trophy, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -179,10 +179,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     return () => document.removeEventListener("pointerdown", close);
   }, [newOpen]);
   const learnActions = useLearnActions();
-  const createLesson = useCallback(async () => {
-    try { const id = await learnActions.createLesson({ language: locale }); router.push(`/dashboard/learn/lessons/${id}`); }
-    catch (err) { toast.error(err); }
-  }, [learnActions, locale, router]);
   const createCourseMutation = useMutation(api.courses.create);
   const createCourse = useCallback(async () => {
     try { const id = await createCourseMutation({ language: locale }); router.push(`/dashboard/courses/${id}`); }
@@ -343,9 +339,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               </button>
             )}
           </div>
-          <button type="button" className="ws-nav-item ws-reveal-host" onClick={() => setPaletteOpen(true)} title={rail ? `${t.search} (Ctrl K)` : undefined}>
-            <Search size={18} aria-hidden="true" /> <span>{t.search}</span> <kbd className="ws-reveal">Ctrl K</kbd>
-          </button>
           <div className="ws-new-menu">
             <button type="button" className="ws-nav-item ws-nav-item--new" onClick={() => setNewOpen((o) => !o)} disabled={busy} aria-expanded={newOpen} aria-haspopup="menu" title={rail ? t.new : undefined}>
               <span className="ws-plus" aria-hidden="true"><Plus size={14} strokeWidth={2.6} /></span> <span>{busy ? t.creating : t.new}</span>
@@ -354,7 +347,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               <div role="menu" className="ws-new-menu__list ws-glass" onKeyDown={(e) => { if (e.key === "Escape") setNewOpen(false); }}>
                 <button type="button" role="menuitem" autoFocus className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(); }}><FileText size={16} aria-hidden="true" /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(newQuizArgs(locale)); }}><ListChecks size={16} aria-hidden="true" /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>
-                <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createLesson(); }}><BookOpenText size={16} aria-hidden="true" /><span><strong>{t.newLessonItem}</strong><small>{t.newLessonHelp}</small></span></button>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createCourse(); }}><GraduationCap size={16} aria-hidden="true" /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createFlashcards(); }}><Layers size={16} aria-hidden="true" /><span><strong>{t.newFlashcards}</strong><small>{t.newFlashcardsHelp}</small></span></button>
               </div>
@@ -430,18 +422,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </div>
 
           <div className="ws-sidebar__footer">
-            {workspaceItems.map(link)}
-            {isAdmin && (
-              <IntentLink href="/admin" className="ws-nav-item ws-nav-item--danger" aria-current={pathname === "/admin" ? "page" : undefined} title={rail ? t.admin : undefined}>
-                <Shield size={18} aria-hidden="true" /> <span>{t.admin}</span>
-              </IntentLink>
-            )}
-            {/* Docs open in a new tab so work in progress stays put. */}
-            <a href="/docs" target="_blank" rel="noopener" className="ws-nav-item" title={rail ? t.docs : undefined}>
-              <BookOpen size={18} aria-hidden="true" /> <span>{t.docs}</span>
-            </a>
             {account && !account.isBanned && !account.suspendedUntil && (
-              <AccountMenu compact={rail}
+              <AccountMenu compact={rail} admin={isAdmin}
                 user={{ name: user?.fullName || user?.username || account.name || t.myCard, email: user?.primaryEmailAddress?.emailAddress ?? account.email, imageUrl: user && "hasImage" in user && user.hasImage ? user.imageUrl : undefined, avatarSeed: account.cardAvatarSeed ?? avatarSeed(account.clerkId) }}
                 onManageAccount={() => clerk.openUserProfile()} onSignOut={() => void clerk.signOut({ redirectUrl: "/" })} />
             )}
@@ -478,6 +460,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               <strong className="truncate">{pageLabel(pathname, t)}</strong>
             </div>
             <div className="flex items-center gap-1">
+              <button type="button" className="ws-topbar__search" onClick={() => setPaletteOpen(true)} aria-label={t.search} aria-keyshortcuts="Control+K Meta+K">
+                <Search size={16} aria-hidden="true" /><span>{t.search}</span><kbd>Ctrl K</kbd>
+              </button>
               <NotificationBell />
               <ThemeToggle className="ws-icon-button !h-9 !w-9 !rounded-[7px] !border-0 !bg-transparent" />
             </div>
@@ -488,7 +473,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </main>
         </div>
       </div>
-      {paletteUsed && <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} items={paletteItems} onCreate={(kind) => { if (kind === "form") void create(); else if (kind === "quiz") void create(newQuizArgs(locale)); else if (kind === "lesson") void createLesson(); else if (kind === "course") void createCourse(); else void createFlashcards(); }} />}
+      {paletteUsed && <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} items={paletteItems} onCreate={(kind) => { if (kind === "form") void create(); else if (kind === "quiz") void create(newQuizArgs(locale)); else if (kind === "course") void createCourse(); else void createFlashcards(); }} />}
     </div>
   );
 }

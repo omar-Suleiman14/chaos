@@ -104,8 +104,8 @@ export function SiteNav({ links: _links = true }: { links?: boolean }) {
           {items.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}
         </div>
         <div className="site-nav__actions">
-          <LanguageButton />
           <ThemeToggle className="site-icon-btn" />
+          <LanguageButton />
           {isLoaded && !isSignedIn && (
             <SignInButton mode="modal" forceRedirectUrl="/dashboard" signUpForceRedirectUrl="/dashboard">
               <button type="button" className="site-btn site-btn--ghost site-login" aria-label={t.logIn}>

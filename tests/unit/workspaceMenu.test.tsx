@@ -30,3 +30,16 @@ it("shows the person and workspace at the bottom and opens a menu with everythin
   fireEvent.click(screen.getByRole("menuitem", { name: "Sign out" }));
   expect(signOut).toHaveBeenCalled();
 });
+
+it("holds Connections and Docs for everyone and Admin only for administrators", () => {
+  const view = render(<LocaleProvider initial="en"><div className="workspace-ui"><AccountMenu user={{ name: "Omar" }} onManageAccount={vi.fn()} onSignOut={vi.fn()} /></div></LocaleProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "Account" }));
+  expect(screen.getByRole("menuitem", { name: "Connections" })).toBeInTheDocument();
+  expect(screen.getByRole("menuitem", { name: "Docs" })).toBeInTheDocument();
+  expect(screen.queryByRole("menuitem", { name: "Admin" })).toBeNull();
+  view.unmount();
+  render(<LocaleProvider initial="en"><div className="workspace-ui"><AccountMenu user={{ name: "Omar" }} admin onManageAccount={vi.fn()} onSignOut={vi.fn()} /></div></LocaleProvider>);
+  fireEvent.click(screen.getByRole("button", { name: "Account" }));
+  fireEvent.click(screen.getByRole("menuitem", { name: "Admin" }));
+  expect(push).toHaveBeenLastCalledWith("/admin");
+});

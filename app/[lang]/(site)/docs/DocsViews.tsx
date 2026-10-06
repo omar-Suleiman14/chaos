@@ -2,11 +2,11 @@
 
 import Link from "@/components/site/SiteLink";
 import { Fragment, useEffect, useState } from "react";
+import dynamic from "next/dynamic";
 import { ArrowLeft, ArrowRight, Lightbulb } from "lucide-react";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { useDocs } from "@/lib/docs/provider";
 import type { DocBlock } from "@/lib/docs";
-import DocsSearch from "./DocsSearch";
 import { docsCopy } from "./copy";
 
 const INLINE = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
@@ -31,7 +31,7 @@ function Rich({ text }: { text: string }) {
   );
 }
 
-function Block({ block }: { block: DocBlock }) {
+export function Block({ block }: { block: DocBlock }) {
   switch (block.type) {
     case "p": return <p><Rich text={block.text} /></p>;
     case "heading": return <h2 id={block.id}><a href={`#${block.id}`}><Rich text={block.text} /></a></h2>;
@@ -106,26 +106,120 @@ export function DocsArticle({ slug }: { slug: string }) {
   );
 }
 
+const home = {
+  en: {
+    eyebrow: "Chaos documentation",
+    title: "Make things people answer, read and play.",
+    lead: "Chaos is an open workspace for forms, quizzes, lessons, courses and live games. These guides show you how to build each one, share it and see how it went.",
+    start: "Get started", what: "What is Chaos?",
+    forms: { title: "Forms and quizzes that feel like yours", body: "Ask one question at a time or show them all. Pick a theme, add logic, mark quizzes for you and publish when you're ready. Try the one on the right; nothing you choose is sent.", link: "Make your first form", href: "/docs/first-form" },
+    learn: { title: "Lessons and courses for real teaching", body: "Write lessons like a document, with images, equations, flashcards and checkpoint quizzes. Put them in order as a course and share one link.", link: "Write a lesson", href: "/docs/lessons", lesson: "Lecture 1: The nervous system", course: "CNS · Lesson 1 of 7", h1: "1. How the nervous system is divided", h2: "2. Neurons and myelin", check: "Checkpoint: Foundations", checkBody: "4 questions" },
+    live: { title: "Run any quiz live", body: "Share a PIN, let everyone join from their phone and reveal the answers together. Games run themselves or wait for you.", link: "Host a live game", href: "/docs/live-games", pin: "GAME PIN", players: "24 players" },
+    ai: { title: "Or ask your assistant", body: "Connect Claude or ChatGPT and ask in plain words. Your assistant does the writing; Chaos keeps your content, permissions and links.", link: "Connect Claude", href: "/docs/claude", link2: "Connect ChatGPT", href2: "/docs/chatgpt", you: "Make a 10-question quiz from this PDF and publish it.", them: "Published “Cell biology check” with 10 questions." },
+    guides: "Browse the guides", ready: "Ready to make something?", readyBody: "Chaos is free for personal use. No AI required.", open: "Open Chaos",
+  },
+  ar: {
+    eyebrow: "دليل Chaos",
+    title: "اصنع ما يجيب عنه الناس ويقرؤونه ويلعبونه.",
+    lead: "Chaos مساحة عمل مفتوحة للنماذج والاختبارات والدروس والدورات والألعاب المباشرة. تشرح هذه الأدلة كيف تبني كلًّا منها وتشاركه وترى نتيجته.",
+    start: "ابدأ", what: "ما هو Chaos؟",
+    forms: { title: "نماذج واختبارات تشبهك", body: "اسأل سؤالًا في كل مرة أو اعرضها كلها. اختر مظهرًا، وأضف منطقًا، ودع الاختبارات تُصحَّح وحدها، وانشر حين تكون جاهزًا. جرّب النموذج المجاور؛ لا يُرسل شيء مما تختاره.", link: "اصنع أول نموذج", href: "/docs/first-form" },
+    learn: { title: "دروس ودورات لتعليم حقيقي", body: "اكتب الدروس كأنها مستند، بالصور والمعادلات والبطاقات والاختبارات القصيرة. رتّبها في دورة وشاركها برابط واحد.", link: "اكتب درسًا", href: "/docs/lessons", lesson: "المحاضرة 1: الجهاز العصبي", course: "CNS · الدرس 1 من 7", h1: "1. كيف ينقسم الجهاز العصبي", h2: "2. العصبونات والميالين", check: "اختبار قصير: الأساسيات", checkBody: "4 أسئلة" },
+    live: { title: "شغّل أي اختبار مباشرةً", body: "شارك الرمز، ودع الجميع ينضمون من هواتفهم، واكشفوا الإجابات معًا. تسير اللعبة وحدها أو تنتظرك.", link: "استضف لعبة مباشرة", href: "/docs/live-games", pin: "رمز اللعبة", players: "24 لاعبًا" },
+    ai: { title: "أو اطلب من مساعدك", body: "اربط Claude أو ChatGPT واطلب بكلماتك. مساعدك يكتب، وChaos يحفظ محتواك وصلاحياتك وروابطك.", link: "اربط Claude", href: "/docs/claude", link2: "اربط ChatGPT", href2: "/docs/chatgpt", you: "أنشئ اختبارًا من 10 أسئلة من ملف PDF هذا وانشره.", them: "نُشر «مراجعة بيولوجيا الخلية» بعشرة أسئلة." },
+    guides: "تصفّح الأدلة", ready: "مستعد لتصنع شيئًا؟", readyBody: "Chaos مجاني للاستخدام الشخصي. ولا يحتاج إلى ذكاء اصطناعي.", open: "افتح Chaos",
+  },
+};
+
+const ProductDemo = dynamic(() => import("@/components/site/ProductDemo"), { ssr: false, loading: () => <div className="docs-home__demo-placeholder" aria-hidden="true" /> });
+
+/** The docs home, in the spirit of react.dev: what Chaos is, each part shown working, then every guide. */
 export function DocsIndex() {
   const t = useCopy(docsCopy);
   const { locale } = useLocale();
+  const h = home[locale === "ar" ? "ar" : "en"];
   const { sections, loading } = useDocs();
+  const more = (href: string, label: string) => <Link href={href} className="docs-home__more">{label}<ArrowRight size={16} className="site-arrow" aria-hidden="true" /></Link>;
   return (
-    <div className="docs-index">
-      <h1>{t.indexTitle}</h1>
-      <p className="docs-summary">{t.indexLead}</p>
-      <DocsSearch inline />
-      <div className="docs-cards">
+    <div className="docs-home">
+      <header className="docs-home__hero">
+        {/* eslint-disable-next-line @next/next/no-img-element -- the static Chaos mark */}
+        <img src="/icon.svg" alt="" width={72} height={72} className="docs-home__mark" />
+        <p className="docs-home__eyebrow">{h.eyebrow}</p>
+        <h1>{h.title}</h1>
+        <p className="docs-home__lead">{h.lead}</p>
+        <div className="docs-home__actions">
+          <Link href="/docs/first-form" className="site-btn site-btn--primary site-btn--lg">{h.start}<ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>
+          <Link href="/docs/what-is-chaos" className="site-btn site-btn--outline site-btn--lg">{h.what}</Link>
+        </div>
+      </header>
+
+      <section className="docs-home__row docs-home__row--demo">
+        <div className="docs-home__copy"><h2>{h.forms.title}</h2><p>{h.forms.body}</p>{more(h.forms.href, h.forms.link)}</div>
+        <div className="docs-home__visual"><ProductDemo /></div>
+      </section>
+
+      <section className="docs-home__row">
+        <div className="docs-home__copy"><h2>{h.learn.title}</h2><p>{h.learn.body}</p>{more(h.learn.href, h.learn.link)}</div>
+        <div className="docs-home__visual">
+          <div className="docs-shot docs-shot--lesson" aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element -- a bundled gallery cover */}
+            <img src="/covers/japanese/the-great-wave-off-kanagawa.jpg" alt="" />
+            <div className="docs-shot__page">
+              <small>{h.learn.course}</small>
+              <strong>{h.learn.lesson}</strong>
+              <span className="docs-shot__line" /><span className="docs-shot__line docs-shot__line--short" />
+              <b>{h.learn.h1}</b>
+              <span className="docs-shot__line" /><span className="docs-shot__line" /><span className="docs-shot__line docs-shot__line--short" />
+              <div className="docs-shot__check"><strong>{h.learn.check}</strong><small>{h.learn.checkBody}</small></div>
+              <b>{h.learn.h2}</b>
+              <span className="docs-shot__line" /><span className="docs-shot__line docs-shot__line--short" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className="docs-home__row">
+        <div className="docs-home__copy"><h2>{h.live.title}</h2><p>{h.live.body}</p>{more(h.live.href, h.live.link)}</div>
+        <div className="docs-home__visual">
+          <div className="docs-shot docs-shot--game" aria-hidden="true">
+            <div className="docs-shot__game-top"><span>{h.live.pin} <b dir="ltr">482 913</b></span><span>{h.live.players}</span></div>
+            <div className="docs-shot__tiles">{["#e21b3c", "#1368ce", "#d89e00", "#26890c"].map((c) => <span key={c} style={{ background: c }} />)}</div>
+          </div>
+        </div>
+      </section>
+
+      <section className="docs-home__row">
+        <div className="docs-home__copy"><h2>{h.ai.title}</h2><p>{h.ai.body}</p><div className="docs-home__links">{more(h.ai.href, h.ai.link)}{more(h.ai.href2, h.ai.link2)}</div></div>
+        <div className="docs-home__visual">
+          <div className="docs-shot docs-shot--chat" aria-hidden="true">
+            <p className="docs-shot__you">{h.ai.you}</p>
+            {/* eslint-disable-next-line @next/next/no-img-element -- the static Chaos mark */}
+            <p className="docs-shot__them"><img src="/icon.svg" alt="" width={18} height={18} />{h.ai.them}</p>
+          </div>
+        </div>
+      </section>
+
+      <section className="docs-home__guides" aria-labelledby="docs-guides">
+        <h2 id="docs-guides">{h.guides}</h2>
         {loading && <p role="status">{locale === "ar" ? "جارٍ تحميل الأدلة…" : "Loading guides…"}</p>}
         {!loading && sections.length === 0 && <p>{locale === "ar" ? "لا توجد أدلة منشورة بعد." : "No guides have been published yet."}</p>}
-        {sections.map((section) => (
-          <section key={section.id} className="docs-card">
-            <h2>{section.title}</h2>
-            <p className="docs-card__count">{t.articlesCount(section.articles.length)}</p>
-            <ul>{section.articles.map((article) => <li key={article.slug}><Link href={`/docs/${article.slug}`}>{article.title}</Link><span>{article.summary}</span></li>)}</ul>
-          </section>
-        ))}
-      </div>
+        <div className="docs-cards">
+          {sections.map((section) => (
+            <section key={section.id} className="docs-card">
+              <h3>{section.title}</h3>
+              <p className="docs-card__count">{t.articlesCount(section.articles.length)}</p>
+              <ul>{section.articles.map((article) => <li key={article.slug}><Link href={`/docs/${article.slug}`}>{article.title}</Link><span>{article.summary}</span></li>)}</ul>
+            </section>
+          ))}
+        </div>
+      </section>
+
+      <section className="docs-home__cta">
+        <h2>{h.ready}</h2>
+        <p>{h.readyBody}</p>
+        <Link href="/dashboard" className="site-btn site-btn--primary site-btn--lg">{h.open}</Link>
+      </section>
     </div>
   );
 }

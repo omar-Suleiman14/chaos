@@ -53,14 +53,13 @@ describe("sidebar sections", () => {
   });
   it("prefetches visible destinations and prioritizes an intended destination and preserves form focus handlers and link semantics", () => {
     const { container } = render(<DashboardLayout><p>Page</p></DashboardLayout>);
-    // Docs opens in a new tab, so it is a plain link outside the prefetch rules.
-    const newTab = screen.getByRole("link", { name: "Docs" });
-    expect(newTab).toHaveAttribute("target", "_blank");
-    const links = Array.from(container.querySelectorAll("a.ws-nav-item")).filter((link) => link !== newTab);
+    // Docs, Connections and Admin live in the account menu now; the sidebar keeps Library, Saved and Recents.
+    expect(screen.queryByRole("link", { name: "Docs" })).toBeNull();
+    const links = Array.from(container.querySelectorAll("a.ws-nav-item"));
     expect(links.length).toBeGreaterThan(2);
     for (const link of links) expect(link).toHaveAttribute("data-prefetch", link.getAttribute("aria-current") === "page" ? "false" : "auto");
     expect(intent.warmForm).not.toHaveBeenCalled();
-    const docs = screen.getByRole("link", { name: "Connections" });
+    const docs = screen.getByRole("link", { name: "Saved" });
     fireEvent.mouseEnter(docs);
     expect(docs).toHaveAttribute("data-prefetch", "true");
     const form = within(screen.getByRole("navigation", { name: "Recent" })).getByRole("link", { name: "Event registration" });

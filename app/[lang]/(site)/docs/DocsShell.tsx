@@ -25,7 +25,7 @@ export default function DocsShell({ children }: { children: React.ReactNode }) {
       <SiteNav links={false} />
       <div className="docs-layout">
         <aside className="docs-side">
-          <DocsSearch global />
+          <DocsSearch />
           <button type="button" className="docs-side__toggle" aria-expanded={menuOpen} aria-controls="docs-nav" onClick={() => setMenuOpen((v) => !v)}>
             <span>{t.guides}</span><ChevronDown size={16} aria-hidden="true" />
           </button>

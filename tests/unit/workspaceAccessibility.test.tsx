@@ -170,9 +170,9 @@ describe("command palette", () => {
     expect(groups()[0]).toBe("Your work");
     expect(within(screen.getByRole("group", { name: "Your work" })).getAllByRole("option").map((o) => o.textContent)).toEqual(expect.arrayContaining([expect.stringContaining("Neuro course"), expect.stringContaining("Neuro flashcards")]));
     await user.clear(screen.getByRole("combobox"));
-    await user.type(screen.getByRole("combobox"), "new lesson");
+    await user.type(screen.getByRole("combobox"), "new course");
     await user.keyboard("{Enter}");
-    expect(onCreate).toHaveBeenCalledWith("lesson");
+    expect(onCreate).toHaveBeenCalledWith("course");
   });
 
   it("navigates in rendered order with an active descendant and executes the selected item", async () => {
