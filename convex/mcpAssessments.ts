@@ -6,6 +6,7 @@ import { requireLearnActor } from "./mcpLearn";
 import { lessonAccessForActor } from "./lessons";
 import { createGameForAccount } from "./live";
 import schema from "./schema";
+import { bareAssetRef } from "./mcpIds";
 /** Assistants pass plain strings; create_form and create_game_draft return form IDs even for quizzes. */
 const asset = v.object({ kind: v.union(v.literal("form"), v.literal("quiz")), id: v.string() });
 function lessonIdFor(ctx: QueryCtx, id: string): Id<"lessons"> {
@@ -14,7 +15,8 @@ function lessonIdFor(ctx: QueryCtx, id: string): Id<"lessons"> {
   return lessonId;
 }
 /** Resolve by the ID's real table, so a quiz made with create_form attaches whether it is sent as "quiz" or "form". */
-function assetFor(ctx: QueryCtx, input: { kind: "form" | "quiz"; id: string }): Doc<"lessonAssessments">["asset"] {
+function assetFor(ctx: QueryCtx, ref: { kind: "form" | "quiz"; id: string }): Doc<"lessonAssessments">["asset"] {
+  const input = bareAssetRef(ref);
   const formId = ctx.db.normalizeId("forms", input.id), quizId = ctx.db.normalizeId("quizzes", input.id);
   if (formId) return { kind: "form", id: formId };
   if (quizId) return { kind: "quiz", id: quizId };

@@ -118,6 +118,7 @@ import type * as mcpCrm from "../mcpCrm.js";
 import type * as mcpFlashcards from "../mcpFlashcards.js";
 import type * as mcpFormManagement from "../mcpFormManagement.js";
 import type * as mcpGames from "../mcpGames.js";
+import type * as mcpIds from "../mcpIds.js";
 import type * as mcpLearn from "../mcpLearn.js";
 import type * as mcpOrganization from "../mcpOrganization.js";
 import type * as memberCards from "../memberCards.js";
@@ -262,6 +263,7 @@ declare const fullApi: ApiFromModules<{
   mcpFlashcards: typeof mcpFlashcards;
   mcpFormManagement: typeof mcpFormManagement;
   mcpGames: typeof mcpGames;
+  mcpIds: typeof mcpIds;
   mcpLearn: typeof mcpLearn;
   mcpOrganization: typeof mcpOrganization;
   memberCards: typeof memberCards;

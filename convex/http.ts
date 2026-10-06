@@ -1,4 +1,5 @@
 import { observeHttp } from "../lib/backendTelemetry";
+import { normalizeAssetRefs } from "./mcpIds";
 import { parseCreatedWith } from "../lib/aiClients";
 import { httpRouter, makeFunctionReference } from "convex/server";
 import { registerLearnIntegrationRoutes } from "./learnIntegrations";
@@ -260,7 +261,8 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
     return error(400, "VALIDATION_FAILED", "userId and tool are required.");
   }
   const userId = await ctx.runQuery(internal.authIdentity.resolveTransportActor, { externalActorId: b.userId });
-  const input = (b.input && typeof b.input === "object" ? b.input : {}) as Record<string, unknown>;
+  // Asset references accept the `form_<id>` ids other tools return (convex/mcpIds.ts).
+  const input = normalizeAssetRefs((b.input && typeof b.input === "object" ? b.input : {}) as Record<string, unknown>);
   const str = (x: unknown) => (typeof x === "string" ? x : undefined);
   const num = (x: unknown) => (typeof x === "number" && Number.isFinite(x) ? x : undefined);
   const p = b.profile as { name?: unknown; email?: unknown; imageUrl?: unknown } | undefined;
