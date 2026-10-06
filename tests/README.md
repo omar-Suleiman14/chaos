@@ -22,9 +22,11 @@ Three layers, each with its own runner and reasons:
   baseline recorded by the last run on main; baselines are CI artifacts, never
   committed, so every image comes from the same Linux renderer. A deliberate
   look change gets the `visual-change` label. `app.spec.ts`
-  (`VISUAL_SUITE=app`, run by hand) covers the dashboard, editor, lesson,
-  course, cards, Live and one form per major theme (`E2E_VISUAL_FORMS`, a
-  comma list of `theme=shareId`) against the E2E environment. Locally:
+  (`VISUAL_SUITE=app`, run by hand) builds the branch against the dev Convex
+  deployment (`VISUAL_CONVEX_URL`) and covers one form per major theme
+  (`E2E_VISUAL_FORMS`, a comma list of `theme=shareId`), cards and Live, plus
+  lesson, course, dashboard and editor when their fixtures and test login exist.
+  Locally:
   `pnpm build && pnpm test:visual --update-snapshots`, then `pnpm test:visual`.
 
 `pnpm test` runs `test:unit` and `test:integration` only — the suites that

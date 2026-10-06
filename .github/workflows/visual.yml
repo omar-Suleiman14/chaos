@@ -9,9 +9,11 @@ name: Visual regression
 #   A pull request that changes the look on purpose gets the `visual-change`
 #   label: the diff still runs and is uploaded, but it does not fail the check,
 #   and the next main run records the new baseline.
-# app: dashboard, editor, lesson, course, cards, Live and each major form
-#   theme, against the E2E environment (never production). Manual: `record`
-#   stores a baseline, `compare` checks against the last recorded one.
+# app: each major form theme, cards and Live (plus lesson, course, dashboard and
+#   editor when their fixtures and the test login are configured), from this
+#   branch's build pointed at the dev Convex deployment (vars.VISUAL_CONVEX_URL),
+#   never production. Manual: `record` stores a baseline, `compare` checks
+#   against the last recorded one.
 on:
   pull_request:
   push:
@@ -69,19 +71,16 @@ jobs:
         run: pnpm exec playwright install --with-deps chromium
 
       - name: Build
-        if: env.SUITE == 'site'
         run: pnpm build
         env:
-          NEXT_PUBLIC_CONVEX_URL: "https://ci-placeholder.convex.cloud"
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_Y2ktcGxhY2Vob2xkZXIuZXhhbXBsZS5jb20k"
+          NEXT_PUBLIC_CONVEX_URL: ${{ env.SUITE == 'app' && vars.VISUAL_CONVEX_URL || 'https://ci-placeholder.convex.cloud' }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ env.SUITE == 'app' && vars.VISUAL_CLERK_PUBLISHABLE_KEY || 'pk_test_Y2ktcGxhY2Vob2xkZXIuZXhhbXBsZS5jb20k' }}
           CLERK_SECRET_KEY: "sk_test_ci-placeholder-not-a-real-credential"
 
-      - name: Point the app suite at the E2E environment
+      - name: App fixtures
         if: env.SUITE == 'app'
         run: |
           {
-            echo "PLAYWRIGHT_BASE_URL=${{ secrets.E2E_BASE_URL }}"
-            echo "E2E_CONVEX_ENV=${{ secrets.E2E_CONVEX_ENV }}"
             echo "E2E_CREATOR_EMAIL=${{ secrets.E2E_CREATOR_EMAIL }}"
             echo "E2E_CREATOR_PASSWORD=${{ secrets.E2E_CREATOR_PASSWORD }}"
             echo "E2E_AUTH_PROVIDER=${{ vars.E2E_AUTH_PROVIDER || 'clerk' }}"

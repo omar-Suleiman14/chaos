@@ -1,12 +1,13 @@
 import { test, type Page } from "@playwright/test";
-import { signInCreator, smokeEnvironment } from "../e2e/support";
+import { signInCreator } from "../e2e/support";
 import { schemes, snap, suite, useScheme } from "./support";
 
 /**
- * App surfaces against the E2E environment (VISUAL_SUITE=app, never
- * production). Same fixtures as the perf journeys, plus E2E_VISUAL_FORMS: a
- * comma list of theme=shareId, one published form per major theme
- * (flow, chaos, paper, midnight, …), so each theme is checked in light and dark.
+ * App surfaces (VISUAL_SUITE=app): this branch's build against the dev Convex
+ * deployment, never production. E2E_VISUAL_FORMS is a comma list of
+ * theme=shareId, one published form per major theme (flow, chaos, paper,
+ * midnight, …), so each theme is checked in light and dark. Lesson, course and
+ * editor use the perf fixtures; dashboard and editor need the test login.
  */
 test.skip(suite !== "app", "VISUAL_SUITE=site");
 
@@ -19,9 +20,11 @@ const themed = (process.env.E2E_VISUAL_FORMS ?? "").split(",").map((pair) => pai
 
 const usable = (page: Page, journey: string) => page.waitForFunction((name) => performance.getEntriesByName(`chaos:usable:${name}`).length > 0, journey, { timeout: 30_000 });
 
+const login = { email: process.env.E2E_CREATOR_EMAIL, password: process.env.E2E_CREATOR_PASSWORD };
+
 async function signedIn(page: Page) {
-  const env = smokeEnvironment();
-  await signInCreator(page, env.creatorEmail, env.creatorPassword);
+  test.skip(!login.email || !login.password, "E2E_CREATOR_EMAIL / E2E_CREATOR_PASSWORD not set");
+  await signInCreator(page, login.email!, login.password!);
 }
 
 for (const scheme of schemes) {
