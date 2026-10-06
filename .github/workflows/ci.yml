@@ -1,9 +1,15 @@
 name: CI
 
+# Every push runs the fast gate: lint, typecheck, tests and one build. The
+# no-Clerk build and the Docker images run nightly; they rarely break and
+# would double each push's wait.
 on:
   push:
     branches: [main]
   pull_request:
+  schedule:
+    - cron: "33 2 * * *"
+  workflow_dispatch:
 
 # Read-only by default. No job in this workflow needs to write to the repo,
 # comment on a PR, or otherwise use the GITHUB_TOKEN for anything but
@@ -32,7 +38,7 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
         with:
-          node-version: "22"
+          node-version: "24"
           cache: pnpm
 
       # This is a `pull_request` (not `pull_request_target`) workflow, so a
@@ -62,6 +68,7 @@ jobs:
           CLERK_SECRET_KEY: "sk_test_ci-placeholder-not-a-real-credential"
 
       - name: Build without Clerk
+        if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
         run: pnpm build
         env:
           NEXT_PUBLIC_AUTH_PROVIDER: "betterauth"
@@ -73,6 +80,7 @@ jobs:
 
   docker:
     name: Docker image build
+    if: github.event_name == 'schedule' || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

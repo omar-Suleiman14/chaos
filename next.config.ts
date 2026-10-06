@@ -66,6 +66,8 @@ const nextConfig: NextConfig = {
   ...(process.env.NEXT_OUTPUT === "standalone" ? { output: "standalone" as const } : {}),
   compress: true,
   poweredByHeader: false,
+  // CI typechecks every push (pnpm typecheck), so Vercel skips the repeat and deploys sooner.
+  typescript: { ignoreBuildErrors: Boolean(process.env.VERCEL) },
   experimental: {
     // Keep visited workspace pages in the client router cache for 30 s, so Back and sidebar hops
     // re-render at once. Their data comes live from Convex, so nothing shown goes stale.

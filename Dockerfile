@@ -5,7 +5,7 @@
 # NEXT_PUBLIC_* values are public by design but are inlined into the browser
 # bundle at build time, so changing one requires rebuilding this image.
 
-ARG NODE_VERSION=22
+ARG NODE_VERSION=24
 
 FROM node:${NODE_VERSION}-alpine AS base
 RUN apk add --no-cache libc6-compat
