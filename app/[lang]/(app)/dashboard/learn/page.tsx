@@ -7,7 +7,6 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { ArrowRight, Bookmark, BookOpen, BookOpenText, ChevronDown, Compass, GraduationCap, Layers, Plus, Target } from "lucide-react";
 import { EmptyState, LessonCard } from "@/components/learn/ui";
-import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { WsMenu } from "@/components/workspace/primitives";
 import {
   useLearnActions, useLearnCapabilities, useMyLessons, useProgress, usePublicLessons, useRecentLessons, useSaved, useWeakAreas,
@@ -15,6 +14,7 @@ import {
 import { useCopy, useLocale } from "@/lib/i18n";
 import { hostHref } from "@/lib/hosts";
 import { useConfirmed, useConfirmedQuery } from "@/lib/confirmedQuery";
+import { hrefIntentHandlers } from "@/lib/convexCache";
 
 const copy = {
   en: {
@@ -54,11 +54,13 @@ export default function LearnHome() {
   const discover = useConfirmed("learn.discover", usePublicLessons({ sort: "recent" })).data;
   const weak = useWeakAreas();
 
-  if (!mine || !recent || !progress || !saved || !courses || !discover) return <PageSkeleton label={t.loading} />;
-
-  const hrefFor = (id: string, ownerId: string) => mine.some((l) => l.id === id && l.ownerId === ownerId) ? `/dashboard/learn/lessons/${id}` : `/learn/${id}`;
-  const inProgress = recent.filter(({ lesson }) => progress[lesson.id]?.state === "in_progress").slice(0, 3);
-  const recentOther = recent.filter(({ lesson }) => !inProgress.some((r) => r.lesson.id === lesson.id)).slice(0, 6);
+  // Each section shows as soon as its own data is in (most come from the device cache at once);
+  // the page used to wait for the slowest of six before showing anything.
+  const wait = <div role="status" aria-busy="true"><span className="sr-only">{t.loading}</span><span className="ws-skeleton" style={{ display: "block", height: 112 }} aria-hidden="true" /></div>;
+  const hrefFor = (id: string, ownerId: string) => mine?.some((l) => l.id === id && l.ownerId === ownerId) ? `/dashboard/learn/lessons/${id}` : `/learn/${id}`;
+  const studied = recent && progress ? recent : undefined;
+  const inProgress = studied ? studied.filter(({ lesson }) => progress![lesson.id]?.state === "in_progress").slice(0, 3) : [];
+  const recentOther = studied ? studied.filter(({ lesson }) => !inProgress.some((r) => r.lesson.id === lesson.id)).slice(0, 6) : [];
   const newLesson = async () => { try { const id = await actions.createLesson({ language: locale }); router.push(`/dashboard/learn/lessons/${id}`); } catch (err) { toast.error(err); } };
   const newCourse = async () => { try { const id = await createCourse({ language: locale }); router.push(`/dashboard/courses/${id}`); } catch (err) { toast.error(err); } };
   const newSet = async () => { try { const id = await actions.createFlashcardSet({ title: t.untitledSet }); router.push(`/dashboard/learn/flashcards/${id}?mode=edit`); } catch (err) { toast.error(err); } };
@@ -83,16 +85,16 @@ export default function LearnHome() {
 
       <section className="lx-section" aria-labelledby="learn-continue">
         <header><h2 id="learn-continue">{t.continue}</h2></header>
-        {inProgress.length ? (
-          <div className="lx-grid">{inProgress.map(({ lesson }) => <LessonCard key={lesson.id} lesson={lesson} href={hostHref(`/learn/${lesson.id}`)} progress={progress[lesson.id]} />)}</div>
+        {!studied ? wait : inProgress.length ? (
+          <div className="lx-grid">{inProgress.map(({ lesson }) => <LessonCard key={lesson.id} lesson={lesson} href={hostHref(`/learn/${lesson.id}`)} progress={progress?.[lesson.id]} />)}</div>
         ) : <p className="lx-muted">{t.continueEmpty}</p>}
       </section>
 
       <section className="lx-section" aria-labelledby="learn-courses">
-        <header><h2 id="learn-courses">{t.courses}</h2><Link className="lx-link" href={hostHref("/learn/courses")}>{courses.length ? t.all : t.browse}</Link></header>
-        {courses.length ? (
+        <header><h2 id="learn-courses">{t.courses}</h2><Link className="lx-link" href={hostHref("/learn/courses")}>{courses?.length ? t.all : t.browse}</Link></header>
+        {!courses ? wait : courses.length ? (
           <div className="lx-level-grid">
-            {courses.slice(0, 6).map(c => <Link key={c.id} className="lx-node" href={c.nextLessonId ? `/learn/${c.nextLessonId}?course=${c.id}` : `/learn/courses/${c.id}`}><GraduationCap size={18} aria-hidden /><span dir="auto">{c.title}<small>{c.completed} / {c.total} · {t.continue}</small></span></Link>)}
+            {courses.slice(0, 6).map(c => <Link key={c.id} className="lx-node" href={c.nextLessonId ? `/learn/${c.nextLessonId}?course=${c.id}` : `/learn/courses/${c.id}`} {...hrefIntentHandlers(c.nextLessonId ? `/learn/${c.nextLessonId}?course=${c.id}` : `/learn/courses/${c.id}`)}><GraduationCap size={18} aria-hidden /><span dir="auto">{c.title}<small>{c.completed} / {c.total} · {t.continue}</small></span></Link>)}
           </div>
         ) : <EmptyState icon={GraduationCap} title={t.courses} body={t.coursesEmpty}><Link className="ws-btn" href={hostHref("/learn/courses")}>{t.browse}</Link></EmptyState>}
       </section>
@@ -115,8 +117,8 @@ export default function LearnHome() {
       )}
 
       <section className="lx-section" aria-labelledby="learn-saved">
-        <header><h2 id="learn-saved">{t.saved}</h2>{saved.length > 0 && <Link className="lx-link" href="/dashboard/learn/saved">{t.all}</Link>}</header>
-        {saved.length ? (
+        <header><h2 id="learn-saved">{t.saved}</h2>{!!saved?.length && <Link className="lx-link" href="/dashboard/learn/saved">{t.all}</Link>}</header>
+        {!saved ? wait : saved.length ? (
           <div className="lx-list">
             {saved.slice(0, 5).map((s) => (
               <Link key={s.id} className="lx-row" href={`/learn/${s.lessonId}${s.blockId ? `#${s.blockId}` : ""}`}>
@@ -132,21 +134,21 @@ export default function LearnHome() {
       {recentOther.length > 0 && (
         <section className="lx-section" aria-labelledby="learn-recent">
           <header><h2 id="learn-recent">{t.recent}</h2></header>
-          <div className="lx-grid">{recentOther.map(({ lesson }) => <LessonCard key={lesson.id} lesson={lesson} href={hrefFor(lesson.id, lesson.ownerId)} progress={progress[lesson.id]} />)}</div>
+          <div className="lx-grid">{recentOther.map(({ lesson }) => <LessonCard key={lesson.id} lesson={lesson} href={hrefFor(lesson.id, lesson.ownerId)} progress={progress?.[lesson.id]} />)}</div>
         </section>
       )}
 
       <section className="lx-section" aria-labelledby="learn-mine">
-        <header><h2 id="learn-mine">{t.mine}</h2>{mine.length > 0 && <Link className="lx-link" href="/dashboard/learn/library">{t.all}</Link>}</header>
-        {mine.length ? (
+        <header><h2 id="learn-mine">{t.mine}</h2>{!!mine?.length && <Link className="lx-link" href="/dashboard/learn/library">{t.all}</Link>}</header>
+        {!mine ? wait : mine.length ? (
           <div className="lx-grid">{mine.slice(0, 6).map((l) => <LessonCard key={l.id} lesson={l} href={`/dashboard/learn/lessons/${l.id}`} showStatus />)}</div>
         ) : <EmptyState icon={BookOpen} title={t.mine} body={t.mineEmpty}><button type="button" className="ws-btn ws-btn--primary" onClick={newLesson}><Plus size={16} aria-hidden />{t.newLesson}</button></EmptyState>}
       </section>
 
       <section className="lx-section" aria-labelledby="learn-discover">
         <header><h2 id="learn-discover">{t.discover}</h2><Link className="lx-link" href={hostHref("/learn")}>{t.explore}</Link></header>
-        {discover.length ? (
-          <div className="lx-grid">{discover.slice(0, 6).map((l) => <LessonCard key={l.id} lesson={l} href={hostHref(`/learn/${l.id}`)} progress={progress[l.id]} />)}</div>
+        {!discover ? wait : discover.length ? (
+          <div className="lx-grid">{discover.slice(0, 6).map((l) => <LessonCard key={l.id} lesson={l} href={hostHref(`/learn/${l.id}`)} progress={progress?.[l.id]} />)}</div>
         ) : <EmptyState icon={Layers} title={t.discover} body={t.discoverEmpty} />}
       </section>
     </div>

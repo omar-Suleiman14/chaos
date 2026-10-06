@@ -3,6 +3,7 @@ import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
+import type { FunctionReturnType } from "convex/server";
 import { lessonDocumentToEditorBlocks, type LessonEditorBlock } from "@/lib/lessonBlockAdapter";
 
 function client() {
@@ -42,10 +43,51 @@ const cachedLesson = unstable_cache(async (id: string) => {
   return lesson;
 }, ["public-lesson"], { revalidate: PUBLIC_TTL });
 
+export type PublicLessonResult = NonNullable<FunctionReturnType<typeof api.learnFrontend.publicLesson>>;
+export type CourseLessonResult = NonNullable<FunctionReturnType<typeof api.courses.lesson>>;
+
+/** The anonymous published-lesson read, shared across requests like the projection above. */
+const cachedLessonResult = unstable_cache(async (id: string) => {
+  const result = await client()!.query(api.learnFrontend.publicLesson, { id });
+  if (!result) throw new Missing(id);
+  return result;
+}, ["public-lesson-result"], { revalidate: PUBLIC_TTL });
+
+/**
+ * The published lesson exactly as the reader's own query returns it, so the page renders it in
+ * the first HTML instead of a placeholder while the browser connects to Convex. Anonymous: the
+ * same copy for everyone, never anything only the signed-in visitor may see.
+ */
+export const fetchPublicLessonResult = cache(async (id: string): Promise<PublicLessonResult | null> => {
+  if (!client()) return null;
+  return cachedLessonResult(id).catch(() => null);
+});
+
+/**
+ * The public course a plain lesson link belongs to. Misses are cached too (as null), so a lesson
+ * outside any course doesn't ask the backend on every visit; one added to a course shows inside it
+ * within a minute.
+ */
+const cachedHomeCourse = unstable_cache(async (lessonId: string) => ({ courseId: await client()!.query(api.courses.courseForLesson, { lessonId }) }), ["lesson-home-course"], { revalidate: PUBLIC_TTL });
+export const fetchHomeCourse = cache(async (lessonId: string): Promise<string | null | undefined> => {
+  if (!client()) return undefined;
+  return cachedHomeCourse(lessonId).then((r) => r.courseId, () => undefined);
+});
+
+/** A lesson as a public course serves it, for the first render of /learn/<id>?course=<course>. */
+const cachedCourseLesson = unstable_cache(async (courseId: string, lessonId: string) => {
+  const result = await client()!.query(api.courses.lesson, { courseId, lessonId });
+  if (!result) throw new Missing(lessonId);
+  return result;
+}, ["public-course-lesson"], { revalidate: PUBLIC_TTL });
+export const fetchCourseLesson = cache(async (courseId: string, lessonId: string): Promise<CourseLessonResult | null> => {
+  if (!client()) return null;
+  return cachedCourseLesson(courseId, lessonId).catch(() => null);
+});
+
 async function readPublicLesson(id: string): Promise<Lesson | null> {
-  const backend = client();
-  if (!backend) return null;
-  const result = await backend.query(api.learnFrontend.publicLesson, { id });
+  if (!client()) return null;
+  const result = await cachedLessonResult(id).catch(() => null);
   if (!result) return null;
   const converted = lessonDocumentToEditorBlocks(result.version.document);
   if (!converted.ok) return null;
@@ -92,3 +134,10 @@ export async function listPublicCourses(): Promise<{ id: string; updatedAt: numb
   if (!backend || (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production")) return [];
   try { return (await backend.query(api.courses.listPublic, { limit: 100 })).map(c => ({ id: c.id, updatedAt: c.updatedAt })); } catch { return []; }
 }
+
+/** The newest public courses, first page of the directory, for the first HTML of /learn. */
+export const fetchCourseDirectory = unstable_cache(async () => {
+  const backend = client();
+  if (!backend) return [];
+  try { return (await backend.query(api.courseDirectory.browse, { sort: "recent", paginationOpts: { numItems: 24, cursor: null } })).page; } catch { return []; }
+}, ["course-directory"], { revalidate: PUBLIC_TTL });

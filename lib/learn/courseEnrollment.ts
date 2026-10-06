@@ -1,8 +1,11 @@
 "use client";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useState, useSyncExternalStore } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useLearnViewer } from "./data";
+import { cacheScope } from "@/lib/confirmedQuery";
+
+const noSubscribe = () => () => {};
 
 // A random id that lets this device enroll in courses without an account. Only its hash reaches the server.
 const TOKEN_KEY = "chaos.learn.guest-token";
@@ -18,6 +21,38 @@ function guestToken(): string | undefined {
     }
     return token;
   } catch { return undefined; }
+}
+
+/**
+ * Courses this device has started, per learner, so an enrolled learner's next visit opens the lesson
+ * at once instead of waiting for sign-in and the enrollment check. Kept per account (the device
+ * cache's verified account) or per this device's guest token, so one learner's courses never unlock
+ * the lesson view for someone else; the live answer always replaces it.
+ */
+const ENROLLED_KEY = "chaos.learn.enrolled.v1";
+type EnrolledMemo = Record<string, string[]>;
+function readEnrolled(): EnrolledMemo { try { return JSON.parse(localStorage.getItem(ENROLLED_KEY) ?? "{}") as EnrolledMemo; } catch { return {}; } }
+function learnerKeys(): string[] {
+  const keys: string[] = [];
+  const account = cacheScope();
+  if (account) keys.push(`u:${account}`);
+  try { const token = localStorage.getItem(TOKEN_KEY); if (token) keys.push(`g:${token.slice(0, 16)}`); } catch { /* unavailable */ }
+  return keys;
+}
+function rememberEnrolled(learner: string, courseId: string, enrolled: boolean) {
+  const memo = readEnrolled();
+  const list = (memo[learner] ?? []).filter((id) => id !== courseId);
+  if (enrolled) list.push(courseId);
+  memo[learner] = list.slice(-100);
+  // Only the current learners' entries stay: signing in as someone else drops the previous account's list.
+  const current = new Set([learner, ...learnerKeys()]);
+  for (const key of Object.keys(memo)) if (!current.has(key)) delete memo[key];
+  try { localStorage.setItem(ENROLLED_KEY, JSON.stringify(memo)); } catch { /* storage full or blocked */ }
+}
+function knownEnrolled(courseId: string): boolean {
+  if (typeof window === "undefined") return false;
+  const memo = readEnrolled();
+  return learnerKeys().some((key) => memo[key]?.includes(courseId));
 }
 
 export function savedGuestName() { try { return localStorage.getItem(NAME_KEY) ?? ""; } catch { return ""; } }
@@ -44,5 +79,10 @@ export function useCourseEnrollment(courseId: string | null | undefined) {
     void recordMutation({ courseId, guestToken: guest, lessonId, ...(completed === undefined ? {} : { completed }) }).catch(() => { /* analytics only */ });
   }, [ready, courseId, guest, recordMutation]);
   const noStorage = !!courseId && !!viewer && !signedIn && token === null;
-  return { state: noStorage ? { enrolled: false, owner: false } : ready ? state : undefined, signedIn, enroll, recordLesson };
+  const learner = signedIn ? `u:${viewer!.id}` : guest ? `g:${guest.slice(0, 16)}` : null;
+  useEffect(() => { if (courseId && learner && state) rememberEnrolled(learner, courseId, state.enrolled); }, [courseId, learner, state]);
+  // The server render and hydration see no memo, so markup matches; the browser then applies it.
+  const optimistic = useSyncExternalStore(noSubscribe, () => !!courseId && knownEnrolled(courseId), () => false);
+  const live = noStorage ? { enrolled: false, owner: false } : ready ? state : undefined;
+  return { state: live === undefined && optimistic ? { enrolled: true, owner: false } : live, signedIn, enroll, recordLesson };
 }

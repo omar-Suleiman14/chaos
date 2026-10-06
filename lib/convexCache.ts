@@ -62,11 +62,17 @@ export function formIntentHandlers(formId: Id<"forms"> | string) {
  * every few seconds per page.
  */
 export function warmHref(href: string) {
-  const path = href.replace(/^\/(?:en|ar)(?=\/)/, "").split(/[?#]/)[0];
+  // Links may be absolute, on another section's host (learn.chaos.fail): only the path and query matter.
+  const local = href.replace(/^https?:\/\/[^/]+/i, "").replace(/^\/(?:en|ar)(?=\/)/, "");
+  const path = local.split(/[?#]/)[0];
+  const course = /[?&]course=([a-z0-9]+)/i.exec(local)?.[1];
   const now = Date.now();
-  if ((warmed.get(path) ?? 0) > now - 10_000) return;
-  warmed.set(path, now);
+  const seen = course ? `${path}?course=${course}` : path;
+  if ((warmed.get(seen) ?? 0) > now - 10_000) return;
+  warmed.set(seen, now);
   let m: RegExpExecArray | null;
+  // A lesson opened from a course reads the course's copy of it (app/[lang]/(app)/learn/[id]/LessonPage.tsx).
+  if (course && (m = /^\/learn\/([a-z0-9]+)$/i.exec(path))) { warmQuery(api.courses.lesson, { courseId: course, lessonId: m[1] }); return; }
   if ((m = /^\/dashboard\/forms\/([a-z0-9]+)$/i.exec(path))) warmQuery(api.forms.getFormForEditor, { formId: m[1] as Id<"forms"> });
   else if ((m = /^\/dashboard\/courses\/([a-z0-9]+)$/i.exec(path))) warmQuery(api.courses.get, { courseId: m[1] as Id<"learnCollections"> });
   else if ((m = /^\/dashboard\/learn\/lessons\/([a-z0-9]+)$/i.exec(path))) warmQuery(api.learnFrontend.editableLesson, { id: m[1] });

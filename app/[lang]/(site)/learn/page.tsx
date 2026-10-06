@@ -1,5 +1,9 @@
 import { sitePageMetadata, type SitePageProps } from "@/lib/seo";
 import PublicExplore from "@/components/site/PublicExplore";
+import { fetchCourseDirectory } from "@/lib/learn/server";
+
+// The course list in the HTML is at most a minute old; the live query updates it on load.
+export const revalidate = 60;
 
 export async function generateMetadata({ params }: SitePageProps) {
   return sitePageMetadata((await params).lang, {
@@ -8,4 +12,4 @@ export async function generateMetadata({ params }: SitePageProps) {
   }, "/learn");
 }
 
-export default function LearnPage() { return <PublicExplore />; }
+export default async function LearnPage() { return <PublicExplore initial={await fetchCourseDirectory()} />; }

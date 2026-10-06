@@ -688,3 +688,8 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-inline-quiz__views button { min-height: 30px; padding: 0 12px; border: 0; border-radius: 7px; background: none; color: var(--on-surface-variant); font: inherit; font-size: 13px; font-weight: 500; cursor: pointer; }
 .lx-inline-quiz__views button[aria-pressed="true"] { background: var(--ws-card); color: var(--on-surface); box-shadow: 0 1px 4px rgba(0, 0, 0, .12); }
 .lx-inline-quiz__views button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+
+/* Space held for a lesson block that loads as it nears the viewport (reader/LazyBlock.tsx). Fades in late, so a quick load shows nothing. */
+.lx-block-wait { margin-block: 16px; border: 1px solid var(--outline-variant, rgb(127 127 127 / 0.18)); border-radius: 12px; background: color-mix(in srgb, var(--on-surface, #000) 4%, transparent); animation: lx-block-wait-in 150ms ease-out 250ms both; }
+@keyframes lx-block-wait-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .lx-block-wait { animation: none; } }

@@ -5,6 +5,7 @@ import { useState, type ComponentProps } from "react";
 import { useLocale } from "@/lib/i18n";
 import { localePath } from "@/lib/locale";
 import { hostHref } from "@/lib/hosts";
+import { warmHref } from "@/lib/convexCache";
 
 /** `eager` prefetches the whole page as soon as the link is on screen, for the few places people go most (the workspace sidebar). */
 type Props = Omit<ComponentProps<typeof Link>, "href" | "prefetch"> & { href: string; eager?: boolean };
@@ -19,7 +20,7 @@ export function IntentLink({ href: rawHref, eager, onMouseEnter, onFocus, onTouc
   const eligible = local.startsWith("/") && !local.startsWith("//")
     && (!props.target || props.target === "_self") && !props.download
     && props["aria-current"] !== "page";
-  const warm = () => { if (eligible) setIntentHref(href); };
+  const warm = () => { if (eligible) { setIntentHref(href); warmHref(local); } };
 
   return <Link {...props} href={href} prefetch={eligible ? (eager || intentHref === href ? true : null) : false}
     onMouseEnter={(event) => { onMouseEnter?.(event); if (!event.defaultPrevented) warm(); }}

@@ -112,6 +112,8 @@ let scope: string | null = (() => {
   } catch { return null; }
 })();
 const scopeListeners = new Set<() => void>();
+/** The account the device cache currently belongs to (checked against the session cookie), or null. */
+export function cacheScope(): string | null { return scope; }
 export function setCacheScope(userId: string | null) {
   if (scope === userId) return;
   scope = userId;

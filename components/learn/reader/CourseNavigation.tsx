@@ -20,9 +20,9 @@ export default function CourseNavigation({ courseId, lessonId, completed }: { co
   // The next lesson is the likeliest click: load it in the background once this one has settled.
   useEffect(() => {
     if (!nextId) return;
-    const timer = window.setTimeout(() => prefetchLesson(nextId), 1500);
+    const timer = window.setTimeout(() => prefetchLesson(nextId, courseId), 1500);
     return () => window.clearTimeout(timer);
-  }, [nextId]);
+  }, [nextId, courseId]);
   if (!course) return null;
   const index = course.lessons.findIndex(l => l.id === lessonId);
   if (index < 0) return null;
@@ -38,11 +38,11 @@ export default function CourseNavigation({ courseId, lessonId, completed }: { co
     </div>
     <div className="lx-course-meter" role="progressbar" aria-valuenow={count} aria-valuemin={0} aria-valuemax={course.lessons.length} aria-label={ar ? "تقدم الدورة" : "Course progress"}><span style={{ width: `${count / Math.max(1, course.lessons.length) * 100}%` }} /></div>
     <div className="lx-pager">
-      {previous ? <Link className="lx-pager__prev" href={href(previous.id)} onPointerEnter={() => prefetchLesson(previous.id)} onFocus={() => prefetchLesson(previous.id)}>
+      {previous ? <Link className="lx-pager__prev" href={href(previous.id)} onPointerEnter={() => prefetchLesson(previous.id, course.id)} onFocus={() => prefetchLesson(previous.id, course.id)} onTouchStart={() => prefetchLesson(previous.id, course.id)}>
         <small><ArrowLeft size={14} className="lx-flip" aria-hidden />{ar ? "الدرس السابق" : "Previous lesson"}</small>
         <bdi>{previous.title}</bdi>
       </Link> : <span />}
-      {next && <Link className="lx-pager__next" href={href(next.id)} onPointerEnter={() => prefetchLesson(next.id)} onFocus={() => prefetchLesson(next.id)}>
+      {next && <Link className="lx-pager__next" href={href(next.id)} onPointerEnter={() => prefetchLesson(next.id, course.id)} onFocus={() => prefetchLesson(next.id, course.id)} onTouchStart={() => prefetchLesson(next.id, course.id)}>
         <small>{ar ? "الدرس التالي" : "Next lesson"}{moduleOf(next.id) && <> · <bdi>{moduleOf(next.id)}</bdi></>}<ArrowRight size={14} className="lx-flip" aria-hidden /></small>
         <bdi>{next.title}</bdi>
       </Link>}

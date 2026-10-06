@@ -102,7 +102,7 @@ function uiLesson(row: Doc<"lessons">, version?: Doc<"lessonVersions"> | null): 
     ...(row.parentLessonId ? { forkedFrom: { kind: "lesson" as const, sourceId: row.parentLessonId, sourceTitle: "Original lesson", authorId: "", authorName: "Chaos creator", forkedAt: row.createdAt, originId: row.originLessonId } } : {}),
   };
 }
-function publicUiLesson(result: { lessonId: Id<"lessons">; ownerId: string; ownerName: string; createdWith?: Doc<"lessons">["createdWith"]; createdAt: number; version: Doc<"lessonVersions"> }): Lesson {
+export function publicUiLesson(result: { lessonId: Id<"lessons">; ownerId: string; ownerName: string; createdWith?: Doc<"lessons">["createdWith"]; createdAt: number; version: Doc<"lessonVersions"> }): Lesson {
   return { ...uiLesson({ _id: result.lessonId, _creationTime: result.createdAt, ownerId: result.ownerId, createdWith: result.createdWith, metadata: result.version.metadata, draft: result.version.document, revision: 0, status: "active", visibility: "public", communityState: "ok", createdAt: result.createdAt, updatedAt: result.version.publishedAt, searchText: "", publishedVersionId: result.version._id }, result.version), ownerName: result.ownerName };
 }
 function useOwnedLessons(archived: boolean): Lesson[] | undefined {
@@ -123,7 +123,11 @@ export function useCanEditLesson(id: string | undefined): boolean | undefined {
   const row = useQuery(api.learnFrontend.editableLesson, auth.isAuthenticated && id ? { id } : "skip");
   return auth.isLoading || (auth.isAuthenticated && row === undefined) ? undefined : !!row;
 }
-export function useLesson(id: string | undefined): Lesson | null | undefined {
+/**
+ * `readerFirst`: the reader may show the published copy everyone sees while sign-in and the edit
+ * check settle. Never for the editor, which must open on the draft.
+ */
+export function useLesson(id: string | undefined, readerFirst = false): Lesson | null | undefined {
   const auth = useConvexAuth();
   const viewer = useLearnViewer();
   const editable = useQuery(api.learnFrontend.editableLesson, auth.isAuthenticated && id ? { id } : "skip");
@@ -136,12 +140,16 @@ export function useLesson(id: string | undefined): Lesson | null | undefined {
     if (version && viewer?.signedIn) rememberProgress(viewer.id, version);
   }, [editable, published, result, viewer?.id, viewer?.signedIn]);
   if (!id) return null;
-  if (!viewer || auth.isLoading || (auth.isAuthenticated && editable === undefined) || (editable ? published === undefined : result === undefined)) return undefined;
+  if (!viewer || auth.isLoading || (auth.isAuthenticated && editable === undefined) || (editable ? published === undefined : result === undefined)) {
+    return readerFirst && result ? publicUiLesson(result) : undefined;
+  }
   return editable ? uiLesson(editable, published) : result ? publicUiLesson(result) : null;
 }
 export function isListed(lesson: Lesson): boolean { return !!lesson.published && lesson.visibility === "public" && !lesson.archived && lesson.moderation === "ok"; }
 export function usePublicLessons(filters: SearchFilters = {}): Lesson[] | undefined {
-  const [asOf] = useState(() => Date.now());
+  // Rounded to five minutes, so every page and remount in that window shares one kept subscription
+  // (and its cached result) instead of opening a new query per mount.
+  const [asOf] = useState(() => Math.floor(Date.now() / 300_000) * 300_000);
   const rank = useQuery(api.learnCommunity.rank, { asOf, limit: 20, ...(filters.moduleId ? { nodeId: filters.moduleId as Id<"curriculumNodes"> } : {}), ...(filters.versionId ? { curriculumVersionId: filters.versionId as Id<"curriculumVersions"> } : {}) });
   const search = usePaginatedQuery(api.learnSearch.searchPublic, filters.q?.trim() ? { text: filters.q.trim().slice(0, 200) } : "skip", { initialNumItems: 20 });
   const ids = filters.q?.trim() ? search.results.map(r => r.lessonId) : rank?.map(r => r.lessonId);

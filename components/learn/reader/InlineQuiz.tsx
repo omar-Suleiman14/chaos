@@ -9,6 +9,7 @@ import { useLocale } from "@/lib/i18n";
 import Link from "@/components/site/SiteLink";
 import QueryErrorBoundary from "@/components/forms/QueryErrorBoundary";
 import { localeDir } from "@/lib/locale";
+import { BlockPlaceholder, useNearViewport } from "./LazyBlock";
 const Form = dynamic(() =>
   import("@/components/forms/respond/RespondPage").then((m) => m.RespondToForm),
 );
@@ -28,16 +29,16 @@ export default function InlineQuiz({
   // Classic quizzes still open on request; forms show their questions straight away.
   const [started, setStarted] = useState(false);
   const [view, setView] = useQuizView();
-  const details = useQuery(api.learnFrontend.embeddedQuiz, {
+  // Loaded when the reader scrolls near it, not with the lesson (components/learn/reader/LazyBlock.tsx).
+  const [ref, near] = useNearViewport<HTMLDivElement>();
+  const details = useQuery(api.learnFrontend.embeddedQuiz, near ? {
     asset:
       asset.kind === "form"
         ? { kind: "form", id: asset.id as Id<"forms"> }
         : { kind: "quiz", id: asset.id as Id<"quizzes"> },
-  });
+  } : "skip");
   if (details === undefined)
-    return (
-      <p role="status">{ar ? "جارٍ تحميل التدريب…" : "Loading practice…"}</p>
-    );
+    return <div ref={ref}><BlockPlaceholder label={ar ? "جارٍ تحميل التدريب…" : "Loading practice…"} height={280} /></div>;
   if (!details)
     return (
       <p className="lx-muted">
