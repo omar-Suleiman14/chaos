@@ -1,7 +1,7 @@
 import { fireEvent, render, screen } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 const mock = vi.hoisted(() => ({ details: { title: "Checkpoint", shareId: "share1", href: "/f/share1", questionCount: 3 } as { title: string; shareId: string | null; href: string; questionCount: number } | null | undefined }));
-vi.mock("@/lib/convexCache", () => ({ useQuery: () => mock.details }));
+vi.mock("@/lib/convexCache", () => ({ warmHref: () => {}, useQuery: () => mock.details }));
 vi.mock("next/dynamic", () => ({ default: () => (props: { shareId?: string; quizId?: string; inline?: boolean; minimal?: boolean; studyProgress?: boolean }) => <div data-testid="player" data-asset={props.shareId ?? props.quizId} data-inline={String(props.inline)} data-minimal={String(!!props.minimal)} data-study={String(props.studyProgress)} /> }));
 import InlineQuiz from "@/components/learn/reader/InlineQuiz";
 beforeEach(() => { mock.details = { title: "Checkpoint", shareId: "share1", href: "/f/share1", questionCount: 3 }; });

@@ -11,7 +11,7 @@ vi.mock("convex/react", () => ({ useConvex: () => ({ query: async (ref: Paramete
   throw new Error(name);
 } }) }));
 
-vi.mock("@/lib/convexCache", () => ({
+vi.mock("@/lib/convexCache", () => ({ warmHref: () => {},
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => {
     const name = getFunctionName(ref);
     if (name === "integrations:listShareableItems") return [{ ref: "form_1", kind: "form", title: "Survey", updatedAt: 1 }];

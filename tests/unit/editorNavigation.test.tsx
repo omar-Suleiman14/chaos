@@ -8,7 +8,7 @@ vi.mock("next/navigation", () => ({ useSearchParams: () => new URLSearchParams({
 vi.mock("@clerk/nextjs", () => ({ useUser: () => ({ user: { id: route.userId } }) }));
 vi.mock("next/dynamic", () => ({ default: () => () => null }));
 vi.mock("@/lib/haptics", () => ({ haptics: { select: vi.fn() } }));
-vi.mock("@/lib/convexCache", () => ({ useQuery: (ref: never) => {
+vi.mock("@/lib/convexCache", () => ({ warmHref: () => {}, useQuery: (ref: never) => {
   switch (getFunctionName(ref)) {
     case "quizFunctions:getQuizForOwner": return { _id: route.quizId, title: `${route.userId}:${route.quizId}`, slug: "example", updatedAt: 1 };
     case "quizFunctions:getQuestionsForOwner": case "quizFunctions:getMyQuizzes": return [];

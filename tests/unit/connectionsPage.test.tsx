@@ -22,7 +22,7 @@ const query = (ref: Parameters<typeof getFunctionName>[0]) => {
   if (name === "lessons:listOwned") return { page: [{ _id: "k1", metadata: { title: "Owned lesson" }, status: "active" }], isDone: true, continueCursor: "" };
   return name === "integrations:listConnections" ? connections : name === "integrations:apiLimits" ? { read: 300, write: 60 } : undefined;
 };
-vi.mock("@/lib/convexCache", () => ({ useQuery: (ref: Parameters<typeof getFunctionName>[0]) => query(ref) }));
+vi.mock("@/lib/convexCache", () => ({ warmHref: () => {}, useQuery: (ref: Parameters<typeof getFunctionName>[0]) => query(ref) }));
 vi.mock("@/lib/analytics", () => ({ default: { capture: vi.fn() } }));
 vi.mock("@/app/[lang]/(app)/dashboard/connections/WebhooksSection", () => ({ default: () => null }));
 vi.mock("@/lib/learn/data", () => ({ useMyLessons: () => [], useFolders: () => [], useCurriculumNodes: () => [] }));
