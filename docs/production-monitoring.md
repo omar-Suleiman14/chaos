@@ -33,3 +33,24 @@ Setup:
 
 The synthetic account collects archived lessons named "Synthetic check …".
 They are private and never published.
+
+## Production health
+
+`.github/workflows/production-health.yml` runs daily (`pnpm health:production`):
+
+- Real-user journeys from PostHog (`journey_usable`, see perf/README.md "Real
+  users"): p50/p75/p95 over the last 24 hours, against per-journey limits and
+  against the 7 days before (p75 +30%, p95 +50%, at least 150 ms worse).
+  Journeys with fewer than 30 samples are skipped.
+- Exceptions (`$exception`): last day against twice the previous daily average,
+  minimum 20.
+- The platform status feed (`GET /api/status/v1` on the Convex site): any
+  degraded or down service.
+
+Thresholds live in `perf/production-thresholds.json`. A crossed threshold opens
+or updates one issue labelled `production-health`. The first healthy day
+closes it.
+
+Setup: `POSTHOG_PERSONAL_API_KEY` secret (read-only query scope),
+`POSTHOG_API_HOST` and `POSTHOG_PROJECT_ID` variables, and optionally
+`PRODUCTION_CONVEX_SITE_URL`.

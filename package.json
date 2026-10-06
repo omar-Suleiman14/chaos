@@ -28,7 +28,8 @@
     "perf:ratchet": "tsx scripts/perf-ratchet.ts update",
     "mcp:inventory": "tsx scripts/mcp-inventory.ts",
     "mcp:inventory:check": "tsx scripts/mcp-inventory.ts --check",
-    "mcp:synthetic": "tsx scripts/mcp-synthetic.ts"
+    "mcp:synthetic": "tsx scripts/mcp-synthetic.ts",
+    "health:production": "tsx scripts/production-health.ts"
   },
   "dependencies": {
     "@better-auth/oauth-provider": "~1.6.33",

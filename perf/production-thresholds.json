@@ -1,0 +1,17 @@
+{
+  "$comment": "Real-user thresholds for scripts/production-health.ts. Absolute limits are per journey, in ms; regressions compare the last day with the 7 days before it.",
+  "minimumSamples": 30,
+  "regression": { "p75": 0.3, "p95": 0.5, "floorMs": 150 },
+  "journeys": {
+    "dashboard": { "p75": 2500, "p95": 5000 },
+    "form.create": { "p75": 2000, "p95": 4000 },
+    "form.open": { "p75": 2500, "p95": 5000 },
+    "course.modules": { "p75": 2500, "p95": 5000 },
+    "lesson.read": { "p75": 2500, "p95": 5000 },
+    "lesson.edit": { "p75": 3000, "p95": 6000 },
+    "quiz.question": { "p75": 1000, "p95": 2500 },
+    "quiz.next": { "p75": 300, "p95": 800 },
+    "live.join": { "p75": 1500, "p95": 3000 }
+  },
+  "errors": { "ratio": 2, "minimum": 20 }
+}
