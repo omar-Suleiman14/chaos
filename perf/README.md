@@ -23,6 +23,8 @@ pnpm perf:ratchet    # after a genuine win: lower budgets, add new metrics
 | Bundles | `scripts/perf-bundles.ts` | First-load JavaScript per route, raw and gzip, from `next build`. |
 | Browser | `perf/browser` | Real journeys in Chromium against a deployed E2E environment. Timings; manual runs only. |
 | Render | `perf/browser/render.spec.ts` | Per surface in Chromium: renders, rerender spikes, idle commits, Convex subscriptions, style recalculation, layout shift and animation frames. |
+| Idle | `perf/browser/idle.spec.ts` | Dashboard, form editor and lesson editor left untouched for 20 s: mutations, actions, subscription churn and HTTP requests must be zero (polling and write loops). Server pushes are recorded. |
+| Memory | `perf/browser/memory.spec.ts` | A large lesson and a large form editor opened and closed 6 times in one page: heap growth per cycle after GC, DOM nodes, window/document listeners and live Convex subscriptions must return to where they started. |
 
 `perf/lib/fixtures.ts` seeds one fixed workspace (forms, quizzes, lessons, the
 CNS course, a Live game with players, a card). Clock and randomness are pinned,
