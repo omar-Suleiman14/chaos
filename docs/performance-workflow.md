@@ -17,7 +17,7 @@ fix. No model watches production or decides on its own.
    them.
 3. **Hand it over when you want it fixed.** Give the issue to an agent (Opus,
    Astra, Sol). The issue already holds the target and how to reproduce it.
-4. **Review the evidence.** The pull request comment shows headline changes,
+4. **Review the evidence.** Run "Performance budgets" (`perf.yml`, manual) on the branch; its comment on the pull request shows headline changes,
    for example "lesson load −18%", "dashboard payload +7%" or "React commits
    unchanged", together with the correctness verdict. The guard keeps the
    harness and budgets out of the same change.

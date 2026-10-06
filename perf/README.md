@@ -85,7 +85,7 @@ Bytes are ratcheted at three levels, each with a 1% band:
 ## Protecting the harness
 
 An optimisation is judged by the harness, so it must not also change the
-harness. On pull requests, `pnpm perf:guard` (the `guard` job in `perf.yml`):
+harness. On every pull request, `pnpm perf:guard` (`.github/workflows/perf-guard.yml`, about a minute, no build):
 
 - fails when one change edits product code (`app`, `components`, `lib`,
   `convex`) and harness files (`perf/lib`, `perf/backend`, `perf/client`,
