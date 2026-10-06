@@ -14,7 +14,6 @@ import { SiteFooter, SiteNav } from "./SiteChrome";
 import Link from "./SiteLink";
 import { AiMark } from "./aiMarks";
 import { ChatGptMark } from "./marks";
-import McpWorkflowDemo from "./McpWorkflowDemo";
 
 type Copy = {
   eyebrow: string; title: string; lead: string; add: string; download: string; downloading: string; downloaded: string; downloadFailed: string; copyFailed: string;
@@ -255,7 +254,6 @@ export default function IntegrationView({ platform: id }: { platform: Integratio
               <li key={prompt}><q>{prompt}</q><CopyButton value={prompt} t={t} /></li>
             ))}
           </ul>
-          <McpWorkflowDemo />
         </section>
 
         <section aria-labelledby="int-manual">
