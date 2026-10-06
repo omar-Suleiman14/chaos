@@ -58,3 +58,6 @@ pnpm_install.log
 /CLAUDE.md
 /convex/_generated/ai/
 /load-report*.json
+
+# performance harness output (perf/README.md)
+/perf/results

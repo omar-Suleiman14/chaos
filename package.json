@@ -20,6 +20,10 @@
     "test:unit": "vitest run --config vitest.unit.config.mts",
     "test:integration": "vitest run --config vitest.integration.config.mts",
     "test:e2e": "playwright test",
+    "perf": "vitest run --config vitest.perf.config.mts",
+    "perf:bundles": "tsx scripts/perf-bundles.ts",
+    "perf:check": "tsx scripts/perf-ratchet.ts check",
+    "perf:ratchet": "tsx scripts/perf-ratchet.ts update",
     "mcp:inventory": "tsx scripts/mcp-inventory.ts",
     "mcp:inventory:check": "tsx scripts/mcp-inventory.ts --check"
   },

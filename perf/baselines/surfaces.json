@@ -1,0 +1,225 @@
+{
+  "suite": "surfaces",
+  "metrics": {
+    "card.mine.bytesRead": {
+      "budget": 290,
+      "unit": "bytes"
+    },
+    "card.mine.databaseQueries": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "card.mine.documentsRead": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "card.mine.payloadBytes": {
+      "budget": 95,
+      "unit": "bytes"
+    },
+    "card.public.bytesRead": {
+      "budget": 704,
+      "unit": "bytes"
+    },
+    "card.public.databaseQueries": {
+      "budget": 4,
+      "unit": "count"
+    },
+    "card.public.documentsRead": {
+      "budget": 3,
+      "unit": "count"
+    },
+    "card.public.payloadBytes": {
+      "budget": 95,
+      "unit": "bytes"
+    },
+    "courses.editor.bytesRead": {
+      "budget": 40649,
+      "unit": "bytes"
+    },
+    "courses.editor.databaseQueries": {
+      "budget": 19,
+      "unit": "count"
+    },
+    "courses.editor.documentsRead": {
+      "budget": 18,
+      "unit": "count"
+    },
+    "courses.editor.payloadBytes": {
+      "budget": 1657,
+      "unit": "bytes"
+    },
+    "courses.public.bytesRead": {
+      "budget": 42389,
+      "unit": "bytes"
+    },
+    "courses.public.databaseQueries": {
+      "budget": 24,
+      "unit": "count"
+    },
+    "courses.public.documentsRead": {
+      "budget": 24,
+      "unit": "count"
+    },
+    "courses.public.payloadBytes": {
+      "budget": 1709,
+      "unit": "bytes"
+    },
+    "dashboard.bytesRead": {
+      "budget": 87506,
+      "unit": "bytes"
+    },
+    "dashboard.databaseQueries": {
+      "budget": 8,
+      "unit": "count"
+    },
+    "dashboard.documentsRead": {
+      "budget": 36,
+      "unit": "count"
+    },
+    "dashboard.payloadBytes": {
+      "budget": 21111,
+      "unit": "bytes"
+    },
+    "dashboard.subscriptions": {
+      "budget": 6,
+      "unit": "count"
+    },
+    "forms.editor.bytesRead": {
+      "budget": 5502,
+      "unit": "bytes"
+    },
+    "forms.editor.databaseQueries": {
+      "budget": 4,
+      "unit": "count"
+    },
+    "forms.editor.documentsRead": {
+      "budget": 3,
+      "unit": "count"
+    },
+    "forms.editor.payloadBytes": {
+      "budget": 3766,
+      "unit": "bytes"
+    },
+    "lessons.editor.bytesRead": {
+      "budget": 8717,
+      "unit": "bytes"
+    },
+    "lessons.editor.databaseQueries": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessons.editor.documentsRead": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessons.editor.payloadBytes": {
+      "budget": 9469,
+      "unit": "bytes"
+    },
+    "lessons.reader.bytesRead": {
+      "budget": 34893,
+      "unit": "bytes"
+    },
+    "lessons.reader.databaseQueries": {
+      "budget": 9,
+      "unit": "count"
+    },
+    "lessons.reader.documentsRead": {
+      "budget": 8,
+      "unit": "count"
+    },
+    "lessons.reader.payloadBytes": {
+      "budget": 6934,
+      "unit": "bytes"
+    },
+    "live.host.bytesRead": {
+      "budget": 10500,
+      "unit": "bytes"
+    },
+    "live.host.databaseQueries": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "live.host.documentsRead": {
+      "budget": 31,
+      "unit": "count"
+    },
+    "live.host.payloadBytes": {
+      "budget": 3784,
+      "unit": "bytes"
+    },
+    "live.player.bytesRead": {
+      "budget": 1758,
+      "unit": "bytes"
+    },
+    "live.player.databaseQueries": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "live.player.documentsRead": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "live.player.payloadBytes": {
+      "budget": 451,
+      "unit": "bytes"
+    },
+    "mcp.getLesson.bytesRead": {
+      "budget": 9837,
+      "unit": "bytes"
+    },
+    "mcp.getLesson.databaseQueries": {
+      "budget": 7,
+      "unit": "count"
+    },
+    "mcp.getLesson.documentsRead": {
+      "budget": 6,
+      "unit": "count"
+    },
+    "mcp.getLesson.payloadBytes": {
+      "budget": 14634,
+      "unit": "bytes"
+    },
+    "mcp.listToolsBytes": {
+      "budget": 597659,
+      "unit": "bytes"
+    },
+    "mcp.searchForms.bytesRead": {
+      "budget": 82186,
+      "unit": "bytes"
+    },
+    "mcp.searchForms.databaseQueries": {
+      "budget": 8,
+      "unit": "count"
+    },
+    "mcp.searchForms.documentsRead": {
+      "budget": 34,
+      "unit": "count"
+    },
+    "mcp.searchForms.payloadBytes": {
+      "budget": 19018,
+      "unit": "bytes"
+    },
+    "mcp.tools": {
+      "budget": 119,
+      "unit": "count"
+    },
+    "quizzes.respondent.bytesRead": {
+      "budget": 5052,
+      "unit": "bytes"
+    },
+    "quizzes.respondent.databaseQueries": {
+      "budget": 5,
+      "unit": "count"
+    },
+    "quizzes.respondent.documentsRead": {
+      "budget": 4,
+      "unit": "count"
+    },
+    "quizzes.respondent.payloadBytes": {
+      "budget": 2840,
+      "unit": "bytes"
+    }
+  }
+}

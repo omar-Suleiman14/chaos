@@ -1,0 +1,173 @@
+{
+  "suite": "bundles",
+  "metrics": {
+    "bundle.card.chunks": {
+      "budget": 19,
+      "unit": "count"
+    },
+    "bundle.card.firstLoadJs": {
+      "budget": 1101420,
+      "unit": "bytes"
+    },
+    "bundle.card.firstLoadJsGzip": {
+      "budget": 332590,
+      "unit": "bytes"
+    },
+    "bundle.card.public.chunks": {
+      "budget": 21,
+      "unit": "count"
+    },
+    "bundle.card.public.firstLoadJs": {
+      "budget": 1108001,
+      "unit": "bytes"
+    },
+    "bundle.card.public.firstLoadJsGzip": {
+      "budget": 333977,
+      "unit": "bytes"
+    },
+    "bundle.courses.editor.chunks": {
+      "budget": 30,
+      "unit": "count"
+    },
+    "bundle.courses.editor.firstLoadJs": {
+      "budget": 1698088,
+      "unit": "bytes"
+    },
+    "bundle.courses.editor.firstLoadJsGzip": {
+      "budget": 506004,
+      "unit": "bytes"
+    },
+    "bundle.courses.public.chunks": {
+      "budget": 21,
+      "unit": "count"
+    },
+    "bundle.courses.public.firstLoadJs": {
+      "budget": 1420133,
+      "unit": "bytes"
+    },
+    "bundle.courses.public.firstLoadJsGzip": {
+      "budget": 406810,
+      "unit": "bytes"
+    },
+    "bundle.dashboard.chunks": {
+      "budget": 30,
+      "unit": "count"
+    },
+    "bundle.dashboard.firstLoadJs": {
+      "budget": 1706423,
+      "unit": "bytes"
+    },
+    "bundle.dashboard.firstLoadJsGzip": {
+      "budget": 506684,
+      "unit": "bytes"
+    },
+    "bundle.forms.editor.chunks": {
+      "budget": 31,
+      "unit": "count"
+    },
+    "bundle.forms.editor.firstLoadJs": {
+      "budget": 1771258,
+      "unit": "bytes"
+    },
+    "bundle.forms.editor.firstLoadJsGzip": {
+      "budget": 526840,
+      "unit": "bytes"
+    },
+    "bundle.forms.respondent.chunks": {
+      "budget": 23,
+      "unit": "count"
+    },
+    "bundle.forms.respondent.firstLoadJs": {
+      "budget": 1192411,
+      "unit": "bytes"
+    },
+    "bundle.forms.respondent.firstLoadJsGzip": {
+      "budget": 359355,
+      "unit": "bytes"
+    },
+    "bundle.forms.responses.chunks": {
+      "budget": 29,
+      "unit": "count"
+    },
+    "bundle.forms.responses.firstLoadJs": {
+      "budget": 1676958,
+      "unit": "bytes"
+    },
+    "bundle.forms.responses.firstLoadJsGzip": {
+      "budget": 496209,
+      "unit": "bytes"
+    },
+    "bundle.landing.chunks": {
+      "budget": 19,
+      "unit": "count"
+    },
+    "bundle.landing.firstLoadJs": {
+      "budget": 1149300,
+      "unit": "bytes"
+    },
+    "bundle.landing.firstLoadJsGzip": {
+      "budget": 348249,
+      "unit": "bytes"
+    },
+    "bundle.lessons.editor.chunks": {
+      "budget": 35,
+      "unit": "count"
+    },
+    "bundle.lessons.editor.firstLoadJs": {
+      "budget": 3119085,
+      "unit": "bytes"
+    },
+    "bundle.lessons.editor.firstLoadJsGzip": {
+      "budget": 937708,
+      "unit": "bytes"
+    },
+    "bundle.lessons.reader.chunks": {
+      "budget": 26,
+      "unit": "count"
+    },
+    "bundle.lessons.reader.firstLoadJs": {
+      "budget": 2881923,
+      "unit": "bytes"
+    },
+    "bundle.lessons.reader.firstLoadJsGzip": {
+      "budget": 855859,
+      "unit": "bytes"
+    },
+    "bundle.live.host.chunks": {
+      "budget": 29,
+      "unit": "count"
+    },
+    "bundle.live.host.firstLoadJs": {
+      "budget": 1644050,
+      "unit": "bytes"
+    },
+    "bundle.live.host.firstLoadJsGzip": {
+      "budget": 486229,
+      "unit": "bytes"
+    },
+    "bundle.live.player.chunks": {
+      "budget": 19,
+      "unit": "count"
+    },
+    "bundle.live.player.firstLoadJs": {
+      "budget": 1110327,
+      "unit": "bytes"
+    },
+    "bundle.live.player.firstLoadJsGzip": {
+      "budget": 332701,
+      "unit": "bytes"
+    },
+    "bundle.quizzes.legacy.chunks": {
+      "budget": 23,
+      "unit": "count"
+    },
+    "bundle.quizzes.legacy.firstLoadJs": {
+      "budget": 1217549,
+      "unit": "bytes"
+    },
+    "bundle.quizzes.legacy.firstLoadJsGzip": {
+      "budget": 367537,
+      "unit": "bytes"
+    }
+  }
+}
