@@ -54,3 +54,13 @@ closes it.
 Setup: `POSTHOG_PERSONAL_API_KEY` secret (read-only query scope),
 `POSTHOG_API_HOST` and `POSTHOG_PROJECT_ID` variables, and optionally
 `PRODUCTION_CONVEX_SITE_URL`.
+
+## Other scheduled checks
+
+| Workflow | When | Issue label |
+|---|---|---|
+| `perf-nightly.yml` | nightly | `perf-regression` (one per journey), `perf-nightly` (run failures) |
+| `flags.yml` | Mondays | `flag-cleanup` ([feature flags](feature-flags.md)) |
+| `perf-targets.yml` | on demand | `perf-target` (one per journey) |
+
+How issues turn into fixes: [performance workflow](performance-workflow.md).

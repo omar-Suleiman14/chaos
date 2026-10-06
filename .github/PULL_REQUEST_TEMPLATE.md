@@ -14,3 +14,6 @@ Closes #
 - [ ] `pnpm lint` passes
 - [ ] Manually verified: <!-- describe what you clicked through, or state
         that it wasn't possible in this environment and why -->
+- [ ] Performance: the PR comment shows no unexplained regression, and design
+      changes (Flow, `/card`, course UI, loading states, Forms UX) were judged by
+      a person, not by a budget (docs/performance-workflow.md)
