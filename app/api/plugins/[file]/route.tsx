@@ -54,7 +54,8 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
     headers: {
       "Content-Type": "application/zip",
       "Content-Disposition": `attachment; filename="${file}"`,
-      "Cache-Control": "public, max-age=3600",
+      // The CDN serves the build's copy; browsers re-check, so a download after a deploy is never the old package.
+      "Cache-Control": "public, max-age=0, must-revalidate",
     },
   });
 }
