@@ -19,6 +19,8 @@ export const builder = {
   },
 };
 
+const stableMutations = new Map<string, unknown>();
+
 export const convexReact = {
   useQuery: (ref: unknown, args?: unknown) => {
     if (args === "skip") return undefined;
@@ -27,14 +29,20 @@ export const convexReact = {
     if (name.startsWith("businessTeams:")) return [];
     return undefined;
   },
+  // Like Convex's own hook, the same mutation returns the same function on every render.
   useMutation: (ref: unknown) => {
     const name = getFunctionName(ref as never);
-    const fn = vi.fn(async (args: { definition?: unknown; expectedRevision?: number }) => {
-      builder.mutations.push(name);
-      if (name === "forms:saveFormDraft") return { draftRevision: (args.expectedRevision ?? 1) + 1 };
-      return null;
-    });
-    return Object.assign(fn, { withOptimisticUpdate: () => fn });
+    let fn = stableMutations.get(name);
+    if (!fn) {
+      const call = vi.fn(async (args: { definition?: unknown; expectedRevision?: number }) => {
+        builder.mutations.push(name);
+        if (name === "forms:saveFormDraft") return { draftRevision: (args.expectedRevision ?? 1) + 1 };
+        return null;
+      });
+      fn = Object.assign(call, { withOptimisticUpdate: () => call });
+      stableMutations.set(name, fn);
+    }
+    return fn;
   },
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
   useConvex: () => ({ query: vi.fn(), mutation: vi.fn() }),

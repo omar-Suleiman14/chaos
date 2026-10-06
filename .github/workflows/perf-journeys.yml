@@ -1,4 +1,4 @@
-name: Browser journeys
+name: Browser journeys and keystrokes
 
 # Real-browser timings for lib/journeys.ts against the dedicated E2E
 # environment. Needs the same secrets as the core E2E smoke plus the
@@ -29,6 +29,7 @@ jobs:
       E2E_PERF_LESSON_ID: ${{ vars.E2E_PERF_LESSON_ID }}
       E2E_PERF_QUIZ_SHARE_ID: ${{ vars.E2E_PERF_QUIZ_SHARE_ID }}
       E2E_PERF_LIVE_PIN: ${{ vars.E2E_PERF_LIVE_PIN }}
+      E2E_PERF_LARGE_FORM_ID: ${{ vars.E2E_PERF_LARGE_FORM_ID }}
       PERF_RUNS: ${{ inputs.runs || '5' }}
     steps:
       - name: Checkout
@@ -56,7 +57,7 @@ jobs:
 
       - name: Compare with budgets
         if: always()
-        run: pnpm perf:check -- --suites journeys-browser --allow-new
+        run: pnpm perf:check -- --suites journeys-browser,keystroke-browser --allow-new
 
       - name: Summary
         if: always()

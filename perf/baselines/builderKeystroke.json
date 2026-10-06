@@ -1,0 +1,101 @@
+{
+  "suite": "builderKeystroke",
+  "metrics": {
+    "keystroke.q10.convexMutations": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "keystroke.q10.domAttributeChanges": {
+      "budget": 34,
+      "unit": "count"
+    },
+    "keystroke.q10.domElementsAdded": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "keystroke.q10.domTextChanges": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "keystroke.q10.fieldEditorRenders": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "keystroke.q10.reactCommits": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "keystroke.q10.savesPer10Keys": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "keystroke.q10.storeWrites": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "keystroke.q100.convexMutations": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "keystroke.q100.domAttributeChanges": {
+      "budget": 34,
+      "unit": "count"
+    },
+    "keystroke.q100.domElementsAdded": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "keystroke.q100.domTextChanges": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "keystroke.q100.fieldEditorRenders": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "keystroke.q100.reactCommits": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "keystroke.q100.savesPer10Keys": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "keystroke.q100.storeWrites": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "keystroke.q200.convexMutations": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "keystroke.q200.domAttributeChanges": {
+      "budget": 34,
+      "unit": "count"
+    },
+    "keystroke.q200.domElementsAdded": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "keystroke.q200.domTextChanges": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "keystroke.q200.fieldEditorRenders": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "keystroke.q200.reactCommits": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "keystroke.q200.savesPer10Keys": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "keystroke.q200.storeWrites": {
+      "budget": 1,
+      "unit": "count"
+    }
+  }
+}

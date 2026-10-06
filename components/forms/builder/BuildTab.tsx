@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { memo, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import {
   AlignLeft, AtSign, Calendar, CheckSquare, ChevronDown, ChevronRight, CircleDot, Clock, FileUp, GitBranch, Globe, Grid3x3, Hash, ListOrdered,
   Minus, Phone, Plus, SlidersHorizontal, SquareChevronDown, Star, Type, Text as TextIcon,
@@ -61,6 +61,49 @@ function AddBar({ onAdd }: { onAdd: (type?: FieldType) => void }) {
   );
 }
 
+type RowActions = { toggle: (id: string) => void; expand: (id: string | null) => void; insert: (afterIndex: number) => void };
+
+/**
+ * One question in the list. Memoized so a keystroke in one question re-renders
+ * that row only, not every row of a long form (perf/client/builderKeystroke).
+ * Actions go through a ref so their identity never invalidates the memo.
+ */
+const QuestionRow = memo(function QuestionRow({ field, index, open, checked, selecting, last, readOnly, actions, children }: {
+  field: FormDefinition["fields"][number]; index: number; open: boolean; checked: boolean; selecting: boolean; last: boolean; readOnly: boolean;
+  actions: { current: RowActions }; children: ReactNode;
+}) {
+  const t = useCopy(copy);
+  const labels = useBuilderLabels();
+  return (
+    <li>
+      <div className={`chaos-card bg-card ws-reveal-host ${field.type === "section" ? "border-foreground" : ""}`}>
+        <div className="flex items-center gap-3 px-4 py-3">
+          {!readOnly && (
+            <input type="checkbox" className="ws-reveal w-4 h-4" data-keep={selecting} checked={checked} onChange={() => actions.current.toggle(field.id)} aria-label={t.select(field.label || labels.fieldType(field.type))} />
+          )}
+          <button type="button" onClick={() => actions.current.expand(open ? null : field.id)} className="flex-1 flex items-center gap-3 text-start min-w-0" aria-expanded={open}>
+            {open ? <ChevronDown size={16} /> : <ChevronRight size={16} className="rtl:rotate-180" />}
+            {(() => { const Icon = fieldIcons[field.type]; return <span className="grid place-items-center w-6 h-6 shrink-0 rounded-md bg-[var(--ws-active)] text-[var(--ws-text-soft)]" title={labels.fieldType(field.type)}><Icon size={13} aria-hidden="true" /></span>; })()}
+            <span className="text-[11px] text-muted-foreground w-5 shrink-0 tabular-nums">{index + 1}</span>
+            <span className={`truncate ${field.type === "section" ? "chaos-heading text-sm" : "font-medium"}`}>
+              {field.label || <em className="text-muted-foreground">{field.type === "statement" ? t.textBlock : t.untitled}</em>}
+              {field.required && <span className="text-destructive"> *</span>}
+            </span>
+            <span className="text-[11px] text-muted-foreground shrink-0 ms-auto">{labels.fieldType(field.type)}</span>
+            {field.showIf && <GitBranch size={14} className="text-primary shrink-0" aria-label={t.branching} />}
+          </button>
+        </div>
+        {children}
+      </div>
+      {!readOnly && !last && (
+        <button type="button" onClick={() => actions.current.insert(index)} className="w-full text-[13px] text-muted-foreground hover:text-foreground py-1.5 opacity-0 hover:opacity-100 focus-visible:opacity-100 transition-opacity flex items-center justify-center gap-1">
+          <Plus size={14} /> {t.insertHere}
+        </button>
+      )}
+    </li>
+  );
+}, (a, b) => !a.open && !b.open && a.field === b.field && a.index === b.index && a.checked === b.checked && a.selecting === b.selecting && a.last === b.last && a.readOnly === b.readOnly);
+
 export default function BuildTab({ def, change: rawChange, readOnly, notice, announce }: {
   def: FormDefinition;
   change: (updater: (d: FormDefinition) => FormDefinition, options?: { checkpoint?: boolean }) => void;
@@ -99,6 +142,10 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
     return next;
   });
 
+  // Rows call the latest handlers through this ref, so memoized rows never hold stale ones.
+  const actions = useRef<RowActions>({ toggle, expand: setExpanded, insert: add });
+  useLayoutEffect(() => { actions.current = { toggle, expand: setExpanded, insert: add }; });
+
   return (
     <div className="space-y-4">
       <div className="chaos-card p-5">
@@ -130,46 +177,24 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
         {def.fields.map((field, index) => {
           const open = expanded === field.id;
           return (
-            <li key={field.id}>
-              <div className={`chaos-card bg-card ws-reveal-host ${field.type === "section" ? "border-foreground" : ""}`}>
-                <div className="flex items-center gap-3 px-4 py-3">
-                  {!readOnly && (
-                    <input type="checkbox" className="ws-reveal w-4 h-4" data-keep={selected.size > 0} checked={selected.has(field.id)} onChange={() => toggle(field.id)} aria-label={t.select(field.label || labels.fieldType(field.type))} />
-                  )}
-                  <button type="button" onClick={() => setExpanded(open ? null : field.id)} className="flex-1 flex items-center gap-3 text-start min-w-0" aria-expanded={open}>
-                    {open ? <ChevronDown size={16} /> : <ChevronRight size={16} className="rtl:rotate-180" />}
-                    {(() => { const Icon = fieldIcons[field.type]; return <span className="grid place-items-center w-6 h-6 shrink-0 rounded-md bg-[var(--ws-active)] text-[var(--ws-text-soft)]" title={labels.fieldType(field.type)}><Icon size={13} aria-hidden="true" /></span>; })()}
-                    <span className="text-[11px] text-muted-foreground w-5 shrink-0 tabular-nums">{index + 1}</span>
-                    <span className={`truncate ${field.type === "section" ? "chaos-heading text-sm" : "font-medium"}`}>
-                      {field.label || <em className="text-muted-foreground">{field.type === "statement" ? t.textBlock : t.untitled}</em>}
-                      {field.required && <span className="text-destructive"> *</span>}
-                    </span>
-                    <span className="text-[11px] text-muted-foreground shrink-0 ms-auto">{labels.fieldType(field.type)}</span>
-                    {field.showIf && <GitBranch size={14} className="text-primary shrink-0" aria-label={t.branching} />}
-                  </button>
+            <QuestionRow key={field.id} field={field} index={index} open={open} checked={selected.has(field.id)} selecting={selected.size > 0}
+              last={index === def.fields.length - 1} readOnly={readOnly} actions={actions}>
+              {open && (
+                <div className="px-4 pb-4">
+                  <FieldEditor
+                    field={field}
+                    index={index}
+                    def={def}
+                    readOnly={readOnly}
+                    onChange={(next) => change((d) => ({ ...d, fields: d.fields.map((f) => (f.id === field.id ? next : f)) }))}
+                    onDuplicate={() => step((d) => (field.type === "section" ? duplicateSection(d, field.id) : insertAfter(d, index, copyFields([field]))))}
+                    onRemove={() => remove(new Set([field.id]))}
+                    onMove={(delta) => step((d) => moveField(d, index, index + delta))}
+                    autoFocus={focusId === field.id}
+                  />
                 </div>
-                {open && (
-                  <div className="px-4 pb-4">
-                    <FieldEditor
-                      field={field}
-                      index={index}
-                      def={def}
-                      readOnly={readOnly}
-                      onChange={(next) => change((d) => ({ ...d, fields: d.fields.map((f) => (f.id === field.id ? next : f)) }))}
-                      onDuplicate={() => step((d) => (field.type === "section" ? duplicateSection(d, field.id) : insertAfter(d, index, copyFields([field]))))}
-                      onRemove={() => remove(new Set([field.id]))}
-                      onMove={(delta) => step((d) => moveField(d, index, index + delta))}
-                      autoFocus={focusId === field.id}
-                    />
-                  </div>
-                )}
-              </div>
-              {!readOnly && index < def.fields.length - 1 && (
-                <button type="button" onClick={() => add(index)} className="w-full text-[13px] text-muted-foreground hover:text-foreground py-1.5 opacity-0 hover:opacity-100 focus-visible:opacity-100 transition-opacity flex items-center justify-center gap-1">
-                  <Plus size={14} /> {t.insertHere}
-                </button>
               )}
-            </li>
+            </QuestionRow>
           );
         })}
       </ol>

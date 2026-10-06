@@ -1,7 +1,6 @@
-import { writeFileSync, mkdirSync } from "node:fs";
-import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
 import { signInCreator, smokeEnvironment } from "../../tests/e2e/support";
+import { browserSuite } from "./results";
 
 /**
  * Browser timings for the journeys in lib/journeys.ts, against a deployed,
@@ -20,7 +19,7 @@ const fixtures = {
   quizShareId: process.env.E2E_PERF_QUIZ_SHARE_ID,
   livePin: process.env.E2E_PERF_LIVE_PIN,
 };
-const samples: Record<string, number[]> = {};
+const suite = browserSuite("journeys-browser");
 
 test.describe.configure({ mode: "serial" });
 let page: Page;
@@ -32,16 +31,7 @@ test.beforeAll(async ({ browser }) => {
 });
 
 test.afterAll(async () => {
-  const metrics: Record<string, { value: number; unit: "ms" }> = {};
-  for (const [journey, values] of Object.entries(samples)) {
-    const sorted = [...values].sort((a, b) => a - b);
-    const at = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
-    metrics[`browser.${journey}.p50`] = { value: at(0.5), unit: "ms" };
-    metrics[`browser.${journey}.p75`] = { value: at(0.75), unit: "ms" };
-    metrics[`browser.${journey}.p95`] = { value: at(0.95), unit: "ms" };
-  }
-  mkdirSync(join("perf", "results"), { recursive: true });
-  writeFileSync(join("perf", "results", "journeys-browser.json"), JSON.stringify({ suite: "journeys-browser", failed: [], metrics }, null, 2) + "\n");
+  suite.write();
   await page?.close();
 });
 
@@ -52,7 +42,7 @@ async function usable(target: Page, journey: string, timeout = 30_000) {
     return entry ? (entry.detail as { ms: number }).ms : null;
   }, journey, { timeout });
   const ms = (await handle.jsonValue()) as number;
-  (samples[journey] ??= []).push(ms);
+  suite.add(`browser.${journey}`, ms);
   return ms;
 }
 

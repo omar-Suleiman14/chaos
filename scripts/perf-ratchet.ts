@@ -101,7 +101,7 @@ if (command === "check") {
 } else if (command === "update") {
   for (const suite of selected()) {
     const result = resultOf(suite);
-    if (!result) continue;
+    if (!result || !Object.keys(result.metrics).length) continue;
     if (result.failed.length) { console.error(`✗ ${suite}: not ratcheting while tests fail`); process.exitCode = 1; continue; }
     const baseline = baselineOf(suite), tolerance = { ...DEFAULT_TOLERANCE, ...baseline.tolerance };
     let lowered = 0, added = 0;
