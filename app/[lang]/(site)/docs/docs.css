@@ -17,7 +17,8 @@
 /* Header: brand, a Docs label, the search in the middle, actions on the right. */
 .docs-ui .site-nav { display: grid; grid-template-columns: 1fr minmax(0, 480px) 1fr; }
 .site-nav__brand { display: flex; align-items: center; gap: 14px; justify-self: start; }
-.docs-tag { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 7px; background: var(--s-subtle); color: var(--s-text); font-size: 14px; font-weight: 600; line-height: 1; text-decoration: none; }
+.docs-tag { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 7px; background: var(--s-subtle); color: var(--s-text); font-size: 14px; font-weight: 600; line-height: 1; text-decoration: none; transform: translateY(2px); }
+/* The nudge puts the label's baseline on the wordmark's: "chaos" is all lowercase, so it reads lower than its box. */
 .docs-header-search { min-width: 0; }
 .docs-header-search .docs-search__field { min-height: 40px; }
 .docs-ui .site-nav__actions { justify-self: end; }
@@ -38,6 +39,8 @@
   .docs-side:hover { scrollbar-color: color-mix(in srgb, var(--s-text) 18%, transparent) transparent; }
 }
 .docs-side__toggle { display: none; }
+/* Link text starts in line with the logo above; the hover pill reaches into the gutter. */
+.docs-nav { margin-inline-start: -10px; }
 .docs-nav ul { list-style: none; }
 .docs-nav a { display: block; padding: 6px 10px; border-radius: 7px; color: var(--s-soft); font-size: 14px; line-height: 1.4; text-decoration: none; transition: background 140ms, color 140ms; }
 .docs-nav a:hover { background: var(--s-subtle); color: var(--s-text); }
@@ -167,7 +170,7 @@
   .docs-side { position: static; max-height: none; overflow: visible; padding: 16px 0 0; }
   .docs-side__toggle { display: flex; align-items: center; justify-content: space-between; width: 100%; min-height: 44px; margin-top: 10px; padding: 0 12px; border: 1px solid var(--s-line); border-radius: 9px; background: var(--s-card); color: var(--s-text); font: inherit; font-size: 14px; font-weight: 550; cursor: pointer; }
   .docs-side__toggle[aria-expanded="true"] svg { transform: rotate(180deg); }
-  .docs-nav { display: none; margin-top: 8px; padding: 4px 0 8px; border-bottom: 1px solid var(--s-line); }
+  .docs-nav { display: none; margin-inline-start: 0; margin-top: 8px; padding: 4px 0 8px; border-bottom: 1px solid var(--s-line); }
   .docs-nav[data-open="true"] { display: block; }
   .docs-main { padding-top: 28px; }
   .docs-pager { grid-template-columns: 1fr; }

@@ -183,8 +183,13 @@ export function useConfirmed<T>(name: string | null, live: T | undefined): Confi
   return { data: showingCache ? cached : live, confirmed: false };
 }
 
-/** useQuery that renders the last-known result immediately and says whether it is confirmed. */
+/**
+ * useQuery that renders the last-known result immediately and says whether it is confirmed.
+ * In the workspace the query waits for Convex to authenticate the visitor: the page now renders
+ * before that (from the cache), and queries that require a sign-in throw when asked anonymously.
+ */
 export function useConfirmedQuery<Q extends FunctionReference<"query">>(query: Q, args: FunctionArgs<Q> | "skip" = {} as FunctionArgs<Q>): Confirmed<FunctionReturnType<Q>> {
-  const live = useQuery(query, args as never) as FunctionReturnType<Q> | undefined;
+  const zone = useContext(CacheZone);
+  const live = useQuery(query, (zone && !zone.authenticated ? "skip" : args) as never) as FunctionReturnType<Q> | undefined;
   return useConfirmed(args === "skip" ? null : `${getFunctionName(query)}:${JSON.stringify(convexToJson(args as Value))}`, live);
 }

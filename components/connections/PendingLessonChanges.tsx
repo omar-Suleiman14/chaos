@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { toast } from "@/lib/toast";
 import { useMutation } from "convex/react";
-import { useQuery } from "@/lib/convexCache";
+import { useConfirmedQuery } from "@/lib/confirmedQuery";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useCopy } from "@/lib/i18n";
@@ -36,7 +36,7 @@ const meta = (value: Doc<"lessons">["metadata"]): LessonMeta => ({ ...value, cur
 /** Owner review queue for connected-app lesson updates (lessonProposals). Hidden when empty. */
 export default function PendingLessonChanges() {
   const t = useCopy(copy);
-  const pending = useQuery(api.lessonProposals.listPending, {});
+  const pending = useConfirmedQuery(api.lessonProposals.listPending, {}).data;
   const accept = useMutation(api.lessonProposals.accept);
   const reject = useMutation(api.lessonProposals.reject);
   const [busy, setBusy] = useState<string | null>(null);

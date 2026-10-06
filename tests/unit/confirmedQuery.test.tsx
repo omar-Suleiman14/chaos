@@ -2,9 +2,9 @@ import { act, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/convex/_generated/api";
 
-const live = vi.hoisted(() => ({ value: undefined as unknown }));
+const live = vi.hoisted(() => ({ value: undefined as unknown, args: [] as unknown[] }));
 const auth = vi.hoisted(() => ({ isAuthenticated: true }));
-vi.mock("convex/react", () => ({ useQuery: () => live.value }));
+vi.mock("convex/react", () => ({ useQuery: (_query: unknown, args: unknown) => { live.args.push(args); return live.value; } }));
 vi.mock("@/lib/convexClient", () => ({ convex: null }));
 
 import { CacheZone, clearConfirmedCache, flushConfirmedWrites, setCacheScope, useCachePending, useConfirmedQuery } from "@/lib/confirmedQuery";
@@ -20,10 +20,19 @@ function CourseList() {
 const course = (id: string, title: string) => ({ id, title, description: "", lessons: 1, visibility: "public", published: true, updatedAt: 1, archived: false });
 const state = () => document.querySelector(".cache-state")!.getAttribute("data-cache-state");
 
-beforeEach(() => { live.value = undefined; auth.isAuthenticated = true; });
+beforeEach(() => { live.value = undefined; live.args = []; auth.isAuthenticated = true; });
 afterEach(() => { act(() => setCacheScope(null)); clearConfirmedCache(); localStorage.clear(); });
 
 describe("confirmed queries", () => {
+  it("asks Convex only once it has the sign-in, so queries that require one never throw", () => {
+    auth.isAuthenticated = false;
+    const view = render(<Courses />);
+    expect(live.args.every((args) => args === "skip")).toBe(true);
+    auth.isAuthenticated = true;
+    view.rerender(<Courses />);
+    expect(live.args.at(-1)).toEqual({});
+  });
+
   it("shows the cached copy faded at once, then the live result at full opacity", () => {
     act(() => setCacheScope("user_a"));
     live.value = [course("c1", "Anatomy"), course("c2", "Physiology")];

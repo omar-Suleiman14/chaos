@@ -7,11 +7,11 @@ import { useLearnActions } from "@/lib/learn/data";
 import { newQuizArgs } from "@/components/live/newGame";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "convex/react";
 import { formIntentHandlers, useQuery } from "@/lib/convexCache";
 import { deleteFormLocally, setFormStatusLocally, useOptimisticMutation } from "@/lib/optimistic";
-import { Archive, ArrowDown, ArrowUp, ArrowUpDown, BarChart3, BookOpen, Check, ChevronDown, Copy, ExternalLink, FileUp, Globe, FileText, GraduationCap, Layers, ListChecks, LayoutGrid, LayoutTemplate, List, ListFilter, Lock, Pencil, Plus, Radio, Search, Trash2, Trophy, X, Pin, PinOff } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, ArrowUpDown, BarChart3, BookOpen, Check, ChevronDown, Copy, ExternalLink, FileUp, Globe, FileText, GraduationCap, Layers, ListChecks, LayoutGrid, LayoutTemplate, List, ListFilter, Lock, Pencil, Plus, Radio, Trash2, Trophy, X, Pin, PinOff } from "lucide-react";
 import { useHostLive } from "@/components/live/HostLiveButton";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -71,10 +71,10 @@ const copy = {
     duplicate: "Duplicate", unpublish: "Unpublish", publish: "Publish", archive: "Archive", delete: "Delete",
     oldQuiz: "Old quiz", quiz: "Quiz", form: "Form",
     games: "Games", library: "Library", newForm: "Form", newFormHelp: "Surveys, sign-ups and feedback", newQuiz: "Quiz", newQuizHelp: "Marked for you; host it live any time", newLesson: "Lesson", newLessonHelp: "A page to teach one thing", newCourse: "Course", newCourseHelp: "Lessons in order, for people to take", newFlashcards: "Flashcard set", newFlashcardsHelp: "Cards to study with spaced review", untitledSet: "Untitled set", newMenu: "Create something new", creating: "Creating…", newLabel: "New", moreWays: "More ways to start", blank: "Blank", fromTemplate: "From a template", import: "Import",
-    dismissError: "Dismiss error", filterLibrary: "Filter library", searchLibrary: "Search library", search: "Search",
+    dismissError: "Dismiss error", filterLibrary: "Filter library",
     filterByStatus: "Filter by status", status: "Status", clearFilter: "Clear filter", sort: "Sort", viewOptions: "View options", gallery: "Gallery", list: "List",
     loadingLibrary: "Loading library...", nothingMatches: "Nothing matches", createFirst: "Create your first form",
-    tryAnother: "Try another name, or clear the search and filter.", startBlank: "Start with a blank page or a ready-made template.", templates: "Templates",
+    tryAnother: "Try another status, or clear the filter.", startBlank: "Start with a blank page or a ready-made template.", templates: "Templates",
     actionsFor: (title: string) => `Actions for ${title}`,
     templatesTitle: "Start from a template", templatesDesc: "Templates open as drafts you can change.",
     loadingTemplates: "Loading templates...", fields: (n: number) => `${n} field${n === 1 ? "" : "s"}`, yourTemplate: "Your template", use: "Use",
@@ -108,10 +108,10 @@ const copy = {
     duplicate: "كرّر", unpublish: "ألغِ النشر", publish: "انشر", archive: "أرشِف", delete: "احذف",
     oldQuiz: "اختبار قديم", quiz: "اختبار", form: "نموذج",
     games: "الألعاب", library: "المكتبة", newForm: "نموذج", newFormHelp: "استبيانات وتسجيل وآراء", newQuiz: "اختبار", newQuizHelp: "يُصحَّح تلقائيًا؛ استضفه مباشرة متى شئت", newLesson: "درس", newLessonHelp: "صفحة تشرح شيئًا واحدًا", newCourse: "دورة", newCourseHelp: "دروس مرتبة يأخذها الناس", newFlashcards: "مجموعة بطاقات", newFlashcardsHelp: "بطاقات للمذاكرة بالمراجعة المتباعدة", untitledSet: "مجموعة بلا عنوان", newMenu: "أنشئ شيئًا جديدًا", creating: "جارٍ الإنشاء…", newLabel: "جديد", moreWays: "طرق أخرى للبدء", blank: "فارغ", fromTemplate: "من قالب", import: "استيراد",
-    dismissError: "أخفِ الخطأ", filterLibrary: "تصفية المكتبة", searchLibrary: "ابحث في المكتبة", search: "بحث",
+    dismissError: "أخفِ الخطأ", filterLibrary: "تصفية المكتبة",
     filterByStatus: "تصفية حسب الحالة", status: "الحالة", clearFilter: "امسح التصفية", sort: "ترتيب", viewOptions: "خيارات العرض", gallery: "معرض", list: "قائمة",
     loadingLibrary: "جارٍ تحميل المكتبة...", nothingMatches: "لا نتائج", createFirst: "أنشئ أول نموذج لك",
-    tryAnother: "جرّب اسمًا آخر، أو امسح البحث والتصفية.", startBlank: "ابدأ بصفحة فارغة أو بقالب جاهز.", templates: "القوالب",
+    tryAnother: "جرّب حالة أخرى، أو امسح التصفية.", startBlank: "ابدأ بصفحة فارغة أو بقالب جاهز.", templates: "القوالب",
     actionsFor: (title: string) => `إجراءات ${title}`,
     templatesTitle: "ابدأ من قالب", templatesDesc: "تُفتح القوالب كمسودات يمكنك تعديلها.",
     loadingTemplates: "جارٍ تحميل القوالب...", fields: (n: number) => pluralForm("ar", n, { one: "حقل واحد", two: "حقلان", few: `${n} حقول`, many: `${n} حقلًا`, other: `${n} حقل` }), yourTemplate: "قالبك", use: "استخدم",
@@ -176,7 +176,6 @@ export default function CreatorLibrary() {
   const { create, busy } = useCreateForm();
   const hostLive = useHostLive();
   const [dialog, setDialog] = useState<"none" | "templates" | "import">("none");
-  const [search, setSearch] = useState("");
   const pathname = usePathname();
   const params = useSearchParams();
   const tabParam = params.get("tab");
@@ -208,7 +207,6 @@ export default function CreatorLibrary() {
   const [dir, setDir] = useState<SortDir>("desc");
   const setStatus = useOptimisticMutation(api.forms.setFormStatus, setFormStatusLocally);
   const [confirming, setConfirming] = useState<Row | null>(null);
-  const searchRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     try {
@@ -278,7 +276,6 @@ export default function CreatorLibrary() {
   }, [forms, quizzes, t]);
 
   const visible = useMemo(() => {
-    const q = search.trim().toLowerCase();
     // Ascending comparators; the direction flips them.
     const compare: Record<SortKey, (a: Row, b: Row) => number> = {
       count: (a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0),
@@ -291,9 +288,8 @@ export default function CreatorLibrary() {
     // Archived forms live on the Archive page, never in the library.
     return rows.filter((r) => r.status !== "archived" && (!statuses.length || statuses.includes(r.status)))
       .filter((r) => kind === "Forms" ? r.kind === "form" : r.kind !== "form")
-      .filter((r) => !q || r.title.toLowerCase().includes(q) || r.group.toLowerCase().includes(q))
       .sort(ordered);
-  }, [rows, search, kind, statuses, activeSort, dir]);
+  }, [rows, kind, statuses, activeSort, dir]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Row[]>();
@@ -425,11 +421,6 @@ export default function CreatorLibrary() {
       <div className="flex items-end gap-3 flex-wrap mb-6">
         <div className="flex-1 min-w-[260px] max-sm:basis-full max-sm:min-w-0"><WsTabs tabs={kinds} value={kind} onChange={setKind} label={t.filterLibrary} labels={t.kinds} icons={{ Forms: FileText, Quizzes: GraduationCap, Flashcards: Layers, Courses: BookOpen, Games: Trophy }} /></div>
         {kind !== "Games" && <>
-        <label className="ws-search !flex-none w-56 max-sm:!w-full max-sm:!max-w-none max-sm:order-last">
-          <span className="sr-only">{t.searchLibrary}</span>
-          <Search size={16} aria-hidden="true" />
-          <input ref={searchRef} value={search} onChange={(e) => setSearch(e.target.value)} placeholder={t.search} />
-        </label>
         <WsMenu label={t.filterByStatus} triggerClassName={`ws-btn ws-btn--ghost ws-filter-btn ${activeStatuses.length ? "ws-filter-btn--on" : ""}`}
           trigger={<><ListFilter size={16} aria-hidden="true" /><span>{activeStatuses.length ? `${t.status} · ${activeStatuses.map((s) => t.status_[s]).join(locale === "ar" ? "، " : ", ")}` : t.status}</span></>}>
           {() => (
@@ -463,13 +454,13 @@ export default function CreatorLibrary() {
       </div>
 
       <CacheState confirmed={confirmed || kind === "Courses" || kind === "Flashcards" || kind === "Games"}>
-      {kind === "Courses" ? <CoursesHub embedded view={view} search={search} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Flashcards" ? <FlashcardsHub embedded view={view} search={search} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
+      {kind === "Courses" ? <CoursesHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Flashcards" ? <FlashcardsHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
         <div className="ws-empty ws-page">
           <span className="ws-empty__art"><Plus size={24} /></span>
-          <h2 className="text-xl font-semibold">{search || statuses.length ? t.nothingMatches : t.createFirst}</h2>
-          <p className="text-muted-foreground max-w-sm">{search || statuses.length ? t.tryAnother : t.startBlank}</p>
+          <h2 className="text-xl font-semibold">{statuses.length ? t.nothingMatches : t.createFirst}</h2>
+          <p className="text-muted-foreground max-w-sm">{statuses.length ? t.tryAnother : t.startBlank}</p>
           {statuses.length > 0 && <button type="button" className="ws-btn mt-3" onClick={() => chooseStatuses([])}>{t.clearFilter}</button>}
-          {!search && !statuses.length && (
+          {!statuses.length && (
             <div className="flex gap-2 mt-3">
               {newMenu}
             </div>

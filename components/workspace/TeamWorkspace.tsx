@@ -12,6 +12,8 @@ import { toast } from "@/lib/toast";
 import { WsTabs } from "./primitives";
 import TeamFolder from "./TeamFolder";
 import { linkOrigin } from "@/lib/hosts";
+import { useConfirmed, useConfirmedQuery } from "@/lib/confirmedQuery";
+import { LibrarySkeleton, PageSkeleton } from "./Skeletons";
 
 const copy = {
   en: { back: "All teams", settings: "Team settings", resources: "Shared workspace", members: "Members", invites: "Invitations", activity: "Team activity", name: "Team name", save: "Save name", invite: "Create invitation", email: "Email (leave blank for a link)", inviteHelp: "Email invitations appear in the recipient’s Chaos account after email verification. You can also send them the link. Every link is single-use and expires in seven days.", link: "Invitation link", copy: "Copy link", copied: "Copied", revoke: "Revoke", admin: "Admin", member: "Member", owner: "Owner", transfer: "Transfer ownership", remove: "Remove", leave: "Leave team", share: "Share a resource", shareHelp: "Everyone on this team can edit shared content. Courses include their lessons; folders include supported content and subfolders. Publishing courses and lessons stays with the resource owner.", choose: "Choose one of your resources", shareButton: "Share with team", unshare: "Stop sharing", empty: "No shared resources yet.", loading: "Loading team…", unavailable: "This team is no longer available to you.", manage: "Settings", workspace: "Workspace", open: "Open folder", rename: "Rename", leaving: "Leave this team?", removal: "Remove this member and their shared resources from this team?", ownership: "Transfer ownership? You will become an administrator.", confirm: "Confirm", cancel: "Cancel", expired: "Expired", recent: "Recent resources (up to 200 of each type)", seats: "Active members", formerMember: "Former member", savedToast: "Saved", failedToast: "Could not save this change.", unsharedToast: "Stopped sharing", renamedToast: "Team renamed", revokedToast: "Invitation revoked", sharedToast: "Shared with the team" },
@@ -20,18 +22,19 @@ const copy = {
 type Action = { title: string; run: () => Promise<unknown> };
 export default function TeamWorkspace({ teamId }: { teamId: Id<"businessTeams"> }) {
   const { isAuthenticated } = useConvexAuth();
-  const t = useCopy(copy), teams = useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip");
+  const t = useCopy(copy), teams = useConfirmed("businessTeams.list", useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip")).data;
   const current = teams?.find(row => row.team._id === teamId);
-  if (!current) return <div className="ws-page ws-teams-page"><p role="status">{teams === undefined ? t.loading : t.unavailable}</p><Link href="/dashboard/teams">{t.back}</Link></div>;
+  if (teams === undefined) return <PageSkeleton label={t.loading} />;
+  if (!current) return <div className="ws-page ws-teams-page"><p role="status">{t.unavailable}</p><Link href="/dashboard/teams">{t.back}</Link></div>;
   return <TeamContents key={teamId} teamId={teamId} name={current.team.name} role={current.role} />;
 }
 function TeamContents({ teamId, name, role }: { teamId: Id<"businessTeams">; name: string; role: "owner" | "admin" | "member" }) {
   const t = useCopy(copy), router = useRouter(), manage = role !== "member";
-  const members = useQuery(api.businessTeams.members, { teamId }), resources = useQuery(api.businessTeams.resources, { teamId });
-  const candidates = useQuery(api.businessTeams.ownedResources);
-  const invites = useQuery(api.businessTeams.invitations, manage ? { teamId } : "skip");
-  const activity = useQuery(api.businessTeams.activity, { teamId });
-  const me = useQuery(api.quizFunctions.getCurrentUser);
+  const members = useConfirmedQuery(api.businessTeams.members, { teamId }).data, resources = useConfirmedQuery(api.businessTeams.resources, { teamId }).data;
+  const candidates = useConfirmedQuery(api.businessTeams.ownedResources).data;
+  const invites = useConfirmedQuery(api.businessTeams.invitations, manage ? { teamId } : "skip").data;
+  const activity = useConfirmedQuery(api.businessTeams.activity, { teamId }).data;
+  const me = useConfirmedQuery(api.quizFunctions.getCurrentUser).data;
   const rename = useMutation(api.businessTeams.rename), invite = useMutation(api.businessTeams.invite), revoke = useMutation(api.businessTeams.revokeInvite);
   const changeRole = useMutation(api.businessTeams.changeRole), remove = useMutation(api.businessTeams.removeMember);
   const share = useMutation(api.businessTeams.share), unshare = useMutation(api.businessTeams.unshare);
@@ -55,7 +58,7 @@ function TeamContents({ teamId, name, role }: { teamId: Id<"businessTeams">; nam
     <WsTabs label={t.settings} tabs={["workspace", "settings"]} labels={{ workspace: t.workspace, settings: t.manage }} value={tab} onChange={setTab} />
     {action && <section className="ws-team-card" role="alertdialog" aria-label={action.title} aria-modal="false"><h2>{action.title}</h2><div className="ws-team-actions"><button className="ws-btn ws-btn--primary" disabled={busy} onClick={() => void run(action.run)}>{t.confirm}</button><button className="ws-btn" disabled={busy} onClick={() => setAction(null)}>{t.cancel}</button></div></section>}
     {tab === "workspace" ? <>
-      <section className="ws-team-card"><h2>{t.resources}</h2><p>{t.shareHelp}</p>{resources === undefined ? <p role="status">{t.loading}</p> : resources.length === 0 ? <p>{t.empty}</p> : resources.map(resource => <div className="ws-team-row" key={resource.shareId}><div>{resource.asset.kind === "folder" ? <button className="ws-btn ws-btn--ghost" onClick={() => setFolderId(resource.asset.id as Id<"folders">)}>{resource.title}</button> : <Link href={resource.href}>{resource.title}</Link>}<small>{resource.asset.kind}</small></div>{(manage || resource.ownerId === me?.clerkId) && <button className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(() => unshare({ shareId: resource.shareId }), t.unsharedToast)}>{t.unshare}</button>}</div>)}</section>
+      <section className="ws-team-card"><h2>{t.resources}</h2><p>{t.shareHelp}</p>{resources === undefined ? <LibrarySkeleton label={t.loading} view="list" count={3} /> : resources.length === 0 ? <p>{t.empty}</p> : resources.map(resource => <div className="ws-team-row" key={resource.shareId}><div>{resource.asset.kind === "folder" ? <button className="ws-btn ws-btn--ghost" onClick={() => setFolderId(resource.asset.id as Id<"folders">)}>{resource.title}</button> : <Link href={resource.href}>{resource.title}</Link>}<small>{resource.asset.kind}</small></div>{(manage || resource.ownerId === me?.clerkId) && <button className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => void run(() => unshare({ shareId: resource.shareId }), t.unsharedToast)}>{t.unshare}</button>}</div>)}</section>
       {folderId && <TeamFolder key={folderId} folderId={folderId} onClose={() => setFolderId(null)} />}
       <section className="ws-team-card"><h2>{t.share}</h2><p>{t.recent}</p><form onSubmit={event => { event.preventDefault(); const selected = candidates?.find(row => `${row.asset.kind}:${row.asset.id}` === assetId); if (selected) void run(async () => { await share({ teamId, asset: selected.asset }); setAssetId(""); }, t.sharedToast); }}><ChaosSelect aria-label={t.choose} value={assetId} required disabled={busy} onChange={event => setAssetId(event.target.value)}><option value="">{t.choose}</option>{candidates?.filter(row => !resources?.some(resource => resource.asset.id === row.asset.id && resource.asset.kind === row.asset.kind)).map(row => <option key={`${row.asset.kind}:${row.asset.id}`} value={`${row.asset.kind}:${row.asset.id}`}>{row.title} ({row.asset.kind})</option>)}</ChaosSelect><button className="ws-btn ws-btn--primary" disabled={busy || !assetId}>{t.shareButton}</button></form></section>
     </> : <>

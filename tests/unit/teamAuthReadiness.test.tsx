@@ -20,8 +20,10 @@ beforeEach(() => { auth.ready = false; auth.queries.mockClear(); auth.push.mockC
 
 it("waits for Convex authentication before loading teams and invitations", () => {
   const view = render(<TeamsHome />);
+  // The page shows at once with a placeholder list; nothing that writes works until Convex has the sign-in.
   expect(screen.getByRole("status")).toHaveTextContent("Loading teams");
-  expect(screen.queryByRole("button", { name: "Create free Business team" })).toBeNull();
+  expect(auth.queries.mock.calls.every(([args]) => args === "skip")).toBe(true);
+  expect(screen.getByRole("button", { name: "Create free Business team" })).toBeDisabled();
   auth.ready = true;
   view.rerender(<TeamsHome />);
   expect(screen.getByRole("button", { name: "Create free Business team" })).toBeEnabled();
