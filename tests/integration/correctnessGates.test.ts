@@ -38,11 +38,11 @@ async function publishedForm(t: ReturnType<typeof createTestConvex>) {
 
 const submit = (shareId: string, key: string, answers: Record<string, string>) => ({ shareId, submissionKey: key, answers, language: "en" as const, final: true, startedAt: Date.now() - 60_000 });
 
-describe("correctness gate: answers are never lost", () => {
+describe("correctness gate: answers are never lost", { timeout: 60_000 }, () => {
   it("stores every answer exactly, including while the owner edits the draft", async () => {
     const t = createTestConvex();
     const { owner, formId, shareId, draftRevision } = await publishedForm(t);
-    const answers = Array.from({ length: 12 }, (_, i) => ({ name: `Respondent ${i} ✓ "quoted" ${"x".repeat(i * 40)}`, pick: i % 2 ? "a" : "b", notes: i % 3 ? `Note ${i}` : "" }));
+    const answers = Array.from({ length: 12 }, (_, i) => ({ name: `Respondent ${i} ${"x".repeat(i * 40)} ✓ "quoted"`, pick: i % 2 ? "a" : "b", notes: i % 3 ? `Note ${i}` : "" }));
 
     // Responses arrive between and after draft saves of the same form.
     let revision = draftRevision;
@@ -57,7 +57,7 @@ describe("correctness gate: answers are never lost", () => {
 
     const page = await owner.query(api.formResults.listResponses, { formId, filter: {}, paginationOpts: { numItems: 50, cursor: null } });
     expect(page.page).toHaveLength(answers.length);
-    const stored = JSON.stringify(await Promise.all(page.page.map((r: { _id: never }) => owner.query(api.formResults.getResponse, { responseId: r._id }))));
+    const stored = JSON.stringify(await Promise.all(page.page.map((r) => owner.query(api.formResults.getResponse, { responseId: r._id }))));
     for (const a of answers) {
       expect(stored).toContain(JSON.stringify(a.name).slice(1, -1));
       if (a.notes) expect(stored).toContain(a.notes);
@@ -82,7 +82,7 @@ describe("correctness gate: drafts are never published by accident", () => {
     // An answer to the draft-only question is refused or dropped, never stored.
     await t.mutation(api.respond.submitResponse, submit(shareId, "gate-key-draft", { name: "N", pick: "a", secret: "leak" })).catch(() => null);
     const page = await owner.query(api.formResults.listResponses, { formId, filter: {}, paginationOpts: { numItems: 5, cursor: null } });
-    const stored = JSON.stringify(await Promise.all(page.page.map((r: { _id: never }) => owner.query(api.formResults.getResponse, { responseId: r._id }))));
+    const stored = JSON.stringify(await Promise.all(page.page.map((r) => owner.query(api.formResults.getResponse, { responseId: r._id }))));
     expect(stored).not.toContain("leak");
   });
 

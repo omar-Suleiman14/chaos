@@ -87,6 +87,8 @@ export default defineSchema({
     createdAt: v.number(),
     expiresAt: v.optional(v.number()),
   }).index("by_username", ["username"]).index("by_ownerId", ["ownerId"]).index("by_expiresAt", ["expiresAt"]),
+  /** One row per username change, for the change rate limit; read only when changing, swept after the window. */
+  usernameChanges: defineTable({ ownerId: v.string(), at: v.number() }).index("by_ownerId_and_at", ["ownerId", "at"]).index("by_at", ["at"]),
   publicAuthorAssets: defineTable({ assetId: v.string(), table: v.union(v.literal("forms"), v.literal("quizzes"), v.literal("lessons"), v.literal("learnCollections")), ownerId: v.string() }).index("by_assetId", ["assetId"]).index("by_ownerId", ["ownerId"]),
 
   // ============ USERS ============
@@ -97,8 +99,6 @@ export default defineSchema({
     username: v.string(),
     /** True once the person picks a username; sign-in sync then stops overwriting it. */
     usernameChosen: v.optional(v.boolean()),
-    /** Recent username changes (newest last), for the change rate limit. */
-    usernameChangedAt: v.optional(v.array(v.number())),
     imageUrl: v.optional(v.string()),
     /** Number of currently public, indexed publications; maintained by authorIndex.ts. */
     publicAuthorAssets: v.optional(v.number()),

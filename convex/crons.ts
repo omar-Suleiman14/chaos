@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { deleteResponseRecord, deleteUploadRecord } from "./formResults";
-import { releaseExpiredAliases } from "./usernameModel";
+import { pruneUsernameChanges, releaseExpiredAliases } from "./usernameModel";
 
 const BATCH = 100;
 const DAY_MS = 86_400_000;
@@ -72,7 +72,10 @@ export const cleanup = internalMutation({
     more ||= windows.length === BATCH;
 
     // Old usernames that never appeared in a public link, after their grace period.
-    more ||= (await releaseExpiredAliases(ctx, BATCH)) === BATCH;
+    // Run before `||=`, which would skip the call once `more` is already true.
+    const released = await releaseExpiredAliases(ctx, BATCH);
+    const pruned = await pruneUsernameChanges(ctx, BATCH);
+    more ||= released === BATCH || pruned === BATCH;
 
     if (more) await ctx.scheduler.runAfter(1000, internal.crons.cleanup, {});
     return null;

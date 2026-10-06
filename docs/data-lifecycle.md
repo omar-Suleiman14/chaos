@@ -67,6 +67,7 @@ Pure age-based policy, run by Convex crons in small batches (`convex/crons.ts`, 
 | Expired team invitations | 30 days after expiry |
 | Lesson draft recovery copies | 90 days, except the newest copy per lesson |
 | Old usernames never used in a public link | 30 days after the change |
+| Username change records (rate limit) | 30 days |
 | Rollout state for flags no longer in `lib/flags.ts` | next daily sweep |
 | Consistency reports | newest 30 kept |
 

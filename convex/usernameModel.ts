@@ -63,9 +63,10 @@ async function usedInPublicLinks(ctx: ReadCtx, user: Doc<"users">, username: str
 export async function changeUsername(ctx: MutationCtx, user: Doc<"users">, next: string): Promise<Partial<Doc<"users">>> {
   if (next === user.username) return {};
   const now = Date.now();
-  const recent = (user.usernameChangedAt ?? []).filter((at) => at > now - USERNAME_CHANGE_WINDOW_MS);
+  const recent = await ctx.db.query("usernameChanges")
+    .withIndex("by_ownerId_and_at", (q) => q.eq("ownerId", user.clerkId).gt("at", now - USERNAME_CHANGE_WINDOW_MS)).take(USERNAME_CHANGE_LIMIT);
   if (recent.length >= USERNAME_CHANGE_LIMIT) {
-    const retry = new Date(recent[0] + USERNAME_CHANGE_WINDOW_MS).toISOString().slice(0, 10);
+    const retry = new Date(recent[0].at + USERNAME_CHANGE_WINDOW_MS).toISOString().slice(0, 10);
     throw new Error(`USERNAME_CHANGE_LIMIT: You can change your username ${USERNAME_CHANGE_LIMIT} times in 30 days. Try again on ${retry}.`);
   }
   const pinned = await usedInPublicLinks(ctx, user, user.username);
@@ -83,7 +84,15 @@ export async function changeUsername(ctx: MutationCtx, user: Doc<"users">, next:
     const old = await ctx.db.query("usernameAliases").withIndex("by_username", (q) => q.eq("username", user.username)).unique();
     if (old) await ctx.db.patch("usernameAliases", old._id, { expiresAt: now + RELEASED_ALIAS_GRACE_MS });
   }
-  return { username: next, usernameChosen: true, usernameChangedAt: [...recent, now] };
+  await ctx.db.insert("usernameChanges", { ownerId: user.clerkId, at: now });
+  return { username: next, usernameChosen: true };
+}
+
+/** Change records older than the rate-limit window; they no longer count for anything. */
+export async function pruneUsernameChanges(ctx: MutationCtx, limit: number): Promise<number> {
+  const old = await ctx.db.query("usernameChanges").withIndex("by_at", (q) => q.lt("at", Date.now() - USERNAME_CHANGE_WINDOW_MS)).take(limit);
+  for (const row of old) await ctx.db.delete("usernameChanges", row._id);
+  return old.length;
 }
 
 /** Releases expired aliases nobody holds any more; returns how many were removed. */

@@ -142,10 +142,13 @@ describe("custom links", () => {
     // Card customisation shares the limit.
     await expect(owner.mutation(api.memberCards.customizeCard, { username: "carol-card" })).rejects.toThrow(/USERNAME_CHANGE_LIMIT/);
     await t.run(async (ctx) => {
-      const user = (await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", creatorIdentity.subject)).unique())!;
-      await ctx.db.patch("users", user._id, { usernameChangedAt: user.usernameChangedAt!.map((at) => at - USERNAME_CHANGE_WINDOW_MS) });
+      const changes = await ctx.db.query("usernameChanges").withIndex("by_ownerId_and_at", (q) => q.eq("ownerId", creatorIdentity.subject)).collect();
+      for (const c of changes) await ctx.db.patch("usernameChanges", c._id, { at: c.at - USERNAME_CHANGE_WINDOW_MS - 1000 });
     });
     expect(await owner.mutation(api.links.chooseUsername, { username: "carol-next" })).toBe("carol-next");
+    // Records past the window are swept.
+    await t.mutation(internal.crons.cleanup, {});
+    expect(await t.run((ctx) => ctx.db.query("usernameChanges").collect())).toHaveLength(1);
   });
 
   it("caps how many old usernames an account keeps", async () => {
