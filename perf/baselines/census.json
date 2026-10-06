@@ -25,6 +25,26 @@
       "budget": 1,
       "unit": "count"
     },
+    "giantLesson.appendBlock.blockBodies": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "giantLesson.appendBlock.renders": {
+      "budget": 1083,
+      "unit": "count"
+    },
+    "giantLesson.domNodes": {
+      "budget": 4793,
+      "unit": "count"
+    },
+    "giantLesson.mount.blockBodies": {
+      "budget": 500,
+      "unit": "count"
+    },
+    "giantLesson.mount.renders": {
+      "budget": 5074,
+      "unit": "count"
+    },
     "lesson.appendBlock.blockBodies": {
       "budget": 1,
       "unit": "count"

@@ -838,18 +838,21 @@ html.dark:has(.workspace-ui), html.dark:has(.workspace-ui) body { background: #1
 .ws-skeleton {
   display: block; border-radius: 10px;
   background: linear-gradient(90deg, var(--ws-hover) 0%, var(--ws-active) 50%, var(--ws-hover) 100%) 0 0 / 200% 100%;
-  animation: ws-shimmer 1.2s ease-in-out infinite;
+  animation: ws-skeleton-in 150ms ease-out 200ms both, ws-shimmer 1.2s ease-in-out infinite;
 }
+/* A load that finishes within the delay (200 ms, SKELETON_DELAY_MS in components/workspace/Skeletons.tsx)
+   never shows a skeleton; the box still holds the space. */
+@keyframes ws-skeleton-in { from { opacity: 0; } to { opacity: 1; } }
 .ws-skeleton--panel { min-height: 420px; }
 .ws-skeleton--line { height: 14px; border-radius: 6px; }
 .ws-skeleton--title { height: 34px; width: 40%; border-radius: 8px; }
 /* Same box as .ws-card: 150px thumbnail, then a title and a meta line. */
-.ws-skeleton-card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--ws-line); border-radius: 10px; background: var(--ws-card); }
+.ws-skeleton-card { display: flex; flex-direction: column; overflow: hidden; border: 1px solid var(--ws-line); border-radius: 10px; background: var(--ws-card); animation: ws-skeleton-in 150ms ease-out 200ms both; }
 .ws-skeleton-card .ws-skeleton--thumb { height: 150px; border-radius: 0; border-bottom: 1px solid var(--ws-line); }
 .ws-skeleton-card__body { display: grid; gap: 10px; padding: 16px 16px 18px; }
 @keyframes ws-shimmer { from { background-position: 100% 0; } to { background-position: -100% 0; } }
-@media (prefers-reduced-motion: reduce) { .ws-skeleton { animation: none; } }
-.reduce-motion .ws-skeleton { animation: none; }
+@media (prefers-reduced-motion: reduce) { .ws-skeleton, .ws-skeleton-card { animation: ws-skeleton-in 0s 200ms both; } }
+.reduce-motion :is(.ws-skeleton, .ws-skeleton-card) { animation: ws-skeleton-in 0s 200ms both; }
 /* ── Select: our dropdown (components/workspace/Select.tsx). A quiet field with one chevron;
    the list is the same glass menu as every other popup. ── */
 .ws-select {

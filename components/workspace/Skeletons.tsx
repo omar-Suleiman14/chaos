@@ -1,9 +1,34 @@
+"use client";
+
+import { useEffect } from "react";
+import posthog from "@/lib/analytics";
+
 /**
  * Placeholders shaped like the content they stand in for, so the page doesn't jump when data
  * arrives. They announce themselves once to screen readers and are otherwise hidden from them.
  */
 
+/**
+ * Skeletons stay invisible for this long (the ws-skeleton-in delay in app/workspace.css), so a load
+ * that finishes sooner shows nothing at all. Tune it from the `loading_state` durations below.
+ */
+export const SKELETON_DELAY_MS = 200;
+
+/** Reports how long each loading state lasted, so the delay follows real load times. */
+function useLoadingTiming(surface: string) {
+  useEffect(() => {
+    const start = performance.now();
+    return () => {
+      const ms = Math.round(performance.now() - start);
+      // A warm reload hides skeletons behind the cached copy (lib/confirmedQuery.ts).
+      const warm = document.documentElement.hasAttribute("data-ws-warm");
+      posthog.captureLater("loading_state", { surface, ms, warm, shown: !warm && ms >= SKELETON_DELAY_MS });
+    };
+  }, [surface]);
+}
+
 export function LibrarySkeleton({ label, view = "gallery", count = 6 }: { label: string; view?: "gallery" | "list"; count?: number }) {
+  useLoadingTiming(`library-${view}`);
   return (
     <div role="status" aria-busy="true">
       <span className="sr-only">{label}</span>
@@ -30,6 +55,7 @@ export function LibrarySkeleton({ label, view = "gallery", count = 6 }: { label:
 
 /** Stand-in for a whole workspace page while its code or data loads (see app/dashboard/loading.tsx). */
 export function PageSkeleton({ label }: { label: string }) {
+  useLoadingTiming("page");
   return (
     <div role="status" aria-busy="true">
       <span className="sr-only">{label}</span>

@@ -42,8 +42,13 @@
       "unit": "count"
     },
     "source.selectors": {
-      "budget": 3377,
-      "unit": "count"
+      "budget": 3378,
+      "unit": "count",
+      "raised": {
+        "from": 3377,
+        "reason": "Skeleton cards fade in after 200 ms like skeleton lines, also under reduced motion",
+        "at": "2026-10-06"
+      }
     },
     "source.transitionAll": {
       "budget": 0,

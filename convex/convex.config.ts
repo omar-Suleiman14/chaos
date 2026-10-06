@@ -21,6 +21,10 @@ const app = defineApp({
     CHAOS_API_WRITE_RATE_PER_MINUTE: v.optional(v.string()),
     /** IndexNow key (8-128 of a-z, A-Z, 0-9, -). Same value as the Next.js INDEXNOW_KEY. Unset disables submissions. */
     INDEXNOW_KEY: v.optional(v.string()),
+    /** GitHub token allowed to open issues, for the nightly consistency check (convex/consistency.ts). Unset keeps reports in Convex only. */
+    CONSISTENCY_GITHUB_TOKEN: v.optional(v.string()),
+    /** owner/repo that receives consistency issues, e.g. omarsuleiman/chaos. */
+    CONSISTENCY_GITHUB_REPO: v.optional(v.string()),
   },
 });
 

@@ -1,5 +1,6 @@
 import type { PostHog } from "posthog-js";
 import { cleanAnalyticsPath } from "@/lib/analyticsPath";
+import { onJourney } from "@/lib/journeys";
 
 /**
  * PostHog, loaded after the page is interactive instead of in the first-load bundle
@@ -90,19 +91,25 @@ export function scheduleAnalytics() {
   else window.addEventListener("load", start, { once: true });
 }
 
-function run(call: Call) {
+/** `load: false` queues the call for when PostHog loads on its own schedule instead of loading it now. */
+function run(call: Call, load = true) {
   if (!enabled()) return;
   if (sdk) return call(sdk);
   if (queue.length < MAX_QUEUED) queue.push(call);
-  void loadAnalytics();
+  if (load) void loadAnalytics();
 }
 
 const posthog = {
   capture: (...args: Parameters<PostHog["capture"]>) => run((p) => p.capture(...args)),
+  /** For timings: sent once PostHog has loaded after the page is idle, never pulling it into a load. */
+  captureLater: (...args: Parameters<PostHog["capture"]>) => run((p) => p.capture(...args), false),
   captureException: (...args: Parameters<PostHog["captureException"]>) => run((p) => p.captureException(...args)),
   identify: (...args: Parameters<PostHog["identify"]>) => run((p) => p.identify(...args)),
   /** Forgets a signed-out person, only if someone was identified on this browser. */
   resetIfIdentified: () => run((p) => { if (p._isIdentified?.()) p.reset(); }),
 };
+
+// Real-user journey timings: the same marks the browser benchmarks read (lib/journeys.ts).
+if (typeof window !== "undefined") onJourney((journey, ms) => posthog.captureLater("journey_usable", { journey, ms }));
 
 export default posthog;

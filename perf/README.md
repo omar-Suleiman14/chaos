@@ -49,7 +49,8 @@ detail):
 needs. `perf/browser/journeys.spec.ts` times the same marks in Chromium
 (`.github/workflows/perf-journeys.yml`); it runs against the E2E environment
 only and needs `E2E_PERF_FORM_ID`, `E2E_PERF_COURSE_ID`, `E2E_PERF_LESSON_ID`,
-`E2E_PERF_QUIZ_SHARE_ID` and `E2E_PERF_LIVE_PIN` repository variables for the
+`E2E_PERF_QUIZ_SHARE_ID` and `E2E_PERF_LIVE_PIN` repository variables (and
+`E2E_PERF_GIANT_LESSON_ID`, a 500-block lesson, for the giant-lesson render) for the
 content journeys. Missing fixtures skip a journey; they never fake one.
 
 ## Ratchets
@@ -139,3 +140,38 @@ the confirmed result then replaces the copy whole.
   when a copy exists, so a warm reload goes from blank to content.
 - Sidebar destinations prefetch their whole page (`IntentLink eager`), so
   switching pages does not stop at the loading skeleton.
+
+## Nightly run
+
+`.github/workflows/perf-nightly.yml` runs every night on main: `pnpm perf`
+(large forms, the 500-block giant lesson in the census, Convex journeys),
+stylesheets, bundles, the MCP suites and, when the E2E environment is
+configured, the Chromium journeys, keystrokes and render health (layout shift,
+JS heap after garbage collection, DOM nodes). A failure opens an issue
+labelled `perf-nightly`, or comments on the open one; the next green night
+closes it.
+
+## Off the main thread
+
+Web Workers are used only where profiling showed a long task. Measured on a
+desktop (phones are several times slower):
+
+| Operation | Before | Now |
+|---|---|---|
+| XLSX export, 5,000 × 40 | 207 ms | worker (`lib/exportFile.ts`); ~20 ms to copy rows |
+| XLSX export, 20,000 × 40 | 2.4 s | worker; ~80 ms to copy rows |
+| CSV / JSON export, 20,000 × 40 | 750 / 414 ms | worker |
+| Docs search, per keystroke | 36–43 ms | 1 ms: entries tokenised once, not per key |
+| Palette index, docs | 75–90 ms | 10–16 ms: ASCII fast path in `lib/search.ts` |
+
+Search did not need a worker once the repeated work was gone. Lesson code
+blocks are not syntax-highlighted and Markdown is not transformed on the
+client, so there is nothing there to move.
+
+## Loading states
+
+Skeletons stay invisible for 200 ms (the `ws-skeleton-in` delay in app/workspace.css)
+and then fade in, so a fast load shows no skeleton at all; a warm reload shows
+the cached copy instead. `loading_state` (surface, ms, shown) and
+`journey_usable` (journey, ms) events go to PostHog once it has loaded, so the
+delay can be tuned from real load times rather than guesses.

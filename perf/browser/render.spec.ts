@@ -1,6 +1,6 @@
 import { expect, test, type Browser, type BrowserContext, type Page } from "@playwright/test";
 import { signInCreator, smokeEnvironment } from "../../tests/e2e/support";
-import { browserSuite, chromeWork } from "./results";
+import { browserSuite, chromeWork, memory } from "./results";
 import { instrument, type Probe } from "./instrument";
 
 /**
@@ -15,6 +15,7 @@ import { instrument, type Probe } from "./instrument";
  * - Layout shift, with the elements that moved.
  * - Animation frames: main-thread time per frame against 60 Hz and 120 Hz
  *   budgets (perf/browser/instrument.ts).
+ * - Memory once settled: JS heap after garbage collection and DOM nodes.
  *
  * Public surfaces need only PLAYWRIGHT_BASE_URL and their fixture id;
  * dashboard and editor also need the creator login. Missing fixtures skip.
@@ -23,6 +24,8 @@ const fixtures = {
   formId: process.env.E2E_PERF_FORM_ID,
   courseId: process.env.E2E_PERF_COURSE_ID,
   lessonId: process.env.E2E_PERF_LESSON_ID,
+  /** A lesson at the 500-block limit (perf/lib/content.ts largeLessonBlocks). */
+  giantLessonId: process.env.E2E_PERF_GIANT_LESSON_ID,
   quizShareId: process.env.E2E_PERF_QUIZ_SHARE_ID,
   livePin: process.env.E2E_PERF_LIVE_PIN,
 };
@@ -52,6 +55,7 @@ async function measure(page: Page, probe: Probe, s: Surface) {
   const idle = await probe.renders(idleFrom);
   const shift = await probe.layoutShift();
   const subs = probe.subscriptions();
+  const mem = await memory(page);
 
   const m = `render.${s.name}`;
   suite.add(`${m}.load.renders`, rendered.renders, "count");
@@ -63,6 +67,8 @@ async function measure(page: Page, probe: Probe, s: Surface) {
   suite.add(`${m}.load.layouts`, load.layouts, "count");
   suite.add(`${m}.load.layoutMs`, load.layoutMs);
   suite.add(`${m}.cls.milli`, Math.round(shift.cls * 1000), "count");
+  suite.add(`${m}.heapBytes`, mem.heapBytes, "bytes");
+  suite.add(`${m}.domNodes`, mem.domNodes, "count");
   test.info().annotations.push(
     { type: `${s.name} spike`, description: JSON.stringify(rendered.spikeTop) },
     { type: `${s.name} subscriptions`, description: subs.join(", ") },
@@ -138,6 +144,8 @@ surfaceTest({ name: "card", url: "/card", ready: (page) => page.locator(".author
   } });
 surfaceTest({ name: "lesson", skip: !fixtures.lessonId && "E2E_PERF_LESSON_ID not set", url: `/learn/${fixtures.lessonId}`, ready: usable("lesson.read"),
   interact: async (page) => { await page.mouse.wheel(0, 2400); await page.waitForTimeout(300); await page.mouse.wheel(0, -2400); } });
+surfaceTest({ name: "giantLesson", skip: !fixtures.giantLessonId && "E2E_PERF_GIANT_LESSON_ID not set", url: `/learn/${fixtures.giantLessonId}`, ready: usable("lesson.read"),
+  interact: async (page) => { for (let i = 0; i < 4; i++) { await page.mouse.wheel(0, 6000); await page.waitForTimeout(250); } } });
 surfaceTest({ name: "course", skip: !fixtures.courseId && "E2E_PERF_COURSE_ID not set", url: `/learn/courses/${fixtures.courseId}`, ready: usable("course.modules") });
 surfaceTest({ name: "flow", skip: !fixtures.quizShareId && "E2E_PERF_QUIZ_SHARE_ID not set", url: `/f/${fixtures.quizShareId}`,
   ready: async (page) => {

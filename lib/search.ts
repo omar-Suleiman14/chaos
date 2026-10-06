@@ -32,9 +32,19 @@ export interface SearchResult<T extends SearchDoc = SearchDoc> {
 
 interface Token { t: string; s: number; e: number }
 
+const folded = new Map<string, string>();
+
 /** One character of Arabic or Latin text reduced to its search form ("" drops it). */
 function foldChar(ch: string): string {
   const code = ch.charCodeAt(0);
+  // Plain ASCII needs only lowercasing; everything else is folded once and remembered.
+  if (code < 0x80) return code >= 65 && code <= 90 ? String.fromCharCode(code + 32) : ch;
+  let out = folded.get(ch);
+  if (out === undefined) folded.set(ch, (out = foldSlow(ch, code)));
+  return out;
+}
+
+function foldSlow(ch: string, code: number): string {
   // Tashkeel, dagger alif and tatweel.
   if ((code >= 0x064b && code <= 0x065f) || code === 0x0670 || code === 0x0640) return "";
   switch (code) {

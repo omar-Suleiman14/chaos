@@ -7,8 +7,8 @@ import { Braces, Download, FileSpreadsheet, FileText } from "lucide-react";
 import posthog from "@/lib/analytics";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { csvCell } from "@/convex/formLogic";
-import { buildXlsx, downloadBlob, safeFilename } from "@/lib/xlsx";
+import { downloadBlob, safeFilename } from "@/lib/xlsx";
+import { EXPORT_MIME, exportFile } from "@/lib/exportFile";
 import { useCopy } from "@/lib/i18n";
 import Link from "next/link";
 import { WsSwitch } from "@/components/workspace/primitives";
@@ -50,7 +50,7 @@ export function ExportTab({ formId, title }: { formId: Id<"forms">; title: strin
       const name = `${safeFilename(title)}-responses`;
       if (kind === "json") {
         const body = { format: "chaos-responses", formatVersion: 1, form: title, exportedAt: new Date().toISOString(), columns, hiddenFields: hidden, responses: rows };
-        downloadBlob(JSON.stringify(body, null, 2), `${name}.json`, "application/json");
+        downloadBlob(await exportFile({ kind, value: body }), `${name}.json`, EXPORT_MIME.json);
         posthog.capture("form_responses_exported", { format: kind, includes_partial: includePartial, includes_spam: includeSpam });
         return;
       }
@@ -59,8 +59,7 @@ export function ExportTab({ formId, title }: { formId: Id<"forms">; title: strin
         r.id, r.receiptCode, r.status, new Date(r.submittedAt).toISOString(), r.language, r.durationSeconds ?? "", r.version, r.ending ?? "", r.quizScore ?? "", r.quizMaxScore ?? "", r.tags.join(", "), r.reviewed ? "yes" : "no", r.edited ? "yes" : "no", r.editedAt ? new Date(r.editedAt).toISOString() : "",
         ...(includeSpam ? [r.spam ? "yes" : "no"] : []), ...columns.map((c) => r.cells[c.key] ?? ""), ...hidden.map((h) => r.hidden?.[h] ?? ""),
       ]);
-      if (kind === "xlsx") downloadBlob(buildXlsx([header, ...table]), `${name}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      else downloadBlob("﻿" + [header, ...table].map((row) => row.map(csvCell).join(",")).join("\r\n"), `${name}.csv`, "text/csv;charset=utf-8");
+      downloadBlob(await exportFile({ kind, rows: [header, ...table] }), `${name}.${kind}`, EXPORT_MIME[kind]);
       posthog.capture("form_responses_exported", { format: kind, includes_partial: includePartial, includes_spam: includeSpam });
     } catch (err) {
       toast.error(err, { fallback: t.exportFailed });

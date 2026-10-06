@@ -2,7 +2,7 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import type { Page } from "@playwright/test";
 
-type Unit = "ms" | "count";
+type Unit = "ms" | "count" | "bytes";
 
 /** Collects samples per metric and writes perf/results/<suite>.json in the ratchet's format. */
 export function browserSuite(suite: string) {
@@ -14,13 +14,23 @@ export function browserSuite(suite: string) {
       for (const [name, { unit, values }] of Object.entries(samples)) {
         const sorted = [...values].sort((a, b) => a - b);
         const at = (q: number) => sorted[Math.min(sorted.length - 1, Math.floor(q * sorted.length))];
-        if (unit === "count") metrics[name] = { value: at(0.5), unit };
+        if (unit !== "ms") metrics[name] = { value: at(0.5), unit };
         else for (const [label, q] of [["p50", 0.5], ["p75", 0.75], ["p95", 0.95]] as const) metrics[`${name}.${label}`] = { value: Math.round(at(q) * 10) / 10, unit };
       }
       mkdirSync(join("perf", "results"), { recursive: true });
       writeFileSync(join("perf", "results", `${suite}.json`), JSON.stringify({ suite, failed: [], metrics }, null, 2) + "\n");
     },
   };
+}
+
+/** Memory once the page has settled: JS heap after a full garbage collection, and live DOM nodes. */
+export async function memory(page: Page) {
+  const cdp = await page.context().newCDPSession(page);
+  await cdp.send("HeapProfiler.collectGarbage");
+  await cdp.send("Performance.enable");
+  const metrics = Object.fromEntries((await cdp.send("Performance.getMetrics")).metrics.map((m) => [m.name, m.value]));
+  await cdp.detach();
+  return { heapBytes: Math.round(metrics.JSHeapUsedSize ?? 0), domNodes: metrics.Nodes ?? 0 };
 }
 
 /** Chromium's own counters (style recalculations, layouts, script time) around `fn`. */

@@ -126,6 +126,33 @@ describe("lesson player", () => {
   });
 });
 
+describe("giant lesson", () => {
+  it("500 blocks (the limit): mount, then an agent appending a block", async (ctx) => {
+    const lesson = lessonWith(500);
+    server.set("learnFrontend:publicLesson", lesson);
+    let at = mark();
+    const view = render(<LocaleProvider initial="en"><LiveLesson /></LocaleProvider>);
+    await waitFor(() => expect(view.container.querySelector("[data-block-id='b499']")).not.toBeNull());
+    const mount = since(at);
+    const mountBodies = bodies(at);
+
+    at = mark();
+    await act(async () => { server.push("learnFrontend:publicLesson", { ...lesson, draft: { ...lesson.draft, content: [...(lesson.draft.content as Block[]), paragraph(500)], updatedAt: 2 } }); });
+    await waitFor(() => expect(view.container.querySelector("[data-block-id='b500']")).not.toBeNull());
+    const append = since(at);
+    const appendBodies = bodies(at);
+
+    recordPerf(ctx, {
+      "giantLesson.mount.renders": mount.renders,
+      "giantLesson.mount.blockBodies": mountBodies,
+      "giantLesson.domNodes": view.container.querySelectorAll("*").length,
+      "giantLesson.appendBlock.renders": append.renders,
+      "giantLesson.appendBlock.blockBodies": appendBodies,
+    });
+    expect(appendBodies).toBe(1);
+  });
+});
+
 describe("Live", () => {
   it("player: question on screen, clock ticks, another player's answer", async (ctx) => {
     vi.useFakeTimers({ toFake: ["setTimeout", "setInterval", "Date", "requestAnimationFrame", "performance"] });

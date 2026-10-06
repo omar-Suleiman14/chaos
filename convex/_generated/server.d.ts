@@ -37,6 +37,8 @@ type Env = {
   readonly CHAOS_SUPPORT_EMAIL: string | undefined;
   readonly CHAOS_WEBHOOK_ALLOW_LOCALHOST: string | undefined;
   readonly CHAOS_WEBHOOK_KEY: string | undefined;
+  readonly CONSISTENCY_GITHUB_REPO: string | undefined;
+  readonly CONSISTENCY_GITHUB_TOKEN: string | undefined;
   readonly INDEXNOW_KEY: string | undefined;
 };
 

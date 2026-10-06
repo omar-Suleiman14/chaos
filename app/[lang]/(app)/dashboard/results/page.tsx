@@ -25,9 +25,9 @@ import {
 } from "lucide-react";
 import { Id } from "@/convex/_generated/dataModel";
 import LoadingState from "@/components/LoadingState";
-import { csvCell } from "@/convex/formLogic";
 import { parseMultiAnswer } from "@/convex/grading";
-import { buildXlsx, downloadBlob, safeFilename } from "@/lib/xlsx";
+import { downloadBlob, safeFilename } from "@/lib/xlsx";
+import { EXPORT_MIME, exportFile } from "@/lib/exportFile";
 import { toast } from "@/lib/toast";
 import { useCopy, useLocale } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
@@ -219,7 +219,7 @@ function QuizDetailView({ quizId }: { quizId: Id<"quizzes"> }) {
     ? completed.reduce((sum, s) => sum + (s.totalPoints > 0 ? (s.score / s.totalPoints) * 100 : 0), 0) / completed.length
     : 0;
 
-  const handleExport = (kind: "csv" | "xlsx") => {
+  const handleExport = async (kind: "csv" | "xlsx") => {
     // Build ordered question list from enhanced stats (or fall back to answer order)
     const qList = enhanced?.questionStats ?? [];
 
@@ -254,13 +254,8 @@ function QuizDetailView({ quizId }: { quizId: Id<"quizzes"> }) {
 
     const rows = [header, ...dataRows];
     const name = `${safeFilename(quiz?.title || "quiz")}-results`;
-    if (kind === "xlsx") {
-      downloadBlob(buildXlsx(rows), `${name}.xlsx`, "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-      return;
-    }
-    // csvCell neutralises spreadsheet formulas in respondent-supplied names.
-    const csv = "﻿" + rows.map((r) => r.map(csvCell).join(",")).join("\r\n");
-    downloadBlob(csv, `${name}.csv`, "text/csv;charset=utf-8");
+    // CSV cells are formula-neutralised (csvCell) inside exportFile.
+    downloadBlob(await exportFile({ kind, rows }), `${name}.${kind}`, EXPORT_MIME[kind]);
   };
 
   const withheld = quiz?.resultRelease === "manual" && quiz.resultsReleasedAt === undefined;

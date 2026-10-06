@@ -56,14 +56,23 @@ function snippetFor(text: string, tokens: Token[], words: string[]): SearchSegme
   return segments;
 }
 
+interface Indexed { entry: DocSearchEntry; title: Token[]; section: Token[]; body: Token[]; normTitle: string }
+// Tokenised once per entry list, not on every keystroke.
+const indexes = new WeakMap<DocSearchEntry[], Indexed[]>();
+function indexFor(entries: DocSearchEntry[]): Indexed[] {
+  let index = indexes.get(entries);
+  if (!index) {
+    index = entries.map((entry) => ({ entry, title: tokenise(entry.title), section: tokenise(entry.section), body: tokenise(entry.text), normTitle: normalise(entry.title) }));
+    indexes.set(entries, index);
+  }
+  return index;
+}
+
 export function searchDocs(entries: DocSearchEntry[], query: string, limit = 8): SearchResult[] {
   const words = queryWords(query);
   if (!words.length) return [];
   const results: SearchResult[] = [];
-  for (const entry of entries) {
-    const title = tokenise(entry.title);
-    const section = tokenise(entry.section);
-    const body = tokenise(entry.text);
+  for (const { entry, title, section, body, normTitle } of indexFor(entries)) {
     let score = 0;
     let all = true;
     for (const word of words) {
@@ -74,7 +83,7 @@ export function searchDocs(entries: DocSearchEntry[], query: string, limit = 8):
       else { all = false; break; }
     }
     if (!all) continue;
-    if (normalise(entry.title).startsWith(words[0])) score += 4;
+    if (normTitle.startsWith(words[0])) score += 4;
     // Whole articles rank just above their own headings when both match equally.
     if (!entry.href.includes("#")) score += 1;
     results.push({ entry, score, snippet: snippetFor(entry.text, body, words) });
