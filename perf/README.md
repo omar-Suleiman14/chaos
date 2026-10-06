@@ -59,6 +59,15 @@ content journeys. Missing fixtures skip a journey; they never fake one.
 - A budget whose metric disappears fails the check; deleting a measurement is
   not a way to pass.
 
+## Subscriptions are correctness
+
+Budgets count subscriptions and reads so that waste shows up, not so that
+live data gets cut. Never drop or narrow a subscription only to improve a
+metric: `tests/integration/reactivity.test.ts` checks that deletes, renames,
+publications and archives reach every open view, and it must keep passing.
+If a view needs the data, its subscription stays and the budget is raised
+with a reason.
+
 ## Correctness before speed
 
 A faster editor that loses answers, a faster publication that exposes drafts or
