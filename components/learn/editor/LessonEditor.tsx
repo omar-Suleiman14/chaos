@@ -5,6 +5,7 @@ import { contentDirection } from "@/lib/learn/direction";
 import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useUsableMark } from "@/lib/journeys";
 import { filterSuggestionItems, insertOrUpdateBlockForSlashMenu } from "@blocknote/core/extensions";
 import * as locales from "@blocknote/core/locales";
 import {
@@ -106,6 +107,8 @@ export default function LessonEditor(props: LessonEditorProps) {
   }, [locale]);
 
   useEffect(() => { props.onReady?.(editor); }, [editor]); // eslint-disable-line react-hooks/exhaustive-deps -- once per editor
+  // Mounted with its content means typeable: the lesson editor journey ends here.
+  useUsableMark("lesson.edit", true);
 
   const bridge = useMemo<LessonEditorBridge>(() => ({
     sources: props.sources, readOnly: false,

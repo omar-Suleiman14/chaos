@@ -1,6 +1,6 @@
 import type { PostHog } from "posthog-js";
 import { cleanAnalyticsPath } from "@/lib/analyticsPath";
-import { onJourney } from "@/lib/journeys";
+import { onJourney, onJourneyStep } from "@/lib/journeys";
 
 /**
  * PostHog, loaded after the page is interactive instead of in the first-load bundle
@@ -110,6 +110,10 @@ const posthog = {
 };
 
 // Real-user journey timings: the same marks the browser benchmarks read (lib/journeys.ts).
-if (typeof window !== "undefined") onJourney((journey, ms) => posthog.captureLater("journey_usable", { journey, ms }));
+// p50/p75/p95 per journey come from these events (scripts/production-health.ts).
+if (typeof window !== "undefined") {
+  onJourney((journey, ms, origin) => posthog.captureLater("journey_usable", { journey, ms, origin }));
+  onJourneyStep((journey, step, ms) => posthog.captureLater("journey_step", { journey, step, ms }));
+}
 
 export default posthog;

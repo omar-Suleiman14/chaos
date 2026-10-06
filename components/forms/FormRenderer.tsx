@@ -14,7 +14,7 @@ import { sfx } from "@/lib/sfx";
 import type { SfxName } from "@/lib/sfx";
 import { haptics } from "@/lib/haptics";
 import { useModal } from "@/components/workspace/useModal";
-import { startJourney, useUsableMark } from "@/lib/journeys";
+import { journeyPending, markUsable, startJourney, useUsableMark } from "@/lib/journeys";
 
 export { themeClass, themeStyle } from "./formThemes";
 
@@ -143,6 +143,8 @@ function useFlow(props: FormRendererProps, rootRef: React.RefObject<HTMLDivEleme
       return;
     }
     const next = index + 1;
+    // Answer → next question usable, for real-user timing of quiz transitions.
+    if (props.journey) startJourney("quiz.next");
     setDirection(1);
     setStepIndex(next);
     play("next");
@@ -189,6 +191,11 @@ export default function FormRenderer(props: FormRendererProps) {
   const mode = props.definition.presentation;
 
   useUsableMark("quiz.question", !!props.journey && started);
+  useEffect(() => {
+    if (!props.journey || !journeyPending("quiz.next")) return;
+    const frame = requestAnimationFrame(() => markUsable("quiz.next"));
+    return () => cancelAnimationFrame(frame);
+  }, [props.journey, flow.index]);
   const start = () => {
     if (props.journey) startJourney("quiz.question");
     setStarted(true);

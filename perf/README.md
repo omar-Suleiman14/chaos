@@ -41,7 +41,9 @@ detail):
 | `form.open` | an existing form's editor is loaded |
 | `course.modules` | the module list renders (public page or editor) |
 | `lesson.read` | the lesson reader is on screen |
+| `lesson.edit` | the lesson editor is mounted with its content |
 | `quiz.question` | the first question can be answered (from Start) |
+| `quiz.next` | the next question is on screen after an answer (from Next) |
 | `live.join` | the joined player sees the game (from Join) |
 | MCP → persisted | measured in the backend suite: the tool call's write is visible to the dashboard |
 
@@ -167,6 +169,15 @@ desktop (phones are several times slower):
 Search did not need a worker once the repeated work was gone. Lesson code
 blocks are not syntax-highlighted and Markdown is not transformed on the
 client, so there is nothing there to move.
+
+## Real users
+
+PostHog receives `journey_usable` (journey, ms, origin: `action` from a click
+or `load` from navigation start) for every journey above, and `journey_step`
+for funnels: `form.create` reports `first_edit` and `published` as time since
+the click that created the draft. Errors arrive as `$exception`.
+`scripts/production-health.ts` reads p50/p75/p95 per journey and the error
+count from PostHog every day (docs/production-monitoring.md).
 
 ## Loading states
 

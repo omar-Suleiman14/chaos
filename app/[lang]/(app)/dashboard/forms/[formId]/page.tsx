@@ -32,7 +32,7 @@ import { pluralForm } from "@/lib/locale";
 import { timeAgo } from "@/lib/timeAgo";
 import { useFormDraft } from "./use-form-draft";
 import type { SaveState } from "./use-form-draft";
-import { journeyPending, useUsableMark, type Journey } from "@/lib/journeys";
+import { journeyPending, markStep, useUsableMark, type Journey } from "@/lib/journeys";
 import { linkOrigin } from "@/lib/hosts";
 
 /**
@@ -164,6 +164,9 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
   // A draft created a moment ago finishes the create journey; anything else is an open.
   const [journey] = useState<Journey>(() => (journeyPending("form.create") ? "form.create" : "form.open"));
   useUsableMark(journey, !!data && !!d.draft);
+  // Creation funnel: the first edit of a new draft (publishing is the last step, below).
+  const editedNew = journey === "form.create" && !!d.draft && d.isDirty();
+  useEffect(() => { if (editedNew) markStep("form.create", "first_edit"); }, [editedNew]);
 
   const report = useMemo(() => (d.draft ? checkDefinition(d.draft) : { errors: [], warnings: [] }), [d.draft]);
   // Getting started, one step at a time: a question, a look, then publish.
@@ -222,6 +225,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
       posthog.capture("form_published", { outcome: result.outcome, form_type: quiz ? "quiz" : "form" });
       // First time it goes live: offer the link, QR code and embed right away.
       if (result.outcome !== "approval_requested" && !published) setSharing(true);
+      if (result.outcome !== "approval_requested" && journey === "form.create") markStep("form.create", "published");
       if (result.outcome === "approval_requested") toast.info(t.requested, { id: "publish" });
       else toast.success(t.published(result.version), { id: "publish" });
     } catch (err) {
