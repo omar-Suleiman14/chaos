@@ -165,7 +165,7 @@ jobs:
 
       - name: Compare with budgets
         if: always() && steps.env.outputs.ready == 'true'
-        run: pnpm perf:check -- --suites journeys-browser,keystroke-browser,render-browser --allow-new
+        run: pnpm perf:check -- --suites journeys-browser,keystroke-browser,render-browser,idle-browser,memory-browser --allow-new
 
       - name: Summary
         if: always() && steps.env.outputs.ready == 'true'
