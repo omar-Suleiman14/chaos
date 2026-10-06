@@ -1,6 +1,6 @@
 "use client";
 
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
 import { toast } from "@/lib/toast";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
@@ -14,6 +14,7 @@ import {
 } from "@/lib/learn/data";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { hostHref } from "@/lib/hosts";
+import { useConfirmed, useConfirmedQuery } from "@/lib/confirmedQuery";
 
 const copy = {
   en: {
@@ -48,9 +49,9 @@ export default function LearnHome() {
   const recent = useRecentLessons(12);
   const progress = useProgress();
   const saved = useSaved();
-  const courses = useQuery(api.courses.myLearning, {});
+  const courses = useConfirmedQuery(api.courses.myLearning, {}).data;
   const createCourse = useMutation(api.courses.create);
-  const discover = usePublicLessons({ sort: "recent" });
+  const discover = useConfirmed("learn.discover", usePublicLessons({ sort: "recent" })).data;
   const weak = useWeakAreas();
 
   if (!mine || !recent || !progress || !saved || !courses || !discover) return <PageSkeleton label={t.loading} />;

@@ -1,6 +1,7 @@
 "use client";
 import { useKeptQuery } from "@/lib/queryCache";
 import { useQuery } from "@/lib/convexCache";
+import { useConfirmed } from "@/lib/confirmedQuery";
 
 import { saveGuestProgress, saveGuestReview, useGuestStudy } from "./guestStudy";
 import { useStableQueries } from "@/lib/stableQueries";
@@ -110,8 +111,9 @@ function useOwnedLessons(archived: boolean): Lesson[] | undefined {
   if (rows === undefined || rows.some(r => r.publishedVersionId && versions[r._id] === undefined)) return undefined;
   return rows.filter(r => (r.status === "archived") === archived).map(row => { const version = versions[row._id]; if (version instanceof Error) throw version; return { ...uiLesson(row, version as Doc<"lessonVersions"> | undefined), folderId: members?.find(m => m.asset.kind === "lesson" && m.asset.id === row._id)?.folderId }; });
 }
-export function useMyLessons(): Lesson[] | undefined { return useOwnedLessons(false); }
-export function useArchivedLessons(): Lesson[] | undefined { return useOwnedLessons(true); }
+// In the workspace these show the device's last copy until Convex confirms it (lib/confirmedQuery.ts).
+export function useMyLessons(): Lesson[] | undefined { return useConfirmed("learn.myLessons", useOwnedLessons(false)).data; }
+export function useArchivedLessons(): Lesson[] | undefined { return useConfirmed("learn.archivedLessons", useOwnedLessons(true)).data; }
 export function useCanEditLesson(id: string | undefined): boolean | undefined {
   const auth = useConvexAuth();
   const row = useQuery(api.learnFrontend.editableLesson, auth.isAuthenticated && id ? { id } : "skip");
@@ -157,9 +159,9 @@ export function useLessonRecovery(lessonId: string | undefined) {
   return useQuery(api.lessons.listRecovery, own ? { lessonId: own._id } : "skip");
 }
 
-export function useFolders(): Folder[] | undefined { return useLibraryFolders(); }
+export function useFolders(): Folder[] | undefined { return useConfirmed("learn.folders", useLibraryFolders()).data; }
 
-export function useFolderItems(): FolderItem[] | undefined { return useLibraryFolderItems(); }
+export function useFolderItems(): FolderItem[] | undefined { return useConfirmed("learn.folderItems", useLibraryFolderItems()).data; }
 
 /** Published collections anyone can open. */
 export function usePublicCollections(): Folder[] | undefined {
@@ -191,11 +193,12 @@ function descendantFolderIds(state: LearnState, rootId: string): Set<string> {
   return ids;
 }
 
-export function useCurriculumNodes(): CurriculumNode[] | undefined { return useLibraryCurriculum(); }
+export function useCurriculumNodes(): CurriculumNode[] | undefined { return useConfirmed("learn.curriculumNodes", useLibraryCurriculum()).data; }
 
-export function useMyCourses(): MyCourse[] | undefined { return useLibraryCourses(); }
+export function useMyCourses(): MyCourse[] | undefined { return useConfirmed("learn.myCourses", useLibraryCourses()).data; }
 
-export function useSaved(): SavedItem[] | undefined {
+export function useSaved(): SavedItem[] | undefined { return useConfirmed("learn.saved", useLiveSaved()).data; }
+function useLiveSaved(): SavedItem[] | undefined {
   return useLibraryAnnotations()?.filter(r => !r.deleted && r.kind === "save").map(annotationSave).sort((a,b) => b.createdAt - a.createdAt);
 }
 
@@ -207,7 +210,8 @@ export function useNotes(lessonId?: string): PersonalNote[] | undefined {
   return useLibraryAnnotations()?.filter(r => !r.deleted && r.kind === "note" && (!lessonId || r.lessonId === lessonId)).map(annotationNote);
 }
 
-export function useProgress(): Record<string, LessonProgress> | undefined {
+export function useProgress(): Record<string, LessonProgress> | undefined { return useConfirmed("learn.progress", useLiveProgress()).data; }
+function useLiveProgress(): Record<string, LessonProgress> | undefined {
   const guest = useGuestStudy();
   const viewer = useLearnViewer(); const auth = useConvexAuth();
   useSyncExternalStore(fn => { listeners.add(fn); return () => { listeners.delete(fn); }; }, () => targetGeneration, () => 0);
@@ -235,7 +239,8 @@ export function useVote(lessonId: string): "helpful" | "not_helpful" | null | un
 }
 
 /** Lessons this person opened, most recent first, with the time they last opened each. */
-export function useRecentLessons(limit = 12): { lesson: Lesson; openedAt: number }[] | undefined {
+export function useRecentLessons(limit = 12): { lesson: Lesson; openedAt: number }[] | undefined { return useConfirmed(`learn.recent:${limit}`, useLiveRecentLessons(limit)).data; }
+function useLiveRecentLessons(limit: number): { lesson: Lesson; openedAt: number }[] | undefined {
   const state = useLearnState();
   const mine = usePersonal();
   const viewer = useLearnViewer();
@@ -273,7 +278,7 @@ export function usePerson(id: string | undefined): (Person & { lessons: Lesson[]
   }, [state, id]);
 }
 
-export function useFlashcardSets(): FlashcardSet[] | undefined { return useLibraryFlashcards(); }
+export function useFlashcardSets(): FlashcardSet[] | undefined { return useConfirmed("learn.flashcardSets", useLibraryFlashcards()).data; }
 
 export function useFlashcardSet(id: string | undefined): FlashcardSet | null | undefined {
   const row = useQuery(api.learnLibrary.flashcard, id ? { id } : "skip");

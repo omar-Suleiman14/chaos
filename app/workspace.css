@@ -1126,6 +1126,12 @@ body.noise-bg:has(.workspace-ui)::before { display: none; }
 .cache-state { transition: opacity 180ms ease-out; }
 .cache-state[data-cache-state="cached"] { opacity: 0.55; }
 .cache-state[data-cache-state="cached"] button[aria-haspopup="menu"] { pointer-events: none; }
+/* The workspace content while any of it is the device's copy: links still open, but nothing that
+   writes can be used until Convex confirms what is on screen. */
+.ws-content.cache-state[data-cache-state="cached"] :is(button, input, textarea, select, [contenteditable="true"], [role="button"]) { pointer-events: none; }
+/* A reload with a cached workspace: until the app takes over (a moment later, with the cached
+   content), show nothing rather than placeholder shapes. DashboardShell removes the flag. */
+html[data-ws-warm] :is(.ws-skeleton, .ws-skeleton-card) { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) { .cache-state { transition: none; } }
 
 /* Search lives in the top bar (Ctrl/Cmd+K anywhere). Phones show just the icon. */

@@ -74,3 +74,24 @@ A faster editor that loses answers, a faster publication that exposes drafts or
 a cache that shows deleted content is a failure. Every perf suite asserts the
 result is correct before recording a number, and a failed assertion fails the
 ratchet. Correctness regressions live in `tests/integration` and run first.
+
+## The workspace opens from the device
+
+`lib/confirmedQuery.ts` keeps the last confirmed copy of the workspace's data
+in localStorage, per account. A reload renders it at once, faded, with buttons
+and fields disabled (links still work) until Convex confirms what is on screen;
+the confirmed result then replaces the copy whole.
+
+- `useConfirmedQuery(query, args)` for one query; `useConfirmed(name, value)`
+  for a hook that combines several (the Learn hooks in `lib/learn/data.ts`).
+- Copies only show inside `WorkspaceCache` (the dashboard layout). Public pages
+  get live values only.
+- A live result counts only after Convex has authenticated the visitor; until
+  then Convex answers as a signed-out visitor and that answer is ignored.
+- The last account is remembered with Clerk's `__client_uat` marker. After a
+  sign-out or another person's sign-in the marker differs and nothing shows
+  until Clerk names the account; a different account clears every copy.
+- An inline script in `dashboard/layout.tsx` hides skeletons before hydration
+  when a copy exists, so a warm reload goes from blank to content.
+- Sidebar destinations prefetch their whole page (`IntentLink eager`), so
+  switching pages does not stop at the loading skeleton.

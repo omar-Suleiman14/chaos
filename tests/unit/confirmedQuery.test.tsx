@@ -3,20 +3,24 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/convex/_generated/api";
 
 const live = vi.hoisted(() => ({ value: undefined as unknown }));
+const auth = vi.hoisted(() => ({ isAuthenticated: true }));
 vi.mock("convex/react", () => ({ useQuery: () => live.value }));
 vi.mock("@/lib/convexClient", () => ({ convex: null }));
 
-import { clearConfirmedCache, setCacheScope, useConfirmedQuery } from "@/lib/confirmedQuery";
+import { CacheZone, clearConfirmedCache, flushConfirmedWrites, setCacheScope, useCachePending, useConfirmedQuery } from "@/lib/confirmedQuery";
 import { CacheState } from "@/components/workspace/CacheState";
 
 function Courses() {
+  return <CacheZone.Provider value={{ authenticated: auth.isAuthenticated }}><CourseList /></CacheZone.Provider>;
+}
+function CourseList() {
   const { data, confirmed } = useConfirmedQuery(api.courses.listMine);
   return <CacheState confirmed={confirmed}><ul>{(data ?? []).map((c) => <li key={c.id}>{c.title}</li>)}</ul></CacheState>;
 }
 const course = (id: string, title: string) => ({ id, title, description: "", lessons: 1, visibility: "public", published: true, updatedAt: 1, archived: false });
 const state = () => document.querySelector(".cache-state")!.getAttribute("data-cache-state");
 
-beforeEach(() => { live.value = undefined; });
+beforeEach(() => { live.value = undefined; auth.isAuthenticated = true; });
 afterEach(() => { act(() => setCacheScope(null)); clearConfirmedCache(); localStorage.clear(); });
 
 describe("confirmed queries", () => {
@@ -26,6 +30,7 @@ describe("confirmed queries", () => {
     const first = render(<Courses />);
     expect(state()).toBe("live");
     first.unmount();
+    flushConfirmedWrites();
 
     // Next visit: Convex has not answered yet.
     live.value = undefined;
@@ -46,6 +51,7 @@ describe("confirmed queries", () => {
     act(() => setCacheScope("user_a"));
     live.value = [course("c1", "Private course")];
     render(<Courses />).unmount();
+    flushConfirmedWrites();
 
     live.value = undefined;
     act(() => setCacheScope("user_b"));
@@ -60,6 +66,61 @@ describe("confirmed queries", () => {
   it("caches nothing without a signed-in scope", () => {
     live.value = [course("c1", "Anatomy")];
     render(<Courses />).unmount();
+    flushConfirmedWrites();
     expect(Object.keys(localStorage).filter((k) => k.startsWith("chaos.cache"))).toEqual([]);
+  });
+
+  it("ignores answers given before Convex has the sign-in, and fades the workspace meanwhile", () => {
+    act(() => setCacheScope("user_a"));
+    live.value = [course("c1", "Anatomy")];
+    render(<Courses />).unmount();
+    flushConfirmedWrites();
+
+    // Reload: Convex answers as a signed-out visitor first (an empty list).
+    auth.isAuthenticated = false;
+    live.value = [];
+    function Probe() { return <i data-testid="pending">{String(useCachePending())}</i>; }
+    const pending = () => screen.getByTestId("pending").textContent === "true";
+    const view = render(<><Courses /><Probe /></>);
+    expect(screen.getByText("Anatomy")).toBeInTheDocument();
+    expect(state()).toBe("cached");
+    expect(pending()).toBe(true);
+
+    auth.isAuthenticated = true;
+    live.value = [course("c1", "Anatomy"), course("c3", "Pharmacology")];
+    view.rerender(<><Courses /><Probe /></>);
+    expect(state()).toBe("live");
+    expect(screen.getByText("Pharmacology")).toBeInTheDocument();
+    expect(pending()).toBe(false);
+  });
+
+  it("passes live values straight through outside the workspace", () => {
+    act(() => setCacheScope("user_a"));
+    live.value = [course("c1", "Anatomy")];
+    function Outside() { const { data } = useConfirmedQuery(api.courses.listMine); return <p>{data?.length ?? "none"}</p>; }
+    render(<Outside />);
+    expect(Object.keys(localStorage).filter((k) => k.startsWith("chaos.cache.v1"))).toEqual([]);
+  });
+
+  it("trusts the remembered account only for the same sign-in", async () => {
+    document.cookie = "__client_uat=1700000000";
+    act(() => setCacheScope("user_a"));
+    expect(JSON.parse(localStorage.getItem("chaos.cache.scope")!)).toEqual({ userId: "user_a", session: "1700000000" });
+
+    vi.resetModules();
+    const same = await import("@/lib/confirmedQuery");
+    function Scope({ mod }: { mod: typeof same }) { const { data } = mod.useConfirmed("probe", undefined as unknown); return <p>{data === undefined ? "no cache" : "cache"}</p>; }
+    localStorage.setItem("chaos.cache.v1:user_a:probe", JSON.stringify({ at: Date.now(), value: 1 }));
+    const a = render(<same.CacheZone.Provider value={{ authenticated: false }}><Scope mod={same} /></same.CacheZone.Provider>);
+    expect(screen.getByText("cache")).toBeInTheDocument();
+    a.unmount();
+
+    // Someone else signed in on this device: Clerk's marker changed.
+    document.cookie = "__client_uat=1800000000";
+    vi.resetModules();
+    const other = await import("@/lib/confirmedQuery");
+    render(<other.CacheZone.Provider value={{ authenticated: false }}><Scope mod={other} /></other.CacheZone.Provider>);
+    expect(screen.getByText("no cache")).toBeInTheDocument();
+    document.cookie = "__client_uat=; max-age=0";
   });
 });

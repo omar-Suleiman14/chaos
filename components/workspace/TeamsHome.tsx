@@ -9,6 +9,7 @@ import { api } from "@/convex/_generated/api";
 import { useCopy } from "@/lib/i18n";
 import { toast } from "@/lib/toast";
 import { WsDialog } from "./primitives";
+import { useConfirmed } from "@/lib/confirmedQuery";
 
 const copy = {
   en: { title: "Teams & workspaces", lead: "Personal is a workspace for one user. Create or join a Business team to edit forms, lessons, courses and folders together.", name: "Team name", create: "Create free Business team", creating: "Creating…", invites: "Your email invitations", accept: "Join team", link: "Join with an invitation link", linkHelp: "Paste your invitation link. Email invitations require the invited address to be verified. Links expire after seven days and can be used once.", join: "Join", empty: "No Business teams yet.", loading: "Loading teams…", verified: "Email invitations appear here after you sign in with the invited, verified address.", role: "Role", roles: { owner: "Owner", admin: "Admin", member: "Member" }, joinFailed: "Could not join this team." },
@@ -17,7 +18,7 @@ const copy = {
 export default function TeamsHome() {
   const t = useCopy(copy), router = useRouter();
   const { isAuthenticated } = useConvexAuth();
-  const teams = useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip"), invites = useQuery(api.businessTeams.inbox, isAuthenticated ? {} : "skip");
+  const teams = useConfirmed("businessTeams.list", useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip")).data, invites = useConfirmed("businessTeams.inbox", useQuery(api.businessTeams.inbox, isAuthenticated ? {} : "skip")).data;
   const create = useMutation(api.businessTeams.create), accept = useMutation(api.businessTeams.accept);
   const [name, setName] = useState(""), [link, setLink] = useState("");
   const nameInput = useRef<HTMLInputElement>(null);

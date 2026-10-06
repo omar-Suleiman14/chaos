@@ -16,10 +16,15 @@ const learnBackend = vi.hoisted(() => ({ query: vi.fn(), mutation: vi.fn(), load
 vi.mock("next/link", () => ({ default: ({ prefetch, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { prefetch?: boolean | null }) => <a {...props} data-prefetch={prefetch === null ? "auto" : String(prefetch)} /> }));
 vi.mock("@/lib/convexCache", () => ({
   formIntentHandlers: (id: string) => ({ onFocus: () => intent.warmForm(id), onPointerEnter: () => intent.warmForm(id), onTouchStart: () => intent.warmForm(id) }),
-  useQuery: () => undefined,
+  // The shell reads its lists through lib/confirmedQuery, which uses this useQuery.
+  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => liveQuery(ref),
 }));
 const courses = [{ id: "course1", title: "Night sky course", description: "", lessons: 2, visibility: "public", published: true, updatedAt: 1, archived: false }];
 const games: { _id: string; title: string; formId: string; state: string; createdAt: number }[] = [];
+function liveQuery(ref: Parameters<typeof getFunctionName>[0]) {
+  const name = getFunctionName(ref);
+  return name === "forms:listMyForms" ? forms : name === "quizFunctions:getMyQuizzes" ? [] : name === "courses:listMine" ? courses : name === "live:myGames" ? games : undefined;
+}
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/dashboard" }));
 vi.mock("@/components/ThemeProvider", () => ({ useTheme: () => ({ toggleTheme: vi.fn() }) }));
 vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ isLoaded: false, userId: null }), useUser: () => ({ isLoaded: false }), useClerk: () => ({ signOut: async () => {} }), UserButton: () => null }));
@@ -28,7 +33,7 @@ vi.mock("convex/react", () => ({
   useConvexAuth: () => ({ isAuthenticated: false, isLoading: true }),
   usePaginatedQuery: () => ({ results: [], status: "Exhausted", loadMore: learnBackend.loadMore }),
   useQueries: () => ({}),
-  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? forms : getFunctionName(ref) === "quizFunctions:getMyQuizzes" ? [] : getFunctionName(ref) === "courses:listMine" ? courses : getFunctionName(ref) === "live:myGames" ? games : undefined),
+  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => liveQuery(ref),
   useMutation: () => vi.fn(),
 }));
 vi.mock("@/components/workspace/useCreateForm", () => ({ useCreateForm: () => ({ create: vi.fn(), busy: false }) }));
@@ -60,7 +65,9 @@ describe("sidebar sections", () => {
     expect(screen.queryByRole("link", { name: "Docs" })).toBeNull();
     const links = Array.from(container.querySelectorAll("a.ws-nav-item"));
     expect(links.length).toBeGreaterThan(2);
-    for (const link of links) expect(link).toHaveAttribute("data-prefetch", link.getAttribute("aria-current") === "page" ? "false" : "auto");
+    // Main destinations prefetch whole pages at once (eager); Recent waits for intent.
+    const expected = (link: Element) => (link.getAttribute("aria-current") === "page" ? "false" : link.closest('nav[aria-label="Recent"]') ? "auto" : "true");
+    for (const link of links) expect(link).toHaveAttribute("data-prefetch", expected(link));
     expect(intent.warmForm).not.toHaveBeenCalled();
     const docs = screen.getByRole("link", { name: "Saved" });
     fireEvent.mouseEnter(docs);
@@ -71,7 +78,7 @@ describe("sidebar sections", () => {
     expect(form).toHaveAttribute("href", "/dashboard/forms/f2");
     expect(intent.warmForm).toHaveBeenCalledExactlyOnceWith("f2");
     expect(learnBackend.mutation).not.toHaveBeenCalled();
-    for (const link of links.filter((link) => link !== docs && link !== form)) expect(link).toHaveAttribute("data-prefetch", link.getAttribute("aria-current") === "page" ? "false" : "auto");
+    for (const link of links.filter((link) => link !== docs && link !== form)) expect(link).toHaveAttribute("data-prefetch", expected(link));
     const current = links.find((link) => link.getAttribute("aria-current") === "page")!;
     fireEvent.focus(current);
     expect(current).toHaveAttribute("data-prefetch", "false");

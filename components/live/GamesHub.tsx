@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { useQuery } from "@/lib/convexCache";
 import { ArrowRight, BookOpen, Plus, Radio, Search } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { ThemePresetId } from "@/convex/formLogic";
@@ -18,6 +17,7 @@ import { Select } from "@/components/workspace/Select";
 import { useCopy, useLocale } from "@/lib/i18n";
 import "./games.css";
 import { hostHref } from "@/lib/hosts";
+import { useConfirmedQuery } from "@/lib/confirmedQuery";
 
 const copy = {
   en: {
@@ -56,8 +56,8 @@ const copy = {
 export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
-  const forms = useQuery(api.forms.listMyForms);
-  const legacy = useQuery(api.quizFunctions.getMyQuizzes);
+  const forms = useConfirmedQuery(api.forms.listMyForms).data;
+  const legacy = useConfirmedQuery(api.quizFunctions.getMyQuizzes).data;
   const [preset, setPreset] = useState<ThemePresetId>();
   const [timeLimitSec, setTimeLimitSec] = useState<number>(DEFAULT_TIME_LIMIT);
   const [showAnswerLabels, setShowAnswerLabels] = useState(true);

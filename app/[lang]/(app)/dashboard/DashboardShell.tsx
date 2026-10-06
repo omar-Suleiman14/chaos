@@ -27,6 +27,7 @@ import { toast } from "@/lib/toast";
 import { useModal } from "@/components/workspace/useModal";
 import { WsTooltips } from "@/components/workspace/primitives";
 import { IntentLink } from "@/components/IntentLink";
+import { useCachePending, useConfirmed, useConfirmedQuery } from "@/lib/confirmedQuery";
 import { usePinned } from "@/components/workspace/usePinned";
 import { formIntentHandlers } from "@/lib/convexCache";
 import { usePreferences } from "@/lib/preferences";
@@ -138,15 +139,17 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const clerk = useClerk();
   const pathname = usePathname();
   const getOrCreateUser = useMutation(api.quizFunctions.getOrCreateUser);
-  const isAdmin = useQuery(api.quizFunctions.getIsAdmin) === true;
-  const account = useQuery(api.quizFunctions.getCurrentUser);
+  // Shown from the device cache until Convex confirms them (lib/confirmedQuery.ts), so a reload opens at once.
+  const isAdmin = useConfirmedQuery(api.quizFunctions.getIsAdmin).data === true;
+  const account = useConfirmedQuery(api.quizFunctions.getCurrentUser).data;
+  const cachePending = useCachePending();
   const { isAuthenticated: convexSignedIn } = useConvexAuth();
   const [cardStarted, setCardStarted] = useState(false), [cardDismissed, setCardDismissed] = useState(false);
   useEffect(() => { if (account?.cardOnboardingPending) setCardStarted(true); }, [account?.cardOnboardingPending]);
-  const forms = useQuery(api.forms.listMyForms);
-  const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
-  const myCourses = useQuery(api.courses.listMine);
-  const myGames = useQuery(api.live.myGames);
+  const forms = useConfirmedQuery(api.forms.listMyForms).data;
+  const quizzes = useConfirmedQuery(api.quizFunctions.getMyQuizzes).data;
+  const myCourses = useConfirmedQuery(api.courses.listMine).data;
+  const myGames = useConfirmedQuery(api.live.myGames).data;
   /** Only for first-time account setup, which blocks the workspace; actions report through toasts. */
   const [initError, setInitError] = useState("");
   const [menuOpen, setMenuOpen] = useState(false);
@@ -170,7 +173,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const myLessons = useMyLessons();
   const learnFolders = useFolders();
   const flashcardSets = useFlashcardSets();
-  const teams = useQuery(api.businessTeams.list, convexSignedIn ? {} : "skip");
+  // Skipped until Convex has the sign-in; the cached list shows meanwhile.
+  const teams = useConfirmed("businessTeams.list", useQuery(api.businessTeams.list, convexSignedIn ? {} : "skip")).data;
   const [newOpen, setNewOpen] = useState(false);
   useEffect(() => {
     if (!newOpen) return;
@@ -225,6 +229,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation ref is stable in behavior
   }, [isLoaded, user]);
+
+  // The app has rendered (with any cached content), so skeletons may show again (dashboard/layout.tsx).
+  useEffect(() => { document.documentElement.removeAttribute("data-ws-warm"); }, []);
 
   // Close the mobile menu whenever the page changes.
   useEffect(() => setMenuOpen(false), [pathname]);
@@ -318,7 +325,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const link = (item: { href: string; key: NavKey; icon: typeof Library }) => {
     const Icon = item.icon;
     return (
-      <IntentLink key={item.href} href={item.href} className="ws-nav-item" aria-current={isActive(item.href) ? "page" : undefined} title={rail ? t[item.key] : undefined}>
+      <IntentLink key={item.href} href={item.href} eager className="ws-nav-item" aria-current={isActive(item.href) ? "page" : undefined} title={rail ? t[item.key] : undefined}>
         <Icon size={18} aria-hidden="true" />
         <span>{t[item.key]}</span>
       </IntentLink>
@@ -479,7 +486,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             </div>
           </header>
 
-          <main id="workspace-content" tabIndex={-1} className={`ws-content ${wide ? "ws-content--wide" : ""}`}>
+          <main id="workspace-content" tabIndex={-1} className={`ws-content cache-state ${wide ? "ws-content--wide" : ""}`} data-cache-state={cachePending ? "cached" : "live"} aria-busy={cachePending || undefined}>
             <div key={pathname} className="ws-page">{(account?.isBanned || account?.suspendedUntil) && <div role="status" className="mb-5 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">{account.isBanned ? t.banned : t.suspended(new Date(account.suspendedUntil!).toLocaleString(dateLocale(locale)))} {t.paused} <a className="underline" href={`mailto:${supportEmail}`}>{t.contact}</a>.</div>}{children}</div>
           </main>
         </div>

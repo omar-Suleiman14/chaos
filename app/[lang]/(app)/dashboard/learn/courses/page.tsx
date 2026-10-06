@@ -9,6 +9,7 @@ import { useCurriculumNodes, useLearnActions, useMyCourses, usePublicLessons } f
 import { ancestors } from "@/lib/learn/search";
 import { errorMessage } from "@/lib/errors";
 import { useCopy } from "@/lib/i18n";
+import { useConfirmed } from "@/lib/confirmedQuery";
 
 const copy = {
   en: {
@@ -27,7 +28,7 @@ export default function MyCoursesPage() {
   const t = useCopy(copy);
   const courses = useMyCourses();
   const nodes = useCurriculumNodes();
-  const lessons = usePublicLessons({});
+  const lessons = useConfirmed("learn.publicLessons", usePublicLessons({})).data;
   const actions = useLearnActions();
   const [error, setError] = useState("");
   const byId = useMemo(() => Object.fromEntries((nodes ?? []).map((n) => [n.id, n])), [nodes]);

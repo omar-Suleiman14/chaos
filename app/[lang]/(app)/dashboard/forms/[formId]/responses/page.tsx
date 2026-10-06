@@ -4,7 +4,6 @@ import Link from "next/link";
 import { useState } from "react";
 import { useParams } from "next/navigation";
 import { ArrowLeft, BarChart3, Download, Inbox } from "lucide-react";
-import { useQuery } from "@/lib/convexCache";
 import { WsTabs } from "@/components/workspace/primitives";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { api } from "@/convex/_generated/api";
@@ -15,6 +14,7 @@ import { SummaryHeader, SummaryTab } from "@/components/forms/results/Summary";
 import { ResponsesTab } from "@/components/forms/results/Responses";
 import { ExportTab } from "@/components/forms/results/Export";
 import Segments from "@/components/forms/results/Segments";
+import { useConfirmedQuery } from "@/lib/confirmedQuery";
 
 const tabs = ["summary", "responses", "segments", "export"] as const;
 type Tab = (typeof tabs)[number];
@@ -24,8 +24,8 @@ export default function ResponsesPage() {
   const { formId } = useParams<{ formId: Id<"forms"> }>();
   const t = useCopy(resultsCopy);
   const { locale } = useLocale();
-  const form = useQuery(api.forms.getFormForEditor, { formId });
-  const analysis = useQuery(api.formResults.getAnalysis, form ? { formId } : "skip");
+  const form = useConfirmedQuery(api.forms.getFormForEditor, { formId }).data;
+  const analysis = useConfirmedQuery(api.formResults.getAnalysis, form ? { formId } : "skip").data;
   const [tab, setTab] = useState<Tab>("summary");
   if (form === undefined) return <PageSkeleton label={t.loading} />;
   if (form === null) return <p className="ws-empty">{t.notFound}</p>;

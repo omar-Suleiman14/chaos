@@ -32,6 +32,7 @@ import { toast } from "@/lib/toast";
 import { useCopy, useLocale } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
+import { useConfirmedQuery } from "@/lib/confirmedQuery";
 
 const copy = {
   en: {
@@ -101,7 +102,7 @@ function StatsContent() {
 function QuizzesListView() {
   const t = useCopy(copy);
   const { locale } = useLocale();
-  const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
+  const quizzes = useConfirmedQuery(api.quizFunctions.getMyQuizzes).data;
   const [search, setSearch] = useState("");
 
   if (quizzes === undefined) {
