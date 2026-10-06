@@ -76,12 +76,17 @@ export default defineSchema({
     createdAt: v.number(), updatedAt: v.number(),
   }).index("by_email", ["email"]).index("by_stage", ["stage"]).index("by_follow_up", ["nextFollowUp"]).searchIndex("search_name", { searchField: "name", filterFields: ["stage"] }),
   crmNotes: defineTable({ contactId: v.id("crmContacts"), body: v.string(), actorId: v.string(), createdAt: v.number() }).index("by_contact", ["contactId"]),
-  /** Permanent namespace reservations; retain these even when an account is removed. */
+  /**
+   * Namespace reservations; retained even when an account is removed. A name left behind that
+   * never appeared in a public link gets `expiresAt` and is released after a grace period
+   * (convex/usernameModel.ts); names that did stay reserved, up to a cap per account.
+   */
   usernameAliases: defineTable({
     username: v.string(),
     ownerId: v.string(),
     createdAt: v.number(),
-  }).index("by_username", ["username"]),
+    expiresAt: v.optional(v.number()),
+  }).index("by_username", ["username"]).index("by_ownerId", ["ownerId"]).index("by_expiresAt", ["expiresAt"]),
   publicAuthorAssets: defineTable({ assetId: v.string(), table: v.union(v.literal("forms"), v.literal("quizzes"), v.literal("lessons"), v.literal("learnCollections")), ownerId: v.string() }).index("by_assetId", ["assetId"]).index("by_ownerId", ["ownerId"]),
 
   // ============ USERS ============
@@ -92,6 +97,8 @@ export default defineSchema({
     username: v.string(),
     /** True once the person picks a username; sign-in sync then stops overwriting it. */
     usernameChosen: v.optional(v.boolean()),
+    /** Recent username changes (newest last), for the change rate limit. */
+    usernameChangedAt: v.optional(v.array(v.number())),
     imageUrl: v.optional(v.string()),
     /** Number of currently public, indexed publications; maintained by authorIndex.ts. */
     publicAuthorAssets: v.optional(v.number()),
