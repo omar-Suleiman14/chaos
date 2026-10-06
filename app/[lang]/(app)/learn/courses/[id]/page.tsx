@@ -7,6 +7,7 @@ import { notFound } from "next/navigation";
 import { fetchPublicCourse } from "@/lib/learn/server";
 import { pageMetadata } from "@/lib/seo";
 import { siteUrl } from "@/lib/site";
+import { absoluteUrl } from "@/lib/hosts";
 import { defaultCover, isCoverUrl } from "@/lib/learn/covers";
 import { SiteFooter, SiteNav } from "@/components/site/SiteChrome";
 import "@/app/landing.css";
@@ -31,12 +32,12 @@ export default async function PublicCoursePage({ params }: Props) {
   if (!course) notFound();
   const jsonLd = {
     "@context": "https://schema.org", "@type": "Course", name: course.title, description: course.description || undefined,
-    url: `${siteUrl}/learn/courses/${course.id}`, inLanguage: course.language, isAccessibleForFree: true,
+    url: absoluteUrl(`/learn/courses/${course.id}`), inLanguage: course.language, isAccessibleForFree: true,
     provider: { "@type": "Organization", name: "Chaos", url: siteUrl },
     author: { "@type": "Person", name: course.ownerName },
     ...(course.details?.estimatedMinutes ? { timeRequired: `PT${course.details.estimatedMinutes}M` } : {}),
     ...(course.details ? { educationalLevel: course.details.level, teaches: course.details.outcomes } : {}),
-    hasPart: course.lessons.map((l, i) => ({ "@type": "LearningResource", position: i + 1, name: l.title, url: `${siteUrl}/learn/${l.id}` })),
+    hasPart: course.lessons.map((l, i) => ({ "@type": "LearningResource", position: i + 1, name: l.title, url: absoluteUrl(`/learn/${l.id}`) })),
   };
   const first = course.lessons[0];
   const ar = course.language.toLowerCase().split(/[-_]/)[0] === "ar";

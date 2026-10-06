@@ -21,6 +21,8 @@ import { themeFromPreset } from "@/components/forms/formThemes";
 import TeamPanel, { TEAMS_ENABLED } from "./TeamPanel";
 import { toast } from "@/lib/toast";
 import { copyText } from "@/lib/clipboard";
+import { linkOrigin } from "@/lib/hosts";
+import { hostHref } from "@/lib/hosts";
 
 const copy = {
   en: {
@@ -93,7 +95,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
     return () => document.removeEventListener("fullscreenchange", update);
   }, []);
 
-  const origin = typeof window !== "undefined" ? window.location.origin : "https://chaos.fail";
+  const origin = linkOrigin("main");
   const joinUrl = game ? `${origin}/play?pin=${game.pin}` : "";
   const qr = useMemo(() => (joinUrl ? qrSvg(joinUrl) : ""), [joinUrl]);
   const copyJoinLink = () => copyText(joinUrl, { success: t.linkCopied, failure: t.copyFailed });
@@ -149,7 +151,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
       <div className="live-root">
         <div className="live-center">
           <p>{t.missing}</p>
-          <Link href="/dashboard?tab=games" className="live-btn">{t.back}</Link>
+          <Link href={hostHref("/dashboard?tab=games")} className="live-btn">{t.back}</Link>
         </div>
       </div>
     );
@@ -177,7 +179,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
       {confirming && <WsConfirm title={confirming.label} body={confirming.body} confirmLabel={confirming.label} onClose={() => setConfirming(null)} onConfirm={confirming.run} />}
       <Announcer text={announce} />
       <header className="live-bar">
-        <Link href="/dashboard?tab=games" className="live-icon-btn" aria-label={t.back}><ArrowLeft size={20} className="rtl:rotate-180" /></Link>
+        <Link href={hostHref("/dashboard?tab=games")} className="live-icon-btn" aria-label={t.back}><ArrowLeft size={20} className="rtl:rotate-180" /></Link>
         <span className="live-bar__title">{game.title}</span>
         {game.state !== "lobby" && game.state !== "ended" && <span className="live-muted">{t.questionOf(game.questionIndex + 1, game.questionCount)}</span>}
         <span className="live-muted inline-flex items-center gap-1"><Users size={18} aria-hidden="true" /> {t.players(game.playerCount)}</span>

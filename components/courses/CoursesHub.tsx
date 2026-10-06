@@ -16,6 +16,7 @@ import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { courseCopy, coverStyle } from "./shared";
 import "./courses.css";
 import { hrefIntentHandlers } from "@/lib/convexCache";
+import { hostHref } from "@/lib/hosts";
 
 /** Your courses: create, open and browse. Shown as the Library's Courses tab. */
 export default function CoursesHub({
@@ -72,7 +73,7 @@ export default function CoursesHub({
           </div>
         )}
         <div className="flex gap-2">
-          <Link className="ws-btn ws-btn--ghost" href="/learn">
+          <Link className="ws-btn ws-btn--ghost" href={hostHref("/learn")}>
             {t.explore}
           </Link>
           {/* In the Library, its New menu is the only place to create; this page keeps its own button when used alone. */}
@@ -126,7 +127,7 @@ export default function CoursesHub({
         )}
         {shown.map((c) => (
           <article key={c.id} className="cx-card relative">
-            <Link href={`/dashboard/courses/${c.id}`} className="contents" {...hrefIntentHandlers(`/dashboard/courses/${c.id}`)}>
+            <Link href={hostHref(`/dashboard/courses/${c.id}`)} className="contents" {...hrefIntentHandlers(`/dashboard/courses/${c.id}`)}>
             <div className="cx-cover" style={coverStyle(c.id, c.coverUrl)}>
               <span className="cx-cover__badge">
                 {!c.published

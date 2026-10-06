@@ -4,15 +4,18 @@ import Link from "next/link";
 import { useState, type ComponentProps } from "react";
 import { useLocale } from "@/lib/i18n";
 import { localePath } from "@/lib/locale";
+import { hostHref } from "@/lib/hosts";
 
 type Props = Omit<ComponentProps<typeof Link>, "href" | "prefetch"> & { href: string };
 
 /** Restore Next's route prefetch after hover, focus or touch intent. */
 export function IntentLink({ href: rawHref, onMouseEnter, onFocus, onTouchStart, ...props }: Props) {
   // Marketing pages have an address per language (lib/locale.ts).
-  const href = localePath(rawHref, useLocale().locale);
+  const local = localePath(rawHref, useLocale().locale);
+  // Each section lives on its own host (lib/hosts.ts); next/link still prefetches when that host is this one.
+  const href = hostHref(local);
   const [intentHref, setIntentHref] = useState<string | null>(null);
-  const eligible = href.startsWith("/") && !href.startsWith("//")
+  const eligible = local.startsWith("/") && !local.startsWith("//")
     && (!props.target || props.target === "_self") && !props.download
     && props["aria-current"] !== "page";
   const warm = () => { if (eligible) setIntentHref(href); };

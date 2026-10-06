@@ -17,6 +17,7 @@ import { newId } from "@/lib/learn/data";
 import type { Flashcard, Visibility } from "@/lib/learn/types";
 import { errorMessage } from "@/lib/errors";
 import { useCopy } from "@/lib/i18n";
+import { hostHref } from "@/lib/hosts";
 
 const copy = {
   en: {
@@ -67,7 +68,7 @@ function FlashcardSetPage() {
           <h1 className="ws-page-title">{set.title}</h1>
           {set.description && <p className="lx-help">{set.description}</p>}
           {set.forkedFrom && <ProvenanceLine provenance={set.forkedFrom} hrefFor={(sid) => `/dashboard/learn/flashcards/${sid}`} />}
-          {set.lessonId && <Link className="lx-link" href={`/learn/${set.lessonId}`}><BookOpen size={13} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} /> {t.fromLesson}</Link>}
+          {set.lessonId && <Link className="lx-link" href={hostHref(`/learn/${set.lessonId}`)}><BookOpen size={13} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} /> {t.fromLesson}</Link>}
         </div>
         <div className="lx-actions">
           {!owner && viewer?.signedIn && <button type="button" className="ws-btn" onClick={() => run(async () => { const id = await actions.forkFlashcardSet(set.id); router.push(`/dashboard/learn/flashcards/${id}`); })}><GitFork size={16} aria-hidden />{t.fork}</button>}

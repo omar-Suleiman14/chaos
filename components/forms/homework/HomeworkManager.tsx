@@ -11,6 +11,8 @@ import { useCopy } from "@/lib/i18n";
 import QueryErrorBoundary from "../QueryErrorBoundary";
 import AttemptHistory from "./AttemptHistory";
 import { homeworkCopy, homeworkError } from "./copy";
+import { linkOrigin } from "@/lib/hosts";
+import { hostHref } from "@/lib/hosts";
 
 function StudentReport({ assignmentId, studentId }: { assignmentId: Id<"homeworkAssignments">; studentId: string }) {
   const rows = useQuery(api.homework.report, { assignmentId, studentId });
@@ -41,7 +43,7 @@ export default function HomeworkManager({ formId }: { formId: Id<"forms"> }) {
   if (!form) return <p className="ws-empty">{t.unavailable}</p>;
   if (form.role !== "owner") return <p className="ws-empty">{t.ownerOnly}</p>;
   return <div className="grid gap-6">
-    <header><Link className="ws-link-quiet" href={`/dashboard/forms/${formId}/responses`}>{t.back}</Link><h1 className="ws-page-title">{t.title} · {form.title}</h1><p className="ws-page-subtitle">{t.pinned}</p></header>
+    <header><Link className="ws-link-quiet" href={hostHref(`/dashboard/forms/${formId}/responses`)}>{t.back}</Link><h1 className="ws-page-title">{t.title} · {form.title}</h1><p className="ws-page-subtitle">{t.pinned}</p></header>
     {!form.versions.length ? <p className="ws-empty">{t.published}</p> : <form className="kb-card-bordered grid gap-4 p-5" onSubmit={e => {
       e.preventDefault(); const fields = new FormData(e.currentTarget);
       if (!version?.definition.quiz?.enabled) { toast.error(t.quiz); return; }
@@ -62,7 +64,7 @@ export default function HomeworkManager({ formId }: { formId: Id<"forms"> }) {
       {assignments.map(a => <option key={a.id} value={a.id}>{a.title} · v{a.version} · {new Date(a.deadline).toLocaleDateString()}{a.closed ? ` · ${t.closedTag}` : ""}</option>)}
     </ChaosSelect></label>}
     {assignmentId && <section className="kb-card-bordered grid gap-4 p-5" aria-label={t.manage}>
-      <div className="flex gap-3 flex-wrap"><Link className="ws-link" href={`/homework/${assignmentId}`}>{t.link}</Link><button className="ws-btn" type="button" disabled={busy} onClick={() => void run(() => navigator.clipboard.writeText(`${window.location.origin}/homework/${assignmentId}`), t.copied)}>{t.copy}</button></div>
+      <div className="flex gap-3 flex-wrap"><Link className="ws-link" href={hostHref(`/homework/${assignmentId}`)}>{t.link}</Link><button className="ws-btn" type="button" disabled={busy} onClick={() => void run(() => navigator.clipboard.writeText(`${linkOrigin("dashboard")}/homework/${assignmentId}`), t.copied)}>{t.copy}</button></div>
       <form className="flex gap-2 flex-wrap items-end" onSubmit={e => { e.preventDefault(); if (email.trim()) void run(async () => { await enroll({ assignmentId, email: email.trim(), active: true }); setEmail(""); }, t.enrolled); }}>
         <label className="grid gap-1 flex-1 min-w-56">{t.student}<input className="kb-input" type="email" value={email} onChange={e => setEmail(e.target.value)} maxLength={200} aria-describedby="homework-student-hint" /></label>
         <button className="ws-btn" disabled={busy || !email.trim()}>{t.enroll}</button>

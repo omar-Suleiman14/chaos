@@ -13,6 +13,7 @@ import {
   useLearnActions, useLearnCapabilities, useMyLessons, useProgress, usePublicLessons, useRecentLessons, useSaved, useWeakAreas,
 } from "@/lib/learn/data";
 import { useCopy, useLocale } from "@/lib/i18n";
+import { hostHref } from "@/lib/hosts";
 
 const copy = {
   en: {
@@ -66,7 +67,7 @@ export default function LearnHome() {
       <header className="lx-hero">
         <div><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></div>
         <div className="lx-actions">
-          <Link href="/learn" className="ws-btn"><Compass size={16} aria-hidden />{t.explore}</Link>
+          <Link href={hostHref("/learn")} className="ws-btn"><Compass size={16} aria-hidden />{t.explore}</Link>
           <WsMenu label={t.newMenu} align="end" triggerClassName="ws-btn ws-btn--primary" trigger={<><Plus size={16} aria-hidden />{t.newLabel}<ChevronDown size={15} aria-hidden /></>}>
             {(close) => (
               <div className="ws-new-choices">
@@ -82,17 +83,17 @@ export default function LearnHome() {
       <section className="lx-section" aria-labelledby="learn-continue">
         <header><h2 id="learn-continue">{t.continue}</h2></header>
         {inProgress.length ? (
-          <div className="lx-grid">{inProgress.map(({ lesson }) => <LessonCard key={lesson.id} lesson={lesson} href={`/learn/${lesson.id}`} progress={progress[lesson.id]} />)}</div>
+          <div className="lx-grid">{inProgress.map(({ lesson }) => <LessonCard key={lesson.id} lesson={lesson} href={hostHref(`/learn/${lesson.id}`)} progress={progress[lesson.id]} />)}</div>
         ) : <p className="lx-muted">{t.continueEmpty}</p>}
       </section>
 
       <section className="lx-section" aria-labelledby="learn-courses">
-        <header><h2 id="learn-courses">{t.courses}</h2><Link className="lx-link" href="/learn/courses">{courses.length ? t.all : t.browse}</Link></header>
+        <header><h2 id="learn-courses">{t.courses}</h2><Link className="lx-link" href={hostHref("/learn/courses")}>{courses.length ? t.all : t.browse}</Link></header>
         {courses.length ? (
           <div className="lx-level-grid">
             {courses.slice(0, 6).map(c => <Link key={c.id} className="lx-node" href={c.nextLessonId ? `/learn/${c.nextLessonId}?course=${c.id}` : `/learn/courses/${c.id}`}><GraduationCap size={18} aria-hidden /><span dir="auto">{c.title}<small>{c.completed} / {c.total} · {t.continue}</small></span></Link>)}
           </div>
-        ) : <EmptyState icon={GraduationCap} title={t.courses} body={t.coursesEmpty}><Link className="ws-btn" href="/learn/courses">{t.browse}</Link></EmptyState>}
+        ) : <EmptyState icon={GraduationCap} title={t.courses} body={t.coursesEmpty}><Link className="ws-btn" href={hostHref("/learn/courses")}>{t.browse}</Link></EmptyState>}
       </section>
 
       {caps.weakAreas && weak && weak.length > 0 && (
@@ -105,7 +106,7 @@ export default function LearnHome() {
                 <span className="lx-row__icon" aria-hidden><Target size={16} /></span>
                 <div className="lx-row__main"><span className="lx-row__title">{w.concept}</span></div>
                 <Link className="ws-btn ws-btn--sm ws-btn--ghost" href={`/learn/${w.lessonId}${w.blockId ? `#${w.blockId}` : ""}`}>{t.reread}</Link>
-                {w.flashcardBlockId && <Link className="ws-btn ws-btn--sm" href={`/learn/${w.lessonId}#${w.flashcardBlockId}`}>{locale === "ar" ? "راجع البطاقات" : "Review cards"}</Link>}{w.quizHref && <Link className="ws-btn ws-btn--sm" href={w.quizHref}>{t.practice}</Link>}
+                {w.flashcardBlockId && <Link className="ws-btn ws-btn--sm" href={hostHref(`/learn/${w.lessonId}#${w.flashcardBlockId}`)}>{locale === "ar" ? "راجع البطاقات" : "Review cards"}</Link>}{w.quizHref && <Link className="ws-btn ws-btn--sm" href={w.quizHref}>{t.practice}</Link>}
               </div>
             ))}
           </div>
@@ -142,9 +143,9 @@ export default function LearnHome() {
       </section>
 
       <section className="lx-section" aria-labelledby="learn-discover">
-        <header><h2 id="learn-discover">{t.discover}</h2><Link className="lx-link" href="/learn">{t.explore}</Link></header>
+        <header><h2 id="learn-discover">{t.discover}</h2><Link className="lx-link" href={hostHref("/learn")}>{t.explore}</Link></header>
         {discover.length ? (
-          <div className="lx-grid">{discover.slice(0, 6).map((l) => <LessonCard key={l.id} lesson={l} href={`/learn/${l.id}`} progress={progress[l.id]} />)}</div>
+          <div className="lx-grid">{discover.slice(0, 6).map((l) => <LessonCard key={l.id} lesson={l} href={hostHref(`/learn/${l.id}`)} progress={progress[l.id]} />)}</div>
         ) : <EmptyState icon={Layers} title={t.discover} body={t.discoverEmpty} />}
       </section>
     </div>

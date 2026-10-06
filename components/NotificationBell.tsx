@@ -8,6 +8,7 @@ import { Bell } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { formatNumber, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
+import { hostHref } from "@/lib/hosts";
 
 const copy = {
   en: {
@@ -75,7 +76,7 @@ export default function NotificationBell() {
               {data.items.map((n) => (
                 <li key={n._id} className={`px-4 py-3 border-b border-foreground/5 text-sm ${n.read ? "text-muted-foreground" : ""}`}>
                   {n.kind === "webhook" ? (
-                    <Link href="/dashboard/connections" onClick={() => { if (!n.read) markRead({ ids: [n._id] }); setOpen(false); }} className="hover:underline">{n.message}</Link>
+                    <Link href={hostHref("/dashboard/connections")} onClick={() => { if (!n.read) markRead({ ids: [n._id] }); setOpen(false); }} className="hover:underline">{n.message}</Link>
                   ) : n.formId ? (
                     <Link href={n.kind === "response" || n.kind === "limit" ? `/dashboard/forms/${n.formId}/responses` : `/dashboard/forms/${n.formId}`}
                       onClick={() => { if (!n.read) markRead({ ids: [n._id] }); setOpen(false); }} className="hover:underline">

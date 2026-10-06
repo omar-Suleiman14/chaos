@@ -25,6 +25,7 @@ import { useInitialTheme } from "./initial-theme";
 import { formatScheduleTime } from "@/convex/formSchedule";
 import type { Id } from "@/convex/_generated/dataModel";
 import { StudyProgressOptIn } from "./StudyProgressOptIn";
+import { linkOrigin } from "@/lib/hosts";
 
 function randomHex(bytes: number) {
   const buf = new Uint8Array(bytes);
@@ -376,7 +377,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
     const token = randomHex(24);
     try {
       await saveResume({ shareId, token, answers: progress.answers, language: progress.language, accessCode });
-      setResumeLink(`${window.location.origin}/f/${shareId}?resume=${token}`);
+      setResumeLink(`${linkOrigin("main")}/f/${shareId}?resume=${token}`);
     } catch (err) {
       setError(parseError(err).message);
     }
@@ -425,7 +426,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
           {form.showReceipt && receipt.editToken && form.allowEditAfterSubmit && (
             <div className="form-receipt" dir={isRtl(receipt.language) ? "rtl" : "ltr"}>
               <p className="text-xs form-muted">{text[receipt.language].editLink}</p>
-              <CopyField value={`${typeof window !== "undefined" ? window.location.origin : ""}/f/${shareId}?edit=${receipt.editToken}`} label={text[receipt.language].copy} copiedLabel={text[receipt.language].copied} />
+              <CopyField value={`${linkOrigin("main")}/f/${shareId}?edit=${receipt.editToken}`} label={text[receipt.language].copy} copiedLabel={text[receipt.language].copied} />
             </div>
           )}
           <div className="form-ending-actions">

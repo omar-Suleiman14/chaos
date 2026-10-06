@@ -16,6 +16,7 @@ import EmbedPanel from "./EmbedPanel";
 import FallbackBoundary from "@/components/FallbackBoundary";
 import DocHint from "@/components/forms/DocHint";
 import { shortShareUrl } from "@/lib/site";
+import { linkOrigin } from "@/lib/hosts";
 
 const copy = {
   en: {
@@ -70,7 +71,7 @@ export default function ShareTab({ formId, shareId, title, published, status, sl
   const saveAsTemplate = useMutation(api.forms.saveAsTemplate);
   const [origin, setOrigin] = useState("");
   const [templateName, setTemplateName] = useState(title);
-  useEffect(() => setOrigin(window.location.origin), []);
+  useEffect(() => setOrigin(linkOrigin("main")), []);
   // The custom link when there is one; /f/<id> always keeps working too.
   const path = slug && me ? `/${me.username}/${slug}` : `/f/${shareId}`;
   const link = `${origin}${path}`;

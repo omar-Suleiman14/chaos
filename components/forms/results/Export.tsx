@@ -14,6 +14,7 @@ import Link from "next/link";
 import { WsSwitch } from "@/components/workspace/primitives";
 import DocHint from "@/components/forms/DocHint";
 import { resultsCopy } from "./copy";
+import { hostHref } from "@/lib/hosts";
 
 /** Downloads every visible response. Column headers stay in English: they are a file format other tools read. */
 export function ExportTab({ formId, title }: { formId: Id<"forms">; title: string }) {
@@ -97,7 +98,7 @@ export function ExportTab({ formId, title }: { formId: Id<"forms">; title: strin
           </li>
         ))}
       </ul>
-      <DocHint slug="webhooks">{t.automate} <Link href="/dashboard/connections" className="underline underline-offset-2">{t.connections}</Link> ·</DocHint>
+      <DocHint slug="webhooks">{t.automate} <Link href={hostHref("/dashboard/connections")} className="underline underline-offset-2">{t.connections}</Link> ·</DocHint>
     </section>
   );
 }

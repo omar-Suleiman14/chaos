@@ -10,6 +10,7 @@ import { WsSwitch } from "@/components/workspace/primitives";
 import { toast } from "@/lib/toast";
 import { useCopy } from "@/lib/i18n";
 import { EMBED_HEIGHT_MESSAGE, MAX_EMBED_ORIGINS, embedSnippet, normalizeEmbedOrigins } from "@/lib/embed";
+import { linkOrigin } from "@/lib/hosts";
 
 const copy = {
   en: {
@@ -71,7 +72,7 @@ export default function EmbedPanel({ formId, link, title }: { formId: Id<"forms"
   const [autoResize, setAutoResize] = useState(true);
   const [copied, setCopied] = useState(false);
   const [origin, setOrigin] = useState("");
-  useEffect(() => setOrigin(window.location.origin), []);
+  useEffect(() => setOrigin(linkOrigin("main")), []);
 
   // Load the saved values once; later server updates would overwrite what the person is typing.
   useEffect(() => {

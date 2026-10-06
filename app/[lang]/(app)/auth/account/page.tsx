@@ -3,6 +3,7 @@ import { useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth/better-client";
 import { useLocale } from "@/lib/i18n";
 import Link from "next/link";
+import { hostHref } from "@/lib/hosts";
 
 export default function AccountPage() {
   const { locale } = useLocale();
@@ -41,7 +42,7 @@ export default function AccountPage() {
   if (process.env.NEXT_PUBLIC_AUTH_PROVIDER !== "betterauth")
     return (
       <main className="p-12">
-        <Link href="/dashboard">{ar ? "العودة" : "Back to dashboard"}</Link>
+        <Link href={hostHref("/dashboard")}>{ar ? "العودة" : "Back to dashboard"}</Link>
       </main>
     );
   if (isPending)

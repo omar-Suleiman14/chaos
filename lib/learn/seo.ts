@@ -1,6 +1,7 @@
 import { isCoverUrl } from "@/lib/learn/covers";
 import type { Metadata } from "next";
 import { defaultOgImage } from "@/lib/seo";
+import { canonicalUrl } from "@/lib/hosts";
 import { excerpt, outline } from "./doc";
 import type { Lesson } from "./types";
 
@@ -29,9 +30,9 @@ export function lessonMetadata(lesson: Lesson | null): Metadata {
   return {
     title,
     description,
-    alternates: { canonical: path },
+    alternates: { canonical: canonicalUrl(path) },
     authors: [{ name: meta.authorDisplay || lesson.ownerName }],
-    openGraph: { title, description, url: path, siteName: "Chaos", type: "article", locale: meta.language === "ar" ? "ar_EG" : "en_US", images: image, publishedTime: new Date(lesson.published.publishedAt).toISOString(), tags: meta.tags },
+    openGraph: { title, description, url: canonicalUrl(path), siteName: "Chaos", type: "article", locale: meta.language === "ar" ? "ar_EG" : "en_US", images: image, publishedTime: new Date(lesson.published.publishedAt).toISOString(), tags: meta.tags },
     twitter: { card: "summary_large_image", title, description, images: image },
     robots: { index: lessonIndexable(lesson), follow: lessonIndexable(lesson) },
   };

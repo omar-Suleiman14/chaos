@@ -11,6 +11,7 @@ import { useAllHighlights, useLearnActions, useLearnCapabilities, useLessonTitle
 import { excerpt } from "@/lib/learn/doc";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
+import { hostHref } from "@/lib/hosts";
 
 const copy = {
   en: {
@@ -60,7 +61,7 @@ export default function SavedPage() {
   const list = tab === "lessons" ? lessons.map((s) => (
     <div key={s.id} className="lx-row">
       <span className="lx-row__icon" data-kind="lesson" aria-hidden><BookOpen size={16} /></span>
-      <Link className="lx-row__main" href={`/learn/${s.lessonId}`} style={{ color: "inherit", textDecoration: "none" }}><span className="lx-row__title">{s.lessonTitle || titleOf(s.lessonId)}</span><span className="lx-row__sub">{timeAgo(locale, s.createdAt)}</span></Link>
+      <Link className="lx-row__main" href={hostHref(`/learn/${s.lessonId}`)} style={{ color: "inherit", textDecoration: "none" }}><span className="lx-row__title">{s.lessonTitle || titleOf(s.lessonId)}</span><span className="lx-row__sub">{timeAgo(locale, s.createdAt)}</span></Link>
       {removeRow(s.lessonTitle, () => actions.removeSave(s.id))}
     </div>
   )) : tab === "parts" ? parts.map((s) => (
@@ -68,7 +69,7 @@ export default function SavedPage() {
       <span className="lx-row__icon" aria-hidden><Bookmark size={16} /></span>
       <div className="lx-row__main">
         <span className="lx-quote">{s.excerpt || "—"}</span>
-        <Link className="lx-link" href={`/learn/${s.lessonId}#${s.blockId}`}>{t.from(s.lessonTitle || t.untitled)} · {t.open}</Link>
+        <Link className="lx-link" href={hostHref(`/learn/${s.lessonId}#${s.blockId}`)}>{t.from(s.lessonTitle || t.untitled)} · {t.open}</Link>
       </div>
       {removeRow(s.excerpt ?? "", () => actions.removeSave(s.id))}
     </div>
@@ -77,7 +78,7 @@ export default function SavedPage() {
       <span className="lx-row__icon" aria-hidden><Highlighter size={16} /></span>
       <div className="lx-row__main">
         <span><mark className="lx-hl" data-color={h.color}>{excerpt(h.quote, 300)}</mark></span>
-        <Link className="lx-link" href={`/learn/${h.lessonId}#${h.blockId}`}>{t.from(titleOf(h.lessonId))} · {t.open}</Link>
+        <Link className="lx-link" href={hostHref(`/learn/${h.lessonId}#${h.blockId}`)}>{t.from(titleOf(h.lessonId))} · {t.open}</Link>
       </div>
       {removeRow(h.quote.slice(0, 30), () => actions.removeHighlight(h.id))}
     </div>
@@ -86,7 +87,7 @@ export default function SavedPage() {
       <span className="lx-row__icon" aria-hidden><NotebookPen size={16} /></span>
       <div className="lx-row__main">
         <span style={{ whiteSpace: "pre-wrap", fontSize: 14 }}>{excerpt(n.body, 400)}</span>
-        <Link className="lx-link" href={`/learn/${n.lessonId}#${n.blockId}`}>{t.from(titleOf(n.lessonId))} · {t.open}</Link>
+        <Link className="lx-link" href={hostHref(`/learn/${n.lessonId}#${n.blockId}`)}>{t.from(titleOf(n.lessonId))} · {t.open}</Link>
       </div>
       {removeRow(n.body.slice(0, 30), () => actions.deleteNote(n.id))}
     </div>

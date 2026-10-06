@@ -78,6 +78,17 @@ export const sectionsAr: DocSection[] = [
         summary: "الشريط الجانبي والبحث والشريط العلوي.",
         blocks: [
           { type: "p", text: "بعد تسجيل الدخول يجري كل شيء في مساحة العمل. الشريط الجانبي على جانب الصفحة." },
+          { type: "heading", id: "addresses", text: "عناوين Chaos" },
+          {
+            type: "list",
+            items: [
+              "**chaos.fail** لاكتشاف Chaos. وتبقى فيه النماذج المشتركة والألعاب المباشرة وبطاقات الأعضاء، فتعمل الروابط القديمة كما هي.",
+              "**app.chaos.fail** للإنشاء: مساحة العمل ومكتبتك والنتائج.",
+              "**learn.chaos.fail** للتعلّم: الدروس والدورات والبطاقات التعليمية.",
+              "**docs.chaos.fail** لفهم Chaos والبناء عليه: هذه الأدلة.",
+            ],
+          },
+          { type: "p", text: "يبقى تسجيل دخولك في العناوين الأربعة، وتتبعك لغتك. والرابط القديم مثل chaos.fail/dashboard ينقلك إلى العنوان الصحيح." },
           { type: "heading", id: "sidebar", text: "الشريط الجانبي" },
           {
             type: "list",
@@ -1218,6 +1229,7 @@ export const sectionsAr: DocSection[] = [
             items: [
               "تتولى بنفسك النسخ الاحتياطي والمراقبة والتحديثات.",
               "اضبط `NEXT_PUBLIC_APP_URL` و`CHAOS_APP_URL` على عنوانك، وإلا أشارت الروابط إلى chaos.fail.",
+              "يعمل كل شيء على عنوان واحد ما لم تضبط `NEXT_PUBLIC_DASHBOARD_ORIGIN` أو `NEXT_PUBLIC_LEARN_ORIGIN` أو `NEXT_PUBLIC_DOCS_ORIGIN` لتعطي قسمًا نطاقًا فرعيًا خاصًا به.",
               "يحتاج API التكامل والـ webhooks إلى أن يكون منفذ HTTP في الخادم متاحًا.",
               "التحليلات متوقفة ما لم تضبطها.",
             ],

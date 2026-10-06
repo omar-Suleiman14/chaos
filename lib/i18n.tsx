@@ -3,6 +3,9 @@
 import { createContext, useCallback, useContext, useEffect, useState } from "react";
 import { isLocale, isSitePath, LOCALE_COOKIE, localeDir, localePath, splitLocale } from "./locale";
 import type { Locale } from "./locale";
+import { sharedCookieDomain } from "./hosts";
+
+const cookieDomain = sharedCookieDomain();
 
 export { dateLocale, formatDate, formatDateTime, formatNumber, isLocale, LOCALE_COOKIE, localeDir, localePath, pluralForm } from "./locale";
 export type { Locale, PluralForms } from "./locale";
@@ -33,7 +36,9 @@ export function LocaleProvider({ initial, children }: { initial: Locale; childre
   }, [locale]);
   const setLocale = useCallback((next: Locale) => {
     setState(next);
-    document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax`;
+    // With the sections on their own hosts the cookie lives on the parent domain (proxy.ts does the same).
+    if (cookieDomain) document.cookie = `${LOCALE_COOKIE}=; path=/; max-age=0; samesite=lax`;
+    document.cookie = `${LOCALE_COOKIE}=${next}; path=/; max-age=31536000; samesite=lax${cookieDomain ? `; domain=${cookieDomain}` : ""}`;
     document.documentElement.lang = next;
     document.documentElement.dir = localeDir(next);
     const { path } = splitLocale(window.location.pathname);

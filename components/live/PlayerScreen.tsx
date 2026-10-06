@@ -22,6 +22,7 @@ import Link from "next/link";
 import { gameSound, gameThemeProps } from "./GameTheme";
 import Logo from "@/components/Logo";
 import { startJourney, useUsableMark } from "@/lib/journeys";
+import { hostHref } from "@/lib/hosts";
 
 const SESSION_KEY = "chaos-live-session";
 type PlayerView = FunctionReturnType<typeof api.live.playerView>;
@@ -204,7 +205,7 @@ function JoinForm({ t, initialPin, onJoined }: { t: Copy; initialPin: string; on
       {error && <p className="live-error" role="alert">{error}</p>}
       <button type="submit" className="live-btn live-btn--primary w-full" disabled={busy || pin.length !== 6 || !nickname.trim()}>{busy ? t.joining : t.join}</button>
       </form>
-      <div className="live-create-callout"><Link href="/dashboard?tab=games" prefetch={false}>{t.createGame} <span aria-hidden="true">↗</span></Link><p>{t.hostHelp}</p></div>
+      <div className="live-create-callout"><Link href={hostHref("/dashboard?tab=games")} prefetch={false}>{t.createGame} <span aria-hidden="true">↗</span></Link><p>{t.hostHelp}</p></div>
       </div>
     </div>
   );

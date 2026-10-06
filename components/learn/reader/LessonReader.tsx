@@ -49,6 +49,7 @@ import PracticeTab from "./PracticeTab";
 import ReportDialog from "./ReportDialog";
 import SelectionToolbar, { useTextSelection, type SelectionAction } from "./SelectionToolbar";
 import { useUsableMark } from "@/lib/journeys";
+import { linkOrigin } from "@/lib/hosts";
 
 const copy = {
   en: {
@@ -245,7 +246,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
 
   const resumeHeading = progress?.state === "in_progress" && progress.lastBlockId ? items.find((i) => i.id === progress.lastBlockId) : undefined;
   const lessonSaved = saved.find((s) => s.kind === "lesson" && s.lessonId === lesson.id);
-  const publicUrl = typeof window !== "undefined" && isListed(lesson) ? `${window.location.origin}${lessonPath(lesson.id)}` : undefined;
+  const publicUrl = typeof window !== "undefined" && isListed(lesson) ? `${linkOrigin("learn")}${lessonPath(lesson.id)}` : undefined;
   const blockIds = useMemo(() => new Set([...walk(asBlocks(view.content))].map(({ block }) => block.id)), [view.content]);
 
   const sectionOf = useCallback((blockId: string) => {
@@ -288,7 +289,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   };
 
   const copyLink = async (hash?: string) => {
-    try { await navigator.clipboard.writeText(`${window.location.origin}${lessonPath(lesson.id)}${hash ? `#${hash}` : ""}`); say(t.linkCopied); } catch { toast.error(t.copyFailed); }
+    try { await navigator.clipboard.writeText(`${linkOrigin("learn")}${lessonPath(lesson.id)}${hash ? `#${hash}` : ""}`); say(t.linkCopied); } catch { toast.error(t.copyFailed); }
   };
 
   const openSourceTarget = async (source: LessonSource, locator: string) => {

@@ -17,6 +17,7 @@ import { toast } from "@/lib/toast";
 import { formatDateTime, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
 import { learnWebhookLabel } from "@/lib/learnWebhookLabels";
+import { hostHref } from "@/lib/hosts";
 
 type Health = "healthy" | "new" | "failing" | "paused" | "disabled";
 type DeliveryStatus = "pending" | "retrying" | "succeeded" | "failed" | "cancelled";
@@ -280,7 +281,7 @@ export default function WebhooksSection() {
 
       <div className="chaos-card bg-card p-5 text-sm space-y-2">
         <ul className="list-disc ps-5 space-y-1 text-muted-foreground">{t.how.map((line) => <li key={line}>{line}</li>)}</ul>
-        <Link href="/docs/webhooks" className="text-xs underline">{t.guide}</Link>
+        <Link href={hostHref("/docs/webhooks")} className="text-xs underline">{t.guide}</Link>
       </div>
 
       {secret && <SecretBox secret={secret.value} note={secret.note} onDone={() => setSecret(null)} />}

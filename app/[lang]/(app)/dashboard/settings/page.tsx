@@ -16,6 +16,7 @@ import { WsSwitch } from "@/components/workspace/primitives";
 import { useCopy } from "@/lib/i18n";
 import { supportEmail } from "@/lib/site";
 import { Row, Section, Segmented, useScrollToHash } from "@/components/workspace/settingsUi";
+import { hostHref } from "@/lib/hosts";
 
 /* Content settings: new forms, library, shortcuts, old quizzes and help. Account and app appearance live on the profile page (/dashboard/card). */
 
@@ -225,7 +226,7 @@ export default function SettingsPage() {
       )}
 
       <Section id="help" icon={LifeBuoy} title={t.help} description={t.helpAbout}>
-        <Row id="settings-docs" label={t.docs} help={t.docsHelp}><Link href="/docs" target="_blank" rel="noopener" className="ws-btn ws-btn--sm">{t.open} <ChevronRight size={14} className="rtl:-scale-x-100" /></Link></Row>
+        <Row id="settings-docs" label={t.docs} help={t.docsHelp}><Link href={hostHref("/docs")} target="_blank" rel="noopener" className="ws-btn ws-btn--sm">{t.open} <ChevronRight size={14} className="rtl:-scale-x-100" /></Link></Row>
         <Row id="settings-help" label={t.feedback}><a href={`mailto:${supportEmail}`} className="ws-btn ws-btn--sm">{t.email}</a></Row>
         <Row id="settings-privacy" label={t.privacy}><Link href="/privacy" className="ws-btn ws-btn--sm ws-btn--ghost">{t.read}</Link></Row>
         <Row id="settings-terms" label={t.terms}><Link href="/terms" className="ws-btn ws-btn--sm ws-btn--ghost">{t.read}</Link></Row>

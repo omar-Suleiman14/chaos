@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { siteUrl } from "@/lib/site";
+import { canonicalUrl } from "@/lib/hosts";
 import { localePath, type Locale } from "@/lib/locale";
 
 /** About 155 characters, so search results show it whole. */
@@ -17,8 +18,8 @@ export function pageMetadata(title: string, description: string, path: string): 
   return {
     title,
     description,
-    alternates: { canonical: path },
-    openGraph: { title, description, url: path, siteName: "Chaos", type: "website", images: [defaultOgImage] },
+    alternates: { canonical: canonicalUrl(path) },
+    openGraph: { title, description, url: canonicalUrl(path), siteName: "Chaos", type: "website", images: [defaultOgImage] },
     twitter: { card: "summary_large_image", title, description, images: [defaultOgImage] },
   };
 }
@@ -27,9 +28,9 @@ export function pageMetadata(title: string, description: string, path: string): 
 export type SitePageProps = { params: Promise<{ lang: string }> };
 export type SitePageCopy = Record<Locale, { title: string; description: string }>;
 
-/** hreflang links for a marketing page: English unprefixed (also x-default), Arabic under /ar. */
+/** hreflang links for a marketing page: English unprefixed (also x-default), Arabic under /ar. Absolute, on the page's own host. */
 export function languageAlternates(path: string): Record<"en" | "ar" | "x-default", string> {
-  return { en: path, ar: localePath(path, "ar"), "x-default": path };
+  return { en: canonicalUrl(path), ar: canonicalUrl(localePath(path, "ar")), "x-default": canonicalUrl(path) };
 }
 
 /** pageMetadata() for a marketing page in its URL language, with canonical and hreflang alternates. */
@@ -41,7 +42,7 @@ export function sitePageMetadata(lang: string, copy: SitePageCopy, path: string,
   return {
     ...base,
     ...(options.absoluteTitle ? { title: { absolute: title } } : {}),
-    alternates: { canonical: url, languages: languageAlternates(path) },
+    alternates: { canonical: canonicalUrl(url), languages: languageAlternates(path) },
     openGraph: { ...base.openGraph, locale: locale === "ar" ? "ar_EG" : "en_US", alternateLocale: [locale === "ar" ? "en_US" : "ar_EG"] },
   };
 }

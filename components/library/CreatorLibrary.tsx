@@ -36,6 +36,7 @@ import { useCreateForm } from "@/components/workspace/useCreateForm";
 import { useUsableMark } from "@/lib/journeys";
 import { useConfirmedQuery } from "@/lib/confirmedQuery";
 import { CacheState } from "@/components/workspace/CacheState";
+import { linkOrigin } from "@/lib/hosts";
 
 const kinds = ["Forms", "Quizzes", "Flashcards", "Courses", "Games"] as const;
 type Kind = (typeof kinds)[number];
@@ -251,7 +252,7 @@ export default function CreatorLibrary() {
   };
 
   const rows = useMemo<Row[]>(() => {
-    const origin = typeof window !== "undefined" ? window.location.origin : "";
+    const origin = linkOrigin("main");
     const own: Row[] = (forms?.owned ?? []).map((f) => ({
       key: f._id, kind: f.quizMode ? "quiz" : "form", title: f.title || (f.quizMode ? t.untitledQuiz : t.untitledForm),
       href: `/dashboard/forms/${f._id}`, resultsHref: `/dashboard/forms/${f._id}/responses`, status: f.status, edited: f.hasUnpublishedChanges,

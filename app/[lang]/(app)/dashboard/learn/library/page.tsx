@@ -20,6 +20,7 @@ import type { Folder as FolderT, LibraryItemKind, Visibility } from "@/lib/learn
 import { useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
 import { hrefIntentHandlers } from "@/lib/convexCache";
+import { hostHref } from "@/lib/hosts";
 
 const copy = {
   en: {
@@ -297,7 +298,7 @@ function CollectionDialog({ folder, device, t, onSave, onClose }: { folder: Fold
         <label className="lx-field">{t.visibility}<Select label={t.visibility} value={visibility} onChange={(v) => setVisibility(v as Visibility)} options={(["private", "public"] as const).map((v) => ({ value: v, label: t.vis[v] }))} /></label>
         {device && visibility !== "private" && <p className="lx-notice" data-tone="warn">{t.collectionDevice}</p>}
         <div className="lx-actions" style={{ justifyContent: "flex-end" }}>
-          {published && <Link className="ws-btn ws-btn--ghost" href={`/learn/collections/${folder.id}`}>{t.viewCol}</Link>}
+          {published && <Link className="ws-btn ws-btn--ghost" href={hostHref(`/learn/collections/${folder.id}`)}>{t.viewCol}</Link>}
           {published && <button type="button" className="ws-btn ws-btn--ghost" onClick={() => onSave(undefined)}>{t.unpublishCol}</button>}
           <button type="button" className="ws-btn ws-btn--ghost" onClick={onClose}>{t.cancel}</button>
           <button type="submit" className="ws-btn ws-btn--primary">{published ? t.save : t.publish}</button>

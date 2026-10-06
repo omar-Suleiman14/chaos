@@ -12,6 +12,7 @@ import { useConvexAuth } from "convex/react";
 import type { VerificationKind, VerificationStatus } from "@/lib/learn/types";
 import { errorMessage } from "@/lib/errors";
 import { formatDate, useCopy, useLocale } from "@/lib/i18n";
+import { hostHref } from "@/lib/hosts";
 
 const copy = {
   en: {
@@ -71,7 +72,7 @@ export default function LearnProfilePage() {
     <div className="lx-page lx-page--narrow">
       <header className="lx-hero">
         <div><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></div>
-        <div className="lx-actions"><Link className="ws-btn" href="/dashboard/learn/weak-areas">{t.weakAreas}</Link><Link className="ws-btn" href={`/learn/people/${encodeURIComponent(viewer.id)}`}><ExternalLink size={15} aria-hidden />{t.view}</Link></div>
+        <div className="lx-actions"><Link className="ws-btn" href="/dashboard/learn/weak-areas">{t.weakAreas}</Link><Link className="ws-btn" href={hostHref(`/learn/people/${encodeURIComponent(viewer.id)}`)}><ExternalLink size={15} aria-hidden />{t.view}</Link></div>
       </header>
       <form className="lx-form lx-panel" onSubmit={async (e) => { e.preventDefault(); try { await actions.updateProfile({ name: (name ?? current.name).trim() || current.name, bio: bio ?? current.bio }); toast.success(t.saved); } catch (err) { toast.error(err); } }}>
         <label className="lx-field">{t.name}<input className="lx-input" value={name ?? current.name} maxLength={80} onChange={(e) => setName(e.target.value)} /></label>

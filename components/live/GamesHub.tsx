@@ -17,6 +17,7 @@ import { WsSwitch } from "@/components/workspace/primitives";
 import { Select } from "@/components/workspace/Select";
 import { useCopy, useLocale } from "@/lib/i18n";
 import "./games.css";
+import { hostHref } from "@/lib/hosts";
 
 const copy = {
   en: {
@@ -81,14 +82,14 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
     const count = filtered.length + old.length;
     return <div className="games-quiz-list">
     {filtered.slice(0, shown[key]).map((quiz) => <article key={quiz._id}>
-      <div className="games-quiz-list__title"><Link href={`/dashboard/forms/${quiz._id}`}><h3>{quiz.title}</h3></Link><p>{published ? t.published : t.draftStatus}</p></div>
-      <div className="games-quiz-list__actions"><Link className="ws-btn" href={`/dashboard/forms/${quiz._id}`}>{published ? t.edit : t.finish}<ArrowRight size={15} aria-hidden="true" className="rtl:rotate-180" /></Link>
+      <div className="games-quiz-list__title"><Link href={hostHref(`/dashboard/forms/${quiz._id}`)}><h3>{quiz.title}</h3></Link><p>{published ? t.published : t.draftStatus}</p></div>
+      <div className="games-quiz-list__actions"><Link className="ws-btn" href={hostHref(`/dashboard/forms/${quiz._id}`)}>{published ? t.edit : t.finish}<ArrowRight size={15} aria-hidden="true" className="rtl:rotate-180" /></Link>
         {published && <button type="button" disabled={host.busy} className="ws-btn ws-btn--primary" onClick={() => void reportHost({ formId: quiz._id })}><Radio size={16} aria-hidden="true" />{host.label}</button>}
       </div>
     </article>)}
     {old.slice(0, Math.max(0, shown[key] - filtered.length)).map((quiz) => <article key={quiz._id}>
-      <div className="games-quiz-list__title"><Link href={`/dashboard/editor?id=${quiz._id}`}><h3>{quiz.title}</h3></Link><p>{published ? t.published : t.draftStatus}</p></div>
-      <div className="games-quiz-list__actions"><Link href={`/dashboard/editor?id=${quiz._id}`} className="ws-btn">{published ? t.edit : t.finish}</Link>
+      <div className="games-quiz-list__title"><Link href={hostHref(`/dashboard/editor?id=${quiz._id}`)}><h3>{quiz.title}</h3></Link><p>{published ? t.published : t.draftStatus}</p></div>
+      <div className="games-quiz-list__actions"><Link href={hostHref(`/dashboard/editor?id=${quiz._id}`)} className="ws-btn">{published ? t.edit : t.finish}</Link>
         {published && <button type="button" className="ws-btn ws-btn--primary" disabled={host.busy} onClick={() => void reportHost({ quizId: quiz._id })}><Radio size={16} aria-hidden="true" />{host.label}</button>}
       </div>
     </article>)}
@@ -100,7 +101,7 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
     {/* In the Library, games start from a quiz (New → Quiz, then Host); the standalone header only appears outside it. */}
     {!embedded && <header className="ws-page-header games-header">
       <div><h1 className="ws-page-title">{t.title}</h1><p className="games-help">{t.lead}</p></div>
-      <div className="games-actions"><Link href="/docs/live-games" className="ws-btn"><BookOpen size={16} aria-hidden="true" />{t.guide}</Link><button type="button" className="ws-btn ws-btn--primary" disabled={busy} onClick={createGame}><Plus size={18} aria-hidden="true" />{busy ? t.creating : t.create}</button></div>
+      <div className="games-actions"><Link href={hostHref("/docs/live-games")} className="ws-btn"><BookOpen size={16} aria-hidden="true" />{t.guide}</Link><button type="button" className="ws-btn ws-btn--primary" disabled={busy} onClick={createGame}><Plus size={18} aria-hidden="true" />{busy ? t.creating : t.create}</button></div>
     </header>}
     <section className="games-session" aria-labelledby="games-session-title">
       <h2 id="games-session-title">{t.setup}</h2><p className="games-help">{t.setupHelp}</p>

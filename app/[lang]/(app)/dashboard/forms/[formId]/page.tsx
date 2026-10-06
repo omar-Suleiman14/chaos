@@ -33,6 +33,7 @@ import { timeAgo } from "@/lib/timeAgo";
 import { useFormDraft } from "./use-form-draft";
 import type { SaveState } from "./use-form-draft";
 import { journeyPending, useUsableMark, type Journey } from "@/lib/journeys";
+import { linkOrigin } from "@/lib/hosts";
 
 /**
  * Questions is the tab people land on; the others (QR code, embed, theme editor, rules…) load as
@@ -237,7 +238,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
       if (typeof navigator.clipboard?.writeText !== "function") {
         throw new Error(t.noClipboard);
       }
-      await navigator.clipboard.writeText(`${window.location.origin}/f/${data.shareId}`);
+      await navigator.clipboard.writeText(`${linkOrigin("main")}/f/${data.shareId}`);
       toast.success(t.linkCopied, { id: "copy-link" });
     } catch (err) {
       toast.error(err, { fallback: t.copyFailed, id: "copy-link" });
@@ -411,7 +412,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
         {tab === "Settings" && (<>
           <SettingsTab formId={formId} settings={editableSettings} hasAccessCode={hasAccessCode} groupName={data.groupName} status={data.status}
             published={published} def={def} isOwner={data.role === "owner"} announce={announce} slug={data.slug} shareId={data.shareId} canHideBranding={data.canHideBranding} />
-          {published && <EmbedPanel formId={formId} link={`${typeof window === "undefined" ? "" : window.location.origin}/f/${data.shareId}`} title={def.title} />}
+          {published && <EmbedPanel formId={formId} link={`${linkOrigin("main")}/f/${data.shareId}`} title={def.title} />}
         </>)}
         {tab === "Share" && <ShareTab formId={formId} shareId={data.shareId} title={def.title} published={published} status={data.status} slug={data.slug} />}
         {tab === "Team" && <TeamTab formId={formId} role={data.role} def={def} />}

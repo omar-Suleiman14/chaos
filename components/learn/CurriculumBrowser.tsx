@@ -9,6 +9,7 @@ import { isListed, useCurriculumNodes, useLearnActions, useLearnCapabilities, us
 import { ancestors } from "@/lib/learn/search";
 import { CURRICULUM_LEVELS, type CurriculumKind, type CurriculumNode } from "@/lib/learn/types";
 import { useCopy } from "@/lib/i18n";
+import { hostHref } from "@/lib/hosts";
 
 const copy = {
   en: {
@@ -43,11 +44,11 @@ const childKind = (kind?: CurriculumKind): CurriculumKind | undefined => kind ? 
 export function Breadcrumbs({ trail, rootLabel }: { trail: CurriculumNode[]; rootLabel: string }) {
   return (
     <nav className="lx-crumbs" aria-label="Breadcrumb">
-      <Link href="/dashboard/learn/courses/browse">{rootLabel}</Link>
+      <Link href={hostHref("/dashboard/learn/courses/browse")}>{rootLabel}</Link>
       {trail.map((n, i) => (
         <span key={n.id} style={{ display: "contents" }}>
           <ChevronRight size={13} aria-hidden className="lx-flip" />
-          {i === trail.length - 1 ? <span aria-current="page">{n.name}</span> : <Link href={`/dashboard/learn/courses/browse?node=${n.id}`}>{n.name}</Link>}
+          {i === trail.length - 1 ? <span aria-current="page">{n.name}</span> : <Link href={hostHref(`/dashboard/learn/courses/browse?node=${n.id}`)}>{n.name}</Link>}
         </span>
       ))}
     </nav>
@@ -123,13 +124,13 @@ export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
         <div className="lx-version-switch" role="group" aria-label={t.levels.version}>
           <History size={15} aria-hidden />
           {siblingsOfVersion.map((v) => (
-            <Link key={v.id} className="lx-chip" aria-current={v.id === version.id ? "true" : undefined} data-on={v.id === version.id} href={`/dashboard/learn/courses/browse?node=${node?.id === version.id ? v.id : equivalentIn(v)}`}>
+            <Link key={v.id} className="lx-chip" aria-current={v.id === version.id ? "true" : undefined} data-on={v.id === version.id} href={hostHref(`/dashboard/learn/courses/browse?node=${node?.id === version.id ? v.id : equivalentIn(v)}`)}>
               {v.name}{v.current ? ` · ${t.current}` : ""}
             </Link>
           ))}
         </div>
       )}
-      {onOldVersion && <p className="lx-notice" data-tone="warn" role="status">{t.olderWarning(version.name)} <Link className="lx-link" href={`/dashboard/learn/courses/browse?node=${equivalentIn(currentVersion)}`}>{t.switchTo(currentVersion.name)}</Link></p>}
+      {onOldVersion && <p className="lx-notice" data-tone="warn" role="status">{t.olderWarning(version.name)} <Link className="lx-link" href={hostHref(`/dashboard/learn/courses/browse?node=${equivalentIn(currentVersion)}`)}>{t.switchTo(currentVersion.name)}</Link></p>}
       {node?.kind === "program" && <p className="lx-help">{t.versionsLead}</p>}
 
       {canBuild && !node && <p className="lx-notice" data-tone="info">{t.localDir}</p>}
@@ -153,7 +154,7 @@ export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
                 const lessonCount = c.kind === "module" ? (allPublic ?? []).filter((l) => (l.published ?? l.draft).meta.curricula.some((r) => r.moduleId === c.id)).length : 0;
                 return (
                   <div key={c.id} style={{ display: "grid", gap: 4 }}>
-                    <Link className="lx-node" href={`/dashboard/learn/courses/browse?node=${c.id}`}>
+                    <Link className="lx-node" href={hostHref(`/dashboard/learn/courses/browse?node=${c.id}`)}>
                       <Icon size={18} aria-hidden />
                       <span>{c.name}{c.code ? ` · ${c.code}` : ""}{c.kind === "version" && <small>{c.current === undefined ? t.one.version : c.current ? t.current : t.older}</small>}{c.kind === "module" && lessonCount > 0 && <small>{t.count(lessonCount)}</small>}</span>
                       <ChevronRight size={15} aria-hidden className="lx-flip" style={{ marginInlineStart: "auto" }} />
@@ -176,7 +177,7 @@ export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
           {myMapped.length > 0 && (
             <section className="lx-section" aria-labelledby="module-mine">
               <header><h2 id="module-mine">{t.yourDrafts}</h2></header>
-              <div className="lx-grid">{myMapped.map((l) => <LessonCard key={l.id} lesson={l} href={`/dashboard/learn/lessons/${l.id}`} showStatus />)}</div>
+              <div className="lx-grid">{myMapped.map((l) => <LessonCard key={l.id} lesson={l} href={hostHref(`/dashboard/learn/lessons/${l.id}`)} showStatus />)}</div>
             </section>
           )}
         </>

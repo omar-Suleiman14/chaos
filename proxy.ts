@@ -4,6 +4,7 @@ import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
 import { decideFraming } from "@/lib/embed";
 import { shortHostRedirect } from "@/lib/site";
+import { hostRedirect, sharedCookieDomain } from "@/lib/hosts";
 import { isSitePath, LOCALE_COOKIE, splitLocale, type Locale } from "@/lib/locale";
 import { routeLocale, type LocaleRoute } from "@/lib/localeRouting";
 import type { EmbedPolicy, EmbedTarget } from "@/lib/embed";
@@ -32,8 +33,18 @@ function localeRoute(req: NextRequest): LocaleRoute {
   return routeLocale(req.nextUrl.pathname, req.nextUrl.search, req.cookies.get(LOCALE_COOKIE)?.value);
 }
 
+/** Set on the parent domain when the sections have their own hosts, so the language follows a visitor between them. */
+const cookieDomain = sharedCookieDomain();
+
 function rememberLocale<T extends NextResponse>(response: T, locale: Locale | undefined): T {
-  if (locale) response.cookies.set(LOCALE_COOKIE, locale, { path: "/", maxAge: 31536000, sameSite: "lax" });
+  if (!locale) return response;
+  if (!cookieDomain) {
+    response.cookies.set(LOCALE_COOKIE, locale, { path: "/", maxAge: 31536000, sameSite: "lax" });
+    return response;
+  }
+  // A host-only cookie from before the split would shadow the shared one, so it is cleared too.
+  response.headers.append("Set-Cookie", `${LOCALE_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax`);
+  response.headers.append("Set-Cookie", `${LOCALE_COOKIE}=${locale}; Domain=${cookieDomain}; Path=/; Max-Age=31536000; SameSite=Lax`);
   return response;
 }
 
@@ -61,11 +72,14 @@ async function finish(req: NextRequest, route: LocaleRoute): Promise<NextRespons
   return response;
 }
 
-/** Redirects that apply before any authentication: the short share host, then the page's language address. */
+/** Redirects that apply before any authentication: the short share host, the section's host, then the page's language address. */
 function earlyRedirect(req: NextRequest, route: LocaleRoute): NextResponse | null {
   // The short share host (NEXT_PUBLIC_SHORT_SHARE_ORIGIN) only redirects; pages live on the canonical site.
   const short = shortHostRedirect(req.url);
   if (short) return NextResponse.redirect(short, 301);
+  // chaos.fail, app., learn. and docs. each serve their own paths (lib/hosts.ts).
+  const host = hostRedirect(req.url);
+  if (host) return NextResponse.redirect(host, req.nextUrl.pathname === "/" ? 307 : 308);
   return localeRedirect(req, route);
 }
 

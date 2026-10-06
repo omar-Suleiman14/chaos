@@ -21,6 +21,7 @@ import { HIDDEN_FIELD_LIMITS, hiddenFieldNameError } from "@/convex/formResponde
 import DocHint from "@/components/forms/DocHint";
 import { Select } from "@/components/workspace/Select";
 import RuleEditor from "./RuleEditor";
+import { linkOrigin } from "@/lib/hosts";
 
 type EditableSettings = Omit<FormSettings, "accessCodeHash">;
 
@@ -216,7 +217,7 @@ function CustomLink({ formId, slug, shareId, title, announce }: {
   const [draft, setDraft] = useState(slug ?? slugify(title));
   const [error, setError] = useState("");
   const [copied, setCopied] = useState(false);
-  const origin = typeof window === "undefined" ? "https://chaos.fail" : window.location.origin;
+  const origin = linkOrigin("main");
   const host = origin.replace(/^https?:\/\//, "");
   const needsUsername = !!me && !me.chosen;
   const live = slug && me ? `${origin}/${me.username}/${slug}` : `${origin}/f/${shareId}`;

@@ -22,6 +22,7 @@ import { LessonCover, type PageLook } from "@/components/learn/editor/PageHeader
 import "@/components/learn/learn.css";
 import "@/components/courses/courses.css";
 import { useUsableMark } from "@/lib/journeys";
+import { hostHref } from "@/lib/hosts";
 
 const copy = {
   en: {
@@ -98,7 +99,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
         <span className="cb-status" data-live={course.published}>{course.published ? t.live : t.draft}</span>
         {course.published && dirty && <span className="cb-note">{t.changes}</span>}
         <span className="cb-top__spacer" />
-        {course.published && <Link className="ws-btn ws-btn--ghost ws-btn--sm" href={`/learn/courses/${course.id}`} target="_blank"><ExternalLink size={15} aria-hidden /> {t.view}</Link>}
+        {course.published && <Link className="ws-btn ws-btn--ghost ws-btn--sm" href={hostHref(`/learn/courses/${course.id}`)} target="_blank"><ExternalLink size={15} aria-hidden /> {t.view}</Link>}
         {course.isOwner && <button type="button" className="ws-btn ws-btn--primary" disabled={busy || !course.lessons.length} onClick={() => { setProblems([]); setPublishing(true); }}><Send size={15} aria-hidden />{course.published ? t.update : t.publish}</button>}
       </div>
 

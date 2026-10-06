@@ -8,6 +8,7 @@ import Link from "next/link";
 import { useCopy } from "@/lib/i18n";
 import { Id } from "@/convex/_generated/dataModel";
 import LoadingState from "@/components/LoadingState";
+import { hostHref } from "@/lib/hosts";
 
 const TYPE_LABELS: Record<string, string> = {
   mcq: "MCQ",
@@ -53,7 +54,7 @@ export default function PrintQuizPage() {
         <div role="alert" style={{ maxWidth: 420, textAlign: "center" }}>
           <h1 style={{ fontSize: 20, fontWeight: 700, marginBottom: 8 }}>{t.noAccess}</h1>
           <p style={{ marginBottom: 16 }}>{t.noAccessBody}</p>
-          <Link href="/dashboard" style={{ textDecoration: "underline" }}>{t.back}</Link>
+          <Link href={hostHref("/dashboard")} style={{ textDecoration: "underline" }}>{t.back}</Link>
         </div>
       </div>
     );

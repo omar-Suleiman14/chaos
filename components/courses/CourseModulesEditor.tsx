@@ -11,6 +11,7 @@ import { useCopy } from "@/lib/i18n";
 import { toast } from "@/lib/toast";
 import QuizBlockEditor from "@/components/learn/editor/QuizBlockEditor";
 import { hrefIntentHandlers } from "@/lib/convexCache";
+import { hostHref } from "@/lib/hosts";
 type Asset = { kind: "form" | "quiz"; id: string };
 export type CourseModule = { id: string; title: string; lessonIds: Id<"lessons">[]; assessments: Asset[] };
 type Lesson = { id: Id<"lessons">; title: string; published: boolean; changed: boolean; blocks: number };
@@ -70,7 +71,7 @@ export default function CourseModulesEditor({ courseId, modules, lessons }: { co
     <li key={l.id} className="cb-lesson">
       <span className="cb-lesson__no">{n}</span>
       <div className="min-w-0">
-        <Link dir="auto" className="cb-lesson__title truncate" href={`/dashboard/learn/lessons/${l.id}?course=${courseId}`} {...hrefIntentHandlers(`/dashboard/learn/lessons/${l.id}`)}>{l.title}</Link>
+        <Link dir="auto" className="cb-lesson__title truncate" href={hostHref(`/dashboard/learn/lessons/${l.id}?course=${courseId}`)} {...hrefIntentHandlers(`/dashboard/learn/lessons/${l.id}`)}>{l.title}</Link>
         <span className="cb-lesson__meta">{!l.published ? t.unpublished : l.changed ? t.changed : t.live} · {t.blocks(l.blocks)}</span>
       </div>
       <div className="cb-lesson__actions">

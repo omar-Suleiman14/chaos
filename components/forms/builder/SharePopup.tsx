@@ -12,6 +12,7 @@ import { embedSnippet } from "@/lib/embed";
 import { useCopy } from "@/lib/i18n";
 import { shortShareUrl } from "@/lib/site";
 import QrShare from "./QrShare";
+import { linkOrigin } from "@/lib/hosts";
 
 const copy = {
   en: {
@@ -59,7 +60,7 @@ export default function SharePopup({ formId, shareId, slug, title, quiz, onClose
   const t = useCopy(copy);
   const [tab, setTab] = useState<Tab>("link");
   const [origin, setOrigin] = useState("");
-  useEffect(() => setOrigin(window.location.origin), []);
+  useEffect(() => setOrigin(linkOrigin("main")), []);
   const me = useQuery(api.links.getMyLinkIdentity, slug ? {} : "skip");
   const path = slug && me ? `/${me.username}/${slug}` : `/f/${shareId}`;
   const link = `${origin}${path}`;

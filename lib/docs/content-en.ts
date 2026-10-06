@@ -73,6 +73,17 @@ export const sectionsEn: DocSection[] = [
         summary: "The sidebar, search, and the top bar.",
         blocks: [
           { type: "p", text: "After you sign in, everything happens in the workspace. The sidebar is at the side of the page." },
+          { type: "heading", id: "addresses", text: "Chaos addresses" },
+          {
+            type: "list",
+            items: [
+              "**chaos.fail** is where you discover Chaos. Shared forms, live games and member cards stay here too, so old links keep working.",
+              "**app.chaos.fail** is where you create. The workspace, your library and results.",
+              "**learn.chaos.fail** is where you learn. Lessons, courses and flashcards.",
+              "**docs.chaos.fail** is where you understand Chaos and build on it. These guides.",
+            ],
+          },
+          { type: "p", text: "You stay signed in on all four, and your language follows you. An old link such as chaos.fail/dashboard takes you to the right address." },
           { type: "heading", id: "sidebar", text: "The sidebar" },
           {
             type: "list",
@@ -1212,6 +1223,7 @@ export const sectionsEn: DocSection[] = [
             items: [
               "You run backups, monitoring and updates yourself.",
               "Set `NEXT_PUBLIC_APP_URL` and `CHAOS_APP_URL` to your own address, or links point at chaos.fail.",
+              "Everything runs on one address unless you set `NEXT_PUBLIC_DASHBOARD_ORIGIN`, `NEXT_PUBLIC_LEARN_ORIGIN` or `NEXT_PUBLIC_DOCS_ORIGIN` to give a section its own subdomain.",
               "The integration API and webhooks need the backend's HTTP port to be reachable.",
               "Analytics is off unless you set it up.",
             ],
