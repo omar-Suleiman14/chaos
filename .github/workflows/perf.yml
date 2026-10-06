@@ -49,6 +49,9 @@ jobs:
   budgets:
     name: Convex, render and bundle budgets
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
     timeout-minutes: 30
     steps:
       - name: Checkout
@@ -100,6 +103,20 @@ jobs:
       - name: Summary
         if: always()
         run: cat perf/results/summary.md >> "$GITHUB_STEP_SUMMARY" || true
+
+      # One comment per pull request, updated on every push: headline changes,
+      # the correctness verdict and every changed metric. Fork PRs get the step summary only.
+      - name: Comment on the pull request
+        if: always() && github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          PR: ${{ github.event.pull_request.number }}
+        run: |
+          pnpm exec tsx scripts/perf-pr-summary.ts > /dev/null
+          existing=$(gh api "repos/$GH_REPO/issues/$PR/comments" --paginate --jq '.[] | select(.body | startswith("<!-- chaos-perf-summary -->")) | .id' | head -n1)
+          if [ -n "$existing" ]; then gh api -X PATCH "repos/$GH_REPO/issues/comments/$existing" -F body=@perf/results/pr-comment.md > /dev/null
+          else gh pr comment "$PR" --body-file perf/results/pr-comment.md; fi
 
       - name: Upload results
         if: always()

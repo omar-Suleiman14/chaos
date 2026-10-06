@@ -5,6 +5,7 @@ import { evaluateErrors, evaluateJourneys, evaluateStatus, type Thresholds } fro
 import productionThresholds from "@/perf/production-thresholds.json";
 import { JOURNEYS } from "@/lib/journeys";
 import { baselineProblems, classify, guard, HARNESS_LABEL } from "@/scripts/lib/perfGuard";
+import { prComment } from "@/scripts/lib/prSummary";
 
 describe("percentiles", () => {
   it("uses nearest rank", () => {
@@ -98,5 +99,29 @@ describe("performance harness guard", () => {
     expect(baselineProblems(base, raised, "s")).toEqual([]);
     expect(baselineProblems(null, head, "s")).toEqual([]);
     expect(baselineProblems(base, null, "s")).toEqual(["s: the whole baseline file was deleted"]);
+  });
+});
+
+describe("pull request performance comment", () => {
+  const rows = [
+    { suite: "surfaces", metric: "dashboard.payloadBytes", unit: "bytes" as const, budget: 1000, value: 1070, status: "ok" },
+    { suite: "surfaces", metric: "lessons.reader.payloadBytes", unit: "bytes" as const, budget: 1000, value: 820, status: "improved" },
+    { suite: "census", metric: "editor.keystroke.commits", unit: "count" as const, budget: 2, value: 2, status: "ok" },
+  ];
+
+  it("leads with headline changes and the correctness verdict", () => {
+    const body = prComment(rows, [], [], "https://run");
+    expect(body.startsWith("<!-- chaos-perf-summary -->")).toBe(true);
+    expect(body).toContain("- Dashboard payload `+7%`");
+    expect(body).toContain("- Lesson load: reader payload `−18%`");
+    expect(body).toContain("- Form input: React commits per keystroke `unchanged`");
+    expect(body).toContain("- React commits unchanged");
+    expect(body).toContain("- ✅ Correctness checks passed");
+    expect(body).toContain("2 changed metrics");
+  });
+
+  it("never claims correctness that did not run or failed", () => {
+    expect(prComment(rows, [], null, "x")).toContain("Correctness checks did not run");
+    expect(prComment(rows, ["p"], ["correctness/integration"], "x")).toContain("🔴 Correctness checks failed: correctness/integration");
   });
 });
