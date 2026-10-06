@@ -63,6 +63,7 @@ async function measure(page: Page, probe: Probe, s: Surface) {
   suite.add(`${m}.idleCommits`, idle.commits, "count");
   suite.add(`${m}.subscriptions`, subs.length, "count");
   suite.add(`${m}.convexBytes`, probe.convexBytes(), "bytes");
+  suite.add(`${m}.sameFunctionSubscriptions`, probe.sameFunctionSubscriptions(), "count");
   suite.add(`${m}.load.recalcStyles`, load.recalcStyles, "count");
   suite.add(`${m}.load.recalcStyleMs`, load.recalcStyleMs);
   suite.add(`${m}.load.layouts`, load.layouts, "count");

@@ -48,9 +48,23 @@ export async function measureConvex<T>(fn: () => Promise<T>): Promise<{ result: 
   return { result, cost, payload: payloadBytes(result) };
 }
 
-/** The metrics a read is budgeted on: documents scanned, bytes read, index ranges and bytes sent to the client. */
-export function readMetrics(prefix: string, measured: { cost: ConvexCost; payload: number }) {
+/** Documents in a result: objects carrying a Convex `_id`, at any depth. */
+export function returnedDocuments(value: unknown): number {
+  if (Array.isArray(value)) return value.reduce((n: number, v) => n + returnedDocuments(v), 0);
+  if (!value || typeof value !== "object") return 0;
+  const own = typeof (value as { _id?: unknown })._id === "string" ? 1 : 0;
+  return own + Object.values(value).reduce((n: number, v) => n + returnedDocuments(v), 0);
+}
+
+/**
+ * The metrics a read is budgeted on: documents scanned, bytes read, index ranges and bytes sent
+ * to the client. `readAmplification` is documents read per document returned, ×10: a broad
+ * subscription that scans a table and filters in code shows up here even when its payload is small.
+ */
+export function readMetrics(prefix: string, measured: { cost: ConvexCost; payload: number; result?: unknown }) {
+  const amplification = measured.result === undefined ? undefined : Math.round((10 * measured.cost.documentsRead) / Math.max(1, returnedDocuments(measured.result)));
   return {
+    ...(amplification === undefined ? {} : { [`${prefix}.readAmplification`]: amplification }),
     [`${prefix}.documentsRead`]: measured.cost.documentsRead,
     [`${prefix}.databaseQueries`]: measured.cost.databaseQueries,
     [`${prefix}.bytesRead`]: { value: measured.cost.bytesRead, unit: "bytes" as const },

@@ -70,6 +70,8 @@ describe("editor", () => {
 
     recordPerf(ctx, {
       "editor.subscriptions": server.subscriptionCount,
+      "editor.duplicateSubscriptions": server.duplicates.sameArgs,
+      "editor.sameFunctionManyArgs": server.duplicates.manyArgs,
       "editor.mount.renders": mount.renders,
       "editor.keystroke.commits": keystroke.commits,
       "editor.keystroke.renders": keystroke.renders,
@@ -115,6 +117,8 @@ describe("lesson player", () => {
 
     recordPerf(ctx, {
       "lesson.subscriptions": server.subscriptionCount,
+      "lesson.duplicateSubscriptions": server.duplicates.sameArgs,
+      "lesson.sameFunctionManyArgs": server.duplicates.manyArgs,
       "lesson.mount.renders": mount.renders,
       "lesson.mount.blockBodies": mountBodies,
       "lesson.appendBlock.renders": append.renders,
@@ -182,6 +186,8 @@ describe("Live", () => {
 
     recordPerf(ctx, {
       "live.player.subscriptions": server.subscriptionCount,
+      "live.player.duplicateSubscriptions": server.duplicates.sameArgs,
+      "live.player.sameFunctionManyArgs": server.duplicates.manyArgs,
       "live.player.mount.renders": mount.renders,
       "live.player.clockSecond.commits": tick.commits,
       "live.player.clockSecond.renders": tick.renders,

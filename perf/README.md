@@ -122,6 +122,22 @@ selectors to `.x *`; use explicit transition properties; animate
 `transform` and `opacity` rather than size or position; give constant motion a
 `prefers-reduced-motion` override.
 
+## Reads and subscriptions
+
+Budgeted per page and per editor, exactly (counts have no noise band):
+
+- Reads: documents read, index ranges and bytes read per surface query
+  (`*.documentsRead`, `*.databaseQueries`, `*.bytesRead`), and
+  `*.readAmplification`, which is documents read per document returned ×10. A
+  broad query that scans and filters in code shows up there even when its
+  payload is small.
+- Subscriptions: live subscriptions per surface in the census and in Chromium
+  (`*.subscriptions`).
+- Duplicate query patterns: the same function and arguments mounted by two
+  components (`*.duplicateSubscriptions`), and one function held with several
+  arguments at once (`*.sameFunctionManyArgs` in jsdom,
+  `render.*.sameFunctionSubscriptions` in Chromium), where one query would often do.
+
 ## Subscriptions are correctness
 
 Budgets count subscriptions and reads so that waste shows up, not so that

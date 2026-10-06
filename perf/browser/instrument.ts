@@ -72,6 +72,8 @@ export async function instrument(page: Page) {
     convexBytes() { return convexBytes; },
     /** Live Convex subscriptions right now, by function. */
     subscriptions() { return [...queries.values()]; },
+    /** Extra subscriptions to a function already held (same function, different arguments). */
+    sameFunctionSubscriptions() { const names = [...queries.values()]; return names.length - new Set(names).size; },
     async commitMark() { return page.evaluate(() => (window as unknown as { __chaosCensus?: Census }).__chaosCensus?.commits.length ?? 0); },
     async renders(since: number) {
       const commits = await page.evaluate((at) => (window as unknown as { __chaosCensus?: Census }).__chaosCensus?.since(at) ?? [], since);
