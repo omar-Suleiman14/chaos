@@ -17,13 +17,26 @@
 /* Header: brand, a Docs label, the search in the middle, actions on the right. */
 .docs-ui .site-nav { display: grid; grid-template-columns: 1fr minmax(0, 480px) 1fr; }
 .site-nav__brand { display: flex; align-items: center; gap: 14px; justify-self: start; }
-.docs-tag { padding: 3px 10px; border-radius: 7px; background: var(--s-subtle); color: var(--s-text); font-size: 15px; font-weight: 600; text-decoration: none; }
+.docs-tag { display: inline-flex; align-items: center; height: 28px; padding: 0 10px; border-radius: 7px; background: var(--s-subtle); color: var(--s-text); font-size: 14px; font-weight: 600; line-height: 1; text-decoration: none; }
 .docs-header-search { min-width: 0; }
 .docs-header-search .docs-search__field { min-height: 40px; }
 .docs-ui .site-nav__actions { justify-self: end; }
+/* Log in and Get Chaos free stay on one line; the search column gives way instead. */
+.docs-ui .site-nav__actions .site-btn { white-space: nowrap; }
 
 /* Sidebar */
-.docs-side { position: sticky; top: 69px; align-self: start; max-height: calc(100dvh - 69px); overflow-y: auto; margin-top: 40px; padding: 4px 20px 40px 0; border-inline-end: 1px solid var(--s-line); scrollbar-width: thin; }
+.docs-side { position: sticky; top: 69px; align-self: start; max-height: calc(100dvh - 69px); overflow-y: auto; margin-top: 40px; padding: 4px 20px 40px 0; border-inline-end: 1px solid var(--s-line); }
+/* A quiet scrollbar: a thin rounded thumb, no arrows or track, that only shows while the guide list is hovered. */
+.docs-side::-webkit-scrollbar { width: 6px; }
+.docs-side::-webkit-scrollbar-button { display: none; height: 0; }
+.docs-side::-webkit-scrollbar-track { background: transparent; }
+.docs-side::-webkit-scrollbar-thumb { border-radius: 999px; background: transparent; }
+.docs-side:hover::-webkit-scrollbar-thumb { background: color-mix(in srgb, var(--s-text) 18%, transparent); }
+.docs-side::-webkit-scrollbar-thumb:hover { background: color-mix(in srgb, var(--s-text) 30%, transparent); }
+@supports not selector(::-webkit-scrollbar) {
+  .docs-side { scrollbar-width: thin; scrollbar-color: transparent transparent; }
+  .docs-side:hover { scrollbar-color: color-mix(in srgb, var(--s-text) 18%, transparent) transparent; }
+}
 .docs-side__toggle { display: none; }
 .docs-nav ul { list-style: none; }
 .docs-nav a { display: block; padding: 6px 10px; border-radius: 7px; color: var(--s-soft); font-size: 14px; line-height: 1.4; text-decoration: none; transition: background 140ms, color 140ms; }

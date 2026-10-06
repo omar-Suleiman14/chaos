@@ -9,6 +9,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { LibrarySkeleton } from "@/components/workspace/Skeletons";
 import { useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
+import { useConfirmed } from "@/lib/confirmedQuery";
 
 type Row = { id: string; title: string; count: number; updatedAt: number; restore: () => Promise<unknown> };
 type PageStatus = "LoadingFirstPage" | "CanLoadMore" | "LoadingMore" | "Exhausted";
@@ -18,12 +19,16 @@ type LearningKind = "courses" | "lessons" | "flashcards" | "legacy_quizzes";
 /** Archived learning content. With a title, the whole section is hidden while it has nothing archived. */
 export default function LearningArchive({ kind, title }: { kind: LearningKind; title?: string }) {
   const { isAuthenticated } = useConvexAuth();
-  const { results, status, loadMore } = usePaginatedQuery(api.archive.list, isAuthenticated ? { kind } : "skip", { initialNumItems: 25 });
+  const page = usePaginatedQuery(api.archive.list, isAuthenticated ? { kind } : "skip", { initialNumItems: 25 });
+  // The device's copy shows until Convex answers (lib/confirmedQuery.ts).
+  const results = useConfirmed(`archive.list:${kind}`, page.status === "LoadingFirstPage" ? undefined : page.results).data;
+  const status: PageStatus = page.status === "LoadingFirstPage" && results ? "Exhausted" : page.status;
+  const { loadMore } = page;
   const restoreCourse = useMutation(api.courses.setArchived);
   const restoreCards = useMutation(api.flashcards.setLifecycle);
   const restoreLesson = useMutation(api.lessons.setLifecycle);
   const restoreQuiz = useMutation(api.quizFunctions.setQuizArchived);
-  const rows = results.map(row => ({ ...row, restore: async () => {
+  const rows = (results ?? []).map(row => ({ ...row, restore: async () => {
     if (kind === "courses") return restoreCourse({ courseId: row.id as Id<"learnCollections">, archived: false });
     if (kind === "legacy_quizzes") return restoreQuiz({ quizId: row.id as Id<"quizzes">, archived: false });
     if (row.revision === undefined) throw new Error("Reload this archive before restoring.");

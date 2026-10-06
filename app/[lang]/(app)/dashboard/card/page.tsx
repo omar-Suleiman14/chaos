@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { ChevronRight, CircleUser, SunMoon } from "lucide-react";
 import { useClerk, useUser } from "@/lib/auth/client";
-import { useQuery } from "convex/react";
+import { useConfirmedQuery } from "@/lib/confirmedQuery";
 import { api } from "@/convex/_generated/api";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { sfx } from "@/lib/sfx";
@@ -54,7 +54,7 @@ export default function ProfilePage() {
   const clerk = useClerk();
   const { mode } = useTheme();
   const { preferences: p, set } = usePreferences();
-  const card = useQuery(api.memberCards.mine);
+  const card = useConfirmedQuery(api.memberCards.mine).data;
   const [sound, setSound] = useState(false);
   useEffect(() => { const sync = () => setSound(sfx.isEnabled()); sync(); window.addEventListener("chaos-sfx-change", sync); return () => window.removeEventListener("chaos-sfx-change", sync); }, []);
   useScrollToHash(card !== undefined);

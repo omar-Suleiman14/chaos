@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { ArrowRight, BookOpen, Plus, Radio, Search } from "lucide-react";
+import { ArrowRight, BookOpen, Plus, Radio } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { ThemePresetId } from "@/convex/formLogic";
 import { DEFAULT_TIME_LIMIT, TIME_LIMITS } from "@/convex/liveLogic";
@@ -61,9 +61,7 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
   const [preset, setPreset] = useState<ThemePresetId>();
   const [timeLimitSec, setTimeLimitSec] = useState<number>(DEFAULT_TIME_LIMIT);
   const [showAnswerLabels, setShowAnswerLabels] = useState(true);
-  const [search, setSearch] = useState("");
   const [shown, setShown] = useState({ published: 12, drafts: 12 });
-  const matches = (title: string) => search.trim().toLocaleLowerCase().split(/\s+/).every(word => title.toLocaleLowerCase().includes(word));
   const { create, busy } = useCreateForm();
   const host = useHostLive();
   const quizzes = forms ? [...forms.owned, ...forms.shared.filter((f) => f.role === "editor")].filter((f) => f.quizMode && f.status !== "archived") : [];
@@ -77,8 +75,8 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
   };
   const quizRows = (published: boolean) => {
     const key = published ? "published" : "drafts";
-    const filtered = quizzes.filter(quiz => (quiz.publishedVersion !== undefined) === published && matches(quiz.title));
-    const old = (legacy ?? []).filter(quiz => quiz.isPublished === published && matches(quiz.title));
+    const filtered = quizzes.filter(quiz => (quiz.publishedVersion !== undefined) === published);
+    const old = (legacy ?? []).filter(quiz => quiz.isPublished === published);
     const count = filtered.length + old.length;
     return <div className="games-quiz-list">
     {filtered.slice(0, shown[key]).map((quiz) => <article key={quiz._id}>
@@ -115,7 +113,6 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
         </div>
       </div>
     </section>
-    <label className="ws-search"><Search size={16} aria-hidden/><input type="search" value={search} aria-label={locale === "ar" ? "ابحث عن اختبار لاستضافته" : "Find a quiz to host"} placeholder={locale === "ar" ? "ابحث عن اختبار لاستضافته…" : "Find a quiz to host…"} onChange={event=> {setSearch(event.target.value);setShown({published:12,drafts:12});}}/></label>
     {!loaded && <p className="games-help" role="status">{t.loading}</p>}
     {loaded && <>
       <section className="games-library" aria-labelledby="games-published-title"><details className="games-toggle" open><summary><h2 id="games-published-title">{t.ready}</h2><span>{quizzes.filter(q => q.publishedVersion !== undefined).length + (legacy ?? []).filter(q => q.isPublished).length}</span></summary><p className="games-help">{t.hostingNote}</p>{quizRows(true)}</details></section>

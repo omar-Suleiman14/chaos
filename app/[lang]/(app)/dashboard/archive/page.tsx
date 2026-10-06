@@ -13,6 +13,7 @@ import { toast } from "@/lib/toast";
 import LearningArchive from "@/components/library/LearningArchive";
 import { formatNumber, pluralForm, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
+import { useConfirmed } from "@/lib/confirmedQuery";
 
 const copy = {
   en: {
@@ -60,7 +61,8 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
   const { locale } = useLocale();
   const { isAuthenticated } = useConvexAuth();
   const { results, status, loadMore } = usePaginatedQuery(api.archive.list, isAuthenticated ? { kind: quizzes ? "quizzes" : "forms" } : "skip", { initialNumItems: 25 });
-  const forms = status === "LoadingFirstPage" ? undefined : { owned: results.map(row => ({ _id: row.id as Id<"forms">, title: row.title, responseCount: row.count, updatedAt: row.updatedAt, publishedVersion: row.published ? 1 : undefined, theme: { accent: row.accent ?? "#3595e3" } })) };
+  // The device's copy shows until Convex answers (lib/confirmedQuery.ts).
+  const forms = useConfirmed(`archive.list:${quizzes ? "quizzes" : "forms"}`, status === "LoadingFirstPage" ? undefined : { owned: results.map(row => ({ _id: row.id as Id<"forms">, title: row.title, responseCount: row.count, updatedAt: row.updatedAt, publishedVersion: row.published ? 1 : undefined, theme: { accent: row.accent ?? "#3595e3" } })) }).data;
   const setStatus = useOptimisticMutation(api.forms.setFormStatus, setFormStatusLocally);
   const deleteForm = useOptimisticMutation(api.forms.deleteForm, deleteFormLocally);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "archived", dir: "desc" });

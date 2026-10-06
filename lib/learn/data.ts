@@ -52,6 +52,10 @@ export interface LearnViewer { id: string; name: string; signedIn: boolean; imag
 const GUEST: LearnViewer = { id: "guest", name: "Guest", signedIn: false };
 
 export function useLearnViewer(): LearnViewer | undefined {
+  // In the workspace, the device's copy shows until the sign-in library loads (lib/confirmedQuery.ts).
+  return useConfirmed("learn.viewer", useLiveViewer()).data;
+}
+function useLiveViewer(): LearnViewer | undefined {
   const { user, isLoaded } = useUser();
   return useMemo(() => {
     if (!isLoaded) return undefined;
@@ -197,17 +201,20 @@ export function useCurriculumNodes(): CurriculumNode[] | undefined { return useC
 
 export function useMyCourses(): MyCourse[] | undefined { return useConfirmed("learn.myCourses", useLibraryCourses()).data; }
 
+/** Saves, highlights and notes, from the device until Convex answers (Saved opens at once). */
+function useAnnotations() { return useConfirmed("learn.annotations", useLibraryAnnotations()).data; }
+
 export function useSaved(): SavedItem[] | undefined { return useConfirmed("learn.saved", useLiveSaved()).data; }
 function useLiveSaved(): SavedItem[] | undefined {
-  return useLibraryAnnotations()?.filter(r => !r.deleted && r.kind === "save").map(annotationSave).sort((a,b) => b.createdAt - a.createdAt);
+  return useAnnotations()?.filter(r => !r.deleted && r.kind === "save").map(annotationSave).sort((a,b) => b.createdAt - a.createdAt);
 }
 
 export function useHighlights(lessonId: string): Highlight[] | undefined {
-  return useLibraryAnnotations()?.filter(r => !r.deleted && r.kind === "highlight" && r.lessonId === lessonId).map(annotationHighlight);
+  return useAnnotations()?.filter(r => !r.deleted && r.kind === "highlight" && r.lessonId === lessonId).map(annotationHighlight);
 }
 
 export function useNotes(lessonId?: string): PersonalNote[] | undefined {
-  return useLibraryAnnotations()?.filter(r => !r.deleted && r.kind === "note" && (!lessonId || r.lessonId === lessonId)).map(annotationNote);
+  return useAnnotations()?.filter(r => !r.deleted && r.kind === "note" && (!lessonId || r.lessonId === lessonId)).map(annotationNote);
 }
 
 export function useProgress(): Record<string, LessonProgress> | undefined { return useConfirmed("learn.progress", useLiveProgress()).data; }
@@ -345,6 +352,7 @@ export class LearnError extends Error {}
 export function useLearnActions() {
   const viewer = useLearnViewer();
   const client = useConvex();
+  // Live rows only: writes need the current revisions, never the device's copy.
   const annotations = useLibraryAnnotations();
   const flashcardRows = useLibraryFlashcardRows();
   const library = useMemo(() => { void viewer?.id; return new DurableLibraryClient(client); }, [client, viewer?.id]);
@@ -570,11 +578,11 @@ export const readerView = (lesson: Lesson) => lesson.published ?? { version: 0, 
 export { emptyPersonal };
 
 /** Every highlight this person made, newest first (Saved → Highlights). */
-export function useAllHighlights(): Highlight[] | undefined { return useLibraryAnnotations()?.filter(r => !r.deleted && r.kind === "highlight").map(annotationHighlight); }
+export function useAllHighlights(): Highlight[] | undefined { return useAnnotations()?.filter(r => !r.deleted && r.kind === "highlight").map(annotationHighlight); }
 
 /** Titles for lesson ids, for lists that reference lessons (saved items, notes). */
 export function useLessonTitles(): ((id: string) => string | undefined) | undefined {
-  const annotations = useLibraryAnnotations();
+  const annotations = useAnnotations();
   const results = useStableQueries(Object.fromEntries([...new Set(annotations?.map(a => a.lessonId) ?? [])].map(id => [id, { query: api.learnFrontend.publicLesson, args: { id } }])));
   return annotations === undefined ? undefined : id => { const row = results[id]; return row && !(row instanceof Error) ? row.version.metadata.title : undefined; };
 }

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
-import { useQuery } from "convex/react";
+import { useConfirmedQuery } from "@/lib/confirmedQuery";
 import {
   Archive, ArchiveRestore, BookOpen, ChevronRight, Copy, FileText, Folder, FolderInput, FolderOpen, FolderPlus, Globe, Layers, Pencil, Pin, PinOff, Plus, Search, Target, X,
 } from "lucide-react";
@@ -76,7 +76,7 @@ function Library() {
   const archivedLessons = useArchivedLessons() ?? [];
   const decks = useFlashcardSets() ?? [];
   const pinned = usePinnedFolders() ?? [];
-  const forms = useQuery(api.forms.listMyForms);
+  const forms = useConfirmedQuery(api.forms.listMyForms).data;
   const [query, setQuery] = useState("");
   const [showArchived, setShowArchived] = useState(false);
   const [dialog, setDialog] = useState<Dialog | null>(null);

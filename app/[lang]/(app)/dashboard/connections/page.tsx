@@ -3,7 +3,7 @@
 import { copyText } from "@/lib/clipboard";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "convex/react";
-import { useQuery } from "@/lib/convexCache";
+import { useConfirmedQuery } from "@/lib/confirmedQuery";
 import posthog from "@/lib/analytics";
 import { Copy, KeyRound, Plus, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -136,7 +136,7 @@ type ConnectionItems = { items: { ref: string; title: string | null }[] };
 
 /** Titles for activity lines and shared-lesson lists. */
 function useItemTitles(connections: ConnectionItems[] | undefined, lessonTitles: Map<string, string>): Map<string, string> {
-  const shareable = useQuery(api.integrations.listShareableItems);
+  const shareable = useConfirmedQuery(api.integrations.listShareableItems).data;
   return useMemo(() => {
     const map = new Map<string, string>(lessonTitles);
     for (const i of shareable ?? []) map.set(i.ref, i.title);
@@ -148,9 +148,9 @@ function useItemTitles(connections: ConnectionItems[] | undefined, lessonTitles:
 export default function ConnectionsPage() {
   const t = useCopy(copy);
   const { locale } = useLocale();
-  const connections = useQuery(api.integrations.listConnections);
-  const limits = useQuery(api.integrations.apiLimits);
-  const ownedLessons = useQuery(api.lessons.listOwned, { paginationOpts: LESSON_PAGE });
+  const connections = useConfirmedQuery(api.integrations.listConnections).data;
+  const limits = useConfirmedQuery(api.integrations.apiLimits).data;
+  const ownedLessons = useConfirmedQuery(api.lessons.listOwned, { paginationOpts: LESSON_PAGE }).data;
   const create = useMutation(api.integrations.createConnection);
   const updateConnection = useMutation(api.integrations.updateConnection);
   const setLessonSelection = useMutation(api.learnIntegrations.setLessonSelection);

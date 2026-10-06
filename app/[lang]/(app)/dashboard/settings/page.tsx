@@ -2,7 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation } from "convex/react";
+import { useConfirmedQuery } from "@/lib/confirmedQuery";
 import { toast } from "@/lib/toast";
 import { ChevronRight, Keyboard, Library, LifeBuoy, Palette, Timer, UserRound } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -95,11 +96,17 @@ const copy = {
 type Copy = typeof copy.en;
 
 function QuizDefaults({ t }: { t: Copy }) {
-  const settings = useQuery(api.quizFunctions.getTeacherSettings);
+  const { data: settings, confirmed } = useConfirmedQuery(api.quizFunctions.getTeacherSettings);
   const update = useMutation(api.quizFunctions.updateTeacherSettings);
   const [local, setLocal] = useState<NonNullable<typeof settings> | null>(null);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => { if (settings && !local) setLocal(settings); }, [settings, local]);
+  // Starts from the device's copy; the live settings replace it once, when Convex confirms them.
+  const live = useRef(false);
+  useEffect(() => {
+    if (!settings || (local && (live.current || !confirmed))) return;
+    live.current = confirmed;
+    setLocal(settings);
+  }, [settings, local, confirmed]);
   if (!local) return <p className="ws-row__help py-3">{t.loading}</p>;
   const change = <K extends keyof typeof local>(key: K, value: (typeof local)[K]) => {
     const next = { ...local, [key]: value };
@@ -139,12 +146,12 @@ function QuizDefaults({ t }: { t: Copy }) {
 export default function SettingsPage() {
   const t = useCopy(copy);
   const labels = useBuilderLabels();
-  const me = useQuery(api.quizFunctions.getCurrentUser);
+  const me = useConfirmedQuery(api.quizFunctions.getCurrentUser).data;
   const setListingVisibility = useMutation(api.publicAuthors.setListingVisibility);
   const setStudentVisibility = useMutation(api.studentRoster.setGlobalVisibility);
   const [studentSaving, setStudentSaving] = useState(false);
   const [listingSaving, setListingSaving] = useState(false);
-  const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
+  const quizzes = useConfirmedQuery(api.quizFunctions.getMyQuizzes).data;
   const { preferences: p, set } = usePreferences();
   const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   useScrollToHash(me !== undefined && quizzes !== undefined);
