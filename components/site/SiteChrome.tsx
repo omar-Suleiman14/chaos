@@ -70,7 +70,8 @@ function LanguageChoice() {
   );
 }
 
-export function SiteNav({ links: _links = true }: { links?: boolean }) {
+/** `tag` sits beside the brand (the docs label); `center` replaces the page links (the docs search). */
+export function SiteNav({ tag, center }: { links?: boolean; tag?: React.ReactNode; center?: React.ReactNode }) {
   const { isSignedIn, isLoaded } = useUser();
   const t = useCopy(copy);
   const [open, setOpen] = useState(false);
@@ -99,10 +100,10 @@ export function SiteNav({ links: _links = true }: { links?: boolean }) {
     <header className="site-nav-wrap">
       <a href="#main-content" className="skip-link">{t.skip}</a>
       <nav className="site-nav" aria-label={t.main}>
-        <Link href="/" className="site-brand"><Logo size={30} />chaos</Link>
-        <div className="site-nav__links">
+        {tag ? <div className="site-nav__brand"><Link href="/" className="site-brand"><Logo size={30} />chaos</Link>{tag}</div> : <Link href="/" className="site-brand"><Logo size={30} />chaos</Link>}
+        {center ?? <div className="site-nav__links">
           {items.map((item) => <Link key={item.href} href={item.href}>{item.label}</Link>)}
-        </div>
+        </div>}
         <div className="site-nav__actions">
           <ThemeToggle className="site-icon-btn" />
           <LanguageButton />
