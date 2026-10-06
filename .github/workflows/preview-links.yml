@@ -1,0 +1,52 @@
+name: Preview links
+
+# When Vercel finishes a preview deployment, comment direct links into its
+# seeded workspace on the pull request (Forms, a quiz, Learn, a course,
+# flashcards, /card, admin). One comment per PR, updated on every push.
+# The links come from public/preview/links.json, written by scripts/preview-seed.ts.
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+
+jobs:
+  comment:
+    name: Comment preview links
+    if: github.event.deployment_status.state == 'success' && github.event.deployment.environment != 'Production'
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+      pull-requests: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+      PREVIEW_URL: ${{ github.event.deployment_status.target_url }}
+      SHA: ${{ github.event.deployment.sha }}
+      BYPASS: ${{ secrets.VERCEL_AUTOMATION_BYPASS_SECRET }}
+    steps:
+      - name: Find the pull request
+        id: pr
+        run: |
+          number=$(gh api "repos/$GH_REPO/commits/$SHA/pulls" --jq '.[0].number // empty')
+          echo "number=$number" >> "$GITHUB_OUTPUT"
+
+      - name: Comment
+        if: steps.pr.outputs.number != ''
+        env:
+          PR: ${{ steps.pr.outputs.number }}
+        run: |
+          headers=()
+          if [ -n "$BYPASS" ]; then headers=(-H "x-vercel-protection-bypass: $BYPASS"); fi
+          if curl -fsS "${headers[@]}" "$PREVIEW_URL/preview/links.json" -o links.json; then
+            rows=$(jq -r --arg base "$PREVIEW_URL" '.links[] | "- [\(.label)](\($base)\(.path))"' links.json)
+            seeded=$(jq -r '"Seeded \(.seededAt) as `\(.owner)`."' links.json)
+          else
+            rows="- [Site]($PREVIEW_URL)"
+            seeded="No seeded workspace: set a Convex preview deploy key and CHAOS_MCP_SECRET for previews (docs/preview-environments.md)."
+          fi
+          body=$(printf '<!-- chaos-preview-links -->\n### Preview\n\n%s\n\n%s\nCommit `%s`.' "$rows" "$seeded" "${SHA:0:7}")
+          existing=$(gh api "repos/$GH_REPO/issues/$PR/comments" --paginate --jq '.[] | select(.body | startswith("<!-- chaos-preview-links -->")) | .id' | head -n1)
+          if [ -n "$existing" ]; then gh api -X PATCH "repos/$GH_REPO/issues/comments/$existing" -f body="$body" > /dev/null
+          else gh pr comment "$PR" --body "$body"; fi
