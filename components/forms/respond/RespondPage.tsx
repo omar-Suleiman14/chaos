@@ -452,6 +452,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
             </div>
           )}
           <FormRenderer
+            journey
             definition={def}
             language={language}
             answers={progress.answers}

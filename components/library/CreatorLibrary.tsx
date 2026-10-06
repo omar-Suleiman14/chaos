@@ -33,6 +33,7 @@ import { toast } from "@/lib/toast";
 import { LibrarySkeleton } from "@/components/workspace/Skeletons";
 import { usePinned } from "@/components/workspace/usePinned";
 import { useCreateForm } from "@/components/workspace/useCreateForm";
+import { useUsableMark } from "@/lib/journeys";
 
 const kinds = ["Forms", "Quizzes", "Flashcards", "Courses", "Games"] as const;
 type Kind = (typeof kinds)[number];
@@ -378,6 +379,7 @@ export default function CreatorLibrary() {
   const kindLabel = (row: Row) => (row.kind === "legacy" ? t.oldQuiz : row.kind === "quiz" ? t.quiz : t.form);
 
   const loading = forms === undefined || quizzes === undefined;
+  useUsableMark("dashboard", !loading);
   const newCourse = async () => {
     try { const id = await createCourse({ language: locale }); router.push(`/dashboard/courses/${id}`); }
     catch (err) { toast.error(err); }

@@ -24,6 +24,30 @@ pnpm perf:ratchet    # after a genuine win: lower budgets, add new metrics
 CNS course, a Live game with players, a card). Clock and randomness are pinned,
 so two runs produce identical numbers.
 
+## Journeys
+
+`lib/journeys.ts` names the moments people wait for and the app marks each one
+itself (`performance.mark("chaos:usable:<journey>")`, duration in the mark's
+detail):
+
+| Journey | Usable when |
+|---|---|
+| `dashboard` | the library shows real items |
+| `form.create` | a new draft's editor can be typed in (from the click) |
+| `form.open` | an existing form's editor is loaded |
+| `course.modules` | the module list renders (public page or editor) |
+| `lesson.read` | the lesson reader is on screen |
+| `quiz.question` | the first question can be answered (from Start) |
+| `live.join` | the joined player sees the game (from Join) |
+| MCP → persisted | measured in the backend suite: the tool call's write is visible to the dashboard |
+
+`perf/backend/journeys.perf.test.ts` budgets the Convex work each journey
+needs. `perf/browser/journeys.spec.ts` times the same marks in Chromium
+(`.github/workflows/perf-journeys.yml`); it runs against the E2E environment
+only and needs `E2E_PERF_FORM_ID`, `E2E_PERF_COURSE_ID`, `E2E_PERF_LESSON_ID`,
+`E2E_PERF_QUIZ_SHARE_ID` and `E2E_PERF_LIVE_PIN` repository variables for the
+content journeys. Missing fixtures skip a journey; they never fake one.
+
 ## Ratchets
 
 - Counts must not grow at all. Bytes allow 1% for toolchain jitter. Timings allow

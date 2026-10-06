@@ -32,6 +32,7 @@ import { pluralForm } from "@/lib/locale";
 import { timeAgo } from "@/lib/timeAgo";
 import { useFormDraft } from "./use-form-draft";
 import type { SaveState } from "./use-form-draft";
+import { journeyPending, useUsableMark, type Journey } from "@/lib/journeys";
 
 /**
  * Questions is the tab people land on; the others (QR code, embed, theme editor, rules…) load as
@@ -159,6 +160,9 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
   const [sharing, setSharing] = useState(false);
   const { toggle: togglePin, isPinned } = usePinned();
   useEffect(preloadTabs, []);
+  // A draft created a moment ago finishes the create journey; anything else is an open.
+  const [journey] = useState<Journey>(() => (journeyPending("form.create") ? "form.create" : "form.open"));
+  useUsableMark(journey, !!data && !!d.draft);
 
   const report = useMemo(() => (d.draft ? checkDefinition(d.draft) : { errors: [], warnings: [] }), [d.draft]);
   // Getting started, one step at a time: a question, a look, then publish.

@@ -21,6 +21,7 @@ import { Announcer, Countdown, StartCountdown, usePrefersReducedMotion, useServe
 import Link from "next/link";
 import { gameSound, gameThemeProps } from "./GameTheme";
 import Logo from "@/components/Logo";
+import { startJourney, useUsableMark } from "@/lib/journeys";
 
 const SESSION_KEY = "chaos-live-session";
 type PlayerView = FunctionReturnType<typeof api.live.playerView>;
@@ -163,6 +164,7 @@ function JoinForm({ t, initialPin, onJoined }: { t: Copy; initialPin: string; on
     if (joining.current || pin.length !== 6 || !nickname.trim()) return;
     joining.current = true;
     setBusy(true);
+    startJourney("live.join");
     setError("");
     const token = newToken();
     try {
@@ -211,6 +213,7 @@ function JoinForm({ t, initialPin, onJoined }: { t: Copy; initialPin: string; on
 function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; view: PlayerView | undefined; t: Copy; onLeave: () => void; setAnnounce: (s: string) => void }) {
   const { locale } = useLocale();
   const submit = useMutation(api.live.submitAnswer);
+  useUsableMark("live.join", !!view);
   const offset = useServerClock();
   const pack = gameSound(view && "theme" in view ? view.theme : null);
   const [picked, setPicked] = useState<string[]>([]);

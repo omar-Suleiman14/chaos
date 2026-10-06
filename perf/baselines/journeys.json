@@ -1,0 +1,185 @@
+{
+  "suite": "journeys",
+  "metrics": {
+    "journey.courseModules.bytesRead": {
+      "budget": 42429,
+      "unit": "bytes"
+    },
+    "journey.courseModules.databaseQueries": {
+      "budget": 24,
+      "unit": "count"
+    },
+    "journey.courseModules.documentsRead": {
+      "budget": 24,
+      "unit": "count"
+    },
+    "journey.courseModules.payloadBytes": {
+      "budget": 1716,
+      "unit": "bytes"
+    },
+    "journey.courseModules.transactions": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "journey.dashboard.bytesRead": {
+      "budget": 88629,
+      "unit": "bytes"
+    },
+    "journey.dashboard.databaseQueries": {
+      "budget": 14,
+      "unit": "count"
+    },
+    "journey.dashboard.documentsRead": {
+      "budget": 41,
+      "unit": "count"
+    },
+    "journey.dashboard.documentsWritten": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "journey.dashboard.payloadBytes": {
+      "budget": 25506,
+      "unit": "bytes"
+    },
+    "journey.dashboard.transactions": {
+      "budget": 8,
+      "unit": "count"
+    },
+    "journey.formCreate.bytesRead": {
+      "budget": 2866,
+      "unit": "bytes"
+    },
+    "journey.formCreate.databaseQueries": {
+      "budget": 9,
+      "unit": "count"
+    },
+    "journey.formCreate.documentsRead": {
+      "budget": 6,
+      "unit": "count"
+    },
+    "journey.formCreate.documentsWritten": {
+      "budget": 3,
+      "unit": "count"
+    },
+    "journey.formCreate.payloadBytes": {
+      "budget": 1464,
+      "unit": "bytes"
+    },
+    "journey.formCreate.transactions": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "journey.formOpen.bytesRead": {
+      "budget": 5403,
+      "unit": "bytes"
+    },
+    "journey.formOpen.databaseQueries": {
+      "budget": 4,
+      "unit": "count"
+    },
+    "journey.formOpen.documentsRead": {
+      "budget": 3,
+      "unit": "count"
+    },
+    "journey.formOpen.payloadBytes": {
+      "budget": 3694,
+      "unit": "bytes"
+    },
+    "journey.formOpen.transactions": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "journey.lessonRead.bytesRead": {
+      "budget": 48687,
+      "unit": "bytes"
+    },
+    "journey.lessonRead.databaseQueries": {
+      "budget": 15,
+      "unit": "count"
+    },
+    "journey.lessonRead.documentsRead": {
+      "budget": 13,
+      "unit": "count"
+    },
+    "journey.lessonRead.payloadBytes": {
+      "budget": 7026,
+      "unit": "bytes"
+    },
+    "journey.lessonRead.transactions": {
+      "budget": 5,
+      "unit": "count"
+    },
+    "journey.liveJoin.bytesRead": {
+      "budget": 13934,
+      "unit": "bytes"
+    },
+    "journey.liveJoin.databaseQueries": {
+      "budget": 10,
+      "unit": "count"
+    },
+    "journey.liveJoin.documentsRead": {
+      "budget": 36,
+      "unit": "count"
+    },
+    "journey.liveJoin.documentsWritten": {
+      "budget": 6,
+      "unit": "count"
+    },
+    "journey.liveJoin.payloadBytes": {
+      "budget": 455,
+      "unit": "bytes"
+    },
+    "journey.liveJoin.transactions": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "journey.mcpPersist.bytesRead": {
+      "budget": 10285,
+      "unit": "bytes"
+    },
+    "journey.mcpPersist.bytesWritten": {
+      "budget": 4197,
+      "unit": "bytes"
+    },
+    "journey.mcpPersist.databaseQueries": {
+      "budget": 25,
+      "unit": "count"
+    },
+    "journey.mcpPersist.documentsRead": {
+      "budget": 18,
+      "unit": "count"
+    },
+    "journey.mcpPersist.documentsWritten": {
+      "budget": 10,
+      "unit": "count"
+    },
+    "journey.mcpPersist.payloadBytes": {
+      "budget": 2024,
+      "unit": "bytes"
+    },
+    "journey.mcpPersist.transactions": {
+      "budget": 8,
+      "unit": "count"
+    },
+    "journey.quizQuestion.bytesRead": {
+      "budget": 5062,
+      "unit": "bytes"
+    },
+    "journey.quizQuestion.databaseQueries": {
+      "budget": 5,
+      "unit": "count"
+    },
+    "journey.quizQuestion.documentsRead": {
+      "budget": 4,
+      "unit": "count"
+    },
+    "journey.quizQuestion.payloadBytes": {
+      "budget": 2840,
+      "unit": "bytes"
+    },
+    "journey.quizQuestion.transactions": {
+      "budget": 1,
+      "unit": "count"
+    }
+  }
+}

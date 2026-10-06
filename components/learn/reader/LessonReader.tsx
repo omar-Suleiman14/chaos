@@ -48,6 +48,7 @@ import { jumpTo, MobileOutline, Outline, useActiveHeading } from "./Outline";
 import PracticeTab from "./PracticeTab";
 import ReportDialog from "./ReportDialog";
 import SelectionToolbar, { useTextSelection, type SelectionAction } from "./SelectionToolbar";
+import { useUsableMark } from "@/lib/journeys";
 
 const copy = {
   en: {
@@ -133,6 +134,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const courseProgress = useCourseProgress(courseId ?? "");
   const enrollment = useCourseEnrollment(courseId);
   const recordCourseLesson = enrollment.recordLesson;
+  useUsableMark("lesson.read", !embedded);
   useEffect(() => { if (courseId && !previewDraft) recordCourseLesson(lesson.id); }, [courseId, lesson.id, previewDraft, recordCourseLesson]);
   const completesCourse = !!course?.lessons.length && course.lessons.some(l => l.id === lesson.id) && course.lessons.every(l => l.id === lesson.id || courseProgress[l.id]?.completed);
   const phone = useIsPhone();

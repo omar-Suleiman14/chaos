@@ -21,6 +21,7 @@ import { WsDialog } from "@/components/workspace/primitives";
 import { LessonCover, type PageLook } from "@/components/learn/editor/PageHeader";
 import "@/components/learn/learn.css";
 import "@/components/courses/courses.css";
+import { useUsableMark } from "@/lib/journeys";
 
 const copy = {
   en: {
@@ -75,6 +76,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
     }
   }, [course, loadedId]);
 
+  useUsableMark("course.modules", !!course);
   if (course === undefined) return <PageSkeleton label={t.loading} />;
   if (course === null) return <p className="ws-empty">{t.missing}</p>;
 

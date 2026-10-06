@@ -14,12 +14,15 @@ import { sfx } from "@/lib/sfx";
 import type { SfxName } from "@/lib/sfx";
 import { haptics } from "@/lib/haptics";
 import { useModal } from "@/components/workspace/useModal";
+import { startJourney, useUsableMark } from "@/lib/journeys";
 
 export { themeClass, themeStyle } from "./formThemes";
 
 export interface UploadedFile { uploadId: string; name: string; size: number }
 
 export interface FormRendererProps {
+  /** Marks the quiz/form journey usable (lib/journeys.ts); only the real respondent page sets it. */
+  journey?: boolean;
   definition: FormDefinition;
   language: Language;
   answers: Answers;
@@ -185,7 +188,9 @@ export default function FormRenderer(props: FormRendererProps) {
   const [started, setStarted] = useState(props.skipCover || cover === "none");
   const mode = props.definition.presentation;
 
+  useUsableMark("quiz.question", !!props.journey && started);
   const start = () => {
+    if (props.journey) startJourney("quiz.question");
     setStarted(true);
     flow.play("start");
     haptics.medium();

@@ -10,6 +10,7 @@ import { blankField, emptyDefinition } from "@/convex/formLogic";
 import { themeFromPreset } from "@/components/forms/formThemes";
 import { useCopy } from "@/lib/i18n";
 import { defaultPreferences, readPreferences } from "@/lib/preferences";
+import { startJourney } from "@/lib/journeys";
 
 /** Track whether the creator changed a new-form preference for analytics. */
 function hasCustomDefaults() {
@@ -51,6 +52,7 @@ export function useCreateForm() {
   const create = async (args: CreateArgs = {}) => {
     if (busy) return;
     setBusy(true);
+    startJourney("form.create");
     try {
       const blank = !args.definition && !args.templateId && !args.ownTemplateId;
       const formId = await createForm(blank ? { ...args, definition: { ...blankFromPreferences(), ...(args.title ? { title: args.title } : {}) } } : args);

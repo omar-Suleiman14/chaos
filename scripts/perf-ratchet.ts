@@ -1,6 +1,6 @@
 // Compares perf/results with the checked-in budgets in perf/baselines.
 //
-//   tsx scripts/perf-ratchet.ts check  [--suites a,b]   fail on regressions (CI)
+//   tsx scripts/perf-ratchet.ts check  [--suites a,b] [--allow-new]   fail on regressions (CI)
 //   tsx scripts/perf-ratchet.ts update [--suites a,b]   lower budgets after genuine wins, add new metrics
 //   tsx scripts/perf-ratchet.ts raise <metric> --reason "why"   the only way a budget goes up
 //
@@ -49,7 +49,8 @@ function compare(suite: string): { rows: Row[]; problems: string[] } {
   for (const [metric, current] of Object.entries(result.metrics)) {
     if (baseline.metrics[metric]) continue;
     rows.push({ suite, metric, unit: current.unit, value: current.value, status: "new" });
-    problems.push(`${suite}: ${metric} has no budget; run pnpm perf:ratchet to add it`);
+    // Scheduled browser suites start without budgets; their first run proposes them.
+    if (!process.argv.includes("--allow-new")) problems.push(`${suite}: ${metric} has no budget; run pnpm perf:ratchet to add it`);
   }
   return { rows, problems };
 }
