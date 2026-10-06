@@ -6,7 +6,7 @@ import { requireActiveUser } from "./authz";
 import { AVATAR_COUNT, avatarSeed, parseAvatarSeed } from "../lib/avatarSeed";
 import { requireLearnActor } from "./mcpLearn";
 import { usernameProblem } from "./links";
-import { reserveUsername, userByUsername } from "./usernameModel";
+import { changeUsername, userByUsername } from "./usernameModel";
 
 const card = v.object({ name: v.string(), username: v.string(), seed: v.string(), memberSince: v.number(), style: v.number() });
 const view = (u: Doc<"users">) => ({ name: u.name, username: u.username, seed: u.cardAvatarSeed ?? avatarSeed(u.clerkId), memberSince: u.createdAt, style: u.cardStyle ?? 0 });
@@ -63,9 +63,7 @@ async function customize(ctx: MutationCtx, user: Doc<"users">, args: { name?: st
       if (username !== user.username) {
         const problem = usernameProblem(username);
         if (problem) throw new Error(`INVALID_USERNAME: ${problem}`);
-        await reserveUsername(ctx, user.username, user.clerkId);
-        await reserveUsername(ctx, username, user.clerkId);
-        updates.username = username; updates.usernameChosen = true;
+        Object.assign(updates, await changeUsername(ctx, user, username));
       }
     }
     if (args.style !== undefined) { if (!Number.isInteger(args.style) || args.style < 0 || args.style > 31) throw new Error("Invalid card style"); updates.cardStyle = args.style; }

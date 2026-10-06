@@ -3,7 +3,7 @@ import { authorDb } from "./authorIndex";
 import { v } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
-import { userByUsername, reserveUsername, usernameOwner } from "./usernameModel";
+import { changeUsername, userByUsername, reserveUsername, usernameOwner } from "./usernameModel";
 import { requireActiveUser, requireFormRole } from "./authz";
 
 /**
@@ -57,16 +57,15 @@ export const chooseUsername = mutation({
 
 /** Shared by both native username mutations; no caller-supplied owner identity. */
 export async function setOwnedUsername(ctx: MutationCtx, args: { username: string }): Promise<string> {
-    const { identity, user } = await requireActiveUser(ctx);
+    const { user } = await requireActiveUser(ctx);
     if (!user) throw new Error("USER_NOT_FOUND: Sign in again and retry.");
     // Reject invalid input rather than silently stripping characters.
     const username = args.username.trim().toLowerCase();
     const problem = usernameProblem(username);
     if (problem) throw new Error(`INVALID_USERNAME: ${problem}`);
-    // Both reservations and the profile change commit in the same transaction.
-    await reserveUsername(ctx, user.username, identity.subject);
-    await reserveUsername(ctx, username, identity.subject);
-    await ctx.db.patch("users", user._id, { username, usernameChosen: true });
+    // Old-name retention and the change rate limit live in changeUsername.
+    const updates = await changeUsername(ctx, user, username);
+    await ctx.db.patch("users", user._id, { ...updates, usernameChosen: true });
     // Legacy quizzes keep their original routing username and creator ID.
     return username;
 }

@@ -3,6 +3,7 @@ import { api, internal } from "@/convex/_generated/api";
 import { createTestConvex } from "./setup";
 import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
 import { emptyDefinition } from "@/convex/formLogic";
+import { MAX_RETAINED_ALIASES, RELEASED_ALIAS_GRACE_MS, USERNAME_CHANGE_LIMIT, USERNAME_CHANGE_WINDOW_MS } from "@/convex/usernameModel";
 
 function definition() {
   const def = emptyDefinition("Application form");
@@ -94,5 +95,69 @@ describe("custom links", () => {
     expect(after!.username).toMatch(/^user\d{5}$/);
     expect(await t.run((ctx) => ctx.db.query("usernameAliases").withIndex("by_username", (q) => q.eq("username", "claude")).unique())).toBeNull();
   });
-});
 
+  it("releases an old username that never appeared in a public link after the grace period", async () => {
+    const { t, owner } = await setup();
+    await owner.mutation(api.links.chooseUsername, { username: "alice" });
+    await owner.mutation(api.links.chooseUsername, { username: "alice2" });
+    const other = t.withIdentity({ ...otherCreatorIdentity, nickname: undefined });
+    await other.mutation(api.quizFunctions.getOrCreateUser, {});
+    // During the grace period the old name still belongs to its owner.
+    await expect(other.mutation(api.links.chooseUsername, { username: "alice" })).rejects.toThrow(/USERNAME_TAKEN/);
+
+    await t.run(async (ctx) => {
+      const alias = (await ctx.db.query("usernameAliases").withIndex("by_username", (q) => q.eq("username", "alice")).unique())!;
+      expect(alias.expiresAt).toBeGreaterThan(Date.now() + RELEASED_ALIAS_GRACE_MS - 60_000);
+      await ctx.db.patch("usernameAliases", alias._id, { expiresAt: Date.now() - 1 });
+    });
+    // Expired: free to take before the cron runs, and the cron removes leftovers.
+    expect(await other.mutation(api.links.chooseUsername, { username: "alice" })).toBe("alice");
+    await t.mutation(internal.crons.cleanup, {});
+    const alias = await t.run((ctx) => ctx.db.query("usernameAliases").withIndex("by_username", (q) => q.eq("username", "alice")).unique());
+    expect(alias).toMatchObject({ ownerId: otherCreatorIdentity.subject });
+    expect(alias!.expiresAt).toBeUndefined();
+  });
+
+  it("keeps an old username that appeared in a public link permanently", async () => {
+    const { t, owner, formId } = await setup();
+    await owner.mutation(api.links.chooseUsername, { username: "bob" });
+    await owner.mutation(api.links.setFormSlug, { formId, slug: "apply" });
+    await owner.mutation(api.links.chooseUsername, { username: "bob2" });
+    const alias = await t.run((ctx) => ctx.db.query("usernameAliases").withIndex("by_username", (q) => q.eq("username", "bob")).unique());
+    expect(alias!.expiresAt).toBeUndefined();
+    // Switching back makes a released-pending name permanent again.
+    await t.run(async (ctx) => {
+      const generated = (await ctx.db.query("usernameAliases").withIndex("by_ownerId", (q) => q.eq("ownerId", creatorIdentity.subject)).collect()).find((a) => /^user\d{5}$/.test(a.username))!;
+      // The generated name was left before any custom link existed.
+      expect(generated.expiresAt).toBeDefined();
+    });
+  });
+
+  it("rate limits username changes", async () => {
+    const { t, owner } = await setup();
+    for (let i = 0; i < USERNAME_CHANGE_LIMIT; i++) await owner.mutation(api.links.chooseUsername, { username: `carol${i}` });
+    await expect(owner.mutation(api.links.chooseUsername, { username: "carol-next" })).rejects.toThrow(/USERNAME_CHANGE_LIMIT/);
+    // Choosing the current name again is not a change.
+    expect(await owner.mutation(api.links.chooseUsername, { username: `carol${USERNAME_CHANGE_LIMIT - 1}` })).toBe(`carol${USERNAME_CHANGE_LIMIT - 1}`);
+    // Card customisation shares the limit.
+    await expect(owner.mutation(api.memberCards.customizeCard, { username: "carol-card" })).rejects.toThrow(/USERNAME_CHANGE_LIMIT/);
+    await t.run(async (ctx) => {
+      const user = (await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", creatorIdentity.subject)).unique())!;
+      await ctx.db.patch("users", user._id, { usernameChangedAt: user.usernameChangedAt!.map((at) => at - USERNAME_CHANGE_WINDOW_MS) });
+    });
+    expect(await owner.mutation(api.links.chooseUsername, { username: "carol-next" })).toBe("carol-next");
+  });
+
+  it("caps how many old usernames an account keeps", async () => {
+    const { t, owner, formId } = await setup();
+    await owner.mutation(api.links.chooseUsername, { username: "dana" });
+    await owner.mutation(api.links.setFormSlug, { formId, slug: "apply" });
+    // Retained names from earlier changes, seeded directly so the rate limit does not interfere.
+    await t.run(async (ctx) => {
+      for (let i = 0; i < MAX_RETAINED_ALIASES; i++) await ctx.db.insert("usernameAliases", { username: `dana-old${i}`, ownerId: creatorIdentity.subject, createdAt: Date.now() });
+    });
+    await expect(owner.mutation(api.links.chooseUsername, { username: "dana-new" })).rejects.toThrow(/USERNAME_ALIAS_LIMIT/);
+    // Moving back to a name already kept adds nothing and is allowed.
+    expect(await owner.mutation(api.links.chooseUsername, { username: "dana-old0" })).toBe("dana-old0");
+  });
+});

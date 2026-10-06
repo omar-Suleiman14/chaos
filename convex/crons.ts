@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { deleteResponseRecord, deleteUploadRecord } from "./formResults";
+import { releaseExpiredAliases } from "./usernameModel";
 
 const BATCH = 100;
 const DAY_MS = 86_400_000;
@@ -69,6 +70,9 @@ export const cleanup = internalMutation({
     const windows = await ctx.db.query("rateWindows").withIndex("by_windowStart", (q) => q.lt("windowStart", now - 3_600_000)).take(BATCH);
     for (const w of windows) await ctx.db.delete("rateWindows", w._id);
     more ||= windows.length === BATCH;
+
+    // Old usernames that never appeared in a public link, after their grace period.
+    more ||= (await releaseExpiredAliases(ctx, BATCH)) === BATCH;
 
     if (more) await ctx.scheduler.runAfter(1000, internal.crons.cleanup, {});
     return null;
