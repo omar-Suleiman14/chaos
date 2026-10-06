@@ -3,11 +3,11 @@
 import Link from "@/components/site/SiteLink";
 import { Fragment, useEffect, useState } from "react";
 import dynamic from "next/dynamic";
-import { ArrowLeft, ArrowRight, Lightbulb } from "lucide-react";
+import { ArrowLeft, ArrowRight, Lightbulb, Search } from "lucide-react";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { useDocs } from "@/lib/docs/provider";
 import type { DocBlock } from "@/lib/docs";
-import { docsCopy } from "./copy";
+import { docsCopy, OPEN_DOCS_SEARCH } from "./copy";
 
 const INLINE = /(\*\*[^*]+\*\*|`[^`]+`|\[[^\]]+\]\([^)]+\))/g;
 
@@ -111,23 +111,23 @@ const home = {
     eyebrow: "Chaos documentation",
     title: "Make things people answer, read and play.",
     lead: "Chaos is an open workspace for forms, quizzes, lessons, courses and live games. These guides show you how to build each one, share it and see how it went.",
-    start: "Get started", what: "What is Chaos?",
+    start: "Get started", what: "What is Chaos?", search: "Search the docs",
     forms: { title: "Forms and quizzes that feel like yours", body: "Ask one question at a time or show them all. Pick a theme, add logic, mark quizzes for you and publish when you're ready. Try the one on the right; nothing you choose is sent.", link: "Make your first form", href: "/docs/first-form" },
     learn: { title: "Lessons and courses for real teaching", body: "Write lessons like a document, with images, equations, flashcards and checkpoint quizzes. Put them in order as a course and share one link.", link: "Write a lesson", href: "/docs/lessons", lesson: "Lecture 1: The nervous system", course: "CNS · Lesson 1 of 7", h1: "1. How the nervous system is divided", h2: "2. Neurons and myelin", check: "Checkpoint: Foundations", checkBody: "4 questions" },
     live: { title: "Run any quiz live", body: "Share a PIN, let everyone join from their phone and reveal the answers together. Games run themselves or wait for you.", link: "Host a live game", href: "/docs/live-games", pin: "GAME PIN", players: "24 players" },
     ai: { title: "Or ask your assistant", body: "Connect Claude or ChatGPT and ask in plain words. Your assistant does the writing; Chaos keeps your content, permissions and links.", link: "Connect Claude", href: "/docs/claude", link2: "Connect ChatGPT", href2: "/docs/chatgpt", you: "Make a 10-question quiz from this PDF and publish it.", them: "Published “Cell biology check” with 10 questions." },
-    guides: "Browse the guides", ready: "Ready to make something?", readyBody: "Chaos is free for personal use. No AI required.", open: "Open Chaos",
+    ready: "Ready to make something?", readyBody: "Chaos is free for personal use. No AI required.", open: "Open Chaos",
   },
   ar: {
     eyebrow: "دليل Chaos",
     title: "اصنع ما يجيب عنه الناس ويقرؤونه ويلعبونه.",
     lead: "Chaos مساحة عمل مفتوحة للنماذج والاختبارات والدروس والدورات والألعاب المباشرة. تشرح هذه الأدلة كيف تبني كلًّا منها وتشاركه وترى نتيجته.",
-    start: "ابدأ", what: "ما هو Chaos؟",
+    start: "ابدأ", what: "ما هو Chaos؟", search: "ابحث في الدليل",
     forms: { title: "نماذج واختبارات تشبهك", body: "اسأل سؤالًا في كل مرة أو اعرضها كلها. اختر مظهرًا، وأضف منطقًا، ودع الاختبارات تُصحَّح وحدها، وانشر حين تكون جاهزًا. جرّب النموذج المجاور؛ لا يُرسل شيء مما تختاره.", link: "اصنع أول نموذج", href: "/docs/first-form" },
     learn: { title: "دروس ودورات لتعليم حقيقي", body: "اكتب الدروس كأنها مستند، بالصور والمعادلات والبطاقات والاختبارات القصيرة. رتّبها في دورة وشاركها برابط واحد.", link: "اكتب درسًا", href: "/docs/lessons", lesson: "المحاضرة 1: الجهاز العصبي", course: "CNS · الدرس 1 من 7", h1: "1. كيف ينقسم الجهاز العصبي", h2: "2. العصبونات والميالين", check: "اختبار قصير: الأساسيات", checkBody: "4 أسئلة" },
     live: { title: "شغّل أي اختبار مباشرةً", body: "شارك الرمز، ودع الجميع ينضمون من هواتفهم، واكشفوا الإجابات معًا. تسير اللعبة وحدها أو تنتظرك.", link: "استضف لعبة مباشرة", href: "/docs/live-games", pin: "رمز اللعبة", players: "24 لاعبًا" },
     ai: { title: "أو اطلب من مساعدك", body: "اربط Claude أو ChatGPT واطلب بكلماتك. مساعدك يكتب، وChaos يحفظ محتواك وصلاحياتك وروابطك.", link: "اربط Claude", href: "/docs/claude", link2: "اربط ChatGPT", href2: "/docs/chatgpt", you: "أنشئ اختبارًا من 10 أسئلة من ملف PDF هذا وانشره.", them: "نُشر «مراجعة بيولوجيا الخلية» بعشرة أسئلة." },
-    guides: "تصفّح الأدلة", ready: "مستعد لتصنع شيئًا؟", readyBody: "Chaos مجاني للاستخدام الشخصي. ولا يحتاج إلى ذكاء اصطناعي.", open: "افتح Chaos",
+    ready: "مستعد لتصنع شيئًا؟", readyBody: "Chaos مجاني للاستخدام الشخصي. ولا يحتاج إلى ذكاء اصطناعي.", open: "افتح Chaos",
   },
 };
 
@@ -135,10 +135,8 @@ const ProductDemo = dynamic(() => import("@/components/site/ProductDemo"), { ssr
 
 /** The docs home, in the spirit of react.dev: what Chaos is, each part shown working, then every guide. */
 export function DocsIndex() {
-  const t = useCopy(docsCopy);
   const { locale } = useLocale();
   const h = home[locale === "ar" ? "ar" : "en"];
-  const { sections, loading } = useDocs();
   const more = (href: string, label: string) => <Link href={href} className="docs-home__more">{label}<ArrowRight size={16} className="site-arrow" aria-hidden="true" /></Link>;
   return (
     <div className="docs-home">
@@ -148,6 +146,9 @@ export function DocsIndex() {
         <p className="docs-home__eyebrow">{h.eyebrow}</p>
         <h1>{h.title}</h1>
         <p className="docs-home__lead">{h.lead}</p>
+        <button type="button" className="docs-search__field docs-home__search" onClick={() => window.dispatchEvent(new Event(OPEN_DOCS_SEARCH))} aria-keyshortcuts="Control+K Meta+K /">
+          <Search size={18} aria-hidden="true" /><span>{h.search}</span><kbd className="docs-search__hint" aria-hidden="true" dir="ltr">Ctrl K</kbd>
+        </button>
         <div className="docs-home__actions">
           <Link href="/docs/first-form" className="site-btn site-btn--primary site-btn--lg">{h.start}<ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>
           <Link href="/docs/what-is-chaos" className="site-btn site-btn--outline site-btn--lg">{h.what}</Link>
@@ -197,21 +198,6 @@ export function DocsIndex() {
             {/* eslint-disable-next-line @next/next/no-img-element -- the static Chaos mark */}
             <p className="docs-shot__them"><img src="/icon.svg" alt="" width={18} height={18} />{h.ai.them}</p>
           </div>
-        </div>
-      </section>
-
-      <section className="docs-home__guides" aria-labelledby="docs-guides">
-        <h2 id="docs-guides">{h.guides}</h2>
-        {loading && <p role="status">{locale === "ar" ? "جارٍ تحميل الأدلة…" : "Loading guides…"}</p>}
-        {!loading && sections.length === 0 && <p>{locale === "ar" ? "لا توجد أدلة منشورة بعد." : "No guides have been published yet."}</p>}
-        <div className="docs-cards">
-          {sections.map((section) => (
-            <section key={section.id} className="docs-card">
-              <h3>{section.title}</h3>
-              <p className="docs-card__count">{t.articlesCount(section.articles.length)}</p>
-              <ul>{section.articles.map((article) => <li key={article.slug}><Link href={`/docs/${article.slug}`}>{article.title}</Link><span>{article.summary}</span></li>)}</ul>
-            </section>
-          ))}
         </div>
       </section>
 

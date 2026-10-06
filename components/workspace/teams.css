@@ -55,7 +55,7 @@
 .ws-team-tile > svg { color: var(--on-surface-variant); flex: none; }
 
 /* Account row at the bottom of the sidebar (components/workspace/AccountMenu.tsx). */
-.ws-account { margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--ws-line); }
+.ws-account { margin-top: 4px; }
 .ws-account__photo { display: block; flex: none; border-radius: 999px; object-fit: cover; background: var(--ws-active); }
 .ws-workspace-avatar .ws-account__photo, .ws-workspace-avatar .member-avatar { border-radius: 8px; }
 .ws-workspace-menu .ws-account__signout, .ws-workspace-menu .ws-account__signout > svg { color: var(--error) !important; }

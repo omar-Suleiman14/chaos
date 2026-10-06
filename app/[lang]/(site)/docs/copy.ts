@@ -1,3 +1,6 @@
+/** Buttons outside the sidebar (the docs home hero) open the docs search by sending this window event. */
+export const OPEN_DOCS_SEARCH = "chaos:open-docs-search";
+
 /** Interface text for the docs pages. The articles themselves live in lib/docs. */
 export const docsCopy = {
   en: {

@@ -413,7 +413,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                     <button type="button" className="ws-section-toggle" onClick={() => fold(section)} aria-expanded={isOpen}
                       aria-label={isOpen ? t.foldLabel(sectionNames[section], list.length) : t.openLabel(sectionNames[section], list.length)}>
                       <span>{sectionNames[section]}{!isOpen && ` (${list.length})`}</span>
-                      {isOpen ? <ChevronUp size={15} aria-hidden="true" className="ms-auto" /> : <ChevronDown size={15} aria-hidden="true" className="ms-auto" />}
+                      <span className="ws-section-toggle__rule" aria-hidden="true" />
+                      {isOpen ? <ChevronUp size={15} aria-hidden="true" /> : <ChevronDown size={15} aria-hidden="true" />}
                     </button>
                     {isOpen && (
                       <nav aria-label={sectionNames[section]} className="grid gap-px">

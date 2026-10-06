@@ -8,13 +8,13 @@ import { useDocs } from "@/lib/docs/provider";
 import { searchDocs } from "@/lib/docs/search";
 import { useModal } from "@/components/workspace/useModal";
 import { Block } from "./DocsViews";
-import { docsCopy } from "./copy";
+import { docsCopy, OPEN_DOCS_SEARCH } from "./copy";
 
 /**
  * The docs search: a button in the sidebar that opens a search popup (also on Ctrl/Cmd+K and "/").
  * Results sit on the left and the highlighted guide previews on the right, as in Quartz and react.dev.
  */
-export default function DocsSearch() {
+export default function DocsSearch({ trigger: showTrigger = true }: { trigger?: boolean }) {
   const t = useCopy(docsCopy);
   const pathname = usePathname();
   const trigger = useRef<HTMLButtonElement>(null);
@@ -23,7 +23,7 @@ export default function DocsSearch() {
   useEffect(() => { setOpen(false); }, [pathname]);
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      const target = event.target as HTMLElement | null;
+      const target = event.target instanceof Element ? event.target : null;
       const typing = !!target?.closest("input, textarea, select, [contenteditable=true]");
       const shortcut = (event.ctrlKey || event.metaKey) && !event.altKey && event.key.toLowerCase() === "k";
       if (shortcut || (event.key === "/" && !typing && !event.ctrlKey && !event.metaKey && !event.altKey)) {
@@ -31,17 +31,20 @@ export default function DocsSearch() {
         setOpen(true);
       }
     };
+    // Other buttons (the docs home hero) open the same search by sending this event.
+    const onOpen = () => setOpen(true);
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener(OPEN_DOCS_SEARCH, onOpen);
+    return () => { window.removeEventListener("keydown", onKey); window.removeEventListener(OPEN_DOCS_SEARCH, onOpen); };
   }, []);
 
   return (
     <>
-      <button ref={trigger} type="button" className="docs-search__field docs-search__trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>
+      {showTrigger && <button ref={trigger} type="button" className="docs-search__field docs-search__trigger" aria-haspopup="dialog" aria-expanded={open} onClick={() => setOpen(true)}>
         <Search size={17} aria-hidden="true" />
         <span>{t.searchPlaceholder}</span>
         <kbd className="docs-search__hint" aria-hidden="true" dir="ltr">Ctrl K</kbd>
-      </button>
+      </button>}
       {open && <SearchDialog onClose={() => setOpen(false)} returnFocus={trigger} />}
     </>
   );
