@@ -54,3 +54,28 @@ export function formIntentHandlers(formId: Id<"forms"> | string) {
   const warm = () => warmForm(formId);
   return { onPointerEnter: warm, onTouchStart: warm, onFocus: warm };
 }
+
+/**
+ * Warms the first query of the page an in-app link opens: form builder,
+ * course builder, lesson editor, public lesson or public course. Next's Link
+ * prefetch fetches the route's code; this fetches its data. At most once
+ * every few seconds per page.
+ */
+export function warmHref(href: string) {
+  const path = href.replace(/^\/(?:en|ar)(?=\/)/, "").split(/[?#]/)[0];
+  const now = Date.now();
+  if ((warmed.get(path) ?? 0) > now - 10_000) return;
+  warmed.set(path, now);
+  let m: RegExpExecArray | null;
+  if ((m = /^\/dashboard\/forms\/([a-z0-9]+)$/i.exec(path))) warmQuery(api.forms.getFormForEditor, { formId: m[1] as Id<"forms"> });
+  else if ((m = /^\/dashboard\/courses\/([a-z0-9]+)$/i.exec(path))) warmQuery(api.courses.get, { courseId: m[1] as Id<"learnCollections"> });
+  else if ((m = /^\/dashboard\/learn\/lessons\/([a-z0-9]+)$/i.exec(path))) warmQuery(api.learnFrontend.editableLesson, { id: m[1] });
+  else if ((m = /^\/learn\/courses\/([a-z0-9]+)$/i.exec(path))) warmQuery(api.courses.getPublic, { courseId: m[1] });
+  else if ((m = /^\/learn\/([a-z0-9]+)$/i.exec(path))) warmQuery(api.learnFrontend.publicLesson, { id: m[1] });
+}
+
+/** Intent handlers for any in-app link; see warmHref. */
+export function hrefIntentHandlers(href: string) {
+  const warm = () => warmHref(href);
+  return { onPointerEnter: warm, onTouchStart: warm, onFocus: warm };
+}

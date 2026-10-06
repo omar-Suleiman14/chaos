@@ -10,6 +10,7 @@ import { timeAgo } from "@/lib/timeAgo";
 import { readingMinutes } from "@/lib/learn/doc";
 import { hasUnpublishedChanges, readerView } from "@/lib/learn/data";
 import type { CurriculumRef, ExternalRef, Lesson, LessonProgress, ModerationState, Person, Provenance, QualityStatus, Verification } from "@/lib/learn/types";
+import { hrefIntentHandlers } from "@/lib/convexCache";
 
 const copy = {
   en: {
@@ -202,7 +203,7 @@ export function LessonCard({ lesson, href, progress, footer, showStatus, current
         {showStatus ? <LessonStatus lesson={lesson} /> : <span>{t.by(meta.authorDisplay || lesson.ownerName)}</span>}
         <QualityBadge quality={lesson.quality} note={lesson.qualityNote} />
       </div>
-      <Heading><Link href={href} className="lx-card__link">{meta.title || t.untitled}</Link></Heading>
+      <Heading><Link href={href} className="lx-card__link" {...hrefIntentHandlers(href)}>{meta.title || t.untitled}</Link></Heading>
       {meta.description && <p>{meta.description}</p>}
       <CurriculumBadges refs={meta.curricula} max={2} currentVersionIds={currentVersionIds} />
       {lesson.forkedFrom && <span className="lx-card__meta"><GitFork size={13} aria-hidden />{t.forkedFrom} “{lesson.forkedFrom.sourceTitle}” · {lesson.forkedFrom.authorName}</span>}

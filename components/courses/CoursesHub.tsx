@@ -15,6 +15,7 @@ import { useCopy, useLocale } from "@/lib/i18n";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { courseCopy, coverStyle } from "./shared";
 import "./courses.css";
+import { hrefIntentHandlers } from "@/lib/convexCache";
 
 /** Your courses: create, open and browse. Shown as the Library's Courses tab. */
 export default function CoursesHub({
@@ -125,7 +126,7 @@ export default function CoursesHub({
         )}
         {shown.map((c) => (
           <article key={c.id} className="cx-card relative">
-            <Link href={`/dashboard/courses/${c.id}`} className="contents">
+            <Link href={`/dashboard/courses/${c.id}`} className="contents" {...hrefIntentHandlers(`/dashboard/courses/${c.id}`)}>
             <div className="cx-cover" style={coverStyle(c.id, c.coverUrl)}>
               <span className="cx-cover__badge">
                 {!c.published

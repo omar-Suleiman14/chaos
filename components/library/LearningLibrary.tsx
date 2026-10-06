@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { WsMenu } from "@/components/workspace/primitives";
 import { useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
+import { hrefIntentHandlers } from "@/lib/convexCache";
 
 export type LearningSort = "name" | "status" | "count" | "edited";
 export type LearningLibraryProps = {
@@ -54,6 +55,6 @@ export function LearningLibraryTable<T extends LearningRow>({ rows, countLabel, 
     </button>
   </th>;
   return <div className="ws-table-wrap ws-page"><table className="ws-table"><thead><tr>{header("name", labels.name)}{header("status", labels.status)}{header("count", countLabel)}{header("edited", labels.edited)}{renderActions && <th>{locale === "ar" ? "الإجراءات" : "Actions"}</th>}</tr></thead><tbody>
-    {rows.map(row => <tr key={row.id}><td><Link href={row.href} className="font-medium" dir="auto">{row.title}</Link></td><td><span className="ws-status" data-status={row.published ? "live" : "draft"}>{row.published ? labels.live : labels.draft}</span></td><td className="ws-num">{row.count}</td><td className="text-muted-foreground">{timeAgo(locale, row.updatedAt)}</td>{renderActions && <td onClick={event => event.stopPropagation()}>{renderActions(row)}</td>}</tr>)}
+    {rows.map(row => <tr key={row.id}><td><Link href={row.href} className="font-medium" dir="auto" {...hrefIntentHandlers(row.href)}>{row.title}</Link></td><td><span className="ws-status" data-status={row.published ? "live" : "draft"}>{row.published ? labels.live : labels.draft}</span></td><td className="ws-num">{row.count}</td><td className="text-muted-foreground">{timeAgo(locale, row.updatedAt)}</td>{renderActions && <td onClick={event => event.stopPropagation()}>{renderActions(row)}</td>}</tr>)}
   </tbody></table></div>;
 }

@@ -19,6 +19,7 @@ import {
 import type { Folder as FolderT, LibraryItemKind, Visibility } from "@/lib/learn/types";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
+import { hrefIntentHandlers } from "@/lib/convexCache";
 
 const copy = {
   en: {
@@ -199,7 +200,7 @@ function Library() {
                 {hereLessons.map((l) => (
                   <div key={l.id} className="lx-row" style={{ opacity: l.archived ? 0.6 : 1 }}>
                     <span className="lx-row__icon" data-kind="lesson" aria-hidden><BookOpen size={16} /></span>
-                    <Link className="lx-row__main" href={`/dashboard/learn/lessons/${l.id}`} style={{ color: "inherit", textDecoration: "none" }}>
+                    <Link className="lx-row__main" href={`/dashboard/learn/lessons/${l.id}`} style={{ color: "inherit", textDecoration: "none" }} {...hrefIntentHandlers(`/dashboard/learn/lessons/${l.id}`)}>
                       <span className="lx-row__title">{l.draft.meta.title || "Untitled lesson"}</span>
                       <span className="lx-row__sub">{t.updated(timeAgo(locale, l.updatedAt))}</span>
                     </Link>
