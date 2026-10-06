@@ -1,0 +1,21 @@
+{
+  "suite": "builderTabs",
+  "metrics": {
+    "builder.mutations.onTabSwitch": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "builder.questions100.domElements": {
+      "budget": 2332,
+      "unit": "count"
+    },
+    "builder.tabReturn.elementsAdded": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "builder.tabReturn.reactCommits": {
+      "budget": 2,
+      "unit": "count"
+    }
+  }
+}

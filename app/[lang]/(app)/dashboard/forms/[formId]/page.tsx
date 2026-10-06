@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import dynamic from "next/dynamic";
-import { useEffect, useMemo, useState } from "react";
+import { Activity, useEffect, useMemo, useState } from "react";
 import { useParams } from "next/navigation";
 import { useMutation } from "convex/react";
 import { useQuery } from "@/lib/convexCache";
@@ -384,8 +384,11 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
 
       <div className="flex flex-wrap items-center gap-3 mb-4"><div className="flex-1 min-w-0"><WsTabs tabs={primaryTabs.map(k => t.tabs[k])} value={t.tabs[tab]} onChange={name => setTab(primaryTabs.find(k => t.tabs[k] === name) ?? "Questions")} label={t.builder} icons={tabIcons} /></div><WsMenu label={locale === "ar" ? "المزيد" : "More"} trigger={<span>{advancedTabs.some(k => k === tab) ? t.tabs[tab] : locale === "ar" ? "المزيد" : "More"}</span>}>{close => <>{advancedTabs.map(k => <button type="button" role="menuitemradio" aria-checked={tab === k} key={k} onClick={() => { close(); setTab(k); }}>{t.tabs[k]}</button>)}</>}</WsMenu></div>
 
-      <div key={tab} className="grid grid-cols-1 gap-6 ws-page" role="tabpanel" aria-label={t.tabs[tab]}>
-        {tab === "Questions" && (
+      {/* The question editor is the expensive part of the builder: it stays mounted (hidden) while
+          another tab is open, so coming back keeps its DOM, focus targets and scroll instead of rebuilding.
+          Other tabs mount on demand, so a keystroke never re-renders a hidden Design or Logic tab. */}
+      <Activity mode={tab === "Questions" ? "visible" : "hidden"}>
+        <div className="grid grid-cols-1 gap-6 ws-page" role="tabpanel" aria-label={t.tabs.Questions}>
           <div className="max-w-3xl mx-auto w-full space-y-4">
             {(report.errors.length > 0 || report.warnings.length > 0) && (
               <details className="chaos-card px-4 py-3" aria-label={t.checks}>
@@ -399,7 +402,9 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
             )}
             <BuildTab def={def} change={d.change} readOnly={!canEdit} notice={(text) => toast.success(text)} announce={announce} />
           </div>
-        )}
+        </div>
+      </Activity>
+      {tab !== "Questions" && <div key={tab} className="grid grid-cols-1 gap-6 ws-page" role="tabpanel" aria-label={t.tabs[tab]}>
         {tab === "Logic" && <LogicTab def={def} change={d.change} readOnly={!canEdit} errors={report.errors} />}
         {tab === "Translate" && <TranslateTab def={def} change={d.change} readOnly={!canEdit} />}
         {tab === "Design" && <DesignTab def={def} change={d.change} readOnly={!canEdit} onFullPreview={() => setPreviewing(true)} announce={announce} />}
@@ -411,7 +416,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
         {tab === "Share" && <ShareTab formId={formId} shareId={data.shareId} title={def.title} published={published} status={data.status} slug={data.slug} />}
         {tab === "Team" && <TeamTab formId={formId} role={data.role} def={def} />}
         {tab === "History" && <HistoryTab formId={formId} versions={data.versions} canEdit={canEdit} revision={d.revision} beforeRestore={d.save} />}
-      </div>
+      </div>}
       {previewing && <FullPreview def={def} onClose={() => setPreviewing(false)} />}
       {sharing && <SharePopup formId={formId} shareId={data.shareId} slug={data.slug} title={def.title} quiz={quiz} onClose={() => setSharing(false)} />}
     </div>
