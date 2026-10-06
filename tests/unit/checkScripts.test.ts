@@ -6,6 +6,7 @@ import productionThresholds from "@/perf/production-thresholds.json";
 import { JOURNEYS } from "@/lib/journeys";
 import { baselineProblems, classify, guard, HARNESS_LABEL } from "@/scripts/lib/perfGuard";
 import { prComment } from "@/scripts/lib/prSummary";
+import { journeyOf, PERF_JOURNEYS, regressionBody, regressionsByJourney, targetBody } from "@/scripts/lib/perfIssues";
 
 describe("percentiles", () => {
   it("uses nearest rank", () => {
@@ -123,5 +124,36 @@ describe("pull request performance comment", () => {
   it("never claims correctness that did not run or failed", () => {
     expect(prComment(rows, [], null, "x")).toContain("Correctness checks did not run");
     expect(prComment(rows, ["p"], ["correctness/integration"], "x")).toContain("🔴 Correctness checks failed: correctness/integration");
+  });
+});
+
+describe("perf issues per journey", () => {
+  const row = (suite: string, metric: string, status = "regressed", budget = 100, value = 130) => ({ suite, metric, unit: "count" as const, budget, value, status });
+
+  it("maps every benchmark to the journey people wait on", () => {
+    const cases: [string, string, string][] = [
+      ["surfaces", "dashboard.payloadBytes", "dashboard"],
+      ["journeys", "journey.formCreate.documentsRead", "form-editor"],
+      ["builderKeystroke", "keystroke.q100.reactCommits", "form-editor"],
+      ["census", "editor.keystroke.renders", "form-editor"],
+      ["surfaces", "quizzes.respondent.payloadBytes", "quiz"],
+      ["census", "giantLesson.mount.renders", "lesson"],
+      ["surfaces", "courses.public.payloadBytes", "course"],
+      ["census", "live.player.mount.renders", "live"],
+      ["surfaces", "card.public.payloadBytes", "card"],
+      ["surfaces", "mcp.listToolsBytes", "mcp"],
+      ["journeys", "journey.mcpPersist.transactions", "mcp"],
+      ["css", "css.universalSelectors", "styles"],
+      ["bundles", "bundle.dashboard.firstLoadJs", "styles"],
+    ];
+    for (const [suite, metric, journey] of cases) expect(`${metric} → ${journeyOf({ suite, metric }).key}`).toBe(`${metric} → ${journey}`);
+  });
+
+  it("groups only regressions and missing budgets, and writes a complete issue", () => {
+    const groups = regressionsByJourney([row("surfaces", "dashboard.payloadBytes"), row("surfaces", "dashboard.bytesRead", "ok"), row("census", "lesson.mount.renders", "missing")]);
+    expect([...groups.keys()]).toEqual(["dashboard", "lesson"]);
+    const body = regressionBody(PERF_JOURNEYS[0], groups.get("dashboard")!, "abc1234", "https://run");
+    for (const part of ["/dashboard", "`surfaces/dashboard.payloadBytes`", "| 100 | 130 | +30% |", "abc1234", "https://run"]) expect(body).toContain(part);
+    expect(targetBody(PERF_JOURNEYS[0], [row("surfaces", "dashboard.payloadBytes", "ok")], { p75: 2500, p95: 5000 })).toContain("p75 ≤ 2500 ms");
   });
 });
