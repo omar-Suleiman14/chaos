@@ -1,6 +1,6 @@
 import { test, type Page } from "@playwright/test";
 import { signInCreator } from "../e2e/support";
-import { schemes, snap, suite, useScheme } from "./support";
+import { open, schemes, snap, suite, useScheme } from "./support";
 
 /**
  * App surfaces (VISUAL_SUITE=app): this branch's build against the dev Convex
@@ -33,7 +33,7 @@ for (const scheme of schemes) {
 
     test("dashboard", async ({ page }) => {
       await signedIn(page);
-      await page.goto("/dashboard");
+      await open(page, "/dashboard");
       await usable(page, "dashboard");
       await snap(page, `app-dashboard-${scheme}`, { maxDiffPixelRatio: 0.01 });
     });
@@ -41,40 +41,40 @@ for (const scheme of schemes) {
     test("editor", async ({ page }) => {
       test.skip(!fixtures.formId, "E2E_PERF_FORM_ID not set");
       await signedIn(page);
-      await page.goto(`/dashboard/forms/${fixtures.formId}`);
+      await open(page, `/dashboard/forms/${fixtures.formId}`);
       await usable(page, "form.open");
       await snap(page, `app-editor-${scheme}`, { maxDiffPixelRatio: 0.01 });
     });
 
     test("lesson", async ({ page }) => {
       test.skip(!fixtures.lessonId, "E2E_PERF_LESSON_ID not set");
-      await page.goto(`/learn/${fixtures.lessonId}`);
+      await open(page, `/learn/${fixtures.lessonId}`);
       await usable(page, "lesson.read");
       await snap(page, `app-lesson-${scheme}`);
     });
 
     test("course", async ({ page }) => {
       test.skip(!fixtures.courseId, "E2E_PERF_COURSE_ID not set");
-      await page.goto(`/learn/courses/${fixtures.courseId}`);
+      await open(page, `/learn/courses/${fixtures.courseId}`);
       await usable(page, "course.modules");
       await snap(page, `app-course-${scheme}`);
     });
 
     test("author cards", async ({ page }) => {
-      await page.goto("/card");
+      await open(page, "/card");
       await page.locator(".author-stack, .authors-state").first().waitFor();
       await snap(page, `app-card-${scheme}`, { maxDiffPixelRatio: 0.01 });
     });
 
     test("live join", async ({ page }) => {
-      await page.goto("/play");
+      await open(page, "/play");
       await page.getByLabel(/nickname/i).waitFor();
       await snap(page, `app-live-join-${scheme}`);
     });
 
     for (const [theme, shareId] of themed) {
       test(`form theme ${theme}`, async ({ page }) => {
-        await page.goto(`/f/${shareId}`);
+        await open(page, `/f/${shareId}`);
         await page.locator(".form-theme").first().waitFor();
         await snap(page, `app-theme-${theme}-${scheme}`);
       });

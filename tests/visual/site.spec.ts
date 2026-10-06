@@ -1,5 +1,5 @@
 import { test } from "@playwright/test";
-import { isolate, schemes, snap, suite, useScheme } from "./support";
+import { isolate, open, schemes, snap, suite, useScheme } from "./support";
 
 /**
  * Public pages from this branch's own build, with no backend: every pixel
@@ -24,7 +24,7 @@ for (const p of pages) {
     test(`${p.name} ${scheme}`, async ({ page, baseURL }) => {
       await isolate(page, baseURL!);
       await useScheme(page, scheme);
-      await page.goto(p.path, { waitUntil: "load" });
+      await open(page, p.path);
       await snap(page, `site-${p.name}-${scheme}`, { fullPage: p.fullPage });
     });
   }

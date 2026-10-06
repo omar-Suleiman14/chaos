@@ -11,7 +11,11 @@ export default defineConfig({
   snapshotPathTemplate: "{testDir}/__screenshots__/{projectName}/{arg}{ext}",
   fullyParallel: true,
   forbidOnly: !!process.env.CI,
-  retries: process.env.CI ? 1 : 0,
+  // Recording never retries; a broken server stops the run after a few failures instead of
+  // waiting out every test (tests/visual/support.ts `open` also fails at once on an error page).
+  retries: process.env.CI && process.env.VISUAL_RECORD !== "1" ? 1 : 0,
+  maxFailures: process.env.CI ? 4 : undefined,
+  timeout: 45_000,
   reporter: [["list"], ["html", { open: "never", outputFolder: "playwright-report/visual" }]],
   expect: { toHaveScreenshot: { animations: "disabled", caret: "hide", scale: "css", maxDiffPixelRatio: 0.002 } },
   use: {

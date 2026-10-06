@@ -43,7 +43,7 @@ jobs:
   visual:
     name: Screenshots (${{ inputs.suite || 'site' }})
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 25
     env:
       SUITE: ${{ inputs.suite || 'site' }}
       MODE: ${{ inputs.mode || (github.event_name == 'push' && 'record' || 'compare') }}
@@ -70,12 +70,33 @@ jobs:
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
 
+      # Written to the job environment so `pnpm start` runs with exactly what was built.
+      # site: no backend; marketing pages never touch auth.
+      # app: the dev Convex deployment with Chaos's own sign-in instead of Clerk, which
+      # would need a real secret key on the server for every app page.
+      - name: Configure build
+        run: |
+          if [ "$SUITE" = app ]; then
+            convex="${{ vars.VISUAL_CONVEX_URL }}"
+            [ -n "$convex" ] || { echo "Set the VISUAL_CONVEX_URL repository variable (dev Convex URL)."; exit 1; }
+            {
+              echo "NEXT_PUBLIC_AUTH_PROVIDER=betterauth"
+              echo "NEXT_PUBLIC_CONVEX_URL=$convex"
+              echo "NEXT_PUBLIC_CONVEX_SITE_URL=${convex%.cloud}.site"
+              echo "NEXT_PUBLIC_APP_URL=http://localhost:3000"
+              echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY="
+              echo "BETTER_AUTH_SECRET=$(openssl rand -hex 32)"
+            } >> "$GITHUB_ENV"
+          else
+            {
+              echo "NEXT_PUBLIC_CONVEX_URL=https://ci-placeholder.convex.cloud"
+              echo "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=pk_test_Y2ktcGxhY2Vob2xkZXIuZXhhbXBsZS5jb20k"
+              echo "CLERK_SECRET_KEY=sk_test_ci-placeholder-not-a-real-credential"
+            } >> "$GITHUB_ENV"
+          fi
+
       - name: Build
         run: pnpm build
-        env:
-          NEXT_PUBLIC_CONVEX_URL: ${{ env.SUITE == 'app' && vars.VISUAL_CONVEX_URL || 'https://ci-placeholder.convex.cloud' }}
-          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ env.SUITE == 'app' && vars.VISUAL_CLERK_PUBLISHABLE_KEY || 'pk_test_Y2ktcGxhY2Vob2xkZXIuZXhhbXBsZS5jb20k' }}
-          CLERK_SECRET_KEY: "sk_test_ci-placeholder-not-a-real-credential"
 
       - name: App fixtures
         if: env.SUITE == 'app'
@@ -83,7 +104,7 @@ jobs:
           {
             echo "E2E_CREATOR_EMAIL=${{ secrets.E2E_CREATOR_EMAIL }}"
             echo "E2E_CREATOR_PASSWORD=${{ secrets.E2E_CREATOR_PASSWORD }}"
-            echo "E2E_AUTH_PROVIDER=${{ vars.E2E_AUTH_PROVIDER || 'clerk' }}"
+            echo "E2E_AUTH_PROVIDER=betterauth"
             echo "E2E_PERF_FORM_ID=${{ vars.E2E_PERF_FORM_ID }}"
             echo "E2E_PERF_COURSE_ID=${{ vars.E2E_PERF_COURSE_ID }}"
             echo "E2E_PERF_LESSON_ID=${{ vars.E2E_PERF_LESSON_ID }}"
@@ -112,6 +133,8 @@ jobs:
       - name: Record
         if: env.MODE == 'record' || env.BASELINE != '1'
         run: pnpm exec playwright test -c playwright.visual.config.ts --update-snapshots=all
+        env:
+          VISUAL_RECORD: "1"
 
       - name: Summary
         if: always()

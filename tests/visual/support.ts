@@ -17,6 +17,13 @@ export async function isolate(page: Page, baseURL: string) {
   await page.route((url) => url.origin !== origin, (route) => route.abort());
 }
 
+/** Navigates and fails at once on a server error, rather than timing out waiting for content. */
+export async function open(page: Page, path: string) {
+  const response = await page.goto(path, { waitUntil: "load" });
+  const status = response?.status() ?? 0;
+  if (status >= 400) throw new Error(`${path} answered ${status}; the server is misconfigured, not the page's look`);
+}
+
 /** Light or dark the way people get it: the stored preference the theme script reads first. */
 export async function useScheme(page: Page, scheme: Scheme) {
   await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
