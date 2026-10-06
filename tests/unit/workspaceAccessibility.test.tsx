@@ -149,9 +149,31 @@ describe("command palette", () => {
   function Palette() {
     const [open, setOpen] = useState(false);
     return <><button onClick={() => setOpen(true)}>Search workspace</button>
-      <CommandPalette open={open} onClose={() => setOpen(false)} onNew={vi.fn()}
+      <CommandPalette open={open} onClose={() => setOpen(false)} onCreate={vi.fn()}
         items={[{ id: "form", title: "Example", kind: "form", href: "/example" }]} /></>;
   }
+
+  it("shows actions first when empty, then puts matching work before actions once you type", async () => {
+    const user = userEvent.setup();
+    const onCreate = vi.fn();
+    render(<CommandPalette open onClose={vi.fn()} onCreate={onCreate} items={[
+      { id: "c1", title: "Neuro course", kind: "course", href: "/dashboard/courses/c1" },
+      { id: "s1", title: "Neuro flashcards", kind: "flashcards", href: "/dashboard/learn/flashcards/s1" },
+      { id: "t1", title: "Anatomy team", kind: "team", href: "/dashboard/teams/t1" },
+    ]} />);
+    const groups = () => screen.getAllByRole("group").map((g) => g.getAttribute("aria-label"));
+    expect(groups()[0]).toBe("Actions");
+    await user.type(screen.getByRole("combobox"), "new");
+    expect(groups().at(-1)).toBe("Actions");
+    await user.clear(screen.getByRole("combobox"));
+    await user.type(screen.getByRole("combobox"), "neuro");
+    expect(groups()[0]).toBe("Your work");
+    expect(within(screen.getByRole("group", { name: "Your work" })).getAllByRole("option").map((o) => o.textContent)).toEqual(expect.arrayContaining([expect.stringContaining("Neuro course"), expect.stringContaining("Neuro flashcards")]));
+    await user.clear(screen.getByRole("combobox"));
+    await user.type(screen.getByRole("combobox"), "new lesson");
+    await user.keyboard("{Enter}");
+    expect(onCreate).toHaveBeenCalledWith("lesson");
+  });
 
   it("navigates in rendered order with an active descendant and executes the selected item", async () => {
     const user = userEvent.setup();

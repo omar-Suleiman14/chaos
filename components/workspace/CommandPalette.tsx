@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { Archive, BarChart3, BookOpen, ChevronDown, FileText, Folder, Keyboard, Link2, Moon, Plus, Search, Settings, Sparkles } from "lucide-react";
+import { Archive, BarChart3, BookOpen, Bookmark, BookOpenText, ChevronDown, FileText, Folder, GraduationCap, IdCard, Keyboard, Layers, Library, Link2, ListChecks, Moon, Plus, Search, Settings, Sparkles, Trophy, Users } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useTheme } from "@/components/ThemeProvider";
 import FallbackBoundary from "@/components/FallbackBoundary";
@@ -16,39 +16,56 @@ import { settingsIndexFor } from "@/lib/settingsIndex";
 import type { SettingsEntry } from "@/lib/settingsIndex";
 import { useModal } from "./useModal";
 
-export interface PaletteItem { id: string; title: string; kind: "form" | "quiz" | "legacy" | "lesson" | "folder"; href: string; accent?: string; archived?: boolean; body?: string }
+export interface PaletteItem { id: string; title: string; kind: "form" | "quiz" | "legacy" | "lesson" | "folder" | "course" | "flashcards" | "game" | "team"; href: string; accent?: string; archived?: boolean; body?: string }
+export type PaletteCreate = "form" | "quiz" | "lesson" | "course" | "flashcards";
 
 type Entry = { key: string; group: string; label: string; hint?: string; icon: React.ReactNode; run: () => void; titleRanges?: Range[]; snippet?: Snippet; keepOpen?: boolean };
 type IndexRow = { id: string; title: string; status: "draft" | "live" | "closed" | "archived"; quiz: boolean; text: string };
 
 const GROUP_LIMIT = 6;
 
-const kindIcon = (kind: PaletteItem["kind"]) => kind === "form" ? <FileText size={16} /> : kind === "lesson" ? <BookOpen size={16} /> : kind === "folder" ? <Folder size={16} /> : <Sparkles size={16} />;
+const KIND_ICONS: Record<PaletteItem["kind"], React.ReactNode> = {
+  form: <FileText size={16} />, quiz: <ListChecks size={16} />, legacy: <Sparkles size={16} />, lesson: <BookOpen size={16} />, folder: <Folder size={16} />,
+  course: <GraduationCap size={16} />, flashcards: <Layers size={16} />, game: <Trophy size={16} />, team: <Users size={16} />,
+};
+const kindIcon = (kind: PaletteItem["kind"]) => KIND_ICONS[kind];
 
 const copy = {
   en: {
-    groupActions: "Actions", groupForms: "Forms, quizzes and lessons", groupSettings: "Settings", groupDocs: "Docs",
-    newForm: "New form or quiz", newHint: "Blank draft", openArchive: "Open archive", openResults: "Open results", connections: "Connections",
+    groupActions: "Actions", groupForms: "Your work", groupSettings: "Settings", groupDocs: "Docs",
+    newForm: "New form", newQuiz: "New quiz", newLesson: "New lesson", newCourse: "New course", newFlashcards: "New flashcard set", newHint: "Blank draft",
+    library: "Open library", saved: "Saved", teams: "Teams & invitations", profile: "Profile and card",
+    courseHint: "Course", flashcardsHint: "Flashcards", gameHint: "Live game", teamHint: "Team", openArchive: "Open archive", openResults: "Open results", connections: "Connections",
     settings: "Settings", shortcuts: "Keyboard shortcuts", docs: "Docs", darkMode: "Toggle dark mode",
     archivedHint: "Archived", legacyHint: "Legacy quiz", quizHint: "Quiz", formHint: "Form", lessonHint: "Lesson", folderHint: "Folder", untitled: "Untitled", learn: "Open Learn",
     showAll: (n: number) => `Show all ${n}`,
-    dialog: "Search and commands", placeholder: "Search forms, settings and help…", search: "Search", list: "Commands and pages",
+    dialog: "Search and commands", placeholder: "Search everything or type a command…", search: "Search", list: "Commands and pages",
     noMatches: (q: string) => `No matches for “${q}”.`, navigate: "Navigate", select: "Select", close: "Close",
   },
   ar: {
-    groupActions: "الإجراءات", groupForms: "النماذج والاختبارات والدروس", groupSettings: "الإعدادات", groupDocs: "الدليل",
-    newForm: "نموذج أو اختبار جديد", newHint: "مسودة فارغة", openArchive: "افتح الأرشيف", openResults: "افتح النتائج", connections: "الاتصالات",
+    groupActions: "الإجراءات", groupForms: "أعمالك", groupSettings: "الإعدادات", groupDocs: "الدليل",
+    newForm: "نموذج جديد", newQuiz: "اختبار جديد", newLesson: "درس جديد", newCourse: "دورة جديدة", newFlashcards: "مجموعة بطاقات جديدة", newHint: "مسودة فارغة",
+    library: "افتح المكتبة", saved: "المحفوظات", teams: "الفرق والدعوات", profile: "الملف الشخصي والبطاقة",
+    courseHint: "دورة", flashcardsHint: "بطاقات", gameHint: "لعبة مباشرة", teamHint: "فريق", openArchive: "افتح الأرشيف", openResults: "افتح النتائج", connections: "الاتصالات",
     settings: "الإعدادات", shortcuts: "اختصارات لوحة المفاتيح", docs: "الدليل", darkMode: "بدّل الوضع الداكن",
     archivedHint: "مؤرشف", legacyHint: "اختبار قديم", quizHint: "اختبار", formHint: "نموذج", lessonHint: "درس", folderHint: "مجلد", untitled: "بلا عنوان", learn: "افتح Learn",
     showAll: (n: number) => `اعرض الكل (${n})`,
-    dialog: "البحث والأوامر", placeholder: "ابحث في النماذج والإعدادات والدليل…", search: "بحث", list: "الأوامر والصفحات",
+    dialog: "البحث والأوامر", placeholder: "ابحث في كل شيء أو اكتب أمرًا…", search: "بحث", list: "الأوامر والصفحات",
     noMatches: (q: string) => `لا نتائج لـ «${q}».`, navigate: "تنقل", select: "اختر", close: "إغلاق",
   },
 };
 
 /** Arabic words for each action, added to the English ones so either language finds it. */
 const actionKeywordsAr: Record<string, string> = {
-  new: "إنشاء جديد مسودة فارغة إضافة ابدأ اختبار استبيان",
+  new: "إنشاء جديد مسودة فارغة إضافة ابدأ نموذج استبيان",
+  quiz: "اختبار جديد إنشاء أسئلة درجات",
+  lesson: "درس جديد إنشاء كتابة شرح",
+  course: "دورة جديدة إنشاء مقرر",
+  flashcards: "بطاقات جديدة إنشاء مراجعة حفظ",
+  library: "المكتبة كل الأعمال",
+  saved: "المحفوظات العلامات المرجعية",
+  teams: "الفرق الدعوات أعمال فريق",
+  profile: "الملف الشخصي البطاقة اسم المستخدم",
   archive: "الأرشيف مؤرشف استعادة حذف سلة",
   results: "النتائج اختبار قديم الدرجات",
   connections: "اتصالات تطبيقات تكامل رمز",
@@ -79,14 +96,14 @@ function navigate(router: { push: (href: string) => void }, href: string) {
   if (hash && path === window.location.pathname) setTimeout(() => window.dispatchEvent(new HashChangeEvent("hashchange")), 0);
 }
 
-type PaletteProps = { open: boolean; onClose: () => void; items: PaletteItem[]; onNew: () => void };
+type PaletteProps = { open: boolean; onClose: () => void; items: PaletteItem[]; onCreate: (kind: PaletteCreate) => void };
 
 /** The guides catalog is subscribed here, once the palette is first opened, not on every page. */
 export default function CommandPalette(props: PaletteProps) {
   return <DocsProvider><Palette {...props} /></DocsProvider>;
 }
 
-function Palette({ open, onClose, items, onNew }: PaletteProps) {
+function Palette({ open, onClose, items, onCreate }: PaletteProps) {
   const router = useRouter();
   const { toggleTheme } = useTheme();
   const { locale } = useLocale();
@@ -111,7 +128,15 @@ function Palette({ open, onClose, items, onNew }: PaletteProps) {
     const go = (href: string) => () => { onClose(); navigate(router, href); };
     const make = (key: string, label: string, en: string, icon: React.ReactNode, run: () => void, hint?: string) => ({ key, label, keywords: locale === "ar" ? `${actionKeywordsAr[key] ?? ""} ${en}` : en, icon, run, hint });
     return [
-      make("new", t.newForm, "create blank draft add start quiz survey", <Plus size={16} />, () => { onClose(); onNew(); }, t.newHint),
+      make("new", t.newForm, "create blank draft add start form survey", <Plus size={16} />, () => { onClose(); onCreate("form"); }, t.newHint),
+      make("quiz", t.newQuiz, "create quiz questions scores test", <ListChecks size={16} />, () => { onClose(); onCreate("quiz"); }, t.newHint),
+      make("lesson", t.newLesson, "create lesson write page", <BookOpenText size={16} />, () => { onClose(); onCreate("lesson"); }, t.newHint),
+      make("course", t.newCourse, "create course lessons modules", <GraduationCap size={16} />, () => { onClose(); onCreate("course"); }, t.newHint),
+      make("flashcards", t.newFlashcards, "create flashcards cards deck study", <Layers size={16} />, () => { onClose(); onCreate("flashcards"); }, t.newHint),
+      make("library", t.library, "library all forms quizzes lessons courses home", <Library size={16} />, go("/dashboard")),
+      make("saved", t.saved, "saved bookmarks", <Bookmark size={16} />, go("/dashboard/learn/saved")),
+      make("teams", t.teams, "teams invitations business workspace members", <Users size={16} />, go("/dashboard/teams")),
+      make("profile", t.profile, "profile card username avatar account", <IdCard size={16} />, go("/dashboard/card")),
       make("archive", t.openArchive, "archived restore delete trash bin", <Archive size={16} />, go("/dashboard/archive")),
       make("results", t.openResults, "old quiz results legacy scores", <BarChart3 size={16} />, go("/dashboard/results")),
       make("learn", t.learn, "learn lessons courses study explore curriculum", <BookOpen size={16} />, go("/dashboard/learn")),
@@ -121,7 +146,7 @@ function Palette({ open, onClose, items, onNew }: PaletteProps) {
       make("docs", t.docs, "help guide how to learn documentation support", <BookOpen size={16} />, () => { onClose(); window.open("/docs", "_blank", "noopener"); }),
       make("theme", t.darkMode, "light theme night appearance", <Moon size={16} />, () => { onClose(); toggleTheme(); }),
     ];
-  }, [onClose, onNew, router, toggleTheme, locale, t]);
+  }, [onClose, onCreate, router, toggleTheme, locale, t]);
 
   const actionIndex = useMemo(() => buildIndex(actionDocs.map((a): SearchDoc & { a: (typeof actionDocs)[number] } => ({ id: a.key, title: a.label, body: a.keywords, a }))), [actionDocs]);
 
@@ -133,7 +158,8 @@ function Palette({ open, onClose, items, onNew }: PaletteProps) {
       seen.add(item.id);
       const row = byId.get(item.id);
       const archived = item.archived || row?.status === "archived";
-      const hint = archived ? t.archivedHint : item.kind === "legacy" ? t.legacyHint : item.kind === "quiz" ? t.quizHint : item.kind === "lesson" ? t.lessonHint : item.kind === "folder" ? t.folderHint : t.formHint;
+      const hints: Record<PaletteItem["kind"], string> = { form: t.formHint, quiz: t.quizHint, legacy: t.legacyHint, lesson: t.lessonHint, folder: t.folderHint, course: t.courseHint, flashcards: t.flashcardsHint, game: t.gameHint, team: t.teamHint };
+      const hint = archived ? t.archivedHint : hints[item.kind];
       const extra = [hint, row?.status ?? "", item.kind === "legacy" ? "old" : ""].join(" ");
       return { id: item.id, title: item.title || t.untitled, extra, body: row?.text ?? item.body ?? "", item, hint, archived };
     });
@@ -170,8 +196,8 @@ function Palette({ open, onClose, items, onNew }: PaletteProps) {
       const direct = searchIndex(index, q);
       return direct.length ? direct : searchIndex(index, stripStopwords(q));
     };
+    // While typing, what you made comes first, then settings and docs, and actions last.
     const groups: { name: string; rows: Entry[] }[] = [];
-    groups.push({ name: t.groupActions, rows: find(actionIndex).map((r) => toEntry((r.doc as (typeof actionIndex)[number]["doc"] & { a: (typeof actionDocs)[number] }).a, r)) });
     groups.push({
       name: t.groupForms,
       rows: find(formIndex).map((r) => {
@@ -195,6 +221,7 @@ function Palette({ open, onClose, items, onNew }: PaletteProps) {
       }),
     });
 
+    groups.push({ name: t.groupActions, rows: find(actionIndex).map((r) => toEntry((r.doc as (typeof actionIndex)[number]["doc"] & { a: (typeof actionDocs)[number] }).a, r)) });
     const out: Entry[] = [];
     for (const g of groups) {
       const showAll = expanded.includes(g.name);

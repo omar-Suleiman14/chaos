@@ -221,7 +221,8 @@ export const formTables = {
     .index("by_ownerId_and_status_and_updatedAt", ["ownerId", "status", "updatedAt"])
     .index("by_ownerId_and_createdAt", ["ownerId", "createdAt"])
     .index("by_shareId", ["shareId"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .searchIndex("search_title", { searchField: "title", filterFields: [] }),
 
   formVersions: defineTable({
     formId: v.id("forms"),

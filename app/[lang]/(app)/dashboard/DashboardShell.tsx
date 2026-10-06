@@ -32,7 +32,7 @@ import { formIntentHandlers } from "@/lib/convexCache";
 import { usePreferences } from "@/lib/preferences";
 import { dateLocale, useCopy, useLocale } from "@/lib/i18n";
 import { supportEmail } from "@/lib/site";
-import { useFolders, useMyLessons } from "@/lib/learn/data";
+import { useFlashcardSets, useFolders, useMyLessons } from "@/lib/learn/data";
 
 /**
  * The palette carries the docs and settings search indexes (~150 KB of text), so it loads on
@@ -169,6 +169,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const router = useRouter();
   const myLessons = useMyLessons();
   const learnFolders = useFolders();
+  const flashcardSets = useFlashcardSets();
+  const teams = useQuery(api.businessTeams.list, convexSignedIn ? {} : "skip");
   const [newOpen, setNewOpen] = useState(false);
   useEffect(() => {
     if (!newOpen) return;
@@ -253,7 +255,11 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     ...(quizzes ?? []).filter(q => !q.archived).map((q) => ({ id: q._id, title: q.title, kind: "legacy" as const, href: `/dashboard/editor?id=${q._id}` })),
     ...(myLessons ?? []).map((l) => ({ id: l.id, title: l.draft.meta.title, kind: "lesson" as const, href: `/dashboard/learn/lessons/${l.id}`, body: [l.draft.meta.description, l.draft.meta.tags.join(" ")].join(" ") })),
     ...(learnFolders ?? []).filter((f) => !f.archived).map((f) => ({ id: f.id, title: f.name, kind: "folder" as const, href: `/dashboard/learn/library?folder=${f.id}` })),
-  ], [forms, quizzes, myLessons, learnFolders]);
+    ...(myCourses ?? []).map((c) => ({ id: c.id, title: c.title, kind: "course" as const, href: c.archived ? "/dashboard/archive" : `/dashboard/courses/${c.id}`, archived: c.archived, body: c.description })),
+    ...(flashcardSets ?? []).map((f) => ({ id: f.id, title: f.title, kind: "flashcards" as const, href: `/dashboard/learn/flashcards/${f.id}`, body: [f.description, ...f.cards.flatMap((card) => [card.front, card.back])].join(" ") })),
+    ...(myGames ?? []).map((g) => ({ id: g._id, title: g.title, kind: "game" as const, href: g.state !== "ended" ? `/dashboard/live/${g._id}` : g.formId ? `/dashboard/forms/${g.formId}/responses` : "/dashboard?tab=games" })),
+    ...(teams ?? []).map((row) => ({ id: row.team._id, title: row.team.name, kind: "team" as const, href: `/dashboard/teams/${row.team._id}` })),
+  ], [forms, quizzes, myLessons, learnFolders, myCourses, flashcardSets, myGames, teams]);
   const { pinned: pinnedIds, toggle: togglePin } = usePinned();
   const { preferences } = usePreferences();
   // Settings → Reduce motion applies across the workspace.
@@ -482,7 +488,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </main>
         </div>
       </div>
-      {paletteUsed && <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} items={paletteItems} onNew={() => void create()} />}
+      {paletteUsed && <CommandPalette open={paletteOpen} onClose={() => setPaletteOpen(false)} items={paletteItems} onCreate={(kind) => { if (kind === "form") void create(); else if (kind === "quiz") void create(newQuizArgs(locale)); else if (kind === "lesson") void createLesson(); else if (kind === "course") void createCourse(); else void createFlashcards(); }} />}
     </div>
   );
 }

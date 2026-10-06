@@ -121,7 +121,8 @@ export default defineSchema({
     .index("by_publicAuthorAssets", ["publicAuthorAssets"])
     .index("by_email", ["email"])
     .index("by_planExpiresAt", ["planExpiresAt"])
-    .index("by_suspendedUntil", ["suspendedUntil"]).searchIndex("search_name", { searchField: "name", filterFields: [] }),
+    .index("by_suspendedUntil", ["suspendedUntil"]).searchIndex("search_name", { searchField: "name", filterFields: [] })
+    .searchIndex("search_email", { searchField: "email", filterFields: [] }),
 
   // ============ TEACHER SETTINGS (Auto Settings) ============
   teacherSettings: defineTable({
@@ -179,7 +180,8 @@ export default defineSchema({
     .index("by_creator_archived", ["creatorId", "archived"])
     .index("by_creator_createdAt", ["creatorId", "createdAt"])
     .index("by_slug", ["slug"])
-    .index("by_creator_slug", ["creatorUsername", "slug"]),
+    .index("by_creator_slug", ["creatorUsername", "slug"])
+    .searchIndex("search_title", { searchField: "title", filterFields: [] }),
 
   // ============ QUESTIONS ============
   questions: defineTable({

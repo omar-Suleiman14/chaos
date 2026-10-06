@@ -155,16 +155,42 @@ export const teams = query({ args: teamsArgs, returns: v.object({ page: v.array(
 export const usersArgs = {
     paginationOpts: paginationOptsValidator,
     email: v.optional(v.string()),
+    /** Name, email or username, matched as typed (word prefixes). Returns the best matches in one page. */
+    search: v.optional(v.string()),
   };
+/** Search results come back as one bounded page rather than a cursor through the whole table. */
+const SEARCH_LIMIT = 50;
+const searchPage = <T,>(page: T[]) => ({ page, isDone: true, continueCursor: "", splitCursor: null });
+function uniqueById<T extends { _id: unknown }>(rows: (T | null | undefined)[]): T[] {
+  const seen = new Set<unknown>();
+  return rows.filter((row): row is T => !!row && !seen.has(row._id) && !!seen.add(row._id));
+}
 export async function usersForActor(ctx: QueryCtx, args: ObjectType<typeof usersArgs>, actorId?: string) {
     await requireAdminForActor(ctx, actorId);
     const email = args.email?.trim();
-    const source = email
-      ? ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email))
-      : ctx.db.query("users");
-    const result = await source
-      .order("desc")
-      .paginate({ ...args.paginationOpts, maximumBytesRead: 2_000_000 });
+    const search = args.search?.trim();
+    let result: { page: Doc<"users">[]; isDone: boolean; continueCursor: string; splitCursor?: string | null };
+    if (search) {
+      // Exact email or username first, then names and emails that contain the words typed.
+      const lower = search.toLowerCase().replace(/^@/, "");
+      const exact = await Promise.all([
+        ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", search)).first(),
+        lower !== search ? ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", lower)).first() : null,
+        ctx.db.query("users").withIndex("by_username", (q) => q.eq("username", lower)).first(),
+      ]);
+      const [byName, byEmail] = await Promise.all([
+        ctx.db.query("users").withSearchIndex("search_name", (q) => q.search("name", search)).take(SEARCH_LIMIT),
+        ctx.db.query("users").withSearchIndex("search_email", (q) => q.search("email", search)).take(SEARCH_LIMIT),
+      ]);
+      result = searchPage(uniqueById([...exact, ...byName, ...byEmail]).slice(0, SEARCH_LIMIT));
+    } else {
+      const source = email
+        ? ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email))
+        : ctx.db.query("users");
+      result = await source
+        .order("desc")
+        .paginate({ ...args.paginationOpts, maximumBytesRead: 2_000_000 });
+    }
     return {
       ...result,
       page: result.page.map((u) => ({
@@ -192,14 +218,22 @@ export const users = query({ args: usersArgs, returns: v.object({ page: v.array(
 export const contentArgs = {
     kind: v.union(v.literal("forms"), v.literal("quizzes")),
     paginationOpts: paginationOptsValidator,
+    /** Title words or an exact id. Returns the best matches in one page. */
+    search: v.optional(v.string()),
   };
 export async function contentForActor(ctx: QueryCtx, args: ObjectType<typeof contentArgs>, actorId?: string) {
     await requireAdminForActor(ctx, actorId);
+    const search = args.search?.trim();
     if (args.kind === "forms") {
-      const result = await ctx.db
-        .query("forms")
-        .order("desc")
-        .paginate({ ...args.paginationOpts, maximumBytesRead: 2_000_000 });
+      const result = search
+        ? searchPage(uniqueById([
+            await (async () => { const id = ctx.db.normalizeId("forms", search); return id ? ctx.db.get("forms", id) : null; })(),
+            ...await ctx.db.query("forms").withSearchIndex("search_title", (q) => q.search("title", search)).take(SEARCH_LIMIT),
+          ]))
+        : await ctx.db
+          .query("forms")
+          .order("desc")
+          .paginate({ ...args.paginationOpts, maximumBytesRead: 2_000_000 });
       return {
         ...result,
         page: result.page.map((f) => ({
@@ -213,10 +247,15 @@ export async function contentForActor(ctx: QueryCtx, args: ObjectType<typeof con
         })),
       };
     }
-    const result = await ctx.db
-      .query("quizzes")
-      .order("desc")
-      .paginate({ ...args.paginationOpts, maximumBytesRead: 2_000_000 });
+    const result = search
+      ? searchPage(uniqueById([
+          await (async () => { const id = ctx.db.normalizeId("quizzes", search); return id ? ctx.db.get("quizzes", id) : null; })(),
+          ...await ctx.db.query("quizzes").withSearchIndex("search_title", (q) => q.search("title", search)).take(SEARCH_LIMIT),
+        ]))
+      : await ctx.db
+        .query("quizzes")
+        .order("desc")
+        .paginate({ ...args.paginationOpts, maximumBytesRead: 2_000_000 });
     return {
       ...result,
       page: result.page.map((q) => ({

@@ -2,7 +2,7 @@
 import DocumentationPanel from "@/components/admin/DocumentationPanel";
 import { toast } from "@/lib/toast";
 import Link from "next/link";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useConvexAuth, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
@@ -270,14 +270,22 @@ function Overview() {
     </section>
   );
 }
+/** The typed search, settled for a moment, so each keystroke doesn't start a new server search. */
+function useSettled(value: string, ms = 250) {
+  const [settled, setSettled] = useState(value);
+  useEffect(() => { const timer = setTimeout(() => setSettled(value.trim()), ms); return () => clearTimeout(timer); }, [value, ms]);
+  return settled;
+}
+
 function UsersPanel({ choose }: { choose: ChooseAction }) {
-  const [emailInput, setEmailInput] = useState("");
-  const [email, setEmail] = useState("");
+  // Name, email or username; searched on the server across every account as you type.
+  const [searchInput, setSearchInput] = useState("");
+  const search = useSettled(searchInput);
   const [crmMessage, setCrmMessage] = useState("");
   const [saving, setSaving] = useState<string | null>(null);
   const { results, status, loadMore } = usePaginatedQuery(
     api.admin.users,
-    email ? { email } : {},
+    search ? { search } : {},
     { initialNumItems: 25 },
   );
   const moderate = useMutation(api.admin.moderateUser);
@@ -317,36 +325,22 @@ function UsersPanel({ choose }: { choose: ChooseAction }) {
   }
   return (
     <section className="space-y-4">
-      <form
-        className="flex gap-2 max-w-lg"
-        onSubmit={(event) => {
-          event.preventDefault();
-          setEmail(emailInput.trim());
-        }}
-      >
+      <div className="relative flex gap-2 max-w-lg">
+        <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
         <Input
-          aria-label="Exact account email"
-          placeholder="Find an account by exact email"
-          value={emailInput}
-          onChange={(event) => setEmailInput(event.target.value)}
+          type="search"
+          className="ps-9"
+          aria-label="Search accounts"
+          placeholder="Search accounts by name, email or username"
+          value={searchInput}
+          onChange={(event) => setSearchInput(event.target.value)}
         />
-        <Button variant="outline" type="submit">
-          <Search size={16} />
-          Search
-        </Button>
-        {email && (
-          <Button
-            variant="ghost"
-            type="button"
-            onClick={() => {
-              setEmail("");
-              setEmailInput("");
-            }}
-          >
+        {searchInput && (
+          <Button variant="ghost" type="button" onClick={() => setSearchInput("")}>
             Clear
           </Button>
         )}
-      </form>
+      </div>
       {crmMessage && <p role="status">{crmMessage}</p>}
       {status === "LoadingFirstPage" ? (
         <p role="status">Loading accounts…</p>
@@ -430,18 +424,16 @@ function ContentPanel({
   kind: "forms" | "quizzes";
   choose: ChooseAction;
 }) {
+  // Title words or an exact id; searched on the server across all content as you type.
+  const [searchInput, setSearchInput] = useState("");
+  const search = useSettled(searchInput);
   const { results, status, loadMore } = usePaginatedQuery(
     api.admin.content,
-    { kind },
+    search ? { kind, search } : { kind },
     { initialNumItems: 25 },
   );
   const moderate = useMutation(api.admin.moderateContent);
-  const [search, setSearch] = useState("");
-  const visible = results.filter((item) =>
-    `${item.title} ${item.ownerId} ${item.id}`
-      .toLowerCase()
-      .includes(search.toLowerCase()),
-  );
+  const visible = results;
   function action(item: Content) {
     choose({
       title: `${item.held ? "Release hold" : "Take offline"} · ${item.title}`,
@@ -458,15 +450,19 @@ function ContentPanel({
   }
   return (
     <section className="space-y-4">
-      <Input
-        className="max-w-lg"
-        placeholder="Filter loaded content by title, ID or owner"
-        aria-label="Filter loaded content"
-        value={search}
-        onChange={(e) => setSearch(e.target.value)}
-      />
+      <div className="relative max-w-lg">
+        <Search size={16} className="absolute start-3 top-1/2 -translate-y-1/2 text-muted-foreground" aria-hidden="true" />
+        <Input
+          type="search"
+          className="ps-9"
+          placeholder="Search all content by title or ID"
+          aria-label="Search content"
+          value={searchInput}
+          onChange={(e) => setSearchInput(e.target.value)}
+        />
+      </div>
       <p className="text-sm text-muted-foreground">
-        {results.length} loaded. Load more to search older content.
+        {search ? `${results.length} ${results.length === 1 ? "match" : "matches"}` : `${results.length} loaded, newest first.`}
       </p>
       {status === "LoadingFirstPage" ? (
         <p role="status">Loading content…</p>
