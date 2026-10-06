@@ -133,8 +133,6 @@
 
 /* ── Surfaces ─────────────────────────────────────────────────────────── */
 :scope .chaos-card,
-:scope .chaos-card-alt,
-:scope .chaos-card-accent,
 :scope .kb-card,
 :scope .kb-card-bordered,
 :scope .kb-card-glass {
@@ -146,8 +144,7 @@
 }
 :scope .chaos-card:active,
 :scope .kb-card-bordered:active { transform: none; box-shadow: var(--ws-shadow-sm); }
-:scope .chaos-card.border-destructive,
-:scope .chaos-card-alt.border-destructive { border-color: color-mix(in srgb, var(--error) 45%, var(--ws-line)); }
+:scope .chaos-card.border-destructive { border-color: color-mix(in srgb, var(--error) 45%, var(--ws-line)); }
 :scope .chaos-card.border-primary { border-color: color-mix(in srgb, var(--primary) 45%, var(--ws-line)); }
 :scope .chaos-card.border-foreground { border-color: var(--ws-line-strong); }
 :scope .chaos-card.bg-foreground { background: var(--surface-container); color: var(--on-background); }

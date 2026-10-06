@@ -3,7 +3,8 @@ import Diagram from "./Diagram";
 
 import InlineQuiz from "./InlineQuiz";
 import InlineFlashcards from "./InlineFlashcards";
-import { Fragment, useEffect, useState } from "react";
+import { Fragment, memo, useEffect, useMemo, useState } from "react";
+import { useStableCallback } from "@/lib/stableCallback";
 import { PlayCircle } from "lucide-react";
 import { asBlocks, blockText, cellInlines, formatTimestamp, inlineText, parseAnnotations, youTubeEmbedUrl, type Block, type CitationContent, type Inline, type LinkContent, type StyledText, type TableContent } from "@/lib/learn/doc";
 import { resolveLearnFileUrl as resolveFileUrl } from "@/lib/learn/data";
@@ -231,10 +232,18 @@ function Table({ table, sources, onCite, id }: { table: TableContent; sources: L
   );
 }
 
-function BlockBody({ block, props }: { block: Block; props: RendererProps }) {
+type BodyProps = { block: Block; sources: LessonSource[]; highlights?: Highlight[]; onCite: RendererProps["onCite"]; onOpenImage?: RendererProps["onOpenImage"] };
+
+const sameHighlights = (a: Highlight[] = [], b: Highlight[] = []) =>
+  a.length === b.length && a.every((h, i) => h === b[i] || (h.id === b[i].id && h.quote === b[i].quote && h.offset === b[i].offset && h.color === b[i].color));
+
+/**
+ * A finished block renders once. When an agent appends blocks to a lesson, or a highlight
+ * lands elsewhere, the blocks already on screen are skipped: blocks keep their identity
+ * across updates (useSharedBlocks) and the handlers are stable, so only changed blocks render.
+ */
+const BlockBody = memo(function BlockBody({ block, sources, highlights: hl, onCite, onOpenImage }: BodyProps) {
   const t = useCopy(copy);
-  const { sources, onCite } = props;
-  const hl = props.highlights?.filter((h) => h.blockId === block.id);
   const inline = Array.isArray(block.content) ? <Inlines content={block.content} sources={sources} highlights={hl} onCite={onCite} keyPrefix={block.id} /> : null;
   const align = typeof block.props.textAlignment === "string" && block.props.textAlignment !== "left" ? { textAlign: block.props.textAlignment === "right" ? "end" : block.props.textAlignment } as React.CSSProperties : undefined;
   switch (block.type) {
@@ -274,7 +283,7 @@ function BlockBody({ block, props }: { block: Block; props: RendererProps }) {
       const Icon = calloutIcon[tone] ?? calloutIcon.info;
       return <div className="lx-callout" data-tone={tone} role="note"><span className="lx-callout__icon" aria-hidden><Icon size={18} /></span><div className="lx-callout__body">{inline}</div></div>;
     }
-    case "image": return <ReaderImage block={block} onOpen={props.onOpenImage} />;
+    case "image": return <ReaderImage block={block} onOpen={onOpenImage} />;
     case "youtube": return <ReaderYouTube block={block} />;
     case "source": return <ReaderSource block={block} sources={sources} onCite={onCite} />;
     case "table": return block.content && !Array.isArray(block.content) ? <Table table={block.content} sources={sources} onCite={onCite} id={block.id} /> : null;
@@ -286,9 +295,14 @@ function BlockBody({ block, props }: { block: Block; props: RendererProps }) {
     }
     default: return inline ? <p>{inline}</p> : null;
   }
-}
+}, (a, b) => a.block === b.block && a.sources === b.sources && a.onCite === b.onCite && a.onOpenImage === b.onOpenImage && sameHighlights(a.highlights, b.highlights));
 
-function BlockShell({ block, props, children }: { block: Block; props: RendererProps; children?: React.ReactNode }) {
+type ListProps = Omit<RendererProps, "content" | "highlights"> & { highlights: Map<string, Highlight[]> };
+
+const body = (block: Block, props: ListProps) =>
+  <BlockBody block={block} sources={props.sources} highlights={props.highlights.get(block.id)} onCite={props.onCite} onOpenImage={props.onOpenImage} />;
+
+function BlockShell({ block, props, children }: { block: Block; props: ListProps; children?: React.ReactNode }) {
   return (
     <div className="lx-block" id={block.id} data-block-id={block.id} data-type={block.type} data-active={props.activeBlockId === block.id || undefined}>
       {props.blockAside && <div className="lx-block__handle">{props.blockAside(block)}</div>}
@@ -298,7 +312,7 @@ function BlockShell({ block, props, children }: { block: Block; props: RendererP
   );
 }
 
-function BlockList({ blocks, props }: { blocks: Block[]; props: RendererProps }) {
+function BlockList({ blocks, props }: { blocks: Block[]; props: ListProps }) {
   const out: React.ReactNode[] = [];
   for (let i = 0; i < blocks.length; i++) {
     const block = blocks[i];
@@ -312,7 +326,7 @@ function BlockList({ blocks, props }: { blocks: Block[]; props: RendererProps })
           {group.map((item) => (
             <li key={item.id} id={item.id} data-block-id={item.id} style={{ position: "relative" }}>
               {props.blockAside && <div className="lx-block__handle">{props.blockAside(item)}</div>}
-              <BlockBody block={item} props={props} />
+              {body(item, props)}
               {item.children.length > 0 && <BlockList blocks={item.children} props={props} />}
               {props.blockAfter?.(item)}
             </li>
@@ -325,7 +339,7 @@ function BlockList({ blocks, props }: { blocks: Block[]; props: RendererProps })
       out.push(
         <BlockShell key={block.id} block={block} props={props}>
           <details>
-            <summary><Inlines content={Array.isArray(block.content) ? block.content : []} sources={props.sources} highlights={props.highlights?.filter((h) => h.blockId === block.id)} onCite={props.onCite} keyPrefix={block.id} /></summary>
+            <summary><Inlines content={Array.isArray(block.content) ? block.content : []} sources={props.sources} highlights={props.highlights.get(block.id)} onCite={props.onCite} keyPrefix={block.id} /></summary>
             <div><BlockList blocks={block.children} props={props} /></div>
           </details>
         </BlockShell>,
@@ -334,7 +348,7 @@ function BlockList({ blocks, props }: { blocks: Block[]; props: RendererProps })
     }
     out.push(
       <BlockShell key={block.id} block={block} props={props}>
-        <BlockBody block={block} props={props} />
+        {body(block, props)}
         {block.children.length > 0 && <div className="lx-children"><BlockList blocks={block.children} props={props} /></div>}
       </BlockShell>,
     );
@@ -342,6 +356,47 @@ function BlockList({ blocks, props }: { blocks: Block[]; props: RendererProps })
   return <>{out}</>;
 }
 
-export default function BlockRenderer(props: RendererProps) {
-  return <BlockList blocks={asBlocks(props.content)} props={props} />;
+/**
+ * Gives unchanged blocks the object they had on the previous render, so memoized bodies
+ * can compare by reference. Convex delivers a fresh document on every update.
+ */
+function useSharedBlocks(content: unknown) {
+  const [seen] = useState(() => new Map<string, { key: string; block: Block }>());
+  return useMemo(() => {
+    const share = (blocks: Block[]): Block[] => blocks.map((block) => {
+      const children = share(block.children ?? []);
+      const key = JSON.stringify([block.type, block.props, block.content ?? null]);
+      const prior = seen.get(block.id);
+      const same = prior?.key === key && prior.block.children.length === children.length && prior.block.children.every((c, i) => c === children[i]);
+      if (same) return prior.block;
+      const next = prior?.key === key ? { ...prior.block, children } : { ...block, children };
+      seen.set(block.id, { key, block: next });
+      return next;
+    });
+    return share(asBlocks(content));
+  }, [content, seen]);
+}
+
+/** Same reference while the value is unchanged by content. */
+function useByContent<T>(value: T): T {
+  const key = JSON.stringify(value ?? null);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by content on purpose
+  return useMemo(() => value, [key]);
+}
+
+/** A stable function that always calls the latest `fn`; undefined while there is none. */
+function useLatest<A extends unknown[]>(fn: ((...args: A) => void) | undefined) {
+  const stable = useStableCallback((...args: A) => fn?.(...args));
+  return fn ? stable : undefined;
+}
+
+export default function BlockRenderer({ content, highlights, sources, onCite, onOpenImage, ...rest }: RendererProps) {
+  const blocks = useSharedBlocks(content);
+  const byBlock = useMemo(() => {
+    const map = new Map<string, Highlight[]>();
+    for (const h of highlights ?? []) map.set(h.blockId, [...(map.get(h.blockId) ?? []), h]);
+    return map;
+  }, [highlights]);
+  const props: ListProps = { ...rest, sources: useByContent(sources), highlights: byBlock, onCite: useLatest(onCite), onOpenImage: useLatest(onOpenImage) };
+  return <BlockList blocks={blocks} props={props} />;
 }

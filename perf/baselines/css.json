@@ -1,0 +1,65 @@
+{
+  "suite": "css",
+  "metrics": {
+    "source.backdropFilters": {
+      "budget": 24,
+      "unit": "count"
+    },
+    "source.bytes": {
+      "budget": 395330,
+      "unit": "bytes"
+    },
+    "source.deepSelectors": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "source.globalHasSelectors": {
+      "budget": 9,
+      "unit": "count"
+    },
+    "source.hasSelectors": {
+      "budget": 27,
+      "unit": "count"
+    },
+    "source.infiniteAnimations": {
+      "budget": 7,
+      "unit": "count"
+    },
+    "source.layoutKeyframes": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "source.layoutTransitions": {
+      "budget": 16,
+      "unit": "count"
+    },
+    "source.paintKeyframes": {
+      "budget": 6,
+      "unit": "count"
+    },
+    "source.rules": {
+      "budget": 3072,
+      "unit": "count"
+    },
+    "source.selectors": {
+      "budget": 3377,
+      "unit": "count"
+    },
+    "source.transitionAll": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "source.unguardedMotionFiles": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "source.universalKeySelectors": {
+      "budget": 42,
+      "unit": "count"
+    },
+    "source.willChange": {
+      "budget": 6,
+      "unit": "count"
+    }
+  }
+}

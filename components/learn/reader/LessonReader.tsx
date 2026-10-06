@@ -17,7 +17,8 @@ import { legacyFlashcardBlocks } from "@/lib/learn/inlineStudy";
 import { defaultCover, isCoverUrl } from "@/lib/learn/covers";
 import Link from "@/components/site/SiteLink";
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent as ReactMouseEvent } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent as ReactMouseEvent } from "react";
+import { useStableCallback } from "@/lib/stableCallback";
 import {
   ArrowRight, BookOpen, ChevronLeft, Bookmark, BookmarkCheck, ExternalLink, Flag, GitFork, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
   Lock, MoreHorizontal, NotebookPen, PenLine, Share2, ThumbsDown, ThumbsUp, Type, X,
@@ -93,6 +94,7 @@ const copy = {
     unavailable: "هذا الدرس غير متاح", unavailableBody: "ربما حُذف أو صار خاصًا أو لم يُنشر قط.",
   },
 };
+type Copy = (typeof copy)["en"];
 
 type ReaderPrefs = { size: "small" | "normal" | "large"; width: "narrow" | "normal" | "wide"; font: "sans" | "serif" };
 const PREFS_KEY = "chaos.learn.reader";
@@ -301,32 +303,20 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
-  const blockAside = (block: Block) => {
-    const noteCount = notes.filter((n) => n.blockId === block.id).length;
-    const threadCount = threads.filter((th) => th.blockId === block.id && !th.resolved).length;
-    const isImage = block.type === "image";
-    return (
-      <>
-        <WsMenu label={t.blockMenu} triggerClassName="lx-block-action" trigger={<MoreHorizontal size={15} />}>
-          {(close) => (
-            <>
-              {isImage && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); openHandoff(undefined, "", block.id, "explain", String(block.props.alt || block.props.caption || "")); }}><ImageIcon size={15} />{t.explainImage}</button>}
-              {isImage && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); openHandoff(undefined, "", block.id, "ask", String(block.props.alt || block.props.caption || "")); }}><MessageSquare size={15} />{t.askImage}</button>}
-              <button role="menuitem" className="ws-menu__row" onClick={() => { close(); guard(() => { actions.saveBlock(lesson, block.id, blockText(block), isImage ? String(block.props.url ?? "") : undefined); say(t.savedToast); }); }}><Bookmark size={15} />{t.saveBlock}</button>
-              <button role="menuitem" className="ws-menu__row" onClick={() => { close(); guard(() => setEditingNote({ blockId: block.id, body: "" })); }}><NotebookPen size={15} />{t.note}</button>
-              {caps.discussions && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); setDiscussAnchor({ blockId: block.id, excerpt: excerpt(blockText(block) || String(block.props.alt ?? ""), 140) }); setPanel("discussion"); }}><MessageSquarePlus size={15} />{t.discuss}</button>}
-              <button role="menuitem" className="ws-menu__row" onClick={() => { close(); void copyLink(block.id); }}><Link2 size={15} />{t.copyPart}</button>
-            </>
-          )}
-        </WsMenu>
-        {(noteCount > 0 || threadCount > 0) && (
-          <span className="lx-block__marks">
-            {threadCount > 0 && <button type="button" className="lx-block__mark" data-kind="thread" aria-label={t.marks(threadCount, "thread")} title={t.marks(threadCount, "thread")} onClick={() => setPanel("discussion")}><MessageSquare size={13} /></button>}
-          </span>
-        )}
-      </>
-    );
-  };
+  const asideAction = useStableCallback((action: AsideAction, block: Block) => {
+    const alt = String(block.props.alt || block.props.caption || "");
+    if (action === "explain" || action === "ask") openHandoff(undefined, "", block.id, action, alt);
+    else if (action === "save") guard(() => { actions.saveBlock(lesson, block.id, blockText(block), block.type === "image" ? String(block.props.url ?? "") : undefined); say(t.savedToast); });
+    else if (action === "note") guard(() => setEditingNote({ blockId: block.id, body: "" }));
+    else if (action === "discuss") { setDiscussAnchor({ blockId: block.id, excerpt: excerpt(blockText(block) || String(block.props.alt ?? ""), 140) }); setPanel("discussion"); }
+    else if (action === "copy") void copyLink(block.id);
+    else setPanel("discussion");
+  });
+  const blockAside = (block: Block) => (
+    <BlockAside block={block} t={t} discussions={!!caps.discussions} onAction={asideAction}
+      noteCount={notes.filter((n) => n.blockId === block.id).length}
+      threadCount={threads.filter((th) => th.blockId === block.id && !th.resolved).length} />
+  );
 
   const blockAfter = (block: Block) => {
     const blockNotes = notes.filter((n) => n.blockId === block.id);
@@ -535,6 +525,34 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
 }
 
 /** Tablets: the side column is hidden by CSS below 1180px, so the panel floats as a sheet instead. */
+type AsideAction = "explain" | "ask" | "save" | "note" | "discuss" | "copy" | "threads";
+
+/** A block's menu and marks. Memoized: blocks keep their identity across lesson updates (BlockRenderer), so an agent adding a block re-renders one menu, not all of them. */
+const BlockAside = memo(function BlockAside({ block, t, discussions, noteCount, threadCount, onAction }: { block: Block; t: Copy; discussions: boolean; noteCount: number; threadCount: number; onAction: (action: AsideAction, block: Block) => void }) {
+  const isImage = block.type === "image";
+  return (
+    <>
+      <WsMenu label={t.blockMenu} triggerClassName="lx-block-action" trigger={<MoreHorizontal size={15} />}>
+        {(close) => (
+          <>
+            {isImage && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); onAction("explain", block); }}><ImageIcon size={15} />{t.explainImage}</button>}
+            {isImage && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); onAction("ask", block); }}><MessageSquare size={15} />{t.askImage}</button>}
+            <button role="menuitem" className="ws-menu__row" onClick={() => { close(); onAction("save", block); }}><Bookmark size={15} />{t.saveBlock}</button>
+            <button role="menuitem" className="ws-menu__row" onClick={() => { close(); onAction("note", block); }}><NotebookPen size={15} />{t.note}</button>
+            {discussions && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); onAction("discuss", block); }}><MessageSquarePlus size={15} />{t.discuss}</button>}
+            <button role="menuitem" className="ws-menu__row" onClick={() => { close(); onAction("copy", block); }}><Link2 size={15} />{t.copyPart}</button>
+          </>
+        )}
+      </WsMenu>
+      {(noteCount > 0 || threadCount > 0) && (
+        <span className="lx-block__marks">
+          {threadCount > 0 && <button type="button" className="lx-block__mark" data-kind="thread" aria-label={t.marks(threadCount, "thread")} title={t.marks(threadCount, "thread")} onClick={() => onAction("threads", block)}><MessageSquare size={13} /></button>}
+        </span>
+      )}
+    </>
+  );
+});
+
 function NarrowPanel({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   const [narrow, setNarrow] = useState(false);
   useEffect(() => {

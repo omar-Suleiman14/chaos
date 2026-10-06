@@ -403,12 +403,6 @@
 /* .chaos-card:hover  { box-shadow: 8px 8px 0px var(--on-surface); transform: translate(-2px,-2px); } */
 .chaos-card:active { box-shadow: 2px 2px 0px var(--on-surface); transform: translate(2px,2px); }
 
-.chaos-card-alt        { border: 3px solid var(--on-surface); box-shadow: 8px 8px 0px var(--primary); transition: all 0.15s ease; }
-/* .chaos-card-alt:hover  { box-shadow: 12px 12px 0px var(--primary); transform: translate(-3px,-3px); } */
-
-.chaos-card-accent        { border: 3px solid var(--primary); box-shadow: 6px 6px 0px var(--primary); transition: all 0.15s ease; }
-/* .chaos-card-accent:hover  { box-shadow: 8px 8px 0px var(--primary); transform: translate(-2px,-2px); } */
-
 .chaos-divider { height: 4px; background: var(--on-surface); border: none; }
 
 /* ============================================================
@@ -437,7 +431,6 @@
 @keyframes chaos-pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.5; } }
 .chaos-pulse { animation: chaos-pulse 2s ease-in-out infinite; }
 
-@keyframes timer-shrink { from { width: 100%; } to { width: 0%; } }
 
 @keyframes shake {
   0%,100%             { transform: translateX(0); }

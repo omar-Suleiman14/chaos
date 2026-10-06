@@ -61,3 +61,6 @@ pnpm_install.log
 
 # performance harness output (perf/README.md)
 /perf/results
+
+# visual baselines come from CI artifacts (tests/visual, visual.yml)
+/tests/visual/__screenshots__/

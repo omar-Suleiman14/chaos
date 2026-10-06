@@ -32,7 +32,7 @@ export default defineConfig({
           name: "client",
           environment: "jsdom",
           include: ["perf/client/**/*.perf.test.tsx"],
-          setupFiles: ["tests/setup/unit-setup.ts"],
+          setupFiles: ["perf/client/censusSetup.ts", "tests/setup/unit-setup.ts"],
           testTimeout: 180_000,
         },
       },

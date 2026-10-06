@@ -1,4 +1,4 @@
-name: Browser journeys and keystrokes
+name: Browser journeys, keystrokes and render health
 
 # Real-browser timings for lib/journeys.ts against the dedicated E2E
 # environment. Needs the same secrets as the core E2E smoke plus the
@@ -31,6 +31,7 @@ jobs:
       E2E_PERF_LIVE_PIN: ${{ vars.E2E_PERF_LIVE_PIN }}
       E2E_PERF_LARGE_FORM_ID: ${{ vars.E2E_PERF_LARGE_FORM_ID }}
       PERF_RUNS: ${{ inputs.runs || '5' }}
+      PERF_RENDER_RUNS: "3"
     steps:
       - name: Checkout
         uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
@@ -52,12 +53,12 @@ jobs:
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
 
-      - name: Measure journeys
+      - name: Measure journeys and render health
         run: pnpm exec playwright test -c playwright.perf.config.ts
 
       - name: Compare with budgets
         if: always()
-        run: pnpm perf:check -- --suites journeys-browser,keystroke-browser --allow-new
+        run: pnpm perf:check -- --suites journeys-browser,keystroke-browser,render-browser --allow-new
 
       - name: Summary
         if: always()

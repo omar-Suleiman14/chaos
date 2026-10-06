@@ -16,6 +16,16 @@ Three layers, each with its own runner and reasons:
   The creator smoke supports both providers; a passing unit suite does not verify
   a live provider deployment. Run
   locally with `pnpm test:e2e`.
+- **`tests/visual`** — Playwright screenshot diffs, desktop and mobile, light
+  and dark (`.github/workflows/visual.yml`). `site.spec.ts` screenshots the
+  public pages of a pull request's own build with no backend, against the
+  baseline recorded by the last run on main; baselines are CI artifacts, never
+  committed, so every image comes from the same Linux renderer. A deliberate
+  look change gets the `visual-change` label. `app.spec.ts`
+  (`VISUAL_SUITE=app`, run by hand) covers the dashboard, editor, lesson,
+  course, cards, Live and one form per major theme (`E2E_VISUAL_FORMS`, a
+  comma list of `theme=shareId`) against the E2E environment. Locally:
+  `pnpm build && pnpm test:visual --update-snapshots`, then `pnpm test:visual`.
 
 `pnpm test` runs `test:unit` and `test:integration` only — the suites that
 work from a clean checkout with no credentials. `pnpm test:e2e` is separate

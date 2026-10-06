@@ -1,0 +1,77 @@
+{
+  "suite": "census",
+  "metrics": {
+    "editor.keystroke.commits": {
+      "budget": 2,
+      "unit": "count"
+    },
+    "editor.keystroke.renders": {
+      "budget": 93,
+      "unit": "count"
+    },
+    "editor.maxRendersPerCommit": {
+      "budget": 84,
+      "unit": "count"
+    },
+    "editor.mount.renders": {
+      "budget": 907,
+      "unit": "count"
+    },
+    "editor.serverEcho.renders": {
+      "budget": 93,
+      "unit": "count"
+    },
+    "editor.subscriptions": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lesson.appendBlock.blockBodies": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lesson.appendBlock.renders": {
+      "budget": 203,
+      "unit": "count"
+    },
+    "lesson.maxRendersPerCommit": {
+      "budget": 105,
+      "unit": "count"
+    },
+    "lesson.mount.blockBodies": {
+      "budget": 60,
+      "unit": "count"
+    },
+    "lesson.mount.renders": {
+      "budget": 677,
+      "unit": "count"
+    },
+    "lesson.subscriptions": {
+      "budget": 10,
+      "unit": "count"
+    },
+    "live.player.clockSecond.commits": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "live.player.clockSecond.renders": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "live.player.maxRendersPerCommit": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "live.player.mount.renders": {
+      "budget": 40,
+      "unit": "count"
+    },
+    "live.player.subscriptions": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "live.player.unchangedUpdate.renders": {
+      "budget": 0,
+      "unit": "count"
+    }
+  }
+}

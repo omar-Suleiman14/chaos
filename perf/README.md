@@ -7,6 +7,7 @@ courses, Live, `/card` and MCP. Each budget is a number checked into
 ```sh
 pnpm perf            # Convex read budgets and client render budgets
 pnpm build && pnpm perf:bundles   # first-load JavaScript per route
+pnpm perf:css        # stylesheet cost census (perf/results/css-detail.md names offenders)
 pnpm perf:check      # compare perf/results with perf/baselines
 pnpm perf:ratchet    # after a genuine win: lower budgets, add new metrics
 ```
@@ -17,8 +18,11 @@ pnpm perf:ratchet    # after a genuine win: lower budgets, add new metrics
 |---|---|---|
 | Convex | `perf/backend` | Documents read, index ranges, bytes read, bytes sent to the client, transactions and writes, using convex-test's own transaction accounting. Deterministic. |
 | Client | `perf/client` | React commits, DOM mutations and handler work in jsdom. Deterministic counts. |
+| Census | `perf/client/census.perf.test.tsx` | Components rendered (fiber census), Convex subscriptions and the largest single commit for the editor, the lesson player and Live, on mount, keystroke and server update. |
+| Styles | `scripts/perf-css.ts` | Universal key selectors, global `:has()`, `transition: all`, layout-animating keyframes and transitions, backdrop filters, infinite animations without a reduced-motion guard. |
 | Bundles | `scripts/perf-bundles.ts` | First-load JavaScript per route, raw and gzip, from `next build`. |
-| Browser | `perf/browser` | Real journeys in Chromium against a deployed E2E environment. Timings; scheduled only. |
+| Browser | `perf/browser` | Real journeys in Chromium against a deployed E2E environment. Timings; manual runs only. |
+| Render | `perf/browser/render.spec.ts` | Per surface in Chromium: renders, rerender spikes, idle commits, Convex subscriptions, style recalculation, layout shift and animation frames. |
 
 `perf/lib/fixtures.ts` seeds one fixed workspace (forms, quizzes, lessons, the
 CNS course, a Live game with players, a card). Clock and randomness are pinned,
@@ -58,6 +62,46 @@ content journeys. Missing fixtures skip a journey; they never fake one.
   The reason is stored with the budget and shown in the PR summary.
 - A budget whose metric disappears fails the check; deleting a measurement is
   not a way to pass.
+
+## Render census
+
+`perf/lib/fiberCensus.ts` registers as React's DevTools hook (production
+builds support it too) and counts, per commit, the components that actually
+rendered, the way the DevTools profiler does. Budgets:
+
+- `census` (jsdom, gates PRs): the editor with 100 questions, a 60-block
+  lesson and a Live phone. Mount, one keystroke, the autosave echo, an agent
+  appending a lesson block, a second of the game clock, an unchanged server
+  update. The lesson test also asserts that blocks already on screen are not
+  rendered again when another block arrives.
+- `render-browser` (Chromium, manual runs): dashboard, editor, `/card`,
+  lesson, course, a Flow-theme quiz and Live. A test fails when layout shift
+  exceeds 0.1 or React keeps committing while the page is idle; the elements
+  that moved and the components in the biggest commit are in the test's
+  annotations.
+
+`perf/browser/instrument.ts` also samples animation frames: the main-thread
+time from requestAnimationFrame to the end of that frame's style, layout and
+paint, counted against 60 Hz (16.7 ms) and 120 Hz (8.3 ms) budgets.
+Compositor-only animations (transform, opacity) barely register there.
+
+## Streamed lesson blocks
+
+Agents write lessons block by block (`add_lesson_blocks`), never token by
+token, so the reader receives finished paragraphs, code blocks and tables. The
+reader keeps each finished block's identity across updates
+(`useSharedBlocks` in `components/learn/reader/BlockRenderer.tsx`), and block
+bodies and block menus are memoized. Each new block renders once, and the
+blocks before it are left alone. `census/lesson.appendBlock.*` holds this.
+
+## Stylesheets
+
+`pnpm perf:css` counts the patterns that make style recalculation and
+animation expensive. Totals are budgeted like any count; the per-file detail
+with examples is in `perf/results/css-detail.md`. Prefer class-qualified key
+selectors to `.x *`; use explicit transition properties; animate
+`transform` and `opacity` rather than size or position; give constant motion a
+`prefers-reduced-motion` override.
 
 ## Subscriptions are correctness
 

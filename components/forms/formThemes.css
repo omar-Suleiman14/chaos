@@ -264,7 +264,8 @@ textarea.form-input { resize: vertical; min-height: 5rem; }
 .form-scale-cell {
   display: grid; place-items: center; min-width: 3rem; height: 3rem; padding: 0 0.6rem;
   border: 1.5px solid var(--form-line-strong); border-radius: var(--form-radius); background: var(--form-surface);
-  font-weight: 700; cursor: pointer; transition: all 0.16s var(--form-ease);
+  font-weight: 700; cursor: pointer;
+  transition: background-color 0.16s var(--form-ease), border-color 0.16s var(--form-ease), color 0.16s var(--form-ease), transform 0.16s var(--form-ease);
 }
 .form-scale-cell:hover { border-color: var(--form-accent); transform: translateY(-2px); }
 .form-scale-cell[data-checked="true"] { background: var(--form-accent); border-color: var(--form-accent); color: var(--form-on-accent); transform: translateY(-2px) scale(1.06); }
