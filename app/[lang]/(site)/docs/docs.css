@@ -189,3 +189,5 @@
 .docs-home__search > span { flex: 1; min-width: 0; text-align: start; }
 .docs-home__search:hover { border-color: var(--s-soft); }
 .docs-home__search:focus-visible { outline: 2px solid var(--s-accent); outline-offset: 2px; }
+/* The popup frames its field already; no extra focus ring around the input. */
+.docs-searchbox__field input:focus, .docs-searchbox__field input:focus-visible { outline: none; box-shadow: none; }
