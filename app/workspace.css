@@ -277,7 +277,7 @@
 .ws-nav-item--new .ws-plus { display: grid; place-items: center; width: 18px; height: 18px; border-radius: 5px; background: var(--primary); color: #fff; }
 .ws-nav-item--new .ws-plus svg { opacity: 1; }
 .ws-recent-icon { display: grid; place-items: center; width: 20px; height: 20px; flex-shrink: 0; border-radius: 5px; font-size: 11px; font-weight: 800; color: #fff; }
-.ws-sidebar__footer { display: grid; gap: 1px; padding-top: 6px; border-top: 1px solid var(--ws-line); }
+.ws-sidebar__footer { display: grid; gap: 1px; padding-top: 4px; }
 .ws-user { display: flex; align-items: center; gap: 4px; min-height: 38px; padding: 0 4px; }
 .ws-user__card { display: flex; align-items: center; gap: 10px; flex: 1; min-width: 0; padding: 4px 6px; border-radius: 8px; color: inherit; text-decoration: none; }
 .ws-user__card:hover { background: var(--surface-container-high, rgba(127,127,127,.12)); }
@@ -1138,3 +1138,10 @@ body.noise-bg:has(.workspace-ui)::before { display: none; }
   .ws-topbar__search span, .ws-topbar__search kbd { display: none; }
 }
 .ws-workspace-menu .ws-account__admin, .ws-workspace-menu .ws-account__admin > svg { color: var(--error) !important; }
+
+/* Pinned and Recent: at the bottom of the sidebar, at most half its height, scrolling inside once
+   "Show more" has added rows. Library and Saved above them never move. */
+.ws-sidebar__scroll.ws-recents { flex: 0 1 auto; margin-top: auto; max-height: 50%; padding-top: 8px; }
+.ws-recents .ws-sidebar-section + .ws-sidebar-section { margin-top: 4px; }
+.ws-recents .ws-section-toggle { margin-top: 0; }
+.ws-recents .ws-sidebar-section[data-open] .ws-section-toggle { position: sticky; top: 0; z-index: 1; background: var(--ws-sidebar); }

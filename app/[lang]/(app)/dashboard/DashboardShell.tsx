@@ -279,16 +279,34 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     ...(myGames ?? []).filter(g => !g.formId || !allForms.some(f => f._id === g.formId && f.status === "archived")).map((g) => ({ key: g._id, title: g.title || t.untitled, time: g.endedAt ?? g.createdAt, icon: Trophy,
       href: g.state !== "ended" ? `/dashboard/live/${g._id}` : g.formId ? `/dashboard/forms/${g.formId}/responses` : g.quizId ? `/dashboard/results?id=${g.quizId}` : "/dashboard?tab=games" })),
   ].sort((a, b) => b.time - a.time);
-  // Each section shows a few, then "Show N more" in steps, like a thread list.
-  const [shown, setShown] = useState<Record<string, number>>({ Pinned: 12, Recent: 6 });
+  // Pinned and Recent sit at the bottom of the sidebar in at most half its height. Recent starts closed;
+  // whatever the person leaves open stays open on this device. Each list shows as many rows as fit, the
+  // last of them "Show N more", and more rows then scroll inside that half.
   const sectionNames: Record<string, string> = { Pinned: t.pinned, Recent: t.recent };
-  const [folded, setFolded] = useState<Record<string, boolean>>({});
-  useEffect(() => { try { setFolded(JSON.parse(localStorage.getItem("chaos.ui.sidebar-folded") ?? "{}")); } catch { /* ignore */ } }, []);
-  const fold = (section: string) => setFolded((prev) => {
+  const [openSections, setOpenSections] = useState<Record<string, boolean>>({ Pinned: true, Recent: false });
+  useEffect(() => { try { setOpenSections((prev) => ({ ...prev, ...JSON.parse(localStorage.getItem("chaos.ui.sidebar-open") ?? "{}") })); } catch { /* ignore */ } }, []);
+  const fold = (section: string) => setOpenSections((prev) => {
     const next = { ...prev, [section]: !prev[section] };
-    try { localStorage.setItem("chaos.ui.sidebar-folded", JSON.stringify(next)); } catch { /* ignore */ }
+    try { localStorage.setItem("chaos.ui.sidebar-open", JSON.stringify(next)); } catch { /* ignore */ }
     return next;
   });
+  const [extra, setExtra] = useState<Record<string, number>>({});
+  const [recentsArea, setRecentsArea] = useState<HTMLDivElement | null>(null);
+  const [capacity, setCapacity] = useState(6);
+  useEffect(() => {
+    const area = recentsArea, aside = area?.closest("aside");
+    if (!area || !aside) return;
+    const measure = () => {
+      const row = area.querySelector<HTMLElement>(".ws-nav-row, .ws-nav-item")?.offsetHeight || 36;
+      const header = area.querySelector<HTMLElement>(".ws-section-toggle")?.offsetHeight || 32;
+      const sections = area.querySelectorAll(".ws-section-toggle").length || 1;
+      setCapacity(Math.max(3, Math.floor((aside.clientHeight / 2 - header * sections - 16) / row)));
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(aside);
+    return () => observer.disconnect();
+  }, [recentsArea]);
 
   const wide = pathname.startsWith("/admin") || pathname.startsWith("/dashboard/learn/flashcards/") || pathname.startsWith("/dashboard/forms/") || pathname.startsWith("/dashboard/editor") || pathname.startsWith("/dashboard/learn/lessons/");
   const isActive = (href: string) => (href === "/dashboard" ? pathname === href || pathname === "/dashboard/forms" : href === "/dashboard/learn" ? pathname === href : pathname.startsWith(href));
@@ -353,14 +371,14 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             )}
           </div>
 
-          <div className="ws-sidebar__scroll">
-            <>
-            <nav aria-label={t.library} className="grid gap-px mt-4">
-              {link(libraryItem)}
-              {link(savedItem)}
-              {(quizzes?.length ?? 0) > 0 && link(legacyResultsItem)}
-            </nav>
+          {/* Library and Saved stay put; only the Pinned and Recent lists below scroll. */}
+          <nav aria-label={t.library} className="grid gap-px mt-4">
+            {link(libraryItem)}
+            {link(savedItem)}
+            {(quizzes?.length ?? 0) > 0 && link(legacyResultsItem)}
+          </nav>
 
+          <div ref={setRecentsArea} className="ws-sidebar__scroll ws-recents">
             {(() => {
               const sections = ([["Pinned", pinned], ["Recent", recent]] as const).filter(([, list]) => list.length > 0);
               const row = (item: SidebarItem) => {
@@ -383,48 +401,40 @@ export default function DashboardShell({ children }: { children: React.ReactNode
                   </div>
                 );
               };
-              return (
-                <>
-                  {sections.filter(([section]) => !folded[section]).map(([section, list]) => {
-                    const limit = shown[section] ?? 6;
-                    const more = list.length - limit;
-                    return (
-                      <div key={section} className="ws-sidebar-section">
-                        <button type="button" className="ws-section-toggle" onClick={() => fold(section)} aria-expanded="true" aria-label={t.foldLabel(sectionNames[section], list.length)}>
-                          <span>{sectionNames[section]}</span>
-                          <ChevronUp size={15} aria-hidden="true" className="ms-auto" />
-                        </button>
-                        <nav aria-label={sectionNames[section]} className="grid gap-px">
-                          {list.slice(0, limit).map(row)}
-                          {more > 0 && (
-                            <button type="button" className="ws-nav-item ws-nav-item--more" onClick={() => setShown((prev) => ({ ...prev, [section]: limit + 25 }))}>
-                              <Plus size={16} aria-hidden="true" /> <span>{t.showMore(Math.min(more, 25))}</span>
-                            </button>
-                          )}
-                        </nav>
-                      </div>
-                    );
-                  })}
-                  {/* Folded sections dock to the bottom, out of the way but one click from open. */}
-                  <div className="ws-sidebar__folded">
-                    {sections.filter(([section]) => folded[section]).map(([section, list]) => (
-                      <button key={section} type="button" className="ws-section-toggle ws-section-toggle--folded" onClick={() => fold(section)} aria-expanded="false" aria-label={t.openLabel(sectionNames[section], list.length)}>
-                        <span>{sectionNames[section]} ({list.length})</span>
-                        <span className="ws-section-toggle__rule" aria-hidden="true" />
-                        <ChevronDown size={15} aria-hidden="true" />
-                      </button>
-                    ))}
+              // The rows that fit share the space between the open sections; the last visible row says how many more there are.
+              const open = sections.filter(([section]) => openSections[section]);
+              const share = Math.max(2, Math.floor(capacity / Math.max(1, open.length)));
+              return sections.map(([section, list]) => {
+                const isOpen = !!openSections[section];
+                const fits = list.length <= share + (extra[section] ?? 0);
+                const limit = fits ? list.length : share - 1 + (extra[section] ?? 0);
+                return (
+                  <div key={section} className="ws-sidebar-section" data-open={isOpen || undefined}>
+                    <button type="button" className="ws-section-toggle" onClick={() => fold(section)} aria-expanded={isOpen}
+                      aria-label={isOpen ? t.foldLabel(sectionNames[section], list.length) : t.openLabel(sectionNames[section], list.length)}>
+                      <span>{sectionNames[section]}{!isOpen && ` (${list.length})`}</span>
+                      {isOpen ? <ChevronUp size={15} aria-hidden="true" className="ms-auto" /> : <ChevronDown size={15} aria-hidden="true" className="ms-auto" />}
+                    </button>
+                    {isOpen && (
+                      <nav aria-label={sectionNames[section]} className="grid gap-px">
+                        {list.slice(0, limit).map(row)}
+                        {!fits && (
+                          <button type="button" className="ws-nav-item ws-nav-item--more" onClick={() => setExtra((prev) => ({ ...prev, [section]: (prev[section] ?? 0) + 25 }))}>
+                            <Plus size={16} aria-hidden="true" /> <span>{t.showMore(Math.min(list.length - limit, 25))}</span>
+                          </button>
+                        )}
+                      </nav>
+                    )}
                   </div>
-                </>
-              );
+                );
+              });
             })()}
-            </>
           </div>
 
           <div className="ws-sidebar__footer">
-            {account && !account.isBanned && !account.suspendedUntil && (
+            {(user || account) && !account?.isBanned && !account?.suspendedUntil && (
               <AccountMenu compact={rail} admin={isAdmin}
-                user={{ name: user?.fullName || user?.username || account.name || t.myCard, email: user?.primaryEmailAddress?.emailAddress ?? account.email, imageUrl: user && "hasImage" in user && user.hasImage ? user.imageUrl : undefined, avatarSeed: account.cardAvatarSeed ?? avatarSeed(account.clerkId) }}
+                user={{ name: user?.fullName || user?.username || account?.name || t.myCard, email: user?.primaryEmailAddress?.emailAddress ?? account?.email, imageUrl: user && "hasImage" in user && user.hasImage ? user.imageUrl : undefined, avatarSeed: account ? account.cardAvatarSeed ?? avatarSeed(account.clerkId) : user ? avatarSeed(user.id) : undefined }}
                 onManageAccount={() => clerk.openUserProfile()} onSignOut={() => void clerk.signOut({ redirectUrl: "/" })} />
             )}
           </div>

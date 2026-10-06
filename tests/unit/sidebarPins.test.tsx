@@ -42,6 +42,8 @@ beforeEach(() => {
   Object.defineProperty(window, "matchMedia", { configurable: true, writable: true, value: vi.fn(() => ({ matches: false, addEventListener: vi.fn(), removeEventListener: vi.fn() })) });
 });
 
+const openRecent = () => localStorage.setItem("chaos.ui.sidebar-open", JSON.stringify({ Recent: true }));
+
 describe("sidebar sections", () => {
   it("hides archived pinned forms and their live-game sessions from Recent", () => {
     localStorage.setItem("chaos.ui.pinned", JSON.stringify(["archived"]));
@@ -52,6 +54,7 @@ describe("sidebar sections", () => {
     expect(screen.queryByRole("navigation", { name: "Pinned" })).toBeNull();
   });
   it("prefetches visible destinations and prioritizes an intended destination and preserves form focus handlers and link semantics", () => {
+    openRecent();
     const { container } = render(<DashboardLayout><p>Page</p></DashboardLayout>);
     // Docs, Connections and Admin live in the account menu now; the sidebar keeps Library, Saved and Recents.
     expect(screen.queryByRole("link", { name: "Docs" })).toBeNull();
@@ -74,6 +77,7 @@ describe("sidebar sections", () => {
     expect(current).toHaveAttribute("data-prefetch", "false");
   });
   it("pins a form above Recent and remembers it", () => {
+    openRecent();
     render(<DashboardLayout><p>Page</p></DashboardLayout>);
     expect(screen.queryByRole("navigation", { name: "Pinned" })).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: "Pin Event registration" }));
@@ -86,6 +90,7 @@ describe("sidebar sections", () => {
   });
 
   it("pins a course like a form", () => {
+    openRecent();
     render(<DashboardLayout><p>Page</p></DashboardLayout>);
     fireEvent.click(screen.getByRole("button", { name: "Pin Night sky course" }));
     const pinned = screen.getByRole("navigation", { name: "Pinned" });
@@ -94,14 +99,25 @@ describe("sidebar sections", () => {
     expect(JSON.parse(localStorage.getItem("chaos.ui.pinned")!)).toEqual(["course1"]);
   });
 
-  it("folds Recent to the bottom and opens it again", () => {
-    const { container } = render(<DashboardLayout><p>Page</p></DashboardLayout>);
+  it("keeps Recent closed by default and remembers it open", () => {
+    const first = render(<DashboardLayout><p>Page</p></DashboardLayout>);
+    expect(screen.queryByRole("navigation", { name: "Recent" })).toBeNull();
+    const toggle = screen.getByRole("button", { name: "Recent, 3. Open" });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(toggle);
+    expect(screen.getByRole("navigation", { name: "Recent" })).toBeInTheDocument();
+    first.unmount();
+    render(<DashboardLayout><p>Page</p></DashboardLayout>);
+    expect(screen.getByRole("navigation", { name: "Recent" })).toBeInTheDocument();
     fireEvent.click(screen.getByRole("button", { name: "Recent, 3. Fold" }));
     expect(screen.queryByRole("navigation", { name: "Recent" })).toBeNull();
-    const folded = screen.getByRole("button", { name: "Recent, 3. Open" });
-    expect(folded).toHaveAttribute("aria-expanded", "false");
-    expect(container.querySelector(".ws-sidebar__folded")).toContainElement(folded);
-    fireEvent.click(folded);
-    expect(screen.getByRole("navigation", { name: "Recent" })).toBeInTheDocument();
+  });
+
+  it("keeps Library and Saved out of the scrolling Recent area", () => {
+    openRecent();
+    const { container } = render(<DashboardLayout><p>Page</p></DashboardLayout>);
+    const recents = container.querySelector(".ws-recents")!;
+    expect(recents).toContainElement(screen.getByRole("navigation", { name: "Recent" }));
+    expect(recents).not.toContainElement(screen.getByRole("link", { name: "Saved" }));
   });
 });
