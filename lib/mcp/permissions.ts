@@ -1,4 +1,5 @@
 import { ADMIN_CRM_TOOLS, ADMIN_PLATFORM_TOOLS } from "./admin";
+import { McpToolError } from "./errors";
 export const MCP_PERMISSIONS = ["read_content", "edit_content", "publish_content", "aggregate_analytics", "individual_responses", "collaborators", "destructive", "admin_crm", "admin_operations"] as const;
 export type McpPermission = (typeof MCP_PERMISSIONS)[number];
 /** Categories are separate from identity scopes; provider-issued grants can map here later. */
@@ -17,5 +18,5 @@ export function permissionForTool(tool: string): McpPermission {
 }
 export function requireToolPermission(tool: string, allowed?: readonly McpPermission[]) {
  const category = permissionForTool(tool);
- if (allowed && !allowed.includes(category)) throw new Error(`PERMISSION_DENIED: This connection does not allow ${category}.`);
+ if (allowed && !allowed.includes(category)) throw new McpToolError("PERMISSION_DENIED", `This connection does not allow ${category}.`);
 }

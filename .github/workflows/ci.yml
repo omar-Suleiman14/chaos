@@ -42,7 +42,7 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Check generated MCP inventory
+      - name: Check MCP inventory and tool schema snapshot
         run: pnpm mcp:inventory:check
 
       - name: Lint

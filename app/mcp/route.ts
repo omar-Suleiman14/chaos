@@ -102,9 +102,9 @@ function convexCaller(verified: Verified, client?: CreatedWith): McpCaller {
       body: JSON.stringify({ userId, profile, tool, input, ...(client ? { client } : {}) }),
       cache: "no-store",
     });
-    const body = (await response.json().catch(() => null)) as { result?: unknown; error?: { code: string; message: string } } | null;
+    const body = (await response.json().catch(() => null)) as { result?: unknown; error?: { code: string; message: string; details?: unknown } } | null;
     if (response.ok && body && "result" in body) return { ok: true as const, result: body.result };
-    return { ok: false as const, code: body?.error?.code ?? "ERROR", message: body?.error?.message ?? "Chaos could not complete this." };
+    return { ok: false as const, code: body?.error?.code ?? "ERROR", message: body?.error?.message ?? "Chaos could not complete this.", details: body?.error?.details };
   };
   return async (tool, input) => {
     let outcome = await send(tool, input);
@@ -115,7 +115,7 @@ function convexCaller(verified: Verified, client?: CreatedWith): McpCaller {
       profile = { name: user.fullName || user.username || user.firstName || "Anonymous", email, imageUrl: user.imageUrl || undefined };
       outcome = await send(tool, input);
     }
-    if (!outcome.ok) throw new McpToolError(outcome.code, outcome.message);
+    if (!outcome.ok) throw new McpToolError(outcome.code, outcome.message, outcome.details);
     return outcome.result;
   };
 }

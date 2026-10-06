@@ -62,3 +62,33 @@ AI retirement coverage lives in `tests/integration/aiRetirement.test.ts`: stale 
 ## Embedding
 
 `embed.spec.ts` frames the app from a fake third-party page served by Playwright. Its first test needs only the running app (creator and app routes must refuse the frame). The second completes a response inside the frame and needs a real deployment plus `E2E_EMBED_SHARE_ID`: a published form with one required short-text question, access "Anyone", embedding allowed for `https://embedder.test`.
+
+## MCP
+
+`tests/integration/mcpRegression.test.ts` drives the real MCP server against the
+real Convex endpoint (`/api/mcp/v1`) of a convex-test deployment, the way
+`app/mcp/route.ts` does in production: tool listing, auth and permission grants,
+then create, update, publish, attach, archive and course/module operations. It
+needs no credentials, so it runs in CI with `pnpm test`.
+
+`tests/integration/mcpErrors.test.ts` checks that each kind of failure reaches the
+assistant with a code and a category (`validation`, `permission`, `ownership`,
+`not_found`, `revision_conflict`, `publication`, `internal`, …) and a recovery
+hint, both in the text and in `_meta["chaos/error"]` (`lib/mcp/errors.ts`). Only
+genuine faults may come back as `internal`.
+
+`lib/mcp/tool-schemas.json` is a snapshot of every tool a client is offered:
+title, description, permission, annotations and input and output schemas.
+`pnpm mcp:inventory:check` (a CI step) fails when the registry differs from it and
+lists the tools that were added, removed or changed. Run `pnpm mcp:inventory` and
+commit the result when a change is intended.
+
+## Large lessons
+
+`tests/integration/largeLessons.test.ts` uses `largeLessonBlocks` from
+`perf/lib/content.ts`: lessons mixing paragraphs, images, videos, diagrams,
+tables, flashcards, quiz embeds and toggles, with real image, flashcard and quiz
+references (`seedLessonRefs`). A 500-block lesson (the limit) and one near the
+300 KB document limit must save, publish and read back whole; 2,000 and 10,000
+blocks must be refused with a validation error, through the app and through MCP,
+without writing anything.

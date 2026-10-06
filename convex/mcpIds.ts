@@ -20,6 +20,8 @@ export function normalizeAssetRefs<T>(value: T, depth = 0): T {
   const record = value as Record<string, unknown>;
   const out: Record<string, unknown> = {};
   for (const [key, item] of Object.entries(record)) out[key] = normalizeAssetRefs(item, depth + 1);
+  // Form tools take `formId`; accept the `form_<id>` that create_form and get_form return.
+  if (typeof out.formId === "string" && out.formId.startsWith("form_")) out.formId = out.formId.slice(5);
   if ((out.kind === "form" || out.kind === "quiz") && typeof out.id === "string" && Object.keys(out).length === 2) return bareAssetRef(out as { kind: "form" | "quiz"; id: string }) as T;
   return out as T;
 }

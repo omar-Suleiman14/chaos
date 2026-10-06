@@ -16,10 +16,13 @@ import type { ApiResult } from "./integrations";
 import type { IntegrationScope } from "./integrationModel";
 import { API_VERSION } from "./integrationContract";
 import { errorCode, sha256Hex } from "./serverUtils";
+import { mcpErrorCode } from "./mcpErrors";
 import { UPLOAD_PATH, uploadRejection } from "./respond";
 
 const PREFIX = "/api/integrations/";
 const MAX_BODY_BYTES = 256 * 1024;
+// MCP calls carry whole lesson documents (LEARN_LIMITS.documentBytes, 300 KB) plus the envelope.
+const MAX_MCP_BODY_BYTES = 350_000;
 
 function respond(result: ApiResult): Response {
   return new Response(JSON.stringify(result.body), {
@@ -32,9 +35,9 @@ function error(status: number, code: string, message: string, details?: unknown,
   return respond({ status, body: { error: details === undefined ? { code, message } : { code, message, details } }, headers });
 }
 
-async function readJson(request: Request): Promise<{ value: unknown; text: string } | Response> {
-  const bytes = await readBoundedBody(request, (size) => size > MAX_BODY_BYTES);
-  if (bytes === null) return error(400, "VALIDATION_FAILED", "The body is larger than 256 KiB.");
+async function readJson(request: Request, limit = MAX_BODY_BYTES): Promise<{ value: unknown; text: string } | Response> {
+  const bytes = await readBoundedBody(request, (size) => size > limit);
+  if (bytes === null) return error(400, "VALIDATION_FAILED", limit === MAX_BODY_BYTES ? "The body is larger than 256 KiB." : `The body is larger than ${Math.floor(limit / 1000)} KB.`);
   const text = new TextDecoder().decode(bytes);
   try {
     return { value: JSON.parse(text), text };
@@ -245,7 +248,7 @@ async function sameSecret(a: string, b: string): Promise<boolean> {
 }
 
 const MCP_STATUS: Record<string, number> = {
-  NOT_FOUND: 404, FORBIDDEN: 403, READ_ONLY: 403, APPROVAL_REQUIRED: 403, ACCOUNT_RESTRICTED: 403, ACCOUNT_REQUIRED: 403,
+  NOT_FOUND: 404, FORBIDDEN: 403, PERMISSION_DENIED: 403, REVISION_CONFLICT: 409, CONFLICT: 409, SETTINGS_CONFLICT: 409, MEMBERSHIP_CONFLICT: 409, READ_ONLY: 403, APPROVAL_REQUIRED: 403, ACCOUNT_RESTRICTED: 403, ACCOUNT_REQUIRED: 403,
   RATE_LIMITED: 429, DRAFT_CONFLICT: 409, FORM_ARCHIVED: 409, INVALID_STATUS: 409, CONTENT_HELD: 409,
   MONTHLY_CREATION_LIMIT: 402, PRO_REQUIRED: 402,
 };
@@ -254,7 +257,7 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
   const secret = env.CHAOS_MCP_SECRET;
   const presented = /^Bearer (.+)$/.exec(request.headers.get("Authorization") ?? "")?.[1] ?? "";
   if (!secret || secret.length < 32 || !(await sameSecret(presented, secret))) return error(401, "UNAUTHORIZED", "Unknown caller.");
-  const body = await readJson(request);
+  const body = await readJson(request, MAX_MCP_BODY_BYTES);
   if (body instanceof Response) return body;
   const b = body.value as { userId?: unknown; profile?: unknown; tool?: unknown; input?: unknown };
   if (typeof b?.userId !== "string" || !(/^(?:user_[A-Za-z0-9]+|oidc_[a-f0-9]{64})$/).test(b.userId) || typeof b.tool !== "string") {
@@ -500,10 +503,10 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       if (/Resolve moderation or archive state/.test(message)) return error(409, "INVALID_STATUS", "Resolve moderation or archive state before publishing.");
       if (/ArgumentValidationError|Validator error|Invalid lesson metadata|Version does not belong/.test(message)) return error(400, "VALIDATION_FAILED", "Invalid Learn tool arguments.");
     }
-    const { code, message } = errorCode(caught);
+    const { code, message, details } = mcpErrorCode(caught);
     const status = MCP_STATUS[code] ?? (code === "ERROR" ? 500 : 400);
     if (status === 500) console.error("mcp tool failed", b.tool, caught);
-    return error(status, code, status === 500 ? "Something went wrong in Chaos. Try again." : message);
+    return error(status, code, status === 500 ? "Something went wrong in Chaos. Try again." : message, details);
   }
 }));
 

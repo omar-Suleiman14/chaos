@@ -2,7 +2,7 @@ import { vi } from "vitest";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { FormDefinition } from "@/convex/formLogic";
-import { formDefinition, lessonBlocks, lessonDoc, lessonMeta } from "./content";
+import { formDefinition, lessonBlocks, lessonDoc, lessonMeta, type LessonRefs } from "./content";
 import { createTestConvex } from "@/tests/integration/setup";
 
 /**
@@ -30,7 +30,7 @@ export const perfStudent = {
   nickname: "sam",
 };
 
-export { formDefinition, formFields, lessonBlocks, lessonDoc, lessonMeta } from "./content";
+export { formDefinition, formFields, largeLessonBlocks, LARGE_LESSON_MIX, lessonBlocks, lessonDoc, lessonMeta, type LessonRefs } from "./content";
 export type T = ReturnType<typeof createTestConvex>;
 export type Client = ReturnType<T["withIdentity"]>;
 
@@ -60,6 +60,18 @@ export async function createPublishedLesson(owner: Client, title: string, blocks
   const draft = await owner.query(api.lessons.getDraft, { lessonId });
   await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: draft.revision, visibility: "public" });
   return lessonId;
+}
+
+/** What a large lesson embeds, all real and publishable: a stored public image, a published flashcard set and a published quiz. */
+export async function seedLessonRefs(t: T, owner: Client, identity = perfCreator): Promise<LessonRefs> {
+  const { formId: quizFormId } = await createPublishedForm(owner, formDefinition("Checkpoint", 5, { quiz: true }), true);
+  const flashcardSetId = await owner.mutation(api.flashcards.create, { title: "Receptors", cards: [{ id: "c1", front: "α1", back: "Constriction", conceptIds: [] }, { id: "c2", front: "β1", back: "Rate up", conceptIds: [] }] });
+  await owner.mutation(api.flashcards.publish, { setId: flashcardSetId, expectedRevision: 0, visibility: "public" });
+  const imageSourceId = await t.run(async (ctx) => {
+    const storageId = await ctx.storage.store(new Blob(["figure"], { type: "image/png" }));
+    return ctx.db.insert("learnSources", { ownerId: identity.subject, uploadedBy: identity.subject, metadata: { title: "Figure", kind: "image", origin: "upload" }, metadataVisibility: "public", contentVisibility: "public", createdAt: Date.now(), status: "active", storageId, contentType: "image/png" });
+  });
+  return { imageSourceId, flashcardSetId, quizFormId };
 }
 
 export const CNS_MODULES = [["Anatomy", ["Meninges", "Ventricles", "Cranial nerves"]], ["Physiology", ["Action potentials", "Synapses"]], ["Histology", ["Neurons", "Glia"]]] as const;

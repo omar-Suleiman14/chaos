@@ -61,6 +61,36 @@ export function lessonBlocks(count: number, opts: { quizFormId?: Id<"forms">; pr
   return blocks;
 }
 
+/** Ids a large lesson embeds: an uploaded image, a flashcard set and a quiz form, all owned by the author. */
+export type LessonRefs = { imageSourceId: Id<"learnSources">; flashcardSetId: Id<"flashcardSets">; quizFormId: Id<"forms"> };
+
+/** The order a long lecture repeats: text, figures, video, diagrams, tables, toggles, flashcards and checkpoint quizzes. */
+export const LARGE_LESSON_MIX = ["heading", "paragraph", "image", "paragraph", "youtube", "diagram", "table", "toggle", "flashcards", "paragraph", "quiz", "list"] as const;
+
+/**
+ * Large lesson fixtures (500 is the stored limit; 2,000 and 10,000 are what a pasted textbook or an
+ * assistant's bulk import produce). Every LARGE_LESSON_MIX kind appears in any run of 12 blocks.
+ */
+export function largeLessonBlocks(count: number, refs: LessonRefs, prefix = "L"): LessonBlock[] {
+  const blocks: LessonBlock[] = [];
+  for (let i = 0; i < count; i++) {
+    const c = { id: `${prefix}${i}`, citations: [], conceptIds: [] };
+    switch (LARGE_LESSON_MIX[i % LARGE_LESSON_MIX.length]) {
+      case "heading": blocks.push({ ...c, type: "heading", level: 2, text: `Part ${i / LARGE_LESSON_MIX.length + 1}` }); break;
+      case "paragraph": blocks.push({ ...c, type: "paragraph", text: prose(i) }); break;
+      case "image": blocks.push({ ...c, type: "image", sourceId: refs.imageSourceId, alt: `Figure ${i}`, caption: `Figure ${i}: pressure over time` }); break;
+      case "youtube": blocks.push({ ...c, type: "youtube", videoId: "dQw4w9WgXcQ", caption: `Video ${i}` }); break;
+      case "diagram": blocks.push({ ...c, type: "diagram", format: "mermaid", text: "graph LR; A[Stretch] --> B[NTS]; B --> C[Vagal outflow]" }); break;
+      case "table": blocks.push({ ...c, type: "table", headerRows: 1, rows: [["Receptor", "Location", "Effect"], ["α1", "Vessels", "Constriction"], ["β1", "Heart", "Rate up"]] }); break;
+      case "toggle": blocks.push({ ...c, type: "toggle", text: `Why does pressure fall on standing? (${i})` }); break;
+      case "flashcards": blocks.push({ ...c, type: "flashcards", setId: refs.flashcardSetId }); break;
+      case "quiz": blocks.push({ ...c, type: "quiz", asset: { kind: "form", id: refs.quizFormId } }); break;
+      case "list": blocks.push({ ...c, type: "list", style: "bullet", text: `Item ${i}` }); break;
+    }
+  }
+  return blocks;
+}
+
 export const lessonDoc = (count: number, opts?: Parameters<typeof lessonBlocks>[1]): LessonDocument => ({ schemaVersion: 1, blocks: lessonBlocks(count, opts) });
 export const lessonMeta = (title: string) => ({ title, description: `${title}, perf fixture`, language: "en", tags: ["perf"] });
 

@@ -26,6 +26,7 @@ import { registerFlashcardTools } from "./flashcards";
 import { registerOrganizationTools } from "./organization";
 import { registerTeamTools } from "./teams";
 import { chaosIntegration } from "@/lib/integrations";
+import { McpToolError, toolError } from "./errors";
 
 export type McpCaller = (tool: string, input: Record<string, unknown>) => Promise<unknown>;
 
@@ -158,11 +159,7 @@ function meta(invoking: string, invoked: string) {
   };
 }
 
-export class McpToolError extends Error {
-  constructor(public code: string, message: string) {
-    super(message);
-  }
-}
+export { McpToolError };
 
 function ok(summary: string, data: unknown): CallToolResult {
   return {
@@ -171,11 +168,7 @@ function ok(summary: string, data: unknown): CallToolResult {
   };
 }
 
-function problem(error: unknown): CallToolResult {
-  const message = error instanceof McpToolError ? error.message : "Chaos could not complete this. Try again in a moment.";
-  const code = error instanceof McpToolError ? error.code : "ERROR";
-  return { isError: true, content: [{ type: "text", text: `${code}: ${message}` }] };
-}
+const problem = toolError;
 
 function requireSound(value: string) {
   const sound = normalizeSound(value);
@@ -206,6 +199,8 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
     ],
   }, { instructions: options.admin ? `${baseInstructions}\n${adminInstructions}` : baseInstructions });
 
+  // Schema failures the SDK catches before a handler runs get the same code, category and readable problems.
+  (server as unknown as { createToolError: (message: string) => CallToolResult }).createToolError = (message) => toolError(new Error(message));
   const register = server.registerTool.bind(server);
   server.registerTool = (name, config, callback) => register(name, { ...config, _meta: { ...config._meta, "chaos/permission": permissionForTool(name) } }, callback);
   const run = async (tool: string, input: Record<string, unknown>, summarize: (data: Record<string, unknown>) => string): Promise<CallToolResult> => {

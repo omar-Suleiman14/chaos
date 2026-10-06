@@ -20,9 +20,9 @@ export function convexMcpCaller(t: T, userId: string): McpCaller {
       headers: { Authorization: `Bearer ${MCP_TEST_SECRET}`, "Content-Type": "application/json" },
       body: JSON.stringify({ userId, tool, input }),
     });
-    const body = (await response.json().catch(() => null)) as { result?: unknown; error?: { code: string; message: string } } | null;
+    const body = (await response.json().catch(() => null)) as { result?: unknown; error?: { code: string; message: string; details?: unknown } } | null;
     if (response.ok && body && "result" in body) return body.result;
-    throw new McpToolError(body?.error?.code ?? "ERROR", body?.error?.message ?? "Chaos could not complete this.");
+    throw new McpToolError(body?.error?.code ?? "ERROR", body?.error?.message ?? "Chaos could not complete this.", body?.error?.details);
   };
 }
 
