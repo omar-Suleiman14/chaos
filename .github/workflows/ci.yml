@@ -51,6 +51,9 @@ jobs:
       - name: Check MCP inventory and tool schema snapshot
         run: pnpm mcp:inventory:check
 
+      - name: Check feature flag declarations
+        run: pnpm flags:check -- --ci
+
       - name: Lint
         run: pnpm lint
 
