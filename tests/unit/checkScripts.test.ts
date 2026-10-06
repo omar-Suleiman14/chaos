@@ -4,6 +4,7 @@ import { describeChanges } from "@/scripts/lib/mcpContract";
 import { evaluateErrors, evaluateJourneys, evaluateStatus, type Thresholds } from "@/scripts/lib/health";
 import productionThresholds from "@/perf/production-thresholds.json";
 import { JOURNEYS } from "@/lib/journeys";
+import { baselineProblems, classify, guard, HARNESS_LABEL } from "@/scripts/lib/perfGuard";
 
 describe("percentiles", () => {
   it("uses nearest rank", () => {
@@ -61,5 +62,41 @@ describe("production health thresholds", () => {
 
   it("has a limit for every journey the app marks", () => {
     expect(Object.keys(productionThresholds.journeys).sort()).toEqual(Object.keys(JOURNEYS).sort());
+  });
+});
+
+describe("performance harness guard", () => {
+  it("separates harness files from product code", () => {
+    expect(classify(["perf/lib/convex.ts", "components/forms/FormRenderer.tsx", "convex/_generated/api.d.ts", "perf/README.md", "scripts/perf-ratchet.ts"]))
+      .toEqual({ harness: ["perf/lib/convex.ts", "scripts/perf-ratchet.ts"], product: ["components/forms/FormRenderer.tsx"] });
+  });
+
+  it("blocks a change to both product code and the harness unless labelled", () => {
+    const paths = ["lib/journeys.ts", "perf/browser/journeys.spec.ts"];
+    expect(guard(paths, [], []).problems).toHaveLength(1);
+    expect(guard(paths, [HARNESS_LABEL], []).problems).toEqual([]);
+    expect(guard(["perf/browser/journeys.spec.ts"], [], []).problems).toEqual([]);
+    expect(guard(["lib/journeys.ts", "perf/baselines/census.json"], [], []).problems).toEqual([]);
+  });
+
+  it("lets budgets fall but not rise, vanish or loosen quietly", () => {
+    const base = { suite: "s", metrics: { a: { budget: 10, unit: "count" }, b: { budget: 5, unit: "count" }, c: { budget: 7, unit: "count" } } };
+    const head = {
+      suite: "s", tolerance: { bytes: 0.05 },
+      metrics: {
+        a: { budget: 9, unit: "count" },
+        b: { budget: 6, unit: "count" },
+        d: { budget: 1, unit: "count" },
+      },
+    };
+    expect(baselineProblems(base, head, "s")).toEqual([
+      "s: bytes tolerance widened from the default to 0.05",
+      "s: b raised 5 → 6 without perf-ratchet raise and a reason",
+      "s: budget c was removed",
+    ]);
+    const raised = { suite: "s", metrics: { ...base.metrics, b: { budget: 6, unit: "count", raised: { from: 5, reason: "Live data the view needs", at: "2026-10-06" } } } };
+    expect(baselineProblems(base, raised, "s")).toEqual([]);
+    expect(baselineProblems(null, head, "s")).toEqual([]);
+    expect(baselineProblems(base, null, "s")).toEqual(["s: the whole baseline file was deleted"]);
   });
 });

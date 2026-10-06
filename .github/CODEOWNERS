@@ -1,0 +1,14 @@
+# The performance harness, its budgets and the scheduled checks are reviewed by
+# the maintainer, so an optimisation cannot also redefine how it is measured
+# (perf/README.md, "Protecting the harness").
+/perf/                          @omar-Suleiman14
+/scripts/perf-*.ts              @omar-Suleiman14
+/scripts/lib/perfGuard.ts       @omar-Suleiman14
+/scripts/lib/stats.ts           @omar-Suleiman14
+/scripts/lib/health.ts          @omar-Suleiman14
+/scripts/mcp-synthetic.ts       @omar-Suleiman14
+/scripts/production-health.ts   @omar-Suleiman14
+/vitest.perf.config.mts         @omar-Suleiman14
+/playwright.perf.config.ts      @omar-Suleiman14
+/.github/workflows/perf*.yml    @omar-Suleiman14
+/.github/CODEOWNERS             @omar-Suleiman14

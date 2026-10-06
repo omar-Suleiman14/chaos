@@ -82,6 +82,23 @@ Bytes are ratcheted at three levels, each with a 1% band:
 - A budget whose metric disappears fails the check; deleting a measurement is
   not a way to pass.
 
+## Protecting the harness
+
+An optimisation is judged by the harness, so it must not also change the
+harness. On pull requests, `pnpm perf:guard` (the `guard` job in `perf.yml`):
+
+- fails when one change edits product code (`app`, `components`, `lib`,
+  `convex`) and harness files (`perf/lib`, `perf/backend`, `perf/client`,
+  `perf/browser`, `scripts/perf-*`, the perf configs and workflows) together,
+  unless a reviewer adds the `perf-harness-change` label. Send harness changes
+  in their own pull request;
+- fails when a budget in `perf/baselines` goes up without
+  `perf-ratchet raise --reason`, when a budget is removed, or when a suite's
+  tolerance is widened. Lowering budgets is always fine.
+
+`.github/CODEOWNERS` routes every harness, baseline and threshold file to the
+maintainer for review.
+
 ## Render census
 
 `perf/lib/fiberCensus.ts` registers as React's DevTools hook (production
