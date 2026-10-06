@@ -53,6 +53,8 @@ export async function instrument(page: Page) {
   await page.addInitScript(installFiberCensus);
   await page.addInitScript(installProbes);
   const queries = new Map<number, string>();
+  /** Bytes Convex pushed over the websocket: query results as they reach the page. */
+  let convexBytes = 0;
   page.on("websocket", (ws) => {
     if (!/convex/.test(ws.url())) return;
     ws.on("framesent", ({ payload }) => {
@@ -62,9 +64,12 @@ export async function instrument(page: Page) {
         for (const m of message.modifications) if (m.type === "Add") queries.set(m.queryId, m.udfPath ?? "?"); else queries.delete(m.queryId);
       } catch { /* not JSON */ }
     });
+    ws.on("framereceived", ({ payload }) => { convexBytes += typeof payload === "string" ? Buffer.byteLength(payload) : payload.length; });
     ws.on("close", () => queries.clear());
   });
   return {
+    /** Websocket bytes received from Convex since the page opened. */
+    convexBytes() { return convexBytes; },
     /** Live Convex subscriptions right now, by function. */
     subscriptions() { return [...queries.values()]; },
     async commitMark() { return page.evaluate(() => (window as unknown as { __chaosCensus?: Census }).__chaosCensus?.commits.length ?? 0); },

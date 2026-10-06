@@ -57,6 +57,20 @@ only and needs `E2E_PERF_FORM_ID`, `E2E_PERF_COURSE_ID`, `E2E_PERF_LESSON_ID`,
 `E2E_PERF_GIANT_LESSON_ID`, a 500-block lesson, for the giant-lesson render) for the
 content journeys. Missing fixtures skip a journey; they never fake one.
 
+## Payload sizes
+
+Bytes are ratcheted at three levels, each with a 1% band:
+
+- Convex results per surface (`perf/backend/surfaces.perf.test.ts`): dashboard,
+  form editor, quiz respondent, lesson editor and reader, course editor and
+  public page, card, Live host and player (`*.payloadBytes`). Responses and
+  analysis pages for large forms are in `largeForms`.
+- MCP: the public and administrator `list_tools` responses and the largest
+  single tool definition (`mcp.listToolsBytes`, `mcp.admin.listToolsBytes`,
+  `mcp.largestToolBytes`), plus `search_forms` and `get_lesson` results.
+- The wire, in Chromium (`render-browser`): websocket bytes Convex pushes to
+  each surface while it loads and settles (`render.*.convexBytes`).
+
 ## Ratchets
 
 - Counts must not grow at all. Bytes allow 1% for toolchain jitter. Timings allow

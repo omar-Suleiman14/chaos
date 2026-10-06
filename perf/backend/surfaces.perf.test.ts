@@ -90,6 +90,9 @@ describe("surface read budgets", () => {
 
   it("MCP tool listing and reads", async (ctx) => {
     const listing = await (await connectMcp(null)).listTools();
+    const adminListing = await (await connectMcp(null, true)).listTools();
+    // The biggest single tool definition: what one bloated description or schema costs every client.
+    const largest = Math.max(...listing.tools.map((tool) => payloadBytes(tool)));
     await signIn(t, perfStudent);
     const client = await connectMcp(convexMcpCaller(t, perfCreator.subject));
     const search = await measureConvex(() => client.callTool({ name: "search_forms", arguments: {} }));
@@ -99,6 +102,9 @@ describe("surface read budgets", () => {
     recordPerf(ctx, {
       "mcp.tools": listing.tools.length,
       "mcp.listToolsBytes": bytes(payloadBytes(listing)),
+      "mcp.admin.tools": adminListing.tools.length,
+      "mcp.admin.listToolsBytes": bytes(payloadBytes(adminListing)),
+      "mcp.largestToolBytes": bytes(largest),
       ...readMetrics("mcp.searchForms", search),
       ...readMetrics("mcp.getLesson", lesson),
     });
