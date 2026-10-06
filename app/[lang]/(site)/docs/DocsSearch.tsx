@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect, useId, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { useRouter, usePathname } from "next/navigation";
 import { ChevronRight, CornerDownLeft, Search, X } from "lucide-react";
 import { useCopy } from "@/lib/i18n";
@@ -45,7 +46,8 @@ export default function DocsSearch({ trigger: showTrigger = true }: { trigger?: 
         <span>{t.searchPlaceholder}</span>
         <kbd className="docs-search__hint" aria-hidden="true" dir="ltr">Ctrl K</kbd>
       </button>}
-      {open && <SearchDialog onClose={() => setOpen(false)} returnFocus={trigger} />}
+      {/* Rendered at the docs root, not inside the sticky sidebar, so it covers the site header and the full width. */}
+      {open && createPortal(<SearchDialog onClose={() => setOpen(false)} returnFocus={trigger} />, document.querySelector(".docs-ui") ?? document.body)}
     </>
   );
 }
@@ -72,11 +74,25 @@ function SearchDialog({ onClose, returnFocus }: { onClose: () => void; returnFoc
     else if (event.key === "ArrowUp") { event.preventDefault(); if (results.length) setActive((current - 1 + results.length) % results.length); }
     else if (event.key === "Enter" && selected) { event.preventDefault(); go(selected.href); }
   };
+  // On wide screens the popup sits over the page body, beside the sidebar rather than on top of it.
+  const overlay = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    const place = () => {
+      const el = overlay.current, body = document.querySelector(".docs-main")?.getBoundingClientRect();
+      if (!el) return;
+      const wide = !!body && window.innerWidth > 820;
+      el.style.paddingLeft = wide ? `${Math.max(16, body.left)}px` : "";
+      el.style.paddingRight = wide ? `${Math.max(16, window.innerWidth - body.right)}px` : "";
+    };
+    place();
+    window.addEventListener("resize", place);
+    return () => window.removeEventListener("resize", place);
+  }, []);
   // Keep the highlighted result in view while moving with the keyboard.
   useEffect(() => { document.getElementById(`${listId}-${current}`)?.scrollIntoView?.({ block: "nearest" }); }, [current, listId]);
 
   return (
-    <div className="docs-searchbox__overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
+    <div ref={overlay} className="docs-searchbox__overlay" onMouseDown={(e) => { if (e.target === e.currentTarget) onClose(); }}>
       <div ref={panel} className="docs-searchbox site-glass" role="dialog" aria-modal="true" aria-label={t.searchLabel} tabIndex={-1}>
         <div className="docs-searchbox__field">
           <Search size={18} aria-hidden="true" />
