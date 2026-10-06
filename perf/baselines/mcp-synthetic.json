@@ -1,0 +1,5 @@
+{
+  "suite": "mcp-synthetic",
+  "tolerance": { "ms": 0.5 },
+  "metrics": {}
+}

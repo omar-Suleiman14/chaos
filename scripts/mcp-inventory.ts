@@ -2,8 +2,8 @@ import { readFile, writeFile } from "node:fs/promises";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createChaosMcpServer } from "../lib/mcp/server";
+import { byName, describeChanges } from "./lib/mcpContract";
 
-type Tool = Awaited<ReturnType<Client["listTools"]>>["tools"][number];
 
 async function listTools(admin: boolean) {
  const server = createChaosMcpServer({ call: null, admin, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" });
@@ -15,29 +15,12 @@ async function listTools(admin: boolean) {
  return tools;
 }
 
-/** Everything a client sees for a tool. A change here changes what ChatGPT and Claude are offered. */
-const contract = (tool: Tool) => ({ title: tool.title ?? null, description: tool.description ?? "", permission: (tool._meta as Record<string, unknown> | undefined)?.["chaos/permission"] ?? null, annotations: tool.annotations ?? null, inputSchema: tool.inputSchema, outputSchema: tool.outputSchema ?? null });
-
-/** Names what changed between two schema snapshots, tool by tool, so CI says more than "stale". */
-function describeChanges(before: Record<string, Record<string, unknown>>, after: Record<string, Record<string, unknown>>) {
- const lines: string[] = [];
- for (const name of Object.keys(after)) if (!(name in before)) lines.push(`+ ${name} (added)`);
- for (const name of Object.keys(before)) if (!(name in after)) lines.push(`- ${name} (removed)`);
- for (const name of Object.keys(after)) {
-  if (!(name in before)) continue;
-  const fields = Object.keys(after[name]).filter(field => JSON.stringify(before[name][field]) !== JSON.stringify(after[name][field]));
-  if (fields.length) lines.push(`~ ${name}: ${fields.join(", ")} changed`);
- }
- return lines;
-}
-
 async function main() {
  const publicTools = await listTools(false);
  const names = publicTools.map(t => t.name).sort();
  const adminTools = (await listTools(true)).filter(t => !names.includes(t.name));
  const adminNames = adminTools.map(t => t.name).sort();
  const json = JSON.stringify({ count: names.length, names, administratorCount: adminNames.length, administratorNames: adminNames }, null, 2) + "\n";
- const byName = (tools: Tool[]) => Object.fromEntries([...tools].sort((x, y) => x.name.localeCompare(y.name)).map(t => [t.name, contract(t)]));
  const schemas = { public: byName(publicTools), administrator: byName(adminTools) };
  const schemaJson = JSON.stringify(schemas, null, 1) + "\n";
  const docs = `# MCP tool inventory\n\nGenerated from the public and administrator MCP registries with \`pnpm mcp:inventory\`. Administrator tools are advertised only to verified administrator connections; see [MCP permissions](mcp-permissions.md).\n\n${names.length} public tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.\n\n${names.map(n => `- \`${n}\``).join("\n")}\n\n## Administrator tools\n\n${adminNames.length} additional tools mirror the administration UI. Every call rechecks current backend authorization.\n\n${adminNames.map(n => `- \`${n}\``).join("\n")}\n`;
