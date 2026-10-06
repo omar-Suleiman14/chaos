@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { memo, useCallback, useEffect, useRef, useState, type CSSProperties } from "react";
 import { usePaginatedQuery } from "convex/react";
 import Link from "@/components/site/SiteLink";
 import { ChevronLeft } from "lucide-react";
@@ -15,15 +15,34 @@ import "@/app/landing.css";
 import "./authors.css";
 
 type Author = { name: string; username: string; seed: string; memberSince: number; style: number };
-function AuthorArt({ author, locale }: { author: Author; locale: "ar" | "en" }) {
-  const art = useMemo(() => memberCardSvg({ ...author, locale, url: `/card/${author.username}` }).replaceAll("mc-front-", `author-${author.username}-mc-front-`).replace(/<rect[^>]*filter="url\([^"\n]*grain\)"[^>]*\/>/g, ""), [author, locale]);
-  return <div className="author-art" aria-hidden dangerouslySetInnerHTML={{ __html: art }} />;
+/**
+ * Card art is built once per author and look: swiping brings the same few cards back into the stack
+ * and each live update hands over new objects, so rebuilding the SVG every time was wasted work.
+ */
+const artCache = new Map<string, string>();
+function authorSvg(author: Author, locale: "ar" | "en") {
+  const key = `${locale}|${author.username}|${author.name}|${author.seed}|${author.style}|${author.memberSince}`;
+  let art = artCache.get(key);
+  if (!art) {
+    art = memberCardSvg({ ...author, locale, url: `/card/${author.username}` }).replaceAll("mc-front-", `author-${author.username}-mc-front-`).replace(/<rect[^>]*filter="url\([^"\n]*grain\)"[^>]*\/>/g, "");
+    if (artCache.size > 300) artCache.clear();
+    artCache.set(key, art);
+  }
+  return art;
 }
+const AuthorArt = memo(function AuthorArt({ author, locale }: { author: Author; locale: "ar" | "en" }) {
+  return <div className="author-art" aria-hidden dangerouslySetInnerHTML={{ __html: authorSvg(author, locale) }} />;
+}, (a, b) => a.locale === b.locale && a.author.username === b.author.username && a.author.name === b.author.name && a.author.seed === b.author.seed && a.author.style === b.author.style);
 
-export default function PublicAuthors() {
+/** `initial` is the server's first page of authors, so the stack is in the first HTML instead of "Loading authors…". */
+export default function PublicAuthors({ initial = [] }: { initial?: Author[] }) {
   const { locale } = useLocale();
   const ar = locale === "ar";
-  const { results, status, loadMore } = usePaginatedQuery(api.publicAuthors.browse, {}, { initialNumItems: 24 });
+  const live = usePaginatedQuery(api.publicAuthors.browse, {}, { initialNumItems: 24 });
+  const { loadMore } = live;
+  // While the live first page loads, the server's copy stands in (and counts as "more on the way").
+  const status = live.status === "LoadingFirstPage" && initial.length ? "LoadingMore" : live.status;
+  const results = live.status === "LoadingFirstPage" ? initial : live.results;
   const [selectedIndex, setIndex] = useState(0);
   const [fannedIndex, setFannedIndex] = useState<number | null>(null);
   const index = Math.min(selectedIndex, Math.max(0, results.length - 1));
@@ -116,7 +135,7 @@ export default function PublicAuthors() {
           {cards.map(({ author, position }) => {
             const depth = Math.abs(position);
             const style = { "--depth": depth, "--position": position, "--lean": `${position * 3}deg`, "--turn": `${position * -12}deg`, zIndex: 5 - depth } as CSSProperties;
-            return position === 0 ? <Link key={author.username} href={`/card/${encodeURIComponent(author.username)}`} aria-label={`${ar ? "عرض بطاقة" : "View card of"} ${author.name}`} draggable={false} className="author-stack-card" style={style} data-active="true"><AuthorArt author={author} locale={locale} /></Link> :
+            return position === 0 ? <Link key={author.username} href={`/card/${encodeURIComponent(author.username)}`} prefetch aria-label={`${ar ? "عرض بطاقة" : "View card of"} ${author.name}`} draggable={false} className="author-stack-card" style={style} data-active="true"><AuthorArt author={author} locale={locale} /></Link> :
               <button key={author.username} type="button" className="author-stack-card" style={style} data-active="false" aria-expanded={fanned} aria-label={ar ? `${fanned ? "ضم البطاقات" : "افرد البطاقات"}: ${author.name}` : `${fanned ? "Close" : "Fan out"} author cards: ${author.name}`} onClick={() => setFannedIndex(fanned ? null : index)}><AuthorArt author={author} locale={locale} /></button>;
           })}
         </div>

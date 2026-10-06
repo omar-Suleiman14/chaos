@@ -78,6 +78,7 @@ export function warmHref(href: string) {
   else if ((m = /^\/dashboard\/learn\/lessons\/([a-z0-9]+)$/i.exec(path))) warmQuery(api.learnFrontend.editableLesson, { id: m[1] });
   else if ((m = /^\/learn\/courses\/([a-z0-9]+)$/i.exec(path))) warmQuery(api.courses.getPublic, { courseId: m[1] });
   else if ((m = /^\/learn\/([a-z0-9]+)$/i.exec(path))) warmQuery(api.learnFrontend.publicLesson, { id: m[1] });
+  else if ((m = /^\/card\/([a-z0-9_.-]+)$/i.exec(path))) warmQuery(api.memberCards.byUsername, { username: decodeURIComponent(m[1]).toLowerCase() });
 }
 
 /** Intent handlers for any in-app link; see warmHref. */
