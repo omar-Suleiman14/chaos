@@ -1,4 +1,4 @@
-import { buildExportFile, type ExportJob } from "./exportFile";
+import { buildExportFile, type ExportJob } from "./exportFileBuild";
 
 // Builds one export file and hands the bytes back without copying them.
 self.onmessage = (event: MessageEvent<ExportJob>) => {

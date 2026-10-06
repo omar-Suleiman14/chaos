@@ -1,5 +1,6 @@
-import { csvCell } from "@/convex/formLogic";
-import { buildXlsx, type Cell } from "@/lib/xlsx";
+import { buildExportFile, type ExportJob } from "@/lib/exportFileBuild";
+
+export { buildExportFile, type ExportJob };
 
 /**
  * Builds download files (CSV, XLSX, JSON) for exports. Large ones are built in
@@ -8,25 +9,11 @@ import { buildXlsx, type Cell } from "@/lib/xlsx";
  * rows to the worker costs about a tenth of that. Small exports are built
  * inline, where starting a worker would cost more than it saves.
  */
-export type ExportJob =
-  | { kind: "csv" | "xlsx"; rows: Cell[][] }
-  | { kind: "json"; value: unknown };
-
 export const EXPORT_MIME = {
   csv: "text/csv;charset=utf-8",
   xlsx: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
   json: "application/json",
 } as const;
-
-const encoder = new TextEncoder();
-
-/** The file's bytes. Pure: runs the same in the worker and on the main thread. */
-export function buildExportFile(job: ExportJob): Uint8Array<ArrayBuffer> {
-  if (job.kind === "xlsx") return buildXlsx(job.rows);
-  if (job.kind === "json") return encoder.encode(JSON.stringify(job.value, null, 2));
-  // csvCell neutralises spreadsheet formulas in respondent-supplied text.
-  return encoder.encode("﻿" + job.rows.map((row) => row.map(csvCell).join(",")).join("\r\n"));
-}
 
 /** Rows (or JSON records) below this are built inline. */
 export const WORKER_MIN_ROWS = 500;
