@@ -64,6 +64,7 @@ export default function CourseModulesEditor({ courseId, modules, lessons }: { co
   const newModule = () => commit([...draft, { id: crypto.randomUUID(), title: t.moduleN(draft.length + 1), lessonIds: draft.length ? [] : ids, assessments: [] }]);
   const swapModules = (i: number, j: number) => { const next = [...draft]; [next[i], next[j]] = [next[j], next[i]]; void commit(next); };
 
+  // Numbers restart in every module (Anatomy 1–3, Physiology 1–2), as readers see them in CourseOutline.
   const row = (l: Lesson, n: number, group: Lesson[]) => (
     <li key={l.id} className="cb-lesson">
       <span className="cb-lesson__no">{n}</span>
@@ -79,11 +80,10 @@ export default function CourseModulesEditor({ courseId, modules, lessons }: { co
       </div>
     </li>
   );
-  const list = (group: Lesson[], start: number) => group.length > 0 && <ol className="cb-lessons mb-1">{group.map((l, i) => row(l, start + i, group))}</ol>;
+  const list = (group: Lesson[]) => group.length > 0 && <ol className="cb-lessons mb-1">{group.map((l, i) => row(l, i + 1, group))}</ol>;
   const addButton = (moduleId?: string) => <button type="button" className="cb-add w-full" disabled={busy} onClick={() => void add(moduleId)}><Plus size={18} aria-hidden /> {t.add}</button>;
 
   const ungrouped = lessons.filter((l) => !moduleOf(l.id));
-  let counter = 1;
   return (
     <section className="cb-section" aria-labelledby="cb-lessons">
       <div className="cb-outline__head">
@@ -92,7 +92,7 @@ export default function CourseModulesEditor({ courseId, modules, lessons }: { co
       </div>
       {lessons.length === 0 && !draft.length && <p className="cb-note mb-3">{t.empty}</p>}
       {draft.map((module, index) => {
-        const group = module.lessonIds.map((id) => lessons.find((l) => l.id === id)).filter((l): l is Lesson => !!l), start = counter; counter += group.length;
+        const group = module.lessonIds.map((id) => lessons.find((l) => l.id === id)).filter((l): l is Lesson => !!l);
         return (
           <div className="cb-module" key={module.id}>
             <div className="cb-module__head">
@@ -104,7 +104,7 @@ export default function CourseModulesEditor({ courseId, modules, lessons }: { co
                 <button type="button" className="ws-icon-button" aria-label={t.removeModule} title={t.removeModule} disabled={busy} onClick={() => void commit(draft.filter((m) => m.id !== module.id))}><Trash2 size={16} aria-hidden /></button>
               </div>
             </div>
-            {list(group, start)}
+            {list(group)}
             {addButton(module.id)}
             {module.assessments.map((asset, i) => <div className="lx-actions" key={`${asset.kind}:${asset.id}`}><Link className="lx-link" href={asset.kind === "form" ? `/dashboard/forms/${asset.id}` : `/dashboard/editor?id=${asset.id}`}>{t.assessment(i + 1)}</Link><button type="button" className="lx-link" disabled={busy} onClick={() => void commit(draft.map((m) => m.id === module.id ? { ...m, assessments: m.assessments.filter((a) => a.id !== asset.id || a.kind !== asset.kind) } : m))}>{t.removeAssessment}</button></div>)}
             <details className="cb-module__quiz"><summary>{t.addAssessment}</summary><AssessmentPicker disabled={busy} onAdd={(asset) => { if (!module.assessments.some((a) => a.kind === asset.kind && a.id === asset.id)) void commit(draft.map((m) => m.id === module.id ? { ...m, assessments: [...m.assessments, asset] } : m)); }} /></details>
@@ -112,7 +112,7 @@ export default function CourseModulesEditor({ courseId, modules, lessons }: { co
         );
       })}
       {draft.length > 0 && ungrouped.length > 0 && <h3 className="cb-module__ungrouped">{t.ungrouped}</h3>}
-      {list(ungrouped, counter)}
+      {list(ungrouped)}
       {!draft.length && addButton()}
     </section>
   );
