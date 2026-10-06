@@ -1,5 +1,6 @@
 {
   "suite": "mcp-synthetic",
+  "scheduled": true,
   "tolerance": { "ms": 0.5 },
   "metrics": {}
 }

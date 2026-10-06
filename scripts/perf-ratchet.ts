@@ -12,7 +12,8 @@ import { join } from "node:path";
 type Unit = "count" | "bytes" | "ms";
 type Result = { suite: string; failed: string[]; metrics: Record<string, { value: number; unit: Unit }> };
 type Budget = { budget: number; unit: Unit; raised?: { from: number; reason: string; at: string } };
-type Baseline = { suite: string; tolerance?: Partial<Record<Unit, number>>; metrics: Record<string, Budget> };
+/** `scheduled` suites measure deployed environments; they are checked only when named with --suites. */
+type Baseline = { suite: string; scheduled?: boolean; tolerance?: Partial<Record<Unit, number>>; metrics: Record<string, Budget> };
 type Row = { suite: string; metric: string; unit: Unit; budget?: number; value?: number; status: "ok" | "regressed" | "improved" | "new" | "missing"; raised?: Budget["raised"] };
 
 const RESULTS = join("perf", "results"), BASELINES = join("perf", "baselines");
@@ -28,7 +29,7 @@ function suites(dir: string) {
 }
 function selected() {
   const only = arg("--suites")?.split(",").filter(Boolean);
-  return only ?? [...new Set([...suites(BASELINES), ...suites(RESULTS)])].sort();
+  return only ?? [...new Set([...suites(BASELINES), ...suites(RESULTS)])].filter((s) => !baselineOf(s).scheduled).sort();
 }
 const baselineOf = (suite: string): Baseline => existsSync(join(BASELINES, `${suite}.json`)) ? read<Baseline>(join(BASELINES, `${suite}.json`)) : { suite, metrics: {} };
 const resultOf = (suite: string): Result | null => existsSync(join(RESULTS, `${suite}.json`)) ? read<Result>(join(RESULTS, `${suite}.json`)) : null;
