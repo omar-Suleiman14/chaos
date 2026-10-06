@@ -8,6 +8,8 @@ playwright-report
 .env*
 !.env.example
 tests
+perf
+playwright.perf.config.ts
 *.log
 .vscode
 .claude
