@@ -13,6 +13,7 @@ import schema from "./schema";
 import { requireActiveUser, creatorRestricted } from "./authz";
 import { lessonBlock, lessonDocument, lessonMeta, visibility, LEARN_LIMITS, LEARN_WRITE_LIMITS, type LessonDocument } from "./learnModel";
 import { consumeRate } from "./serverUtils";
+import { liveStructureAfterLessonPublish } from "./courseStructure";
 import { assertDocument, validateDocument, validateMetadataPresentation, type LessonProblem } from "./learnValidation";
 
 export async function lessonAccess(ctx: QueryCtx | MutationCtx, id: Id<"lessons">, edit = false) {
@@ -215,12 +216,12 @@ export async function publishLessonForActor(ctx: MutationCtx, actor: string, arg
   await authorDb(ctx).patch("lessons", lesson._id, { publishedVersionId: versionId, visibility: args.visibility, audienceTeamId, searchText, revision: lesson.revision + 1, updatedAt: Date.now() });
   await enqueueLearnWebhookEvent(ctx, { event: "lesson.published", lessonId: lesson._id, versionId, operationId: `version:${versionId}`, revision: lesson.revision + 1 });
   await recordPublicationAction(ctx, { lessonId: lesson._id, actorId: actor, action: "publish", revision: lesson.revision + 1, versionId, beforeVisibility: lesson.visibility, afterVisibility: args.visibility, reason: args.note?.trim() || "Explicitly published an immutable lesson version." });
-  // Point each live course that already contains this lesson at the new version.
+  // Each live course containing this lesson shows the new version, in the course's current structure (convex/courseStructure.ts).
   for (const course of courses) {
     const live = course.publishedVersionId ? await ctx.db.get("collectionVersions", course.publishedVersionId) : null;
-    if (!live || !live.items.some(i => i.kind === "lesson" && i.id === lesson._id)) continue;
-    const items = live.items.map(i => (i.kind === "lesson" && i.id === lesson._id ? { ...i, versionId } : i));
-    await ctx.db.patch("collectionVersions", live._id, { items });
+    if (!live) continue;
+    const { items, modules } = await liveStructureAfterLessonPublish(ctx, course, live, lesson._id, versionId);
+    await ctx.db.patch("collectionVersions", live._id, { items, modules });
     await authorDb(ctx).patch("learnCollections", course._id, { items, updatedAt: Date.now() });
   }
   return { ok: true as const, versionId, revision: lesson.revision + 1 };

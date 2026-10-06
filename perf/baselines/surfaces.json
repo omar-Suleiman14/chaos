@@ -1,5 +1,8 @@
 {
   "suite": "surfaces",
+  "tolerance": {
+    "bytes": 0
+  },
   "metrics": {
     "card.mine.bytesRead": {
       "budget": 290,
@@ -46,8 +49,13 @@
       "unit": "count"
     },
     "courses.editor.payloadBytes": {
-      "budget": 1657,
-      "unit": "bytes"
+      "budget": 1677,
+      "unit": "bytes",
+      "raised": {
+        "from": 1657,
+        "reason": "The course editor now reports pendingChanges so owners see unpublished details and module edits.",
+        "at": "2026-10-06"
+      }
     },
     "courses.public.bytesRead": {
       "budget": 42389,
@@ -182,8 +190,13 @@
       "unit": "bytes"
     },
     "mcp.listToolsBytes": {
-      "budget": 597659,
-      "unit": "bytes"
+      "budget": 598009,
+      "unit": "bytes",
+      "raised": {
+        "from": 597659,
+        "reason": "get_course documents pendingChanges so assistants know when publish_course is needed.",
+        "at": "2026-10-06"
+      }
     },
     "mcp.searchForms.bytesRead": {
       "budget": 82186,

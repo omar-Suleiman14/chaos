@@ -1,6 +1,6 @@
 // Actor comes only from the secret-protected MCP envelope.
 import { courseModule, courseDetails } from "./learnAssetModel";
-import { setCourseModules, readCourseProgress, rememberCourse, readCourseLesson } from "./courses";
+import { pendingCourseChange, setCourseModules, readCourseProgress, rememberCourse, readCourseLesson } from "./courses";
 import { exportCourseManifest, importCourseLesson } from "./coursePortability";
 import { lessonDocument, lessonMeta } from "./learnModel";
 import { v } from "convex/values";
@@ -18,7 +18,7 @@ export const create = internalMutation({
 });
 export const read = internalQuery({
  args: { userId: v.string(), courseId: v.id("learnCollections") },
- returns: v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), coverY: v.optional(v.number()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()), visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), isOwner: v.boolean(), teamId: v.optional(v.id("businessTeams")), canPrivate: v.boolean(), modules: v.array(courseModule), details: v.optional(courseDetails), lessons: v.array(v.object({ id: v.id("lessons"), title: v.string(), description: v.string(), published: v.boolean(), changed: v.boolean(), blocks: v.number() })), revision: v.number() }),
+ returns: v.object({ id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), coverY: v.optional(v.number()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()), visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), isOwner: v.boolean(), teamId: v.optional(v.id("businessTeams")), canPrivate: v.boolean(), modules: v.array(courseModule), details: v.optional(courseDetails), lessons: v.array(v.object({ id: v.id("lessons"), title: v.string(), description: v.string(), published: v.boolean(), changed: v.boolean(), blocks: v.number() })), revision: v.number(), pendingChanges: v.array(pendingCourseChange) }),
  handler: async (ctx, { userId, ...input }) => {
  const actor = await requireLearnActor(ctx, userId);
  return await getCourse(ctx, input, actor);

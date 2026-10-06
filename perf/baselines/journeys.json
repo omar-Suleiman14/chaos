@@ -1,5 +1,8 @@
 {
   "suite": "journeys",
+  "tolerance": {
+    "bytes": 0
+  },
   "metrics": {
     "journey.courseModules.bytesRead": {
       "budget": 42429,

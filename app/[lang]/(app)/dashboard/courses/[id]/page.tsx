@@ -88,7 +88,8 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
     setLook({ ...page, ...patch });
     save({ courseId, ...("coverUrl" in patch ? { coverUrl: patch.coverUrl ?? null } : {}), ...("coverY" in patch ? { coverY: patch.coverY ?? null } : {}) });
   };
-  const dirty = !course.published || course.lessons.some((l) => l.changed);
+  // Course details and module edits wait for publication too, not only lesson edits (convex/courseStructure.ts).
+  const dirty = !course.published || course.lessons.some((l) => l.changed) || course.pendingChanges.length > 0;
 
   return (
     <div className="cb cb-page" dir={localeDir(locale)}>

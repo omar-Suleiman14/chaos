@@ -14,6 +14,7 @@ import { canEditTeamAsset, hasBusinessWorkspace, resolveAudienceTeam, teamAudien
 import { visibility } from "./learnModel";
 import { recordAssetPublicationAction } from "./learnPublicationAudit";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
+import { pendingCourseChanges } from "./courseStructure";
 
 /**
  * Courses are created like forms: a titled, ordered set of lessons that is published as
@@ -21,6 +22,7 @@ import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
  * published snapshot. Public courses are free for everyone; private ones need Business.
  */
 const MAX_LESSONS = 100;
+export const pendingCourseChange = v.union(v.literal("details"), v.literal("structure"));
 
 /** Signed-in caller, or a server-verified actor (ChatGPT app) when `actor` is given. */
 async function ownedCourse(ctx: QueryCtx | MutationCtx, courseId: Id<"learnCollections">, asActor?: string, allowEditor = false) {
@@ -59,15 +61,18 @@ export async function getCourse(ctx: QueryCtx, args: Infer<typeof getArgs>, asAc
     const { row, user, actor } = await ownedCourse(ctx, args.courseId, asActor, true);
     const version = row.publishedVersionId ? await ctx.db.get("collectionVersions", row.publishedVersionId) : null;
     const lessons: Infer<typeof lessonRow>[] = [];
+    const publishedLessons = new Set<Id<"lessons">>();
     for (const id of outline(row)) {
       const lesson = await ctx.db.get("lessons", id);
       if (!lesson || lesson.status !== "active") continue;
       const pub = lesson.publishedVersionId ? await ctx.db.get("lessonVersions", lesson.publishedVersionId) : null;
+      if (pub) publishedLessons.add(id);
       lessons.push({ id, title: lesson.metadata.title, description: lesson.metadata.description, published: !!pub, changed: !pub || JSON.stringify(pub.document) !== JSON.stringify(lesson.draft) || JSON.stringify(pub.metadata) !== JSON.stringify(lesson.metadata), blocks: lesson.draft.blocks.length });
     }
     return {
       id: row._id, title: row.metadata.title, description: row.metadata.description, coverUrl: row.metadata.coverUrl, coverY: row.metadata.coverY, icon: row.metadata.icon, language: row.metadata.language, tags: row.metadata.tags,
       visibility: row.visibility, published: !!row.publishedVersionId, publishedAt: version?.publishedAt ?? null, isOwner: row.ownerId === actor, ...(row.visibility === "restricted" && row.audienceTeamId ? { teamId: row.audienceTeamId } : {}), canPrivate: isPaidPlan(user ?? null, Date.now()) || await hasBusinessWorkspace(ctx, row.ownerId), modules: row.modules ?? [], details: row.details, lessons, revision: row.revision,
+      pendingChanges: pendingCourseChanges(row, version, publishedLessons),
     };
 }
 export const get = query({
@@ -75,6 +80,8 @@ export const get = query({
   returns: v.object({
     id: v.id("learnCollections"), title: v.string(), description: v.string(), coverUrl: v.optional(v.string()), coverY: v.optional(v.number()), icon: v.optional(v.string()), language: v.string(), tags: v.array(v.string()),
     visibility, published: v.boolean(), publishedAt: v.union(v.number(), v.null()), isOwner: v.boolean(), teamId: v.optional(v.id("businessTeams")), canPrivate: v.boolean(), modules: v.array(courseModule), details: v.optional(courseDetails), lessons: v.array(lessonRow), revision: v.number(),
+    /** Draft changes readers don't see yet; publishing the course releases them (convex/courseStructure.ts). */
+    pendingChanges: v.array(pendingCourseChange),
   }),
   handler: (ctx, args) => getCourse(ctx, args),
 });

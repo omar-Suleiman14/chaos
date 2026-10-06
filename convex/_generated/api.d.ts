@@ -24,6 +24,7 @@ import type * as courseDirectory from "../courseDirectory.js";
 import type * as coursePortability from "../coursePortability.js";
 import type * as courseSearchModel from "../courseSearchModel.js";
 import type * as courseStudents from "../courseStudents.js";
+import type * as courseStructure from "../courseStructure.js";
 import type * as courses from "../courses.js";
 import type * as crmServices from "../crmServices.js";
 import type * as crons from "../crons.js";
@@ -169,6 +170,7 @@ declare const fullApi: ApiFromModules<{
   coursePortability: typeof coursePortability;
   courseSearchModel: typeof courseSearchModel;
   courseStudents: typeof courseStudents;
+  courseStructure: typeof courseStructure;
   courses: typeof courses;
   crmServices: typeof crmServices;
   crons: typeof crons;
