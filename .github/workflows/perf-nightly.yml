@@ -41,6 +41,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      # Correctness before speed: lost answers, exposed drafts and stale or deleted
+      # content fail the run whatever the numbers say (perf/results/correctness.json).
+      - name: Correctness checks
+        run: pnpm test:correctness
+        continue-on-error: true
+
       # Measurements first; the ratchet fails the job if any suite failed.
       - name: Measure Convex reads and client rendering
         run: pnpm perf

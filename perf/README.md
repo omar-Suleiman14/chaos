@@ -169,7 +169,17 @@ with a reason.
 A faster editor that loses answers, a faster publication that exposes drafts or
 a cache that shows deleted content is a failure. Every perf suite asserts the
 result is correct before recording a number, and a failed assertion fails the
-ratchet. Correctness regressions live in `tests/integration` and run first.
+ratchet.
+
+`pnpm test:correctness` (`scripts/correctness.ts`) runs first in every perf
+workflow: `tests/integration/correctnessGates.test.ts` states the three
+failures end to end (every answer stored exactly while the owner edits; the
+published form and lesson served while a newer draft exists; archived, deleted
+and unpublished content gone), together with the reactivity, form integrity,
+publication boundary, answer secrecy, device cache and draft recovery suites.
+Its result goes to `perf/results/correctness.json`, so `pnpm perf:check` fails
+on it like a regression, and the PR summary says "Correctness checks passed"
+only when they did.
 
 ## The workspace opens from the device
 
