@@ -14,24 +14,24 @@ export const PERF_JOURNEYS: Journey[] = [
   { key: "live", title: "Live", page: "/play" },
   { key: "card", title: "Card", page: "/card" },
   { key: "mcp", title: "MCP", page: "https://chaos.fail/mcp" },
-  { key: "styles", title: "Stylesheets and bundles", page: "every page" },
+  { key: "styles", title: "Stylesheets", page: "every page" },
 ];
 
+/** First match wins: lesson and course editors before the form editor's generic "editor.". */
 const RULES: [RegExp, string][] = [
   [/(^|\.)(mcp|journey\.mcpPersist)/, "mcp"],
   [/dashboard/i, "dashboard"],
-  [/(keystroke|builder|editor\.|forms\.(editor|q\d+|max)|formCreate|formOpen|form\.(create|open)|largeForm|formEditor)/i, "form-editor"],
-  [/(quiz|respondent|flow|quizQuestion)/i, "quiz"],
   [/(lesson|giantLesson)/i, "lesson"],
   [/course/i, "course"],
+  [/(keystroke|builder|editor\.|forms\.(editor|q\d+|max)|formCreate|formOpen|form\.(create|open)|largeForm|formEditor)/i, "form-editor"],
+  [/(quiz|respondent|flow)/i, "quiz"],
   [/live/i, "live"],
   [/card/i, "card"],
-  [/^(css|bundle)/, "styles"],
 ];
 
+/** The journey a benchmark belongs to; stylesheet totals and anything unmatched go to "styles". */
 export function journeyOf(row: Pick<Row, "suite" | "metric">): Journey {
-  const text = `${row.suite === "css" || row.suite === "bundles" ? "css." : ""}${row.metric}`;
-  const key = RULES.find(([pattern]) => pattern.test(text))?.[1] ?? "styles";
+  const key = row.suite === "css" ? "styles" : RULES.find(([pattern]) => pattern.test(row.metric))?.[1] ?? "styles";
   return PERF_JOURNEYS.find((j) => j.key === key)!;
 }
 

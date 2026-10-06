@@ -144,7 +144,12 @@ describe("perf issues per journey", () => {
       ["surfaces", "mcp.listToolsBytes", "mcp"],
       ["journeys", "journey.mcpPersist.transactions", "mcp"],
       ["css", "css.universalSelectors", "styles"],
-      ["bundles", "bundle.dashboard.firstLoadJs", "styles"],
+      ["bundles", "bundle.dashboard.firstLoadJs", "dashboard"],
+      ["surfaces", "lessons.editor.payloadBytes", "lesson"],
+      ["surfaces", "courses.editor.payloadBytes", "course"],
+      ["surfaces", "forms.editor.payloadBytes", "form-editor"],
+      ["idle-browser", "idle.lessonEditor.mutations", "lesson"],
+      ["render-browser", "render.flow.load.renders", "quiz"],
     ];
     for (const [suite, metric, journey] of cases) expect(`${metric} → ${journeyOf({ suite, metric }).key}`).toBe(`${metric} → ${journey}`);
   });
