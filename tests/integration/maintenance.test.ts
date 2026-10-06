@@ -22,12 +22,14 @@ it("sweeps expired housekeeping rows and keeps everything still in use", async (
       oldView: await view(old(MAINTENANCE_POLICY.communityViewsDays)), freshView: await view(now),
       oldInvite: await invite(old(MAINTENANCE_POLICY.expiredInvitesDays)), recentlyExpired: await invite(now - DAY), openInvite: await invite(now + DAY),
       oldCopy: await copy(1, old(MAINTENANCE_POLICY.draftRecoveryDays)), newestOldCopy: await copy(2, old(MAINTENANCE_POLICY.draftRecoveryDays)),
+      obsoleteRollout: await ctx.db.insert("featureRollouts", { key: "removed.flag", percent: 50, allow: [], updatedAt: 0, updatedBy: "admin" }),
+      liveRollout: await ctx.db.insert("featureRollouts", { key: "editor.new", percent: 10, allow: [], updatedAt: 0, updatedBy: "admin" }),
     };
   });
 
-  expect(await t.mutation(internal.maintenance.sweep, {})).toEqual({ views: 1, invites: 1, recovery: 1 });
+  expect(await t.mutation(internal.maintenance.sweep, {})).toEqual({ views: 1, invites: 1, recovery: 1, rollouts: 1 });
   const exists = await t.run(async (ctx) => Object.fromEntries(await Promise.all(Object.entries(ids).map(async ([key, id]) => [key, (await ctx.db.get(id as never)) !== null]))));
-  expect(exists).toEqual({ oldView: false, freshView: true, oldInvite: false, recentlyExpired: true, openInvite: true, oldCopy: false, newestOldCopy: true });
+  expect(exists).toEqual({ oldView: false, freshView: true, oldInvite: false, recentlyExpired: true, openInvite: true, oldCopy: false, newestOldCopy: true, obsoleteRollout: false, liveRollout: true });
   // A second run finds nothing more to do: the newest copy of a lesson is kept however old.
-  expect(await t.mutation(internal.maintenance.sweep, {})).toEqual({ views: 0, invites: 0, recovery: 0 });
+  expect(await t.mutation(internal.maintenance.sweep, {})).toEqual({ views: 0, invites: 0, recovery: 0, rollouts: 0 });
 });

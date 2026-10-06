@@ -1,6 +1,7 @@
 import { v } from "convex/values";
 import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
+import { sweepObsoleteRollouts } from "./flags";
 
 /**
  * Housekeeping that is pure policy: rows past a fixed age are removed in small
@@ -8,7 +9,8 @@ import { internal } from "./_generated/api";
  * No judgement calls and no content a person could still need: the newest
  * recovery copy of every lesson is always kept (see docs/data-lifecycle.md).
  * Form uploads, resume drafts, grants and rate-limit windows are swept hourly
- * by crons.cleanup; this covers the rest.
+ * by crons.cleanup; this covers the rest, including rollout rows for flags
+ * no longer declared in lib/flags.ts.
  */
 
 const DAY_MS = 86_400_000;
@@ -25,7 +27,7 @@ export const MAINTENANCE_POLICY = {
 
 export const sweep = internalMutation({
   args: {},
-  returns: v.object({ views: v.number(), invites: v.number(), recovery: v.number() }),
+  returns: v.object({ views: v.number(), invites: v.number(), recovery: v.number(), rollouts: v.number() }),
   handler: async (ctx) => {
     const now = Date.now();
 
@@ -48,8 +50,10 @@ export const sweep = internalMutation({
       recovery++;
     }
 
+    const rollouts = await sweepObsoleteRollouts(ctx, BATCH);
+
     // A full batch of kept newest copies would loop forever, so only deletions reschedule.
-    if (views.length === BATCH || invites.length === BATCH || recovery === BATCH) await ctx.scheduler.runAfter(1000, internal.maintenance.sweep, {});
-    return { views: views.length, invites: invites.length, recovery };
+    if (views.length === BATCH || invites.length === BATCH || recovery === BATCH || rollouts === BATCH) await ctx.scheduler.runAfter(1000, internal.maintenance.sweep, {});
+    return { views: views.length, invites: invites.length, recovery, rollouts };
   },
 });

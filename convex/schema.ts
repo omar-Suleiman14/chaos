@@ -270,6 +270,14 @@ export default defineSchema({
   }).index("by_clerkId", ["clerkId"]),
 
   // ============ GLOBAL CONFIGURATION ============
+  /** Rollout state for flags declared in lib/flags.ts; rows for removed flags are swept daily. */
+  featureRollouts: defineTable({
+    key: v.string(),
+    percent: v.number(),
+    allow: v.array(v.string()),
+    updatedAt: v.number(),
+    updatedBy: v.string(),
+  }).index("by_key", ["key"]),
   globalConfig: defineTable({
     aiLimitPopupText: v.optional(v.string()),
     playerLimitErrorText: v.optional(v.string()),
