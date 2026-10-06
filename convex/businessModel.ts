@@ -14,7 +14,7 @@ export const businessTables = {
   businessMembers: defineTable({ teamId: v.id("businessTeams"), userId: v.string(), role: teamRole, joinedAt: v.number() })
     .index("by_user", ["userId"]).index("by_team_user", ["teamId", "userId"]),
   businessInvites: defineTable({ teamId: v.id("businessTeams"), email: v.optional(v.string()), tokenHash: v.string(), role: inviteRole, invitedBy: v.string(), expiresAt: v.number(), createdAt: v.number() })
-    .index("by_hash", ["tokenHash"]).index("by_email", ["email"]).index("by_team", ["teamId"]),
+    .index("by_hash", ["tokenHash"]).index("by_email", ["email"]).index("by_team", ["teamId"]).index("by_expiresAt", ["expiresAt"]),
   businessShares: defineTable({ teamId: v.id("businessTeams"), asset: teamAsset, ownerId: v.string(), sharedBy: v.string(), createdAt: v.number() })
     .index("by_team_asset", ["teamId", "asset"]).index("by_asset", ["asset"]).index("by_team_kind", ["teamId", "asset.kind"]),
   businessActivity: defineTable({ teamId: v.id("businessTeams"), actorId: v.string(), action: v.string(), detail: v.string(), createdAt: v.number() }).index("by_team", ["teamId"]),

@@ -59,7 +59,7 @@ export const communityTables = {
     versionId: v.id("lessonVersions"),
     blockId: v.string(),
     recordedAt: v.number(),
-  }).index("by_lessonId_and_userKey_and_day", ["lessonId", "userKey", "day"]),
+  }).index("by_lessonId_and_userKey_and_day", ["lessonId", "userKey", "day"]).index("by_recordedAt", ["recordedAt"]),
   learnProgress: defineTable({
     ...progressKey,
     userKey: v.string(),

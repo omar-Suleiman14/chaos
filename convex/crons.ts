@@ -88,5 +88,6 @@ crons.interval("prune webhook history", { hours: 1 }, internal.webhooks.pruneHis
 crons.interval("end idle live games", { minutes: 15 }, internal.live.expireIdle, {});
 crons.interval("prune service metrics", { hours: 1 }, makeFunctionReference<"mutation">("observability:prune"), {});
 crons.interval("clean up retained Learn source files", { hours: 1 }, makeFunctionReference<"mutation">("learnSourceRetention:cleanup"), {});
+crons.daily("sweep expired housekeeping rows", { hourUTC: 4, minuteUTC: 10 }, internal.maintenance.sweep, {});
 crons.daily("check data consistency", { hourUTC: 3, minuteUTC: 30 }, internal.consistency.start, {});
 export default crons;

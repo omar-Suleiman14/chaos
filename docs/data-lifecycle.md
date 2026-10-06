@@ -53,3 +53,21 @@ Context assembly is a selected export, not an automatic external transfer: bound
 ## Coverage and operational limits
 
 [Quiz lifecycle tests](../tests/integration/quizLifecycle.test.ts), [legacy compatibility tests](../tests/integration/legacyData.test.ts), [source retention tests](../tests/integration/learnSourceRetention.test.ts) and [Learn lifecycle tests](../tests/integration/learnLifecycle.test.ts) exercise preservation and deletion boundaries. Local regressions do not prove deployed cleanup execution, full account erasure or compliance. Account-data and closure requests are handled manually through Support after identity and scope checks; no account-wide destructive migration runs automatically.
+
+## Scheduled housekeeping
+
+Pure age-based policy, run by Convex crons in small batches (`convex/crons.ts`, `convex/maintenance.ts`); no model or heuristic decides what goes:
+
+| Data | Removed after |
+|---|---|
+| Abandoned form uploads, upload tickets | 1 day / at expiry |
+| Form resume drafts, access grants | at expiry |
+| Rate-limit windows, integration idempotency keys | 1 hour / 1 day |
+| Learn community view de-duplication rows | 30 days |
+| Expired team invitations | 30 days after expiry |
+| Lesson draft recovery copies | 90 days, except the newest copy per lesson |
+| Old usernames never used in a public link | 30 days after the change |
+| Rollout state for flags no longer in `lib/flags.ts` | next daily sweep |
+| Consistency reports | newest 30 kept |
+
+Old usernames that appeared in a public link (a form custom link, a classic quiz route or the public author listing) stay reserved permanently, up to 10 per account; username changes are limited to 5 per 30 days.
