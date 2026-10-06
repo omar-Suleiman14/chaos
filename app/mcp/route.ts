@@ -28,6 +28,19 @@ function withCors(response: Response): Response {
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
 }
 
+/**
+ * ChatGPT lists tools before sign-in and asks to connect per tool (securitySchemes and
+ * mcp/www_authenticate). Every other client (Claude, Claude Code, Codex, Cursor) only starts OAuth
+ * when the transport answers 401, so a token-less request from them gets one straight away.
+ */
+const PER_TOOL_AUTH_CLIENT = /^openai-mcp\//i;
+function signInRequired(request: Request): Response {
+  return withCors(Response.json(
+    { error: "invalid_request", error_description: "Sign in to Chaos to continue." },
+    { status: 401, headers: { "WWW-Authenticate": `Bearer resource_metadata="${resourceMetadataUrl(request)}"` } },
+  ));
+}
+
 function unauthorized(request: Request, description: string): Response {
   return withCors(Response.json(
     { error: "invalid_token", error_description: description },
@@ -124,6 +137,7 @@ const adminCapabilities = new Map<string, { admin: boolean; expires: number }>()
 async function handle(request: Request): Promise<Response> {
   const verified = await verifiedUser(request);
   if (verified instanceof Response) return verified;
+  if (!verified && !PER_TOOL_AUTH_CLIENT.test(request.headers.get("user-agent") ?? "")) return signInRequired(request);
   const userId = verified?.userId ?? null;
   // Which assistant is calling, so content it creates can say "Created with ChatGPT/Claude/…".
   const client = verified ? detectAiClient(verified.provider === "clerk" ? await oauthClientName(verified.clientId) : undefined, request.headers.get("user-agent")) : undefined;

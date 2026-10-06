@@ -26,7 +26,7 @@ it("registers course review annotations and strips client actor injection", asyn
  for (const [name, annotations] of Object.entries(expected)) {
   expect(byName[name].annotations).toMatchObject(annotations);
   expect(byName[name].inputSchema.properties).not.toHaveProperty("userId");
-  expect(byName[name]._meta?.securitySchemes).toEqual([{type:"oauth2",scopes:["openid","profile","email"]}]);
+  expect(byName[name]._meta?.securitySchemes).toEqual([{type:"oauth2",scopes:["openid","profile","email","offline_access"]}]);
   expect(byName[name].outputSchema).toBeDefined();
  }
  expect(byName.publish_course.description).toContain("Only on explicit user request");
@@ -38,7 +38,7 @@ it("registers course review annotations and strips client actor injection", asyn
  expect(byName.publish_course.annotations).toMatchObject({ readOnlyHint:false, destructiveHint:true, openWorldHint:true, idempotentHint:false });
  expect(byName.set_course_outline.annotations).toMatchObject({ destructiveHint:true, openWorldHint:false });
  expect(byName.get_course.annotations?.readOnlyHint).toBe(true);
- expect(byName.create_course._meta?.securitySchemes).toEqual([{type:"oauth2",scopes:["openid","profile","email"]}]);
+ expect(byName.create_course._meta?.securitySchemes).toEqual([{type:"oauth2",scopes:["openid","profile","email","offline_access"]}]);
  expect(byName.create_course.inputSchema.properties).not.toHaveProperty("userId");
  const result = await client.callTool({ name:"create_course", arguments:{title:"Course",userId:"foreign"} });
  expect(result.isError).toBeFalsy();

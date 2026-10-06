@@ -35,7 +35,12 @@ export const MCP_SERVER_VERSION = chaosIntegration.version;
 
 /** Chaos uses one permission set; Clerk issues the standard OpenID scopes. */
 export const MCP_SCOPES = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "betterauth" ? ["profile", "email"] : ["openid", "profile", "email"];
-const securitySchemes = [{ type: "oauth2", scopes: MCP_SCOPES }];
+/**
+ * What clients are told to request. offline_access gets them a refresh token from Clerk; without it the
+ * access token lapses after a day and Claude, Codex and ChatGPT show "authentication expired".
+ */
+export const MCP_REQUESTED_SCOPES = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "betterauth" ? MCP_SCOPES : [...MCP_SCOPES, "offline_access"];
+const securitySchemes = [{ type: "oauth2", scopes: MCP_REQUESTED_SCOPES }];
 
 const baseInstructions = `Chaos (chaos.fail) is where this person builds forms, surveys, quizzes, Learn lessons and courses, organises owned content in folders, and reads authorized published material and requested answers.
 - The Chaos app is free on every plan.

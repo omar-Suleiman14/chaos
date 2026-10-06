@@ -125,10 +125,10 @@ export function chatGptPackage(logo: LogoAssets): PackageFiles {
     }),
     "assets/icon.png": logo.png128,
     ...common("ChatGPT", integrationPlatforms.chatgpt.docsUrl, logo, [
-      "Unzip it to `~/plugins/chaos`.",
-      "Add the entry below to `~/.agents/plugins/marketplace.json`, then install Chaos from the plugin directory in Codex.",
+      `ChatGPT on the web, iPhone and Android: plugins only install in the desktop app, so add Chaos as an app instead. On chatgpt.com open Settings, Apps, Advanced settings and turn on Developer mode. Choose Create app, name it Chaos, enter ${chaos.mcpUrl}, pick OAuth and sign in to Chaos. The app then shows up in ChatGPT on your phone too.`,
+      "ChatGPT desktop and Codex: unzip this file to `~/plugins/chaos`.",
+      "Add the entry below to `~/.agents/plugins/marketplace.json`, then install Chaos from the plugin directory.",
       "Sign in to Chaos when asked and allow access.",
-      `In ChatGPT on the web, add Chaos as an app instead: Settings, Apps, Create, name it Chaos, enter ${chaos.mcpUrl} and choose OAuth.`,
     ], `
 \`\`\`json
 ${json({ name: "personal", plugins: [{ name: chaos.id, source: { source: "local", path: `./plugins/${chaos.id}` }, policy: { installation: "AVAILABLE", authentication: "ON_INSTALL" }, category: "Productivity" }] }).trim()}

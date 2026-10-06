@@ -772,13 +772,9 @@
       ]
      },
      "sourceId": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "pin": {
@@ -788,13 +784,9 @@
       "type": "string"
      },
      "joinUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "questionIndex": {
@@ -807,13 +799,9 @@
       "type": "number"
      },
      "questionEndsAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "number",
+       "null"
       ]
      },
      "settings": {
@@ -857,26 +845,18 @@
       "additionalProperties": false
      },
      "nextStepAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "description": "When autoplay moves on (ms since epoch); null when paused or not on an answer/leaderboard screen."
+      "description": "When autoplay moves on (ms since epoch); null when paused or not on an answer/leaderboard screen.",
+      "type": [
+       "number",
+       "null"
+      ]
      },
      "startsAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "description": "When the lobby countdown ends and the first question starts."
+      "description": "When the lobby countdown ends and the first question starts.",
+      "type": [
+       "number",
+       "null"
+      ]
      },
      "theme": {
       "anyOf": [
@@ -894,23 +874,15 @@
       "type": "string"
      },
      "endedAt": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsStatus": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "savedResponses": {
@@ -1119,7 +1091,7 @@
       "type": "string",
       "maxLength": 320,
       "format": "email",
-      "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
      },
      "role": {
       "anyOf": [
@@ -1607,13 +1579,9 @@
       "type": "string"
      },
      "shareUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsUrl": {
@@ -2432,13 +2400,9 @@
       "type": "string"
      },
      "shareUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsUrl": {
@@ -4498,13 +4462,9 @@
       ]
      },
      "sourceId": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "pin": {
@@ -4514,13 +4474,9 @@
       "type": "string"
      },
      "joinUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "questionIndex": {
@@ -4533,13 +4489,9 @@
       "type": "number"
      },
      "questionEndsAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "number",
+       "null"
       ]
      },
      "settings": {
@@ -4583,26 +4535,18 @@
       "additionalProperties": false
      },
      "nextStepAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "description": "When autoplay moves on (ms since epoch); null when paused or not on an answer/leaderboard screen."
+      "description": "When autoplay moves on (ms since epoch); null when paused or not on an answer/leaderboard screen.",
+      "type": [
+       "number",
+       "null"
+      ]
      },
      "startsAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "description": "When the lobby countdown ends and the first question starts."
+      "description": "When the lobby countdown ends and the first question starts.",
+      "type": [
+       "number",
+       "null"
+      ]
      },
      "theme": {
       "anyOf": [
@@ -4620,23 +4564,15 @@
       "type": "string"
      },
      "endedAt": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsStatus": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "savedResponses": {
@@ -5203,13 +5139,9 @@
       "type": "boolean"
      },
      "publishedAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "number",
+       "null"
       ]
      },
      "canPrivate": {
@@ -5733,13 +5665,9 @@
       "type": "string"
      },
      "shareUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsUrl": {
@@ -5920,13 +5848,9 @@
       ]
      },
      "sourceId": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "pin": {
@@ -5936,13 +5860,9 @@
       "type": "string"
      },
      "joinUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "questionIndex": {
@@ -5955,13 +5875,9 @@
       "type": "number"
      },
      "questionEndsAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "number",
+       "null"
       ]
      },
      "settings": {
@@ -6005,26 +5921,18 @@
       "additionalProperties": false
      },
      "nextStepAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "description": "When autoplay moves on (ms since epoch); null when paused or not on an answer/leaderboard screen."
+      "description": "When autoplay moves on (ms since epoch); null when paused or not on an answer/leaderboard screen.",
+      "type": [
+       "number",
+       "null"
+      ]
      },
      "startsAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "description": "When the lobby countdown ends and the first question starts."
+      "description": "When the lobby countdown ends and the first question starts.",
+      "type": [
+       "number",
+       "null"
+      ]
      },
      "theme": {
       "anyOf": [
@@ -6042,23 +5950,15 @@
       "type": "string"
      },
      "endedAt": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsStatus": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "savedResponses": {
@@ -7442,13 +7342,9 @@
       "type": "number"
      },
      "nextOffset": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "number",
+       "null"
       ]
      }
     },
@@ -7939,13 +7835,9 @@
       "type": "string"
      },
      "shareUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsUrl": {
@@ -8022,13 +7914,9 @@
     "type": "object",
     "properties": {
      "visible": {
-      "anyOf": [
-       {
-        "type": "boolean"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "boolean",
+       "null"
       ]
      }
     },
@@ -8205,13 +8093,9 @@
       ]
      },
      "sourceId": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "pin": {
@@ -8221,13 +8105,9 @@
       "type": "string"
      },
      "joinUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "questionIndex": {
@@ -8240,13 +8120,9 @@
       "type": "number"
      },
      "questionEndsAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "number",
+       "null"
       ]
      },
      "settings": {
@@ -8290,26 +8166,18 @@
       "additionalProperties": false
      },
      "nextStepAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "description": "When autoplay moves on (ms since epoch); null when paused or not on an answer/leaderboard screen."
+      "description": "When autoplay moves on (ms since epoch); null when paused or not on an answer/leaderboard screen.",
+      "type": [
+       "number",
+       "null"
+      ]
      },
      "startsAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "description": "When the lobby countdown ends and the first question starts."
+      "description": "When the lobby countdown ends and the first question starts.",
+      "type": [
+       "number",
+       "null"
+      ]
      },
      "theme": {
       "anyOf": [
@@ -8327,23 +8195,15 @@
       "type": "string"
      },
      "endedAt": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsStatus": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "savedResponses": {
@@ -8957,7 +8817,7 @@
       "type": "string",
       "maxLength": 254,
       "format": "email",
-      "pattern": "^(?!\\.)(?!.*\\.\\.)([A-Za-z0-9_'+\\-\\.]*)[A-Za-z0-9_+-]@([A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
+      "pattern": "^(?:[A-Za-z0-9_'+\\-]+\\.)*[A-Za-z0-9_'+\\-]*[A-Za-z0-9_+-]@(?:[A-Za-z0-9][A-Za-z0-9\\-]*\\.)+[A-Za-z]{2,}$"
      },
      "role": {
       "type": "string",
@@ -9079,13 +8939,9 @@
       }
      },
      "nextCursor": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      }
     },
@@ -9510,13 +9366,9 @@
       }
      },
      "nextCursor": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      }
     },
@@ -9818,13 +9670,9 @@
          ]
         },
         "sourceId": {
-         "anyOf": [
-          {
-           "type": "string"
-          },
-          {
-           "type": "null"
-          }
+         "type": [
+          "string",
+          "null"
          ]
         },
         "pin": {
@@ -9834,13 +9682,9 @@
          "type": "string"
         },
         "joinUrl": {
-         "anyOf": [
-          {
-           "type": "string"
-          },
-          {
-           "type": "null"
-          }
+         "type": [
+          "string",
+          "null"
          ]
         },
         "questionIndex": {
@@ -9853,13 +9697,9 @@
          "type": "number"
         },
         "questionEndsAt": {
-         "anyOf": [
-          {
-           "type": "number"
-          },
-          {
-           "type": "null"
-          }
+         "type": [
+          "number",
+          "null"
          ]
         },
         "settings": {
@@ -9903,26 +9743,18 @@
          "additionalProperties": false
         },
         "nextStepAt": {
-         "anyOf": [
-          {
-           "type": "number"
-          },
-          {
-           "type": "null"
-          }
-         ],
-         "description": "When autoplay moves on (ms since epoch); null when paused or not on an answer/leaderboard screen."
+         "description": "When autoplay moves on (ms since epoch); null when paused or not on an answer/leaderboard screen.",
+         "type": [
+          "number",
+          "null"
+         ]
         },
         "startsAt": {
-         "anyOf": [
-          {
-           "type": "number"
-          },
-          {
-           "type": "null"
-          }
-         ],
-         "description": "When the lobby countdown ends and the first question starts."
+         "description": "When the lobby countdown ends and the first question starts.",
+         "type": [
+          "number",
+          "null"
+         ]
         },
         "theme": {
          "anyOf": [
@@ -9940,23 +9772,15 @@
          "type": "string"
         },
         "endedAt": {
-         "anyOf": [
-          {
-           "type": "string"
-          },
-          {
-           "type": "null"
-          }
+         "type": [
+          "string",
+          "null"
          ]
         },
         "resultsStatus": {
-         "anyOf": [
-          {
-           "type": "string"
-          },
-          {
-           "type": "null"
-          }
+         "type": [
+          "string",
+          "null"
          ]
         },
         "savedResponses": {
@@ -9993,13 +9817,9 @@
       }
      },
      "nextCursor": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      }
     },
@@ -10224,13 +10044,9 @@
       }
      },
      "nextBeforeNumber": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "number",
+       "null"
       ]
      }
     },
@@ -10420,13 +10236,9 @@
       }
      },
      "nextCursor": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      }
     },
@@ -10479,13 +10291,9 @@
          "type": "string"
         },
         "username": {
-         "anyOf": [
-          {
-           "type": "string"
-          },
-          {
-           "type": "null"
-          }
+         "type": [
+          "string",
+          "null"
          ]
         },
         "seed": {
@@ -10495,13 +10303,9 @@
          "type": "number"
         },
         "context": {
-         "anyOf": [
-          {
-           "type": "string"
-          },
-          {
-           "type": "null"
-          }
+         "type": [
+          "string",
+          "null"
          ]
         }
        },
@@ -10598,13 +10402,9 @@
       "type": "string"
      },
      "splitCursor": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "pageStatus": {
@@ -10679,13 +10479,9 @@
          "type": "string"
         },
         "username": {
-         "anyOf": [
-          {
-           "type": "string"
-          },
-          {
-           "type": "null"
-          }
+         "type": [
+          "string",
+          "null"
          ]
         },
         "seed": {
@@ -10716,13 +10512,9 @@
       "type": "string"
      },
      "splitCursor": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "pageStatus": {
@@ -10809,13 +10601,9 @@
       "type": "string"
      },
      "shareUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsUrl": {
@@ -10841,16 +10629,10 @@
           "type": "string"
          },
          "additionalProperties": {
-          "anyOf": [
-           {
-            "type": "string"
-           },
-           {
-            "type": "number"
-           },
-           {
-            "type": "boolean"
-           }
+          "type": [
+           "string",
+           "number",
+           "boolean"
           ]
          }
         }
@@ -10859,13 +10641,9 @@
       }
      },
      "nextCursor": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      }
     },
@@ -11622,13 +11400,9 @@
       "type": "string"
      },
      "shareUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsUrl": {
@@ -12846,13 +12620,9 @@
          "type": "string"
         },
         "shareUrl": {
-         "anyOf": [
-          {
-           "type": "string"
-          },
-          {
-           "type": "null"
-          }
+         "type": [
+          "string",
+          "null"
          ]
         },
         "resultsUrl": {
@@ -12985,13 +12755,9 @@
          "type": "string"
         },
         "parentId": {
-         "anyOf": [
-          {
-           "type": "string"
-          },
-          {
-           "type": "null"
-          }
+         "type": [
+          "string",
+          "null"
          ]
         }
        },
@@ -13011,13 +12777,9 @@
       "type": "string"
      },
      "splitCursor": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "pageStatus": {
@@ -13222,13 +12984,9 @@
       }
      },
      "nextCursor": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      }
     },
@@ -13599,13 +13357,9 @@
              ]
             },
             "value": {
-             "anyOf": [
-              {
-               "type": "string"
-              },
-              {
-               "type": "number"
-              }
+             "type": [
+              "string",
+              "number"
              ]
             }
            },
@@ -13701,23 +13455,15 @@
         ]
        },
        "opensAt": {
-        "anyOf": [
-         {
-          "type": "number"
-         },
-         {
-          "type": "null"
-         }
+        "type": [
+         "number",
+         "null"
         ]
        },
        "closesAt": {
-        "anyOf": [
-         {
-          "type": "number"
-         },
-         {
-          "type": "null"
-         }
+        "type": [
+         "number",
+         "null"
         ]
        },
        "responseLimit": {
@@ -13901,13 +13647,9 @@
       "type": "string"
      },
      "shareUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsUrl": {
@@ -14010,13 +13752,9 @@
       "type": "string"
      },
      "shareUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsUrl": {
@@ -14195,13 +13933,9 @@
       "type": "string"
      },
      "shareUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsUrl": {
@@ -14325,13 +14059,9 @@
       ]
      },
      "sourceId": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "pin": {
@@ -14341,13 +14071,9 @@
       "type": "string"
      },
      "joinUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "questionIndex": {
@@ -14360,13 +14086,9 @@
       "type": "number"
      },
      "questionEndsAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "number",
+       "null"
       ]
      },
      "settings": {
@@ -14410,26 +14132,18 @@
       "additionalProperties": false
      },
      "nextStepAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "description": "When autoplay moves on (ms since epoch); null when paused or not on an answer/leaderboard screen."
+      "description": "When autoplay moves on (ms since epoch); null when paused or not on an answer/leaderboard screen.",
+      "type": [
+       "number",
+       "null"
+      ]
      },
      "startsAt": {
-      "anyOf": [
-       {
-        "type": "number"
-       },
-       {
-        "type": "null"
-       }
-      ],
-      "description": "When the lobby countdown ends and the first question starts."
+      "description": "When the lobby countdown ends and the first question starts.",
+      "type": [
+       "number",
+       "null"
+      ]
      },
      "theme": {
       "anyOf": [
@@ -14447,23 +14161,15 @@
       "type": "string"
      },
      "endedAt": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsStatus": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "savedResponses": {
@@ -15269,13 +14975,9 @@
       "type": "string"
      },
      "shareUrl": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "resultsUrl": {
@@ -16292,13 +15994,9 @@
       "type": "string"
      },
      "splitCursor": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "pageStatus": {
@@ -16399,13 +16097,9 @@
       "type": "string"
      },
      "splitCursor": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "pageStatus": {
@@ -16497,13 +16191,9 @@
       "type": "string"
      },
      "splitCursor": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "pageStatus": {
@@ -16604,13 +16294,9 @@
       "type": "string"
      },
      "splitCursor": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "pageStatus": {
@@ -16775,13 +16461,9 @@
       "type": "string"
      },
      "splitCursor": {
-      "anyOf": [
-       {
-        "type": "string"
-       },
-       {
-        "type": "null"
-       }
+      "type": [
+       "string",
+       "null"
       ]
      },
      "pageStatus": {

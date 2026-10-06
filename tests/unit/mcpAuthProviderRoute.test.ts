@@ -53,4 +53,13 @@ describe("MCP auth provider routing", () => {
     expect(mocks.verify).not.toHaveBeenCalled();
     expect(JSON.parse(mocks.backend.mock.calls[0][1].body).userId).toBe("user_original");
   });
+  it("answers 401 to token-less clients that sign in at the transport, but lets ChatGPT list tools first", async () => {
+    const { POST } = await import("@/app/mcp/route");
+    const claude = await POST(new Request("https://chaos.example/mcp", { method: "POST", headers: { "User-Agent": "claude-code/2.1" } }));
+    expect(claude.status).toBe(401);
+    expect(claude.headers.get("WWW-Authenticate")).toBe('Bearer resource_metadata="https://chaos.example/.well-known/oauth-protected-resource/mcp"');
+    const chatgpt = await POST(new Request("https://chaos.example/mcp", { method: "POST", headers: { "User-Agent": "openai-mcp/1.0.0" } }));
+    expect(chatgpt.status).toBe(200);
+    expect(mocks.backend).not.toHaveBeenCalled();
+  });
 });

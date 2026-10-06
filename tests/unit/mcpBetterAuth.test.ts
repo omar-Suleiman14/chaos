@@ -7,7 +7,7 @@ const mocks = vi.hoisted(() => ({ keys: undefined as unknown, clerkMetadata: vi.
 vi.mock("jose", async (original) => ({ ...await original<typeof import("jose")>(), createRemoteJWKSet: vi.fn(() => mocks.keys) }));
 vi.mock("@clerk/mcp-tools/server", () => ({ generateClerkProtectedResourceMetadata: mocks.clerkMetadata }));
 // OAuth verification is independent of server/tool registration.
-vi.mock("@/lib/mcp/server", () => ({ MCP_SCOPES: ["profile", "email"] }));
+vi.mock("@/lib/mcp/server", () => ({ MCP_SCOPES: ["profile", "email"], MCP_REQUESTED_SCOPES: ["profile", "email"] }));
 
 const issuer = "https://chaos.example";
 let key: Awaited<ReturnType<typeof generateKeyPair>>["privateKey"];

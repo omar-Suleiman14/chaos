@@ -33,7 +33,7 @@ describe("Chaos MCP server", () => {
       expect(typeof tool.annotations?.readOnlyHint).toBe("boolean");
       expect(typeof tool.annotations?.destructiveHint).toBe("boolean");
       expect(typeof tool.annotations?.openWorldHint).toBe("boolean");
-      expect(tool._meta?.securitySchemes).toEqual([{ type: "oauth2", scopes: ["openid", "profile", "email"] }]);
+      expect(tool._meta?.securitySchemes).toEqual([{ type: "oauth2", scopes: ["openid", "profile", "email", "offline_access"] }]);
       expect(tool.outputSchema).toBeDefined();
       expect(tool._meta?.["chaos/permission"]).toBe(permissionForTool(tool.name));
     }

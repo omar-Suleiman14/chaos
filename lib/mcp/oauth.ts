@@ -1,6 +1,6 @@
 import { createRemoteJWKSet, jwtVerify } from "jose";
 import { oidcActorId } from "@/lib/auth/identity";
-import { MCP_SCOPES } from "./server";
+import { MCP_REQUESTED_SCOPES, MCP_SCOPES } from "./server";
 
 /** Public origin of this deployment (Vercel sets x-forwarded-host). */
 export function publicOrigin(request: Request): string {
@@ -94,7 +94,7 @@ export async function protectedResourceResponse(request: Request): Promise<Respo
       publishableKey,
       resourceUrl: resourceUrl(request),
       properties: {
-        scopes_supported: MCP_SCOPES,
+        scopes_supported: MCP_REQUESTED_SCOPES,
         resource_name: "Chaos",
         resource_documentation: `${publicOrigin(request)}/chatgpt`,
         bearer_methods_supported: ["header"],

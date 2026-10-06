@@ -3,7 +3,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 const mocks = vi.hoisted(() => ({ clerk: vi.fn(() => Response.json({ issuer: "https://clerk.example" })) }));
 vi.mock("@clerk/mcp-tools/next", () => ({ authServerMetadataHandlerClerk: () => mocks.clerk }));
-vi.mock("@/lib/mcp/server", () => ({ MCP_SCOPES: ["openid", "profile", "email"] }));
+vi.mock("@/lib/mcp/server", () => ({ MCP_SCOPES: ["openid", "profile", "email"], MCP_REQUESTED_SCOPES: ["openid", "profile", "email", "offline_access"] }));
 afterEach(() => { vi.unstubAllEnvs(); vi.unstubAllGlobals(); vi.resetModules(); vi.clearAllMocks(); });
 
 const issuer = "https://chaos.example";

@@ -35,7 +35,7 @@ it("advertises bounded organization reads, validates outputs and strips tool act
       expect(descriptor.inputSchema.properties).not.toHaveProperty("userId");
       expect(descriptor.outputSchema).toBeDefined();
       expect(descriptor._meta?.securitySchemes).toEqual([
-        { type: "oauth2", scopes: ["openid", "profile", "email"] },
+        { type: "oauth2", scopes: ["openid", "profile", "email", "offline_access"] },
       ]);
     }
     const mappingInput = {
