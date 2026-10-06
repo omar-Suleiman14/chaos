@@ -22,7 +22,7 @@ const courses = [{ id: "course1", title: "Night sky course", description: "", le
 const games: { _id: string; title: string; formId: string; state: string; createdAt: number }[] = [];
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/dashboard" }));
 vi.mock("@/components/ThemeProvider", () => ({ useTheme: () => ({ toggleTheme: vi.fn() }) }));
-vi.mock("@clerk/nextjs", () => ({ useUser: () => ({ isLoaded: false }), useClerk: () => ({ signOut: async () => {} }), UserButton: () => null }));
+vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ isLoaded: false, userId: null }), useUser: () => ({ isLoaded: false }), useClerk: () => ({ signOut: async () => {} }), UserButton: () => null }));
 vi.mock("convex/react", () => ({
   useConvex: () => learnBackend,
   useConvexAuth: () => ({ isAuthenticated: false, isLoading: true }),

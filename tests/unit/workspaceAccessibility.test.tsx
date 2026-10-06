@@ -11,7 +11,7 @@ const mocks = vi.hoisted(() => ({ push: vi.fn(), toggleTheme: vi.fn() }));
 const learnBackend = vi.hoisted(() => ({ query: vi.fn(), mutation: vi.fn(), loadMore: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: mocks.push }), usePathname: () => "/dashboard" }));
 vi.mock("@/components/ThemeProvider", () => ({ useTheme: () => ({ toggleTheme: mocks.toggleTheme }) }));
-vi.mock("@clerk/nextjs", () => ({ useUser: () => ({ isLoaded: false }), useClerk: () => ({ signOut: async () => {} }), UserButton: () => null }));
+vi.mock("@clerk/nextjs", () => ({ useAuth: () => ({ isLoaded: false, userId: null }), useUser: () => ({ isLoaded: false }), useClerk: () => ({ signOut: async () => {} }), UserButton: () => null }));
 vi.mock("convex/react", () => ({
   useConvex: () => learnBackend,
   useConvexAuth: () => ({ isAuthenticated: false, isLoading: true }),

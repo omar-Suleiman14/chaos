@@ -8,7 +8,8 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Plus } from "lucide-react";
 import { useMutation } from "convex/react";
-import { useQuery } from "@/lib/convexCache";
+import { useConfirmedQuery } from "@/lib/confirmedQuery";
+import { CacheState } from "@/components/workspace/CacheState";
 import { api } from "@/convex/_generated/api";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
@@ -24,7 +25,8 @@ export default function CoursesHub({
   const t = useCopy(courseCopy);
   const { locale } = useLocale();
   const router = useRouter();
-  const courses = useQuery(api.courses.listMine);
+  const coursesQuery = useConfirmedQuery(api.courses.listMine);
+  const courses = coursesQuery.data;
   const create = useMutation(api.courses.create);
   const setArchived = useMutation(api.courses.setArchived);
   const [busy, setBusy] = useState(false);
@@ -39,7 +41,8 @@ export default function CoursesHub({
       setBusy(false);
     }
   };
-  if (courses === undefined) return <PageSkeleton label={t.loading} />;
+  // An empty cached list proves nothing; wait for Convex rather than offer "create your first course".
+  if (courses === undefined || (!coursesQuery.confirmed && !courses.length)) return <PageSkeleton label={t.loading} />;
   const shown = filterLearningRows(courses.filter(c => !c.archived).map(c => ({ ...c, count: c.lessons, href: `/dashboard/courses/${c.id}` })), filters);
   const filtered = !!filters.search || !!filters.statuses?.length;
   const archive = async (course: typeof shown[number]) => {
@@ -57,7 +60,7 @@ export default function CoursesHub({
   const rowActions = (course: typeof shown[number]) => <LearningLibraryActions row={course} disabled={busy}
     previewHref={course.published ? `/learn/courses/${course.id}` : undefined} onArchive={() => void archive(course)} />;
   return (
-    <div>
+    <CacheState confirmed={coursesQuery.confirmed}>
       {!embedded && <header className="ws-page-header">
         {embedded ? (
           <p className="ws-page-subtitle">{t.subtitle}</p>
@@ -141,6 +144,6 @@ export default function CoursesHub({
           </article>
         ))}
       </div>)}
-    </div>
+    </CacheState>
   );
 }

@@ -1118,3 +1118,10 @@ body.noise-bg:has(.workspace-ui)::before { display: none; }
 .ws-share__target { display: grid; justify-items: center; gap: 6px; padding: 12px 6px; border: 1px solid var(--ws-line); border-radius: 10px; font-size: 13px; color: var(--on-background); text-decoration: none; background: var(--ws-card, var(--background)); }
 .ws-share__target:hover { background: var(--ws-hover); }
 @media (max-width: 560px) { .ws-share__copy { flex-direction: column; } .ws-share__copy .ws-btn { align-self: stretch; justify-content: center; min-height: 44px; } .ws-share__targets { grid-template-columns: repeat(3, 1fr); } }
+
+/* Device-cached content (lib/confirmedQuery.ts): shown at once, faded and
+   without row actions until Convex confirms it, then full opacity. */
+.cache-state { transition: opacity 180ms ease-out; }
+.cache-state[data-cache-state="cached"] { opacity: 0.55; }
+.cache-state[data-cache-state="cached"] button[aria-haspopup="menu"] { pointer-events: none; }
+@media (prefers-reduced-motion: reduce) { .cache-state { transition: none; } }

@@ -34,6 +34,8 @@ import { LibrarySkeleton } from "@/components/workspace/Skeletons";
 import { usePinned } from "@/components/workspace/usePinned";
 import { useCreateForm } from "@/components/workspace/useCreateForm";
 import { useUsableMark } from "@/lib/journeys";
+import { useConfirmedQuery } from "@/lib/confirmedQuery";
+import { CacheState } from "@/components/workspace/CacheState";
 
 const kinds = ["Forms", "Quizzes", "Flashcards", "Courses", "Games"] as const;
 type Kind = (typeof kinds)[number];
@@ -155,8 +157,11 @@ export default function CreatorLibrary() {
   const t = useCopy(copy);
   const { locale } = useLocale();
   const router = useRouter();
-  const forms = useQuery(api.forms.listMyForms);
-  const quizzes = useQuery(api.quizFunctions.getMyQuizzes);
+  // Last-known lists render at once, faded until Convex confirms them (lib/confirmedQuery.ts).
+  const formsQuery = useConfirmedQuery(api.forms.listMyForms);
+  const quizzesQuery = useConfirmedQuery(api.quizFunctions.getMyQuizzes);
+  const forms = formsQuery.data, quizzes = quizzesQuery.data;
+  const confirmed = formsQuery.confirmed && quizzesQuery.confirmed;
   const templates = useQuery(api.forms.listTemplates);
   const deleteQuiz = useMutation(api.quizFunctions.deleteQuiz);
   const setQuizArchived = useMutation(api.quizFunctions.setQuizArchived);
@@ -378,8 +383,10 @@ export default function CreatorLibrary() {
   const groupLabel = (group: string) => (group === SHARED_GROUP ? t.sharedGroup : group || t.ungrouped);
   const kindLabel = (row: Row) => (row.kind === "legacy" ? t.oldQuiz : row.kind === "quiz" ? t.quiz : t.form);
 
-  const loading = forms === undefined || quizzes === undefined;
-  useUsableMark("dashboard", !loading);
+  // An empty cached copy proves nothing, so it waits for Convex instead of offering "create your first form".
+  const cachedEmpty = !confirmed && !(forms?.owned.length || forms?.shared.length || quizzes?.length);
+  const loading = forms === undefined || quizzes === undefined || cachedEmpty;
+  useUsableMark("dashboard", !loading && confirmed);
   const newCourse = async () => {
     try { const id = await createCourse({ language: locale }); router.push(`/dashboard/courses/${id}`); }
     catch (err) { toast.error(err); }
@@ -454,6 +461,7 @@ export default function CreatorLibrary() {
         </WsMenu>}
       </div>
 
+      <CacheState confirmed={confirmed || kind === "Courses" || kind === "Flashcards" || kind === "Games"}>
       {kind === "Courses" ? <CoursesHub embedded view={view} search={search} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Flashcards" ? <FlashcardsHub embedded view={view} search={search} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
         <div className="ws-empty ws-page">
           <span className="ws-empty__art"><Plus size={24} /></span>
@@ -516,6 +524,7 @@ export default function CreatorLibrary() {
           </table>
         </div>
       )}
+      </CacheState>
 
 
       {dialog === "templates" && (
