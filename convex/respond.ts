@@ -22,6 +22,7 @@ import { emitWebhookEvent, formResponseData } from "./webhookEvents";
 import { releasedDefinition, releasedFieldIds, nextFieldReleaseAt, releasedAnswers, assertReleasedAnswers } from "./formRelease";
 import { captureHidden, captureTypedHidden } from "./formRespondent";
 import { teamOrEmailCheck } from "./businessAccess";
+import { changeFormCounts, readFormCounts } from "./formCounts";
 
 export const DEFAULT_FORM_RESPONSE_LIMIT = planLimits.free.responsesPerForm;
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -117,7 +118,7 @@ export const getPublicForm = query({
       if (when === "closed") return { state: "closed" as const, ...base, message: form.settings.closedMessage ?? null, ...schedule, reason: "scheduled" as const };
     }
     const cap = await responseCap(ctx, form);
-    if (!editingClosed && cap !== null && form.responseCount >= cap) return { state: "full" as const, ...base, message: form.settings.closedMessage ?? null };
+    if (!editingClosed && cap !== null && (await readFormCounts(ctx, form)).responseCount >= cap) return { state: "full" as const, ...base, message: form.settings.closedMessage ?? null };
     const identity = await getAuthIdentity(ctx);
     if (form.settings.access === "signed_in" && !identity) return { state: "sign_in" as const, ...base };
     if (form.settings.access === "signed_in") {
@@ -253,8 +254,7 @@ async function adjustAggregates(ctx: MutationCtx, formId: Id<"forms">, def: Form
 /** Counters and aggregates for a completed, non-spam response entering or leaving the totals. */
 export async function countResponse(ctx: MutationCtx, form: Doc<"forms">, response: Doc<"formResponses">, def: FormDefinition, sign: 1 | -1) {
   await adjustAggregates(ctx, form._id, def, response.answers as Answers, sign, response.durationMs);
-  const fresh = (await ctx.db.get("forms", form._id))!;
-  await authorDb(ctx).patch("forms", form._id, { responseCount: Math.max(0, fresh.responseCount + sign), ...(sign === 1 ? { lastResponseAt: Date.now() } : {}) });
+  await changeFormCounts(ctx, form, { responses: sign, ...(sign === 1 ? { lastResponseAt: Date.now() } : {}) });
 }
 
 export async function definitionForResponse(ctx: Ctx, response: Doc<"formResponses">): Promise<FormDefinition | null> {
@@ -271,7 +271,8 @@ function validationFailure(errors: Record<string, string>): never {
 
 async function afterCompletion(ctx: MutationCtx, form: Doc<"forms">, response: Doc<"formResponses">, def: FormDefinition) {
   const cap = await responseCap(ctx, form, Date.now());
-  const count = form.responseCount + 1;
+  // countResponse ran first, so this already includes the new response.
+  const count = (await readFormCounts(ctx, form)).responseCount;
   if (form.settings.notifyOnResponse) {
     await notify(ctx, form.ownerId, "response", `New response to “${form.title}” (${count} total).`, `response:${response._id}`, form._id);
   }
@@ -361,7 +362,7 @@ export const submitResponse = mutation({
 
     if (args.final) {
       const cap = await responseCap(ctx, form, Date.now());
-      if (cap !== null && form.responseCount >= cap) throw new Error("FORM_FULL: This form has reached its response limit. Your answers were not submitted; the organiser has been told the form is full.");
+      if (cap !== null && (await readFormCounts(ctx, form)).responseCount >= cap) throw new Error("FORM_FULL: This form has reached its response limit. Your answers were not submitted; the organiser has been told the form is full.");
     }
     if (identity && form.settings.onePerPerson && args.final) {
       const prior = await ctx.db
@@ -407,7 +408,7 @@ export const submitResponse = mutation({
       await ctx.db.patch("formResponses", existing._id, record);
       responseId = existing._id;
       receiptCode = existing.receiptCode;
-      if (args.final) await authorDb(ctx).patch("forms", form._id, { partialCount: Math.max(0, form.partialCount - 1) });
+      if (args.final) await changeFormCounts(ctx, form, { partials: -1 });
     } else {
       receiptCode = randomCode(8).toUpperCase();
       responseId = await ctx.db.insert("formResponses", {
@@ -423,7 +424,7 @@ export const submitResponse = mutation({
         reviewed: false,
         tags: [],
       });
-      if (!args.final) await authorDb(ctx).patch("forms", form._id, { partialCount: form.partialCount + 1 });
+      if (!args.final) await changeFormCounts(ctx, form, { partials: 1 });
     }
     for (const upload of uploads.docs) if (!upload.responseId) await ctx.db.patch("formUploads", upload._id, { responseId });
 

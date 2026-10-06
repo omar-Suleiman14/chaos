@@ -21,6 +21,7 @@ import { insertNewUser } from "./quizFunctions";
 import { consumeRate, logActivity } from "./serverUtils";
 import { emitFormStatusChange } from "./webhookEvents";
 import { registerMcpGames } from "./mcpGames";
+import { withFormCounts, withOwnerFormCounts } from "./formCounts";
 
 type Ctx = QueryCtx | MutationCtx;
 type Role = "owner" | "editor" | "viewer";
@@ -94,7 +95,7 @@ async function loadItem(ctx: Ctx, userId: string, ref: string, minimum: Role = "
     const role = form ? await formRole(ctx, form, userId) : null;
     if (form && role) {
       if (roleRank[role] < roleRank[minimum]) fail("FORBIDDEN", `You are a ${role} on this form; this needs ${minimum} access.`);
-      return { kind: "form", ref: `form_${form._id}`, doc: form, role };
+      return { kind: "form", ref: `form_${form._id}`, doc: await withFormCounts(ctx, form), role };
     }
   }
   if (match && match[1] !== "form") {
@@ -168,7 +169,10 @@ export const searchForms = internalQuery({
     const filtered = items
       .filter((i) => matches(i.doc.title) && statusOk(i.kind === "form" ? i.doc.status : quizStatus(i.doc)))
       .sort((a, b) => b.doc.updatedAt - a.doc.updatedAt);
-    return { total: filtered.length, items: filtered.slice(0, limit).map(summary) };
+    const shown = filtered.slice(0, limit);
+    const counted = new Map((await withOwnerFormCounts(ctx, args.userId, shown.flatMap((i) => (i.kind === "form" ? [i.doc] : [])))).map((doc) => [doc._id as string, doc]));
+    const page = shown.map((i) => (i.kind === "form" ? { ...i, doc: counted.get(i.doc._id)! } : i));
+    return { total: filtered.length, items: page.map(summary) };
   },
 });
 
@@ -381,7 +385,7 @@ export const updateForm = internalMutation({
     const fresh = (await ctx.db.get("forms", form._id))!;
     const report = checkDefinition(definition);
     return {
-      ...summary({ ...item, doc: fresh }),
+      ...summary({ ...item, doc: await withFormCounts(ctx, fresh) }),
       revision: fresh.draftRevision,
       readyToPublish: report.errors.length === 0,
       problems: report.errors,
@@ -413,7 +417,7 @@ export const publishForm = internalMutation({
     }
     const fresh = (await ctx.db.get("forms", form._id))!;
     return {
-      ...summary({ ...item, doc: fresh }),
+      ...summary({ ...item, doc: await withFormCounts(ctx, fresh) }),
       version: fresh.publishedVersion,
       note: fresh.status === "closed" ? "Published, but the form is closed. Use set_form_status with reopen to accept responses." : "Live. Share shareUrl with respondents.",
     };

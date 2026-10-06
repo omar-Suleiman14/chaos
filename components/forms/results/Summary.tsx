@@ -2,8 +2,10 @@
 
 import { useMemo, useState } from "react";
 import type { FunctionReturnType } from "convex/server";
+import { useQuery } from "convex/react";
 import { Search } from "lucide-react";
-import type { api } from "@/convex/_generated/api";
+import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
 import { formatDate, formatNumber, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
 import { BarList, Columns, Sparkline, lastDays } from "./charts";
@@ -60,17 +62,22 @@ export function SummaryHeader({ analysis }: { analysis: Analysis | undefined }) 
   );
 }
 
-function TextAnswers({ field }: { field: FieldResult }) {
+/** The summary carries a few answers per question; the rest load when someone opens or searches them. */
+function TextAnswers({ field, formId }: { field: FieldResult; formId?: Id<"forms"> }) {
   const t = useCopy(resultsCopy);
   const { locale } = useLocale();
   const [query, setQuery] = useState("");
-  const texts = field.texts ?? [];
+  const [expanded, setExpanded] = useState(false);
+  const preview = field.texts ?? [];
+  const more = !!formId && field.textCount > preview.length;
+  const all = useQuery(api.formResults.getTextAnswers, more && (expanded || query.trim()) ? { formId, fieldId: field.fieldId } : "skip");
+  const texts = all ?? preview;
   const needle = query.trim().toLocaleLowerCase();
   const shown = needle ? texts.filter((x) => x.text.toLocaleLowerCase().includes(needle)) : texts;
   if (!texts.length) return <p className="ws-muted">{t.noTextAnswers}</p>;
   return (
     <div className="grid gap-2">
-      {texts.length > 5 && (
+      {(texts.length > 5 || more) && (
         <label className="ws-search !max-w-none">
           <span className="sr-only">{t.searchAnswers}</span>
           <Search size={16} aria-hidden="true" />
@@ -86,12 +93,13 @@ function TextAnswers({ field }: { field: FieldResult }) {
         ))}
         {!shown.length && <li className="ws-muted">{t.noTextMatches}</li>}
       </ul>
-      {field.textCount > texts.length && <p className="ws-muted text-[13px]">{t.showingLatest(texts.length, field.textCount)}</p>}
+      {more && !all && !query.trim() && <button type="button" className="ws-btn ws-btn--ghost justify-self-start" onClick={() => setExpanded(true)} disabled={expanded}>{t.showAllAnswers(field.textCount)}</button>}
+      {all && field.textCount > texts.length && <p className="ws-muted text-[13px]">{t.showingLatest(texts.length, field.textCount)}</p>}
     </div>
   );
 }
 
-function QuestionCard({ field, analysis, index }: { field: FieldResult; analysis: Analysis; index: number }) {
+function QuestionCard({ field, analysis, index, formId }: { field: FieldResult; analysis: Analysis; index: number; formId?: Id<"forms"> }) {
   const t = useCopy(resultsCopy);
   const { locale } = useLocale();
   const def = analysis.definition.fields.find((x) => x.id === field.fieldId);
@@ -157,7 +165,7 @@ function QuestionCard({ field, analysis, index }: { field: FieldResult; analysis
         </>
       )}
 
-      {field.texts && <TextAnswers field={field} />}
+      {field.texts && <TextAnswers field={field} formId={formId} />}
 
       {matrix && def && (
         <div className="ws-matrix-wrap">
@@ -225,7 +233,7 @@ function QuestionPerformance({ analysis }: { analysis: Analysis }) {
 }
 
 /** Per-question summary cards, the default view of a results page. */
-export function SummaryTab({ analysis }: { analysis: Analysis | undefined }) {
+export function SummaryTab({ analysis, formId }: { analysis: Analysis | undefined; formId?: Id<"forms"> }) {
   const t = useCopy(resultsCopy);
   const { locale: lang } = useLocale();
   if (analysis === undefined) {
@@ -266,7 +274,7 @@ export function SummaryTab({ analysis }: { analysis: Analysis | undefined }) {
 
       <QuestionPerformance analysis={a} />
 
-      {a.fields.map((f, i) => <QuestionCard key={f.fieldId} field={f} analysis={a} index={i} />)}
+      {a.fields.map((f, i) => <QuestionCard key={f.fieldId} field={f} analysis={a} index={i} formId={formId} />)}
 
       {(a.durationBins?.length ?? 0) > 1 && (
         <section className="ws-question" aria-labelledby="time-title">

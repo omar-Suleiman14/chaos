@@ -19,6 +19,7 @@ import { defaultFormSettings, definitionValidator, formRoleValidator, formSettin
 import { displayName, logActivity, notify, randomCode, sha256Hex } from "./serverUtils";
 import { builtInTemplates } from "./formTemplates";
 import { emitFormStatusChange, emitWebhookEvent, formItem } from "./webhookEvents";
+import { withFormCounts, withOwnerFormCounts } from "./formCounts";
 
 type Definition = Infer<typeof definitionValidator>;
 
@@ -147,8 +148,9 @@ export const listMyForms = query({
       if (!matchesFormCollaborator(m, identity)) continue;
       if (seen.has(m.formId)) continue;
       seen.add(m.formId);
-      const form = await ctx.db.get("forms", m.formId);
-      if (!form || form.ownerId === identity.subject) continue;
+      const stored = await ctx.db.get("forms", m.formId);
+      if (!stored || stored.ownerId === identity.subject) continue;
+      const form = await withFormCounts(ctx, stored);
       let ownerName = ownerNames.get(form.ownerId);
       if (ownerName === undefined) ownerNames.set(form.ownerId, (ownerName = await displayName(ctx, form.ownerId)));
       if (m.status === "declined") continue;
@@ -158,7 +160,7 @@ export const listMyForms = query({
         shared.push({ ...formSummary(form), role: m.role, ownerName });
       }
     }
-    return { owned: owned.map(formSummary), shared, invites };
+    return { owned: (await withOwnerFormCounts(ctx, identity.subject, owned)).map(formSummary), shared, invites };
   },
 });
 
@@ -233,7 +235,8 @@ export const getFormForEditor = query({
   handler: async (ctx, args) => {
     const access = await getFormIfRole(ctx, args.formId, "viewer");
     if (!access) return null;
-    const { form, role } = access;
+    const { role } = access;
+    const form = await withFormCounts(ctx, access.form);
     const versions = await ctx.db
       .query("formVersions")
       .withIndex("by_formId_and_version", (q) => q.eq("formId", form._id))
@@ -530,9 +533,10 @@ export const purgeFormData = internalMutation({
       case 7: await drain("formCollaborators", await ctx.db.query("formCollaborators").withIndex("by_formId", (q) => q.eq("formId", id)).take(PURGE_BATCH)); break;
       case 8: await drain("formComments", await ctx.db.query("formComments").withIndex("by_formId", (q) => q.eq("formId", id)).take(PURGE_BATCH)); break;
       case 9: await drain("formActivity", await ctx.db.query("formActivity").withIndex("by_formId_and_at", (q) => q.eq("formId", id)).take(PURGE_BATCH)); break;
+      case 10: await drain("formCounters", await ctx.db.query("formCounters").withIndex("by_formId", (q) => q.eq("formId", id)).take(PURGE_BATCH)); break;
       default: return null;
     }
-    if (remaining || phase < 9) await ctx.scheduler.runAfter(0, internal.forms.purgeFormData, { formId: id, phase: remaining ? phase : phase + 1 });
+    if (remaining || phase < 10) await ctx.scheduler.runAfter(0, internal.forms.purgeFormData, { formId: id, phase: remaining ? phase : phase + 1 });
     return null;
   },
 });

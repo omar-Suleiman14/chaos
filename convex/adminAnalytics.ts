@@ -5,6 +5,7 @@ import { internal } from "./_generated/api";
 import { creatorRestricted, isPaidPlan } from "./authz";
 import { requireAdminForActor } from "./adminAccess";
 import { emptyMetrics, metricsValidator } from "./adminModel";
+import { readFormCounts } from "./formCounts";
 
 async function start(ctx: MutationCtx) {
   const prior = await ctx.db
@@ -95,9 +96,10 @@ export const scan = internalMutation({
     } else if (phase === "forms") {
       const page = await ctx.db.query("forms").paginate(options);
       for (const form of page.page) {
+        const counts = await readFormCounts(ctx, form);
         pending.forms++;
-        pending.responses += form.responseCount;
-        pending.partials += form.partialCount;
+        pending.responses += counts.responseCount;
+        pending.partials += counts.partialCount;
         if (
           form.status === "live" &&
           !form.isBanned &&

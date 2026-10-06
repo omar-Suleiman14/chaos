@@ -29,8 +29,13 @@
       "unit": "bytes"
     },
     "journey.dashboard.databaseQueries": {
-      "budget": 14,
-      "unit": "count"
+      "budget": 15,
+      "unit": "count",
+      "raised": {
+        "from": 14,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "journey.dashboard.documentsRead": {
       "budget": 41,
@@ -77,8 +82,13 @@
       "unit": "bytes"
     },
     "journey.formOpen.databaseQueries": {
-      "budget": 4,
-      "unit": "count"
+      "budget": 5,
+      "unit": "count",
+      "raised": {
+        "from": 4,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "journey.formOpen.documentsRead": {
       "budget": 3,
@@ -137,20 +147,35 @@
       "unit": "count"
     },
     "journey.mcpPersist.bytesRead": {
-      "budget": 10285,
-      "unit": "bytes"
+      "budget": 10795,
+      "unit": "bytes",
+      "raised": {
+        "from": 10285,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "journey.mcpPersist.bytesWritten": {
       "budget": 4197,
       "unit": "bytes"
     },
     "journey.mcpPersist.databaseQueries": {
-      "budget": 25,
-      "unit": "count"
+      "budget": 26,
+      "unit": "count",
+      "raised": {
+        "from": 25,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "journey.mcpPersist.documentsRead": {
-      "budget": 18,
-      "unit": "count"
+      "budget": 20,
+      "unit": "count",
+      "raised": {
+        "from": 18,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "journey.mcpPersist.documentsWritten": {
       "budget": 10,

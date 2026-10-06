@@ -303,6 +303,20 @@ export const formTables = {
     timedCount: v.number(),
   }).index("by_formId", ["formId"]),
 
+  /**
+   * Response counts, kept apart from the form so a submission writes a few bytes here instead of
+   * rewriting the whole form document (its draft makes it tens of KB). Created on the first count
+   * change; until then the counts on the form are current. See convex/formCounts.ts.
+   */
+  formCounters: defineTable({
+    formId: v.id("forms"),
+    /** The form's owner, so a library reads every count in one range. */
+    ownerId: v.string(),
+    responseCount: v.number(),
+    partialCount: v.number(),
+    lastResponseAt: v.optional(v.number()),
+  }).index("by_formId", ["formId"]).index("by_ownerId", ["ownerId"]),
+
   /** Private cross-device resume copies. Never shown to the creator. */
   /** Short-lived passes handed out after a correct access code, so the code itself is checked in one rate-limited place. */
   formAccessGrants: defineTable({

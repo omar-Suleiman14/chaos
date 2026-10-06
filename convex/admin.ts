@@ -8,6 +8,7 @@ import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
 import { isPaidPlan, requireAdmin, requireIdentity } from "./authz";
+import { readFormCounts } from "./formCounts";
 
 const DAY = 86_400_000;
 export const contact = query({ args: { contactId: v.id("crmContacts") }, handler: async (ctx, { contactId }) => {
@@ -234,15 +235,16 @@ export async function contentForActor(ctx: QueryCtx, args: ObjectType<typeof con
           .query("forms")
           .order("desc")
           .paginate({ ...args.paginationOpts, maximumBytesRead: 2_000_000 });
+      const counts = await Promise.all(result.page.map((f) => readFormCounts(ctx, f)));
       return {
         ...result,
-        page: result.page.map((f) => ({
+        page: result.page.map((f, i) => ({
           id: String(f._id),
           title: f.title,
           ownerId: f.ownerId,
           status: f.status,
           held: !!f.isBanned,
-          responses: f.responseCount,
+          responses: counts[i].responseCount,
           createdAt: f.createdAt,
         })),
       };

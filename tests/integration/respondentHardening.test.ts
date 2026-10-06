@@ -262,7 +262,9 @@ async function seedLargeResponses(t: Test, count = 100) {
     });
   }
   await t.run(async (ctx) => {
-    await ctx.db.patch("forms", formId, { responseCount: count });
+    // The first submission created the form's counter row (convex/formCounts.ts).
+    const counter = (await ctx.db.query("formCounters").withIndex("by_formId", (q) => q.eq("formId", formId)).unique())!;
+    await ctx.db.patch("formCounters", counter._id, { responseCount: count });
     const agg = (await ctx.db.query("formAggregates").withIndex("by_formId", (q) => q.eq("formId", formId)).unique())!;
     await ctx.db.patch("formAggregates", agg._id, { counts: Object.fromEntries(def.fields.map((f) => [f.id, { answered: count }])), totalDurationMs: count * 60_000, timedCount: count });
   });
@@ -327,3 +329,22 @@ describe("cleanup under production byte limits", () => {
     expect(await t.run((ctx) => ctx.db.system.get(storageId))).not.toBeNull();
   });
 });
+
+describe("response counts", () => {
+  it("keeps counts off the form document and carries over counts stored on it before", async () => {
+    const t = testConvex();
+    const { owner, formId, shareId } = await publish(t);
+    // A form counted before formCounters existed: its counts are on the form and there is no counter row.
+    await t.run((ctx) => ctx.db.patch("forms", formId, { responseCount: 7, partialCount: 2, lastResponseAt: 1 }));
+    expect(await owner.query(api.forms.getFormForEditor, { formId })).toMatchObject({ responseCount: 7, partialCount: 2 });
+    const before = (await t.run((ctx) => ctx.db.get("forms", formId)))!;
+    await t.mutation(api.respond.submitResponse, submission(shareId, "count-one"));
+    expect(await owner.query(api.forms.getFormForEditor, { formId })).toMatchObject({ responseCount: 8, partialCount: 2 });
+    const after = (await t.run((ctx) => ctx.db.get("forms", formId)))!;
+    expect(after.updatedAt).toBe(before.updatedAt);
+    expect(after.responseCount).toBe(7);
+    const library = await owner.query(api.forms.listMyForms, {});
+    expect(library.owned.find((form) => form._id === formId)).toMatchObject({ responseCount: 8 });
+  });
+});
+

@@ -35,7 +35,7 @@ import { lessonPath } from "@/lib/learn/seo";
 import type { HandoffAction, HandoffTarget } from "@/lib/learn/handoff";
 import type { AttachedQuiz, Lesson, LessonSource } from "@/lib/learn/types";
 import { formatDate, useCopy, useLocale } from "@/lib/i18n";
-import { sourceIcon, sourceLabel, useBlockCopy } from "../editor/blocks";
+import { sourceIcon, sourceLabel, useBlockCopy } from "../blockShared";
 import { CurriculumBadges, ExternalRefLine, ModerationNotice, ProvenanceLine, QualityBadge, VerificationBadges } from "../ui";
 import { AiMark } from "@/components/site/aiMarks";
 import BlockRenderer from "./BlockRenderer";

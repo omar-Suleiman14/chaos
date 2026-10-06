@@ -26,8 +26,13 @@
       "unit": "bytes"
     },
     "bundle.courses.editor.chunks": {
-      "budget": 30,
-      "unit": "count"
+      "budget": 31,
+      "unit": "count",
+      "raised": {
+        "from": 30,
+        "reason": "lib/hosts.ts (subdomain links) and the reader/editor split of lesson block helpers add a shared chunk; bytes are flat and the lesson reader lost 1.2 MB.",
+        "at": "2026-10-06"
+      }
     },
     "bundle.courses.editor.firstLoadJs": {
       "budget": 1698088,
@@ -50,8 +55,13 @@
       "unit": "bytes"
     },
     "bundle.dashboard.chunks": {
-      "budget": 30,
-      "unit": "count"
+      "budget": 31,
+      "unit": "count",
+      "raised": {
+        "from": 30,
+        "reason": "lib/hosts.ts (subdomain links) and the reader/editor split of lesson block helpers add a shared chunk; bytes are flat and the lesson reader lost 1.2 MB.",
+        "at": "2026-10-06"
+      }
     },
     "bundle.dashboard.firstLoadJs": {
       "budget": 1706423,
@@ -62,8 +72,13 @@
       "unit": "bytes"
     },
     "bundle.forms.editor.chunks": {
-      "budget": 31,
-      "unit": "count"
+      "budget": 32,
+      "unit": "count",
+      "raised": {
+        "from": 31,
+        "reason": "lib/hosts.ts (subdomain links) and the reader/editor split of lesson block helpers add a shared chunk; bytes are flat and the lesson reader lost 1.2 MB.",
+        "at": "2026-10-06"
+      }
     },
     "bundle.forms.editor.firstLoadJs": {
       "budget": 1771258,
@@ -86,8 +101,13 @@
       "unit": "bytes"
     },
     "bundle.forms.responses.chunks": {
-      "budget": 29,
-      "unit": "count"
+      "budget": 30,
+      "unit": "count",
+      "raised": {
+        "from": 29,
+        "reason": "lib/hosts.ts (subdomain links) and the reader/editor split of lesson block helpers add a shared chunk; bytes are flat and the lesson reader lost 1.2 MB.",
+        "at": "2026-10-06"
+      }
     },
     "bundle.forms.responses.firstLoadJs": {
       "budget": 1676958,
@@ -98,20 +118,25 @@
       "unit": "bytes"
     },
     "bundle.landing.chunks": {
-      "budget": 19,
+      "budget": 18,
       "unit": "count"
     },
     "bundle.landing.firstLoadJs": {
-      "budget": 1149300,
+      "budget": 1099348,
       "unit": "bytes"
     },
     "bundle.landing.firstLoadJsGzip": {
-      "budget": 348249,
+      "budget": 330941,
       "unit": "bytes"
     },
     "bundle.lessons.editor.chunks": {
-      "budget": 35,
-      "unit": "count"
+      "budget": 38,
+      "unit": "count",
+      "raised": {
+        "from": 35,
+        "reason": "lib/hosts.ts (subdomain links) and the reader/editor split of lesson block helpers add a shared chunk; bytes are flat and the lesson reader lost 1.2 MB.",
+        "at": "2026-10-06"
+      }
     },
     "bundle.lessons.editor.firstLoadJs": {
       "budget": 3119085,
@@ -122,20 +147,25 @@
       "unit": "bytes"
     },
     "bundle.lessons.reader.chunks": {
-      "budget": 26,
+      "budget": 24,
       "unit": "count"
     },
     "bundle.lessons.reader.firstLoadJs": {
-      "budget": 2881923,
+      "budget": 1610598,
       "unit": "bytes"
     },
     "bundle.lessons.reader.firstLoadJsGzip": {
-      "budget": 855859,
+      "budget": 472937,
       "unit": "bytes"
     },
     "bundle.live.host.chunks": {
-      "budget": 29,
-      "unit": "count"
+      "budget": 30,
+      "unit": "count",
+      "raised": {
+        "from": 29,
+        "reason": "lib/hosts.ts (subdomain links) and the reader/editor split of lesson block helpers add a shared chunk; bytes are flat and the lesson reader lost 1.2 MB.",
+        "at": "2026-10-06"
+      }
     },
     "bundle.live.host.firstLoadJs": {
       "budget": 1644050,

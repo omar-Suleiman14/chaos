@@ -34,6 +34,7 @@ import {
   PRO_PLAYER_LIMIT, questionsFromForm, questionsFromLegacy, rankScores, streakBonus,
 } from "./liveLogic";
 import type { LegacyQuestionLike, LiveQuestion } from "./liveLogic";
+import { readFormCounts } from "./formCounts";
 
 type Ctx = QueryCtx | MutationCtx;
 type Game = Doc<"liveGames">;
@@ -827,7 +828,7 @@ async function saveFormResponse(ctx: MutationCtx, game: Game, player: Player, an
   const duplicate = await ctx.db.query("formResponses").withIndex("by_formId_and_submissionKey", (q) => q.eq("formId", form._id).eq("submissionKey", submissionKey)).unique();
   if (duplicate) return true;
   const cap = await responseCap(ctx, form, Date.now());
-  if (cap !== null && form.responseCount >= cap) return false;
+  if (cap !== null && (await readFormCounts(ctx, form)).responseCount >= cap) return false;
   const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", (q) => q.eq("formId", form._id).eq("version", game.formVersion!)).unique();
   if (!version) return false;
   const def = version.definition as FormDefinition;

@@ -29,23 +29,38 @@
       "unit": "count"
     },
     "forms.max.r25.analysis.bytesRead": {
-      "budget": 309234,
-      "unit": "bytes"
+      "budget": 309409,
+      "unit": "bytes",
+      "raised": {
+        "from": 309234,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "forms.max.r25.analysis.databaseQueries": {
-      "budget": 6,
-      "unit": "count"
+      "budget": 7,
+      "unit": "count",
+      "raised": {
+        "from": 6,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "forms.max.r25.analysis.documentsRead": {
-      "budget": 29,
-      "unit": "count"
+      "budget": 30,
+      "unit": "count",
+      "raised": {
+        "from": 29,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "forms.max.r25.analysis.payloadBytes": {
-      "budget": 300303,
+      "budget": 146713,
       "unit": "bytes"
     },
     "forms.max.r25.responsesPage.bytesRead": {
-      "budget": 268418,
+      "budget": 268394,
       "unit": "bytes"
     },
     "forms.max.r25.responsesPage.databaseQueries": {
@@ -81,7 +96,7 @@
       "unit": "bytes"
     },
     "forms.max.submit.bytesWritten": {
-      "budget": 48447,
+      "budget": 14776,
       "unit": "bytes"
     },
     "forms.q10.editor.bytesRead": {
@@ -109,23 +124,38 @@
       "unit": "count"
     },
     "forms.q10.r50.analysis.bytesRead": {
-      "budget": 49719,
-      "unit": "bytes"
+      "budget": 49894,
+      "unit": "bytes",
+      "raised": {
+        "from": 49719,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "forms.q10.r50.analysis.databaseQueries": {
-      "budget": 6,
-      "unit": "count"
+      "budget": 7,
+      "unit": "count",
+      "raised": {
+        "from": 6,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "forms.q10.r50.analysis.documentsRead": {
-      "budget": 54,
-      "unit": "count"
+      "budget": 55,
+      "unit": "count",
+      "raised": {
+        "from": 54,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "forms.q10.r50.analysis.payloadBytes": {
-      "budget": 34243,
+      "budget": 9443,
       "unit": "bytes"
     },
     "forms.q10.r50.responsesPage.bytesRead": {
-      "budget": 25937,
+      "budget": 25913,
       "unit": "bytes"
     },
     "forms.q10.r50.responsesPage.databaseQueries": {
@@ -161,7 +191,7 @@
       "unit": "bytes"
     },
     "forms.q10.submit.bytesWritten": {
-      "budget": 4831,
+      "budget": 2411,
       "unit": "bytes"
     },
     "forms.q100.editor.bytesRead": {
@@ -189,23 +219,38 @@
       "unit": "count"
     },
     "forms.q100.r50.analysis.bytesRead": {
-      "budget": 291519,
-      "unit": "bytes"
+      "budget": 291694,
+      "unit": "bytes",
+      "raised": {
+        "from": 291519,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "forms.q100.r50.analysis.databaseQueries": {
-      "budget": 6,
-      "unit": "count"
+      "budget": 7,
+      "unit": "count",
+      "raised": {
+        "from": 6,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "forms.q100.r50.analysis.documentsRead": {
-      "budget": 54,
-      "unit": "count"
+      "budget": 55,
+      "unit": "count",
+      "raised": {
+        "from": 54,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "forms.q100.r50.analysis.payloadBytes": {
-      "budget": 276496,
+      "budget": 81191,
       "unit": "bytes"
     },
     "forms.q100.r50.responsesPage.bytesRead": {
-      "budget": 153438,
+      "budget": 153414,
       "unit": "bytes"
     },
     "forms.q100.r50.responsesPage.databaseQueries": {
@@ -241,7 +286,7 @@
       "unit": "bytes"
     },
     "forms.q100.submit.bytesWritten": {
-      "budget": 27420,
+      "budget": 8879,
       "unit": "bytes"
     }
   }

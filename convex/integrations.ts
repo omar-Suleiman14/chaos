@@ -21,6 +21,7 @@ import {
 import type { IntegrationScope } from "./integrationModel";
 import { displayName, errorCode, randomHex, sha256Hex } from "./serverUtils";
 import { disableConnectionWebhooks } from "./webhooks";
+import { readFormCounts } from "./formCounts";
 
 type Ctx = QueryCtx | MutationCtx;
 type Token = Doc<"integrationTokens">;
@@ -545,15 +546,16 @@ export const getSummary = internalQuery({
       const form = item.doc;
       const def = await publishedFormDefinition(ctx, form);
       const agg = await ctx.db.query("formAggregates").withIndex("by_formId", (q) => q.eq("formId", form._id)).unique();
-      const summary = publicSummary(def, (agg?.counts ?? {}) as Aggregates, form.responseCount, min);
+      const counts = await readFormCounts(ctx, form);
+      const summary = publicSummary(def, (agg?.counts ?? {}) as Aggregates, counts.responseCount, min);
       return ok({
         itemId: item.ref, kind: "form", status: form.status,
-        responseCount: summary.suppressed ? null : form.responseCount,
+        responseCount: summary.suppressed ? null : counts.responseCount,
         suppressed: summary.suppressed, minimumGroupSize: min,
-        completedCount: summary.suppressed ? null : form.responseCount,
+        completedCount: summary.suppressed ? null : counts.responseCount,
         averageScorePercent: null,
         questions: summary.questions,
-        updatedAt: form.lastResponseAt ?? form.updatedAt,
+        updatedAt: counts.lastResponseAt ?? form.updatedAt,
       });
     }
     const quiz = item.doc;

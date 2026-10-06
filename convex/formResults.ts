@@ -12,6 +12,7 @@ import { countResponse, definitionForResponse } from "./respond";
 import { dateSpread, histogram, median, mostCommonWrong, scoreSummary, tallyQuizAnswer } from "./formAnalysis";
 import type { Bin, DateSpread, QuizQuestionTally } from "./formAnalysis";
 import { displayName, logActivity } from "./serverUtils";
+import { changeFormCounts, readFormCounts } from "./formCounts";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -325,7 +326,7 @@ export async function deleteResponseRecord(ctx: MutationCtx, response: Doc<"form
       const def = await definitionForResponse(ctx, response);
       if (def) await countResponse(ctx, form, response, def, -1);
     } else if (response.status === "partial") {
-      await authorDb(ctx).patch("forms", form._id, { partialCount: Math.max(0, form.partialCount - 1) });
+      await changeFormCounts(ctx, form, { partials: -1 });
     }
   }
   await ctx.db.delete("formResponses", response._id);
@@ -437,7 +438,7 @@ interface FieldAnalysis {
   numberStats: { min: number; max: number; mean: number; median: number; bins: Bin[] } | null;
   /** Date questions: earliest, latest and counts over the range (from the sample). */
   dateStats: DateSpread | null;
-  /** Written answers, newest first (from the sample), capped at TEXT_ANSWERS per question. */
+  /** Written answers, newest first (from the sample), capped per question (getAnalysis sends TEXT_PREVIEW). */
   texts: { responseId: Id<"formResponses">; text: string; submittedAt: number }[] | null;
   /** Written answers in the sample, including any beyond the cap. */
   textCount: number;
@@ -447,6 +448,12 @@ interface FieldAnalysis {
 
 /** Written answers returned per question; the full set is in Responses and exports. */
 const TEXT_ANSWERS = 200;
+/**
+ * Written answers per question in the results summary. The page asks getTextAnswers for the rest
+ * of one question when someone opens or searches it; sending 200 for every question made a
+ * 100-question form's summary about 276 KB for 50 responses.
+ */
+const TEXT_PREVIEW = 5;
 const textTypes: FormField["type"][] = ["text", "textarea", "email", "phone", "url", "time"];
 
 export const getAnalysis = query({
@@ -454,7 +461,36 @@ export const getAnalysis = query({
   handler: async (ctx, args) => {
     const access = await getFormIfRole(ctx, args.formId, "viewer");
     if (!access) return null;
-    return getAnalysisForActor(ctx, access.form);
+    return getAnalysisForActor(ctx, access.form, TEXT_PREVIEW);
+  },
+});
+
+/** Up to TEXT_ANSWERS written answers to one question, newest first, from the same sample as getAnalysis. */
+export const getTextAnswers = query({
+  args: { formId: v.id("forms"), fieldId: v.string() },
+  handler: async (ctx, args) => {
+    const access = await getFormIfRole(ctx, args.formId, "viewer");
+    if (!access) return null;
+    const form = access.form;
+    const def = await reportingDefinition(ctx, form);
+    const field = def.fields.find((f) => f.id === args.fieldId);
+    if (!field || !textTypes.includes(field.type)) return [];
+    const definition = versionCache(ctx, form._id);
+    const completed = await ctx.db
+      .query("formResponses")
+      .withIndex("by_formId_and_status_and_submittedAt", (q) => q.eq("formId", form._id).eq("status", "completed"))
+      .order("desc")
+      .take(ANALYSIS_SAMPLE);
+    const texts: { responseId: Id<"formResponses">; text: string; submittedAt: number }[] = [];
+    for (const r of completed) {
+      if (r.spam || texts.length >= TEXT_ANSWERS) continue;
+      const value = (r.answers as Answers)[args.fieldId];
+      if (typeof value !== "string" || !value.trim()) continue;
+      const rDef = await definition(r.version);
+      if (!rDef || !visibleFieldIds(rDef, r.answers as Answers).has(args.fieldId)) continue;
+      texts.push({ responseId: r._id, text: value.slice(0, 2000), submittedAt: r.submittedAt });
+    }
+    return texts;
   },
 });
 
@@ -474,7 +510,7 @@ export const exportResponses = query({
 });
 
 
-export async function getAnalysisForActor(ctx: QueryCtx, form: Doc<"forms">) {
+export async function getAnalysisForActor(ctx: QueryCtx, form: Doc<"forms">, textAnswers = TEXT_ANSWERS) {
     const def = await reportingDefinition(ctx, form);
     const aggRow = await ctx.db.query("formAggregates").withIndex("by_formId", (q) => q.eq("formId", form._id)).unique();
     const agg = (aggRow?.counts ?? {}) as Aggregates;
@@ -538,7 +574,7 @@ export async function getAnalysisForActor(ctx: QueryCtx, form: Doc<"forms">) {
         if (f.type === "date" && typeof value === "string") { const list = dates.get(f.fieldId) ?? []; list.push(value); dates.set(f.fieldId, list); }
         if (f.texts && typeof value === "string" && value.trim() && visible.has(f.fieldId)) {
           f.textCount++;
-          if (f.texts.length < TEXT_ANSWERS) f.texts.push({ responseId: r._id, text: value.slice(0, 2000), submittedAt: r.submittedAt });
+          if (f.texts.length < textAnswers) f.texts.push({ responseId: r._id, text: value.slice(0, 2000), submittedAt: r.submittedAt });
         }
         const key = graded.get(f.fieldId);
         if (key && visible.has(f.fieldId)) {
@@ -598,13 +634,14 @@ export async function getAnalysisForActor(ctx: QueryCtx, form: Doc<"forms">) {
     }
 
     const medianDuration = median(durations);
-    const started = form.responseCount + form.partialCount;
+    const counts = await readFormCounts(ctx, form);
+    const started = counts.responseCount + counts.partialCount;
     return {
       title: form.title,
       collectPartial: form.settings.collectPartial,
-      responseCount: form.responseCount,
-      partialCount: form.partialCount,
-      completionRate: form.settings.collectPartial && started > 0 ? form.responseCount / started : null,
+      responseCount: counts.responseCount,
+      partialCount: counts.partialCount,
+      completionRate: form.settings.collectPartial && started > 0 ? counts.responseCount / started : null,
       averageDurationMs: aggRow && aggRow.timedCount > 0 ? aggRow.totalDurationMs / aggRow.timedCount : null,
       medianDurationMs: medianDuration,
       /** Completion times in seconds (from the sample), for the time distribution. */
@@ -613,7 +650,7 @@ export async function getAnalysisForActor(ctx: QueryCtx, form: Doc<"forms">) {
       editedResponses: edited,
       quiz: quizOn ? scoreSummary(scores) : null,
       quizEnabled: quizOn,
-      lastResponseAt: form.lastResponseAt ?? null,
+      lastResponseAt: counts.lastResponseAt ?? null,
       sampleLimited: completed.length === ANALYSIS_SAMPLE,
       stoppedBeforeFirst,
       fields,

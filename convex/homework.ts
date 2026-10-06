@@ -19,6 +19,7 @@ import { checkAnswers, searchTextFor, selectEnding } from "./formLogic";
 import { countResponse, responseCap } from "./respond";
 import { consumeRate, randomCode } from "./serverUtils";
 import { emitWebhookEvent, formResponseData } from "./webhookEvents";
+import { readFormCounts } from "./formCounts";
 type Ctx = MutationCtx | QueryCtx;
 async function actor(ctx: Ctx) {
   const id = await getAuthIdentity(ctx);
@@ -256,7 +257,7 @@ export const submitAttempt = mutation({
     if (!form || form.status === "archived" || form.isBanned || await creatorRestricted(ctx, form.ownerId) || !version || version.formId !== form._id || !version.definition.quiz?.enabled) throw new Error("Assignment content unavailable");
     if (!version.definition.languages.includes(args.language)) throw new Error("Unsupported assignment language");
     const cap = await responseCap(ctx, form, now);
-    if (cap !== null && form.responseCount >= cap) throw new Error("FORM_FULL: Response limit reached");
+    if (cap !== null && (await readFormCounts(ctx, form)).responseCount >= cap) throw new Error("FORM_FULL: Response limit reached");
     await consumeRate(ctx, `homework-submit:${identity.tokenIdentifier}`, 60, 60000);
     assertReleasedAnswers(version.definition, args.answers, now);
     const definition = releasedDefinition(version.definition, now);

@@ -8,7 +8,8 @@ import { PlayCircle } from "lucide-react";
 import { asBlocks, blockText, cellInlines, formatTimestamp, inlineText, parseAnnotations, youTubeEmbedUrl, type Block, type CitationContent, type Inline, type LinkContent, type StyledText, type TableContent } from "@/lib/learn/doc";
 import { resolveLearnFileUrl as resolveFileUrl } from "@/lib/learn/data";
 import type { Highlight, LessonSource } from "@/lib/learn/types";
-import { calloutIcon, renderMath, sourceIcon, sourceLabel, useBlockCopy, type CalloutTone } from "../editor/blocks";
+import { calloutIcon, sourceIcon, sourceLabel, useBlockCopy, type CalloutTone } from "../blockShared";
+import ReaderMath from "./ReaderMath";
 import { useCopy } from "@/lib/i18n";
 import { TermText } from "./Glossary";
 import type { GlossaryEntry } from "@/lib/learn/glossary";
@@ -266,8 +267,7 @@ function BlockBody({ block, props }: { block: Block; props: RendererProps }) {
     }
     case "divider": return <hr />;
     case "equation": {
-      const { html } = renderMath(blockText(block));
-      return html ? <div className="lx-math" dangerouslySetInnerHTML={{ __html: html }} /> : <pre>{blockText(block)}</pre>;
+      return <ReaderMath source={blockText(block)} />;
     }
     case "callout": {
       const tone = (block.props.tone as CalloutTone) ?? "info";

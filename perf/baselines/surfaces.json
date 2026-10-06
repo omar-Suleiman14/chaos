@@ -78,8 +78,13 @@
       "unit": "bytes"
     },
     "dashboard.databaseQueries": {
-      "budget": 8,
-      "unit": "count"
+      "budget": 9,
+      "unit": "count",
+      "raised": {
+        "from": 8,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "dashboard.documentsRead": {
       "budget": 36,
@@ -98,8 +103,13 @@
       "unit": "bytes"
     },
     "forms.editor.databaseQueries": {
-      "budget": 4,
-      "unit": "count"
+      "budget": 5,
+      "unit": "count",
+      "raised": {
+        "from": 4,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "forms.editor.documentsRead": {
       "budget": 3,
@@ -190,21 +200,21 @@
       "unit": "bytes"
     },
     "mcp.listToolsBytes": {
-      "budget": 598009,
-      "unit": "bytes",
-      "raised": {
-        "from": 597659,
-        "reason": "get_course documents pendingChanges so assistants know when publish_course is needed.",
-        "at": "2026-10-06"
-      }
+      "budget": 246805,
+      "unit": "bytes"
     },
     "mcp.searchForms.bytesRead": {
       "budget": 82186,
       "unit": "bytes"
     },
     "mcp.searchForms.databaseQueries": {
-      "budget": 8,
-      "unit": "count"
+      "budget": 9,
+      "unit": "count",
+      "raised": {
+        "from": 8,
+        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
+        "at": "2026-10-06"
+      }
     },
     "mcp.searchForms.documentsRead": {
       "budget": 34,

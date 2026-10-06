@@ -1,3 +1,4 @@
+import { readFormCounts } from "./formCounts";
 import { v } from "convex/values";
 import { mutation, query, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
@@ -315,7 +316,7 @@ export const selectPractice = query({
             form.settings.access !== "code" &&
             (form.settings.access !== "signed_in" ||
               (await teamOrEmailCheck(ctx, form.settings, identity)) === "ok") &&
-            (cap === null || form.responseCount < cap);
+            (cap === null || (await readFormCounts(ctx, form)).responseCount < cap);
           if (allowed && form.settings.onePerPerson) {
             const prior = await ctx.db
               .query("formResponses")

@@ -6,6 +6,7 @@ import base from "../../convex/schema";
 
 import { emptyDefinition } from "../../convex/formLogic";
 import { defaultFormSettings } from "../../convex/formModel";
+import { readFormCounts } from "@/convex/formCounts";
 const schema = base;
 const modules = import.meta.glob("../../convex/**/*.*s");
 const ref = (name: string) =>
@@ -180,7 +181,7 @@ describe("homework", () => {
     expect(retry).toEqual({ ...result, duplicate: true });
     const saved = await s.t.run(ctx => ctx.db.get("formResponses", result.responseId));
     expect(saved).toMatchObject({ version: 1, answers: { q: "a" }, quizScore: 2, respondentId: "student" });
-    const count = await s.t.run(async ctx => (await ctx.db.get("forms", saved!.formId))!.responseCount);
+    const count = await s.t.run(async ctx => (await readFormCounts(ctx, (await ctx.db.get("forms", saved!.formId))!)).responseCount);
     expect(count).toBe(1);
     await expect(s.other.mutation(ref("submitAttempt"), { attemptId, answers: { q: "a" }, language: "en" })).rejects.toThrow("Own attempt");
   });

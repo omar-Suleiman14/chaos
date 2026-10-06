@@ -48,7 +48,7 @@ export default function ResponsesPage() {
         icons={{ summary: BarChart3, responses: Inbox, segments: BarChart3, export: Download }}
         badge={(x) => (x === "responses" && form.responseCount > 0 ? <span className="ws-count">{formatNumber(locale, form.responseCount)}</span> : null)} />
       <div className="ws-results-body">
-        {tab === "summary" && <SummaryTab analysis={analysis === null ? undefined : analysis} />}
+        {tab === "summary" && <SummaryTab analysis={analysis === null ? undefined : analysis} formId={formId} />}
         {tab === "responses" && <ResponsesTab formId={formId} role={form.role} quiz={quiz} />}
         {tab === "export" && <ExportTab formId={formId} title={form.title} />}
         {tab === "segments" && <Segments formId={formId} versions={form.versions} publishedVersion={form.publishedVersion ?? null} parameters={[...(form.settings.hiddenParameters ?? []), ...(form.settings.hiddenFields ?? []).filter(name => !form.settings.hiddenParameters?.some(parameter => parameter.name === name)).map(name => ({ name, type: "string" as const }))]} />}
