@@ -65,7 +65,7 @@ export function useKeptQuery<Q extends FunctionReference<"query">>(query: Q, arg
     if (args === "skip" || !convex) return;
     return retainQuery(convex, query, args);
     // The key captures the query and its arguments; args is a fresh object on every render.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [key]);
   return useQuery(query, args as never) as FunctionReturnType<Q> | undefined;
 }

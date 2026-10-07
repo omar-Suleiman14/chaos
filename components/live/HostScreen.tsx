@@ -72,7 +72,11 @@ const copy = {
 export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
-  const game = useQuery(api.live.hostView, { gameId });
+  const scene = useQuery(api.live.hostView, { gameId, activity: false });
+  const activity = useQuery(api.live.hostActivity, { gameId });
+  const game = scene == null ? scene : activity === undefined ? undefined
+    : activity && activity.state === scene.state && activity.questionIndex === scene.questionIndex
+      ? { ...scene, ...activity } : scene;
   const advance = useMutation(api.live.advance);
   const endGame = useMutation(api.live.endGameNow);
   const kick = useMutation(api.live.kickPlayer);

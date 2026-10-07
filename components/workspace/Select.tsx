@@ -177,7 +177,7 @@ export function Select<V extends string = string>({
     const el = document.getElementById(optionId(active));
     el?.scrollIntoView?.({ block: "nearest" });
     // optionId is derived from stable ids.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [open, active]);
 
   // Close on a press outside, or when focus leaves.

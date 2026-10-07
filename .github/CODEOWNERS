@@ -1,14 +1,25 @@
-# The performance harness, its budgets and the scheduled checks are reviewed by
-# the maintainer, so an optimisation cannot also redefine how it is measured
-# (perf/README.md, "Protecting the harness").
-/perf/                          @omar-Suleiman14
-/scripts/perf-*.ts              @omar-Suleiman14
-/scripts/lib/perfGuard.ts       @omar-Suleiman14
-/scripts/lib/stats.ts           @omar-Suleiman14
-/scripts/lib/health.ts          @omar-Suleiman14
-/scripts/mcp-synthetic.ts       @omar-Suleiman14
-/scripts/production-health.ts   @omar-Suleiman14
-/vitest.perf.config.mts         @omar-Suleiman14
-/playwright.perf.config.ts      @omar-Suleiman14
-/.github/workflows/perf*.yml    @omar-Suleiman14
-/.github/CODEOWNERS             @omar-Suleiman14
+# Security, auth and integration boundaries
+/convex/authz.ts                  @omar-Suleiman14
+/convex/schema.ts                 @omar-Suleiman14
+/convex/mcp*.ts                   @omar-Suleiman14
+/lib/auth/                        @omar-Suleiman14
+/lib/mcp/                         @omar-Suleiman14
+/app/api/mcp/                     @omar-Suleiman14
+/SECURITY.md                      @omar-Suleiman14
+
+# Repository policy and automation
+/.github/workflows/               @omar-Suleiman14
+/.github/dependabot.yml           @omar-Suleiman14
+/.github/PULL_REQUEST_TEMPLATE.md @omar-Suleiman14
+/.github/CODEOWNERS               @omar-Suleiman14
+
+# Performance harness and budgets
+/perf/                            @omar-Suleiman14
+/scripts/perf-*.ts                @omar-Suleiman14
+/scripts/lib/perfGuard.ts         @omar-Suleiman14
+/scripts/lib/stats.ts             @omar-Suleiman14
+/scripts/lib/health.ts            @omar-Suleiman14
+/scripts/mcp-synthetic.ts         @omar-Suleiman14
+/scripts/production-health.ts     @omar-Suleiman14
+/vitest.perf.config.mts           @omar-Suleiman14
+/playwright.perf.config.ts        @omar-Suleiman14

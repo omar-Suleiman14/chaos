@@ -94,7 +94,7 @@ function ToastCard({ item, t, depth, offset, expanded, frontHeight, paused, onHe
     const observer = new ResizeObserver(() => onHeight(el.offsetHeight));
     observer.observe(el);
     return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- onHeight is a fresh closure each render; the element is stable
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- onHeight is a fresh closure each render; the element is stable
   }, []);
   useEffect(() => { const frame = requestAnimationFrame(() => setMounted(true)); return () => cancelAnimationFrame(frame); }, []);
   // The timer pauses while the stack is open, the toast is expanded or the tab is hidden, and restarts when the toast is updated.

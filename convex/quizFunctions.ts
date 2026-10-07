@@ -10,7 +10,7 @@ import { grantPlan, usersForActor, contentForActor } from "./admin";
 import { paginationOptsValidator } from "convex/server";
 import { creatorRestricted, hasPro, verifiedIdentityEmail } from "./authz";
 import { v } from "convex/values";
-import { query, mutation } from "./_generated/server";
+import { query, mutation, internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import type { Doc } from "./_generated/dataModel";
@@ -31,6 +31,15 @@ import {
   requireQuizOwner,
   requireSessionOwner,
 } from "./authz";
+
+/** Active legacy questions are bounded independently of soft-deleted history. */
+async function activeQuizQuestions(ctx: QueryCtx | MutationCtx, quizId: Id<"quizzes">) {
+  const rows = await ctx.db.query("questions")
+    .withIndex("by_quiz_deleted_order", q => q.eq("quizId", quizId).eq("deletedAt", undefined))
+    .take(501);
+  if (rows.length > 500) throw new Error("QUIZ_SIZE_LIMIT: Split quizzes with more than 500 active questions.");
+  return rows;
+}
 
 /**
  * A quiz's most recently completed attempts (up to 500), returned oldest first.
@@ -396,7 +405,7 @@ export const getQuizDeletionImpact = query({
     if (!quiz) return null;
 
     const [questions, completed] = await Promise.all([
-      ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
+      activeQuizQuestions(ctx, args.quizId),
       completedSessions(ctx, args.quizId),
     ]);
 
@@ -416,6 +425,7 @@ export const deleteQuiz = mutation({
   },
 });
 
+/** Most recent 200 classic quizzes; modern forms use the paginated library. */
 export const getMyQuizzes = query({
   args: {},
   handler: async (ctx) => {
@@ -425,7 +435,8 @@ export const getMyQuizzes = query({
     const quizzes = await ctx.db
       .query("quizzes")
       .withIndex("by_creator", (q) => q.eq("creatorId", identity.subject))
-      .collect();
+      .order("desc")
+      .take(200);
 
     if (quizzes.length === 0) return [];
 
@@ -433,7 +444,7 @@ export const getMyQuizzes = query({
     // attempts are skipped by the index, so live play doesn't re-run the library.
     const [allQuestions, allCompleted] = await Promise.all([
       Promise.all(quizzes.map((quiz) =>
-        ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", quiz._id)).collect()
+        activeQuizQuestions(ctx, quiz._id)
       )),
       Promise.all(quizzes.map((quiz) => completedSessions(ctx, quiz._id))),
     ]);
@@ -796,10 +807,7 @@ export const getQuestionsForOwner = query({
   handler: async (ctx, args) => {
     const quiz = await getQuizIfOwnerOrAdmin(ctx, args.quizId);
     if (!quiz) return [];
-    const questions = await ctx.db
-      .query("questions")
-      .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-      .collect();
+    const questions = await activeQuizQuestions(ctx, args.quizId);
 
     return questions
       .filter((q) => q.deletedAt === undefined)
@@ -821,7 +829,7 @@ export const getQuizForPlayer = query({
     // Fetch creator and questions in parallel
     const [creator, allQuestions] = await Promise.all([
       ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId)).first(),
-      ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
+      activeQuizQuestions(ctx, args.quizId),
     ]);
 
     const questions = quiz.publishedSnapshot?.questions ?? allQuestions.filter((q) => q.deletedAt === undefined);
@@ -1453,6 +1461,19 @@ export const adminToggleUserBan = mutation({
   },
 });
 
+async function propagateQuizElevation(ctx: MutationCtx, clerkId: string, elevate: boolean, cursor: string | null) {
+  const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", clerkId)).unique();
+  if (!user || !!user.isElevated !== elevate) return; // Superseded grant/revoke jobs stop.
+  const page = await ctx.db.query("quizzes").withIndex("by_creator", q => q.eq("creatorId", clerkId))
+    .paginate({ numItems: 50, cursor, maximumBytesRead: 1_000_000 });
+  for (const quiz of page.page) await authorDb(ctx).patch("quizzes", quiz._id, { isElevated: elevate });
+  if (!page.isDone) await ctx.scheduler.runAfter(0, internal.quizFunctions.continueQuizElevation, { clerkId, elevate, cursor: page.continueCursor });
+}
+export const continueQuizElevation = internalMutation({
+  args: { clerkId: v.string(), elevate: v.boolean(), cursor: v.union(v.string(), v.null()) },
+  handler: (ctx, args) => propagateQuizElevation(ctx, args.clerkId, args.elevate, args.cursor),
+});
+
 export const adminToggleUserElevation = mutation({
   args: { clerkId: v.string(), elevate: v.boolean() },
   handler: async (ctx, args) => {
@@ -1464,14 +1485,8 @@ export const adminToggleUserElevation = mutation({
       // respondent and response caps on the user's quizzes and forms.
       await grantPlan(ctx, user, args.elevate ? "pro" : "free");
 
-      // Propagate to all their quizzes
-      const quizzes = await ctx.db
-        .query("quizzes")
-        .withIndex("by_creator", (q) => q.eq("creatorId", args.clerkId))
-        .collect();
-      for (const quiz of quizzes) {
-        await authorDb(ctx).patch("quizzes", quiz._id, { isElevated: args.elevate });
-      }
+      // The first page is immediate; large accounts continue in bounded batches.
+      await propagateQuizElevation(ctx, args.clerkId, args.elevate, null);
     }
   },
 });
@@ -1578,7 +1593,7 @@ export const getQuizStatsEnhanced = query({
 
     const [completed, allQuestions] = await Promise.all([
       completedSessions(ctx, args.quizId),
-      ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", args.quizId)).collect(),
+      activeQuizQuestions(ctx, args.quizId),
     ]);
 
     const questions = allQuestions.filter((q) => q.deletedAt === undefined);

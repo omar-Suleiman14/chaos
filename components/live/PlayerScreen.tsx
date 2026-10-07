@@ -245,7 +245,7 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
       setAnnounce(t.announceResult(view.correct, fmt(view.points)));
     }
     if (view.state === "ended") sfx.play("finish", pack);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per phase
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- runs once per phase
   }, [phase]);
 
   const send = useCallback(async (ids: string[]) => {

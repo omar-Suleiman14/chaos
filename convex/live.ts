@@ -42,6 +42,18 @@ type Ctx = QueryCtx | MutationCtx;
 type Game = Doc<"liveGames">;
 type Player = Doc<"livePlayers">;
 
+async function withGameContent(ctx: Ctx, game: Game): Promise<Game> {
+  if (!game.contentId) return game; // Rooms created before the split.
+  const content = await ctx.db.get("liveGameContent", game.contentId);
+  if (!content) throw new Error("LIVE_NOT_FOUND: Game content is unavailable.");
+  return { ...game, questions: content.questions, ...(content.quizQuestions ? { quizQuestions: content.quizQuestions } : {}) };
+}
+
+async function readGame(ctx: Ctx, gameId: Id<"liveGames">): Promise<Game | null> {
+  const game = await ctx.db.get("liveGames", gameId);
+  return game ? withGameContent(ctx, game) : null;
+}
+
 const TOKEN = /^[a-f0-9]{32,128}$/;
 const ACTIVE_STATES = ["lobby", "question", "reveal", "leaderboard"] as const;
 /** Active memberships have their own index; kicked history never occupies capacity or scoring slots. */
@@ -53,14 +65,14 @@ const ANSWER_CHECK_INTERVAL = 1_000;
 async function syncPhoneState(ctx: MutationCtx, game: Game) {
   const value = {
     gameId: game._id, title: game.title, state: game.state, questionIndex: game.questionIndex,
-    questionCount: game.questions.length, appearance: game.appearance, theme: game.theme,
+    questionCount: game.questionCount ?? game.questions.length, appearance: game.appearance, theme: game.theme,
     showAnswerLabels: game.settings.showAnswerLabels ?? true, startsAt: game.startsAt,
     questionStartedAt: game.questionStartedAt, questionEndsAt: game.questionEndsAt,
   };
   const row = await ctx.db.query("livePhoneStates").withIndex("by_gameId", q => q.eq("gameId", game._id)).unique();
   if (!row) {
     await ctx.db.insert("livePhoneStates", value);
-    for (const [questionIndex, question] of game.questions.entries())
+    for (const [questionIndex, question] of (await withGameContent(ctx, game)).questions.entries())
       await ctx.db.insert("liveQuestions", { gameId: game._id, questionIndex, question });
   } else {
     const changed = Object.entries(value).some(([key, val]) => JSON.stringify(row[key as keyof typeof row]) !== JSON.stringify(val));
@@ -90,7 +102,7 @@ async function requireActiveAccount(ctx: Ctx, userId: string) {
 
 async function requireHostForAccount(ctx: MutationCtx, userId: string, gameId: Id<"liveGames">) {
   await requireActiveAccount(ctx, userId);
-  const game = await ctx.db.get("liveGames", gameId);
+  const game = await readGame(ctx, gameId);
   if (!game || game.hostId !== userId) throw new Error("LIVE_NOT_FOUND: This game was not found, or you are not its host.");
   return game;
 }
@@ -98,7 +110,7 @@ async function requireHostForAccount(ctx: MutationCtx, userId: string, gameId: I
 async function activeGameByPin(ctx: Ctx, pin: string): Promise<Game | null> {
   for (const state of ACTIVE_STATES) {
     const game = await ctx.db.query("liveGames").withIndex("by_pin_and_state", (q) => q.eq("pin", pin).eq("state", state)).first();
-    if (game) return game;
+    if (game) return withGameContent(ctx, game);
   }
   return null;
 }
@@ -360,6 +372,8 @@ export async function createGameForAccount(ctx: MutationCtx, userId: string, arg
   }
   if (!pin) throw new Error("LIVE_BUSY: Too many games are running. Try again in a moment.");
 
+  const snapshot = questions.slice(0, MAX_LIVE_QUESTIONS);
+  const contentId = await ctx.db.insert("liveGameContent", { questions: snapshot, quizQuestions });
   const gameId = await ctx.db.insert("liveGames", {
     hostId: userId,
     formId: args.formId,
@@ -372,8 +386,9 @@ export async function createGameForAccount(ctx: MutationCtx, userId: string, arg
     state: "lobby",
     questionIndex: -1,
     replayClockVersion: 1,
-    questions: questions.slice(0, MAX_LIVE_QUESTIONS),
-    quizQuestions,
+    questions: [],
+    contentId,
+    questionCount: snapshot.length,
     skippedQuestions: skipped,
     settings: { timeLimitSec, maxPlayers: hasPro(user, now) ? PRO_PLAYER_LIMIT : FREE_PLAYER_LIMIT, language, showAnswerLabels: args.showAnswerLabels ?? true, autoAdvance: args.autoAdvance ?? true, breakSec, startWhenPlayers: args.startWhenPlayers || undefined },
     lastActivityAt: now,
@@ -538,31 +553,60 @@ export const kickPlayer = mutation({
   },
 });
 
-/** Everything the host screen shows. Answer keys only after each reveal. */
-export const hostView = query({
-  args: { gameId: v.id("liveGames") },
-  handler: async (ctx, args) => {
-    const identity = await getAuthIdentity(ctx);
-    const game = await ctx.db.get("liveGames", args.gameId);
-    if (!identity || !game || game.hostId !== identity.subject) return null;
+/** Accepts the bare liveGames row: question content is read only after a reveal, when option ids are needed. */
+async function hostActivityFor(ctx: QueryCtx, game: Game) {
     // During answering, only the small standing preview and shard counts change.
     // Old rooms without counters fall back to the full active roster until initialized.
     const storedCount = await storedPlayerCount(ctx, game);
     const countedQuestion = game.state === "question" && game.answerCounterQuestion === game.questionIndex && storedCount !== undefined;
     const players = await playersOf(ctx, game._id, countedQuestion ? 10 : PLAYER_READ_CAP);
-    const question = game.questions[game.questionIndex] as LiveQuestion | undefined;
+    const hasQuestion = game.questionIndex >= 0 && game.questionIndex < (game.questionCount ?? game.questions.length);
     const revealed = game.state === "reveal" || game.state === "leaderboard" || game.state === "ended";
     let answeredCount = 0;
     let distribution: Record<string, number> | null = null;
-    if (question && game.state !== "lobby") {
+    if (hasQuestion && game.state !== "lobby") {
       answeredCount = game.answerCounterQuestion === game.questionIndex ? await answerCount(ctx, game) : (await answersFor(ctx, game._id, game.questionIndex, players)).length;
-      if (revealed) {
+      const question = revealed
+        ? (game.questions[game.questionIndex] ?? (await withGameContent(ctx, game)).questions[game.questionIndex]) as LiveQuestion | undefined
+        : undefined;
+      if (question) {
         const counted = await answersFor(ctx, game._id, game.questionIndex, players);
         distribution = Object.fromEntries(question.options.map((o) => [o.id, 0]));
         for (const a of counted) for (const id of a.answer) distribution[id] = (distribution[id] ?? 0) + 1;
       }
     }
     const ranked = players.map((p) => ({ _id: p._id, nickname: p.nickname, score: p.score, rank: p.rank ?? 1, streak: p.streak }));
+    return {
+      playerCount: countedQuestion ? storedCount! : players.length,
+      players: game.state === "lobby" ? ranked.slice(0, game.settings.maxPlayers) : ranked.slice(0, 10),
+      answeredCount, distribution,
+    };
+}
+
+/** Small, frequently changing payload; question text and themes stay on hostView. */
+export const hostActivity = query({
+  args: { gameId: v.id("liveGames") },
+  handler: async (ctx, args) => {
+    const identity = await getAuthIdentity(ctx);
+    // The bare row: this query reruns on every answer, so the immutable question snapshot stays on hostView.
+    const game = await ctx.db.get("liveGames", args.gameId);
+    if (!identity || !game || game.hostId !== identity.subject) return null;
+    return { state: game.state, questionIndex: game.questionIndex, ...await hostActivityFor(ctx, game) };
+  },
+});
+
+/** Everything the host screen shows. Answer keys only after each reveal. */
+export const hostView = query({
+  args: { gameId: v.id("liveGames"), activity: v.optional(v.boolean()) },
+  handler: async (ctx, args) => {
+    const identity = await getAuthIdentity(ctx);
+    const game = await readGame(ctx, args.gameId);
+    if (!identity || !game || game.hostId !== identity.subject) return null;
+    const activity = args.activity === false
+      ? { playerCount: 0, players: [], answeredCount: 0, distribution: null }
+      : await hostActivityFor(ctx, game);
+    const question = game.questions[game.questionIndex] as LiveQuestion | undefined;
+    const revealed = game.state === "reveal" || game.state === "leaderboard" || game.state === "ended";
     return {
       _id: game._id,
       rehearsal: game.rehearsal ?? false,
@@ -586,12 +630,8 @@ export const hostView = query({
       savedResponses: game.savedResponses ?? 0,
       unsavedResponses: game.unsavedResponses ?? 0,
       endedReason: game.endedReason ?? null,
-      playerCount: countedQuestion ? storedCount! : players.length,
-      // Lobby shows everyone; later screens need the top of the table only.
-      players: game.state === "lobby" ? ranked.slice(0, game.settings.maxPlayers) : ranked.slice(0, 10),
-      answeredCount,
+      ...activity,
       question: question ? { ...publicQuestion(question), correct: revealed ? question.correct : null } : null,
-      distribution,
     };
   },
 });
@@ -613,7 +653,7 @@ export const myGames = query({
     const counts = await Promise.all(shown.map((g) => storedPlayerCount(ctx, g)));
     return shown.map((g, i) => ({
       _id: g._id, rehearsal: g.rehearsal ?? false, title: g.title, state: g.state, createdAt: g.createdAt, endedAt: g.endedAt ?? null,
-      formId: g.formId ?? null, quizId: g.quizId ?? null, questionCount: g.questions.length,
+      formId: g.formId ?? null, quizId: g.quizId ?? null, questionCount: g.questionCount ?? g.questions.length,
       players: counts[i] ?? null, savedResponses: g.savedResponses ?? 0,
     }));
   },
@@ -683,7 +723,7 @@ export const playerView = query({
   handler: async (ctx, args) => {
     const small = await ctx.db.query("livePhoneStates").withIndex("by_gameId", q => q.eq("gameId", args.gameId)).unique();
     // Active pre-deploy rooms migrate at their next host transition.
-    const legacy = small ? null : await ctx.db.get("liveGames", args.gameId);
+    const legacy = small ? null : await readGame(ctx, args.gameId);
     const game = small ? { ...small, _id: args.gameId } : legacy;
     if (!game) return { state: "missing" as const };
     const player = await playerByToken(ctx, game._id, args.token);
@@ -696,7 +736,7 @@ export const playerView = query({
       showAnswerLabels: ("showAnswerLabels" in game ? game.showAnswerLabels : game.settings.showAnswerLabels) ?? true,
       nickname: player.nickname,
       questionIndex: game.questionIndex,
-      questionCount: "questionCount" in game ? game.questionCount : game.questions.length,
+      questionCount: "questions" in game ? game.questionCount ?? game.questions.length : game.questionCount,
     };
     const question = small
       ? (await ctx.db.query("liveQuestions").withIndex("by_gameId_and_questionIndex", q => q.eq("gameId", args.gameId).eq("questionIndex", game.questionIndex)).unique())?.question
@@ -744,7 +784,7 @@ export const submitAnswer = mutation({
   returns: v.object({ status: v.union(v.literal("received"), v.literal("already")) }),
   handler: async (ctx, args) => {
     const now = Date.now();
-    const game = await ctx.db.get("liveGames", args.gameId);
+    const game = await readGame(ctx, args.gameId);
     if (!game) throw new Error("LIVE_NOT_FOUND: This game has ended.");
     if (game.state !== "question" || game.questionIndex !== args.questionIndex) throw new Error("LIVE_CLOSED: This question is closed.");
     if (game.questionEndsAt === undefined || game.questionStartedAt === undefined || now > game.questionEndsAt) throw new Error("LIVE_TOO_LATE: Time was up before your answer arrived.");
@@ -782,7 +822,7 @@ export const timeUp = internalMutation({
   args: { gameId: v.id("liveGames"), questionIndex: v.number() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const game = await ctx.db.get("liveGames", args.gameId);
+    const game = await readGame(ctx, args.gameId);
     if (game && game.state === "question" && game.questionIndex === args.questionIndex) await revealQuestion(ctx, game);
     return null;
   },
@@ -794,7 +834,7 @@ export const countdownDone = internalMutation({
   args: { gameId: v.id("liveGames"), startsAt: v.number() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const game = await ctx.db.get("liveGames", args.gameId);
+    const game = await readGame(ctx, args.gameId);
     if (!game || game.state !== "lobby" || game.startsAt !== args.startsAt) return null;
     if (!(await playersOf(ctx, game._id, 1)).length) {
       await patchGame(ctx, game._id, { startsAt: undefined });
@@ -809,7 +849,7 @@ export const autoStep = internalMutation({
   args: { gameId: v.id("liveGames"), from: v.union(v.literal("reveal"), v.literal("leaderboard")), questionIndex: v.number() },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const game = await ctx.db.get("liveGames", args.gameId);
+    const game = await readGame(ctx, args.gameId);
     if (!game || game.state !== args.from || game.questionIndex !== args.questionIndex) return null;
     if (!game.settings.autoAdvance || !game.phaseEndsAt || game.phaseEndsAt > Date.now()) return null;
     await stepGame(ctx, game);
@@ -821,7 +861,7 @@ export const checkAllAnswered = internalMutation({
   args: { gameId: v.id("liveGames"), questionIndex: v.number(), coalesced: v.optional(v.boolean()) },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const game = await ctx.db.get("liveGames", args.gameId);
+    const game = await readGame(ctx, args.gameId);
     if (!game || game.state !== "question" || game.questionIndex !== args.questionIndex) return null;
     const activeCount = await storedPlayerCount(ctx, game) ?? (await playersOf(ctx, game._id)).length;
     const answered = game.answerCounterQuestion === game.questionIndex ? await answerCount(ctx, game) : (await answersFor(ctx, game._id, args.questionIndex, await playersOf(ctx, game._id))).length;
@@ -856,7 +896,7 @@ export const saveResults = internalMutation({
   args: { gameId: v.id("liveGames"), cursor: v.union(v.string(), v.null()) },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const game = await ctx.db.get("liveGames", args.gameId);
+    const game = await readGame(ctx, args.gameId);
     if (!game || game.state !== "ended" || game.rehearsal) return null;
     const page = await ctx.db
       .query("livePlayers")
@@ -873,7 +913,7 @@ export const saveResults = internalMutation({
       if (ok) saved++;
       else unsaved++;
     }
-    const fresh = (await ctx.db.get("liveGames", game._id))!;
+    const fresh = (await readGame(ctx, game._id))!;
     const done = page.isDone;
     await patchGame(ctx, game._id, {
       savedResponses: (fresh.savedResponses ?? 0) + saved,
@@ -1006,7 +1046,7 @@ export const questionReplay = query({
     const identity = await getAuthIdentity(ctx);
     const game = await ctx.db.get("liveGames", args.gameId);
     if (!game || identity?.subject !== game.hostId || game.state !== "ended") return null;
-    if (!Number.isInteger(args.questionIndex) || args.questionIndex < 0 || args.questionIndex >= game.questions.length || args.questionIndex > game.questionIndex) return null;
+    if (!Number.isInteger(args.questionIndex) || args.questionIndex < 0 || args.questionIndex >= (game.questionCount ?? game.questions.length) || args.questionIndex > game.questionIndex) return null;
     const historical = game.replayClockVersion !== 1;
     const players = await playersOf(ctx, game._id, historical ? 100 : PLAYER_READ_CAP);
     const [round, previous, answers, clock] = await Promise.all([
@@ -1015,6 +1055,9 @@ export const questionReplay = query({
       ctx.db.query("liveAnswers").withIndex("by_gameId_and_questionIndex_and_playerId", q => q.eq("gameId", game._id).eq("questionIndex", args.questionIndex)).take(PLAYER_READ_CAP),
       ctx.db.query("liveQuestions").withIndex("by_gameId_and_questionIndex", q => q.eq("gameId", game._id).eq("questionIndex", args.questionIndex)).unique(),
     ]);
+    // Question rows exist for every room created after the content split; older rooms keep questions inline.
+    const replayed = (clock?.question ?? game.questions[args.questionIndex]) as LiveQuestion | undefined;
+    if (!replayed) return null;
     const currentScores = new Map(round.map(r => [r.playerId, r]));
     const previousScores = new Map(previous.map(r => [r.playerId, r]));
     const currentAnswers = new Map(answers.map(a => [a.playerId, a]));
@@ -1025,7 +1068,7 @@ export const questionReplay = query({
       title: game.title, questionIndex: args.questionIndex, questionCount: game.questionIndex + 1,
       durationMs, historical, sampled: historical && players.length === 100,
       revealedAtMs: clock?.revealedAt !== undefined && clock.startedAt !== undefined ? clock.revealedAt - clock.startedAt : historical ? durationMs : null,
-      question: { ...publicQuestion(game.questions[args.questionIndex]), correct: game.questions[args.questionIndex].correct },
+      question: { ...publicQuestion(replayed), correct: replayed.correct },
       players: players.map((p, i) => {
         const prior = previousScores.get(p._id);
         const current = currentScores.get(p._id);

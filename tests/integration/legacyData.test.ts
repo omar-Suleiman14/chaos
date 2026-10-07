@@ -63,6 +63,25 @@ describe("legacy data: the current schema accepts old shapes", () => {
 });
 
 describe("legacy data: read paths return correct values", () => {
+  it("does not let deleted question history consume the active question bound", async () => {
+    const { t, teacher, ds } = await seeded();
+    await t.run(async ctx => {
+      for (let order = 0; order < 510; order++) await ctx.db.insert("questions", {
+        quizId: ds.quizzes.draft, type: "mcq", questionText: "Deleted", options: ["a", "b"],
+        correctAnswer: "a", points: 1, order, deletedAt: 1,
+      });
+      await ctx.db.insert("questions", { quizId: ds.quizzes.draft, type: "mcq", questionText: "Active", options: ["a", "b"], correctAnswer: "a", points: 1, order: 511 });
+    });
+    expect(await teacher.query(api.quizFunctions.getQuestionsForOwner, { quizId: ds.quizzes.draft })).toMatchObject([{ questionText: "Active" }]);
+    await t.run(async ctx => {
+      for (let order = 0; order < 500; order++) await ctx.db.insert("questions", {
+        quizId: ds.quizzes.draft, type: "mcq", questionText: "Active", options: ["a", "b"],
+        correctAnswer: "a", points: 1, order,
+      });
+    });
+    await expect(teacher.query(api.quizFunctions.getQuestionsForOwner, { quizId: ds.quizzes.draft })).rejects.toThrow(/QUIZ_SIZE_LIMIT/);
+  });
+
   it("library list counts live questions and completed attempts only", async () => {
     const { teacher, ds } = await seeded();
     const list = await teacher.query(api.quizFunctions.getMyQuizzes, {});

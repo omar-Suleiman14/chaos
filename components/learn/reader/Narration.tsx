@@ -80,7 +80,7 @@ export default function Narration({ request, lessonId, content, title, descripti
   // Built once per request from the lesson's blocks (the page DOM is only followed, never read).
   const sequence = useMemo(
     () => (request.mode === "lesson" ? buildNarration(content, { title, description, language }) : buildTextNarration(request.text, language)),
-    [request.id], // eslint-disable-line react-hooks/exhaustive-deps -- a narration keeps the lesson it started with
+    [request.id], // oxlint-disable-line react-hooks/exhaustive-deps -- a narration keeps the lesson it started with
   );
   const latest = useRef({ prefs, voices, overrides, activities });
   useLayoutEffect(() => { latest.current = { prefs, voices, overrides, activities }; });
@@ -130,7 +130,7 @@ export default function Narration({ request, lessonId, content, title, descripti
       player.current = null;
       follower.current?.clear();
     };
-  }, [sequence]); // eslint-disable-line react-hooks/exhaustive-deps -- one player per narration
+  }, [sequence]); // oxlint-disable-line react-hooks/exhaustive-deps -- one player per narration
 
   useEffect(() => { follower.current?.setMode(prefs.follow); }, [prefs.follow]);
   useEffect(() => { follower.current?.setColor(prefs.narrationColor); }, [prefs.narrationColor]);

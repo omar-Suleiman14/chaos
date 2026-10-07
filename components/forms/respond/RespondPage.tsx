@@ -268,7 +268,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
     const base = local ?? { answers: {}, language, startedAt: Date.now(), submissionKey: randomHex(16), version: form.version };
     setProgress(fromLink ? { ...base, hidden: { ...base.hidden, ...fromLink } } : base);
     setReady(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per version
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- load once per version
   }, []);
 
   const persist = useCallback((next: LocalProgress) => {

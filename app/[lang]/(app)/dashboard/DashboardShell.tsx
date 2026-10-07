@@ -6,7 +6,7 @@ import "@/components/workspace/teams.css";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 
-import { useClerk, useUser } from "@/lib/auth/client";
+import { useAccount, useUser } from "@/lib/auth/client";
 import { CardOnboarding, CardSetupSkeleton } from "@/components/card/CardCustomization";
 import { avatarSeed } from "@/lib/avatarSeed";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
@@ -136,7 +136,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const t = useCopy(copy);
   const { locale, dir } = useLocale();
   const { user, isLoaded } = useUser();
-  const clerk = useClerk();
+  const accountActions = useAccount();
   const pathname = usePathname();
   const getOrCreateUser = useMutation(api.quizFunctions.getOrCreateUser);
   // Shown from the device cache until Convex confirms them (lib/confirmedQuery.ts), so a reload opens at once.
@@ -227,7 +227,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         setInitError(errorMessage(err, t.initFailed));
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation ref is stable in behavior
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- mutation ref is stable in behavior
   }, [isLoaded, user]);
 
   // The app has rendered (with any cached content), so skeletons may show again (dashboard/layout.tsx).
@@ -443,7 +443,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             {(user || account) && !account?.isBanned && !account?.suspendedUntil && (
               <AccountMenu compact={rail} admin={isAdmin}
                 user={{ name: user?.fullName || user?.username || account?.name || t.myCard, email: user?.primaryEmailAddress?.emailAddress ?? account?.email, imageUrl: user && "hasImage" in user && user.hasImage ? user.imageUrl : undefined, avatarSeed: account ? account.cardAvatarSeed ?? avatarSeed(account.clerkId) : user ? avatarSeed(user.id) : undefined }}
-                onManageAccount={() => clerk.openUserProfile()} onSignOut={() => void clerk.signOut({ redirectUrl: "/" })} />
+                onManageAccount={() => accountActions.openUserProfile()} onSignOut={() => void accountActions.signOut({ redirectUrl: "/" })} />
             )}
           </div>
           {!mobile && !rail && (

@@ -191,7 +191,7 @@ function EditorSession() {
       editor.initialize(toDraft(quiz, existingQuestions, teacherSettings, globalConfig), quiz.updatedAt);
     }
     // initialize is idempotent; later reactive updates must not overwrite local edits.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [ready]);
 
   // Keyboard undo/redo outside text fields' native history.

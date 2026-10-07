@@ -56,6 +56,61 @@ async function gameWithPlayers(t: T, names: string[], options: { autoAdvance?: b
 }
 
 describe("live games: create, join, start", () => {
+  it("keeps new snapshots immutable and still reads legacy inline rooms", async () => {
+    const t = createTestConvex();
+    const { owner, formId } = await publishedQuiz(t);
+    const gameId = await owner.mutation(api.live.createGame, { formId });
+    const content = await t.run(async ctx => {
+      const game = (await ctx.db.get("liveGames", gameId))!;
+      expect(game.questions).toEqual([]);
+      expect(game.questionCount).toBe(3);
+      return (await ctx.db.get("liveGameContent", game.contentId!))!;
+    });
+    const lobby = (await owner.query(api.live.hostView, { gameId }))!;
+    await t.mutation(api.live.joinGame, { pin: lobby.pin, nickname: "Sam", token: token(1) });
+    await owner.mutation(api.live.advance, { gameId, from: "lobby", questionIndex: -1 });
+    expect((await owner.query(api.live.hostView, { gameId }))!.question).toMatchObject({ text: "Capital of France?", correct: null });
+    expect((await t.query(api.live.playerView, { gameId, token: token(1) })).state).toBe("question");
+    const scene = await owner.query(api.live.hostView, { gameId, activity: false });
+    await t.mutation(api.live.submitAnswer, { gameId, token: token(1), questionIndex: 0, optionIds: ["paris"] });
+    expect(await owner.query(api.live.hostView, { gameId, activity: false })).toEqual(scene);
+    expect(await owner.query(api.live.hostActivity, { gameId })).toMatchObject({ answeredCount: 1, playerCount: 1 });
+    expect(await t.query(api.live.hostActivity, { gameId })).toBeNull();
+    await t.run(async ctx => {
+      expect(await ctx.db.get("liveGameContent", content._id)).toEqual(content);
+      await ctx.db.patch("liveGames", gameId, { contentId: undefined, questionCount: undefined, questions: content.questions });
+    });
+    expect((await owner.query(api.live.hostView, { gameId }))!.questionCount).toBe(3);
+    expect((await owner.query(api.live.myGames, {}))[0].questionCount).toBe(3);
+  });
+
+  it("serves host activity while answering without reading the question snapshot", async () => {
+    const t = createTestConvex();
+    const { owner, formId } = await publishedQuiz(t);
+    const gameId = await owner.mutation(api.live.createGame, { formId });
+    const { pin } = (await owner.query(api.live.hostView, { gameId }))!;
+    await t.mutation(api.live.joinGame, { pin, nickname: "Sam", token: token(1) });
+    await owner.mutation(api.live.advance, { gameId, from: "lobby", questionIndex: -1 });
+    await t.mutation(api.live.submitAnswer, { gameId, token: token(1), questionIndex: 0, optionIds: ["paris"] });
+    const content = await t.run(async ctx => {
+      const contentId = (await ctx.db.get("liveGames", gameId))!.contentId!;
+      const doc = (await ctx.db.get("liveGameContent", contentId))!;
+      await ctx.db.delete("liveGameContent", contentId);
+      return doc;
+    });
+    // Any snapshot read would now throw LIVE_NOT_FOUND.
+    expect(await owner.query(api.live.hostActivity, { gameId })).toMatchObject({ state: "question", answeredCount: 1, playerCount: 1, distribution: null });
+    await t.run(async ctx => {
+      const { _id, _creationTime, ...questions } = content;
+      const contentId = await ctx.db.insert("liveGameContent", questions);
+      await ctx.db.patch("liveGames", gameId, { contentId });
+    });
+    await owner.mutation(api.live.advance, { gameId, from: "question", questionIndex: 0 });
+    const reveal = (await owner.query(api.live.hostActivity, { gameId }))!;
+    expect(reveal.state).toBe("reveal");
+    expect(reveal.distribution).toMatchObject({ paris: 1 });
+  });
+
   it("hides archived quizzes' sessions from history and restores them when unarchived", async () => {
     const t = createTestConvex();
     const { owner, formId } = await publishedQuiz(t);

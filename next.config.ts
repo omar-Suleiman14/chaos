@@ -69,6 +69,8 @@ const nextConfig: NextConfig = {
   // CI typechecks every push (pnpm typecheck), so Vercel skips the repeat and deploys sooner.
   typescript: { ignoreBuildErrors: Boolean(process.env.VERCEL) },
   experimental: {
+    // TypeScript 7 exposes a native CLI rather than the TypeScript 6 JS compiler API.
+    useTypeScriptCli: true,
     // Keep visited workspace pages in the client router cache for 30 s, so Back and sidebar hops
     // re-render at once. Their data comes live from Convex, so nothing shown goes stale.
     staleTimes: { dynamic: 30 },

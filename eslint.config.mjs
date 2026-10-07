@@ -1,24 +1,35 @@
 import { defineConfig, globalIgnores } from "eslint/config";
-import nextCoreWebVitals from "eslint-config-next/core-web-vitals";
-import nextTypescript from "eslint-config-next/typescript";
+import nextPlugin from "@next/eslint-plugin-next";
+import babelParser from "@babel/eslint-parser";
 import convexPlugin from "@convex-dev/eslint-plugin";
 
+// Framework rules need syntax, not the legacy TypeScript compiler API.
+// Babel parses TS/TSX while TypeScript 7 owns all semantic checking.
 export default defineConfig([
-  ...nextCoreWebVitals,
-  ...nextTypescript,
-  ...convexPlugin.configs.recommended,
   {
+    files: ["**/*.{js,jsx,mjs,ts,tsx,mts}"],
+    languageOptions: {
+      parser: babelParser,
+      parserOptions: {
+        requireConfigFile: false,
+        babelOptions: { parserOpts: { plugins: ["typescript", "jsx"] } },
+      },
+    },
+    plugins: { "@next/next": nextPlugin },
     rules: {
-      // This rule is far stricter than common React practice and
-      // breaks typical hydration/mount patterns in Next.js client components.
-      "react-hooks/set-state-in-effect": "off",
-
-      // Allow incremental typing improvements without blocking builds.
-      "@typescript-eslint/no-explicit-any": "warn",
-
-      // A leading underscore marks a value left out on purpose, e.g. `const { id: _id, ...rest } = row`.
-      "@typescript-eslint/no-unused-vars": ["warn", { argsIgnorePattern: "^_", varsIgnorePattern: "^_", destructuredArrayIgnorePattern: "^_", ignoreRestSiblings: true }],
+      ...nextPlugin.configs.recommended.rules,
+      ...nextPlugin.configs["core-web-vitals"].rules,
     },
   },
-  globalIgnores(["convex/_generated", "convex/*/_generated", ".claude/worktrees", "test-results", "playwright-report", "blob-report", "coverage"]),
+  ...convexPlugin.configs.recommended,
+  globalIgnores([
+    "convex/_generated",
+    "convex/*/_generated",
+    ".next",
+    ".claude/worktrees",
+    "test-results",
+    "playwright-report",
+    "blob-report",
+    "coverage",
+  ]),
 ]);
