@@ -20,6 +20,10 @@
       "budget": 1716,
       "unit": "bytes"
     },
+    "journey.courseModules.readAmplification": {
+      "budget": 240,
+      "unit": "count"
+    },
     "journey.courseModules.transactions": {
       "budget": 1,
       "unit": "count"
@@ -49,6 +53,10 @@
       "budget": 25506,
       "unit": "bytes"
     },
+    "journey.dashboard.readAmplification": {
+      "budget": 12,
+      "unit": "count"
+    },
     "journey.dashboard.transactions": {
       "budget": 8,
       "unit": "count"
@@ -72,6 +80,10 @@
     "journey.formCreate.payloadBytes": {
       "budget": 1464,
       "unit": "bytes"
+    },
+    "journey.formCreate.readAmplification": {
+      "budget": 60,
+      "unit": "count"
     },
     "journey.formCreate.transactions": {
       "budget": 2,
@@ -98,6 +110,10 @@
       "budget": 3694,
       "unit": "bytes"
     },
+    "journey.formOpen.readAmplification": {
+      "budget": 30,
+      "unit": "count"
+    },
     "journey.formOpen.transactions": {
       "budget": 1,
       "unit": "count"
@@ -117,6 +133,10 @@
     "journey.lessonRead.payloadBytes": {
       "budget": 7026,
       "unit": "bytes"
+    },
+    "journey.lessonRead.readAmplification": {
+      "budget": 130,
+      "unit": "count"
     },
     "journey.lessonRead.transactions": {
       "budget": 5,
@@ -141,6 +161,10 @@
     "journey.liveJoin.payloadBytes": {
       "budget": 455,
       "unit": "bytes"
+    },
+    "journey.liveJoin.readAmplification": {
+      "budget": 360,
+      "unit": "count"
     },
     "journey.liveJoin.transactions": {
       "budget": 2,
@@ -185,6 +209,10 @@
       "budget": 2024,
       "unit": "bytes"
     },
+    "journey.mcpPersist.readAmplification": {
+      "budget": 180,
+      "unit": "count"
+    },
     "journey.mcpPersist.transactions": {
       "budget": 8,
       "unit": "count"
@@ -204,6 +232,10 @@
     "journey.quizQuestion.payloadBytes": {
       "budget": 2840,
       "unit": "bytes"
+    },
+    "journey.quizQuestion.readAmplification": {
+      "budget": 40,
+      "unit": "count"
     },
     "journey.quizQuestion.transactions": {
       "budget": 1,

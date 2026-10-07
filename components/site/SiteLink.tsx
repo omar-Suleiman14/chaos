@@ -5,7 +5,6 @@ import { useState, type ComponentProps } from "react";
 import { useLocale } from "@/lib/i18n";
 import { localePath } from "@/lib/locale";
 import { hostHref } from "@/lib/hosts";
-import { warmHref } from "@/lib/convexCache";
 
 /**
  * next/link for public pages:
@@ -19,7 +18,10 @@ export default function SiteLink({ href, prefetch, onMouseEnter, onFocus, onTouc
   const { locale } = useLocale();
   const [intent, setIntent] = useState(false);
   // Intent also starts the next page's Convex data (lessons, courses), not only its code.
-  const warm = () => { setIntent(true); if (typeof href === "string") warmHref(href); };
+  const warm = () => {
+    setIntent(true);
+    if (typeof href === "string") void import("@/lib/convexCache").then(({ warmHref }) => warmHref(href)).catch(() => {});
+  };
   return (
     <Link
       {...props}

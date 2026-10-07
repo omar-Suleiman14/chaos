@@ -20,6 +20,10 @@
       "budget": 95,
       "unit": "bytes"
     },
+    "card.mine.readAmplification": {
+      "budget": 10,
+      "unit": "count"
+    },
     "card.public.bytesRead": {
       "budget": 704,
       "unit": "bytes"
@@ -35,6 +39,10 @@
     "card.public.payloadBytes": {
       "budget": 95,
       "unit": "bytes"
+    },
+    "card.public.readAmplification": {
+      "budget": 30,
+      "unit": "count"
     },
     "courses.editor.bytesRead": {
       "budget": 40649,
@@ -57,6 +65,10 @@
         "at": "2026-10-06"
       }
     },
+    "courses.editor.readAmplification": {
+      "budget": 180,
+      "unit": "count"
+    },
     "courses.public.bytesRead": {
       "budget": 42389,
       "unit": "bytes"
@@ -72,6 +84,10 @@
     "courses.public.payloadBytes": {
       "budget": 1709,
       "unit": "bytes"
+    },
+    "courses.public.readAmplification": {
+      "budget": 240,
+      "unit": "count"
     },
     "dashboard.bytesRead": {
       "budget": 87506,
@@ -93,6 +109,10 @@
     "dashboard.payloadBytes": {
       "budget": 21111,
       "unit": "bytes"
+    },
+    "dashboard.readAmplification": {
+      "budget": 11,
+      "unit": "count"
     },
     "dashboard.subscriptions": {
       "budget": 6,
@@ -119,6 +139,10 @@
       "budget": 3766,
       "unit": "bytes"
     },
+    "forms.editor.readAmplification": {
+      "budget": 30,
+      "unit": "count"
+    },
     "lessons.editor.bytesRead": {
       "budget": 8717,
       "unit": "bytes"
@@ -134,6 +158,10 @@
     "lessons.editor.payloadBytes": {
       "budget": 9469,
       "unit": "bytes"
+    },
+    "lessons.editor.readAmplification": {
+      "budget": 10,
+      "unit": "count"
     },
     "lessons.reader.bytesRead": {
       "budget": 34893,
@@ -151,6 +179,10 @@
       "budget": 6934,
       "unit": "bytes"
     },
+    "lessons.reader.readAmplification": {
+      "budget": 80,
+      "unit": "count"
+    },
     "live.host.bytesRead": {
       "budget": 10500,
       "unit": "bytes"
@@ -166,6 +198,10 @@
     "live.host.payloadBytes": {
       "budget": 3784,
       "unit": "bytes"
+    },
+    "live.host.readAmplification": {
+      "budget": 10,
+      "unit": "count"
     },
     "live.player.bytesRead": {
       "budget": 1758,
@@ -183,6 +219,18 @@
       "budget": 451,
       "unit": "bytes"
     },
+    "live.player.readAmplification": {
+      "budget": 20,
+      "unit": "count"
+    },
+    "mcp.admin.listToolsBytes": {
+      "budget": 271782,
+      "unit": "bytes"
+    },
+    "mcp.admin.tools": {
+      "budget": 137,
+      "unit": "count"
+    },
     "mcp.getLesson.bytesRead": {
       "budget": 9837,
       "unit": "bytes"
@@ -199,9 +247,22 @@
       "budget": 14634,
       "unit": "bytes"
     },
-    "mcp.listToolsBytes": {
-      "budget": 246805,
+    "mcp.getLesson.readAmplification": {
+      "budget": 60,
+      "unit": "count"
+    },
+    "mcp.largestToolBytes": {
+      "budget": 12072,
       "unit": "bytes"
+    },
+    "mcp.listToolsBytes": {
+      "budget": 247277,
+      "unit": "bytes",
+      "raised": {
+        "from": 246805,
+        "reason": "OAuth offline_access is now advertised in tool security metadata so MCP clients can refresh expired access tokens; measured in nightly run 37594838168.",
+        "at": "2026-10-07"
+      }
     },
     "mcp.searchForms.bytesRead": {
       "budget": 82186,
@@ -224,6 +285,10 @@
       "budget": 19018,
       "unit": "bytes"
     },
+    "mcp.searchForms.readAmplification": {
+      "budget": 340,
+      "unit": "count"
+    },
     "mcp.tools": {
       "budget": 119,
       "unit": "count"
@@ -243,6 +308,10 @@
     "quizzes.respondent.payloadBytes": {
       "budget": 2840,
       "unit": "bytes"
+    },
+    "quizzes.respondent.readAmplification": {
+      "budget": 40,
+      "unit": "count"
     }
   }
 }

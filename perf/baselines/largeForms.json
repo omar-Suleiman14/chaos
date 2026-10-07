@@ -20,6 +20,10 @@
       "budget": 40438,
       "unit": "bytes"
     },
+    "forms.max.editor.readAmplification": {
+      "budget": 20,
+      "unit": "count"
+    },
     "forms.max.publish.bytesWritten": {
       "budget": 67610,
       "unit": "bytes"
@@ -59,6 +63,10 @@
       "budget": 146713,
       "unit": "bytes"
     },
+    "forms.max.r25.analysis.readAmplification": {
+      "budget": 300,
+      "unit": "count"
+    },
     "forms.max.r25.responsesPage.bytesRead": {
       "budget": 268394,
       "unit": "bytes"
@@ -75,6 +83,10 @@
       "budget": 9485,
       "unit": "bytes"
     },
+    "forms.max.r25.responsesPage.readAmplification": {
+      "budget": 11,
+      "unit": "count"
+    },
     "forms.max.respondent.bytesRead": {
       "budget": 67939,
       "unit": "bytes"
@@ -90,6 +102,10 @@
     "forms.max.respondent.payloadBytes": {
       "budget": 40291,
       "unit": "bytes"
+    },
+    "forms.max.respondent.readAmplification": {
+      "budget": 40,
+      "unit": "count"
     },
     "forms.max.save.bytesWritten": {
       "budget": 33968,
@@ -114,6 +130,10 @@
     "forms.q10.editor.payloadBytes": {
       "budget": 3438,
       "unit": "bytes"
+    },
+    "forms.q10.editor.readAmplification": {
+      "budget": 20,
+      "unit": "count"
     },
     "forms.q10.publish.bytesWritten": {
       "budget": 5108,
@@ -154,6 +174,10 @@
       "budget": 9443,
       "unit": "bytes"
     },
+    "forms.q10.r50.analysis.readAmplification": {
+      "budget": 550,
+      "unit": "count"
+    },
     "forms.q10.r50.responsesPage.bytesRead": {
       "budget": 25913,
       "unit": "bytes"
@@ -170,6 +194,10 @@
       "budget": 9621,
       "unit": "bytes"
     },
+    "forms.q10.r50.responsesPage.readAmplification": {
+      "budget": 11,
+      "unit": "count"
+    },
     "forms.q10.respondent.bytesRead": {
       "budget": 5437,
       "unit": "bytes"
@@ -185,6 +213,10 @@
     "forms.q10.respondent.payloadBytes": {
       "budget": 3292,
       "unit": "bytes"
+    },
+    "forms.q10.respondent.readAmplification": {
+      "budget": 40,
+      "unit": "count"
     },
     "forms.q10.save.bytesWritten": {
       "budget": 2717,
@@ -209,6 +241,10 @@
     "forms.q100.editor.payloadBytes": {
       "budget": 22537,
       "unit": "bytes"
+    },
+    "forms.q100.editor.readAmplification": {
+      "budget": 20,
+      "unit": "count"
     },
     "forms.q100.publish.bytesWritten": {
       "budget": 37349,
@@ -249,6 +285,10 @@
       "budget": 81191,
       "unit": "bytes"
     },
+    "forms.q100.r50.analysis.readAmplification": {
+      "budget": 550,
+      "unit": "count"
+    },
     "forms.q100.r50.responsesPage.bytesRead": {
       "budget": 153414,
       "unit": "bytes"
@@ -265,6 +305,10 @@
       "budget": 9621,
       "unit": "bytes"
     },
+    "forms.q100.r50.responsesPage.readAmplification": {
+      "budget": 11,
+      "unit": "count"
+    },
     "forms.q100.respondent.bytesRead": {
       "budget": 37678,
       "unit": "bytes"
@@ -280,6 +324,10 @@
     "forms.q100.respondent.payloadBytes": {
       "budget": 22390,
       "unit": "bytes"
+    },
+    "forms.q100.respondent.readAmplification": {
+      "budget": 40,
+      "unit": "count"
     },
     "forms.q100.save.bytesWritten": {
       "budget": 18838,

@@ -1,6 +1,10 @@
 {
   "suite": "census",
   "metrics": {
+    "editor.duplicateSubscriptions": {
+      "budget": 0,
+      "unit": "count"
+    },
     "editor.keystroke.commits": {
       "budget": 2,
       "unit": "count"
@@ -15,6 +19,10 @@
     },
     "editor.mount.renders": {
       "budget": 907,
+      "unit": "count"
+    },
+    "editor.sameFunctionManyArgs": {
+      "budget": 0,
       "unit": "count"
     },
     "editor.serverEcho.renders": {
@@ -53,6 +61,10 @@
       "budget": 203,
       "unit": "count"
     },
+    "lesson.duplicateSubscriptions": {
+      "budget": 3,
+      "unit": "count"
+    },
     "lesson.maxRendersPerCommit": {
       "budget": 105,
       "unit": "count"
@@ -63,6 +75,10 @@
     },
     "lesson.mount.renders": {
       "budget": 677,
+      "unit": "count"
+    },
+    "lesson.sameFunctionManyArgs": {
+      "budget": 0,
       "unit": "count"
     },
     "lesson.subscriptions": {
@@ -77,12 +93,20 @@
       "budget": 1,
       "unit": "count"
     },
+    "live.player.duplicateSubscriptions": {
+      "budget": 0,
+      "unit": "count"
+    },
     "live.player.maxRendersPerCommit": {
       "budget": 1,
       "unit": "count"
     },
     "live.player.mount.renders": {
       "budget": 40,
+      "unit": "count"
+    },
+    "live.player.sameFunctionManyArgs": {
+      "budget": 0,
       "unit": "count"
     },
     "live.player.subscriptions": {
