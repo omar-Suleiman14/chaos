@@ -48,7 +48,7 @@ describe("authorization helper guard", () => {
     const matcher = /createRouteMatcher\(\[([^\]]*)\]\)/.exec(proxy)?.[1] ?? "";
     for (const route of ["/dashboard(.*)", "/admin(.*)", "/print(.*)"]) expect(matcher).toContain(`"${route}"`);
     // Every page folder under app/ that is not public must be listed above.
-    const publicTop = new Set(["ai", "forms-quizzes", "live-games", "open-source", "teams", "status", "changelog","[username]", "f", "sign-in", "sign-up", "docs", "chatgpt", "claude", "connect", "pricing", "privacy", "terms", "copyright", "api", "mcp", ".well-known", "opengraph-image",
+    const publicTop = new Set(["ai", "forms-quizzes", "live-games", "open-source", "teams", "status", "changelog","[username]", "f", "sign-in", "sign-up", "docs", "chatgpt", "claude", "connect", "pricing", "privacy", "cookies", "terms", "copyright", "api", "mcp", ".well-known", "opengraph-image",
       // Live game players join with a PIN and no account (host screens live under /dashboard).
       "play", "compare", "support", "faq", "card", "sitemap",
       // Published lessons, profiles and collections are readable without an account; writing needs sign-in.

@@ -1,6 +1,6 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
-import CookieConsent from "@/components/CookieConsent";
+import CookieConsent, { CookieSettingsButton } from "@/components/CookieConsent";
 import CookiesView from "@/components/site/CookiesView";
 import { analyticsAllowed, CONSENT_COOKIE, CONSENT_DAYS, cookieConsent, saveCookieConsent } from "@/lib/cookieConsent";
 import { LocaleProvider } from "@/lib/i18n";
@@ -16,7 +16,7 @@ beforeEach(() => {
 afterEach(() => vi.useRealTimers());
 
 it("offers equally accessible allow and reject choices, then supports withdrawal", () => {
-  render(<LocaleProvider initial="en"><CookieConsent /></LocaleProvider>);
+  render(<LocaleProvider initial="en"><CookieConsent /><CookieSettingsButton /></LocaleProvider>);
   expect(cookieConsent()).toBeNull();
   expect(analyticsAllowed()).toBe(false);
   fireEvent.click(screen.getByRole("button", { name: "Allow analytics" }));

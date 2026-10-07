@@ -7,6 +7,7 @@ import { Languages, LogIn, Menu, X } from "lucide-react";
 import Logo from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { ThemeModeSwitch } from "@/components/ThemeModeSwitch";
+import { CookieSettingsButton } from "@/components/CookieConsent";
 import { useCopy, useLocale } from "@/lib/i18n";
 import type { Locale } from "@/lib/i18n";
 import { repoIssuesUrl, repoUrl } from "@/lib/site";
@@ -178,6 +179,7 @@ export function SiteFooter() {
             <h2>{t.legal}</h2>
             <Link href="/privacy">{t.privacy}</Link>
             <Link href="/cookies">{t.privacy === "Privacy policy" ? "Cookie policy" : "سياسة ملفات تعريف الارتباط"}</Link>
+            <CookieSettingsButton />
             <Link href="/terms">{t.terms}</Link>
             <Link href="/copyright">{t.copyright}</Link>
             <Link href="/support#security">{t.security}</Link>

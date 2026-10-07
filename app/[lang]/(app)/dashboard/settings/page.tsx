@@ -5,7 +5,7 @@ import Link from "next/link";
 import { useMutation } from "convex/react";
 import { useConfirmedQuery } from "@/lib/confirmedQuery";
 import { toast } from "@/lib/toast";
-import { ChevronRight, Keyboard, Library, LifeBuoy, Palette, Timer, UserRound } from "lucide-react";
+import { ChevronRight, Cookie, Keyboard, Library, LifeBuoy, Palette, Timer, UserRound } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { presentationLabels } from "@/convex/formLogic";
 import { useBuilderLabels } from "@/components/forms/formThemeLabels";
@@ -18,6 +18,8 @@ import { useCopy } from "@/lib/i18n";
 import { supportEmail } from "@/lib/site";
 import { Row, Section, Segmented, useScrollToHash } from "@/components/workspace/settingsUi";
 import { hostHref } from "@/lib/hosts";
+import { useCookieChoice } from "@/components/CookieConsent";
+import { saveCookieConsent } from "@/lib/cookieConsent";
 
 /* Content settings: new forms, library, shortcuts, old quizzes and help. Account and app appearance live on the profile page (/dashboard/card). */
 
@@ -55,6 +57,7 @@ const copy = {
     shuffleQuestions: "Shuffle questions", shuffleOptions: "Shuffle answer options", showCorrect: "Show correct answers", showExplanations: "Show explanations",
     resultsAs: "Show results as", score: "Score", passFail: "Pass or fail", passMark: "Pass mark", halfMarks: "Half marks from", halfMarksHelp: "For written answers: if this share of keywords match, the answer gets half the points.",
     help: "Help", helpAbout: "Questions, feedback and the fine print.", feedback: "Help and feedback", email: "Email us", docs: "Docs", docsHelp: "Step-by-step guides for everything in Chaos.",
+    cookies: "Cookies and analytics", cookiesAbout: "Sign-in, language and saved progress always use cookies. Analytics is your choice.", analytics: "Usage analytics", analyticsHelp: "Anonymous usage data that helps us improve Chaos. Do Not Track and Global Privacy Control keep it off. Applies to this browser.", analyticsOn: "Analytics allowed", analyticsOff: "Analytics off", cookiePolicy: "Cookie policy",
     privacy: "Privacy policy", terms: "Terms", signOut: "Sign out", signOutHelp: "You can sign back in any time.",
   },
   ar: {
@@ -90,6 +93,7 @@ const copy = {
     shuffleQuestions: "خلط الأسئلة", shuffleOptions: "خلط الخيارات", showCorrect: "إظهار الإجابات الصحيحة", showExplanations: "إظهار الشروح",
     resultsAs: "عرض النتيجة", score: "الدرجة", passFail: "ناجح أو راسب", passMark: "درجة النجاح", halfMarks: "نصف الدرجة من", halfMarksHelp: "للإجابات الكتابية: إذا وردت هذه النسبة من الكلمات المفتاحية نالت الإجابة نصف الدرجة.",
     help: "المساعدة", helpAbout: "الأسئلة والملاحظات والشروط.", feedback: "المساعدة والملاحظات", email: "راسلنا", docs: "الدليل", docsHelp: "أدلة خطوة بخطوة لكل ما في Chaos.",
+    cookies: "ملفات تعريف الارتباط والتحليلات", cookiesAbout: "يستخدم تسجيل الدخول واللغة وحفظ التقدّم ملفات تعريف الارتباط دائمًا. أما التحليلات فاختيارك.", analytics: "تحليلات الاستخدام", analyticsHelp: "بيانات استخدام تساعدنا على تحسين Chaos. إشارتا Do Not Track وGlobal Privacy Control تُبقيانها متوقفة. ينطبق على هذا المتصفح.", analyticsOn: "تم السماح بالتحليلات", analyticsOff: "التحليلات متوقفة", cookiePolicy: "سياسة ملفات تعريف الارتباط",
     privacy: "سياسة الخصوصية", terms: "الشروط", signOut: "تسجيل الخروج", signOutHelp: "يمكنك تسجيل الدخول مجددًا في أي وقت.",
   },
 };
@@ -153,6 +157,7 @@ export default function SettingsPage() {
   const [listingSaving, setListingSaving] = useState(false);
   const quizzes = useConfirmedQuery(api.quizFunctions.getMyQuizzes).data;
   const { preferences: p, set } = usePreferences();
+  const cookieChoice = useCookieChoice();
   const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
   useScrollToHash(me !== undefined && quizzes !== undefined);
 
@@ -231,6 +236,14 @@ export default function SettingsPage() {
           <div id="settings-quiz-timers"><QuizDefaults t={t} /></div>
         </Section>
       )}
+
+      <Section id="cookies" icon={Cookie} title={t.cookies} description={t.cookiesAbout}>
+        <Row id="settings-analytics" label={t.analytics} help={t.analyticsHelp} isDefault={cookieChoice !== true}>
+          <WsSwitch label={t.analytics} hideLabel checked={cookieChoice === true} disabled={cookieChoice === undefined}
+            onChange={(allow) => { saveCookieConsent(allow); toast.success(allow ? t.analyticsOn : t.analyticsOff, { id: "analytics-consent" }); }} />
+        </Row>
+        <Row id="settings-cookie-policy" label={t.cookiePolicy}><Link href="/cookies" className="ws-btn ws-btn--sm ws-btn--ghost">{t.read}</Link></Row>
+      </Section>
 
       <Section id="help" icon={LifeBuoy} title={t.help} description={t.helpAbout}>
         <Row id="settings-docs" label={t.docs} help={t.docsHelp}><Link href={hostHref("/docs")} target="_blank" rel="noopener" className="ws-btn ws-btn--sm">{t.open} <ChevronRight size={14} className="rtl:-scale-x-100" /></Link></Row>
