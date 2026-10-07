@@ -1,11 +1,9 @@
 name: CI
 
-# Pull requests run the required gate. Pushes to main stay enabled until main
-# is protected against direct pushes; once that repository rule is active,
-# the push trigger can be removed to avoid re-running the same merged commit.
+# Pull requests run the required gate. main is protected (PR required, these
+# checks required), so the squash-merged commit is not tested a second time.
+# Docs-only PRs skip tests and build; a skipped required job counts as passing.
 on:
-  push:
-    branches: [main]
   pull_request:
   workflow_dispatch:
 
@@ -19,6 +17,23 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  changes:
+    name: Detect code changes
+    runs-on: ubuntu-latest
+    outputs:
+      code: ${{ steps.filter.outputs.code }}
+    steps:
+      - id: filter
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "${{ github.event_name }}" != "pull_request" ]; then echo "code=true" >> "$GITHUB_OUTPUT"; exit 0; fi
+          files=$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" --jq '.[].filename')
+          code_files=$(printf '%s\n' "$files" | grep -Ev '^(docs/.*\.md|[^/]+\.md|LICENSE|\.github/ISSUE_TEMPLATE/.*|\.github/PULL_REQUEST_TEMPLATE\.md|\.github/CODEOWNERS)$' || true)
+          if [ -n "$code_files" ]; then code=true; else code=false; fi
+          echo "code=$code" >> "$GITHUB_OUTPUT"
+          echo "Code changed: $code"
+
   static:
     name: Static checks
     runs-on: ubuntu-latest
@@ -68,6 +83,8 @@ jobs:
 
   unit:
     name: Unit tests
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -88,6 +105,8 @@ jobs:
 
   integration:
     name: Integration tests
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -108,6 +127,8 @@ jobs:
 
   build:
     name: Production build
+    needs: changes
+    if: needs.changes.outputs.code == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout

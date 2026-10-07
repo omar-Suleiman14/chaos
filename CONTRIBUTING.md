@@ -51,6 +51,8 @@ Check dependency advisories with `pnpm audit` and `pnpm audit --prod`. Report un
 ## Pull requests
 
 - Open pull requests against **`main`**. Work happens on short-lived branches; `main` should stay releasable.
+- `main` is protected. Pull requests are squash-merged once Static checks, Unit tests, Integration tests and Production build pass and review conversations are resolved. The pull request title becomes the commit message, so write it as one, e.g. `fix: keep live answers after reconnect`.
+- Pull requests that only touch Markdown docs or issue/PR templates skip the test and build jobs.
 - Keep each pull request to one change, and link the issue it closes (`Closes #123`).
 - Describe what you changed and how you checked it, including anything you could not check.
 - Screenshots help for visual changes, ideally in both English and Arabic.
