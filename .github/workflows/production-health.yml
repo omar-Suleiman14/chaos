@@ -1,12 +1,8 @@
 name: Production health
 
-# Once a day: real-user journey p50/p75/p95 and exceptions from PostHog, and
-# the platform status feed, against perf/production-thresholds.json. A crossed
-# threshold opens one issue labelled production-health (or comments on it);
-# the next healthy day closes it. Thresholds decide; no model runs here.
+# Manual until Chaos has enough traffic for continuous telemetry monitoring to
+# be worth the CI noise and issue automation.
 on:
-  schedule:
-    - cron: "5 7 * * *"
   workflow_dispatch:
 
 permissions:
@@ -86,4 +82,4 @@ jobs:
         with:
           name: production-health
           path: perf/results/production-health.*
-          retention-days: 90
+          retention-days: 30
