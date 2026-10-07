@@ -82,7 +82,7 @@ interface Receipt { receiptCode: string; endingId: string | null; editToken?: st
 /** `minimal` (inline only): just the questions, without the toolbar, progress bar, cover or full-height stage. */
 export function RespondToForm({ shareId, inline = false, minimal = false, studyProgress = false, onComplete }: { shareId: string; inline?: boolean; minimal?: boolean; studyProgress?: boolean; onComplete?: () => void }) {
   return (
-    <Suspense fallback={<RespondLoading />}>
+    <Suspense fallback={<RespondLoading embed={inline} />}>
       <MinimalContext.Provider value={inline && minimal}>
         <RespondPage key={shareId} shareId={shareId} inline={inline} studyProgress={studyProgress} onComplete={onComplete} />
       </MinimalContext.Provider>
@@ -91,8 +91,8 @@ export function RespondToForm({ shareId, inline = false, minimal = false, studyP
 }
 
 /** A loading screen in the form's own theme, when the server already knows it. */
-export function RespondLoading() {
-  return <Shell embed={false}><FormLoading /></Shell>;
+export function RespondLoading({ embed = false }: { embed?: boolean }) {
+  return <Shell embed={embed}><FormLoading /></Shell>;
 }
 
 function RespondPage({ shareId, inline = false, studyProgress = false, onComplete }: { shareId: string; inline?: boolean; studyProgress?: boolean; onComplete?: () => void }) {
@@ -164,7 +164,7 @@ function RespondPage({ shareId, inline = false, studyProgress = false, onComplet
     );
   }
   if (form.state === "code") {
-    return <Shell embed={embed} def={gateDef} plain={plain}><CodeGate title={form.title} lang={lang} error={codeError ?? (form.invalidCode ? "wrong" : null)} onSubmit={(code) => void tryCode(code)} /></Shell>;
+    return <Shell embed={embed} def={gateDef} plain={plain}><CodeGate autoFocus={!embed} title={form.title} lang={lang} error={codeError ?? (form.invalidCode ? "wrong" : null)} onSubmit={(code) => void tryCode(code)} /></Shell>;
   }
   if (editToken && editing === null) return <Shell embed={embed} def={gateDef} plain={plain}><Message title={form.title} body="This edit link is no longer valid." /></Shell>;
   if (resumeToken && resumed === null) return <Shell embed={embed} def={gateDef} plain={plain}><Message title={form.title} body="This resume link is no longer valid." /></Shell>;
@@ -637,7 +637,7 @@ function Message({ title, body, lang = "en", children }: { title: string; body?:
   );
 }
 
-function CodeGate({ title, lang, error, onSubmit }: { title: string; lang: Language; error: "wrong" | "locked" | null; onSubmit: (code: string) => void }) {
+function CodeGate({ title, lang, error, onSubmit, autoFocus }: { title: string; lang: Language; error: "wrong" | "locked" | null; onSubmit: (code: string) => void; autoFocus: boolean }) {
   const invalid = error !== null;
   const [code, setCode] = useState("");
   const t = text[lang];
@@ -646,7 +646,7 @@ function CodeGate({ title, lang, error, onSubmit }: { title: string; lang: Langu
       <h1 className="form-page-title form-heading" style={{ ["--i" as string]: 0 }}>{title}</h1>
       <label className="block space-y-2" style={{ ["--i" as string]: 1 }}>
         <span className="form-q-label">{t.code}</span>
-        <input value={code} onChange={(e) => setCode(e.target.value)} className="form-input" autoComplete="off" autoFocus aria-invalid={invalid} aria-describedby={invalid ? "code-error" : undefined} />
+        <input value={code} onChange={(e) => setCode(e.target.value)} className="form-input" autoComplete="off" autoFocus={autoFocus} aria-invalid={invalid} aria-describedby={invalid ? "code-error" : undefined} />
       </label>
       {invalid && <p id="code-error" role="alert" className="form-error-text">{error === "locked" ? t.codeLocked : t.codeWrong}</p>}
       <div style={{ ["--i" as string]: 2 }}><button className="form-btn">{t.continue} <span aria-hidden="true" className="form-btn-arrow">{isRtl(lang) ? "←" : "→"}</span></button></div>

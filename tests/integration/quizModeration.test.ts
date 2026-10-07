@@ -120,7 +120,7 @@ describe("banned quiz (respondent paths)", () => {
     expect(await owner.query(api.quizFunctions.getQuizForPlayer, { quizId })).not.toBeNull();
     expect(await admin.query(api.quizFunctions.getQuizForPlayer, { quizId })).not.toBeNull();
     expect(
-      (await admin.query(api.quizFunctions.getAdminQuizzes, {})).find((q) => q._id === quizId)?.isBanned
+      (await admin.query(api.quizFunctions.getAdminQuizzes, {})).page.find((q) => q.id === quizId)?.held
     ).toBe(true);
     expect(
       await owner.query(api.quizFunctions.getQuizByUsernameSlug, { username: creatorIdentity.nickname, slug: quizFixture.slug })

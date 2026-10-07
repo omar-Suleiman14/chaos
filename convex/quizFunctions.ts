@@ -6,7 +6,8 @@ import { reserveUsername, usernameOwner } from "./usernameModel";
 import { consumeCreation } from "./plans";
 import { DEFAULT_HALF_MARK_THRESHOLD, clampThreshold, gradeMulti, gradeSingle, gradeWritten, parseMultiAnswer } from "./grading";
 import { internal } from "./_generated/api";
-import { grantPlan } from "./admin";
+import { grantPlan, usersForActor, contentForActor } from "./admin";
+import { paginationOptsValidator } from "convex/server";
 import { creatorRestricted, hasPro, verifiedIdentityEmail } from "./authz";
 import { v } from "convex/values";
 import { query, mutation } from "./_generated/server";
@@ -1348,125 +1349,44 @@ export const getIsAdmin = query({
   },
 });
 
+/** Legacy admin names now share the bounded inventory and cached analytics paths. */
 export const getAdminStats = query({
   args: {},
   handler: async (ctx) => {
     await requireAdmin(ctx);
-    const allUsers = await ctx.db.query("users").collect();
-    const allQuizzes = await ctx.db.query("quizzes").collect();
-    const allSessions = await ctx.db.query("quizSessions").collect();
-
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayTimestamp = today.getTime();
-
-    const activeTodayQuizzes = allQuizzes.filter(
-      (q) => q.isPublished && q.updatedAt >= todayTimestamp
-    );
-
+    const snapshot = await ctx.db.query("adminMetrics").withIndex("by_key", q => q.eq("key", "platform")).unique();
+    const ready = snapshot?.completedAt != null;
     return {
-      totalUsers: allUsers.length,
-      totalQuizzes: allQuizzes.length,
-      totalSubmissions: allSessions.filter((s) => s.status === "completed").length,
-      activeToday: activeTodayQuizzes.length,
+      totalUsers: ready ? snapshot.counts.users : null,
+      totalQuizzes: ready ? snapshot.counts.quizzes : null,
+      totalSubmissions: ready ? snapshot.counts.completedAttempts : null,
+      activeToday: ready && !snapshot.running && new Date(snapshot.startedAt).toISOString().slice(0, 10) === new Date().toISOString().slice(0, 10)
+        ? snapshot.counts.activeTodayQuizzes ?? null : null,
+      completedAt: snapshot?.completedAt ?? null,
+      refreshing: snapshot?.running ?? false,
     };
   },
 });
 
+const adminPageArgs = { paginationOpts: v.optional(paginationOptsValidator) };
+function adminPage(options: { numItems: number; cursor: string | null } | undefined) {
+  if (options && (!Number.isSafeInteger(options.numItems) || options.numItems < 1 || options.numItems > 50)) {
+    throw new Error("Page size must be 1-50");
+  }
+  return options ?? { numItems: 25, cursor: null };
+}
 export const getAdminUsers = query({
-  args: {},
-  handler: async (ctx) => {
+  args: adminPageArgs,
+  handler: async (ctx, args) => {
     await requireAdmin(ctx);
-
-    // Batch-fetch all data once instead of N+1 per user
-    const [users, allQuizzes, allSessions] = await Promise.all([
-      ctx.db.query("users").collect(),
-      ctx.db.query("quizzes").collect(),
-      ctx.db.query("quizSessions").collect(),
-    ]);
-
-    // Build lookup maps
-    const quizzesByCreator = new Map<string, typeof allQuizzes>();
-    for (const quiz of allQuizzes) {
-      const arr = quizzesByCreator.get(quiz.creatorId) || [];
-      arr.push(quiz);
-      quizzesByCreator.set(quiz.creatorId, arr);
-    }
-
-    const completedSessionsByQuiz = new Map<string, number>();
-    for (const session of allSessions) {
-      if (session.status === "completed") {
-        completedSessionsByQuiz.set(
-          session.quizId,
-          (completedSessionsByQuiz.get(session.quizId) || 0) + 1
-        );
-      }
-    }
-
-    return users.map((user) => {
-      const userQuizzes = quizzesByCreator.get(user.clerkId) || [];
-      let totalSubmissions = 0;
-      for (const quiz of userQuizzes) {
-        totalSubmissions += completedSessionsByQuiz.get(quiz._id) || 0;
-      }
-
-      return {
-        ...user,
-        quizCount: userQuizzes.length,
-        submissionCount: totalSubmissions,
-        isElevated: user.isElevated ?? false,
-      };
-    });
+    return usersForActor(ctx, { paginationOpts: adminPage(args.paginationOpts) });
   },
 });
-
 export const getAdminQuizzes = query({
-  args: {},
-  handler: async (ctx) => {
+  args: adminPageArgs,
+  handler: async (ctx, args) => {
     await requireAdmin(ctx);
-
-    // Batch-fetch all data once instead of N+1 per quiz
-    const [quizzes, allUsers, allSessions, allQuestions] = await Promise.all([
-      ctx.db.query("quizzes").collect(),
-      ctx.db.query("users").collect(),
-      ctx.db.query("quizSessions").collect(),
-      ctx.db.query("questions").collect(),
-    ]);
-
-    // Build lookup maps
-    const usersByClerkId = new Map<string, string>();
-    for (const user of allUsers) {
-      usersByClerkId.set(user.clerkId, user.name);
-    }
-
-    const completedSessionsByQuiz = new Map<string, number>();
-    for (const session of allSessions) {
-      if (session.status === "completed") {
-        completedSessionsByQuiz.set(
-          session.quizId,
-          (completedSessionsByQuiz.get(session.quizId) || 0) + 1
-        );
-      }
-    }
-
-    const questionCountByQuiz = new Map<string, number>();
-    for (const question of allQuestions) {
-      if (question.deletedAt !== undefined) continue;
-      questionCountByQuiz.set(
-        question.quizId,
-        (questionCountByQuiz.get(question.quizId) || 0) + 1
-      );
-    }
-
-    const enriched = quizzes.map((quiz) => ({
-      ...quiz,
-      creatorName: usersByClerkId.get(quiz.creatorId) || "Unknown",
-      sessionCount: completedSessionsByQuiz.get(quiz._id) || 0,
-      questionCount: questionCountByQuiz.get(quiz._id) || 0,
-      isElevated: quiz.isElevated ?? false,
-    }));
-
-    return enriched.sort((a, b) => b.createdAt - a.createdAt);
+    return contentForActor(ctx, { kind: "quizzes", paginationOpts: adminPage(args.paginationOpts) });
   },
 });
 

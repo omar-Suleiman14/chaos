@@ -111,8 +111,13 @@ export const scan = internalMutation({
       if (page.isDone) phase = "quizzes";
     } else if (phase === "quizzes") {
       const page = await ctx.db.query("quizzes").paginate(options);
+      const dayStart = new Date(job.startedAt);
+      dayStart.setUTCHours(0, 0, 0, 0);
       for (const quiz of page.page) {
         pending.quizzes++;
+        if (quiz.isPublished && quiz.updatedAt >= dayStart.getTime()) {
+          pending.activeTodayQuizzes = (pending.activeTodayQuizzes ?? 0) + 1;
+        }
         if (
           quiz.isPublished &&
           !quiz.isBanned &&

@@ -1,6 +1,7 @@
 "use client";
 
 import dynamic from "next/dynamic";
+import { Suspense } from "react";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { localeDir } from "@/lib/locale";
@@ -18,6 +19,6 @@ export default function InlineFlashcards({ setId }: { setId: string }) {
   if (!deck) return <p className="lx-muted">{t.unavailable}</p>;
   return <section className="lx-inline-flashcards" aria-label={deck.title} dir={localeDir(locale)}>
     <header className="lx-panel__row"><strong dir="auto">{deck.title}</strong><span className="lx-muted">{t.cards(deck.cardCount)}</span></header>
-    <QueryErrorBoundary key={setId}><FlashcardStudy setId={setId} /></QueryErrorBoundary>
+    <QueryErrorBoundary key={setId}><Suspense fallback={<BlockPlaceholder label={t.loading} height={300} />}><FlashcardStudy setId={setId} /></Suspense></QueryErrorBoundary>
   </section>;
 }

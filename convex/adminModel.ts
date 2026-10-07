@@ -11,6 +11,7 @@ export const metricsValidator = v.object({
   partials: v.number(),
   completedAttempts: v.number(),
   attempts: v.number(),
+  activeTodayQuizzes: v.optional(v.number()),
 });
 export const emptyMetrics = {
   users: 0,
@@ -24,4 +25,5 @@ export const emptyMetrics = {
   partials: 0,
   completedAttempts: 0,
   attempts: 0,
+  activeTodayQuizzes: 0,
 };

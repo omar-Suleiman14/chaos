@@ -69,6 +69,7 @@ export function StudyRound({ setId, cards: draftCards, reviews, onEdit, onReview
   const [queue, setQueue] = useState(order);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
+  const restart = () => { reviewed.current.clear(); setIndex(0); setFlipped(false); setQueue(order()); };
   const card = cards.find((c) => c.id === queue[index]);
   const known = cards.filter((c) => boxOf(c.id) >= 3).length;
   const [pending, setPending] = useState(false);
@@ -90,7 +91,7 @@ export function StudyRound({ setId, cards: draftCards, reviews, onEdit, onReview
   return (
     <div ref={round} tabIndex={0} className="lx-section" style={{ gap: 16 }}>
       <div className="lx-panel__row"><span className="lx-muted" role="status">{t.progress(known, cards.length)}</span>
-        <button type="button" className="lx-link" disabled={pending} onClick={() => { setIndex(0); setFlipped(false); setQueue(order()); }}><RotateCcw size={12} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} /> {t.reset}</button>
+        <button type="button" className="lx-link" disabled={pending} onClick={restart}><RotateCcw size={12} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} /> {t.reset}</button>
       </div>
       <nav className="lx-actions" aria-label={t.back} style={{ justifyContent: "space-between" }}>
         <button type="button" className="ws-btn ws-btn--sm" disabled={pending || index === 0} onClick={() => { setIndex(i => i - 1); setFlipped(false); }}>{t.previous}</button>
@@ -117,9 +118,8 @@ export function StudyRound({ setId, cards: draftCards, reviews, onEdit, onReview
           </div>
         </>
       ) : (
-        <div className="lx-empty"><Check size={26} aria-hidden /><p>{t.finished}</p><button type="button" className="ws-btn ws-btn--primary" onClick={() => { setIndex(0); setFlipped(false); setQueue(order()); }}>{t.restart}</button></div>
+        <div className="lx-empty"><Check size={26} aria-hidden /><p>{t.finished}</p><button type="button" className="ws-btn ws-btn--primary" onClick={restart}>{t.restart}</button></div>
       )}
     </div>
   );
 }
-

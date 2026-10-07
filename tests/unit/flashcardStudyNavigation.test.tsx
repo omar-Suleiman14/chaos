@@ -1,11 +1,30 @@
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { beforeEach, expect, it, vi } from "vitest";
 import FlashcardStudy from "@/components/learn/study/FlashcardStudy";
+import { LessonActivity } from "@/components/learn/reader/ActivityContext";
 const mocks = vi.hoisted(() => ({ review: vi.fn() }));
 vi.mock("@/lib/auth/client", () => ({ SignInButton: ({ children }: { children: React.ReactNode }) => children }));
 vi.mock("convex/react", () => ({ useQuery: () => ({ _id: "version", title: "Study", cards: [{ id: "a", front: "First question", back: "First answer" }, { id: "b", front: "Second question", back: "Second answer" }] }) }));
 vi.mock("@/lib/learn/data", () => ({ useLearnViewer: () => ({ signedIn: true, id: "learner" }), useLearnActions: () => ({ reviewCard: mocks.review }), useCardReviews: () => [{ cardId: "a", box: 3, reviewedAt: 0 }] }));
 beforeEach(() => { vi.clearAllMocks(); mocks.review.mockResolvedValue(undefined); });
+it("requires every card to be reviewed again after restarting a completed round", async () => {
+  const report = vi.fn();
+  render(<LessonActivity.Provider value={report}><FlashcardStudy setId="deck" /></LessonActivity.Provider>);
+  const answer = async () => {
+    fireEvent.click(screen.getByRole("button", { name: "Show answer" }));
+    fireEvent.click(screen.getByRole("button", { name: "Knew it" }));
+    await waitFor(() => expect(screen.queryByRole("button", { name: "Knew it" })).toBeNull());
+  };
+  await answer();
+  expect(report).not.toHaveBeenCalled();
+  await answer();
+  expect(report).toHaveBeenCalledTimes(1);
+  fireEvent.click(screen.getByRole("button", { name: "Restart round" }));
+  await answer();
+  expect(report).toHaveBeenCalledTimes(1);
+  await answer();
+  expect(report).toHaveBeenCalledTimes(2);
+});
 it("navigates and flips without changing mastery, then restarts the same round", () => {
   render(<FlashcardStudy setId="deck" />);
   expect(screen.getByText("1 of 2 known well")).toBeInTheDocument();

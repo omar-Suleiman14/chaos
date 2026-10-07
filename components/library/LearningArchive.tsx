@@ -11,7 +11,7 @@ import { useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
 import { useConfirmed } from "@/lib/confirmedQuery";
 
-type Row = { id: string; title: string; count: number; updatedAt: number; restore: () => Promise<unknown> };
+type Row = { id: string; title: string; count: number; updatedAt: number; restore: () => Promise<unknown>; undo?: () => Promise<unknown> };
 type PageStatus = "LoadingFirstPage" | "CanLoadMore" | "LoadingMore" | "Exhausted";
 type LearningKind = "courses" | "lessons" | "flashcards" | "legacy_quizzes";
 
@@ -28,7 +28,9 @@ export default function LearningArchive({ kind, title }: { kind: LearningKind; t
   const restoreCards = useMutation(api.flashcards.setLifecycle);
   const restoreLesson = useMutation(api.lessons.setLifecycle);
   const restoreQuiz = useMutation(api.quizFunctions.setQuizArchived);
-  const rows = (results ?? []).map(row => ({ ...row, restore: async () => {
+  const rows = (results ?? []).map(row => ({ ...row,
+    undo: kind === "legacy_quizzes" ? () => restoreQuiz({ quizId: row.id as Id<"quizzes">, archived: true }) : undefined,
+    restore: async () => {
     if (kind === "courses") return restoreCourse({ courseId: row.id as Id<"learnCollections">, archived: false });
     if (kind === "legacy_quizzes") return restoreQuiz({ quizId: row.id as Id<"quizzes">, archived: false });
     if (row.revision === undefined) throw new Error("Reload this archive before restoring.");
@@ -45,7 +47,13 @@ function ArchivedTable({ kind, title, rows, status, loadMore }: { kind: Learning
   const run = async (row: Row) => {
     if (pending) return;
     setPending(row.id);
-    try { await row.restore(); toast.success(ar ? `تمت استعادة «${row.title}» إلى مكتبتك` : `Restored “${row.title}” to your library`); }
+    try {
+      await row.restore();
+      const undo = row.undo;
+      toast.success(ar ? `تمت استعادة «${row.title}» إلى مكتبتك` : `Restored “${row.title}” to your library`, {
+        undo: undo ? () => { void undo().catch(err => toast.error(err)); } : undefined,
+      });
+    }
     catch (err) { toast.error(err); }
     finally { setPending(null); }
   };

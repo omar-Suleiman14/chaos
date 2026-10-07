@@ -60,6 +60,14 @@ beforeEach(() => {
 });
 afterEach(() => vi.useRealTimers());
 
+it.each([true, false])("access-code autofocus respects inline=%s", inline => {
+  m.state = "code";
+  render(<RespondToForm shareId="protected" inline={inline} />);
+  const input = screen.getByRole("textbox");
+  if (inline) expect(input).not.toHaveFocus();
+  else expect(input).toHaveFocus();
+});
+
 it("waits for a resume lookup before initializing answers", () => {
   m.search = "resume=resume-a";
   const { rerender } = render(<RespondToForm shareId="a" />);

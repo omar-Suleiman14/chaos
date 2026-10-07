@@ -3,22 +3,22 @@ import { beforeEach, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
 import LearningArchive from "@/components/library/LearningArchive";
 
-const state = vi.hoisted(() => ({ restoreCourse: vi.fn(), restoreCards: vi.fn(), restoreLesson: vi.fn(), loadMore: vi.fn(), query: vi.fn(), status: "Exhausted", authenticated: true, courseArchived: true, revision: 7 }));
+const state = vi.hoisted(() => ({ restoreQuiz: vi.fn(), restoreCourse: vi.fn(), restoreCards: vi.fn(), restoreLesson: vi.fn(), loadMore: vi.fn(), query: vi.fn(), status: "Exhausted", authenticated: true, courseArchived: true, revision: 7 }));
 vi.mock("convex/react", () => ({
   useConvexAuth: () => ({ isAuthenticated: state.authenticated }),
-  useMutation: (ref: Parameters<typeof getFunctionName>[0]) => getFunctionName(ref) === "courses:setArchived" ? state.restoreCourse : getFunctionName(ref) === "lessons:setLifecycle" ? state.restoreLesson : state.restoreCards,
+  useMutation: (ref: Parameters<typeof getFunctionName>[0]) => getFunctionName(ref) === "quizFunctions:setQuizArchived" ? state.restoreQuiz : getFunctionName(ref) === "courses:setArchived" ? state.restoreCourse : getFunctionName(ref) === "lessons:setLifecycle" ? state.restoreLesson : state.restoreCards,
   usePaginatedQuery: (ref: Parameters<typeof getFunctionName>[0], args: unknown, options: unknown) => {
     const name = getFunctionName(ref); state.query(name, args, options);
     // The server returns archived rows only, already summarised (no drafts or card text).
     const kind = (args as { kind?: string } | "skip") === "skip" ? undefined : (args as { kind: string }).kind;
     return { status: state.status, loadMore: state.loadMore, results: kind === "courses" ? (state.courseArchived ? [{ id: "course-old", title: "Old course", updatedAt: 100, count: 1, published: false }] : [])
       : kind === "lessons" ? [{ id: "lesson-old", title: "Old lesson", updatedAt: 100, count: 1, published: false, revision: 4 }]
-      : kind === "flashcards" ? [{ id: "cards-old", title: "Old cards", updatedAt: 100, count: 1, published: false, revision: state.revision }] : [] };
+      : kind === "flashcards" ? [{ id: "cards-old", title: "Old cards", updatedAt: 100, count: 1, published: false, revision: state.revision }] : kind === "legacy_quizzes" ? [{ id: "quiz-old", title: "Old quiz", updatedAt: 100, count: 0, published: false }] : [] };
   },
 }));
 beforeEach(() => {
   vi.clearAllMocks(); state.status = "Exhausted"; state.authenticated = true; state.courseArchived = true; state.revision = 7;
-  state.restoreCourse.mockResolvedValue(null); state.restoreCards.mockResolvedValue(8); state.restoreLesson.mockResolvedValue(5);
+  state.restoreQuiz.mockResolvedValue(null); state.restoreCourse.mockResolvedValue(null); state.restoreCards.mockResolvedValue(8); state.restoreLesson.mockResolvedValue(5);
 });
 
 it("lists archived owned courses without draft links and restores them permanently", async () => {
@@ -88,4 +88,13 @@ it("reactivates archived lessons with their revision and only subscribes to the 
   fireEvent.click(screen.getByRole("button", { name: "Restore Old lesson" }));
   await waitFor(() => expect(state.restoreLesson).toHaveBeenCalledWith({ lessonId: "lesson-old", expectedRevision: 4, action: "reactivate" }));
   expect(screen.queryByRole("link", { name: "Back to library" })).toBeNull();
+});
+
+it("undoes restoring an archived classic quiz", async () => {
+  render(<LearningArchive kind="legacy_quizzes" />);
+  fireEvent.click(screen.getByRole("button", { name: "Restore Old quiz" }));
+  await screen.findByRole("button", { name: "Undo" });
+  expect(state.restoreQuiz).toHaveBeenLastCalledWith({ quizId: "quiz-old", archived: false });
+  fireEvent.click(screen.getByRole("button", { name: "Undo" }));
+  expect(state.restoreQuiz).toHaveBeenLastCalledWith({ quizId: "quiz-old", archived: true });
 });

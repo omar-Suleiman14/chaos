@@ -27,6 +27,8 @@ This is manual plan administration, not checkout, recurring billing or automatic
 
 Platform totals scan all users, forms, quizzes and attempts in bounded transactions. Only completed reports are displayed. Refresh hourly or with Refresh analytics. The timestamp identifies the completed scan; activity while a scan runs may be reflected in the next refresh. Restricted owners' content is excluded from live counts.
 
+The legacy `quizFunctions.getAdminUsers` and `getAdminQuizzes` queries now return the same metadata page shape as `admin.users` and `admin.content`, rather than entire tables with per-row aggregate scans. Pass `paginationOpts: { numItems, cursor }` (1–50 items; default 25) and follow `continueCursor` until `isDone`. Quiz rows use `id` and `held`; user rows include moderation and plan metadata. `getAdminStats` reads the completed analytics snapshot and includes `completedAt` and `refreshing`. Totals are `null` until the first completed refresh. `activeToday` counts published quizzes updated since the scan day's UTC midnight, and is `null` during refresh or when the snapshot belongs to an earlier day. It is not a count of active learners.
+
 PostHog uses the EU region. Set the following public build-time variables in `.env.local` and the frontend hosting environment, then rebuild:
 
 ```dotenv

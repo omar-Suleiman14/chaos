@@ -33,6 +33,24 @@ describe("cached useQuery", () => {
     render(<Page formId="skip" />).unmount();
     expect(client.watchQuery).not.toHaveBeenCalled();
   });
+  it("shares one retained watcher and cancels expiry when a page returns", () => {
+    vi.useFakeTimers();
+    const first = render(<Page formId="shared" />);
+    const second = render(<Page formId="shared" />);
+    expect(client.watchQuery).toHaveBeenCalledTimes(1);
+    first.unmount();
+    vi.advanceTimersByTime(KEEP_ALIVE_MS);
+    expect(client.release).not.toHaveBeenCalled();
+    second.unmount();
+    vi.advanceTimersByTime(KEEP_ALIVE_MS - 1);
+    const returned = render(<Page formId="shared" />);
+    vi.advanceTimersByTime(KEEP_ALIVE_MS);
+    expect(client.watchQuery).toHaveBeenCalledTimes(1);
+    expect(client.release).not.toHaveBeenCalled();
+    returned.unmount();
+    vi.advanceTimersByTime(KEEP_ALIVE_MS);
+    expect(client.release).toHaveBeenCalledTimes(1);
+  });
 
   it("warms a form on intent once per few seconds", () => {
     warmForm("f2");

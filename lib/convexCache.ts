@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useQuery as useConvexQuery } from "convex/react";
 import type { FunctionReference } from "convex/server";
+import { getFunctionName } from "convex/server";
 import { convexToJson, jsonToConvex } from "convex/values";
 import type { Value } from "convex/values";
 import { api } from "@/convex/_generated/api";
@@ -13,6 +14,7 @@ import { convex } from "@/lib/convexClient";
 export const KEEP_ALIVE_MS = 5 * 60_000;
 /** How long an intent prefetch (hover, touch, focus) keeps a query warm if nothing mounts it. */
 const INTENT_MS = 30_000;
+const retained = new Map<string, { users: number; release: () => void; timer?: ReturnType<typeof setTimeout> }>();
 
 /**
  * `useQuery` from convex/react, plus: when the component unmounts, the subscription is kept
@@ -26,10 +28,19 @@ export const useQuery = ((query: FunctionReference<"query">, ...rest: [Record<st
   const key = args === "skip" ? null : JSON.stringify(convexToJson(args ?? {}));
   useEffect(() => {
     if (key === null || !convex) return;
-    // A second subscription taken while mounted, so the query never drops to zero subscribers
-    // when the page unmounts (that would discard the result); it is released a few minutes later.
-    const release = convex.watchQuery(query, jsonToConvex(JSON.parse(key)) as Record<string, Value>).onUpdate(() => {});
-    return () => { setTimeout(release, KEEP_ALIVE_MS); };
+    const cacheKey = `${getFunctionName(query)}:${key}`;
+    let entry = retained.get(cacheKey);
+    if (!entry) {
+      entry = { users: 0, release: convex.watchQuery(query, jsonToConvex(JSON.parse(key)) as Record<string, Value>).onUpdate(() => {}) };
+      retained.set(cacheKey, entry);
+    }
+    clearTimeout(entry.timer);
+    entry.users++;
+    const held = entry;
+    return () => {
+      if (--held.users !== 0) return;
+      held.timer = setTimeout(() => { held.release(); retained.delete(cacheKey); }, KEEP_ALIVE_MS);
+    };
   }, [query, key]);
   return result;
 }) as typeof useConvexQuery;
@@ -40,12 +51,19 @@ export function warmQuery<Q extends FunctionReference<"query">>(query: Q, args: 
 }
 
 const warmed = new Map<string, number>();
+function markWarm(key: string, now: number) {
+  for (const [seen, time] of warmed) if (time <= now - 10_000) warmed.delete(seen);
+  if (warmed.has(key)) return false;
+  // Bound bookkeeping even if a long list generates thousands of intent events.
+  if (warmed.size >= 500) warmed.delete(warmed.keys().next().value!);
+  warmed.set(key, now);
+  return true;
+}
 
 /** Warms the builder's data for a form, at most once every few seconds per form. */
 export function warmForm(formId: Id<"forms"> | string) {
   const now = Date.now();
-  if ((warmed.get(formId) ?? 0) > now - 10_000) return;
-  warmed.set(formId, now);
+  if (!markWarm(formId, now)) return;
   warmQuery(api.forms.getFormForEditor, { formId: formId as Id<"forms"> });
 }
 
@@ -68,8 +86,7 @@ export function warmHref(href: string) {
   const course = /[?&]course=([a-z0-9]+)/i.exec(local)?.[1];
   const now = Date.now();
   const seen = course ? `${path}?course=${course}` : path;
-  if ((warmed.get(seen) ?? 0) > now - 10_000) return;
-  warmed.set(seen, now);
+  if (!markWarm(seen, now)) return;
   let m: RegExpExecArray | null;
   // A lesson opened from a course reads the course's copy of it (app/[lang]/(app)/learn/[id]/LessonPage.tsx).
   if (course && (m = /^\/learn\/([a-z0-9]+)$/i.exec(path))) { warmQuery(api.courses.lesson, { courseId: course, lessonId: m[1] }); return; }

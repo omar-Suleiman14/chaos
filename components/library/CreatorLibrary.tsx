@@ -317,7 +317,7 @@ export default function CreatorLibrary() {
     // The row moves at once (optimistic update); the toast follows the tap, not the round trip.
     const id = toast(next === "archived" ? t.archived(row.title) : t.restored(row.title), {
       description: next === "archived" ? t.findInArchive : undefined,
-      undo: () => { const pending = row.formId ? setStatus({ formId: row.formId, status: before }) : setQuizArchived({ quizId: row.quizId!, archived: false }); pending.catch((e) => toast.error(e)); },
+      undo: () => { const pending = row.formId ? setStatus({ formId: row.formId, status: before }) : setQuizArchived({ quizId: row.quizId!, archived: before === "archived" }); pending.catch((e) => toast.error(e)); },
     });
     try {
       if (row.formId) await setStatus({ formId: row.formId, status: next });

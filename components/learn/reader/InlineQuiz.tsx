@@ -2,7 +2,7 @@
 import { useLessonActivity } from "./ActivityContext";
 import dynamic from "next/dynamic";
 import { Suspense, useEffect, useState } from "react";
-import { useQuery } from "@/lib/convexCache";
+import { useQuery, warmQuery } from "@/lib/convexCache";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useLocale } from "@/lib/i18n";
@@ -10,9 +10,9 @@ import Link from "@/components/site/SiteLink";
 import QueryErrorBoundary from "@/components/forms/QueryErrorBoundary";
 import { localeDir } from "@/lib/locale";
 import { BlockPlaceholder, useNearViewport } from "./LazyBlock";
-const Form = dynamic(() =>
-  import("@/components/forms/respond/RespondPage").then((m) => m.RespondToForm),
-);
+const loadForm = () => import("@/components/forms/respond/RespondPage").then((m) => m.RespondToForm);
+const loadQuiz = () => import("@/components/quizzes/QuizPlayer");
+const Form = dynamic(() => import("@/components/forms/respond/RespondPage").then((m) => m.RespondToForm));
 const Quiz = dynamic(() => import("@/components/quizzes/QuizPlayer"));
 export default function InlineQuiz({
   asset,
@@ -37,6 +37,21 @@ export default function InlineQuiz({
         ? { kind: "form", id: asset.id as Id<"forms"> }
         : { kind: "quiz", id: asset.id as Id<"quizzes"> },
   } : "skip");
+  // Start code and metadata together instead of waiting for metadata before downloading code.
+  useEffect(() => {
+    if (!near) return;
+    void (asset.kind === "form" ? loadForm() : loadQuiz()).catch(() => {
+      // Rendering retries the import and the local error boundary handles a persistent failure.
+    });
+  }, [near, asset.kind]);
+  const publicShareId = details?.shareId || shareId;
+  const available = !!details;
+  useEffect(() => {
+    if (near && asset.kind === "form" && publicShareId) warmQuery(api.respond.getPublicForm, { shareId: publicShareId });
+  }, [near, asset.kind, publicShareId]);
+  useEffect(() => {
+    if (near && asset.kind === "quiz" && available) warmQuery(api.quizFunctions.getQuizForPlayer, { quizId: asset.id as Id<"quizzes"> });
+  }, [near, asset.kind, asset.id, available]);
   if (details === undefined)
     return <div ref={ref}><BlockPlaceholder label={ar ? "جارٍ تحميل التدريب…" : "Loading practice…"} height={280} /></div>;
   if (!details)
