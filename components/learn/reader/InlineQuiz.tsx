@@ -1,7 +1,7 @@
 "use client";
 import { useLessonActivity } from "./ActivityContext";
 import dynamic from "next/dynamic";
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useQuery } from "@/lib/convexCache";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -68,11 +68,13 @@ export default function InlineQuiz({
         )}
       </header>
       {(form || started) && <QueryErrorBoundary key={`${asset.kind}:${asset.id}:${view}`}>
+        {/* Keep a lazy player download from hiding the lesson and resetting its scroll. */}
+        <Suspense fallback={<BlockPlaceholder label={ar ? "جارٍ تحميل التدريب…" : "Loading practice…"} height={280} />}>
         {form ? (
           <Form shareId={details.shareId || shareId || ""} inline minimal={view === "minimal"} studyProgress onComplete={() => report(asset)} />
         ) : (
           <Quiz quizId={asset.id as Id<"quizzes">} inline onComplete={() => report(asset)} />
-        )}</QueryErrorBoundary>}
+        )}</Suspense></QueryErrorBoundary>}
     </section>
   );
 }
