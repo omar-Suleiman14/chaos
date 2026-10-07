@@ -1,4 +1,4 @@
-import { readFileSync } from "node:fs";
+import { existsSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 
 /**
@@ -87,5 +87,26 @@ describe("motion", () => {
   it("narration tints blend so text stays crisp in light and dark appearance", () => {
     expect(all.find((r) => r.selector === ".lx-narr-layer > span")?.body).toMatch(/background:\s*var\(--narr\).*mix-blend-mode:\s*multiply/);
     expect(all.find((r) => r.selector === ".dark .lx-narr-layer > span")?.body).toMatch(/mix-blend-mode:\s*screen/);
+  });
+});
+
+describe("lesson typefaces", () => {
+  const serif = all.find((r) => r.selector === '.lx-article[data-font="serif"]')!.body;
+  it("sets Latin serif text in the bundled Libron, with every style it ships", () => {
+    expect(serif).toMatch(/font-family:\s*"Libron"/);
+    const css = readFileSync("components/learn/learn.css", "utf8");
+    for (const file of ["Regular", "Italic", "Bold", "BoldItalic"]) {
+      expect(css).toContain(`url("./fonts/libron/Libron-${file}.woff2")`);
+      expect(existsSync(`components/learn/fonts/libron/Libron-${file}.woff2`)).toBe(true);
+    }
+    expect(existsSync("components/learn/fonts/libron/OFL.txt")).toBe(true);
+  });
+
+  it("gives Arabic Cairo before any face that carries a system Times Arabic, and survives a missing font variable", () => {
+    const stack = serif.replace(/^.*font-family:\s*/, "");
+    expect(stack).not.toMatch(/Times/);
+    expect(stack.indexOf("--font-cairo")).toBeGreaterThan(-1);
+    expect(stack).toMatch(/var\(--font-cairo,\s*"Cairo"\)/);
+    expect(stack).toMatch(/var\(--font-plex-arabic,\s*"IBM Plex Sans Arabic"\)/);
   });
 });
