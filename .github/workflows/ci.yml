@@ -11,6 +11,8 @@ on:
 
 permissions:
   contents: read
+  issues: read
+  pull-requests: read
 
 concurrency:
   group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
@@ -57,10 +59,12 @@ jobs:
 
       - name: Guard the performance harness
         if: github.event_name == 'pull_request'
-        run: pnpm perf:guard
         env:
+          GH_TOKEN: ${{ github.token }}
           BASE_REF: origin/${{ github.base_ref }}
-          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          labels=$(gh api "repos/${{ github.repository }}/issues/${{ github.event.pull_request.number }}" --jq '[.labels[].name] | join(",")')
+          PR_LABELS="$labels" pnpm perf:guard
 
   unit:
     name: Unit tests
