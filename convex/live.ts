@@ -515,19 +515,23 @@ export const kickPlayer = mutation({
   },
 });
 
+/** Accepts the bare liveGames row: question content is read only after a reveal, when option ids are needed. */
 async function hostActivityFor(ctx: QueryCtx, game: Game) {
     // During answering, only the small standing preview and shard counts change.
     // Old rooms without counters fall back to the full active roster until initialized.
     const storedCount = await storedPlayerCount(ctx, game);
     const countedQuestion = game.state === "question" && game.answerCounterQuestion === game.questionIndex && storedCount !== undefined;
     const players = await playersOf(ctx, game._id, countedQuestion ? 10 : PLAYER_READ_CAP);
-    const question = game.questions[game.questionIndex] as LiveQuestion | undefined;
+    const hasQuestion = game.questionIndex >= 0 && game.questionIndex < (game.questionCount ?? game.questions.length);
     const revealed = game.state === "reveal" || game.state === "leaderboard" || game.state === "ended";
     let answeredCount = 0;
     let distribution: Record<string, number> | null = null;
-    if (question && game.state !== "lobby") {
+    if (hasQuestion && game.state !== "lobby") {
       answeredCount = game.answerCounterQuestion === game.questionIndex ? await answerCount(ctx, game) : (await answersFor(ctx, game._id, game.questionIndex, players)).length;
-      if (revealed) {
+      const question = revealed
+        ? (game.questions[game.questionIndex] ?? (await withGameContent(ctx, game)).questions[game.questionIndex]) as LiveQuestion | undefined
+        : undefined;
+      if (question) {
         const counted = await answersFor(ctx, game._id, game.questionIndex, players);
         distribution = Object.fromEntries(question.options.map((o) => [o.id, 0]));
         for (const a of counted) for (const id of a.answer) distribution[id] = (distribution[id] ?? 0) + 1;
@@ -546,7 +550,8 @@ export const hostActivity = query({
   args: { gameId: v.id("liveGames") },
   handler: async (ctx, args) => {
     const identity = await getAuthIdentity(ctx);
-    const game = await readGame(ctx, args.gameId);
+    // The bare row: this query reruns on every answer, so the immutable question snapshot stays on hostView.
+    const game = await ctx.db.get("liveGames", args.gameId);
     if (!identity || !game || game.hostId !== identity.subject) return null;
     return { state: game.state, questionIndex: game.questionIndex, ...await hostActivityFor(ctx, game) };
   },

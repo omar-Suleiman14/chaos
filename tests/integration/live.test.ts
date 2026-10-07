@@ -84,6 +84,33 @@ describe("live games: create, join, start", () => {
     expect((await owner.query(api.live.myGames, {}))[0].questionCount).toBe(3);
   });
 
+  it("serves host activity while answering without reading the question snapshot", async () => {
+    const t = createTestConvex();
+    const { owner, formId } = await publishedQuiz(t);
+    const gameId = await owner.mutation(api.live.createGame, { formId });
+    const { pin } = (await owner.query(api.live.hostView, { gameId }))!;
+    await t.mutation(api.live.joinGame, { pin, nickname: "Sam", token: token(1) });
+    await owner.mutation(api.live.advance, { gameId, from: "lobby", questionIndex: -1 });
+    await t.mutation(api.live.submitAnswer, { gameId, token: token(1), questionIndex: 0, optionIds: ["paris"] });
+    const content = await t.run(async ctx => {
+      const contentId = (await ctx.db.get("liveGames", gameId))!.contentId!;
+      const doc = (await ctx.db.get("liveGameContent", contentId))!;
+      await ctx.db.delete("liveGameContent", contentId);
+      return doc;
+    });
+    // Any snapshot read would now throw LIVE_NOT_FOUND.
+    expect(await owner.query(api.live.hostActivity, { gameId })).toMatchObject({ state: "question", answeredCount: 1, playerCount: 1, distribution: null });
+    await t.run(async ctx => {
+      const { _id, _creationTime, ...questions } = content;
+      const contentId = await ctx.db.insert("liveGameContent", questions);
+      await ctx.db.patch("liveGames", gameId, { contentId });
+    });
+    await owner.mutation(api.live.advance, { gameId, from: "question", questionIndex: 0 });
+    const reveal = (await owner.query(api.live.hostActivity, { gameId }))!;
+    expect(reveal.state).toBe("reveal");
+    expect(reveal.distribution).toMatchObject({ paris: 1 });
+  });
+
   it("hides archived quizzes' sessions from history and restores them when unarchived", async () => {
     const t = createTestConvex();
     const { owner, formId } = await publishedQuiz(t);
