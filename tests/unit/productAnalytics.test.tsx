@@ -3,7 +3,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import ProductAnalytics, {
   analyticsScreen,
 } from "@/components/ProductAnalytics";
-const sdk = vi.hoisted(() => ({ init: vi.fn(), capture: vi.fn() }));
+const sdk = vi.hoisted(() => ({ init: vi.fn(), capture: vi.fn(), opt_in_capturing: vi.fn() }));
 vi.mock("posthog-js", () => ({ default: sdk }));
 vi.mock("next/navigation", () => ({
   usePathname: () => "/f/private-id?resume=secret",
@@ -18,6 +18,8 @@ it("does not expose private identifiers in screen names", () => {
 it("captures a sanitized screen name when PostHog is configured", async () => {
   vi.stubEnv("NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN", "phc_test");
   vi.stubEnv("NEXT_PUBLIC_POSTHOG_HOST", "https://eu.i.posthog.com");
+  const { saveCookieConsent } = await import("@/lib/cookieConsent");
+  saveCookieConsent(true);
   render(<ProductAnalytics />);
   // PostHog loads lazily (lib/analytics.ts); the call is queued and replayed once it arrives.
   await waitFor(() =>

@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "@/components/site/SiteLink";
 import LegalPage from "@/components/site/LegalPage";
 import { useLocale } from "@/lib/i18n";
 import { supportEmail } from "@/lib/site";
@@ -9,7 +10,7 @@ export default function PrivacyView() {
 
   if (locale === "ar") {
     return (
-      <LegalPage title="سياسة الخصوصية" updated="٤ أكتوبر ٢٠٢٦" draft>
+      <LegalPage title="سياسة الخصوصية" updated="٧ أكتوبر ٢٠٢٦" draft>
         <p>
           يتيح Chaos للأشخاص إنشاء النماذج والاختبارات والدروس والدورات والبطاقات التعليمية («المنشئون»)، ويتيح للجميع الإجابة عن النماذج والاختبارات («المجيبون»)، وقراءة المواد المنشورة ودراستها («المتعلمون»). توضح هذه السياسة ما نجمعه من معلومات، وأسباب ذلك، والخيارات المتاحة لك. إذا كان أي بند غير واضح، يُرجى مراسلتنا عبر{" "}
           <a href={`mailto:${supportEmail}`}>{supportEmail}</a>.
@@ -50,6 +51,7 @@ export default function PrivacyView() {
           يستخدم Chaos التخزين المحلي لمتصفحك (Local Storage) لحفظ تفضيلات المظهر الفاتح/الداكن، وتشغيل الأصوات أو كتمها، وتقدّمك في النموذج حتى لا تفقد إجاباتك إذا أغلقت الصفحة دون قصد. يستخدم Clerk ملفات تعريف الارتباط (Cookies) لإبقائك قيد تسجيل الدخول. نحن لا نستخدم إطلاقًا ملفات تعريف ارتباط إعلانية أو لتتبعك عبر المواقع.
         </p>
 
+        <p>تعمل تحليلات PostHog الاختيارية فقط بعد السماح بها. يمكنك رفضها أو سحب الموافقة من إعدادات ملفات تعريف الارتباط. اقرأ <Link href="/cookies">سياسة ملفات تعريف الارتباط والتخزين</Link> للتفاصيل وخيارات التحكم.</p>
         <h2>كيف نستخدم المعلومات</h2>
         <ul>
           <li>لتشغيل Chaos: عرض النماذج، وتسجيل الإجابات، وحساب درجات الاختبارات، وعرض النتائج للمنشئين.</li>
@@ -84,7 +86,7 @@ export default function PrivacyView() {
           <li><strong>Clerk</strong> لإدارة تسجيل الدخول والحسابات.</li>
           <li><strong>Convex</strong> لقاعدة البيانات وتخزين الملفات والدوال السحابية.</li>
           <li><strong>Vercel</strong> لاستضافة الموقع وتشغيله.</li>
-          <li><strong>PostHog</strong> لتحليلات الاستخدام (عند تفعيلها): مثل الصفحات التي تتم زيارتها (مع حذف الروابط والأسماء والرموز من العنوان لضمان إخفاء الهوية)، وبعض الأحداث البرمجية والأخطاء، دون تسجيل أي إجابات مطلقًا.</li>
+          <li><strong>PostHog</strong> لتحليلات الاستخدام الاختيارية بعد موافقتك (عند تهيئتها): مثل الصفحات التي تتم زيارتها (مع حذف الروابط والأسماء والرموز من العنوان)، وبعض الأحداث البرمجية والأخطاء، دون تسجيل أي إجابات مطلقًا.</li>
         </ul>
 
         <h2>مدة الاحتفاظ بالبيانات</h2>
@@ -123,7 +125,7 @@ export default function PrivacyView() {
   }
 
   return (
-    <LegalPage title="Privacy policy" updated="October 4, 2026" draft>
+    <LegalPage title="Privacy policy" updated="October 7, 2026" draft>
       <p>
         Chaos lets people create forms, quizzes, lessons, courses and flashcards (&ldquo;creators&rdquo;), lets anyone answer forms and quizzes (&ldquo;respondents&rdquo;), and lets people read and study published material (&ldquo;learners&rdquo;).
         This policy explains what we collect, why, and the choices you have. If something here is unclear, email{" "}
@@ -166,6 +168,7 @@ export default function PrivacyView() {
         don&rsquo;t lose answers if you close the page. Clerk uses cookies to keep you signed in. We don&rsquo;t use advertising or cross-site tracking cookies.
       </p>
 
+      <p>Optional PostHog analytics runs only after you choose Allow analytics. You can reject it or withdraw consent through Cookie settings. Read our <Link href="/cookies">cookie and browser storage policy</Link> for storage details and controls.</p>
       <h2>How we use information</h2>
       <ul>
         <li>To run Chaos: show forms, record answers, calculate quiz scores and show results to creators.</li>
@@ -203,7 +206,7 @@ export default function PrivacyView() {
         <li><strong>Clerk</strong> for sign-in and account management.</li>
         <li><strong>Convex</strong> for the database, file storage and server functions.</li>
         <li><strong>Vercel</strong> for hosting the website.</li>
-        <li><strong>PostHog</strong> for product analytics when analytics is configured: which pages are visited (with links, names and codes removed from the address, so a form link is recorded only as “a form”), a few named events and errors, never answers. It keeps an anonymous id in your browser’s local storage, not a cookie. When you are signed in, these are linked to your account id (not your email or name); people answering forms stay anonymous.</li>
+        <li><strong>PostHog</strong> for optional product analytics when configured and you consent: which pages are visited (with links, names and codes removed from the address, so a form link is recorded only as “a form”), a few named events and errors, never answers. It keeps an anonymous id in your browser’s local storage, not a cookie. When you are signed in, these are linked to your account id (not your email or name); people answering forms stay anonymous.</li>
       </ul>
 
       <h2>How long we keep data</h2>

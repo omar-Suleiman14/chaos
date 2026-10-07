@@ -3,7 +3,7 @@
  * private or per-form segment replaced. Custom links (/<username>/<slug>) contain no digits,
  * so digit-based rules alone would leak names; the route shape decides instead.
  */
-const TOP_LEVEL = new Set(["", "pricing", "docs", "chatgpt", "claude", "privacy", "terms", "dashboard", "admin", "mcp", "sign-in", "sign-up"]);
+const TOP_LEVEL = new Set(["", "pricing", "docs", "chatgpt", "claude", "privacy", "cookies", "terms", "dashboard", "admin", "mcp", "sign-in", "sign-up"]);
 const DASHBOARD = new Set(["settings", "connections", "archive", "editor", "results", "forms"]);
 const DOC_SLUG = /^[a-z0-9-]{1,64}$/;
 

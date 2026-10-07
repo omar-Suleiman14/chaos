@@ -1,11 +1,12 @@
 import type { PostHog } from "posthog-js";
 import { cleanAnalyticsPath } from "@/lib/analyticsPath";
 import { onJourney, onJourneyStep } from "@/lib/journeys";
+import { analyticsAllowed, subscribeCookieConsent } from "@/lib/cookieConsent";
 
 /**
  * PostHog, loaded after the page is interactive instead of in the first-load bundle
  * (it is ~90 KB gzipped, the largest script every page shipped). Calls made before it
- * loads are queued and replayed in order, so callers use it like the SDK:
+ * loads after consent are queued and replayed in order. Calls without consent are dropped:
  * `import posthog from "@/lib/analytics"; posthog.capture("form_created", …)`.
  */
 
@@ -25,7 +26,33 @@ let queue: Call[] = [];
 
 const enabled = () => typeof window !== "undefined"
   && !!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN
-  && !!process.env.NEXT_PUBLIC_POSTHOG_HOST;
+  && !!process.env.NEXT_PUBLIC_POSTHOG_HOST
+  && analyticsAllowed();
+
+/** Remove this project's old identifiers without loading the SDK or touching app progress. */
+function clearAnalyticsStorage() {
+  const token = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
+  if (!token || typeof window === "undefined") return;
+  for (const name of ["localStorage", "sessionStorage"] as const) {
+    try {
+      const store = window[name];
+      for (let i = store.length - 1; i >= 0; i--) {
+        const key = store.key(i);
+        if (key?.startsWith(`ph_${token}_`) || key === `__ph_opt_in_out_${token}`) store.removeItem(key);
+      }
+    } catch { /* Storage may be blocked. */ }
+  }
+}
+
+function syncConsent() {
+  if (!enabled()) {
+    queue = [];
+    sdk?.opt_out_capturing();
+    sdk?.reset();
+    clearAnalyticsStorage();
+  } else if (sdk) sdk.opt_in_capturing({ captureEventName: false });
+  else void loadAnalytics();
+}
 
 function init(posthog: PostHog) {
   const projectToken = process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN;
@@ -46,7 +73,10 @@ function init(posthog: PostHog) {
     persistence: "localStorage",
     respect_dnt: true,
     advanced_disable_feature_flags: true,
+    opt_out_capturing_by_default: true,
+    opt_out_persistence_by_default: true,
     before_send: (event) => {
+      if (!enabled()) return null;
       if (!event || (event.event.startsWith("$") && !keptBuiltIns.has(event.event))) return null;
       const props = event.properties;
       for (const key of droppedProperties) delete props[key];
@@ -59,6 +89,8 @@ function init(posthog: PostHog) {
     },
     debug: process.env.NODE_ENV === "development",
   });
+  posthog.opt_in_capturing({ captureEventName: false });
+  posthog.capture("$pageview");
 }
 
 /** Downloads and starts PostHog once; later calls return the same promise. */
@@ -66,6 +98,8 @@ export function loadAnalytics(): Promise<void> {
   if (!enabled()) return Promise.resolve();
   loading ??= import("posthog-js")
     .then(({ default: posthog }) => {
+      // Consent may have been withdrawn while the module was downloading.
+      if (!enabled()) { queue = []; loading = null; clearAnalyticsStorage(); return; }
       init(posthog);
       sdk = posthog;
       const pending = queue;
@@ -75,13 +109,16 @@ export function loadAnalytics(): Promise<void> {
     .catch(() => {
       // Blocked by an extension or offline: analytics stays off, the app is unaffected.
       queue = [];
+      loading = null;
     });
   return loading;
 }
 
 /** Starts PostHog once the browser is idle after load, so it never competes with first paint or input. */
 export function scheduleAnalytics() {
-  if (!enabled()) return;
+  if (typeof window === "undefined") return;
+  subscribeCookieConsent(syncConsent);
+  if (!enabled()) { clearAnalyticsStorage(); return; }
   const start = () => {
     const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
     if (idle) idle(() => void loadAnalytics(), { timeout: 3000 });
@@ -106,7 +143,7 @@ const posthog = {
   captureException: (...args: Parameters<PostHog["captureException"]>) => run((p) => p.captureException(...args)),
   identify: (...args: Parameters<PostHog["identify"]>) => run((p) => p.identify(...args)),
   /** Forgets a signed-out person, only if someone was identified on this browser. */
-  resetIfIdentified: () => run((p) => { if (p._isIdentified?.()) p.reset(); }),
+  resetIfIdentified: () => run((p) => { if (p._isIdentified?.()) { p.reset(); p.opt_in_capturing({ captureEventName: false }); } }),
 };
 
 // Real-user journey timings: the same marks the browser benchmarks read (lib/journeys.ts).

@@ -1,4 +1,5 @@
 import ProductAnalytics, { AnalyticsIdentity } from "@/components/ProductAnalytics";
+import CookieConsent from "@/components/CookieConsent";
 import type { Metadata, Viewport } from "next";
 import { siteUrl } from "@/lib/site";
 import { defaultOgImage, siteDescription } from "@/lib/seo";
@@ -121,6 +122,7 @@ export default async function RootLayout({ children, params }: Readonly<{ childr
         <ThemeProvider>
           <FrameGuard />
           <ProductAnalytics />
+          <CookieConsent />
           <AuthProvider locale={locale}>
             <ConvexClientProvider>
               <AnalyticsIdentity />

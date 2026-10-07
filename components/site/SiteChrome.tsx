@@ -177,6 +177,7 @@ export function SiteFooter() {
           <div>
             <h2>{t.legal}</h2>
             <Link href="/privacy">{t.privacy}</Link>
+            <Link href="/cookies">{t.privacy === "Privacy policy" ? "Cookie policy" : "سياسة ملفات تعريف الارتباط"}</Link>
             <Link href="/terms">{t.terms}</Link>
             <Link href="/copyright">{t.copyright}</Link>
             <Link href="/support#security">{t.security}</Link>

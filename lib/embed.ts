@@ -22,7 +22,7 @@ export type { EmbedPolicy, EmbedSettings } from "../convex/embedPolicy";
  */
 export const APP_SEGMENTS = [
   "ai", "forms-quizzes", "live-games", "open-source", "teams", "status", "changelog", "admin", "api", "app", "ar", "auth", "card", "compare", "chatgpt", "claude", "connect", "dashboard", "docs", "en", "help", "homework", "learn", "login", "logout", "mcp", "play", "pricing", "print",
-  "privacy", "copyright", "faq", "settings", "sign-in", "sign-up", "signin", "signup", "sitemap", "static", "support", "terms", "trpc",
+  "privacy", "cookies", "copyright", "faq", "settings", "sign-in", "sign-up", "signin", "signup", "sitemap", "static", "support", "terms", "trpc",
   "_next", ".well-known", "opengraph-image",
 ];
 

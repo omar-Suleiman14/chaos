@@ -41,7 +41,7 @@ export const LOCALES: readonly Locale[] = ["en", "ar"];
  * /ar (/ar/pricing). They render statically for each language. Every other page keeps one
  * address and takes its language from the chaos-lang cookie (proxy.ts, lib/localeRouting.ts).
  */
-const SITE_PATHS = new Set(["/", "/pricing", "/compare", "/docs", "/learn", "/chatgpt", "/claude", "/connect", "/support", "/faq", "/privacy", "/terms", "/copyright", "/sitemap"]);
+const SITE_PATHS = new Set(["/", "/pricing", "/compare", "/docs", "/learn", "/chatgpt", "/claude", "/connect", "/support", "/faq", "/privacy", "/cookies", "/terms", "/copyright", "/sitemap"]);
 
 /** True for a marketing page path without a language prefix, such as "/" or "/docs/first-form". */
 export function isSitePath(path: string): boolean {

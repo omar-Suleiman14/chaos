@@ -4,11 +4,12 @@ import { useEffect } from "react";
 import { usePathname } from "next/navigation";
 import posthog from "@/lib/analytics";
 import { useUser } from "@/lib/auth/client";
+import { useAnalyticsConsent } from "@/components/CookieConsent";
 
 export function analyticsScreen(path: string): string {
   if (path === "/") return "home";
   if (path === "/admin") return "admin";
-  if (path === "/privacy" || path === "/terms") return path.slice(1);
+  if (path === "/privacy" || path === "/cookies" || path === "/terms") return path.slice(1);
   if (path.startsWith("/dashboard/forms/"))
     return path.endsWith("/responses") ? "responses" : "form_builder";
   if (path.startsWith("/dashboard/")) {
@@ -26,10 +27,11 @@ export function analyticsScreen(path: string): string {
 /** Captures a sanitized logical screen name; private links never leave Chaos. */
 export default function ProductAnalytics() {
   const path = usePathname();
+  const allowed = useAnalyticsConsent();
   useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return;
+    if (!allowed || !process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN) return;
     posthog.capture("screen_viewed", { screen: analyticsScreen(path) });
-  }, [path]);
+  }, [path, allowed]);
   return null;
 }
 
@@ -41,10 +43,11 @@ export default function ProductAnalytics() {
 export function AnalyticsIdentity() {
   const { isLoaded, user } = useUser();
   const userId = user?.id;
+  const allowed = useAnalyticsConsent();
   useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN || !isLoaded) return;
+    if (!allowed || !process.env.NEXT_PUBLIC_POSTHOG_PROJECT_TOKEN || !isLoaded) return;
     if (userId) posthog.identify(userId);
     else posthog.resetIfIdentified();
-  }, [isLoaded, userId]);
+  }, [isLoaded, userId, allowed]);
   return null;
 }
