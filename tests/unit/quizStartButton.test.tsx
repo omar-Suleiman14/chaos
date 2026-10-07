@@ -187,3 +187,43 @@ describe("quiz Start control", () => {
     expect(screen.getByRole("button", { name: /Start quiz/ })).toBeEnabled();
   });
 });
+
+
+describe("quiz device recovery", () => {
+  it("resumes the same attempt and retries a saved answer without creating a new session", async () => {
+    withQuestion(); gradeAnswer.mockRejectedValueOnce(new Error("Offline"));
+    const first = render(<QuizRoute />); await beginQuiz();
+    await act(async () => { fireEvent.click(screen.getByRole("radio",{name:/First/})); });
+    expect(JSON.parse(localStorage.getItem("chaos-quiz-backup:quiz1")!).pending.answer).toBe("First");
+    expect(screen.getByText("Saved on this device · waiting to send")).toBeVisible();
+    first.unmount();
+    attemptQuery.mockResolvedValue({completed:false,questions:[{_id:"q1",questionText:"Pick one",type:"mcq",options:["First","Second"],points:10,timeLimit:2,order:0}],opened:[],answers:[]});
+    gradeAnswer.mockResolvedValue({isCorrect:true,pointsEarned:10,totalPointsPossible:10});
+    render(<QuizRoute />);
+    await act(async () => {fireEvent.click(await screen.findByRole("button",{name:"Resume saved quiz"}));});
+    await act(async () => {fireEvent.click(screen.getByRole("button",{name:"Try again"}));});
+    expect(startSession).toHaveBeenCalledTimes(1);
+    expect(gradeAnswer).toHaveBeenLastCalledWith(expect.objectContaining({sessionId:"session1",answer:"First"}));
+    expect(JSON.parse(localStorage.getItem("chaos-quiz-backup:quiz1")!).pending).toBeNull();
+  });
+  it("keeps a failed selected answer when the timer expires instead of replacing it with a timeout", async () => {
+    withQuestion(); gradeAnswer.mockRejectedValueOnce(new Error("Offline"));
+    render(<QuizRoute />); await beginQuiz(true);
+    await act(async () => {fireEvent.click(screen.getByRole("radio",{name:/First/}));});
+    await act(async () => {await vi.advanceTimersByTimeAsync(3_000);});
+    expect(gradeAnswer).toHaveBeenCalledTimes(1);
+    expect(JSON.parse(localStorage.getItem("chaos-quiz-backup:quiz1")!).pending.answer).toBe("First");
+  });
+});
+
+it("returns to a pending saved answer instead of completing an attempt", async () => {
+  withQuestion();
+  Object.defineProperty(HTMLElement.prototype, "scrollIntoView", { configurable: true, value: vi.fn() });
+  localStorage.setItem("chaos-quiz-backup:quiz1", JSON.stringify({ version: 1, quizId: "quiz1", sessionId: "session1", playerName: "Guest", questionIds: ["q1"], currentQ: 1, selected: { q1: "First" }, multi: {}, written: {}, opened: {}, pending: { qId: "q1", answer: "First", isTimeout: false } }));
+  attemptQuery.mockResolvedValue({ completed: false, questions: [{ _id: "q1", questionText: "Pick one", type: "mcq", options: ["First", "Second"], points: 10, timeLimit: 2, order: 0 }], opened: [], answers: [] });
+  render(<QuizRoute />);
+  await act(async () => { fireEvent.click(await screen.findByRole("button", { name: "Resume saved quiz" })); });
+  await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Submit quiz" })); });
+  expect(completeSession).not.toHaveBeenCalled();
+  expect(screen.getByRole("button", { name: "Try again" })).toBeVisible();
+});

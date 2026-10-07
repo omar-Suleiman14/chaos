@@ -1,3 +1,6 @@
+import { questionQuality, type QualityQuestion, type QualityObservation } from "./questionQuality";
+import { gradeQuiz } from "./formQuiz";
+import { nicknameKey, questionsFromForm, MAX_LIVE_QUESTIONS } from "./liveLogic";
 import { authorDb } from "./authorIndex";
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
@@ -735,3 +738,51 @@ export async function exportResponsesForActor(ctx: QueryCtx, access: { form: Doc
     const hiddenColumns = [...new Set([...(access.form.settings.hiddenFields ?? []), ...(access.form.settings.hiddenParameters ?? []).map(d => d.name), ...rows.flatMap((r) => Object.keys(r.hidden))])];
     return { title: access.form.title, columns, hiddenColumns, rows, isDone: result.isDone, continueCursor: result.continueCursor };
 }
+
+/** Immutable form editions plus cohort signals; timing is available for live answers only. */
+export const getTeachingInsights = query({
+  args: { formId: v.id("forms") },
+  handler: async (ctx, args) => {
+    const access = await getFormIfRole(ctx, args.formId, "viewer");
+    if (!access) return null;
+    const [editions, responses] = await Promise.all([
+      ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", args.formId)).order("desc").take(30),
+      ctx.db.query("formResponses").withIndex("by_formId_and_status_and_submittedAt", q => q.eq("formId", args.formId).eq("status", "completed")).order("desc").take(201),
+    ]);
+    const sample = responses.slice(0,200).filter(r => !r.spam);
+    const definition = versionCache(ctx, args.formId);
+    const variants = new Map<string, { question: QualityQuestion; observations: QualityObservation[] }>();
+    let missingSnapshots = 0;
+    for (const r of sample) {
+      const def = await definition(r.version);
+      if (!def) { missingSnapshots++; continue; }
+      const answers = r.answers as Answers;
+      const grade = gradeQuiz(def, answers);
+      if (!grade) continue;
+      let liveAnswers: Doc<"liveAnswers">[] = [];
+      if (r.live) {
+        const player = await ctx.db.query("livePlayers").withIndex("by_gameId_and_nicknameKey", q => q.eq("gameId", r.live!.gameId).eq("nicknameKey", nicknameKey(r.live!.nickname))).first();
+        if (player) liveAnswers = await ctx.db.query("liveAnswers").withIndex("by_playerId_and_questionIndex", q => q.eq("playerId", player._id)).take(MAX_LIVE_QUESTIONS);
+      }
+      // Live question indexes follow only the eligible choice questions, not every form field.
+      const liveKeys = questionsFromForm(def).questions.map(q => q.key);
+      for (const result of grade.questions) {
+        if (r.live && !liveKeys.includes(result.fieldId)) continue;
+        const f = def.fields.find(f => f.id === result.fieldId)!;
+        const q: QualityQuestion = { id: `${r.version}:${f.id}`, text: f.label, kind: f.type,
+          options: f.options?.map(o => o.label) ?? [], answerKey: f.options?.filter(o => f.quiz?.correctOptionIds.includes(o.id)).map(o => o.label) ?? [], points: result.possible, timeLimit: null };
+        const variant = variants.get(q.id) ?? { question: q, observations: [] };
+        const a = liveAnswers.find(a => a.questionIndex === liveKeys.indexOf(f.id));
+        const chosen = answers[f.id];
+        const labels = (Array.isArray(chosen) ? chosen : [chosen]).filter((id): id is string => typeof id === "string").map(id => f.options?.find(o => o.id === id)?.label ?? "");
+        variant.observations.push({ correct: result.earned === result.possible, seconds: a ? a.timeTakenMs/1000 : null,
+          cohortScore: grade.maxScore > 0 ? grade.score/grade.maxScore : 0, wrongChoice: labels.filter(Boolean).join(", ") || null, review: a?.reviewFlag === "too_fast" });
+        variants.set(q.id, variant);
+      }
+    }
+    return { sampleCount: sample.length, capped: responses.length > 200, missingSnapshots, pooled: false,
+      questions: [...variants.values()].map(v => questionQuality(v.question, v.observations)),
+      versions: editions.map(e => ({ key: String(e.version), at: e.publishedAt, attempts: sample.filter(r => r.version === e.version).length,
+        questions: e.definition.fields.filter(f => f.quiz?.correctOptionIds.length).map(f => ({ id: f.id, text: f.label, kind: f.type, options: f.options?.map(o => o.label) ?? [], answerKey: f.options?.filter(o => f.quiz!.correctOptionIds.includes(o.id)).map(o => o.label) ?? [], points: f.quiz!.points, timeLimit: null })) })) };
+  },
+});

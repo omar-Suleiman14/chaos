@@ -10,6 +10,7 @@ import { useState, useEffect, useEffectEvent, useRef, useMemo, useId } from "rea
 import { haptics } from "@/lib/haptics";
 import { sfx } from "@/lib/sfx";
 import { Zap, ArrowDown, Volume2, VolumeX } from "lucide-react";
+import { clearQuizBackup, readQuizBackup, writeQuizBackup, type QuizBackup } from "@/lib/quizRecovery";
 import LoadingState from "@/components/LoadingState";
 
 
@@ -46,6 +47,10 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
   const username = params.username as string;
   const quizname = params.quizname as string;
   const notFound = useCopy(notFoundCopy);
+  const recoveryCopy = useCopy({
+    en: { draft: "Draft saved on this device", resume: "Resume saved quiz", saving: "Saving…", saved: "Saved", device: "Saved on this device · waiting to send", unavailable: "Device backup unavailable", restored: "Your saved quiz is ready to resume.", failed: "This attempt could not be restored. Please try again.", late: "The server still checks the time limit when your answer arrives." },
+    ar: { draft: "المسودة محفوظة على هذا الجهاز", resume: "استأنف الاختبار المحفوظ", saving: "جارٍ الحفظ…", saved: "تم الحفظ", device: "محفوظ على هذا الجهاز · بانتظار الإرسال", unavailable: "الحفظ على الجهاز غير متاح", restored: "اختبارك المحفوظ جاهز للاستئناف.", failed: "تعذّر استعادة هذه المحاولة. حاول مجددًا.", late: "يتحقق الخادم من المهلة عند وصول إجابتك." },
+  });
 
   const resolvedMeta = useQuery(
     api.quizFunctions.getQuizByUsernameSlug,
@@ -72,6 +77,9 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
     isTimeout: boolean;
     message: string;
   } | null>(null);
+  const [backup, setBackup] = useState<QuizBackup | null>(null);
+  const [saveStatus, setSaveStatus] = useState<"saving" | "saved" | "device" | "draft" | "unavailable">("saved");
+  const pendingAnswer = useRef<QuizBackup["pending"]>(null);
   const [finishError, setFinishError] = useState("");
   const [sessionId, setSessionId] = useState<Id<"quizSessions"> | null>(null);
   // Last completed attempt on this device, so held results can be checked later.
@@ -122,6 +130,7 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
     try {
       const stored = window.localStorage.getItem(`chaos-attempt:${quizMeta._id}`);
       if (stored) setSavedAttempt(stored as Id<"quizSessions">);
+      setBackup(readQuizBackup(quizMeta._id));
     } catch { /* storage unavailable */ }
   }, [quizMeta?._id]);
 
@@ -143,6 +152,61 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
   }, [rawQuestions, gameState, shuffledQuestions.length]);
 
   const questions = shuffledQuestions;
+
+  const saveDevice = (pending = pendingAnswer.current) => {
+    if (!quizMeta?._id || !sessionId) return false;
+    return writeQuizBackup({ version: 1, quizId: quizMeta._id, sessionId, playerName,
+      questionIds: shuffledQuestions.map(q => q._id), currentQ, selected: selectedOptions,
+      multi: multiSelections, written: writtenAnswers, opened: qStartTimes.current, pending });
+  };
+  const persistDevice = useEffectEvent(() => {
+    if (!saveDevice()) { setSaveStatus("unavailable"); return; }
+    const question = questions[currentQ];
+    if (!pendingAnswer.current && question && !feedbacks[question._id] &&
+      (writtenAnswers[question._id] || multiSelections[question._id]?.length)) setSaveStatus("draft");
+  });
+  useEffect(() => {
+    if (gameState === "playing" && sessionId && !finalResults) persistDevice();
+  }, [gameState, sessionId, currentQ, selectedOptions, multiSelections, writtenAnswers, shuffledQuestions, finalResults]);
+
+  const retryPending = useEffectEvent(() => {
+    const pending = pendingAnswer.current;
+    if (pending && !submitting.current) void handleSubmitAnswer(pending.qId as Id<"questions">, pending.answer, pending.isTimeout);
+  });
+  useEffect(() => {
+    const online = () => retryPending();
+    window.addEventListener("online", online);
+    return () => window.removeEventListener("online", online);
+  }, []);
+
+  const handleResume = async () => {
+    if (!backup || !quizMeta?._id || starting.current) return;
+    starting.current = true;
+    setIsStarting(true);
+    try {
+      const restored = await convex.query(api.quizFunctions.getAttemptRecovery, { sessionId: backup.sessionId as Id<"quizSessions">, quizId: quizMeta._id });
+      if (!restored) throw new Error(recoveryCopy.failed);
+      if (restored.completed) { clearQuizBackup(quizMeta._id); setBackup(null); setSavedAttempt(backup.sessionId as Id<"quizSessions">); return; }
+      const byId = new Map(restored.questions.map(q => [q._id as string, q]));
+      const ordered = backup.questionIds.map(id => byId.get(id)).filter((q): q is typeof restored.questions[number] => !!q);
+      if (ordered.length !== restored.questions.length) throw new Error(recoveryCopy.failed);
+      setShuffledQuestions(ordered);
+      setSessionId(backup.sessionId as Id<"quizSessions">);
+      allocatedSession.current = backup.sessionId as Id<"quizSessions">;
+      setPlayerName(backup.playerName);
+      setSelectedOptions({ ...backup.selected, ...Object.fromEntries(restored.answers.map(a => [a.questionId, a.answer])) });
+      setMultiSelections(backup.multi); setWrittenAnswers(backup.written);
+      setFeedbacks(Object.fromEntries(restored.answers.map(a => [a.questionId, a.feedback])));
+      qStartTimes.current = { ...backup.opened, ...Object.fromEntries(restored.opened.map(o => [o.questionId, o.at])) };
+      pendingAnswer.current = backup.pending && !restored.answers.some(a => a.questionId === backup.pending?.qId) ? backup.pending : null;
+      if (pendingAnswer.current) setAnswerError({ ...pendingAnswer.current, qId: pendingAnswer.current.qId as Id<"questions">, message: recoveryCopy.device });
+      setSaveStatus(pendingAnswer.current ? "device" : "saved");
+      setCurrentQ(backup.currentQ); pendingFocus.current = true;
+      setGameState("playing"); setAnnouncement(recoveryCopy.restored);
+    } catch (error) { setStartError(errorMessage(error, recoveryCopy.failed)); }
+    finally { starting.current = false; setIsStarting(false); }
+  };
+
 
   // After Next, move focus to the new question so keyboard and screen reader users land on it.
   useEffect(() => {
@@ -175,7 +239,7 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
   const reportOpened = useEffectEvent((questionId: Id<"questions">) => {
     if (sessionId) openQuestion({ sessionId, questionId }).catch(() => { /* the server falls back to the previous answer's time */ });
   });
-  const submitTimeout = useEffectEvent((qId: Id<"questions">) => { void handleSubmitAnswer(qId, "", true); });
+  const submitTimeout = useEffectEvent((qId: Id<"questions">) => { if (!pendingAnswer.current) void handleSubmitAnswer(qId, "", true); });
 
   useEffect(() => {
     if (gameState !== "playing" || currentQ === questions.length) {
@@ -221,6 +285,9 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
 
   const handleSubmitAnswer = async (qId: Id<"questions">, answer: string, isTimeout = false) => {
     if (!sessionId || submitting.current || feedbacks[qId]) return;
+    pendingAnswer.current = { qId, answer, isTimeout };
+    const backedUp = saveDevice(pendingAnswer.current);
+    setSaveStatus(backedUp ? "saving" : "unavailable");
     submitting.current = true;
     setIsSubmitting(true);
     setAnswerError(null);
@@ -238,7 +305,10 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
         timeTaken: tTaken,
       });
 
+      pendingAnswer.current = null;
+      saveDevice(null);
       if (!active.current) return;
+      setSaveStatus(backedUp ? "saved" : "unavailable");
       setFeedbacks(prev => ({ ...prev, [qId]: result.withheld ? { withheld: true } : result }));
       setAnnouncement(
         result.withheld ? "Answer recorded. Results are released by the organiser."
@@ -254,6 +324,7 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
 
     } catch (err: unknown) {
       if (!active.current) return;
+      setSaveStatus(backedUp ? "device" : "unavailable");
       setAnswerError({
         qId,
         answer,
@@ -269,12 +340,19 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
 
   const handleFinish = async () => {
     if (!sessionId || isFinishing.current) return;
+    if (submitting.current || pendingAnswer.current) {
+      const index = questions.findIndex(q => q._id === pendingAnswer.current?.qId);
+      if (index >= 0) { pendingFocus.current = true; setCurrentQ(index); }
+      return;
+    }
     isFinishing.current = true;
     setFinishError("");
     haptics.success(); sfx.play("finish");
     try {
       const result = await completeSession({ sessionId });
       if (!active.current) return;
+      if (quizMeta?._id) clearQuizBackup(quizMeta._id);
+      setBackup(null);
       onComplete?.();
       setFinalResults(result.withheld ? { withheld: true } : result);
       try { if (quizMeta?._id) window.localStorage.setItem(`chaos-attempt:${quizMeta._id}`, sessionId); } catch { /* storage unavailable */ }
@@ -380,6 +458,7 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
             </h1>
 
             <div className="space-y-4">
+              {backup && <button type="button" className="kb-btn kb-btn-primary w-full" disabled={isStarting} onClick={() => void handleResume()}>{recoveryCopy.resume}</button>}
               <input
                 type="text"
                 value={playerName}
@@ -430,6 +509,7 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
   return (
     <div data-inline={inline || undefined} className="workspace-ui quiz-player h-[100dvh] bg-background text-foreground font-sans relative">
       <div className="fixed top-4 right-4 z-[60] flex items-center gap-2">
+        <span role="status" aria-live="polite" className="rounded-full border border-border bg-card px-3 py-2 text-xs text-muted-foreground">{recoveryCopy[saveStatus]}</span>
         <button
           type="button"
           onClick={toggleSound}
@@ -643,6 +723,7 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
                   <div role="alert" className="mt-4 border-2 border-destructive bg-destructive/10 p-4 text-left">
                     <p className="text-sm font-semibold text-destructive mb-3">
                       {answerError.message}
+                      <span className="block mt-2 font-normal">{recoveryCopy.late}</span>
                     </p>
                     <button
                       type="button"

@@ -1,0 +1,100 @@
+.classroom-page {
+  max-width: 960px;
+  margin-inline: auto;
+  padding: clamp(20px, 4vw, 48px);
+  display: grid;
+  gap: 24px;
+}
+.classroom-page header {
+  display: grid;
+  gap: 8px;
+}
+.classroom-panel {
+  width: 100%;
+  max-width: 960px;
+  margin-inline: auto;
+  padding: clamp(16px, 3vw, 28px);
+  border: 1px solid var(--live-line, var(--ws-line));
+  border-radius: 20px;
+  background: var(--live-surface, var(--ws-card));
+  color: var(--live-text, var(--on-background));
+  display: grid;
+  gap: 16px;
+  text-align: start;
+}
+.classroom-panel h2 {
+  font-size: 1.125rem;
+  font-weight: 650;
+  line-height: 1.4;
+}
+.classroom-panel p,
+.classroom-options small {
+  color: var(--live-muted, var(--on-surface-variant));
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.classroom-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+.classroom-controls label:not(.ws-switch) {
+  display: grid;
+  gap: 8px;
+  font-size: 0.875rem;
+}
+.classroom-controls input {
+  width: 100px;
+  min-height: 44px;
+  padding: 8px 12px;
+  border: 1px solid var(--live-line, var(--ws-line));
+  border-radius: 10px;
+  background: var(--live-bg, var(--background));
+}
+.classroom-controls button {
+  min-height: 44px;
+}
+.classroom-timeline {
+  display: grid;
+  gap: 12px;
+  font-size: 0.875rem;
+}
+.classroom-timeline input {
+  width: 100%;
+  min-height: 44px;
+  accent-color: var(--live-accent, var(--primary));
+}
+.classroom-options {
+  display: grid;
+  gap: 0;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.classroom-options li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding-block: 14px;
+  border-bottom: 1px solid var(--live-line, var(--ws-line));
+}
+.classroom-options li:last-child {
+  border-bottom: 0;
+}
+.classroom-options small {
+  display: block;
+}
+.classroom-panel :focus-visible {
+  outline: 2px solid var(--live-accent, var(--primary));
+  outline-offset: 3px;
+}
+@media (max-width: 480px) {
+  .classroom-controls {
+    align-items: stretch;
+  }
+  .classroom-controls > * {
+    flex: 1 1 100%;
+  }
+}
