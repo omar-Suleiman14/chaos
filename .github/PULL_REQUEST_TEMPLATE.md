@@ -2,18 +2,26 @@ Closes #
 
 ## Summary
 
-<!-- What changed and why, in a few bullets. -->
+<!-- What changed and why? Keep this short and concrete. -->
 
 ## Verification
 
-<!-- What you actually ran, not what the issue asked for. Check only what's
-     true. -->
+<!-- Check only what you actually ran. -->
 
-- [ ] `pnpm test` passes
-- [ ] `pnpm typecheck` passes
-- [ ] `pnpm lint` passes
-- [ ] Manually verified: <!-- describe what you clicked through, or state
-        that it wasn't possible in this environment and why -->
-- [ ] Performance: the PR comment shows no unexplained regression, and design
-      changes (Flow, `/card`, course UI, loading states, Forms UX) were judged by
-      a person, not by a budget (docs/performance-workflow.md)
+- [ ] `pnpm test`
+- [ ] `pnpm typecheck`
+- [ ] `pnpm lint`
+- [ ] `pnpm build`
+- [ ] Manually verified where relevant
+
+## Risk / compatibility
+
+<!-- Schema or migration impact, public API changes, auth/security/privacy impact, or "None". -->
+
+## Screenshots
+
+<!-- Required for visible UI changes; otherwise "N/A". -->
+
+## Not verified
+
+<!-- Anything you could not test in this environment; otherwise "None". -->
