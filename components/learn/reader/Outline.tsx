@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { memo, useEffect, useId, useRef, useState } from "react";
 import { useModal } from "@/components/workspace/useModal";
-import { ListTree, X } from "lucide-react";
+import { ListTree, PanelLeft, X } from "lucide-react";
 import type { OutlineItem } from "@/lib/learn/doc";
 import { useCopy } from "@/lib/i18n";
 
-const copy = { en: { title: "On this page", nav: "Lesson outline", close: "Close outline" }, ar: { title: "في هذه الصفحة", nav: "مخطط الدرس", close: "أغلق المخطط" } };
+const copy = {
+  en: { title: "On this page", nav: "Lesson outline", close: "Close outline", hide: "Hide sidebar", show: "Show sidebar" },
+  ar: { title: "في هذه الصفحة", nav: "مخطط الدرس", close: "أغلق المخطط", hide: "إخفاء الشريط الجانبي", show: "إظهار الشريط الجانبي" },
+};
 
 /** The heading currently being read: the last one above a line a third of the way down the screen. */
 export function useActiveHeading(items: OutlineItem[]): string | undefined {
@@ -71,6 +74,31 @@ export function Outline({ items, active }: { items: OutlineItem[]; active?: stri
     </div>
   );
 }
+
+/**
+ * Desktop sidebar outline that folds away. The toggle stays in place (its label says what it
+ * will do); the list fades and clips out, and LessonReader slides the lesson into the space.
+ * A folded list is inert, so it leaves the tab order and the accessibility tree.
+ */
+export const DesktopOutline = memo(function DesktopOutline({ items, active, collapsed, onToggle }: { items: OutlineItem[]; active?: string; collapsed: boolean; onToggle: () => void }) {
+  const t = useCopy(copy);
+  const id = useId();
+  if (!items.length) return null;
+  const label = collapsed ? t.show : t.hide;
+  return (
+    <div className="lx-toc-desk" data-collapsed={collapsed || undefined}>
+      <div className="lx-toc-desk__head">
+        <button type="button" className="ws-icon-button lx-toc-toggle" aria-expanded={!collapsed} aria-controls={id} aria-label={label} title={label} onClick={onToggle}>
+          <PanelLeft size={18} strokeWidth={1.75} className="lx-flip" aria-hidden />
+        </button>
+        <p className="lx-toc__title lx-toc-desk__title" aria-hidden={collapsed || undefined}>{t.title}</p>
+      </div>
+      <div id={id} className="lx-toc-desk__body" inert={collapsed}>
+        <OutlineNav items={items} active={active} />
+      </div>
+    </div>
+  );
+});
 
 /** Phones and tablets: the same outline, folded above the lesson. */
 export function MobileOutline({ items, active }: { items: OutlineItem[]; active?: string }) {

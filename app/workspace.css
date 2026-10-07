@@ -403,8 +403,9 @@
 .ws-dialog__title { font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
 .ws-dialog__body { padding: 6px 20px 20px; }
 .ws-menu { position: absolute; z-index: 60; min-width: 200px; padding: 5px; border: 1px solid var(--ws-line); border-radius: 9px; box-shadow: var(--ws-shadow-lg); animation: ws-pop 160ms var(--ws-spring) both; transform-origin: top right; }
-.ws-menu button, .ws-menu a { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 0 10px; border-radius: 6px; color: var(--on-background); font-size: 14.5px; font-weight: 500; text-align: start; }
-.ws-menu button:hover, .ws-menu a:hover, .ws-menu button:focus-visible { background: var(--ws-hover); outline: none; }
+/* Rows only: an icon button inside a menu (e.g. the theme toggle) keeps its fixed icon size. */
+.ws-menu button:not(:where(.ws-icon-button)), .ws-menu a { display: flex; align-items: center; gap: 10px; width: 100%; min-height: 36px; padding: 0 10px; border-radius: 6px; color: var(--on-background); font-size: 14.5px; font-weight: 500; text-align: start; }
+.ws-menu button:not(:where(.ws-icon-button)):hover, .ws-menu a:hover, .ws-menu button:not(:where(.ws-icon-button)):focus-visible { background: var(--ws-hover); outline: none; }
 .ws-menu hr { margin: 4px 2px; border: 0; border-top: 1px solid var(--ws-line); }
 .ws-menu .ws-menu__danger { color: var(--error); }
 .ws-palette { width: min(620px, 100%); overflow: hidden; border: 1px solid var(--ws-line); border-radius: 12px; box-shadow: var(--ws-shadow-lg); animation: ws-pop 200ms var(--ws-spring) both; }
@@ -568,7 +569,7 @@ html.dark:has(.workspace-ui), html.dark:has(.workspace-ui) body { background: #1
 @media (hover: none), (pointer: coarse), (max-width: 640px) {
   .ws-card__menu { opacity: 1; }
   .ws-icon-button, .ws-btn--icon { min-width: 44px; min-height: 44px; }
-  .ws-nav-item, .ws-btn, .ws-menu button, .ws-menu a, .ws-palette__item, .ws-segmented button { min-height: 44px; }
+  .ws-nav-item, .ws-btn, .ws-menu button:not(:where(.ws-icon-button)), .ws-menu a, .ws-palette__item, .ws-segmented button { min-height: 44px; }
   .ws-search input, .ws-palette__input input { min-height: 44px; font-size: 16px; }
   .workspace-ui input:not([type="checkbox"]):not([type="radio"]):not([type="color"]):not(.ws-title-input),
   .workspace-ui select, .workspace-ui textarea { font-size: 16px; }

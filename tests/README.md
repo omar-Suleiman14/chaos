@@ -1,6 +1,6 @@
 # Tests
 
-Three layers, each with its own runner and reasons:
+Layers, each with its own runner and reasons:
 
 - **`tests/unit`** — Vitest + jsdom. Pure logic and
   React component tests. Convex and Clerk are mocked at the module boundary;
@@ -28,6 +28,11 @@ Three layers, each with its own runner and reasons:
   lesson, course, dashboard and editor when their fixtures and test login exist.
   Locally:
   `pnpm build && pnpm test:visual --update-snapshots`, then `pnpm test:visual`.
+- **`tests/layout`** — Playwright geometry checks against the shipped
+  stylesheets in a static page: no app server, no backend (reader theme toggle
+  sizing, block ⋯ menu placement at 320px and in RTL, outline sidebar folding).
+  Needs a local Chromium; not part of `pnpm test`. Run with `pnpm test:layout`
+  (set `CHAOS_CHROMIUM` to a Chromium binary if Playwright's own is not installed).
 
 `pnpm test` runs `test:unit` and `test:integration` only — the suites that
 work from a clean checkout with no credentials. `pnpm test:e2e` is separate

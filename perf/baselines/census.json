@@ -38,27 +38,37 @@
       "unit": "count"
     },
     "giantLesson.appendBlock.renders": {
-      "budget": 1083,
+      "budget": 1081,
       "unit": "count"
     },
     "giantLesson.domNodes": {
-      "budget": 4793,
-      "unit": "count"
+      "budget": 4807,
+      "unit": "count",
+      "raised": {
+        "from": 4793,
+        "reason": "Lesson read aloud: Listen controls (top bar and byline) and the collapsible outline toggle render on mount; speech code itself stays out of the lesson (loaded on demand). Append-block renders went down (memoized reading menu, outline and Listen buttons).",
+        "at": "2026-10-07"
+      }
     },
     "giantLesson.mount.blockBodies": {
       "budget": 500,
       "unit": "count"
     },
     "giantLesson.mount.renders": {
-      "budget": 5074,
-      "unit": "count"
+      "budget": 5083,
+      "unit": "count",
+      "raised": {
+        "from": 5074,
+        "reason": "Lesson read aloud: Listen controls (top bar and byline) and the collapsible outline toggle render on mount; speech code itself stays out of the lesson (loaded on demand). Append-block renders went down (memoized reading menu, outline and Listen buttons).",
+        "at": "2026-10-07"
+      }
     },
     "lesson.appendBlock.blockBodies": {
       "budget": 1,
       "unit": "count"
     },
     "lesson.appendBlock.renders": {
-      "budget": 203,
+      "budget": 201,
       "unit": "count"
     },
     "lesson.duplicateSubscriptions": {
@@ -66,7 +76,7 @@
       "unit": "count"
     },
     "lesson.maxRendersPerCommit": {
-      "budget": 105,
+      "budget": 104,
       "unit": "count"
     },
     "lesson.mount.blockBodies": {
@@ -74,8 +84,13 @@
       "unit": "count"
     },
     "lesson.mount.renders": {
-      "budget": 677,
-      "unit": "count"
+      "budget": 686,
+      "unit": "count",
+      "raised": {
+        "from": 677,
+        "reason": "Lesson read aloud: Listen controls (top bar and byline) and the collapsible outline toggle render on mount; speech code itself stays out of the lesson (loaded on demand). Append-block renders went down (memoized reading menu, outline and Listen buttons).",
+        "at": "2026-10-07"
+      }
     },
     "lesson.sameFunctionManyArgs": {
       "budget": 0,

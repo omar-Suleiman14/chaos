@@ -6,8 +6,13 @@
       "unit": "count"
     },
     "source.bytes": {
-      "budget": 395330,
-      "unit": "bytes"
+      "budget": 407360,
+      "unit": "bytes",
+      "raised": {
+        "from": 395330,
+        "reason": "Lesson read aloud (compact player, follow-along overlay, reading-menu Listen settings), foldable desktop outline and the touch block-actions bar. The two layout transitions are width/height on childless, absolutely positioned overlay boxes; their 18 colour rules moved to inline CSS variables.",
+        "at": "2026-10-07"
+      }
     },
     "source.deepSelectors": {
       "budget": 2,
@@ -30,28 +35,33 @@
       "unit": "count"
     },
     "source.layoutTransitions": {
-      "budget": 16,
-      "unit": "count"
+      "budget": 18,
+      "unit": "count",
+      "raised": {
+        "from": 16,
+        "reason": "Lesson read aloud (compact player, follow-along overlay, reading-menu Listen settings), foldable desktop outline and the touch block-actions bar. The two layout transitions are width/height on childless, absolutely positioned overlay boxes; their 18 colour rules moved to inline CSS variables.",
+        "at": "2026-10-07"
+      }
     },
     "source.paintKeyframes": {
       "budget": 6,
       "unit": "count"
     },
     "source.rules": {
-      "budget": 3078,
+      "budget": 3163,
       "unit": "count",
       "raised": {
-        "from": 3072,
-        "reason": "English/Arabic cookie consent banner and persistent settings control add accessible actions, focus styles and mobile positioning; measured in nightly run 37596275571.",
+        "from": 3078,
+        "reason": "Lesson read aloud (compact player, follow-along overlay, reading-menu Listen settings), foldable desktop outline and the touch block-actions bar. The two layout transitions are width/height on childless, absolutely positioned overlay boxes; their 18 colour rules moved to inline CSS variables.",
         "at": "2026-10-07"
       }
     },
     "source.selectors": {
-      "budget": 3385,
+      "budget": 3480,
       "unit": "count",
       "raised": {
-        "from": 3378,
-        "reason": "English/Arabic cookie consent banner and persistent settings control add accessible actions, focus styles and mobile positioning; measured in nightly run 37596275571.",
+        "from": 3385,
+        "reason": "Lesson read aloud (compact player, follow-along overlay, reading-menu Listen settings), foldable desktop outline and the touch block-actions bar. The two layout transitions are width/height on childless, absolutely positioned overlay boxes; their 18 colour rules moved to inline CSS variables.",
         "at": "2026-10-07"
       }
     },

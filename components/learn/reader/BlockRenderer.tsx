@@ -324,7 +324,7 @@ function BlockList({ blocks, props }: { blocks: Block[]; props: ListProps }) {
       out.push(
         <List key={group[0].id} className="lx-block" data-type="list" start={List === "ol" && Number(group[0].props.start) > 1 ? Number(group[0].props.start) : undefined}>
           {group.map((item) => (
-            <li key={item.id} id={item.id} data-block-id={item.id} style={{ position: "relative" }}>
+            <li key={item.id} id={item.id} data-block-id={item.id} data-active={props.activeBlockId === item.id || undefined} style={{ position: "relative" }}>
               {props.blockAside && <div className="lx-block__handle">{props.blockAside(item)}</div>}
               {body(item, props)}
               {item.children.length > 0 && <BlockList blocks={item.children} props={props} />}
