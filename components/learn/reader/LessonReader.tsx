@@ -51,6 +51,7 @@ import PracticeTab from "./PracticeTab";
 import ReportDialog from "./ReportDialog";
 import SelectionToolbar, { useTextSelection, type SelectionAction } from "./SelectionToolbar";
 import ReadingMenu from "./ReadingMenu";
+import ListenMenu from "./ListenMenu";
 import type { NarrationRequest } from "./Narration";
 import { useReaderPrefs } from "@/lib/learn/readerPrefs";
 import { activityOf } from "@/lib/learn/narration/activity";
@@ -189,7 +190,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   };
   const [narration, setNarration] = useState<NarrationRequest | null>(null);
   const narrationIds = useRef(0);
-  const startNarration = (request: { mode: "lesson"; from?: string } | { mode: "selection"; text: string }) => {
+  const startNarration = (request: { mode: "lesson"; from?: string } | { mode: "selection"; text: string; title?: string }) => {
     if (!speechSupported()) { toast.error(t.speechUnavailable); return; }
     primeSpeech(); // inside the click: iOS only starts speech from a user gesture
     setNarration({ ...request, id: ++narrationIds.current } as NarrationRequest);
@@ -387,7 +388,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
           {/* Chaos runs no AI: questions go to the reader's own ChatGPT or Claude with the lesson as context. */}
           <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" onClick={() => setHandoff({ lessonTitle: meta.title || t.untitled, selection: "", publicUrl, action: "ask" })}><MessageCircleQuestion size={15} aria-hidden /><span className="lx-phone-label">{t.ask}</span></button>
           {caps.discussions && <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={panel === "discussion"} onClick={() => setPanel(panel === "discussion" ? null : "discussion")}><MessageSquare size={15} aria-hidden /><span className="lx-phone-label">{t.discussion}{threads.filter((th) => !th.resolved).length ? ` (${threads.filter((th) => !th.resolved).length})` : ""}</span></button>}
-          <ListenButton className="ws-btn ws-btn--sm ws-btn--ghost lx-listen-top" labelClassName="lx-phone-label" size={15} pressed={listening} label={t.listen} title={t.listenHelp} onClick={toggleListen} />
+          <ListenMenu prefs={prefs} setPrefs={setPrefs} listening={listening} onToggle={toggleListen} />
           <ReadingMenu prefs={prefs} setPrefs={setPrefs} />
           <WsMenu label={t.more}>
             {(close) => (
@@ -505,7 +506,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
       {panel && !phone && <NarrowPanel onClose={() => setPanel(null)}>{sidePanel}</NarrowPanel>}
 
       {selection && tab === "lesson" && (
-        <SelectionToolbar selection={selection} onAction={onSelectionAction} canWrite={signedIn} aiLabel={t.aiOff} canLookUp={!!findEntry(glossary.matcher, selection.text)} canRead={speechSupported()} />
+        <SelectionToolbar selection={selection} onAction={onSelectionAction} canWrite={signedIn} aiLabel={t.aiOff} canLookUp={!!findEntry(glossary.matcher, selection.text)} canRead={speechSupported()} within={main.current} />
       )}
       {tapped && (
         <div className="lx-block-bar ws-glass" data-dock={blockDock} role="toolbar" aria-label={t.blockMenu}>
@@ -519,7 +520,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
         <Narration key={lesson.id} request={narration} lessonId={lesson.id} content={view.content} title={meta.title || t.untitled} description={meta.description}
           language={meta.language} article={article} activities={activities} onClose={() => setNarration(null)} />
       )}
-      {openTerm && <TermCard term={openTerm} onClose={closeTerm} />}
+      {openTerm && <TermCard term={openTerm} onClose={closeTerm} onSpeak={speechSupported() ? (text, title) => startNarration({ mode: "selection", text, title }) : undefined} />}
       {handoff && <HandoffDialog input={handoff} onClose={() => setHandoff(null)} />}
       {reporting && <ReportDialog target={{ kind: "lesson", id: lesson.id }} title={meta.title} onClose={() => setReporting(false)} />}
       {lightbox && <Lightbox {...lightbox} onClose={() => setLightbox(null)} />}
@@ -563,10 +564,10 @@ const BlockAside = memo(function BlockAside({ block, t, discussions, noteCount, 
 });
 
 /** Memoized so lesson updates do not re-render it; `onClick` is a stable callback. */
-const ListenButton = memo(function ListenButton({ className, labelClassName, size, pressed, label, title, onClick }: { className: string; labelClassName?: string; size: number; pressed: boolean; label: string; title: string; onClick: () => void }) {
+const ListenButton = memo(function ListenButton({ className, size, pressed, label, title, onClick }: { className: string; size: number; pressed: boolean; label: string; title: string; onClick: () => void }) {
   return (
     <button type="button" className={className} aria-pressed={pressed} title={title} onClick={onClick}>
-      <Headphones size={size} aria-hidden /><span className={labelClassName}>{label}</span>
+      <Headphones size={size} aria-hidden /><span>{label}</span>
     </button>
   );
 });

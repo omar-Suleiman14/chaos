@@ -73,7 +73,9 @@ beforeEach(() => {
 afterEach(() => { removeSpeech(); layout.mockRestore(); });
 let layout: ReturnType<typeof vi.spyOn>;
 
-const listen = () => fireEvent.click(screen.getAllByRole("button", { name: "Listen" })[0]);
+/** The Listen chip beside the reading time starts the lesson at once; the top-bar Listen icon opens its menu. */
+const chip = () => document.querySelector<HTMLButtonElement>(".lx-listen-chip")!;
+const listen = () => fireEvent.click(chip());
 const player = () => screen.findByRole("region", { name: "Read aloud" });
 
 describe("Listen", () => {
@@ -97,7 +99,7 @@ describe("Listen", () => {
     expect(within(region).getByText("Section 2 of 3")).toBeInTheDocument();
     const layer = document.querySelector("article .lx-narr-layer")!;
     expect(layer).toHaveAttribute("aria-hidden", "true");
-    expect(screen.getAllByRole("button", { name: "Listen" })[0]).toHaveAttribute("aria-pressed", "true");
+    expect(chip()).toHaveAttribute("aria-pressed", "true");
 
     fireEvent.click(within(region).getByRole("button", { name: "Pause" }));
     expect(within(region).getByRole("button", { name: "Resume" })).toBeInTheDocument();
@@ -141,7 +143,8 @@ describe("Listen", () => {
 
   it("is labelled in Arabic for Arabic readers", async () => {
     inWorkspace(<LessonReader lesson={lesson("ar")} />, "ar");
-    fireEvent.click(screen.getAllByRole("button", { name: "استمع" })[0]);
+    expect(chip()).toHaveAccessibleName("استمع");
+    fireEvent.click(chip());
     const region = await screen.findByRole("region", { name: "القراءة بصوت عالٍ" });
     expect(within(region).getByRole("button", { name: "القسم التالي" })).toBeInTheDocument();
     expect(region.closest("[dir]")).toHaveAttribute("dir", "rtl");
@@ -221,14 +224,24 @@ describe("selection read aloud", () => {
 });
 
 describe("reading settings", () => {
-  it("keeps read-aloud settings one level in, and saves them with the reading preferences", async () => {
+  it("keeps text settings and appearance only; the theme toggle stays an icon button", () => {
     inWorkspace(<LessonReader lesson={lesson()} />);
     fireEvent.click(screen.getByRole("button", { name: "Reading settings" }));
     const menu = screen.getByRole("menu", { name: "Reading settings" });
     expect(within(menu).getByRole("button", { name: /Use (light|dark) appearance/ })).toHaveClass("ws-icon-button");
-    fireEvent.click(within(menu).getByRole("menuitem", { name: /Read aloud/ }));
-    await waitFor(() => expect(within(menu).getByRole("menuitem", { name: "Back" })).toHaveFocus());
-    expect(within(menu).getByRole("menuitemradio", { name: "Sentence" })).toHaveAttribute("aria-checked", "true");
+    expect(within(menu).queryByRole("menuitemradio", { name: "Sentence" })).toBeNull();
+  });
+});
+
+describe("Listen menu", () => {
+  const open = () => { fireEvent.click(screen.getByRole("button", { name: "Listen", expanded: false })); return screen.getByRole("menu", { name: "Listen" }); };
+
+  it("holds every read-aloud setting and saves them with the reading preferences", async () => {
+    inWorkspace(<LessonReader lesson={lesson()} />);
+    const menu = open();
+    expect(within(menu).getAllByRole("menuitem")[0]).toHaveAccessibleName("Listen to this lesson");
+    const sentence = await within(menu).findByRole("menuitemradio", { name: "Sentence" });
+    expect(sentence).toHaveAttribute("aria-checked", "true");
     fireEvent.click(within(menu).getByRole("menuitemradio", { name: "Word" }));
     fireEvent.click(within(menu).getByRole("menuitemradio", { name: "Purple" }));
     fireEvent.click(within(menu).getByRole("menuitemradio", { name: "1.5×" }));
@@ -236,8 +249,46 @@ describe("reading settings", () => {
     expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toMatchObject({ follow: "word", narrationColor: "purple", speed: 1.5, oneSpeed: false });
     expect(within(menu).getByText(/word timing/)).toBeInTheDocument();
     fireEvent.click(within(menu).getByRole("menuitem", { name: /English voice/ }));
-    fireEvent.click(await within(menu).findByRole("menuitemradio", { name: /^Samantha/ }));
+    await waitFor(() => expect(within(menu).getByRole("menuitem", { name: "Back" })).toHaveFocus());
+    fireEvent.click(within(menu).getByRole("menuitemradio", { name: /^Samantha/ }));
     expect(JSON.parse(localStorage.getItem(PREFS_KEY)!).voices).toEqual({ en: "samantha" });
+  });
+
+  it("starts and stops the lesson from the menu", async () => {
+    inWorkspace(<LessonReader lesson={lesson()} />);
+    fireEvent.click(within(open()).getByRole("menuitem", { name: "Listen to this lesson" }));
+    await player();
+    await waitFor(() => expect(synth.spoken).toEqual(["Portal hypertension"]));
+    fireEvent.click(within(open()).getByRole("menuitem", { name: "Stop listening" }));
+    expect(screen.queryByRole("region", { name: "Read aloud" })).toBeNull();
+  });
+});
+
+describe("glossary card", () => {
+  it("reads the term, its definition and its Arabic meaning aloud, named in the player", async () => {
+    const { TermCard } = await import("@/components/learn/reader/Glossary");
+    const onSpeak = vi.fn();
+    const entry = { term: "oligodendrocytes", definition: "CNS glial cells that form myelin around central axons.", translation: "الخلايا قليلة التغصن", explanation: "خلايا داعمة تكوّن الميالين.", language: "ar" };
+    inWorkspace(<TermCard term={{ entry: entry as never, rect: new DOMRect(0, 0, 10, 10) }} onClose={() => {}} onSpeak={onSpeak} />);
+    fireEvent.click(screen.getByRole("button", { name: "Read aloud" }));
+    expect(onSpeak).toHaveBeenCalledWith("oligodendrocytes.\nCNS glial cells that form myelin around central axons.\nالخلايا قليلة التغصن.\nخلايا داعمة تكوّن الميالين.", "oligodendrocytes");
+  });
+
+  it("plays through the player with each language in its own voice", async () => {
+    const entry = { term: "oligodendrocytes", definition: "Glial cells.", translation: "الخلايا قليلة التغصن", language: "ar" };
+    const props = { request: { id: 1, mode: "selection" as const, text: "oligodendrocytes.\nGlial cells.\nالخلايا قليلة التغصن.", title: entry.term }, lessonId: "l", content: [], title: "", article: createRef<HTMLElement>(), activities: {}, onClose: () => {} };
+    inWorkspace(<Narration {...props} />);
+    const region = await player();
+    expect(within(region).getByText("oligodendrocytes")).toBeInTheDocument();
+    await waitFor(() => expect(synth.queue[0]?.text).toBe("oligodendrocytes."));
+    act(() => synth.finish()); act(() => synth.finish());
+    expect([synth.queue[0].text, synth.queue[0].lang]).toEqual(["الخلايا قليلة التغصن.", "ar-SA"]);
+  });
+
+  it("offers no speaker without speech", async () => {
+    const { TermCard } = await import("@/components/learn/reader/Glossary");
+    inWorkspace(<TermCard term={{ entry: { term: "x", definition: "y" } as never, rect: new DOMRect(0, 0, 1, 1) }} onClose={() => {}} />);
+    expect(screen.queryByRole("button", { name: "Read aloud" })).toBeNull();
   });
 });
 

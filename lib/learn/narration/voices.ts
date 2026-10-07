@@ -39,9 +39,15 @@ export function rankVoices<V extends VoiceLike>(voices: readonly V[], lang: Lang
 }
 
 /** The reader's saved voice when the device still has it, otherwise the best voice for the language. */
+/** Chaos's chosen voice per language when the device has it: Moira (Irish English, Apple). */
+const HOUSE_VOICE: Partial<Record<Lang, RegExp>> = { en: /^moira\b/i };
+
 export function pickVoice<V extends VoiceLike>(voices: readonly V[], lang: Lang, preferred?: string, region?: string): V | null {
   const own = preferred ? voices.find((v) => v.voiceURI === preferred && voicesFor([v], lang).length) : undefined;
-  return own ?? rankVoices(voices, lang, region)[0] ?? null;
+  if (own) return own;
+  const ranked = rankVoices(voices, lang, region);
+  const house = HOUSE_VOICE[lang];
+  return (house && ranked.find((v) => house.test(v.name))) || ranked[0] || null;
 }
 
 /** The region of the reader's own language setting for a language ("GB" for en-GB), when it matches. */

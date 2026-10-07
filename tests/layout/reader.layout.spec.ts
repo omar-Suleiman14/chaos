@@ -148,3 +148,41 @@ test.describe("outline sidebar", () => {
     expect(await p.locator(".lx-reader__toc").evaluate((e) => getComputedStyle(e).display)).toBe("none");
   });
 });
+
+const tools = (ai = true) => `<div class="lx-seltools ws-glass" role="toolbar" style="left:8px;top:8px">
+  ${["Read aloud", "Explain", "Simplify", "Example", "Quiz me"].map((l) => `<button type="button"><svg width="15" height="15"></svg>${l}</button>`).join("")}
+  ${ai ? `<span class="lx-muted lx-seltools__note" style="font-size:11px;padding-inline:4px">opens outside Chaos</span>` : ""}<span class="lx-seltools__sep"></span>
+  <span class="lx-seltools__swatches">${["#facc15", "#4ade80", "#60a5fa", "#f472b6"].map((c) => `<button type="button" aria-label="Highlight"><span class="lx-seltools__swatch" style="background:${c}"></span></button>`).join("")}</span>
+  ${["Note", "Save", "Discuss"].map((l) => `<button type="button"><svg width="15" height="15"></svg>${l}</button>`).join("")}<span class="lx-seltools__sep"></span>
+  ${["Ask ChatGPT", "Ask Claude"].map((l) => `<button type="button"><svg width="15" height="15"></svg>${l}</button>`).join("")}</div>`;
+
+test.describe("selection toolbar", () => {
+  for (const width of [320, 390]) {
+    test(`is a compact square of tiles on a ${width}px phone, not a sideways strip`, async ({ browser }) => {
+      const context = await browser.newContext({ viewport: { width, height: 800 }, hasTouch: true, isMobile: true });
+      const p = await context.newPage();
+      await p.setContent(page());
+      await p.evaluate((html) => document.body.insertAdjacentHTML("beforeend", html), tools());
+      const bar = (await p.locator(".lx-seltools").boundingBox())!;
+      expect(bar.width).toBeLessThanOrEqual(width - 16);
+      expect(bar.height / bar.width).toBeGreaterThan(0.55);
+      expect(await p.locator(".lx-seltools").evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true);
+      const rows = new Set(await p.locator(".lx-seltools > button, .lx-seltools__swatches").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top))));
+      expect(rows.size).toBe(3);
+      await context.close();
+    });
+  }
+});
+
+test.describe("phone top bar", () => {
+  test("fits the Listen icon beside the other actions at 320px without scrolling sideways", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 320, height: 640 }, hasTouch: true, isMobile: true });
+    const p = await context.newPage();
+    const icon = (label: string) => `<button type="button" class="ws-btn ws-btn--sm ws-btn--ghost"><svg width="15" height="15"></svg><span class="lx-phone-label">${label}</span></button>`;
+    await p.setContent(page().replace('<div class="lx-reader-root" dir="ltr">', `<div class="lx-reader-root" dir="ltr"><header class="lx-reader-top"><a class="ws-icon-button lx-reader-back" href="#">‹</a><span class="lx-reader-top__title">T</span><div class="lx-actions" style="gap:2px">${["Save", "Ask", "Discussion", "Listen"].map(icon).join("")}<button class="ws-icon-button">T</button><button class="ws-icon-button">⋯</button></div></header>`));
+    const last = (await p.locator(".lx-reader-top .lx-actions > :last-child").boundingBox())!;
+    expect(last.x + last.width).toBeLessThanOrEqual(320);
+    expect(await p.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+    await context.close();
+  });
+});

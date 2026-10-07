@@ -43,7 +43,8 @@ const copy = {
   },
 };
 
-export type NarrationRequest = { id: number; mode: "lesson"; from?: string } | { id: number; mode: "selection"; text: string };
+/** `title` names what a selection read is (a glossary term); otherwise the player says "Reading your selection". */
+export type NarrationRequest = { id: number; mode: "lesson"; from?: string } | { id: number; mode: "selection"; text: string; title?: string };
 
 export interface NarrationProps {
   request: NarrationRequest;
@@ -161,7 +162,7 @@ export default function Narration({ request, lessonId, content, title, descripti
   const label = status === "error" ? (snap.error === "unsupported" ? t.unsupported : t.failed)
     : status === "checkpoint" ? t.checkpoint
     : status === "ended" ? t.finished
-    : !lesson ? t.selection
+    : request.mode === "selection" ? request.title || t.selection
     : section?.title || title;
   const announce = { idle: t.loading, playing: t.playing, paused: t.paused, checkpoint: t.checkpoint, ended: t.finished, error: label }[status];
   const mainLabel = playing ? t.pause : status === "checkpoint" ? t.skip : status === "ended" ? t.replay : status === "error" ? t.retry : status === "paused" ? t.resume : t.play;

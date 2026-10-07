@@ -219,6 +219,14 @@ describe("voices", () => {
     expect(pickVoice(voices, "en", "Gone")?.name).toBe("Ava (Premium)");
     expect(pickVoice([], "ar")).toBeNull();
   });
+
+  it("uses Moira (Irish English) as the automatic English voice when the device has it", () => {
+    const apple = [...voices, v("Moira", "en-IE"), v("Moira (Enhanced)", "en-IE")];
+    expect(pickVoice(apple, "en")?.name).toBe("Moira (Enhanced)");
+    expect(pickVoice(apple, "en", "Daniel")?.name).toBe("Daniel");
+    expect(pickVoice(voices, "en")?.name).toBe("Ava (Premium)");
+    expect(pickVoice(apple, "ar")?.name).toBe("Maged");
+  });
 });
 
 describe("playback speed", () => {

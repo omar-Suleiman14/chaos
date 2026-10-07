@@ -59,10 +59,12 @@ export function useTextSelection(root: React.RefObject<HTMLElement | null>): [Te
   return [selection, () => { document.getSelection()?.removeAllRanges(); setSelection(null); }];
 }
 
-export default function SelectionToolbar({ selection, onAction, canWrite, aiLabel, canLookUp, canRead }: {
+export default function SelectionToolbar({ selection, onAction, canWrite, aiLabel, canLookUp, canRead, within }: {
   selection: TextSelection; onAction: (action: SelectionAction) => void; canWrite: boolean;
   /** The device can speak: offer Read aloud for exactly the selected text. */
   canRead?: boolean;
+  /** On large screens the toolbar stays inside this element (the lesson column), never over the sidebars. */
+  within?: HTMLElement | null;
   /** The selection is a glossary term, so Look Up can open its card. */
   canLookUp?: boolean;
   /** When in-product AI is off, Explain/Simplify/Example/Quiz go to an external assistant; the label says so. */
@@ -74,12 +76,16 @@ export default function SelectionToolbar({ selection, onAction, canWrite, aiLabe
   useLayoutEffect(() => {
     const el = bar.current;
     if (!el) return;
+    const area = within && window.matchMedia("(min-width: 1181px)").matches ? within.getBoundingClientRect() : null;
+    el.style.maxWidth = area ? `${Math.min(area.width + 16, window.innerWidth - 16)}px` : "";
+    const min = area ? Math.max(8, area.left - 8) : 8;
+    const max = area ? Math.min(window.innerWidth - 8, area.right + 8) : window.innerWidth - 8;
     const w = el.offsetWidth;
     const h = el.offsetHeight;
     const r = selection.rect;
     const above = r.top - h - 10 > 64;
-    setPos({ left: Math.max(8, Math.min(window.innerWidth - w - 8, r.left + r.width / 2 - w / 2)), top: above ? r.top - h - 8 : Math.min(window.innerHeight - h - 8, r.bottom + 8) });
-  }, [selection]);
+    setPos({ left: Math.max(min, Math.min(max - w, r.left + r.width / 2 - w / 2)), top: above ? r.top - h - 8 : Math.min(window.innerHeight - h - 8, r.bottom + 8) });
+  }, [selection, within]);
   // Alt+Enter moves focus into the toolbar for keyboard users; Escape returns.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -108,13 +114,13 @@ export default function SelectionToolbar({ selection, onAction, canWrite, aiLabe
         {item("simplify", Wand2, t.simplify)}
         {item("example", Sparkles, t.example)}
         {item("quiz", HelpCircle, t.quiz)}
-        {aiLabel && <span className="lx-muted" style={{ fontSize: 11, paddingInline: 4 }}>{aiLabel}</span>}
+        {aiLabel && <span className="lx-muted lx-seltools__note" style={{ fontSize: 11, paddingInline: 4 }}>{aiLabel}</span>}
         <span className="lx-seltools__sep" aria-hidden />
-        {canWrite && COLORS.map((c) => (
+        {canWrite && <span className="lx-seltools__swatches">{COLORS.map((c) => (
           <button key={c} type="button" aria-label={t.highlight(t.colors[c])} title={t.highlight(t.colors[c])} onMouseDown={(e) => e.preventDefault()} onClick={() => onAction(`highlight:${c}`)}>
             <span className="lx-seltools__swatch" style={{ background: SWATCH[c] }} aria-hidden />
           </button>
-        ))}
+        ))}</span>}
         {canWrite && item("note", NotebookPen, t.note)}
         {canWrite && item("save", Bookmark, t.save)}
         {canWrite && item("discuss", MessageSquarePlus, t.discuss)}

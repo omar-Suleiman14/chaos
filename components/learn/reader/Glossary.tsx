@@ -1,13 +1,13 @@
 "use client";
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { X } from "lucide-react";
+import { Volume2, X } from "lucide-react";
 import type { GlossaryEntry, GlossaryMatcher } from "@/lib/learn/glossary";
 import { splitTerms } from "@/lib/learn/glossary";
 import { useCopy, useLocale } from "@/lib/i18n";
 
 const copy = {
-  en: { lookUp: (term: string) => `Look up ${term}`, close: "Close", definition: "Definition", meaning: "Meaning" },
-  ar: { lookUp: (term: string) => `ابحث عن ${term}`, close: "إغلاق", definition: "التعريف", meaning: "المعنى" },
+  en: { lookUp: (term: string) => `Look up ${term}`, close: "Close", definition: "Definition", meaning: "Meaning", read: "Read aloud" },
+  ar: { lookUp: (term: string) => `ابحث عن ${term}`, close: "إغلاق", definition: "التعريف", meaning: "المعنى", read: "اقرأ بصوت عالٍ" },
 };
 
 export interface OpenTerm { entry: GlossaryEntry; rect: DOMRect; from?: HTMLElement | null }
@@ -33,7 +33,12 @@ function languageName(code: string | undefined, locale: string) {
 }
 
 /** The look-up card: definition first, then the word and its meaning in the learner's language. */
-export function TermCard({ term, onClose }: { term: OpenTerm; onClose: () => void }) {
+/** Everything the card shows, in reading order, for read aloud (each part ends a sentence). */
+export function termSpeech(entry: GlossaryEntry): string {
+  return [entry.term, entry.definition, entry.translation, entry.explanation].map((s) => s?.trim()).filter(Boolean).map((s) => (/[.!?؟]$/.test(s!) ? s : `${s}.`)).join("\n");
+}
+
+export function TermCard({ term, onClose, onSpeak }: { term: OpenTerm; onClose: () => void; onSpeak?: (text: string, title: string) => void }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
   const card = useRef<HTMLDivElement>(null);
@@ -70,7 +75,10 @@ export function TermCard({ term, onClose }: { term: OpenTerm; onClose: () => voi
     <div ref={card} className="lx-termcard ws-glass" role="dialog" aria-label={entry.term} tabIndex={-1} style={pos}>
       <header>
         <div><strong dir="auto">{entry.term}</strong>{entry.pronunciation && <span className="lx-termcard__say" dir="auto">{entry.pronunciation}</span>}</div>
-        <button type="button" onClick={onClose} aria-label={t.close}><X size={15} aria-hidden /></button>
+        <span className="lx-termcard__actions">
+          {onSpeak && <button type="button" onClick={() => onSpeak(termSpeech(entry), entry.term)} aria-label={t.read} title={t.read}><Volume2 size={15} aria-hidden /></button>}
+          <button type="button" onClick={onClose} aria-label={t.close}><X size={15} aria-hidden /></button>
+        </span>
       </header>
       <section><h4>{t.definition}</h4><p dir="auto">{entry.definition}</p></section>
       {other && (

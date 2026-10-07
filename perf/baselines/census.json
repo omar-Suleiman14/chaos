@@ -42,11 +42,11 @@
       "unit": "count"
     },
     "giantLesson.domNodes": {
-      "budget": 4807,
+      "budget": 4808,
       "unit": "count",
       "raised": {
-        "from": 4793,
-        "reason": "Lesson read aloud: Listen controls (top bar and byline) and the collapsible outline toggle render on mount; speech code itself stays out of the lesson (loaded on demand). Append-block renders went down (memoized reading menu, outline and Listen buttons).",
+        "from": 4807,
+        "reason": "Listen icon becomes a menu holding the read-aloud settings (moved out of Reading settings); the settings themselves still load on demand.",
         "at": "2026-10-07"
       }
     },
@@ -55,11 +55,11 @@
       "unit": "count"
     },
     "giantLesson.mount.renders": {
-      "budget": 5083,
+      "budget": 5085,
       "unit": "count",
       "raised": {
-        "from": 5074,
-        "reason": "Lesson read aloud: Listen controls (top bar and byline) and the collapsible outline toggle render on mount; speech code itself stays out of the lesson (loaded on demand). Append-block renders went down (memoized reading menu, outline and Listen buttons).",
+        "from": 5083,
+        "reason": "Listen icon becomes a menu holding the read-aloud settings (moved out of Reading settings); the settings themselves still load on demand.",
         "at": "2026-10-07"
       }
     },
@@ -84,11 +84,11 @@
       "unit": "count"
     },
     "lesson.mount.renders": {
-      "budget": 686,
+      "budget": 688,
       "unit": "count",
       "raised": {
-        "from": 677,
-        "reason": "Lesson read aloud: Listen controls (top bar and byline) and the collapsible outline toggle render on mount; speech code itself stays out of the lesson (loaded on demand). Append-block renders went down (memoized reading menu, outline and Listen buttons).",
+        "from": 686,
+        "reason": "Listen icon becomes a menu holding the read-aloud settings (moved out of Reading settings); the settings themselves still load on demand.",
         "at": "2026-10-07"
       }
     },

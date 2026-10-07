@@ -48,20 +48,20 @@
       "unit": "count"
     },
     "source.rules": {
-      "budget": 3163,
+      "budget": 3172,
       "unit": "count",
       "raised": {
-        "from": 3078,
-        "reason": "Lesson read aloud (compact player, follow-along overlay, reading-menu Listen settings), foldable desktop outline and the touch block-actions bar. The two layout transitions are width/height on childless, absolutely positioned overlay boxes; their 18 colour rules moved to inline CSS variables.",
+        "from": 3163,
+        "reason": "Selection toolbar lays out as a square grid of tiles on phones; glossary card gains a read-aloud button.",
         "at": "2026-10-07"
       }
     },
     "source.selectors": {
-      "budget": 3480,
+      "budget": 3489,
       "unit": "count",
       "raised": {
-        "from": 3385,
-        "reason": "Lesson read aloud (compact player, follow-along overlay, reading-menu Listen settings), foldable desktop outline and the touch block-actions bar. The two layout transitions are width/height on childless, absolutely positioned overlay boxes; their 18 colour rules moved to inline CSS variables.",
+        "from": 3480,
+        "reason": "Selection toolbar lays out as a square grid of tiles on phones; glossary card gains a read-aloud button.",
         "at": "2026-10-07"
       }
     },

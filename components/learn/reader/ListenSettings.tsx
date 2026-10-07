@@ -35,15 +35,20 @@ const copy = {
 
 const SPEED_LABELS = Object.fromEntries(SPEEDS.map((s) => [String(s), `${s}×`]));
 
-export default function ListenSettings({ prefs, setPrefs, onBack }: { prefs: ReaderPrefs; setPrefs: SetPrefs; onBack: () => void }) {
+/** `onBack` adds a Back row for menus that open these settings as a sub-level. */
+export default function ListenSettings({ prefs, setPrefs, onBack }: { prefs: ReaderPrefs; setPrefs: SetPrefs; onBack?: () => void }) {
   const t = useCopy(copy);
   const voices = useVoices();
   const [voiceFor, setVoiceFor] = useState<Lang | null>(null);
   const root = useRef<HTMLDivElement>(null);
-  // Each level opens with focus on its first row (Back), so keyboard users stay in the menu.
-  useEffect(() => { root.current?.querySelector<HTMLElement>('[role^="menuitem"]')?.focus(); }, [voiceFor]);
-  const back = (
-    <button type="button" role="menuitem" className="lx-reading-menu__row" onClick={() => (voiceFor ? setVoiceFor(null) : onBack())}>
+  // Moving between levels keeps focus inside the menu, on the new level's first row.
+  const first = useRef(!onBack);
+  useEffect(() => {
+    if (first.current) { first.current = false; return; }
+    root.current?.querySelector<HTMLElement>('[role^="menuitem"]')?.focus();
+  }, [voiceFor]);
+  const back = (voiceFor || onBack) && (
+    <button type="button" role="menuitem" className="lx-reading-menu__row" onClick={() => (voiceFor ? setVoiceFor(null) : onBack?.())}>
       <ChevronLeft size={16} className="lx-flip" aria-hidden />{t.back}
     </button>
   );
