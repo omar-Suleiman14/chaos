@@ -81,6 +81,17 @@ jobs:
           path: perf/results
           retention-days: 30
 
+      - name: Upload bundle diagnostics
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: nightly-bundle-diagnostics
+          path: |
+            .next/diagnostics/route-bundle-stats.json
+            .next/static/chunks/*.js
+          include-hidden-files: true
+          retention-days: 7
+
   mcp:
     name: MCP end to end
     runs-on: ubuntu-latest
