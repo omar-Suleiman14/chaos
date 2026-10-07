@@ -59,6 +59,7 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
 
   const startSession = useMutation(api.quizFunctions.startQuizSession);
   const gradeAnswer = useMutation(api.quizFunctions.gradeAnswer);
+  const openQuestion = useMutation(api.quizFunctions.openQuestion);
   const completeSession = useMutation(api.quizFunctions.completeQuizSession);
   const convex = useConvex();
 
@@ -171,6 +172,9 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
     }
   };
 
+  const reportOpened = useEffectEvent((questionId: Id<"questions">) => {
+    if (sessionId) openQuestion({ sessionId, questionId }).catch(() => { /* the server falls back to the previous answer's time */ });
+  });
   const submitTimeout = useEffectEvent((qId: Id<"questions">) => { void handleSubmitAnswer(qId, "", true); });
 
   useEffect(() => {
@@ -188,6 +192,8 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
 
     if (qStartTimes.current[q._id] === undefined) {
       qStartTimes.current[q._id] = Date.now();
+      // The server measures the time limit from here; the timer below is only the display.
+      reportOpened(q._id);
     }
     const endsAt = qStartTimes.current[q._id] + (q.timeLimit || 60) * 1000;
     setTimeLeftMap(prev => ({ ...prev, [q._id]: Math.max(0, Math.ceil((endsAt - Date.now()) / 1000)) }));

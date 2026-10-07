@@ -21,7 +21,7 @@ vi.mock("convex/react", () => ({
   useQuery: (ref: never, args: unknown) => (args === "skip" ? undefined : queryResults[getFunctionName(ref)]),
   useMutation: (ref: never) => {
     const name = getFunctionName(ref);
-    return name === "quizFunctions:startQuizSession" ? startSession : name === "quizFunctions:gradeAnswer" ? gradeAnswer : vi.fn();
+    return name === "quizFunctions:startQuizSession" ? startSession : name === "quizFunctions:gradeAnswer" ? gradeAnswer : vi.fn().mockResolvedValue(null);
   },
   useConvex: () => ({ query: vi.fn() }),
 }));

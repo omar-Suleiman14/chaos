@@ -77,6 +77,8 @@ function preview(def: FormDefinition | null, answers: Answers): string {
   return parts.join(" · ").slice(0, 200);
 }
 
+const TAG_SCAN_PAGE = 200;
+
 export const listResponses = query({
   args: {
     formId: v.id("forms"),
@@ -92,6 +94,9 @@ export const listResponses = query({
     const f = args.filter;
     const spam = f.spam ?? false;
     const search = f.search?.trim();
+    // Tags are matched after the read (an index can't test array membership), so tag
+    // filters scan a wider page; the client keeps loading until it has enough matches.
+    const paginationOpts = f.tag ? { ...args.paginationOpts, numItems: Math.max(args.paginationOpts.numItems, TAG_SCAN_PAGE) } : args.paginationOpts;
     const result = search
       ? await ctx.db
           .query("formResponses")
@@ -101,20 +106,20 @@ export const listResponses = query({
             if (f.reviewed !== undefined) s = s.eq("reviewed", f.reviewed);
             return s;
           })
-          .paginate(args.paginationOpts)
+          .paginate(paginationOpts)
       : f.status
         ? await ctx.db
             .query("formResponses")
             .withIndex("by_formId_and_status_and_submittedAt", (q) => q.eq("formId", args.formId).eq("status", f.status!))
             .order(order)
             .filter((q) => (f.reviewed === undefined ? q.eq(q.field("spam"), spam) : q.and(q.eq(q.field("spam"), spam), q.eq(q.field("reviewed"), f.reviewed))))
-            .paginate(args.paginationOpts)
+            .paginate(paginationOpts)
         : await (() => {
             const folder = ctx.db
               .query("formResponses")
               .withIndex("by_formId_and_spam_and_submittedAt", (q) => q.eq("formId", args.formId).eq("spam", spam))
               .order(order);
-            return (f.reviewed === undefined ? folder : folder.filter((q) => q.eq(q.field("reviewed"), f.reviewed))).paginate(args.paginationOpts);
+            return (f.reviewed === undefined ? folder : folder.filter((q) => q.eq(q.field("reviewed"), f.reviewed))).paginate(paginationOpts);
           })();
     const definition = versionCache(ctx, args.formId);
     const page = [];

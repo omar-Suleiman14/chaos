@@ -64,6 +64,7 @@ export const liveTables = {
     settings: liveSettingsValidator,
     lastActivityAt: v.number(),
     createdAt: v.number(),
+    /** Legacy: rooms created before livePlayerCounts. Read only as a fallback; never written. */
     activePlayerCount: v.optional(v.number()),
     /** Team-only game: copied from the quiz; only signed-in members of this team may join. */
     audienceTeamId: v.optional(v.id("businessTeams")),
@@ -102,6 +103,14 @@ export const liveTables = {
     .index("by_gameId_and_nicknameKey", ["gameId", "nicknameKey"])
     .index("by_gameId_and_kicked_and_score", ["gameId", "kicked", "score"])
     .index("by_gameId_and_score", ["gameId", "score"]),
+
+  /**
+   * Active players per game, kept off liveGames so a burst of joins doesn't rewrite the
+   * document every phone subscribes to (each write would re-run every playerView).
+   */
+  livePlayerCounts: defineTable({
+    gameId: v.id("liveGames"), count: v.number(),
+  }).index("by_gameId", ["gameId"]),
 
   liveAnswerCounts: defineTable({
     gameId: v.id("liveGames"), questionIndex: v.number(), shard: v.number(), count: v.number(),

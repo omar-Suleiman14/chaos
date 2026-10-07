@@ -9,6 +9,7 @@ import QuizRoute from "@/app/[lang]/(app)/[username]/[quizname]/page";
 const startSession = vi.fn();
 const gradeAnswer = vi.fn();
 const completeSession = vi.fn();
+const openQuestion = vi.fn().mockResolvedValue(null);
 const attemptQuery = vi.fn();
 let routeParams = { username: "creator", quizname: "quiz" };
 const playerData = { isPublished: true, title: "Quiz", questions: [], totalPoints: 0, questionCount: 0, usesPool: false, resultsWithheld: false };
@@ -22,7 +23,7 @@ const queryResults: Record<string, unknown> = {
 
 vi.mock("convex/react", () => ({
   useQuery: (ref: never, args: unknown) => (args === "skip" ? undefined : queryResults[getFunctionName(ref)]),
-  useMutation: (ref: never) => ({ "quizFunctions:startQuizSession": startSession, "quizFunctions:gradeAnswer": gradeAnswer, "quizFunctions:completeQuizSession": completeSession })[getFunctionName(ref)],
+  useMutation: (ref: never) => ({ "quizFunctions:startQuizSession": startSession, "quizFunctions:gradeAnswer": gradeAnswer, "quizFunctions:completeQuizSession": completeSession, "quizFunctions:openQuestion": openQuestion })[getFunctionName(ref)],
   useConvex: () => ({ query: attemptQuery }),
 }));
 vi.mock("next/navigation", () => ({ useParams: () => routeParams }));

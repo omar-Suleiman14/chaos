@@ -4,7 +4,7 @@ import { authorDb } from "./authorIndex";
 import { setOwnedUsername } from "./links";
 import { reserveUsername, usernameOwner } from "./usernameModel";
 import { consumeCreation } from "./plans";
-import { DEFAULT_HALF_MARK_THRESHOLD, clampThreshold, gradeMulti, gradeSingle, gradeWritten, parseMultiAnswer } from "./grading";
+import { clampThreshold, gradeMulti, gradeSingle, gradeWritten, parseMultiAnswer } from "./grading";
 import { internal } from "./_generated/api";
 import { grantPlan, usersForActor, contentForActor } from "./admin";
 import { paginationOptsValidator } from "convex/server";
@@ -31,13 +31,15 @@ import {
 } from "./authz";
 
 /**
- * A quiz's completed attempts, oldest first (the order the by_quiz index gives).
- * Reads only completed rows through the status index, bounded to 500 to prevent unbounded reads.
+ * A quiz's most recently completed attempts (up to 500), returned oldest first.
+ * Reads only completed rows, so answers on in-progress attempts don't re-run these queries.
+ * Ordered by completion time, not score: a score-ordered window would keep only the lowest scores.
  */
 async function completedSessions(ctx: QueryCtx, quizId: Id<"quizzes">, limit = 500): Promise<Doc<"quizSessions">[]> {
   const rows = await ctx.db
     .query("quizSessions")
-    .withIndex("by_quizId_and_status_and_score", (q) => q.eq("quizId", quizId).eq("status", "completed"))
+    .withIndex("by_quizId_and_status_and_completedAt", (q) => q.eq("quizId", quizId).eq("status", "completed"))
+    .order("desc")
     .take(limit);
   return rows.sort((a, b) => a._creationTime - b._creationTime);
 }
@@ -907,6 +909,11 @@ const SESSION_RATE_WINDOW_MS = 60_000;
 const MAX_ANSWER_LENGTH = 5_000;
 const MAX_ANSWERS_PER_SESSION = 200;
 const MAX_NAME_LENGTH = 100;
+const MAX_ACTIVE_ATTEMPTS = 5;
+/** The player's default when a question sets no limit; matches QuizPlayer. */
+const DEFAULT_QUESTION_SECONDS = 60;
+/** Allowance for network latency and the player's last tap before the deadline. */
+const LATE_GRACE_MS = 5_000;
 
 function normalizePlayerName(raw: string): string {
   const withoutMarkup = raw.replace(/<[^>]*>/g, "");
@@ -963,13 +970,12 @@ export const startQuizSession = mutation({
     const playerKey = identity?.subject ?? name.trim().toLowerCase();
     await consumeRate(ctx, `quiz:start:${args.quizId}:${playerKey}`, 10, 60_000);
 
-    const activeSessions = await ctx.db
+    // This player's own in-progress attempts, however many other people are mid-attempt.
+    const playerActive = await ctx.db
       .query("quizSessions")
-      .withIndex("by_quiz", (q) => q.eq("quizId", args.quizId))
-      .filter((q) => q.eq(q.field("status"), "in_progress"))
-      .take(20);
-    const playerActive = activeSessions.filter((s) => s.playerName.trim().toLowerCase() === name.trim().toLowerCase());
-    if (playerActive.length >= 5) {
+      .withIndex("by_quizId_and_status_and_playerKey", (q) => q.eq("quizId", args.quizId).eq("status", "in_progress").eq("playerKey", playerKey))
+      .take(MAX_ACTIVE_ATTEMPTS);
+    if (playerActive.length >= MAX_ACTIVE_ATTEMPTS) {
       throw new Error("CAP_REACHED: You have too many in-progress attempts for this quiz. Finish or wait before starting a new one.");
     }
 
@@ -989,6 +995,7 @@ export const startQuizSession = mutation({
     return await ctx.db.insert("quizSessions", {
       quizId: args.quizId,
       playerName: name,
+      playerKey,
       status: "in_progress",
       score: 0,
       totalPoints: 0,
@@ -999,15 +1006,48 @@ export const startQuizSession = mutation({
   },
 });
 
+/**
+ * Records when this attempt first showed a question, so its time limit is measured by the
+ * server. Calling it again never moves the start later.
+ */
+export const openQuestion = mutation({
+  args: { sessionId: v.id("quizSessions"), questionId: v.id("questions") },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get("quizSessions", args.sessionId);
+    if (!session || session.status !== "in_progress" || session.source === "live") return null;
+    if (session.questionSnapshot && !session.questionSnapshot.some((q) => q._id === args.questionId)) return null;
+    const opened = session.openedQuestions ?? [];
+    if (opened.some((o) => o.questionId === args.questionId) || session.answers.some((a) => a.questionId === args.questionId)) return null;
+    if (opened.length >= MAX_ANSWERS_PER_SESSION) return null;
+    await ctx.db.patch("quizSessions", session._id, { openedQuestions: [...opened, { questionId: args.questionId, at: Date.now() }] });
+    return null;
+  },
+});
+
+/**
+ * When the server considers this question started. Players who never reported opening it
+ * (older clients, or a script skipping the call) get the time since their previous answer.
+ * Null for attempts already underway before answer times were stored.
+ */
+function questionStartedAt(session: Doc<"quizSessions">, questionId: Id<"questions">): number | null {
+  const opened = session.openedQuestions?.find((o) => o.questionId === questionId);
+  if (opened) return opened.at;
+  if (session.answers.some((a) => a.answeredAt === undefined)) return null;
+  return session.answers.reduce((latest, a) => Math.max(latest, a.answeredAt ?? 0), session.startedAt);
+}
+
 // Grade a single answer — server-side only
 export const gradeAnswer = mutation({
   args: {
     sessionId: v.id("quizSessions"),
     questionId: v.id("questions"),
     answer: v.string(),
+    /** Ignored: kept so older clients still validate. The server measures the time. */
     timeTaken: v.optional(v.number()),
   },
   handler: async (ctx, args) => {
+    const now = Date.now();
     const session = await ctx.db.get("quizSessions", args.sessionId);
     if (!session) throw new Error("SESSION_NOT_FOUND: This attempt no longer exists.");
     if (session.source === "live") throw new Error("SESSION_CLOSED: Use the live game to answer this attempt.");
@@ -1015,18 +1055,20 @@ export const gradeAnswer = mutation({
       throw new Error("SESSION_CLOSED: This attempt is already completed.");
     }
 
-    const storedQuestion = await ctx.db.get("questions", args.questionId);
-    const question = session.questionSnapshot?.find(q => q._id === args.questionId) ?? (session.questionSnapshot ? null : storedQuestion);
+    // A snapshot names its own questions; only legacy attempts without one need the live row.
+    const snapshotQuestion = session.questionSnapshot?.find(q => q._id === args.questionId);
+    const storedQuestion = session.questionSnapshot ? null : await ctx.db.get("questions", args.questionId);
+    const question = session.questionSnapshot ? snapshotQuestion : storedQuestion;
     if (!question) throw new Error("QUESTION_NOT_FOUND: That question no longer exists.");
-    if (!storedQuestion || storedQuestion.quizId !== session.quizId) {
+    if (storedQuestion && storedQuestion.quizId !== session.quizId) {
       throw new Error("QUESTION_NOT_IN_QUIZ: That question is not part of this quiz.");
     }
 
     const existingAnswer = session.answers.find((answer) => answer.questionId === args.questionId);
-    const sessionQuiz = await ctx.db.get("quizzes", session.quizId);
+    const quiz = await ctx.db.get("quizzes", session.quizId);
     // Unpublishing or moderation stops attempts already in progress.
-    if (!sessionQuiz || sessionQuiz.archived || !sessionQuiz.isPublished || sessionQuiz.isBanned) throw new Error("QUIZ_UNAVAILABLE: This quiz isn't available.");
-    const withheld = resultsWithheld(sessionQuiz);
+    if (!quiz || quiz.archived || !quiz.isPublished || quiz.isBanned) throw new Error("QUIZ_UNAVAILABLE: This quiz isn't available.");
+    const withheld = resultsWithheld(quiz);
     if (existingAnswer && withheld) {
       return { isCorrect: false, pointsEarned: 0, totalPointsPossible: question.points, alreadyAnswered: true, withheld: true, correctAnswer: undefined, explanation: undefined };
     }
@@ -1048,41 +1090,39 @@ export const gradeAnswer = mutation({
       throw new Error("TOO_MANY_ANSWERS: This attempt has submitted too many answers.");
     }
 
-    const activeQuiz = await ctx.db.get("quizzes", session.quizId);
-    if (!activeQuiz || activeQuiz.archived || activeQuiz.isBanned || await creatorRestricted(ctx, activeQuiz.creatorId)) throw new Error("QUIZ_UNAVAILABLE");
+    if (await creatorRestricted(ctx, quiz.creatorId)) throw new Error("QUIZ_UNAVAILABLE");
 
     // Resolve creator/global settings for grading and post-answer reveal rules.
-    const quiz = await ctx.db.get("quizzes", session.quizId);
-    let halfMarkThreshold = DEFAULT_HALF_MARK_THRESHOLD;
-    let teacherSettings = null;
-    let globalConfig = null;
-    if (quiz) {
-      [teacherSettings, globalConfig] = await Promise.all([
-        ctx.db
-          .query("teacherSettings")
-          .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
-          .first(),
-        ctx.db.query("globalConfig").first(),
-      ]);
-      halfMarkThreshold = clampThreshold(teacherSettings?.halfMarkThreshold);
-    }
+    const [teacherSettings, globalConfig] = await Promise.all([
+      ctx.db
+        .query("teacherSettings")
+        .withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId))
+        .first(),
+      ctx.db.query("globalConfig").first(),
+    ]);
+    const halfMarkThreshold = clampThreshold(teacherSettings?.halfMarkThreshold);
 
     const showCorrectAnswers =
-      quiz?.showCorrectAnswers ??
+      quiz.showCorrectAnswers ??
       teacherSettings?.showCorrectAnswers ??
       globalConfig?.showCorrectAnswers ??
       true;
     const showExplanations =
-      quiz?.showExplanations ??
+      quiz.showExplanations ??
       teacherSettings?.showExplanations ??
       globalConfig?.showExplanations ??
       true;
 
+    // The time limit is enforced here, not by the browser's timer.
+    const startedAt = questionStartedAt(session, args.questionId);
+    const elapsedMs = startedAt === null ? null : Math.max(0, now - startedAt);
+    const late = elapsedMs !== null && elapsedMs > (question.timeLimit || DEFAULT_QUESTION_SECONDS) * 1000 + LATE_GRACE_MS;
+
     let isCorrect = false;
     let pointsEarned = 0;
-    const rawAnswer = args.answer.trim();
+    const rawAnswer = late ? "" : args.answer.trim();
 
-    switch (question.type) {
+    if (!late) switch (question.type) {
       case "mcq":
       case "true_false": {
         ({ isCorrect, points: pointsEarned } = gradeSingle(rawAnswer, question.correctAnswer, question.points));
@@ -1106,7 +1146,9 @@ export const gradeAnswer = mutation({
         answer: rawAnswer,
         isCorrect,
         pointsEarned,
-        timeTaken: args.timeTaken,
+        timeTaken: elapsedMs === null ? undefined : Math.round(elapsedMs / 100) / 10,
+        answeredAt: now,
+        ...(late ? { late: true } : {}),
       },
     ];
 
@@ -1300,6 +1342,29 @@ export const overrideScore = mutation({
   },
 });
 
+/**
+ * The best completed attempts by raw score; ties go to whoever started first. Finds the
+ * cutoff, then fetches only enough oldest tied attempts to fill the list, since reading
+ * every tie can exceed transaction limits on popular quizzes.
+ */
+async function topCompleted(ctx: QueryCtx, quizId: Id<"quizzes">, limit: number): Promise<Doc<"quizSessions">[]> {
+  const top = await ctx.db.query("quizSessions")
+    .withIndex("by_quizId_and_status_and_score", (q) => q.eq("quizId", quizId).eq("status", "completed"))
+    .order("desc")
+    .take(limit);
+  const cutoff = top.length === limit ? top[limit - 1].score : undefined;
+  const aboveCutoff = cutoff === undefined ? top : top.filter((s) => s.score > cutoff);
+  const tied = cutoff === undefined ? [] : await ctx.db
+    .query("quizSessions")
+    .withIndex("by_quizId_and_status_and_score", (q) => q.eq("quizId", quizId).eq("status", "completed").eq("score", cutoff))
+    .order("asc")
+    .take(limit - aboveCutoff.length);
+  const byId = new Map([...aboveCutoff, ...tied].map((s) => [s._id, s]));
+  return [...byId.values()]
+    .sort((a, b) => b.score - a.score || a._creationTime - b._creationTime)
+    .slice(0, limit);
+}
+
 export const getQuizLeaderboard = query({
   args: { quizId: v.id("quizzes") },
   handler: async (ctx, args) => {
@@ -1310,24 +1375,7 @@ export const getQuizLeaderboard = query({
     // Scores stay private until the creator releases results; only the owner or an admin sees them before that.
     if (resultsWithheld(quiz) && !(await getQuizIfOwnerOrAdmin(ctx, quiz._id))) return [];
 
-    // Find the cutoff, then fetch only enough oldest tied attempts to fill the
-    // board. Reading every tie can exceed transaction limits on popular quizzes.
-    const LIMIT = 20;
-    const completed = (quizId: Id<"quizzes">) =>
-      ctx.db.query("quizSessions").withIndex("by_quizId_and_status_and_score", (q) => q.eq("quizId", quizId).eq("status", "completed"));
-    const top = await completed(args.quizId).order("desc").take(LIMIT);
-    const cutoff = top.length === LIMIT ? top[LIMIT - 1].score : undefined;
-    const aboveCutoff = cutoff === undefined ? top : top.filter((s) => s.score > cutoff);
-    const tied = cutoff === undefined ? [] : await ctx.db
-      .query("quizSessions")
-      .withIndex("by_quizId_and_status_and_score", (q) => q.eq("quizId", args.quizId).eq("status", "completed").eq("score", cutoff))
-      .order("asc")
-      .take(LIMIT - aboveCutoff.length);
-    const byId = new Map([...aboveCutoff, ...tied].map((s) => [s._id, s]));
-
-    return [...byId.values()]
-      .sort((a, b) => b.score - a.score || a._creationTime - b._creationTime)
-      .slice(0, LIMIT)
+    return (await topCompleted(ctx, args.quizId, 20))
       .map((s) => ({
         playerName: s.playerName,
         score: s.score,
@@ -1495,6 +1543,9 @@ export const updateGlobalConfig = mutation({
 // ANALYTICS — PERCENTILE & ENHANCED STATS
 // ============================================================
 
+/** Rows read per side of the player's score; past this the percentile is an estimate. */
+const PERCENTILE_READ_CAP = 2_000;
+
 export const getPlayerPercentile = query({
   args: { sessionId: v.id("quizSessions") },
   handler: async (ctx, args) => {
@@ -1503,19 +1554,16 @@ export const getPlayerPercentile = query({
     // A standing among other people's scores is a result too; withhold it with the scores.
     if (resultsWithheld(await ctx.db.get("quizzes", session.quizId))) return null;
 
-    const completed = await completedSessions(ctx, session.quizId);
-    if (completed.length <= 1) return null;
-
-    const myPct = session.totalPoints > 0 ? session.score / session.totalPoints : 0;
-    const beatCount = completed.filter((s) => {
-      const theirPct = s.totalPoints > 0 ? s.score / s.totalPoints : 0;
-      return myPct > theirPct;
-    }).length;
-
-    // Exclude self from the "others" count
-    const others = completed.length - 1;
-    if (others === 0) return null;
-    return Math.round((beatCount / others) * 100);
+    // Ranked by raw score, like the leaderboard, so the two always agree.
+    const completed = () => ctx.db.query("quizSessions");
+    const [below, atOrAbove] = await Promise.all([
+      completed().withIndex("by_quizId_and_status_and_score", (q) => q.eq("quizId", session.quizId).eq("status", "completed").lt("score", session.score)).take(PERCENTILE_READ_CAP),
+      completed().withIndex("by_quizId_and_status_and_score", (q) => q.eq("quizId", session.quizId).eq("status", "completed").gte("score", session.score)).take(PERCENTILE_READ_CAP),
+    ]);
+    // atOrAbove includes this attempt.
+    const others = below.length + atOrAbove.length - 1;
+    if (others <= 0) return null;
+    return Math.round((below.length / others) * 100);
   },
 });
 
@@ -1532,14 +1580,8 @@ export const getQuizStatsEnhanced = query({
 
     const questions = allQuestions.filter((q) => q.deletedAt === undefined);
 
-    // Top 3
-    const top3 = [...completed]
-      .sort((a, b) => {
-        const aPct = a.totalPoints > 0 ? a.score / a.totalPoints : 0;
-        const bPct = b.totalPoints > 0 ? b.score / b.totalPoints : 0;
-        return bPct - aPct;
-      })
-      .slice(0, 3)
+    // Top 3 across every attempt, ranked like the leaderboard.
+    const top3 = (await topCompleted(ctx, args.quizId, 3))
       .map((s) => ({
         playerName: s.playerName,
         score: s.score,
