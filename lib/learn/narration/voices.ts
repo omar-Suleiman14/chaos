@@ -38,10 +38,10 @@ export function rankVoices<V extends VoiceLike>(voices: readonly V[], lang: Lang
     .sort((a, b) => b.score - a.score || a.i - b.i).map((x) => x.v);
 }
 
-/** The reader's saved voice when the device still has it, otherwise the best voice for the language. */
 /** Chaos's chosen voice per language when the device has it: Moira (Irish English, Apple). */
 const HOUSE_VOICE: Partial<Record<Lang, RegExp>> = { en: /^moira\b/i };
 
+/** The reader's saved voice when the device still has it, then the house voice, then the best voice for the language. */
 export function pickVoice<V extends VoiceLike>(voices: readonly V[], lang: Lang, preferred?: string, region?: string): V | null {
   const own = preferred ? voices.find((v) => v.voiceURI === preferred && voicesFor([v], lang).length) : undefined;
   if (own) return own;
