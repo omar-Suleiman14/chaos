@@ -38,16 +38,21 @@
       "unit": "count"
     },
     "source.rules": {
-      "budget": 3072,
-      "unit": "count"
-    },
-    "source.selectors": {
-      "budget": 3378,
+      "budget": 3078,
       "unit": "count",
       "raised": {
-        "from": 3377,
-        "reason": "Skeleton cards fade in after 200 ms like skeleton lines, also under reduced motion",
-        "at": "2026-10-06"
+        "from": 3072,
+        "reason": "English/Arabic cookie consent banner and persistent settings control add accessible actions, focus styles and mobile positioning; measured in nightly run 37596275571.",
+        "at": "2026-10-07"
+      }
+    },
+    "source.selectors": {
+      "budget": 3385,
+      "unit": "count",
+      "raised": {
+        "from": 3378,
+        "reason": "English/Arabic cookie consent banner and persistent settings control add accessible actions, focus styles and mobile positioning; measured in nightly run 37596275571.",
+        "at": "2026-10-07"
       }
     },
     "source.transitionAll": {

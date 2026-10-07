@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { string as zString, number as zNumber, strictObject as zStrictObject, discriminatedUnion as zDiscriminatedUnion, literal as zLiteral, boolean as zBoolean, array as zArray, enum as zEnum, union as zUnion, type infer as ZodInfer } from "zod";
 import type { Id } from "../convex/_generated/dataModel";
 import type { LessonDocument } from "../convex/learnModel";
 import { validateDocument } from "../convex/learnValidation";
@@ -30,96 +30,93 @@ export interface LessonAdapterProblem {
 export type LessonAdapterResult<T> =
   | { ok: true; value: T; problems: [] }
   | { ok: false; problems: LessonAdapterProblem[] };
-const str = z.string().max(20_000);
-const id = z.string().min(1).max(200);
+const str = zString().max(20_000);
+const id = zString().min(1).max(200);
 const sourceId = id.transform((value) => value as Id<"learnSources">);
-const time = z.number().finite().nonnegative();
-const citation = z.strictObject({
+const time = zNumber().finite().nonnegative();
+const citation = zStrictObject({
   sourceId,
-  locator: z.discriminatedUnion("kind", [
-    z.strictObject({
-      kind: z.literal("page"),
-      page: z.number().int().positive(),
+  locator: zDiscriminatedUnion("kind", [
+    zStrictObject({
+      kind: zLiteral("page"),
+      page: zNumber().int().positive(),
     }),
-    z.strictObject({
-      kind: z.literal("slide"),
-      slide: z.number().int().positive(),
+    zStrictObject({
+      kind: zLiteral("slide"),
+      slide: zNumber().int().positive(),
     }),
-    z
-      .strictObject({
-        kind: z.literal("time"),
+    zStrictObject({
+        kind: zLiteral("time"),
         start: time,
         end: time.optional(),
       })
       .refine((v) => v.end === undefined || v.end > v.start),
-    z.strictObject({ kind: z.literal("section"), label: str }),
+    zStrictObject({ kind: zLiteral("section"), label: str }),
   ]),
 });
-const marks = z.strictObject({ bold: z.boolean().optional(), italic: z.boolean().optional(), underline: z.boolean().optional(), strike: z.boolean().optional(), code: z.boolean().optional(), textColor: str.optional(), backgroundColor: str.optional() });
-const inline = z.array(z.strictObject({ text: str, marks: marks.optional(), href: str.optional() })).max(1000);
-const presentation = z.strictObject({ alignment: z.enum(["left", "center", "right", "justify"]).optional(), textColor: str.optional(), backgroundColor: str.optional() });
-const annotations = z.strictObject({ v: z.literal(1), items: z.array(z.strictObject({ id, x: z.number(), y: z.number(), w: z.number().optional(), h: z.number().optional(), label: str, body: str.optional() })).max(100) });
+const marks = zStrictObject({ bold: zBoolean().optional(), italic: zBoolean().optional(), underline: zBoolean().optional(), strike: zBoolean().optional(), code: zBoolean().optional(), textColor: str.optional(), backgroundColor: str.optional() });
+const inline = zArray(zStrictObject({ text: str, marks: marks.optional(), href: str.optional() })).max(1000);
+const presentation = zStrictObject({ alignment: zEnum(["left", "center", "right", "justify"]).optional(), textColor: str.optional(), backgroundColor: str.optional() });
+const annotations = zStrictObject({ v: zLiteral(1), items: zArray(zStrictObject({ id, x: zNumber(), y: zNumber(), w: zNumber().optional(), h: zNumber().optional(), label: str, body: str.optional() })).max(100) });
 const common = {
   id,
   parentId: id.optional(),
   presentation: presentation.optional(),
-  citations: z.array(citation).max(50),
-  conceptIds: z.array(id).max(500),
+  citations: zArray(citation).max(50),
+  conceptIds: zArray(id).max(500),
 };
 const text = { ...common, text: str, inline: inline.optional() };
-const blockSchema = z.discriminatedUnion("type", [
-  z.strictObject({ ...common, type: z.literal("flashcards"), required: z.boolean().optional(), setId: id.transform(v => v as Id<"flashcardSets">) }),
-  z.strictObject({ ...text, type: z.literal("callout"), tone: z.enum(["info", "tip", "warning", "clinical", "key"]) }),
-  z.strictObject({ ...text, type: z.literal("code"), language: str }),
-  z.strictObject({ ...text, type: z.literal("quote") }),
-  z.strictObject({ ...text, type: z.literal("toggle") }),
-  z.strictObject({ ...common, type: z.literal("divider") }),
-  z.strictObject({ ...text, type: z.literal("paragraph") }),
-  z.strictObject({
+const blockSchema = zDiscriminatedUnion("type", [
+  zStrictObject({ ...common, type: zLiteral("flashcards"), required: zBoolean().optional(), setId: id.transform(v => v as Id<"flashcardSets">) }),
+  zStrictObject({ ...text, type: zLiteral("callout"), tone: zEnum(["info", "tip", "warning", "clinical", "key"]) }),
+  zStrictObject({ ...text, type: zLiteral("code"), language: str }),
+  zStrictObject({ ...text, type: zLiteral("quote") }),
+  zStrictObject({ ...text, type: zLiteral("toggle") }),
+  zStrictObject({ ...common, type: zLiteral("divider") }),
+  zStrictObject({ ...text, type: zLiteral("paragraph") }),
+  zStrictObject({
     ...text,
-    type: z.literal("heading"),
-    level: z.union([z.literal(1), z.literal(2), z.literal(3)]),
+    type: zLiteral("heading"),
+    level: zUnion([zLiteral(1), zLiteral(2), zLiteral(3)]),
   }),
-  z.strictObject({
+  zStrictObject({
     ...text,
-    type: z.literal("list"),
-    style: z.enum(["bullet", "number", "check"]),
-    checked: z.boolean().optional(),
+    type: zLiteral("list"),
+    style: zEnum(["bullet", "number", "check"]),
+    checked: zBoolean().optional(),
   }),
-  z.strictObject({
+  zStrictObject({
     ...common,
-    type: z.literal("image"),
+    type: zLiteral("image"),
     sourceId,
     alt: str,
-    name: str.optional(), previewWidth: z.number().finite().positive().max(10000).optional(), showPreview: z.boolean().optional(), credit: str.optional(), creditUrl: str.optional(), figureKind: z.enum(["photo", "diagram"]).optional(), annotations: annotations.optional(),
+    name: str.optional(), previewWidth: zNumber().finite().positive().max(10000).optional(), showPreview: zBoolean().optional(), credit: str.optional(), creditUrl: str.optional(), figureKind: zEnum(["photo", "diagram"]).optional(), annotations: annotations.optional(),
     caption: str,
   }),
-  z.strictObject({
+  zStrictObject({
     ...text,
-    type: z.literal("diagram"),
-    format: z.literal("mermaid"),
+    type: zLiteral("diagram"),
+    format: zLiteral("mermaid"),
   }),
-  z
-    .strictObject({
+  zStrictObject({
       ...common,
-      type: z.literal("youtube"),
-      videoId: z.string().regex(/^[A-Za-z0-9_-]{11}$/),
+      type: zLiteral("youtube"),
+      videoId: zString().regex(/^[A-Za-z0-9_-]{11}$/),
       start: time.optional(),
       end: time.optional(),
       caption: str,
     })
     .refine((v) => v.end === undefined || v.end >= (v.start ?? 0)),
-  z.strictObject({
+  zStrictObject({
     ...text,
-    type: z.literal("equation"),
-    display: z.boolean(),
+    type: zLiteral("equation"),
+    display: zBoolean(),
   }),
-  z
-    .strictObject({
+  zStrictObject({
       ...common,
-      type: z.literal("table"),
-      rows: z.array(z.array(str).min(1).max(100)).min(1).max(500),
-      headerRows: z.number().int().nonnegative(),
+      type: zLiteral("table"),
+      rows: zArray(zArray(str).min(1).max(100)).min(1).max(500),
+      headerRows: zNumber().int().nonnegative(),
     })
     .refine(
       (v) =>
@@ -127,30 +124,30 @@ const blockSchema = z.discriminatedUnion("type", [
         v.rows.every((r) => r.length === v.rows[0].length),
       "Use rectangular rows and a header count within the table.",
     ),
-  z.strictObject({
+  zStrictObject({
     ...common,
-    type: z.literal("source"),
+    type: zLiteral("source"),
     sourceId,
     label: str,
   }),
-  z.strictObject({
+  zStrictObject({
     ...common,
-    type: z.literal("quiz"), required: z.boolean().optional(),
-    asset: z.discriminatedUnion("kind", [
-      z.strictObject({
-        kind: z.literal("form"),
+    type: zLiteral("quiz"), required: zBoolean().optional(),
+    asset: zDiscriminatedUnion("kind", [
+      zStrictObject({
+        kind: zLiteral("form"),
         id: id.transform((v) => v as Id<"forms">),
       }),
-      z.strictObject({
-        kind: z.literal("quiz"),
+      zStrictObject({
+        kind: zLiteral("quiz"),
         id: id.transform((v) => v as Id<"quizzes">),
       }),
     ]),
   }),
 ]);
-const documentSchema = z.strictObject({
-  schemaVersion: z.literal(1),
-  blocks: z.array(blockSchema).max(500),
+const documentSchema = zStrictObject({
+  schemaVersion: zLiteral(1),
+  blocks: zArray(blockSchema).max(500),
 });
 const nativeTypes = {
   paragraph: "paragraph",
@@ -334,10 +331,10 @@ export function editorBlocksToLessonDocument(
       throw new Error("Metadata props must be JSON strings.");
     return JSON.parse(value);
   }
-  function rich(content: unknown, path: string): { text: string; inline?: { text: string; marks?: z.infer<typeof marks>; href?: string }[] } {
+  function rich(content: unknown, path: string): { text: string; inline?: { text: string; marks?: ZodInfer<typeof marks>; href?: string }[] } {
     if (typeof content === "string") return { text: content };
     if (content === undefined) return { text: "" };
-    const runs: { text: string; marks?: z.infer<typeof marks>; href?: string }[] = [];
+    const runs: { text: string; marks?: ZodInfer<typeof marks>; href?: string }[] = [];
     if (!Array.isArray(content)) { problems.push(problem(path, "Unsupported inline content.", "formatting")); return { text: "" }; }
     for (const item of content) {
       const linked = record(item) && item.type === "link";
