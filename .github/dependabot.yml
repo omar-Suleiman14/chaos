@@ -50,6 +50,12 @@ updates:
         update-types: [version-update:semver-major]
       - dependency-name: "@types/node"
         update-types: [version-update:semver-major]
+      # @convex-dev/better-auth (0.12.5, the latest) supports better-auth >=1.6.11 <1.7.0.
+      # Keep taking 1.6 patches; lift this once a @convex-dev/better-auth release accepts 1.7.
+      - dependency-name: better-auth
+        update-types: [version-update:semver-minor, version-update:semver-major]
+      - dependency-name: "@better-auth/*"
+        update-types: [version-update:semver-minor, version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
     target-branch: main
