@@ -72,7 +72,7 @@ export default function SharePopup({ formId, shareId, slug, title, quiz, onClose
     { label: t.whatsapp, icon: Share2, href: `https://wa.me/?text=${enc(`${title} ${shareLink}`)}` },
     { label: t.x, icon: Share2, href: `https://x.com/intent/post?text=${enc(title)}&url=${enc(shareLink)}` },
     { label: t.linkedin, icon: Share2, href: `https://www.linkedin.com/sharing/share-offsite/?url=${enc(shareLink)}` },
-  ], [t, title, shareLink]); // eslint-disable-line react-hooks/exhaustive-deps -- enc is stable
+  ], [t, title, shareLink]); // oxlint-disable-line react-hooks/exhaustive-deps -- enc is stable
 
   return (
     <WsDialog title={quiz ? t.liveQuiz : t.liveForm} description={t.intro} onClose={onClose}>

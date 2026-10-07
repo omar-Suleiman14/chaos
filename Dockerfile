@@ -10,7 +10,7 @@ ARG NODE_VERSION=24
 FROM node:${NODE_VERSION}-alpine AS base
 RUN apk add --no-cache libc6-compat
 # Keep in step with the pnpm version pinned in .github/workflows/ci.yml.
-RUN corepack enable && corepack prepare pnpm@12.4.2 --activate
+RUN corepack enable && corepack prepare pnpm@12.10.1 --activate
 WORKDIR /app
 
 FROM base AS deps

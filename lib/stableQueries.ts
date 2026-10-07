@@ -13,7 +13,7 @@ type Requests = Parameters<typeof useQueries>[0];
  */
 export function useStableQueries(queries: Requests): ReturnType<typeof useQueries> {
   const key = JSON.stringify(Object.entries(queries).map(([k, q]) => [k, getFunctionName(q.query), q.args]));
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by content on purpose
+  // oxlint-disable-next-line react-hooks/exhaustive-deps -- keyed by content on purpose
   const stable = useMemo(() => queries, [key]);
   return useQueries(stable);
 }

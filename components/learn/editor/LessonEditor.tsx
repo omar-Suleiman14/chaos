@@ -106,7 +106,7 @@ export default function LessonEditor(props: LessonEditorProps) {
     tables: { splitCells: false, cellBackgroundColor: false, cellTextColor: false, headers: true },
   }, [locale]);
 
-  useEffect(() => { props.onReady?.(editor); }, [editor]); // eslint-disable-line react-hooks/exhaustive-deps -- once per editor
+  useEffect(() => { props.onReady?.(editor); }, [editor]); // oxlint-disable-line react-hooks/exhaustive-deps -- once per editor
   // Mounted with its content means typeable: the lesson editor journey ends here.
   useUsableMark("lesson.edit", true);
 

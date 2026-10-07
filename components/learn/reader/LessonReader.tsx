@@ -214,7 +214,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
       void actions.recordView(lesson.id, { blockId, engagedSeconds: seconds }).catch(err => toast.error(err, { id: "lesson-sync" }));
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [lesson.id, active, previewDraft, signedIn]); // eslint-disable-line react-hooks/exhaustive-deps -- timer belongs to the engagement target
+  }, [lesson.id, active, previewDraft, signedIn]); // oxlint-disable-line react-hooks/exhaustive-deps -- timer belongs to the engagement target
 
   const positionKey = `${activityKey}:position`;
   const [resumePosition, setResumePosition] = useState<number | null>(null);

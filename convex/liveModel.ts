@@ -38,6 +38,8 @@ export const liveSettingsValidator = v.object({
  * The server owns the clock (questionEndsAt) and every correctness decision.
  */
 export const liveTables = {
+  /** Immutable server-only snapshot; state transitions never rewrite this data. */
+  liveGameContent: defineTable({ questions: v.array(liveQuestionValidator) }),
   liveGames: defineTable({
     hostId: v.string(),
     formId: v.optional(v.id("forms")),
@@ -60,6 +62,8 @@ export const liveTables = {
     phaseEndsAt: v.optional(v.number()),
     /** Snapshot taken when the game was created; answer keys stay on the server until each reveal. */
     questions: v.array(liveQuestionValidator),
+    contentId: v.optional(v.id("liveGameContent")),
+    questionCount: v.optional(v.number()),
     skippedQuestions: v.number(),
     settings: liveSettingsValidator,
     lastActivityAt: v.number(),

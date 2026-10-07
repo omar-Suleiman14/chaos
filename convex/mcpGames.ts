@@ -58,7 +58,7 @@ function view(game: Doc<"liveGames">) {
     sourceId: game.formId ? `form_${game.formId}` : game.quizId ? `quiz_${game.quizId}` : null,
     pin: game.pin, hostUrl: `${base}/dashboard/live/${game._id}`,
     joinUrl: game.state === "ended" ? null : `${base}/play?pin=${game.pin}`,
-    questionIndex: game.questionIndex, questionCount: game.questions.length, skippedQuestions: game.skippedQuestions,
+    questionIndex: game.questionIndex, questionCount: game.questionCount ?? game.questions.length, skippedQuestions: game.skippedQuestions,
     questionEndsAt: game.questionEndsAt ?? null,
     settings: {
       timeLimitSec: game.settings.timeLimitSec, showAnswerLabels: game.settings.showAnswerLabels ?? true, maxPlayers: game.settings.maxPlayers, language: game.settings.language,

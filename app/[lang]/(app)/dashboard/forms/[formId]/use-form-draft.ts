@@ -147,7 +147,7 @@ export function useFormDraft(formId: Id<"forms">, server: { draft: FormDefinitio
     persistLocal(next);
     setSaveState((s) => (s.kind === "error" ? { kind: "idle" } : s));
     schedule();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- persistLocal only reads refs
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- persistLocal only reads refs
   }, [canEdit, schedule]);
 
   const step = (from: React.MutableRefObject<FormDefinition[]>, to: React.MutableRefObject<FormDefinition[]>) => {

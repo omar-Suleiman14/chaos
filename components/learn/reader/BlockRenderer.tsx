@@ -380,7 +380,7 @@ function useSharedBlocks(content: unknown) {
 /** Same reference while the value is unchanged by content. */
 function useByContent<T>(value: T): T {
   const key = JSON.stringify(value ?? null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by content on purpose
+  // oxlint-disable-next-line react-hooks/exhaustive-deps -- keyed by content on purpose
   return useMemo(() => value, [key]);
 }
 

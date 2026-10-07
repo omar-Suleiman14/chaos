@@ -565,7 +565,7 @@ function useLeavingStep(step: Step | undefined, direction: number, stepRef: Reac
     setLeaving({ step: before, direction, place: place.current });
     const timer = setTimeout(() => setLeaving(null), 560);
     return () => clearTimeout(timer);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // oxlint-disable-next-line react-hooks/exhaustive-deps
   }, [step?.key]);
   // Layout position (not transformed), measured after every commit for the next change.
   useLayoutEffect(() => {
@@ -780,7 +780,7 @@ export function EndingView({ ending, def, language, answers, children, score }: 
       void import("canvas-confetti").then(({ default: confetti }) => confetti({ particleCount: 110, spread: 75, origin: { y: 0.65 }, colors: [accent, "#ffffff", "#ffd54f"], disableForReducedMotion: true }));
     }
     return () => cancelAnimationFrame(frame);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- celebrate once
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- celebrate once
   }, []);
 
   const pct = score && score.max > 0 ? score.value / score.max : 0;

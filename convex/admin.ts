@@ -143,8 +143,8 @@ export async function teamsForActor(ctx: QueryCtx, args: ObjectType<typeof teams
     const result = await ctx.db.query("businessTeams").order("desc").paginate({ ...paginationOpts, maximumBytesRead: 2_000_000 });
     const page = await Promise.all(result.page.map(async row => {
       const [members, shares] = await Promise.all([
-        ctx.db.query("businessMembers").withIndex("by_team_user", q => q.eq("teamId", row._id)).collect(),
-        ctx.db.query("businessShares").withIndex("by_team_asset", q => q.eq("teamId", row._id)).collect(),
+        ctx.db.query("businessMembers").withIndex("by_team_user", q => q.eq("teamId", row._id)).take(101),
+        ctx.db.query("businessShares").withIndex("by_team_asset", q => q.eq("teamId", row._id)).take(101),
       ]);
       return { ...(await inventoryOwner(ctx, row.ownerId)), id: row._id, name: row.name, ownerId: row.ownerId, createdAt: row.createdAt, members: members.length, sharedResources: shares.length };
     }));

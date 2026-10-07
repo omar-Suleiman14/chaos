@@ -211,7 +211,10 @@ export default defineSchema({
     hint: v.optional(v.string()),
     order: v.number(),
     deletedAt: v.optional(v.number()),
-  }).index("by_quiz", ["quizId"]),
+  })
+    // eslint-disable-next-line @convex-dev/no-duplicate-indexes -- legacy cleanup scans need creation order; active questions sort by deletion status/order
+    .index("by_quiz", ["quizId"])
+    .index("by_quiz_deleted_order", ["quizId", "deletedAt", "order"]),
 
   // ============ QUIZ SUBMISSIONS ============
   quizSessions: defineTable({
