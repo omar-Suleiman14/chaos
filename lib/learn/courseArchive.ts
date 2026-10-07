@@ -4,8 +4,9 @@ import { lessonDocumentSchema, lessonMetadataSchema } from "@/lib/mcp/learn";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { LessonDocument } from "@/convex/learnModel";
+import { ARCHIVE_MAX_BYTES } from "./courseArchiveLimits";
+export { ARCHIVE_MAX_BYTES } from "./courseArchiveLimits";
 export type CourseArchive = { manifest: FunctionReturnType<typeof api.coursePortability.manifest>; lessons: FunctionReturnType<typeof api.coursePortability.lesson>[]; assets: FunctionReturnType<typeof api.coursePortability.asset>[] };
-export const ARCHIVE_MAX_BYTES = 150*1024*1024;
 export function encodeCourseArchive(data: CourseArchive, files: Record<string,Uint8Array>) {
  const entries={"course.json":strToU8(JSON.stringify(data)),...files};
  if(Object.values(entries).reduce((n,b)=>n+b.byteLength,0)>ARCHIVE_MAX_BYTES)throw new Error("Course archive exceeds 150 MiB.");

@@ -2,8 +2,13 @@
   "suite": "bundles",
   "metrics": {
     "bundle.card.chunks": {
-      "budget": 19,
-      "unit": "count"
+      "budget": 20,
+      "unit": "count",
+      "raised": {
+        "from": 19,
+        "reason": "Shared cookie consent banner and settings control introduce a client chunk; byte budgets remain unchanged. Measured in nightly run 37597321804.",
+        "at": "2026-10-07"
+      }
     },
     "bundle.card.firstLoadJs": {
       "budget": 1101420,
@@ -43,8 +48,13 @@
       "unit": "bytes"
     },
     "bundle.courses.public.chunks": {
-      "budget": 21,
-      "unit": "count"
+      "budget": 22,
+      "unit": "count",
+      "raised": {
+        "from": 21,
+        "reason": "Shared cookie consent banner and settings control introduce a client chunk; byte budgets remain unchanged. Measured in nightly run 37597321804.",
+        "at": "2026-10-07"
+      }
     },
     "bundle.courses.public.firstLoadJs": {
       "budget": 1420133,
@@ -118,8 +128,13 @@
       "unit": "bytes"
     },
     "bundle.landing.chunks": {
-      "budget": 18,
-      "unit": "count"
+      "budget": 19,
+      "unit": "count",
+      "raised": {
+        "from": 18,
+        "reason": "Shared cookie consent banner and settings control introduce a client chunk; byte budgets remain unchanged. Measured in nightly run 37597321804.",
+        "at": "2026-10-07"
+      }
     },
     "bundle.landing.firstLoadJs": {
       "budget": 1099348,
@@ -147,8 +162,13 @@
       "unit": "bytes"
     },
     "bundle.lessons.reader.chunks": {
-      "budget": 24,
-      "unit": "count"
+      "budget": 25,
+      "unit": "count",
+      "raised": {
+        "from": 24,
+        "reason": "Shared cookie consent banner and settings control introduce a client chunk; byte budgets remain unchanged. Measured in nightly run 37597321804.",
+        "at": "2026-10-07"
+      }
     },
     "bundle.lessons.reader.firstLoadJs": {
       "budget": 1610598,
@@ -176,8 +196,13 @@
       "unit": "bytes"
     },
     "bundle.live.player.chunks": {
-      "budget": 19,
-      "unit": "count"
+      "budget": 20,
+      "unit": "count",
+      "raised": {
+        "from": 19,
+        "reason": "Shared cookie consent banner and settings control introduce a client chunk; byte budgets remain unchanged. Measured in nightly run 37597321804.",
+        "at": "2026-10-07"
+      }
     },
     "bundle.live.player.firstLoadJs": {
       "budget": 1110327,

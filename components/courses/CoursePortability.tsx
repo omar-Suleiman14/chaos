@@ -5,7 +5,8 @@ import { useRouter } from "next/navigation";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useLearnMediaClient } from "@/lib/learn/mediaClient";
-import { encodeCourseArchive, decodeCourseArchive, remapCourseDocument, ARCHIVE_MAX_BYTES, type CourseArchive } from "@/lib/learn/courseArchive";
+import type { CourseArchive } from "@/lib/learn/courseArchive";
+import { ARCHIVE_MAX_BYTES } from "@/lib/learn/courseArchiveLimits";
 import { useLocale } from "@/lib/i18n";
 import { errorMessage } from "@/lib/errors";
 import { toast } from "@/lib/toast";
@@ -13,6 +14,7 @@ export default function CoursePortability({ courseId }: {courseId:Id<"learnColle
  const client=useConvex(),media=useLearnMediaClient(),router=useRouter(),{locale}=useLocale(),ar=locale==="ar",[busy,setBusy]=useState(false);
  const run=async(fn:()=>Promise<void>,loading:string,success:string)=>{setBusy(true);try{await toast.promise(fn,{loading,success});}catch{/* shown by the toast */}finally{setBusy(false);}};
  const exportCourse=()=>run(async()=>{
+  const { encodeCourseArchive } = await import("@/lib/learn/courseArchive");
   const manifest=await client.query(api.coursePortability.manifest,{courseId}),lessons:CourseArchive["lessons"]=[],refs=new Map<string,{kind:"form"|"quiz"|"flashcards"|"source";id:string}>();
   const add=(kind:"form"|"quiz"|"flashcards"|"source",id:string)=>refs.set(`${kind}:${id}`,{kind,id});
   for(const courseModuleItem of manifest.modules)for(const a of courseModuleItem.assessments)add(a.kind,a.id);
@@ -27,7 +29,9 @@ export default function CoursePortability({ courseId }: {courseId:Id<"learnColle
   const bytes=encodeCourseArchive({manifest,lessons,assets},files),url=URL.createObjectURL(new Blob([new Uint8Array(bytes)],{type:"application/zip"})),link=document.createElement("a");link.href=url;link.download="course.zip";link.click();setTimeout(()=>URL.revokeObjectURL(url),1000);
  },ar?"جارٍ تصدير الدورة…":"Exporting course…",ar?"تم تصدير الدورة":"Course exported");
  const importCourse=(file:File)=>run(async()=>{
-  if(file.size>ARCHIVE_MAX_BYTES)throw new Error("Archive exceeds 150 MiB.");const {data,files}=decodeCourseArchive(new Uint8Array(await file.arrayBuffer())),ids=new Map<string,string>();let created:Id<"learnCollections">|undefined;
+  if(file.size>ARCHIVE_MAX_BYTES)throw new Error("Archive exceeds 150 MiB.");
+  const { decodeCourseArchive, remapCourseDocument } = await import("@/lib/learn/courseArchive");
+  const {data,files}=decodeCourseArchive(new Uint8Array(await file.arrayBuffer())),ids=new Map<string,string>();let created:Id<"learnCollections">|undefined;
   try{
    created=await client.mutation(api.courses.create,{title:data.manifest.metadata.title,language:data.manifest.metadata.language});
    const {title,description,language,tags,coverUrl,coverY,icon}=data.manifest.metadata;await client.mutation(api.courses.update,{courseId:created,title,description,language,tags,coverUrl,coverY,icon,details:data.manifest.details});
