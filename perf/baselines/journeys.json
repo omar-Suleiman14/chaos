@@ -171,13 +171,8 @@
       "unit": "count"
     },
     "journey.mcpPersist.bytesRead": {
-      "budget": 10795,
-      "unit": "bytes",
-      "raised": {
-        "from": 10285,
-        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
-        "at": "2026-10-06"
-      }
+      "budget": 10285,
+      "unit": "bytes"
     },
     "journey.mcpPersist.bytesWritten": {
       "budget": 4197,
@@ -193,13 +188,8 @@
       }
     },
     "journey.mcpPersist.documentsRead": {
-      "budget": 20,
-      "unit": "count",
-      "raised": {
-        "from": 18,
-        "reason": "Response counts moved to formCounters, so a submission writes a few bytes instead of rewriting the whole form; reading them costs one small indexed read.",
-        "at": "2026-10-06"
-      }
+      "budget": 18,
+      "unit": "count"
     },
     "journey.mcpPersist.documentsWritten": {
       "budget": 10,

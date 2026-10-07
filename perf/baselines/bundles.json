@@ -2,11 +2,11 @@
   "suite": "bundles",
   "metrics": {
     "bundle.card.chunks": {
-      "budget": 20,
+      "budget": 21,
       "unit": "count",
       "raised": {
         "from": 19,
-        "reason": "Shared cookie consent banner and settings control introduce a client chunk; byte budgets remain unchanged. Measured in nightly run 37597321804.",
+        "reason": "Consent UI and on-demand course archive code change Turbopack shared chunk partitioning. All route byte/gzip budgets hold; retain their existing limits. Measured in nightly run 37597925262.",
         "at": "2026-10-07"
       }
     },
@@ -19,8 +19,13 @@
       "unit": "bytes"
     },
     "bundle.card.public.chunks": {
-      "budget": 21,
-      "unit": "count"
+      "budget": 22,
+      "unit": "count",
+      "raised": {
+        "from": 21,
+        "reason": "Consent UI and on-demand course archive code change Turbopack shared chunk partitioning. All route byte/gzip budgets hold; retain their existing limits. Measured in nightly run 37597925262.",
+        "at": "2026-10-07"
+      }
     },
     "bundle.card.public.firstLoadJs": {
       "budget": 1108001,
@@ -40,67 +45,72 @@
       }
     },
     "bundle.courses.editor.firstLoadJs": {
-      "budget": 1698088,
+      "budget": 1551410,
       "unit": "bytes"
     },
     "bundle.courses.editor.firstLoadJsGzip": {
-      "budget": 506004,
+      "budget": 470430,
       "unit": "bytes"
     },
     "bundle.courses.public.chunks": {
-      "budget": 22,
+      "budget": 23,
       "unit": "count",
       "raised": {
         "from": 21,
-        "reason": "Shared cookie consent banner and settings control introduce a client chunk; byte budgets remain unchanged. Measured in nightly run 37597321804.",
+        "reason": "Consent UI and on-demand course archive code change Turbopack shared chunk partitioning. All route byte/gzip budgets hold; retain their existing limits. Measured in nightly run 37597925262.",
         "at": "2026-10-07"
       }
     },
     "bundle.courses.public.firstLoadJs": {
-      "budget": 1420133,
+      "budget": 1308523,
       "unit": "bytes"
     },
     "bundle.courses.public.firstLoadJsGzip": {
-      "budget": 406810,
+      "budget": 385040,
       "unit": "bytes"
     },
     "bundle.dashboard.chunks": {
-      "budget": 31,
-      "unit": "count",
-      "raised": {
-        "from": 30,
-        "reason": "lib/hosts.ts (subdomain links) and the reader/editor split of lesson block helpers add a shared chunk; bytes are flat and the lesson reader lost 1.2 MB.",
-        "at": "2026-10-06"
-      }
-    },
-    "bundle.dashboard.firstLoadJs": {
-      "budget": 1706423,
-      "unit": "bytes"
-    },
-    "bundle.dashboard.firstLoadJsGzip": {
-      "budget": 506684,
-      "unit": "bytes"
-    },
-    "bundle.forms.editor.chunks": {
       "budget": 32,
       "unit": "count",
       "raised": {
+        "from": 30,
+        "reason": "Consent UI and on-demand course archive code change Turbopack shared chunk partitioning. All route byte/gzip budgets hold; retain their existing limits. Measured in nightly run 37597925262.",
+        "at": "2026-10-07"
+      }
+    },
+    "bundle.dashboard.firstLoadJs": {
+      "budget": 1594383,
+      "unit": "bytes"
+    },
+    "bundle.dashboard.firstLoadJsGzip": {
+      "budget": 484296,
+      "unit": "bytes"
+    },
+    "bundle.forms.editor.chunks": {
+      "budget": 33,
+      "unit": "count",
+      "raised": {
         "from": 31,
-        "reason": "lib/hosts.ts (subdomain links) and the reader/editor split of lesson block helpers add a shared chunk; bytes are flat and the lesson reader lost 1.2 MB.",
-        "at": "2026-10-06"
+        "reason": "Consent UI and on-demand course archive code change Turbopack shared chunk partitioning. All route byte/gzip budgets hold; retain their existing limits. Measured in nightly run 37597925262.",
+        "at": "2026-10-07"
       }
     },
     "bundle.forms.editor.firstLoadJs": {
-      "budget": 1771258,
+      "budget": 1660185,
       "unit": "bytes"
     },
     "bundle.forms.editor.firstLoadJsGzip": {
-      "budget": 526840,
+      "budget": 504416,
       "unit": "bytes"
     },
     "bundle.forms.respondent.chunks": {
-      "budget": 23,
-      "unit": "count"
+      "budget": 24,
+      "unit": "count",
+      "raised": {
+        "from": 23,
+        "reason": "Consent UI and on-demand course archive code change Turbopack shared chunk partitioning. All route byte/gzip budgets hold; retain their existing limits. Measured in nightly run 37597925262.",
+        "at": "2026-10-07"
+      }
     },
     "bundle.forms.respondent.firstLoadJs": {
       "budget": 1192411,
@@ -111,28 +121,28 @@
       "unit": "bytes"
     },
     "bundle.forms.responses.chunks": {
-      "budget": 30,
+      "budget": 31,
       "unit": "count",
       "raised": {
         "from": 29,
-        "reason": "lib/hosts.ts (subdomain links) and the reader/editor split of lesson block helpers add a shared chunk; bytes are flat and the lesson reader lost 1.2 MB.",
-        "at": "2026-10-06"
+        "reason": "Consent UI and on-demand course archive code change Turbopack shared chunk partitioning. All route byte/gzip budgets hold; retain their existing limits. Measured in nightly run 37597925262.",
+        "at": "2026-10-07"
       }
     },
     "bundle.forms.responses.firstLoadJs": {
-      "budget": 1676958,
+      "budget": 1566866,
       "unit": "bytes"
     },
     "bundle.forms.responses.firstLoadJsGzip": {
-      "budget": 496209,
+      "budget": 474306,
       "unit": "bytes"
     },
     "bundle.landing.chunks": {
-      "budget": 19,
+      "budget": 20,
       "unit": "count",
       "raised": {
         "from": 18,
-        "reason": "Shared cookie consent banner and settings control introduce a client chunk; byte budgets remain unchanged. Measured in nightly run 37597321804.",
+        "reason": "Consent UI and on-demand course archive code change Turbopack shared chunk partitioning. All route byte/gzip budgets hold; retain their existing limits. Measured in nightly run 37597925262.",
         "at": "2026-10-07"
       }
     },
@@ -145,62 +155,62 @@
       "unit": "bytes"
     },
     "bundle.lessons.editor.chunks": {
-      "budget": 38,
+      "budget": 39,
       "unit": "count",
       "raised": {
         "from": 35,
-        "reason": "lib/hosts.ts (subdomain links) and the reader/editor split of lesson block helpers add a shared chunk; bytes are flat and the lesson reader lost 1.2 MB.",
-        "at": "2026-10-06"
+        "reason": "Consent UI and on-demand course archive code change Turbopack shared chunk partitioning. All route byte/gzip budgets hold; retain their existing limits. Measured in nightly run 37597925262.",
+        "at": "2026-10-07"
       }
     },
     "bundle.lessons.editor.firstLoadJs": {
-      "budget": 3119085,
+      "budget": 3012864,
       "unit": "bytes"
     },
     "bundle.lessons.editor.firstLoadJsGzip": {
-      "budget": 937708,
+      "budget": 917398,
       "unit": "bytes"
     },
     "bundle.lessons.reader.chunks": {
-      "budget": 25,
+      "budget": 26,
       "unit": "count",
       "raised": {
         "from": 24,
-        "reason": "Shared cookie consent banner and settings control introduce a client chunk; byte budgets remain unchanged. Measured in nightly run 37597321804.",
+        "reason": "Consent UI and on-demand course archive code change Turbopack shared chunk partitioning. All route byte/gzip budgets hold; retain their existing limits. Measured in nightly run 37597925262.",
         "at": "2026-10-07"
       }
     },
     "bundle.lessons.reader.firstLoadJs": {
-      "budget": 1610598,
+      "budget": 1499912,
       "unit": "bytes"
     },
     "bundle.lessons.reader.firstLoadJsGzip": {
-      "budget": 472937,
+      "budget": 451492,
       "unit": "bytes"
     },
     "bundle.live.host.chunks": {
-      "budget": 30,
+      "budget": 31,
       "unit": "count",
       "raised": {
         "from": 29,
-        "reason": "lib/hosts.ts (subdomain links) and the reader/editor split of lesson block helpers add a shared chunk; bytes are flat and the lesson reader lost 1.2 MB.",
-        "at": "2026-10-06"
+        "reason": "Consent UI and on-demand course archive code change Turbopack shared chunk partitioning. All route byte/gzip budgets hold; retain their existing limits. Measured in nightly run 37597925262.",
+        "at": "2026-10-07"
       }
     },
     "bundle.live.host.firstLoadJs": {
-      "budget": 1644050,
+      "budget": 1531533,
       "unit": "bytes"
     },
     "bundle.live.host.firstLoadJsGzip": {
-      "budget": 486229,
+      "budget": 463327,
       "unit": "bytes"
     },
     "bundle.live.player.chunks": {
-      "budget": 20,
+      "budget": 21,
       "unit": "count",
       "raised": {
         "from": 19,
-        "reason": "Shared cookie consent banner and settings control introduce a client chunk; byte budgets remain unchanged. Measured in nightly run 37597321804.",
+        "reason": "Consent UI and on-demand course archive code change Turbopack shared chunk partitioning. All route byte/gzip budgets hold; retain their existing limits. Measured in nightly run 37597925262.",
         "at": "2026-10-07"
       }
     },
@@ -213,8 +223,13 @@
       "unit": "bytes"
     },
     "bundle.quizzes.legacy.chunks": {
-      "budget": 23,
-      "unit": "count"
+      "budget": 24,
+      "unit": "count",
+      "raised": {
+        "from": 23,
+        "reason": "Consent UI and on-demand course archive code change Turbopack shared chunk partitioning. All route byte/gzip budgets hold; retain their existing limits. Measured in nightly run 37597925262.",
+        "at": "2026-10-07"
+      }
     },
     "bundle.quizzes.legacy.firstLoadJs": {
       "budget": 1217549,
