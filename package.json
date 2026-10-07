@@ -43,7 +43,7 @@
     "knip:check": "node scripts/knip-check.mjs"
   },
   "dependencies": {
-    "@better-auth/oauth-provider": "~1.6.33",
+    "@better-auth/oauth-provider": "~1.7.7",
     "@blobatar/react": "^2.7.0",
     "@blocknote/code-block": "0.55.0",
     "@blocknote/core": "0.55.0",
@@ -55,7 +55,7 @@
     "@convex-dev/better-auth": "0.12.5",
     "@hello-pangea/dnd": "^18.0.1",
     "@modelcontextprotocol/sdk": "^1.32.1",
-    "better-auth": "~1.6.33",
+    "better-auth": "~1.7.7",
     "blobatar": "^2.7.0",
     "canvas-confetti": "^1.9.4",
     "class-variance-authority": "^0.7.1",
