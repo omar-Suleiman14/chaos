@@ -1,21 +1,8 @@
 name: Visual regression
 
-# Screenshot diffs, desktop and mobile, light and dark (tests/visual).
-#
-# Nightly, not on every push: screenshots are too slow to gate each deploy.
-# site: each night builds main and compares the public pages with the baseline
-#   from the latest successful run (artifact `visual-baseline-site`), then
-#   carries that baseline forward. A night with no baseline records one. After
-#   an intended look change, run it manually with `record`. Baselines are never
-#   committed, so every image comes from this same Linux runner.
-# app: each major form theme, cards and Live (plus lesson, course, dashboard and
-#   editor when their fixtures and the test login are configured), from this
-#   branch's build pointed at the dev Convex deployment (vars.VISUAL_CONVEX_URL),
-#   never production. Manual: `record` stores a baseline, `compare` checks
-#   against the last recorded one.
+# Screenshot diffs are deliberately manual. Run this when a change is expected
+# to affect the UI instead of rebuilding Chromium screenshots every night.
 on:
-  schedule:
-    - cron: "47 2 * * *"
   workflow_dispatch:
     inputs:
       suite:
@@ -34,18 +21,18 @@ permissions:
   actions: read
 
 concurrency:
-  group: visual-${{ github.ref }}-${{ inputs.suite || 'site' }}
+  group: visual-${{ github.ref }}-${{ inputs.suite }}
   cancel-in-progress: true
 
 jobs:
   visual:
-    name: Screenshots (${{ inputs.suite || 'site' }})
+    name: Screenshots (${{ inputs.suite }})
     runs-on: ubuntu-latest
     timeout-minutes: 25
     env:
-      SUITE: ${{ inputs.suite || 'site' }}
-      MODE: ${{ inputs.mode || 'compare' }}
-      VISUAL_SUITE: ${{ inputs.suite || 'site' }}
+      SUITE: ${{ inputs.suite }}
+      MODE: ${{ inputs.mode }}
+      VISUAL_SUITE: ${{ inputs.suite }}
       GH_TOKEN: ${{ github.token }}
     steps:
       - name: Checkout
@@ -68,15 +55,11 @@ jobs:
       - name: Install Chromium
         run: pnpm exec playwright install --with-deps chromium
 
-      # Written to the job environment so `pnpm start` runs with exactly what was built.
-      # site: no backend; marketing pages never touch auth.
-      # app: the dev Convex deployment with Chaos's own sign-in instead of Clerk, which
-      # would need a real secret key on the server for every app page.
       - name: Configure build
         run: |
           if [ "$SUITE" = app ]; then
             convex="${{ vars.VISUAL_CONVEX_URL }}"
-            [ -n "$convex" ] || { echo "Set the VISUAL_CONVEX_URL repository variable (dev Convex URL)."; exit 1; }
+            [ -n "$convex" ] || { echo "Set VISUAL_CONVEX_URL before running the app suite."; exit 1; }
             {
               echo "NEXT_PUBLIC_AUTH_PROVIDER=betterauth"
               echo "NEXT_PUBLIC_CONVEX_URL=$convex"
@@ -112,7 +95,6 @@ jobs:
       - name: Fetch baseline
         if: env.MODE == 'compare'
         run: |
-          # The newest successful main run that recorded this suite's baseline.
           for run_id in $(gh run list --workflow visual.yml --branch main --status success --limit 30 --json databaseId --jq '.[].databaseId'); do
             if gh run download "$run_id" --name "visual-baseline-$SUITE" --dir tests/visual/__screenshots__ 2>/dev/null; then
               echo "Comparing with the baseline from run $run_id." >> "$GITHUB_STEP_SUMMARY"
@@ -133,9 +115,8 @@ jobs:
         env:
           VISUAL_RECORD: "1"
 
-      # A passing compare re-uploads the same images so the baseline never ages out.
       - name: Upload baseline
-        if: github.ref == 'refs/heads/main' && (env.MODE == 'record' || env.BASELINE != '1' || steps.compare.outcome == 'success')
+        if: env.MODE == 'record' || env.BASELINE != '1' || steps.compare.outcome == 'success'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: visual-baseline-${{ env.SUITE }}
