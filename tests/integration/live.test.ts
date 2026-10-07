@@ -278,6 +278,18 @@ describe("live games: safety", () => {
     expect((await owner.query(api.live.hostView, { gameId }))!.playerCount).toBe(1);
   });
 
+  it("keeps the player count off the game document every phone watches", async () => {
+    const t = createTestConvex();
+    const { owner, formId } = await publishedQuiz(t);
+    const gameId = await owner.mutation(api.live.createGame, { formId });
+    const pin = (await owner.query(api.live.hostView, { gameId }))!.pin;
+    const before = await t.run((ctx) => ctx.db.get("liveGames", gameId));
+    for (let i = 0; i < 3; i++) await t.mutation(api.live.joinGame, { pin, nickname: `P${i}`, token: token(i + 1) });
+    // Each write to liveGames would re-run every phone's playerView.
+    expect(await t.run((ctx) => ctx.db.get("liveGames", gameId))).toEqual(before);
+    expect((await owner.query(api.live.hostView, { gameId }))!.playerCount).toBe(3);
+  });
+
   it("gives Personal hosts the 500-player maximum", async () => {
     const t = createTestConvex();
     const { owner, formId } = await publishedQuiz(t);
@@ -293,6 +305,9 @@ describe("live games: safety", () => {
       for (let i = 0; i < 500; i++) {
         await ctx.db.insert("livePlayers", { gameId, nickname: `P${i}`, nicknameKey: `p${i}`, tokenHash: `h${i}`, score: 0, streak: 0, correctCount: 0, kicked: false, joinedAt: 0 });
       }
+      // Joins check capacity against the stored count, which joinGame keeps in step.
+      const counter = (await ctx.db.query("livePlayerCounts").withIndex("by_gameId", (q) => q.eq("gameId", gameId)).unique())!;
+      await ctx.db.patch("livePlayerCounts", counter._id, { count: 500 });
     });
     await expect(t.mutation(api.live.joinGame, { pin, nickname: "Late", token: token(200) })).rejects.toThrow(/LIVE_FULL/);
   });

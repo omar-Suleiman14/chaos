@@ -111,6 +111,21 @@ async function answerCount(ctx: Ctx, game: Game) {
   return rows.reduce((sum, row) => sum + row.count, 0);
 }
 
+async function playerCountRow(ctx: Ctx, gameId: Id<"liveGames">) {
+  return await ctx.db.query("livePlayerCounts").withIndex("by_gameId", (q) => q.eq("gameId", gameId)).unique();
+}
+
+/** Stored active-player count; undefined only for old rooms that never stored one. */
+async function storedPlayerCount(ctx: Ctx, game: Game): Promise<number | undefined> {
+  return (await playerCountRow(ctx, game._id))?.count ?? game.activePlayerCount;
+}
+
+async function setPlayerCount(ctx: MutationCtx, gameId: Id<"liveGames">, count: number) {
+  const row = await playerCountRow(ctx, gameId);
+  if (row) { if (row.count !== count) await ctx.db.patch("livePlayerCounts", row._id, { count }); }
+  else await ctx.db.insert("livePlayerCounts", { gameId, count });
+}
+
 /** Lazily initialize rooms already running when this code was deployed. */
 async function ensureAnswerCounts(ctx: MutationCtx, game: Game) {
   if (game.answerCounterQuestion === game.questionIndex) return;
@@ -120,7 +135,8 @@ async function ensureAnswerCounts(ctx: MutationCtx, game: Game) {
   const answered = new Set(answers.map((a) => a.playerId));
   for (const player of players) if (answered.has(player._id)) counts[answerShard(player)]++;
   for (const [shard, count] of counts.entries()) if (count) await changeAnswerCount(ctx, game._id, game.questionIndex, shard, count);
-  await ctx.db.patch("liveGames", game._id, { answerCounterQuestion: game.questionIndex, activePlayerCount: players.length });
+  await setPlayerCount(ctx, game._id, players.length);
+  await ctx.db.patch("liveGames", game._id, { answerCounterQuestion: game.questionIndex });
   await ctx.scheduler.runAfter(ANSWER_CHECK_INTERVAL, internal.live.checkAllAnswered, { gameId: game._id, questionIndex: game.questionIndex, coalesced: true });
 }
 
@@ -179,7 +195,7 @@ async function stepGame(ctx: MutationCtx, game: Game) {
     case "lobby": {
       const players = await playersOf(ctx, game._id);
       if (!players.length) throw new Error("LIVE_NO_PLAYERS: Wait for at least one player to join.");
-      await ctx.db.patch("liveGames", game._id, { activePlayerCount: players.length });
+      await setPlayerCount(ctx, game._id, players.length);
       await startQuestion(ctx, game, 0);
       break;
     }
@@ -308,7 +324,7 @@ export async function createGameForAccount(ctx: MutationCtx, userId: string, arg
   }
   if (!pin) throw new Error("LIVE_BUSY: Too many games are running. Try again in a moment.");
 
-  return await ctx.db.insert("liveGames", {
+  const gameId = await ctx.db.insert("liveGames", {
     hostId: userId,
     formId: args.formId,
     formVersion,
@@ -324,9 +340,10 @@ export async function createGameForAccount(ctx: MutationCtx, userId: string, arg
     settings: { timeLimitSec, maxPlayers: hasPro(user, now) ? PRO_PLAYER_LIMIT : FREE_PLAYER_LIMIT, language, showAnswerLabels: args.showAnswerLabels ?? true, autoAdvance: args.autoAdvance ?? true, breakSec, startWhenPlayers: args.startWhenPlayers || undefined },
     lastActivityAt: now,
     createdAt: now,
-    activePlayerCount: 0,
     ...(audienceTeamId ? { audienceTeamId } : {}),
   });
+  await ctx.db.insert("livePlayerCounts", { gameId, count: 0 });
+  return gameId;
 }
 /** 0 turns auto-start off. */
 export function validateStartTarget(players: number) {
@@ -471,13 +488,13 @@ export const kickPlayer = mutation({
     if (!player || player.gameId !== game._id) throw new Error("LIVE_NOT_FOUND: That player is not in this game.");
     if (player.kicked) return null;
     if (game.state === "question") await ensureAnswerCounts(ctx, game);
-    const active = (await playersOf(ctx, game._id)).length;
+    const active = await storedPlayerCount(ctx, game) ?? (await playersOf(ctx, game._id)).length;
     if (game.state === "question") {
       const answer = await ctx.db.query("liveAnswers").withIndex("by_gameId_and_questionIndex_and_playerId", (q) => q.eq("gameId", game._id).eq("questionIndex", game.questionIndex).eq("playerId", player._id)).unique();
       if (answer) await changeAnswerCount(ctx, game._id, game.questionIndex, answerShard(player), -1);
     }
     await ctx.db.patch("livePlayers", player._id, { kicked: true });
-    await ctx.db.patch("liveGames", game._id, { activePlayerCount: Math.max(0, active - 1) });
+    await setPlayerCount(ctx, game._id, Math.max(0, active - 1));
     return null;
   },
 });
@@ -491,7 +508,8 @@ export const hostView = query({
     if (!identity || !game || game.hostId !== identity.subject) return null;
     // During answering, only the small standing preview and shard counts change.
     // Old rooms without counters fall back to the full active roster until initialized.
-    const countedQuestion = game.state === "question" && game.answerCounterQuestion === game.questionIndex && game.activePlayerCount !== undefined;
+    const storedCount = await storedPlayerCount(ctx, game);
+    const countedQuestion = game.state === "question" && game.answerCounterQuestion === game.questionIndex && storedCount !== undefined;
     const players = await playersOf(ctx, game._id, countedQuestion ? 10 : PLAYER_READ_CAP);
     const question = game.questions[game.questionIndex] as LiveQuestion | undefined;
     const revealed = game.state === "reveal" || game.state === "leaderboard" || game.state === "ended";
@@ -528,7 +546,7 @@ export const hostView = query({
       savedResponses: game.savedResponses ?? 0,
       unsavedResponses: game.unsavedResponses ?? 0,
       endedReason: game.endedReason ?? null,
-      playerCount: countedQuestion ? game.activePlayerCount! : players.length,
+      playerCount: countedQuestion ? storedCount! : players.length,
       // Lobby shows everyone; later screens need the top of the table only.
       players: game.state === "lobby" ? ranked.slice(0, game.settings.maxPlayers) : ranked.slice(0, 10),
       answeredCount,
@@ -551,10 +569,12 @@ export const myGames = query({
     if (!identity) return [];
     const games = await ctx.db.query("liveGames").withIndex("by_hostId_and_createdAt", (q) => q.eq("hostId", identity.subject)).order("desc").take(30);
     const visible = await Promise.all(games.map(async g => g.formId && (await ctx.db.get("forms", g.formId))?.status === "archived" ? null : g));
-    return visible.filter(g => g !== null).map((g) => ({
+    const shown = visible.filter(g => g !== null);
+    const counts = await Promise.all(shown.map((g) => storedPlayerCount(ctx, g)));
+    return shown.map((g, i) => ({
       _id: g._id, title: g.title, state: g.state, createdAt: g.createdAt, endedAt: g.endedAt ?? null,
       formId: g.formId ?? null, quizId: g.quizId ?? null, questionCount: g.questions.length,
-      players: g.activePlayerCount ?? null, savedResponses: g.savedResponses ?? 0,
+      players: counts[i] ?? null, savedResponses: g.savedResponses ?? 0,
     }));
   },
 });
@@ -598,13 +618,15 @@ export const joinGame = mutation({
     const key = nicknameKey(nickname);
     const taken = await ctx.db.query("livePlayers").withIndex("by_gameId_and_nicknameKey", (q) => q.eq("gameId", game._id).eq("nicknameKey", key)).first();
     if (taken) throw new Error("NICKNAME_TAKEN: Someone already has that nickname. Choose another.");
-    const active = (await playersOf(ctx, game._id)).length;
+    // The stored count, not a roster read: reading every player would make each join
+    // conflict with every other join's insert.
+    const active = await storedPlayerCount(ctx, game) ?? (await playersOf(ctx, game._id)).length;
     if (active >= game.settings.maxPlayers) throw new Error(`LIVE_FULL: This game is full (${game.settings.maxPlayers} players).`);
     await ctx.db.insert("livePlayers", {
       gameId: game._id, nickname, nicknameKey: key, tokenHash, score: 0, streak: 0, correctCount: 0, kicked: false, joinedAt: Date.now(),
     });
     await recordStudent(ctx, { authorId: game.hostId, guestKey: `live:${game._id}:${tokenHash}`, guestName: nickname, context: game.title });
-    await ctx.db.patch("liveGames", game._id, { activePlayerCount: active + 1 });
+    await setPlayerCount(ctx, game._id, active + 1);
     const target = game.settings.startWhenPlayers;
     if (game.state === "lobby" && target && active + 1 >= target) await beginCountdown(ctx, game);
     return { status: "joined" as const, gameId: game._id, nickname };
@@ -751,7 +773,7 @@ export const checkAllAnswered = internalMutation({
   handler: async (ctx, args) => {
     const game = await ctx.db.get("liveGames", args.gameId);
     if (!game || game.state !== "question" || game.questionIndex !== args.questionIndex) return null;
-    const activeCount = game.activePlayerCount ?? (await playersOf(ctx, game._id)).length;
+    const activeCount = await storedPlayerCount(ctx, game) ?? (await playersOf(ctx, game._id)).length;
     const answered = game.answerCounterQuestion === game.questionIndex ? await answerCount(ctx, game) : (await answersFor(ctx, game._id, args.questionIndex, await playersOf(ctx, game._id))).length;
     if (activeCount > 0 && answered >= activeCount) await revealQuestion(ctx, game);
     // Jobs queued by the older per-answer implementation may still run after a deploy.
