@@ -17,9 +17,10 @@ on:
 permissions:
   contents: read
 
-# A superseded run on the same PR/branch is wasted CI time.
+# A superseded run on the same PR/branch is wasted CI time. Keyed by event too,
+# so a late-firing scheduled run never cancels a push run (or vice versa).
 concurrency:
-  group: ci-${{ github.workflow }}-${{ github.ref }}
+  group: ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
