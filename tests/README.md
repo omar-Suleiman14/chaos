@@ -17,9 +17,9 @@ Layers, each with its own runner and reasons:
   a live provider deployment. Run
   locally with `pnpm test:e2e`.
 - **`tests/visual`** — Playwright screenshot diffs, desktop and mobile, light
-  and dark (`.github/workflows/visual.yml`). `site.spec.ts` screenshots the
-  public pages of a pull request's own build with no backend, against the
-  baseline recorded by the last run on main; baselines are CI artifacts, never
+  and dark (`.github/workflows/visual.yml`). The workflow is manual: run it when
+  a change is expected to affect the UI. `site.spec.ts` screenshots public pages
+  against the most recent recorded baseline; baselines are CI artifacts, never
   committed, so every image comes from the same Linux renderer. A deliberate
   look change gets the `visual-change` label. `app.spec.ts`
   (`VISUAL_SUITE=app`, run by hand) builds the branch against the dev Convex
