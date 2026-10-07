@@ -1,5 +1,6 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
+import { savedQuestion } from "./quizModel";
 import { languageValidator, themeValidator } from "./formModel";
 
 export const liveStateValidator = v.union(
@@ -39,9 +40,11 @@ export const liveSettingsValidator = v.object({
  */
 export const liveTables = {
   /** Immutable server-only snapshot; state transitions never rewrite this data. */
-  liveGameContent: defineTable({ questions: v.array(liveQuestionValidator) }),
+  liveGameContent: defineTable({ questions: v.array(liveQuestionValidator), quizQuestions: v.optional(v.array(savedQuestion)) }),
   liveGames: defineTable({
     hostId: v.string(),
+    rehearsal: v.optional(v.boolean()),
+    replayClockVersion: v.optional(v.literal(1)),
     formId: v.optional(v.id("forms")),
     formVersion: v.optional(v.number()),
     quizId: v.optional(v.id("quizzes")),
@@ -62,6 +65,8 @@ export const liveTables = {
     phaseEndsAt: v.optional(v.number()),
     /** Snapshot taken when the game was created; answer keys stay on the server until each reveal. */
     questions: v.array(liveQuestionValidator),
+    /** Legacy: rooms created before liveGameContent kept this snapshot inline. */
+    quizQuestions: v.optional(v.array(savedQuestion)),
     contentId: v.optional(v.id("liveGameContent")),
     questionCount: v.optional(v.number()),
     skippedQuestions: v.number(),
@@ -84,6 +89,21 @@ export const liveTables = {
     .index("by_pin_and_state", ["pin", "state"])
     .index("by_state_and_lastActivityAt", ["state", "lastActivityAt"])
     .index("by_hostId_and_createdAt", ["hostId", "createdAt"]),
+
+  /** Small phone subscription; immutable question content lives in separate rows. */
+  livePhoneStates: defineTable({
+    gameId: v.id("liveGames"), title: v.string(), state: liveStateValidator,
+    questionIndex: v.number(), questionCount: v.number(),
+    appearance: v.optional(v.union(v.literal("apple"), v.literal("theme"))),
+    theme: v.optional(themeValidator), showAnswerLabels: v.boolean(),
+    startsAt: v.optional(v.number()), questionStartedAt: v.optional(v.number()), questionEndsAt: v.optional(v.number()),
+  }).index("by_gameId", ["gameId"]),
+  liveQuestions: defineTable({ gameId: v.id("liveGames"), questionIndex: v.number(), question: liveQuestionValidator, startedAt: v.optional(v.number()), endsAt: v.optional(v.number()), revealedAt: v.optional(v.number()) })
+    .index("by_gameId_and_questionIndex", ["gameId", "questionIndex"]),
+
+  /** Historical round scores stay off the player documents every phone subscribes to. */
+  liveRoundScores: defineTable({ gameId: v.id("liveGames"), questionIndex: v.number(), playerId: v.id("livePlayers"), scoreBefore: v.number(), scoreAfter: v.number(), streakAfter: v.number() })
+    .index("by_gameId_and_questionIndex", ["gameId", "questionIndex"]),
 
   livePlayers: defineTable({
     gameId: v.id("liveGames"),
@@ -130,6 +150,7 @@ export const liveTables = {
     points: v.number(),
     timeTakenMs: v.number(),
     answeredAt: v.number(),
+    reviewFlag: v.optional(v.literal("too_fast")),
   })
     .index("by_gameId_and_questionIndex_and_playerId", ["gameId", "questionIndex", "playerId"])
     .index("by_playerId_and_questionIndex", ["playerId", "questionIndex"]),

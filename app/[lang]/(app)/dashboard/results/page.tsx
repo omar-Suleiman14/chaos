@@ -1,5 +1,6 @@
 "use client";
 
+import TeachingInsights from "@/components/teaching/TeachingInsights";
 import { useMutation } from "convex/react";
 import { useQuery } from "@/lib/convexCache";
 import { api } from "@/convex/_generated/api";
@@ -270,6 +271,7 @@ function QuizDetailView({ quizId }: { quizId: Id<"quizzes"> }) {
 
   return (
     <>
+      <TeachingInsights quizId={quizId} />
       <div className="flex flex-col md:flex-row justify-between items-start md:items-end gap-6 border-b-2 border-foreground pb-6">
         <div>
           <Link href="/dashboard/results" className="inline-flex items-center gap-2 text-xs text-muted-foreground hover:text-foreground transition-colors mb-2 chaos-heading">

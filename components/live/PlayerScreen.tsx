@@ -1,10 +1,11 @@
 "use client";
 
+import { clearLiveAnswer, readLiveAnswer, saveLiveAnswer } from "@/lib/liveRecovery";
 import TeamPanel, { TEAMS_ENABLED } from "./TeamPanel";
 
 import "./live.css";
 import "./apple.css";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useConvexConnectionState, useMutation, useQuery } from "convex/react";
 import { Check, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -63,7 +64,8 @@ const copy = {
     } as Record<string, string>,
     youreIn: "You're in!", waitStart: "Starting soon",
     questionOf: (i: number, n: number) => `Question ${i} of ${n}`, pickMany: "Pick every right answer, then press Submit.", submit: "Submit",
-    sent: "Answer sent", waitOthers: "Waiting for the others…", tooSlow: "Time's up", noAnswer: "You didn't answer this one.",
+    saving: "Saved on this device · saving…", deviceSaved: "Saved on this device · waiting to send", backupUnavailable: "Device backup unavailable", retry: "Retry saved answer", closedBackup: "Your saved answer could not reach the server before this question closed.",
+    sent: "Answer saved", waitOthers: "Waiting for the others…", tooSlow: "Time's up", noAnswer: "You didn't answer this one.",
     correct: "Correct", wrong: "Not quite", points: (n: string) => `+${n} points`, streak: (n: number, bonus: string) => `${n} in a row: +${bonus} bonus`,
     rank: (n: string) => `You are in place ${n}`, score: (n: string) => `${n} points`, lookUp: "Look at the big screen for the leaderboard.",
     finalRank: (n: string) => `You finished in place ${n}`, correctCount: (n: number, total: number) => `${n} of ${total} correct`, podium: "Top 3",
@@ -84,7 +86,8 @@ const copy = {
     } as Record<string, string>,
     youreIn: "انضممت!", waitStart: "تبدأ قريبًا",
     questionOf: (i: number, n: number) => `السؤال ${i} من ${n}`, pickMany: "اختر كل الإجابات الصحيحة، ثم اضغط إرسال.", submit: "إرسال",
-    sent: "أُرسلت الإجابة", waitOthers: "بانتظار الآخرين…", tooSlow: "انتهى الوقت", noAnswer: "لم تُجب عن هذا السؤال.",
+    saving: "محفوظ على الجهاز · جارٍ الإرسال…", deviceSaved: "محفوظ على الجهاز · بانتظار الإرسال", backupUnavailable: "الحفظ على الجهاز غير متاح", retry: "أعد إرسال الإجابة المحفوظة", closedBackup: "لم تصل إجابتك المحفوظة إلى الخادم قبل إغلاق السؤال.",
+    sent: "حُفظت الإجابة", waitOthers: "بانتظار الآخرين…", tooSlow: "انتهى الوقت", noAnswer: "لم تُجب عن هذا السؤال.",
     correct: "صحيح", wrong: "ليست صحيحة", points: (n: string) => `+${n} نقطة`, streak: (n: number, bonus: string) => `${n} على التوالي: مكافأة +${bonus}`,
     rank: (n: string) => `ترتيبك ${n}`, score: (n: string) => `${n} نقطة`, lookUp: "انظر إلى الشاشة الكبيرة لرؤية لوحة الصدارة.",
     finalRank: (n: string) => `أنهيت في المركز ${n}`, correctCount: (n: number, total: number) => `${n} من ${total} صحيحة`, podium: "المراكز الثلاثة الأولى",
@@ -214,6 +217,8 @@ function JoinForm({ t, initialPin, onJoined }: { t: Copy; initialPin: string; on
 function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; view: PlayerView | undefined; t: Copy; onLeave: () => void; setAnnounce: (s: string) => void }) {
   const { locale } = useLocale();
   const submit = useMutation(api.live.submitAnswer);
+  const connection = useConvexConnectionState();
+  const [backupStatus, setBackupStatus] = useState<"saving" | "deviceSaved" | "backupUnavailable" | null>(null);
   useUsableMark("live.join", !!view);
   const offset = useServerClock();
   const pack = gameSound(view && "theme" in view ? view.theme : null);
@@ -246,14 +251,21 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
   const send = useCallback(async (ids: string[]) => {
     if (!view || view.state !== "question" || view.answered || sent || pending.current) return;
     pending.current = true;
+    const questionIndex = view.questionIndex;
+    const backedUp = saveLiveAnswer(session.gameId, { token: session.token, questionIndex, optionIds: ids });
+    setBackupStatus(backedUp ? "saving" : "backupUnavailable");
+    setPicked(ids);
     setSending(true);
     setError("");
     haptics.select();
     sfx.play("select", pack);
     try {
       await submit({ gameId: session.gameId, token: session.token, questionIndex: view.questionIndex, optionIds: ids });
+      clearLiveAnswer(session.gameId, questionIndex);
+      setBackupStatus(null);
       setSent(true);
     } catch (e) {
+      setBackupStatus(backedUp ? "deviceSaved" : "backupUnavailable");
       setError(errorText(t, e));
       haptics.error();
     } finally {
@@ -261,6 +273,24 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
       setSending(false);
     }
   }, [view, sent, submit, session, t, pack]);
+
+  const recoverSaved = useEffectEvent(() => {
+    if (!view || !("questionIndex" in view)) return;
+    const saved = readLiveAnswer(session.gameId, session.token, view.questionIndex);
+    if (!saved) return;
+    if ("myAnswer" in view && view.myAnswer) { clearLiveAnswer(session.gameId, view.questionIndex); return; }
+    if (view.state === "question") {
+      setPicked(saved.optionIds);
+      if (!pending.current && !sent) void send(saved.optionIds);
+    } else if (view.state === "reveal" || view.state === "leaderboard") setError(t.closedBackup);
+  });
+  const answered = view?.state === "question" ? view.answered : false;
+  useEffect(() => { recoverSaved(); }, [phase, connection.isWebSocketConnected, answered]);
+  useEffect(() => {
+    const online = () => recoverSaved();
+    window.addEventListener("online", online);
+    return () => window.removeEventListener("online", online);
+  }, []);
 
   const choose = useCallback((id: string) => {
     if (!view || view.state !== "question" || view.answered || sent || pending.current) return;
@@ -334,7 +364,9 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
               <p className="live-muted text-sm sr-only">{t.shortcuts}</p>
             </>
           )}
+          {backupStatus && <p className="live-muted" role="status">{t[backupStatus]}</p>}
           {error && <p className="live-error" role="alert">{error}</p>}
+          {error && picked.length > 0 && !view.answered && !sent && <button type="button" className="live-btn" disabled={sending} onClick={() => void send(picked)}>{t.retry}</button>}
         </div>
       );
     }
@@ -350,6 +382,7 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
             {view.correct && <span className="text-xl">{t.points(fmt(view.points))}</span>}
             {!answered && <span className="text-base font-semibold">{t.noAnswer}</span>}
           </div>
+          {error && <p className="live-error" role="alert">{error}</p>}
           {view.bonus > 0 && <p className="text-lg font-semibold">{t.streak(view.streak, fmt(view.bonus))}</p>}
           {view.rank !== null && <p className="text-2xl font-bold">{t.rank(fmt(view.rank))}</p>}
           <p className="live-muted">{t.score(fmt(view.score))}</p>

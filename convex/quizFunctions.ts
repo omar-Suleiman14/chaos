@@ -16,6 +16,8 @@ import type { Id } from "./_generated/dataModel";
 import type { Doc } from "./_generated/dataModel";
 import { publicationErrors, quizQuestionFields } from "./quizModel";
 import { emitQuizAttemptEvent, emitQuizStatusEvent } from "./webhookEvents";
+import { MIN_READ_TIME_MS, questionQuality, type QualityQuestion, type QualityObservation } from "./questionQuality";
+import { sha256Hex } from "./serverUtils";
 import { consumeRate } from "./serverUtils";
 import {
   canViewQuizAsRespondent,
@@ -1157,6 +1159,7 @@ export const gradeAnswer = mutation({
         timeTaken: elapsedMs === null ? undefined : Math.round(elapsedMs / 100) / 10,
         answeredAt: now,
         ...(late ? { late: true } : {}),
+        ...(elapsedMs !== null && elapsedMs < MIN_READ_TIME_MS && rawAnswer ? { reviewFlag: "too_fast" as const } : {}),
       },
     ];
 
@@ -1637,5 +1640,62 @@ export const getQuizStatsEnhanced = query({
       });
 
     return { top3, questionStats };
+  },
+});
+
+/** Resume only the questions drawn for this attempt, with current release rules. */
+export const getAttemptRecovery = query({
+  args: { sessionId: v.id("quizSessions"), quizId: v.id("quizzes") },
+  handler: async (ctx, args) => {
+    const session = await ctx.db.get("quizSessions", args.sessionId);
+    const quiz = await ctx.db.get("quizzes", args.quizId);
+    if (!session || session.quizId !== args.quizId || session.source === "live" || !quiz || !await canViewQuizAsRespondent(ctx, quiz)) return null;
+    if (session.status !== "in_progress") return { completed: true as const };
+    if (!session.questionSnapshot) return null;
+    const withheld = resultsWithheld(quiz);
+    return {
+      completed: false as const,
+      questions: session.questionSnapshot.map(q => ({ _id: q._id, type: q.type, questionText: q.questionText, options: q.options, points: q.points, timeLimit: q.timeLimit, order: q.order })),
+      opened: session.openedQuestions ?? [],
+      answers: session.answers.map(a => ({ questionId: a.questionId, answer: a.answer,
+        feedback: withheld ? { withheld: true as const } : { isCorrect: a.isCorrect, pointsEarned: a.pointsEarned, totalPointsPossible: session.questionSnapshot!.find(q => q._id === a.questionId)?.points ?? 0 } })),
+    };
+  },
+});
+
+/** Teacher-only, bounded and grouped by immutable content, so edited prompts do not mix. */
+export const getTeachingInsights = query({
+  args: { quizId: v.id("quizzes") },
+  handler: async (ctx, args) => {
+    const quiz = await getQuizIfOwner(ctx, args.quizId);
+    if (!quiz) return null;
+    const sessions = await completedSessions(ctx, args.quizId, 201);
+    const sample = sessions.slice(-200);
+    const variants = new Map<string, { question: QualityQuestion; observations: QualityObservation[] }>();
+    const versions = new Map<string, { key: string; at: number; attempts: number; questions: QualityQuestion[] }>();
+    let missingSnapshots = 0;
+    for (const session of sample) {
+      if (!session.questionSnapshot) { missingSnapshots++; continue; }
+      const questions = session.questionSnapshot.map(q => ({ id: q._id as string, text: q.questionText, kind: q.type,
+        options: q.options ?? [], answerKey: q.type === "written" ? q.keywords ?? [] : q.type === "multi_select" ? q.correctAnswers ?? [] : [q.correctAnswer ?? ""],
+        points: q.points, timeLimit: q.timeLimit ?? null }));
+      const key = await sha256Hex(JSON.stringify(questions));
+      const version = versions.get(key) ?? { key, at: session.startedAt, attempts: 0, questions };
+      version.at = Math.min(version.at, session.startedAt); version.attempts++;
+      versions.set(key, version);
+      for (const q of questions) {
+        const variantKey = await sha256Hex(JSON.stringify(q));
+        const variant = variants.get(variantKey) ?? { question: { ...q, id: variantKey }, observations: [] };
+        const a = session.answers.find(a => a.questionId === q.id);
+        // Unanswered drawn questions count as incorrect, rather than disappearing from difficulty.
+        variant.observations.push({ correct: a?.isCorrect ?? false, seconds: a?.timeTaken ?? null,
+          cohortScore: session.totalPoints > 0 ? session.score/session.totalPoints : 0,
+          wrongChoice: a && q.kind !== "written" && a.answer ? (q.kind === "multi_select" ? parseMultiAnswer(a.answer).join(", ") : a.answer) : null, review: a?.reviewFlag === "too_fast" });
+        variants.set(variantKey, variant);
+      }
+    }
+    return { sampleCount: sample.length, capped: sessions.length > 200, missingSnapshots,
+      questions: [...variants.values()].map(v => questionQuality(v.question, v.observations)),
+      versions: [...versions.values()].sort((a,b) => b.at-a.at).slice(0,30), pooled: quiz.poolSize !== undefined };
   },
 });

@@ -182,7 +182,12 @@ describe("live games: create, join, start", () => {
   it("keeps rooms created before themes readable", async () => {
     const t = createTestConvex();
     const { owner, gameId, players } = await gameWithPlayers(t, ["Sam"]);
-    await t.run(async (ctx) => { await ctx.db.patch("liveGames", gameId, { theme: undefined, appearance: undefined }); });
+    await t.run(async (ctx) => {
+      await ctx.db.patch("liveGames", gameId, { theme: undefined, appearance: undefined });
+      const projection = await ctx.db.query("livePhoneStates").withIndex("by_gameId", q => q.eq("gameId", gameId)).unique();
+      if (projection) await ctx.db.delete("livePhoneStates", projection._id);
+      for (const row of await ctx.db.query("liveQuestions").withIndex("by_gameId_and_questionIndex", q => q.eq("gameId", gameId)).collect()) await ctx.db.delete("liveQuestions", row._id);
+    });
     expect((await owner.query(api.live.hostView, { gameId }))!.theme).toBeNull();
     expect((await owner.query(api.live.hostView, { gameId }))!.appearance).toBe("theme");
     expect(await t.query(api.live.playerView, { gameId, token: players[0].token })).toMatchObject({ state: "lobby", theme: null, appearance: "apple" });
