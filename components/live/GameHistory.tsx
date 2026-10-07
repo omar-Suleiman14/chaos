@@ -32,11 +32,11 @@ export default function GameHistory({ limit }: { limit?: number }) {
     <div className="games-quiz-list">
       {games.slice(0, limit).map((game) => {
         const running = game.state !== "ended";
-        const href = running ? `/dashboard/live/${game._id}`
+        const href = running || game.rehearsal ? `/dashboard/live/${game._id}`
           : game.formId ? `/dashboard/forms/${game.formId}/responses`
           : game.quizId ? `/dashboard/results?id=${game.quizId}` : null;
         const meta = [
-          running ? t.live : t.ended,
+          game.rehearsal ? (locale === "ar" ? "تدريب" : "Rehearsal") : running ? t.live : t.ended,
           timeAgo(locale, game.endedAt ?? game.createdAt),
           t.questions(game.questionCount),
           ...(game.players !== null ? [t.players(formatNumber(locale, game.players))] : []),
@@ -46,6 +46,7 @@ export default function GameHistory({ limit }: { limit?: number }) {
             <div className="games-quiz-list__title"><h3>{game.title}</h3><p>{meta}</p></div>
             {href && (
               <div className="games-quiz-list__actions">
+                {!running && <Link className="ws-btn" href={`/dashboard/live/${game._id}/replay`}>{locale === "ar" ? "إعادة المشاهدة" : "Replay"}</Link>}
                 <Link className={running ? "ws-btn ws-btn--primary" : "ws-btn"} href={href}>
                   {running ? <><Radio size={16} aria-hidden="true" />{t.open}</> : <>{t.results}<ArrowRight size={15} aria-hidden="true" className="rtl:rotate-180" /></>}
                 </Link>

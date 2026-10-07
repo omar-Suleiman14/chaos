@@ -18,6 +18,8 @@ import { Announcer, Countdown, StartCountdown, usePrefersReducedMotion, useSecon
 import { gameSound, gameThemeProps } from "./GameTheme";
 import { ThemePicker } from "@/components/ThemePicker";
 import { themeFromPreset } from "@/components/forms/formThemes";
+import RehearsalPanel from "./RehearsalPanel";
+import "./classroom.css";
 import TeamPanel, { TEAMS_ENABLED } from "./TeamPanel";
 import { toast } from "@/lib/toast";
 import { copyText } from "@/lib/clipboard";
@@ -191,6 +193,8 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
       </header>
 
       <main className="live-main" id="live-main">
+        {game.rehearsal && <RehearsalPanel gameId={gameId} pin={game.pin} maxPlayers={game.settings.maxPlayers} lobby={game.state === "lobby" && !game.startsAt} />}
+        {game.state === "ended" && <Link className="ws-btn" href={hostHref(`/dashboard/live/${gameId}/replay`)}>{locale === "ar" ? "أعد مشاهدة الفصل" : "Replay classroom"}</Link>}
         {TEAMS_ENABLED && <TeamPanel gameId={gameId} frozen={game.state !== "lobby" || game.startsAt != null} maxPlayers={game.settings.maxPlayers} players={game.players} />}
 
         {game.state === "lobby" && game.startsAt && (

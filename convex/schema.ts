@@ -240,6 +240,7 @@ export default defineSchema({
         answeredAt: v.optional(v.number()),
         /** Arrived after the question's time limit; graded as no answer. */
         late: v.optional(v.boolean()),
+        reviewFlag: v.optional(v.literal("too_fast")),
       })
     ),
     /** When the server first served each question of this attempt; time limits are checked against it. */
