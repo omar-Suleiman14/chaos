@@ -2,7 +2,7 @@ version: 2
 updates:
   - package-ecosystem: npm
     directory: /
-    target-branch: e2e
+    target-branch: main
     schedule:
       interval: weekly
       day: monday
@@ -52,7 +52,7 @@ updates:
         update-types: [version-update:semver-major]
   - package-ecosystem: github-actions
     directory: /
-    target-branch: e2e
+    target-branch: main
     schedule:
       interval: weekly
     groups:
