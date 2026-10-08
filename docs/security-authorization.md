@@ -14,9 +14,7 @@ nor an editable profile field grants administrator access.
 
 ## Creator content
 
-`convex/authz.ts` provides quiz, question, session and form authorization helpers.
-Legacy quiz writes require ownership; administrator reads are permitted only
-where the specific function requests them. Form access is scoped by owner,
+`convex/authz.ts` provides account and form authorization helpers. Form access is scoped by owner,
 editor and viewer roles. Sensitive settings and collaborator administration
 require the appropriate role. Writes also check account moderation restrictions.
 

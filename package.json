@@ -53,7 +53,6 @@
     "@clerk/mcp-tools": "^0.6.0",
     "@clerk/nextjs": "^7.9.10",
     "@convex-dev/better-auth": "0.12.5",
-    "@hello-pangea/dnd": "^18.0.1",
     "@modelcontextprotocol/sdk": "^1.32.1",
     "better-auth": "~1.6.33",
     "blobatar": "^2.7.0",

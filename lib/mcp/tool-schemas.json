@@ -978,7 +978,7 @@
   },
   "attach_lesson_quiz": {
    "title": null,
-   "description": "Attach an owned existing quiz to an owned lesson by stable identity. Quizzes made with create_form or create_game_draft are forms: pass asset {kind:\"form\", id} with the id those tools returned; kind \"quiz\" is only for classic quizzes. Updates label/order idempotently; creates no quiz copy and never publishes.",
+   "description": "Attach an owned existing quiz to an owned lesson by stable identity. Quizzes are forms: pass asset {kind:\"form\", id} with the id create_form, create_game_draft or search_forms returned. Updates label/order idempotently; creates no quiz copy and never publishes.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,
@@ -995,43 +995,21 @@
       "maxLength": 100
      },
      "asset": {
-      "oneOf": [
-       {
-        "type": "object",
-        "properties": {
-         "kind": {
-          "type": "string",
-          "const": "form"
-         },
-         "id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 100
-         }
-        },
-        "required": [
-         "kind",
-         "id"
-        ]
+      "type": "object",
+      "properties": {
+       "kind": {
+        "type": "string",
+        "const": "form"
        },
-       {
-        "type": "object",
-        "properties": {
-         "kind": {
-          "type": "string",
-          "const": "quiz"
-         },
-         "id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 100
-         }
-        },
-        "required": [
-         "kind",
-         "id"
-        ]
+       "id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100
        }
+      },
+      "required": [
+       "kind",
+       "id"
       ]
      },
      "label": {
@@ -1569,8 +1547,7 @@
      "kind": {
       "type": "string",
       "enum": [
-       "form",
-       "classic_quiz"
+       "form"
       ]
      },
      "title": {
@@ -2390,8 +2367,7 @@
      "kind": {
       "type": "string",
       "enum": [
-       "form",
-       "classic_quiz"
+       "form"
       ]
      },
      "title": {
@@ -3125,43 +3101,21 @@
       "maxLength": 100
      },
      "asset": {
-      "oneOf": [
-       {
-        "type": "object",
-        "properties": {
-         "kind": {
-          "type": "string",
-          "const": "form"
-         },
-         "id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 100
-         }
-        },
-        "required": [
-         "kind",
-         "id"
-        ]
+      "type": "object",
+      "properties": {
+       "kind": {
+        "type": "string",
+        "const": "form"
        },
-       {
-        "type": "object",
-        "properties": {
-         "kind": {
-          "type": "string",
-          "const": "quiz"
-         },
-         "id": {
-          "type": "string",
-          "minLength": 1,
-          "maxLength": 100
-         }
-        },
-        "required": [
-         "kind",
-         "id"
-        ]
+       "id": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100
        }
+      },
+      "required": [
+       "kind",
+       "id"
       ]
      }
     },
@@ -4962,7 +4916,7 @@
   },
   "fork_quiz": {
    "title": null,
-   "description": "Create a private editable form/classic quiz fork from published content, preserving permanent parent and root version provenance. Select formVersionId for forms or expectedPublishedAt for classic quizzes. No responses, collaborators, operational settings or publication state are copied. Every successful call creates a new asset; inspect your library before retrying an uncertain success. Requires explicit intent to copy assessment content.",
+   "description": "Create a private editable fork of a published quiz form, preserving permanent parent and root version provenance. Select the immutable formVersionId. No responses, collaborators, operational settings or publication state are copied. Every successful call creates a new asset; inspect your library before retrying an uncertain success. Requires explicit intent to copy assessment content.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,
@@ -4974,53 +4928,30 @@
     "type": "object",
     "properties": {
      "asset": {
-      "oneOf": [
-       {
-        "type": "object",
-        "properties": {
-         "kind": {
-          "type": "string",
-          "const": "form"
-         },
-         "id": {
-          "type": "string",
-          "minLength": 1
-         }
-        },
-        "required": [
-         "kind",
-         "id"
-        ]
+      "type": "object",
+      "properties": {
+       "kind": {
+        "type": "string",
+        "const": "form"
        },
-       {
-        "type": "object",
-        "properties": {
-         "kind": {
-          "type": "string",
-          "const": "quiz"
-         },
-         "id": {
-          "type": "string",
-          "minLength": 1
-         }
-        },
-        "required": [
-         "kind",
-         "id"
-        ]
+       "id": {
+        "type": "string",
+        "minLength": 1
        }
+      },
+      "required": [
+       "kind",
+       "id"
       ]
      },
      "formVersionId": {
       "type": "string",
       "minLength": 1
-     },
-     "expectedPublishedAt": {
-      "type": "number"
      }
     },
     "required": [
-     "asset"
+     "asset",
+     "formVersionId"
     ],
     "$schema": "http://json-schema.org/draft-07/schema#"
    },
@@ -5028,44 +4959,22 @@
     "type": "object",
     "properties": {
      "asset": {
-      "oneOf": [
-       {
-        "type": "object",
-        "properties": {
-         "kind": {
-          "type": "string",
-          "const": "form"
-         },
-         "id": {
-          "type": "string",
-          "minLength": 1
-         }
-        },
-        "required": [
-         "kind",
-         "id"
-        ],
-        "additionalProperties": false
+      "type": "object",
+      "properties": {
+       "kind": {
+        "type": "string",
+        "const": "form"
        },
-       {
-        "type": "object",
-        "properties": {
-         "kind": {
-          "type": "string",
-          "const": "quiz"
-         },
-         "id": {
-          "type": "string",
-          "minLength": 1
-         }
-        },
-        "required": [
-         "kind",
-         "id"
-        ],
-        "additionalProperties": false
+       "id": {
+        "type": "string",
+        "minLength": 1
        }
-      ]
+      },
+      "required": [
+       "kind",
+       "id"
+      ],
+      "additionalProperties": false
      }
     },
     "required": [
@@ -5655,8 +5564,7 @@
      "kind": {
       "type": "string",
       "enum": [
-       "form",
-       "classic_quiz"
+       "form"
       ]
      },
      "title": {
@@ -7492,41 +7400,20 @@
     "type": "object",
     "properties": {
      "asset": {
-      "oneOf": [
-       {
-        "type": "object",
-        "properties": {
-         "kind": {
-          "type": "string",
-          "const": "form"
-         },
-         "id": {
-          "type": "string",
-          "minLength": 1
-         }
-        },
-        "required": [
-         "kind",
-         "id"
-        ]
+      "type": "object",
+      "properties": {
+       "kind": {
+        "type": "string",
+        "const": "form"
        },
-       {
-        "type": "object",
-        "properties": {
-         "kind": {
-          "type": "string",
-          "const": "quiz"
-         },
-         "id": {
-          "type": "string",
-          "minLength": 1
-         }
-        },
-        "required": [
-         "kind",
-         "id"
-        ]
+       "id": {
+        "type": "string",
+        "minLength": 1
        }
+      },
+      "required": [
+       "kind",
+       "id"
       ]
      }
     },
@@ -7825,8 +7712,7 @@
      "kind": {
       "type": "string",
       "enum": [
-       "form",
-       "classic_quiz"
+       "form"
       ]
      },
      "title": {
@@ -10591,8 +10477,7 @@
      "kind": {
       "type": "string",
       "enum": [
-       "form",
-       "classic_quiz"
+       "form"
       ]
      },
      "title": {
@@ -11390,8 +11275,7 @@
      "kind": {
       "type": "string",
       "enum": [
-       "form",
-       "classic_quiz"
+       "form"
       ]
      },
      "title": {
@@ -12610,8 +12494,7 @@
         "kind": {
          "type": "string",
          "enum": [
-          "form",
-          "classic_quiz"
+          "form"
          ]
         },
         "title": {
@@ -13637,8 +13520,7 @@
      "kind": {
       "type": "string",
       "enum": [
-       "form",
-       "classic_quiz"
+       "form"
       ]
      },
      "title": {
@@ -13742,8 +13624,7 @@
      "kind": {
       "type": "string",
       "enum": [
-       "form",
-       "classic_quiz"
+       "form"
       ]
      },
      "title": {
@@ -13923,8 +13804,7 @@
      "kind": {
       "type": "string",
       "enum": [
-       "form",
-       "classic_quiz"
+       "form"
       ]
      },
      "title": {
@@ -14969,8 +14849,7 @@
      "kind": {
       "type": "string",
       "enum": [
-       "form",
-       "classic_quiz"
+       "form"
       ]
      },
      "title": {
@@ -15926,7 +15805,7 @@
   },
   "list_admin_content": {
    "title": "List platform forms and quizzes (admin)",
-   "description": "Administrators only: page the same forms or classic quizzes inventory as the admin UI, including status, owner, holds and response counts. Returns metadata only, never question content, answer keys or respondent answers.",
+   "description": "Administrators only: page the same forms inventory (quizzes are quiz forms) as the admin UI, including status, owner, holds and response counts. Returns metadata only, never question content, answer keys or respondent answers.",
    "permission": "admin_operations",
    "annotations": {
     "readOnlyHint": true,
@@ -15940,8 +15819,7 @@
      "kind": {
       "type": "string",
       "enum": [
-       "forms",
-       "quizzes"
+       "forms"
       ]
      },
      "paginationOpts": {
@@ -16528,7 +16406,7 @@
   },
   "moderate_admin_content": {
    "title": "Hold or release platform content (admin)",
-   "description": "Administrators only, on explicit request: hold or release a form/classic quiz ID from list_admin_content. A reason is required. Holding removes public access through the same UI moderation logic and writes an audit event; releasing a hold does not republish a closed form.",
+   "description": "Administrators only, on explicit request: hold or release a form ID from list_admin_content. A reason is required. Holding removes public access through the same UI moderation logic and writes an audit event; releasing a hold does not republish a closed form.",
    "permission": "admin_operations",
    "annotations": {
     "readOnlyHint": false,
