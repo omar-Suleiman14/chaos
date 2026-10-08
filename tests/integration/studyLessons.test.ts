@@ -625,3 +625,70 @@ it("refreshes a changed course snapshot without discarding completed teaching wo
       .lessonIds,
   ).toEqual([...current!.lessonIds!, draft.lessonId]);
 });
+
+it("keeps working for libraries with more than 100 decks, quiz forms and references", async () => {
+  const s = await setup();
+  await s.fill();
+  const first = await s.t.mutation(m("finalize"), {
+    userId,
+    jobId: s.job.jobId,
+    expectedRevision: s.job.revision,
+  });
+  await s.t.run(async (ctx) => {
+    const form = (await ctx.db.get("forms", first.assets[1]))!;
+    const deck = (await ctx.db.get("flashcardSets", first.assets[0]))!;
+    const source = (await ctx.db.get("learnSources", s.sourceId))!;
+    for (let i = 0; i < 101; i++) {
+      const { _id, _creationTime, ...f } = form;
+      await ctx.db.insert("forms", {
+        ...f,
+        draft: {
+          ...f.draft,
+          fields: f.draft.fields.map((x) => ({ ...x, label: `Other ${i}` })),
+        },
+      });
+      const { _id: _d, _creationTime: _dc, ...d } = deck;
+      await ctx.db.insert("flashcardSets", {
+        ...d,
+        cards: d.cards.map((c) => ({ ...c, front: `Other ${i}` })),
+      });
+      const { _id: _s, _creationTime: _sc, ...r } = source;
+      await ctx.db.insert("learnSources", {
+        ...r,
+        metadata: { ...r.metadata, title: `Other ${i}` },
+      });
+    }
+  });
+  expect(
+    await s.t.mutation(
+      makeFunctionReference<"mutation">("studySourceUploads:reference"),
+      {
+        userId,
+        metadata: { title: "New", kind: "reference", origin: "Provided" },
+      },
+    ),
+  ).toMatchObject({ duplicate: false });
+  s.job = await s.t.mutation(m("start"), {
+    userId,
+    request: { ...s.request, key: "lecture-9", title: "Lecture 9" },
+  });
+  await s.fill();
+  await s.save("cards", {
+    kind: "flashcards",
+    cards: [
+      {
+        id: "new",
+        front: "What stops at equilibrium?",
+        back: "Net flux; random motion continues.",
+        conceptIds: ["diffusion"],
+      },
+    ],
+  });
+  const second = await s.t.mutation(m("finalize"), {
+    userId,
+    jobId: s.job.jobId,
+    expectedRevision: s.job.revision,
+  });
+  expect(second.status).toBe("draft");
+  expect(second.assets).not.toContain(first.assets[0]);
+});

@@ -342,17 +342,15 @@ export const reference = internalMutation({
           .eq("sha256", undefined)
           .eq("status", "active"),
       )
-      .take(101);
+      .order("desc")
+      .take(100);
     const existing = candidates.find(
       (s) =>
         s.metadataVisibility === metadataVisibility &&
         studyValue(s.metadata) === studyValue(a.metadata),
     );
+    // Best-effort reuse over the most recent references; a larger library still registers new ones.
     if (existing) return { sourceId: existing._id, duplicate: true };
-    if (candidates.length > 100)
-      invalid(
-        "Select an existing reference explicitly in large source libraries.",
-      );
     const sourceId = await ctx.db.insert("learnSources", {
       ownerId: a.userId,
       uploadedBy: a.userId,

@@ -579,10 +579,12 @@ export async function finalizeStudyLesson(
         "Reused flashcard deck must be owned, active and exactly match submitted cards.",
       );
   } else {
+    // Best-effort reuse over the most recent decks; a larger library still gets a new deck.
     const candidates = await ctx.db
       .query("flashcardSets")
       .withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", ownerId))
-      .take(101);
+      .order("desc")
+      .take(100);
     const existing = candidates.find(
       (c) =>
         !c.archived &&
@@ -590,23 +592,18 @@ export async function finalizeStudyLesson(
           studyValue(deck.cards.map(({ id: _id, ...card }) => card)),
     );
     if (existing) setId = existing._id;
-    else {
-      if (candidates.length > 100)
-        fail(
-          "Select an existing deck explicitly or verify the library before creating another deck.",
-        );
+    else
       setId = await createFlashcardSet(ctx, ownerId, {
         title: reviews[0].metadata.title,
         cards: deck.cards,
       });
-    }
   }
   const assetIds: string[] = [setId];
   const reusableForms = await ctx.db
     .query("forms")
     .withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", ownerId))
     .order("desc")
-    .take(101);
+    .take(100);
   const questionSignature = (qs: import("./mcpContract").McpQuestion[]) =>
     studyValue(
       qs.map((q) => [
@@ -698,10 +695,6 @@ export async function finalizeStudyLesson(
       )
         fail("Reused quiz does not match independently verified questions.");
     } else {
-      if (reusableForms.length > 100)
-        fail(
-          "Select matching existing quiz forms explicitly in libraries larger than 100 forms before creating new assessments.",
-        );
       formId = await createFormRecord(ctx, ownerId, definition);
       reusableForms.push((await ctx.db.get("forms", formId))!);
     }
