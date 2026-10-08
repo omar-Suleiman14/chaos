@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { Select } from "@/components/workspace/Select";
-import { use, useEffect, useState } from "react";
+import { use, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ExternalLink, Globe, History, Lock, Send, Users } from "lucide-react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
@@ -62,6 +62,16 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
   const update = useMutation(api.courses.update);
   const publish = useMutation(api.courses.publish), unpublish = useMutation(api.courses.unpublish), setArchived = useMutation(api.courses.setArchived);
   const [title, setTitle] = useState(""), [desc, setDesc] = useState(""), [tags, setTags] = useState("");
+  const descRef = useRef<HTMLTextAreaElement>(null);
+  // The description grows with its text rather than scrolling; CSS field-sizing does this where supported.
+  useLayoutEffect(() => {
+    const el = descRef.current;
+    if (!el || CSS.supports("field-sizing", "content")) return;
+    const fit = () => { el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; };
+    fit();
+    window.addEventListener("resize", fit);
+    return () => window.removeEventListener("resize", fit);
+  }, [desc]);
   // Cover and icon show the change at once; the server copy catches up.
   const [look, setLook] = useState<PageLook | null>(null);
   const [loadedId, setLoadedId] = useState<string | null>(null);
@@ -110,7 +120,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
       <section className="cb-hero">
         <div className="cb-hero__body">
           <input dir={contentDirection(course.language)} lang={course.language} className="cb-title" aria-label={t.titlePh} placeholder={t.titlePh} value={title} maxLength={200} onChange={(e) => setTitle(e.target.value)} onBlur={() => title.trim() && title !== course.title && save({ courseId, title })} />
-          <textarea dir={contentDirection(course.language)} lang={course.language} className="cb-desc" aria-label={t.descPh} placeholder={t.descPh} rows={2} value={desc} maxLength={4000} onChange={(e) => setDesc(e.target.value)} onBlur={() => desc !== course.description && save({ courseId, description: desc })} />
+          <textarea dir={contentDirection(course.language)} lang={course.language} ref={descRef} className="cb-desc" aria-label={t.descPh} placeholder={t.descPh} rows={1} value={desc} maxLength={4000} onChange={(e) => setDesc(e.target.value)} onBlur={() => desc !== course.description && save({ courseId, description: desc })} />
         </div>
       </section>
 
