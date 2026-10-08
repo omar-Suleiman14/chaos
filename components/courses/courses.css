@@ -160,3 +160,8 @@ a.cs-who:hover strong { text-decoration: underline; text-underline-offset: 3px; 
 .cb-module__quiz summary { cursor: pointer; }
 .cb-module__ungrouped { margin: 16px 8px 4px; font-size: 13px; font-weight: 600; color: var(--on-surface-variant); }
 .cb-lesson__actions .ws-select { min-width: 120px; }
+
+.cp-back { display: flex; width: fit-content; align-items: center; gap: 6px; min-height: 44px; padding-inline: 8px; margin-block-end: 16px; border-radius: 8px; color: var(--s-soft); text-decoration: none; font-size: 14px; }
+.cp-back:hover { color: var(--s-text); background: var(--s-bg); }
+.cp-back:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.cp-back:dir(rtl) svg { transform: rotate(180deg); }

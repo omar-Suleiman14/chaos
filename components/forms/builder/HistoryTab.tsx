@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "@/lib/toast";
 import { useMutation, useQueries } from "convex/react";
 import { History } from "lucide-react";
@@ -58,9 +58,11 @@ export default function HistoryTab({ formId, versions, canEdit, revision, before
   const [open, setOpen] = useState<string | null>(null);
   const restore = useMutation(api.forms.restoreVersion);
   const busy = useRef(false);
-  // The newest 30 versions are browsable; each loads once the browser opens.
-  const shown = versions.slice(0, 30);
-  const loaded = useQueries(open === null ? {} : Object.fromEntries(shown.map((v) => [String(v.version), { query: api.forms.getVersion, args: { formId, version: v.version } }])));
+  // Every version in the timeline must also be available in the browser.
+  const shown = versions;
+  // useQueries compares request identity during render; a fresh object creates a render loop.
+  const queries = useMemo(() => open === null ? {} : Object.fromEntries(shown.map((v) => [String(v.version), { query: api.forms.getVersion, args: { formId, version: v.version } }])), [open, shown, formId]);
+  const loaded = useQueries(queries);
   const browsed = shown.flatMap((v) => {
     const row = loaded[String(v.version)] as { definition: FormDefinition } | null | undefined | Error;
     if (!row || row instanceof Error) return [];
@@ -110,8 +112,8 @@ export default function HistoryTab({ formId, versions, canEdit, revision, before
         <button type="button" className="ws-btn ws-btn--primary" onClick={() => setOpen(versions[1] ? String(versions[1].version) : live)}><History size={16} aria-hidden />{t.browse}</button>
       </section>
       {open !== null && (
-        <VersionBrowser status={pending ? "loading" : browsed.length ? "ready" : "unavailable"} current={browsed[0]} currentLabel={t.liveVersion} past={browsed.slice(1)}
-          initialKey={open === live ? undefined : open} onClose={() => setOpen(null)}
+        <VersionBrowser key={`${open}:${pending ? "loading" : "ready"}`} status={pending ? "loading" : browsed.length ? "ready" : "unavailable"} current={browsed[0]} currentLabel={t.liveVersion} past={browsed.slice(1)}
+          initialKey={open} onClose={() => setOpen(null)}
           counts={(a, b) => compareQuestions(a.questions, b.questions).counts}
           sheet={(v, { against, side }) => <QuestionSheet questions={v.questions} against={against?.questions} side={side} showPoints={v.quiz} />}
           restore={canEdit ? {
