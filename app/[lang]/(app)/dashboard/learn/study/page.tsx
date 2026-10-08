@@ -12,6 +12,7 @@ import {
   useLearnMediaClient,
 } from "@/lib/learn/mediaClient";
 import { useLocale } from "@/lib/i18n";
+import { parseError } from "@/lib/errors";
 
 type Job = {
   jobId: Id<"studyLessonJobs">;
@@ -36,6 +37,37 @@ const get = makeFunctionReference<
   { jobId: Id<"studyLessonJobs"> },
   Job
 >("studyLessons:get");
+
+const errors = {
+  en: {
+    generic: "Something went wrong. Please try again.",
+    NETWORK: "You appear to be offline. Try again when you're connected.",
+    RATE_LIMITED: "You've prepared a lot of material recently. Wait a little, then try again.",
+    VALIDATION_FAILED: "This file or title couldn't be used. Check them and try again.",
+    NOT_FOUND: "That material isn't available any more. Upload it again.",
+    FORBIDDEN: "You don't have access to that material.",
+    ACCOUNT_REQUIRED: "Sign in to Chaos to prepare a lesson.",
+    ACCOUNT_RESTRICTED: "Your account can't create lessons right now.",
+  },
+  ar: {
+    generic: "حدث خطأ. حاول مرة أخرى.",
+    NETWORK: "يبدو أنك غير متصل. حاول مرة أخرى عند الاتصال.",
+    RATE_LIMITED: "أعددت مواد كثيرة مؤخرًا. انتظر قليلًا ثم حاول مرة أخرى.",
+    VALIDATION_FAILED: "تعذّر استخدام هذا الملف أو العنوان. راجعهما وحاول مرة أخرى.",
+    NOT_FOUND: "هذه المادة لم تعد متاحة. ارفعها مرة أخرى.",
+    FORBIDDEN: "لا تملك صلاحية الوصول إلى هذه المادة.",
+    ACCOUNT_REQUIRED: "سجّل الدخول إلى Chaos لإعداد درس.",
+    ACCOUNT_RESTRICTED: "لا يمكن لحسابك إنشاء دروس الآن.",
+  },
+};
+/** A short, translated message: server codes map to plain text, never raw Convex errors or stack traces. */
+function friendlyError(error: unknown, ar: boolean): string {
+  const t = ar ? errors.ar : errors.en;
+  const { code, message } = parseError(error, t.generic);
+  if (code in t) return t[code as keyof typeof t];
+  // Upload checks in the media client already explain themselves in English.
+  return !ar && code === "ERROR" ? message : t.generic;
+}
 
 export default function StudyLessonsPage() {
   const { locale } = useLocale();
@@ -85,7 +117,7 @@ export default function StudyLessonsPage() {
       });
       setSelected(result.jobId);
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      setError(friendlyError(e, ar));
     } finally {
       setBusy(false);
     }
