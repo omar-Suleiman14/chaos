@@ -4,8 +4,7 @@ import { useConvex } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { runRehearsal, type RehearsalStats } from "@/lib/liveRehearsal";
 import { formatNumber, useCopy, useLocale } from "@/lib/i18n";
-import { Lock, Minus, Plus, Square, UserPlus, Users } from "lucide-react";
-import { WsSwitch } from "@/components/workspace/primitives";
+import { Lock, Minus, Plus, Square, UserPlus, Users, Zap } from "lucide-react";
 import { AnimatedNumber } from "@/components/AnimatedNumber";
 import type { Id } from "@/convex/_generated/dataModel";
 
@@ -13,7 +12,7 @@ const copy = {
   en: {
     title: "Rehearsal classroom", lead: "Practise with simulated students before class. Nothing here reaches student records.", private: "Private",
     students: "Simulated students", studentsHelp: (max: string) => `Up to ${max}`, fewer: "Fewer students", more: "More students",
-    chaos: "Chaos mode", chaosHelp: "Missed answers, late phones and duplicate retries, like real school Wi-Fi.",
+    chaos: "Chaos mode", on: "On", off: "Off", chaosHelp: "Missed answers, late phones and duplicate retries, like real school Wi-Fi.",
     add: (n: string) => `Add ${n} students`, addSome: "Add students", stop: "Stop simulation",
     startHint: "Then start the game as usual.", runningHint: "Students are playing along. Start the game when you're ready.", addedHint: "Simulated students have joined.", lobbyOnly: "Add students while the game is in the lobby.",
     joined: "Joined", received: "Answers saved", duplicates: "Retries", missed: "Missed", errors: "Rejected", latency: "Slowest reply",
@@ -21,7 +20,7 @@ const copy = {
   ar: {
     title: "فصل التدريب", lead: "تدرّب مع طلاب افتراضيين قبل الحصة. لا يصل شيء من هنا إلى سجلات الطلاب.", private: "خاص",
     students: "طلاب افتراضيون", studentsHelp: (max: string) => `حتى ${max}`, fewer: "طلاب أقل", more: "طلاب أكثر",
-    chaos: "وضع الفوضى", chaosHelp: "إجابات مفقودة وهواتف متأخرة ومحاولات مكررة، مثل شبكة المدرسة الحقيقية.",
+    chaos: "وضع الفوضى", on: "تشغيل", off: "إيقاف", chaosHelp: "إجابات مفقودة وهواتف متأخرة ومحاولات مكررة، مثل شبكة المدرسة الحقيقية.",
     add: (n: string) => `أضف ${n} من الطلاب`, addSome: "أضف طلابًا", stop: "أوقف المحاكاة",
     startHint: "ثم ابدأ اللعبة كالمعتاد.", runningHint: "الطلاب يلعبون. ابدأ اللعبة عندما تكون جاهزًا.", addedHint: "انضم الطلاب الافتراضيون.", lobbyOnly: "أضف الطلاب ما دامت اللعبة في الردهة.",
     joined: "انضموا", received: "إجابات محفوظة", duplicates: "محاولات مكررة", missed: "مفقودة", errors: "مرفوضة", latency: "أبطأ رد",
@@ -98,26 +97,31 @@ export default function RehearsalPanel({
   return (
     <section className="rh" aria-labelledby="rehearsal-title">
       <header className="rh-head">
-        <span className="rh-icon" aria-hidden><Users size={18} /></span>
-        <div className="rh-head__text">
-          <h2 id="rehearsal-title">{t.title}</h2>
-          <p>{t.lead}</p>
-        </div>
+        <h2 id="rehearsal-title"><Users size={18} aria-hidden />{t.title}</h2>
         <span className="rh-private"><Lock size={12} aria-hidden />{t.private}</span>
       </header>
-      <div className="rh-group">
-        <div className="rh-row">
-          <label htmlFor="rehearsal-count" className="rh-row__text"><strong>{t.students}</strong><small>{t.studentsHelp(fmt(limit))}</small></label>
-          <div className="rh-stepper">
+      <p className="rh-lead">{t.lead}</p>
+      <div className="rh-controls">
+        <div className="rh-field">
+          <label htmlFor="rehearsal-count">{t.students}</label>
+          <div className="rh-count">
             <button type="button" aria-label={t.fewer} disabled={locked || count <= 1} onClick={() => step(-5)}><Minus size={15} aria-hidden /></button>
             <input id="rehearsal-count" type="number" inputMode="numeric" min={1} max={limit} value={Number.isFinite(count) ? count : ""} disabled={locked}
-              onChange={(e) => setCount(e.target.value === "" ? NaN : Number(e.target.value))} aria-invalid={!valid || undefined} />
+              onChange={(e) => setCount(e.target.value === "" ? NaN : Number(e.target.value))} aria-invalid={!valid || undefined} aria-describedby="rehearsal-count-help" />
             <button type="button" aria-label={t.more} disabled={locked || count >= limit} onClick={() => step(5)}><Plus size={15} aria-hidden /></button>
           </div>
+          <small id="rehearsal-count-help">{t.studentsHelp(fmt(limit))}</small>
         </div>
-        <div className="rh-row">
-          <span className="rh-row__text"><strong>{t.chaos}</strong><small>{t.chaosHelp}</small></span>
-          <WsSwitch checked={chaos} onChange={setChaos} disabled={locked} label={t.chaos} hideLabel />
+        <div className="rh-field">
+          <span id="rehearsal-chaos">{t.chaos}</span>
+          <div className="rh-seg" role="group" aria-labelledby="rehearsal-chaos" aria-describedby="rehearsal-chaos-help">
+            {[false, true].map((on) => (
+              <button key={String(on)} type="button" aria-pressed={chaos === on} disabled={locked} onClick={() => setChaos(on)}>
+                {on && <Zap size={14} aria-hidden />}{on ? t.on : t.off}
+              </button>
+            ))}
+          </div>
+          <small id="rehearsal-chaos-help">{t.chaosHelp}</small>
         </div>
       </div>
       <div className="rh-actions">
@@ -130,7 +134,7 @@ export default function RehearsalPanel({
             <UserPlus size={16} aria-hidden />{valid ? t.add(fmt(count)) : t.addSome}
           </button>
         )}
-        <p className="rh-hint">{running ? <><span className="rh-live" aria-hidden />{t.runningHint}</> : joined > 0 ? t.addedHint : lobby ? t.startHint : t.lobbyOnly}</p>
+        <p className="rh-hint" role="status">{running ? <><span className="rh-live" aria-hidden />{t.runningHint}</> : joined > 0 ? t.addedHint : lobby ? t.startHint : t.lobbyOnly}</p>
       </div>
       {stats && (
         <dl className="rh-stats">
