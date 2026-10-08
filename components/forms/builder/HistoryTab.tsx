@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { toast } from "@/lib/toast";
 import { useMutation, useQueries } from "convex/react";
 import { History } from "lucide-react";
@@ -60,7 +60,9 @@ export default function HistoryTab({ formId, versions, canEdit, revision, before
   const busy = useRef(false);
   // Every version in the timeline must also be available in the browser.
   const shown = versions;
-  const loaded = useQueries(open === null ? {} : Object.fromEntries(shown.map((v) => [String(v.version), { query: api.forms.getVersion, args: { formId, version: v.version } }])));
+  // useQueries compares request identity during render; a fresh object creates a render loop.
+  const queries = useMemo(() => open === null ? {} : Object.fromEntries(shown.map((v) => [String(v.version), { query: api.forms.getVersion, args: { formId, version: v.version } }])), [open, shown, formId]);
+  const loaded = useQueries(queries);
   const browsed = shown.flatMap((v) => {
     const row = loaded[String(v.version)] as { definition: FormDefinition } | null | undefined | Error;
     if (!row || row instanceof Error) return [];
