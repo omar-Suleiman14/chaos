@@ -12,6 +12,7 @@ import { sfx } from "@/lib/sfx";
 import { Zap, ArrowDown, Volume2, VolumeX } from "lucide-react";
 import { clearQuizBackup, readQuizBackup, writeQuizBackup, type QuizBackup } from "@/lib/quizRecovery";
 import LoadingState from "@/components/LoadingState";
+import { SaveStatus } from "./SaveStatus";
 
 
 import ErrorScreen from "@/components/site/ErrorScreen";
@@ -509,7 +510,7 @@ export default function QuizPlayer({ quizId, inline = false, onComplete }: { qui
   return (
     <div data-inline={inline || undefined} className="workspace-ui quiz-player h-[100dvh] bg-background text-foreground font-sans relative">
       <div className="fixed top-4 right-4 z-[60] flex items-center gap-2">
-        <span role="status" aria-live="polite" className="rounded-full border border-border bg-card px-3 py-2 text-xs text-muted-foreground">{recoveryCopy[saveStatus]}</span>
+        <SaveStatus state={saveStatus} label={recoveryCopy[saveStatus]} className="text-foreground" />
         <button
           type="button"
           onClick={toggleSound}

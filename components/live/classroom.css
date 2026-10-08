@@ -1,100 +1,72 @@
-.classroom-page {
-  max-width: 960px;
-  margin-inline: auto;
-  padding: clamp(20px, 4vw, 48px);
-  display: grid;
-  gap: 24px;
-}
-.classroom-page header {
-  display: grid;
-  gap: 8px;
-}
-.classroom-panel {
+/* Rehearsal classroom on the host screen: an inset grouped card in the live theme's colours
+   (falling back to the workspace's), with an iOS-style stepper and live result tiles. */
+.rh {
+  --rh-surface: var(--live-surface, var(--ws-card));
+  --rh-line: var(--live-line, var(--ws-line-strong));
+  --rh-text: var(--live-text, var(--on-background));
+  --rh-muted: var(--live-muted, var(--on-surface-variant));
+  --rh-accent: var(--live-accent, var(--primary));
+  --rh-fill: var(--live-fill, var(--ws-hover));
+  --rh-good: var(--live-good, var(--ws-success));
+  --rh-bad: var(--live-bad, var(--error));
   width: 100%;
-  max-width: 960px;
-  margin-inline: auto;
-  padding: clamp(16px, 3vw, 28px);
-  border: 1px solid var(--live-line, var(--ws-line));
-  border-radius: 20px;
-  background: var(--live-surface, var(--ws-card));
-  color: var(--live-text, var(--on-background));
+  max-width: 720px;
+  margin: 0 auto 20px;
   display: grid;
-  gap: 16px;
+  gap: 14px;
+  color: var(--rh-text);
   text-align: start;
 }
-.classroom-panel h2 {
-  font-size: 1.125rem;
-  font-weight: 650;
-  line-height: 1.4;
-}
-.classroom-panel p,
-.classroom-options small {
-  color: var(--live-muted, var(--on-surface-variant));
-  font-size: 0.875rem;
-  line-height: 1.6;
-}
-.classroom-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 16px;
-}
-.classroom-controls label:not(.ws-switch) {
-  display: grid;
-  gap: 8px;
-  font-size: 0.875rem;
-}
-.classroom-controls input {
-  width: 100px;
-  min-height: 44px;
-  padding: 8px 12px;
-  border: 1px solid var(--live-line, var(--ws-line));
-  border-radius: 10px;
-  background: var(--live-bg, var(--background));
-}
-.classroom-controls button {
-  min-height: 44px;
-}
-.classroom-timeline {
-  display: grid;
-  gap: 12px;
-  font-size: 0.875rem;
-}
-.classroom-timeline input {
-  width: 100%;
-  min-height: 44px;
-  accent-color: var(--live-accent, var(--primary));
-}
-.classroom-options {
-  display: grid;
-  gap: 0;
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-.classroom-options li {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  padding-block: 14px;
-  border-bottom: 1px solid var(--live-line, var(--ws-line));
-}
-.classroom-options li:last-child {
-  border-bottom: 0;
-}
-.classroom-options small {
-  display: block;
-}
-.classroom-panel :focus-visible {
-  outline: 2px solid var(--live-accent, var(--primary));
-  outline-offset: 3px;
-}
+.rh-head { display: flex; align-items: flex-start; gap: 12px; }
+.rh-icon { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(180deg, #5ad27a, #2fb35a); color: #fff; }
+.rh-head__text { flex: 1; min-width: 0; }
+.rh-head h2 { font-size: 19px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; }
+.rh-head p { margin-top: 2px; font-size: 14px; line-height: 1.45; color: var(--rh-muted); }
+.rh-private { display: inline-flex; align-items: center; gap: 4px; flex: none; min-height: 24px; padding: 0 10px; border-radius: 999px; background: var(--rh-fill); color: var(--rh-muted); font-size: 12px; font-weight: 600; }
+.rh-group { overflow: hidden; border-radius: 14px; background: var(--rh-surface); box-shadow: 0 0 0 .5px var(--rh-line); }
+.rh-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; min-height: 60px; padding: 10px 16px; }
+.rh-row + .rh-row { border-top: .5px solid var(--rh-line); }
+.rh-row__text { display: grid; gap: 1px; min-width: 0; }
+.rh-row__text strong { font-size: 15px; font-weight: 600; }
+.rh-row__text small { font-size: 13px; line-height: 1.4; color: var(--rh-muted); }
+.rh-stepper { display: inline-flex; align-items: center; flex: none; overflow: hidden; border-radius: 9px; background: var(--rh-fill); }
+.rh-stepper button { display: grid; place-items: center; width: 40px; height: 34px; border: 0; background: none; color: var(--rh-text); cursor: pointer; transition: background .12s; }
+.rh-stepper button:hover:not(:disabled) { background: color-mix(in srgb, var(--rh-text) 8%, transparent); }
+.rh-stepper button:disabled { opacity: .35; cursor: default; }
+.rh-stepper input { width: 54px; height: 34px; border: 0; border-inline: .5px solid var(--rh-line); background: none; color: var(--rh-text); font: inherit; font-size: 16px; font-weight: 600; text-align: center; font-variant-numeric: tabular-nums; -moz-appearance: textfield; }
+.rh-stepper input::-webkit-inner-spin-button, .rh-stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+.rh-stepper input[aria-invalid] { color: var(--rh-bad); }
+.rh-stepper input:disabled { opacity: .6; }
+.rh-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 14px; }
+.rh-btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 20px; border: 0; border-radius: 999px; background: var(--rh-fill); color: var(--rh-accent); font: inherit; font-size: 15px; font-weight: 600; cursor: pointer; transition: transform var(--ws-press-out, .16s ease), opacity .15s; }
+.rh-btn:active:not(:disabled) { transform: scale(.97); transition: transform var(--ws-press-in, 90ms ease); }
+.rh-btn--primary { background: var(--rh-accent); color: #fff; }
+.rh-btn:disabled { opacity: .4; cursor: default; }
+.rh-hint { display: inline-flex; align-items: center; gap: 8px; font-size: 13.5px; color: var(--rh-muted); }
+.rh-live { width: 8px; height: 8px; border-radius: 999px; background: var(--rh-good); box-shadow: 0 0 0 0 color-mix(in srgb, var(--rh-good) 50%, transparent); animation: rh-pulse 1.6s ease-out infinite; }
+@keyframes rh-pulse { to { box-shadow: 0 0 0 8px transparent; } }
+.rh-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 8px; margin: 0; }
+.rh-stats > div { display: grid; gap: 2px; padding: 12px 14px; border-radius: 12px; background: var(--rh-surface); box-shadow: 0 0 0 .5px var(--rh-line); }
+.rh-stats dt { font-size: 12px; font-weight: 600; color: var(--rh-muted); }
+.rh-stats dd { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
+.rh-stats dd small { font-size: 13px; font-weight: 600; color: var(--rh-muted); }
+.rh-stats > div[data-warn] dd { color: var(--rh-bad); }
+.rh :focus-visible { outline: 2px solid var(--rh-accent); outline-offset: 2px; }
 @media (max-width: 480px) {
-  .classroom-controls {
-    align-items: stretch;
-  }
-  .classroom-controls > * {
-    flex: 1 1 100%;
-  }
+  .rh-private { display: none; }
+  .rh-btn { flex: 1; justify-content: center; }
 }
+@media (prefers-reduced-motion: reduce) { .rh-live { animation: none; } }
+
+/* The way into the time machine once a game ends. */
+.live-replay { display: flex; justify-content: center; margin-bottom: 16px; }
+.live-replay .live-btn { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
+
+/* The live theme has no workspace tokens: give the switch iOS proportions and colours here. */
+.rh .ws-switch__track { width: 51px; height: 31px; background: var(--rh-fill); box-shadow: inset 0 0 0 .5px var(--rh-line); }
+.rh .ws-switch__track::after { width: 27px; height: 27px; box-shadow: 0 3px 8px rgb(0 0 0 / .15), 0 1px 1px rgb(0 0 0 / .16); }
+.rh .ws-switch input:checked + .ws-switch__track { background: var(--rh-good); }
+.rh .ws-switch input:checked + .ws-switch__track::after { transform: translateX(20px); }
+[dir="rtl"] .rh .ws-switch input:checked + .ws-switch__track::after { transform: translateX(-20px); }
+.rh .ws-switch input:focus-visible + .ws-switch__track { box-shadow: 0 0 0 3px color-mix(in srgb, var(--rh-accent) 40%, transparent); }
+.rh .ws-switch input:disabled + .ws-switch__track { opacity: .5; }

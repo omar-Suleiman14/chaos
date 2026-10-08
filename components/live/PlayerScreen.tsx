@@ -2,6 +2,7 @@
 
 import { clearLiveAnswer, readLiveAnswer, saveLiveAnswer } from "@/lib/liveRecovery";
 import TeamPanel, { TEAMS_ENABLED } from "./TeamPanel";
+import { SaveStatus } from "@/components/quizzes/SaveStatus";
 
 import "./live.css";
 import "./apple.css";
@@ -364,7 +365,7 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
               <p className="live-muted text-sm sr-only">{t.shortcuts}</p>
             </>
           )}
-          {backupStatus && <p className="live-muted" role="status">{t[backupStatus]}</p>}
+          {backupStatus && <div className="flex justify-center"><SaveStatus state={backupStatus === "saving" ? "saving" : backupStatus === "deviceSaved" ? "device" : "unavailable"} label={t[backupStatus]} /></div>}
           {error && <p className="live-error" role="alert">{error}</p>}
           {error && picked.length > 0 && !view.answered && !sent && <button type="button" className="live-btn" disabled={sending} onClick={() => void send(picked)}>{t.retry}</button>}
         </div>

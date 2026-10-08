@@ -80,3 +80,25 @@ does. A game stopped before reveal awards no round points. Replay queries read o
 round's answers and two score ledgers, rather than every student's entire history.
 Older games reconstruct saved answer timing with an estimated reveal time and a
 clearly labelled sample of at most 100 players. Replay is host-only and read-only.
+
+## Interface
+
+The teacher tools follow Apple's patterns in Chaos colours (screenshots in
+`docs/screenshots/apple-polish/`):
+
+- **Classroom time machine** (`/dashboard/live/<game>/replay`) works like Time Machine.
+  The current question is the front window, and earlier questions recede behind it.
+  The timeline on the trailing edge, the up/down arrows and the ↑/↓ keys move between
+  questions. Inside a question, play or scrub through a waveform of answer arrivals.
+  The leaderboard re-sorts at the reveal. Media controls stay left to right in Arabic.
+- **Ghost replay** follows one student: their answer, rank and score, and a marker on
+  the scrubber.
+- **Version history** works like Preview's "Browse All Versions": the current version
+  on one side, earlier versions stacked behind on the other, with a date timeline.
+  Changed, added and removed questions, options, marks and answer keys are marked.
+  On phones a segmented control switches between the two sides.
+- **Question detective** is an inset grouped list sorted by what needs attention, each
+  with a plain-language reason.
+- **Rehearsal classroom** uses an iOS stepper, a switch and live result tiles.
+- **Saving status** is one capsule shared by quizzes and live phones. "Saved" folds to
+  a tick, and states that need attention keep their words.

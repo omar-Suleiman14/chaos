@@ -265,13 +265,20 @@ describe("Listen menu", () => {
 });
 
 describe("glossary card", () => {
-  it("reads the term, its definition and its Arabic meaning aloud, named in the player", async () => {
+  it("says only the word, in its own language, without opening the narration player", async () => {
     const { TermCard } = await import("@/components/learn/reader/Glossary");
-    const onSpeak = vi.fn();
-    const entry = { term: "oligodendrocytes", definition: "CNS glial cells that form myelin around central axons.", translation: "الخلايا قليلة التغصن", explanation: "خلايا داعمة تكوّن الميالين.", language: "ar" };
-    inWorkspace(<TermCard term={{ entry: entry as never, rect: new DOMRect(0, 0, 10, 10) }} onClose={() => {}} onSpeak={onSpeak} />);
-    fireEvent.click(screen.getByRole("button", { name: "Read aloud" }));
-    expect(onSpeak).toHaveBeenCalledWith("oligodendrocytes.\nCNS glial cells that form myelin around central axons.\nالخلايا قليلة التغصن.\nخلايا داعمة تكوّن الميالين.", "oligodendrocytes");
+    const entry = { term: "oligodendrocytes", pronunciation: "/ˌɒlɪɡəʊˈdɛndrəsaɪts/", definition: "CNS glial cells that form myelin around central axons.", translation: "الخلايا قليلة التغصن", explanation: "خلايا داعمة تكوّن الميالين.", language: "ar" };
+    inWorkspace(<TermCard term={{ entry: entry as never, rect: new DOMRect(0, 0, 10, 10) }} onClose={() => {}} canSpeak />);
+    const word = screen.getByRole("button", { name: /^Pronounce oligodendrocytes/ });
+    expect(word).toHaveTextContent("/ˌɒlɪɡəʊˈdɛndrəsaɪts/");
+    fireEvent.click(word);
+    expect(synth.spoken).toEqual(["oligodendrocytes"]);
+    expect([synth.queue[0].lang, word.getAttribute("aria-pressed")]).toEqual(["en-US", "true"]);
+    expect(screen.queryByRole("region", { name: "Read aloud" })).toBeNull();
+    act(() => synth.finish());
+    expect(word).toHaveAttribute("aria-pressed", "false");
+    fireEvent.click(screen.getByRole("button", { name: "Pronounce الخلايا قليلة التغصن" }));
+    expect([synth.spoken.at(-1), synth.queue[0].lang]).toEqual(["الخلايا قليلة التغصن", "ar-SA"]);
   });
 
   it("plays through the player with each language in its own voice", async () => {
@@ -288,7 +295,7 @@ describe("glossary card", () => {
   it("offers no speaker without speech", async () => {
     const { TermCard } = await import("@/components/learn/reader/Glossary");
     inWorkspace(<TermCard term={{ entry: { term: "x", definition: "y" } as never, rect: new DOMRect(0, 0, 1, 1) }} onClose={() => {}} />);
-    expect(screen.queryByRole("button", { name: "Read aloud" })).toBeNull();
+    expect(screen.queryByRole("button", { name: /Pronounce/ })).toBeNull();
   });
 });
 
@@ -320,16 +327,35 @@ describe("outline sidebar", () => {
 });
 
 describe("block actions on touch screens", () => {
-  it("docks the tapped block's menu in a bar outside the lesson text instead of over it", () => {
+  // jsdom lays nothing out: put every block mid-screen so the callout has room above it.
+  beforeEach(() => { vi.spyOn(Element.prototype, "getBoundingClientRect").mockReturnValue(new DOMRect(16, 300, 343, 80)); });
+  afterEach(() => { vi.restoreAllMocks(); });
+  it("opens the tapped block's actions in one tap, in a callout outside the lesson text", () => {
     narrow = true;
     inWorkspace(<LessonReader lesson={lesson()} />);
     fireEvent.click(screen.getByText("Cirrhosis raises resistance. Varices form."));
     const bar = screen.getByRole("toolbar", { name: "Actions for this part" });
     expect(document.querySelector("article")!.contains(bar)).toBe(false);
     expect(document.getElementById("p1")).toHaveAttribute("data-active", "true");
-    fireEvent.click(within(bar).getByRole("button", { name: "Actions for this part" }));
-    expect(screen.getByRole("menuitem", { name: "Save this part" })).toBeInTheDocument();
-    fireEvent.click(within(bar).getByRole("button", { name: "Close actions" }));
+    expect(within(bar).getAllByRole("button").map((b) => b.textContent)).toEqual(["Save", "Note", "Discuss", "Copy link"]);
+    expect(within(bar).getByRole("button", { name: "Save" })).toHaveAttribute("title", "Save this part");
+    fireEvent.click(within(bar).getByRole("button", { name: "Note" }));
+    expect(screen.queryByRole("toolbar", { name: "Actions for this part" })).toBeNull();
+  });
+
+  it("closes on a second tap of the block, on Escape and on a tap outside the lesson", () => {
+    narrow = true;
+    inWorkspace(<LessonReader lesson={lesson()} />);
+    const block = screen.getByText("Cirrhosis raises resistance. Varices form.");
+    fireEvent.click(block);
+    expect(screen.getByRole("toolbar", { name: "Actions for this part" })).toBeInTheDocument();
+    fireEvent.click(block);
+    expect(screen.queryByRole("toolbar", { name: "Actions for this part" })).toBeNull();
+    fireEvent.click(block);
+    fireEvent.keyDown(document, { key: "Escape" });
+    expect(screen.queryByRole("toolbar", { name: "Actions for this part" })).toBeNull();
+    fireEvent.click(block);
+    fireEvent.pointerDown(document.body);
     expect(screen.queryByRole("toolbar", { name: "Actions for this part" })).toBeNull();
   });
 

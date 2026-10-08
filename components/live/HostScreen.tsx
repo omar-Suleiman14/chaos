@@ -4,7 +4,7 @@ import "./live.css";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, Check, Copy, Maximize, Minimize, Pause, Play, Users, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, History, Maximize, Minimize, Pause, Play, Users, Volume2, VolumeX, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { BREAKS, TIME_LIMITS } from "@/convex/liveLogic";
@@ -198,7 +198,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
 
       <main className="live-main" id="live-main">
         {game.rehearsal && <RehearsalPanel gameId={gameId} pin={game.pin} maxPlayers={game.settings.maxPlayers} lobby={game.state === "lobby" && !game.startsAt} />}
-        {game.state === "ended" && <Link className="ws-btn" href={hostHref(`/dashboard/live/${gameId}/replay`)}>{locale === "ar" ? "أعد مشاهدة الفصل" : "Replay classroom"}</Link>}
+        {game.state === "ended" && <div className="live-replay"><Link className="live-btn" href={hostHref(`/dashboard/live/${gameId}/replay`)}><History size={16} aria-hidden />{locale === "ar" ? "افتح آلة زمن الفصل" : "Open classroom time machine"}</Link></div>}
         {TEAMS_ENABLED && <TeamPanel gameId={gameId} frozen={game.state !== "lobby" || game.startsAt != null} maxPlayers={game.settings.maxPlayers} players={game.players} />}
 
         {game.state === "lobby" && game.startsAt && (

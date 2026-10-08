@@ -42,6 +42,7 @@ import { CurriculumBadges, ExternalRefLine, ModerationNotice, ProvenanceLine, Qu
 import { AiMark } from "@/components/site/aiMarks";
 import BlockRenderer from "./BlockRenderer";
 import { GlossaryContext, TermCard, type OpenTerm } from "./Glossary";
+import { BlockCallout } from "./BlockCallout";
 import { findEntry, glossaryMatcher } from "@/lib/learn/glossary";
 import DiscussionPanel from "./DiscussionPanel";
 import HandoffDialog, { type HandoffContext } from "./HandoffDialog";
@@ -68,11 +69,11 @@ const copy = {
     back: "Back", untitled: "Untitled lesson", by: "By", createdWith: (name: string) => `Created with ${name}`, minutes: (n: number) => `${n} min read`, version: (n: number) => `Version ${n}`, updated: (d: string) => `Published ${d}`,
     ask: "Ask", discussion: "Discussion", save: "Save", saved: "Saved", more: "More", fork: "Copy to my library", forkHelp: "Make an editable copy. The original author stays credited.",
     report: "Report", copyLink: "Copy link", linkCopied: "Link copied", askChatgpt: "Ask ChatGPT", askClaude: "Ask Claude", edit: "Edit lesson",
-    listen: "Listen", listenHelp: "Read this lesson aloud", speechUnavailable: "Read aloud isn't available in this browser.", closeActions: "Close actions",
+    listen: "Listen", listenHelp: "Read this lesson aloud", speechUnavailable: "Read aloud isn't available in this browser.",
     tabs: { lesson: "Lesson", practice: "Practice" }, sources: "Sources", openSource: "Open", noSourceLink: "No link or file for this source.",
     helpful: "Was this lesson helpful?", yes: "Helpful", no: "Not helpful", thanks: "Thanks for the feedback.",
     complete: "Mark as completed", completed: "Completed", reset: "Start over", resumeLabel: "Continue where you left off", resumeTop: "Your last reading position", resumeGo: "Resume", resumeDismiss: "Dismiss",
-    blockMenu: "Actions for this part", saveBlock: "Save this part", note: "Add private note", discuss: "Discuss this part", copyPart: "Copy link to this part",
+    blockMenu: "Actions for this part", actSave: "Save", actNote: "Note", actDiscuss: "Discuss", actThreads: "Threads", actLink: "Copy link", actExplain: "Explain", actAsk: "Ask", saveBlock: "Save this part", note: "Add private note", discuss: "Discuss this part", copyPart: "Copy link to this part",
     explainImage: "Explain image", askImage: "Ask about this", savedToast: "Saved to your Learn library", noteSaved: "Note saved (only you can see it)",
     highlightSaved: "Highlighted (only you can see it)", removeHighlight: "Remove highlight", highlightRemoved: "Highlight removed",
     noteTitle: "Private note", notePh: "Only you can see this note.", noteSave: "Save note", noteCancel: "Cancel", noteDelete: "Delete note", noteDeleted: "Note deleted", copyFailed: "Could not copy the link",
@@ -87,11 +88,11 @@ const copy = {
     back: "رجوع", untitled: "درس بلا عنوان", by: "بقلم", createdWith: (name: string) => `أُنشئ باستخدام ${name}`, minutes: (n: number) => `${n} د قراءة`, version: (n: number) => `الإصدار ${n}`, updated: (d: string) => `نُشر ${d}`,
     ask: "اسأل", discussion: "النقاش", save: "احفظ", saved: "محفوظ", more: "المزيد", fork: "انسخ إلى مكتبتي", forkHelp: "أنشئ نسخة قابلة للتعديل. يبقى الكاتب الأصلي منسوبًا.",
     report: "إبلاغ", copyLink: "انسخ الرابط", linkCopied: "نُسخ الرابط", askChatgpt: "اسأل ChatGPT", askClaude: "اسأل Claude", edit: "عدّل الدرس",
-    listen: "استمع", listenHelp: "اقرأ هذا الدرس بصوت عالٍ", speechUnavailable: "القراءة بصوت عالٍ غير متاحة في هذا المتصفح.", closeActions: "أغلق الإجراءات",
+    listen: "استمع", listenHelp: "اقرأ هذا الدرس بصوت عالٍ", speechUnavailable: "القراءة بصوت عالٍ غير متاحة في هذا المتصفح.",
     tabs: { lesson: "الدرس", practice: "التدريب" }, sources: "المصادر", openSource: "افتح", noSourceLink: "لا رابط أو ملف لهذا المصدر.",
     helpful: "هل كان هذا الدرس مفيدًا؟", yes: "مفيد", no: "غير مفيد", thanks: "شكرًا على رأيك.",
     complete: "علّم كمكتمل", completed: "مكتمل", reset: "ابدأ من جديد", resumeLabel: "تابع من حيث توقفت", resumeTop: "آخر موضع قرأته", resumeGo: "تابع", resumeDismiss: "إخفاء",
-    blockMenu: "إجراءات لهذا الجزء", saveBlock: "احفظ هذا الجزء", note: "أضف ملاحظة خاصة", discuss: "ناقش هذا الجزء", copyPart: "انسخ رابط هذا الجزء",
+    blockMenu: "إجراءات لهذا الجزء", actSave: "احفظ", actNote: "ملاحظة", actDiscuss: "ناقش", actThreads: "النقاشات", actLink: "انسخ الرابط", actExplain: "اشرح", actAsk: "اسأل", saveBlock: "احفظ هذا الجزء", note: "أضف ملاحظة خاصة", discuss: "ناقش هذا الجزء", copyPart: "انسخ رابط هذا الجزء",
     explainImage: "اشرح الصورة", askImage: "اسأل عن هذا", savedToast: "حُفظ في مكتبة Learn", noteSaved: "حُفظت الملاحظة (لا يراها غيرك)",
     highlightSaved: "ظُلّل النص (لا يراه غيرك)", removeHighlight: "أزل التظليل", highlightRemoved: "أُزيل التظليل",
     noteTitle: "ملاحظة خاصة", notePh: "لا يرى هذه الملاحظة غيرك.", noteSave: "احفظ الملاحظة", noteCancel: "إلغاء", noteDelete: "احذف الملاحظة", noteDeleted: "حُذفت الملاحظة", copyFailed: "تعذّر نسخ الرابط",
@@ -174,18 +175,16 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const [scrolled, setScrolled] = useState(0);
   const [openSource, setOpenSource] = useState<{ source: LessonSource; locator: string } | null>(null);
   const article = useRef<HTMLElement>(null);
-  // Phones and tablets have no hover, so a block's ⋯ menu appears only on the block the reader tapped.
-  // There is no gutter beside the text there, so the menu docks in a bar at the screen edge
-  // farther from the tapped block instead of covering its words.
+  // Phones and tablets have no hover and no gutter beside the text, so tapping a block opens its
+  // actions in a callout pointing at it (BlockCallout): one tap, no ⋯ menu in between.
   const [tappedBlock, setTappedBlock] = useState<string>();
-  const [blockDock, setBlockDock] = useState<"top" | "bottom">("bottom");
+  const closeCallout = useCallback(() => setTappedBlock(undefined), []);
   const tapBlock = (event: ReactMouseEvent<HTMLElement>) => {
     if (!window.matchMedia("(max-width: 1180px), (hover: none)").matches) return;
     const target = event.target as HTMLElement;
     if (target.closest("a, button, input, textarea, select, summary, [role='menu'], [role='button'], .lx-block__handle")) return;
-    const el = target.closest<HTMLElement>("[data-block-id]");
-    const id = el?.dataset.blockId;
-    if (el) setBlockDock(el.getBoundingClientRect().top > window.innerHeight * 0.55 ? "top" : "bottom");
+    if (window.getSelection()?.toString()) return; // selecting text shows the selection toolbar instead
+    const id = target.closest<HTMLElement>("[data-block-id]")?.dataset.blockId;
     setTappedBlock((current) => (current === id ? undefined : id));
   };
   const [narration, setNarration] = useState<NarrationRequest | null>(null);
@@ -509,18 +508,16 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
         <SelectionToolbar selection={selection} onAction={onSelectionAction} canWrite={signedIn} aiLabel={t.aiOff} canLookUp={!!findEntry(glossary.matcher, selection.text)} canRead={speechSupported()} within={main.current} />
       )}
       {tapped && (
-        <div className="lx-block-bar ws-glass" data-dock={blockDock} role="toolbar" aria-label={t.blockMenu}>
-          <BlockAside block={tapped} t={t} discussions={!!caps.discussions} onAction={asideAction} variant="bar"
-            noteCount={notes.filter((n) => n.blockId === tapped.id).length}
+        <BlockCallout key={tapped.id} blockId={tapped.id} label={t.blockMenu} onClose={closeCallout}>
+          <BlockActions block={tapped} t={t} discussions={!!caps.discussions} onAction={(action, block) => { closeCallout(); asideAction(action, block); }}
             threadCount={threads.filter((th) => th.blockId === tapped.id && !th.resolved).length} />
-          <button type="button" className="ws-icon-button" aria-label={t.closeActions} onClick={() => setTappedBlock(undefined)}><X size={16} aria-hidden /></button>
-        </div>
+        </BlockCallout>
       )}
       {narration && (
         <Narration key={lesson.id} request={narration} lessonId={lesson.id} content={view.content} title={meta.title || t.untitled} description={meta.description}
           language={meta.language} article={article} activities={activities} onClose={() => setNarration(null)} />
       )}
-      {openTerm && <TermCard term={openTerm} onClose={closeTerm} onSpeak={speechSupported() ? (text, title) => startNarration({ mode: "selection", text, title }) : undefined} />}
+      {openTerm && <TermCard term={openTerm} onClose={closeTerm} canSpeak={speechSupported()} />}
       {handoff && <HandoffDialog input={handoff} onClose={() => setHandoff(null)} />}
       {reporting && <ReportDialog target={{ kind: "lesson", id: lesson.id }} title={meta.title} onClose={() => setReporting(false)} />}
       {lightbox && <Lightbox {...lightbox} onClose={() => setLightbox(null)} />}
@@ -537,12 +534,11 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
 type AsideAction = "explain" | "ask" | "save" | "note" | "discuss" | "copy" | "threads";
 
 /** A block's menu and marks. Memoized: blocks keep their identity across lesson updates (BlockRenderer), so an agent adding a block re-renders one menu, not all of them. */
-const BlockAside = memo(function BlockAside({ block, t, discussions, noteCount, threadCount, onAction, variant = "gutter" }: { block: Block; t: Copy; discussions: boolean; noteCount: number; threadCount: number; onAction: (action: AsideAction, block: Block) => void; variant?: "gutter" | "bar" }) {
+const BlockAside = memo(function BlockAside({ block, t, discussions, noteCount, threadCount, onAction }: { block: Block; t: Copy; discussions: boolean; noteCount: number; threadCount: number; onAction: (action: AsideAction, block: Block) => void }) {
   const isImage = block.type === "image";
   return (
     <>
-      <WsMenu label={t.blockMenu} align={variant === "bar" ? "start" : "end"} triggerClassName={variant === "bar" ? "ws-btn ws-btn--sm ws-btn--ghost lx-block-bar__menu" : "lx-block-action"}
-        trigger={variant === "bar" ? <><MoreHorizontal size={16} aria-hidden /><span>{t.blockMenu}</span></> : <MoreHorizontal size={15} />}>
+      <WsMenu label={t.blockMenu} align="end" triggerClassName="lx-block-action" trigger={<MoreHorizontal size={15} />}>
         {(close) => (
           <>
             {isImage && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); onAction("explain", block); }}><ImageIcon size={15} />{t.explainImage}</button>}
@@ -562,6 +558,25 @@ const BlockAside = memo(function BlockAside({ block, t, discussions, noteCount, 
     </>
   );
 });
+
+/** The touch callout's actions, laid out like iOS's edit menu: each one a single tap. */
+function BlockActions({ block, t, discussions, threadCount, onAction }: { block: Block; t: Copy; discussions: boolean; threadCount: number; onAction: (action: AsideAction, block: Block) => void }) {
+  const isImage = block.type === "image";
+  const actions: { action: AsideAction; icon: typeof Bookmark; label: string; title: string; badge?: number }[] = [
+    ...(isImage ? [{ action: "explain" as const, icon: ImageIcon, label: t.actExplain, title: t.explainImage }, { action: "ask" as const, icon: MessageCircleQuestion, label: t.actAsk, title: t.askImage }] : []),
+    { action: "save", icon: Bookmark, label: t.actSave, title: t.saveBlock },
+    { action: "note", icon: NotebookPen, label: t.actNote, title: t.note },
+    ...(discussions ? [{ action: "discuss" as const, icon: MessageSquarePlus, label: t.actDiscuss, title: t.discuss }] : []),
+    ...(discussions && threadCount > 0 ? [{ action: "threads" as const, icon: MessageSquare, label: t.actThreads, title: t.marks(threadCount, "thread"), badge: threadCount }] : []),
+    { action: "copy", icon: Link2, label: t.actLink, title: t.copyPart },
+  ];
+  return actions.map(({ action, icon: Icon, label, title, badge }) => (
+    <button key={action} type="button" className="lx-actbar__action" title={title} onClick={() => onAction(action, block)}>
+      <span className="lx-actbar__icon" aria-hidden><Icon size={18} strokeWidth={1.9} />{badge ? <span className="lx-actbar__badge">{badge}</span> : null}</span>
+      <span>{label}</span>
+    </button>
+  ));
+}
 
 /** Memoized so lesson updates do not re-render it; `onClick` is a stable callback. */
 const ListenButton = memo(function ListenButton({ className, size, pressed, label, title, onClick }: { className: string; size: number; pressed: boolean; label: string; title: string; onClick: () => void }) {
