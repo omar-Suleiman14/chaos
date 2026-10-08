@@ -78,6 +78,8 @@ export interface McpFormInput {
   title: string;
   description?: string;
   quizMode?: boolean;
+  /** Quiz mode: whether respondents see the answer key and explanations after submitting (default true). */
+  showAnswers?: boolean;
   presentation?: McpPresentation;
   questions: McpQuestion[];
   theme?: McpThemePatch;
@@ -261,6 +263,10 @@ export function parseFormInput(raw: unknown, partial = false): { input: Partial<
     if (typeof b.quizMode !== "boolean") errors.push("quizMode must be true or false.");
     else out.quizMode = b.quizMode;
   }
+  if (b.showAnswers !== undefined) {
+    if (typeof b.showAnswers !== "boolean") errors.push("showAnswers must be true or false.");
+    else out.showAnswers = b.showAnswers;
+  }
   if (b.presentation !== undefined) {
     if (!MCP_PRESENTATIONS.includes(b.presentation as McpPresentation)) errors.push(`presentation must be one of ${MCP_PRESENTATIONS.join(", ")}.`);
     else out.presentation = b.presentation as McpPresentation;
@@ -416,7 +422,8 @@ export function toDefinition(input: Partial<McpFormInput>, previous?: FormDefini
     presentation: input.presentation ? toPresentation[input.presentation] : base.presentation,
     fields,
   };
-  if (quizEnabled) def.quiz = { enabled: true };
+  const showAnswers = input.showAnswers ?? base.quiz?.showAnswers;
+  if (quizEnabled) def.quiz = showAnswers === false ? { enabled: true, showAnswers: false } : { enabled: true };
   else delete def.quiz;
   // Forms created from ChatGPT start with sound on (Glass); edits keep whatever the form has.
   const sound = input.sound ?? (previous ? undefined : "soft");
@@ -431,7 +438,7 @@ export interface McpQuestionView extends McpQuestion {
 }
 
 /** The draft as the model sees it. Answer keys are included: only the owner can call this. */
-export function fromDefinition(def: FormDefinition): { title: string; description: string; quizMode: boolean; presentation: McpPresentation; questions: McpQuestionView[]; unsupported: string[]; theme: ReturnType<typeof themeView> } {
+export function fromDefinition(def: FormDefinition): { title: string; description: string; quizMode: boolean; showAnswers?: boolean; presentation: McpPresentation; questions: McpQuestionView[]; unsupported: string[]; theme: ReturnType<typeof themeView> } {
   const unsupported = new Set<string>();
   const questions: McpQuestionView[] = [];
   for (const f of def.fields) {
@@ -463,6 +470,7 @@ export function fromDefinition(def: FormDefinition): { title: string; descriptio
     title: def.title,
     description: def.description,
     quizMode: !!def.quiz?.enabled,
+    ...(def.quiz?.enabled ? { showAnswers: def.quiz.showAnswers !== false } : {}),
     presentation: fromPresentation[def.presentation] ?? "page",
     questions,
     unsupported: [...unsupported],

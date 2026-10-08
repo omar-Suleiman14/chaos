@@ -55,7 +55,7 @@ const baseInstructions = `Chaos (chaos.fail) is where this person builds forms, 
 - Lessons: search_lessons/list_lessons use scope owned for drafts or public for published discovery. get_lesson draft and get_lesson_outline with outlineFrom draft require edit permission; outlines default to published. get_lesson and get_lesson_outline return bounded pages: offset 0?500, limit 1?100; follow nextOffset until null instead of claiming the first page is complete. Keep stable block IDs and use the current expectedRevision for edits; on conflict reload before making a reviewed change.
 - Teams: Personal is one user. Business teams (free for a limited time) share editing: list_teams, create_team, invite_team_member (returns a single-use link; Chaos sends no email), list_team_members, change_team_member_role, remove_team_member, share_with_team and list_team_resources. Team-only (internal) content: publish_lesson, publish_course and publish_flashcard_set with visibility restricted and teamId; set_form_response_controls with access signed_in and audienceTeamId for forms and quizzes; host_game with teamId. Only members of that team can read, respond or join. Invite, remove or change roles only on explicit request.
 - Folders: list_folders and list_folder_contents use paginationOpts and continueCursor, including empty partial pages. create_folder creates an owned private folder; add_folder_member requires ownership of both folder and asset; move_folder needs explicit relocation intent. Folder changes never publish content.
-- A quiz is a form with quizMode on. For "make a quiz about what we discussed", write the questions from the conversation yourself: mostly single_choice with 3–4 options, set correctAnswers to the exact option label, and give points.
+- A quiz is a form with quizMode on. For "make a quiz about what we discussed", write the questions from the conversation yourself: mostly single_choice with 3–4 options, set correctAnswers to the exact option label, and give points. Respondents see the correct answers and explanations after submitting; set showAnswers false for a graded test whose key must stay private.
 - Write like a real teacher or organiser, not a brochure. Each question is one short, direct sentence (usually under 15 words) that tests one fact or asks one thing. Options are 1–5 words, parallel in form, and every wrong option is plausible; no "All of the above", joke options or filler. Leave question descriptions empty unless a hint is truly needed. A quiz explanation, if any, is one plain sentence saying why the answer is right. Titles are 2–6 words; the intro is one sentence or empty. No emojis, exclamation marks, hype ("ultimate", "fun-filled", "dive into", "journey", "test your knowledge") or restating the question in the options.
 - Use natural, human language in all content and chat replies. Write short, clear sentences. Avoid em dashes; use periods or commas instead. Avoid promotional wording, jargon, stock phrases and filler. Match the person's language, including natural Arabic when they write in Arabic.
 - Keep chat replies short: one or two sentences on what you made, then the link. Do not list the questions back unless the person asks.
@@ -96,6 +96,7 @@ const formFields = {
   title: z.string().min(1).max(200),
   description: z.string().max(5000).optional().describe("Intro text shown at the top."),
   quizMode: z.boolean().optional().describe("true for a scored quiz with an answer key."),
+  showAnswers: z.boolean().optional().describe("Quiz mode only: after submitting, respondents see which answers were right, the correct answers and the explanations (default true). false shows only their marks, for tests whose key must stay private."),
   presentation: z.enum(MCP_PRESENTATIONS).optional().describe("page = all questions on one page (default); one_at_a_time = one question per screen; sections = one page per section; swipe = full-screen cards."),
   questions: z.array(question).max(200),
   theme: z.string().max(60).optional().describe("Optional look by name, e.g. Lilac (default), Banner, Paper, Evergreen, Spotlight (Typeform-like), Midnight (dark). See list_themes."),
@@ -387,6 +388,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
         title: formFields.title.optional(),
         description: formFields.description,
         quizMode: formFields.quizMode,
+        showAnswers: formFields.showAnswers,
         presentation: formFields.presentation,
         questions: formFields.questions.optional().describe("The complete new question list."),
       }),

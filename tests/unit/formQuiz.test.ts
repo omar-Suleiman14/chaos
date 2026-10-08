@@ -33,6 +33,16 @@ describe("form quiz mode", () => {
     expect(quizReview(def, null)).toBeNull();
   });
 
+  it("returns only marks when the creator hides the answers", () => {
+    const def = quiz();
+    def.quiz = { enabled: true, showAnswers: false };
+    def.fields[0].quiz!.explanation = "A is right.";
+    expect(quizReview(def, gradeQuiz(def, { single: "b", multi: ["x", "z"] }))).toEqual([
+      { fieldId: "single", earned: 0, possible: 2, correctOptionIds: [] },
+      { fieldId: "multi", earned: 3, possible: 3, correctOptionIds: [] },
+    ]);
+  });
+
   it("does not send answer keys or option scores to respondents", () => {
     const source = quiz();
     const publicDef = publicQuizDefinition(source);

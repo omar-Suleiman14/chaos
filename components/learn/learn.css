@@ -763,6 +763,9 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-reading-menu__value { color: var(--on-surface-variant); font-size: 12.5px; font-weight: 450; max-width: 10em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lx-reading-menu__hint { color: var(--on-surface-variant); font-size: 12px; line-height: 1.45; margin-top: -4px; }
 .lx-reading-menu hr { margin: 0 -6px; }
+/* A hairline between each setting in the Text and Listen menus (a hint stays with the setting above it,
+   and the two voice rows stay together). It runs edge to edge, like the menu's own dividers. */
+:is(.lx-reading-menu__body, .lx-level) > * + :not(.lx-reading-menu__hint, hr, .lx-voice-row + .lx-voice-row) { margin-inline: -6px; padding: 10px 6px 0; border-top: 1px solid var(--ws-line); }
 /* Choices are chips, not full-width menu rows. */
 .ws-menu .lx-chip { display: inline-flex; width: auto; min-height: 32px; padding: 4px 11px; border-radius: 999px; font-size: 13px; font-weight: 500; }
 .lx-narr-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
