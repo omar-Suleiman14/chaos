@@ -750,9 +750,11 @@ function SwipeFlow({ flow, props }: { flow: Flow; props: FormRendererProps }) {
 }
 
 // ── Ending ────────────────────────────────────────────────────────────────
-export function EndingView({ ending, def, language, answers, children, score }: {
+export function EndingView({ ending, def, language, answers, children, score, celebrate = true }: {
   ending: Ending | null; def: FormDefinition; language: Language; answers: Answers; children?: React.ReactNode;
   score?: { value: number; max: number } | null;
+  /** false when showing a result submitted earlier (a reload): no sound, count-up or confetti again. */
+  celebrate?: boolean;
 }) {
   const localized = ending ? localizeEnding(ending, language, def) : null;
   const fallback = language === "ar" ? { title: "شكرًا لك", message: "تم استلام إجابتك." } : { title: "Thank you", message: "Your response was received." };
@@ -761,6 +763,7 @@ export function EndingView({ ending, def, language, answers, children, score }: 
   const pack = themeSound(def);
 
   useEffect(() => {
+    if (!celebrate) { setShown(score?.value ?? 0); return; }
     sfx.play("finish", pack);
     haptics.success();
     if (!score || window.matchMedia("(prefers-reduced-motion: reduce)").matches) {

@@ -138,7 +138,8 @@ export function formatTimestamp(seconds: number): string {
 
 /** Privacy-enhanced embed; start/end limit playback to the useful section. */
 export function youTubeEmbedUrl(id: string, start?: number, end?: number): string {
-  const params = new URLSearchParams({ rel: "0", modestbranding: "1" });
+  // playsinline keeps iOS on YouTube's own inline controls instead of its bare fullscreen player.
+  const params = new URLSearchParams({ rel: "0", modestbranding: "1", playsinline: "1" });
   if (start) params.set("start", String(Math.floor(start)));
   if (end && (!start || end > start)) params.set("end", String(Math.floor(end)));
   return `https://www.youtube-nocookie.com/embed/${id}?${params}`;

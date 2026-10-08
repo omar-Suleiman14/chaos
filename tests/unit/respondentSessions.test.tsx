@@ -25,7 +25,7 @@ vi.mock("@/components/forms/FormRenderer", () => ({
     <button onClick={() => props.onSubmit()}>Submit</button>
     {props.footer}
   </section>,
-  EndingView: ({ children }: { children: React.ReactNode }) => <div>Finished{children}</div>,
+  EndingView: ({ children, celebrate }: { children: React.ReactNode; celebrate?: boolean }) => <div data-testid="ending" data-celebrate={String(celebrate)}>Finished{children}</div>,
   formUi: { en: { required: "Required" } }, themeClass: () => "", themeStyle: () => ({}),
 }));
 const definition = emptyDefinition("Example");
@@ -207,4 +207,28 @@ it("offers Arabic consent and prevents duplicate clicks during ingestion", async
   expect(m.ingest).toHaveBeenCalledTimes(1);
   await act(async () => finish({ evidenceCount: 1 }));
   expect(screen.getByRole("status")).toHaveTextContent("أُضيفت هذه المحاولة إلى تقدّمك الدراسي.");
+});
+
+it("celebrates a quiz once; after a reload it shows the result and what was wrong, without confetti", async () => {
+  vi.useRealTimers();
+  const fields = definition.fields;
+  definition.quiz = { enabled: true };
+  definition.fields = [{ id: "q1", type: "choice", label: "Which vein drains the spleen?", required: true, options: [{ id: "a", label: "Splenic vein" }, { id: "b", label: "Renal vein" }] }];
+  try {
+    m.submit.mockResolvedValue({ receiptCode: "R1", endingId: null, status: "completed", responseId: "r1", quizScore: 0, quizMaxScore: 1,
+      quizReview: [{ fieldId: "q1", earned: 0, possible: 1, correctOptionIds: ["a"], explanation: "It runs along the pancreas." }] });
+    const first = render(<RespondToForm shareId="quiz" />);
+    await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Submit" })); });
+    expect(screen.getByTestId("ending")).toHaveAttribute("data-celebrate", "true");
+    first.unmount();
+
+    render(<RespondToForm shareId="quiz" />);
+    expect(screen.getByTestId("ending")).toHaveAttribute("data-celebrate", "false");
+    const review = screen.getByRole("region", { name: "Your answers" });
+    expect(review).toHaveTextContent("Which vein drains the spleen?");
+    expect(review).toHaveTextContent("Correct answerSplenic vein");
+    expect(review).toHaveTextContent("It runs along the pancreas.");
+  } finally {
+    definition.fields = fields;
+  }
 });

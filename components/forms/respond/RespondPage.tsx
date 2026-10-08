@@ -25,6 +25,8 @@ import { useInitialTheme } from "./initial-theme";
 import { formatScheduleTime } from "@/convex/formSchedule";
 import type { Id } from "@/convex/_generated/dataModel";
 import { StudyProgressOptIn } from "./StudyProgressOptIn";
+import { QuizReview } from "./QuizReview";
+import type { QuizReviewItem } from "@/convex/formQuiz";
 import { linkOrigin } from "@/lib/hosts";
 
 function randomHex(bytes: number) {
@@ -76,7 +78,7 @@ function readHidden(names: string[]): Record<string, string> | undefined {
   for (const name of names) { const value = params.get(name); if (value?.trim()) out[name] = value.slice(0, 500); }
   return Object.keys(out).length ? out : undefined;
 }
-interface Receipt { receiptCode: string; endingId: string | null; editToken?: string; submittedAt: number; answers: Answers; language: Language; quizScore?: number | null; quizMaxScore?: number | null }
+interface Receipt { receiptCode: string; endingId: string | null; editToken?: string; submittedAt: number; answers: Answers; language: Language; quizScore?: number | null; quizMaxScore?: number | null; quizReview?: QuizReviewItem[] | null }
 
 /** The respondent experience for one form; also served at custom links (chaos.fail/<username>/<slug>). */
 /** `minimal` (inline only): just the questions, without the toolbar, progress bar, cover or full-height stage. */
@@ -224,6 +226,8 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   const [progress, setProgress] = useState<LocalProgress | null>(null);
   const [restored, setRestored] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  // Celebrate a submission once, when it happens; a receipt restored after a refresh just shows the result.
+  const [justSubmitted, setJustSubmitted] = useState(false);
   // Never trust a receipt restored from shared-device storage as account evidence.
   const [studyResponseId, setStudyResponseId] = useState<Id<"formResponses"> | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -335,7 +339,8 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
       if (editing && editToken) {
         const result = await update({ shareId, editToken, answers: progress.answers, language: progress.language, accessCode });
         posthog.capture("form_response_updated", { language: progress.language, form_type: def.quiz?.enabled ? "quiz" : "form" });
-        setReceipt({ receiptCode: result.receiptCode, endingId: result.endingId, editToken, submittedAt: Date.now(), answers: progress.answers, language: progress.language, quizScore: result.quizScore, quizMaxScore: result.quizMaxScore });
+        setJustSubmitted(true);
+        setReceipt({ receiptCode: result.receiptCode, endingId: result.endingId, editToken, submittedAt: Date.now(), answers: progress.answers, language: progress.language, quizScore: result.quizScore, quizMaxScore: result.quizMaxScore, quizReview: result.quizReview ?? null });
         return;
       }
       const token = form.allowEditAfterSubmit ? responseEditToken.current ?? progress.editToken ?? randomHex(24) : undefined;
@@ -347,10 +352,11 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
         startedAt: progress.startedAt, accessCode, editToken: token, resumeToken: resumeToken ?? undefined, lastFieldId: progress.lastFieldId,
         honeypot: honeypot || undefined, hidden: progress.hidden,
       });
-      const r: Receipt = { receiptCode: result.receiptCode, endingId: result.endingId, editToken: token, submittedAt: Date.now(), answers: progress.answers, language: progress.language, quizScore: result.quizScore, quizMaxScore: result.quizMaxScore };
+      const r: Receipt = { receiptCode: result.receiptCode, endingId: result.endingId, editToken: token, submittedAt: Date.now(), answers: progress.answers, language: progress.language, quizScore: result.quizScore, quizMaxScore: result.quizMaxScore, quizReview: result.quizReview ?? null };
       if (result.status === "completed") onComplete?.();
       setStudyResponseId(result.status === "completed" ? result.responseId : null);
       posthog.capture("form_response_submitted", { language: progress.language, form_type: def.quiz?.enabled ? "quiz" : "form" });
+      setJustSubmitted(true);
       setReceipt(r);
       try {
         window.localStorage.removeItem(storageKey);
@@ -419,7 +425,8 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   return (
     <Shell embed={embed} def={def} plain={form.hideBranding} languageSwitch={languageSwitch} immersive={receipt ? def.presentation === "conversational" || def.presentation === "swipe" : !(form.alreadyResponded && !editing) && !notOpen}>
       {receipt ? (
-        <EndingView ending={ending} def={def} language={receipt.language} answers={receipt.answers} score={score}>
+        <EndingView ending={ending} def={def} language={receipt.language} answers={receipt.answers} score={score} celebrate={justSubmitted}>
+          {def.quiz?.enabled && receipt.quizReview && <QuizReview def={def} review={receipt.quizReview} answers={receipt.answers} language={receipt.language} />}
           {studyProgress && form.signedIn && form.responseIdentityLinked && def.quiz?.enabled && studyResponseId && (
             <StudyProgressOptIn key={studyResponseId} responseId={studyResponseId} language={receipt.language} />
           )}

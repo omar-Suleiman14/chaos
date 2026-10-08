@@ -32,7 +32,8 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   `connect-src 'self' ${[...clerk, "https://clerk-telemetry.com", ...convex, ...posthog, ...vercelLive, "wss://ws-us3.pusher.com"].join(" ")}`,
-  `frame-src 'self' https://challenges.cloudflare.com ${vercelLive.join(" ")}`,
+  // Lesson YouTube blocks play in the privacy-enhanced player.
+  `frame-src 'self' https://challenges.cloudflare.com https://www.youtube-nocookie.com ${vercelLive.join(" ")}`,
   "worker-src 'self' blob: data:",
   "media-src 'self' blob: data: https:",
   "object-src 'none'",

@@ -101,6 +101,11 @@ describe("forms: responses", () => {
     const retry = await t.mutation(api.respond.submitResponse, { ...submission("key-quiz-001", { answer: "wrong" }), shareId });
     expect(first).toMatchObject({ quizScore: 4, quizMaxScore: 4, duplicate: false });
     expect(retry).toMatchObject({ quizScore: 4, quizMaxScore: 4, duplicate: true });
+    // The respondent's own result carries the key, so they can see what they got wrong; a retry returns the same.
+    expect(first.quizReview).toEqual([{ fieldId: "answer", earned: 4, possible: 4, correctOptionIds: ["right"] }]);
+    expect(retry.quizReview).toEqual(first.quizReview);
+    const missed = await t.mutation(api.respond.submitResponse, { ...submission("key-quiz-002", { answer: "wrong" }), shareId });
+    expect(missed.quizReview).toEqual([{ fieldId: "answer", earned: 0, possible: 4, correctOptionIds: ["right"] }]);
     expect((await owner.query(api.formResults.getResponse, { responseId: first.responseId }))?.quizScore).toBe(4);
   });
 
