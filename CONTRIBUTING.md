@@ -55,7 +55,7 @@ Check dependency advisories with `pnpm audit` and `pnpm audit --prod`. Report un
 - Pull requests that only touch Markdown docs or issue/PR templates skip the test and build jobs.
 - Keep each pull request to one change, and link the issue it closes (`Closes #123`).
 - Describe what you changed and how you checked it, including anything you could not check.
-- Screenshots help for visual changes, ideally in both English and Arabic.
+- **Every visible change needs screenshots in the pull request description.** Show each changed screen in English and Arabic, in light and dark appearance, at desktop and phone widths where they apply. Show motion with a short recording or before/after frames. The `PR screenshots` check fails when pages, components or styles change without an image in the description. Use the `no-visual-change` label only when those files change and nothing visible does.
 - Changes to the public API, data model, authentication, authorization or other security-sensitive code get extra scrutiny.
 
 ## Issues

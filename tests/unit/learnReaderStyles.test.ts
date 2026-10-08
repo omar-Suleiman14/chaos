@@ -50,7 +50,7 @@ describe("theme toggle in the reading settings menu", () => {
 
 describe("block ⋯ menu placement", () => {
   const narrow = all.filter((r) => r.media.includes("max-width: 1180px") && r.media.includes("hover: none"));
-  it("is hidden inside blocks on narrow and touch screens (it docks in .lx-block-bar instead)", () => {
+  it("is hidden inside blocks on narrow and touch screens (a callout, .lx-actbar, opens instead)", () => {
     expect(narrow.some((r) => r.selector === ".lx-block__handle" && /display:\s*none/.test(r.body))).toBe(true);
     const shown = narrow.filter((r) => /lx-block__handle/.test(r.selector) && /display:\s*(block|flex|grid)/.test(r.body));
     expect(shown.map((r) => r.selector)).toEqual([]);
@@ -63,8 +63,8 @@ describe("block ⋯ menu placement", () => {
     expect(all.find((r) => r.selector === ".lx-article" && !r.media && /padding-inline/.test(r.body))?.body).toMatch(/padding-inline:\s*36px/);
   });
 
-  it("the docked bar is fixed to the screen edge, never laid out inside the lesson", () => {
-    expect(all.find((r) => r.selector === ".lx-block-bar")?.body).toMatch(/position:\s*fixed/);
+  it("the touch callout floats over the page, never laid out inside the lesson", () => {
+    expect(all.find((r) => r.selector === ".lx-actbar")?.body).toMatch(/position:\s*fixed/);
   });
 });
 
@@ -79,7 +79,8 @@ describe("motion", () => {
   });
 
   it("the narration overlay animates only itself, never lesson text", () => {
-    const transitions = all.filter((r) => /transition:/.test(r.body) && /lx-narr(-|\b)(?!ation)/.test(r.selector));
+    // Colour swatches in the Listen menu are controls, not lesson text: they may animate.
+    const transitions = all.filter((r) => /transition:/.test(r.body) && /lx-narr(?!-swatch)(-|\b)(?!ation)/.test(r.selector));
     expect(transitions.length).toBeGreaterThan(0);
     for (const r of transitions) expect(r.selector).toMatch(/^(\.reduce-motion |\.dark )?\.lx-narr-layer/);
   });

@@ -20,7 +20,7 @@ Closes #
 
 ## Screenshots
 
-<!-- Required for visible UI changes; otherwise "N/A". -->
+<!-- Required for every visible change, and checked by CI: English and Arabic, light and dark, desktop and phone where they apply. Otherwise "N/A" (use the no-visual-change label if UI files changed without a visible difference). -->
 
 ## Not verified
 

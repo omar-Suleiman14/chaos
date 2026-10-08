@@ -107,9 +107,9 @@ test.describe("block ⋯ menu", () => {
         }
         expect(await p.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
       }
-      // The docked bar is fixed inside the screen, outside the lesson's flow.
-      await p.evaluate(() => document.body.insertAdjacentHTML("beforeend", `<div class="lx-block-bar ws-glass" role="toolbar"><button class="ws-btn ws-btn--sm ws-btn--ghost">⋯ Actions for this part</button><button class="ws-icon-button">×</button></div>`));
-      const bar = (await p.locator(".lx-block-bar").boundingBox())!;
+      // The callout fits the screen with every action showing, even an image's six.
+      await p.evaluate(() => document.body.insertAdjacentHTML("beforeend", `<div class="lx-actbar ws-glass" data-side="above" role="toolbar" style="top:200px;left:8px">${["Explain", "Ask", "Save", "Note", "Discuss", "Copy link"].map((l) => `<button class="lx-actbar__action"><span class="lx-actbar__icon">•</span><span>${l}</span></button>`).join("")}</div>`));
+      const bar = (await p.locator(".lx-actbar").boundingBox())!;
       expect(bar.x).toBeGreaterThanOrEqual(0);
       expect(bar.x + bar.width).toBeLessThanOrEqual(width);
       expect(bar.y + bar.height).toBeLessThanOrEqual(700);

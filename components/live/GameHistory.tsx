@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useQuery } from "convex/react";
-import { ArrowRight, Radio } from "lucide-react";
+import { ArrowRight, History, Radio } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { formatNumber, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
@@ -46,7 +46,7 @@ export default function GameHistory({ limit }: { limit?: number }) {
             <div className="games-quiz-list__title"><h3>{game.title}</h3><p>{meta}</p></div>
             {href && (
               <div className="games-quiz-list__actions">
-                {!running && <Link className="ws-btn" href={`/dashboard/live/${game._id}/replay`}>{locale === "ar" ? "إعادة المشاهدة" : "Replay"}</Link>}
+                {!running && <Link className="ws-btn" href={`/dashboard/live/${game._id}/replay`}><History size={15} aria-hidden="true" />{locale === "ar" ? "إعادة المشاهدة" : "Replay"}</Link>}
                 <Link className={running ? "ws-btn ws-btn--primary" : "ws-btn"} href={href}>
                   {running ? <><Radio size={16} aria-hidden="true" />{t.open}</> : <>{t.results}<ArrowRight size={15} aria-hidden="true" className="rtl:rotate-180" /></>}
                 </Link>

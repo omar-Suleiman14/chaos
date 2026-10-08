@@ -1,0 +1,37 @@
+/* The answer-save capsule. Drawn from currentColor so it sits on any quiz or live theme. */
+.save-status {
+  --save-tone: currentColor;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: min(320px, calc(100vw - 96px));
+  min-height: 30px;
+  padding: 0 12px 0 9px;
+  border-radius: 999px;
+  background: color-mix(in srgb, currentColor 7%, transparent);
+  box-shadow: inset 0 0 0 .5px color-mix(in srgb, currentColor 16%, transparent);
+  -webkit-backdrop-filter: blur(16px) saturate(1.5);
+  backdrop-filter: blur(16px) saturate(1.5);
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  white-space: nowrap;
+  transition: padding .3s cubic-bezier(.22, 1, .36, 1);
+}
+[dir="rtl"] .save-status { padding: 0 9px 0 12px; }
+.save-status[data-state="saved"] { --save-tone: var(--ws-success, #23875f); }
+.save-status[data-state="device"] { --save-tone: var(--ws-warning, #d9730d); }
+.save-status[data-state="unavailable"] { --save-tone: var(--error, #c23b33); }
+.save-status[data-state="draft"] { opacity: .8; }
+.save-status__icon { flex: none; color: var(--save-tone); }
+.save-status[data-state="saving"] .save-status__icon { animation: save-spin .9s linear infinite; opacity: .7; }
+.save-status[data-state="saved"] .save-status__icon { animation: save-pop .35s cubic-bezier(.22, 1, .36, 1); }
+.save-status__label { overflow: hidden; text-overflow: ellipsis; max-width: 280px; opacity: .85; transition: max-width .35s cubic-bezier(.22, 1, .36, 1), opacity .25s; }
+.save-status[data-folded] { padding: 0 8px; }
+.save-status[data-folded] .save-status__label { max-width: 0; opacity: 0; }
+@keyframes save-spin { to { transform: rotate(360deg); } }
+@keyframes save-pop { from { transform: scale(.4); opacity: 0; } }
+@media (prefers-reduced-motion: reduce) {
+  .save-status, .save-status__label { transition: none; }
+  .save-status[data-state="saving"] .save-status__icon, .save-status[data-state="saved"] .save-status__icon { animation: none; }
+}
