@@ -6,7 +6,7 @@ import InlineFlashcards from "./InlineFlashcards";
 import { Fragment, memo, useEffect, useMemo, useState } from "react";
 import { useStableCallback } from "@/lib/stableCallback";
 import { PlayCircle } from "lucide-react";
-import { asBlocks, blockText, cellInlines, formatTimestamp, inlineText, parseAnnotations, youTubeEmbedUrl, type Block, type CitationContent, type Inline, type LinkContent, type StyledText, type TableContent } from "@/lib/learn/doc";
+import { asBlocks, blockText, cellInlines, formatTimestamp, inlineText, parseAnnotations, parseYouTube, youTubeEmbedUrl, type Block, type CitationContent, type Inline, type LinkContent, type StyledText, type TableContent } from "@/lib/learn/doc";
 import { resolveLearnFileUrl as resolveFileUrl } from "@/lib/learn/data";
 import type { Highlight, LessonSource } from "@/lib/learn/types";
 import { calloutIcon, sourceIcon, sourceLabel, useBlockCopy, type CalloutTone } from "../blockShared";
@@ -158,18 +158,20 @@ function ReaderImage({ block, onOpen }: { block: Block; onOpen?: (block: Block, 
   );
 }
 
-function ReaderYouTube({ block }: { block: Block }) {
+type YouTubeProps = { videoId: string; start?: number; end?: number; caption?: string; title?: string };
+
+function ReaderYouTube({ video: p }: { video: YouTubeProps }) {
   const t = useCopy(copy);
   const bt = useBlockCopy();
   const [playing, setPlaying] = useState(false);
-  const p = block.props as { videoId: string; start: number; end: number; caption: string; title?: string };
   if (!/^[A-Za-z0-9_-]{11}$/.test(p.videoId ?? "")) return null;
-  const range = p.start || p.end ? `${formatTimestamp(p.start)}–${p.end ? formatTimestamp(p.end) : "…"}` : "";
+  const start = Number(p.start) || 0, end = Number(p.end) || 0;
+  const range = start || end ? `${formatTimestamp(start)}–${end ? formatTimestamp(end) : "…"}` : "";
   return (
     <div className="lx-youtube">
       <div className="lx-youtube__frame">
         {playing ? (
-          <iframe src={`${youTubeEmbedUrl(p.videoId, p.start, p.end)}&autoplay=1`} title={p.title || p.caption || "YouTube"} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+          <iframe src={`${youTubeEmbedUrl(p.videoId, start, end)}&autoplay=1`} title={p.title || p.caption || "YouTube"} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
         ) : (
           <>
             {/* Facade: YouTube loads only when the reader asks for it. */}
@@ -284,14 +286,19 @@ const BlockBody = memo(function BlockBody({ block, sources, highlights: hl, onCi
       return <div className="lx-callout" data-tone={tone} role="note"><span className="lx-callout__icon" aria-hidden><Icon size={18} /></span><div className="lx-callout__body">{inline}</div></div>;
     }
     case "image": return <ReaderImage block={block} onOpen={onOpenImage} />;
-    case "youtube": return <ReaderYouTube block={block} />;
+    case "youtube": return <ReaderYouTube video={block.props as YouTubeProps} />;
     case "source": return <ReaderSource block={block} sources={sources} onCite={onCite} />;
     case "table": return block.content && !Array.isArray(block.content) ? <Table table={block.content} sources={sources} onCite={onCite} id={block.id} /> : null;
     case "checkListItem": return <div className="lx-check"><input type="checkbox" checked={!!block.props.checked} readOnly aria-readonly tabIndex={-1} /> <span>{inline}</span></div>;
     case "toggleListItem": return null; // rendered by the wrapper as <details>
     case "video": case "audio": case "file": {
       const href = safeHref(String(block.props.url ?? ""));
-      return href ? <p><a href={href} target="_blank" rel="noopener noreferrer">{String(block.props.name || block.props.caption || href)}</a></p> : null;
+      if (!href) return null;
+      const caption = String(block.props.caption ?? "");
+      // A YouTube link in a plain video block plays as a YouTube embed; a <video> tag cannot play it.
+      const yt = block.type === "video" ? parseYouTube(href) : null;
+      if (yt) return <ReaderYouTube video={{ videoId: yt.id, start: yt.start, caption }} />;
+      return <p><a href={href} target="_blank" rel="noopener noreferrer">{String(block.props.name || caption || href)}</a></p>;
     }
     default: return inline ? <p>{inline}</p> : null;
   }
