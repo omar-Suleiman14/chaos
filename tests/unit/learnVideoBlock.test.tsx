@@ -6,7 +6,7 @@ vi.mock("convex/react", () => ({ useConvex: () => ({}), useQuery: () => undefine
 const { default: BlockRenderer } = await import("@/components/learn/reader/BlockRenderer");
 
 const video = (url: string) => [{ id: "v", type: "video", props: { url, caption: "Portal circulation", name: "" }, children: [] }];
-const show = (content: unknown[]) => render(<LocaleProvider initial="en"><BlockRenderer content={content as never} /></LocaleProvider>);
+const show = (content: unknown[]) => render(<LocaleProvider initial="en"><BlockRenderer content={content as never} sources={[]} /></LocaleProvider>);
 
 describe("video blocks in the reader", () => {
   it("plays a YouTube link in a plain video block as a YouTube embed with its own controls", () => {

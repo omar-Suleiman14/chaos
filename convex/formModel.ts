@@ -112,7 +112,7 @@ export const definitionValidator = v.object({
   fields: v.array(fieldValidator),
   endings: v.array(endingValidator),
   theme: themeValidator,
-  quiz: v.optional(v.object({ enabled: v.boolean() })),
+  quiz: v.optional(v.object({ enabled: v.boolean(), showAnswers: v.optional(v.boolean()) })),
   translations: v.optional(v.record(v.string(), v.object({ title: v.optional(v.string()), description: v.optional(v.string()) }))),
 });
 
