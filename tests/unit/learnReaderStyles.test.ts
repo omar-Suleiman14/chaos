@@ -79,7 +79,8 @@ describe("motion", () => {
   });
 
   it("the narration overlay animates only itself, never lesson text", () => {
-    const transitions = all.filter((r) => /transition:/.test(r.body) && /lx-narr(-|\b)(?!ation)/.test(r.selector));
+    // Colour swatches in the Listen menu are controls, not lesson text: they may animate.
+    const transitions = all.filter((r) => /transition:/.test(r.body) && /lx-narr(?!-swatch)(-|\b)(?!ation)/.test(r.selector));
     expect(transitions.length).toBeGreaterThan(0);
     for (const r of transitions) expect(r.selector).toMatch(/^(\.reduce-motion |\.dark )?\.lx-narr-layer/);
   });

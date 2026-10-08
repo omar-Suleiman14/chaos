@@ -13,7 +13,7 @@
   display: grid;
   grid-template-rows: auto 1fr;
   color: var(--tm-chrome);
-  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", var(--ws-font);
+  font-family: var(--ws-font);
   -webkit-font-smoothing: antialiased;
   overflow-x: clip;
 }

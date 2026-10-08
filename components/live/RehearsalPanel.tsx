@@ -6,6 +6,7 @@ import { runRehearsal, type RehearsalStats } from "@/lib/liveRehearsal";
 import { formatNumber, useCopy, useLocale } from "@/lib/i18n";
 import { Lock, Minus, Plus, Square, UserPlus, Users } from "lucide-react";
 import { WsSwitch } from "@/components/workspace/primitives";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
 import type { Id } from "@/convex/_generated/dataModel";
 
 const copy = {
@@ -132,11 +133,11 @@ export default function RehearsalPanel({
         <p className="rh-hint">{running ? <><span className="rh-live" aria-hidden />{t.runningHint}</> : joined > 0 ? t.addedHint : lobby ? t.startHint : t.lobbyOnly}</p>
       </div>
       {stats && (
-        <dl className="rh-stats" role="status" aria-live="polite">
+        <dl className="rh-stats">
           {tiles.map(({ key, label, unit, warn }) => (
             <div key={key} data-warn={(warn && stats[key] > 0) || undefined}>
               <dt>{label}</dt>
-              <dd>{fmt(stats[key])}{unit && <small> {unit}</small>}</dd>
+              <dd><AnimatedNumber value={stats[key]} format={fmt} />{unit && <small> {unit}</small>}</dd>
             </div>
           ))}
         </dl>

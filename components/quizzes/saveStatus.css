@@ -19,9 +19,9 @@
   transition: padding .3s cubic-bezier(.22, 1, .36, 1);
 }
 [dir="rtl"] .save-status { padding: 0 9px 0 12px; }
-.save-status[data-state="saved"] { --save-tone: #34c759; }
-.save-status[data-state="device"] { --save-tone: #ff9500; }
-.save-status[data-state="unavailable"] { --save-tone: #ff3b30; }
+.save-status[data-state="saved"] { --save-tone: var(--ws-success, #23875f); }
+.save-status[data-state="device"] { --save-tone: var(--ws-warning, #d9730d); }
+.save-status[data-state="unavailable"] { --save-tone: var(--error, #c23b33); }
 .save-status[data-state="draft"] { opacity: .8; }
 .save-status__icon { flex: none; color: var(--save-tone); }
 .save-status[data-state="saving"] .save-status__icon { animation: save-spin .9s linear infinite; opacity: .7; }

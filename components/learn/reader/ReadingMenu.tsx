@@ -4,21 +4,21 @@
  * on the Listen icon (ListenMenu). Every choice is a menu item, so the menu's arrow keys reach all of them.
  */
 import { memo } from "react";
-import { Type } from "lucide-react";
+import { Monitor, Moon, Sun, Type } from "lucide-react";
 import { WsMenu } from "@/components/workspace/primitives";
-import { ThemeToggle } from "@/components/ThemeToggle";
+import { useTheme, type ThemeMode } from "@/components/ThemeProvider";
 import { useCopy } from "@/lib/i18n";
 import type { ReaderPrefs } from "@/lib/learn/readerPrefs";
-import { ChoiceChips, type SetPrefs } from "./ChoiceChips";
+import { ChoiceChips, Segmented, type SetPrefs } from "./ChoiceChips";
 
 const copy = {
   en: {
     reading: "Reading settings", size: "Text size", sizes: { small: "Small", normal: "Normal", large: "Large" }, width: "Line width", widths: { narrow: "Narrow", normal: "Normal", wide: "Wide" },
-    font: "Typeface", fonts: { sans: "Sans", serif: "Serif" }, appearance: "Appearance",
+    font: "Typeface", fonts: { sans: "Sans", serif: "Serif" }, appearance: "Appearance", modes: { light: "Light", dark: "Dark", system: "Auto" },
   },
   ar: {
     reading: "إعدادات القراءة", size: "حجم النص", sizes: { small: "صغير", normal: "عادي", large: "كبير" }, width: "عرض السطر", widths: { narrow: "ضيق", normal: "عادي", wide: "عريض" },
-    font: "الخط", fonts: { sans: "بلا زوائد", serif: "بزوائد" }, appearance: "المظهر",
+    font: "الخط", fonts: { sans: "بلا زوائد", serif: "بزوائد" }, appearance: "المظهر", modes: { light: "فاتح", dark: "داكن", system: "تلقائي" },
   },
 };
 
@@ -33,14 +33,21 @@ const ReadingMenu = memo(function ReadingMenu({ prefs, setPrefs }: { prefs: Read
 });
 export default ReadingMenu;
 
+const SIZE_PREVIEW = { small: "12px", normal: "13.5px", large: "15.5px" } as Record<string, string>;
+const MODES: readonly ThemeMode[] = ["light", "dark", "system"];
+const MODE_ICON = { light: Sun, dark: Moon, system: Monitor };
+
 function ReadingSettings({ prefs, setPrefs }: { prefs: ReaderPrefs; setPrefs: SetPrefs }) {
   const t = useCopy(copy);
+  const { mode, setMode } = useTheme();
   return (
     <div className="lx-reading-menu__body">
-      <ChoiceChips prefs={prefs} setPrefs={setPrefs} name="size" label={t.size} options={t.sizes} />
+      {/* Each choice previews itself: sizes in their size, typefaces in their face. */}
+      <ChoiceChips prefs={prefs} setPrefs={setPrefs} name="size" label={t.size} options={t.sizes} optionStyle={(v) => ({ fontSize: SIZE_PREVIEW[v] })} />
       <ChoiceChips prefs={prefs} setPrefs={setPrefs} name="width" label={t.width} options={t.widths} />
-      <ChoiceChips prefs={prefs} setPrefs={setPrefs} name="font" label={t.font} options={t.fonts} />
-      <div className="lx-reading-menu__appearance"><span className="lx-reading-menu__label">{t.appearance}</span><ThemeToggle className="ws-icon-button" /></div>
+      <ChoiceChips prefs={prefs} setPrefs={setPrefs} name="font" label={t.font} options={t.fonts} optionStyle={(v) => (v === "serif" ? { fontFamily: '"Libron", Georgia, serif' } : undefined)} />
+      <Segmented label={t.appearance} values={MODES} value={mode} onChange={setMode}
+        render={(m) => { const Icon = MODE_ICON[m]; return <><Icon size={14} aria-hidden /><bdi>{t.modes[m]}</bdi></>; }} />
     </div>
   );
 }

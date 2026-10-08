@@ -40,6 +40,7 @@ export default function ListenSettings({ prefs, setPrefs, onBack }: { prefs: Rea
   const t = useCopy(copy);
   const voices = useVoices();
   const [voiceFor, setVoiceFor] = useState<Lang | null>(null);
+  const [returned, setReturned] = useState(false);
   const root = useRef<HTMLDivElement>(null);
   // Moving between levels keeps focus inside the menu, on the new level's first row.
   const first = useRef(!onBack);
@@ -48,19 +49,20 @@ export default function ListenSettings({ prefs, setPrefs, onBack }: { prefs: Rea
     root.current?.querySelector<HTMLElement>('[role^="menuitem"]')?.focus();
   }, [voiceFor]);
   const back = (voiceFor || onBack) && (
-    <button type="button" role="menuitem" className="lx-reading-menu__row" onClick={() => (voiceFor ? setVoiceFor(null) : onBack?.())}>
+    <button type="button" role="menuitem" className="lx-reading-menu__row" onClick={() => { if (voiceFor) { setVoiceFor(null); setReturned(true); } else onBack?.(); }}>
       <ChevronLeft size={16} className="lx-flip" aria-hidden />{t.back}
     </button>
   );
-  if (!speechSupported()) return <div ref={root} style={{ display: "contents" }}>{back}<p className="lx-muted" style={{ padding: "4px 10px" }}>{t.unsupported}</p></div>;
-  if (voiceFor) return <div ref={root} style={{ display: "contents" }}><VoiceList lang={voiceFor} voices={voices} prefs={prefs} setPrefs={setPrefs} back={back} /></div>;
+  if (!speechSupported()) return <div ref={root} className="lx-level">{back}<p className="lx-muted" style={{ padding: "4px 10px" }}>{t.unsupported}</p></div>;
+  // Levels slide in from the side they lead to, like a navigation stack.
+  if (voiceFor) return <div ref={root} key="voices" className="lx-level" data-from="end"><VoiceList lang={voiceFor} voices={voices} prefs={prefs} setPrefs={setPrefs} back={back} /></div>;
   return (
-    <div ref={root} style={{ display: "contents" }}>
+    <div ref={root} key="main" className="lx-level" data-from={returned ? "start" : undefined}>
       {back}
       {(["en", "ar"] as const).map((lang) => {
         const voice = pickVoice(voices, lang, prefs.voices[lang], readerRegion(lang));
         return (
-          <button key={lang} type="button" role="menuitem" className="lx-reading-menu__row" aria-haspopup="true" onClick={() => setVoiceFor(lang)}>
+          <button key={lang} type="button" role="menuitem" className="lx-reading-menu__row lx-voice-row" aria-haspopup="true" onClick={() => setVoiceFor(lang)}>
             <span style={{ flex: 1 }}>{t.voice(t.langs[lang])}</span>
             <span className="lx-reading-menu__value" dir="auto">{voice?.name ?? t.noVoices}</span>
             <ChevronRight size={16} className="lx-flip" aria-hidden />
@@ -74,7 +76,9 @@ export default function ListenSettings({ prefs, setPrefs, onBack }: { prefs: Rea
         <div className="lx-narr-swatches">
           {NARRATION_COLORS.map((c) => (
             <button key={c} type="button" role="menuitemradio" aria-checked={prefs.narrationColor === c} aria-label={t.colors[c]} title={t.colors[c]} className="lx-narr-swatch"
-              style={narrationVars(c) as React.CSSProperties} onClick={() => setPrefs({ narrationColor: c })} />
+              style={narrationVars(c) as React.CSSProperties} onClick={() => setPrefs({ narrationColor: c })}>
+              {prefs.narrationColor === c && <Check size={13} strokeWidth={3} aria-hidden />}
+            </button>
           ))}
         </div>
       </div>

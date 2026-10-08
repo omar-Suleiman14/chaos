@@ -97,13 +97,13 @@ export default function TeachingInsights(target: Target) {
     <section className="ti" aria-label={t.title}>
       <div className="ti-group">
         <button type="button" className="ti-row" aria-expanded={detective} onClick={() => setDetective(!detective)}>
-          <span className="ti-row__icon" data-tone="blue" aria-hidden><SearchCheck size={17} /></span>
+          <span className="ti-row__icon" aria-hidden><SearchCheck size={19} /></span>
           <span className="ti-row__text"><strong>{t.detective}</strong><small>{t.detectiveHelp}</small></span>
           <ChevronDown size={18} aria-hidden className="ti-row__chevron" data-open={detective || undefined} />
         </button>
         {detective && <Detective target={target} t={t} />}
         <button type="button" className="ti-row" aria-haspopup="dialog" onClick={() => setBrowsing(true)}>
-          <span className="ti-row__icon" data-tone="purple" aria-hidden><History size={17} /></span>
+          <span className="ti-row__icon" aria-hidden><History size={19} /></span>
           <span className="ti-row__text"><strong>{t.history}</strong><small>{t.historyHelp}</small></span>
           <ChevronRight size={18} aria-hidden className="ti-row__chevron rtl:rotate-180" />
         </button>

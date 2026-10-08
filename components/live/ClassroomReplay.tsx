@@ -9,6 +9,7 @@ import { dateLocale, useCopy, useLocale, formatNumber } from "@/lib/i18n";
 import { Select } from "@/components/workspace/Select";
 import { Check, ChevronLeft, ChevronDown, ChevronUp, Ghost, Info, Pause, Play, RotateCcw } from "lucide-react";
 import { ShapeIcon, shapeAt } from "./tiles";
+import { AnimatedNumber } from "@/components/AnimatedNumber";
 import "./timemachine.css";
 
 type Replay = NonNullable<FunctionReturnType<typeof api.live.questionReplay>>;
@@ -247,7 +248,7 @@ function QuestionScene({ replay, at, ghost, t, fmt, secs, stale }: { replay: Rep
                 <span className="tm-option__label" dir="auto">{o.label}</span>
                 {ghostHere && <span className="tm-ghost-dot" title={follow.nickname} aria-label={t.following(follow.nickname)}><Ghost size={13} aria-hidden /></span>}
                 {revealed && correct && <span className="tm-option__check"><Check size={14} aria-hidden /><span className="sr-only">{t.correct}</span></span>}
-                <strong className="tm-option__votes">{fmt(votes)}</strong>
+                <strong className="tm-option__votes"><AnimatedNumber value={votes} format={fmt} duration={280} /></strong>
               </li>
             );
           })}
@@ -282,7 +283,7 @@ function QuestionScene({ replay, at, ghost, t, fmt, secs, stale }: { replay: Rep
                     <small>{p.answeredNow && p.answer ? t.answeredAt(secs(p.answer.at)) : revealed ? t.noAnswer : t.waiting}</small>
                   </span>
                   <span className="tm-board__dot" data-state={revealed && p.answer ? (p.answer.correct ? "correct" : "wrong") : p.answeredNow ? "in" : "waiting"} aria-hidden />
-                  <strong className="tm-board__score">{fmt(p.score)}</strong>
+                  <strong className="tm-board__score"><AnimatedNumber value={p.score} format={fmt} /></strong>
                 </li>
               );
             })}

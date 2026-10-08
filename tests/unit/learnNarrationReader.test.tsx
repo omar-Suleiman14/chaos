@@ -224,12 +224,16 @@ describe("selection read aloud", () => {
 });
 
 describe("reading settings", () => {
-  it("keeps text settings and appearance only; the theme toggle stays an icon button", () => {
+  it("keeps text settings and appearance only, each a segmented choice", () => {
     inWorkspace(<LessonReader lesson={lesson()} />);
     fireEvent.click(screen.getByRole("button", { name: "Reading settings" }));
     const menu = screen.getByRole("menu", { name: "Reading settings" });
-    expect(within(menu).getByRole("button", { name: /Use (light|dark) appearance/ })).toHaveClass("ws-icon-button");
+    expect(within(menu).getAllByRole("group").map((g) => g.getAttribute("aria-label"))).toEqual(["Text size", "Line width", "Typeface", "Appearance"]);
     expect(within(menu).queryByRole("menuitemradio", { name: "Sentence" })).toBeNull();
+    fireEvent.click(within(menu).getByRole("menuitemradio", { name: "Large" }));
+    expect(within(menu).getByRole("menuitemradio", { name: "Large" })).toHaveAttribute("aria-checked", "true");
+    fireEvent.click(within(menu).getByRole("menuitemradio", { name: "Dark" }));
+    expect(within(menu).getByRole("menuitemradio", { name: "Dark" })).toHaveAttribute("aria-checked", "true");
   });
 });
 

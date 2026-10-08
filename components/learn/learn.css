@@ -772,6 +772,62 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 [aria-checked="true"] > .lx-switch:dir(rtl)::after { transform: translateX(-12px); }
 @media (pointer: coarse) { .ws-menu .lx-narr-swatch { width: 32px; height: 32px; min-height: 32px; } .ws-menu .lx-chip { min-height: 40px; } }
 
+/* Segmented choices: one track, a thumb that springs to the chosen option. */
+.lx-reading-menu { width: min(304px, calc(100vw - 16px)); }
+.lx-reading-menu__body { gap: 12px; padding: 8px; }
+.lx-reading-menu__label { font-size: 11.5px; font-weight: 600; letter-spacing: .02em; }
+.lx-seg { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); padding: 2px; border-radius: 10px; background: var(--ws-active); }
+.lx-seg__thumb { position: absolute; z-index: -1; top: 2px; bottom: 2px; inset-inline-start: calc(2px + (100% - 4px) / var(--n) * var(--i)); width: calc((100% - 4px) / var(--n)); border-radius: 8px; background: var(--ws-card); box-shadow: 0 1px 3px rgb(15 15 15 / .1), 0 0 0 .5px var(--ws-line-strong); transition: inset-inline-start .38s var(--ws-spring); }
+.dark .lx-seg__thumb { background: color-mix(in srgb, #fff 13%, transparent); box-shadow: 0 1px 3px rgb(0 0 0 / .3); }
+.lx-seg[data-empty] .lx-seg__thumb { opacity: 0; }
+.ws-menu .lx-seg .lx-seg__opt { display: inline-flex; align-items: center; justify-content: center; gap: 5px; width: 100%; min-width: 0; min-height: 32px; padding: 0 4px; border: 0; border-radius: 8px; background: none; box-shadow: none; color: var(--on-surface-variant); font-size: 12.5px; font-weight: 550; white-space: nowrap; transition: color .2s, transform var(--ws-press-out, .16s ease); }
+.ws-menu .lx-seg .lx-seg__opt:hover { background: none; color: var(--on-surface); }
+.ws-menu .lx-seg .lx-seg__opt[aria-checked="true"] { color: var(--on-surface); font-weight: 650; }
+.ws-menu .lx-seg .lx-seg__opt:active { transform: scale(.95); transition: transform var(--ws-press-in, 90ms ease); }
+.ws-menu .lx-seg .lx-seg__opt:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+.ws-menu .lx-seg .lx-seg__opt bdi { overflow: hidden; text-overflow: ellipsis; }
+@media (pointer: coarse) { .ws-menu .lx-seg .lx-seg__opt { min-height: 38px; } }
+
+/* Highlight colours: one row, the chosen one ringed with a tick. */
+.lx-narr-swatches { flex-wrap: nowrap; justify-content: space-between; gap: 4px; }
+.ws-menu .lx-narr-swatch { display: grid; place-items: center; width: 26px; height: 26px; min-height: 26px; flex: none; background: var(--narr-strong); color: var(--on-surface); transition: transform .25s var(--ws-spring), box-shadow .2s; }
+.ws-menu .lx-narr-swatch:hover { background: var(--narr-strong); transform: scale(1.1); }
+.ws-menu .lx-narr-swatch[aria-checked="true"] { box-shadow: 0 0 0 2px var(--ws-card), 0 0 0 3.5px var(--primary); }
+.ws-menu .lx-narr-swatch svg { animation: lx-pop .3s var(--ws-spring); }
+@media (pointer: coarse) { .ws-menu .lx-narr-swatch { width: 28px; height: 28px; min-height: 28px; } }
+
+/* Listen: the menu's main action is a real button, not a row. */
+.ws-menu .lx-listen-start { justify-content: center; gap: 8px; min-height: 40px; border-radius: 10px; background: var(--primary); color: #fff; font-weight: 600; transition: background .15s, transform var(--ws-press-out, .16s ease); }
+.ws-menu .lx-listen-start:hover, .ws-menu .lx-listen-start:focus-visible { background: var(--ws-accent-hover); color: #fff; }
+.ws-menu .lx-listen-start:active { transform: scale(.97); transition: transform var(--ws-press-in, 90ms ease); }
+.ws-menu .lx-listen-start > span { flex: none !important; }
+.lx-listen-start + hr { display: none; }
+.ws-menu .lx-voice-row { border-radius: 8px; }
+
+/* Opening the menu settles its sections in, one after another; a sub-level slides in like a pushed page. */
+.lx-reading-menu__body > *, .lx-level > * { animation: lx-settle .34s var(--ws-spring) both; }
+.lx-reading-menu__body > :nth-child(2), .lx-level > :nth-child(2) { animation-delay: 25ms; }
+.lx-reading-menu__body > :nth-child(3), .lx-level > :nth-child(3) { animation-delay: 50ms; }
+.lx-reading-menu__body > :nth-child(4), .lx-level > :nth-child(4) { animation-delay: 75ms; }
+.lx-reading-menu__body > :nth-child(5), .lx-level > :nth-child(5) { animation-delay: 100ms; }
+.lx-level > :nth-child(n + 6) { animation-delay: 125ms; }
+.lx-level { display: grid; gap: 12px; }
+.lx-level[data-from="end"] { animation: lx-push-end .32s var(--ws-spring); }
+.lx-level[data-from="start"] { animation: lx-push-start .32s var(--ws-spring); }
+.lx-level[data-from] > * { animation: none; }
+@keyframes lx-settle { from { opacity: 0; transform: translateY(4px); } }
+@keyframes lx-push-end { from { opacity: 0; transform: translateX(14px); } }
+@keyframes lx-push-start { from { opacity: 0; transform: translateX(-14px); } }
+[dir="rtl"] .lx-level[data-from="end"] { animation-name: lx-push-start; }
+[dir="rtl"] .lx-level[data-from="start"] { animation-name: lx-push-end; }
+@keyframes lx-pop { from { opacity: 0; transform: scale(.4); } }
+@media (prefers-reduced-motion: reduce) {
+  .lx-seg__thumb { transition: none; }
+  .lx-reading-menu__body > *, .lx-level > *, .lx-level[data-from], .ws-menu .lx-narr-swatch svg { animation: none; }
+}
+.reduce-motion .lx-seg__thumb { transition: none; }
+.reduce-motion .lx-reading-menu__body > *, .reduce-motion .lx-level > *, .reduce-motion .lx-level[data-from] { animation: none; }
+
 /* ── Narration follow overlay (lib/learn/narration/follow.ts): boxes over the text, blended so the
    text stays crisp (multiply on light pages, screen on dark ones). Never mutates the lesson DOM. ── */
 /* No z-index: a stacking context here would stop the boxes from blending with the text below. */

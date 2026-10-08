@@ -18,7 +18,7 @@
   text-align: start;
 }
 .rh-head { display: flex; align-items: flex-start; gap: 12px; }
-.rh-icon { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border-radius: 10px; background: linear-gradient(180deg, #5ad27a, #2fb35a); color: #fff; }
+.rh-icon { display: grid; place-items: center; flex: none; width: 24px; height: 28px; color: var(--rh-accent); }
 .rh-head__text { flex: 1; min-width: 0; }
 .rh-head h2 { font-size: 19px; font-weight: 700; letter-spacing: -.01em; line-height: 1.25; }
 .rh-head p { margin-top: 2px; font-size: 14px; line-height: 1.45; color: var(--rh-muted); }
@@ -46,7 +46,13 @@
 .rh-live { width: 8px; height: 8px; border-radius: 999px; background: var(--rh-good); box-shadow: 0 0 0 0 color-mix(in srgb, var(--rh-good) 50%, transparent); animation: rh-pulse 1.6s ease-out infinite; }
 @keyframes rh-pulse { to { box-shadow: 0 0 0 8px transparent; } }
 .rh-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(104px, 1fr)); gap: 8px; margin: 0; }
-.rh-stats > div { display: grid; gap: 2px; padding: 12px 14px; border-radius: 12px; background: var(--rh-surface); box-shadow: 0 0 0 .5px var(--rh-line); }
+.rh-stats > div { display: grid; gap: 2px; padding: 12px 14px; border-radius: 12px; background: var(--rh-surface); box-shadow: 0 0 0 .5px var(--rh-line); animation: rh-tile .45s var(--ws-spring, cubic-bezier(.22, 1, .36, 1)) both; }
+.rh-stats > div:nth-child(2) { animation-delay: 40ms; }
+.rh-stats > div:nth-child(3) { animation-delay: 80ms; }
+.rh-stats > div:nth-child(4) { animation-delay: 120ms; }
+.rh-stats > div:nth-child(5) { animation-delay: 160ms; }
+.rh-stats > div:nth-child(6) { animation-delay: 200ms; }
+@keyframes rh-tile { from { opacity: 0; transform: translateY(8px) scale(.97); } }
 .rh-stats dt { font-size: 12px; font-weight: 600; color: var(--rh-muted); }
 .rh-stats dd { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: -.02em; font-variant-numeric: tabular-nums; }
 .rh-stats dd small { font-size: 13px; font-weight: 600; color: var(--rh-muted); }
@@ -56,17 +62,17 @@
   .rh-private { display: none; }
   .rh-btn { flex: 1; justify-content: center; }
 }
-@media (prefers-reduced-motion: reduce) { .rh-live { animation: none; } }
+@media (prefers-reduced-motion: reduce) { .rh-live, .rh-stats > div { animation: none; } }
+/* The live theme carries no workspace tokens: the switch takes the live colours. */
+.rh .ws-switch__track { background: var(--rh-fill); box-shadow: inset 0 0 0 .5px var(--rh-line); }
+.rh .ws-switch input:checked + .ws-switch__track { background: var(--rh-accent); }
+.rh .ws-switch input:focus-visible + .ws-switch__track { box-shadow: 0 0 0 3px color-mix(in srgb, var(--rh-accent) 40%, transparent); }
+.rh .ws-switch input:disabled + .ws-switch__track { opacity: .5; }
 
 /* The way into the time machine once a game ends. */
 .live-replay { display: flex; justify-content: center; margin-bottom: 16px; }
 .live-replay .live-btn { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
 
-/* The live theme has no workspace tokens: give the switch iOS proportions and colours here. */
-.rh .ws-switch__track { width: 51px; height: 31px; background: var(--rh-fill); box-shadow: inset 0 0 0 .5px var(--rh-line); }
-.rh .ws-switch__track::after { width: 27px; height: 27px; box-shadow: 0 3px 8px rgb(0 0 0 / .15), 0 1px 1px rgb(0 0 0 / .16); }
-.rh .ws-switch input:checked + .ws-switch__track { background: var(--rh-good); }
-.rh .ws-switch input:checked + .ws-switch__track::after { transform: translateX(20px); }
-[dir="rtl"] .rh .ws-switch input:checked + .ws-switch__track::after { transform: translateX(-20px); }
-.rh .ws-switch input:focus-visible + .ws-switch__track { box-shadow: 0 0 0 3px color-mix(in srgb, var(--rh-accent) 40%, transparent); }
-.rh .ws-switch input:disabled + .ws-switch__track { opacity: .5; }
+/* The way into the time machine once a game ends. */
+.live-replay { display: flex; justify-content: center; margin-bottom: 16px; }
+.live-replay .live-btn { display: inline-flex; align-items: center; gap: 6px; text-decoration: none; }
