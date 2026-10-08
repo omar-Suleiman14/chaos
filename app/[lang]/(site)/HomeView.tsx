@@ -2,7 +2,7 @@
 
 import { productDefinition } from "@/lib/product";
 import Link from "@/components/site/SiteLink";
-import { ArrowRight, BookOpen, Braces, Download, FileText, GraduationCap, ListChecks, Radio, Server, Users, Webhook } from "lucide-react";
+import { ArrowRight, BookOpen, Braces, Download, FileText, GraduationCap, ListChecks, Radio, Server, Target, Users, Webhook } from "lucide-react";
 import { PrimaryCta, SiteFooter, SiteNav } from "@/components/site/SiteChrome";
 import { ChatGptMark, NotionMark } from "@/components/site/marks";
 import { AiMark } from "@/components/site/aiMarks";
@@ -19,36 +19,43 @@ import "@/app/landing.css";
 const copy = {
   en: {
     title: ["Turn what you know", "into something people can use."],
-    lead: "Create lessons, courses, quizzes and forms. Teach live, let students study, and connect the AI tools you already use.",
-    start: "Start free", explore: "Explore courses", trust: ["Open source", "Self-hostable", "English + Arabic", "MCP connected"],
+    lead: "Write lessons and courses, then make them stick with quizzes, flashcards and live games. Build it yourself, or ask ChatGPT or Claude to draft it for you.",
+    start: "Start free", explore: "Explore courses", trust: ["Open source (AGPL)", "Self-host with Docker", "English + Arabic", "Works with ChatGPT and Claude"],
     flow: { label: "How it fits together", source: "Notes, a PDF or an idea", lesson: "Lesson", outputs: ["Quiz", "Flashcards", "Course"], practice: "Practice or a live game" },
-    create: {
-      title: "Create", lead: "Write, edit and arrange your content in one place.",
+    teach: {
+      title: "Teach", lead: "Write it once, put it in order, and see what people still find hard.",
       items: [
-        { icon: FileText, title: "Forms", body: "Surveys, sign-ups and feedback. Sections, branching, file uploads and custom endings.", href: "/docs/first-form", link: "Build a form" },
-        { icon: ListChecks, title: "Quizzes", body: "Marked for you, with explanations, hints and attempt limits. Any quiz can become a live game.", href: "/docs/first-quiz", link: "Make a quiz" },
         { icon: BookOpen, title: "Lessons", body: "A page like a document: headings, images, video, equations, tables, sources and citations.", href: "/docs/lessons", link: "Write a lesson" },
-      ],
-    },
-    learn: {
-      title: "Learn", lead: "Put lessons in order, share them, and see what people still find hard.",
-      items: [
         { icon: GraduationCap, title: "Courses", body: "Lessons in a clear order, free for anyone to take when public.", href: "/learn", link: "Browse courses" },
-        { icon: ListChecks, title: "Practice and progress", body: "Quizzes and flashcards attached to lessons, with progress and weak areas for each learner.", href: "/docs/progress", link: "How progress works" },
+        { icon: ListChecks, title: "Quizzes and flashcards", body: "Marked for you, with explanations and hints. Attach them to lessons and each learner sees their progress and weak areas.", href: "/docs/first-quiz", link: "Make a quiz" },
       ],
     },
     play: {
       title: "Play", lead: "Put any quiz on the big screen. People join on their phones with a PIN, answer, and see the leaderboard after each round.",
       link: "Host a live game", href: "/docs/live-games",
     },
+    ai: {
+      title: "Build it with ChatGPT or Claude",
+      lead: "Connect your account once, then ask your assistant to do the work in Chaos. New content arrives as a draft for you to review. Chaos itself runs no AI.",
+      prompts: [
+        { icon: GraduationCap, title: "Make a course from your notes", body: "“Use my notes to create a course draft with three lessons, flashcards and a quiz for each lesson.”" },
+        { icon: ListChecks, title: "Build a quiz that teaches", body: "“Write 10 questions from this chapter with plausible wrong answers and short explanations.”" },
+        { icon: Radio, title: "Prepare a live class", body: "“Open a live game for my Chapter 3 quiz and give me the join PIN.”" },
+        { icon: Target, title: "Review what needs practice", body: "“Read my weak areas and tell me which lesson and flashcards to review.”" },
+      ],
+      link: "Connect ChatGPT or Claude", href: "/connect",
+    },
+    forms: {
+      title: "Forms and surveys too", lead: "The same editor builds sign-ups, feedback and surveys, with sections, branching, file uploads and custom endings. Results come with live charts and exports.",
+      link: "Build a form", href: "/docs/first-form",
+    },
     teams: {
       title: "Work as a team", lead: "Business teams edit forms, lessons and courses together, and publish quizzes, courses, flashcards and live games only your team can open. Free for a limited time.",
       link: "See Business teams", href: "/teams",
     },
     connect: {
-      title: "Connect", lead: "Chaos works on its own and connects to the tools you already use.",
+      title: "Connect", lead: "Bring in work from the other tools you use.",
       max: { name: "Max", title: "Turn Max pages into drafts.", body: "Pick a Max page and get a Chaos draft to review. Only summaries go back to Max.", link: "Get Max" },
-      ai: { name: "ChatGPT and Claude", title: "Use Chaos from your assistant.", body: "Ask ChatGPT or Claude to make a quiz, write a lesson, build a course or check results. Chaos itself runs no AI.", link: "See how it works" },
       notion: { name: "Notion", soon: "Coming soon" },
     },
     open: {
@@ -60,40 +67,47 @@ const copy = {
         { icon: Webhook, title: "Webhooks", body: "Chaos tells another app when something happens, like a new response.", href: "/docs/webhooks", link: "Webhooks" },
       ],
     },
-    ctaTitle: "Create something to share.", ctaLead: "A form, a quiz, a lesson or a course. Free for personal use.",
+    ctaTitle: "Write your first lesson.", ctaLead: "Then turn it into a quiz, flashcards or a live game. Free for personal use.",
   },
   ar: {
     title: ["حوّل ما تعرفه", "إلى شيء يستفيد منه الناس."],
-    lead: "أنشئ دروسًا ودورات واختبارات ونماذج. درّس مباشرةً واترك الطلاب يذاكرون واربط أدوات الذكاء الاصطناعي التي تستخدمها.",
-    start: "ابدأ مجانًا", explore: "استكشف الدورات", trust: ["مفتوح المصدر", "استضافة ذاتية", "العربية والإنجليزية", "متصل بـ MCP"],
+    lead: "اكتب دروسًا ودورات، ثم ثبّتها في الأذهان باختبارات وبطاقات وألعاب مباشرة. ابنِها بنفسك أو اطلب من ChatGPT أو Claude أن يكتب لك مسودتها.",
+    start: "ابدأ مجانًا", explore: "استكشف الدورات", trust: ["مفتوح المصدر (AGPL)", "استضافة ذاتية بـ Docker", "العربية والإنجليزية", "يعمل مع ChatGPT وClaude"],
     flow: { label: "كيف يترابط كل شيء", source: "ملاحظات أو ملف PDF أو فكرة", lesson: "درس", outputs: ["اختبار", "بطاقات", "دورة"], practice: "تدريب أو لعبة مباشرة" },
-    create: {
-      title: "أنشئ", lead: "اكتب محتواك وعدّله ورتّبه في مكان واحد.",
+    teach: {
+      title: "درّس", lead: "اكتبه مرة واحدة ورتّبه واعرف ما يصعب على الناس.",
       items: [
-        { icon: FileText, title: "النماذج", body: "استطلاعات وتسجيل وآراء. أقسام وتفرّع ورفع ملفات ورسائل ختامية مخصصة.", href: "/docs/first-form", link: "أنشئ نموذجًا" },
-        { icon: ListChecks, title: "الاختبارات", body: "تُصحَّح تلقائيًا، مع شروح وتلميحات وحدود للمحاولات. ويمكن أن يصبح أي اختبار لعبة مباشرة.", href: "/docs/first-quiz", link: "أنشئ اختبارًا" },
         { icon: BookOpen, title: "الدروس", body: "صفحة كالمستند: عناوين وصور وفيديو ومعادلات وجداول ومصادر واستشهادات.", href: "/docs/lessons", link: "اكتب درسًا" },
-      ],
-    },
-    learn: {
-      title: "تعلّم", lead: "رتّب الدروس وشاركها واعرف ما يصعب على الناس.",
-      items: [
         { icon: GraduationCap, title: "الدورات", body: "دروس بترتيب واضح، مجانية لأي أحد حين تكون عامة.", href: "/learn", link: "تصفّح الدورات" },
-        { icon: ListChecks, title: "التدريب والتقدّم", body: "اختبارات وبطاقات مرتبطة بالدروس، مع التقدّم ونقاط الضعف لكل متعلم.", href: "/docs/progress", link: "كيف يعمل التقدّم" },
+        { icon: ListChecks, title: "الاختبارات والبطاقات", body: "تُصحَّح تلقائيًا مع شروح وتلميحات. أرفقها بالدروس ليرى كل متعلم تقدّمه ونقاط ضعفه.", href: "/docs/first-quiz", link: "أنشئ اختبارًا" },
       ],
     },
     play: {
       title: "العب", lead: "اعرض أي اختبار على الشاشة الكبيرة. ينضم الناس من هواتفهم برمز، ويجيبون، ويرون لوحة الصدارة بعد كل جولة.",
       link: "استضف لعبة مباشرة", href: "/docs/live-games",
     },
+    ai: {
+      title: "ابنِه مع ChatGPT أو Claude",
+      lead: "اربط حسابك مرة واحدة، ثم اطلب من مساعدك أن ينجز العمل في Chaos. يصلك المحتوى الجديد مسودةً لتراجعها. Chaos نفسه لا يشغّل أي ذكاء اصطناعي.",
+      prompts: [
+        { icon: GraduationCap, title: "حوّل ملاحظاتك إلى دورة", body: "«استخدم ملاحظاتي لإنشاء مسودة دورة من ثلاثة دروس مع بطاقات واختبار لكل درس.»" },
+        { icon: ListChecks, title: "أنشئ اختبارًا يساعد على التعلّم", body: "«اكتب عشرة أسئلة من هذا الفصل مع بدائل معقولة وتفسيرات قصيرة.»" },
+        { icon: Radio, title: "جهّز حصة مباشرة", body: "«افتح لعبة مباشرة لاختبار الفصل الثالث وأعطني رمز الانضمام.»" },
+        { icon: Target, title: "راجع ما يحتاج تدريبًا", body: "«اقرأ نقاط ضعفي وأخبرني أي درس وأي بطاقات أراجع.»" },
+      ],
+      link: "اربط ChatGPT أو Claude", href: "/connect",
+    },
+    forms: {
+      title: "ونماذج واستطلاعات أيضًا", lead: "المحرّر نفسه يبني نماذج التسجيل والآراء والاستطلاعات، مع أقسام وتفرّع ورفع ملفات ورسائل ختامية مخصصة. وتأتي النتائج مع رسوم مباشرة وتصدير.",
+      link: "أنشئ نموذجًا", href: "/docs/first-form",
+    },
     teams: {
       title: "اعملوا كفريق", lead: "تعدّل فرق الأعمال النماذج والدروس والدورات معًا، وتنشر اختبارات ودورات وبطاقات وألعابًا مباشرة لا يفتحها إلا فريقك. مجانًا لفترة محدودة.",
       link: "تعرّف على فرق الأعمال", href: "/teams",
     },
     connect: {
-      title: "اربط", lead: "يعمل Chaos وحده، ويتصل بالأدوات التي تستخدمها.",
+      title: "اربط", lead: "أحضر عملك من الأدوات الأخرى التي تستخدمها.",
       max: { name: "Max", title: "حوّل صفحات Max إلى مسودات.", body: "اختر صفحة من Max واحصل على مسودة في Chaos لتراجعها. لا يعود إلى Max سوى الملخصات.", link: "احصل على Max" },
-      ai: { name: "ChatGPT وClaude", title: "استخدم Chaos من مساعدك.", body: "اطلب من ChatGPT أو Claude إنشاء اختبار أو كتابة درس أو بناء دورة أو معرفة النتائج. Chaos نفسه لا يشغّل أي ذكاء اصطناعي.", link: "اعرف كيف يعمل" },
       notion: { name: "Notion", soon: "قريبًا" },
     },
     open: {
@@ -105,7 +119,7 @@ const copy = {
         { icon: Webhook, title: "Webhooks", body: "يخبر Chaos تطبيقًا آخر حين يحدث شيء، مثل وصول رد جديد.", href: "/docs/webhooks", link: "Webhooks" },
       ],
     },
-    ctaTitle: "أنشئ محتوى وشاركه.", ctaLead: "نموذج أو اختبار أو درس أو دورة. مجاني للاستخدام الشخصي.",
+    ctaTitle: "اكتب درسك الأول.", ctaLead: "ثم حوّله إلى اختبار أو بطاقات أو لعبة مباشرة. مجاني للاستخدام الشخصي.",
   },
 };
 
@@ -151,14 +165,9 @@ export default function HomeView() {
           <p className="site-product-definition">{productDefinition[locale === "ar" ? "ar" : "en"]}</p>
         </section>
 
-        <section id="create" className="site-section" aria-labelledby="create-title">
-          <div className="site-section-heading"><h2 id="create-title" className="site-h2">{t.create.title}</h2><p>{t.create.lead}</p></div>
-          <Cards items={t.create.items} />
-        </section>
-
-        <section id="learn" className="site-section" aria-labelledby="learn-title">
-          <div className="site-section-heading"><h2 id="learn-title" className="site-h2">{t.learn.title}</h2><p>{t.learn.lead}</p></div>
-          <Cards items={t.learn.items} />
+        <section id="teach" className="site-section" aria-labelledby="teach-title">
+          <div className="site-section-heading"><h2 id="teach-title" className="site-h2">{t.teach.title}</h2><p>{t.teach.lead}</p></div>
+          <Cards items={t.teach.items} />
         </section>
 
         <section id="play" className="site-section" aria-labelledby="play-title">
@@ -166,6 +175,35 @@ export default function HomeView() {
             <h2 id="play-title" className="site-h2"><Radio size={30} aria-hidden="true" className="site-h2-icon" />{t.play.title}</h2>
             <p>{t.play.lead}</p>
             <Link href={t.play.href} className="site-text-link">{t.play.link} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>
+          </div>
+        </section>
+
+        <section id="ai" className="site-section" aria-labelledby="ai-title">
+          <div className="site-section-heading">
+            <span className="site-partner__marks" aria-hidden="true">
+              <span className="site-partner__mark"><ChatGptMark size={26} /></span>
+              <span className="site-partner__mark"><AiMark client="claude" size={26} /></span>
+            </span>
+            <h2 id="ai-title" className="site-h2">{t.ai.title}</h2>
+            <p>{t.ai.lead}</p>
+            <Link href={t.ai.href} className="site-text-link">{t.ai.link} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>
+          </div>
+          <div className="site-features">
+            {t.ai.prompts.map(({ icon: Icon, title, body }) => (
+              <article key={title} className="site-feature">
+                <Icon size={22} aria-hidden="true" />
+                <h3>{title}</h3>
+                <p>{body}</p>
+              </article>
+            ))}
+          </div>
+        </section>
+
+        <section id="forms" className="site-section" aria-labelledby="forms-title">
+          <div className="site-section-heading">
+            <h2 id="forms-title" className="site-h2"><FileText size={30} aria-hidden="true" className="site-h2-icon" />{t.forms.title}</h2>
+            <p>{t.forms.lead}</p>
+            <Link href={t.forms.href} className="site-text-link">{t.forms.link} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>
           </div>
         </section>
 
@@ -189,18 +227,6 @@ export default function HomeView() {
               <h3>{t.connect.max.title}</h3>
               <p>{t.connect.max.body}</p>
               <a href="https://trymaxnow.vercel.app" className="site-text-link" target="_blank" rel="noreferrer">{t.connect.max.link} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></a>
-            </article>
-            <article className="site-partner">
-              <div className="site-partner__head">
-                <span className="site-partner__marks">
-                  <span className="site-partner__mark"><ChatGptMark size={26} /></span>
-                  <span className="site-partner__mark"><AiMark client="claude" size={26} /></span>
-                </span>
-                <span className="site-partner__name">{t.connect.ai.name}</span>
-              </div>
-              <h3>{t.connect.ai.title}</h3>
-              <p>{t.connect.ai.body}</p>
-              <Link href="/connect" className="site-text-link">{t.connect.ai.link} <ArrowRight size={17} className="site-arrow" aria-hidden="true" /></Link>
             </article>
             <article className="site-partner site-partner--soon" aria-label={`${t.connect.notion.name}: ${t.connect.notion.soon}`}>
               <div className="site-partner__head">

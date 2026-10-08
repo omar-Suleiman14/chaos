@@ -17,7 +17,7 @@ const copy = {
     getFree: "Get Chaos free", open: "Open Chaos", logIn: "Log in", skip: "Skip to content", main: "Main", footer: "Footer",
     explore: "Explore", modes: "Modes", themes: "Themes", features: "Features", docs: "Docs", pricing: "Pricing", play: "Join a game",
     menu: "Menu", closeMenu: "Close menu", language: "Language",
-    tagline: "Forms, quizzes, live games and Learn. One open-source workspace.",
+    tagline: "Lessons, courses, quizzes and live games. Open source, in English and Arabic.",
     product: "Product", ways: "Ways to answer", chatgpt: "Chaos in ChatGPT", claude: "Chaos in Claude", connect: "Connect Claude or ChatGPT", compare: "Compare",
     openSource: "Build and connect", source: "Source code", selfHost: "Self-hosting", api: "API and connections", webhooks: "Webhooks",
     start: "Get started", help: "Support", faq: "FAQ", status: "Status", issues: "Report an issue",
@@ -27,7 +27,7 @@ const copy = {
     getFree: "ابدأ مجانًا", open: "افتح Chaos", logIn: "تسجيل الدخول", skip: "انتقل إلى المحتوى", main: "التنقل الرئيسي", footer: "التذييل",
     explore: "استكشف", modes: "طرق العرض", themes: "المظاهر", features: "المزايا", docs: "الدليل", pricing: "الأسعار", play: "انضم إلى لعبة",
     menu: "القائمة", closeMenu: "إغلاق القائمة", language: "اللغة",
-    tagline: "نماذج واختبارات وألعاب مباشرة وLearn. مساحة عمل واحدة مفتوحة المصدر.",
+    tagline: "دروس ودورات واختبارات وألعاب مباشرة. مفتوح المصدر، بالعربية والإنجليزية.",
     product: "المنتج", ways: "طرق الإجابة", chatgpt: "Chaos في ChatGPT", claude: "Chaos في Claude", connect: "اربط Claude أو ChatGPT", compare: "المقارنة",
     openSource: "البناء والربط", source: "الشيفرة المصدرية", selfHost: "الاستضافة الذاتية", api: "API والاتصالات", webhooks: "Webhooks",
     start: "ابدأ الآن", help: "الدعم", faq: "الأسئلة الشائعة", status: "حالة الخدمة", issues: "أبلغ عن مشكلة",
@@ -148,9 +148,9 @@ export function SiteFooter() {
         <nav className="site-footer__cols" aria-label={t.footer}>
           <div>
             <h2>{t.product}</h2>
-            <Link href="/#modes">{t.ways}</Link>
-            <Link href="/#themes">{t.themes}</Link>
-            <Link href="/#features">{t.features}</Link>
+            <Link href="/docs/answer-modes">{t.ways}</Link>
+            <Link href="/docs/themes">{t.themes}</Link>
+            <Link href="/#teach">{t.features}</Link>
             <Link href="/learn">{t.explore}</Link>
             <Link href="/compare">{t.compare}</Link>
             <Link href="/pricing">{t.pricing}</Link>
