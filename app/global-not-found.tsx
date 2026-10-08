@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { inter } from "./fonts/inter";
+import { inter } from "@/components/fonts/inter";
 import ErrorScreen from "@/components/site/ErrorScreen";
 import { siteUrl } from "@/lib/site";
 import { themeInitScript } from "@/lib/theme";

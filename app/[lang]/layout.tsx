@@ -5,7 +5,7 @@ import { siteUrl } from "@/lib/site";
 import { defaultOgImage, siteDescription } from "@/lib/seo";
 import { notFound } from "next/navigation";
 import { Cairo, Fraunces, IBM_Plex_Sans_Arabic, Instrument_Serif, Nunito, Roboto, Space_Grotesk, Space_Mono } from "next/font/google";
-import { inter } from "@/app/fonts/inter";
+import { inter } from "@/components/fonts/inter";
 import "@/app/globals.css";
 import "@/app/workspace.css";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
