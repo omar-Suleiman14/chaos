@@ -18,7 +18,7 @@ import "@/app/landing.css";
  */
 const copy = {
   en: {
-    title: ["Turn what you know", "into something people can use."],
+    title: ["Turn what you know", "into lessons that stick."],
     lead: "Write lessons and courses, then make them stick with quizzes, flashcards and live games. Build it yourself, or ask ChatGPT or Claude to draft it for you.",
     start: "Start free", explore: "Explore courses", trust: ["Open source (AGPL)", "Self-host with Docker", "English + Arabic", "Works with ChatGPT and Claude"],
     flow: { label: "How it fits together", source: "Notes, a PDF or an idea", lesson: "Lesson", outputs: ["Quiz", "Flashcards", "Course"], practice: "Practice or a live game" },
@@ -70,7 +70,7 @@ const copy = {
     ctaTitle: "Write your first lesson.", ctaLead: "Then turn it into a quiz, flashcards or a live game. Free for personal use.",
   },
   ar: {
-    title: ["حوّل ما تعرفه", "إلى شيء يستفيد منه الناس."],
+    title: ["حوّل ما تعرفه", "إلى دروس تبقى في الذاكرة."],
     lead: "اكتب دروسًا ودورات، ثم ثبّتها في الأذهان باختبارات وبطاقات وألعاب مباشرة. ابنِها بنفسك أو اطلب من ChatGPT أو Claude أن يكتب لك مسودتها.",
     start: "ابدأ مجانًا", explore: "استكشف الدورات", trust: ["مفتوح المصدر (AGPL)", "استضافة ذاتية بـ Docker", "العربية والإنجليزية", "يعمل مع ChatGPT وClaude"],
     flow: { label: "كيف يترابط كل شيء", source: "ملاحظات أو ملف PDF أو فكرة", lesson: "درس", outputs: ["اختبار", "بطاقات", "دورة"], practice: "تدريب أو لعبة مباشرة" },

@@ -750,9 +750,11 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 @media (min-width: 1181px) and (hover: hover) { .lx-actbar { display: none; } }
 
 /* ── Reading settings menu ── */
-.lx-reading-menu { width: min(292px, calc(100vw - 16px)); }
-.lx-reading-menu__body { display: grid; gap: 10px; padding: 6px; }
-.lx-reading-menu__group { display: grid; gap: 5px; }
+.lx-reading-menu { width: min(292px, calc(100vw - 16px)); overflow-x: hidden; }
+.lx-reading-menu__body { display: grid; grid-template-columns: minmax(0, 1fr); gap: 10px; padding: 6px; }
+.lx-reading-menu__group { display: grid; min-width: 0; gap: 5px; }
+.lx-reading-menu__row > span { min-width: 0; overflow-wrap: anywhere; }
+.lx-reading-menu__row > svg { flex-shrink: 0; }
 .lx-reading-menu__label { color: var(--on-surface-variant); font-size: 12px; }
 .lx-reading-menu__appearance { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 /* The theme button matches the outline's sidebar toggle: a 34px tinted square in both themes, no border. */
@@ -782,8 +784,8 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .ws-menu .lx-onoff__seg button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
 @media (pointer: coarse) { .ws-menu .lx-narr-swatch { width: 32px; height: 32px; min-height: 32px; } .ws-menu .lx-chip { min-height: 40px; } }
 
-/* Highlight colours: one row, the chosen one ringed with a tick. */
-.lx-narr-swatches { flex-wrap: nowrap; justify-content: space-between; gap: 4px; }
+/* Highlight colours wrap on narrow screens; the chosen one is ringed with a tick. */
+.lx-narr-swatches { flex-wrap: wrap; gap: 6px; padding: 4px; }
 .ws-menu .lx-narr-swatch { display: grid; place-items: center; width: 26px; height: 26px; min-height: 26px; flex: none; background: var(--narr-strong); color: var(--on-surface); transition: transform .25s var(--ws-spring), box-shadow .2s; }
 .ws-menu .lx-narr-swatch:hover { background: var(--narr-strong); transform: scale(1.1); }
 .ws-menu .lx-narr-swatch[aria-checked="true"] { box-shadow: 0 0 0 2px var(--ws-card), 0 0 0 3.5px var(--primary); }
@@ -799,7 +801,7 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .ws-menu .lx-voice-row { border-radius: 8px; }
 
 /* A Listen sub-level (a voice list, then back) slides in from the side it leads to. */
-.lx-level { display: grid; gap: 10px; }
+.lx-level { display: grid; grid-template-columns: minmax(0, 1fr); min-width: 0; gap: 10px; }
 .lx-level[data-from="end"] { animation: lx-push-end .28s var(--ws-spring); }
 .lx-level[data-from="start"] { animation: lx-push-start .28s var(--ws-spring); }
 @keyframes lx-push-end { from { opacity: 0; transform: translateX(14px); } }

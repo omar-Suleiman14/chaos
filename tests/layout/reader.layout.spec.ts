@@ -186,3 +186,29 @@ test.describe("phone top bar", () => {
     await context.close();
   });
 });
+
+test.describe("Listen menu overflow", () => {
+  for (const dir of ["ltr", "rtl"] as const) {
+    for (const width of [280, 320, 390, 1280]) {
+      test(`wraps settings and long voices at ${width}px (${dir})`, async ({ page: p }) => {
+        await p.setViewportSize({ width, height: 800 });
+        await p.setContent(page(dir));
+        await p.locator('.lx-reading-menu').evaluate((menu) => {
+          (menu as HTMLElement).style.overflowY = 'auto';
+          menu.innerHTML = `<div class="lx-reading-menu__body"><div class="lx-level">
+            <button class="lx-reading-menu__row lx-voice-row"><span style="flex:1">English voice</span><span class="lx-reading-menu__value">A very long device-provided voice name</span><svg width="16"></svg></button>
+            <div class="lx-reading-menu__group"><span>Highlight colour</span><div class="lx-narr-swatches">${Array.from({length:9}, () => '<button class="lx-narr-swatch"></button>').join('')}</div></div>
+            <div class="lx-reading-menu__group"><span>Speed</span><div class="lx-chips">${[0.5,0.75,1,1.25,1.5,1.75,2].map(s => `<button class="lx-chip">${s}×</button>`).join('')}</div></div>
+            <button class="lx-reading-menu__row"><span style="flex:1">Automatic (ExtremelyLongUnbrokenDeviceVoiceNameWithNoSpaces)</span><svg width="15"></svg></button>
+          </div></div>`;
+        });
+        expect(await p.locator('.lx-reading-menu').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+        const bounds = (await p.locator('.lx-reading-menu').boundingBox())!;
+        for (const box of await p.locator('.lx-narr-swatch, .lx-chip').evaluateAll(els => els.map(el => ({left:el.getBoundingClientRect().left,right:el.getBoundingClientRect().right})))) {
+          expect(box.left).toBeGreaterThanOrEqual(bounds.x);
+          expect(box.right).toBeLessThanOrEqual(bounds.x + bounds.width);
+        }
+      });
+    }
+  }
+});
