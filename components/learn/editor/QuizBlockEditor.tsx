@@ -10,8 +10,8 @@ import { localeDir } from "@/lib/locale";
 import Link from "@/components/site/SiteLink";
 
 const copy = {
-  en: {  attach: "Attach existing quiz", choose: "Choose a quiz", selected: "Selected quiz", draft: "Draft", loading: "Loading quizzes…", more: "Load more", empty: "No quizzes on this page.", create: "Create new quiz", title: "Quiz title", save: "Create quiz draft", cancel: "Cancel", edit: "Edit questions and publish", note: "Publish the quiz from its editor when it is ready. Lesson publication stays separate." },
-  ar: {  attach: "أرفق اختبارًا موجودًا", choose: "اختر اختبارًا", selected: "الاختبار المحدد", draft: "مسودة", loading: "جارٍ تحميل الاختبارات…", more: "حمّل المزيد", empty: "لا اختبارات في هذه الصفحة.", create: "أنشئ اختبارًا", title: "عنوان الاختبار", save: "أنشئ مسودة اختبار", cancel: "إلغاء", edit: "عدّل الأسئلة وانشر", note: "انشر الاختبار من محرره عندما يكون جاهزًا. يبقى نشر الدرس مستقلًا." },
+  en: { attach: "Attach existing quiz", choose: "Choose a quiz", selected: "Selected quiz", draft: "Draft", loading: "Loading quizzes…", more: "Load more", empty: "No quizzes on this page.", create: "Create new quiz", title: "Quiz title", save: "Create quiz draft", cancel: "Cancel", edit: "Edit questions and publish", note: "Publish the quiz from its editor when it is ready. Lesson publication stays separate." },
+  ar: { attach: "أرفق اختبارًا موجودًا", choose: "اختر اختبارًا", selected: "الاختبار المحدد", draft: "مسودة", loading: "جارٍ تحميل الاختبارات…", more: "حمّل المزيد", empty: "لا اختبارات في هذه الصفحة.", create: "أنشئ اختبارًا", title: "عنوان الاختبار", save: "أنشئ مسودة اختبار", cancel: "إلغاء", edit: "عدّل الأسئلة وانشر", note: "انشر الاختبار من محرره عندما يكون جاهزًا. يبقى نشر الدرس مستقلًا." },
 };
 /** Attach or create the quiz form a lesson quiz block shows. */
 export default function QuizBlockEditor({ assetId, onSelect }: { assetId: string; onSelect: (asset: { kind: "form"; id: string }) => void }) {
