@@ -1,4 +1,4 @@
 export const productDefinition = {
- en: "Chaos is an open platform for creating, teaching, learning and testing. Build lessons and courses, create forms and quizzes, turn quizzes into live games, and connect ChatGPT or Claude to work directly on your content.",
- ar: "Chaos منصة مفتوحة للإنشاء والتدريس والتعلّم والتقييم. ابنِ دروسًا ودورات وأنشئ نماذج واختبارات وحوّل الاختبارات إلى ألعاب مباشرة واربط ChatGPT أو Claude للعمل على محتواك.",
+ en: "Chaos is an open platform for teaching and learning. Write lessons and courses, make them interactive with quizzes, flashcards and live games, and connect ChatGPT or Claude to build them with you. Forms and surveys are included too.",
+ ar: "Chaos منصة مفتوحة للتعليم والتعلّم. اكتب دروسًا ودورات واجعلها تفاعلية باختبارات وبطاقات وألعاب مباشرة، واربط ChatGPT أو Claude ليبنياها معك. والنماذج والاستطلاعات متاحة أيضًا.",
 } as const;
