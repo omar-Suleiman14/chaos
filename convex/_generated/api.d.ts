@@ -20,6 +20,7 @@ import type * as authz from "../authz.js";
 import type * as businessAccess from "../businessAccess.js";
 import type * as businessModel from "../businessModel.js";
 import type * as businessTeams from "../businessTeams.js";
+import type * as classicQuizMigration from "../classicQuizMigration.js";
 import type * as consistency from "../consistency.js";
 import type * as courseDirectory from "../courseDirectory.js";
 import type * as coursePortability from "../coursePortability.js";
@@ -171,6 +172,7 @@ declare const fullApi: ApiFromModules<{
   businessAccess: typeof businessAccess;
   businessModel: typeof businessModel;
   businessTeams: typeof businessTeams;
+  classicQuizMigration: typeof classicQuizMigration;
   consistency: typeof consistency;
   courseDirectory: typeof courseDirectory;
   coursePortability: typeof coursePortability;
