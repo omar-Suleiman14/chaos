@@ -256,7 +256,6 @@ export const mapConcept = mutation({
     versionId: v.id("lessonVersions"),
     blockId: v.string(),
     conceptId: v.id("learnConcepts"),
-    questionId: v.optional(v.id("questions")),
   },
   returns: v.id("learnConceptMappings"),
   handler: async (ctx, args) => {
@@ -272,23 +271,6 @@ export const mapConcept = mutation({
       !(await ctx.db.get("learnConcepts", args.conceptId))
     )
       throw new Error("Invalid concept mapping");
-    if (args.questionId) {
-      const question = await ctx.db.get("questions", args.questionId),
-        quiz = question ? await ctx.db.get("quizzes", question.quizId) : null;
-      if (
-        !question ||
-        question.deletedAt ||
-        !quiz ||
-        quiz.creatorId !== lesson.ownerId ||
-        !version.document.blocks.some(
-          (b) =>
-            b.type === "quiz" &&
-            b.asset.kind === "quiz" &&
-            b.asset.id === quiz._id,
-        )
-      )
-        throw new Error("Question must belong to an owned embedded quiz");
-    }
     const old = await ctx.db
       .query("learnConceptMappings")
       .withIndex(
@@ -299,7 +281,7 @@ export const mapConcept = mutation({
             .eq("versionId", args.versionId)
             .eq("blockId", args.blockId)
             .eq("conceptId", args.conceptId)
-            .eq("questionId", args.questionId),
+            .eq("questionId", undefined),
       )
       .unique();
     return old?._id ?? ctx.db.insert("learnConceptMappings", args);

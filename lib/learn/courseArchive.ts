@@ -1,12 +1,14 @@
 import { zipSync, unzipSync, strToU8, strFromU8 } from "fflate";
-import type { FunctionReturnType } from "convex/server";
+import type { FunctionArgs, FunctionReturnType } from "convex/server";
 import { lessonDocumentSchema, lessonMetadataSchema } from "@/lib/mcp/learn";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import type { LessonDocument } from "@/convex/learnModel";
 import { ARCHIVE_MAX_BYTES } from "./courseArchiveLimits";
 export { ARCHIVE_MAX_BYTES } from "./courseArchiveLimits";
-export type CourseArchive = { manifest: FunctionReturnType<typeof api.coursePortability.manifest>; lessons: FunctionReturnType<typeof api.coursePortability.lesson>[]; assets: FunctionReturnType<typeof api.coursePortability.asset>[] };
+/** Archives made before classic quizzes were retired can hold their questions; they import as quiz forms. */
+type ArchivedQuiz = { kind: "quiz"; id: string; title: string; description?: string; questions: FunctionArgs<typeof api.coursePortability.importArchivedQuiz>["questions"] };
+export type CourseArchive = { manifest: FunctionReturnType<typeof api.coursePortability.manifest>; lessons: FunctionReturnType<typeof api.coursePortability.lesson>[]; assets: (FunctionReturnType<typeof api.coursePortability.asset> | ArchivedQuiz)[] };
 export function encodeCourseArchive(data: CourseArchive, files: Record<string,Uint8Array>) {
  const entries={"course.json":strToU8(JSON.stringify(data)),...files};
  if(Object.values(entries).reduce((n,b)=>n+b.byteLength,0)>ARCHIVE_MAX_BYTES)throw new Error("Course archive exceeds 150 MiB.");
@@ -30,5 +32,5 @@ export function decodeCourseArchive(bytes: Uint8Array): { data: CourseArchive; f
 }
 export function remapCourseDocument(document: LessonDocument, ids: Map<string,string>): LessonDocument {
  const lookup=(kind:string,id:string)=>{const value=ids.get(`${kind}:${id}`);if(!value)throw new Error(`Missing archived ${kind} reference.`);return value;};
- return {schemaVersion:1,blocks:document.blocks.map(b=>({...b,citations:b.citations.map(c=>({...c,sourceId:lookup("source",c.sourceId) as Id<"learnSources">})),...("sourceId" in b?{sourceId:lookup("source",b.sourceId) as Id<"learnSources">}:{}),...(b.type==="flashcards"?{setId:lookup("flashcards",b.setId) as Id<"flashcardSets">}:{}),...(b.type==="quiz"?{asset:{kind:b.asset.kind,id:lookup(b.asset.kind,b.asset.id)}}:{})})) as LessonDocument["blocks"]};
+ return {schemaVersion:1,blocks:document.blocks.map(b=>({...b,citations:b.citations.map(c=>({...c,sourceId:lookup("source",c.sourceId) as Id<"learnSources">})),...("sourceId" in b?{sourceId:lookup("source",b.sourceId) as Id<"learnSources">}:{}),...(b.type==="flashcards"?{setId:lookup("flashcards",b.setId) as Id<"flashcardSets">}:{}),...(b.type==="quiz"?{asset:{kind:"form",id:lookup(b.asset.kind,b.asset.id)}}:{})})) as LessonDocument["blocks"]};
 }

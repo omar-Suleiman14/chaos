@@ -59,7 +59,6 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
   const forms = useConfirmedQuery(api.forms.listMyForms).data;
-  const legacy = useConfirmedQuery(api.quizFunctions.getMyQuizzes).data;
   const [preset, setPreset] = useState<ThemePresetId>();
   const [timeLimitSec, setTimeLimitSec] = useState<number>(DEFAULT_TIME_LIMIT);
   const [showAnswerLabels, setShowAnswerLabels] = useState(true);
@@ -72,7 +71,7 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
   const createRehearsal = useMutation(api.live.createRehearsal);
   const [practising, setPractising] = useState(false);
   const [practiceError, setPracticeError] = useState("");
-  const practise = async (target: { formId?: Parameters<typeof createRehearsal>[0]["formId"]; quizId?: Parameters<typeof createRehearsal>[0]["quizId"] }) => {
+  const practise = async (target: Parameters<typeof createRehearsal>[0]) => {
     if (practising) return;
     setPractising(true); setPracticeError("");
     try { const gameId = await createRehearsal(target); router.push(hostHref(`/dashboard/live/${gameId}`)); }
@@ -80,7 +79,7 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
     finally { setPractising(false); }
   };
   const quizzes = forms ? [...forms.owned, ...forms.shared.filter((f) => f.role === "editor")].filter((f) => f.quizMode && f.status !== "archived") : [];
-  const loaded = forms !== undefined && legacy !== undefined;
+  const loaded = forms !== undefined;
 
   const createGame = () => {
     void create(newGameArgs(locale, preset ?? "flow"));
@@ -91,21 +90,13 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
   const quizRows = (published: boolean) => {
     const key = published ? "published" : "drafts";
     const filtered = quizzes.filter(quiz => (quiz.publishedVersion !== undefined) === published && matches(quiz.title));
-    const old = (legacy ?? []).filter(quiz => quiz.isPublished === published && matches(quiz.title));
-    const count = filtered.length + old.length;
+    const count = filtered.length;
     return <div className="games-quiz-list">
     {filtered.slice(0, shown[key]).map((quiz) => <article key={quiz._id}>
       <div className="games-quiz-list__title"><Link href={hostHref(`/dashboard/forms/${quiz._id}`)}><h3>{quiz.title}</h3></Link><p>{published ? t.published : t.draftStatus}</p></div>
       <div className="games-quiz-list__actions"><Link className="ws-btn" href={hostHref(`/dashboard/forms/${quiz._id}`)}>{published ? t.edit : t.finish}<ArrowRight size={15} aria-hidden="true" className="rtl:rotate-180" /></Link>
         {published && <button type="button" className="ws-btn" disabled={practising} onClick={() => void practise({ formId: quiz._id })}>{locale === "ar" ? "تدرّب" : "Rehearse"}</button>}
         {published && <button type="button" disabled={host.busy} className="ws-btn ws-btn--primary" onClick={() => void reportHost({ formId: quiz._id })}><Radio size={16} aria-hidden="true" />{host.label}</button>}
-      </div>
-    </article>)}
-    {old.slice(0, Math.max(0, shown[key] - filtered.length)).map((quiz) => <article key={quiz._id}>
-      <div className="games-quiz-list__title"><Link href={hostHref(`/dashboard/editor?id=${quiz._id}`)}><h3>{quiz.title}</h3></Link><p>{published ? t.published : t.draftStatus}</p></div>
-      <div className="games-quiz-list__actions"><Link href={hostHref(`/dashboard/editor?id=${quiz._id}`)} className="ws-btn">{published ? t.edit : t.finish}</Link>
-        {published && <button type="button" className="ws-btn" disabled={practising} onClick={() => void practise({ quizId: quiz._id })}>{locale === "ar" ? "تدرّب" : "Rehearse"}</button>}
-        {published && <button type="button" className="ws-btn ws-btn--primary" disabled={host.busy} onClick={() => void reportHost({ quizId: quiz._id })}><Radio size={16} aria-hidden="true" />{host.label}</button>}
       </div>
     </article>)}
     {loaded && count === 0 && <p className="games-empty">{published ? t.emptyReady : t.emptyDrafts}</p>}
@@ -134,8 +125,8 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
     <label className="ws-search"><Search size={16} aria-hidden/><input type="search" value={search} aria-label={locale === "ar" ? "ابحث عن اختبار لاستضافته" : "Find a quiz to host"} placeholder={locale === "ar" ? "ابحث عن اختبار لاستضافته…" : "Find a quiz to host…"} onChange={event=> {setSearch(event.target.value);setShown({published:12,drafts:12});}}/></label>
     {!loaded && <p className="games-help" role="status">{t.loading}</p>}
     {loaded && <>
-      <section className="games-library" aria-labelledby="games-published-title"><details className="games-toggle" open><summary><h2 id="games-published-title">{t.ready}</h2><span>{quizzes.filter(q => q.publishedVersion !== undefined).length + (legacy ?? []).filter(q => q.isPublished).length}</span></summary><p className="games-help">{t.hostingNote}</p>{quizRows(true)}</details></section>
-      <section className="games-library" aria-labelledby="games-drafts-title"><details className="games-toggle"><summary><h2 id="games-drafts-title">{t.draft}</h2><span>{quizzes.filter(q => q.publishedVersion === undefined).length + (legacy ?? []).filter(q => !q.isPublished).length}</span></summary><p className="games-help">{t.draftNote}</p>{quizRows(false)}</details></section>
+      <section className="games-library" aria-labelledby="games-published-title"><details className="games-toggle" open><summary><h2 id="games-published-title">{t.ready}</h2><span>{quizzes.filter(q => q.publishedVersion !== undefined).length}</span></summary><p className="games-help">{t.hostingNote}</p>{quizRows(true)}</details></section>
+      <section className="games-library" aria-labelledby="games-drafts-title"><details className="games-toggle"><summary><h2 id="games-drafts-title">{t.draft}</h2><span>{quizzes.filter(q => q.publishedVersion === undefined).length}</span></summary><p className="games-help">{t.draftNote}</p>{quizRows(false)}</details></section>
       <section className="games-library" aria-labelledby="games-history-title"><details className="games-toggle"><summary><h2 id="games-history-title">{t.history}</h2></summary><p className="games-help">{t.historyHelp}</p><GameHistory /></details></section>
     </>}
   </div>;

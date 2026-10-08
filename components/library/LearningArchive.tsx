@@ -13,7 +13,7 @@ import { useConfirmed } from "@/lib/confirmedQuery";
 
 type Row = { id: string; title: string; count: number; updatedAt: number; restore: () => Promise<unknown>; undo?: () => Promise<unknown> };
 type PageStatus = "LoadingFirstPage" | "CanLoadMore" | "LoadingMore" | "Exhausted";
-type LearningKind = "courses" | "lessons" | "flashcards" | "legacy_quizzes";
+type LearningKind = "courses" | "lessons" | "flashcards";
 
 /** Archived drafts stay unreadable until the owner explicitly restores them. */
 /** Archived learning content. With a title, the whole section is hidden while it has nothing archived. */
@@ -27,12 +27,9 @@ export default function LearningArchive({ kind, title }: { kind: LearningKind; t
   const restoreCourse = useMutation(api.courses.setArchived);
   const restoreCards = useMutation(api.flashcards.setLifecycle);
   const restoreLesson = useMutation(api.lessons.setLifecycle);
-  const restoreQuiz = useMutation(api.quizFunctions.setQuizArchived);
   const rows = (results ?? []).map(row => ({ ...row,
-    undo: kind === "legacy_quizzes" ? () => restoreQuiz({ quizId: row.id as Id<"quizzes">, archived: true }) : undefined,
     restore: async () => {
     if (kind === "courses") return restoreCourse({ courseId: row.id as Id<"learnCollections">, archived: false });
-    if (kind === "legacy_quizzes") return restoreQuiz({ quizId: row.id as Id<"quizzes">, archived: false });
     if (row.revision === undefined) throw new Error("Reload this archive before restoring.");
     if (kind === "lessons") return restoreLesson({ lessonId: row.id as Id<"lessons">, expectedRevision: row.revision, action: "reactivate" });
     return restoreCards({ setId: row.id as Id<"flashcardSets">, expectedRevision: row.revision, action: "restore" });
@@ -63,8 +60,8 @@ function ArchivedTable({ kind, title, rows, status, loadMore }: { kind: Learning
   return <section className="space-y-4">
     {title && <h2 className="ws-section-title mb-3">{title}</h2>}
     {!rows.length ? <div className="ws-empty ws-page"><span className="ws-empty__art"><Archive size={24} aria-hidden /></span><h2>{ar ? "لا شيء مؤرشف" : "Nothing archived"}</h2><p>{ar ? "أرشِف من قائمة «…» في المكتبة، وسيبقى هنا حتى تستعيده." : "Archive from the “…” menu in the library. It waits here until you restore it."}</p></div>
-      : <div className="ws-table-wrap ws-page"><table className="ws-table"><thead><tr><th>{ar ? "الاسم" : "Name"}</th>{kind !== "legacy_quizzes" && <th>{kind === "courses" ? ar ? "الدروس" : "Lessons" : kind === "lessons" ? ar ? "الكتل" : "Blocks" : ar ? "البطاقات" : "Cards"}</th>}<th>{ar ? "آخر تعديل" : "Edited"}</th><th>{ar ? "الإجراءات" : "Actions"}</th></tr></thead><tbody>
-        {rows.map(row => <tr key={row.id}><td><span className="font-medium" dir="auto">{row.title || (ar ? "بلا عنوان" : "Untitled")}</span></td>{kind !== "legacy_quizzes" && <td className="ws-num">{row.count}</td>}<td className="text-muted-foreground">{timeAgo(locale, row.updatedAt)}</td><td><button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" aria-label={`${restoreLabel} ${row.title}`} disabled={pending !== null} onClick={() => void run(row)}><ArchiveRestore size={15} aria-hidden />{pending === row.id ? ar ? "جارٍ الاستعادة..." : "Restoring..." : restoreLabel}</button></td></tr>)}
+      : <div className="ws-table-wrap ws-page"><table className="ws-table"><thead><tr><th>{ar ? "الاسم" : "Name"}</th><th>{kind === "courses" ? ar ? "الدروس" : "Lessons" : kind === "lessons" ? ar ? "الكتل" : "Blocks" : ar ? "البطاقات" : "Cards"}</th><th>{ar ? "آخر تعديل" : "Edited"}</th><th>{ar ? "الإجراءات" : "Actions"}</th></tr></thead><tbody>
+        {rows.map(row => <tr key={row.id}><td><span className="font-medium" dir="auto">{row.title || (ar ? "بلا عنوان" : "Untitled")}</span></td><td className="ws-num">{row.count}</td><td className="text-muted-foreground">{timeAgo(locale, row.updatedAt)}</td><td><button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" aria-label={`${restoreLabel} ${row.title}`} disabled={pending !== null} onClick={() => void run(row)}><ArchiveRestore size={15} aria-hidden />{pending === row.id ? ar ? "جارٍ الاستعادة..." : "Restoring..." : restoreLabel}</button></td></tr>)}
       </tbody></table></div>}
     {(status === "CanLoadMore" || status === "LoadingMore") && <button type="button" className="ws-btn" disabled={status === "LoadingMore" || pending !== null} onClick={() => loadMore(25)}>{status === "LoadingMore" ? ar ? "جارٍ التحميل..." : "Loading..." : ar ? "حمّل المزيد" : "Load more"}</button>}
   </section>;

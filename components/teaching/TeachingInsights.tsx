@@ -10,8 +10,8 @@ import VersionBrowser from "@/components/versions/VersionBrowser";
 import { QuestionSheet, compareQuestions } from "@/components/versions/QuestionSheet";
 import "./teaching.css";
 
-type Target = { formId: Id<"forms">; quizId?: never } | { quizId: Id<"quizzes">; formId?: never };
-type Report = NonNullable<FunctionReturnType<typeof api.formResults.getTeachingInsights>> | NonNullable<FunctionReturnType<typeof api.quizFunctions.getTeachingInsights>>;
+type Target = { formId: Id<"forms"> };
+type Report = NonNullable<FunctionReturnType<typeof api.formResults.getTeachingInsights>>;
 type Quality = Report["questions"][number];
 type Flag = Quality["flags"][number];
 
@@ -39,8 +39,7 @@ const copy = {
     tooFast: (n: string) => `${n} answers came faster than anyone can read the question. Worth a quiet look; marks are not changed.`,
     timed: (n: string) => `Answer time was recorded for ${n} answers.`,
     current: "Current version",
-    versionN: (key: string) => `Version ${key}`, snapshotN: (n: string) => `Snapshot ${n}`, attempts: (n: string) => `${n} attempts`,
-    snapshotsNote: "Snapshots are the questions saved with each attempt. Question pools can draw different sets, so a new snapshot is not always a new publication.",
+    versionN: (key: string) => `Version ${key}`, attempts: (n: string) => `${n} attempts`,
   },
   ar: {
     title: "رؤى التدريس",
@@ -65,17 +64,14 @@ const copy = {
     tooFast: (n: string) => `${n} إجابة وصلت أسرع من أن يقرأ أحد السؤال. تستحق نظرة هادئة؛ الدرجات لا تتغير.`,
     timed: (n: string) => `سُجّل زمن الإجابة لـ ${n} إجابة.`,
     current: "النسخة الحالية",
-    versionN: (key: string) => `النسخة ${key}`, snapshotN: (n: string) => `اللقطة ${n}`, attempts: (n: string) => `${n} محاولة`,
-    snapshotsNote: "اللقطات هي الأسئلة المحفوظة مع كل محاولة. قد تسحب بنوك الأسئلة مجموعات مختلفة، فاللقطة الجديدة ليست دائمًا نشرًا جديدًا.",
+    versionN: (key: string) => `النسخة ${key}`, attempts: (n: string) => `${n} محاولة`,
   },
 };
 type T = (typeof copy)["en"];
 
 /** The report loads only once a tool is opened, so these tools add no work to the results page. */
 function useReport(target: Target) {
-  const form = useQuery(api.formResults.getTeachingInsights, target.formId ? { formId: target.formId } : "skip");
-  const quiz = useQuery(api.quizFunctions.getTeachingInsights, target.quizId ? { quizId: target.quizId } : "skip");
-  return (target.formId ? form : quiz) as Report | null | undefined;
+  return useQuery(api.formResults.getTeachingInsights, { formId: target.formId });
 }
 
 export default function TeachingInsights(target: Target) {
@@ -192,13 +188,12 @@ function VersionHistory({ target, t, onClose }: { target: Target; t: T; onClose:
   const { locale } = useLocale();
   const fmt = (n: number) => formatNumber(locale, n);
   const report = useReport(target);
-  const versions = (report?.versions ?? []).map((v, i, all) => ({
-    ...v, key: String(v.key), name: target.formId ? t.versionN(String(v.key)) : t.snapshotN(fmt(all.length - i)), detail: i > 0 ? t.attempts(fmt(v.attempts)) : undefined,
+  const versions = (report?.versions ?? []).map((v, i) => ({
+    ...v, key: String(v.key), name: t.versionN(String(v.key)), detail: i > 0 ? t.attempts(fmt(v.attempts)) : undefined,
   }));
   return (
     <VersionBrowser label={t.history} status={report === undefined ? "loading" : report === null ? "unavailable" : "ready"}
       current={versions[0]} currentLabel={t.current} past={versions.slice(1)} onClose={onClose}
-      footnote={target.formId ? undefined : t.snapshotsNote}
       counts={(a, b) => compareQuestions(a.questions, b.questions).counts}
       sheet={(v, { against, side }) => <QuestionSheet questions={v.questions} against={against?.questions} side={side} />} />
   );

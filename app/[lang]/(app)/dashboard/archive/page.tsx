@@ -52,7 +52,7 @@ export default function ArchivePage() {
     <div className="ws-page-header"><div><h1 className="ws-page-title">{t.title}</h1><p className="ws-page-subtitle">{locale === "ar" ? "استعد المحتوى المؤرشف إلى مكتبتك. النماذج وحدها تدعم الحذف النهائي." : "Restore archived content to your library. Forms also support permanent deletion."}</p></div></div>
     <WsTabs tabs={["forms", "quizzes", "courses", "lessons", "flashcards"] as const} value={tab} onChange={setTab} label={locale === "ar" ? "أنواع المحتوى المؤرشف" : "Archived content types"}
       labels={locale === "ar" ? { forms: "النماذج", quizzes: "الاختبارات", courses: "الدورات", lessons: "الدروس", flashcards: "البطاقات" } : { forms: "Forms", quizzes: "Quizzes", courses: "Courses", lessons: "Lessons", flashcards: "Flashcards" }} />
-    <div className="mt-6">{tab === "forms" ? <FormsArchive key={tab} quizzes={false} /> : tab === "quizzes" ? <div className="space-y-8"><section><h2 className="ws-section-title mb-3">{locale === "ar" ? "اختبارات النماذج" : "Quiz forms"}</h2><FormsArchive key={tab} quizzes /></section><LearningArchive kind="legacy_quizzes" title={locale === "ar" ? "الاختبارات الكلاسيكية" : "Classic quizzes"} /></div> : <LearningArchive key={tab} kind={tab} />}</div>
+    <div className="mt-6">{tab === "forms" ? <FormsArchive key={tab} quizzes={false} /> : tab === "quizzes" ? <FormsArchive key={tab} quizzes /> : <LearningArchive key={tab} kind={tab} />}</div>
   </div>;
 }
 

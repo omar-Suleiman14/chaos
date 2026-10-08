@@ -138,8 +138,8 @@ function AdminConsole() {
             </section>
             <Overview />
           </> : tab === "users" ? <UsersPanel choose={choose} /> : tab === "teams" ? <PlatformTeams /> : tab === "activity" ? <Activity /> : <>
-            <WsTabs tabs={["forms", "quizzes", "courses", "lessons", "flashcards"]} value={contentKind} onChange={setContentKind} label="Content types" labels={{ forms: "Forms & quizzes", quizzes: "Legacy quizzes", courses: "Courses", lessons: "Lessons", flashcards: "Flashcards" }} />
-            {contentKind === "forms" || contentKind === "quizzes" ? <ContentPanel key={contentKind} kind={contentKind} choose={choose} /> : <PlatformContent key={contentKind} kind={contentKind as "courses" | "lessons" | "flashcards"} />}
+            <WsTabs tabs={["forms", "courses", "lessons", "flashcards"]} value={contentKind} onChange={setContentKind} label="Content types" labels={{ forms: "Forms & quizzes", courses: "Courses", lessons: "Lessons", flashcards: "Flashcards" }} />
+            {contentKind === "forms" ? <ContentPanel choose={choose} /> : <PlatformContent key={contentKind} kind={contentKind as "courses" | "lessons" | "flashcards"} />}
           </>}
 
         </main>
@@ -235,15 +235,8 @@ function Overview() {
     ["Accounts", stats.users],
     ["Restricted accounts", stats.restricted],
     ["Live forms", `${stats.liveForms} / ${stats.forms}`],
-    ["Live legacy quizzes", `${stats.liveQuizzes} / ${stats.quizzes}`],
     ["Form responses", stats.responses],
     ["Partial responses", stats.partials],
-    [
-      "Quiz completion",
-      stats.attempts
-        ? `${Math.round((stats.completedAttempts / stats.attempts) * 100)}%`
-        : "—",
-    ],
   ];
   return (
     <section className="space-y-6">
@@ -417,19 +410,13 @@ function UsersPanel({ choose }: { choose: ChooseAction }) {
     </section>
   );
 }
-function ContentPanel({
-  kind,
-  choose,
-}: {
-  kind: "forms" | "quizzes";
-  choose: ChooseAction;
-}) {
+function ContentPanel({ choose }: { choose: ChooseAction }) {
   // Title words or an exact id; searched on the server across all content as you type.
   const [searchInput, setSearchInput] = useState("");
   const search = useSettled(searchInput);
   const { results, status, loadMore } = usePaginatedQuery(
     api.admin.content,
-    search ? { kind, search } : { kind },
+    search ? { kind: "forms", search } : { kind: "forms" },
     { initialNumItems: 25 },
   );
   const moderate = useMutation(api.admin.moderateContent);
@@ -442,7 +429,7 @@ function ContentPanel({
         : "This content will stop accepting responses. The owner cannot republish until you release the hold. Responses and scores are preserved.",
       run: (reason) =>
         moderate({
-          targetId: item.id as Id<"forms"> | Id<"quizzes">,
+          targetId: item.id as Id<"forms">,
           hold: !item.held,
           reason,
         }),

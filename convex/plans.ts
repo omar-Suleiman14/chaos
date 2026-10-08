@@ -25,21 +25,13 @@ export async function consumeCreation(ctx: MutationCtx, ownerId: string) {
   if (user.creationMonth !== month) {
     // Bootstrap once, bounded to enough records to prove the active tier's cap.
     const start = Date.parse(`${month}-01T00:00:00Z`);
-    const [forms, quizzes] = await Promise.all([
-      ctx.db
-        .query("forms")
-        .withIndex("by_ownerId_and_createdAt", (q) =>
-          q.eq("ownerId", ownerId).gte("createdAt", start),
-        )
-        .take(limit + 1),
-      ctx.db
-        .query("quizzes")
-        .withIndex("by_creator_createdAt", (q) =>
-          q.eq("creatorId", ownerId).gte("createdAt", start),
-        )
-        .take(limit + 1),
-    ]);
-    count = forms.length + quizzes.length;
+    const forms = await ctx.db
+      .query("forms")
+      .withIndex("by_ownerId_and_createdAt", (q) =>
+        q.eq("ownerId", ownerId).gte("createdAt", start),
+      )
+      .take(limit + 1);
+    count = forms.length;
   }
   if (count >= limit)
     throw new Error(

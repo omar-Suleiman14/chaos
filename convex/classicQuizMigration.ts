@@ -10,7 +10,7 @@
  *   2. repoint  lesson quiz blocks (drafts, published versions, recovery copies), lesson attachments,
  *               course modules (draft and published), folders and past live games to the new forms.
  *   3. purge    delete the classic quiz tables' rows: quizzes, questions, attempts, fork snapshots and
- *               lineage, and author-index rows.
+ *               lineage, author-index rows and classic quiz settings.
  * Past attempts and scores on classic quizzes are not carried over. `status` reports progress.
  */
 import { v } from "convex/values";
@@ -18,8 +18,9 @@ import { internal } from "./_generated/api";
 import { internalMutation, internalQuery, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { checkDefinition, type FormDefinition } from "./formLogic";
-import { toDefinition, type McpQuestion } from "./mcpContract";
-import { authorDb } from "./authorIndex";
+import { toDefinition } from "./mcpContract";
+import { quizFormQuestion } from "./integrationContract";
+import { authorDb, changeCount } from "./authorIndex";
 import { defaultFormSettings } from "./formModel";
 import { randomCode } from "./serverUtils";
 
@@ -28,22 +29,26 @@ const stage = v.union(v.literal("convert"), v.literal("repoint"), v.literal("pur
 type Stage = "convert" | "repoint" | "purge";
 /** The tables each stage walks, in order. */
 const REPOINT = ["lessons", "lessonVersions", "lessonDraftRecovery", "lessonAssessments", "learnCollections", "collectionVersions", "folderMembers", "liveGames"] as const;
-const PURGE = ["questions", "quizSessions", "quizForkSnapshots", "quizForkLineage", "publicAuthorAssets", "aiJobs", "quizzes"] as const;
+const PURGE = ["questions", "quizSessions", "quizForkSnapshots", "quizForkLineage", "publicAuthorAssets", "aiJobs", "teacherSettings", "quizzes"] as const;
 
-/** A classic question as a quiz-form question; an option list keeps its order. */
-function question(q: Pick<Doc<"questions">, "type" | "questionText" | "options" | "correctAnswer" | "correctAnswers" | "explanation" | "points">): McpQuestion {
-  const base = { label: q.questionText.trim() || "Question", required: true, points: Math.max(1, q.points || 1), ...(q.explanation?.trim() ? { explanation: q.explanation.trim().slice(0, 2000) } : {}) };
-  if (q.type === "true_false") return { ...base, type: "single_choice", options: ["True", "False"], correctAnswers: [q.correctAnswer?.toLowerCase() === "false" ? "False" : "True"] };
-  if (q.type === "mcq") return { ...base, type: "single_choice", options: q.options ?? [], correctAnswers: q.correctAnswer ? [q.correctAnswer] : [] };
-  if (q.type === "multi_select") return { ...base, type: "multiple_choice", options: q.options ?? [], correctAnswers: q.correctAnswers ?? [] };
-  // Written answers have no automatic grading in forms: a long-text question without a key.
-  return { type: "long_text", label: base.label, required: true };
+type QuestionShape = Pick<Doc<"questions">, "type" | "options" | "correctAnswer" | "correctAnswers" | "keywords">;
+
+/**
+ * The old editor rewrote `type` to "mcq" on save, leaving the answer data of the real type behind.
+ * Only unambiguous cases are repaired before converting: "mcq" with several correctAnswers and
+ * options is a multi-select question; "mcq" or "true_false" with keywords, no options and no
+ * correctAnswer is a written question.
+ */
+export function repairedQuestionType(q: QuestionShape): QuestionShape["type"] {
+  if (q.type === "mcq" && (q.correctAnswers?.length ?? 0) > 1 && (q.options?.length ?? 0) > 0) return "multi_select";
+  if ((q.type === "mcq" || q.type === "true_false") && (q.keywords?.length ?? 0) > 0 && !q.options?.length && !q.correctAnswer) return "written";
+  return q.type;
 }
 
 async function definitionFor(ctx: MutationCtx, quiz: Doc<"quizzes">): Promise<FormDefinition> {
   const live = await ctx.db.query("questions").withIndex("by_quiz_deleted_order", (q) => q.eq("quizId", quiz._id).eq("deletedAt", undefined)).take(200);
   const source = live.length ? live : quiz.publishedSnapshot?.questions ?? [];
-  return toDefinition({ title: quiz.title.slice(0, 200) || "Untitled quiz", description: quiz.description?.slice(0, 5000), quizMode: true, questions: source.slice(0, 200).map(question) });
+  return toDefinition({ title: quiz.title.slice(0, 200) || "Untitled quiz", description: quiz.description?.slice(0, 5000), quizMode: true, questions: source.slice(0, 200).map((q) => quizFormQuestion({ ...q, type: repairedQuestionType(q) })) });
 }
 
 async function uniqueShareId(ctx: MutationCtx) {
@@ -70,7 +75,7 @@ async function convertOne(ctx: MutationCtx, quiz: Doc<"quizzes">) {
     await authorDb(ctx).patch("forms", formId, { status: "live", publishedVersion: 1, publishedRevision: 1 });
   }
   if (quiz.archived) await authorDb(ctx).patch("forms", formId, { status: "archived" });
-  await ctx.db.insert("classicQuizConversions", { quizId: quiz._id, formId, convertedAt: now });
+  await ctx.db.insert("classicQuizConversions", { quizId: quiz._id, formId, username: quiz.creatorUsername.toLowerCase(), slug: quiz.slug, convertedAt: now });
 }
 
 async function formFor(ctx: MutationCtx, quizId: string): Promise<Id<"forms"> | null> {
@@ -132,7 +137,12 @@ async function repointRow(ctx: MutationCtx, table: (typeof REPOINT)[number], row
 }
 
 async function purgeRow(ctx: MutationCtx, table: (typeof PURGE)[number], row: Record<string, unknown> & { _id: string }) {
-  if (table === "publicAuthorAssets") { if (row.table === "quizzes") await ctx.db.delete("publicAuthorAssets", row._id as Id<"publicAuthorAssets">); return; }
+  if (table === "publicAuthorAssets") {
+    if (row.table !== "quizzes") return;
+    await ctx.db.delete("publicAuthorAssets", row._id as Id<"publicAuthorAssets">);
+    await changeCount(ctx, row.ownerId as string, -1);
+    return;
+  }
   if (table === "aiJobs") { if (row.quizId) await ctx.db.patch("aiJobs", row._id as Id<"aiJobs">, { quizId: undefined }); return; }
   if (table === "quizForkLineage") {
     const refs = [row.asset, row.parent, row.root, row.parentVersion, row.rootVersion] as { kind: string }[];

@@ -51,9 +51,6 @@ export async function assetOwned(
   if (asset.kind === "form") {
     const form = await ctx.db.get("forms", asset.id);
     if (form?.ownerId === ownerId) return;
-  } else if (asset.kind === "quiz") {
-    const quiz = await ctx.db.get("quizzes", asset.id);
-    if (quiz?.creatorId === ownerId) return;
   } else if (asset.kind === "lesson") {
     const lesson = await ctx.db.get("lessons", asset.id);
     if (lesson?.ownerId === ownerId) return;

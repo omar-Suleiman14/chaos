@@ -36,14 +36,9 @@ export function pendingCourseChanges(course: Course, version: Version | null, pu
 }
 
 async function assessmentLive(ctx: QueryCtx, asset: { kind: "form" | "quiz"; id: string }) {
-  if (asset.kind === "form") {
-    const id = ctx.db.normalizeId("forms", asset.id);
-    const form = id ? await ctx.db.get("forms", id) : null;
-    return !!form && form.status === "live" && !form.isBanned && form.publishedVersion !== undefined;
-  }
-  const id = ctx.db.normalizeId("quizzes", asset.id);
-  const quiz = id ? await ctx.db.get("quizzes", id) : null;
-  return !!quiz && quiz.isPublished && !quiz.isBanned && !!quiz.publishedSnapshot;
+  const id = asset.kind === "form" ? ctx.db.normalizeId("forms", asset.id) : null;
+  const form = id ? await ctx.db.get("forms", id) : null;
+  return !!form && form.status === "live" && !form.isBanned && form.publishedVersion !== undefined;
 }
 
 /** The live structure after `lessonId` was published as `versionId`: the draft outline and modules, live lessons only. */

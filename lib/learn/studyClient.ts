@@ -33,9 +33,7 @@ export class StudyClient {
   }
   async forkQuiz(formId: string): Promise<string> {
     const asset = { kind: "form" as const, id: formId as Id<"forms"> };
-    const result = await this.forkAssessment(asset);
-    if (result.asset.kind !== "form") throw new Error("Unexpected copied assessment type.");
-    return result.asset.id;
+    return (await this.forkAssessment(asset)).asset.id;
   }
   claimIdentity(role: "student" | "educator", institution: string) {
     const value = institution.trim();
@@ -44,7 +42,7 @@ export class StudyClient {
   }
 }
 export function assessmentEditorHref(asset: FunctionArgs<typeof api.quizForks.fork>["asset"]) {
-  return asset.kind === "form" ? `/dashboard/forms/${encodeURIComponent(asset.id)}` : `/dashboard/editor?id=${encodeURIComponent(asset.id)}`;
+  return `/dashboard/forms/${encodeURIComponent(asset.id)}`;
 }
 export function useStudyActions() {
   const client = useConvex();

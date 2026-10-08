@@ -28,13 +28,12 @@ import type { Answers, FormDefinition, FormTheme } from "./formLogic";
 import { searchTextFor, selectEnding } from "./formLogic";
 import { gradeQuiz } from "./formQuiz";
 import { countResponse, ownerBanned, responseCap } from "./respond";
-import { emitQuizAttemptEvent, emitWebhookEvent, formResponseData } from "./webhookEvents";
+import { emitWebhookEvent, formResponseData } from "./webhookEvents";
 import {
   answerPoints, cleanChoice, cleanNickname, DEFAULT_BREAK, DEFAULT_TIME_LIMIT, MAX_BREAK, MIN_BREAK, START_COUNTDOWN_MS, FREE_PLAYER_LIMIT, IDLE_EXPIRY_MS, isCorrectAnswer,
-  isValidPin, legacyAnswerText, MAX_LIVE_QUESTIONS, MAX_TIME_LIMIT, MIN_TIME_LIMIT, nicknameKey, nicknameProblem,
-  PRO_PLAYER_LIMIT, questionsFromForm, questionsFromLegacy, rankScores, streakBonus,
+  isValidPin, MAX_LIVE_QUESTIONS, MAX_TIME_LIMIT, MIN_TIME_LIMIT, nicknameKey, nicknameProblem,
+  PRO_PLAYER_LIMIT, questionsFromForm, rankScores, streakBonus,
 } from "./liveLogic";
-import type { QuizQuestion } from "./quizModel";
 import type { LiveQuestion } from "./liveLogic";
 import { readFormCounts } from "./formCounts";
 
@@ -287,8 +286,7 @@ export const serverNow = mutation({
 
 export const createGame = mutation({
   args: {
-    formId: v.optional(v.id("forms")),
-    quizId: v.optional(v.id("quizzes")),
+    formId: v.id("forms"),
     language: v.optional(languageValidator),
     theme: v.optional(themeValidator),
     timeLimitSec: v.optional(v.number()),
@@ -305,8 +303,7 @@ export const createGame = mutation({
   },
 });
 
-export async function createGameForAccount(ctx: MutationCtx, userId: string, args: { formId?: Id<"forms">; quizId?: Id<"quizzes">; teamId?: Id<"businessTeams">; language?: "en" | "ar"; theme?: FormTheme; timeLimitSec?: number; showAnswerLabels?: boolean; autoAdvance?: boolean; breakSec?: number; startWhenPlayers?: number }) {
-  if (!!args.formId === !!args.quizId) throw new Error("LIVE_INVALID: Choose one quiz to host.");
+export async function createGameForAccount(ctx: MutationCtx, userId: string, args: { formId: Id<"forms">; teamId?: Id<"businessTeams">; language?: "en" | "ar"; theme?: FormTheme; timeLimitSec?: number; showAnswerLabels?: boolean; autoAdvance?: boolean; breakSec?: number; startWhenPlayers?: number }) {
   const timeLimitSec = args.timeLimitSec ?? DEFAULT_TIME_LIMIT;
   validateTimeLimit(timeLimitSec);
   const breakSec = args.breakSec ?? DEFAULT_BREAK;
@@ -318,7 +315,6 @@ export async function createGameForAccount(ctx: MutationCtx, userId: string, arg
 
   let title = "";
   let questions: LiveQuestion[] = [];
-  let quizQuestions: QuizQuestion[] | undefined;
   let skipped = 0;
   let language = args.language ?? "en";
   let formVersion: number | undefined;
@@ -326,7 +322,7 @@ export async function createGameForAccount(ctx: MutationCtx, userId: string, arg
   // Team-only: chosen by the host, or carried over from a team-only quiz.
   let audienceTeamId = args.teamId;
   if (audienceTeamId && !await businessMember(ctx, audienceTeamId, userId)) throw new Error("TEAM_ACCESS_REQUIRED: You can only host for a team you belong to.");
-  if (args.formId) {
+  {
     const form = await ctx.db.get("forms", args.formId);
     if (!form) throw new Error("FORM_NOT_FOUND: Form not found or you do not have access.");
     if (form.ownerId !== userId) {
@@ -347,19 +343,6 @@ export async function createGameForAccount(ctx: MutationCtx, userId: string, arg
     title = def.title || form.title;
     formVersion = version.version;
     if (form.settings.access === "signed_in" && form.settings.audienceTeamId) audienceTeamId ??= form.settings.audienceTeamId;
-  } else {
-    const quiz = await ctx.db.get("quizzes", args.quizId!);
-    if (!quiz || quiz.creatorId !== userId) throw new Error("Quiz not found or unauthorized");
-    if (quiz.archived || !quiz.isPublished || quiz.isBanned) throw new Error("LIVE_NOT_PUBLISHED: Publish this quiz before hosting it live.");
-    let list: QuizQuestion[] = quiz.publishedSnapshot?.questions ?? [];
-    if (!quiz.publishedSnapshot) {
-      const rows = await ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", quiz._id)).take(500);
-      list = rows.filter((q) => q.deletedAt === undefined).sort((a, b) => a.order - b.order).map(({ quizId: _quiz, _creationTime: _created, deletedAt: _deleted, ...q }) => q);
-    }
-    ({ questions, skipped } = questionsFromLegacy(list));
-    const keys = new Set(questions.slice(0, MAX_LIVE_QUESTIONS).map(q => q.key));
-    quizQuestions = list.filter(q => keys.has(q._id));
-    title = quiz.publishedSnapshot?.title || quiz.title;
   }
   if (!questions.length) {
     throw new Error("LIVE_NO_QUESTIONS: Live games need choice questions with two to four options and a correct answer.");
@@ -373,12 +356,11 @@ export async function createGameForAccount(ctx: MutationCtx, userId: string, arg
   if (!pin) throw new Error("LIVE_BUSY: Too many games are running. Try again in a moment.");
 
   const snapshot = questions.slice(0, MAX_LIVE_QUESTIONS);
-  const contentId = await ctx.db.insert("liveGameContent", { questions: snapshot, quizQuestions });
+  const contentId = await ctx.db.insert("liveGameContent", { questions: snapshot });
   const gameId = await ctx.db.insert("liveGames", {
     hostId: userId,
     formId: args.formId,
     formVersion,
-    quizId: args.quizId,
     title: title.slice(0, 200),
     theme,
     appearance: args.theme ? "theme" : "apple",
@@ -625,7 +607,6 @@ export const hostView = query({
       theme: game.theme ?? null,
       skippedQuestions: game.skippedQuestions,
       formId: game.formId ?? null,
-      quizId: game.quizId ?? null,
       resultsStatus: game.resultsStatus ?? null,
       savedResponses: game.savedResponses ?? 0,
       unsavedResponses: game.unsavedResponses ?? 0,
@@ -641,7 +622,7 @@ export const myGames = query({
   args: {},
   returns: v.array(v.object({
     _id: v.id("liveGames"), rehearsal: v.boolean(), title: v.string(), state: liveStateValidator, createdAt: v.number(), endedAt: v.union(v.number(), v.null()),
-    formId: v.union(v.id("forms"), v.null()), quizId: v.union(v.id("quizzes"), v.null()), questionCount: v.number(),
+    formId: v.union(v.id("forms"), v.null()), questionCount: v.number(),
     players: v.union(v.number(), v.null()), savedResponses: v.number(),
   })),
   handler: async (ctx) => {
@@ -653,7 +634,7 @@ export const myGames = query({
     const counts = await Promise.all(shown.map((g) => storedPlayerCount(ctx, g)));
     return shown.map((g, i) => ({
       _id: g._id, rehearsal: g.rehearsal ?? false, title: g.title, state: g.state, createdAt: g.createdAt, endedAt: g.endedAt ?? null,
-      formId: g.formId ?? null, quizId: g.quizId ?? null, questionCount: g.questionCount ?? g.questions.length,
+      formId: g.formId ?? null, questionCount: g.questionCount ?? g.questions.length,
       players: counts[i] ?? null, savedResponses: g.savedResponses ?? 0,
     }));
   },
@@ -909,7 +890,7 @@ export const saveResults = internalMutation({
       if (player.kicked) continue;
       const answers = await ctx.db.query("liveAnswers").withIndex("by_playerId_and_questionIndex", (q) => q.eq("playerId", player._id)).take(MAX_LIVE_QUESTIONS + 1);
       if (!answers.length) continue;
-      const ok = game.formId ? await saveFormResponse(ctx, game, player, answers) : await saveQuizAttempt(ctx, game, player, answers);
+      const ok = game.formId ? await saveFormResponse(ctx, game, player, answers) : false;
       if (ok) saved++;
       else unsaved++;
     }
@@ -979,57 +960,11 @@ async function saveFormResponse(ctx: MutationCtx, game: Game, player: Player, an
   return true;
 }
 
-async function saveQuizAttempt(ctx: MutationCtx, game: Game, player: Player, answers: Doc<"liveAnswers">[]): Promise<boolean> {
-  const quiz = await ctx.db.get("quizzes", game.quizId!);
-  if (!quiz) return false;
-  const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", quiz.creatorId)).first();
-  const unlimited = owner?.plan !== undefined ? hasPro(owner, Date.now()) : quiz.isElevated || hasPro(owner, Date.now());
-  if (!unlimited) {
-    // Same 100-attempt cap as startQuizSession.
-    const completed = await ctx.db.query("quizSessions").withIndex("by_quizId_and_status_and_score", (q) => q.eq("quizId", quiz._id).eq("status", "completed")).take(FREE_PLAYER_LIMIT);
-    if (completed.length >= FREE_PLAYER_LIMIT) return false;
-  }
-  const byIndex = new Map(answers.map((a) => [a.questionIndex, a]));
-  const rows: Doc<"quizSessions">["answers"] = [];
-  let score = 0;
-  let total = 0;
-  game.questions.forEach((question, index) => {
-    total += question.points ?? 0;
-    const a = byIndex.get(index);
-    if (!a) return;
-    const questionId = ctx.db.normalizeId("questions", question.key);
-    if (!questionId) return;
-    const earned = a.correct ? question.points ?? 0 : 0;
-    score += earned;
-    rows.push({ questionId, answer: legacyAnswerText(question, a.answer), isCorrect: a.correct, pointsEarned: earned, timeTaken: Math.round(a.timeTakenMs / 100) / 10, answeredAt: a.answeredAt, ...(a.reviewFlag ? { reviewFlag: a.reviewFlag } : {}) });
-  });
-  const snapshot = (game.quizQuestions ?? game.questions.flatMap((q, index) => {
-    const id = ctx.db.normalizeId("questions", q.key);
-    return id && q.legacyType ? [{ _id: id, type: q.legacyType, questionText: q.text,
-      options: q.options.map(o => o.label), correctAnswer: q.legacyCorrect, correctAnswers: q.legacyCorrectList,
-      points: q.points ?? 1, order: index }] : [];
-  })).map(q => ({ ...q, timeLimit: game.settings.timeLimitSec }));
-  const sessionId = await ctx.db.insert("quizSessions", {
-    quizId: quiz._id,
-    playerName: player.nickname,
-    status: "completed",
-    score,
-    totalPoints: total,
-    answers: rows,
-    ...(snapshot?.length ? { questionSnapshot: snapshot } : {}),
-    startedAt: player.joinedAt,
-    completedAt: Date.now(),
-    source: "live",
-    liveGameId: game._id,
-  });
-  await emitQuizAttemptEvent(ctx, sessionId, "response.completed");
-  return true;
-}
 
 
 /** A separate room uses the real live engine but never creates student records or responses. */
 export const createRehearsal = mutation({
-  args: { formId: v.optional(v.id("forms")), quizId: v.optional(v.id("quizzes")) },
+  args: { formId: v.id("forms") },
   returns: v.id("liveGames"),
   handler: async (ctx, args) => {
     const { identity } = await requireActiveUser(ctx);

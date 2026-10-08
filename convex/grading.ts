@@ -1,5 +1,5 @@
-// Pure grading rules shared by old quiz sessions (quizFunctions.ts) and quiz-mode
-// forms (formQuiz.ts). No Convex imports, so it is unit-testable and identical everywhere.
+// Pure grading rules shared by quiz-mode forms (formQuiz.ts) and live games. No Convex imports,
+// so it is unit-testable and identical everywhere.
 //
 // Rules:
 //  - Single choice / true-false: exact match after trim and case-fold, else 0.

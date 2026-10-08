@@ -76,7 +76,7 @@ export const begin = internalMutation({
 
 // ── Access ──────────────────────────────────────────────────────────────────
 
-type Item = { kind: "form"; ref: string; doc: Doc<"forms">; role: Role } | { kind: "classic_quiz"; ref: string; doc: Doc<"quizzes">; role: "owner" };
+type Item = { kind: "form"; ref: string; doc: Doc<"forms">; role: Role };
 
 async function formRole(ctx: Ctx, form: Doc<"forms">, userId: string): Promise<Role | null> {
   if (form.ownerId === userId) return "owner";
@@ -86,11 +86,11 @@ async function formRole(ctx: Ctx, form: Doc<"forms">, userId: string): Promise<R
   return rows.find((c) => matchesAccountFormCollaborator(c, userId))?.role ?? null;
 }
 
-/** Ids are `form_<id>` or `quiz_<id>` (classic quizzes); a bare form id also works. */
+/** Ids are `form_<id>`; a bare form id also works. Quizzes are quiz forms. */
 async function loadItem(ctx: Ctx, userId: string, ref: string, minimum: Role = "viewer"): Promise<Item> {
-  const match = /^(?:(form|quiz)_)?([A-Za-z0-9]+)$/.exec(ref.trim());
-  if (match && match[1] !== "quiz") {
-    const id = ctx.db.normalizeId("forms", match[2]);
+  const match = /^(?:form_)?([A-Za-z0-9]+)$/.exec(ref.trim());
+  if (match) {
+    const id = ctx.db.normalizeId("forms", match[1]);
     const form = id ? await ctx.db.get("forms", id) : null;
     const role = form ? await formRole(ctx, form, userId) : null;
     if (form && role) {
@@ -98,17 +98,7 @@ async function loadItem(ctx: Ctx, userId: string, ref: string, minimum: Role = "
       return { kind: "form", ref: `form_${form._id}`, doc: await withFormCounts(ctx, form), role };
     }
   }
-  if (match && match[1] !== "form") {
-    const id = ctx.db.normalizeId("quizzes", match[2]);
-    const quiz = id ? await ctx.db.get("quizzes", id) : null;
-    if (quiz && quiz.creatorId === userId && !quiz.isBanned) return { kind: "classic_quiz", ref: `quiz_${quiz._id}`, doc: quiz, role: "owner" };
-  }
   return fail("NOT_FOUND", "No form or quiz with that id in this Chaos account. Use search_forms to find it.");
-}
-
-function quizStatus(q: Doc<"quizzes">) {
-  if (q.isPublished) return "live" as const;
-  return q.publishedAt !== undefined || q.publishedSnapshot ? ("closed" as const) : ("draft" as const);
 }
 
 function formLinks(form: Doc<"forms">) {
@@ -120,23 +110,12 @@ function formLinks(form: Doc<"forms">) {
 }
 
 function summary(item: Item) {
-  if (item.kind === "form") {
-    const f = item.doc;
-    return {
-      id: item.ref, kind: "form" as const, title: f.title, status: f.status, quizMode: !!f.draft.quiz?.enabled,
-      questionCount: f.draft.fields.filter(isAnswerable).length, responseCount: f.responseCount,
-      hasUnpublishedChanges: f.publishedRevision !== undefined && f.draftRevision > f.publishedRevision,
-      role: item.role, updatedAt: new Date(f.updatedAt).toISOString(), ...formLinks(f),
-    };
-  }
-  const q = item.doc;
+  const f = item.doc;
   return {
-    id: item.ref, kind: "classic_quiz" as const, title: q.title, status: quizStatus(q), quizMode: true,
-    questionCount: null, responseCount: null, hasUnpublishedChanges: q.publishedAt !== undefined && q.updatedAt > q.publishedAt,
-    role: "owner" as const, updatedAt: new Date(q.updatedAt).toISOString(),
-    editUrl: appUrl(`/dashboard/editor?id=${q._id}`)!,
-    shareUrl: q.isPublished ? appUrl(`/${q.creatorUsername}/${q.slug}`) : null,
-    resultsUrl: appUrl(`/dashboard/results?id=${q._id}`)!,
+    id: item.ref, kind: "form" as const, title: f.title, status: f.status, quizMode: !!f.draft.quiz?.enabled,
+    questionCount: f.draft.fields.filter(isAnswerable).length, responseCount: f.responseCount,
+    hasUnpublishedChanges: f.publishedRevision !== undefined && f.draftRevision > f.publishedRevision,
+    role: item.role, updatedAt: new Date(f.updatedAt).toISOString(), ...formLinks(f),
   };
 }
 
@@ -164,14 +143,12 @@ export const searchForms = internalQuery({
       const doc = await ctx.db.get("forms", m.formId);
       if (doc) items.push({ kind: "form", ref: `form_${doc._id}`, doc, role: m.role });
     }
-    const quizzes = await ctx.db.query("quizzes").withIndex("by_creator", (q) => q.eq("creatorId", args.userId)).take(300);
-    for (const doc of quizzes) if (!doc.isBanned) items.push({ kind: "classic_quiz", ref: `quiz_${doc._id}`, doc, role: "owner" });
     const filtered = items
-      .filter((i) => matches(i.doc.title) && statusOk(i.kind === "form" ? i.doc.status : quizStatus(i.doc)))
+      .filter((i) => matches(i.doc.title) && statusOk(i.doc.status))
       .sort((a, b) => b.doc.updatedAt - a.doc.updatedAt);
     const shown = filtered.slice(0, limit);
-    const counted = new Map((await withOwnerFormCounts(ctx, args.userId, shown.flatMap((i) => (i.kind === "form" ? [i.doc] : [])))).map((doc) => [doc._id as string, doc]));
-    const page = shown.map((i) => (i.kind === "form" ? { ...i, doc: counted.get(i.doc._id)! } : i));
+    const counted = new Map((await withOwnerFormCounts(ctx, args.userId, shown.map((i) => i.doc))).map((doc) => [doc._id as string, doc]));
+    const page = shown.map((i) => ({ ...i, doc: counted.get(i.doc._id)! }));
     return { total: filtered.length, items: page.map(summary) };
   },
 });
@@ -180,33 +157,16 @@ export const getForm = internalQuery({
   args: { userId: v.string(), id: v.string() },
   handler: async (ctx, args) => {
     const item = await loadItem(ctx, args.userId, args.id);
-    if (item.kind === "form") {
-      const view = fromDefinition(item.doc.draft as FormDefinition);
-      const report = checkDefinition(item.doc.draft as FormDefinition);
-      return {
-        ...summary(item),
-        revision: item.doc.draftRevision,
-        ...view,
-        readyToPublish: report.errors.length === 0,
-        problems: report.errors,
-      };
-    }
-    const quiz = item.doc;
-    const rows = await ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", quiz._id)).take(500);
-    const questions = rows.filter((r) => r.deletedAt === undefined).sort((a, b) => a.order - b.order).map((r) => ({
-      id: r._id as string,
-      type: r.type === "written" ? "long_text" : r.type === "multi_select" ? "multiple_choice" : "single_choice",
-      label: r.questionText,
-      options: r.type === "written" ? undefined : r.options,
-      correctAnswers: r.correctAnswers ?? (r.correctAnswer ? [r.correctAnswer] : undefined),
-      keywords: r.keywords,
-      points: r.points,
-      explanation: r.explanation,
-    }));
+    const view = fromDefinition(item.doc.draft as FormDefinition);
+    const report = checkDefinition(item.doc.draft as FormDefinition);
     return {
-      ...summary(item), title: quiz.title, description: quiz.description ?? "", questions,
-      note: "Classic quizzes are read-only here. Open editUrl to change them, or create a new quiz with create_form.",
+      ...summary(item),
+      revision: item.doc.draftRevision,
+      ...view,
+      readyToPublish: report.errors.length === 0,
+      problems: report.errors,
     };
+
   },
 });
 
@@ -216,18 +176,6 @@ export const getResults = internalQuery({
   args: { userId: v.string(), id: v.string() },
   handler: async (ctx, args) => {
     const item = await loadItem(ctx, args.userId, args.id);
-    if (item.kind === "classic_quiz") {
-      const sessions = await ctx.db.query("quizSessions").withIndex("by_quiz", (q) => q.eq("quizId", item.doc._id)).take(ANALYSIS_SAMPLE);
-      const completed = sessions.filter((s) => s.status === "completed" || (s.status === undefined && s.completedAt !== undefined));
-      const percents = completed.filter((s) => s.totalPoints > 0).map((s) => (s.score / s.totalPoints) * 100);
-      return {
-        ...summary(item),
-        attempts: sessions.length,
-        completed: completed.length,
-        averageScorePercent: percents.length ? Math.round((percents.reduce((a, b) => a + b, 0) / percents.length) * 10) / 10 : null,
-        sampleLimited: sessions.length === ANALYSIS_SAMPLE,
-      };
-    }
     const form = item.doc;
     let def = form.draft as FormDefinition;
     if (form.publishedVersion !== undefined) {
@@ -287,17 +235,6 @@ export const listResponses = internalQuery({
     const item = await loadItem(ctx, args.userId, args.id);
     const numItems = Math.min(25, Math.max(1, Math.floor(args.limit ?? 10)));
     const cursor = args.cursor || null;
-    if (item.kind === "classic_quiz") {
-      const page = await ctx.db.query("quizSessions").withIndex("by_quiz_started", (q) => q.eq("quizId", item.doc._id)).order("desc").paginate({ numItems, cursor });
-      return {
-        ...summary(item),
-        responses: page.page.map((s) => ({
-          name: s.playerName, status: s.status ?? (s.completedAt ? "completed" : "in_progress"),
-          score: s.score, maxScore: s.totalPoints, startedAt: new Date(s.startedAt).toISOString(),
-        })),
-        nextCursor: page.isDone ? null : page.continueCursor,
-      };
-    }
     const form = item.doc;
     const page = await ctx.db.query("formResponses")
       .withIndex("by_formId_and_status_and_submittedAt", (q) => q.eq("formId", form._id).eq("status", "completed"))
@@ -371,7 +308,6 @@ export const updateForm = internalMutation({
   handler: async (ctx, args) => {
     await requireWritable(ctx, args.userId);
     const item = await loadItem(ctx, args.userId, args.id, "editor");
-    if (item.kind !== "form") fail("READ_ONLY", "Classic quizzes can only be edited in Chaos. Create a new quiz with create_form instead.");
     const form = item.doc;
     if (form.status === "archived") fail("FORM_ARCHIVED", "Restore this form before editing it.");
     if (args.expectedRevision !== undefined && args.expectedRevision !== form.draftRevision) {
@@ -404,7 +340,6 @@ export const publishForm = internalMutation({
   handler: async (ctx, args) => {
     await requireWritable(ctx, args.userId);
     const item = await loadItem(ctx, args.userId, args.id, "editor");
-    if (item.kind !== "form") fail("READ_ONLY", "Publish classic quizzes in Chaos.");
     const form = item.doc;
     if (form.status === "archived") fail("FORM_ARCHIVED", "Restore this form before publishing it.");
     if (item.role !== "owner" && form.settings.requireApproval) fail("APPROVAL_REQUIRED", "The owner must approve publishing. Request it in Chaos.");
@@ -429,7 +364,6 @@ export const setFormStatus = internalMutation({
   handler: async (ctx, args) => {
     await requireWritable(ctx, args.userId);
     const item = await loadItem(ctx, args.userId, args.id, "owner");
-    if (item.kind !== "form") fail("READ_ONLY", "Change classic quizzes in Chaos.");
     const form = item.doc;
     const published = form.publishedVersion !== undefined;
     let status: Doc<"forms">["status"];

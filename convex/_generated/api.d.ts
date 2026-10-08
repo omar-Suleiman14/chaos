@@ -129,7 +129,6 @@ import type * as mcpIds from "../mcpIds.js";
 import type * as mcpLearn from "../mcpLearn.js";
 import type * as mcpOrganization from "../mcpOrganization.js";
 import type * as memberCards from "../memberCards.js";
-import type * as migrations from "../migrations.js";
 import type * as notifications from "../notifications.js";
 import type * as observability from "../observability.js";
 import type * as observabilityModel from "../observabilityModel.js";
@@ -281,7 +280,6 @@ declare const fullApi: ApiFromModules<{
   mcpLearn: typeof mcpLearn;
   mcpOrganization: typeof mcpOrganization;
   memberCards: typeof memberCards;
-  migrations: typeof migrations;
   notifications: typeof notifications;
   observability: typeof observability;
   observabilityModel: typeof observabilityModel;
