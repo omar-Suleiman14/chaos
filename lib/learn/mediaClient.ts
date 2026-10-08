@@ -160,7 +160,7 @@ export class LearnMediaClient {
 export function useLearnMediaClient() {
   const client = useConvex();
   const { getToken, userId } = useAuth();
-  const media = useMemo(() => new LearnMediaClient(client, () => getToken({ template: "convex", skipCache: true }), process.env.NEXT_PUBLIC_CONVEX_SITE_URL || process.env.NEXT_PUBLIC_CONVEX_URL?.replace(/\.cloud\/?$/, ".site") || ""), [client, getToken, userId]);
+  const media = useMemo(() => { void userId; return new LearnMediaClient(client, () => getToken({ template: "convex", skipCache: true }), process.env.NEXT_PUBLIC_CONVEX_SITE_URL || process.env.NEXT_PUBLIC_CONVEX_URL?.replace(/\.cloud\/?$/, ".site") || ""); }, [client, getToken, userId]);
   useEffect(() => { media.activate(); return () => media.dispose(); }, [media]);
   return media;
 }

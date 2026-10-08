@@ -1,5 +1,9 @@
 "use client";
 
+import { ContentImage } from "@/components/ContentImage";
+
+import { FocusTextarea } from "@/components/InitialFocus";
+
 import { useKeptQuery } from "@/lib/queryCache";
 import { useCourseProgress } from "@/lib/learn/courseProgress";
 import { useCourseEnrollment } from "@/lib/learn/courseEnrollment";
@@ -21,10 +25,7 @@ import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEven
 import { flushSync } from "react-dom";
 import dynamic from "next/dynamic";
 import { useStableCallback } from "@/lib/stableCallback";
-import {
-  ArrowRight, BookOpen, ChevronLeft, Bookmark, BookmarkCheck, ExternalLink, Flag, GitFork, Headphones, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
-  Lock, MoreHorizontal, NotebookPen, PenLine, Share2, ThumbsDown, ThumbsUp, X,
-} from "lucide-react";
+import { ArrowRight, BookOpen, ChevronLeft, Bookmark, BookmarkCheck, ExternalLink, Flag, GitFork, Headphones, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus, Lock, MoreHorizontal, NotebookPen, PenLine, Share2, ThumbsUp, X } from "lucide-react";
 import { WsConfirm, WsMenu } from "@/components/workspace/primitives";
 import { toast } from "@/lib/toast";
 import { useIsPhone } from "@/components/workspace/useIsPhone";
@@ -116,6 +117,7 @@ export interface LessonReaderProps {
   courseId?: string | null;
 }
 
+/* oxlint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/prefer-tag-over-role -- Article taps complement native block action buttons; backdrop dismissal complements the modal Escape handler. This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 export default function LessonReader({ lesson, previewDraft, backHref = "/dashboard/learn", embedded, courseId }: LessonReaderProps) {
   const t = useCopy(copy);
   const bt = useBlockCopy();
@@ -166,7 +168,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const readingSeconds = useReadingSeconds(`${activityKey}:seconds`, !previewDraft && !completed);
   const [prefs, setPrefs] = useReaderPrefs();
   const [panel, setPanel] = useState<"discussion" | null>(null);
-  const [tab, setTab] = useState<"lesson" | "practice">("lesson");
+  const [tab] = useState<"lesson" | "practice">("lesson");
   const [handoff, setHandoff] = useState<HandoffContext | null>(null);
   const [reporting, setReporting] = useState(false);
   const [lightbox, setLightbox] = useState<{ url: string; alt: string; caption?: string } | null>(null);
@@ -335,7 +337,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
           <form className="lx-note-inline" onSubmit={(e) => { e.preventDefault(); if (editingNote.body.trim()) void guard(async () => { await actions.upsertNote({ id: editingNote.id, lessonId: lesson.id, blockId: block.id, body: editingNote.body }); say(t.noteSaved); setEditingNote(null); }); }}>
             <header><span><NotebookPen size={12} aria-hidden /> {t.noteTitle}</span></header>
             { }
-            <textarea autoFocus className="lx-textarea" rows={3} value={editingNote.body} placeholder={t.notePh} aria-label={t.noteTitle} maxLength={4000} onChange={(e) => setEditingNote({ ...editingNote, body: e.target.value })}
+            <FocusTextarea focusOnMount className="lx-textarea" rows={3} value={editingNote.body} placeholder={t.notePh} aria-label={t.noteTitle} maxLength={4000} onChange={(e) => setEditingNote({ ...editingNote, body: e.target.value })}
               onKeyDown={(e) => { if (e.key === "Escape") setEditingNote(null); }} />
             <div className="lx-actions" style={{ justifyContent: "flex-end", marginTop: 6 }}>
               <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" onClick={() => setEditingNote(null)}>{t.noteCancel}</button>
@@ -411,7 +413,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
           {isOwner && !caps.sharedPublishing && lesson.published && !previewDraft && <p className="lx-notice" style={{ marginBottom: 16 }}>{t.devicePublish}</p>}
           <ModerationNotice state={lesson.moderation} note={isOwner ? lesson.moderationNote : undefined} owner={isOwner} />
           <LessonActivity.Provider value={reportActivity}><article ref={article} onClick={tapBlock} className="lx-article" data-size={prefs.size} data-font={prefs.font} lang={meta.language} dir={contentDirection(meta.language)} aria-labelledby="lesson-title">
-            <img className="lx-article__cover" src={isCoverUrl(meta.coverUrl) ? meta.coverUrl : defaultCover(lesson.id)} alt="" style={{ objectPosition: `center ${meta.coverY ?? 50}%` }} />
+            <ContentImage className="lx-article__cover" src={isCoverUrl(meta.coverUrl) ? meta.coverUrl : defaultCover(lesson.id)} alt="" style={{ objectPosition: `center ${meta.coverY ?? 50}%` }} />
             <h1 id="lesson-title" className="lx-article__title">{meta.title || t.untitled}</h1>
             {meta.description && <p id="lesson-lead" className="lx-article__lead">{meta.description}</p>}
             <div className="lx-article__byline">
@@ -488,7 +490,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                           </span>
                         )}
                       </div>
-                      {remainingActivities > 0 && progress?.state !== "completed" && <p role="status" className="lx-muted">{locale === "ar" ? `أكمل الأنشطة المطلوبة المتبقية: ${remainingActivities}` : `Complete ${remainingActivities} remaining required activities first.`}</p>}
+                      {remainingActivities > 0 && progress?.state !== "completed" && <output  className="lx-muted">{locale === "ar" ? `أكمل الأنشطة المطلوبة المتبقية: ${remainingActivities}` : `Complete ${remainingActivities} remaining required activities first.`}</output>}
                       {completed && <ActivitySummary seconds={readingSeconds} activities={Object.values(activities)} />}
                       <CourseNavigation courseId={courseId} lessonId={lesson.id} completed={completed} />
                     </footer>
@@ -505,7 +507,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
       {panel && !phone && <NarrowPanel onClose={() => setPanel(null)}>{sidePanel}</NarrowPanel>}
 
       {selection && tab === "lesson" && (
-        <SelectionToolbar selection={selection} onAction={onSelectionAction} canWrite={signedIn} aiLabel={t.aiOff} canLookUp={!!findEntry(glossary.matcher, selection.text)} canRead={speechSupported()} within={main.current} />
+        <SelectionToolbar selection={selection} onAction={onSelectionAction} canWrite={signedIn} aiLabel={t.aiOff} canLookUp={!!findEntry(glossary.matcher, selection.text)} canRead={speechSupported()} within={main} />
       )}
       {tapped && (
         <BlockCallout key={tapped.id} blockId={tapped.id} label={t.blockMenu} onClose={closeCallout}>
@@ -529,6 +531,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/prefer-tag-over-role */
 
 /** Tablets: the side column is hidden by CSS below 1180px, so the panel floats as a sheet instead. */
 type AsideAction = "explain" | "ask" | "save" | "note" | "discuss" | "copy" | "threads";
@@ -600,6 +603,7 @@ function NarrowPanel({ children, onClose }: { children: React.ReactNode; onClose
   return <PhoneSheet onClose={onClose}>{children}</PhoneSheet>;
 }
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 function PhoneSheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   const panel = useModal<HTMLDivElement>({ onClose });
   return (
@@ -609,7 +613,9 @@ function PhoneSheet({ children, onClose }: { children: React.ReactNode; onClose:
     </>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
+/* oxlint-disable jsx-a11y/no-static-element-interactions, jsx-a11y/prefer-tag-over-role -- Article taps complement native block action buttons; backdrop dismissal complements the modal Escape handler. This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 function SourceSheet({ source, locator, onOpen, onClose, noLink, openLabel }: { source: LessonSource; locator: string; onOpen: () => void; onClose: () => void; noLink: string; openLabel: string }) {
   const bt = useBlockCopy();
   const panel = useModal<HTMLDivElement>({ onClose });
@@ -638,6 +644,7 @@ function SourceSheet({ source, locator, onOpen, onClose, noLink, openLabel }: { 
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/no-static-element-interactions, jsx-a11y/prefer-tag-over-role */
 
 export function UnavailableLesson({ backHref = "/dashboard/learn" }: { backHref?: string }) {
   const t = useCopy(copy);

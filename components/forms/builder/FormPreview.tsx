@@ -41,6 +41,7 @@ export function PreviewSurface({ def, language, height, runKey }: { def: FormDef
 }
 
 /** Full-screen preview with a device switch, opened from the builder header. */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 export function FullPreview({ def, onClose }: { def: FormDefinition; onClose: () => void }) {
   const t = useCopy(copy);
   const modal = useModal({ onClose });
@@ -61,14 +62,14 @@ export function FullPreview({ def, onClose }: { def: FormDefinition; onClose: ()
           </div>
           <div className="flex items-center gap-2">
             {def.languages.length > 1 && (
-              <div className="ws-segmented" role="group" aria-label={t.language}>
+              <fieldset className="ws-segmented"  aria-label={t.language}>
                 {def.languages.map((l) => <button key={l} type="button" aria-pressed={language === l} onClick={() => setLanguage(l)}>{l === "ar" ? "العربية" : "English"}</button>)}
-              </div>
+              </fieldset>
             )}
-            {!phone && <div className="ws-segmented" role="group" aria-label={t.device}>
+            {!phone && <fieldset className="ws-segmented"  aria-label={t.device}>
               <button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")} aria-label={t.desktop}><Monitor size={14} /></button>
               <button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")} aria-label={t.phone}><Smartphone size={14} /></button>
-            </div>}
+            </fieldset>}
             <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setRun((n) => n + 1)} aria-label={t.restart}><RotateCcw size={16} /><span className="ws-phone-hide">{t.restart}</span></button>
           </div>
         </div>
@@ -81,3 +82,4 @@ export function FullPreview({ def, onClose }: { def: FormDefinition; onClose: ()
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */

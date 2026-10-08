@@ -53,7 +53,7 @@ export default function GlossaryPanel({ lessonId }: { lessonId: string }) {
   return (
     <div className="lx-form">
       <p className="lx-help" style={{ fontSize: 13 }}>{t.lead}</p>
-      {entries === undefined ? <p className="lx-muted" role="status">{t.loading}</p> : !entries.length && !draft && <p className="lx-muted">{t.empty}</p>}
+      {entries === undefined ? <output className="lx-muted" >{t.loading}</output> : !entries.length && !draft && <p className="lx-muted">{t.empty}</p>}
       {entries?.map(e => (
         <div key={e.term} className="lx-panel" style={{ gap: 4, padding: 10 }}>
           <div className="lx-panel__row">

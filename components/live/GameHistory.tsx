@@ -26,7 +26,7 @@ export default function GameHistory({ limit }: { limit?: number }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
   const games = useQuery(api.live.myGames);
-  if (games === undefined) return <p className="games-help" role="status">{t.loading}</p>;
+  if (games === undefined) return <output className="games-help" >{t.loading}</output>;
   if (games.length === 0) return <p className="games-empty">{t.empty}</p>;
   return (
     <div className="games-quiz-list">

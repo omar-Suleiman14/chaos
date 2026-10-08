@@ -1,5 +1,7 @@
 "use client";
 
+import { useNow } from "@/lib/useNow";
+
 import { useEffect, useRef, useState } from "react";
 import Link from "@/components/site/SiteLink";
 import { SignInButton, SignUpButton, useUser } from "@/lib/auth/client";
@@ -59,6 +61,7 @@ function LanguageButton() {
 }
 
 /** Footer and menu: both languages, current one marked. */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- Styled button radios preserve native button activation and expose their selection to assistive technology. */
 function LanguageChoice() {
   const { locale, setLocale } = useLocale();
   const t = useCopy(copy);
@@ -70,6 +73,7 @@ function LanguageChoice() {
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
 /** `tag` sits beside the brand (the docs label); `center` replaces the page links (the docs search). */
 export function SiteNav({ tag, center }: { links?: boolean; tag?: React.ReactNode; center?: React.ReactNode }) {
@@ -135,6 +139,7 @@ export function SiteNav({ tag, center }: { links?: boolean; tag?: React.ReactNod
 }
 
 export function SiteFooter() {
+  const now = useNow();
   const t = useCopy(copy);
   return (
     <footer className="site-footer">
@@ -186,7 +191,7 @@ export function SiteFooter() {
           </div>
         </nav>
       </div>
-      <p className="site-footer__legal">© {new Date().getFullYear()} chaos · <Link href="/sitemap">{t.siteMap}</Link></p>
+      <p className="site-footer__legal">© {now === null ? "" : new Date(now).getFullYear()} chaos · <Link href="/sitemap">{t.siteMap}</Link></p>
     </footer>
   );
 }

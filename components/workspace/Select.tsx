@@ -43,6 +43,7 @@ const TYPEAHEAD_MS = 600;
  * Tab chooses the highlighted option and moves on, and typing jumps to a matching option.
  * On phones the list opens as a bottom sheet with large rows.
  */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The custom combobox uses managed focus and active-descendant options; native select and option cannot host this rich popup. */
 export function Select<V extends string = string>({
   value, onChange, options, label, labelledBy, id, placeholder = "", disabled, size = "md", className = "", onOpenChange, triggerProps,
 }: SelectProps<V>) {
@@ -236,12 +237,14 @@ export function Select<V extends string = string>({
                 key={o.value}
                 id={optionId(i)}
                 role="option"
+                tabIndex={-1}
                 aria-selected={o.value === value}
                 aria-disabled={o.disabled || undefined}
                 data-active={i === active || undefined}
                 className="ws-option"
                 onPointerMove={() => { if (enabled(i) && i !== active) setActive(i); }}
                 onClick={() => { choose(i); button.current?.focus(); }}
+                onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(i); button.current?.focus(); } }}
               >
                 <span className="ws-option__text">
                   <span>{o.label}</span>
@@ -256,3 +259,4 @@ export function Select<V extends string = string>({
     </>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */

@@ -14,6 +14,7 @@ const copy = {
   ar: { attach: "أرفق اختبارًا موجودًا", choose: "اختر اختبارًا", selected: "الاختبار المحدد", draft: "مسودة", loading: "جارٍ تحميل الاختبارات…", more: "حمّل المزيد", empty: "لا اختبارات في هذه الصفحة.", create: "أنشئ اختبارًا", title: "عنوان الاختبار", save: "أنشئ مسودة اختبار", cancel: "إلغاء", edit: "عدّل الأسئلة وانشر", note: "انشر الاختبار من محرره عندما يكون جاهزًا. يبقى نشر الدرس مستقلًا." },
 };
 /** Attach or create the quiz form a lesson quiz block shows. */
+/* oxlint-disable jsx-a11y/no-static-element-interactions -- The container stops editor shortcuts bubbling from its focusable child controls. */
 export default function QuizBlockEditor({ assetId, onSelect }: { assetId: string; onSelect: (asset: { kind: "form"; id: string }) => void }) {
   const t = useCopy(copy), { locale } = useLocale(), uid = useId();
   const page = usePaginatedQuery(api.learnLibrary.quizChoices, { kind: "form" }, { initialNumItems: 20 });
@@ -29,7 +30,7 @@ export default function QuizBlockEditor({ assetId, onSelect }: { assetId: string
       {assetId && !selected && <option value={assetId}>{t.selected}</option>}
       {page.results.map(q => <option key={q.id} value={q.id}>{q.title}{q.published ? "" : ` · ${t.draft}`}</option>)}
     </ChaosSelect>
-    {page.status === "LoadingFirstPage" && <p role="status">{t.loading}</p>}
+    {page.status === "LoadingFirstPage" && <output >{t.loading}</output>}
     {page.status === "Exhausted" && !page.results.length && <p className="lx-muted">{t.empty}</p>}
     {(page.status === "CanLoadMore" || page.status === "LoadingMore") && <button type="button" className="ws-btn ws-btn--sm" disabled={busy || page.status === "LoadingMore"} onClick={() => page.loadMore(20)}>{t.more}</button>}
     {assetId && <Link className="lx-link" href={`/dashboard/forms/${encodeURIComponent(assetId)}`}>{t.edit}</Link>}
@@ -45,3 +46,4 @@ export default function QuizBlockEditor({ assetId, onSelect }: { assetId: string
     </>}
   </div>;
 }
+/* oxlint-enable jsx-a11y/no-static-element-interactions */

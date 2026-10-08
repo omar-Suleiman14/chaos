@@ -1,6 +1,6 @@
 "use client";
 
-import { memo, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { memo, useCallback, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import {
   AlignLeft, AtSign, Calendar, CheckSquare, ChevronDown, ChevronRight, CircleDot, Clock, FileUp, GitBranch, Globe, Grid3x3, Hash, ListOrdered,
   Minus, Phone, Plus, SlidersHorizontal, SquareChevronDown, Star, Type, Text as TextIcon,
@@ -53,11 +53,11 @@ function nextType(def: FormDefinition, afterIndex: number): FieldType {
 function AddBar({ onAdd }: { onAdd: (type?: FieldType) => void }) {
   const t = useCopy(copy);
   return (
-    <div className="flex flex-wrap items-center gap-2" role="group" aria-label={t.addQuestion}>
+    <fieldset className="flex flex-wrap items-center gap-2"  aria-label={t.addQuestion}>
       <button type="button" className="ws-btn ws-btn--primary" onClick={() => onAdd()}><Plus size={17} /> {t.addQuestionButton}</button>
       <button type="button" className="ws-btn ws-btn--ghost" onClick={() => onAdd("statement")}><TextIcon size={16} /> {t.addText}</button>
       <button type="button" className="ws-btn ws-btn--ghost" onClick={() => onAdd("section")}><Minus size={16} /> {t.addSection}</button>
-    </div>
+    </fieldset>
   );
 }
 
@@ -113,19 +113,18 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
 }) {
   /** Typing merges into one undo step; structural edits are always their own step. */
   const t = useCopy(copy);
-  const labels = useBuilderLabels();
   const change = (updater: (d: FormDefinition) => FormDefinition) => rawChange(updater);
-  const step = (updater: (d: FormDefinition) => FormDefinition) => rawChange(updater, { checkpoint: true });
+  const step = useCallback((updater: (d: FormDefinition) => FormDefinition) => rawChange(updater, { checkpoint: true }), [rawChange]);
   const [expanded, setExpanded] = useState<string | null>(def.fields[0]?.id ?? null);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [focusId, setFocusId] = useState<string | null>(null);
 
-  const add = (afterIndex: number, type?: FieldType) => {
+  const add = useCallback((afterIndex: number, type?: FieldType) => {
     const field = blankField(type ?? nextType(def, afterIndex));
     step((d) => insertAfter(d, afterIndex, [field]));
     setExpanded(field.id);
     setFocusId(field.id);
-  };
+  }, [def, step]);
   const remove = (ids: Set<string>) => {
     const count = def.fields.filter((f) => ids.has(f.id)).length;
     step((d) => {
@@ -136,15 +135,15 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
     setSelected(new Set());
     announce?.(t.deleted(count));
   };
-  const toggle = (id: string) => setSelected((prev) => {
+  const toggle = useCallback((id: string) => setSelected((prev) => {
     const next = new Set(prev);
     if (next.has(id)) next.delete(id); else next.add(id);
     return next;
-  });
+  }), []);
 
   // Rows call the latest handlers through this ref, so memoized rows never hold stale ones.
   const actions = useRef<RowActions>({ toggle, expand: setExpanded, insert: add });
-  useLayoutEffect(() => { actions.current = { toggle, expand: setExpanded, insert: add }; });
+  useLayoutEffect(() => { actions.current = { toggle, expand: setExpanded, insert: add }; }, [toggle, add]);
 
   return (
     <div className="space-y-4">
@@ -190,7 +189,7 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
                     onDuplicate={() => step((d) => (field.type === "section" ? duplicateSection(d, field.id) : insertAfter(d, index, copyFields([field]))))}
                     onRemove={() => remove(new Set([field.id]))}
                     onMove={(delta) => step((d) => moveField(d, index, index + delta))}
-                    autoFocus={focusId === field.id}
+                    focusOnMount={focusId === field.id}
                   />
                 </div>
               )}

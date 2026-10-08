@@ -37,9 +37,9 @@ export function StudyProgressOptIn({ responseId, language }: {
   return (
     <div className="form-receipt" lang={language} dir={ar ? "rtl" : "ltr"}>
       {evidenceCount !== null ? (
-        <p role="status">{evidenceCount > 0
+        <output >{evidenceCount > 0
           ? ar ? "أُضيفت هذه المحاولة إلى تقدّمك الدراسي." : "This attempt was added to your study progress."
-          : ar ? "لا توجد أسئلة مرتبطة بمفاهيم دراسية في هذه المحاولة؛ لم يُضف أي تقدّم." : "This attempt has no questions mapped to study concepts; no progress was added."}</p>
+          : ar ? "لا توجد أسئلة مرتبطة بمفاهيم دراسية في هذه المحاولة؛ لم يُضف أي تقدّم." : "This attempt has no questions mapped to study concepts; no progress was added."}</output>
       ) : (
         <>
           <p className="text-xs form-muted">{ar ? "يمكنك استخدام هذه المحاولة لتحديث تقدّمك في المفاهيم الدراسية المرتبطة بهذا الاختبار." : "You can use this attempt to update your progress for study concepts linked to this quiz."}</p>

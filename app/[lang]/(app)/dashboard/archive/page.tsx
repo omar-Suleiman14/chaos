@@ -126,7 +126,7 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
             <tbody>
               {rows.map((f) => (
                 <tr key={f._id}>
-                  <td>
+                  <td aria-label={locale === "ar" ? "الإجراءات" : "Actions"}>
                     <Link href={`/dashboard/forms/${f._id}`} className="flex items-center gap-2.5 font-medium">
                       <span className="ws-recent-icon" aria-hidden="true" style={{ background: /^#[0-9a-f]{6}$/i.test(f.theme.accent) ? f.theme.accent : "var(--primary)", opacity: 0.6 }}>
                         {(f.title || "U").trim().charAt(0).toUpperCase()}
@@ -136,7 +136,7 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
                   </td>
                   <td className="ws-num">{formatNumber(locale, f.responseCount)}</td>
                   <td className="text-muted-foreground">{timeAgo(locale, f.updatedAt)}</td>
-                  <td>
+                  <td aria-label={locale === "ar" ? "الإجراءات" : "Actions"}>
                     <span className="flex items-center justify-end gap-1">
                       <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => void restore(f._id, f.title || t.untitled, f.publishedVersion !== undefined)}>
                         <ArchiveRestore size={15} /> {t.restore}

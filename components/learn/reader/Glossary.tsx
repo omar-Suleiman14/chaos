@@ -16,6 +16,7 @@ export interface OpenTerm { entry: GlossaryEntry; rect: DOMRect; from?: HTMLElem
 export const GlossaryContext = createContext<{ matcher: GlossaryMatcher | null; open: (term: OpenTerm) => void } | null>(null);
 
 /** Text with the lesson's glossary terms marked; tapping one opens its look-up card. */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- Inline glossary terms preserve saved text offsets; the span button implements Enter and Space, and the look-up card uses managed focus. */
 export function TermText({ text, seen, keyPrefix }: { text: string; seen: Set<GlossaryEntry>; keyPrefix: string }) {
   const glossary = useContext(GlossaryContext);
   const t = useCopy(copy);
@@ -28,6 +29,7 @@ export function TermText({ text, seen, keyPrefix }: { text: string; seen: Set<Gl
       onKeyDown={(e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); glossary?.open({ entry: part.entry, rect: e.currentTarget.getBoundingClientRect(), from: e.currentTarget }); } }}>{part.text}</span>
   ))}</>;
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
 function languageName(code: string | undefined, locale: string) {
   if (!code) return undefined;
@@ -38,6 +40,7 @@ function languageName(code: string | undefined, locale: string) {
  * The look-up card, laid out like a dictionary entry: the word with its pronunciation and a speaker
  * that says only the word, the definition, then the word in the learner's language with its own speaker.
  */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- Inline glossary terms preserve saved text offsets; the span button implements Enter and Space, and the look-up card uses managed focus. */
 export function TermCard({ term, onClose, canSpeak = false }: { term: OpenTerm; onClose: () => void; canSpeak?: boolean }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
@@ -120,6 +123,7 @@ export function TermCard({ term, onClose, canSpeak = false }: { term: OpenTerm; 
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
 /** A speaker whose waves pulse while it talks. */
 function SpeakerGlyph({ speaking }: { speaking: boolean }) {

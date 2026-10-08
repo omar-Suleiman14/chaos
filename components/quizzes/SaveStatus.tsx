@@ -22,9 +22,9 @@ export function SaveStatus({ state, label, className = "" }: { state: SaveState;
   }, [state]);
   const Icon = ICON[state];
   return (
-    <span role="status" aria-live="polite" className={`save-status ${className}`} data-state={state} data-folded={folded || undefined} title={label}>
+    <output  aria-live="polite" className={`save-status ${className}`} data-state={state} data-folded={folded || undefined} title={label}>
       <Icon size={14} strokeWidth={2.4} aria-hidden className="save-status__icon" />
       <span className="save-status__label">{label}</span>
-    </span>
+    </output>
   );
 }

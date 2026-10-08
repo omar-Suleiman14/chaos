@@ -13,6 +13,7 @@ const copy = {
   ar: { attach: "أرفق مجموعة موجودة", create: "أنشئ مجموعة", title: "عنوان المجموعة", front: "السؤال", back: "الإجابة", add: "أضف بطاقة", remove: "احذف البطاقة", save: "أنشئ المجموعة", cancel: "إلغاء", choose: "اختر مجموعة بطاقات", more: "حمّل المزيد", loading: "جارٍ تحميل المجموعات…", draft: "مسودة", publish: "انشر المجموعة للمتعلمين", public: "منشورة للمتعلمين", edit: "عدّل المجموعة", count: (n: number) => `${n} بطاقة`, empty: "لا مجموعات بطاقات بعد.", note: "أنشئ مجموعة ثم انشرها عندما تكون جاهزة. يبقى نشر الدرس مستقلًا." },
 };
 
+/* oxlint-disable jsx-a11y/no-static-element-interactions -- The container stops editor shortcuts bubbling from its focusable child controls. */
 export default function FlashcardBlockEditor({ setId, onSelect }: { setId: string; onSelect: (id: string) => void }) {
   const { locale } = useLocale();
   const t = useCopy(copy);
@@ -35,12 +36,12 @@ export default function FlashcardBlockEditor({ setId, onSelect }: { setId: strin
       {setId && !choices.some(d => d._id === setId) && <option value={setId}>{deck?.title || t.loading}</option>}
       {choices.map(d => <option key={d._id} value={d._id}>{d.title}{!d.publishedVersionId || d.visibility !== "public" ? ` · ${t.draft}` : ""}</option>)}
     </ChaosSelect>
-    {page.status === "LoadingFirstPage" && <p role="status">{t.loading}</p>}
+    {page.status === "LoadingFirstPage" && <output >{t.loading}</output>}
     {page.status === "Exhausted" && !choices.length && <p className="lx-muted">{t.empty}</p>}
     {(page.status === "CanLoadMore" || page.status === "LoadingMore") && <button type="button" className="ws-btn ws-btn--sm" disabled={page.status === "LoadingMore"} onClick={() => page.loadMore(20)}>{t.more}</button>}
     {deck && <div className="lx-actions"><span className="lx-muted">{t.count(deck.cards.length)}</span><Link className="lx-link" href={`/dashboard/learn/flashcards/${deck._id}`}>{t.edit}</Link>
       {deck.publishedVersionId && deck.visibility === "public" ? <span className="lx-badge" data-tone="green">{t.public}</span> : <button type="button" className="ws-btn ws-btn--sm" disabled={busy || !deck.cards.length} onClick={async () => {
-        setBusy(true); 
+        setBusy(true);
         try { await publish({ setId: deck._id, expectedRevision: deck.revision, visibility: "public" }); }
         catch (err) { toast.error(err); }
         finally { setBusy(false); }
@@ -57,7 +58,7 @@ export default function FlashcardBlockEditor({ setId, onSelect }: { setId: strin
       </fieldset>)}
       <div className="lx-actions"><button type="button" className="ws-btn ws-btn--sm" disabled={busy || cards.length >= 500} onClick={() => setCards(rows => [...rows, { id: crypto.randomUUID().replaceAll("-", "_"), front: "", back: "", conceptIds: [] }])}>{t.add}</button>
         <button type="button" className="ws-btn ws-btn--primary" disabled={busy || !valid} onClick={async () => {
-          setBusy(true); 
+          setBusy(true);
           try { const id = await create({ title: title.trim(), cards: cards.map(c => ({ ...c, front: c.front.trim(), back: c.back.trim() })) }); onSelect(id); setCreating(false); setTitle(""); setCards([{ id: "card_1", front: "", back: "", conceptIds: [] }]); }
           catch (err) { toast.error(err); }
           finally { setBusy(false); }
@@ -65,3 +66,4 @@ export default function FlashcardBlockEditor({ setId, onSelect }: { setId: strin
     </>}
   </div>;
 }
+/* oxlint-enable jsx-a11y/no-static-element-interactions */

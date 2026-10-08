@@ -1,5 +1,7 @@
 "use client";
 
+import { FocusInput } from "@/components/InitialFocus";
+
 import { useEffect, useRef, useState } from "react";
 import { toast } from "@/lib/toast";
 import { useMutation, usePaginatedQuery } from "convex/react";
@@ -56,6 +58,7 @@ function FilterChip<V extends string>({ name, value, options, onChange, empty }:
   );
 }
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-interactions -- This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. The list delegates arrow keys between its native row buttons; the list itself is not a control. */
 export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role: "owner" | "editor" | "viewer"; quiz: boolean }) {
   const t = useCopy(resultsCopy);
   const { locale } = useLocale();
@@ -294,7 +297,7 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
             saveView({ formId, name: viewName, filter }).then(() => { toast.success(t.viewSaved(viewName)); setViewName(""); setSavingView(false); }).catch((err) => toast.error(err));
           }}>
             <label className="grid gap-1.5 text-sm font-medium">{t.viewName}
-              <input className="kb-input" value={viewName} maxLength={60} onChange={(e) => setViewName(e.target.value)} autoFocus />
+              <FocusInput className="kb-input" value={viewName} maxLength={60} onChange={(e) => setViewName(e.target.value)} focusOnMount />
             </label>
             <div className="flex justify-end gap-2">
               <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setSavingView(false)}>{t.cancel}</button>
@@ -313,7 +316,7 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
             act(setTags({ formId, responseIds: target, add: tagInput }), () => { setTagInput(""); setTagDialog(null); });
           }}>
             <label className="grid gap-1.5 text-sm font-medium">{t.tagName}
-              <input className="kb-input" value={tagInput} maxLength={40} onChange={(e) => setTagInput(e.target.value)} autoFocus />
+              <FocusInput className="kb-input" value={tagInput} maxLength={40} onChange={(e) => setTagInput(e.target.value)} focusOnMount />
             </label>
             <div className="flex justify-end gap-2">
               <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setTagDialog(null)}>{t.cancel}</button>
@@ -325,3 +328,4 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-interactions */

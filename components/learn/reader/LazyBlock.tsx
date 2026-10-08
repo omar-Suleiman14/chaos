@@ -26,7 +26,7 @@ export function useNearViewport<T extends Element>() {
 
 /** Reserves the block's space in the page's own shape; no "Loading…" text, which jumped around as blocks arrived. */
 export function BlockPlaceholder({ label, height }: { label: string; height: number }) {
-  return <div role="status" aria-busy="true" className="lx-block-wait" style={{ minHeight: height }}><span className="sr-only">{label}</span></div>;
+  return <output  aria-busy="true" className="lx-block-wait" style={{ minHeight: height }}><span className="sr-only">{label}</span></output>;
 }
 
 export default function LazyBlock({ children, label, height }: { children: ReactNode; label: string; height: number }) {

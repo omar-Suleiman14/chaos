@@ -287,7 +287,7 @@ export default function WebhooksSection() {
       {secret && <SecretBox secret={secret.value} note={secret.note} onDone={() => setSecret(null)} />}
 
       {creating && (
-        <div className="chaos-card bg-card p-5 space-y-4" role="group" aria-label={t.newWebhook}>
+        <fieldset className="chaos-card bg-card p-5 space-y-4"  aria-label={t.newWebhook}>
           <div className="flex justify-between items-center">
             <h3 className="chaos-heading text-sm">{t.newWebhook}</h3>
             <button type="button" onClick={() => setCreating(false)} aria-label={t.cancel}><X size={16} /></button>
@@ -317,7 +317,7 @@ export default function WebhooksSection() {
           </label>
           {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
           <button type="button" onClick={submit} disabled={!url.trim() || !events.length || (target === "selected" && !refs.length)} className="kb-btn kb-btn-primary disabled:opacity-50">{t.create}</button>
-        </div>
+        </fieldset>
       )}
 
       {hooks === undefined ? <LoadingState label={t.loading} /> : hooks.length === 0 ? (

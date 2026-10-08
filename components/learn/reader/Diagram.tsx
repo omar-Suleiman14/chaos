@@ -1,4 +1,6 @@
 "use client";
+
+import { ContentImage } from "@/components/ContentImage";
 import { useEffect, useId, useRef, useState } from "react";
 import { useLocale } from "@/lib/i18n";
 import { useTheme } from "@/components/ThemeProvider";
@@ -102,7 +104,7 @@ ${text}`);
     return () => { live = false; clearTimeout(timer); };
   }, [text, id, theme, key, near]);
   return <figure ref={ref} className="lx-diagram" data-theme={theme}>
-    {image ? <img src={image} alt={ar ? "مخطط الدرس" : "Lesson diagram"} /> : error ? <p role="status" className="lx-muted">{ar ? "تحقق من صيغة المخطط أدناه." : "Check the diagram syntax below."}</p> : <BlockPlaceholder label={ar ? "جارٍ رسم المخطط…" : "Rendering diagram…"} height={220} />}
+    {image ? <ContentImage src={image} alt={ar ? "مخطط الدرس" : "Lesson diagram"} /> : error ? <output  className="lx-muted">{ar ? "تحقق من صيغة المخطط أدناه." : "Check the diagram syntax below."}</output> : <BlockPlaceholder label={ar ? "جارٍ رسم المخطط…" : "Rendering diagram…"} height={220} />}
     <details><summary>{ar ? "اعرض نص المخطط" : "View diagram source"}</summary><pre dir="ltr"><code>{text}</code></pre></details>
   </figure>;
 }

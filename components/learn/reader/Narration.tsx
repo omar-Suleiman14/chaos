@@ -61,6 +61,7 @@ export interface NarrationProps {
 
 const IDLE: Snapshot = { status: "idle", index: 0, section: 0, wordTiming: null };
 
+/* oxlint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/prefer-tag-over-role -- The labelled narration region delegates arrow shortcuts to its focusable playback controls. The labelled progress indicator uses custom nested visual tracks while exposing current, minimum and maximum values. */
 export default function Narration({ request, lessonId, content, title, description, language, article, activities, onClose }: NarrationProps) {
   const t = useCopy(copy);
   const [prefs, setPrefs] = useReaderPrefs();
@@ -179,7 +180,7 @@ export default function Narration({ request, lessonId, content, title, descripti
   return (
     <>
       {lesson && host && createPortal(<span ref={setLayer} className="lx-narr-layer" aria-hidden />, host)}
-      <section ref={bar} className="lx-narration ws-glass" role="region" aria-label={t.region} tabIndex={-1} data-status={status} data-minimized={minimized || undefined}
+      <section ref={bar} className="lx-narration ws-glass"  aria-label={t.region} tabIndex={-1} data-status={status} data-minimized={minimized || undefined}
         onKeyDown={(e) => {
           if ((e.target as HTMLElement).closest("[role='menu']")) return;
           const rtl = getComputedStyle(e.currentTarget).direction === "rtl";
@@ -234,7 +235,7 @@ export default function Narration({ request, lessonId, content, title, descripti
                       const ranked = rankVoices(voices, lang, readerRegion(lang));
                       const chosen = pickVoice(voices, lang, prefs.voices[lang], readerRegion(lang));
                       return (
-                        <div key={lang} role="group" aria-label={t.langs[lang]}>
+                        <fieldset key={lang}  aria-label={t.langs[lang]}>
                           {langs.length > 1 && <p className="lx-narration__menu-title">{t.langs[lang]}</p>}
                           {!ranked.length && <p className="lx-muted" style={{ padding: "4px 10px" }}>{t.noVoices}</p>}
                           {ranked.map((v) => (
@@ -243,7 +244,7 @@ export default function Narration({ request, lessonId, content, title, descripti
                               <span style={{ flex: 1, minWidth: 0 }} dir="auto">{v.name}</span><span className="lx-muted">{v.lang}</span>{chosen?.voiceURI === v.voiceURI && <Check size={15} aria-hidden />}
                             </button>
                           ))}
-                        </div>
+                        </fieldset>
                       );
                     })}
                   </>
@@ -260,3 +261,4 @@ export default function Narration({ request, lessonId, content, title, descripti
     </>
   );
 }
+/* oxlint-enable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/prefer-tag-over-role */

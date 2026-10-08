@@ -1,6 +1,6 @@
 import { recordStudent } from "./studentRoster";
 import { getAuthIdentity } from "./authIdentity";
-import { authorDb } from "./authorIndex";
+
 import { homeworkUploadAccess } from "./homeworkUploadAccess";
 import { hasPro } from "./authz";
 import { planLimits } from "../lib/planCatalog";
@@ -637,6 +637,7 @@ export const checkUploadTicket = internalQuery({
 });
 
 /** Consumes the ticket and records a file the endpoint itself stored. */
+/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export const recordUpload = internalMutation({
   args: { token: v.string(), storageId: v.id("_storage"), name: v.string(), contentType: v.string(), size: v.number() },
   returns: uploadResult,
@@ -657,6 +658,7 @@ export const recordUpload = internalMutation({
     return { uploadId, name, size: args.size };
   },
 });
+/* oxlint-enable eslint/no-control-regex */
 
 /** Shared limits for the HTTP endpoint. */
 export function uploadRejection(contentType: string, size: number): string | null {

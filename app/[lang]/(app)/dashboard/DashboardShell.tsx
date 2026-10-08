@@ -1,5 +1,7 @@
 "use client";
 
+import { FocusButton } from "@/components/InitialFocus";
+
 import Link from "next/link";
 import AccountMenu from "@/components/workspace/AccountMenu";
 import "@/components/workspace/teams.css";
@@ -129,6 +131,7 @@ function pageLabel(pathname: string, t: Copy): string {
   return item ? t[item.key] : t.dashboard;
 }
 
+/* oxlint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/prefer-tag-over-role -- The sidebar delegates native link clicks to close the drawer; keyboard link activation also dispatches click. The focusable vertical separator supports keyboard and pointer resizing; a native hr is not an interactive splitter. */
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const t = useCopy(copy);
   const { locale, dir } = useLocale();
@@ -364,8 +367,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               <span className="ws-plus" aria-hidden="true"><Plus size={14} strokeWidth={2.6} /></span> <span>{busy ? t.creating : t.new}</span>
             </button>
             {newOpen && (
-              <div role="menu" className="ws-new-menu__list ws-glass" onKeyDown={(e) => { if (e.key === "Escape") setNewOpen(false); }}>
-                <button type="button" role="menuitem" autoFocus className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(); }}><FileText size={16} aria-hidden="true" /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>
+              <div role="menu" tabIndex={-1} className="ws-new-menu__list ws-glass" onKeyDown={(e) => { if (e.key === "Escape") setNewOpen(false); }}>
+                <FocusButton type="button" role="menuitem" focusOnMount className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(); }}><FileText size={16} aria-hidden="true" /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></FocusButton>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(newQuizArgs(locale)); }}><ListChecks size={16} aria-hidden="true" /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createCourse(); }}><GraduationCap size={16} aria-hidden="true" /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createFlashcards(); }}><Layers size={16} aria-hidden="true" /><span><strong>{t.newFlashcards}</strong><small>{t.newFlashcardsHelp}</small></span></button>
@@ -481,7 +484,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </header>
 
           <main id="workspace-content" tabIndex={-1} className={`ws-content cache-state ${wide ? "ws-content--wide" : ""}`} data-cache-state={cachePending ? "cached" : "live"} aria-busy={cachePending || undefined}>
-            <div key={pathname} className="ws-page">{(account?.isBanned || account?.suspendedUntil) && <div role="status" className="mb-5 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">{account.isBanned ? t.banned : t.suspended(new Date(account.suspendedUntil!).toLocaleString(dateLocale(locale)))} {t.paused} <a className="underline" href={`mailto:${supportEmail}`}>{t.contact}</a>.</div>}{children}</div>
+            <div key={pathname} className="ws-page">{(account?.isBanned || account?.suspendedUntil) && <output  className="mb-5 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">{account.isBanned ? t.banned : t.suspended(new Date(account.suspendedUntil!).toLocaleString(dateLocale(locale)))} {t.paused} <a className="underline" href={`mailto:${supportEmail}`}>{t.contact}</a>.</output>}{children}</div>
           </main>
         </div>
       </div>
@@ -489,3 +492,4 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/prefer-tag-over-role */

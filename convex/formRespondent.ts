@@ -10,6 +10,7 @@ export function checkHiddenParameters(definitions: readonly HiddenParameter[], l
   return definitions;
 }
 /** Strict URL syntax: no whitespace, numeric coercion of empty strings, or truthy booleans. */
+/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export function captureTypedHidden(definitions: readonly HiddenParameter[] | undefined, input: Record<string, string> | undefined, partial = false): Record<string, string | number | boolean> | undefined {
   if (!definitions?.length) return undefined;
   const result: Record<string, string | number | boolean> = {};
@@ -26,6 +27,7 @@ export function captureTypedHidden(definitions: readonly HiddenParameter[] | und
   if (Object.keys(errors).length) throw new Error("INVALID_HIDDEN_PARAMETERS: " + JSON.stringify(errors));
   return result;
 }
+/* oxlint-enable eslint/no-control-regex */
 const hiddenNamePattern = /^[A-Za-z][A-Za-z0-9_-]{0,39}$/;
 /** Query parameters the respondent page already uses. */
 export const reservedParams = ["lang", "embed", "resume", "edit", "score"] as const;
@@ -55,6 +57,7 @@ export function checkHiddenFieldNames(names: readonly string[]): string[] {
  * Keeps only the declared parameters, trimmed, without control characters and capped in length.
  * Unknown names are dropped, so a link can never add fields or overwrite answers.
  */
+/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export function captureHidden(declared: readonly string[] | undefined, input: Record<string, string> | undefined): Record<string, string> | undefined {
   if (!declared?.length || !input) return undefined;
   const out: Record<string, string> = {};
@@ -66,6 +69,7 @@ export function captureHidden(declared: readonly string[] | undefined, input: Re
   }
   return Object.keys(out).length ? out : undefined;
 }
+/* oxlint-enable eslint/no-control-regex */
 
 // ── Allowed emails and domains (signed-in forms) ────────────────────────────
 

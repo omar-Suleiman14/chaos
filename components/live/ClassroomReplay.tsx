@@ -65,6 +65,7 @@ const reducedMotion = () => typeof window !== "undefined" && window.matchMedia?.
  * questions recede behind it, and the timeline on the trailing edge jumps between them. Inside a
  * question, play or scrub through answers and scores as they arrived; ghost replay follows one student.
  */
+/* oxlint-disable jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions -- Stacked replay cards provide pointer shortcuts; labelled timeline buttons and the dialog key handler provide keyboard navigation. */
 export default function ClassroomReplay({ gameId }: { gameId: Id<"liveGames"> }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
@@ -141,7 +142,7 @@ export default function ClassroomReplay({ gameId }: { gameId: Id<"liveGames"> })
 
       {replay === undefined ? (
         <main className="tm-stage" aria-busy="true">
-          <div className="tm-stack"><section className="tm-window tm-window--skeleton" style={{ ["--d" as string]: 0 }}><p role="status" className="tm-loading">{t.loading}</p></section></div>
+          <div className="tm-stack"><section className="tm-window tm-window--skeleton" style={{ ["--d" as string]: 0 }}><output  className="tm-loading">{t.loading}</output></section></div>
         </main>
       ) : replay === null ? (
         <main className="tm-stage">
@@ -209,6 +210,7 @@ export default function ClassroomReplay({ gameId }: { gameId: Id<"liveGames"> })
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/no-static-element-interactions, jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions */
 
 type T = (typeof copy)["en"];
 
@@ -254,7 +256,7 @@ function QuestionScene({ replay, at, ghost, t, fmt, secs, stale }: { replay: Rep
           })}
         </ul>
         {follow && (
-          <div className="tm-follow" role="status">
+          <output className="tm-follow" >
             <span className="tm-follow__avatar" aria-hidden>{follow.nickname.slice(0, 1).toLocaleUpperCase()}</span>
             <span className="tm-follow__text">
               <strong dir="auto">{t.following(follow.nickname)}</strong>
@@ -266,7 +268,7 @@ function QuestionScene({ replay, at, ghost, t, fmt, secs, stale }: { replay: Rep
               </span>
             </span>
             <span className="tm-follow__rank">#{fmt(followRank)}</span>
-          </div>
+          </output>
         )}
       </div>
       <aside className="tm-board" aria-label={t.leaderboard}>
@@ -326,9 +328,9 @@ function Transport({ replay, at, duration, playing, ended, speed, ghost, t, secs
           aria-valuetext={`${secs(at)} ${t.seconds}`} onChange={(e) => onScrub(Number(e.target.value))} />
       </div>
       <span className="tm-time"><span>{secs(at)}</span> / {secs(duration)}</span>
-      <div className="tm-speed" role="group" aria-label={t.speed}>
+      <fieldset className="tm-speed"  aria-label={t.speed}>
         {SPEEDS.map((s) => <button key={s} type="button" aria-pressed={speed === s} onClick={() => onSpeed(s)}>{s}×</button>)}
-      </div>
+      </fieldset>
       {ended && onNext && <button type="button" className="tm-next" onClick={onNext}>{t.next}<ChevronDown size={15} aria-hidden /></button>}
     </footer>
   );

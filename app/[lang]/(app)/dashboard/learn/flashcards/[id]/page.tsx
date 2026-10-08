@@ -1,5 +1,7 @@
 "use client";
 
+import { FocusTextarea } from "@/components/InitialFocus";
+
 import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
@@ -112,7 +114,7 @@ function EditCards({ setId, title, cards, visibility, teamId, onError, onSaved }
     <label className="lx-field">{t.visibility}<Select label={t.visibility} value={draftVisibility} onChange={setVisibility} options={[{ value: "private", label: t.vis.private }, ...(teams ?? []).map(row => ({ value: `team:${row.team._id}`, label: t.teamOnly(row.team.name) })), { value: "public", label: t.vis.public }]} /></label>
     <div className="lx-cards-edit">{draftCards.map((c,i) => <div key={c.id} className="lx-cards-edit__row">
       <span className="lx-muted">{i+1}</span>
-      <textarea className="kb-input ws-flashcard-text" value={c.front} aria-label={t.front} placeholder={t.front} autoFocus={i === 0 && cards.length === 0} maxLength={1000} onChange={e => setCards(draftCards.map(x => x.id === c.id ? {...x,front:e.target.value} : x))} />
+      <FocusTextarea className="kb-input ws-flashcard-text" value={c.front} aria-label={t.front} placeholder={t.front} focusOnMount={i === 0 && cards.length === 0} maxLength={1000} onChange={e => setCards(draftCards.map(x => x.id === c.id ? {...x,front:e.target.value} : x))} />
       <textarea className="kb-input ws-flashcard-text" value={c.back} aria-label={t.back2} placeholder={t.back2} maxLength={2000} onChange={e => setCards(draftCards.map(x => x.id === c.id ? {...x,back:e.target.value} : x))} />
       <span><button type="button" className="ws-icon-button" disabled={i===0} aria-label={t.up} onClick={() => move(i,-1)}><ArrowUp size={13} /></button><button type="button" className="ws-icon-button" disabled={i===draftCards.length-1} aria-label={t.down} onClick={() => move(i,1)}><ArrowDown size={13} /></button><button type="button" className="ws-icon-button" aria-label={t.remove} onClick={() => setCards(draftCards.filter(x=>x.id!==c.id))}><Trash2 size={13} /></button></span>
     </div>)}</div>

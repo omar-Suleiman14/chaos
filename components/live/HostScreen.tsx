@@ -69,14 +69,15 @@ const copy = {
   },
 };
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- This labelled graphic is composed from inline SVG or multiple elements; a native img cannot represent it. */
 export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
   const scene = useQuery(api.live.hostView, { gameId, activity: false });
   const activity = useQuery(api.live.hostActivity, { gameId });
-  const game = scene == null ? scene : activity === undefined ? undefined
+  const game = useMemo(() => scene == null ? scene : activity === undefined ? undefined
     : activity && activity.state === scene.state && activity.questionIndex === scene.questionIndex
-      ? { ...scene, ...activity } : scene;
+      ? { ...scene, ...activity } : scene, [scene, activity]);
   const advance = useMutation(api.live.advance);
   const endGame = useMutation(api.live.endGameNow);
   const kick = useMutation(api.live.kickPlayer);
@@ -153,7 +154,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
 
   const onTick = useCallback((left: number) => { if (left > 0 && left <= 5) sfx.play("tap", pack); }, [pack]);
 
-  if (game === undefined) return <div className="live-root"><div className="live-center live-muted" role="status">{t.loading}</div></div>;
+  if (game === undefined) return <div className="live-root"><output className="live-center live-muted" >{t.loading}</output></div>;
   if (game === null) {
     return (
       <div className="live-root">
@@ -307,13 +308,13 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
               </div>
             )}
             {game.state === "reveal" && <p className="sr-only">{t.correctIs(question.options.filter((o) => correct.has(o.id)).map((o) => o.label).join(", "))}</p>}
-            <div className="live-tiles" role="list">
+            <ul className="live-tiles" >
               {question.options.map((o, i) => (
                 <AnswerTile key={o.id} index={i} label={o.label} size="host"
                   result={game.state === "reveal" ? (correct.has(o.id) ? "correct" : "wrong") : undefined}
                   count={game.state === "reveal" ? game.distribution?.[o.id] ?? 0 : undefined} />
               ))}
-            </div>
+            </ul>
             <div className="flex justify-end items-center gap-3 flex-wrap">
               {game.state === "reveal" && <AutoplayControls game={game} offset={offset} busy={busy} t={t} onToggle={(on) => void run(() => setAutoplay({ gameId, autoAdvance: on }))} />}
               <button ref={nextRef} type="button" className="live-btn live-btn--primary" onClick={step} disabled={busy}>{nextLabel}</button>
@@ -374,9 +375,9 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
                 </ol>
               </>
             )}
-            <p className="live-muted" role="status">
+            <output className="live-muted" >
               {game.resultsStatus === "saved" ? `${t.saved(game.savedResponses)}${game.unsavedResponses ? ` ${t.unsaved(game.unsavedResponses)}` : ""}` : t.saving}
-            </p>
+            </output>
             <Link href={resultsHref} className="live-btn live-btn--primary">{t.openResults}</Link>
           </div>
         )}
@@ -384,6 +385,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
 /** "Next in 4" with pause and resume while autoplay waits on an answer or leaderboard screen. */
 function AutoplayControls({ game, offset, busy, t, onToggle }: {

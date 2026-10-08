@@ -114,13 +114,13 @@ export default function RehearsalPanel({
         </div>
         <div className="rh-field">
           <span id="rehearsal-chaos">{t.chaos}</span>
-          <div className="rh-seg" role="group" aria-labelledby="rehearsal-chaos" aria-describedby="rehearsal-chaos-help">
+          <fieldset className="rh-seg"  aria-labelledby="rehearsal-chaos" aria-describedby="rehearsal-chaos-help">
             {[false, true].map((on) => (
               <button key={String(on)} type="button" aria-pressed={chaos === on} disabled={locked} onClick={() => setChaos(on)}>
                 {on && <Zap size={14} aria-hidden />}{on ? t.on : t.off}
               </button>
             ))}
-          </div>
+          </fieldset>
           <small id="rehearsal-chaos-help">{t.chaosHelp}</small>
         </div>
       </div>
@@ -134,7 +134,7 @@ export default function RehearsalPanel({
             <UserPlus size={16} aria-hidden />{valid ? t.add(fmt(count)) : t.addSome}
           </button>
         )}
-        <p className="rh-hint" role="status">{running ? <><span className="rh-live" aria-hidden />{t.runningHint}</> : joined > 0 ? t.addedHint : lobby ? t.startHint : t.lobbyOnly}</p>
+        <output className="rh-hint" >{running ? <><span className="rh-live" aria-hidden />{t.runningHint}</> : joined > 0 ? t.addedHint : lobby ? t.startHint : t.lobbyOnly}</output>
       </div>
       {stats && (
         <dl className="rh-stats">

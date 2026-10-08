@@ -1,5 +1,7 @@
 "use client";
 
+import { FocusInput, FocusTextarea } from "@/components/InitialFocus";
+
 import { useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronRight, Copy, GitBranch, Plus, Trash2, X } from "lucide-react";
 import { blankField, fieldTypes, isAnswerable, newId, optionTypes } from "@/convex/formLogic";
@@ -138,7 +140,7 @@ function ChoiceList({ kind, items, onChange, prefix, withScores }: { kind: "opti
  * options and "Required". Type changes, limits, scores and images live under
  * "More options"; moving, duplicating and deleting live in the "…" menu.
  */
-export default function FieldEditor({ field, index, def, onChange, onDuplicate, onRemove, onMove, readOnly, autoFocus }: {
+export default function FieldEditor({ field, index, def, onChange, onDuplicate, onRemove, onMove, readOnly, focusOnMount }: {
   field: FormField;
   index: number;
   def: FormDefinition;
@@ -147,7 +149,7 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
   onRemove: () => void;
   onMove: (delta: number) => void;
   readOnly?: boolean;
-  autoFocus?: boolean;
+  focusOnMount?: boolean;
 }) {
   const t = useCopy(copy);
   const labels = useBuilderLabels();
@@ -175,7 +177,7 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
       <div className="flex flex-wrap items-start gap-2">
         <label className="block flex-1 min-w-[min(100%,16rem)]">
           <span className="sr-only">{name}</span>
-          <input value={field.label} onChange={(e) => set({ label: e.target.value })} className="kb-input !text-[17px] font-medium" maxLength={500} autoFocus={autoFocus}
+          <FocusInput value={field.label} onChange={(e) => set({ label: e.target.value })} className="kb-input !text-[17px] font-medium" maxLength={500} focusOnMount={focusOnMount}
             placeholder={field.type === "section" ? t.sectionTitle : field.type === "statement" ? t.headingOptional : t.typeQuestion} />
         </label>
         {field.type !== "section" && (
@@ -186,8 +188,8 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
       {showDescription || field.description || field.type === "statement" ? (
         <label className="block">
           <span className="sr-only">{field.type === "statement" ? t.text : t.description}</span>
-          <textarea value={field.description ?? ""} onChange={(e) => set({ description: e.target.value || undefined })} rows={field.type === "statement" ? 4 : 2}
-            className="kb-input text-sm" maxLength={5000} placeholder={field.type === "statement" ? t.text : t.descriptionOptional} autoFocus={showDescription && !field.description} />
+          <FocusTextarea value={field.description ?? ""} onChange={(e) => set({ description: e.target.value || undefined })} rows={field.type === "statement" ? 4 : 2}
+            className="kb-input text-sm" maxLength={5000} placeholder={field.type === "statement" ? t.text : t.descriptionOptional} focusOnMount={showDescription && !field.description} />
         </label>
       ) : field.type !== "section" && (
         <button type="button" onClick={() => setShowDescription(true)} className="ws-link-quiet flex items-center gap-1"><Plus size={14} /> {t.addDescription}</button>

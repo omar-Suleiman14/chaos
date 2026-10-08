@@ -63,6 +63,7 @@ export function SummaryHeader({ analysis }: { analysis: Analysis | undefined }) 
 }
 
 /** The summary carries a few answers per question; the rest load when someone opens or searches them. */
+/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- The bounded text-answer list is focusable to support keyboard scrolling. */
 function TextAnswers({ field, formId }: { field: FieldResult; formId?: Id<"forms"> }) {
   const t = useCopy(resultsCopy);
   const { locale } = useLocale();
@@ -98,6 +99,7 @@ function TextAnswers({ field, formId }: { field: FieldResult; formId?: Id<"forms
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/no-noninteractive-tabindex */
 
 function QuestionCard({ field, analysis, index, formId }: { field: FieldResult; analysis: Analysis; index: number; formId?: Id<"forms"> }) {
   const t = useCopy(resultsCopy);
@@ -170,7 +172,7 @@ function QuestionCard({ field, analysis, index, formId }: { field: FieldResult; 
       {matrix && def && (
         <div className="ws-matrix-wrap">
           <table className="ws-matrix">
-            <thead><tr><td />{def.options?.map((o) => <th key={o.id} scope="col">{o.label}</th>)}</tr></thead>
+            <thead><tr><th scope="col" aria-label={locale === "ar" ? "السؤال" : "Question"} />{def.options?.map((o) => <th key={o.id} scope="col">{o.label}</th>)}</tr></thead>
             <tbody>
               {def.rows?.map((row) => {
                 const rowTotal = Object.values(matrix[row.id] ?? {}).reduce((s, n) => s + n, 0);
@@ -238,10 +240,10 @@ export function SummaryTab({ analysis, formId }: { analysis: Analysis | undefine
   const { locale: lang } = useLocale();
   if (analysis === undefined) {
     return (
-      <div role="status" aria-busy="true" className="grid gap-4">
+      <output  aria-busy="true" className="grid gap-4">
         <span className="sr-only">{t.analysing}</span>
         {[0, 1, 2].map((i) => <span key={i} aria-hidden="true" className="ws-skeleton" style={{ height: 180 }} />)}
-      </div>
+      </output>
     );
   }
   const a = analysis;

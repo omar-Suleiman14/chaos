@@ -1,6 +1,10 @@
 {
   "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["typescript", "react", "jsx-a11y"],
+  "plugins": [
+    "typescript",
+    "react",
+    "jsx-a11y"
+  ],
   "categories": {
     "correctness": "error"
   },
@@ -29,7 +33,17 @@
     "jsx-a11y/no-noninteractive-tabindex": "warn",
     "jsx-a11y/autocomplete-valid": "warn",
     "react/immutability": "warn",
-    "jsx-a11y/label-has-associated-control": "warn",
+    "jsx-a11y/label-has-associated-control": [
+      "warn",
+      {
+        "controlComponents": [
+          "Input",
+          "Select",
+          "ChaosSelect"
+        ],
+        "depth": 5
+      }
+    ],
     "jsx-a11y/click-events-have-key-events": "warn",
     "jsx-a11y/interactive-supports-focus": "warn",
     "no-control-regex": "warn",

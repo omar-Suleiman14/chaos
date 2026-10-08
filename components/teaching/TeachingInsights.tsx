@@ -118,7 +118,7 @@ function Detective({ target, t }: { target: Target; t: T }) {
     const list = shown === "worth" ? report.questions.filter(worth) : report.questions;
     return [...list].sort((a, b) => severity(a) - severity(b) || (a.correctRate ?? 101) - (b.correctRate ?? 101));
   }, [report, shown]);
-  if (report === undefined) return <div className="ti-panel" role="status"><div className="ti-skeleton" aria-hidden><span /><span /><span /></div><span className="sr-only">{t.loading}</span></div>;
+  if (report === undefined) return <output className="ti-panel" ><div className="ti-skeleton" aria-hidden><span /><span /><span /></div><span className="sr-only">{t.loading}</span></output>;
   if (report === null) return <div className="ti-panel"><p className="ti-note">{t.unavailable}</p></div>;
   if (!report.questions.length) return <div className="ti-panel"><p className="ti-empty"><Sparkles size={18} aria-hidden />{t.empty}</p></div>;
   return (
@@ -128,10 +128,10 @@ function Detective({ target, t }: { target: Target; t: T }) {
           <p className="ti-summary__headline">{t.summary(fmt(report.questions.length), fmt(flagged))}</p>
           <p className="ti-note">{t.basedOn(fmt(report.sampleCount))}{report.capped ? ` ${t.capped}` : ""}{report.missingSnapshots > 0 ? ` ${t.missing}` : ""}</p>
         </div>
-        <div className="ws-segmented" role="group" aria-label={t.filter}>
+        <fieldset className="ws-segmented"  aria-label={t.filter}>
           <button type="button" aria-pressed={shown === "worth"} onClick={() => setView("worth")}>{t.worthALook}{flagged ? <span className="ti-count">{fmt(flagged)}</span> : null}</button>
           <button type="button" aria-pressed={shown === "all"} onClick={() => setView("all")}>{t.all}</button>
-        </div>
+        </fieldset>
       </div>
       {questions.length === 0 ? (
         <p className="ti-empty"><Check size={18} aria-hidden />{t.noneFlagged}</p>

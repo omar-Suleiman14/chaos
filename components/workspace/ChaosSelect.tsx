@@ -6,6 +6,7 @@ import { Select, type SelectOption } from "./Select";
 
 type Change = { target: { value: string }; currentTarget: { value: string } };
 type Props = Omit<SelectHTMLAttributes<HTMLSelectElement>, "onChange" | "value" | "defaultValue" | "size" | "multiple"> & {
+  focusOnMount?: boolean;
   value?: string | number;
   defaultValue?: string | number;
   onChange?: (event: Change) => void;
@@ -25,7 +26,7 @@ function optionsFrom(children: ReactNode): SelectOption[] {
 }
 
 /** Keeps existing option markup and value callbacks while using the Chaos listbox. */
-export function ChaosSelect({ children, value, defaultValue, onChange, name, required, disabled, id, className, form, ...attributes }: Props) {
+export function ChaosSelect({ children, value, defaultValue, onChange, name, required, disabled, id, className, form, focusOnMount, ...attributes }: Props) {
   const generatedId = useId();
   const triggerId = id ?? generatedId;
   const options = optionsFrom(children);
@@ -42,6 +43,8 @@ export function ChaosSelect({ children, value, defaultValue, onChange, name, req
     owner?.addEventListener("reset", reset);
     return () => owner?.removeEventListener("reset", reset);
   }, [initial]);
+
+  useEffect(() => { if (focusOnMount) document.getElementById(triggerId)?.focus({ preventScroll: true }); }, [focusOnMount, triggerId]);
 
   const label = attributes["aria-label"];
   const labelledBy = attributes["aria-labelledby"];

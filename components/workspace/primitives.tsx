@@ -9,6 +9,7 @@ import { useModal } from "./useModal";
 const copy = { en: { close: "Close", undo: "Undo", dismiss: "Dismiss", cancel: "Cancel" }, ar: { close: "إغلاق", undo: "تراجع", dismiss: "إخفاء", cancel: "إلغاء" } };
 
 /** Modal dialog rendered inside the workspace tree so it inherits workspace styling. */
+/* oxlint-disable jsx-a11y/no-static-element-interactions, jsx-a11y/prefer-tag-over-role -- Backdrop mouse dismissal complements the modal Escape handler and labelled Close button. This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 export function WsDialog({ title, description, onClose, children, wide, initialFocusRef }: {
   title: string; description?: string; onClose: () => void; children: React.ReactNode; wide?: boolean; initialFocusRef?: React.RefObject<HTMLElement | null>;
 }) {
@@ -30,6 +31,7 @@ export function WsDialog({ title, description, onClose, children, wide, initialF
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/no-static-element-interactions, jsx-a11y/prefer-tag-over-role */
 
 /** Confirmation dialog that replaces window.confirm: says what will happen, cancel is the default focus. */
 export function WsConfirm({ title, body, confirmLabel, danger = true, onConfirm, onClose }: {
@@ -115,7 +117,7 @@ export function WsMenu({ label, children, align = "end", trigger, triggerClassNa
         {trigger ?? <MoreHorizontal size={18} />}
       </button>
       {open && portalRoot && createPortal(
-        <div ref={menu} id={id} role="menu" aria-label={label} className={`ws-menu ws-glass${menuClassName ? ` ${menuClassName}` : ""}`} style={{ position: "fixed", ...position, maxHeight: "calc(100dvh - 16px)", overflowY: "auto" }}
+        <div ref={menu} id={id} role="menu" tabIndex={-1} aria-label={label} className={`ws-menu ws-glass${menuClassName ? ` ${menuClassName}` : ""}`} style={{ position: "fixed", ...position, maxHeight: "calc(100dvh - 16px)", overflowY: "auto" }}
           onKeyDown={(e) => {
             if (e.key === "Escape") { e.preventDefault(); e.stopPropagation(); close(); return; }
             if (e.key === "Tab") { triggerRef.current?.focus(); close(); return; }
@@ -172,7 +174,7 @@ export function WsTabs<T extends string>({ tabs, value, onChange, label, badge, 
     return () => window.removeEventListener("resize", measure);
   }, [value, tabs]);
   return (
-    <div ref={bar} className="ws-tabs" role="tablist" aria-label={label}
+    <div ref={bar} className="ws-tabs" role="tablist" tabIndex={-1} aria-label={label}
       onKeyDown={(e) => {
         if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) return;
         e.preventDefault();
