@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
 import { checkDefinition, describeRule, emptyDefinition, explainVisibility, newId, type FormDefinition, type FormField } from "@/convex/formLogic";
-import { publicationErrors } from "@/convex/quizModel";
 import { localizeActivityAction, localizeActivityDetail, localizeMessage } from "@/lib/messages";
 
 const ARABIC = /[؀-ۿ]/;
@@ -76,26 +75,6 @@ describe("localizeMessage", () => {
     expect(ar(hidden)).toContain("“Colour”");
     expect(ar(hidden)).toMatch(ARABIC);
     expect(ar("Hidden because section “Intro” is hidden.")).toContain("“Intro”");
-  });
-
-  it("translates quiz publication errors and editor problems", () => {
-    const errors = publicationErrors("", [
-      { type: "mcq", questionText: "", options: ["a", "a"], points: 0, order: 0, timeLimit: -1 },
-      { type: "true_false", questionText: "q", points: 1, order: 1 },
-      { type: "written", questionText: "q", keywords: [" "], points: 1, order: 2 },
-      { type: "multi_select", questionText: "q", options: ["a", "b"], correctAnswers: [], points: 1, order: 3 },
-    ]);
-    expect(errors.length).toBeGreaterThanOrEqual(8);
-    for (const m of errors) {
-      const out = ar(m);
-      expect(out, m).not.toBe(m);
-      expect(out, m).toMatch(ARABIC);
-    }
-    expect(ar("Question 12: enter the question text.")).toBe("السؤال 12: أدخل نص السؤال.");
-    expect(ar("Question 3: timer must be between 5 and 3600 seconds.")).toContain("3600");
-    expect(ar("The question pool draws 9 questions but the quiz has 4.")).toMatch(/9.*4/);
-    expect(ar("Passing threshold must be between 0 and 100.")).toMatch(ARABIC);
-    expect(ar("A quiz can contain at most 200 questions.")).toContain("200");
   });
 
   it("translates server errors, including a publication-blocked list", () => {

@@ -9,8 +9,8 @@ import { isSitePath, LOCALE_COOKIE, splitLocale, type Locale } from "@/lib/local
 import { routeLocale, type LocaleRoute } from "@/lib/localeRouting";
 import type { EmbedPolicy, EmbedTarget } from "@/lib/embed";
 
-// /print shows a quiz with its answer key; the queries already check ownership, and
-// signing in first keeps anonymous visitors off the page entirely.
+// Signed-in areas. /print is retired (it printed classic quizzes) but stays reserved and
+// protected so no custom link can take the path.
 const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/admin(.*)", "/print(.*)", "/homework(.*)", "/auth(.*)"]);
 
 /** Past this the frame is denied rather than holding up the page. */

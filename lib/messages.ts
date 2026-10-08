@@ -2,7 +2,7 @@ import { pluralForm, type Locale } from "@/lib/locale";
 
 /**
  * Arabic versions of the English messages produced outside React components
- * (convex/formLogic.ts, convex/quizModel.ts, editor-draft.ts, activity log and
+ * (convex/formLogic.ts, activity log and
  * server errors). The English source strings stay untouched because other code
  * matches them; translation happens only at display time. Unknown messages
  * fall back to the English text.
@@ -23,7 +23,6 @@ const ROW: Forms = ["صف واحد", "صفين", "صفوف", "صفًا"];
 const ENDING: Forms = ["شاشة نهاية واحدة", "شاشتي نهاية", "شاشات نهاية", "شاشة نهاية"];
 const CONDITION: Forms = ["شرط واحد", "شرطين", "شروط", "شرطًا"];
 const FILE: Forms = ["ملف واحد", "ملفين", "ملفات", "ملفًا"];
-const QUESTION: Forms = ["سؤال واحد", "سؤالين", "أسئلة", "سؤالًا"];
 const ITEM: Forms = ["عنصر واحد", "عنصرين", "عناصر", "عنصرًا"];
 const RESPONSE: Forms = ["ردّ واحد", "ردّين", "ردود", "ردًّا"];
 const SECOND: Forms = ["ثانية واحدة", "ثانيتين", "ثوانٍ", "ثانية"];
@@ -96,16 +95,6 @@ const bodies: Entry[] = [
   [/^add a title or message\.$/, () => "أضف عنوانًا أو رسالة."],
   [/^the message is too long\.$/, () => "الرسالة طويلة جدًا."],
   [/^quiz endings cannot use calculated option scores\.$/, () => "لا يمكن لشاشات نهاية الاختبار استخدام درجات الخيارات المحسوبة."],
-  // quiz questions (quizModel.publicationErrors, editor-draft)
-  [/^enter the question text\.$/, () => "أدخل نص السؤال."],
-  [/^points must be a finite number of at least 1\.$/, () => "يجب أن تكون النقاط رقمًا لا يقل عن 1."],
-  [/^timer must be positive\.$/, () => "يجب أن يكون المؤقت موجبًا."],
-  [/^provide at least two distinct, nonempty options\.$/, () => "أدخل خيارين مختلفين غير فارغين على الأقل."],
-  [/^select a valid correct answer\.$/, () => "اختر إجابة صحيحة من الخيارات."],
-  [/^select valid, distinct correct answers\.$/, () => "اختر إجابات صحيحة مختلفة من الخيارات."],
-  [/^select True or False\.$/, () => "اختر صح أو خطأ."],
-  [/^remove empty grading keywords\.$/, () => "احذف الكلمات المفتاحية الفارغة الخاصة بالتصحيح."],
-  [/^timer must be between (\d+) and (\d+) seconds\.$/, (m) => `يجب أن يكون المؤقت بين ${m[1]} و${m[2]} ثانية.`],
 ];
 
 const ownerPrefix = /^(Field (\d+)(?: \((“[\s\S]*”)\))?|Ending (\d+)|Question (\d+)): ([\s\S]*)$/;
@@ -167,24 +156,6 @@ const whole: Entry[] = [
   [/^Enter a valid date\.$/, () => "أدخل تاريخًا صالحًا."],
   [/^Enter a valid time\.$/, () => "أدخل وقتًا صالحًا."],
   [/^Other \(fewer than (\d+)\)$/, (m) => `أخرى (أقل من ${m[1]})`],
-  // quizModel.publicationErrors
-  [/^Enter a title\.$/, () => "أدخل عنوانًا."],
-  [/^A quiz can contain at most (\d+) questions\.$/, (m) => `يمكن أن يحتوي الاختبار على ${num(m[1], QUESTION)} على الأكثر.`],
-  // editor-draft.publicationProblems
-  [/^Use a URL slug with lowercase letters, numbers and single hyphens\.$/, () => "استخدم رابطًا مختصرًا بأحرف لاتينية صغيرة وأرقام وشرطات مفردة."],
-  [/^Passing threshold must be between (\d+) and (\d+)\.$/, (m) => `يجب أن تكون نسبة النجاح بين ${m[1]} و${m[2]}.`],
-  [/^The question pool size must be a whole number \(0 turns the pool off\)\.$/, () => "يجب أن يكون حجم مجموعة الأسئلة عددًا صحيحًا (0 يعطّل المجموعة)."],
-  [/^The question pool draws (\d+) questions but the quiz has (\d+)\.$/, (m) => `تسحب مجموعة الأسئلة ${num(m[1], QUESTION)} لكن الاختبار يحتوي على ${m[2]}.`],
-  // editor draft hook (use-editor-draft.ts)
-  [/^Question (\d+): enter a number for marks and timer before saving\.$/, (m) => `السؤال ${m[1]}: أدخل رقمًا للنقاط والمؤقت قبل الحفظ.`],
-  [/^Enter a passing threshold before saving\.$/, () => "أدخل نسبة النجاح قبل الحفظ."],
-  [/^Save failed\. Your changes are kept in this browser; retry when connected\.$/, () => "تعذّر الحفظ. تعديلاتك محفوظة في هذا المتصفح؛ أعد المحاولة عند عودة الاتصال."],
-  [/^Publication failed\.$/, () => "تعذّر النشر."],
-  [/^Could not unpublish\.$/, () => "تعذّر إلغاء النشر."],
-  [/^This browser could not keep a local recovery copy\. Keep this page open until the server save succeeds\.$/, () => "تعذّر على هذا المتصفح حفظ نسخة استرداد محلية. أبقِ هذه الصفحة مفتوحة حتى ينجح الحفظ على الخادم."],
-  [/^A local recovery copy exists but could not be read\. It was left untouched\.$/, () => "توجد نسخة استرداد محلية لكن تعذّرت قراءتها. لم يتم تغييرها."],
-  [/^Local recovery storage could not be read\.$/, () => "تعذّرت قراءة تخزين الاسترداد المحلي."],
-  [/^Could not remove the local recovery copy\.$/, () => "تعذّر حذف نسخة الاسترداد المحلية."],
   // client
   [/^Something went wrong\. Please try again\.$/, () => "حدث خطأ. حاول مرة أخرى."],
   [/^You appear to be offline\. Your work is kept here; try again when connected\.$/, () => "يبدو أنك غير متصل. عملك محفوظ هنا؛ حاول مرة أخرى عند عودة الاتصال."],

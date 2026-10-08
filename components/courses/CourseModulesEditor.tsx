@@ -108,7 +108,7 @@ export default function CourseModulesEditor({ courseId, modules, lessons }: { co
             </div>
             {list(group)}
             {addButton(module.id)}
-            {module.assessments.map((asset, i) => <div className="lx-actions" key={`${asset.kind}:${asset.id}`}><Link className="lx-link" href={asset.kind === "form" ? `/dashboard/forms/${asset.id}` : `/dashboard/editor?id=${asset.id}`}>{t.assessment(i + 1)}</Link><button type="button" className="lx-link" disabled={busy} onClick={() => void commit(draft.map((m) => m.id === module.id ? { ...m, assessments: m.assessments.filter((a) => a.id !== asset.id || a.kind !== asset.kind) } : m))}>{t.removeAssessment}</button></div>)}
+            {module.assessments.map((asset, i) => <div className="lx-actions" key={`${asset.kind}:${asset.id}`}><Link className="lx-link" href={`/dashboard/forms/${asset.id}`}>{t.assessment(i + 1)}</Link><button type="button" className="lx-link" disabled={busy} onClick={() => void commit(draft.map((m) => m.id === module.id ? { ...m, assessments: m.assessments.filter((a) => a.id !== asset.id || a.kind !== asset.kind) } : m))}>{t.removeAssessment}</button></div>)}
             <details className="cb-module__quiz"><summary>{t.addAssessment}</summary><AssessmentPicker disabled={busy} onAdd={(asset) => { if (!module.assessments.some((a) => a.kind === asset.kind && a.id === asset.id)) void commit(draft.map((m) => m.id === module.id ? { ...m, assessments: [...m.assessments, asset] } : m)); }} /></details>
           </div>
         );
@@ -120,6 +120,5 @@ export default function CourseModulesEditor({ courseId, modules, lessons }: { co
   );
 }
 function AssessmentPicker({ onAdd, disabled }: { onAdd: (asset: Asset) => void; disabled: boolean }) {
-  const [kind, setKind] = useState<Asset["kind"]>("form");
-  return <fieldset disabled={disabled}><QuizBlockEditor kind={kind} assetId="" onSelect={asset => { setKind(asset.kind); if (asset.id) onAdd(asset); }} /></fieldset>;
+  return <fieldset disabled={disabled}><QuizBlockEditor assetId="" onSelect={asset => { if (asset.id) onAdd(asset); }} /></fieldset>;
 }

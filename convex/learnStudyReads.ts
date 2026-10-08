@@ -2,7 +2,6 @@ import { v } from "convex/values";
 import { teamOrEmailCheck } from "./businessAccess";
 import { mutation, query, type QueryCtx } from "./_generated/server";
 import { creatorRestricted, requireActiveUser } from "./authz";
-import { assessmentRef } from "./quizForkModel";
 import { lessonAccess, lessonAccessForActor } from "./lessons";
 import { recentEvidence } from "./learnPractice";
 import { summarizeEvidence } from "./learnPracticeModel";
@@ -46,21 +45,17 @@ export const saveFormAttachments = mutation({
 
 /** Publication identifiers only: no answer keys or respondent evidence leave here. */
 export const forkSource = query({
-  args: { asset: assessmentRef },
-  returns: v.union(v.null(), v.object({ formVersionId: v.id("formVersions") }), v.object({ expectedPublishedAt: v.number() })),
+  args: { asset: v.object({ kind: v.literal("form"), id: v.id("forms") }) },
+  returns: v.union(v.null(), v.object({ formVersionId: v.id("formVersions") })),
   handler: async (ctx, { asset }) => {
     const { identity } = await requireActiveUser(ctx);
-    if (asset.kind === "form") {
-      const form = await ctx.db.get("forms", asset.id);
-      if (!form || form.isBanned || await creatorRestricted(ctx, form.ownerId) || form.publishedVersion === undefined) return null;
-      // Public quizzes, or a team-only quiz for a member of its team.
-      const open = form.settings.access === "public" || (form.settings.access === "signed_in" && !!form.settings.audienceTeamId && await teamOrEmailCheck(ctx, form.settings, identity) === "ok");
-      if (form.ownerId !== identity.subject && (form.status !== "live" || !open || form.settings.allowedEmails?.length || form.settings.allowedDomains?.length)) return null;
-      const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", form._id).eq("version", form.publishedVersion!)).unique();
-      return version?.definition.quiz?.enabled ? { formVersionId: version._id } : null;
-    }
-    const quiz = await ctx.db.get("quizzes", asset.id);
-    return quiz?.isPublished && quiz.publishedSnapshot && quiz.publishedAt !== undefined && !quiz.isBanned && !await creatorRestricted(ctx, quiz.creatorId) ? { expectedPublishedAt: quiz.publishedAt } : null;
+    const form = await ctx.db.get("forms", asset.id);
+    if (!form || form.isBanned || await creatorRestricted(ctx, form.ownerId) || form.publishedVersion === undefined) return null;
+    // Public quizzes, or a team-only quiz for a member of its team.
+    const open = form.settings.access === "public" || (form.settings.access === "signed_in" && !!form.settings.audienceTeamId && await teamOrEmailCheck(ctx, form.settings, identity) === "ok");
+    if (form.ownerId !== identity.subject && (form.status !== "live" || !open || form.settings.allowedEmails?.length || form.settings.allowedDomains?.length)) return null;
+    const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", form._id).eq("version", form.publishedVersion!)).unique();
+    return version?.definition.quiz?.enabled ? { formVersionId: version._id } : null;
   },
 });
 

@@ -7,7 +7,7 @@ import { query } from "./_generated/server";
 import { creatorRestricted, requireActiveUser } from "./authz";
 import { lessonAccess, lessonSummary } from "./lessons";
 import { createdWith, lessonMeta } from "./learnModel";
-import { questionsFromForm, questionsFromLegacy } from "./liveLogic";
+import { questionsFromForm } from "./liveLogic";
 import { canonicalCommunityActor } from "./learnCommunityIntegrations";
 import schema from "./schema";
 
@@ -103,7 +103,7 @@ export const listIndexableLessons = query({
   },
 });
 
-const assessment = v.object({ kind: v.union(v.literal("form"), v.literal("quiz")), id: v.union(v.id("forms"), v.id("quizzes")), title: v.string(), shareId: v.union(v.string(), v.null()), href: v.string(), questionCount: v.number(), published: v.literal(true), liveEligible: v.boolean() });
+const assessment = v.object({ kind: v.literal("form"), id: v.id("forms"), title: v.string(), shareId: v.union(v.string(), v.null()), href: v.string(), questionCount: v.number(), published: v.literal(true), liveEligible: v.boolean() });
 export const attachedQuizzes = query({
   args: { lessonId: v.id("lessons") }, returns: v.array(assessment),
   handler: async (ctx, args) => {
@@ -111,18 +111,13 @@ export const attachedQuizzes = query({
     const links = await ctx.db.query("lessonAssessments").withIndex("by_lessonId_and_order", q => q.eq("lessonId", args.lessonId)).take(50);
     const result = [];
     for (const link of links) {
-      if (link.asset.kind === "form") {
-        const form = await ctx.db.get("forms", link.asset.id);
-        if (!form || form.status !== "live" || form.isBanned || form.publishedVersion === undefined || await creatorRestricted(ctx, form.ownerId)) continue;
-        const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", form._id).eq("version", form.publishedVersion!)).unique();
-        if (!version?.definition.quiz?.enabled) continue;
-        const definition = version.definition;
-        result.push({ kind: "form" as const, id: form._id, title: definition.title, shareId: form.shareId, href: `/f/${encodeURIComponent(form.shareId)}`, questionCount: definition.fields.filter(f => f.type !== "section").length, published: true as const, liveEligible: questionsFromForm(definition, definition.defaultLanguage).questions.length > 0 });
-      } else {
-        const quiz = await ctx.db.get("quizzes", link.asset.id);
-        if (!quiz?.isPublished || quiz.isBanned || !quiz.publishedSnapshot || await creatorRestricted(ctx, quiz.creatorId)) continue;
-        result.push({ kind: "quiz" as const, id: quiz._id, title: quiz.publishedSnapshot.title, shareId: null, href: `/${encodeURIComponent(quiz.creatorUsername)}/${encodeURIComponent(quiz.slug)}`, questionCount: quiz.publishedSnapshot.questions.length, published: true as const, liveEligible: questionsFromLegacy(quiz.publishedSnapshot.questions).questions.length > 0 });
-      }
+      if (link.asset.kind !== "form") continue;
+      const form = await ctx.db.get("forms", link.asset.id);
+      if (!form || form.status !== "live" || form.isBanned || form.publishedVersion === undefined || await creatorRestricted(ctx, form.ownerId)) continue;
+      const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", form._id).eq("version", form.publishedVersion!)).unique();
+      if (!version?.definition.quiz?.enabled) continue;
+      const definition = version.definition;
+      result.push({ kind: "form" as const, id: form._id, title: definition.title, shareId: form.shareId, href: `/f/${encodeURIComponent(form.shareId)}`, questionCount: definition.fields.filter(f => f.type !== "section").length, published: true as const, liveEligible: questionsFromForm(definition, definition.defaultLanguage).questions.length > 0 });
     }
     return result;
   },
@@ -145,17 +140,13 @@ export const embeddedQuiz = query({
   args: { asset: v.object({ kind: v.union(v.literal("form"), v.literal("quiz")), id: v.string() }) },
   returns: v.union(v.null(), v.object({ title: v.string(), shareId: v.union(v.string(), v.null()), href: v.string(), questionCount: v.number() })),
   handler: async (ctx, { asset }) => {
-    if (asset.kind === "form") {
-      const id = ctx.db.normalizeId("forms", asset.id);
-      const form = id ? await ctx.db.get("forms", id) : null;
-      if (!form || form.status !== "live" || form.isBanned || form.publishedVersion === undefined || await creatorRestricted(ctx, form.ownerId)) return null;
-      const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", form._id).eq("version", form.publishedVersion!)).unique();
-      return version?.definition.quiz?.enabled ? { title: version.definition.title, shareId: form.shareId, href: `/f/${encodeURIComponent(form.shareId)}`, questionCount: version.definition.fields.filter(f => f.type !== "section" && f.type !== "statement").length } : null;
-    }
-    const id = ctx.db.normalizeId("quizzes", asset.id);
-    const quiz = id ? await ctx.db.get("quizzes", id) : null;
-    if (!quiz?.isPublished || quiz.isBanned || !quiz.publishedSnapshot || await creatorRestricted(ctx, quiz.creatorId)) return null;
-    return { title: quiz.publishedSnapshot.title, shareId: null, href: `/${encodeURIComponent(quiz.creatorUsername)}/${encodeURIComponent(quiz.slug)}`, questionCount: quiz.publishedSnapshot.questions.length };
+    // Classic quiz blocks were converted to quiz forms; any left over render nothing.
+    if (asset.kind !== "form") return null;
+    const id = ctx.db.normalizeId("forms", asset.id);
+    const form = id ? await ctx.db.get("forms", id) : null;
+    if (!form || form.status !== "live" || form.isBanned || form.publishedVersion === undefined || await creatorRestricted(ctx, form.ownerId)) return null;
+    const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", form._id).eq("version", form.publishedVersion!)).unique();
+    return version?.definition.quiz?.enabled ? { title: version.definition.title, shareId: form.shareId, href: `/f/${encodeURIComponent(form.shareId)}`, questionCount: version.definition.fields.filter(f => f.type !== "section" && f.type !== "statement").length } : null;
   },
 });
 

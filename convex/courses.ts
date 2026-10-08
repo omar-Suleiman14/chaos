@@ -168,8 +168,8 @@ export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publish
     const audienceTeamId = await resolveAudienceTeam(ctx, actor, args.visibility, args.teamId, row.audienceTeamId);
     if (row.communityState !== "ok") throw new Error("MODERATED: This course is under review and can't be published right now.");
     for (const courseModuleItem of row.modules ?? []) for (const asset of courseModuleItem.assessments) {
-      if (asset.kind === "form") { const id = ctx.db.normalizeId("forms", asset.id); const form = id ? await ctx.db.get("forms", id) : null; if (!form || form.ownerId !== actor || form.status !== "live" || form.isBanned || form.publishedVersion === undefined) throw new Error("ASSESSMENT_UNPUBLISHED: Publish each module quiz before publishing this course."); }
-      else { const id = ctx.db.normalizeId("quizzes", asset.id); const quiz = id ? await ctx.db.get("quizzes", id) : null; if (!quiz || quiz.creatorId !== actor || !quiz.isPublished || quiz.isBanned || !quiz.publishedSnapshot) throw new Error("ASSESSMENT_UNPUBLISHED: Publish each module quiz before publishing this course."); }
+      const id = asset.kind === "form" ? ctx.db.normalizeId("forms", asset.id) : null; const form = id ? await ctx.db.get("forms", id) : null;
+      if (!form || form.ownerId !== actor || form.status !== "live" || form.isBanned || form.publishedVersion === undefined) throw new Error("ASSESSMENT_UNPUBLISHED: Publish each module quiz before publishing this course.");
     }
     const ids = outline(row);
     if (!ids.length) throw new Error("EMPTY: Add at least one lesson before publishing.");
@@ -339,10 +339,10 @@ export async function setCourseModules(ctx: MutationCtx, args: { courseId: Id<"l
     for (const id of courseModuleItem.lessonIds) { if (seen.has(id) || !current.includes(id)) throw new Error("VALIDATION_FAILED: Each outlined lesson belongs to at most one module."); seen.add(id); }
     for (const asset of courseModuleItem.assessments) {
       if (editor !== row.ownerId && !(row.modules ?? []).some(module => module.assessments.some(existing => existing.kind === asset.kind && existing.id === asset.id))) throw new Error("Only the owner can add assessments to this course.");
-      const id = ctx.db.normalizeId(asset.kind === "form" ? "forms" : "quizzes", asset.id);
+      const id = asset.kind === "form" ? ctx.db.normalizeId("forms", asset.id) : null;
       if (!id) throw new Error("NOT_FOUND: Assessment not found.");
-      if (asset.kind === "form") { const form = await ctx.db.get("forms", id as Id<"forms">); if (!form || form.ownerId !== actor || !form.draft.quiz?.enabled) throw new Error("NOT_FOUND: Quiz not owned by you."); }
-      else { const quiz = await ctx.db.get("quizzes", id as Id<"quizzes">); if (!quiz || quiz.creatorId !== actor) throw new Error("NOT_FOUND: Quiz not owned by you."); }
+      const form = await ctx.db.get("forms", id);
+      if (!form || form.ownerId !== actor || !form.draft.quiz?.enabled) throw new Error("NOT_FOUND: Quiz not owned by you.");
     }
   }
   await authorDb(ctx).patch("learnCollections", row._id, { modules: args.modules.map(m => ({ ...m, title: m.title.trim() })), lessonIds: [...args.modules.flatMap(m => m.lessonIds), ...current.filter(id => !seen.has(id))], updatedAt: Date.now() });

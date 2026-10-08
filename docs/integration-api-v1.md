@@ -242,7 +242,7 @@ against, any other usage limit in Chaos.
 ```json
 {
   "id": "form_…" ,
-  "kind": "form" | "quiz",
+  "kind": "form",
   "title": "string",
   "status": "draft" | "live" | "closed" | "archived",
   "revision": "string",
@@ -262,9 +262,10 @@ against, any other usage limit in Chaos.
 `source` is the validated source this connection sent when it created the
 item (see [Source](#source)), or `null`. Other connections never see it.
 
-`id` is opaque and stable across renames. Form ids start with `form_`, quiz ids
-with `quiz_`. Quiz paths are `/dashboard/editor?id=…`, `/{username}/{slug}` and
-`/dashboard/results?id=…`. URLs are absolute when the deployment sets `CHAOS_APP_URL`;
+`id` is opaque and stable across renames and starts with `form_`. Quizzes are
+forms with quiz mode on. Classic quizzes (ids starting with `quiz_`) were converted
+to quiz forms and their old ids now return `404 NOT_FOUND`
+([docs/classic-quiz-retirement.md](classic-quiz-retirement.md)). URLs are absolute when the deployment sets `CHAOS_APP_URL`;
 otherwise only paths are returned. `revision` changes whenever the draft changes,
 from any source.
 
@@ -321,7 +322,8 @@ Any valid token. Used for "test connection".
 ### `GET /items?kind=form|quiz&cursor=…`
 
 `items:read`. Returns `{ "items": Item[], "nextCursor": string | null }`, most
-recently updated first, at most 50 per page.
+recently updated first, at most 50 per page. `kind=quiz` lists only the forms
+with quiz mode on.
 
 ### `GET /items/{id}`
 
@@ -336,7 +338,10 @@ recently updated first, at most 50 per page.
 ```
 
 Returns `201 { "item": Item, "warnings": string[] }`. Replays and conflicts
-follow [Idempotency](#idempotency).
+follow [Idempotency](#idempotency). A `quiz` draft (quiz field types `mcq`,
+`true_false`, `multi_select`, `written`) is created as a form with quiz mode on,
+so the returned item is a `form`. Written questions become long-text questions
+without automatic grading.
 
 ### Source
 
@@ -563,8 +568,8 @@ exercised by a live Max client.
 | `community:read` / `community:save` / `community:fork` | Search public lessons; save one to the owner's library; fork one as a private copy. |
 
 Lessons are selected one by one in **Connections** (stored as `lesson_<id>`
-references next to `form_…` and `quiz_…`). `access: "all"` keeps meaning
-all forms and quizzes; it never grants lessons. Folder listings show folder
+references next to `form_…`). `access: "all"` keeps meaning
+all forms, quizzes included; it never grants lessons. Folder listings show folder
 names, but folder contents list only assets the connection may already reach.
 An unselected or missing lesson returns `404 NOT_FOUND`, so a connection
 cannot probe for ids.

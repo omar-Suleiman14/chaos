@@ -286,39 +286,6 @@ describe("privacy review: public payloads", () => {
   });
 });
 
-describe("privacy review: withheld quiz results", () => {
-  async function withheldQuiz(t: T) {
-    return await t.run(async (ctx) => {
-      const quizId = await ctx.db.insert("quizzes", {
-        title: "Exam", slug: "exam", creatorId: creatorIdentity.subject, creatorUsername: "creator", isPublished: true,
-        resultRelease: "manual", createdAt: 0, updatedAt: 0,
-      });
-      const sessions: Id<"quizSessions">[] = [];
-      for (const [name, score] of [["Ana", 9], ["Ben", 4], ["Cy", 7]] as const) {
-        sessions.push(await ctx.db.insert("quizSessions", {
-          quizId, playerName: name, status: "completed", score, totalPoints: 10, answers: [], startedAt: 1, completedAt: 2,
-        }));
-      }
-      return { quizId, sessions };
-    });
-  }
-
-  it("hides the leaderboard and percentile from respondents until the creator releases results", async () => {
-    const t = createTestConvex();
-    const { quizId, sessions } = await withheldQuiz(t);
-    expect(await t.query(api.quizFunctions.getQuizLeaderboard, { quizId })).toEqual([]);
-    expect(await t.withIdentity(otherCreatorIdentity).query(api.quizFunctions.getQuizLeaderboard, { quizId })).toEqual([]);
-    expect(await t.query(api.quizFunctions.getPlayerPercentile, { sessionId: sessions[0] })).toBeNull();
-    // The creator still sees the ranking while results are held.
-    const owner = t.withIdentity(creatorIdentity);
-    expect((await owner.query(api.quizFunctions.getQuizLeaderboard, { quizId })).map((r) => r.playerName)).toEqual(["Ana", "Cy", "Ben"]);
-
-    await owner.mutation(api.quizFunctions.setResultsReleased, { quizId, released: true });
-    expect(await t.query(api.quizFunctions.getQuizLeaderboard, { quizId })).toHaveLength(3);
-    expect(await t.query(api.quizFunctions.getPlayerPercentile, { sessionId: sessions[0] })).toBe(100);
-  });
-});
-
 // ── #213: integration API ───────────────────────────────────────────────────
 
 describe("integration review: credentials", () => {

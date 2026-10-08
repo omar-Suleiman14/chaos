@@ -44,17 +44,17 @@ existing webhook secret.
 
 | Type | When | Items |
 | --- | --- | --- |
-| `response.completed` | A respondent submits a form (not spam), or finishes a classic quiz attempt | form, quiz |
-| `response.graded` | The creator changes the marks of a classic quiz answer | quiz |
-| `form.published` | A form version or a quiz is published | form, quiz |
-| `form.closed` | A live form is closed or archived, or a live quiz is unpublished | form, quiz |
+| `response.completed` | A respondent submits a form (not spam) | form |
+| `response.graded` | Not emitted yet (see below) | form |
+| `form.published` | A form version is published | form |
+| `form.closed` | A live form is closed or archived | form |
 | `form.reopened` | A closed form is made live again | form |
 | `webhook.test` | Only when someone presses **Send test** or calls `POST /webhooks/{id}/test` | — |
 
 Not emitted: edits to a submitted response, partial saves, draft edits, and
 state that changes only with time (a form's scheduled open and close times are
-checked when someone opens the form, so there is no moment to emit at). A
-reopened quiz sends `form.published`. Forms do not have manual grading yet;
+checked when someone opens the form, so there is no moment to emit at). Forms
+do not have manual grading yet;
 when it exists it will emit `response.graded` with the same shape.
 
 ## Payload

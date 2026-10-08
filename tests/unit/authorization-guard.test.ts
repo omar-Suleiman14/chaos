@@ -8,15 +8,6 @@ const readSource = (relativePath: string) =>
 
 const quizFunctions = readSource("convex/quizFunctions.ts");
 
-function exportedBlock(source: string, name: string) {
-  const marker = `export const ${name} =`;
-  const start = source.indexOf(marker);
-  expect(start, `${name} should remain exported`).toBeGreaterThanOrEqual(0);
-  const rest = source.slice(start + marker.length);
-  const next = rest.search(/\nexport const /);
-  return next === -1 ? rest : rest.slice(0, next);
-}
-
 describe("authorization helper guard", () => {
   it("keeps creator ownership comparisons centralized in authz.ts", () => {
     const directOwnershipComparison =
@@ -25,28 +16,10 @@ describe("authorization helper guard", () => {
     expect(quizFunctions).not.toMatch(directOwnershipComparison);
   });
 
-  it.each([
-    ["updateQuiz", "requireQuizOwner"],
-    ["deleteQuiz", "requireQuizOwner"],
-    ["addQuestion", "requireQuizOwner"],
-    ["updateQuestion", "requireQuestionOwner"],
-    ["deleteQuestion", "requireQuestionOwner"],
-    ["getQuiz", "getQuizIfOwnerOrAdmin"],
-    ["getQuizForOwner", "getQuizIfOwner"],
-    ["getQuestionsForOwner", "getQuizIfOwnerOrAdmin"],
-    ["getQuizSessions", "getQuizIfOwner"],
-    ["getSessionDetail", "getSessionIfOwnerOrAdmin"],
-    ["overrideScore", "requireSessionOwner"],
-    ["getQuizStatsEnhanced", "getQuizIfOwner"],
-    ["getQuizByUsernameSlug", "canViewQuizAsRespondent"],
-  ])("%s uses %s", (name, helper) => {
-    expect(exportedBlock(quizFunctions, name)).toContain(helper);
-  });
-
-  it("requires sign-in in the proxy for every signed-in-only page, including the /print answer-key view", () => {
+  it("requires sign-in in the proxy for every signed-in-only page", () => {
     const proxy = readSource("proxy.ts");
     const matcher = /createRouteMatcher\(\[([^\]]*)\]\)/.exec(proxy)?.[1] ?? "";
-    for (const route of ["/dashboard(.*)", "/admin(.*)", "/print(.*)"]) expect(matcher).toContain(`"${route}"`);
+    for (const route of ["/dashboard(.*)", "/admin(.*)"]) expect(matcher).toContain(`"${route}"`);
     // Every page folder under app/ that is not public must be listed above.
     const publicTop = new Set(["ai", "forms-quizzes", "live-games", "open-source", "teams", "status", "changelog","[username]", "f", "sign-in", "sign-up", "docs", "chatgpt", "claude", "connect", "pricing", "privacy", "cookies", "terms", "copyright", "api", "mcp", ".well-known", "opengraph-image",
       // Live game players join with a PIN and no account (host screens live under /dashboard).

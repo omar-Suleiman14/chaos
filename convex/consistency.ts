@@ -24,12 +24,8 @@ type Scan<T extends TableNames> = { table: T; pageSize: number; check: (ctx: Mut
 
 /** Module assessments store their target as a plain string id. */
 async function assessmentExists(ctx: MutationCtx, kind: "form" | "quiz", id: string) {
-  if (kind === "form") {
-    const formId = ctx.db.normalizeId("forms", id);
-    return !!formId && !!(await ctx.db.get("forms", formId));
-  }
-  const quizId = ctx.db.normalizeId("quizzes", id);
-  return !!quizId && !!(await ctx.db.get("quizzes", quizId));
+  const formId = kind === "form" ? ctx.db.normalizeId("forms", id) : null;
+  return !!formId && !!(await ctx.db.get("forms", formId));
 }
 
 const courses: Scan<"learnCollections"> = {
@@ -39,7 +35,7 @@ const courses: Scan<"learnCollections"> = {
     // The draft outline and modules name lessons that no longer exist.
     const draft = new Set<Id<"lessons">>([...(course.lessonIds ?? []), ...(course.modules ?? []).flatMap((m) => m.lessonIds)]);
     for (const lessonId of draft) if (!(await ctx.db.get("lessons", lessonId))) add("course.lessonMissing", `${id} → ${lessonId}`);
-    // Module assessments point at forms or quizzes that are gone.
+    // Module assessments point at quiz forms that are gone.
     for (const a of (course.modules ?? []).flatMap((m) => m.assessments)) {
       if (!(await assessmentExists(ctx, a.kind, a.id))) add("course.assessmentMissing", `${id} → ${a.kind}:${a.id}`);
     }
@@ -69,7 +65,7 @@ const assessments: Scan<"lessonAssessments"> = {
   table: "lessonAssessments", pageSize: 200,
   check: async (ctx, link, add) => {
     if (!(await ctx.db.get("lessons", link.lessonId))) add("assessment.lessonMissing", `${link._id} → ${link.lessonId}`);
-    const asset = link.asset.kind === "form" ? await ctx.db.get("forms", link.asset.id) : await ctx.db.get("quizzes", link.asset.id);
+    const asset = link.asset.kind === "form" ? await ctx.db.get("forms", link.asset.id) : null;
     if (!asset) add("assessment.orphaned", `${link.lessonId} → ${link.asset.kind}:${link.asset.id}`);
   },
 };

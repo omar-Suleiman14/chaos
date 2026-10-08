@@ -175,7 +175,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
     else void document.documentElement.requestFullscreen?.().catch(() => {});
   };
-  const resultsHref = game.formId ? `/dashboard/forms/${game.formId}/responses` : game.quizId ? `/dashboard/results?id=${game.quizId}` : "/dashboard";
+  const resultsHref = game.formId ? `/dashboard/forms/${game.formId}/responses` : "/dashboard";
   const fmt = (n: number) => formatNumber(locale, n);
   const question = game.question;
   const correct = new Set(question?.correct ?? []);

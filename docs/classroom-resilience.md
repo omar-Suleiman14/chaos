@@ -65,11 +65,7 @@ marked as insufficient; difficulty and easy-question signals need ten observatio
 and high/low cohort discrimination needs twenty and distinct score groups. Missing
 answer times remain missing. Form timings currently come from live games only.
 
-Form version comparisons use up to 30 immutable published editions. Classic quiz
-comparisons use up to 30 distinct attempt snapshots, including prompts, options,
-answer keys, marks and timers. Pool draws are explicitly labelled as snapshots,
-since a different draw does not necessarily mean a different published version.
-Historical attempts without snapshots are disclosed and excluded. These queries
+Form version comparisons use up to 30 immutable published editions. These queries
 use existing teacher/viewer authorization and expose no student names or raw
 written answers.
 

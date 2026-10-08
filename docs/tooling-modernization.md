@@ -50,11 +50,7 @@ standings and distributions without resending the question/options/theme payload
 State and question index guard the client merge against cross-phase responses.
 The ended player podium reads three indexed rows rather than the entire roster.
 
-Legacy quiz questions use an index including quiz, soft-deletion status and order.
-Reads reject more than 500 active questions rather than silently truncating grading
-data. The classic quiz list is bounded to the newest 200 entries; modern forms
-use a paginated library. Elevation propagation processes 50 quizzes per batch,
-and superseded jobs stop. Admin team counts are bounded to the enforced 100 member
+Forms use a paginated library. Admin team counts are bounded to the enforced 100 member
 and 100 resource limits. Student rosters, completed quiz attempts and game listings
 already use bounded/indexed reads.
 

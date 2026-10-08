@@ -93,7 +93,9 @@ export const scan = internalMutation({
       }
       cursor = page.isDone ? null : page.continueCursor;
       if (page.isDone) phase = "forms";
-    } else if (phase === "forms") {
+    } else {
+      // Forms are the last phase (quizzes are quiz forms).
+      phase = "forms";
       const page = await ctx.db.query("forms").paginate(options);
       for (const form of page.page) {
         const counts = await readFormCounts(ctx, form);
@@ -106,36 +108,6 @@ export const scan = internalMutation({
           !(await creatorRestricted(ctx, form.ownerId))
         )
           pending.liveForms++;
-      }
-      cursor = page.isDone ? null : page.continueCursor;
-      if (page.isDone) phase = "quizzes";
-    } else if (phase === "quizzes") {
-      const page = await ctx.db.query("quizzes").paginate(options);
-      const dayStart = new Date(job.startedAt);
-      dayStart.setUTCHours(0, 0, 0, 0);
-      for (const quiz of page.page) {
-        pending.quizzes++;
-        if (quiz.isPublished && quiz.updatedAt >= dayStart.getTime()) {
-          pending.activeTodayQuizzes = (pending.activeTodayQuizzes ?? 0) + 1;
-        }
-        if (
-          quiz.isPublished &&
-          !quiz.isBanned &&
-          !(await creatorRestricted(ctx, quiz.creatorId))
-        )
-          pending.liveQuizzes++;
-      }
-      cursor = page.isDone ? null : page.continueCursor;
-      if (page.isDone) phase = "quizSessions";
-    } else {
-      const page = await ctx.db.query("quizSessions").paginate(options);
-      for (const session of page.page) {
-        pending.attempts++;
-        if (
-          session.status === "completed" ||
-          (session.status === undefined && session.completedAt !== undefined)
-        )
-          pending.completedAttempts++;
       }
       cursor = page.isDone ? null : page.continueCursor;
       done = page.isDone;

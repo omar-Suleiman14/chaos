@@ -59,7 +59,7 @@ const baseInstructions = `Chaos (chaos.fail) is where this person builds forms, 
 - Write like a real teacher or organiser, not a brochure. Each question is one short, direct sentence (usually under 15 words) that tests one fact or asks one thing. Options are 1–5 words, parallel in form, and every wrong option is plausible; no "All of the above", joke options or filler. Leave question descriptions empty unless a hint is truly needed. A quiz explanation, if any, is one plain sentence saying why the answer is right. Titles are 2–6 words; the intro is one sentence or empty. No emojis, exclamation marks, hype ("ultimate", "fun-filled", "dive into", "journey", "test your knowledge") or restating the question in the options.
 - Use natural, human language in all content and chat replies. Write short, clear sentences. Avoid em dashes; use periods or commas instead. Avoid promotional wording, jargon, stock phrases and filler. Match the person's language, including natural Arabic when they write in Arabic.
 - Keep chat replies short: one or two sentences on what you made, then the link. Do not list the questions back unless the person asks.
-- Ids look like form_… (forms and quizzes) or quiz_… (classic quizzes, read-only). Find them with search_forms.
+- Ids look like form_… (forms and quizzes; a quiz is a form with quiz mode on). Find them with search_forms.
 - update_form replaces the question list when you send questions: call get_form first, keep each question's id, and send the full list.
 - Looks: every form has a theme (colours, font, buttons, start screen). When you create a form, pick a preset that suits it and pass it as theme: "Lilac" for everyday forms and sign-ups, "Banner" for work and school, and a livelier one (Candy, Arcade, Neon, Sunset, Aurora) for games, parties and fun quizzes. Use list_themes to see them all, and set_form_theme for "make it dark", "use the Typeform look" or a brand colour. If the person names a look, use theirs. If set_form_theme returns warnings about hard-to-read colours, fix them.
 - Sounds: forms you create have sound on (Glass). Pick a pack that suits the mood with sound (soft is Glass, pop, wood, arcade), and use off only when the person asks for silence or the form is formal or sensitive (health, HR, legal).
@@ -128,7 +128,7 @@ const read: ToolAnnotations = { readOnlyHint: true, destructiveHint: false, open
 /** Loose output shapes: key fields are named for reviewers; extra fields pass through. */
 const itemShape = {
   id: z.string(),
-  kind: z.enum(["form", "classic_quiz"]),
+  kind: z.enum(["form"]),
   title: z.string(),
   status: z.string(),
   editUrl: z.string(),

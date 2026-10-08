@@ -33,8 +33,7 @@ export default function GameHistory({ limit }: { limit?: number }) {
       {games.slice(0, limit).map((game) => {
         const running = game.state !== "ended";
         const href = running || game.rehearsal ? `/dashboard/live/${game._id}`
-          : game.formId ? `/dashboard/forms/${game.formId}/responses`
-          : game.quizId ? `/dashboard/results?id=${game.quizId}` : null;
+          : game.formId ? `/dashboard/forms/${game.formId}/responses` : null;
         const meta = [
           game.rehearsal ? (locale === "ar" ? "تدريب" : "Rehearsal") : running ? t.live : t.ended,
           timeAgo(locale, game.endedAt ?? game.createdAt),

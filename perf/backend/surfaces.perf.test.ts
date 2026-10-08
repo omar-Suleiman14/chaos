@@ -30,7 +30,6 @@ describe("surface read budgets", () => {
       () => ws.owner.query(api.quizFunctions.getIsAdmin, {}),
       () => ws.owner.query(api.quizFunctions.getCurrentUser, {}),
       () => ws.owner.query(api.forms.listMyForms, {}),
-      () => ws.owner.query(api.quizFunctions.getMyQuizzes, {}),
       () => ws.owner.query(api.courses.listMine, {}),
       () => ws.owner.query(api.live.myGames, {}),
     ]));

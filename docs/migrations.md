@@ -12,7 +12,7 @@ Running one needs the owner's approval (see "Running a repair").
 
 Kinds: **additive** (old rows are valid and behave as before), **interpretive** (old rows are valid
 but the code decides what a missing value means), **destructive** (data is removed or rewritten).
-No change so far is destructive.
+The classic quiz retirement is the only destructive change (see below).
 
 | Release | Change | Kind | How an old row is read |
 | --- | --- | --- | --- |
@@ -29,6 +29,7 @@ No change so far is destructive.
 | 0.4 | `users` usage counters, `usernameChosen`, suspension and ban fields | additive | Missing means none. |
 | 1.0 | Forms: `forms`, `formVersions`, `formResponses`, `formAggregates` | additive | A 1.0 form has `schemaVersion: 1`, a minimal theme and no `quiz`, `translations` or logic. All of these are optional in the validators and read as "off". |
 | 1.x | Form themes, slugs, embed, webhooks, integration tokens, collaborators | additive | New tables and optional fields only. |
+| 2026-10 | Classic quizzes retired: converted to quiz forms, then deleted | destructive | No app code reads `quizzes`, `questions`, `quizSessions`, `teacherSettings` or `quizForkSnapshots` any more. Run `classicQuizMigration:start` ([classic-quiz-retirement.md](classic-quiz-retirement.md)). The 0.2–0.4 rows above describe data that the retirement converts or deletes. |
 
 Things the issues mention that do not exist in this codebase, so there is nothing to migrate:
 revisions of quizzes (a form has `formVersions`; a classic quiz has one frozen snapshot),
@@ -47,11 +48,6 @@ empty slug is not a public route: the quiz is reachable only by id.
 validation. New grants bind to the current access-code hash. Older grants without
 that field and grants for a previous code no longer unlock a form; respondents
 must enter the current code again. No form definition or response is rewritten.
-
-Newly completed classic quiz attempts with a question snapshot include unanswered
-questions in their possible marks. Existing completed scores and pre-snapshot
-attempts are kept as stored. Live-game attempts cannot be graded or completed
-through the classic quiz respondent endpoints.
 
 Deployments require an explicit HTTPS issuer for the selected authentication
 mode: `CLERK_JWT_ISSUER_DOMAIN` for Clerk, or `BETTER_AUTH_SECRET` and `CHAOS_APP_URL` with
@@ -76,32 +72,18 @@ team membership dynamically. Deploying the schema/functions enables the feature;
 there is no backfill or production repair to run. Removing this feature from the
 app leaves old records unchanged, but stops resolving the new team grants.
 
-## Sessions without a status
+## Classic quiz retirement
 
-Sessions saved before `status` existed have no status. Four reads only look at
-`status: "completed"` through the index: the library counts and averages, results and the session
-list, the leaderboard, and the 100-player limit for free owners. Those sessions were therefore
-not counted. The MCP and integration summaries already treated a status-less session with
-`completedAt` as completed, so the two sides disagreed.
+`convex/classicQuizMigration.ts` converts every classic quiz to a quiz form, re-points everything
+that referred to it, and deletes the classic rows. Before converting it repairs the two
+unambiguous editor-corrupted question types (an `mcq` with several `correctAnswers` and options is
+a multi-select question; an `mcq` or `true_false` with `keywords`, no options and no
+`correctAnswer` is a written question). Steps, rollback and what is not carried over are in
+[classic-quiz-retirement.md](classic-quiz-retirement.md). The earlier
+`migrations:backfillSessionStatus` and `migrations:repairQuestionTypes` repairs were removed with
+the classic quiz code.
 
-`migrations:backfillSessionStatus` sets `status: "completed"` when `completedAt` exists and
-`"in_progress"` otherwise. It changes nothing else.
-
-## The repair functions (`convex/migrations.ts`)
-
-Both are internal mutations, work one page at a time, take `dryRun`, and are idempotent.
-
-- `migrations:backfillSessionStatus`
-- `migrations:repairQuestionTypes`. Only two shapes are treated as corrupted, because they cannot
-  be legitimate: an `mcq` with more than one `correctAnswers` and options becomes `multi_select`;
-  an `mcq` or `true_false` with `keywords` and no options and no `correctAnswer` becomes `written`.
-  Only `type` changes. `correctAnswer`, `correctAnswers`, `keywords` and options are kept. The
-  frozen `publishedSnapshot` copy is repaired the same way. Anything ambiguous is left alone for a
-  person to review (for example an `mcq` with keywords and options).
-
-Arguments: `{ "dryRun": true, "batchSize": 100, "cursor": null }`. The result is
-`{ scanned, changed, changedIds, isDone, continueCursor }`; repeat with `continueCursor` until
-`isDone`.
+## The repair functions
 
 ### Reserved usernames (`convex/links.ts`)
 
@@ -126,9 +108,8 @@ Convex has no automatic migration history, so the position for each repair is:
 
 | Repair | What it wrote | Roll back |
 | --- | --- | --- |
-| `backfillSessionStatus` | `status` on rows that had none | Save `changedIds` from the run. To undo, patch those ids back to `status: undefined`. The app reads correctly either way; the counts simply return to excluding those sessions. Restoring from the backup taken in step 1 also works. |
 | `releaseReservedUsernames` | `username`, `usernameChosen`, `cardOnboardingPending` on the listed users; deletes the reserved name's `usernameAliases` row | Save `changedIds` and their old usernames from the dry run. The old name cannot be given back while it is a page address. |
-| `repairQuestionTypes` | `type` on the listed questions and in `publishedSnapshot` | Save `changedIds`. To undo, patch those question ids back to `type: "mcq"`, and the `snapshot:` ids inside their quiz's `publishedSnapshot`. No answer data was removed, so this is lossless. |
+| `classicQuizMigration` | new quiz forms, re-pointed references, deleted classic rows | Restore the backup taken in step 1. See [classic-quiz-retirement.md](classic-quiz-retirement.md). |
 
 A schema change that has already been deployed cannot be un-deployed against existing rows. If a
 future field becomes required, ship it optional first, backfill, then tighten.
@@ -139,9 +120,9 @@ future field becomes required, ship it optional first, backfill, then tighten.
   `isElevated` users, a soft-deleted question, corrupted questions, sessions with and without
   `status`, a frozen snapshot, an AI job pointing at a deleted quiz, an empty slug, partial teacher
   settings, and a 1.0 form with responses.
-- `tests/integration/legacyData.test.ts` loads it, checks every read path, runs each repair
-  (dry run, real run, second run, no data loss) and compares scores, public URLs and form data
-  before and after.
+- `tests/integration/legacyData.test.ts` loads it, checks the schema still accepts every old
+  shape, and checks 1.0-era forms in the library, public page, inbox, analysis and export.
+- `tests/integration/classicQuizMigration.test.ts` runs the classic quiz retirement end to end.
 - `tests/integration/formIntegrity.test.ts` covers form round trips, exports, concurrency and
   editing.
 
@@ -151,6 +132,5 @@ future field becomes required, ship it optional first, backfill, then tighten.
   answered on (`formResponses.version`), the inbox and detail views render them with that version's
   labels, and the spreadsheet export lists every question that any of the last 100 versions had.
   Unfinished responses are completed against the version they started on.
-- Historical multi-select answers with commas in option text cannot be re-graded (see above).
 - There is no fixture for production-scale data. Run the repairs on a copy of real data with the
   owner before any production run.

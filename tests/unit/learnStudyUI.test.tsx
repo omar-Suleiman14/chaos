@@ -26,13 +26,13 @@ const lesson = { id: "lesson", quizzes: [], draft: { content: [] } } as unknown 
 const wrap = (ui: React.ReactNode) => render(<LocaleProvider initial="en">{ui}</LocaleProvider>);
 beforeEach(() => { state.push.mockReset(); state.query.mockReset(); state.mutation.mockReset(); state.reads = { "learnFrontend:attachedQuizzes": [], "forms:listMyForms": { owned: [], shared: [] } }; });
 describe("durable study UI", () => {
-  it.each(["form", "quiz"])("copies %s into a NEW draft and navigates its existing builder route", async kind => {
-    state.reads["learnFrontend:attachedQuizzes"] = [{ kind, id: "original", title: "Published", shareId: "public", href: "/creator/original", questionCount: 1 }];
-    state.query.mockResolvedValue(kind === "form" ? { formVersionId: "publication" } : { expectedPublishedAt: 12 });
-    state.mutation.mockResolvedValue({ asset: { kind, id: "new-draft" } });
+  it("copies a quiz form into a NEW draft and navigates its existing builder route", async () => {
+    state.reads["learnFrontend:attachedQuizzes"] = [{ kind: "form", id: "original", title: "Published", shareId: "public", href: "/f/public", questionCount: 1 }];
+    state.query.mockResolvedValue({ formVersionId: "publication" });
+    state.mutation.mockResolvedValue({ asset: { kind: "form", id: "new-draft" } });
     wrap(<PracticeTab lesson={lesson} isOwner={false} />);
     fireEvent.click(screen.getByRole("button", { name: "Copy to my library" }));
-    await waitFor(() => expect(state.push).toHaveBeenCalledWith(kind === "form" ? "/dashboard/forms/new-draft" : "/dashboard/editor?id=new-draft"));
+    await waitFor(() => expect(state.push).toHaveBeenCalledWith("/dashboard/forms/new-draft"));
   });
   it("omits a legacy practice attachment already embedded in the published lesson", () => {
     state.reads["learnFrontend:attachedQuizzes"] = [{ kind: "form", id: "original", title: "Published", shareId: "public", href: "/f/public", questionCount: 1 }];

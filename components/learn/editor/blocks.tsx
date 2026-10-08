@@ -305,7 +305,7 @@ export const LessonQuiz = createReactBlockSpec(
   const { locale } = useLocale();
   return <div contentEditable={false} className="lx-panel">
     {editor.isEditable && <label><input type="checkbox" checked={block.props.required} onChange={e => editor.updateBlock(block, { props: { required: e.target.checked } })} /> {locale === "ar" ? "مطلوب لإكمال الدرس" : "Required to complete the lesson"}</label>}
-    {editor.isEditable ? <QuizBlockEditor kind={block.props.assetKind} assetId={block.props.assetId} onSelect={asset => editor.updateBlock(block, { props: { assetKind: asset.kind, assetId: asset.id } })} /> : block.props.assetId ? <InlineQuiz asset={{ kind: block.props.assetKind, id: block.props.assetId }} /> : null}
+    {editor.isEditable ? <QuizBlockEditor assetId={block.props.assetKind === "form" ? block.props.assetId : ""} onSelect={asset => editor.updateBlock(block, { props: { assetKind: asset.kind, assetId: asset.id } })} /> : block.props.assetId ? <InlineQuiz asset={{ kind: block.props.assetKind, id: block.props.assetId }} /> : null}
   </div>;
  } }
 );

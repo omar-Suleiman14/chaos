@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { api, internal } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { createTestConvex } from "./setup";
-import { creatorIdentity, otherCreatorIdentity, questionFixtures } from "../fixtures";
+import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
 import { themeFromPreset } from "@/components/forms/formThemes";
 import { sha256Hex } from "@/convex/serverUtils";
 
@@ -463,38 +463,6 @@ describe("live games: results", () => {
     expect(detail).toMatchObject({ respondent: "Sam", quizScore: 2, quizMaxScore: 6, tags: ["live"], live: { gameId } });
     const stored = await t.run(async (ctx) => await ctx.db.query("formResponses").collect());
     expect(stored.every((r) => r.source === "live" && r.live?.gameId === gameId)).toBe(true);
-  });
-
-  it("hosts an old quiz and saves attempts to it", async () => {
-    const t = createTestConvex();
-    const owner = t.withIdentity(creatorIdentity);
-    await owner.mutation(api.quizFunctions.getOrCreateUser, {});
-    const quizId = await t.run(async (ctx) => {
-      const id = await ctx.db.insert("quizzes", { title: "Old", slug: "old", creatorId: creatorIdentity.subject, creatorUsername: "creator", isPublished: true, createdAt: 0, updatedAt: 0 });
-      const snapshot = [];
-      for (const q of [questionFixtures.mcq, questionFixtures.trueFalse, questionFixtures.written]) {
-        const qid = await ctx.db.insert("questions", { ...q, quizId: id });
-        const { order, ...rest } = q;
-        snapshot.push({ ...rest, order, _id: qid });
-      }
-      await ctx.db.patch("quizzes", id, { publishedSnapshot: { title: "Old", questions: snapshot } });
-      return id;
-    });
-    const gameId = await owner.mutation(api.live.createGame, { quizId });
-    const view = await owner.query(api.live.hostView, { gameId });
-    expect(view).toMatchObject({ questionCount: 2, skippedQuestions: 1 });
-    await t.mutation(api.live.joinGame, { pin: view!.pin, nickname: "Sam", token: token(1) });
-    await owner.mutation(api.live.advance, { gameId, from: "lobby", questionIndex: -1 });
-    await t.mutation(api.live.submitAnswer, { gameId, token: token(1), questionIndex: 0, optionIds: ["1"] }); // "4"
-    await owner.mutation(api.live.advance, { gameId, from: "reveal", questionIndex: 0 }).catch(() => {});
-    await settle(t);
-    expect(await t.query(api.live.playerView, { gameId, token: token(1) })).toMatchObject({ correct: true });
-    await owner.mutation(api.live.endGameNow, { gameId });
-    await t.finishAllScheduledFunctions(() => vi.runAllTimers());
-    const sessions = await t.run(async (ctx) => await ctx.db.query("quizSessions").collect());
-    expect(sessions).toHaveLength(1);
-    expect(sessions[0]).toMatchObject({ playerName: "Sam", status: "completed", score: 10, totalPoints: 20, source: "live", liveGameId: gameId });
-    expect(sessions[0].answers[0]).toMatchObject({ answer: "4", isCorrect: true, pointsEarned: 10 });
   });
 });
 
