@@ -80,3 +80,34 @@ it("gives every new course a cover and its lessons different ones", async () => 
   expect(covers.every((c) => c?.startsWith("/covers/"))).toBe(true);
   expect(new Set(covers).size).toBe(covers.length);
 });
+
+it("lists a course's published versions with lesson titles as published, and restores one into the draft (owner only)", async () => {
+  vi.stubEnv("CLERK_JWT_ISSUER_DOMAIN", creatorIdentity.issuer);
+  const t = createTestConvex(), owner = t.withIdentity(creatorIdentity), other = t.withIdentity(otherCreatorIdentity);
+  await owner.mutation(api.quizFunctions.getOrCreateUser, {});
+  await other.mutation(api.quizFunctions.getOrCreateUser, {});
+  const courseId = await owner.mutation(api.courses.create, { title: "Liver basics" });
+  const first = await owner.mutation(api.courses.addLesson, { courseId, title: "Anatomy" });
+  await owner.mutation(api.lessons.saveDraft, { lessonId: first, expectedRevision: 0, document: { schemaVersion: 1, blocks: [paragraph("p", "Text")] } });
+  expect(await owner.mutation(api.courses.publish, { courseId, visibility: "public" })).toEqual({ ok: true });
+
+  const second = await owner.mutation(api.courses.addLesson, { courseId, title: "Portal hypertension" });
+  await owner.mutation(api.lessons.saveDraft, { lessonId: second, expectedRevision: 0, document: { schemaVersion: 1, blocks: [paragraph("p", "Text")] } });
+  await owner.mutation(api.courses.update, { courseId, title: "Liver, in depth" });
+  expect(await owner.mutation(api.courses.publish, { courseId, visibility: "public" })).toEqual({ ok: true });
+
+  const versions = await owner.query(api.courses.listVersions, { courseId });
+  expect(versions.map((v) => [v.number, v.title, v.lessons.map((l) => l.title)])).toEqual([
+    [2, "Liver, in depth", ["Anatomy", "Portal hypertension"]],
+    [1, "Liver basics", ["Anatomy"]],
+  ]);
+  await expect(other.query(api.courses.listVersions, { courseId })).rejects.toThrow("NOT_FOUND");
+  await expect(other.mutation(api.courses.restoreVersion, { courseId, number: 1 })).rejects.toThrow("NOT_FOUND");
+
+  await owner.mutation(api.courses.restoreVersion, { courseId, number: 1 });
+  const draft = await owner.query(api.courses.get, { courseId });
+  expect([draft.title, draft.lessons.map((l) => l.id)]).toEqual(["Liver basics", [first]]);
+  // Readers keep version 2 until the next publish.
+  expect((await t.query(api.courses.getPublic, { courseId }))?.lessons.map((l) => l.title)).toEqual(["Anatomy", "Portal hypertension"]);
+  await expect(owner.mutation(api.courses.restoreVersion, { courseId, number: 9 })).rejects.toThrow("NOT_FOUND");
+});

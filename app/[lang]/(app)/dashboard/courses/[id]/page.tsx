@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Select } from "@/components/workspace/Select";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ExternalLink, Globe, Lock, Send, Users } from "lucide-react";
+import { ArrowLeft, ExternalLink, Globe, History, Lock, Send, Users } from "lucide-react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -12,6 +12,7 @@ import CoursePortability from "@/components/courses/CoursePortability";
 import CourseDetailsEditor from "@/components/courses/CourseDetailsEditor";
 import CourseModulesEditor from "@/components/courses/CourseModulesEditor";
 import CourseStudents from "@/components/courses/CourseStudents";
+import CourseVersionHistory from "@/components/courses/CourseVersionHistory";
 import { contentDirection } from "@/lib/learn/direction";
 import { localeDir } from "@/lib/locale";
 import { toast } from "@/lib/toast";
@@ -29,7 +30,7 @@ const copy = {
     back: "Courses", loading: "Loading course…", missing: "This course doesn't exist or isn't yours.", draft: "Draft", live: "Published", changes: "Unpublished changes",
     titlePh: "Course title", descPh: "What will people learn? One or two sentences.",
     language: "Course language", languageHelp: "Sets reading direction. New lessons inherit this language.", settings: "Settings", tags: "Topics", tagsHelp: "Comma separated, up to 12.",
-    publish: "Publish course", update: "Publish course changes", view: "View course", unpublish: "Unpublish", archive: "Archive",
+    history: "Version history", publish: "Publish course", update: "Publish course changes", view: "View course", unpublish: "Unpublish", archive: "Archive",
     publishedToast: "Course published", unpublishedToast: "Course unpublished", unpublishedHelp: "Learners can no longer open it.", archivedToast: "Course archived", archivedHelp: "Find it in the Archive.",
     publishTitle: "Publish this course", who: "Who can take it", public: "Public", publicHelp: "Anyone can find and take it, free. Recommended.", team: "Your team", teamHelp: "Only members of your Business team can take it. Its lessons become team-only too.",
     private: "Private", privateHelp: "Only you and people you share lessons with. Part of Chaos Business.", business: "Business only",
@@ -40,7 +41,7 @@ const copy = {
     back: "الدورات", loading: "جارٍ تحميل الدورة…", missing: "هذه الدورة غير موجودة أو ليست لك.", draft: "مسودة", live: "منشورة", changes: "تغييرات غير منشورة",
     titlePh: "عنوان الدورة", descPh: "ماذا سيتعلم الناس؟ جملة أو جملتان.",
     language: "لغة الدورة", languageHelp: "تحدد اتجاه القراءة. ترث الدروس الجديدة هذه اللغة.", settings: "الإعدادات", tags: "المواضيع", tagsHelp: "مفصولة بفواصل، حتى 12.",
-    publish: "انشر الدورة", update: "انشر تغييرات الدورة", view: "اعرض الدورة", unpublish: "ألغِ النشر", archive: "أرشف",
+    history: "سجل النسخ", publish: "انشر الدورة", update: "انشر تغييرات الدورة", view: "اعرض الدورة", unpublish: "ألغِ النشر", archive: "أرشف",
     publishedToast: "تم نشر الدورة", unpublishedToast: "أُلغي نشر الدورة", unpublishedHelp: "لم يعد بإمكان المتعلمين فتحها.", archivedToast: "تمت أرشفة الدورة", archivedHelp: "ستجدها في الأرشيف.",
     publishTitle: "انشر هذه الدورة", who: "من يمكنه أخذها", public: "عامة", publicHelp: "يمكن لأي أحد إيجادها وأخذها مجانًا. موصى به.", team: "فريقك", teamHelp: "لا يأخذها إلا أعضاء فريق الأعمال. وتصبح دروسها للفريق فقط أيضًا.",
     private: "خاصة", privateHelp: "أنت ومن تشاركهم الدروس فقط. جزء من Chaos للأعمال.", business: "للأعمال فقط",
@@ -65,6 +66,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
   const [look, setLook] = useState<PageLook | null>(null);
   const [loadedId, setLoadedId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [historyAt, setHistoryAt] = useState<number | null>(null);
   const [publishing, setPublishing] = useState(false), [visibility, setVisibility] = useState<"public" | "private" | "team">("public"), [teamId, setTeamId] = useState("");
   const { isAuthenticated } = useConvexAuth();
   const teams = useQuery(api.businessTeams.list, isAuthenticated ? {} : "skip");
@@ -99,6 +101,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
         <span className="cb-status" data-live={course.published}>{course.published ? t.live : t.draft}</span>
         {course.published && dirty && <span className="cb-note">{t.changes}</span>}
         <span className="cb-top__spacer" />
+        <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => setHistoryAt(Date.now())}><History size={15} aria-hidden /> {t.history}</button>
         {course.published && <Link className="ws-btn ws-btn--ghost ws-btn--sm" href={hostHref(`/learn/courses/${course.id}`)} target="_blank"><ExternalLink size={15} aria-hidden /> {t.view}</Link>}
         {course.isOwner && <button type="button" className="ws-btn ws-btn--primary" disabled={busy || !course.lessons.length} onClick={() => { setProblems([]); setPublishing(true); }}><Send size={15} aria-hidden />{course.published ? t.update : t.publish}</button>}
       </div>
@@ -131,6 +134,10 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
         </div>}
       </section>
 
+      {historyAt !== null && (
+        <CourseVersionHistory courseId={courseId} isOwner={course.isOwner} draftAt={historyAt} onClose={() => setHistoryAt(null)}
+          draft={{ title: course.title, description: course.description, outcomes: course.details?.outcomes ?? [], modules: course.modules, lessons: course.lessons.map((l) => ({ id: l.id, title: l.title })) }} />
+      )}
       {publishing && <WsDialog onClose={() => setPublishing(false)} title={t.publishTitle}>
         <div className="grid gap-4">
           <fieldset className="cb-vis"><legend className="text-sm font-semibold mb-1">{t.who}</legend>
