@@ -70,7 +70,7 @@ export default function VersionBrowser<V extends BrowsedVersion>({ label, status
   const fmt = (n: number) => formatNumber(locale, n);
   const dialog = useModal<HTMLDivElement>({ onClose });
   const [selected, setSelected] = useState(() => Math.max(0, past.findIndex((v) => v.key === initialKey)));
-  const [phoneView, setPhoneView] = useState<"past" | "current">("past");
+  const [phoneView, setPhoneView] = useState<"past" | "current">(() => initialKey === current?.key ? "current" : "past");
   const [confirming, setConfirming] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");

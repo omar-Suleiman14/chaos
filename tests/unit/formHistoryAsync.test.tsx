@@ -5,11 +5,12 @@ import { emptyDefinition } from "@/convex/formLogic";
 import type { Id } from "@/convex/_generated/dataModel";
 
 const restore = vi.hoisted(() => vi.fn());
+const history = vi.hoisted(() => ({ pending: false }));
 vi.mock("convex/react", () => ({
   useMutation: () => restore,
-  useQueries: (queries: Record<string, unknown>) => Object.fromEntries(Object.keys(queries).map((k) => [k, { version: Number(k), definition: emptyDefinition("Published") }])),
+  useQueries: (queries: Record<string, unknown>) => Object.fromEntries(Object.keys(queries).map((k) => [k, history.pending ? undefined : { version: Number(k), definition: emptyDefinition(`Published ${k}`) }])),
 }));
-beforeEach(() => { restore.mockReset(); });
+beforeEach(() => { restore.mockReset(); history.pending = false; });
 function example(beforeRestore: () => Promise<boolean>) {
   render(<HistoryTab formId={"f1" as Id<"forms">} versions={[{ version: 1, publishedAt: Date.now(), publishedByName: "Owner" }]} canEdit revision={() => 4} beforeRestore={beforeRestore} />);
   fireEvent.click(screen.getByRole("button", { name: "Browse versions" }));
@@ -36,4 +37,33 @@ it("waits for saving and prevents repeated restores", async () => {
   await act(async () => resolve(true));
   expect(restore).toHaveBeenCalledExactlyOnceWith({ formId: "f1", version: 1, expectedRevision: 4 });
   expect(screen.getByRole("button", { name: "Copy into draft" })).toBeEnabled();
+});
+
+it("opens the selected older version after its queries finish loading", async () => {
+  history.pending = true;
+  const props = { formId: "f1" as Id<"forms">, versions: [3, 2, 1].map(version => ({ version, publishedAt: Date.now(), publishedByName: "Owner" })), canEdit: true, revision: () => 4, beforeRestore: vi.fn().mockResolvedValue(true) };
+  const view = render(<HistoryTab {...props} />);
+  fireEvent.click(screen.getByRole("button", { name: /Version 1/ }));
+  expect(screen.getByText("Loading versions…")).toBeInTheDocument();
+  history.pending = false;
+  view.rerender(<HistoryTab {...props} />);
+  fireEvent.click(screen.getByRole("button", { name: "Copy into draft" }));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Copy into draft" })));
+  expect(restore).toHaveBeenCalledExactlyOnceWith({ formId: "f1", version: 1, expectedRevision: 4 });
+});
+it("can restore a timeline version older than the first thirty", async () => {
+  const props = { formId: "f1" as Id<"forms">, versions: Array.from({ length: 35 }, (_, i) => ({ version: 35 - i, publishedAt: Date.now(), publishedByName: "Owner" })), canEdit: true, revision: () => 4, beforeRestore: vi.fn().mockResolvedValue(true) };
+  render(<HistoryTab {...props} />);
+  fireEvent.click(screen.getByRole("button", { name: /^Version 1Owner/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Copy into draft" }));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Copy into draft" })));
+  expect(restore).toHaveBeenCalledExactlyOnceWith({ formId: "f1", version: 1, expectedRevision: 4 });
+});
+
+it("copies the live version when its timeline entry is selected", async () => {
+  render(<HistoryTab formId={"f1" as Id<"forms">} versions={[2, 1].map(version => ({ version, publishedAt: Date.now(), publishedByName: "Owner" }))} canEdit revision={() => 4} beforeRestore={vi.fn().mockResolvedValue(true)} />);
+  fireEvent.click(screen.getByRole("button", { name: /Version 2/ }));
+  fireEvent.click(screen.getByRole("button", { name: "Copy into draft" }));
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Copy into draft" })));
+  expect(restore).toHaveBeenCalledExactlyOnceWith({ formId: "f1", version: 2, expectedRevision: 4 });
 });
