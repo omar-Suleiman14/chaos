@@ -12,7 +12,7 @@ export const chaosIntegration = {
   id: "chaos",
   name: "Chaos",
   /** Bump with any change to the tools or the packages. Also the MCP server version. */
-  version: "1.2.0",
+  version: "1.3.0",
   developer: "Chaos",
   tagline: "Make forms, quizzes, lessons and courses from your assistant.",
   description: "Create and manage Chaos forms, quizzes, lessons, courses, flashcards and live games from a conversation.",

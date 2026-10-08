@@ -1069,6 +1069,331 @@
     "additionalProperties": false
    }
   },
+  "build_study_lesson": {
+   "title": null,
+   "description": "Start or resume a durable study lesson job. Use for Study this PDF, teach/explain a lecture, create a tutorial, or do Lecture 8 like previous lessons. The MCP client reads the complete source (including visuals), teaches using the create-study-lesson skill, and saves resumable checkpoints. No server AI extraction is implied. Upload client-local files explicitly using upload_study_source; client upload IDs and local paths are not backend files. Course/module titles resolve only unambiguous existing matches. Draft by default; returned profile may authorize publication. Reuse a stable key for retries.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "request": {
+      "type": "object",
+      "properties": {
+       "key": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160,
+        "pattern": "^[A-Za-z0-9_-]+$"
+       },
+       "title": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+       },
+       "sources": {
+        "minItems": 1,
+        "maxItems": 50,
+        "type": "array",
+        "items": {
+         "type": "object",
+         "properties": {
+          "sourceId": {
+           "type": "string",
+           "minLength": 1,
+           "maxLength": 160
+          },
+          "reference": {
+           "type": "string",
+           "minLength": 1,
+           "maxLength": 4000
+          },
+          "label": {
+           "type": "string",
+           "minLength": 1,
+           "maxLength": 200
+          }
+         },
+         "required": [
+          "label"
+         ]
+        }
+       },
+       "courseId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       "courseTitle": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+       },
+       "moduleId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       "moduleTitle": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+       },
+       "afterLessonId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       "quizSource": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2000
+       },
+       "preferences": {
+        "type": "object",
+        "properties": {
+         "teamId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+         },
+         "language": {
+          "type": "string",
+          "maxLength": 35
+         },
+         "lookupLanguage": {
+          "type": "string",
+          "maxLength": 35
+         },
+         "style": {
+          "type": "string",
+          "maxLength": 4000
+         },
+         "level": {
+          "type": "string",
+          "maxLength": 200
+         },
+         "theme": {
+          "type": "string",
+          "maxLength": 100
+         },
+         "sound": {
+          "type": "string",
+          "enum": [
+           "soft",
+           "pop",
+           "wood",
+           "arcade",
+           "off"
+          ]
+         },
+         "publish": {
+          "type": "boolean"
+         },
+         "visibility": {
+          "type": "string",
+          "enum": [
+           "public",
+           "private",
+           "restricted"
+          ]
+         }
+        }
+       }
+      },
+      "required": [
+       "key",
+       "title",
+       "sources"
+      ]
+     }
+    },
+    "required": [
+     "request"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "revision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "collecting",
+       "draft",
+       "validation_failed",
+       "published"
+      ]
+     },
+     "lessonId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "lessonUrl": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "assets": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 160
+      }
+     },
+     "problems": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "profile": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {}
+     },
+     "request": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {}
+     },
+     "nextAction": {
+      "type": "string"
+     },
+     "summary": {
+      "type": "object",
+      "properties": {
+       "assets": {
+        "type": "number"
+       },
+       "checkpoints": {
+        "type": "number"
+       },
+       "flashcardSets": {
+        "type": "number"
+       },
+       "sections": {
+        "type": "number"
+       },
+       "questions": {
+        "type": "number"
+       },
+       "cards": {
+        "type": "number"
+       },
+       "glossaryTerms": {
+        "type": "number"
+       },
+       "media": {
+        "type": "number"
+       },
+       "sources": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "assets",
+       "checkpoints",
+       "flashcardSets",
+       "sections",
+       "questions",
+       "cards",
+       "glossaryTerms",
+       "media",
+       "sources"
+      ],
+      "additionalProperties": false
+     },
+     "progress": {
+      "type": "object",
+      "properties": {
+       "stage": {
+        "type": "string"
+       },
+       "savedCheckpoints": {
+        "type": "number"
+       },
+       "checkpointBytes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "stage",
+       "savedCheckpoints",
+       "checkpointBytes"
+      ],
+      "additionalProperties": false
+     },
+     "resolvedCourseId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "resolvedModuleId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "required": [
+     "jobId",
+     "revision",
+     "status",
+     "lessonId",
+     "lessonUrl",
+     "assets",
+     "problems",
+     "profile",
+     "request",
+     "nextAction",
+     "summary",
+     "progress",
+     "resolvedCourseId",
+     "resolvedModuleId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": {}
+   }
+  },
   "change_form_collaborator": {
    "title": null,
    "description": "Explicit owner-authorized invitation, role change or removal (role=null). Grants access to form and respondent data; may notify an existing Chaos account. Obtain clear user intent identifying recipient and role before calling. Requires current membershipRevision from list_form_collaborators; reload on conflict or uncertain success. Cannot transfer or remove ownership. Requires authenticated Chaos MCP OAuth access.",
@@ -1187,6 +1512,1282 @@
     ],
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false
+   }
+  },
+  "checkpoint_study_lesson": {
+   "title": null,
+   "description": "Save or replace one bounded teaching checkpoint (210 KB maximum). Stable key + identical value is safe to retry, even with an old revision. Otherwise use latest expectedRevision. Reading is a client attestation of complete page/slide/section and visual inspection, never automatic extraction. Section concepts use local descriptive names; block conceptIds must be real Chaos concept IDs or empty. Record original source questions first, then independently solve with citations. Original IDs, wording, options, attribution and order must survive unchanged. Supplementary questions omit originalId. Review records client-verified diagrams/media and warnings. No publication.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "value": {
+      "oneOf": [
+       {
+        "type": "object",
+        "properties": {
+         "kind": {
+          "type": "string",
+          "const": "reading"
+         },
+         "sourceIndex": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+         },
+         "sourceId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+         },
+         "totalUnits": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000
+         },
+         "readUnits": {
+          "maxItems": 10000,
+          "type": "array",
+          "items": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
+          }
+         },
+         "visualUnits": {
+          "maxItems": 10000,
+          "type": "array",
+          "items": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
+          }
+         },
+         "inspectedVisualUnits": {
+          "maxItems": 10000,
+          "type": "array",
+          "items": {
+           "type": "integer",
+           "exclusiveMinimum": 0,
+           "maximum": 9007199254740991
+          }
+         },
+         "concepts": {
+          "maxItems": 1000,
+          "type": "array",
+          "items": {
+           "type": "string",
+           "minLength": 1,
+           "maxLength": 200
+          }
+         },
+         "notes": {
+          "type": "string",
+          "maxLength": 10000
+         }
+        },
+        "required": [
+         "kind",
+         "sourceIndex",
+         "sourceId",
+         "totalUnits",
+         "readUnits",
+         "visualUnits",
+         "inspectedVisualUnits",
+         "concepts",
+         "notes"
+        ]
+       },
+       {
+        "type": "object",
+        "properties": {
+         "kind": {
+          "type": "string",
+          "const": "question_source"
+         },
+         "source": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 2000
+         },
+         "topic": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+         },
+         "questions": {
+          "maxItems": 500,
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "id": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 160
+            },
+            "order": {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 9007199254740991
+            },
+            "label": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 500
+            },
+            "description": {
+             "type": "string",
+             "maxLength": 5000
+            },
+            "options": {
+             "minItems": 2,
+             "maxItems": 100,
+             "type": "array",
+             "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+             }
+            },
+            "type": {
+             "type": "string",
+             "enum": [
+              "single_choice",
+              "multiple_choice"
+             ]
+            },
+            "attribution": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 2000
+            },
+            "locator": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 1000
+            }
+           },
+           "required": [
+            "id",
+            "order",
+            "label",
+            "options",
+            "type",
+            "attribution",
+            "locator"
+           ]
+          }
+         }
+        },
+        "required": [
+         "kind",
+         "source",
+         "topic",
+         "questions"
+        ]
+       },
+       {
+        "type": "object",
+        "properties": {
+         "kind": {
+          "type": "string",
+          "const": "section"
+         },
+         "order": {
+          "type": "integer",
+          "minimum": -9007199254740991,
+          "maximum": 9007199254740991
+         },
+         "blocks": {
+          "maxItems": 500,
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "id": {
+             "type": "string",
+             "pattern": "^[A-Za-z0-9_-]{1,100}$"
+            },
+            "parentId": {
+             "type": "string",
+             "pattern": "^[A-Za-z0-9_-]{1,100}$"
+            },
+            "citations": {
+             "maxItems": 20,
+             "type": "array",
+             "items": {
+              "type": "object",
+              "properties": {
+               "sourceId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 100,
+                "description": "Raw Chaos lesson/source/version ID from Learn tools."
+               },
+               "locator": {
+                "oneOf": [
+                 {
+                  "type": "object",
+                  "properties": {
+                   "kind": {
+                    "type": "string",
+                    "const": "page"
+                   },
+                   "page": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                   }
+                  },
+                  "required": [
+                   "kind",
+                   "page"
+                  ]
+                 },
+                 {
+                  "type": "object",
+                  "properties": {
+                   "kind": {
+                    "type": "string",
+                    "const": "slide"
+                   },
+                   "slide": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                   }
+                  },
+                  "required": [
+                   "kind",
+                   "slide"
+                  ]
+                 },
+                 {
+                  "type": "object",
+                  "properties": {
+                   "kind": {
+                    "type": "string",
+                    "const": "time"
+                   },
+                   "start": {
+                    "type": "number",
+                    "minimum": 0
+                   },
+                   "end": {
+                    "type": "number",
+                    "minimum": 0
+                   }
+                  },
+                  "required": [
+                   "kind",
+                   "start"
+                  ]
+                 },
+                 {
+                  "type": "object",
+                  "properties": {
+                   "kind": {
+                    "type": "string",
+                    "const": "section"
+                   },
+                   "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                   }
+                  },
+                  "required": [
+                   "kind",
+                   "label"
+                  ]
+                 }
+                ]
+               }
+              },
+              "required": [
+               "sourceId",
+               "locator"
+              ]
+             }
+            },
+            "conceptIds": {
+             "maxItems": 20,
+             "type": "array",
+             "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100,
+              "description": "Raw Chaos lesson/source/version ID from Learn tools."
+             }
+            },
+            "presentation": {
+             "type": "object",
+             "properties": {
+              "alignment": {
+               "type": "string",
+               "enum": [
+                "left",
+                "center",
+                "right",
+                "justify"
+               ]
+              },
+              "textColor": {
+               "type": "string"
+              },
+              "backgroundColor": {
+               "type": "string"
+              }
+             }
+            },
+            "type": {
+             "type": "string",
+             "enum": [
+              "flashcards",
+              "callout",
+              "code",
+              "quote",
+              "toggle",
+              "divider",
+              "paragraph",
+              "heading",
+              "list",
+              "image",
+              "diagram",
+              "youtube",
+              "equation",
+              "table",
+              "source",
+              "quiz"
+             ]
+            },
+            "required": {
+             "type": "boolean"
+            },
+            "setId": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 100,
+             "description": "Raw Chaos lesson/source/version ID from Learn tools."
+            },
+            "text": {
+             "type": "string",
+             "maxLength": 20000
+            },
+            "inline": {
+             "type": "array",
+             "items": {
+              "type": "object",
+              "properties": {
+               "text": {
+                "type": "string"
+               },
+               "marks": {
+                "type": "object",
+                "properties": {
+                 "bold": {
+                  "type": "boolean"
+                 },
+                 "italic": {
+                  "type": "boolean"
+                 },
+                 "underline": {
+                  "type": "boolean"
+                 },
+                 "strike": {
+                  "type": "boolean"
+                 },
+                 "code": {
+                  "type": "boolean"
+                 },
+                 "textColor": {
+                  "type": "string"
+                 },
+                 "backgroundColor": {
+                  "type": "string"
+                 }
+                }
+               },
+               "href": {
+                "type": "string"
+               }
+              },
+              "required": [
+               "text"
+              ]
+             }
+            },
+            "tone": {
+             "type": "string",
+             "enum": [
+              "info",
+              "tip",
+              "warning",
+              "clinical",
+              "key"
+             ]
+            },
+            "language": {
+             "type": "string"
+            },
+            "level": {
+             "anyOf": [
+              {
+               "type": "number",
+               "const": 1
+              },
+              {
+               "type": "number",
+               "const": 2
+              },
+              {
+               "type": "number",
+               "const": 3
+              }
+             ]
+            },
+            "style": {
+             "type": "string",
+             "enum": [
+              "bullet",
+              "number",
+              "check"
+             ]
+            },
+            "checked": {
+             "type": "boolean"
+            },
+            "sourceId": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 100,
+             "description": "Raw Chaos lesson/source/version ID from Learn tools."
+            },
+            "alt": {
+             "type": "string"
+            },
+            "caption": {
+             "type": "string"
+            },
+            "credit": {
+             "type": "string"
+            },
+            "creditUrl": {
+             "type": "string"
+            },
+            "figureKind": {
+             "type": "string",
+             "enum": [
+              "photo",
+              "diagram"
+             ]
+            },
+            "name": {
+             "type": "string"
+            },
+            "previewWidth": {
+             "type": "number",
+             "exclusiveMinimum": 0,
+             "maximum": 10000
+            },
+            "showPreview": {
+             "type": "boolean"
+            },
+            "annotations": {
+             "type": "object",
+             "properties": {
+              "v": {
+               "type": "number",
+               "const": 1
+              },
+              "items": {
+               "type": "array",
+               "items": {
+                "type": "object",
+                "properties": {
+                 "id": {
+                  "type": "string"
+                 },
+                 "x": {
+                  "type": "number"
+                 },
+                 "y": {
+                  "type": "number"
+                 },
+                 "w": {
+                  "type": "number"
+                 },
+                 "h": {
+                  "type": "number"
+                 },
+                 "label": {
+                  "type": "string"
+                 },
+                 "body": {
+                  "type": "string"
+                 }
+                },
+                "required": [
+                 "id",
+                 "x",
+                 "y",
+                 "label"
+                ]
+               }
+              }
+             },
+             "required": [
+              "v",
+              "items"
+             ]
+            },
+            "format": {
+             "type": "string",
+             "const": "mermaid"
+            },
+            "videoId": {
+             "type": "string",
+             "pattern": "^[A-Za-z0-9_-]{11}$"
+            },
+            "start": {
+             "type": "number",
+             "minimum": 0
+            },
+            "end": {
+             "type": "number",
+             "minimum": 0
+            },
+            "display": {
+             "type": "boolean"
+            },
+            "rows": {
+             "minItems": 1,
+             "maxItems": 100,
+             "type": "array",
+             "items": {
+              "minItems": 1,
+              "maxItems": 20,
+              "type": "array",
+              "items": {
+               "type": "string",
+               "maxLength": 2000
+              }
+             }
+            },
+            "headerRows": {
+             "type": "integer",
+             "minimum": 0,
+             "maximum": 100
+            },
+            "label": {
+             "type": "string"
+            },
+            "asset": {
+             "oneOf": [
+              {
+               "type": "object",
+               "properties": {
+                "kind": {
+                 "type": "string",
+                 "const": "form"
+                },
+                "id": {
+                 "type": "string",
+                 "minLength": 1,
+                 "maxLength": 100,
+                 "description": "Raw Chaos lesson/source/version ID from Learn tools."
+                }
+               },
+               "required": [
+                "kind",
+                "id"
+               ]
+              },
+              {
+               "type": "object",
+               "properties": {
+                "kind": {
+                 "type": "string",
+                 "const": "quiz"
+                },
+                "id": {
+                 "type": "string",
+                 "minLength": 1,
+                 "maxLength": 100,
+                 "description": "Raw Chaos lesson/source/version ID from Learn tools."
+                }
+               },
+               "required": [
+                "kind",
+                "id"
+               ]
+              }
+             ]
+            }
+           },
+           "required": [
+            "id",
+            "citations",
+            "conceptIds",
+            "type"
+           ],
+           "description": "A Chaos block. Fields by type: paragraph, quote, toggle: text. heading: text, level 1-3. list: text, style, checked? (check style). callout: text, tone. code: text, language. diagram: text (Mermaid source), format \"mermaid\". equation: text (LaTeX), display. divider: none. image: sourceId, alt, caption. youtube: videoId, caption, start?, end?. table: rows, headerRows. source: sourceId, label. quiz: asset. flashcards: setId. inline (rich text runs) applies to text blocks. Fields a type does not take are dropped."
+          }
+         },
+         "concepts": {
+          "maxItems": 1000,
+          "type": "array",
+          "items": {
+           "type": "string",
+           "minLength": 1,
+           "maxLength": 200
+          }
+         }
+        },
+        "required": [
+         "kind",
+         "order",
+         "blocks",
+         "concepts"
+        ]
+       },
+       {
+        "type": "object",
+        "properties": {
+         "kind": {
+          "type": "string",
+          "const": "checkpoint"
+         },
+         "order": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 9007199254740991
+         },
+         "afterBlockId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+         },
+         "title": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+         },
+         "questions": {
+          "minItems": 1,
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "id": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 160
+            },
+            "label": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 500
+            },
+            "description": {
+             "type": "string",
+             "maxLength": 5000
+            },
+            "options": {
+             "minItems": 2,
+             "maxItems": 100,
+             "type": "array",
+             "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 500
+             }
+            },
+            "type": {
+             "type": "string",
+             "enum": [
+              "single_choice",
+              "multiple_choice"
+             ]
+            },
+            "correctAnswers": {
+             "minItems": 1,
+             "type": "array",
+             "items": {
+              "type": "string",
+              "minLength": 1
+             }
+            },
+            "explanation": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 2000
+            },
+            "evidence": {
+             "minItems": 1,
+             "maxItems": 20,
+             "type": "array",
+             "items": {
+              "type": "object",
+              "properties": {
+               "sourceId": {
+                "type": "string",
+                "minLength": 1,
+                "maxLength": 160
+               },
+               "locator": {
+                "oneOf": [
+                 {
+                  "type": "object",
+                  "properties": {
+                   "kind": {
+                    "type": "string",
+                    "const": "page"
+                   },
+                   "page": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                   }
+                  },
+                  "required": [
+                   "kind",
+                   "page"
+                  ]
+                 },
+                 {
+                  "type": "object",
+                  "properties": {
+                   "kind": {
+                    "type": "string",
+                    "const": "slide"
+                   },
+                   "slide": {
+                    "type": "integer",
+                    "exclusiveMinimum": 0,
+                    "maximum": 9007199254740991
+                   }
+                  },
+                  "required": [
+                   "kind",
+                   "slide"
+                  ]
+                 },
+                 {
+                  "type": "object",
+                  "properties": {
+                   "kind": {
+                    "type": "string",
+                    "const": "time"
+                   },
+                   "start": {
+                    "type": "number",
+                    "minimum": 0
+                   },
+                   "end": {
+                    "type": "number",
+                    "minimum": 0
+                   }
+                  },
+                  "required": [
+                   "kind",
+                   "start"
+                  ]
+                 },
+                 {
+                  "type": "object",
+                  "properties": {
+                   "kind": {
+                    "type": "string",
+                    "const": "section"
+                   },
+                   "label": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 300
+                   }
+                  },
+                  "required": [
+                   "kind",
+                   "label"
+                  ]
+                 }
+                ]
+               }
+              },
+              "required": [
+               "sourceId",
+               "locator"
+              ]
+             }
+            },
+            "originalId": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 160
+            }
+           },
+           "required": [
+            "id",
+            "label",
+            "options",
+            "type",
+            "correctAnswers",
+            "explanation",
+            "evidence"
+           ]
+          }
+         },
+         "existingFormId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+         }
+        },
+        "required": [
+         "kind",
+         "order",
+         "afterBlockId",
+         "title",
+         "questions"
+        ]
+       },
+       {
+        "type": "object",
+        "properties": {
+         "kind": {
+          "type": "string",
+          "const": "flashcards"
+         },
+         "cards": {
+          "minItems": 1,
+          "maxItems": 500,
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "id": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 160
+            },
+            "front": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 2000
+            },
+            "back": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 4000
+            },
+            "conceptIds": {
+             "maxItems": 20,
+             "type": "array",
+             "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 160
+             }
+            }
+           },
+           "required": [
+            "id",
+            "front",
+            "back",
+            "conceptIds"
+           ]
+          }
+         },
+         "existingSetId": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+         }
+        },
+        "required": [
+         "kind",
+         "cards"
+        ]
+       },
+       {
+        "type": "object",
+        "properties": {
+         "kind": {
+          "type": "string",
+          "const": "glossary"
+         },
+         "entries": {
+          "maxItems": 200,
+          "type": "array",
+          "items": {
+           "type": "object",
+           "properties": {
+            "term": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 100
+            },
+            "definition": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 1000
+            },
+            "aliases": {
+             "maxItems": 5,
+             "type": "array",
+             "items": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 100
+             }
+            },
+            "translation": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 200
+            },
+            "explanation": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 1500
+            },
+            "language": {
+             "type": "string",
+             "maxLength": 35
+            },
+            "pronunciation": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 100
+            }
+           },
+           "required": [
+            "term",
+            "definition"
+           ]
+          }
+         }
+        },
+        "required": [
+         "kind",
+         "entries"
+        ]
+       },
+       {
+        "type": "object",
+        "properties": {
+         "kind": {
+          "type": "string",
+          "const": "review"
+         },
+         "metadata": {
+          "type": "object",
+          "properties": {
+           "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+           },
+           "description": {
+            "type": "string",
+            "maxLength": 4000
+           },
+           "language": {
+            "type": "string",
+            "maxLength": 35
+           },
+           "tags": {
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 80
+            }
+           },
+           "license": {
+            "type": "string",
+            "maxLength": 300
+           },
+           "indexing": {
+            "type": "string",
+            "enum": [
+             "index",
+             "noindex"
+            ]
+           },
+           "coverUrl": {
+            "description": "Cover image: an https link or a bundled gallery path such as /covers/<name>.jpg.",
+            "type": "string"
+           },
+           "coverY": {
+            "description": "Vertical cover position, percent 0-100.",
+            "type": "number",
+            "minimum": 0,
+            "maximum": 100
+           },
+           "icon": {
+            "description": "Optional single emoji shown as the lesson icon.",
+            "type": "string",
+            "maxLength": 16
+           },
+           "authorDisplay": {
+            "type": "string",
+            "maxLength": 200
+           }
+          },
+          "required": [
+           "title",
+           "description",
+           "language",
+           "tags"
+          ]
+         },
+         "coveredConcepts": {
+          "maxItems": 1000,
+          "type": "array",
+          "items": {
+           "type": "string",
+           "minLength": 1,
+           "maxLength": 200
+          }
+         },
+         "verifiedMediaBlockIds": {
+          "maxItems": 500,
+          "type": "array",
+          "items": {
+           "type": "string",
+           "minLength": 1,
+           "maxLength": 160
+          }
+         },
+         "warnings": {
+          "maxItems": 100,
+          "type": "array",
+          "items": {
+           "type": "string",
+           "minLength": 1,
+           "maxLength": 2000
+          }
+         }
+        },
+        "required": [
+         "kind",
+         "metadata",
+         "coveredConcepts",
+         "verifiedMediaBlockIds",
+         "warnings"
+        ]
+       }
+      ]
+     }
+    },
+    "required": [
+     "jobId",
+     "expectedRevision",
+     "key",
+     "value"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "revision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "collecting",
+       "draft",
+       "validation_failed",
+       "published"
+      ]
+     },
+     "lessonId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "lessonUrl": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "assets": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 160
+      }
+     },
+     "problems": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "profile": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {}
+     },
+     "request": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {}
+     },
+     "nextAction": {
+      "type": "string"
+     },
+     "summary": {
+      "type": "object",
+      "properties": {
+       "assets": {
+        "type": "number"
+       },
+       "checkpoints": {
+        "type": "number"
+       },
+       "flashcardSets": {
+        "type": "number"
+       },
+       "sections": {
+        "type": "number"
+       },
+       "questions": {
+        "type": "number"
+       },
+       "cards": {
+        "type": "number"
+       },
+       "glossaryTerms": {
+        "type": "number"
+       },
+       "media": {
+        "type": "number"
+       },
+       "sources": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "assets",
+       "checkpoints",
+       "flashcardSets",
+       "sections",
+       "questions",
+       "cards",
+       "glossaryTerms",
+       "media",
+       "sources"
+      ],
+      "additionalProperties": false
+     },
+     "progress": {
+      "type": "object",
+      "properties": {
+       "stage": {
+        "type": "string"
+       },
+       "savedCheckpoints": {
+        "type": "number"
+       },
+       "checkpointBytes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "stage",
+       "savedCheckpoints",
+       "checkpointBytes"
+      ],
+      "additionalProperties": false
+     },
+     "resolvedCourseId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "resolvedModuleId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "required": [
+     "jobId",
+     "revision",
+     "status",
+     "lessonId",
+     "lessonUrl",
+     "assets",
+     "problems",
+     "profile",
+     "request",
+     "nextAction",
+     "summary",
+     "progress",
+     "resolvedCourseId",
+     "resolvedModuleId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": {}
    }
   },
   "create_course": {
@@ -4902,6 +6503,212 @@
     "additionalProperties": false
    }
   },
+  "finalize_study_lesson": {
+   "title": null,
+   "description": "Validate complete reading, concept coverage, original question preservation, independently evidenced answers, media review, duplicate cards and course placement; then atomically save native lesson, quizzes, inline flashcards and glossary as drafts. Reuses explicitly selected matching assets. No publication; embedded draft assets become playable after authorized publication. Failures preserve checkpoints and report actionable problems. Repeated success returns the same lesson URL.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "jobId",
+     "expectedRevision"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "revision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "collecting",
+       "draft",
+       "validation_failed",
+       "published"
+      ]
+     },
+     "lessonId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "lessonUrl": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "assets": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 160
+      }
+     },
+     "problems": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "profile": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {}
+     },
+     "request": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {}
+     },
+     "nextAction": {
+      "type": "string"
+     },
+     "summary": {
+      "type": "object",
+      "properties": {
+       "assets": {
+        "type": "number"
+       },
+       "checkpoints": {
+        "type": "number"
+       },
+       "flashcardSets": {
+        "type": "number"
+       },
+       "sections": {
+        "type": "number"
+       },
+       "questions": {
+        "type": "number"
+       },
+       "cards": {
+        "type": "number"
+       },
+       "glossaryTerms": {
+        "type": "number"
+       },
+       "media": {
+        "type": "number"
+       },
+       "sources": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "assets",
+       "checkpoints",
+       "flashcardSets",
+       "sections",
+       "questions",
+       "cards",
+       "glossaryTerms",
+       "media",
+       "sources"
+      ],
+      "additionalProperties": false
+     },
+     "progress": {
+      "type": "object",
+      "properties": {
+       "stage": {
+        "type": "string"
+       },
+       "savedCheckpoints": {
+        "type": "number"
+       },
+       "checkpointBytes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "stage",
+       "savedCheckpoints",
+       "checkpointBytes"
+      ],
+      "additionalProperties": false
+     },
+     "resolvedCourseId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "resolvedModuleId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "required": [
+     "jobId",
+     "revision",
+     "status",
+     "lessonId",
+     "lessonUrl",
+     "assets",
+     "problems",
+     "profile",
+     "request",
+     "nextAction",
+     "summary",
+     "progress",
+     "resolvedCourseId",
+     "resolvedModuleId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": {}
+   }
+  },
   "fork_lesson": {
    "title": "Fork a published lesson",
    "description": "Copy an accessible immutable version into a new private draft. Non-owners may copy only the current published version. Preserves parent/version/origin and citation IDs; never grants source access or publishes. Each call creates a draft; do not retry an uncertain success.",
@@ -7856,6 +9663,379 @@
     },
     "required": [
      "visible"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "get_study_lesson_checkpoint": {
+   "title": null,
+   "description": "Read one owned durable checkpoint by key to resume source reading/teaching or repair validation. May include owner-authored question answers.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     }
+    },
+    "required": [
+     "jobId",
+     "key"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "value": {
+      "anyOf": [
+       {
+        "type": "object",
+        "propertyNames": {
+         "type": "string"
+        },
+        "additionalProperties": {}
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "required": [
+     "value"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "get_study_lesson_job": {
+   "title": null,
+   "description": "Read durable progress, resolved preferences, draft/publication status, warnings, errors, assets and saved checkpoint keys. Resume unfinished work rather than generating duplicates.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     }
+    },
+    "required": [
+     "jobId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "revision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "collecting",
+       "draft",
+       "validation_failed",
+       "published"
+      ]
+     },
+     "lessonId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "lessonUrl": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "assets": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 160
+      }
+     },
+     "problems": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "profile": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {}
+     },
+     "request": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {}
+     },
+     "nextAction": {
+      "type": "string"
+     },
+     "summary": {
+      "type": "object",
+      "properties": {
+       "assets": {
+        "type": "number"
+       },
+       "checkpoints": {
+        "type": "number"
+       },
+       "flashcardSets": {
+        "type": "number"
+       },
+       "sections": {
+        "type": "number"
+       },
+       "questions": {
+        "type": "number"
+       },
+       "cards": {
+        "type": "number"
+       },
+       "glossaryTerms": {
+        "type": "number"
+       },
+       "media": {
+        "type": "number"
+       },
+       "sources": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "assets",
+       "checkpoints",
+       "flashcardSets",
+       "sections",
+       "questions",
+       "cards",
+       "glossaryTerms",
+       "media",
+       "sources"
+      ],
+      "additionalProperties": false
+     },
+     "progress": {
+      "type": "object",
+      "properties": {
+       "stage": {
+        "type": "string"
+       },
+       "savedCheckpoints": {
+        "type": "number"
+       },
+       "checkpointBytes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "stage",
+       "savedCheckpoints",
+       "checkpointBytes"
+      ],
+      "additionalProperties": false
+     },
+     "resolvedCourseId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "resolvedModuleId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "required": [
+     "jobId",
+     "revision",
+     "status",
+     "lessonId",
+     "lessonUrl",
+     "assets",
+     "problems",
+     "profile",
+     "request",
+     "nextAction",
+     "summary",
+     "progress",
+     "resolvedCourseId",
+     "resolvedModuleId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": {}
+   }
+  },
+  "get_study_lesson_skill": {
+   "title": null,
+   "description": "Read the complete create-study-lesson skill or its workflow/teaching reference. Use before teaching educational material in Chaos. This static instruction tool supports clients that expose MCP tools but do not expose resources or packaged skills. No source content or account data.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "path": {
+      "type": "string",
+      "enum": [
+       "SKILL.md",
+       "references/workflow.md",
+       "references/teaching.md"
+      ]
+     }
+    },
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "name": {
+      "type": "string"
+     },
+     "path": {
+      "type": "string"
+     },
+     "text": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "name",
+     "path",
+     "text"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "get_study_source_content": {
+   "title": null,
+   "description": "Read an explicitly selected source with independent content and metadata authorization. Files return base64 in at most 128 KiB pages; follow nextOffset and reconstruct locally to inspect all pages and visuals. References return metadata and URL, not fetched text. Never infers access from a lesson citation.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "sourceId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "sourceId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "metadata": {
+      "type": "object",
+      "propertyNames": {
+       "type": "string"
+      },
+      "additionalProperties": {}
+     },
+     "contentType": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "data": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "totalBytes": {
+      "type": "number"
+     },
+     "nextOffset": {
+      "type": [
+       "number",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "metadata",
+     "contentType",
+     "data",
+     "totalBytes",
+     "nextOffset"
     ],
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false
@@ -11454,6 +13634,633 @@
     "additionalProperties": false
    }
   },
+  "publish_study_lesson": {
+   "title": null,
+   "description": "Publish the finalized study lesson and its native quizzes/flashcards when the user requested publication or returned profile.publish is true. Embedded quizzes and cards require public assets under existing Chaos rules, even for restricted lessons; disclose this when selecting visibility. Never changes source sharing. Source metadata/images must already have required visibility. For course lessons, refuse publication that would publish other unreviewed drafts. Safe to retry a completed job.",
+   "permission": "publish_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "jobId",
+     "expectedRevision"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "revision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "collecting",
+       "draft",
+       "validation_failed",
+       "published"
+      ]
+     },
+     "lessonId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "lessonUrl": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "assets": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 160
+      }
+     },
+     "problems": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "profile": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {}
+     },
+     "request": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {}
+     },
+     "nextAction": {
+      "type": "string"
+     },
+     "summary": {
+      "type": "object",
+      "properties": {
+       "assets": {
+        "type": "number"
+       },
+       "checkpoints": {
+        "type": "number"
+       },
+       "flashcardSets": {
+        "type": "number"
+       },
+       "sections": {
+        "type": "number"
+       },
+       "questions": {
+        "type": "number"
+       },
+       "cards": {
+        "type": "number"
+       },
+       "glossaryTerms": {
+        "type": "number"
+       },
+       "media": {
+        "type": "number"
+       },
+       "sources": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "assets",
+       "checkpoints",
+       "flashcardSets",
+       "sections",
+       "questions",
+       "cards",
+       "glossaryTerms",
+       "media",
+       "sources"
+      ],
+      "additionalProperties": false
+     },
+     "progress": {
+      "type": "object",
+      "properties": {
+       "stage": {
+        "type": "string"
+       },
+       "savedCheckpoints": {
+        "type": "number"
+       },
+       "checkpointBytes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "stage",
+       "savedCheckpoints",
+       "checkpointBytes"
+      ],
+      "additionalProperties": false
+     },
+     "resolvedCourseId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "resolvedModuleId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "required": [
+     "jobId",
+     "revision",
+     "status",
+     "lessonId",
+     "lessonUrl",
+     "assets",
+     "problems",
+     "profile",
+     "request",
+     "nextAction",
+     "summary",
+     "progress",
+     "resolvedCourseId",
+     "resolvedModuleId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": {}
+   }
+  },
+  "publish_study_source": {
+   "title": null,
+   "description": "Explicitly publish citation metadata (title, origin, author, license, reference URL) for an owned selected source when user-authorized. File bytes retain their existing visibility. includeImage true also makes an owned image's bytes public only when the user authorizes embedding that image in a published lesson; it is rejected for PDFs/slides/other files. Use for new source assets in an authorized publication workflow; never silently change existing source sharing. Requires publish_content permission and is safe to retry.",
+   "permission": "publish_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": true
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "sourceId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "includeImage": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "sourceId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "sourceId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "metadataVisibility": {
+      "type": "string",
+      "const": "public"
+     },
+     "contentVisibility": {
+      "type": "string",
+      "enum": [
+       "private",
+       "public",
+       "restricted"
+      ]
+     }
+    },
+    "required": [
+     "sourceId",
+     "metadataVisibility",
+     "contentVisibility"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "refresh_study_lesson_placement": {
+   "title": null,
+   "description": "Resume a collecting or failed study job after its course outline/modules changed. Read get_course first and send its current revision, complete ordered lesson IDs and modules. This compares the current structure and updates only the job's placement snapshot; never overwrites the course or discards teaching checkpoints. Selected module/anchor must still exist. Finalized lessons use the native course editor.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "courseRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "lessonIds": {
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 160
+      }
+     },
+     "modules": {
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 160
+        },
+        "title": {
+         "type": "string"
+        },
+        "lessonIds": {
+         "type": "array",
+         "items": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 160
+         }
+        },
+        "assessments": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "kind": {
+            "type": "string",
+            "enum": [
+             "form",
+             "quiz"
+            ]
+           },
+           "id": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 160
+           }
+          },
+          "required": [
+           "kind",
+           "id"
+          ]
+         }
+        }
+       },
+       "required": [
+        "id",
+        "title",
+        "lessonIds",
+        "assessments"
+       ]
+      }
+     }
+    },
+    "required": [
+     "jobId",
+     "expectedRevision",
+     "courseRevision",
+     "lessonIds",
+     "modules"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "jobId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "revision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "status": {
+      "type": "string",
+      "enum": [
+       "collecting",
+       "draft",
+       "validation_failed",
+       "published"
+      ]
+     },
+     "lessonId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "lessonUrl": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "assets": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 160
+      }
+     },
+     "problems": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "profile": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {}
+     },
+     "request": {
+      "type": "object",
+      "properties": {},
+      "additionalProperties": {}
+     },
+     "nextAction": {
+      "type": "string"
+     },
+     "summary": {
+      "type": "object",
+      "properties": {
+       "assets": {
+        "type": "number"
+       },
+       "checkpoints": {
+        "type": "number"
+       },
+       "flashcardSets": {
+        "type": "number"
+       },
+       "sections": {
+        "type": "number"
+       },
+       "questions": {
+        "type": "number"
+       },
+       "cards": {
+        "type": "number"
+       },
+       "glossaryTerms": {
+        "type": "number"
+       },
+       "media": {
+        "type": "number"
+       },
+       "sources": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "assets",
+       "checkpoints",
+       "flashcardSets",
+       "sections",
+       "questions",
+       "cards",
+       "glossaryTerms",
+       "media",
+       "sources"
+      ],
+      "additionalProperties": false
+     },
+     "progress": {
+      "type": "object",
+      "properties": {
+       "stage": {
+        "type": "string"
+       },
+       "savedCheckpoints": {
+        "type": "number"
+       },
+       "checkpointBytes": {
+        "type": "number"
+       }
+      },
+      "required": [
+       "stage",
+       "savedCheckpoints",
+       "checkpointBytes"
+      ],
+      "additionalProperties": false
+     },
+     "resolvedCourseId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     },
+     "resolvedModuleId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "required": [
+     "jobId",
+     "revision",
+     "status",
+     "lessonId",
+     "lessonUrl",
+     "assets",
+     "problems",
+     "profile",
+     "request",
+     "nextAction",
+     "summary",
+     "progress",
+     "resolvedCourseId",
+     "resolvedModuleId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": {}
+   }
+  },
+  "register_study_reference": {
+   "title": null,
+   "description": "Register metadata for a URL, video or reference the client actually consulted. This does not fetch or verify its content. Uses exact owner metadata matching to reuse prior references. Private by default; metadataVisibility public makes citation metadata public only when user-authorized. Never exposes reference file bytes or changes existing source sharing.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "metadata": {
+      "type": "object",
+      "properties": {
+       "title": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+       },
+       "kind": {
+        "type": "string",
+        "enum": [
+         "url",
+         "video",
+         "reference"
+        ]
+       },
+       "origin": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+       },
+       "url": {
+        "type": "string",
+        "format": "uri"
+       },
+       "author": {
+        "type": "string",
+        "maxLength": 200
+       },
+       "license": {
+        "type": "string",
+        "maxLength": 300
+       }
+      },
+      "required": [
+       "title",
+       "kind",
+       "origin"
+      ]
+     },
+     "metadataVisibility": {
+      "type": "string",
+      "enum": [
+       "private",
+       "public"
+      ]
+     }
+    },
+    "required": [
+     "metadata"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "sourceId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "duplicate": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "sourceId",
+     "duplicate"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "remember_course": {
    "title": null,
    "description": "Add a readable published course to your private learning dashboard and update its recent activity. Does not publish or enroll other people.",
@@ -14382,6 +17189,95 @@
     "additionalProperties": false
    }
   },
+  "set_study_teaching_profile": {
+   "title": null,
+   "description": "Remember reusable teaching preferences as the default or for an owned course. Course preferences override defaults; per-job preferences override both. Store only the learner's requested preferences. publish true is standing authorization for future study-job publication; record it only when explicitly requested.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "courseId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160
+     },
+     "profile": {
+      "type": "object",
+      "properties": {
+       "teamId": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       "language": {
+        "type": "string",
+        "maxLength": 35
+       },
+       "lookupLanguage": {
+        "type": "string",
+        "maxLength": 35
+       },
+       "style": {
+        "type": "string",
+        "maxLength": 4000
+       },
+       "level": {
+        "type": "string",
+        "maxLength": 200
+       },
+       "theme": {
+        "type": "string",
+        "maxLength": 100
+       },
+       "sound": {
+        "type": "string",
+        "enum": [
+         "soft",
+         "pop",
+         "wood",
+         "arcade",
+         "off"
+        ]
+       },
+       "publish": {
+        "type": "boolean"
+       },
+       "visibility": {
+        "type": "string",
+        "enum": [
+         "public",
+         "private",
+         "restricted"
+        ]
+       }
+      }
+     }
+    },
+    "required": [
+     "profile"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "saved": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "saved"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "share_with_team": {
    "title": null,
    "description": "Share an owned form, lesson, course or folder with a team so every member can edit it. Courses include their lessons; folders include their contents. Does not publish anything or change who can read published content.",
@@ -15421,6 +18317,123 @@
     },
     "required": [
      "revision"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "upload_study_source": {
+   "title": null,
+   "description": "Explicit cross-client file transfer. Send base64 chunks of at most 128 KiB decoded bytes, indexed from zero under one stable upload key. Include unchanged metadata, contentType and totalChunks on each call. Returns sourceId only after every chunk arrives and file signature is verified; partial uploads are resumable for 24 hours. Supports Chaos source MIME types and 25 MB total; no fetching local paths, client attachment IDs or arbitrary remote URLs. Files remain private. Repeated chunks must have identical bytes.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "key": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 160,
+      "pattern": "^[A-Za-z0-9_-]+$"
+     },
+     "index": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 199
+     },
+     "totalChunks": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 200
+     },
+     "data": {
+      "type": "string",
+      "maxLength": 174764
+     },
+     "contentType": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+     },
+     "metadata": {
+      "type": "object",
+      "properties": {
+       "title": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+       },
+       "kind": {
+        "type": "string",
+        "enum": [
+         "pdf",
+         "slides",
+         "image",
+         "file"
+        ]
+       },
+       "origin": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 500
+       },
+       "author": {
+        "type": "string",
+        "maxLength": 200
+       },
+       "license": {
+        "type": "string",
+        "maxLength": 300
+       }
+      },
+      "required": [
+       "title",
+       "kind",
+       "origin"
+      ]
+     }
+    },
+    "required": [
+     "key",
+     "index",
+     "totalChunks",
+     "data",
+     "contentType",
+     "metadata"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "receivedChunks": {
+      "type": "number"
+     },
+     "totalChunks": {
+      "type": "number"
+     },
+     "sourceId": {
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 160
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "required": [
+     "receivedChunks",
+     "totalChunks",
+     "sourceId"
     ],
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false

@@ -75,6 +75,7 @@ export default function LearnHome() {
             {(close) => (
               <div className="ws-new-choices">
                 <button type="button" role="menuitem" onClick={() => { close(); void newLesson(); }}><BookOpenText size={16} /><span><strong>{t.lessonItem}</strong><small>{t.lessonHelp}</small></span></button>
+                <button type="button" role="menuitem" onClick={() => { close(); router.push("/dashboard/learn/study"); }}><BookOpenText size={16} /><span><strong>{locale === "ar" ? "درس للمذاكرة" : "Study lesson"}</strong><small>{locale === "ar" ? "تدريس ملف أو محاضرة مع مساعدك" : "Teach a PDF or lecture with your assistant"}</small></span></button>
                 <button type="button" role="menuitem" onClick={() => { close(); void newCourse(); }}><GraduationCap size={16} /><span><strong>{t.courseItem}</strong><small>{t.courseHelp}</small></span></button>
                 <button type="button" role="menuitem" onClick={() => { close(); void newSet(); }}><Layers size={16} /><span><strong>{t.setItem}</strong><small>{t.setHelp}</small></span></button>
               </div>

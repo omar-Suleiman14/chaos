@@ -126,7 +126,7 @@ const visibilityArgs = {
   metadataVisibility: visibility,
   contentVisibility: visibility,
 };
-const mimeKinds: Record<string, Metadata["kind"]> = {
+export const mimeKinds: Record<string, Metadata["kind"]> = {
   "application/pdf": "pdf",
   "image/png": "image",
   "image/jpeg": "image",
@@ -209,7 +209,7 @@ function isPptx(bytes: Uint8Array): boolean {
   );
 }
 /* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
-async function validSignature(
+export async function validSignature(
   blob: Blob,
   contentType: string,
 ): Promise<boolean> {
@@ -258,7 +258,7 @@ function bounded(value: string, max: number) {
     throw new Error("Invalid source metadata");
 }
 /* oxlint-enable eslint/no-control-regex */
-function validateMetadata(metadata: Metadata) {
+export function validateMetadata(metadata: Metadata) {
   bounded(metadata.title, LEARN_LIMITS.title);
   bounded(metadata.origin, 500);
   if (metadata.author !== undefined) bounded(metadata.author, 200);
@@ -426,7 +426,13 @@ export const update = mutation({
   },
   returns: v.null(),
   handler: async (ctx, args) => {
-    const source = await ownedSource(ctx, args.sourceId);
+    return updateSourceForActor(ctx,(await requireActiveUser(ctx)).identity.subject,args);
+  },
+});
+/** Shared source edits; actor is checked by native auth or the MCP transport. */
+export async function updateSourceForActor(ctx: MutationCtx, actor: string, args: { sourceId: Id<"learnSources">; metadata?: Metadata; metadataVisibility?: Infer<typeof visibility>; contentVisibility?: Infer<typeof visibility> }) {
+    const source = await ctx.db.get("learnSources",args.sourceId);
+    if(!source || source.ownerId!==actor || source.status==="removed") throw new Error("Source not found or unauthorized");
     const patch: Partial<
       Pick<
         Doc<"learnSources">,
@@ -447,8 +453,7 @@ export const update = mutation({
       patch.contentVisibility = args.contentVisibility;
     await ctx.db.patch("learnSources", source._id, patch);
     return null;
-  },
-});
+}
 /** Retention keeps citation access; removal revokes all access. Both preserve blobs. */
 export const remove = mutation({
   args: { sourceId: v.id("learnSources"), retain: v.optional(v.boolean()) },
@@ -506,9 +511,13 @@ export const registerUpload = internalMutation({
   },
   returns: v.object({ sourceId: v.id("learnSources"), duplicate: v.boolean(), nearDuplicateOf: v.optional(v.id("learnSources")) }),
   handler: async (ctx, args) => {
-    const { identity } = await requireActiveUser(ctx);
+    return registerSourceUploadForActor(ctx, (await requireActiveUser(ctx)).identity.subject, args);
+  },
+});
+/** Shared validated registration; actor is verified by the UI or MCP transport. */
+export async function registerSourceUploadForActor(ctx: MutationCtx, actor: string, args: { metadata: Metadata; metadataVisibility: Infer<typeof visibility>; contentVisibility: Infer<typeof visibility>; storageId: Id<"_storage">; contentType: string; fingerprint?: Infer<typeof sourceFingerprint> }) {
     // Bounds storage one account can add (each file is up to 25 MB); a refused upload's file is deleted by the caller.
-    await consumeRate(ctx, `learn:source-upload:${identity.subject}`, 40, 60 * 60 * 1000);
+    await consumeRate(ctx, `learn:source-upload:${actor}`, 40, 60 * 60 * 1000);
     validateMetadata(args.metadata);
     const file = await ctx.db.system.get("_storage", args.storageId);
     if (
@@ -525,7 +534,7 @@ export const registerUpload = internalMutation({
       .query("learnSources")
       .withIndex("by_ownerId_and_sha256_and_status", (q) =>
         q
-          .eq("ownerId", identity.subject)
+          .eq("ownerId", actor)
           .eq("sha256", file.sha256)
           .eq("status", "active"),
       )
@@ -544,13 +553,13 @@ export const registerUpload = internalMutation({
     )
       return { sourceId: duplicate._id, duplicate: true };
     if (args.fingerprint && (args.fingerprint.chunks.length > SOURCE_SIMILARITY_LIMITS.sampledChunks || args.fingerprint.chunks.some(chunk => !/^[0-9a-f]{16}$/.test(chunk)))) throw new Error("Invalid source fingerprint");
-    const nearCandidates = args.fingerprint ? await ctx.db.query("learnSources").withIndex("by_ownerId_and_contentType_and_status", q => q.eq("ownerId", identity.subject).eq("contentType", args.contentType).eq("status", "active")).order("desc").take(SOURCE_SIMILARITY_LIMITS.candidates) : [];
+    const nearCandidates = args.fingerprint ? await ctx.db.query("learnSources").withIndex("by_ownerId_and_contentType_and_status", q => q.eq("ownerId", actor).eq("contentType", args.contentType).eq("status", "active")).order("desc").take(SOURCE_SIMILARITY_LIMITS.candidates) : [];
     const near = nearCandidates.find(source => source.fingerprint && source.size !== undefined && source.sha256 !== file.sha256 && nearByteDuplicate(args.fingerprint!, file.size, source.fingerprint, source.size));
     const sourceId = await ctx.db.insert("learnSources", {
       ...args,
       ...(near ? { nearDuplicateOf: near._id } : {}),
-      ownerId: identity.subject,
-      uploadedBy: identity.subject,
+      ownerId: actor,
+      uploadedBy: actor,
       sha256: file.sha256,
       size: file.size,
       contentType: file.contentType ?? args.contentType,
@@ -558,8 +567,7 @@ export const registerUpload = internalMutation({
       status: "active",
     });
     return { sourceId, duplicate: false, ...(near ? { nearDuplicateOf: near._id } : {}) };
-  },
-});
+}
 const registration = makeFunctionReference<
   "mutation",
   {
