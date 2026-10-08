@@ -472,7 +472,7 @@ export default function CreatorLibrary() {
             <tbody>
               {visible.map((row) => (
                 <tr key={row.key} className="cursor-pointer" data-muted={row.status === "archived" || row.status === "closed"} onClick={() => router.push(row.href)} {...(row.formId ? formIntentHandlers(row.formId) : undefined)}>
-                  <td>
+                  <td aria-label={locale === "ar" ? "الإجراءات" : "Actions"}>
                     <Link href={row.href} className="flex items-center gap-2.5 font-medium" onClick={(e) => e.stopPropagation()}>
                       <span className="ws-recent-icon" aria-hidden="true" style={{ background: row.theme?.accent && /^#[0-9a-f]{6}$/i.test(row.theme.accent) ? row.theme.accent : "#2f5333" }}>
                         {row.title.trim().charAt(0).toUpperCase() || "U"}
@@ -480,7 +480,7 @@ export default function CreatorLibrary() {
                       <span className="truncate">{row.title}</span>
                     </Link>
                   </td>
-                  <td><StatusBadge status={row.status} edited={row.edited} /></td>
+                  <td aria-label={locale === "ar" ? "الإجراءات" : "Actions"}><StatusBadge status={row.status} edited={row.edited} /></td>
                   <td className="ws-num">{row.responses > 0 ? formatNumber(locale, row.responses) : <span className="text-muted-foreground">0</span>}</td>
                   <td className="text-muted-foreground">{row.updatedAt ? timeAgo(locale, row.updatedAt) : "—"}</td>
                   <td onClick={(e) => e.stopPropagation()}><WsMenu label={t.actionsFor(row.title)}>{(close) => actions(row, close)}</WsMenu></td>
@@ -566,10 +566,10 @@ function ImportPanel({ busy, onImport }: { busy: boolean; onImport: (result: Imp
 
   const sourceNames = { chaos: t.sourceChaos, typeform: "Typeform", google: "Google Forms", text: t.sourceText, sheet: t.sourceSheet } as const;
   const modes = (
-    <div className="ws-segmented" role="group" aria-label={t.importTitle}>
+    <fieldset className="ws-segmented"  aria-label={t.importTitle}>
       <button type="button" aria-pressed={mode === "export"} onClick={() => setMode("export")}><FileUp size={14} aria-hidden="true" /> {t.modeExport}</button>
       <button type="button" aria-pressed={mode === "sheet"} onClick={() => setMode("sheet")}><FileText size={14} aria-hidden="true" /> {t.modeSheet}</button>
-    </div>
+    </fieldset>
   );
   if (mode === "sheet") {
     return (

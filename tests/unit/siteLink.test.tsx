@@ -3,7 +3,7 @@ import { fireEvent, render, screen } from "@testing-library/react";
 import SiteLink from "@/components/site/SiteLink";
 import { LocaleProvider } from "@/lib/i18n";
 
-vi.mock("next/link", () => ({ default: ({ prefetch, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { prefetch?: boolean | null }) => <a {...props} data-prefetch={prefetch === null ? "auto" : String(prefetch)} /> }));
+vi.mock("next/link", () => ({ default: ({ prefetch, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { prefetch?: boolean | null }) => <a {...props} data-prefetch={prefetch === null ? "auto" : String(prefetch)}>{props.children}</a> }));
 
 describe("SiteLink", () => {
   it("waits for hover, focus or touch before prefetching", () => {

@@ -10,6 +10,7 @@ import Link from "@/components/site/SiteLink";
 import { useCourseProgress } from "@/lib/learn/courseProgress";
 import { useLocale } from "@/lib/i18n";
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The labelled progress indicator uses custom nested visual tracks while exposing current, minimum and maximum values. */
 export default function CourseNavigation({ courseId, lessonId, completed }: { courseId?: string | null; lessonId: string; completed: boolean }) {
   const viewer = useLearnViewer(), remember = useMutation(api.courses.remember);
   useEffect(() => { if (courseId && viewer?.signedIn) void remember({ courseId }).catch(() => {}); }, [courseId, viewer?.signedIn, remember]);
@@ -49,3 +50,4 @@ export default function CourseNavigation({ courseId, lessonId, completed }: { co
     </div>
   </nav>;
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */

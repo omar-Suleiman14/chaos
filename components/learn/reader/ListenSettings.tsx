@@ -71,7 +71,7 @@ export default function ListenSettings({ prefs, setPrefs, onBack }: { prefs: Rea
       })}
       <ChoiceChips prefs={prefs} setPrefs={setPrefs} name="follow" label={t.follow} options={t.follows} values={FOLLOW_MODES} />
       {prefs.follow === "word" && <p className="lx-reading-menu__hint">{t.wordHint}</p>}
-      <div role="group" aria-label={t.color} className="lx-reading-menu__group">
+      <fieldset  aria-label={t.color} className="lx-reading-menu__group">
         <span className="lx-reading-menu__label">{t.color}</span>
         <div className="lx-narr-swatches">
           {NARRATION_COLORS.map((c) => (
@@ -81,16 +81,16 @@ export default function ListenSettings({ prefs, setPrefs, onBack }: { prefs: Rea
             </button>
           ))}
         </div>
-      </div>
+      </fieldset>
       <ChoiceChips prefs={prefs} setPrefs={setPrefs} name="speed" label={t.speed} options={SPEED_LABELS} values={SPEEDS} />
-      <div role="group" aria-label={t.oneSpeed} className="lx-onoff">
+      <fieldset  aria-label={t.oneSpeed} className="lx-onoff">
         <span className="lx-onoff__label">{t.oneSpeed}</span>
         <div className="ws-segmented lx-onoff__seg">
           {[false, true].map((on) => (
             <button key={String(on)} type="button" role="menuitemradio" aria-checked={prefs.oneSpeed === on} onClick={() => setPrefs({ oneSpeed: on })}>{on ? t.on : t.off}</button>
           ))}
         </div>
-      </div>
+      </fieldset>
       {!prefs.oneSpeed && <p className="lx-reading-menu__hint">{t.oneSpeedOff}</p>}
     </div>
   );
@@ -103,7 +103,7 @@ function VoiceList({ lang, voices, prefs, setPrefs, back }: { lang: Lang; voices
   const saved = prefs.voices[lang] && ranked.some((v) => v.voiceURI === prefs.voices[lang]) ? prefs.voices[lang] : undefined;
   const choose = (uri: string | undefined) => setPrefs({ voices: { ...prefs.voices, [lang]: uri } });
   return (
-    <div role="group" aria-label={t.voice(t.langs[lang])}>
+    <fieldset  aria-label={t.voice(t.langs[lang])}>
       {back}
       <p className="lx-reading-menu__label" style={{ padding: "6px 10px 2px" }}>{t.voice(t.langs[lang])}</p>
       {!ranked.length && <p className="lx-muted" style={{ padding: "4px 10px" }}>{t.noVoices}</p>}
@@ -117,6 +117,6 @@ function VoiceList({ lang, voices, prefs, setPrefs, back }: { lang: Lang; voices
           <span style={{ flex: 1, minWidth: 0 }} dir="auto">{v.name}</span><span className="lx-reading-menu__value">{v.lang}</span>{saved === v.voiceURI && <Check size={15} aria-hidden />}
         </button>
       ))}
-    </div>
+    </fieldset>
   );
 }

@@ -47,6 +47,7 @@ export type RestoreAction<V> = {
   current?: boolean;
 };
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role, jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. Hidden stacked cards provide pointer shortcuts; visible timeline buttons provide the same keyboard navigation. */
 export default function VersionBrowser<V extends BrowsedVersion>({ label, status, current, currentLabel, past, sheet, counts, footnote, onlyOne, restore, initialKey, onClose }: {
   label?: string;
   status: "loading" | "unavailable" | "ready";
@@ -109,15 +110,15 @@ export default function VersionBrowser<V extends BrowsedVersion>({ label, status
     <div ref={dialog} className="vb" role="dialog" aria-modal="true" aria-label={label ?? t.history} tabIndex={-1} dir={locale === "ar" ? "rtl" : "ltr"} data-phone-view={phoneView}>
       <div className="vb-backdrop" aria-hidden />
       {status === "loading" ? (
-        <p className="vb-status" role="status">{t.loading}</p>
+        <output className="vb-status" >{t.loading}</output>
       ) : status === "unavailable" || !current ? (
         <p className="vb-status">{t.unavailable}</p>
       ) : (
         <>
-          <div className="vb-phone-switch ws-segmented" role="group" aria-label={t.showing}>
+          <fieldset className="vb-phone-switch ws-segmented"  aria-label={t.showing}>
             <button type="button" aria-pressed={phoneView === "past"} disabled={!past.length} onClick={() => setPhoneView("past")}>{t.showPast}</button>
             <button type="button" aria-pressed={phoneView === "current"} onClick={() => { setPhoneView("current"); setConfirming(false); }}>{t.showCurrent}</button>
-          </div>
+          </fieldset>
           <div className="vb-layout">
             <section className="vb-pane vb-pane--current" aria-label={currentLabel}>
               <div className="vb-stack">{doc(current, sheet(current, { against: chosen, side: "base", front: true }))}</div>
@@ -172,7 +173,7 @@ export default function VersionBrowser<V extends BrowsedVersion>({ label, status
             {footnote && past.length > 0 && <p className="vb-footnote">{footnote}</p>}
             {confirming && restore && <p className="vb-confirm" role="alert">{restore.warning}</p>}
             {error && <p className="vb-error" role="alert">{error}</p>}
-            {done && <p className="vb-confirm" role="status">{t.restored}</p>}
+            {done && <output className="vb-confirm" >{t.restored}</output>}
             <div className="vb-actions">
               {restore && target && (
                 <>
@@ -190,6 +191,7 @@ export default function VersionBrowser<V extends BrowsedVersion>({ label, status
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role, jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */
 
 /** Compares two lists of items by id, by a signature of what matters. */
 export function compareItems<T>(base: readonly T[], other: readonly T[], id: (item: T) => string, sig: (item: T) => string = (x) => JSON.stringify(x)) {

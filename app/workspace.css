@@ -7,6 +7,8 @@
    `.ws-respondent-preview`.
    ============================================================ */
 
+.workspace-ui :where(fieldset[aria-label]) { min-width: 0; margin: 0; padding: 0; border: 0; }
+
 .workspace-ui {
   --background:                #fbfaf9;
   --surface:                   #fbfaf9;

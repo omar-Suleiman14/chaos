@@ -77,7 +77,8 @@ it("preserves native radio arrow keys in swipe mode", () => {
 });
 
 it("does not steal focus from controls outside a mounted preview", () => {
-  render(<button autoFocus>Outside</button>);
+  render(<button>Outside</button>);
+  screen.getByRole("button", { name: "Outside" }).focus();
   const outside = screen.getByRole("button", { name: "Outside" });
   outside.focus();
   render(<Example />);

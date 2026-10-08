@@ -1,12 +1,12 @@
 "use client";
 
+import { FocusInput } from "@/components/InitialFocus";
+
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { useConfirmedQuery } from "@/lib/confirmedQuery";
-import {
-  Archive, ArchiveRestore, BookOpen, ChevronRight, Copy, FileText, Folder, FolderInput, FolderOpen, FolderPlus, Globe, Layers, Pencil, Pin, PinOff, Plus, Search, Target, X,
-} from "lucide-react";
+import { Archive, ArchiveRestore, BookOpen, ChevronRight, Copy, FileText, Folder, FolderInput, FolderOpen, FolderPlus, Globe, Layers, Pencil, Pin, Plus, Search, Target, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { WsDialog, WsMenu } from "@/components/workspace/primitives";
 import { toast } from "@/lib/toast";
@@ -15,7 +15,7 @@ import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { EmptyState, LessonStatus } from "@/components/learn/ui";
 import { search } from "@/lib/search";
 import {
-  useLibraryCollections, useArchivedLessons, useFlashcardSets, useFolderItems, useFolders, useLearnActions, useLearnCapabilities, useMyLessons, usePinnedFolders } from "@/lib/learn/data";
+  useLibraryCollections, useArchivedLessons, useFlashcardSets, useFolderItems, useFolders, useLearnActions, useMyLessons, usePinnedFolders } from "@/lib/learn/data";
 import type { Folder as FolderT, LibraryItemKind, Visibility } from "@/lib/learn/types";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
@@ -67,7 +67,6 @@ function Library() {
   const router = useRouter();
   const params = useSearchParams();
   const folderId = params.get("folder") ?? undefined;
-  const caps = useLearnCapabilities();
   const actions = useLearnActions();
   const folders = useFolders();
   const collections = useLibraryCollections();
@@ -267,7 +266,7 @@ function NameDialog({ title, label, submit, cancel, initial = "", onSubmit, onCl
     <WsDialog title={title} onClose={onClose}>
       <form className="lx-form" onSubmit={(e) => { e.preventDefault(); if (name.trim()) onSubmit(name); }}>
         { }
-        <label className="lx-field">{label}<input autoFocus className="lx-input" value={name} maxLength={120} onChange={(e) => setName(e.target.value)} /></label>
+        <label className="lx-field">{label}<FocusInput focusOnMount className="lx-input" value={name} maxLength={120} onChange={(e) => setName(e.target.value)} /></label>
         <div className="lx-actions" style={{ justifyContent: "flex-end" }}><button type="button" className="ws-btn ws-btn--ghost" onClick={onClose}>{cancel}</button><button type="submit" className="ws-btn ws-btn--primary" disabled={!name.trim()}>{submit}</button></div>
       </form>
     </WsDialog>

@@ -1,4 +1,5 @@
 /** The OpenAI blossom, as used for ChatGPT. Monochrome: it takes the surrounding text colour. */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- This labelled graphic is composed from inline SVG or multiple elements; a native img cannot represent it. */
 export function ChatGptMark({ size = 28, className }: { size?: number; className?: string }) {
   return (
     <svg role="img" aria-label="ChatGPT" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" className={className}>
@@ -7,8 +8,10 @@ export function ChatGptMark({ size = 28, className }: { size?: number; className
     </svg>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
 /** The Notion mark (path from simple-icons 16.33.0, CC0; the mark is Notion's trademark). Monochrome: takes the text colour. */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- This labelled graphic is composed from inline SVG or multiple elements; a native img cannot represent it. */
 export function NotionMark({ size = 28, className }: { size?: number; className?: string }) {
   return (
     <svg role="img" aria-label="Notion" viewBox="0 0 24 24" width={size} height={size} fill="currentColor" className={className}>
@@ -17,3 +20,4 @@ export function NotionMark({ size = 28, className }: { size?: number; className?
     </svg>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */

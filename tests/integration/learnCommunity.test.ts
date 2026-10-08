@@ -354,7 +354,7 @@ describe("Learn community and private learning state", () => {
     ).toBeNull();
   });
   it("creates stable admin concepts and reports exposure only without altering quiz data", async () => {
-    const { t, admin, other, owner, lessonId, versionId } = await setup();
+    const { admin, other, owner, lessonId, versionId } = await setup();
     const concept = {
       slug: "stable-concept",
       title: "Concept",

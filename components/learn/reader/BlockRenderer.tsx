@@ -1,4 +1,6 @@
 "use client";
+
+import { ContentImage } from "@/components/ContentImage";
 import Diagram from "./Diagram";
 
 import InlineQuiz from "./InlineQuiz";
@@ -146,7 +148,7 @@ function ReaderImage({ block, onOpen }: { block: Block; onOpen?: (block: Block, 
   return (
     <figure className="lx-reader-figure" data-kind={p.figureKind}>
       <button type="button" onClick={() => onOpen?.(block, url)} aria-label={`${t.enlarge}${p.alt ? `: ${p.alt}` : ""}`}>
-        <img src={url} alt={String(p.alt ?? "")} width={p.previewWidth ? Number(p.previewWidth) : undefined} loading="lazy" decoding="async" />
+        <ContentImage src={url} alt={String(p.alt ?? "")} width={p.previewWidth ? Number(p.previewWidth) : undefined} loading="lazy" decoding="async" />
       </button>
       {(p.caption || credit) && (
         <figcaption>
@@ -175,7 +177,7 @@ function ReaderYouTube({ video: p }: { video: YouTubeProps }) {
         ) : (
           <>
             {/* Facade: YouTube loads only when the reader asks for it. */}
-            <img src={`https://i.ytimg.com/vi/${p.videoId}/hqdefault.jpg`} alt="" loading="lazy" />
+            <ContentImage src={`https://i.ytimg.com/vi/${p.videoId}/hqdefault.jpg`} alt="" loading="lazy" />
             <button type="button" className="lx-youtube__launch" onClick={() => setPlaying(true)} aria-label={t.play(range)}><PlayCircle size={56} aria-hidden /></button>
             {range && <span className="lx-youtube__range">{bt.ytWatch(range)}</span>}
           </>
@@ -207,11 +209,12 @@ function ReaderSource({ block, sources, onCite }: { block: Block; sources: Lesso
   );
 }
 
+/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- The table viewport is focusable so wide tables can be scrolled with the keyboard. */
 function Table({ table, sources, onCite, id }: { table: TableContent; sources: LessonSource[]; onCite?: RendererProps["onCite"]; id: string }) {
   const headerRows = table.headerRows ?? 0;
   const headerCols = table.headerCols ?? 0;
   return (
-    <div className="lx-table-wrap" tabIndex={0} role="region" aria-label="Table">
+    <section className="lx-table-wrap" tabIndex={0}  aria-label="Table">
       <table>
         <tbody>
           {table.rows.map((row, r) => (
@@ -230,9 +233,10 @@ function Table({ table, sources, onCite, id }: { table: TableContent; sources: L
           ))}
         </tbody>
       </table>
-    </div>
+    </section>
   );
 }
+/* oxlint-enable jsx-a11y/no-noninteractive-tabindex */
 
 type BodyProps = { block: Block; sources: LessonSource[]; highlights?: Highlight[]; onCite: RendererProps["onCite"]; onOpenImage?: RendererProps["onOpenImage"] };
 

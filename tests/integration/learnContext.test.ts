@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { expect, it } from "vitest";
 import { api } from "@/convex/_generated/api";
 import { createTestConvex } from "./setup";
 import { creatorIdentity, otherCreatorIdentity } from "../fixtures";

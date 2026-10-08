@@ -101,6 +101,7 @@ export const create = mutation({
 });
 
 const updateArgs = v.object({ courseId: v.id("learnCollections"), title: v.optional(v.string()), description: v.optional(v.string()), coverUrl: v.optional(v.union(v.string(), v.null())), coverY: v.optional(v.union(v.number(), v.null())), icon: v.optional(v.union(v.string(), v.null())), language: v.optional(v.string()), tags: v.optional(v.array(v.string())), details: v.optional(courseDetails) });
+/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export async function updateCourse(ctx: MutationCtx, args: Infer<typeof updateArgs>, asActor?: string) {
     const { row } = await ownedCourse(ctx, args.courseId, asActor, true);
     const m = { ...row.metadata };
@@ -116,6 +117,7 @@ export async function updateCourse(ctx: MutationCtx, args: Infer<typeof updateAr
     await authorDb(ctx).patch("learnCollections", row._id, { metadata: m, ...(args.details ? { details: args.details } : {}), updatedAt: Date.now() });
     return null;
 }
+/* oxlint-enable eslint/no-control-regex */
 export const update = mutation({
   args: updateArgs.fields,
   returns: v.null(),

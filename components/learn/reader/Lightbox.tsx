@@ -1,5 +1,7 @@
 "use client";
 
+import { ContentImage } from "@/components/ContentImage";
+
 import { useState } from "react";
 import { Minus, Plus, RotateCcw, X } from "lucide-react";
 import { useModal } from "@/components/workspace/useModal";
@@ -8,6 +10,7 @@ import { useCopy } from "@/lib/i18n";
 const copy = { en: { close: "Close", zoomIn: "Zoom in", zoomOut: "Zoom out", reset: "Actual fit", viewer: "Image viewer" }, ar: { close: "إغلاق", zoomIn: "تكبير", zoomOut: "تصغير", reset: "الحجم الملائم", viewer: "عارض الصور" } };
 
 /** Full-screen image/diagram viewer with keyboard zoom (+, -, 0) and Escape to close. */
+/* oxlint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/prefer-tag-over-role, jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions -- The dialog delegates arrow keys and dismisses on Escape; backdrop taps are a pointer-only dismissal shortcut. This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 export default function Lightbox({ url, alt, caption, onClose }: { url: string; alt: string; caption?: string; onClose: () => void }) {
   const t = useCopy(copy);
   const [zoom, setZoom] = useState(1);
@@ -27,9 +30,10 @@ export default function Lightbox({ url, alt, caption, onClose }: { url: string; 
         <button type="button" data-close onClick={onClose} aria-label={t.close}><X size={18} /></button>
       </div>
       <div className="lx-lightbox__stage" onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}>
-        <img src={url} alt={alt} style={{ maxWidth: zoom === 1 ? "min(100%, 1600px)" : undefined, maxHeight: zoom === 1 ? "calc(100dvh - 140px)" : undefined, transform: zoom === 1 ? undefined : `scale(${zoom})` }} />
+        <ContentImage src={url} alt={alt} style={{ maxWidth: zoom === 1 ? "min(100%, 1600px)" : undefined, maxHeight: zoom === 1 ? "calc(100dvh - 140px)" : undefined, transform: zoom === 1 ? undefined : `scale(${zoom})` }} />
       </div>
       {caption && <p className="lx-lightbox__caption">{caption}</p>}
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/prefer-tag-over-role, jsx-a11y/click-events-have-key-events, jsx-a11y/no-static-element-interactions */

@@ -1,5 +1,7 @@
 "use client";
 
+import { FocusInput } from "@/components/InitialFocus";
+
 import { clearLiveAnswer, readLiveAnswer, saveLiveAnswer } from "@/lib/liveRecovery";
 import TeamPanel, { TEAMS_ENABLED } from "./TeamPanel";
 import { SaveStatus } from "@/components/quizzes/SaveStatus";
@@ -139,7 +141,7 @@ function PlayerSession({ initialPin }: { initialPin?: string }) {
       <Announcer text={announce} />
       <header className="live-bar">
         <Link href="/" className="live-bar__title live-brand"><Logo size={28} />Chaos<span>live</span></Link>
-        {offline && <span className="live-muted live-pulse" role="status">{t.reconnecting}</span>}
+        {offline && <output className="live-muted live-pulse" >{t.reconnecting}</output>}
         <button type="button" className="live-icon-btn" onClick={toggleSound} aria-label={sound ? t.mute : t.unmute} aria-pressed={!sound}>{sound ? <Volume2 size={20} /> : <VolumeX size={20} />}</button>
         <button type="button" className="live-btn" onClick={() => setLocale((locale === "ar" ? "en" : "ar") as Locale)} lang={locale === "ar" ? "en" : "ar"}>{t.language}</button>
       </header>
@@ -196,13 +198,13 @@ function JoinForm({ t, initialPin, onJoined }: { t: Copy; initialPin: string; on
       <h2 className="sr-only">{t.details}</h2>
       <label className="live-field">
         <span className="font-semibold">{t.pin}</span>
-        <input className="live-input live-input--pin" inputMode="numeric" autoComplete="off" pattern="[0-9]*" maxLength={6} required
-          placeholder="000 000" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))} aria-describedby="pin-hint" autoFocus={!initialPin} />
+        <FocusInput className="live-input live-input--pin" inputMode="numeric" autoComplete="off" pattern="[0-9]*" maxLength={6} required
+          placeholder="000 000" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))} aria-describedby="pin-hint" focusOnMount={!initialPin} />
         <span id="pin-hint" className="live-muted text-sm">{t.pinHint}</span>
       </label>
       <label className="live-field">
         <span className="font-semibold">{t.nickname}</span>
-        <input ref={nameRef} className="live-input" autoComplete="nickname" maxLength={NICKNAME_MAX} required
+        <input ref={nameRef} className="live-input" autoComplete="off" maxLength={NICKNAME_MAX} required
           value={nickname} onChange={(e) => setNickname(e.target.value)} aria-describedby="nick-hint" />
         <span id="nick-hint" className="live-muted text-sm">{t.nicknameHint}</span>
       </label>
@@ -312,11 +314,11 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
     return () => window.removeEventListener("keydown", onKey);
   }, [view, choose]);
 
-  if (view === undefined) return <div className="live-center live-muted" role="status">…</div>;
+  if (view === undefined) return <output className="live-center live-muted" >…</output>;
   if (view.state === "missing" || view.state === "unknown" || view.state === "kicked") {
     return (
       <div className="live-center">
-        <p className="text-2xl font-bold" role="status">{view.state === "kicked" ? t.kicked : t.ended}</p>
+        <output className="text-2xl font-bold" >{view.state === "kicked" ? t.kicked : t.ended}</output>
         <button type="button" className="live-btn live-btn--primary" onClick={onLeave}>{t.playAgain}</button>
       </div>
     );
@@ -349,18 +351,18 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
           {view.answered || sent ? (
             <div className="live-center">
               <Check size={56} aria-hidden="true" />
-              <p className="text-2xl font-bold" role="status">{t.sent}</p>
+              <output className="text-2xl font-bold" >{t.sent}</output>
               {view.myAnswer && <p className="live-muted">{view.myAnswer.map((id) => view.question.options.find((o) => o.id === id)?.label).filter(Boolean).join(", ")}</p>}
               <p className="live-muted live-pulse">{t.waitOthers}</p>
             </div>
           ) : (
             <>
               {multi && <p className="live-muted">{t.pickMany}</p>}
-              <div className="live-tiles live-player-answers" data-labelled={view.showAnswerLabels} role="group" aria-label={view.question.text}>
+              <fieldset className="live-tiles live-player-answers" data-labelled={view.showAnswerLabels}  aria-label={view.question.text}>
                 {view.question.options.map((o, i) => (
                   <AnswerTile key={o.id} index={i} label={o.label} showLabel={view.showAnswerLabels} toggle={multi} selected={picked.includes(o.id)} disabled={locked} onSelect={() => choose(o.id)} />
                 ))}
-              </div>
+              </fieldset>
               {multi && <button type="button" className="live-btn live-btn--primary w-full" disabled={locked || picked.length === 0} onClick={() => void send(picked)}>{t.submit}</button>}
               <p className="live-muted text-sm sr-only">{t.shortcuts}</p>
             </>
@@ -395,7 +397,7 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
       return (
         <div className="live-center">
           <Trophy size={56} aria-hidden="true" />
-          <p className="text-3xl font-bold" role="status">{view.rank !== null ? t.finalRank(fmt(view.rank)) : t.ended}</p>
+          <output className="text-3xl font-bold" >{view.rank !== null ? t.finalRank(fmt(view.rank)) : t.ended}</output>
           <p className="text-xl">{t.score(fmt(view.score))} · {t.correctCount(view.correctCount, view.questionCount)}</p>
           {TEAMS_ENABLED && <TeamPanel gameId={session.gameId} token={session.token} frozen />}
           {view.podium.length > 0 && (

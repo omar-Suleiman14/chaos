@@ -3,12 +3,15 @@ import { LEARN_LIMITS, type LessonDocument, type lessonMeta } from "./learnModel
 import type { Infer } from "convex/values";
 
 export interface LessonProblem { path: string; code: string; message: string }
+/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export function safeLessonLink(value: string): boolean {
   if (!value || value.length > 2048 || /[\s\u0000-\u001f\u007f\\]/.test(value)) return false;
   try { const url = new URL(value); return ["https:", "http:", "mailto:"].includes(url.protocol) && !url.username && !url.password && (url.protocol === "mailto:" ? !!url.pathname : !!url.hostname); } catch { return false; }
 }
+/* oxlint-enable eslint/no-control-regex */
 const safeColor = (value: string) => /^(default|red|orange|yellow|green|blue|purple|pink|brown|gray|grey|black|white|#[0-9a-fA-F]{3,8})$/.test(value);
 /** Parent lifecycle service can append these to its existing metadata checks. */
+/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export function validateMetadataPresentation(metadata: Infer<typeof lessonMeta>): LessonProblem[] {
   const problems: LessonProblem[] = [];
   // Covers are an absolute link or one of the bundled gallery images (public/covers, see lib/learn/covers.ts).
@@ -18,6 +21,7 @@ export function validateMetadataPresentation(metadata: Infer<typeof lessonMeta>)
   if (metadata.authorDisplay !== undefined && (metadata.authorDisplay.length > 200 || /[\u0000-\u001f\u007f]/.test(metadata.authorDisplay))) problems.push({ path: "metadata.authorDisplay", code: "LIMIT", message: "Use an author display name of at most 200 characters without control characters." });
   return problems;
 }
+/* oxlint-enable eslint/no-control-regex */
 export function validateDocument(document: LessonDocument): LessonProblem[] {
   const errors: LessonProblem[] = [];
   const problem = (path: string, code: string, message: string) => errors.push({ path, code, message });

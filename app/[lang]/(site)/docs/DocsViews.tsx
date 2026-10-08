@@ -81,7 +81,7 @@ export function DocsArticle({ slug }: { slug: string }) {
   const previous = articles[index - 1], next = articles[index + 1];
   const Back = dir === "rtl" ? ArrowRight : ArrowLeft;
   const Forward = dir === "rtl" ? ArrowLeft : ArrowRight;
-  if (!article) return <p role="status">{loading ? (locale === "ar" ? "جارٍ تحميل الدليل…" : "Loading guide…") : (locale === "ar" ? "الدليل غير متاح." : "This guide is unavailable.")}</p>;
+  if (!article) return <output >{loading ? (locale === "ar" ? "جارٍ تحميل الدليل…" : "Loading guide…") : (locale === "ar" ? "الدليل غير متاح." : "This guide is unavailable.")}</output>;
 
   return (
     <div className="docs-article-wrap">

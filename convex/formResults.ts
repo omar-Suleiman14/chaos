@@ -1,7 +1,7 @@
 import { questionQuality, type QualityQuestion, type QualityObservation } from "./questionQuality";
 import { gradeQuiz } from "./formQuiz";
 import { nicknameKey, questionsFromForm, MAX_LIVE_QUESTIONS } from "./liveLogic";
-import { authorDb } from "./authorIndex";
+
 import { v } from "convex/values";
 import { paginationOptsValidator } from "convex/server";
 import { internalMutation, mutation, query } from "./_generated/server";
@@ -110,20 +110,18 @@ export const listResponses = query({
             return s;
           })
           .paginate(paginationOpts)
-      : f.status
-        ? await ctx.db
-            .query("formResponses")
-            .withIndex("by_formId_and_status_and_submittedAt", (q) => q.eq("formId", args.formId).eq("status", f.status!))
-            .order(order)
-            .filter((q) => (f.reviewed === undefined ? q.eq(q.field("spam"), spam) : q.and(q.eq(q.field("spam"), spam), q.eq(q.field("reviewed"), f.reviewed))))
-            .paginate(paginationOpts)
-        : await (() => {
-            const folder = ctx.db
-              .query("formResponses")
-              .withIndex("by_formId_and_spam_and_submittedAt", (q) => q.eq("formId", args.formId).eq("spam", spam))
-              .order(order);
-            return (f.reviewed === undefined ? folder : folder.filter((q) => q.eq(q.field("reviewed"), f.reviewed))).paginate(paginationOpts);
-          })();
+      : await (() => {
+          // Include spam/review state in the index range, rather than scanning
+          // and filtering rows that will never appear in this response page.
+          const rows = f.status
+            ? f.reviewed === undefined
+              ? ctx.db.query("formResponses").withIndex("by_form_status_spam_submitted", q => q.eq("formId", args.formId).eq("status", f.status!).eq("spam", spam))
+              : ctx.db.query("formResponses").withIndex("by_form_status_spam_reviewed_submitted", q => q.eq("formId", args.formId).eq("status", f.status!).eq("spam", spam).eq("reviewed", f.reviewed!))
+            : f.reviewed === undefined
+              ? ctx.db.query("formResponses").withIndex("by_formId_and_spam_and_submittedAt", q => q.eq("formId", args.formId).eq("spam", spam))
+              : ctx.db.query("formResponses").withIndex("by_form_spam_reviewed_submitted", q => q.eq("formId", args.formId).eq("spam", spam).eq("reviewed", f.reviewed!));
+          return rows.order(order).paginate(paginationOpts);
+        })();
     const definition = versionCache(ctx, args.formId);
     const page = [];
     for (const r of result.page) {

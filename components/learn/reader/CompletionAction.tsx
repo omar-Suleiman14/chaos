@@ -16,13 +16,13 @@ function CompletionHud({ label, onDone }: { label: string; onDone: () => void })
     return () => { window.clearTimeout(leave); window.clearTimeout(close); window.removeEventListener("keydown", onKey); };
   }, [onDone]);
   return createPortal(
-    <div className="lx-hud" data-leaving={leaving || undefined} onClick={onDone} role="status" aria-live="polite">
+    <output className="lx-hud" data-leaving={leaving || undefined}  aria-live="polite">
       <svg className="lx-hud__mark" viewBox="0 0 72 72" aria-hidden>
         <circle className="lx-hud__fill" cx="36" cy="36" r="36" />
         <path className="lx-hud__check" d="M22 37.5 31.5 47 50 27" />
       </svg>
       <span className="lx-hud__label">{label}</span>
-    </div>,
+    </output>,
     document.body,
   );
 }
@@ -35,7 +35,7 @@ export default function CompletionAction({ completed, disabled, onComplete, onRe
   const label = completionSound === "course_complete" ? (ar ? "اكتملت الدورة" : "Course completed") : (ar ? "اكتمل الدرس" : "Lesson completed");
   return <div className="lx-completion">
     <div className="lx-actions">
-      {done ? <><span className="lx-completion-success" role="status"><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="12" /><path d="m7 12.5 3.2 3.2L17 9" /></svg>{ar ? "اكتمل الدرس" : "Lesson completed"}</span><button type="button" className="lx-link" disabled={busy} onClick={async () => { setBusy(true); try { await onReset(); setCelebrating(false); } catch (err) { toast.error(err); } finally { setBusy(false); } }}>{ar ? "ابدأ من جديد" : "Start over"}</button></> : <button type="button" className="ws-btn ws-btn--primary lx-complete-button" disabled={disabled || busy} onClick={async () => {
+      {done ? <><output className="lx-completion-success" ><svg width="24" height="24" viewBox="0 0 24 24" aria-hidden><circle cx="12" cy="12" r="12" /><path d="m7 12.5 3.2 3.2L17 9" /></svg>{ar ? "اكتمل الدرس" : "Lesson completed"}</output><button type="button" className="lx-link" disabled={busy} onClick={async () => { setBusy(true); try { await onReset(); setCelebrating(false); } catch (err) { toast.error(err); } finally { setBusy(false); } }}>{ar ? "ابدأ من جديد" : "Start over"}</button></> : <button type="button" className="ws-btn ws-btn--primary lx-complete-button" disabled={disabled || busy} onClick={async () => {
         sfx.unlock(); setBusy(true);
         try {
           await onComplete(); setCelebrating(true); setHud(true);

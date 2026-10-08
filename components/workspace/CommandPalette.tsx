@@ -103,6 +103,7 @@ export default function CommandPalette(props: PaletteProps) {
   return <DocsProvider><Palette {...props} /></DocsProvider>;
 }
 
+/* oxlint-disable jsx-a11y/no-static-element-interactions, jsx-a11y/prefer-tag-over-role -- Backdrop mouse dismissal complements the modal Escape handler and labelled Close button. The custom combobox uses managed focus and active-descendant options; native select and option cannot host this rich popup. */
 function Palette({ open, onClose, items, onCreate }: PaletteProps) {
   const router = useRouter();
   const { toggleTheme } = useTheme();
@@ -257,7 +258,7 @@ function Palette({ open, onClose, items, onCreate }: PaletteProps) {
         <div ref={list} id={listId} role="listbox" aria-label={t.list} className="ws-palette__list">
           {entries.length === 0 && <p className="ws-palette__empty">{t.noMatches(query)}</p>}
           {groups.map((group) => (
-            <div key={group} role="group" aria-label={group}>
+            <fieldset key={group}  aria-label={group}>
               <p className="ws-palette__group">{group}</p>
               {entries.filter((e) => e.group === group).map((entry) => {
                 const index = entries.indexOf(entry);
@@ -274,7 +275,7 @@ function Palette({ open, onClose, items, onCreate }: PaletteProps) {
                   </button>
                 );
               })}
-            </div>
+            </fieldset>
           ))}
         </div>
         <div className="ws-palette__footer" aria-hidden="true">
@@ -286,3 +287,4 @@ function Palette({ open, onClose, items, onCreate }: PaletteProps) {
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/no-static-element-interactions, jsx-a11y/prefer-tag-over-role */

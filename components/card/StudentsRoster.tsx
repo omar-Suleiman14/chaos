@@ -8,6 +8,7 @@ import { CARD_THEMES } from "@/lib/memberCard";
 import MemberAvatar from "@/components/MemberAvatar";
 import Link from "@/components/site/SiteLink";
 
+/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- The virtualised scroll viewport must be keyboard-focusable so keyboard users can scroll to more students. */
 export default function StudentsRoster({ username }: { username?: string }) {
   const { locale } = useLocale(), ar = locale === "ar";
   const own = usePaginatedQuery(api.studentRoster.mine, username ? "skip" : {}, { initialNumItems: 24 });
@@ -36,10 +37,11 @@ export default function StudentsRoster({ username }: { username?: string }) {
           return <div key={student.id} style={style}>{student.username ? <Link prefetch={false} className="mc-student" href={`/card/${encodeURIComponent(student.username)}`} style={{ borderColor: theme.art[0] }}>{body}</Link> : <div className="mc-student" style={{ borderColor: theme.art[0] }}>{body}</div>}</div>;
         })}
       </div>
-      {status === "LoadingFirstPage" && <p role="status">{ar ? "جارٍ التحميل…" : "Loading…"}</p>}
+      {status === "LoadingFirstPage" && <output >{ar ? "جارٍ التحميل…" : "Loading…"}</output>}
       {status === "Exhausted" && !results.length && <p>{ar ? "لا توجد بطاقات طلاب بعد." : "No student cards yet."}</p>}
     </div>
     {status === "CanLoadMore" && <button className="ws-btn" onClick={() => loadMore(24)}>{ar ? "تحميل المزيد" : "Load more"}</button>}
-    {status === "LoadingMore" && <p role="status">{ar ? "جارٍ تحميل المزيد…" : "Loading more…"}</p>}
+    {status === "LoadingMore" && <output >{ar ? "جارٍ تحميل المزيد…" : "Loading more…"}</output>}
   </section>;
 }
+/* oxlint-enable jsx-a11y/no-noninteractive-tabindex */

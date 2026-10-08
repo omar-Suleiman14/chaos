@@ -63,9 +63,11 @@ vi.mock("@/components/forms/builder/SettingsTab", () => ({ default: () => null }
 vi.mock("@/components/forms/builder/ShareTab", () => ({ default: () => null }));
 vi.mock("@/components/forms/builder/TeamTab", () => ({ default: () => null }));
 vi.mock("@/components/forms/builder/HistoryTab", () => ({ default: () => null }));
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 vi.mock("@/components/forms/builder/FormPreview", () => ({
   FullPreview: () => <div role="dialog" aria-label="Form preview" />,
 }));
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
 const originalClipboard = Object.getOwnPropertyDescriptor(navigator, "clipboard");
 function setClipboard(value: unknown) {

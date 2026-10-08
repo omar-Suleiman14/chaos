@@ -1,5 +1,7 @@
 "use client";
 
+import { FocusInput } from "@/components/InitialFocus";
+
 import { copyText } from "@/lib/clipboard";
 import { Suspense, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { FunctionReturnType } from "convex/server";
@@ -166,7 +168,7 @@ function RespondPage({ shareId, inline = false, studyProgress = false, onComplet
     );
   }
   if (form.state === "code") {
-    return <Shell embed={embed} def={gateDef} plain={plain}><CodeGate autoFocus={!embed} title={form.title} lang={lang} error={codeError ?? (form.invalidCode ? "wrong" : null)} onSubmit={(code) => void tryCode(code)} /></Shell>;
+    return <Shell embed={embed} def={gateDef} plain={plain}><CodeGate focusOnMount={!embed} title={form.title} lang={lang} error={codeError ?? (form.invalidCode ? "wrong" : null)} onSubmit={(code) => void tryCode(code)} /></Shell>;
   }
   if (editToken && editing === null) return <Shell embed={embed} def={gateDef} plain={plain}><Message title={form.title} body="This edit link is no longer valid." /></Shell>;
   if (resumeToken && resumed === null) return <Shell embed={embed} def={gateDef} plain={plain}><Message title={form.title} body="This resume link is no longer valid." /></Shell>;
@@ -410,13 +412,13 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   if (!ready || !progress) return <Shell embed={embed} def={def} plain={form.hideBranding}><FormLoading /></Shell>;
 
   const languageSwitch = def.languages.length > 1 && (
-    <div className="form-lang" role="group" aria-label="Language">
+    <fieldset className="form-lang"  aria-label="Language">
       {def.languages.map((l) => (
         <button key={l} type="button" onClick={() => setLanguage(l)} aria-pressed={language === l} lang={l}>
           {languageNames[l]}
         </button>
       ))}
-    </div>
+    </fieldset>
   );
   const dir = isRtl(language) ? "rtl" : "ltr";
   const score = def.quiz?.enabled && receipt && receipt.quizScore !== undefined && receipt.quizScore !== null
@@ -454,10 +456,10 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
       ) : (
         <>
           {(editing || restored) && (
-            <div className="form-toast" dir={dir} role="status">
+            <output className="form-toast" dir={dir} >
               <span>{editing ? t.editing : t.restored}</span>
               {!editing && <button type="button" onClick={startOver}>{t.startOver}</button>}
-            </div>
+            </output>
           )}
           <FormRenderer
             journey
@@ -568,7 +570,7 @@ function FormLoading() {
       </div>
     );
   }
-  return <div className="grid place-items-center py-24 form-muted" role="status" aria-label="Loading"><span className="form-spinner" /></div>;
+  return <output className="grid place-items-center py-24 form-muted"  aria-label="Loading"><span className="form-spinner" /></output>;
 }
 
 /** `plain` hides the Chaos brand (Pro, enforced by the server); Privacy and Terms links stay. */
@@ -644,7 +646,7 @@ function Message({ title, body, lang = "en", children }: { title: string; body?:
   );
 }
 
-function CodeGate({ title, lang, error, onSubmit, autoFocus }: { title: string; lang: Language; error: "wrong" | "locked" | null; onSubmit: (code: string) => void; autoFocus: boolean }) {
+function CodeGate({ title, lang, error, onSubmit, focusOnMount }: { title: string; lang: Language; error: "wrong" | "locked" | null; onSubmit: (code: string) => void; focusOnMount: boolean }) {
   const invalid = error !== null;
   const [code, setCode] = useState("");
   const t = text[lang];
@@ -653,7 +655,7 @@ function CodeGate({ title, lang, error, onSubmit, autoFocus }: { title: string; 
       <h1 className="form-page-title form-heading" style={{ ["--i" as string]: 0 }}>{title}</h1>
       <label className="block space-y-2" style={{ ["--i" as string]: 1 }}>
         <span className="form-q-label">{t.code}</span>
-        <input value={code} onChange={(e) => setCode(e.target.value)} className="form-input" autoComplete="off" autoFocus={autoFocus} aria-invalid={invalid} aria-describedby={invalid ? "code-error" : undefined} />
+        <FocusInput value={code} onChange={(e) => setCode(e.target.value)} className="form-input" autoComplete="off" focusOnMount={focusOnMount} aria-invalid={invalid} aria-describedby={invalid ? "code-error" : undefined} />
       </label>
       {invalid && <p id="code-error" role="alert" className="form-error-text">{error === "locked" ? t.codeLocked : t.codeWrong}</p>}
       <div style={{ ["--i" as string]: 2 }}><button className="form-btn">{t.continue} <span aria-hidden="true" className="form-btn-arrow">{isRtl(lang) ? "←" : "→"}</span></button></div>

@@ -123,7 +123,7 @@ export default function GamesHub({ embedded = false }: { embedded?: boolean }) {
       </div>
     </section>
     <label className="ws-search"><Search size={16} aria-hidden/><input type="search" value={search} aria-label={locale === "ar" ? "ابحث عن اختبار لاستضافته" : "Find a quiz to host"} placeholder={locale === "ar" ? "ابحث عن اختبار لاستضافته…" : "Find a quiz to host…"} onChange={event=> {setSearch(event.target.value);setShown({published:12,drafts:12});}}/></label>
-    {!loaded && <p className="games-help" role="status">{t.loading}</p>}
+    {!loaded && <output className="games-help" >{t.loading}</output>}
     {loaded && <>
       <section className="games-library" aria-labelledby="games-published-title"><details className="games-toggle" open><summary><h2 id="games-published-title">{t.ready}</h2><span>{quizzes.filter(q => q.publishedVersion !== undefined).length}</span></summary><p className="games-help">{t.hostingNote}</p>{quizRows(true)}</details></section>
       <section className="games-library" aria-labelledby="games-drafts-title"><details className="games-toggle"><summary><h2 id="games-drafts-title">{t.draft}</h2><span>{quizzes.filter(q => q.publishedVersion === undefined).length}</span></summary><p className="games-help">{t.draftNote}</p>{quizRows(false)}</details></section>

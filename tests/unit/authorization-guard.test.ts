@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
 import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
+import { isProtectedPath } from "@/lib/protectedRoutes";
 import { topLevelRouteFolders } from "../routeFolders";
 
 const readSource = (relativePath: string) =>
@@ -17,9 +18,13 @@ describe("authorization helper guard", () => {
   });
 
   it("requires sign-in in the proxy for every signed-in-only page", () => {
-    const proxy = readSource("proxy.ts");
-    const matcher = /createRouteMatcher\(\[([^\]]*)\]\)/.exec(proxy)?.[1] ?? "";
-    for (const route of ["/dashboard(.*)", "/admin(.*)"]) expect(matcher).toContain(`"${route}"`);
+    for (const root of ["/dashboard", "/admin", "/print", "/homework", "/auth"]) {
+      for (const prefix of ["", "/en", "/ar"]) {
+        expect(isProtectedPath(prefix + root)).toBe(true);
+        expect(isProtectedPath(prefix + root + "/nested")).toBe(true);
+        expect(isProtectedPath(prefix + root + "-public")).toBe(false);
+      }
+    }
     // Every page folder under app/ that is not public must be listed above.
     const publicTop = new Set(["ai", "forms-quizzes", "live-games", "open-source", "teams", "status", "changelog","[username]", "f", "sign-in", "sign-up", "docs", "chatgpt", "claude", "connect", "pricing", "privacy", "cookies", "terms", "copyright", "api", "mcp", ".well-known", "opengraph-image",
       // Live game players join with a PIN and no account (host screens live under /dashboard).
@@ -28,7 +33,7 @@ describe("authorization helper guard", () => {
       "learn"]);
     for (const folder of topLevelRouteFolders()) {
       if (publicTop.has(folder)) continue;
-      expect(matcher, `app/${folder} is neither public nor protected`).toContain(`"/${folder}(.*)"`);
+      expect(isProtectedPath(`/${folder}`), `app/${folder} is neither public nor protected`).toBe(true);
     }
   });
 });

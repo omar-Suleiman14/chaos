@@ -182,6 +182,7 @@ export function looksLikePrivatePath(value: string): boolean {
  * structured field is sent. Unknown keys, private paths and private hosts are
  * rejected; query strings and fragments are stripped from `url`.
  */
+/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export function parseSource(raw: unknown): { label?: string; source?: ExternalSource; warnings: string[] } | { errors: string[] } {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { errors: ["source must be an object."] };
   const s = raw as Record<string, unknown>;
@@ -239,6 +240,7 @@ export function parseSource(raw: unknown): { label?: string; source?: ExternalSo
     : undefined;
   return { label: label ?? title, source, warnings };
 }
+/* oxlint-enable eslint/no-control-regex */
 
 /** Choices keep their ids when the label is unchanged, so reporting stays stable across edits. */
 function toChoices(labels: string[] | undefined, previous: Choice[] | undefined, prefix: string): Choice[] | undefined {

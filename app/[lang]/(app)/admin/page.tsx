@@ -168,7 +168,7 @@ function AdminConsole() {
           <label className="space-y-2 text-sm">
             Reason for the activity log
             <Input
-              autoFocus
+
               maxLength={500}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -216,7 +216,7 @@ function Overview() {
       toast.error(e, { fallback: "Could not refresh analytics. Try again." });
     }
   };
-  if (report === undefined) return <p role="status">Loading analytics…</p>;
+  if (report === undefined) return <output >Loading analytics…</output>;
   if (!report || !report.completedAt)
     return (
       <div className="space-y-3">
@@ -334,9 +334,9 @@ function UsersPanel({ choose }: { choose: ChooseAction }) {
           </Button>
         )}
       </div>
-      {crmMessage && <p role="status">{crmMessage}</p>}
+      {crmMessage && <output >{crmMessage}</output>}
       {status === "LoadingFirstPage" ? (
-        <p role="status">Loading accounts…</p>
+        <output >Loading accounts…</output>
       ) : !results.length ? (
         <p className="py-8 text-muted-foreground">No accounts found.</p>
       ) : (
@@ -452,7 +452,7 @@ function ContentPanel({ choose }: { choose: ChooseAction }) {
         {search ? `${results.length} ${results.length === 1 ? "match" : "matches"}` : `${results.length} loaded, newest first.`}
       </p>
       {status === "LoadingFirstPage" ? (
-        <p role="status">Loading content…</p>
+        <output >Loading content…</output>
       ) : !visible.length ? (
         <p className="py-8 text-muted-foreground">No matching content.</p>
       ) : (
@@ -504,7 +504,7 @@ function Activity() {
         The latest 50 moderation and plan changes.
       </p>
       {!rows ? (
-        <p role="status">Loading activity…</p>
+        <output >Loading activity…</output>
       ) : !rows.length ? (
         <p>No changes recorded yet.</p>
       ) : (

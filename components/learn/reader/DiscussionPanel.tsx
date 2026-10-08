@@ -27,6 +27,7 @@ const copy = {
   },
 };
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- Styled button radios preserve native button activation and expose their selection to assistive technology. */
 export default function DiscussionPanel({ lesson, draftAnchor, onClearAnchor, onClose, blockExists }: {
   lesson: Lesson; draftAnchor?: { blockId: string; excerpt: string }; onClearAnchor: () => void; onClose: () => void; blockExists: (id: string) => boolean;
 }) {
@@ -82,6 +83,7 @@ export default function DiscussionPanel({ lesson, draftAnchor, onClearAnchor, on
     </section>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
 function Thread({ thread, lesson, viewerId, signedIn, locale, t, blockExists, onReport }: {
   thread: DiscussionThread; lesson: Lesson; viewerId?: string; signedIn: boolean; locale: "en" | "ar"; t: (typeof copy)["en"];

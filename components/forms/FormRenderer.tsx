@@ -1,5 +1,9 @@
 "use client";
 
+import { FocusInput, FocusTextarea } from "@/components/InitialFocus";
+
+import { useNow } from "@/lib/useNow";
+
 import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronUp, Clock, CornerDownLeft, Star, Upload, X } from "lucide-react";
@@ -220,6 +224,7 @@ export default function FormRenderer(props: FormRendererProps) {
 
 // ── Start screens ─────────────────────────────────────────────────────────
 function WelcomeScreen({ def, language, resuming, onStart }: { def: FormDefinition; language: Language; resuming: boolean; onStart: () => void }) {
+  const now = useNow();
   const t = ui[language];
   const meta = localizedMeta(def, language);
   const cover = themeCover(def);
@@ -331,7 +336,7 @@ function WelcomeScreen({ def, language, resuming, onStart }: { def: FormDefiniti
         <div className="form-cover-editorial form-stagger">
           <div className="form-cover-masthead" style={{ ["--i" as string]: 0 }}>
             {logo}
-            <span>{new Date().toLocaleDateString(language === "ar" ? "ar" : "en", { year: "numeric", month: "long", day: "numeric" })}</span>
+            <span>{now === null ? "" : new Date(now).toLocaleDateString(language === "ar" ? "ar" : "en", { year: "numeric", month: "long", day: "numeric" })}</span>
             <span>{t.questions(count)}</span>
           </div>
           <h1 className="form-cover-title form-heading" style={{ ["--i" as string]: 1 }}>{meta.title}</h1>
@@ -360,6 +365,7 @@ function WelcomeScreen({ def, language, resuming, onStart }: { def: FormDefiniti
 }
 
 // ── Classic and sections ──────────────────────────────────────────────────
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The labelled progress indicator uses custom nested visual tracks while exposing current, minimum and maximum values. */
 function PagedFlow({ flow, props, showHeader }: { flow: Flow; props: FormRendererProps; showHeader: boolean }) {
   const { def, t, language, answers, steps, step, index, last, direction } = flow;
   const meta = localizedMeta(def, language);
@@ -468,6 +474,7 @@ function PagedFlow({ flow, props, showHeader }: { flow: Flow; props: FormRendere
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
 // ── Typeform style: one question at a time ───────────────────────────────
 /** A ref that always holds the latest value, for listeners and timers registered once. */
@@ -575,6 +582,7 @@ function useLeavingStep(step: Step | undefined, direction: number, stepRef: Reac
   return leaving;
 }
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The labelled progress indicator uses custom nested visual tracks while exposing current, minimum and maximum values. */
 function FocusFlow({ flow, props }: { flow: Flow; props: FormRendererProps }) {
   const { def, t, language, answers, steps, step, index, last, direction } = flow;
   const stageRef = useRef<HTMLDivElement>(null);
@@ -631,13 +639,14 @@ function FocusFlow({ flow, props }: { flow: Flow; props: FormRendererProps }) {
           </div>
         )}
       </form>
-      <div className="form-stage-nav" role="group" aria-label={t.of(index + 1, steps.length)}>
+      <fieldset className="form-stage-nav"  aria-label={t.of(index + 1, steps.length)}>
         <button type="button" onClick={flow.back} disabled={index === 0} aria-label={t.back}><ChevronUp size={18} /></button>
         <button type="button" onClick={flow.advance} disabled={last} aria-label={t.next}><ChevronDown size={18} /></button>
-      </div>
+      </fieldset>
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
 // ── Swipe: full-screen cards ──────────────────────────────────────────────
 function SwipeFlow({ flow, props }: { flow: Flow; props: FormRendererProps }) {
@@ -718,7 +727,7 @@ function SwipeFlow({ flow, props }: { flow: Flow; props: FormRendererProps }) {
                   <FieldView field={localizeField(field, language, def)} def={def} language={language} answers={answers}
                     error={current && (flow.showErrors || props.serverErrors?.[field.id]) ? flow.errorFor(field) : null}
                     onChange={(v) => flow.setAnswer(field, v)} uploadFile={props.uploadFile} files={props.files} play={flow.play}
-                    variant="swipe" autoFocus={false} onEnter={flow.submit} onCommit={autoAdvanceTypes.includes(field.type) ? autoAdvance : undefined} />
+                    variant="swipe" focusOnMount={false} onEnter={flow.submit} onCommit={autoAdvanceTypes.includes(field.type) ? autoAdvance : undefined} />
                 )}
                 <div key={current ? flow.shake : 0} className={`form-swipe-actions ${current && flow.shake ? "form-shake" : ""}`}>
                   <button type="submit" disabled={props.submitting} className="form-btn form-btn-lg">
@@ -741,10 +750,10 @@ function SwipeFlow({ flow, props }: { flow: Flow; props: FormRendererProps }) {
           <ChevronUp size={18} aria-hidden="true" /> {t.swipe}
         </button>
       )}
-      <div className="form-stage-nav" role="group" aria-label={t.of(index + 1, steps.length)}>
+      <fieldset className="form-stage-nav"  aria-label={t.of(index + 1, steps.length)}>
         <button type="button" onClick={flow.back} disabled={index === 0} aria-label={t.back}><ChevronUp size={18} /></button>
         <button type="button" onClick={flow.advance} disabled={last} aria-label={t.next}><ChevronDown size={18} /></button>
-      </div>
+      </fieldset>
     </div>
   );
 }
@@ -788,7 +797,7 @@ export function EndingView({ ending, def, language, answers, children, score, ce
 
   const pct = score && score.max > 0 ? score.value / score.max : 0;
   return (
-    <div dir={isRtl(language) ? "rtl" : "ltr"} lang={language} className={`form-ending ${immersive ? "form-ending--stage" : ""}`} role="status">
+    <output dir={isRtl(language) ? "rtl" : "ltr"} lang={language} className={`form-ending ${immersive ? "form-ending--stage" : ""}`} >
       <div className="form-ending-inner form-stagger">
         {score ? (
           <div className="form-score" style={{ ["--i" as string]: 0, ["--pct" as string]: pct }}>
@@ -811,7 +820,7 @@ export function EndingView({ ending, def, language, answers, children, score, ce
         <p className="whitespace-pre-line form-muted text-lg" style={{ ["--i" as string]: 2 }}>{pipeText(localized?.message || fallback.message, def, answers, language)}</p>
         <div className="space-y-4" style={{ ["--i" as string]: 3 }}>{children}</div>
       </div>
-    </div>
+    </output>
   );
 }
 
@@ -825,7 +834,7 @@ interface FieldViewProps {
   onChange: (value: AnswerValue | undefined) => void;
   uploadFile?: FormRendererProps["uploadFile"];
   files?: Record<string, UploadedFile>;
-  autoFocus?: boolean;
+  focusOnMount?: boolean;
   onEnter?: () => void;
   /** A complete single answer was chosen (immersive modes advance). */
   onCommit?: () => void;
@@ -833,7 +842,7 @@ interface FieldViewProps {
   variant: "page" | "focus" | "swipe";
 }
 
-function FieldView({ field, def, language, answers, error, onChange, uploadFile, files, autoFocus, onEnter, onCommit, play, variant }: FieldViewProps) {
+function FieldView({ field, def, language, answers, error, onChange, uploadFile, files, focusOnMount, onEnter, onCommit, play, variant }: FieldViewProps) {
   const id = useId();
   const t = ui[language];
   const value = answers[field.id];
@@ -884,11 +893,11 @@ function FieldView({ field, def, language, answers, error, onChange, uploadFile,
       <div className="form-field">
         <label htmlFor={`field-${id}`} className="block">{heading}</label>
         {help}
-        <input id={`field-${id}`} data-field-id={field.id} type={textTypes[field.type]} value={typeof value === "string" ? value : ""} placeholder={field.placeholder}
+        <FocusInput id={`field-${id}`} data-field-id={field.id} type={textTypes[field.type]} value={typeof value === "string" ? value : ""} placeholder={field.placeholder}
           onChange={(e) => onChange(e.target.value || undefined)} aria-invalid={!!error} aria-describedby={describedBy} aria-required={field.required}
           autoComplete={field.type === "email" ? "email" : field.type === "phone" ? "tel" : "off"} dir={["email", "url", "phone", "date", "time"].includes(field.type) ? "ltr" : undefined}
           min={field.type === "date" || field.type === "time" ? field.minValue : undefined} max={field.type === "date" || field.type === "time" ? field.maxValue : undefined}
-          className={inputClass} autoFocus={autoFocus} onKeyDown={onKeyDown} maxLength={1000} />
+          className={inputClass} focusOnMount={focusOnMount} onKeyDown={onKeyDown} maxLength={1000} />
         {errorText}
       </div>
     );
@@ -898,9 +907,9 @@ function FieldView({ field, def, language, answers, error, onChange, uploadFile,
       <div className="form-field">
         <label htmlFor={`field-${id}`} className="block">{heading}</label>
         {help}
-        <textarea id={`field-${id}`} data-field-id={field.id} value={typeof value === "string" ? value : ""} placeholder={field.placeholder} rows={immersive ? 3 : 5} maxLength={10000}
+        <FocusTextarea id={`field-${id}`} data-field-id={field.id} value={typeof value === "string" ? value : ""} placeholder={field.placeholder} rows={immersive ? 3 : 5} maxLength={10000}
           onChange={(e) => onChange(e.target.value || undefined)} aria-invalid={!!error} aria-describedby={describedBy} aria-required={field.required}
-          className={inputClass} autoFocus={autoFocus}
+          className={inputClass} focusOnMount={focusOnMount}
           onKeyDown={(e) => { if (onEnter && !e.nativeEvent.isComposing && !e.repeat && e.key === "Enter" && (e.ctrlKey || e.metaKey)) { e.preventDefault(); e.stopPropagation(); onEnter(); } }} />
         {immersive && <p className="form-hint" aria-hidden="true"><kbd>Ctrl</kbd> + <kbd>Enter ↵</kbd></p>}
         {errorText}
@@ -913,7 +922,7 @@ function FieldView({ field, def, language, answers, error, onChange, uploadFile,
         <label htmlFor={`field-${id}`} className="block">{heading}</label>
         {help}
         <NumberInput id={`field-${id}`} fieldId={field.id} field={field} value={value} onChange={onChange} invalid={!!error} describedBy={describedBy}
-          className={inputClass} autoFocus={autoFocus} onKeyDown={onKeyDown} />
+          className={inputClass} focusOnMount={focusOnMount} onKeyDown={onKeyDown} />
         {errorText}
       </div>
     );
@@ -925,7 +934,7 @@ function FieldView({ field, def, language, answers, error, onChange, uploadFile,
         {help}
         <div className="form-select">
           <ChaosSelect id={`field-${id}`} data-field-id={field.id} value={typeof value === "string" ? value : ""} onChange={(e) => { play("select"); commit(e.target.value || undefined); }}
-            aria-invalid={!!error} aria-describedby={describedBy} className={`form-input ${immersive ? "form-input--lg" : ""}`} autoFocus={autoFocus}>
+            aria-invalid={!!error} aria-describedby={describedBy} className={`form-input ${immersive ? "form-input--lg" : ""}`} focusOnMount={focusOnMount}>
             <option value="">{t.choose}</option>
             {field.options?.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
           </ChaosSelect>
@@ -947,7 +956,7 @@ function FieldView({ field, def, language, answers, error, onChange, uploadFile,
             const checked = selected.includes(o.id);
             return (
               <label key={o.id} className={`form-choice ${blink === o.id ? "form-choice--blink" : ""}`} data-checked={checked}>
-                <input type={multiple ? "checkbox" : "radio"} name={id} checked={checked} autoFocus={autoFocus && i === 0 && variant === "page"} className="sr-only"
+                <FocusInput type={multiple ? "checkbox" : "radio"} name={id} checked={checked} focusOnMount={focusOnMount && i === 0 && variant === "page"} className="sr-only"
                   data-choice-index={`${field.id}-${i}`}
                   onChange={() => {
                     haptics.select();
@@ -1052,7 +1061,7 @@ function FieldView({ field, def, language, answers, error, onChange, uploadFile,
           <table className="w-full text-sm border-collapse">
             <thead>
               <tr>
-                <td />
+                <th scope="col" aria-label={language === "ar" ? "السؤال" : "Question"} />
                 {field.options?.map((o) => <th key={o.id} scope="col" className="p-2 text-xs font-medium text-center form-muted">{o.label}</th>)}
               </tr>
             </thead>
@@ -1142,6 +1151,7 @@ function FileField({ id, field, heading, help, errorText, value, onChange, uploa
 }
 
 /** In-app replacement for window.confirm: focus is trapped, Escape cancels, focus returns to the Clear button. */
+/* oxlint-disable jsx-a11y/no-static-element-interactions -- Backdrop mouse dismissal complements the modal Escape handler and labelled Close button. */
 function ClearDialog({ message, clearLabel, cancelLabel, onCancel, onClear }: { message: string; clearLabel: string; cancelLabel: string; onCancel: () => void; onClear: () => void }) {
   const panel = useModal({ onClose: onCancel });
   const id = useId();
@@ -1157,6 +1167,7 @@ function ClearDialog({ message, clearLabel, cancelLabel, onCancel, onClear }: { 
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/no-static-element-interactions */
 
 /**
  * Number field. People type text, which is parsed the same way everywhere:
@@ -1164,15 +1175,15 @@ function ClearDialog({ message, clearLabel, cancelLabel, onCancel, onClear }: { 
  * a plain number; text that is not a number is kept (as text) so the field
  * shows "Enter a number." instead of silently turning into 0 or vanishing.
  */
-function NumberInput({ id, fieldId, field, value, onChange, invalid, describedBy, className, autoFocus, onKeyDown }: {
+function NumberInput({ id, fieldId, field, value, onChange, invalid, describedBy, className, focusOnMount, onKeyDown }: {
   id: string; fieldId: string; field: FormField; value: AnswerValue | undefined; onChange: (next: AnswerValue | undefined) => void;
-  invalid: boolean; describedBy?: string; className: string; autoFocus?: boolean; onKeyDown: (e: React.KeyboardEvent) => void;
+  invalid: boolean; describedBy?: string; className: string; focusOnMount?: boolean; onKeyDown: (e: React.KeyboardEvent) => void;
 }) {
   const [draft, setDraft] = useState<string | null>(null);
   const shown = draft ?? (typeof value === "number" ? String(value) : typeof value === "string" ? value : "");
   const hint = [field.min !== undefined ? `min ${field.min}` : "", field.max !== undefined ? `max ${field.max}` : "", field.step !== undefined ? `step ${field.step}` : ""].filter(Boolean).join(" · ");
   return (
-    <input id={id} data-field-id={fieldId} type="text" inputMode={field.integer ? "numeric" : "decimal"} dir="ltr" value={shown} autoComplete="off"
+    <FocusInput id={id} data-field-id={fieldId} type="text" inputMode={field.integer ? "numeric" : "decimal"} dir="ltr" value={shown} autoComplete="off"
       onChange={(e) => {
         const text = e.target.value;
         setDraft(text);
@@ -1181,6 +1192,6 @@ function NumberInput({ id, fieldId, field, value, onChange, invalid, describedBy
       }}
       onBlur={() => setDraft(null)}
       aria-invalid={invalid} aria-describedby={describedBy} aria-required={field.required} title={hint || undefined}
-      className={className} autoFocus={autoFocus} onKeyDown={onKeyDown} />
+      className={className} focusOnMount={focusOnMount} onKeyDown={onKeyDown} />
   );
 }

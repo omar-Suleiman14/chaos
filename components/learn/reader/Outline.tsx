@@ -121,6 +121,7 @@ const SHEET_MS = 260;
  * Bottom sheet on phones: slides up on a spring with the page dimming behind it, and slides back down to
  * close (the close button, the scrim, Escape, a chosen section, or a drag down on the handle).
  */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 function OutlineDrawer({ items, active, onClose }: { items: OutlineItem[]; active?: string; onClose: () => void }) {
   const t = useCopy(copy);
   const [shown, setShown] = useState(false);
@@ -168,3 +169,4 @@ function OutlineDrawer({ items, active, onClose }: { items: OutlineItem[]; activ
     </div>
   </>;
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */

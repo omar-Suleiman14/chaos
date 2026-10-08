@@ -64,7 +64,7 @@ export default function SelectionToolbar({ selection, onAction, canWrite, aiLabe
   /** The device can speak: offer Read aloud for exactly the selected text. */
   canRead?: boolean;
   /** On large screens the toolbar stays inside this element (the lesson column), never over the sidebars. */
-  within?: HTMLElement | null;
+  within?: React.RefObject<HTMLElement | null>;
   /** The selection is a glossary term, so Look Up can open its card. */
   canLookUp?: boolean;
   /** When in-product AI is off, Explain/Simplify/Example/Quiz go to an external assistant; the label says so. */
@@ -76,7 +76,7 @@ export default function SelectionToolbar({ selection, onAction, canWrite, aiLabe
   useLayoutEffect(() => {
     const el = bar.current;
     if (!el) return;
-    const area = within && window.matchMedia("(min-width: 1181px)").matches ? within.getBoundingClientRect() : null;
+    const area = within?.current && window.matchMedia("(min-width: 1181px)").matches ? within.current.getBoundingClientRect() : null;
     el.style.maxWidth = area ? `${Math.min(area.width + 16, window.innerWidth - 16)}px` : "";
     const min = area ? Math.max(8, area.left - 8) : 8;
     const max = area ? Math.min(window.innerWidth - 8, area.right + 8) : window.innerWidth - 8;
@@ -99,8 +99,8 @@ export default function SelectionToolbar({ selection, onAction, canWrite, aiLabe
   );
   return (
     <>
-      <span className="sr-only" role="status">{t.hint}</span>
-      <div ref={bar} className="lx-seltools ws-glass" role="toolbar" aria-label={t.label} style={pos}
+      <output className="sr-only" >{t.hint}</output>
+      <div ref={bar} className="lx-seltools ws-glass" role="toolbar" tabIndex={-1} aria-label={t.label} style={pos}
         onKeyDown={(e) => {
           const buttons = Array.from(bar.current?.querySelectorAll<HTMLButtonElement>("button") ?? []);
           const i = buttons.indexOf(document.activeElement as HTMLButtonElement);

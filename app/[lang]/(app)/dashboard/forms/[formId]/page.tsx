@@ -1,5 +1,7 @@
 "use client";
 
+import { useNow } from "@/lib/useNow";
+
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Activity, useEffect, useMemo, useState } from "react";
@@ -145,6 +147,7 @@ export default function FormBuilderPage() {
 }
 
 function FormBuilder({ formId }: { formId: Id<"forms"> }) {
+  const now = useNow();
   const t = useCopy(copy);
   const { locale } = useLocale();
   const data = useQuery(api.forms.getFormForEditor, { formId });
@@ -258,8 +261,8 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
   const fmtZoned = (ms: number) => formatScheduleTime(ms, data.settings.timezone, locale);
   // Limits are easy to forget once set, so they stay visible under the title.
   const limits = [
-    data.settings.opensAt !== undefined && data.settings.opensAt > Date.now() ? t.opens(fmtZoned(data.settings.opensAt)) : "",
-    data.settings.closesAt !== undefined ? (data.settings.closesAt > Date.now() ? t.closes : t.closed)(fmtZoned(data.settings.closesAt)) : "",
+    data.settings.opensAt !== undefined && now !== null && data.settings.opensAt > now ? t.opens(fmtZoned(data.settings.opensAt)) : "",
+    now !== null && data.settings.closesAt !== undefined ? (data.settings.closesAt > now ? t.closes : t.closed)(fmtZoned(data.settings.closesAt)) : "",
     data.settings.responseLimit !== undefined ? t.ofLimit(data.responseCount, data.settings.responseLimit) : "",
   ].filter(Boolean);
 
@@ -350,13 +353,13 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
         const index = steps.findIndex((s) => !s.done);
         const step = steps[index];
         return (
-          <div className="ws-next-step ws-page" role="status" aria-label={t.guideLabel}>
+          <output className="ws-next-step ws-page"  aria-label={t.guideLabel}>
             <span className="ws-next-step__count" aria-hidden="true">{index + 1}</span>
             <span className="min-w-0 flex-1">{step.text}</span>
             <span className="ws-next-step__dots" aria-label={t.stepOf(index + 1, steps.length)}>{steps.map((s, i) => <span key={i} data-done={i < index} />)}</span>
             <button type="button" className="ws-btn ws-btn--sm ws-btn--primary" onClick={step.run}>{step.action}</button>
             <button type="button" className="ws-icon-button" aria-label={t.hideGuide} onClick={() => { setGuide((g) => ({ ...g, dismissed: true })); try { localStorage.setItem("chaos.ui.guide-dismissed", "1"); } catch { /* storage unavailable */ } }}><X size={15} /></button>
-          </div>
+          </output>
         );
       })()}
       {d.recovery && canEdit && (

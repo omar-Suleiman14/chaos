@@ -56,13 +56,13 @@ export default function InlineQuiz({
           <strong dir="auto">{title || details.title}</strong>
           <span className="lx-muted">{ar ? `${details.questionCount} سؤال` : `${details.questionCount} questions`} · <Link className="lx-link" href={details.href}>{ar ? "افتح الاختبار الكامل" : "Open full quiz"}</Link></span>
         </div>
-        <div className="lx-inline-quiz__views" role="group" aria-label={ar ? "طريقة العرض" : "View"}>
+        <fieldset className="lx-inline-quiz__views"  aria-label={ar ? "طريقة العرض" : "View"}>
           {(["minimal", "full"] as const).map((v) => (
             <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>
               {v === "minimal" ? (ar ? "مختصر" : "Minimal") : (ar ? "كامل" : "Full")}
             </button>
           ))}
-        </div>
+        </fieldset>
       </header>
       <QueryErrorBoundary key={`${asset.kind}:${asset.id}:${view}`}>
         {/* Keep a lazy player download from hiding the lesson and resetting its scroll. */}

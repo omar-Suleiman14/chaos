@@ -1,11 +1,13 @@
 "use client";
 
+import { FocusInput } from "@/components/InitialFocus";
+
 import Link from "next/link";
 import { toast } from "@/lib/toast";
 import { useMemo, useState } from "react";
 import { BookmarkMinus, BookmarkPlus, Building2, CalendarRange, ChevronRight, GraduationCap, History, Layers3, Library, Plus, School } from "lucide-react";
 import { EmptyState, LessonCard } from "@/components/learn/ui";
-import { isListed, useCurriculumNodes, useLearnActions, useLearnCapabilities, useLearnViewer, useMyCourses, useMyLessons, useProgress, usePublicLessons } from "@/lib/learn/data";
+import { isListed, useCurriculumNodes, useLearnActions, useLearnViewer, useMyCourses, useMyLessons, useProgress, usePublicLessons } from "@/lib/learn/data";
 import { ancestors } from "@/lib/learn/search";
 import { CURRICULUM_LEVELS, type CurriculumKind, type CurriculumNode } from "@/lib/learn/types";
 import { useCopy } from "@/lib/i18n";
@@ -58,7 +60,6 @@ export function Breadcrumbs({ trail, rootLabel }: { trail: CurriculumNode[]; roo
 export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
   const t = useCopy(copy);
   const nodes = useCurriculumNodes();
-  const caps = useLearnCapabilities();
   const viewer = useLearnViewer();
   const actions = useLearnActions();
   const courses = useMyCourses() ?? [];
@@ -121,16 +122,16 @@ export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
       )}
 
       {siblingsOfVersion.length > 1 && version && (
-        <div className="lx-version-switch" role="group" aria-label={t.levels.version}>
+        <fieldset className="lx-version-switch"  aria-label={t.levels.version}>
           <History size={15} aria-hidden />
           {siblingsOfVersion.map((v) => (
             <Link key={v.id} className="lx-chip" aria-current={v.id === version.id ? "true" : undefined} data-on={v.id === version.id} href={hostHref(`/dashboard/learn/courses/browse?node=${node?.id === version.id ? v.id : equivalentIn(v)}`)}>
               {v.name}{v.current ? ` · ${t.current}` : ""}
             </Link>
           ))}
-        </div>
+        </fieldset>
       )}
-      {onOldVersion && <p className="lx-notice" data-tone="warn" role="status">{t.olderWarning(version.name)} <Link className="lx-link" href={hostHref(`/dashboard/learn/courses/browse?node=${equivalentIn(currentVersion)}`)}>{t.switchTo(currentVersion.name)}</Link></p>}
+      {onOldVersion && <output className="lx-notice" data-tone="warn" >{t.olderWarning(version.name)} <Link className="lx-link" href={hostHref(`/dashboard/learn/courses/browse?node=${equivalentIn(currentVersion)}`)}>{t.switchTo(currentVersion.name)}</Link></output>}
       {node?.kind === "program" && <p className="lx-help">{t.versionsLead}</p>}
 
       {canBuild && !node && <p className="lx-notice" data-tone="info">{t.localDir}</p>}
@@ -141,7 +142,7 @@ export default function CurriculumBrowser({ nodeId }: { nodeId?: string }) {
           {adding && (
             <form className="lx-toolbar" onSubmit={(e) => { e.preventDefault(); add(); }}>
               { }
-              <input autoFocus className="lx-input" value={adding.name} placeholder={t.placeholder[kind]} aria-label={t.one[kind]} maxLength={160} onChange={(e) => setAdding({ ...adding, name: e.target.value })} />
+              <FocusInput focusOnMount className="lx-input" value={adding.name} placeholder={t.placeholder[kind]} aria-label={t.one[kind]} maxLength={160} onChange={(e) => setAdding({ ...adding, name: e.target.value })} />
               {kind === "module" && <input className="lx-input" style={{ maxWidth: 160 }} value={adding.code} placeholder={t.code} aria-label={t.code} maxLength={24} onChange={(e) => setAdding({ ...adding, code: e.target.value })} />}
               <button type="submit" className="ws-btn ws-btn--primary" disabled={!adding.name.trim()}>{t.save}</button>
               <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setAdding(null)}>{t.cancel}</button>

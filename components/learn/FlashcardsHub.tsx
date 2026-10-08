@@ -76,7 +76,7 @@ export default function FlashcardsHub({ embedded = false, view = "gallery", ...f
             <article key={s.id} className="lx-card">
               <div className="flex items-start justify-between gap-2">
               <span className="lx-card__meta"><Layers size={13} aria-hidden />{t.cards(s.cards.length)} · {timeAgo(locale, s.updatedAt)}{s.forkedFrom ? ` · ${t.copied}` : ""}</span>
-              <div className="lx-card__menu" onClick={event => event.stopPropagation()}>{rowActions(s)}</div>
+              <div className="lx-card__menu" onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()} role="presentation">{rowActions(s)}</div>
               </div>
               <h2><Link className="lx-card__link" href={s.href}>{s.title || t.untitled}</Link></h2>
               {s.description && <p>{s.description}</p>}

@@ -256,7 +256,7 @@ describe("numbers keep their precision and empty never becomes zero", () => {
   it("keeps decimals, negatives, zero and large values exactly", async () => {
     const t = createTestConvex();
     const { owner, formId, shareId } = await publish(t, def);
-    const values = [0.1 + 0.2, -5.5, 0, 1e-7, 123456789.123456789, Number.MAX_SAFE_INTEGER, -0.000001];
+    const values = [0.1 + 0.2, -5.5, 0, 1e-7, 123456789.12345679, Number.MAX_SAFE_INTEGER, -0.000001];
     for (const n of values) await submit(t, shareId, { num: n, req: 1 });
     const rows = (await exportAll(owner, formId)).rows;
     expect(rows.map((r) => r.answers.num)).toEqual(values);

@@ -13,6 +13,7 @@ const text = {
  * After a quiz is submitted: each graded question with what the respondent chose, the right
  * answer where they missed it, and the creator's explanation, so they can see what went wrong.
  */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- This labelled graphic is composed from inline SVG or multiple elements; a native img cannot represent it. */
 export function QuizReview({ def, review, answers, language }: { def: FormDefinition; review: QuizReviewItem[]; answers: Answers; language: Language }) {
   const t = language === "ar" ? text.ar : text.en;
   const fields = new Map(def.fields.map((f) => [f.id, f]));
@@ -49,3 +50,4 @@ export function QuizReview({ def, review, answers, language }: { def: FormDefini
     </section>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
