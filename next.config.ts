@@ -62,6 +62,7 @@ const noFraming = Object.entries(DENY_FRAMING).map(([key, value]) => ({ key, val
  * Kept as a single negative match so new routes are unframable by default.
  */
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: { "/mcp": ["./skills/create-study-lesson/**/*"], "/api/plugins/*": ["./skills/create-study-lesson/**/*"] },
   // NEXT_OUTPUT=standalone (set by the Dockerfile) emits a self-contained server
   // bundle. Left unset the build is unchanged, so Vercel deployments are unaffected.
   ...(process.env.NEXT_OUTPUT === "standalone" ? { output: "standalone" as const } : {}),

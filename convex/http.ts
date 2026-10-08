@@ -298,6 +298,19 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
     });
     let result: unknown;
     switch (b.tool) {
+      case "publish_study_source": result = await ctx.runMutation(makeFunctionReference<"mutation">("studySourceUploads:publishSource"), { ...input, userId }); break;
+      case "refresh_study_lesson_placement": result = await ctx.runMutation(makeFunctionReference<"mutation">("studyLessons:refreshPlacement"), { ...input, userId }); break;
+      case "get_study_source_content": result = await ctx.runAction(makeFunctionReference<"action">("studySourceUploads:readContent"), { ...input, userId }); break;
+      case "register_study_reference": result = await ctx.runMutation(makeFunctionReference<"mutation">("studySourceUploads:reference"), { ...input, userId }); break;
+      case "build_study_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("studyLessons:start"), { ...input, userId }); break;
+      case "checkpoint_study_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("studyLessons:checkpoint"), { ...input, userId }); break;
+      case "get_study_lesson_job": result = await ctx.runQuery(makeFunctionReference<"query">("studyLessons:status"), { ...input, userId }); break;
+      case "get_study_lesson_checkpoint": result = await ctx.runQuery(makeFunctionReference<"query">("studyLessons:readPart"), { ...input, userId }); break;
+      case "finalize_study_lesson": result = await ctx.runAction(makeFunctionReference<"action">("studyLessonJobs:finalize"), { ...input, userId }); await stamp(result); break;
+      case "publish_study_lesson": result = await ctx.runAction(makeFunctionReference<"action">("studyLessonJobs:publish"), { ...input, userId }); break;
+      case "set_study_teaching_profile": result = await ctx.runMutation(makeFunctionReference<"mutation">("studyLessons:profile"), { ...input, userId }); break;
+      case "upload_study_source": result = await ctx.runAction(makeFunctionReference<"action">("studySourceUploads:upload"), { ...input, userId }); break;
+
       case "get_documentation_capabilities": result = await ctx.runQuery(makeFunctionReference<"query">("docs:mcpCapabilities"), { userId }); break;
       case "list_documentation": result = await ctx.runQuery(makeFunctionReference<"query">("docs:mcpList"), { ...input, userId }); break;
       case "save_documentation": result = await ctx.runMutation(makeFunctionReference<"mutation">("docs:mcpSave"), { ...input, userId }); break;
