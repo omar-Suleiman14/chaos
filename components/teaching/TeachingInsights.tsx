@@ -1,19 +1,18 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { useQuery } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { useCopy, useLocale, formatDateTime, formatNumber } from "@/lib/i18n";
-import { useModal } from "@/components/workspace/useModal";
-import { AlertTriangle, Check, ChevronDown, ChevronRight, ChevronUp, Clock, History, Info, SearchCheck, Sparkles, Timer, Zap } from "lucide-react";
+import { useCopy, useLocale, formatNumber } from "@/lib/i18n";
+import { AlertTriangle, Check, ChevronDown, ChevronRight, Clock, History, Info, SearchCheck, Sparkles, Timer, Zap } from "lucide-react";
+import VersionBrowser from "@/components/versions/VersionBrowser";
+import { QuestionSheet, compareQuestions } from "@/components/versions/QuestionSheet";
 import "./teaching.css";
 
 type Target = { formId: Id<"forms">; quizId?: never } | { quizId: Id<"quizzes">; formId?: never };
 type Report = NonNullable<FunctionReturnType<typeof api.formResults.getTeachingInsights>> | NonNullable<FunctionReturnType<typeof api.quizFunctions.getTeachingInsights>>;
 type Quality = Report["questions"][number];
-type Version = Report["versions"][number];
-type VQuestion = Version["questions"][number];
 type Flag = Quality["flags"][number];
 
 const copy = {
@@ -39,14 +38,9 @@ const copy = {
     commonWrong: "Most picked wrong answer", students: (n: string) => `${n} students`,
     tooFast: (n: string) => `${n} answers came faster than anyone can read the question. Worth a quiet look; marks are not changed.`,
     timed: (n: string) => `Answer time was recorded for ${n} answers.`,
-    browse: "Browse versions", done: "Done", current: "Current version", older: "Older version", newer: "Newer version",
+    current: "Current version",
     versionN: (key: string) => `Version ${key}`, snapshotN: (n: string) => `Snapshot ${n}`, attempts: (n: string) => `${n} attempts`,
-    timeline: "Versions", now: "Now", showing: "Showing", showCurrent: "Current", showPast: "Earlier",
-    onlyOne: "There's only one version so far. Each time you publish changes, the earlier version appears here.",
     snapshotsNote: "Snapshots are the questions saved with each attempt. Question pools can draw different sets, so a new snapshot is not always a new publication.",
-    changes: (c: string, a: string, r: string) => `${c} changed · ${a} added · ${r} removed`, noChanges: "No changes from the current version",
-    added: "Added", removed: "Removed", changed: "Changed", keyChanged: "Answer key changed",
-    marks: (n: number, f: string) => (n === 1 ? "1 mark" : `${f} marks`), limit: (n: string) => `${n} s limit`, answerKey: "Correct answer",
   },
   ar: {
     title: "رؤى التدريس",
@@ -70,14 +64,9 @@ const copy = {
     commonWrong: "أكثر إجابة خاطئة اختيارًا", students: (n: string) => `${n} طالب`,
     tooFast: (n: string) => `${n} إجابة وصلت أسرع من أن يقرأ أحد السؤال. تستحق نظرة هادئة؛ الدرجات لا تتغير.`,
     timed: (n: string) => `سُجّل زمن الإجابة لـ ${n} إجابة.`,
-    browse: "تصفّح النسخ", done: "تم", current: "النسخة الحالية", older: "نسخة أقدم", newer: "نسخة أحدث",
+    current: "النسخة الحالية",
     versionN: (key: string) => `النسخة ${key}`, snapshotN: (n: string) => `اللقطة ${n}`, attempts: (n: string) => `${n} محاولة`,
-    timeline: "النسخ", now: "الآن", showing: "عرض", showCurrent: "الحالية", showPast: "الأقدم",
-    onlyOne: "توجد نسخة واحدة حتى الآن. كلما نشرت تغييرات تظهر النسخة السابقة هنا.",
     snapshotsNote: "اللقطات هي الأسئلة المحفوظة مع كل محاولة. قد تسحب بنوك الأسئلة مجموعات مختلفة، فاللقطة الجديدة ليست دائمًا نشرًا جديدًا.",
-    changes: (c: string, a: string, r: string) => `${c} تغيّر · ${a} أُضيف · ${r} أُزيل`, noChanges: "لا تغييرات عن النسخة الحالية",
-    added: "أُضيف", removed: "أُزيل", changed: "تغيّر", keyChanged: "تغيّر مفتاح الإجابة",
-    marks: (n: number, f: string) => (n === 1 ? "درجة واحدة" : n === 2 ? "درجتان" : n >= 3 && n <= 10 ? `${f} درجات` : `${f} درجة`), limit: (n: string) => `مهلة ${n} ث`, answerKey: "الإجابة الصحيحة",
   },
 };
 type T = (typeof copy)["en"];
@@ -108,7 +97,7 @@ export default function TeachingInsights(target: Target) {
           <ChevronRight size={18} aria-hidden className="ti-row__chevron rtl:rotate-180" />
         </button>
       </div>
-      {browsing && <VersionBrowser target={target} t={t} onClose={() => setBrowsing(false)} />}
+      {browsing && <VersionHistory target={target} t={t} onClose={() => setBrowsing(false)} />}
     </section>
   );
 }
@@ -197,171 +186,20 @@ function Detective({ target, t }: { target: Target; t: T }) {
   );
 }
 
-/* ── Version history: Preview's "Browse All Versions" ───────────────── */
+/* ── Version history: the shared browser (components/versions) over quiz versions or snapshots ── */
 
-type Change = "added" | "removed" | "changed" | "same";
-const same = (a: VQuestion, b: VQuestion) => JSON.stringify(a) === JSON.stringify(b);
-function compare(base: Version | undefined, other: Version | undefined) {
-  const theirs = new Map(other?.questions.map((q) => [q.id, q]) ?? []);
-  const mine = new Map(base?.questions.map((q) => [q.id, q]) ?? []);
-  const change = (q: VQuestion, side: "base" | "other"): Change => {
-    const counterpart = side === "base" ? theirs.get(q.id) : mine.get(q.id);
-    if (!counterpart) return side === "base" ? "added" : "removed";
-    return same(q, counterpart) ? "same" : "changed";
-  };
-  const counts = { changed: 0, added: 0, removed: 0 };
-  for (const q of base?.questions ?? []) { const c = change(q, "base"); if (c === "changed" || c === "added") counts[c]++; }
-  for (const q of other?.questions ?? []) if (!mine.has(q.id)) counts.removed++;
-  return { theirs, mine, change, counts };
-}
-
-function VersionBrowser({ target, t, onClose }: { target: Target; t: T; onClose: () => void }) {
+function VersionHistory({ target, t, onClose }: { target: Target; t: T; onClose: () => void }) {
   const { locale } = useLocale();
   const fmt = (n: number) => formatNumber(locale, n);
   const report = useReport(target);
-  const dialog = useModal<HTMLDivElement>({ onClose });
-  const [selected, setSelected] = useState(0);
-  const [phoneView, setPhoneView] = useState<"past" | "current">("past");
-  const versions = report?.versions ?? [];
-  const current = versions[0];
-  const past = versions.slice(1);
-  const pick = (i: number) => { if (i >= 0 && i < past.length) { setSelected(i); setPhoneView("past"); } };
-  const name = (v: Version) => (target.formId ? t.versionN(v.key) : t.snapshotN(fmt(versions.length - versions.indexOf(v))));
-  const when = (v: Version) => formatDateTime(locale, v.at, { dateStyle: "medium", timeStyle: "short" });
-  const diff = compare(current, past[selected]);
-  useEffect(() => {
-    const el = dialog.current;
-    if (!el) return;
-    const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest("input, textarea")) return;
-      if (e.key === "ArrowUp" || e.key === "PageUp") { e.preventDefault(); setSelected((s) => Math.min(past.length - 1, s + 1)); }
-      if (e.key === "ArrowDown" || e.key === "PageDown") { e.preventDefault(); setSelected((s) => Math.max(0, s - 1)); }
-    };
-    el.addEventListener("keydown", onKey);
-    return () => el.removeEventListener("keydown", onKey);
-  }, [dialog, past.length]);
-  const totals = diff.counts;
+  const versions = (report?.versions ?? []).map((v, i, all) => ({
+    ...v, key: String(v.key), name: target.formId ? t.versionN(String(v.key)) : t.snapshotN(fmt(all.length - i)), detail: i > 0 ? t.attempts(fmt(v.attempts)) : undefined,
+  }));
   return (
-    <div ref={dialog} className="vb" role="dialog" aria-modal="true" aria-label={t.history} tabIndex={-1} dir={locale === "ar" ? "rtl" : "ltr"} data-phone-view={phoneView}>
-      <div className="vb-backdrop" aria-hidden />
-      {report === undefined ? (
-        <p className="vb-status" role="status">{t.loading}</p>
-      ) : report === null || !current ? (
-        <p className="vb-status">{t.unavailable}</p>
-      ) : (
-        <>
-          <div className="vb-phone-switch ws-segmented" role="group" aria-label={t.showing}>
-            <button type="button" aria-pressed={phoneView === "past"} disabled={!past.length} onClick={() => setPhoneView("past")}>{t.showPast}</button>
-            <button type="button" aria-pressed={phoneView === "current"} onClick={() => setPhoneView("current")}>{t.showCurrent}</button>
-          </div>
-          <div className="vb-layout">
-            <section className="vb-pane vb-pane--current" aria-label={t.current}>
-              <div className="vb-stack">
-                <VersionDoc version={current} title={name(current)} t={t} fmt={fmt} change={past[selected] ? (q) => diff.change(q, "base") : undefined} counterpart={diff.theirs} side="base" />
-              </div>
-              <p className="vb-caption"><strong>{t.current}</strong><span>{when(current)}</span></p>
-            </section>
-            <section className="vb-pane vb-pane--past" aria-label={past[selected] ? `${name(past[selected])}, ${when(past[selected])}` : t.older}>
-              {past.length === 0 ? (
-                <div className="vb-stack"><div className="vb-doc vb-doc--empty"><History size={26} aria-hidden /><p>{t.onlyOne}</p></div></div>
-              ) : (
-                <div className="vb-stack">
-                  {past.map((v, i) => {
-                    const d = i - selected;
-                    if (d > 3 || d < -1) return null;
-                    return (
-                      <div key={v.key} className="vb-card" data-depth={d < 0 ? "ahead" : d} style={{ ["--d" as string]: Math.max(0, d) }} aria-hidden={d !== 0 || undefined}
-                        onClick={d > 0 ? () => pick(i) : undefined}>
-                        <VersionDoc version={v} title={name(v)} t={t} fmt={fmt} change={d === 0 ? (q) => diff.change(q, "other") : undefined} counterpart={diff.mine} side="other" />
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-              {past[selected] && <p key={past[selected].key} className="vb-caption" data-swap><strong>{name(past[selected])}</strong><span>{when(past[selected])} · {t.attempts(fmt(past[selected].attempts))}</span></p>}
-            </section>
-            {past.length > 0 && (
-              <nav className="vb-timeline" aria-label={t.timeline}>
-                <button type="button" className="vb-arrow" aria-label={t.older} disabled={selected >= past.length - 1} onClick={() => pick(selected + 1)}><ChevronUp size={18} aria-hidden /></button>
-                <ol>
-                  {[...past].reverse().map((v) => {
-                    const i = past.indexOf(v);
-                    return (
-                      <li key={v.key}>
-                        <button type="button" aria-current={i === selected ? "true" : undefined} onClick={() => pick(i)} aria-label={`${name(v)}, ${when(v)}`}>
-                          <span className="vb-timeline__label">{formatDateTime(locale, v.at, { month: "short", day: "numeric" })}</span>
-                          <span className="vb-timeline__tick" />
-                        </button>
-                      </li>
-                    );
-                  })}
-                  <li aria-hidden className="vb-timeline__now"><span className="vb-timeline__label">{t.now}</span><span className="vb-timeline__tick" /></li>
-                </ol>
-                <button type="button" className="vb-arrow" aria-label={t.newer} disabled={selected <= 0} onClick={() => pick(selected - 1)}><ChevronDown size={18} aria-hidden /></button>
-              </nav>
-            )}
-          </div>
-          <footer className="vb-bar">
-            {past[selected] && (
-              <p className="vb-changes" aria-live="polite">
-                {totals.changed + totals.added + totals.removed === 0 ? t.noChanges : t.changes(fmt(totals.changed), fmt(totals.added), fmt(totals.removed))}
-              </p>
-            )}
-            {!target.formId && past.length > 0 && <p className="vb-footnote">{t.snapshotsNote}</p>}
-            <button type="button" data-close className="vb-done" onClick={onClose}>{t.done}</button>
-          </footer>
-        </>
-      )}
-    </div>
-  );
-}
-
-/** One version as a sheet of paper; changes are marked against the version it is compared with. */
-function VersionDoc({ version, title, t, fmt, change, counterpart, side }: {
-  version: Version; title: string; t: T; fmt: (n: number) => string;
-  change?: (q: VQuestion) => Change; counterpart: Map<string, VQuestion>; side: "base" | "other";
-}) {
-  const label: Record<Exclude<Change, "same">, string> = { added: t.added, removed: t.removed, changed: t.changed };
-  return (
-    <article className="vb-doc">
-      <header className="vb-doc__head"><History size={14} aria-hidden /><span>{title}</span></header>
-      <ol className="vb-questions">
-        {version.questions.map((q, n) => {
-          const c = change?.(q) ?? "same";
-          const other = counterpart.get(q.id);
-          const compared = c === "changed" && other;
-          const keyChanged = compared && JSON.stringify([...q.answerKey].sort()) !== JSON.stringify([...other.answerKey].sort());
-          return (
-            <li key={q.id} className="vb-q" data-change={c} style={{ ["--n" as string]: Math.min(n, 8) }}>
-              <div className="vb-q__head">
-                <span className="vb-q__num">{fmt(n + 1)}</span>
-                <p dir="auto">{compared && other.text !== q.text ? <mark>{q.text}</mark> : q.text}</p>
-                {c !== "same" && <span className="vb-badge" data-change={c}>{label[c]}</span>}
-              </div>
-              {q.options.length > 0 && (
-                <ul className="vb-q__options">
-                  {q.options.map((o, i) => {
-                    const isKey = q.answerKey.includes(o);
-                    const novel = compared && !other.options.includes(o);
-                    return (
-                      <li key={`${i}-${o}`} data-key={isKey || undefined} data-diff={novel ? (side === "base" ? "added" : "removed") : undefined}>
-                        <span className="vb-q__mark" aria-hidden>{isKey ? <Check size={11} strokeWidth={3} /> : null}</span>
-                        <span dir="auto">{o}</span>
-                        {isKey && <span className="sr-only">{t.answerKey}</span>}
-                      </li>
-                    );
-                  })}
-                </ul>
-              )}
-              <p className="vb-q__meta">
-                {compared && other.points !== q.points ? <mark>{t.marks(q.points, fmt(q.points))}</mark> : t.marks(q.points, fmt(q.points))}
-                {q.timeLimit !== null && <> · {t.limit(fmt(q.timeLimit))}</>}
-                {keyChanged && <span className="vb-q__key">{t.keyChanged}</span>}
-              </p>
-            </li>
-          );
-        })}
-      </ol>
-    </article>
+    <VersionBrowser label={t.history} status={report === undefined ? "loading" : report === null ? "unavailable" : "ready"}
+      current={versions[0]} currentLabel={t.current} past={versions.slice(1)} onClose={onClose}
+      footnote={target.formId ? undefined : t.snapshotsNote}
+      counts={(a, b) => compareQuestions(a.questions, b.questions).counts}
+      sheet={(v, { against, side }) => <QuestionSheet questions={v.questions} against={against?.questions} side={side} />} />
   );
 }
