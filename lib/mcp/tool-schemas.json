@@ -1418,6 +1418,10 @@
       "description": "true for a scored quiz with an answer key.",
       "type": "boolean"
      },
+     "showAnswers": {
+      "description": "Quiz mode only: after submitting, respondents see which answers were right, the correct answers and the explanations (default true). false shows only their marks, for tests whose key must stay private.",
+      "type": "boolean"
+     },
      "presentation": {
       "description": "page = all questions on one page (default); one_at_a_time = one question per screen; sections = one page per section; swipe = full-screen cards.",
       "type": "string",
@@ -14823,6 +14827,10 @@
        },
        "quizMode": {
         "description": "true for a scored quiz with an answer key.",
+        "type": "boolean"
+       },
+       "showAnswers": {
+        "description": "Quiz mode only: after submitting, respondents see which answers were right, the correct answers and the explanations (default true). false shows only their marks, for tests whose key must stay private.",
         "type": "boolean"
        },
        "presentation": {
