@@ -65,54 +65,23 @@ describe("assessment fork provenance", () => {
     await t.run(ctx => ctx.db.patch("forms", ids.formId, { status: "live", publishedVersion: 2 }));
     await expect(other.mutation(fork, input)).rejects.toThrow("UNAUTHORIZED");
   });
-  it("classic snapshots survive republication and never copy unpublished question edits", async () => {
-    const { t, owner, other } = await setup();
-    const quizId = await t.run(async ctx => {
-      const id = await ctx.db.insert("quizzes", { creatorId: creatorIdentity.subject, creatorUsername: "creator", title: "Draft title", slug: "parent", isPublished: true, publishedAt: 10, createdAt: 0, updatedAt: 11 });
-      const qid = await ctx.db.insert("questions", { quizId: id, type: "mcq", questionText: "Draft changed", options: ["A", "B"], correctAnswer: "A", points: 1, order: 0 });
-      await ctx.db.patch("quizzes", id, { publishedSnapshot: { title: "Published title", questions: [{ _id: qid, type: "mcq", questionText: "Published question", options: ["A", "B"], correctAnswer: "A", points: 1, order: 0 }] } });
-      return id;
-    });
-    await expect(other.mutation(fork, { asset: { kind: "quiz", id: quizId }, expectedPublishedAt: 9 })).rejects.toThrow("CONFLICT");
-    const copy = await other.mutation(fork, { asset: { kind: "quiz", id: quizId }, expectedPublishedAt: 10 });
-    if (copy.asset.kind !== "quiz") throw new Error("wrong asset");
-    const saved = await other.query(lineage, copy);
-    await t.run(async ctx => {
-      const privateCopy = await ctx.db.get("quizzes", copy.asset.id as typeof quizId);
-      expect(privateCopy?.isPublished).toBe(false); expect(privateCopy?.publishedSnapshot).toBeUndefined();
-    });
-    await t.run(async ctx => {
-      const questions = await ctx.db.query("questions").withIndex("by_quiz", q => q.eq("quizId", copy.asset.id as typeof quizId)).take(200);
-      await ctx.db.patch("quizzes", copy.asset.id as typeof quizId, { isPublished: true, publishedAt: 15, publishedSnapshot: { title: "Fork published", questions: questions.map(({ _creationTime: _time, quizId: _quiz, deletedAt: _deleted, ...question }) => ({ ...question, correctAnswer: "B" })) } });
-    });
-    const grandchild = await owner.mutation(fork, { asset: copy.asset, expectedPublishedAt: 15 });
-    const descendant = await owner.query(lineage, grandchild);
-    expect(descendant.root).toEqual({ kind: "quiz", id: quizId }); expect(descendant.parent).toEqual(copy.asset); expect(descendant.rootVersion).toEqual(saved.rootVersion); expect(descendant.depth).toBe(2);
-    await t.run(async ctx => {
-      const q = await ctx.db.get("quizzes", copy.asset.id as typeof quizId);
-      expect(q?.creatorId).toBe(otherCreatorIdentity.subject);
-      const questions = await ctx.db.query("questions").withIndex("by_quiz", q => q.eq("quizId", copy.asset.id as typeof quizId)).take(5);
-      expect(questions[0].questionText).toBe("Published question");
-      // Someone else's answer key is not copied.
-      expect(questions[0].correctAnswer).toBeUndefined();
-      await ctx.db.patch("quizzes", quizId, { publishedAt: 20, publishedSnapshot: { title: "New publication", questions: [] } });
-      const snap = await ctx.db.get("quizForkSnapshots", saved.parentVersion.id);
-      expect(snap?.snapshot.title).toBe("Published title");
-    });
-    await expect(owner.query(lineage, copy)).rejects.toThrow("UNAUTHORIZED");
-    await t.run(ctx => ctx.db.patch("quizzes", quizId, { isBanned: true }));
-    await expect(owner.mutation(fork, { asset: { kind: "quiz", id: quizId }, expectedPublishedAt: 20 })).rejects.toThrow("UNAUTHORIZED");
-  });
   it("refuses restricted actors through the internal MCP entrypoint", async () => {
     const { t } = await setup();
     await t.run(async ctx => {
       const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", otherCreatorIdentity.subject)).unique();
       await ctx.db.patch("users", user!._id, { isBanned: true });
     });
-    const id = await t.run(ctx => ctx.db.insert("quizzes", { creatorId: creatorIdentity.subject, creatorUsername: "creator", title: "Private", slug: "private", isPublished: false, createdAt: 0, updatedAt: 0 }));
+    const { formId, versionId } = await t.run(async ctx => {
+      const formId = await ctx.db.insert("forms", { ownerId: creatorIdentity.subject, title: "Private", shareId: "private", status: "draft", draft: emptyDefinition("Private"), draftRevision: 1, settings: defaultFormSettings, responseCount: 0, partialCount: 0, createdAt: 0, updatedAt: 0 });
+      const versionId = await ctx.db.insert("formVersions", { formId, version: 1, definition: emptyDefinition("Private"), publishedAt: 1, publishedBy: "Casey", draftRevision: 1 });
+      return { formId, versionId };
+    });
+    const asset = { kind: "form" as const, id: formId };
     const mcpFork = makeFunctionReference<"mutation">("quizForks:mcpFork");
-    await expect(t.mutation(mcpFork, { userId: otherCreatorIdentity.subject, asset: { kind: "quiz", id }, expectedPublishedAt: 1 })).rejects.toThrow("ACCOUNT_RESTRICTED");
-    await expect(t.withIdentity(otherCreatorIdentity).mutation(fork, { asset: { kind: "quiz", id }, expectedPublishedAt: 1 })).rejects.toThrow("BANNED");
-    await expect(t.withIdentity(creatorIdentity).mutation(fork, { asset: { kind: "quiz", id }, expectedPublishedAt: 1 })).rejects.toThrow("UNAUTHORIZED");
+    await expect(t.mutation(mcpFork, { userId: otherCreatorIdentity.subject, asset, formVersionId: versionId })).rejects.toThrow("ACCOUNT_RESTRICTED");
+    await expect(t.withIdentity(otherCreatorIdentity).mutation(fork, { asset, formVersionId: versionId })).rejects.toThrow("BANNED");
+    // A classic quiz can no longer be forked; it is rejected by the argument validator.
+    const quizId = await t.run(ctx => ctx.db.insert("quizzes", { creatorId: creatorIdentity.subject, creatorUsername: "creator", title: "Classic", slug: "classic", isPublished: true, createdAt: 0, updatedAt: 0 }));
+    await expect(t.withIdentity(creatorIdentity).mutation(fork, { asset: { kind: "quiz", id: quizId }, expectedPublishedAt: 1 })).rejects.toThrow("Validator");
   });
 });

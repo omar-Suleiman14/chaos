@@ -23,7 +23,7 @@ const courses = [{ id: "course1", title: "Night sky course", description: "", le
 const games: { _id: string; title: string; formId: string; state: string; createdAt: number }[] = [];
 function liveQuery(ref: Parameters<typeof getFunctionName>[0]) {
   const name = getFunctionName(ref);
-  return name === "forms:listMyForms" ? forms : name === "quizFunctions:getMyQuizzes" ? [] : name === "courses:listMine" ? courses : name === "live:myGames" ? games : undefined;
+  return name === "forms:listMyForms" ? forms : name === "courses:listMine" ? courses : name === "live:myGames" ? games : undefined;
 }
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/dashboard" }));
 vi.mock("@/components/ThemeProvider", () => ({ useTheme: () => ({ toggleTheme: vi.fn() }) }));

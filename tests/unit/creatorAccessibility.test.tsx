@@ -3,7 +3,6 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import { describe, expect, it, vi } from "vitest";
 import { axe } from "vitest-axe";
 import { WsConfirm } from "@/components/workspace/primitives";
-import { moveItem } from "@/app/[lang]/(app)/dashboard/editor/editor-draft";
 
 function Example({ onConfirm }: { onConfirm: () => void }) {
   const [open, setOpen] = useState(false);
@@ -38,15 +37,5 @@ describe("confirmation dialog", () => {
     fireEvent.click(within(screen.getByRole("dialog")).getByRole("button", { name: "Delete" }));
     expect(onConfirm).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole("dialog")).toBeNull();
-  });
-});
-
-describe("keyboard reorder", () => {
-  it("moves an item by one place and stays inside the list", () => {
-    expect(moveItem(["a", "b", "c"], 1, -1)).toEqual(["b", "a", "c"]);
-    expect(moveItem(["a", "b", "c"], 1, 1)).toEqual(["a", "c", "b"]);
-    const list = ["a", "b"];
-    expect(moveItem(list, 0, -1)).toBe(list);
-    expect(moveItem(list, 1, 1)).toBe(list);
   });
 });

@@ -30,7 +30,7 @@ it("keeps public inline form quiz metadata frozen and responses on the original 
   expect(await t.query(api.learnFrontend.embeddedQuiz, { asset: { kind: "form", id: "invalid" } })).toBeNull();
 });
 
-it("pages owner quiz choices without exposing another creator and keeps classic snapshot URLs", async () => {
+it("pages owner quiz choices without exposing another creator and shows no unconverted classic quiz", async () => {
   vi.stubEnv("CLERK_JWT_ISSUER_DOMAIN", creatorIdentity.issuer);
   const t = createTestConvex(), owner = t.withIdentity(creatorIdentity), other = t.withIdentity(otherCreatorIdentity);
   await owner.mutation(api.quizFunctions.getOrCreateUser, {});
@@ -42,16 +42,15 @@ it("pages owner quiz choices without exposing another creator and keeps classic 
   expect(choices.page.map(q => q.title)).toEqual(["Own draft"]);
   expect(choices.page[0].published).toBe(false);
   await expect(t.query(api.learnLibrary.quizChoices, { kind: "form", paginationOpts: options })).rejects.toThrow();
-  await expect(owner.query(api.learnLibrary.quizChoices, { kind: "quiz", paginationOpts: { numItems: 101, cursor: null } })).rejects.toThrow("1..100");
+  await expect(owner.query(api.learnLibrary.quizChoices, { kind: "form", paginationOpts: { numItems: 101, cursor: null } })).rejects.toThrow("1..100");
   const quizId = await t.run(async ctx => {
     const id = await ctx.db.insert("quizzes", { ...quizFixture, title: "Private changed draft", creatorId: creatorIdentity.subject, creatorUsername: "creator" });
     const question = await ctx.db.insert("questions", { ...questionFixtures.mcq, quizId: id });
     await ctx.db.patch("quizzes", id, { publishedSnapshot: { title: "Published checkpoint", questions: [{ ...questionFixtures.mcq, _id: question }] } });
     return id;
   });
-  expect(await t.query(api.learnFrontend.embeddedQuiz, { asset: { kind: "quiz", id: quizId } })).toEqual({ title: "Published checkpoint", shareId: null, href: "/creator/fixture-quiz", questionCount: 1 });
-  expect((await owner.query(api.learnLibrary.quizChoices, { kind: "quiz", paginationOpts: options })).page[0]).toMatchObject({ id: quizId, published: true });
-  await t.run(ctx => ctx.db.patch("quizzes", quizId, { isBanned: true }));
+  // Classic quizzes were converted to quiz forms; a block still naming one renders nothing.
   expect(await t.query(api.learnFrontend.embeddedQuiz, { asset: { kind: "quiz", id: quizId } })).toBeNull();
+  expect((await owner.query(api.learnLibrary.quizChoices, { kind: "form", paginationOpts: options })).page.map(q => q.title)).toEqual(["Own draft"]);
   expect(await t.query(api.learnFrontend.embeddedQuiz, { asset: { kind: "quiz", id: "invalid" } })).toBeNull();
 });

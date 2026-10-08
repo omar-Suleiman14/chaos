@@ -2,7 +2,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import { api } from "@/convex/_generated/api";
 import type { FunctionArgs } from "convex/server";
 import { createTestConvex } from "./setup";
-import { quizFixture } from "../fixtures";
+import { emptyDefinition } from "@/convex/formLogic";
+import { defaultFormSettings } from "@/convex/formModel";
 
 const secret = "admin-parity-test-secret-at-least-32-characters";
 const adminId = "user_AdminParity", memberId = "user_MemberParity";
@@ -14,9 +15,9 @@ async function setup() {
     const admin = await ctx.db.insert("users", { clerkId: adminId, name: "Admin", email: "admin@example.com", username: "admin", createdAt: 0 });
     const member = await ctx.db.insert("users", { clerkId: memberId, name: "Member", email: "member@example.com", username: "member", createdAt: 0 });
     await ctx.db.insert("admins", { clerkId: adminId, email: "admin@example.com", grantedAt: 0 });
-    const quiz = await ctx.db.insert("quizzes", { ...quizFixture, creatorId: memberId, creatorUsername: "member" });
+    const form = await ctx.db.insert("forms", { ownerId: memberId, title: "Member quiz", shareId: "member-quiz", status: "live", draft: { ...emptyDefinition("Member quiz"), quiz: { enabled: true } }, draftRevision: 0, settings: defaultFormSettings, publishedVersion: 1, responseCount: 0, partialCount: 0, createdAt: 0, updatedAt: 0 });
     const contact = await ctx.db.insert("crmContacts", { name: "School", email: "school@example.com", organization: "School", owner: "Admin", source: "Referral", stage: "new", nextFollowUp: 123456, createdAt: 0, updatedAt: 0 });
-    return { admin, member, quiz, contact };
+    return { admin, member, form, contact };
   });
   const send = (tool: string, input: Record<string, unknown> = {}, userId = adminId, key = secret) => t.fetch("/api/mcp/v1", { method: "POST", headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" }, body: JSON.stringify({ tool, input, userId }) });
   const identity = { subject: adminId, tokenIdentifier: `https://test.example|${adminId}`, issuer: "https://test.example" };
@@ -28,7 +29,7 @@ it("matches all UI reads and serializes activity through the verified transport"
   const { send, admin, ids } = await setup();
   for (const [tool, input, expected] of [
     ["list_admin_users", { paginationOpts }, await admin.query(api.admin.users, { paginationOpts })],
-    ["list_admin_content", { kind: "quizzes", paginationOpts }, await admin.query(api.admin.content, { kind: "quizzes", paginationOpts })],
+    ["list_admin_content", { kind: "forms", paginationOpts }, await admin.query(api.admin.content, { kind: "forms", paginationOpts })],
     ["list_admin_teams", { paginationOpts }, await admin.query(api.admin.teams, { paginationOpts })],
     ["get_admin_overview", {}, { overview: await admin.query(api.adminAnalytics.overview, {}) }],
     ["list_admin_activity", {}, { activity: await admin.query(api.admin.activity, {}) }],
@@ -50,9 +51,9 @@ it("reuses moderation and CRM mutations with trusted audit attribution and no ac
   expect((await send("moderate_admin_user", { accountId: ids.member, state: "suspended", days: 3, reason: "Requested suspension", userId: memberId })).status).toBe(200);
   expect(await t.run(ctx => ctx.db.get("users", ids.member))).toMatchObject({ suspendedUntil: expect.any(Number), moderationReason: "Requested suspension" });
   expect((await send("moderate_admin_user", { accountId: ids.member, state: "active", reason: "Restore" })).status).toBe(200);
-  expect((await send("moderate_admin_content", { targetId: ids.quiz, hold: true, reason: "Review", userId: memberId })).status).toBe(200);
-  expect(await t.run(ctx => ctx.db.get("quizzes", ids.quiz))).toMatchObject({ isBanned: true, isPublished: false });
-  expect((await send("moderate_admin_content", { targetId: ids.quiz, hold: false, reason: "Reviewed" })).status).toBe(200);
+  expect((await send("moderate_admin_content", { targetId: ids.form, hold: true, reason: "Review", userId: memberId })).status).toBe(200);
+  expect(await t.run(ctx => ctx.db.get("forms", ids.form))).toMatchObject({ isBanned: true, status: "closed" });
+  expect((await send("moderate_admin_content", { targetId: ids.form, hold: false, reason: "Reviewed" })).status).toBe(200);
   expect((await send("set_crm_contact_stages", { contactIds: [ids.contact, ids.contact], stage: "active", userId: memberId })).status).toBe(200);
   expect((await send("complete_crm_follow_up", { contactId: ids.contact, userId: memberId })).status).toBe(200);
   expect(await admin.query(api.admin.contact, { contactId: ids.contact })).toMatchObject({ stage: "active" });
@@ -78,7 +79,7 @@ it("rejects unauthenticated, non-admin, revoked and restricted actors on every o
     ["list_admin_content", { kind: "forms", paginationOpts }], ["list_admin_learning_content", { kind: "courses", paginationOpts }],
     ["list_admin_teams", { paginationOpts }], ["list_admin_activity", {}],
     ["moderate_admin_user", { accountId: ids.member, state: "banned", reason: "Denied" }],
-    ["moderate_admin_content", { targetId: ids.quiz, hold: true, reason: "Denied" }],
+    ["moderate_admin_content", { targetId: ids.form, hold: true, reason: "Denied" }],
     ["get_crm_activity", { contactId: ids.contact }], ["set_crm_contact_stages", { contactIds: [ids.contact], stage: "closed" }], ["complete_crm_follow_up", { contactId: ids.contact }],
   ] as const;
   expect((await send("list_admin_users", { paginationOpts }, adminId, "wrong")).status).toBe(401);

@@ -1,11 +1,19 @@
 import type { Answers, FormDefinition, FormField } from "./formLogic";
 import { visibleFieldIds } from "./formLogic";
-import { sameSet } from "./grading";
 
 export interface QuizGrade {
   score: number;
   maxScore: number;
   questions: { fieldId: string; earned: number; possible: number }[];
+}
+
+/** Exact set equality after the given normaliser; duplicates in either list are ignored. */
+export function sameSet(selected: string[], correct: string[], norm: (s: string) => string = (s) => s.trim().toLowerCase()): boolean {
+  const a = new Set(selected.map(norm).filter(Boolean));
+  const b = new Set(correct.map(norm).filter(Boolean));
+  if (b.size === 0 || a.size !== b.size) return false;
+  for (const x of a) if (!b.has(x)) return false;
+  return true;
 }
 
 /**

@@ -54,7 +54,6 @@ import type * as formSchedule from "../formSchedule.js";
 import type * as formSegmentAnalysis from "../formSegmentAnalysis.js";
 import type * as formTemplates from "../formTemplates.js";
 import type * as forms from "../forms.js";
-import type * as grading from "../grading.js";
 import type * as homework from "../homework.js";
 import type * as homeworkModel from "../homeworkModel.js";
 import type * as homeworkUploadAccess from "../homeworkUploadAccess.js";
@@ -205,7 +204,6 @@ declare const fullApi: ApiFromModules<{
   formSegmentAnalysis: typeof formSegmentAnalysis;
   formTemplates: typeof formTemplates;
   forms: typeof forms;
-  grading: typeof grading;
   homework: typeof homework;
   homeworkModel: typeof homeworkModel;
   homeworkUploadAccess: typeof homeworkUploadAccess;

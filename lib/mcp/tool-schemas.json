@@ -978,7 +978,7 @@
   },
   "attach_lesson_quiz": {
    "title": null,
-   "description": "Attach an owned existing quiz to an owned lesson by stable identity. Quizzes are forms: pass asset {kind:\"form\", id} with the id create_form, create_game_draft or search_forms returned. Updates label/order idempotently; creates no quiz copy and never publishes.",
+   "description": "Attach an owned existing quiz to an owned lesson by stable identity. Quizzes are forms: pass asset {kind:\"form\", id} with the id create_form, create_game_draft or search_forms returned (kind \"quiz\" with the same id also works). Updates label/order idempotently; creates no quiz copy and never publishes.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,
@@ -995,21 +995,43 @@
       "maxLength": 100
      },
      "asset": {
-      "type": "object",
-      "properties": {
-       "kind": {
-        "type": "string",
-        "const": "form"
+      "oneOf": [
+       {
+        "type": "object",
+        "properties": {
+         "kind": {
+          "type": "string",
+          "const": "form"
+         },
+         "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+         }
+        },
+        "required": [
+         "kind",
+         "id"
+        ]
        },
-       "id": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 100
+       {
+        "type": "object",
+        "properties": {
+         "kind": {
+          "type": "string",
+          "const": "quiz"
+         },
+         "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+         }
+        },
+        "required": [
+         "kind",
+         "id"
+        ]
        }
-      },
-      "required": [
-       "kind",
-       "id"
       ]
      },
      "label": {
@@ -3101,21 +3123,43 @@
       "maxLength": 100
      },
      "asset": {
-      "type": "object",
-      "properties": {
-       "kind": {
-        "type": "string",
-        "const": "form"
+      "oneOf": [
+       {
+        "type": "object",
+        "properties": {
+         "kind": {
+          "type": "string",
+          "const": "form"
+         },
+         "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+         }
+        },
+        "required": [
+         "kind",
+         "id"
+        ]
        },
-       "id": {
-        "type": "string",
-        "minLength": 1,
-        "maxLength": 100
+       {
+        "type": "object",
+        "properties": {
+         "kind": {
+          "type": "string",
+          "const": "quiz"
+         },
+         "id": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 100
+         }
+        },
+        "required": [
+         "kind",
+         "id"
+        ]
        }
-      },
-      "required": [
-       "kind",
-       "id"
       ]
      }
     },

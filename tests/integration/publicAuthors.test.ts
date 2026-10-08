@@ -4,7 +4,7 @@ import type { MutationCtx } from "../../convex/_generated/server";
 import { authorDb, syncAuthorAsset } from "../../convex/authorIndex";
 import { defaultFormSettings } from "../../convex/formModel";
 import { createTestConvex } from "./setup";
-import { creatorIdentity, questionFixtures } from "../fixtures";
+import { creatorIdentity } from "../fixtures";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -18,8 +18,12 @@ const definition = {
 async function user(ctx: MutationCtx, username = "author", extra = {}) {
   return ctx.db.insert("users", { clerkId: username, username, name: "Author Name", email: "private@example.test", createdAt: 123, ...extra });
 }
-async function quiz(ctx: MutationCtx, ownerId = "author") {
-  return authorDb(ctx).insert("quizzes", { creatorId: ownerId, creatorUsername: ownerId, title: "Draft", slug: "quiz", isPublished: true, publishedSnapshot: { title: "Published", questions: [] }, createdAt: 123, updatedAt: 123 });
+const indexedSettings = { ...defaultFormSettings, allowIndexing: true };
+/** A live, indexable form row and (optionally) its published version, written without the author index. */
+async function rawForm(ctx: MutationCtx, ownerId: string, shareId: string, published = true) {
+  const formId = await ctx.db.insert("forms", { ownerId, title: "Form", shareId, status: published ? "live" : "draft", draft: definition, draftRevision: 0, settings: indexedSettings, ...(published ? { publishedVersion: 1 } : {}), responseCount: 0, partialCount: 0, createdAt: 1, updatedAt: 1 });
+  if (published) await ctx.db.insert("formVersions", { formId, version: 1, definition, publishedAt: 1, publishedBy: ownerId, draftRevision: 0 });
+  return formId;
 }
 const pageArgs = { paginationOpts: { numItems: 24, cursor: null } };
 
@@ -27,17 +31,28 @@ it("indexes normal creator publication automatically and removes it on unpublish
   vi.stubEnv("CLERK_JWT_ISSUER_DOMAIN", creatorIdentity.issuer);
   const t = createTestConvex(), owner = t.withIdentity(creatorIdentity);
   await owner.mutation(api.quizFunctions.getOrCreateUser, {});
-  const quizId = await owner.mutation(api.quizFunctions.createQuiz, { title: "Directory quiz" });
-  await owner.mutation(api.quizFunctions.addQuestion, { quizId, ...questionFixtures.mcq });
+  const formId = await owner.mutation(api.forms.createForm, { title: "Directory quiz", quizMode: true });
+  const editor = (await owner.query(api.forms.getFormForEditor, { formId }))!;
+  const { hasAccessCode: _drop, accessCodeHash: _hash, ...settings } = editor.settings;
+  void _drop; void _hash;
+  await owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...settings, allowIndexing: true } });
+  const saved = await owner.mutation(api.forms.saveFormDraft, {
+    formId,
+    expectedRevision: editor.draftRevision,
+    definition: {
+      ...editor.draft,
+      fields: [{ id: "q", type: "choice" as const, label: "2 + 2?", required: true, options: [{ id: "a", label: "4" }, { id: "b", label: "5" }], quiz: { correctOptionIds: ["a"], points: 1 } }],
+    },
+  });
   expect((await t.query(api.publicAuthors.browse, pageArgs)).page).toEqual([]);
-  await owner.mutation(api.quizFunctions.publishQuiz, { quizId });
+  await owner.mutation(api.forms.publishForm, { formId, expectedRevision: saved.draftRevision });
   expect((await t.query(api.publicAuthors.browse, pageArgs)).page).toHaveLength(1);
   // Repeated publication is one membership, not another author or increment.
-  await owner.mutation(api.quizFunctions.publishQuiz, { quizId });
+  await owner.mutation(api.forms.publishForm, { formId, expectedRevision: saved.draftRevision });
   await t.run(async ctx => {
     expect((await ctx.db.query("users").first())!.publicAuthorAssets).toBe(1);
   });
-  await owner.mutation(api.quizFunctions.unpublishQuiz, { quizId });
+  await owner.mutation(api.forms.setFormStatus, { formId, status: "closed" });
   expect((await t.query(api.publicAuthors.browse, pageArgs)).page).toEqual([]);
 });
 
@@ -45,26 +60,27 @@ it("updates author membership atomically across publish, ownership transfer, rep
   const t = createTestConvex();
   const ids = await t.run(async ctx => {
     const first = await user(ctx), second = await user(ctx, "second");
-    const id = await authorDb(ctx).insert("quizzes", { creatorId: "author", creatorUsername: "author", title: "Draft", slug: "draft", isPublished: false, createdAt: 1, updatedAt: 1 });
+    const id = await authorDb(ctx).insert("forms", { ownerId: "author", title: "Draft", shareId: "draft", status: "draft", draft: definition, draftRevision: 0, settings: indexedSettings, responseCount: 0, partialCount: 0, createdAt: 1, updatedAt: 1 });
     return { first, second, id };
   });
   expect((await t.query(api.publicAuthors.browse, pageArgs)).page).toEqual([]);
   await t.run(async ctx => {
-    await authorDb(ctx).patch("quizzes", ids.id, { isPublished: true, publishedSnapshot: { title: "Public", questions: [] } });
-    await syncAuthorAsset(ctx, "quizzes", ids.id);
-    await authorDb(ctx).patch("quizzes", ids.id, { title: "Private draft changes" });
+    await ctx.db.insert("formVersions", { formId: ids.id, version: 1, definition, publishedAt: 1, publishedBy: "author", draftRevision: 0 });
+    await authorDb(ctx).patch("forms", ids.id, { status: "live", publishedVersion: 1 });
+    await syncAuthorAsset(ctx, "forms", ids.id);
+    await authorDb(ctx).patch("forms", ids.id, { title: "Private draft changes" });
     expect((await ctx.db.get("users", ids.first))!.publicAuthorAssets).toBe(1);
     expect(await ctx.db.query("publicAuthorAssets").collect()).toHaveLength(1);
-    await authorDb(ctx).patch("quizzes", ids.id, { creatorId: "second", creatorUsername: "second" });
+    await authorDb(ctx).patch("forms", ids.id, { ownerId: "second" });
     expect((await ctx.db.get("users", ids.first))!.publicAuthorAssets).toBe(0);
     expect((await ctx.db.get("users", ids.second))!.publicAuthorAssets).toBe(1);
-    const row = (await ctx.db.get("quizzes", ids.id))!;
+    const row = (await ctx.db.get("forms", ids.id))!;
     const { _id, _creationTime, ...replacement } = row;
     void _id; void _creationTime;
-    await authorDb(ctx).replace("quizzes", ids.id, { ...replacement, isBanned: true });
+    await authorDb(ctx).replace("forms", ids.id, { ...replacement, isBanned: true });
     expect((await ctx.db.get("users", ids.second))!.publicAuthorAssets).toBe(0);
-    await authorDb(ctx).patch("quizzes", ids.id, { isBanned: false });
-    await authorDb(ctx).delete("quizzes", ids.id);
+    await authorDb(ctx).patch("forms", ids.id, { isBanned: false });
+    await authorDb(ctx).delete("forms", ids.id);
     expect((await ctx.db.get("users", ids.second))!.publicAuthorAssets).toBe(0);
     expect(await ctx.db.query("publicAuthorAssets").collect()).toEqual([]);
   });
@@ -123,11 +139,11 @@ it("projects only public card fields and keeps paging past filtered authors", as
   expect(next.isDone).toBe(true);
 });
 
-it("does not accept a missing quiz snapshot or a version belonging to someone else's asset", async () => {
+it("does not accept a missing form snapshot or a version belonging to someone else's asset", async () => {
   const t = createTestConvex();
   await t.run(async ctx => {
     const owner = await user(ctx);
-    await authorDb(ctx).insert("quizzes", { creatorId: "author", creatorUsername: "author", title: "Legacy published flag", slug: "missing-snapshot", isPublished: true, createdAt: 1, updatedAt: 1 });
+    await authorDb(ctx).insert("forms", { ownerId: "author", title: "Published flag without a version", shareId: "missing-snapshot", status: "live", draft: definition, draftRevision: 0, settings: indexedSettings, publishedVersion: 1, responseCount: 0, partialCount: 0, createdAt: 1, updatedAt: 1 });
     const base = { ownerId: "author", metadata, draft: document, revision: 0, status: "active" as const, visibility: "public" as const, communityState: "ok" as const, searchText: "", createdAt: 1, updatedAt: 1 };
     const first = await authorDb(ctx).insert("lessons", base);
     const second = await authorDb(ctx).insert("lessons", base);
@@ -143,9 +159,9 @@ it("backfills multiple pages and all asset phases without duplicating membership
   const t = createTestConvex();
   await t.run(async ctx => {
     await user(ctx);
-    for (let i = 0; i < 25; i++) await ctx.db.insert("quizzes", { creatorId: "author", creatorUsername: "author", title: "Quiz", slug: `old-${i}`, isPublished: true, publishedSnapshot: { title: "Public", questions: [] }, createdAt: 1, updatedAt: 1 });
-    await ctx.db.insert("quizzes", { creatorId: "author", creatorUsername: "author", title: "Unpublished", slug: "unpublished", isPublished: false, createdAt: 1, updatedAt: 1 });
-    await quiz(ctx, "missing-user");
+    for (let i = 0; i < 25; i++) await rawForm(ctx, "author", `old-${i}`);
+    await rawForm(ctx, "author", "unpublished", false);
+    await rawForm(ctx, "missing-user", "orphan");
   });
   for (let i = 0; i < 2; i++) {
     await t.mutation(internal.publicAuthors.backfill, {});

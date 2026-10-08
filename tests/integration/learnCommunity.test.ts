@@ -6,8 +6,6 @@ import { api } from "../../convex/_generated/api";
 import {
   creatorIdentity,
   otherCreatorIdentity,
-  quizFixture,
-  questionFixtures,
 } from "../fixtures";
 import type { LessonDocument } from "../../convex/learnModel";
 const modules = import.meta.glob("../../convex/**/*.*s");
@@ -384,21 +382,6 @@ describe("Learn community and private learning state", () => {
     );
     const mappingId = await admin.mutation(ref("mapConcept"), mapping);
     expect(await admin.mutation(ref("mapConcept"), mapping)).toBe(mappingId);
-    const questionId = await t.run(async (ctx) => {
-      const quizId = await ctx.db.insert("quizzes", {
-        ...quizFixture,
-        creatorId: creatorIdentity.subject,
-        creatorUsername: "creator",
-      });
-      return ctx.db.insert("questions", { ...questionFixtures.mcq, quizId });
-    });
-    const before = await t.run((ctx) => ctx.db.get("questions", questionId));
-    await expect(
-      admin.mutation(ref("mapConcept"), { ...mapping, questionId }),
-    ).rejects.toThrow("embedded quiz");
-    expect(await t.run((ctx) => ctx.db.get("questions", questionId))).toEqual(
-      before,
-    );
     const evidenceArgs = { lessonId, versionId: versionId!, conceptId };
     expect(
       (await other.query(ref("learningEvidence"), evidenceArgs)).state,

@@ -81,18 +81,19 @@ describe("private generic folders", () => {
 
   it("checks asset and membership ownership, deduplicates links and preserves assets", async () => {
     const { t, owner, other, root } = await fixture();
-    const quizId = await t.run(ctx => ctx.db.insert("quizzes", { ...quizFixture, creatorId: creatorIdentity.subject, creatorUsername: creatorIdentity.nickname }));
-    const foreignQuizId = await t.run(ctx => ctx.db.insert("quizzes", { ...quizFixture, creatorId: otherCreatorIdentity.subject, creatorUsername: otherCreatorIdentity.nickname }));
     const formId = await owner.mutation(api.forms.createForm, { definition: emptyDefinition("Owned") });
+    const secondFormId = await owner.mutation(api.forms.createForm, { definition: emptyDefinition("Second") });
     const foreignFormId = await other.mutation(api.forms.createForm, { definition: emptyDefinition("Foreign") });
-    for (const asset of [{ kind: "quiz" as const, id: foreignQuizId }, { kind: "form" as const, id: foreignFormId }]) {
+    // Classic quizzes are no longer folder assets, even the creator's own unconverted ones.
+    const quizId = await t.run(ctx => ctx.db.insert("quizzes", { ...quizFixture, creatorId: creatorIdentity.subject, creatorUsername: creatorIdentity.nickname }));
+    for (const asset of [{ kind: "form" as const, id: foreignFormId }, { kind: "quiz" as const, id: quizId }]) {
       await expect(owner.mutation(f.addMember, { folderId: root, asset })).rejects.toThrow("FOLDER_ASSET_NOT_FOUND");
     }
-    await expect(other.mutation(f.addMember, { folderId: root, asset: { kind: "quiz", id: foreignQuizId } })).rejects.toThrow("FOLDER_NOT_FOUND");
-    const asset = { kind: "quiz" as const, id: quizId };
+    await expect(other.mutation(f.addMember, { folderId: root, asset: { kind: "form", id: foreignFormId } })).rejects.toThrow("FOLDER_NOT_FOUND");
+    const asset = { kind: "form" as const, id: formId };
     const memberId = await owner.mutation(f.addMember, { folderId: root, asset });
     expect(await owner.mutation(f.addMember, { folderId: root, asset })).toBe(memberId);
-    const formMember = await owner.mutation(f.addMember, { folderId: root, asset: { kind: "form", id: formId } });
+    const formMember = await owner.mutation(f.addMember, { folderId: root, asset: { kind: "form", id: secondFormId } });
     expect((await owner.query(f.listMembers, { folderId: root, paginationOpts: page })).page).toHaveLength(2);
     await expect(other.mutation(f.removeMember, { memberId })).rejects.toThrow("FOLDER_MEMBER_NOT_FOUND");
     await expect(owner.mutation(f.remove, { folderId: root })).rejects.toThrow("FOLDER_NOT_EMPTY");
@@ -100,8 +101,8 @@ describe("private generic folders", () => {
     const collectionMember = await owner.mutation(f.addMember, { folderId: root, asset: { kind: "collection", id: collectionId } });
     await owner.mutation(f.removeMember, { memberId: collectionMember });
     await owner.mutation(f.removeMember, { memberId: formMember });
-    expect(await t.run(ctx => ctx.db.get("forms", formId))).not.toBeNull();
-    await t.run(ctx => ctx.db.delete("quizzes", quizId));
+    expect(await t.run(ctx => ctx.db.get("forms", secondFormId))).not.toBeNull();
+    await t.run(ctx => ctx.db.delete("forms", formId));
     await expect(owner.mutation(f.addMember, { folderId: root, asset })).rejects.toThrow("FOLDER_ASSET_NOT_FOUND");
     await owner.mutation(f.removeMember, { memberId });
     await owner.mutation(f.remove, { folderId: root });

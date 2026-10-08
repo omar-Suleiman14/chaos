@@ -1,9 +1,4 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import {
-  readQuizBackup,
-  writeQuizBackup,
-  type QuizBackup,
-} from "@/lib/quizRecovery";
 import { readLiveAnswer, saveLiveAnswer } from "@/lib/liveRecovery";
 import {
   questionQuality,
@@ -26,30 +21,7 @@ afterEach(() => {
   localStorage.clear();
   vi.restoreAllMocks();
 });
-describe("device answer backups and quality signals", () => {
-  it("preserves pending answers and question order across a storage roundtrip", () => {
-    const value: QuizBackup = {
-      version: 1,
-      quizId: "quiz",
-      sessionId: "session",
-      playerName: "Student",
-      questionIds: ["b", "a"],
-      currentQ: 1,
-      selected: { b: "B" },
-      multi: {},
-      written: { a: "Still writing" },
-      opened: { b: 100 },
-      pending: { qId: "a", answer: "Draft", isTimeout: false },
-    };
-    expect(writeQuizBackup(value)).toBe(true);
-    expect(readQuizBackup("quiz")).toEqual(value);
-    expect(readQuizBackup("other")).toBeNull();
-    localStorage.setItem(
-      "chaos-quiz-backup:quiz",
-      JSON.stringify({ ...value, multi: { a: "bad" } }),
-    );
-    expect(readQuizBackup("quiz")).toBeNull();
-  });
+describe("live answer backups and quality signals", () => {
   it("fails safely when storage is disabled and keeps live answers bound to their token and question", () => {
     expect(
       saveLiveAnswer("g", { token: "t", questionIndex: 0, optionIds: ["a"] }),
