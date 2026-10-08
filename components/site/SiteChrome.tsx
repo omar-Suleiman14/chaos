@@ -148,9 +148,9 @@ export function SiteFooter() {
         <nav className="site-footer__cols" aria-label={t.footer}>
           <div>
             <h2>{t.product}</h2>
-            <Link href="/#modes">{t.ways}</Link>
-            <Link href="/#themes">{t.themes}</Link>
-            <Link href="/#features">{t.features}</Link>
+            <Link href="/docs/answer-modes">{t.ways}</Link>
+            <Link href="/docs/themes">{t.themes}</Link>
+            <Link href="/#teach">{t.features}</Link>
             <Link href="/learn">{t.explore}</Link>
             <Link href="/compare">{t.compare}</Link>
             <Link href="/pricing">{t.pricing}</Link>

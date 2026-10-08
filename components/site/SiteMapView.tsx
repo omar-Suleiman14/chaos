@@ -60,7 +60,7 @@ export default function SiteMapView({ docs }: { docs: SiteMapDocSection[] }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
   const explore: Column[] = [
-    { title: t.product, items: [{ label: t.home, href: "/" }, { label: t.ways, href: "/#modes" }, { label: t.themes, href: "/#themes" }, { label: t.features, href: "/#features" }, { label: t.pricing, href: "/pricing" }, { label: t.compare, href: "/compare" }] },
+    { title: t.product, items: [{ label: t.home, href: "/" }, { label: t.ways, href: "/docs/answer-modes" }, { label: t.themes, href: "/docs/themes" }, { label: t.features, href: "/#teach" }, { label: t.pricing, href: "/pricing" }, { label: t.compare, href: "/compare" }] },
     { title: t.learn, items: [{ label: t.courses, href: "/learn" }, { label: t.authors, href: "/card" }, { label: t.play, href: "/play" }] },
     { title: t.connections, items: [{ label: t.claude, href: "/claude" }, { label: t.chatgpt, href: "/chatgpt" }, { label: t.connect, href: "/connect" }, { label: t.api, href: "/docs/integration-api" }, { label: t.webhooks, href: "/docs/webhooks" }] },
   ];
