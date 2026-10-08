@@ -97,7 +97,8 @@ button.lx-badge { cursor: pointer; font-family: inherit; }
 
 /* ── Lesson editor page ─────────────────────────────────────────────────── */
 .lx-edit { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0; width: 100%; max-width: 1180px; margin-inline: auto; }
-.lx-edit__bar { position: sticky; top: 0; z-index: 20; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0; background: var(--background); border-bottom: 1px solid var(--ws-line); }
+/* Sticks below the workspace top bar (52px, .ws-topbar) instead of sliding over its breadcrumbs. */
+.lx-edit__bar { position: sticky; top: 52px; z-index: 19; display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 10px 0; background: var(--background); border-bottom: 1px solid var(--ws-line); }
 .lx-edit__bar .lx-save { font-size: 12px; color: var(--on-surface-variant); display: inline-flex; gap: 6px; align-items: center; }
 .lx-edit__status { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; padding: 4px 9px; border-radius: 999px; background: var(--ws-canvas-subtle); border: 1px solid var(--ws-line); }
 .lx-edit__status[data-state="published"] { color: var(--ws-success); }
