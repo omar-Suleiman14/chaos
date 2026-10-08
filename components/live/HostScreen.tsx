@@ -23,7 +23,7 @@ import "./classroom.css";
 import TeamPanel, { TEAMS_ENABLED } from "./TeamPanel";
 import { toast } from "@/lib/toast";
 import { copyText } from "@/lib/clipboard";
-import { linkOrigin } from "@/lib/hosts";
+import { hasOwnHost, linkOrigin } from "@/lib/hosts";
 import { hostHref } from "@/lib/hosts";
 
 const copy = {
@@ -101,8 +101,10 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
     return () => document.removeEventListener("fullscreenchange", update);
   }, []);
 
-  const origin = linkOrigin("main");
+  // Players join on play.chaos.fail when it is set up; the bare host opens /play, so the lobby shows just the host.
+  const origin = linkOrigin("play");
   const joinUrl = game ? `${origin}/play?pin=${game.pin}` : "";
+  const joinHost = `${origin.replace(/^https?:\/\//, "")}${hasOwnHost("play") ? "" : "/play"}`;
   const qr = useMemo(() => (joinUrl ? qrSvg(joinUrl) : ""), [joinUrl]);
   const copyJoinLink = () => copyText(joinUrl, { success: t.linkCopied, failure: t.copyFailed });
 
@@ -215,7 +217,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
           <>
             <section className="live-join live-card" aria-label={t.withPin}>
               <div className="flex flex-col gap-3">
-                <p className="text-2xl">{t.joinAt} <strong dir="ltr">{origin.replace(/^https?:\/\//, "")}/play</strong></p>
+                <p className="text-2xl">{t.joinAt} <strong dir="ltr">{joinHost}</strong></p>
                 <p className="live-muted text-xl">{t.withPin}</p>
                 <p className="live-pin" aria-label={game.pin.split("").join(" ")}>{game.pin.slice(0, 3)} {game.pin.slice(3)}</p>
                 <button type="button" className="live-copy-link" title={t.copyLink} aria-label={`${t.copyLink}: ${joinUrl}`} onClick={() => void copyJoinLink()}>

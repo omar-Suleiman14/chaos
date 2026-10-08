@@ -19,7 +19,7 @@ const copy = {
     back: "Back", voice: (lang: string) => `${lang} voice`, automatic: "Automatic", automaticBest: (name: string) => `Automatic (${name})`, noVoices: "No voice on this device",
     follow: "Follow along", follows: { word: "Word", sentence: "Sentence", paragraph: "Paragraph", off: "Off" }, color: "Highlight color",
     colors: { gray: "Gray", brown: "Brown", red: "Red", orange: "Orange", yellow: "Yellow", green: "Green", blue: "Blue", purple: "Purple", pink: "Pink" } as Record<NarrationColor, string>,
-    speed: "Playback speed", oneSpeed: "Use one speed for whole lesson", oneSpeedOff: "Each section can keep its own speed from the player.",
+    speed: "Playback speed", oneSpeed: "Use one speed for whole lesson", on: "On", off: "Off", oneSpeedOff: "Each section can keep its own speed from the player.",
     wordHint: "Word following needs a voice that reports word timing; otherwise the sentence is followed.", unsupported: "Read aloud isn't available in this browser.",
     langs: { en: "English", ar: "Arabic" } as Record<Lang, string>,
   },
@@ -27,7 +27,7 @@ const copy = {
     back: "رجوع", voice: (lang: string) => `صوت ${lang}`, automatic: "تلقائي", automaticBest: (name: string) => `تلقائي (${name})`, noVoices: "لا صوت على هذا الجهاز",
     follow: "تتبّع القراءة", follows: { word: "كلمة", sentence: "جملة", paragraph: "فقرة", off: "إيقاف" }, color: "لون التظليل",
     colors: { gray: "رمادي", brown: "بني", red: "أحمر", orange: "برتقالي", yellow: "أصفر", green: "أخضر", blue: "أزرق", purple: "بنفسجي", pink: "وردي" } as Record<NarrationColor, string>,
-    speed: "سرعة التشغيل", oneSpeed: "سرعة واحدة للدرس كله", oneSpeedOff: "يمكن لكل قسم أن يحتفظ بسرعته من المشغّل.",
+    speed: "سرعة التشغيل", oneSpeed: "سرعة واحدة للدرس كله", on: "تشغيل", off: "إيقاف", oneSpeedOff: "يمكن لكل قسم أن يحتفظ بسرعته من المشغّل.",
     wordHint: "تتبّع الكلمات يحتاج صوتًا يُبلغ عن توقيت الكلمات؛ وإلا تُتتبّع الجملة.", unsupported: "القراءة بصوت عالٍ غير متاحة في هذا المتصفح.",
     langs: { en: "الإنجليزية", ar: "العربية" } as Record<Lang, string>,
   },
@@ -83,9 +83,14 @@ export default function ListenSettings({ prefs, setPrefs, onBack }: { prefs: Rea
         </div>
       </div>
       <ChoiceChips prefs={prefs} setPrefs={setPrefs} name="speed" label={t.speed} options={SPEED_LABELS} values={SPEEDS} />
-      <button type="button" role="menuitemcheckbox" aria-checked={prefs.oneSpeed} className="lx-reading-menu__row" onClick={() => setPrefs({ oneSpeed: !prefs.oneSpeed })}>
-        <span style={{ flex: 1 }}>{t.oneSpeed}</span><span className="lx-switch" aria-hidden />
-      </button>
+      <div role="group" aria-label={t.oneSpeed} className="lx-onoff">
+        <span className="lx-onoff__label">{t.oneSpeed}</span>
+        <div className="ws-segmented lx-onoff__seg">
+          {[false, true].map((on) => (
+            <button key={String(on)} type="button" role="menuitemradio" aria-checked={prefs.oneSpeed === on} onClick={() => setPrefs({ oneSpeed: on })}>{on ? t.on : t.off}</button>
+          ))}
+        </div>
+      </div>
       {!prefs.oneSpeed && <p className="lx-reading-menu__hint">{t.oneSpeedOff}</p>}
     </div>
   );

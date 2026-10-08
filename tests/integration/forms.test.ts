@@ -101,7 +101,32 @@ describe("forms: responses", () => {
     const retry = await t.mutation(api.respond.submitResponse, { ...submission("key-quiz-001", { answer: "wrong" }), shareId });
     expect(first).toMatchObject({ quizScore: 4, quizMaxScore: 4, duplicate: false });
     expect(retry).toMatchObject({ quizScore: 4, quizMaxScore: 4, duplicate: true });
+    // The respondent's own result carries the key, so they can see what they got wrong; a retry returns the same.
+    expect(first.quizReview).toEqual([{ fieldId: "answer", earned: 4, possible: 4, correctOptionIds: ["right"] }]);
+    expect(retry.quizReview).toEqual(first.quizReview);
+    const missed = await t.mutation(api.respond.submitResponse, { ...submission("key-quiz-002", { answer: "wrong" }), shareId });
+    expect(missed.quizReview).toEqual([{ fieldId: "answer", earned: 0, possible: 4, correctOptionIds: ["right"] }]);
     expect((await owner.query(api.formResults.getResponse, { responseId: first.responseId }))?.quizScore).toBe(4);
+  });
+
+  it("returns only marks after submitting when the creator hides the answers", async () => {
+    const t = createTestConvex();
+    const owner = t.withIdentity(creatorIdentity);
+    await owner.mutation(api.quizFunctions.getOrCreateUser, {});
+    const formId = await owner.mutation(api.forms.createForm, { quizMode: true });
+    const initial = await owner.query(api.forms.getFormForEditor, { formId });
+    const definition = {
+      ...initial!.draft, quiz: { enabled: true, showAnswers: false },
+      fields: [{ id: "answer", type: "choice" as const, label: "Choose", required: true,
+        options: [{ id: "right", label: "Right" }, { id: "wrong", label: "Wrong" }],
+        quiz: { correctOptionIds: ["right"], points: 4, explanation: "Right is right." } }],
+    };
+    const saved = await owner.mutation(api.forms.saveFormDraft, { formId, expectedRevision: initial!.draftRevision, definition });
+    await owner.mutation(api.forms.publishForm, { formId, expectedRevision: saved.draftRevision });
+    const shareId = (await owner.query(api.forms.getFormForEditor, { formId }))!.shareId;
+    const missed = await t.mutation(api.respond.submitResponse, { ...submission("key-hidden-01", { answer: "wrong" }), shareId });
+    expect(missed).toMatchObject({ quizScore: 0, quizMaxScore: 4 });
+    expect(missed.quizReview).toEqual([{ fieldId: "answer", earned: 0, possible: 4, correctOptionIds: [] }]);
   });
 
   it("records a submission once, even when retried", async () => {

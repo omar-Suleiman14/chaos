@@ -16,7 +16,7 @@ import {
 import { SideMenuExtension } from "@blocknote/core/extensions";
 import { BlockNoteView } from "@blocknote/shadcn";
 import { BookMarked, Copy, Image as ImageIcon, Info, MoveDown, MoveUp, PlayCircle, Quote, Sigma, MessageCircleQuestion } from "lucide-react";
-import { blockText } from "@/lib/learn/doc";
+import { blockText, parseYouTube } from "@/lib/learn/doc";
 import type { Block } from "@/lib/learn/doc";
 import type { LessonSource } from "@/lib/learn/types";
 
@@ -145,7 +145,7 @@ export default function LessonEditor(props: LessonEditorProps) {
           focusLessonEnd(editor);
         }}>
         <BlockNoteView editor={editor} editable={props.editable !== false} theme={dark ? "dark" : "light"} slashMenu={false} formattingToolbar={false} sideMenu={false}
-          onChange={() => propsRef.current.onChange(editor.document as unknown[])}>
+          onChange={() => { if (!embedYouTubeVideos(editor)) propsRef.current.onChange(editor.document as unknown[]); }}>
           <SuggestionMenuController triggerCharacter="/" getItems={async (query) => filterSuggestionItems(slashItems(), query)} />
           <FormattingToolbarController formattingToolbar={() => (
             <FormattingToolbar>
@@ -232,4 +232,27 @@ function AssistButtons({ labels, title, onRun }: { labels: Record<SelectionActio
       </Components.Generic.Menu.Dropdown>
     </Components.Generic.Menu.Root>
   );
+}
+
+/**
+ * BlockNote's own video block plays files with a <video> tag, so a YouTube link pasted into it
+ * shows a black frame with no YouTube controls. Swap any such block for a YouTube block.
+ * Returns true when a swap is queued; the swap fires onChange again, and that one saves.
+ */
+function embedYouTubeVideos(editor: LessonEditorType): boolean {
+  const found: { id: string; videoId: string; start?: number; caption: string }[] = [];
+  const walk = (blocks: { id: string; type: string; props: Record<string, unknown>; children?: unknown[] }[]) => {
+    for (const b of blocks) {
+      const yt = b.type === "video" ? parseYouTube(String(b.props.url ?? "")) : null;
+      if (yt) found.push({ id: b.id, videoId: yt.id, start: yt.start, caption: String(b.props.caption ?? "") });
+      if (b.children?.length) walk(b.children as typeof blocks);
+    }
+  };
+  walk(editor.document as never);
+  if (!found.length) return false;
+  // After this change event settles: the swap's own change event then saves the result.
+  queueMicrotask(() => {
+    for (const v of found) if (editor.getBlock(v.id)) editor.replaceBlocks([v.id], [{ type: "youtube", props: { videoId: v.videoId, start: v.start ?? 0, caption: v.caption } } as never]);
+  });
+  return true;
 }

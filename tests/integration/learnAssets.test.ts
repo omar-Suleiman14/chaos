@@ -29,6 +29,24 @@ describe("Learn collections and reusable cards", () => {
     await owner.mutation(api.learnCollections.replaceItems, { collectionId, expectedRevision: 0, items: [{ kind: "lesson", id: lessonId, versionId: published.versionId }] });
     await expect(owner.mutation(api.learnCollections.publish, { collectionId, expectedRevision: 1, visibility: "public" })).rejects.toThrow("unavailable");
   });
+  it("lists a set's published versions to its owner and restores one into the draft", async () => {
+    const t = createTestConvex(); const owner = t.withIdentity(creatorIdentity); const other = t.withIdentity(otherCreatorIdentity);
+    const cards = [{ id: "card1", front: "Question", back: "Answer", conceptIds: [] }];
+    const setId = await owner.mutation(api.flashcards.create, { title: "Review", cards });
+    await owner.mutation(api.flashcards.publish, { setId, expectedRevision: 0, visibility: "public" });
+    await owner.mutation(api.flashcards.save, { setId, expectedRevision: 1, title: "Review 2", cards: [{ ...cards[0], back: "Different" }, { id: "card2", front: "New", back: "Card", conceptIds: [] }] });
+    await owner.mutation(api.flashcards.publish, { setId, expectedRevision: 2, visibility: "public" });
+    const versions = await owner.query(api.flashcards.listVersions, { setId });
+    expect(versions.map((v) => [v.number, v.title, v.cards.length])).toEqual([[2, "Review 2", 2], [1, "Review", 1]]);
+    await expect(other.query(api.flashcards.listVersions, { setId })).rejects.toThrow("NOT_FOUND");
+    await expect(other.mutation(api.flashcards.restoreVersion, { setId, number: 1 })).rejects.toThrow("NOT_FOUND");
+    const revision = await owner.mutation(api.flashcards.restoreVersion, { setId, number: 1 });
+    const draft = await t.run((ctx) => ctx.db.get("flashcardSets", setId));
+    expect([draft?.title, draft?.cards, draft?.revision]).toEqual(["Review", cards, revision]);
+    // Learners keep the latest published version until the next publish.
+    expect((await t.query(api.flashcards.getPublished, { setId }))?.title).toBe("Review 2");
+  });
+
   it("versions cards independently and copies immutable fork content", async () => {
     const t = createTestConvex(); const owner = t.withIdentity(creatorIdentity); const other = t.withIdentity(otherCreatorIdentity);
     const cards = [{ id: "card1", front: "Question", back: "Answer", conceptIds: [] }];

@@ -449,6 +449,24 @@ textarea.form-input { resize: vertical; min-height: 5rem; }
 .form-ending--stage { min-height: var(--form-stage-h, 100dvh); padding: 6rem 1.5rem; }
 .form-shell--embed .form-ending:not(.form-ending--stage), .ws-respondent-preview .form-ending:not(.form-ending--stage) { min-height: 0; }
 .form-ending-actions { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 0.5rem 1rem; }
+/* After a quiz: each graded question, what was chosen, the right answer where it was missed and why. */
+.form-review { display: grid; gap: 0.75rem; width: 100%; text-align: start; }
+.form-review__title { font-size: 1.125rem; font-weight: 700; }
+.form-review__list { display: grid; gap: 0.625rem; margin: 0; padding: 0; list-style: none; }
+.form-review__item { --tone: var(--form-error); display: grid; gap: 0.5rem; padding: 0.875rem 1rem; border: 1px solid var(--form-line); border-inline-start: 3px solid var(--tone); border-radius: calc(var(--form-radius, 12px) * 0.75); background: var(--form-surface); }
+.form-review__item[data-right] { --tone: var(--form-accent); }
+.form-review__head { display: flex; align-items: flex-start; gap: 0.625rem; }
+.form-review__mark { display: grid; place-items: center; flex: none; width: 22px; height: 22px; margin-top: 1px; border-radius: 999px; background: var(--tone); color: var(--form-on-accent, #fff); }
+.form-review__item:not([data-right]) .form-review__mark { color: #fff; }
+.form-review__q { flex: 1; min-width: 0; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+.form-review__marks { flex: none; font-size: 0.8125rem; font-weight: 600; color: var(--form-muted); font-variant-numeric: tabular-nums; }
+.form-review__answers { display: grid; gap: 0.25rem; margin: 0; padding-inline-start: 2rem; font-size: 0.9rem; }
+.form-review__answers > div { display: flex; flex-wrap: wrap; gap: 0.25rem 0.5rem; }
+.form-review__answers dt { color: var(--form-muted); }
+.form-review__answers dt::after { content: ":"; }
+.form-review__answers dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.form-review__answers [data-key] dd { color: var(--form-accent); }
+.form-review__why { padding-inline-start: 2rem; font-size: 0.875rem; line-height: 1.55; color: var(--form-muted); white-space: pre-line; }
 @media (max-width: 640px) {
   .form-ending--stage { padding: 4rem 1.25rem; }
 }

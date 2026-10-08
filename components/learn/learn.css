@@ -755,38 +755,32 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-reading-menu__group { display: grid; gap: 5px; }
 .lx-reading-menu__label { color: var(--on-surface-variant); font-size: 12px; }
 .lx-reading-menu__appearance { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-.lx-reading-menu__appearance .theme-toggle { flex: none; }
+/* The theme button matches the outline's sidebar toggle: a 34px tinted square in both themes, no border. */
+.lx-reading-menu__appearance { min-height: 34px; }
+.ws-menu .lx-reading-menu__appearance .theme-toggle { flex: none; width: 34px; height: 34px; min-width: 34px; min-height: 34px; border: 0; border-radius: 9px; background: var(--ws-hover); color: var(--on-background); }
+.ws-menu .lx-reading-menu__appearance .theme-toggle:hover { background: var(--ws-active); }
+.ws-menu .lx-reading-menu__appearance .theme-toggle:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
 .lx-reading-menu__value { color: var(--on-surface-variant); font-size: 12.5px; font-weight: 450; max-width: 10em; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .lx-reading-menu__hint { color: var(--on-surface-variant); font-size: 12px; line-height: 1.45; margin-top: -4px; }
 .lx-reading-menu hr { margin: 0 -6px; }
+/* A hairline between each setting in the Text and Listen menus (a hint stays with the setting above it,
+   and the two voice rows stay together). It runs edge to edge, like the menu's own dividers. */
+:is(.lx-reading-menu__body, .lx-level) > * + :not(.lx-reading-menu__hint, hr, .lx-voice-row + .lx-voice-row) { margin-inline: -6px; padding: 10px 6px 0; border-top: 1px solid var(--ws-line); }
 /* Choices are chips, not full-width menu rows. */
 .ws-menu .lx-chip { display: inline-flex; width: auto; min-height: 32px; padding: 4px 11px; border-radius: 999px; font-size: 13px; font-weight: 500; }
 .lx-narr-swatches { display: flex; flex-wrap: wrap; gap: 6px; }
 .ws-menu .lx-narr-swatch { width: 26px; min-height: 26px; height: 26px; padding: 0; border-radius: 50%; background: var(--narr); border: 1px solid color-mix(in srgb, var(--on-surface) 16%, transparent); }
 .ws-menu .lx-narr-swatch:hover { background: var(--narr-strong); }
 .ws-menu .lx-narr-swatch[aria-checked="true"] { box-shadow: 0 0 0 2px var(--ws-card), 0 0 0 4px var(--primary); }
-.lx-switch { position: relative; flex: none; width: 30px; height: 18px; border-radius: 999px; background: var(--ws-line-strong); transition: background .15s ease; }
-.lx-switch::after { content: ""; position: absolute; top: 2px; inset-inline-start: 2px; width: 14px; height: 14px; border-radius: 50%; background: #fff; box-shadow: 0 1px 2px rgb(0 0 0 / .25); transition: transform .2s var(--ws-spring); }
-[aria-checked="true"] > .lx-switch { background: var(--primary); }
-[aria-checked="true"] > .lx-switch::after { transform: translateX(12px); }
-[aria-checked="true"] > .lx-switch:dir(rtl)::after { transform: translateX(-12px); }
+/* An on/off setting is the workspace's segmented control (.ws-segmented), not a sliding switch. */
+.lx-onoff { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding-inline: 10px 0; font-size: 14px; }
+.lx-onoff__label { flex: 1; min-width: 0; line-height: 1.35; }
+.ws-menu .lx-onoff__seg { flex: none; }
+.ws-menu .lx-onoff__seg button { width: auto; min-height: 28px; padding: 0 11px; border-radius: 6px; font-size: 13px; font-weight: 600; color: var(--on-surface-variant); }
+.ws-menu .lx-onoff__seg button:hover { background: none; color: var(--on-background); }
+.ws-menu .lx-onoff__seg button[aria-checked="true"] { background: var(--ws-card); color: var(--on-background); box-shadow: var(--ws-shadow-sm); }
+.ws-menu .lx-onoff__seg button:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
 @media (pointer: coarse) { .ws-menu .lx-narr-swatch { width: 32px; height: 32px; min-height: 32px; } .ws-menu .lx-chip { min-height: 40px; } }
-
-/* Segmented choices: one track, a thumb that springs to the chosen option. */
-.lx-reading-menu { width: min(304px, calc(100vw - 16px)); }
-.lx-reading-menu__body { gap: 12px; padding: 8px; }
-.lx-reading-menu__label { font-size: 11.5px; font-weight: 600; letter-spacing: .02em; }
-.lx-seg { position: relative; isolation: isolate; display: grid; grid-template-columns: repeat(var(--n), minmax(0, 1fr)); padding: 2px; border-radius: 10px; background: var(--ws-active); }
-.lx-seg__thumb { position: absolute; z-index: -1; top: 2px; bottom: 2px; inset-inline-start: calc(2px + (100% - 4px) / var(--n) * var(--i)); width: calc((100% - 4px) / var(--n)); border-radius: 8px; background: var(--ws-card); box-shadow: 0 1px 3px rgb(15 15 15 / .1), 0 0 0 .5px var(--ws-line-strong); transition: inset-inline-start .38s var(--ws-spring); }
-.dark .lx-seg__thumb { background: color-mix(in srgb, #fff 13%, transparent); box-shadow: 0 1px 3px rgb(0 0 0 / .3); }
-.lx-seg[data-empty] .lx-seg__thumb { opacity: 0; }
-.ws-menu .lx-seg .lx-seg__opt { display: inline-flex; align-items: center; justify-content: center; gap: 5px; width: 100%; min-width: 0; min-height: 32px; padding: 0 4px; border: 0; border-radius: 8px; background: none; box-shadow: none; color: var(--on-surface-variant); font-size: 12.5px; font-weight: 550; white-space: nowrap; transition: color .2s, transform var(--ws-press-out, .16s ease); }
-.ws-menu .lx-seg .lx-seg__opt:hover { background: none; color: var(--on-surface); }
-.ws-menu .lx-seg .lx-seg__opt[aria-checked="true"] { color: var(--on-surface); font-weight: 650; }
-.ws-menu .lx-seg .lx-seg__opt:active { transform: scale(.95); transition: transform var(--ws-press-in, 90ms ease); }
-.ws-menu .lx-seg .lx-seg__opt:focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
-.ws-menu .lx-seg .lx-seg__opt bdi { overflow: hidden; text-overflow: ellipsis; }
-@media (pointer: coarse) { .ws-menu .lx-seg .lx-seg__opt { min-height: 38px; } }
 
 /* Highlight colours: one row, the chosen one ringed with a tick. */
 .lx-narr-swatches { flex-wrap: nowrap; justify-content: space-between; gap: 4px; }
@@ -804,29 +798,17 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-listen-start + hr { display: none; }
 .ws-menu .lx-voice-row { border-radius: 8px; }
 
-/* Opening the menu settles its sections in, one after another; a sub-level slides in like a pushed page. */
-.lx-reading-menu__body > *, .lx-level > * { animation: lx-settle .34s var(--ws-spring) both; }
-.lx-reading-menu__body > :nth-child(2), .lx-level > :nth-child(2) { animation-delay: 25ms; }
-.lx-reading-menu__body > :nth-child(3), .lx-level > :nth-child(3) { animation-delay: 50ms; }
-.lx-reading-menu__body > :nth-child(4), .lx-level > :nth-child(4) { animation-delay: 75ms; }
-.lx-reading-menu__body > :nth-child(5), .lx-level > :nth-child(5) { animation-delay: 100ms; }
-.lx-level > :nth-child(n + 6) { animation-delay: 125ms; }
-.lx-level { display: grid; gap: 12px; }
-.lx-level[data-from="end"] { animation: lx-push-end .32s var(--ws-spring); }
-.lx-level[data-from="start"] { animation: lx-push-start .32s var(--ws-spring); }
-.lx-level[data-from] > * { animation: none; }
-@keyframes lx-settle { from { opacity: 0; transform: translateY(4px); } }
+/* A Listen sub-level (a voice list, then back) slides in from the side it leads to. */
+.lx-level { display: grid; gap: 10px; }
+.lx-level[data-from="end"] { animation: lx-push-end .28s var(--ws-spring); }
+.lx-level[data-from="start"] { animation: lx-push-start .28s var(--ws-spring); }
 @keyframes lx-push-end { from { opacity: 0; transform: translateX(14px); } }
 @keyframes lx-push-start { from { opacity: 0; transform: translateX(-14px); } }
 [dir="rtl"] .lx-level[data-from="end"] { animation-name: lx-push-start; }
 [dir="rtl"] .lx-level[data-from="start"] { animation-name: lx-push-end; }
 @keyframes lx-pop { from { opacity: 0; transform: scale(.4); } }
-@media (prefers-reduced-motion: reduce) {
-  .lx-seg__thumb { transition: none; }
-  .lx-reading-menu__body > *, .lx-level > *, .lx-level[data-from], .ws-menu .lx-narr-swatch svg { animation: none; }
-}
-.reduce-motion .lx-seg__thumb { transition: none; }
-.reduce-motion .lx-reading-menu__body > *, .reduce-motion .lx-level > *, .reduce-motion .lx-level[data-from] { animation: none; }
+@media (prefers-reduced-motion: reduce) { .lx-level[data-from], .ws-menu .lx-narr-swatch svg { animation: none; } }
+.reduce-motion .lx-level[data-from] { animation: none; }
 
 /* ── Narration follow overlay (lib/learn/narration/follow.ts): boxes over the text, blended so the
    text stays crisp (multiply on light pages, screen on dark ones). Never mutates the lesson DOM. ── */
@@ -878,7 +860,7 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-listen-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--primary); margin-inline-start: -2px; }
 .lx-listen-chip[aria-pressed="true"] { background: var(--ws-accent-soft); border-color: color-mix(in srgb, var(--primary) 45%, transparent); color: var(--on-secondary-container); }
 @media (pointer: coarse) { .lx-listen-chip { min-height: 36px; } }
-@media (prefers-reduced-motion: reduce) { .lx-narration, .lx-actbar { animation: none; } .lx-narration__meter > span, .lx-switch, .lx-switch::after { transition: none; } }
+@media (prefers-reduced-motion: reduce) { .lx-narration, .lx-actbar { animation: none; } .lx-narration__meter > span { transition: none; } }
 .reduce-motion .lx-narration, .reduce-motion .lx-actbar { animation: none; }
 @media print { .lx-narration, .lx-narr-layer, .lx-actbar { display: none !important; } }
 

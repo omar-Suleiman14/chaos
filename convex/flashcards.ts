@@ -73,3 +73,33 @@ export const setLifecycle = mutation({
   returns: v.number(),
   handler: async (ctx, args) => setFlashcardLifecycle(ctx, (await requireActiveUser(ctx)).identity.subject, args),
 });
+
+// ── Version history ─────────────────────────────────────────────────────────
+
+/** The owner's newest published versions of a set, cards included, for the version browser. */
+export const listVersions = query({
+  args: { setId: v.id("flashcardSets") },
+  returns: v.array(v.object({ number: v.number(), publishedAt: v.number(), title: v.string(), cards })),
+  handler: async (ctx, args) => {
+    const { identity } = await requireActiveUser(ctx);
+    const row = await ctx.db.get("flashcardSets", args.setId);
+    if (!row || row.ownerId !== identity.subject) throw new Error(NOT_FOUND);
+    const rows = await ctx.db.query("flashcardVersions").withIndex("by_setId_and_number", (q) => q.eq("setId", row._id)).order("desc").take(20);
+    return rows.map((r) => ({ number: r.number, publishedAt: r.publishedAt, title: r.title, cards: r.cards }));
+  },
+});
+
+/** Copies a published version's title and cards into the draft. Learners keep the published set until the next publish. */
+export const restoreVersion = mutation({
+  args: { setId: v.id("flashcardSets"), number: v.number() },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const { identity } = await requireActiveUser(ctx);
+    const row = await ctx.db.get("flashcardSets", args.setId);
+    if (!row || row.archived || row.ownerId !== identity.subject) throw new Error(NOT_FOUND);
+    const version = await ctx.db.query("flashcardVersions").withIndex("by_setId_and_number", (q) => q.eq("setId", row._id).eq("number", args.number)).unique();
+    if (!version) throw new Error(NOT_FOUND);
+    await ctx.db.patch("flashcardSets", row._id, { title: version.title, cards: version.cards, revision: row.revision + 1, updatedAt: Date.now() });
+    return row.revision + 1;
+  },
+});
