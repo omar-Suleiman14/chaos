@@ -4,11 +4,11 @@ import { canonicalUrl } from "@/lib/hosts";
 import { localePath, type Locale } from "@/lib/locale";
 
 /** About 155 characters, so search results show it whole. */
-export const siteDescription = "An open platform to create, teach, learn and test. Build lessons, courses, forms and quizzes, teach live and connect ChatGPT or Claude. English and Arabic.";
+export const siteDescription = "Turn what you know into lessons that stick. Build lessons, courses and quizzes, teach live, and connect ChatGPT or Claude. In English and Arabic.";
 
 /** The generic share card, app/opengraph-image/route.tsx. Pages with their own picture (a course or lesson cover) replace it. */
-export const defaultOgImageAlt = "Chaos: Create. Teach. Learn. Test. Forms, quizzes, lessons, courses and live games.";
-export const defaultOgImage = { url: "/opengraph-image", width: 1200, height: 630, alt: defaultOgImageAlt };
+export const defaultOgImageAlt = "Chaos: Turn what you know into lessons that stick. Lessons, courses, quizzes, forms and live games.";
+export const defaultOgImage = { url: "/opengraph-image?v=lessons-that-stick", width: 1200, height: 630, alt: defaultOgImageAlt };
 
 /**
  * Use the same page address and copy in search results and shared links. Setting openGraph here

@@ -58,7 +58,7 @@ const instrumentSerif = Instrument_Serif({ subsets: ["latin"], weight: "400", va
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   applicationName: "Chaos",
-  title: { default: "Chaos · Forms, quizzes, live games and Learn", template: "%s · Chaos" },
+  title: { default: "Chaos · Turn what you know into lessons that stick", template: "%s · Chaos" },
   description: siteDescription,
   // No default canonical: pages render under an internal /en or /ar segment (proxy.ts), so a
   // relative "./" would point at that internal path. Indexable pages set their own.
