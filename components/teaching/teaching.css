@@ -66,6 +66,9 @@
 /* ── Version browser ── */
 .vb { position: fixed; inset: 0; z-index: 80; isolation: isolate; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; color: #fff; outline: none; font-family: var(--ws-font); animation: vb-fade .3s ease both; }
 @keyframes vb-fade { from { opacity: 0; } }
+/* The starfield settles from a slight zoom as the browser opens, so it feels like stepping into space. */
+.vb-backdrop { animation: vb-space .9s cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes vb-space { from { transform: scale(1.12); filter: brightness(1.6); } }
 .vb-backdrop { position: absolute; inset: 0; z-index: -1; background:
   radial-gradient(ellipse 70% 50% at 50% -10%, rgb(110 130 200 / .28), transparent 70%),
   radial-gradient(1px 1px at 37px 51px, rgb(255 255 255 / .55), transparent 1.5px) 0 0 / 220px 220px,
@@ -78,18 +81,24 @@
 .vb-status { grid-row: 2; }
 .vb-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 64px; gap: clamp(16px, 3vw, 44px); min-height: 0; padding: 24px clamp(16px, 4vw, 56px) 4px; }
 .vb-pane { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 14px; min-height: 0; min-width: 0; }
-.vb-pane--current { animation: vb-in-start .5s var(--ws-spring) both; }
-.vb-pane--past { animation: vb-in-end .5s var(--ws-spring) both; }
+/* Opening: the current version rises into place, then the older ones deal in from the back, one by one. */
+.vb-pane--current { animation: vb-rise .6s cubic-bezier(.16, 1, .3, 1) .05s backwards; }
+.vb-pane--past { animation: vb-fade .3s ease .1s backwards; }
+@keyframes vb-rise { from { opacity: 0; transform: translateY(36px) scale(.94); } }
 @keyframes vb-in-start { from { opacity: 0; transform: translateX(22%) scale(1.06); } }
 @keyframes vb-in-end { from { opacity: 0; transform: translateX(-22%) scale(.94); } }
 [dir="rtl"] .vb-pane--current { animation-name: vb-in-end; }
 [dir="rtl"] .vb-pane--past { animation-name: vb-in-start; }
 .vb-stack { display: grid; grid-template-areas: "d"; min-height: 0; padding-top: 54px; }
 .vb-stack > * { grid-area: d; min-height: 0; }
-.vb-card { display: grid; min-height: 0; z-index: calc(10 - var(--d)); transform-origin: 50% 0; transform: translateY(calc(var(--d) * -18px)) scale(calc(1 - var(--d) * .05)); filter: brightness(calc(1 - var(--d) * .16)); transition: transform .55s var(--ws-spring), opacity .4s ease, filter .4s ease; }
+.vb-card { display: grid; min-height: 0; z-index: calc(10 - var(--d)); transform-origin: 50% 0; transform: translateY(calc(var(--d) * -18px)) scale(calc(1 - var(--d) * .05)); filter: brightness(calc(1 - var(--d) * .16)) blur(0); transition: transform .62s cubic-bezier(.2, 1.1, .3, 1), opacity .4s ease, filter .45s ease; transition-delay: calc(var(--d) * 45ms); animation: vb-deal .7s cubic-bezier(.16, 1, .3, 1) calc(.18s + var(--d) * 90ms) backwards; }
+/* A card joining the stack comes out of the distance (backwards fill only, so it never pins the transform). */
+@keyframes vb-deal { from { opacity: 0; transform: translateY(calc(var(--d) * -18px - 70px)) scale(calc(.8 - var(--d) * .05)); filter: brightness(.3) blur(6px); } }
+.vb-card:not([data-depth="0"]):not([data-depth="ahead"]):hover { transform: translateY(calc(var(--d) * -18px - 8px)) scale(calc(1 - var(--d) * .05)); filter: brightness(calc(1.08 - var(--d) * .16)); transition-delay: 0s; }
 .vb-card:not([data-depth="0"]):not([data-depth="ahead"]) { cursor: pointer; }
 .vb-card:not([data-depth="0"]) .vb-doc { overflow: hidden; }
-.vb-card[data-depth="ahead"] { opacity: 0; transform: translateY(60px) scale(1.07); pointer-events: none; }
+/* Going further back in time, the front sheet flies past the viewer and blurs away. */
+.vb-card[data-depth="ahead"] { opacity: 0; transform: translateY(90px) scale(1.12); filter: blur(8px); pointer-events: none; transition-delay: 0s; }
 .vb-doc { min-height: 0; overflow: auto; overscroll-behavior: contain; border-radius: 10px; background: var(--ws-card); color: var(--on-surface); box-shadow: 0 34px 80px rgb(0 0 0 / .55), 0 0 0 .5px rgb(255 255 255 / .12); }
 .vb-doc--empty { display: grid; place-content: center; justify-items: center; gap: 12px; min-height: 260px; padding: 40px 28px; color: var(--on-surface-variant); font-size: 14px; line-height: 1.5; text-align: center; }
 .vb-doc__head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 6px; padding: 10px 18px; border-bottom: .5px solid var(--ws-line-strong); background: var(--ws-canvas-subtle); color: var(--on-surface-variant); font-size: 12.5px; font-weight: 600; }
@@ -99,7 +108,12 @@
 .vb-q[data-change="added"] { --chg: var(--ws-success); }
 .vb-q[data-change="removed"] { --chg: var(--error); }
 .vb-q[data-change="changed"] { --chg: var(--ws-warning); }
-.vb-q::before { content: ""; position: absolute; inset-block: 12px; inset-inline-start: -12px; width: 3px; border-radius: 2px; background: var(--chg); }
+.vb-q::before { content: ""; position: absolute; inset-block: 12px; inset-inline-start: -12px; width: 3px; border-radius: 2px; background: var(--chg); transform-origin: 50% 0; }
+/* When a version comes to the front, its change marks draw in down the page and the badges pop. */
+.vb-card[data-depth="0"] .vb-q:not([data-change="same"])::before, .vb-pane--current .vb-q:not([data-change="same"])::before { animation: vb-draw .5s cubic-bezier(.16, 1, .3, 1) calc(.25s + var(--n, 0) * 40ms) backwards; }
+.vb-card[data-depth="0"] .vb-badge, .vb-pane--current .vb-badge { animation: vb-pop .45s cubic-bezier(.3, 1.5, .5, 1) calc(.3s + var(--n, 0) * 40ms) backwards; }
+@keyframes vb-draw { from { transform: scaleY(0); } }
+@keyframes vb-pop { from { opacity: 0; transform: scale(.5); } }
 .vb-q[data-change="removed"] .vb-q__head p { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--error) 70%, transparent); opacity: .75; }
 .vb-q__head { display: flex; align-items: baseline; gap: 10px; }
 .vb-q__num { min-width: 18px; font-size: 12px; font-weight: 600; color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
@@ -119,6 +133,8 @@
 .vb-q__meta { margin-top: 8px; padding-inline-start: 28px; font-size: 12px; color: var(--on-surface-variant); }
 .vb-q__key { margin-inline-start: 8px; color: var(--ws-warning); font-weight: 600; }
 .vb-caption { display: grid; gap: 2px; text-align: center; }
+.vb-caption[data-swap] { animation: vb-swap .35s cubic-bezier(.16, 1, .3, 1) backwards; }
+@keyframes vb-swap { from { opacity: 0; transform: translateY(6px); } }
 .vb-caption strong { font-size: 15px; font-weight: 600; }
 .vb-caption span { font-size: 13px; color: rgb(255 255 255 / .62); }
 
@@ -127,7 +143,7 @@
 .vb-timeline ol { display: flex; flex: 1; flex-direction: column; justify-content: space-between; width: 100%; margin: 0; padding: 4px 0; list-style: none; }
 .vb-timeline li { display: flex; flex: 1; max-height: 34px; }
 .vb-timeline li button, .vb-timeline__now { display: flex; flex: 1; align-items: center; justify-content: flex-end; gap: 8px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
-.vb-timeline__tick { width: 12px; height: 2px; flex: none; border-radius: 1px; background: rgb(255 255 255 / .42); transition: width .2s var(--ws-spring), background .2s; }
+.vb-timeline__tick { width: 12px; height: 2px; flex: none; border-radius: 1px; background: rgb(255 255 255 / .42); transition: width .35s cubic-bezier(.3, 1.4, .5, 1), height .2s, background .2s; }
 .vb-timeline__label { font-size: 11px; font-weight: 600; white-space: nowrap; opacity: 0; transition: opacity .2s; }
 .vb-timeline li:hover .vb-timeline__tick { width: 24px; background: rgb(255 255 255 / .9); }
 .vb-timeline li:hover .vb-timeline__label { opacity: 1; }
@@ -173,8 +189,8 @@
   [dir="rtl"] .vb-arrow svg { transform: rotate(90deg); }
 }
 @media (prefers-reduced-motion: reduce) {
-  .vb, .vb-pane--current, .vb-pane--past, .ti-panel, .ti-q__detail, .ti-skeleton span, .ti-q, .ti-meter > span { animation: none; }
-  .vb-card, .ti-row__chevron, .ti-meter > span { transition: opacity .2s; }
+  .vb, .vb-backdrop, .vb-pane--current, .vb-pane--past, .vb-card, .vb-q::before, .vb-badge, .vb-caption, .vb-changes, .ti-panel, .ti-q__detail, .ti-skeleton span, .ti-q, .ti-meter > span { animation: none !important; }
+  .vb-card, .ti-row__chevron, .ti-meter > span { transition: opacity .2s; transition-delay: 0s; }
 }
-.reduce-motion .vb, .reduce-motion .vb-pane--current, .reduce-motion .vb-pane--past, .reduce-motion .ti-panel, .reduce-motion .ti-q__detail { animation: none; }
-.reduce-motion .vb-card { transition: opacity .2s; }
+.reduce-motion :is(.vb, .vb-backdrop, .vb-pane--current, .vb-pane--past, .vb-card, .vb-q::before, .vb-badge, .vb-caption, .vb-changes, .ti-panel, .ti-q__detail) { animation: none !important; }
+.reduce-motion .vb-card { transition: opacity .2s; transition-delay: 0s; }

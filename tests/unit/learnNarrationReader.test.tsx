@@ -224,16 +224,12 @@ describe("selection read aloud", () => {
 });
 
 describe("reading settings", () => {
-  it("keeps text settings and appearance only, each a segmented choice", () => {
+  it("keeps text settings and appearance only; the theme toggle stays an icon button", () => {
     inWorkspace(<LessonReader lesson={lesson()} />);
     fireEvent.click(screen.getByRole("button", { name: "Reading settings" }));
     const menu = screen.getByRole("menu", { name: "Reading settings" });
-    expect(within(menu).getAllByRole("group").map((g) => g.getAttribute("aria-label"))).toEqual(["Text size", "Line width", "Typeface", "Appearance"]);
+    expect(within(menu).getByRole("button", { name: /Use (light|dark) appearance/ })).toHaveClass("ws-icon-button");
     expect(within(menu).queryByRole("menuitemradio", { name: "Sentence" })).toBeNull();
-    fireEvent.click(within(menu).getByRole("menuitemradio", { name: "Large" }));
-    expect(within(menu).getByRole("menuitemradio", { name: "Large" })).toHaveAttribute("aria-checked", "true");
-    fireEvent.click(within(menu).getByRole("menuitemradio", { name: "Dark" }));
-    expect(within(menu).getByRole("menuitemradio", { name: "Dark" })).toHaveAttribute("aria-checked", "true");
   });
 });
 
@@ -249,7 +245,7 @@ describe("Listen menu", () => {
     fireEvent.click(within(menu).getByRole("menuitemradio", { name: "Word" }));
     fireEvent.click(within(menu).getByRole("menuitemradio", { name: "Purple" }));
     fireEvent.click(within(menu).getByRole("menuitemradio", { name: "1.5×" }));
-    fireEvent.click(within(menu).getByRole("menuitemcheckbox", { name: "Use one speed for whole lesson" }));
+    fireEvent.click(within(within(menu).getByRole("group", { name: "Use one speed for whole lesson" })).getByRole("menuitemradio", { name: "Off" }));
     expect(JSON.parse(localStorage.getItem(PREFS_KEY)!)).toMatchObject({ follow: "word", narrationColor: "purple", speed: 1.5, oneSpeed: false });
     expect(within(menu).getByText(/word timing/)).toBeInTheDocument();
     fireEvent.click(within(menu).getByRole("menuitem", { name: /English voice/ }));

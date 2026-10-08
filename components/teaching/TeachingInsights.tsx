@@ -278,7 +278,7 @@ function VersionBrowser({ target, t, onClose }: { target: Target; t: T; onClose:
                   })}
                 </div>
               )}
-              {past[selected] && <p className="vb-caption"><strong>{name(past[selected])}</strong><span>{when(past[selected])} · {t.attempts(fmt(past[selected].attempts))}</span></p>}
+              {past[selected] && <p key={past[selected].key} className="vb-caption" data-swap><strong>{name(past[selected])}</strong><span>{when(past[selected])} · {t.attempts(fmt(past[selected].attempts))}</span></p>}
             </section>
             {past.length > 0 && (
               <nav className="vb-timeline" aria-label={t.timeline}>
@@ -332,7 +332,7 @@ function VersionDoc({ version, title, t, fmt, change, counterpart, side }: {
           const compared = c === "changed" && other;
           const keyChanged = compared && JSON.stringify([...q.answerKey].sort()) !== JSON.stringify([...other.answerKey].sort());
           return (
-            <li key={q.id} className="vb-q" data-change={c}>
+            <li key={q.id} className="vb-q" data-change={c} style={{ ["--n" as string]: Math.min(n, 8) }}>
               <div className="vb-q__head">
                 <span className="vb-q__num">{fmt(n + 1)}</span>
                 <p dir="auto">{compared && other.text !== q.text ? <mark>{q.text}</mark> : q.text}</p>
