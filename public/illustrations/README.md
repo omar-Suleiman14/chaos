@@ -23,8 +23,10 @@ repository and licensed with it under AGPL-3.0-or-later.
 - 240 × 180 view box; the drawing sits on a soft ground shadow.
 - Ink outlines (2.25 units, round caps) over flat colour fills that are shifted a
   few units off the outline, like a slightly misregistered print.
-- Colours are the `--ill-*` tokens defined in `app/globals.css`, each with its
-  light value as a fallback, so the files also render on their own:
+- Colours are `--ill-*` tokens, each with its light value as a fallback in the
+  file, so the files also render on their own. The dark values live in the
+  `.dark` rule of `app/globals.css`; a surface with its own palette (a
+  respondent theme) can set any of them. The tokens are:
   ink, paper, shade, accent (soft blue), warm (soft apricot), leaf (soft sage)
   and pop (the workspace blue, for small marks only).
 - No text, no letters, no arrows that depend on reading direction, so one file

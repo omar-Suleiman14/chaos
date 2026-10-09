@@ -12,20 +12,19 @@
  *
  * Renders an inline <svg> that points at the file with <use>, so the browser
  * fetches and caches each drawing once and no artwork ships in a JS bundle. The
- * drawing reads the --ill-* tokens (app/globals.css), so it follows light and
- * dark appearance; `tone` pins one. Decorative by default: the heading next to
- * it says what happened. Pass `label` only when the picture carries meaning
+ * drawing reads --ill-* tokens: light values are the files' own fallbacks and
+ * `.dark` (app/globals.css) sets the dark ones, so it follows the appearance
+ * with no stylesheet rules of its own. Decorative by default: the heading next
+ * to it says what happened. Pass `label` only when the picture carries meaning
  * that no nearby text does.
  */
 export const illustrationVariants = ["create", "learn", "search", "error", "not-found", "offline"] as const;
 export type IllustrationVariant = (typeof illustrationVariants)[number];
 
-export default function StateIllustration({ variant, size = "compact", tone, label, className }: {
+export default function StateIllustration({ variant, size = "compact", label, className }: {
   variant: IllustrationVariant;
   /** `compact` (128px) sits above a short empty state; `hero` (up to 240px) heads a full-page state. */
   size?: "compact" | "hero";
-  /** Pin the light or dark palette regardless of the page appearance. */
-  tone?: "light" | "dark";
   label?: string;
   className?: string;
 }) {
@@ -34,7 +33,6 @@ export default function StateIllustration({ variant, size = "compact", tone, lab
       className={className ? `state-illustration ${className}` : "state-illustration"}
       data-variant={variant}
       data-size={size}
-      data-tone={tone}
       viewBox="0 0 240 180"
       width={size === "hero" ? 240 : 128}
       height={size === "hero" ? 180 : 96}
