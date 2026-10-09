@@ -15,7 +15,8 @@ import {
 import type { Aggregates, Answers, FormDefinition } from "./formLogic";
 import { answersValidator, languageValidator } from "./formModel";
 import { scheduleState } from "./formSchedule";
-import { consumeRate, notify, randomCode, randomHex, sha256Hex } from "./serverUtils";
+import { UNLOCK_WINDOW_MS, unlockBudgets } from "./accessCodeBudget";
+import { assertRateAvailable, consumeRate, notify, randomCode, randomHex, sha256Hex } from "./serverUtils";
 import { ruleHolds, visibleFieldIds } from "./formLogic";
 import { gradeQuiz, publicQuizDefinition } from "./formQuiz";
 import { emitWebhookEvent, formResponseData } from "./webhookEvents";
@@ -79,9 +80,6 @@ export async function ownerBanned(ctx: Ctx, form: Doc<"forms">) {
 /** Access passes: "grant_" + random hex, valid for one form for 12 hours. */
 const GRANT_PREFIX = "grant_";
 const GRANT_TTL_MS = 12 * 3_600_000;
-/** Wrong-code budget per form: every attempt counts, so guessing stops after 20 tries in 10 minutes. */
-const UNLOCK_LIMIT = 20;
-const UNLOCK_WINDOW_MS = 10 * 60_000;
 
 /**
  * True when `grant` is a live pass for this form. Raw codes are never accepted here:
@@ -178,9 +176,10 @@ async function responseForEditToken(ctx: Ctx, form: Doc<"forms">, editToken: str
  * after closing (`allowEditAfterClose`).
  */
 /**
- * Checks an access code and hands back a 12-hour pass for the form. Every attempt counts toward
- * the form's budget and a wrong code returns normally (so the count is kept); after the budget
- * the form answers RATE_LIMITED until the window ends.
+ * Checks an access code and hands back a 12-hour pass for the form. A wrong code returns normally
+ * (so its count is kept) and spends the requester's budgets; once a budget is spent the requester
+ * gets RATE_LIMITED until the window ends, before the code is checked, so a locked guesser learns
+ * nothing.
  */
 export const unlockForm = mutation({
   args: { shareId: v.string(), code: v.string() },
@@ -188,9 +187,14 @@ export const unlockForm = mutation({
   handler: async (ctx, args) => {
     const form = await formByShareId(ctx, args.shareId);
     if (!form || form.settings.access !== "code" || !form.settings.accessCodeHash) return { ok: false as const };
-    await consumeRate(ctx, `unlock:${form._id}`, UNLOCK_LIMIT, UNLOCK_WINDOW_MS);
+    const identity = await getAuthIdentity(ctx);
+    const budgets = unlockBudgets(form._id, identity?.subject ?? null);
+    for (const { key, limit } of budgets) await assertRateAvailable(ctx, key, limit, UNLOCK_WINDOW_MS);
     const code = args.code.trim().slice(0, 100);
-    if (!code || (await sha256Hex(`${form._id}:${code}`)) !== form.settings.accessCodeHash) return { ok: false as const };
+    if (!code || (await sha256Hex(`${form._id}:${code}`)) !== form.settings.accessCodeHash) {
+      for (const { key, limit } of budgets) await consumeRate(ctx, key, limit, UNLOCK_WINDOW_MS);
+      return { ok: false as const };
+    }
     const grant = `${GRANT_PREFIX}${randomHex(32)}`;
     await ctx.db.insert("formAccessGrants", { formId: form._id, tokenHash: await sha256Hex(grant), accessCodeHash: form.settings.accessCodeHash, expiresAt: Date.now() + GRANT_TTL_MS });
     return { ok: true as const, grant };
