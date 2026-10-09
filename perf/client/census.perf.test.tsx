@@ -45,6 +45,11 @@ const mark = () => census().commits.length;
 const since = (at: number) => summarize(census().since(at));
 const bodies = (at: number) => rendersOf(census().since(at), "BlockBody");
 
+// Without IntersectionObserver, Next Link queues visibility updates through a
+// 1 ms idle-callback fallback. Include that mount work before measuring the next
+// interaction; otherwise three link renders randomly land in either snapshot.
+const settleMount = () => act(async () => { await new Promise(resolve => setTimeout(resolve, 10)); });
+
 beforeEach(() => { localStorage.clear(); server.reset(); });
 
 describe("editor", () => {
@@ -56,6 +61,7 @@ describe("editor", () => {
     let at = mark();
     const view = render(<LocaleProvider initial="en"><FormBuilderPage /></LocaleProvider>);
     await waitFor(() => expect(screen.getAllByRole("tab").length).toBeGreaterThan(2));
+    await settleMount();
     const mount = since(at);
 
     const label = [...view.container.querySelectorAll<HTMLInputElement>("input")].find((el) => el.value.startsWith("Question 1:"))!;
@@ -105,6 +111,7 @@ describe("lesson player", () => {
     let at = mark();
     const view = render(<LocaleProvider initial="en"><LiveLesson /></LocaleProvider>);
     await waitFor(() => expect(view.container.querySelector("[data-block-id='b59']")).not.toBeNull());
+    await settleMount();
     const mount = since(at);
     const mountBodies = bodies(at);
 
@@ -137,6 +144,7 @@ describe("giant lesson", () => {
     let at = mark();
     const view = render(<LocaleProvider initial="en"><LiveLesson /></LocaleProvider>);
     await waitFor(() => expect(view.container.querySelector("[data-block-id='b499']")).not.toBeNull());
+    await settleMount();
     const mount = since(at);
     const mountBodies = bodies(at);
 

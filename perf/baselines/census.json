@@ -80,11 +80,11 @@
       "unit": "count"
     },
     "giantLesson.mount.renders": {
-      "budget": 5087,
+      "budget": 5090,
       "unit": "count",
       "raised": {
         "from": 5085,
-        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Render counts grew with the classroom tools, reader menus and version history (#113-#123). Lower with pnpm perf:ratchet as they are trimmed.",
+        "reason": "Existing reader menus account for the initial 5087-render measurement versus the old 5085 budget. The mount census now waits for Next Link idle visibility callbacks, consistently including their three renders instead of racing between 5087 and 5090. Four repeat runs measured 5090; this records actual mount work with no extra headroom.",
         "at": "2026-10-09"
       }
     },
