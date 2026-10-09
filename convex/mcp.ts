@@ -22,6 +22,7 @@ import { consumeRate, logActivity } from "./serverUtils";
 import { emitFormStatusChange } from "./webhookEvents";
 import { registerMcpGames } from "./mcpGames";
 import { withFormCounts, withOwnerFormCounts } from "./formCounts";
+import { enumerateForms } from "./formInventory";
 
 type Ctx = QueryCtx | MutationCtx;
 type Role = "owner" | "editor" | "viewer";
@@ -132,17 +133,9 @@ export const searchForms = internalQuery({
     // Archived forms only appear when asked for, like the library.
     const statusOk = (status: string) => (args.status === "any" ? true : args.status ? status === args.status : status !== "archived");
     const items: Item[] = [];
-    const owned = await ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", args.userId)).order("desc").take(500);
-    for (const doc of owned) items.push({ kind: "form", ref: `form_${doc._id}`, doc, role: "owner" });
-    const memberships = await ctx.db.query("formCollaborators").withIndex("by_userId", (q) => q.eq("userId", args.userId)).take(200);
-    const seen = new Set(owned.map((f) => f._id as string));
-    for (const m of memberships) {
-      if (!matchesAccountFormCollaborator(m, args.userId)) continue;
-      if (seen.has(m.formId)) continue;
-      seen.add(m.formId);
-      const doc = await ctx.db.get("forms", m.formId);
-      if (doc) items.push({ kind: "form", ref: `form_${doc._id}`, doc, role: m.role });
-    }
+    const inventory = await enumerateForms(ctx, { kind: "account", userId: args.userId }, { owned: 500, memberships: 200 });
+    for (const doc of inventory.owned) items.push({ kind: "form", ref: `form_${doc._id}`, doc, role: "owner" });
+    for (const { form: doc, membership } of inventory.shared) items.push({ kind: "form", ref: `form_${doc._id}`, doc, role: membership.role });
     const filtered = items
       .filter((i) => matches(i.doc.title) && statusOk(i.doc.status))
       .sort((a, b) => b.doc.updatedAt - a.doc.updatedAt);
