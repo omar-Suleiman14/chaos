@@ -79,6 +79,8 @@ it("advertises truthful Learn/course/folder instructions and verified publicatio
   const instructions = client.getInstructions()!;
   for (const text of ["Learn lessons and courses", "Folders are private organisation", "New things start as private drafts", "Pass publish true only when the person explicitly asks", "person selected", "never supply an actor/userId", "Lesson and course tools do not return shareUrl", "publish_course returns ok true", "courseId from verified create_course", "https://chaos.fail/learn/courses/<courseId>", "https://chaos.fail/learn/<lessonId>", "offset 0?500, limit 1?100", "follow nextOffset until null", "outlineFrom draft require edit permission", "Folder changes never publish content", "Do not automatically retry"]) expect(instructions).toContain(text);
   expect(instructions).not.toContain("share the returned shareUrl");
+  // One publishing policy: nothing in the instructions says a creation tool publishes by itself.
+  expect(instructions).not.toMatch(/publishes on creation|publish(es)? (straight away|as soon as)|publish false/i);
   expect(instructions).not.toMatch(/AI provider|model provider/i);
  } finally { await client.close(); await server.close(); }
 });
