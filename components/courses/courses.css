@@ -83,12 +83,15 @@
   .cx-card, .cp-lesson, .cp .cp-start { transition: none; }
 }
 
-/* Course page as a Notion page (app/dashboard/courses/[id]): a full-bleed cover band, the page icon
-   overlapping it, a large borderless title, and quiet list rows instead of boxed cards. */
+/* Course page as a Notion page (app/dashboard/courses/[id]): a cover as wide as the content below it,
+   a large borderless title, and quiet list rows instead of boxed cards. */
 .cb-page { max-width: none; padding-top: 0; gap: 0; }
 /* In-flow sections only: the version browser and dialogs are fixed overlays and must keep covering the screen. */
 .cb-page > :not(.vb, .ws-overlay) { width: 100%; max-width: 860px; margin-inline: auto; }
-.cb-page > .lx-cover { width: auto; max-width: none; margin-inline: -48px; }
+/* Rounded on the image, not the box: the cover picker opens inside the box and must not be clipped. */
+.cb-page > .lx-cover > img { border-radius: 12px; }
+/* The cover is narrower than the phone viewport; keep its picker inside that column too. */
+.cb-page > .lx-cover > .lx-cover-picker { max-width: calc(100% - 32px); }
 .cb-page > .cb-hero { margin-top: 40px; border: 0; border-radius: 0; overflow: visible; }
 .cb-page > .lx-cover + .cb-hero { margin-top: 0; }
 .cb-page .cb-hero__body { padding: 4px 0 0; gap: 6px; }
@@ -106,7 +109,6 @@
 .cb-page .cb-lesson:hover .cb-lesson__actions, .cb-page .cb-lesson:focus-within .cb-lesson__actions { opacity: 1; }
 .cb-page .cb-add { justify-content: flex-start; padding: 8px; border: 0; border-radius: 6px; font-weight: 500; }
 .cb-page .cb-add:hover { background: var(--ws-hover, rgba(55,53,47,.06)); color: var(--on-background); }
-@media (max-width: 860px) { .cb-page > .lx-cover { margin-inline: -16px; } }
 @media (hover: none) { .cb-page .cb-lesson__actions { opacity: 1; } }
 
 .cb-title, .cb-desc, .cp-lesson__title, .cp-lesson__desc, .cx-title { text-align: start; }
