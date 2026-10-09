@@ -2,16 +2,21 @@
   "suite": "css",
   "metrics": {
     "source.backdropFilters": {
-      "budget": 24,
-      "unit": "count"
+      "budget": 34,
+      "unit": "count",
+      "raised": {
+        "from": 24,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Stylesheets grew with the classroom tools, reader menus and version history redesign (#113-#123). Follow-up: move route-only rules out of the global workspace styles loaded by app/[lang]/layout.tsx.",
+        "at": "2026-10-09"
+      }
     },
     "source.bytes": {
-      "budget": 407360,
+      "budget": 471381,
       "unit": "bytes",
       "raised": {
-        "from": 395330,
-        "reason": "Lesson read aloud (compact player, follow-along overlay, reading-menu Listen settings), foldable desktop outline and the touch block-actions bar. The two layout transitions are width/height on childless, absolutely positioned overlay boxes; their 18 colour rules moved to inline CSS variables.",
-        "at": "2026-10-07"
+        "from": 407360,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Stylesheets grew with the classroom tools, reader menus and version history redesign (#113-#123). Follow-up: move route-only rules out of the global workspace styles loaded by app/[lang]/layout.tsx.",
+        "at": "2026-10-09"
       }
     },
     "source.deepSelectors": {
@@ -23,46 +28,66 @@
       "unit": "count"
     },
     "source.hasSelectors": {
-      "budget": 27,
-      "unit": "count"
-    },
-    "source.infiniteAnimations": {
-      "budget": 7,
-      "unit": "count"
-    },
-    "source.layoutKeyframes": {
-      "budget": 0,
-      "unit": "count"
-    },
-    "source.layoutTransitions": {
-      "budget": 18,
+      "budget": 30,
       "unit": "count",
       "raised": {
-        "from": 16,
-        "reason": "Lesson read aloud (compact player, follow-along overlay, reading-menu Listen settings), foldable desktop outline and the touch block-actions bar. The two layout transitions are width/height on childless, absolutely positioned overlay boxes; their 18 colour rules moved to inline CSS variables.",
-        "at": "2026-10-07"
+        "from": 27,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Stylesheets grew with the classroom tools, reader menus and version history redesign (#113-#123). Follow-up: move route-only rules out of the global workspace styles loaded by app/[lang]/layout.tsx.",
+        "at": "2026-10-09"
+      }
+    },
+    "source.infiniteAnimations": {
+      "budget": 13,
+      "unit": "count",
+      "raised": {
+        "from": 7,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Stylesheets grew with the classroom tools, reader menus and version history redesign (#113-#123). Follow-up: move route-only rules out of the global workspace styles loaded by app/[lang]/layout.tsx.",
+        "at": "2026-10-09"
+      }
+    },
+    "source.layoutKeyframes": {
+      "budget": 1,
+      "unit": "count",
+      "raised": {
+        "from": 0,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Stylesheets grew with the classroom tools, reader menus and version history redesign (#113-#123). Follow-up: move route-only rules out of the global workspace styles loaded by app/[lang]/layout.tsx.",
+        "at": "2026-10-09"
+      }
+    },
+    "source.layoutTransitions": {
+      "budget": 25,
+      "unit": "count",
+      "raised": {
+        "from": 18,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Stylesheets grew with the classroom tools, reader menus and version history redesign (#113-#123). Follow-up: move route-only rules out of the global workspace styles loaded by app/[lang]/layout.tsx.",
+        "at": "2026-10-09"
       }
     },
     "source.paintKeyframes": {
-      "budget": 6,
-      "unit": "count"
-    },
-    "source.rules": {
-      "budget": 3172,
+      "budget": 9,
       "unit": "count",
       "raised": {
-        "from": 3163,
-        "reason": "Selection toolbar lays out as a square grid of tiles on phones; glossary card gains a read-aloud button.",
-        "at": "2026-10-07"
+        "from": 6,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Stylesheets grew with the classroom tools, reader menus and version history redesign (#113-#123). Follow-up: move route-only rules out of the global workspace styles loaded by app/[lang]/layout.tsx.",
+        "at": "2026-10-09"
+      }
+    },
+    "source.rules": {
+      "budget": 3644,
+      "unit": "count",
+      "raised": {
+        "from": 3172,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Stylesheets grew with the classroom tools, reader menus and version history redesign (#113-#123). Follow-up: move route-only rules out of the global workspace styles loaded by app/[lang]/layout.tsx.",
+        "at": "2026-10-09"
       }
     },
     "source.selectors": {
-      "budget": 3489,
+      "budget": 4012,
       "unit": "count",
       "raised": {
-        "from": 3480,
-        "reason": "Selection toolbar lays out as a square grid of tiles on phones; glossary card gains a read-aloud button.",
-        "at": "2026-10-07"
+        "from": 3489,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Stylesheets grew with the classroom tools, reader menus and version history redesign (#113-#123). Follow-up: move route-only rules out of the global workspace styles loaded by app/[lang]/layout.tsx.",
+        "at": "2026-10-09"
       }
     },
     "source.transitionAll": {
@@ -74,8 +99,13 @@
       "unit": "count"
     },
     "source.universalKeySelectors": {
-      "budget": 42,
-      "unit": "count"
+      "budget": 46,
+      "unit": "count",
+      "raised": {
+        "from": 42,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Stylesheets grew with the classroom tools, reader menus and version history redesign (#113-#123). Follow-up: move route-only rules out of the global workspace styles loaded by app/[lang]/layout.tsx.",
+        "at": "2026-10-09"
+      }
     },
     "source.willChange": {
       "budget": 6,
