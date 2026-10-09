@@ -8,6 +8,7 @@
  * @module
  */
 
+import type * as accessCodeBudget from "../accessCodeBudget.js";
 import type * as admin from "../admin.js";
 import type * as adminAccess from "../adminAccess.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
@@ -141,6 +142,7 @@ import type * as quizModel from "../quizModel.js";
 import type * as respond from "../respond.js";
 import type * as serverUtils from "../serverUtils.js";
 import type * as sourceFingerprint from "../sourceFingerprint.js";
+import type * as sourceStorage from "../sourceStorage.js";
 import type * as studentRoster from "../studentRoster.js";
 import type * as support from "../support.js";
 import type * as usernameModel from "../usernameModel.js";
@@ -158,6 +160,7 @@ import type {
 } from "convex/server";
 
 declare const fullApi: ApiFromModules<{
+  accessCodeBudget: typeof accessCodeBudget;
   admin: typeof admin;
   adminAccess: typeof adminAccess;
   adminAnalytics: typeof adminAnalytics;
@@ -291,6 +294,7 @@ declare const fullApi: ApiFromModules<{
   respond: typeof respond;
   serverUtils: typeof serverUtils;
   sourceFingerprint: typeof sourceFingerprint;
+  sourceStorage: typeof sourceStorage;
   studentRoster: typeof studentRoster;
   support: typeof support;
   usernameModel: typeof usernameModel;

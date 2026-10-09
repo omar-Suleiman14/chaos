@@ -22,7 +22,7 @@ const copy = {
     lead: "What Chaos does well, where it falls short, and how it lines up with Google Forms, Microsoft Forms, Typeform and Kahoot!.",
     whyTitle: "What makes Chaos different",
     why: [
-      { title: "Works with ChatGPT and Claude", body: "Connect the Chaos app in ChatGPT to draft forms and quizzes, publish new content unless you ask for a draft, run a live game and read results. Other apps work through a scoped API.", href: "/chatgpt", link: "Chaos in ChatGPT" },
+      { title: "Works with ChatGPT and Claude", body: "Connect the Chaos app in ChatGPT to draft forms and quizzes, publish when you ask, run a live game and read results. Other apps work through a scoped API.", href: "/chatgpt", link: "Chaos in ChatGPT" },
       { title: "Choose how questions appear", body: "The same form works as one page, sections, one question at a time or swipeable cards, with 19 themes, sounds and English or Arabic.", href: "/docs/answer-modes", link: "Ways to answer" },
       { title: "Live games built in", body: "Turn a quiz into a game: a PIN, questions on the big screen, answers on phones and a leaderboard. Results land with your other responses.", href: "/docs/live-games", link: "Live games" },
       { title: "Teams and team-only content", body: "Business teams edit together, and publish courses, quizzes, flashcards and live games only the team can open. Free for a limited time.", href: "/teams", link: "Business teams" },
@@ -58,7 +58,7 @@ const copy = {
     lead: "ما يُحسنه Chaos، وأين يقصر، وكيف يقارَن بـ Google Forms وMicrosoft Forms وTypeform وKahoot!.",
     whyTitle: "ما يميّز Chaos",
     why: [
-      { title: "يعمل مع ChatGPT وClaude", body: "اربط تطبيق Chaos في ChatGPT لصياغة المسودات، ونشر المحتوى الجديد ما لم تطلب مسودة، وتشغيل لعبة مباشرة، وقراءة النتائج. وتعمل التطبيقات الأخرى عبر API بصلاحيات محددة.", href: "/chatgpt", link: "Chaos في ChatGPT" },
+      { title: "يعمل مع ChatGPT وClaude", body: "اربط تطبيق Chaos في ChatGPT لصياغة المسودات، والنشر عندما تطلب، وتشغيل لعبة مباشرة، وقراءة النتائج. وتعمل التطبيقات الأخرى عبر API بصلاحيات محددة.", href: "/chatgpt", link: "Chaos في ChatGPT" },
       { title: "اختر طريقة عرض الأسئلة", body: "النموذج نفسه يعمل صفحةً واحدة أو أقسامًا أو سؤالًا في كل مرة أو بطاقات تسحبها، مع 19 مظهرًا وأصوات وبالعربية أو الإنجليزية.", href: "/docs/answer-modes", link: "طرق الإجابة" },
       { title: "ألعاب مباشرة مدمجة", body: "حوّل الاختبار إلى لعبة: رمز دخول، والأسئلة على الشاشة الكبيرة، والإجابات من الهواتف، ولوحة صدارة. وتُحفظ النتائج مع بقية ردودك.", href: "/docs/live-games", link: "الألعاب المباشرة" },
       { title: "الفرق والمحتوى الخاص بالفريق", body: "تعدّل فرق الأعمال معًا، وتنشر دورات واختبارات وبطاقات وألعابًا مباشرة لا يفتحها إلا الفريق. مجانًا لفترة محدودة.", href: "/teams", link: "فرق الأعمال" },

@@ -3,7 +3,7 @@ import { internalMutation, internalQuery } from "./_generated/server";
 import { requireLearnActor } from "./mcpLearn";
 import { browsePublicAuthors } from "./publicAuthors";
 import { readPublicCard } from "./memberCards";
-import { pageFor, setGlobalStudentVisibility } from "./studentRoster";
+import { pageFor, setGlobalStudentVisibility, studentCardPublic, studentCardsGloballyPublic } from "./studentRoster";
 import { userByUsername } from "./usernameModel";
 
 const actor = { userId: v.string() };
@@ -71,7 +71,7 @@ export const visibility = internalQuery({
       .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
       .unique();
     return {
-      visible: row ? !row.publicHidden && !user?.hideStudentCards : null,
+      visible: row ? studentCardPublic(user, row) : null,
     };
   },
 });
@@ -98,7 +98,7 @@ export const studentPreferences = internalQuery({
       .query("users")
       .withIndex("by_clerkId", (q) => q.eq("clerkId", args.userId))
       .unique();
-    return { visible: !user?.hideStudentCards };
+    return { visible: studentCardsGloballyPublic(user) };
   },
 });
 export const setStudentPreferences = internalMutation({

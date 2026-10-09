@@ -2834,7 +2834,7 @@
   },
   "create_flashcard_set": {
    "title": null,
-   "description": "Create a flashcard set with up to 500 cards (front is the prompt, back the answer) and publish it (public by default). publish false keeps a private draft. Returns versionId for attach_lesson_flashcards when published. Each call creates a new set; check list_flashcard_sets before retrying an uncertain success.",
+   "description": "Create a flashcard set with up to 500 cards (front is the prompt, back the answer) as a private draft; publish true also publishes it (public unless visibility says otherwise), only when the person explicitly asks. Returns versionId for attach_lesson_flashcards when published. Each call creates a new set; check list_flashcard_sets before retrying an uncertain success.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,
@@ -2993,7 +2993,7 @@
   },
   "create_form": {
    "title": "Create a form or quiz",
-   "description": "Create a new form, survey or quiz as a draft in the person's Chaos library, with all its questions. For a quiz set quizMode true and give correctAnswers (exact option labels) and points on choice questions. Pass a theme (a preset name) that suits the form; the default is Lilac. Sound is on (Glass) unless you pass sound, e.g. off for formal or sensitive forms. Publishes straight away and returns the share link, unless publish is false or something must be fixed first (then it stays a draft and the problems are listed).",
+   "description": "Create a new form, survey or quiz as a draft in the person's Chaos library, with all its questions. For a quiz set quizMode true and give correctAnswers (exact option labels) and points on choice questions. Pass a theme (a preset name) that suits the form; the default is Lilac. Sound is on (Glass) unless you pass sound, e.g. off for formal or sensitive forms. Stays a private draft and returns the edit link. With publish true it publishes and returns the share link, unless something must be fixed first (then it stays a draft and the problems are listed).",
    "permission": "edit_content",
    "annotations": {
     "title": "Create a form or quiz",
@@ -3151,7 +3151,7 @@
       "maxLength": 20
      },
      "publish": {
-      "description": "Default true: publish right after creating so the link works. Pass false only when the person asks for a draft.",
+      "description": "Default false: create a private draft to review. Pass true only when the person explicitly asks to publish it now.",
       "type": "boolean"
      }
     },
@@ -3842,7 +3842,7 @@
   },
   "create_game_draft": {
    "title": "Create a quiz game draft",
-   "description": "Create a private quiz draft for live play using the ordinary Chaos builder and themes. Needs 1–100 single_choice, multiple_choice or dropdown questions, each with 2–4 distinct options and correctAnswers. Publishes the quiz straight away (publish false keeps a draft) but never opens a room: call host_game when the person asks to host.",
+   "description": "Create a private quiz draft for live play using the ordinary Chaos builder and themes. Needs 1–100 single_choice, multiple_choice or dropdown questions, each with 2–4 distinct options and correctAnswers. Stays a draft unless publish is true; never opens a room: call host_game when the person asks to host.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,
@@ -3971,7 +3971,7 @@
       "maxLength": 20
      },
      "publish": {
-      "description": "Default true: publish right after creating so the link works. Pass false only when the person asks for a draft.",
+      "description": "Default false: create a private draft to review. Pass true only when the person explicitly asks to publish it now.",
       "type": "boolean"
      }
     },
@@ -4042,7 +4042,7 @@
   },
   "create_lesson": {
    "title": "Create a lesson",
-   "description": "Create a lesson from Chaos blocks and publish it (public by default). Set a cover with metadata.coverUrl (https image link or /covers/ gallery path), metadata.coverY and an optional Lucide icon name or emoji metadata.icon. publish false keeps a private draft; visibility private or restricted limits who can read it. If publication is blocked the lesson stays a draft and problems are listed. Never changes source sharing.",
+   "description": "Create a lesson from Chaos blocks as a private draft; publish true also publishes it (public unless visibility says otherwise). Set a cover with metadata.coverUrl (https image link or /covers/ gallery path), metadata.coverY and an optional Lucide icon name or emoji metadata.icon. Pass publish true only when the person explicitly asks to publish now; visibility private or restricted limits who can read it. If publication is blocked the lesson stays a draft and problems are listed. Never changes source sharing.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,
@@ -4828,7 +4828,7 @@
   },
   "customize_my_card": {
    "title": null,
-   "description": "Customize your own Chaos Card. showStudentCards controls your public student Card preference (enabled by default), including when skipping onboarding. Choose name, reserved username, style 0–31, generated avatar 0–23 and optional avatarHue 0–359 (null resets to automatic). Existing public URL aliases remain valid. Only explicit finishOnboarding or skip marks first-account setup complete; edits are optional and can be changed later.",
+   "description": "Customize your own Chaos Card. showStudentCards controls your public student Card preference (off unless you turn it on), including when skipping onboarding. Only set it when the person explicitly asks. Choose name, reserved username, style 0–31, generated avatar 0–23 and optional avatarHue 0–359 (null resets to automatic). Existing public URL aliases remain valid. Only explicit finishOnboarding or skip marks first-account setup complete; edits are optional and can be changed later.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,
@@ -9600,7 +9600,7 @@
   },
   "get_student_card_preferences": {
    "title": null,
-   "description": "Read YOUR global student Card visibility preference. Public by default; visible=false hides your Card from every teacher's public page and the authors carousel. Individual teacher opt-outs can still apply when globally enabled.",
+   "description": "Read YOUR global student Card visibility preference. Private by default; visible=true means you chose to show your Card on every teacher's public page and the authors carousel. Individual teacher opt-outs still apply when globally enabled.",
    "permission": "read_content",
    "annotations": {
     "readOnlyHint": true,
@@ -12366,7 +12366,7 @@
   },
   "list_my_students": {
    "title": null,
-   "description": "Read your private Students roster with cursor pagination. Includes account cards and guest labels/context, never answers or scores. Anonymous participation stays anonymous; account Cards are public by default and students can opt out globally or per teacher.",
+   "description": "Read your private Students roster with cursor pagination. Includes account cards and guest labels/context, never answers or scores. Anonymous participation stays anonymous; account Cards stay private unless the student chooses to show them, globally or per teacher.",
    "permission": "individual_responses",
    "annotations": {
     "readOnlyHint": true,
@@ -12547,7 +12547,7 @@
   },
   "list_public_student_cards": {
    "title": null,
-   "description": "Read all eligible student Cards for a teacher, public by default unless opted out globally or per teacher. Defaults to 24 per page; follow cursors until isDone to reach every student. No guests, private contexts, answers or grades. Visibility is controlled by each student.",
+   "description": "Read the student Cards a teacher's public page shows: only students who chose to show their Card, globally or for this teacher. Defaults to 24 per page; follow cursors until isDone to reach every student. No guests, private contexts, answers or grades. Visibility is controlled by each student.",
    "permission": "read_content",
    "annotations": {
     "readOnlyHint": true,
@@ -17113,7 +17113,7 @@
   },
   "set_student_card_preferences": {
    "title": null,
-   "description": "Set YOUR global student Card visibility. Public by default; visible=false opts out of all teachers' public student Cards. visible=true restores the default without clearing individual teacher opt-outs. This is the same preference as settings and the card creation checkbox.",
+   "description": "Set YOUR global student Card visibility. Private by default; visible=true shows your Card with every teacher, visible=false hides it from all teachers' public pages. visible=true keeps individual teacher opt-outs. This is the same preference as settings and the card creation switch. Only change it when the person explicitly asks.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,
@@ -17149,7 +17149,7 @@
   },
   "set_student_card_visibility": {
    "title": null,
-   "description": "Choose whether YOUR real Card floats around an existing teacher's public Card, including in the authors carousel. Public by default; visible=false opts out for this teacher. A global opt-out always wins. Cannot expose another person's relationship or create a new one.",
+   "description": "Choose whether YOUR real Card floats around an existing teacher's public Card, including in the authors carousel. Private by default; visible=true opts in for this teacher, visible=false opts out. A global opt-out always wins. Only change it when the person explicitly asks. Cannot expose another person's relationship or create a new one.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,

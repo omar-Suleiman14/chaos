@@ -25,18 +25,32 @@ export function randomCode(length: number): string {
  * Fixed-window counter. Throws RATE_LIMITED when `limit` is exceeded within
  * the window. Callers use distinct keys per resource (form, token, action).
  */
-export async function consumeRate(ctx: MutationCtx, key: string, limit: number, windowMs: number): Promise<void> {
+async function currentRateWindow(ctx: QueryCtx | MutationCtx, key: string, windowMs: number) {
   const now = Date.now();
   const windowStart = now - (now % windowMs);
   const existing = await ctx.db
     .query("rateWindows")
     .withIndex("by_key_and_windowStart", (q) => q.eq("key", key).eq("windowStart", windowStart))
     .unique();
+  return { now, windowStart, existing };
+}
+
+function rateLimited(windowStart: number, windowMs: number, now: number): never {
+  const retryAfter = Math.ceil((windowStart + windowMs - now) / 1000);
+  throw new Error(`RATE_LIMITED: Too many requests. Try again in ${retryAfter} seconds.`);
+}
+
+/** Throws RATE_LIMITED when `key` has used its budget in the current window, without spending any. */
+export async function assertRateAvailable(ctx: MutationCtx, key: string, limit: number, windowMs: number): Promise<void> {
+  const { now, windowStart, existing } = await currentRateWindow(ctx, key, windowMs);
+  if (existing && existing.count >= limit) rateLimited(windowStart, windowMs, now);
+}
+
+
+export async function consumeRate(ctx: MutationCtx, key: string, limit: number, windowMs: number): Promise<void> {
+  const { now, windowStart, existing } = await currentRateWindow(ctx, key, windowMs);
   if (existing) {
-    if (existing.count >= limit) {
-      const retryAfter = Math.ceil((windowStart + windowMs - now) / 1000);
-      throw new Error(`RATE_LIMITED: Too many requests. Try again in ${retryAfter} seconds.`);
-    }
+    if (existing.count >= limit) rateLimited(windowStart, windowMs, now);
     await ctx.db.patch("rateWindows", existing._id, { count: existing.count + 1 });
   } else {
     await ctx.db.insert("rateWindows", { key, windowStart, count: 1 });

@@ -40,7 +40,7 @@ function randomHex(bytes: number) {
 const text = {
   en: {
     unavailable: "This form is not available.", closed: "This form is closed.", full: "This form has reached its response limit.",
-    signIn: "Sign in to respond", signInHelp: "The organiser asked respondents to sign in.", code: "Enter the access code", codeWrong: "That code is not right.", codeLocked: "Too many tries. Wait a few minutes, then try again.",
+    signIn: "Sign in to respond", signInHelp: "The organiser asked respondents to sign in.", code: "Enter the access code", codeWrong: "That code is not right.", codeLocked: "Too many wrong codes were tried. Wait about 10 minutes, sign in and try again, or ask the organiser for a new code.",
     continue: "Continue", opens: (d: string) => `This form opens ${d}.`, closes: (d: string) => `Closes ${d}.`, already: "You have already responded to this form.",
     savedHere: "Your answers are saved on this device until you submit.", partial: "The organiser can see unfinished answers to this form.",
     startOver: "Start over", resume: "Continue on another device", resumeHelp: "Anyone with this private link can see and continue your answers for 30 days.",
@@ -55,7 +55,7 @@ const text = {
   },
   ar: {
     unavailable: "هذا النموذج غير متاح.", closed: "هذا النموذج مغلق.", full: "وصل هذا النموذج إلى الحد الأقصى من الردود.",
-    signIn: "سجّل الدخول للإجابة", signInHelp: "طلب المنظم تسجيل الدخول قبل الإجابة.", code: "أدخل رمز الوصول", codeWrong: "الرمز غير صحيح.", codeLocked: "محاولات كثيرة. انتظر بضع دقائق ثم حاول مجددًا.",
+    signIn: "سجّل الدخول للإجابة", signInHelp: "طلب المنظم تسجيل الدخول قبل الإجابة.", code: "أدخل رمز الوصول", codeWrong: "الرمز غير صحيح.", codeLocked: "جُرّبت رموز خاطئة كثيرة. انتظر نحو 10 دقائق، أو سجّل الدخول وحاول مجددًا، أو اطلب من المنظم رمزًا جديدًا.",
     continue: "متابعة", opens: (d: string) => `يفتح هذا النموذج ${d}.`, closes: (d: string) => `يغلق ${d}.`, already: "لقد أجبت على هذا النموذج بالفعل.",
     savedHere: "تُحفظ إجاباتك على هذا الجهاز حتى ترسلها.", partial: "يمكن للمنظم رؤية الإجابات غير المكتملة في هذا النموذج.",
     startOver: "البدء من جديد", resume: "المتابعة على جهاز آخر", resumeHelp: "يمكن لأي شخص لديه هذا الرابط الخاص رؤية إجاباتك ومتابعتها لمدة 30 يومًا.",

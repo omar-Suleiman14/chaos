@@ -54,7 +54,7 @@ export default function TermsView() {
 
         <h2>٥. التطبيقات المتصلة</h2>
         <p>
-          يمكنك ربط Max، والمساعدين الأذكياء مثل ChatGPT وClaude، وتطبيقاتك الخاصة عبر واجهة برمجة التطبيقات (API)، وWebhooks. يعمل التطبيق المتصل في حدود الصلاحيات الممنوحة له، وتتحمل أنت مسؤولية الأوامر التي تطلب منه تنفيذها. يُنشر المحتوى الجديد الذي ينشئه المساعد فورًا لتعمل الروابط مباشرةً ما لم تطلب صراحةً إنشاءه كمسودة. يمكنك إلغاء الربط في أي وقت من صفحة الاتصالات.
+          يمكنك ربط Max، والمساعدين الأذكياء مثل ChatGPT وClaude، وتطبيقاتك الخاصة عبر واجهة برمجة التطبيقات (API)، وWebhooks. يعمل التطبيق المتصل في حدود الصلاحيات الممنوحة له، وتتحمل أنت مسؤولية الأوامر التي تطلب منه تنفيذها. يبدأ المحتوى الجديد الذي ينشئه المساعد مسودةً خاصة، ولا يُنشر إلا عندما تطلب ذلك. يمكنك إلغاء الربط في أي وقت من صفحة الاتصالات.
         </p>
 
         <h2>٦. استخدام الأعمال</h2>
@@ -129,8 +129,8 @@ export default function TermsView() {
       <h2>5. Connected apps</h2>
       <p>
         You can connect Max, assistants such as ChatGPT and Claude, your own apps through the API, and webhooks. A connected app acts with the permissions
-        you give it, and you&rsquo;re responsible for what you ask it to do. New content an assistant creates for you is published straight away unless you ask
-        for a draft. You can revoke a connection at any time in Connections.
+        you give it, and you&rsquo;re responsible for what you ask it to do. New content an assistant creates for you starts as a private draft and is published only when you
+        ask for it. You can revoke a connection at any time in Connections.
       </p>
 
       <h2>6. Business use</h2>

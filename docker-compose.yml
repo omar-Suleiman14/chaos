@@ -8,7 +8,7 @@ name: chaos
 
 services:
   backend:
-    image: ghcr.io/get-convex/convex-backend:${CONVEX_BACKEND_TAG:-latest}
+    image: ghcr.io/get-convex/convex-backend:${CONVEX_BACKEND_TAG:-5c7cb5bc7db457290f1769f95f1d1340912f7fd7}
     restart: unless-stopped
     stop_grace_period: 10s
     ports:
@@ -36,7 +36,7 @@ services:
       retries: 10
 
   dashboard:
-    image: ghcr.io/get-convex/convex-dashboard:${CONVEX_DASHBOARD_TAG:-latest}
+    image: ghcr.io/get-convex/convex-dashboard:${CONVEX_DASHBOARD_TAG:-5c7cb5bc7db457290f1769f95f1d1340912f7fd7}
     restart: unless-stopped
     ports:
       # Admin UI. Bind to localhost by default; it is protected only by the admin key.
