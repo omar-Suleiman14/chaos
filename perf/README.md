@@ -204,9 +204,12 @@ the confirmed result then replaces the copy whole.
 
 ## Performance runs
 
-The deterministic budgets (Convex reads, render counts, stylesheet costs and
-bundle sizes) run on every pull request in CI's **Production build** job, after
-the build, and fail it on a regression. Raising a budget needs
+The deterministic budgets (Convex reads, render counts and stylesheet costs)
+run on every pull request in CI's **Production build** job and fail it on a
+regression. Measure them on Node 24, as CI does; some counts differ on other
+Node versions. Bundle budgets are not gated yet: `next build --webpack` does not
+write the `.next/diagnostics/route-bundle-stats.json` that `pnpm perf:bundles`
+reads. Raising a budget needs
 `pnpm perf:ratchet raise <metric> --reason "..."`; the perf guard in Static
 checks rejects a quiet raise.
 

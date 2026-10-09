@@ -150,8 +150,8 @@ jobs:
           NEXT_PUBLIC_CONVEX_URL: "https://ci-placeholder.convex.cloud"
           NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: "pk_test_Y2ktcGxhY2Vob2xkZXIuZXhhbXBsZS5jb20k"
           CLERK_SECRET_KEY: "sk_test_ci-placeholder-not-a-real-credential"
-      # Deterministic performance budgets (Convex reads, render counts, CSS and the
-      # bundles just built) gate every pull request. Timings stay in the manual
+      # Deterministic performance budgets (Convex reads, render counts and CSS)
+      # gate every pull request. Timings stay in the manual
       # perf.yml run. A raise needs `pnpm perf:ratchet raise` with a reason, which
       # the perf guard in Static checks enforces.
       - name: Measure Convex reads and client rendering
@@ -160,11 +160,10 @@ jobs:
       - name: Measure stylesheet costs
         run: pnpm perf:css
         continue-on-error: true
-      - name: Measure bundles
-        run: pnpm perf:bundles
-        continue-on-error: true
+      # Bundle sizes are not gated yet: `next build --webpack` does not write the
+      # .next/diagnostics/route-bundle-stats.json that perf:bundles reads.
       - name: Compare with performance budgets
-        run: pnpm perf:check
+        run: pnpm perf:check --suites builderKeystroke,builderTabs,census,css,journeys,largeForms,surfaces
       - name: Performance summary
         if: always()
         run: cat perf/results/summary.md >> "$GITHUB_STEP_SUMMARY" || true
