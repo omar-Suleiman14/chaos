@@ -55,9 +55,11 @@ export const admitUpload = internalQuery({
 });
 
 /**
- * One-time backfill for accounts that kept files before usage was counted. Walks learnSources by
- * owner, a page per transaction, and writes each owner's total once all their rows are read.
- * Start with `npx convex run sourceStorage:backfill '{"restart": true}'`; it schedules itself.
+ * One-time backfill for files kept before usage was counted. Each source row carries
+ * `storageCounted`; registration sets it in the same transaction that adds the bytes, and this
+ * walk adds the bytes of every kept file still unmarked and marks it, one page per transaction.
+ * A file is therefore counted exactly once whatever runs concurrently, and the run is safe to
+ * repeat. Start with `npx convex run sourceStorage:backfill '{"restart": true}'`; it schedules itself.
  */
 export const backfill = internalMutation({
   args: { restart: v.optional(v.boolean()) },
@@ -65,24 +67,16 @@ export const backfill = internalMutation({
   handler: async (ctx, args) => {
     let state = await ctx.db.query("sourceStorageBackfill").first();
     if (state && args.restart) { await ctx.db.delete("sourceStorageBackfill", state._id); state = null; }
-    if (!state) state = (await ctx.db.get("sourceStorageBackfill", await ctx.db.insert("sourceStorageBackfill", { cursor: null, ownerId: null, bytes: 0, done: false })))!;
+    if (!state) state = (await ctx.db.get("sourceStorageBackfill", await ctx.db.insert("sourceStorageBackfill", { cursor: null, done: false })))!;
     if (state.done) return null;
-    const page = await ctx.db.query("learnSources").withIndex("by_ownerId_and_sha256_and_status").paginate({ cursor: state.cursor, numItems: 100, maximumBytesRead: 4_000_000 });
-    let { ownerId, bytes } = state;
-    const settle = async () => { if (ownerId !== null) await setUsage(ctx, ownerId, bytes); };
+    const page = await ctx.db.query("learnSources").paginate({ cursor: state.cursor, numItems: 100, maximumBytesRead: 4_000_000 });
     for (const source of page.page) {
-      if (source.ownerId !== ownerId) { await settle(); ownerId = source.ownerId; bytes = 0; }
-      if (source.storageId) bytes += source.size ?? 0;
+      if (!source.storageId || source.storageCounted) continue;
+      await changeSourceStorage(ctx, source.ownerId, source.size ?? 0);
+      await ctx.db.patch("learnSources", source._id, { storageCounted: true });
     }
-    if (page.isDone) await settle();
-    await ctx.db.patch("sourceStorageBackfill", state._id, { cursor: page.continueCursor, ownerId, bytes, done: page.isDone });
+    await ctx.db.patch("sourceStorageBackfill", state._id, { cursor: page.continueCursor, done: page.isDone });
     if (!page.isDone) await ctx.scheduler.runAfter(0, internal.sourceStorage.backfill, {});
     return null;
   },
 });
-
-async function setUsage(ctx: MutationCtx, ownerId: string, bytes: number) {
-  const row = await usageRow(ctx, ownerId);
-  if (row) await ctx.db.patch("sourceStorageUsage", row._id, { bytes });
-  else if (bytes > 0) await ctx.db.insert("sourceStorageUsage", { ownerId, bytes });
-}

@@ -568,6 +568,7 @@ export async function registerSourceUploadForActor(ctx: MutationCtx, actor: stri
       contentType: file.contentType ?? args.contentType,
       createdAt: Date.now(),
       status: "active",
+      storageCounted: true,
     });
     await changeSourceStorage(ctx, actor, file.size);
     return { sourceId, duplicate: false, ...(near ? { nearDuplicateOf: near._id } : {}) };
