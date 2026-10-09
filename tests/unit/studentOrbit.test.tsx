@@ -7,7 +7,7 @@ vi.mock("convex/react", () => ({ usePaginatedQuery: () => state, useQuery: vi.fn
 vi.mock("@/lib/i18n", () => ({ useLocale: () => ({ locale: "en" }) }));
 vi.mock("@/components/card/useTilt", () => ({ useTilt: vi.fn() }));
 vi.mock("@/components/MemberAvatar", () => ({ default: () => <span /> }));
-vi.mock("@/components/site/SiteLink", () => ({ default: ({ prefetch: _prefetch, ...props }: React.ComponentProps<"a"> & { prefetch?: boolean }) => <a {...props} /> }));
+vi.mock("@/components/site/SiteLink", () => ({ default: ({ prefetch: _prefetch, ...props }: React.ComponentProps<"a"> & { prefetch?: boolean }) => <a {...props}>{props.children}</a> }));
 beforeEach(() => {
   state.loadMore.mockClear();
   state.results = Array.from({ length: 60 }, (_, i) => ({ id: String(i), name: `Student ${i}`, username: `student-${i}`, seed: String(i), style: 0, context: null }));

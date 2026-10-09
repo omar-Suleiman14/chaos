@@ -1,12 +1,10 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import { inter } from "@/components/fonts/inter";
 import ErrorScreen from "@/components/site/ErrorScreen";
 import { siteUrl } from "@/lib/site";
 import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
 import "./workspace.css";
-
-const inter = Inter({ subsets: ["latin"], weight: ["400", "500", "600", "700"], variable: "--font-inter", display: "swap" });
 
 export const metadata: Metadata = { metadataBase: new URL(siteUrl), title: "Page not found · Chaos", robots: { index: false } };
 

@@ -13,7 +13,7 @@ const forms = {
 };
 const intent = vi.hoisted(() => ({ warmForm: vi.fn() }));
 const learnBackend = vi.hoisted(() => ({ query: vi.fn(), mutation: vi.fn(), loadMore: vi.fn() }));
-vi.mock("next/link", () => ({ default: ({ prefetch, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { prefetch?: boolean | null }) => <a {...props} data-prefetch={prefetch === null ? "auto" : String(prefetch)} /> }));
+vi.mock("next/link", () => ({ default: ({ prefetch, ...props }: React.AnchorHTMLAttributes<HTMLAnchorElement> & { prefetch?: boolean | null }) => <a {...props} data-prefetch={prefetch === null ? "auto" : String(prefetch)}>{props.children}</a> }));
 vi.mock("@/lib/convexCache", () => ({ warmHref: () => {},
   formIntentHandlers: (id: string) => ({ onFocus: () => intent.warmForm(id), onPointerEnter: () => intent.warmForm(id), onTouchStart: () => intent.warmForm(id) }),
   // The shell reads its lists through lib/confirmedQuery, which uses this useQuery.
@@ -23,7 +23,7 @@ const courses = [{ id: "course1", title: "Night sky course", description: "", le
 const games: { _id: string; title: string; formId: string; state: string; createdAt: number }[] = [];
 function liveQuery(ref: Parameters<typeof getFunctionName>[0]) {
   const name = getFunctionName(ref);
-  return name === "forms:listMyForms" ? forms : name === "quizFunctions:getMyQuizzes" ? [] : name === "courses:listMine" ? courses : name === "live:myGames" ? games : undefined;
+  return name === "forms:listMyForms" ? forms : name === "courses:listMine" ? courses : name === "live:myGames" ? games : undefined;
 }
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn() }), usePathname: () => "/dashboard" }));
 vi.mock("@/components/ThemeProvider", () => ({ useTheme: () => ({ toggleTheme: vi.fn() }) }));

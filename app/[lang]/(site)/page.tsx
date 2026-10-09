@@ -3,10 +3,10 @@ import HomeView from "./HomeView";
 
 export async function generateMetadata({ params }: SitePageProps) {
   return sitePageMetadata((await params).lang, {
-    en: { title: "Chaos · Forms, quizzes, lessons, courses and live games", description: siteDescription },
+    en: { title: "Chaos · Turn what you know into lessons that stick", description: siteDescription },
     ar: {
-      title: "Chaos · نماذج واختبارات ودروس ودورات وألعاب مباشرة",
-      description: "أنشئ النماذج والاختبارات والدروس والدورات والألعاب المباشرة في مساحة عمل واحدة مجانية ومفتوحة المصدر. بالعربية والإنجليزية، مع MCP وAPI وWebhooks واستضافة ذاتية.",
+      title: "Chaos · حوّل ما تعرفه إلى دروس تبقى في الذاكرة",
+      description: "حوّل ما تعرفه إلى دروس تبقى في الذاكرة. أنشئ الدروس والدورات والاختبارات ودرّس مباشرة، واربط ChatGPT أو Claude. بالعربية والإنجليزية.",
     },
   }, "/", { absoluteTitle: true });
 }

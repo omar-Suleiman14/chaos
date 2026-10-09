@@ -43,6 +43,7 @@ function DialogExample() {
   </div>;
 }
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 describe("workspace modals", () => {
   it("traps focus, isolates background, closes on Escape and restores focus and scroll", async () => {
     const user = userEvent.setup();
@@ -110,6 +111,7 @@ describe("workspace modals", () => {
     expect(dialog).toHaveFocus();
   });
 });
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
 describe("workspace menu", () => {
   it("escapes card clipping and supports arrows, Home/End, typeahead and return focus", async () => {

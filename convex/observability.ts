@@ -4,7 +4,7 @@ import { v } from "convex/values";
 import { makeFunctionReference } from "convex/server";
 
 import { requireActiveUser, requireAdmin } from "./authz";
-import { METRIC_POLICY, observabilityTables, serviceValidator, statusValidator } from "./observabilityModel";
+import { METRIC_POLICY, serviceValidator, statusValidator } from "./observabilityModel";
 
 const hourMs = 3600000;
 const services = ["submissions", "integration-api", "mcp", "source-files", "learn-reads", "search", "ai", "webhooks"] as const;

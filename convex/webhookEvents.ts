@@ -13,7 +13,6 @@ import {
 } from "./webhookModel";
 import type { WebhookEventType, WebhookSentEvent } from "./webhookModel";
 import { randomHex } from "./serverUtils";
-import { parseMultiAnswer } from "./grading";
 
 type Subscription = Doc<"webhookSubscriptions">;
 
@@ -117,14 +116,6 @@ export function formItem(form: Doc<"forms">, status: string = form.status) {
   };
 }
 
-export function quizItem(quiz: Doc<"quizzes">, status: "live" | "closed" | "draft") {
-  return {
-    id: `quiz_${quiz._id}`, kind: "quiz" as const, title: quiz.title, status,
-    version: null,
-    sharePath: `/${quiz.creatorUsername}/${quiz.slug}`,
-  };
-}
-
 function formAnswers(def: FormDefinition, answers: Answers) {
   const out = [];
   for (const field of def.fields) {
@@ -162,40 +153,6 @@ export function formResponseData(form: Doc<"forms">, response: Doc<"formResponse
   return { base, withAnswers: { ...base, answers: formAnswers(def, response.answers as Answers), hidden: response.hidden ?? {}, typedHidden: response.typedHidden ?? {} } };
 }
 
-type QuizQuestionLike = { _id: Id<"questions">; questionText: string; type: string; points: number };
-
-export function quizAttemptData(
-  quiz: Doc<"quizzes">,
-  session: Doc<"quizSessions">,
-  questions: QuizQuestionLike[],
-  grading?: { questionId: Id<"questions">; points: number; previousPoints: number; gradedAt: number },
-): EventData {
-  const base: Record<string, unknown> = {
-    item: quizItem(quiz, quiz.isPublished ? "live" : "closed"),
-    response: {
-      id: `attempt_${session._id}`,
-      status: "completed",
-      formVersion: null,
-      startedAt: session.startedAt,
-      submittedAt: session.completedAt ?? null,
-      durationMs: session.completedAt ? session.completedAt - session.startedAt : null,
-      language: null,
-      answeredCount: session.answers.filter((a) => a.answer.trim()).length,
-      score: session.score,
-      maxScore: session.totalPoints,
-      endingId: null,
-    },
-  };
-  if (grading) base.grading = { fieldId: grading.questionId, points: grading.points, previousPoints: grading.previousPoints, gradedAt: grading.gradedAt };
-  const byId = new Map(questions.map((q) => [q._id, q]));
-  const answers = session.answers.map((a) => {
-    const q = byId.get(a.questionId);
-    const multi = q?.type === "multi_select" ? parseMultiAnswer(a.answer) : null;
-    return { fieldId: a.questionId, label: q?.questionText ?? "", type: q?.type ?? "unknown", value: multi ?? a.answer, text: multi ? multi.join(", ") : a.answer, correct: a.isCorrect, points: a.pointsEarned };
-  });
-  return { base, withAnswers: { ...base, respondent: { name: session.playerName }, answers } };
-}
-
 /** form.closed / form.reopened for a form status change. */
 export async function emitFormStatusChange(ctx: MutationCtx, form: Doc<"forms">, next: Doc<"forms">["status"]) {
   if (form.status === next) return;
@@ -204,24 +161,3 @@ export async function emitFormStatusChange(ctx: MutationCtx, form: Doc<"forms">,
   await emitWebhookEvent(ctx, form.ownerId, type, `form_${form._id}`, () => ({ base: { item: formItem(form, next), previousStatus: form.status } }));
 }
 
-/** response.completed / response.graded for a classic quiz attempt. Loads what it needs so call sites stay one line. */
-export async function emitQuizAttemptEvent(
-  ctx: MutationCtx,
-  sessionId: Id<"quizSessions">,
-  type: "response.completed" | "response.graded",
-  grading?: { questionId: Id<"questions">; points: number; previousPoints: number },
-) {
-  const session = await ctx.db.get("quizSessions", sessionId);
-  const quiz = session ? await ctx.db.get("quizzes", session.quizId) : null;
-  if (!session || !quiz || session.status !== "completed") return;
-  const questions = session.questionSnapshot ?? quiz.publishedSnapshot?.questions ?? [];
-  await emitWebhookEvent(ctx, quiz.creatorId, type, `quiz_${quiz._id}`, () =>
-    quizAttemptData(quiz, session, questions, grading ? { ...grading, gradedAt: Date.now() } : undefined));
-}
-
-/** form.published / form.closed for a classic quiz. */
-export async function emitQuizStatusEvent(ctx: MutationCtx, quizId: Id<"quizzes">, type: "form.published" | "form.closed") {
-  const quiz = await ctx.db.get("quizzes", quizId);
-  if (!quiz) return;
-  await emitWebhookEvent(ctx, quiz.creatorId, type, `quiz_${quiz._id}`, () => ({ base: { item: quizItem(quiz, type === "form.published" ? "live" : "closed") } }));
-}

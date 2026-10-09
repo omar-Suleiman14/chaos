@@ -13,6 +13,7 @@ const copy = {
 };
 
 /** System, Light or Dark. Icon buttons by default; pass showLabels for a roomier row (App Settings). */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- Styled button radios preserve native button activation and expose their selection to assistive technology. */
 export function ThemeModeSwitch({ showLabels = false, className = "" }: { showLabels?: boolean; className?: string }) {
   const { mode, setMode } = useTheme();
   const t = useCopy(copy);
@@ -46,3 +47,4 @@ export function ThemeModeSwitch({ showLabels = false, className = "" }: { showLa
     </>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */

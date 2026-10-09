@@ -1,4 +1,6 @@
 "use client";
+
+import { ContentImage } from "@/components/ContentImage";
 import Diagram from "./Diagram";
 
 import InlineQuiz from "./InlineQuiz";
@@ -6,7 +8,7 @@ import InlineFlashcards from "./InlineFlashcards";
 import { Fragment, memo, useEffect, useMemo, useState } from "react";
 import { useStableCallback } from "@/lib/stableCallback";
 import { PlayCircle } from "lucide-react";
-import { asBlocks, blockText, cellInlines, formatTimestamp, inlineText, parseAnnotations, youTubeEmbedUrl, type Block, type CitationContent, type Inline, type LinkContent, type StyledText, type TableContent } from "@/lib/learn/doc";
+import { asBlocks, blockText, cellInlines, formatTimestamp, inlineText, parseAnnotations, parseYouTube, youTubeEmbedUrl, type Block, type CitationContent, type Inline, type LinkContent, type StyledText, type TableContent } from "@/lib/learn/doc";
 import { resolveLearnFileUrl as resolveFileUrl } from "@/lib/learn/data";
 import type { Highlight, LessonSource } from "@/lib/learn/types";
 import { calloutIcon, sourceIcon, sourceLabel, useBlockCopy, type CalloutTone } from "../blockShared";
@@ -146,7 +148,7 @@ function ReaderImage({ block, onOpen }: { block: Block; onOpen?: (block: Block, 
   return (
     <figure className="lx-reader-figure" data-kind={p.figureKind}>
       <button type="button" onClick={() => onOpen?.(block, url)} aria-label={`${t.enlarge}${p.alt ? `: ${p.alt}` : ""}`}>
-        <img src={url} alt={String(p.alt ?? "")} width={p.previewWidth ? Number(p.previewWidth) : undefined} loading="lazy" decoding="async" />
+        <ContentImage src={url} alt={String(p.alt ?? "")} width={p.previewWidth ? Number(p.previewWidth) : undefined} loading="lazy" decoding="async" />
       </button>
       {(p.caption || credit) && (
         <figcaption>
@@ -158,22 +160,24 @@ function ReaderImage({ block, onOpen }: { block: Block; onOpen?: (block: Block, 
   );
 }
 
-function ReaderYouTube({ block }: { block: Block }) {
+type YouTubeProps = { videoId: string; start?: number; end?: number; caption?: string; title?: string };
+
+function ReaderYouTube({ video: p }: { video: YouTubeProps }) {
   const t = useCopy(copy);
   const bt = useBlockCopy();
   const [playing, setPlaying] = useState(false);
-  const p = block.props as { videoId: string; start: number; end: number; caption: string; title?: string };
   if (!/^[A-Za-z0-9_-]{11}$/.test(p.videoId ?? "")) return null;
-  const range = p.start || p.end ? `${formatTimestamp(p.start)}–${p.end ? formatTimestamp(p.end) : "…"}` : "";
+  const start = Number(p.start) || 0, end = Number(p.end) || 0;
+  const range = start || end ? `${formatTimestamp(start)}–${end ? formatTimestamp(end) : "…"}` : "";
   return (
     <div className="lx-youtube">
       <div className="lx-youtube__frame">
         {playing ? (
-          <iframe src={`${youTubeEmbedUrl(p.videoId, p.start, p.end)}&autoplay=1`} title={p.title || p.caption || "YouTube"} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
+          <iframe src={`${youTubeEmbedUrl(p.videoId, start, end)}&autoplay=1`} title={p.title || p.caption || "YouTube"} allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" />
         ) : (
           <>
             {/* Facade: YouTube loads only when the reader asks for it. */}
-            <img src={`https://i.ytimg.com/vi/${p.videoId}/hqdefault.jpg`} alt="" loading="lazy" />
+            <ContentImage src={`https://i.ytimg.com/vi/${p.videoId}/hqdefault.jpg`} alt="" loading="lazy" />
             <button type="button" className="lx-youtube__launch" onClick={() => setPlaying(true)} aria-label={t.play(range)}><PlayCircle size={56} aria-hidden /></button>
             {range && <span className="lx-youtube__range">{bt.ytWatch(range)}</span>}
           </>
@@ -205,11 +209,12 @@ function ReaderSource({ block, sources, onCite }: { block: Block; sources: Lesso
   );
 }
 
+/* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- The table viewport is focusable so wide tables can be scrolled with the keyboard. */
 function Table({ table, sources, onCite, id }: { table: TableContent; sources: LessonSource[]; onCite?: RendererProps["onCite"]; id: string }) {
   const headerRows = table.headerRows ?? 0;
   const headerCols = table.headerCols ?? 0;
   return (
-    <div className="lx-table-wrap" tabIndex={0} role="region" aria-label="Table">
+    <section className="lx-table-wrap" tabIndex={0}  aria-label="Table">
       <table>
         <tbody>
           {table.rows.map((row, r) => (
@@ -228,9 +233,10 @@ function Table({ table, sources, onCite, id }: { table: TableContent; sources: L
           ))}
         </tbody>
       </table>
-    </div>
+    </section>
   );
 }
+/* oxlint-enable jsx-a11y/no-noninteractive-tabindex */
 
 type BodyProps = { block: Block; sources: LessonSource[]; highlights?: Highlight[]; onCite: RendererProps["onCite"]; onOpenImage?: RendererProps["onOpenImage"] };
 
@@ -284,14 +290,19 @@ const BlockBody = memo(function BlockBody({ block, sources, highlights: hl, onCi
       return <div className="lx-callout" data-tone={tone} role="note"><span className="lx-callout__icon" aria-hidden><Icon size={18} /></span><div className="lx-callout__body">{inline}</div></div>;
     }
     case "image": return <ReaderImage block={block} onOpen={onOpenImage} />;
-    case "youtube": return <ReaderYouTube block={block} />;
+    case "youtube": return <ReaderYouTube video={block.props as YouTubeProps} />;
     case "source": return <ReaderSource block={block} sources={sources} onCite={onCite} />;
     case "table": return block.content && !Array.isArray(block.content) ? <Table table={block.content} sources={sources} onCite={onCite} id={block.id} /> : null;
     case "checkListItem": return <div className="lx-check"><input type="checkbox" checked={!!block.props.checked} readOnly aria-readonly tabIndex={-1} /> <span>{inline}</span></div>;
     case "toggleListItem": return null; // rendered by the wrapper as <details>
     case "video": case "audio": case "file": {
       const href = safeHref(String(block.props.url ?? ""));
-      return href ? <p><a href={href} target="_blank" rel="noopener noreferrer">{String(block.props.name || block.props.caption || href)}</a></p> : null;
+      if (!href) return null;
+      const caption = String(block.props.caption ?? "");
+      // A YouTube link in a plain video block plays as a YouTube embed; a <video> tag cannot play it.
+      const yt = block.type === "video" ? parseYouTube(href) : null;
+      if (yt) return <ReaderYouTube video={{ videoId: yt.id, start: yt.start, caption }} />;
+      return <p><a href={href} target="_blank" rel="noopener noreferrer">{String(block.props.name || caption || href)}</a></p>;
     }
     default: return inline ? <p>{inline}</p> : null;
   }
@@ -324,7 +335,7 @@ function BlockList({ blocks, props }: { blocks: Block[]; props: ListProps }) {
       out.push(
         <List key={group[0].id} className="lx-block" data-type="list" start={List === "ol" && Number(group[0].props.start) > 1 ? Number(group[0].props.start) : undefined}>
           {group.map((item) => (
-            <li key={item.id} id={item.id} data-block-id={item.id} style={{ position: "relative" }}>
+            <li key={item.id} id={item.id} data-block-id={item.id} data-active={props.activeBlockId === item.id || undefined} style={{ position: "relative" }}>
               {props.blockAside && <div className="lx-block__handle">{props.blockAside(item)}</div>}
               {body(item, props)}
               {item.children.length > 0 && <BlockList blocks={item.children} props={props} />}
@@ -380,7 +391,7 @@ function useSharedBlocks(content: unknown) {
 /** Same reference while the value is unchanged by content. */
 function useByContent<T>(value: T): T {
   const key = JSON.stringify(value ?? null);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by content on purpose
+  // oxlint-disable-next-line react-hooks/exhaustive-deps -- keyed by content on purpose
   return useMemo(() => value, [key]);
 }
 

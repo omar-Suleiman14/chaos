@@ -47,7 +47,7 @@ export default function ReportDialog({ target, title, onClose }: { target: Repor
     <WsDialog title={`${t.title}: ${title}`} description={t.lead} onClose={onClose}>
       {sent ? (
         <div className="lx-form">
-          <p className="lx-notice" data-tone="info" role="status"><CheckCircle2 size={16} aria-hidden />{t.sent}</p>
+          <output className="lx-notice" data-tone="info" ><CheckCircle2 size={16} aria-hidden />{t.sent}</output>
           <div className="lx-actions" style={{ justifyContent: "flex-end" }}><button type="button" className="ws-btn ws-btn--primary" onClick={onClose}>{t.close}</button></div>
         </div>
       ) : (
@@ -61,7 +61,7 @@ export default function ReportDialog({ target, title, onClose }: { target: Repor
           <fieldset className="lx-field" style={{ border: 0, padding: 0, margin: 0, gap: 8 }}>
             <legend className="sr-only">{t.title}</legend>
             {(Object.keys(t.reasons) as ReportReason[]).filter(r => r !== "other").map((r) => (
-              <label key={r} className="lx-panel" style={{ display: "flex", gap: 10, cursor: "pointer", padding: 10, borderColor: reason === r ? "var(--primary)" : undefined }}>
+              <label key={r} aria-label={t.reasons[r][0]} className="lx-panel" style={{ display: "flex", gap: 10, cursor: "pointer", padding: 10, borderColor: reason === r ? "var(--primary)" : undefined }}>
                 <input type="radio" name="reason" checked={reason === r} onChange={() => { setReason(r); setError(""); }} />
                 <span style={{ display: "grid", gap: 2 }}><strong style={{ fontSize: 14 }}>{t.reasons[r][0]}</strong><span className="lx-muted" style={{ fontWeight: 400 }}>{t.reasons[r][1]}</span></span>
               </label>

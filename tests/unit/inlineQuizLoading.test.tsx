@@ -1,5 +1,5 @@
 import { Suspense, lazy } from "react";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "@/lib/i18n";
 
@@ -10,7 +10,6 @@ vi.mock("next/dynamic", () => ({ default: () => lazy(() => new Promise<{ default
 })) }));
 vi.mock("@/lib/convexCache", () => ({ warmQuery: pending.warm, useQuery: () => ({ title: "Checkpoint", questionCount: 1, href: "/f/checkpoint", shareId: "checkpoint" }) }));
 vi.mock("@/components/forms/respond/RespondPage", () => ({ RespondToForm: () => null }));
-vi.mock("@/components/quizzes/QuizPlayer", () => ({ default: () => null }));
 vi.mock("convex/react", () => ({ useQuery: () => ({ title: "Cards", cardCount: 2 }) }));
 vi.mock("@/components/learn/reader/LazyBlock", async importOriginal => ({
   ...await importOriginal<typeof import("@/components/learn/reader/LazyBlock")>(),
@@ -23,20 +22,27 @@ import InlineFlashcards from "@/components/learn/reader/InlineFlashcards";
 import { api } from "@/convex/_generated/api";
 
 describe("inline quiz lazy loading", () => {
-  it.each(["form", "quiz"] as const)("keeps the lesson visible while the %s player downloads", async kind => {
+  it("keeps the lesson visible while the form player downloads", async () => {
     render(<LocaleProvider initial="en"><Suspense fallback={<div>Lesson loading</div>}>
-      <article><h1>Lesson content</h1><InlineQuiz asset={{ kind, id: "checkpoint" }} /></article>
+      <article><h1>Lesson content</h1><InlineQuiz asset={{ kind: "form", id: "checkpoint" }} /></article>
     </Suspense></LocaleProvider>);
-    if (kind === "quiz") fireEvent.click(screen.getByRole("button", { name: "Start practice" }));
     expect(screen.queryByText("Lesson loading")).toBeNull();
     expect(screen.getByRole("heading", { name: "Lesson content" })).toBeVisible();
     expect(screen.getByRole("status")).toHaveStyle({ minHeight: "280px" });
-    if (kind === "form") expect(pending.warm).toHaveBeenCalledWith(api.respond.getPublicForm, { shareId: "checkpoint" });
-    else expect(pending.warm).toHaveBeenCalledWith(api.quizFunctions.getQuizForPlayer, { quizId: "checkpoint" });
+    expect(pending.warm).toHaveBeenCalledWith(api.respond.getPublicForm, { shareId: "checkpoint" });
     await act(async () => { pending.resolve.shift()!(); });
     expect(screen.getByText("Loaded player")).toBeVisible();
     expect(screen.getByRole("heading", { name: "Lesson content" })).toBeVisible();
     expect(screen.queryByRole("status")).toBeNull();
+  });
+  it("shows an unconverted classic quiz reference as unavailable without loading a player", () => {
+    pending.warm.mockClear();
+    render(<LocaleProvider initial="en"><Suspense fallback={<div>Lesson loading</div>}>
+      <article><h1>Lesson content</h1><InlineQuiz asset={{ kind: "quiz", id: "checkpoint" }} /></article>
+    </Suspense></LocaleProvider>);
+    expect(screen.getByText("This quiz is unavailable.")).toBeVisible();
+    expect(screen.getByRole("heading", { name: "Lesson content" })).toBeVisible();
+    expect(pending.warm).not.toHaveBeenCalled();
   });
   it("keeps the lesson visible while the flashcard player downloads", async () => {
     render(<LocaleProvider initial="en"><Suspense fallback={<div>Lesson loading</div>}>

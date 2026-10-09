@@ -64,7 +64,7 @@ function VersionSegments({ formId, version, parameters }: { formId: Id<"forms">;
   const [request, setRequest] = useState<{ segment: Dimension; compare: Dimension }>({ segment: { kind: "language" }, compare: { kind: "status" } });
   const matrix = useQuery(api.formSegmentAnalysis.crossTab, { formId, version, ...request });
   const [error, setError] = useState("");
-  if (snapshot === undefined) return <p role="status">{t.loading}</p>;
+  if (snapshot === undefined) return <output >{t.loading}</output>;
   if (!snapshot || matrix === null) return <p className="ws-empty">{t.unavailable}</p>;
   const def = snapshot.definition;
   const bucketLabel = (value: string, d: Dimension) => {
@@ -78,11 +78,11 @@ function VersionSegments({ formId, version, parameters }: { formId: Id<"forms">;
     return value === "ar" ? "العربية" : "English";
   };
   return <>
-    <p className="ws-muted">{t.sample}</p>{matrix?.evidence.windowLimited && <p role="status">{t.limited}</p>}
+    <p className="ws-muted">{t.sample}</p>{matrix?.evidence.windowLimited && <output >{t.limited}</output>}
     <form className="kb-card-bordered grid gap-4 p-5" onSubmit={e => { e.preventDefault(); try { setRequest({ segment: dimension(segment, parameters), compare: dimension(compare, parameters) }); setError(""); } catch { setError(t.invalid); } }}>
       <h2 className="text-lg font-semibold">{t.matrix}</h2><div className="grid gap-4 sm:grid-cols-2"><DimensionInput label={t.segment} value={segment} onChange={setSegment} definition={def} parameters={parameters} /><DimensionInput label={t.compare} value={compare} onChange={setCompare} definition={def} parameters={parameters} /></div>
       {error && <p role="alert">{error}</p>}<button className="ws-btn w-fit">{t.apply}</button>
     </form>
-    {matrix === undefined ? <p role="status">{t.loading}</p> : matrix.suppressed ? <p role="status">{t.suppressed} ({t.minimum}: {matrix.evidence.minimumCell})</p> : !matrix.cells.length ? <p>{t.empty}</p> : <div className="overflow-x-auto"><table className="w-full text-start"><caption className="text-start font-semibold py-2">{t.matrix}</caption><thead><tr>{[t.segment, t.compare, t.count, t.rate].map(label => <th className="text-start p-2" scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{matrix.cells.map(cell => <tr key={JSON.stringify([cell.segment, cell.comparison])}><th scope="row" className="text-start p-2">{bucketLabel(cell.segment, request.segment)}</th><td className="p-2">{bucketLabel(cell.comparison, request.compare)}</td><td className="p-2">{formatNumber(locale, cell.count)}</td><td className="p-2">{formatNumber(locale, Math.round(cell.withinSegmentRate * 100))}%</td></tr>)}</tbody></table></div>}
+    {matrix === undefined ? <output >{t.loading}</output> : matrix.suppressed ? <output >{t.suppressed} ({t.minimum}: {matrix.evidence.minimumCell})</output> : !matrix.cells.length ? <p>{t.empty}</p> : <div className="overflow-x-auto"><table className="w-full text-start"><caption className="text-start font-semibold py-2">{t.matrix}</caption><thead><tr>{[t.segment, t.compare, t.count, t.rate].map(label => <th className="text-start p-2" scope="col" key={label}>{label}</th>)}</tr></thead><tbody>{matrix.cells.map(cell => <tr key={JSON.stringify([cell.segment, cell.comparison])}><th scope="row" className="text-start p-2">{bucketLabel(cell.segment, request.segment)}</th><td className="p-2">{bucketLabel(cell.comparison, request.compare)}</td><td className="p-2">{formatNumber(locale, cell.count)}</td><td className="p-2">{formatNumber(locale, Math.round(cell.withinSegmentRate * 100))}%</td></tr>)}</tbody></table></div>}
   </>;
 }

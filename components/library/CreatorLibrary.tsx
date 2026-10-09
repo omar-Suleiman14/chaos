@@ -11,7 +11,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "convex/react";
 import { formIntentHandlers, useQuery } from "@/lib/convexCache";
 import { deleteFormLocally, setFormStatusLocally, useOptimisticMutation } from "@/lib/optimistic";
-import { Archive, ArrowDown, ArrowUp, ArrowUpDown, BarChart3, BookOpen, Check, ChevronDown, Copy, ExternalLink, FileUp, Globe, FileText, GraduationCap, Layers, ListChecks, LayoutGrid, LayoutTemplate, List, ListFilter, Lock, Pencil, Plus, Radio, Trash2, Trophy, X, Pin, PinOff } from "lucide-react";
+import { Archive, ArrowDown, ArrowUp, ArrowUpDown, BarChart3, BookOpen, Check, ChevronDown, Copy, ExternalLink, FileUp, FileText, GraduationCap, Layers, ListChecks, LayoutGrid, LayoutTemplate, List, ListFilter, Pencil, Plus, Radio, Trash2, Trophy, X, Pin, PinOff } from "lucide-react";
 import { useHostLive } from "@/components/live/HostLiveButton";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -61,7 +61,6 @@ const copy = {
     colName: "Name", colStatus: "Status", colResponses: "Responses", colEdited: "Edited", colActions: "Actions",
     untitledQuiz: "Untitled quiz", untitledForm: "Untitled form", untitled: "Untitled",
     responseCount: (n: number) => `${n} response${n === 1 ? "" : "s"}`,
-    playCount: (n: number) => `${n} play${n === 1 ? "" : "s"}`,
     sharedMeta: (owner: string, canEdit: boolean) => `${owner} · you can ${canEdit ? "edit" : "view"}`,
     sharedGroup: "Shared with you", ungrouped: "Ungrouped",
     approvalNote: "Waiting for your approval to publish",
@@ -69,7 +68,7 @@ const copy = {
     archived: (title: string) => `Archived “${title}”`, restored: (title: string) => `Restored “${title}”`, findInArchive: "Find it in Archive in the sidebar", deleted: "Deleted",
     open: "Open", results: "Results", viewLive: "View live", copyLink: "Copy link", unpin: "Unpin from sidebar", pin: "Pin to sidebar",
     duplicate: "Duplicate", unpublish: "Unpublish", publish: "Publish", archive: "Archive", delete: "Delete",
-    oldQuiz: "Old quiz", quiz: "Quiz", form: "Form",
+    quiz: "Quiz", form: "Form",
     games: "Games", library: "Library", newForm: "Form", newFormHelp: "Surveys, sign-ups and feedback", newQuiz: "Quiz", newQuizHelp: "Marked for you; host it live any time", newLesson: "Lesson", newLessonHelp: "A page to teach one thing", newCourse: "Course", newCourseHelp: "Lessons in order, for people to take", newFlashcards: "Flashcard set", newFlashcardsHelp: "Cards to study with spaced review", untitledSet: "Untitled set", newMenu: "Create something new", creating: "Creating…", newLabel: "New", moreWays: "More ways to start", blank: "Blank", fromTemplate: "From a template", import: "Import",
     dismissError: "Dismiss error", filterLibrary: "Filter library",
     filterByStatus: "Filter by status", status: "Status", clearFilter: "Clear filter", sort: "Sort", viewOptions: "View options", gallery: "Gallery", list: "List",
@@ -81,8 +80,6 @@ const copy = {
     deleteTemplate: (name: string) => `Delete template ${name}`,
     importTitle: "Import a form", importDesc: "Imports become drafts for you to review; nothing is published.",
     deleteTitle: (title: string) => `Delete “${title}”?`,
-    deleteLegacy: (responses: number, questions: number) => `Its ${questions} question${questions === 1 ? "" : "s"} and ${responses} response${responses === 1 ? "" : "s"} with their scores will be deleted. This cannot be undone.`,
-    counting: "Counting responses…",
     deleteForm: (n: number) => `Its ${n} response${n === 1 ? "" : "s"}, uploads and history will be deleted. This cannot be undone. Archive it from its settings instead to keep the data.`,
     cancel: "Cancel", deleteForever: "Delete permanently",
     sourceChaos: "Chaos export", sourceText: "Pasted questions", sourceSheet: "Spreadsheet", modeExport: "Form export or text", modeSheet: "Questions from CSV or Excel",
@@ -98,7 +95,6 @@ const copy = {
     colName: "الاسم", colStatus: "الحالة", colResponses: "الردود", colEdited: "آخر تعديل", colActions: "الإجراءات",
     untitledQuiz: "اختبار بلا عنوان", untitledForm: "نموذج بلا عنوان", untitled: "بلا عنوان",
     responseCount: (n: number) => n === 0 ? "لا ردود" : pluralForm("ar", n, { one: "ردّ واحد", two: "ردّان", few: `${n} ردود`, many: `${n} ردًّا`, other: `${n} ردّ` }),
-    playCount: (n: number) => n === 0 ? "لا محاولات" : pluralForm("ar", n, { one: "محاولة واحدة", two: "محاولتان", few: `${n} محاولات`, many: `${n} محاولة`, other: `${n} محاولة` }),
     sharedMeta: (owner: string, canEdit: boolean) => `${owner} · يمكنك ${canEdit ? "التعديل" : "العرض"}`,
     sharedGroup: "تمت مشاركته معك", ungrouped: "بلا مجموعة",
     approvalNote: "بانتظار موافقتك على النشر",
@@ -106,7 +102,7 @@ const copy = {
     archived: (title: string) => `تمت أرشفة «${title}»`, restored: (title: string) => `تمت استعادة «${title}»`, findInArchive: "تجده في الأرشيف بالشريط الجانبي", deleted: "تم الحذف",
     open: "افتح", results: "النتائج", viewLive: "اعرض المنشور", copyLink: "انسخ الرابط", unpin: "إلغاء التثبيت من الشريط الجانبي", pin: "ثبّت في الشريط الجانبي",
     duplicate: "كرّر", unpublish: "ألغِ النشر", publish: "انشر", archive: "أرشِف", delete: "احذف",
-    oldQuiz: "اختبار قديم", quiz: "اختبار", form: "نموذج",
+    quiz: "اختبار", form: "نموذج",
     games: "الألعاب", library: "المكتبة", newForm: "نموذج", newFormHelp: "استبيانات وتسجيل وآراء", newQuiz: "اختبار", newQuizHelp: "يُصحَّح تلقائيًا؛ استضفه مباشرة متى شئت", newLesson: "درس", newLessonHelp: "صفحة تشرح شيئًا واحدًا", newCourse: "دورة", newCourseHelp: "دروس مرتبة يأخذها الناس", newFlashcards: "مجموعة بطاقات", newFlashcardsHelp: "بطاقات للمذاكرة بالمراجعة المتباعدة", untitledSet: "مجموعة بلا عنوان", newMenu: "أنشئ شيئًا جديدًا", creating: "جارٍ الإنشاء…", newLabel: "جديد", moreWays: "طرق أخرى للبدء", blank: "فارغ", fromTemplate: "من قالب", import: "استيراد",
     dismissError: "أخفِ الخطأ", filterLibrary: "تصفية المكتبة",
     filterByStatus: "تصفية حسب الحالة", status: "الحالة", clearFilter: "امسح التصفية", sort: "ترتيب", viewOptions: "خيارات العرض", gallery: "معرض", list: "قائمة",
@@ -118,8 +114,6 @@ const copy = {
     deleteTemplate: (name: string) => `احذف القالب ${name}`,
     importTitle: "استيراد نموذج", importDesc: "تصبح المستوردات مسودات لتراجعها؛ لا يُنشر شيء.",
     deleteTitle: (title: string) => `حذف «${title}»؟`,
-    deleteLegacy: (responses: number, questions: number) => `سيُحذف ${pluralForm("ar", questions, { zero: "0 سؤال", one: "سؤال واحد", two: "سؤالان", few: `${questions} أسئلة`, many: `${questions} سؤالًا`, other: `${questions} سؤال` })} و${pluralForm("ar", responses, { zero: "0 ردّ", one: "ردّ واحد", two: "ردّان", few: `${responses} ردود`, many: `${responses} ردًّا`, other: `${responses} ردّ` })} مع درجاتها. لا يمكن التراجع عن ذلك.`,
-    counting: "جارٍ عدّ الردود…",
     deleteForm: (n: number) => `${n === 0 ? "سيُحذف ما فيه من ملفات مرفوعة وسجل" : `سيُحذف ${pluralForm("ar", n, { one: "ردّ واحد", two: "ردّان", few: `${n} ردود`, many: `${n} ردًّا`, other: `${n} ردّ` })} مع الملفات المرفوعة والسجل`}. لا يمكن التراجع عن ذلك. أرشِفه من إعداداته بدلًا من ذلك للاحتفاظ بالبيانات.`,
     cancel: "إلغاء", deleteForever: "احذف نهائيًا",
     sourceChaos: "تصدير Chaos", sourceText: "أسئلة ملصوقة", sourceSheet: "جدول بيانات", modeExport: "تصدير نموذج أو نص", modeSheet: "أسئلة من CSV أو Excel",
@@ -132,7 +126,7 @@ const copy = {
 };
 interface Row {
   key: string;
-  kind: "form" | "quiz" | "legacy";
+  kind: "form" | "quiz";
   title: string;
   href: string;
   resultsHref: string;
@@ -147,7 +141,6 @@ interface Row {
   shareUrl?: string;
   note?: string;
   formId?: Id<"forms">;
-  quizId?: Id<"quizzes">;
   owned: boolean;
   published?: boolean;
   /** Published quizzes the viewer may run as a live game. */
@@ -160,14 +153,9 @@ export default function CreatorLibrary() {
   const router = useRouter();
   // Last-known lists render at once, faded until Convex confirms them (lib/confirmedQuery.ts).
   const formsQuery = useConfirmedQuery(api.forms.listMyForms);
-  const quizzesQuery = useConfirmedQuery(api.quizFunctions.getMyQuizzes);
-  const forms = formsQuery.data, quizzes = quizzesQuery.data;
-  const confirmed = formsQuery.confirmed && quizzesQuery.confirmed;
+  const forms = formsQuery.data;
+  const confirmed = formsQuery.confirmed;
   const templates = useQuery(api.forms.listTemplates);
-  const deleteQuiz = useMutation(api.quizFunctions.deleteQuiz);
-  const setQuizArchived = useMutation(api.quizFunctions.setQuizArchived);
-  const publishQuiz = useMutation(api.quizFunctions.publishQuiz);
-  const unpublishQuiz = useMutation(api.quizFunctions.unpublishQuiz);
   const duplicateForm = useMutation(api.forms.duplicateForm);
   const createCourse = useMutation(api.courses.create);
   const learnActions = useLearnActions();
@@ -261,19 +249,14 @@ export default function CreatorLibrary() {
       formId: f._id, owned: true, published: f.publishedVersion !== undefined,
       canHost: f.quizMode && f.publishedVersion !== undefined && f.status !== "archived",
     }));
-    const legacy: Row[] = (quizzes ?? []).map((q) => ({
-      key: q._id, kind: "legacy", title: q.title || t.untitledQuiz, href: `/dashboard/editor?id=${q._id}`, resultsHref: `/dashboard/results?id=${q._id}`,
-      status: q.archived ? "archived" : q.isPublished ? "live" : "draft", meta: t.playCount(q.sessionCount), responses: q.sessionCount, group: q.groupName || "",
-      shareUrl: q.isPublished ? `${origin}/${q.creatorUsername}/${q.slug}` : undefined, quizId: q._id, owned: true, canHost: q.isPublished,
-    }));
     const shared: Row[] = (forms?.shared ?? []).map((f) => ({
       key: `shared-${f._id}`, kind: f.quizMode ? "quiz" : "form", title: f.title || t.untitled, href: `/dashboard/forms/${f._id}`, resultsHref: `/dashboard/forms/${f._id}/responses`,
       status: f.status, edited: f.hasUnpublishedChanges, meta: t.sharedMeta(f.ownerName, f.role === "editor"), updatedAt: f.updatedAt,
       responses: f.responseCount, group: SHARED_GROUP, theme: f.theme, presentation: f.presentation, formId: f._id, owned: false,
       canHost: f.quizMode && f.role === "editor" && f.status === "live",
     }));
-    return [...own, ...legacy, ...shared];
-  }, [forms, quizzes, t]);
+    return [...own, ...shared];
+  }, [forms, t]);
 
   const visible = useMemo(() => {
     // Ascending comparators; the direction flips them.
@@ -311,17 +294,16 @@ export default function CreatorLibrary() {
   };
   /** Archive hides a form from people answering and from the library; responses are kept. Undo puts it back. */
   const archive = async (row: Row) => {
-    if (!row.formId && !row.quizId) return;
+    if (!row.formId) return;
     const before = row.status;
     const next = row.status === "archived" ? (row.published ? "closed" : "draft") : "archived";
     // The row moves at once (optimistic update); the toast follows the tap, not the round trip.
     const id = toast(next === "archived" ? t.archived(row.title) : t.restored(row.title), {
       description: next === "archived" ? t.findInArchive : undefined,
-      undo: () => { const pending = row.formId ? setStatus({ formId: row.formId, status: before }) : setQuizArchived({ quizId: row.quizId!, archived: before === "archived" }); pending.catch((e) => toast.error(e)); },
+      undo: () => { if (row.formId) setStatus({ formId: row.formId, status: before }).catch((e) => toast.error(e)); },
     });
     try {
       if (row.formId) await setStatus({ formId: row.formId, status: next });
-      else await setQuizArchived({ quizId: row.quizId!, archived: next === "archived" });
     } catch (e) {
       toast.error(e, { id });
     }
@@ -333,9 +315,6 @@ export default function CreatorLibrary() {
         const pending = deleteForm({ formId: row.formId });
         const id = toast.success(t.deleted, { description: row.title });
         await pending.catch((e) => { toast.error(e, { id }); });
-      } else if (row.quizId) {
-        await deleteQuiz({ quizId: row.quizId });
-        toast.success(t.deleted, { description: row.title });
       }
     } catch (e) { toast.error(e); }
   };
@@ -346,10 +325,10 @@ export default function CreatorLibrary() {
       <Link href={row.resultsHref} role="menuitem" onClick={close}><BarChart3 size={14} /> {t.results}</Link>
       {row.shareUrl && <a href={row.shareUrl} target="_blank" rel="noreferrer" role="menuitem" onClick={close}><ExternalLink size={14} /> {t.viewLive}</a>}
       {row.shareUrl && <button type="button" role="menuitem" onClick={() => { close(); void copyLink(row.shareUrl!); }}><Copy size={14} /> {t.copyLink}</button>}
-      {row.canHost && (
+      {row.canHost && row.formId && (
         <button type="button" role="menuitem" disabled={hostLive.busy} onClick={() => {
           close();
-          void hostLive.start(row.formId ? { formId: row.formId } : { quizId: row.quizId! });
+          void hostLive.start({ formId: row.formId! });
         }}>
           <Radio size={14} /> {hostLive.label}
         </button>
@@ -364,12 +343,7 @@ export default function CreatorLibrary() {
           <Copy size={14} /> {t.duplicate}
         </button>
       )}
-      {row.quizId && (
-        <button type="button" role="menuitem" onClick={() => { close(); (row.status === "live" ? unpublishQuiz : publishQuiz)({ quizId: row.quizId! }).catch((e) => toast.error(e)); }}>
-          {row.status === "live" ? <Lock size={14} /> : <Globe size={14} />} {row.status === "live" ? t.unpublish : t.publish}
-        </button>
-      )}
-      {(row.formId || row.quizId) && row.owned && (
+      {row.formId && row.owned && (
         <button type="button" role="menuitem" onClick={() => { close(); void archive(row); }}>
           <Archive size={14} /> {t.archive}
         </button>
@@ -378,11 +352,11 @@ export default function CreatorLibrary() {
   );
 
   const groupLabel = (group: string) => (group === SHARED_GROUP ? t.sharedGroup : group || t.ungrouped);
-  const kindLabel = (row: Row) => (row.kind === "legacy" ? t.oldQuiz : row.kind === "quiz" ? t.quiz : t.form);
+  const kindLabel = (row: Row) => (row.kind === "quiz" ? t.quiz : t.form);
 
   // An empty cached copy proves nothing, so it waits for Convex instead of offering "create your first form".
-  const cachedEmpty = !confirmed && !(forms?.owned.length || forms?.shared.length || quizzes?.length);
-  const loading = forms === undefined || quizzes === undefined || cachedEmpty;
+  const cachedEmpty = !confirmed && !(forms?.owned.length || forms?.shared.length);
+  const loading = forms === undefined || cachedEmpty;
   useUsableMark("dashboard", !loading && confirmed);
   const newCourse = async () => {
     try { const id = await createCourse({ language: locale }); router.push(`/dashboard/courses/${id}`); }
@@ -474,7 +448,7 @@ export default function CreatorLibrary() {
               <ul className="ws-gallery ws-stagger">
                 {list.map((row, i) => (
                   <li key={row.key} className="ws-card" style={{ ["--i" as string]: i + 1 }} {...(row.formId ? formIntentHandlers(row.formId) : undefined)}>
-                    <span className="ws-card__thumb"><FormThumb theme={row.theme} presentation={row.presentation} title={row.title} legacy={row.kind === "legacy"} /></span>
+                    <span className="ws-card__thumb"><FormThumb theme={row.theme} presentation={row.presentation} title={row.title} /></span>
                     <div className="ws-card__body">
                       <Link href={row.href} className="ws-card__title">{row.title}</Link>
                       <p className="ws-card__meta">
@@ -498,7 +472,7 @@ export default function CreatorLibrary() {
             <tbody>
               {visible.map((row) => (
                 <tr key={row.key} className="cursor-pointer" data-muted={row.status === "archived" || row.status === "closed"} onClick={() => router.push(row.href)} {...(row.formId ? formIntentHandlers(row.formId) : undefined)}>
-                  <td>
+                  <td aria-label={locale === "ar" ? "الإجراءات" : "Actions"}>
                     <Link href={row.href} className="flex items-center gap-2.5 font-medium" onClick={(e) => e.stopPropagation()}>
                       <span className="ws-recent-icon" aria-hidden="true" style={{ background: row.theme?.accent && /^#[0-9a-f]{6}$/i.test(row.theme.accent) ? row.theme.accent : "#2f5333" }}>
                         {row.title.trim().charAt(0).toUpperCase() || "U"}
@@ -506,7 +480,7 @@ export default function CreatorLibrary() {
                       <span className="truncate">{row.title}</span>
                     </Link>
                   </td>
-                  <td><StatusBadge status={row.status} edited={row.edited} /></td>
+                  <td aria-label={locale === "ar" ? "الإجراءات" : "Actions"}><StatusBadge status={row.status} edited={row.edited} /></td>
                   <td className="ws-num">{row.responses > 0 ? formatNumber(locale, row.responses) : <span className="text-muted-foreground">0</span>}</td>
                   <td className="text-muted-foreground">{row.updatedAt ? timeAgo(locale, row.updatedAt) : "—"}</td>
                   <td onClick={(e) => e.stopPropagation()}><WsMenu label={t.actionsFor(row.title)}>{(close) => actions(row, close)}</WsMenu></td>
@@ -556,9 +530,7 @@ export default function CreatorLibrary() {
       {confirming && (
         <WsDialog title={t.deleteTitle(confirming.title)} onClose={() => setConfirming(null)}>
           <p className="text-sm text-muted-foreground">
-            {confirming.kind === "legacy" && confirming.quizId
-              ? <LegacyDeleteImpact quizId={confirming.quizId} />
-              : t.deleteForm(confirming.responses)}
+            {t.deleteForm(confirming.responses)}
           </p>
           <div className="flex justify-end gap-2 mt-5">
             <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setConfirming(null)}>{t.cancel}</button>
@@ -568,13 +540,6 @@ export default function CreatorLibrary() {
       )}
     </div>
   );
-}
-
-/** How much an old quiz's deletion destroys, counted on the server. */
-function LegacyDeleteImpact({ quizId }: { quizId: Id<"quizzes"> }) {
-  const t = useCopy(copy);
-  const impact = useQuery(api.quizFunctions.getQuizDeletionImpact, { quizId });
-  return <>{impact ? t.deleteLegacy(impact.responseCount, impact.questionCount) : t.counting}</>;
 }
 
 function ImportPanel({ busy, onImport }: { busy: boolean; onImport: (result: ImportResult, label: string) => void }) {
@@ -601,10 +566,10 @@ function ImportPanel({ busy, onImport }: { busy: boolean; onImport: (result: Imp
 
   const sourceNames = { chaos: t.sourceChaos, typeform: "Typeform", google: "Google Forms", text: t.sourceText, sheet: t.sourceSheet } as const;
   const modes = (
-    <div className="ws-segmented" role="group" aria-label={t.importTitle}>
+    <fieldset className="ws-segmented"  aria-label={t.importTitle}>
       <button type="button" aria-pressed={mode === "export"} onClick={() => setMode("export")}><FileUp size={14} aria-hidden="true" /> {t.modeExport}</button>
       <button type="button" aria-pressed={mode === "sheet"} onClick={() => setMode("sheet")}><FileText size={14} aria-hidden="true" /> {t.modeSheet}</button>
-    </div>
+    </fieldset>
   );
   if (mode === "sheet") {
     return (

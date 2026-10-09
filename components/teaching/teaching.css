@@ -1,0 +1,70 @@
+/* Teaching insights: an inset grouped list (Question detective, Version history) in Chaos colours.
+   The version browser itself lives in components/versions/versions.css. */
+.ti { margin-block: 24px; color: var(--on-background); }
+.ti-group { overflow: hidden; border: .5px solid var(--ws-line-strong); border-radius: 14px; background: var(--ws-card); box-shadow: var(--ws-shadow-sm); }
+.ti-group > * + * { border-top: .5px solid var(--ws-line-strong); }
+.ti-row { display: flex; align-items: center; gap: 12px; width: 100%; min-height: 62px; padding: 10px 16px; border: 0; background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; transition: background .15s; }
+.ti-row:hover { background: var(--ws-hover); }
+.ti-row:active { background: var(--ws-active); }
+.ti-row__icon { display: grid; place-items: center; flex: none; width: 22px; color: var(--on-surface-variant); transition: color .2s, transform .3s var(--ws-spring); }
+.ti-row:hover .ti-row__icon, .ti-row[aria-expanded="true"] .ti-row__icon { color: var(--primary); }
+.ti-row:hover .ti-row__icon { transform: scale(1.08); }
+.ti-row__text { display: grid; flex: 1; min-width: 0; gap: 1px; }
+.ti-row__text strong { font-size: 15px; font-weight: 600; }
+.ti-row__text small { font-size: 13px; color: var(--on-surface-variant); }
+.ti-row__chevron { flex: none; color: var(--outline); transition: transform .25s var(--ws-spring); }
+.ti-row__chevron[data-open] { transform: rotate(180deg); }
+.ti :focus-visible { outline: 2px solid var(--primary); outline-offset: -2px; }
+
+/* ── Question detective ── */
+.ti-panel { display: grid; gap: 14px; padding: 6px 16px 18px; background: var(--ws-canvas-subtle); animation: ti-open .3s var(--ws-spring); }
+@keyframes ti-open { from { opacity: 0; transform: translateY(-4px); } }
+.ti-summary { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 10px; }
+.ti-summary__headline { font-size: 17px; font-weight: 650; letter-spacing: -.01em; }
+.ti-note { font-size: 13px; line-height: 1.5; color: var(--on-surface-variant); }
+.ti-count { display: inline-grid; place-items: center; min-width: 18px; height: 18px; margin-inline-start: 6px; padding: 0 5px; border-radius: 999px; background: var(--primary); color: #fff; font-size: 11px; }
+.ti-empty { display: flex; align-items: center; gap: 10px; padding: 16px 4px; font-size: 14px; color: var(--on-surface-variant); }
+.ti-empty svg { color: var(--ws-success); flex: none; }
+.ti-questions { margin: 0; padding: 0; list-style: none; overflow: hidden; border: .5px solid var(--ws-line-strong); border-radius: 12px; background: var(--ws-card); }
+.ti-q { --tone: var(--ws-success); }
+.ti-q[data-tone="red"] { --tone: var(--error); }
+.ti-q[data-tone="orange"] { --tone: var(--ws-warning); }
+.ti-q[data-tone="yellow"] { --tone: #c99700; }
+.ti-q[data-tone="gray"] { --tone: var(--outline); }
+.ti-q + .ti-q { border-top: .5px solid var(--ws-line-strong); }
+.ti-q__head { display: flex; align-items: flex-start; gap: 12px; width: 100%; padding: 14px; border: 0; background: none; color: inherit; font: inherit; text-align: start; cursor: pointer; transition: background .15s; }
+.ti-q__head:hover { background: var(--ws-hover); }
+.ti-q__glyph { display: grid; place-items: center; flex: none; width: 26px; height: 26px; margin-top: 1px; border-radius: 999px; background: color-mix(in srgb, var(--tone) 15%, transparent); color: var(--tone); }
+.ti-q__main { display: grid; flex: 1; gap: 4px; min-width: 0; }
+.ti-q__title { display: -webkit-box; overflow: hidden; -webkit-box-orient: vertical; -webkit-line-clamp: 2; font-size: 15px; font-weight: 600; line-height: 1.4; overflow-wrap: anywhere; }
+.ti-q__verdict { font-size: 13px; font-weight: 600; color: var(--tone); }
+.ti-q[data-tone="green"] .ti-q__verdict, .ti-q[data-tone="gray"] .ti-q__verdict { color: var(--on-surface-variant); font-weight: 500; }
+.ti-q__stats { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 14px; margin-top: 2px; font-size: 12.5px; color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
+.ti-q__stats > span { display: inline-flex; align-items: center; gap: 4px; }
+.ti-meter { width: 72px; height: 6px; overflow: hidden; border-radius: 3px; background: var(--ws-active); }
+.ti-meter > span { display: block; height: 100%; border-radius: inherit; background: var(--tone); transition: width .5s var(--ws-spring); animation: ti-meter .8s var(--ws-spring) .1s both; }
+@keyframes ti-meter { from { width: 0; } }
+.ti-q { animation: ti-row-in .4s var(--ws-spring) both; }
+.ti-q:nth-child(2) { animation-delay: 35ms; }
+.ti-q:nth-child(3) { animation-delay: 70ms; }
+.ti-q:nth-child(4) { animation-delay: 105ms; }
+.ti-q:nth-child(n + 5) { animation-delay: 140ms; }
+@keyframes ti-row-in { from { opacity: 0; transform: translateY(6px); } }
+.ti-q__detail { display: grid; gap: 12px; padding-block: 0 16px; padding-inline: 52px 14px; animation: ti-open .25s var(--ws-spring); }
+.ti-reason { font-size: 13.5px; line-height: 1.55; color: var(--on-surface-variant); }
+.ti-reason strong { display: block; margin-bottom: 2px; font-size: 14px; font-weight: 650; color: var(--on-surface); }
+.ti-wrong { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: baseline; gap: 2px 12px; padding: 10px 12px; border-radius: 10px; background: var(--ws-hover); }
+.ti-wrong__label { grid-column: 1 / -1; font-size: 11px; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; color: var(--on-surface-variant); }
+.ti-wrong__value { font-size: 15px; font-weight: 600; overflow-wrap: anywhere; }
+.ti-wrong__count { font-size: 13px; color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
+.ti-fact { display: flex; align-items: flex-start; gap: 8px; font-size: 13px; line-height: 1.5; color: var(--on-surface-variant); }
+.ti-fact svg { flex: none; margin-top: 3px; }
+.ti-skeleton { display: grid; gap: 10px; padding: 14px 0; }
+.ti-skeleton span { height: 56px; border-radius: 12px; background: linear-gradient(90deg, var(--ws-hover), var(--ws-active), var(--ws-hover)); background-size: 200% 100%; animation: ti-shimmer 1.4s ease-in-out infinite; }
+@keyframes ti-shimmer { to { background-position: -200% 0; } }
+
+@media (prefers-reduced-motion: reduce) {
+  .ti-panel, .ti-q__detail, .ti-skeleton span, .ti-q, .ti-meter > span { animation: none !important; }
+  .ti-row__chevron, .ti-meter > span { transition: opacity .2s; }
+}
+.reduce-motion :is(.ti-panel, .ti-q__detail) { animation: none !important; }

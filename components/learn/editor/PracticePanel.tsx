@@ -50,7 +50,7 @@ export default function PracticePanel({ lessonId, onCreateCards, onInsertQuiz, o
   const byId = new Map(mine.map((f) => [f._id as string, f]));
   const change = async (next: AttachedQuiz[]) => {
     if (busy || relationships === undefined) return;
-    setBusy(true); 
+    setBusy(true);
     const classicCount = relationships.filter(row => row.asset.kind === "quiz").length;
     try {
       await save({ lessonId: lessonId as Id<"lessons">, expected: quizzes.map(q => ({ id: q.formId as Id<"forms">, label: q.label, order: q.order })), attachments: next.map((q, i) => ({ id: q.formId as Id<"forms">, label: q.label.trim() || q.title.trim() || "Practice", order: classicCount + i })) });
@@ -63,7 +63,7 @@ export default function PracticePanel({ lessonId, onCreateCards, onInsertQuiz, o
   return (
     <div className="lx-form">
       <p className="lx-help" style={{ fontSize: 13 }}>{t.lead}</p>
-      {relationships === undefined && <p className="lx-muted" role="status">{t.loading}</p>}
+      {relationships === undefined && <output className="lx-muted" >{t.loading}</output>}
       {quizzes.map((q, i) => {
         const form = byId.get(q.formId);
         return (

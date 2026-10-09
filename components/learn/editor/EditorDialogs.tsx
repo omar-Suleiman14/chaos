@@ -1,7 +1,9 @@
 "use client";
 
+import { FocusTextarea, FocusInput } from "@/components/InitialFocus";
+
 import { useState } from "react";
-import { Check, Sparkles } from "lucide-react";
+
 import { WsDialog } from "@/components/workspace/primitives";
 import { Select } from "@/components/workspace/Select";
 import type { LessonSource } from "@/lib/learn/types";
@@ -45,7 +47,7 @@ export function ImageDetailsDialog({ initial, onSave, onClose }: { initial: Imag
         onSave({ ...value, alt: value.alt.trim().slice(0, 500), caption: value.caption.slice(0, 500), credit: value.credit.trim().slice(0, 200) });
       }}>
         { }
-        <label className="lx-field">{t.alt}<textarea autoFocus className="lx-textarea" rows={3} value={value.alt} placeholder={t.altPh} onChange={(e) => setValue({ ...value, alt: e.target.value })} /><small>{t.altHelp}</small></label>
+        <label className="lx-field">{t.alt}<FocusTextarea focusOnMount className="lx-textarea" rows={3} value={value.alt} placeholder={t.altPh} onChange={(e) => setValue({ ...value, alt: e.target.value })} /><small>{t.altHelp}</small></label>
         <label className="lx-field">{t.caption}<input className="lx-input" value={value.caption} onChange={(e) => setValue({ ...value, caption: e.target.value })} /><small>{t.captionHelp}</small></label>
         <label className="lx-field">{t.kind}<Select label={t.kind} value={value.figureKind} onChange={(v) => setValue({ ...value, figureKind: v as "photo" | "diagram" })} options={(["photo", "diagram"] as const).map((k) => ({ value: k, label: t.kinds[k] }))} /></label>
         <div className="lx-form__row">
@@ -78,7 +80,7 @@ export function CitationDialog({ sources, initial, onDone, onManageSources, onCl
         <form className="lx-form" onSubmit={async (e) => { e.preventDefault(); if (!sourceId || busy) return; setBusy(true); setError(""); try { await onDone({ sourceId, locator: formatLocator(parseCitationLocator(locator)) }); } catch (err) { setError(errorMessage(err)); } finally { setBusy(false); } }}>
           <label className="lx-field">{t.source}<Select label={t.source} value={sourceId} onChange={setSourceId} options={sources.map((s) => ({ value: s.id, label: s.shortLabel ? `${s.shortLabel} — ${s.title}` : s.title }))} /></label>
           { }
-          <label className="lx-field">{t.locator}<input autoFocus className="lx-input" value={locator} placeholder={t.locatorPh} maxLength={300} required disabled={busy} onChange={(e) => setLocator(e.target.value)} /><small>Saved against this stable block. Exact inline citation positions are not supported.</small></label>
+          <label className="lx-field">{t.locator}<FocusInput focusOnMount className="lx-input" value={locator} placeholder={t.locatorPh} maxLength={300} required disabled={busy} onChange={(e) => setLocator(e.target.value)} /><small>Saved against this stable block. Exact inline citation positions are not supported.</small></label>
           {error && <p className="lx-error" role="alert">{error}</p>}
           <div className="lx-actions" style={{ justifyContent: "flex-end" }}>
             <button type="button" className="ws-btn ws-btn--ghost" onClick={onClose}>{t.cancel}</button>

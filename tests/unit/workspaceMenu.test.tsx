@@ -18,7 +18,7 @@ it("shows the person and workspace at the bottom and opens a menu with everythin
   expect(screen.getByRole("menuitemradio", { name: /Anatomy Lab/ })).toHaveAttribute("aria-checked", "true");
   fireEvent.click(screen.getByRole("menuitem", { name: "Workspace settings" }));
   expect(push).toHaveBeenLastCalledWith("/dashboard/teams/team1?tab=settings");
-  for (const [name, href] of [["Settings", "/dashboard/settings"], ["Archive", "/dashboard/archive"], ["Profile and card", "/dashboard/card"]] as const) {
+  for (const [name, href] of [["Courses", "/dashboard?tab=courses"], ["Settings", "/dashboard/settings"], ["Archive", "/dashboard/archive"], ["Profile and card", "/dashboard/card"]] as const) {
     fireEvent.click(trigger);
     fireEvent.click(screen.getByRole("menuitem", { name }));
     expect(push).toHaveBeenLastCalledWith(href);

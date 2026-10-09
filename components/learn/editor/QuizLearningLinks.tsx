@@ -8,7 +8,7 @@ import { useLocale } from "@/lib/i18n";
 import { toast } from "@/lib/toast";
 import Link from "@/components/site/SiteLink";
 import HostLiveButton from "@/components/live/HostLiveButton";
-export default function QuizLearningLinks({ asset, title, published }: { asset: { kind: "form"; id: Id<"forms"> } | { kind: "quiz"; id: Id<"quizzes"> }; title: string; published: boolean }) {
+export default function QuizLearningLinks({ asset, title, published }: { asset: { kind: "form"; id: Id<"forms"> }; title: string; published: boolean }) {
  const { locale } = useLocale(), ar = locale === "ar";
  const lessons = usePaginatedQuery(api.lessons.listOwned, {}, { initialNumItems: 20 }), courses = useQuery(api.courses.listMine, {});
  const attach = useMutation(api.learnCollections.attachAssessment), add = useMutation(api.courses.addAssessment);
@@ -22,6 +22,6 @@ export default function QuizLearningLinks({ asset, title, published }: { asset: 
  <label>{ar ? "الدورة" : "Course"}<ChaosSelect value={courseId} onChange={e => { setCourse(e.target.value); setModule(""); }}><option value="">{ar ? "اختر دورة" : "Choose a course"}</option>{courses?.filter(c => !c.archived).map(c => <option key={c.id} value={c.id}>{c.title}</option>)}</ChaosSelect></label>
  <label>{ar ? "التقييم" : "Assessment placement"}<ChaosSelect value={moduleId} onChange={e => setModule(e.target.value)}><option value="">{ar ? "التقييم النهائي" : "Final assessment"}</option>{course?.modules.map(m => <option key={m.id} value={m.id}>{m.title}</option>)}</ChaosSelect></label>
  <button className="ws-btn" type="button" disabled={busy || !course} onClick={() => void run(() => add({ courseId: courseId as Id<"learnCollections">, asset, ...(moduleId ? { moduleId } : {}) }))}>{ar ? "أضف للدورة" : "Add to course"}</button>
- <div className="lx-actions">{asset.kind === "form" && published && <HostLiveButton formId={asset.id} />}<Link className="ws-btn" href={asset.kind === "form" ? `/dashboard/forms/${asset.id}/responses` : `/dashboard/results?quizId=${asset.id}`}>{ar ? "نتائج المتعلّمين" : "Learner results"}</Link></div>
+ <div className="lx-actions">{published && <HostLiveButton formId={asset.id} />}<Link className="ws-btn" href={`/dashboard/forms/${asset.id}/responses`}>{ar ? "نتائج المتعلّمين" : "Learner results"}</Link></div>
  </div></details>;
 }

@@ -262,17 +262,17 @@ export default function DesignTab({ def, change, readOnly, onFullPreview, announ
               {colorInput(t.text, "textColor", theme.background === "dark" ? "#f5f5f5" : "#202020")}
             </div>
             {issues.length > 0 && (
-              <div className="ws-contrast" role="status">
+              <output className="ws-contrast" >
                 <AlertTriangle size={14} className="shrink-0 text-[var(--ws-warning)]" />
                 <span>{t.lowContrast(issues.map((i) => `${t.contrast[i.label] ?? i.label.toLowerCase()} (${i.ratio}:1)`).join(locale === "ar" ? "، " : ", "))}</span>
-              </div>
+              </output>
             )}
             <div className="flex items-center justify-between gap-3">
               <span className="text-[12px] font-semibold">{t.darkMode}</span>
-              <div className="ws-segmented" role="group" aria-label={t.darkMode}>
+              <fieldset className="ws-segmented"  aria-label={t.darkMode}>
                 <button type="button" aria-pressed={theme.appearance !== "auto"} onClick={() => setStyle({ appearance: "fixed" })}>{t.asDesigned}</button>
                 <button type="button" aria-pressed={theme.appearance === "auto"} onClick={() => setStyle({ appearance: "auto" })}>{t.followDevice}</button>
-              </div>
+              </fieldset>
             </div>
           </section>
 
@@ -303,20 +303,20 @@ export default function DesignTab({ def, change, readOnly, onFullPreview, announ
             </div>
             <div className="flex items-center justify-between gap-3">
               <span className="text-[12px] font-semibold">{t.corners}</span>
-              <div className="ws-segmented" role="group" aria-label={t.corners}>
+              <fieldset className="ws-segmented"  aria-label={t.corners}>
                 {(["none", "small", "large"] as const).map((r) => (
                   <button key={r} type="button" aria-pressed={theme.radius === r} onClick={() => setStyle({ radius: r })}>{r === "none" ? t.square : r === "small" ? t.soft : t.round}</button>
                 ))}
-              </div>
+              </fieldset>
             </div>
             {(def.presentation === "page" || def.presentation === "sections") && (
               <div className="flex items-center justify-between gap-3">
                 <span className="text-[12px] font-semibold">{t.pageLayout}</span>
-                <div className="ws-segmented" role="group" aria-label={t.pageLayout}>
+                <fieldset className="ws-segmented"  aria-label={t.pageLayout}>
                   {(["flat", "card", "focus"] as const).map((l) => (
                     <button key={l} type="button" aria-pressed={(theme.layout ?? "flat") === l} onClick={() => setStyle({ layout: l })}>{l === "flat" ? t.open : l === "card" ? t.card : t.spacious}</button>
                   ))}
-                </div>
+                </fieldset>
               </div>
             )}
           </section>
@@ -377,14 +377,14 @@ export default function DesignTab({ def, change, readOnly, onFullPreview, announ
             <p className="text-[13px] font-semibold">{t.preview}</p>
             <div className="flex items-center gap-1.5">
               {def.languages.length > 1 && (
-                <div className="ws-segmented" role="group" aria-label={t.previewLanguage}>
+                <fieldset className="ws-segmented"  aria-label={t.previewLanguage}>
                   {def.languages.map((l) => <button key={l} type="button" aria-pressed={language === l} onClick={() => setLanguage(l)}>{l === "ar" ? "العربية" : "English"}</button>)}
-                </div>
+                </fieldset>
               )}
-              <div className="ws-segmented" role="group" aria-label={t.device}>
+              <fieldset className="ws-segmented"  aria-label={t.device}>
                 <button type="button" aria-pressed={device === "desktop"} onClick={() => setDevice("desktop")} aria-label={t.desktop}><Monitor size={14} /></button>
                 <button type="button" aria-pressed={device === "mobile"} onClick={() => setDevice("mobile")} aria-label={t.phone}><Smartphone size={14} /></button>
-              </div>
+              </fieldset>
               <button type="button" className="ws-btn ws-btn--ghost ws-btn--icon" onClick={() => setRun((n) => n + 1)} aria-label={t.restartPreview} title={t.restartPreview}><RotateCcw size={14} /></button>
               {onFullPreview && <button type="button" className="ws-btn ws-btn--ghost ws-btn--icon" onClick={onFullPreview} aria-label={t.fullScreen} title={t.fullScreen}><Maximize2 size={14} /></button>}
             </div>

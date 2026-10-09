@@ -26,7 +26,10 @@ import { webhookTables } from "./webhookModel";
 import { liveTables } from "./liveModel";
 import { glossaryTables } from "./lessonGlossaryModel";
 
+import { studyTables } from "./studyLessonModel";
+
 export default defineSchema({
+  ...studyTables,
   authorStudents: defineTable({ authorId: v.string(), key: v.string(), studentId: v.optional(v.string()), guestName: v.optional(v.string()), context: v.string(), publicVisible: v.boolean(), publicHidden: v.optional(v.boolean()), updatedAt: v.number() }).index("by_author_key", ["authorId", "key"]).index("by_author_updated", ["authorId", "updatedAt"]).index("by_author_public_updated", ["authorId", "publicVisible", "updatedAt"]),
   /** A learner who pressed Start on a course: a signed-in account or a device-scoped guest. Feeds the author's course analytics. */
   courseEnrollments: defineTable({ courseId: v.id("learnCollections"), ownerId: v.string(), key: v.string(), studentId: v.optional(v.string()), guestName: v.optional(v.string()), completedLessonIds: v.array(v.id("lessons")), lastLessonId: v.optional(v.id("lessons")), enrolledAt: v.number(), updatedAt: v.number(), completedAt: v.optional(v.number()) }).index("by_course_key", ["courseId", "key"]).index("by_course_updated", ["courseId", "updatedAt"]),
@@ -211,12 +214,17 @@ export default defineSchema({
     hint: v.optional(v.string()),
     order: v.number(),
     deletedAt: v.optional(v.number()),
-  }).index("by_quiz", ["quizId"]),
+  })
+    // eslint-disable-next-line @convex-dev/no-duplicate-indexes -- legacy cleanup scans need creation order; active questions sort by deletion status/order
+    .index("by_quiz", ["quizId"])
+    .index("by_quiz_deleted_order", ["quizId", "deletedAt", "order"]),
 
   // ============ QUIZ SUBMISSIONS ============
   quizSessions: defineTable({
     quizId: v.id("quizzes"),
     playerName: v.string(),
+    /** Who started the attempt: the signed-in subject, else the lowercased name. Caps in-progress attempts. */
+    playerKey: v.optional(v.string()),
     status: v.optional(v.union(
       v.literal("in_progress"),
       v.literal("completed")
@@ -233,9 +241,16 @@ export default defineSchema({
         originalPointsEarned: v.optional(v.number()),
         reviewedAt: v.optional(v.number()),
         reviewedBy: v.optional(v.string()),
+        /** Seconds, measured by the server from when the question was opened (client-reported before). */
         timeTaken: v.optional(v.number()),
+        answeredAt: v.optional(v.number()),
+        /** Arrived after the question's time limit; graded as no answer. */
+        late: v.optional(v.boolean()),
+        reviewFlag: v.optional(v.literal("too_fast")),
       })
     ),
+    /** When the server first served each question of this attempt; time limits are checked against it. */
+    openedQuestions: v.optional(v.array(v.object({ questionId: v.id("questions"), at: v.number() }))),
     completedAt: v.optional(v.number()),
     startedAt: v.number(),
     /** Attempts saved from a live game (convex/live.ts). */
@@ -248,7 +263,9 @@ export default defineSchema({
     .index("by_quiz_score", ["quizId", "score"])
     // Completed attempts only: counts, averages, leaderboards and results read this range, so
     // answers landing on in-progress attempts neither get read nor re-run those subscriptions.
-    .index("by_quizId_and_status_and_score", ["quizId", "status", "score"]),
+    .index("by_quizId_and_status_and_score", ["quizId", "status", "score"])
+    .index("by_quizId_and_status_and_completedAt", ["quizId", "status", "completedAt"])
+    .index("by_quizId_and_status_and_playerKey", ["quizId", "status", "playerKey"]),
 
   // ============ AI JOBS (inert) ============
   // Chaos no longer runs AI. Kept so historical rows stay valid; nothing creates or reads jobs.

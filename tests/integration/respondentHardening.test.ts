@@ -161,7 +161,7 @@ describe("upload claims and response deletion", () => {
     const { responseId } = await t.mutation(api.respond.submitResponse, submission(shareId, "legacy-response", { file0: [claim.uploadId] }));
     await t.run(async (ctx) => {
       const original = (await ctx.db.get("formUploads", claim.uploadId))!;
-      const { _id: _id, _creationTime: _time, responseId: _response, ...alias } = original;
+      const { _id, _creationTime: _time, responseId: _response, ...alias } = original;
       await ctx.db.insert("formUploads", { ...alias, uploadKey: "legacy-orphan", createdAt: Date.now() - 2 * DAY });
       for (let i = 0; i < 30; i++) {
         const id = await ctx.storage.store(new Blob(["orphan"], { type: "text/plain" }));
@@ -188,7 +188,7 @@ describe("upload claims and response deletion", () => {
     const claim = await register(t, b.shareId, storageId);
     const { responseId } = await t.mutation(api.respond.submitResponse, submission(b.shareId, "kept-response", { file0: [claim.uploadId] }));
     await t.run(async (ctx) => {
-      const { _id: _id, _creationTime: _time, responseId: _response, ...alias } = (await ctx.db.get("formUploads", claim.uploadId))!;
+      const { _id, _creationTime: _time, responseId: _response, ...alias } = (await ctx.db.get("formUploads", claim.uploadId))!;
       await ctx.db.insert("formUploads", { ...alias, formId: a.formId, uploadKey: "old-cross-form" });
     });
     await a.owner.mutation(api.forms.setFormStatus, { formId: a.formId, status: "archived" });
@@ -254,7 +254,7 @@ async function seedLargeResponses(t: Test, count = 100) {
   const { owner, formId, shareId } = await publish(t, def);
   const answers = Object.fromEntries(def.fields.map((field) => [field.id, "x".repeat(10_000)]));
   const first = await t.mutation(api.respond.submitResponse, submission(shareId, "large-first", answers));
-  const { _id: _id, _creationTime: _time, ...source } = (await t.run((ctx) => ctx.db.get("formResponses", first.responseId)))!;
+  const { _id, _creationTime: _time, ...source } = (await t.run((ctx) => ctx.db.get("formResponses", first.responseId)))!;
   const ids = [first.responseId];
   for (let offset = 1; offset < count; offset += 10) {
     await t.run(async (ctx) => {

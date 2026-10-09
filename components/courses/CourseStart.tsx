@@ -26,6 +26,7 @@ const copy = {
   },
 };
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The labelled progress indicator uses custom nested visual tracks while exposing current, minimum and maximum values. */
 export default function CourseStart({ course }: { course: NonNullable<FunctionReturnType<typeof api.courses.getPublic>> }) {
   const progress = useCourseProgress(course.id), { locale } = useLocale(), t = copy[locale === "ar" ? "ar" : "en"];
   const router = useRouter();
@@ -48,7 +49,7 @@ export default function CourseStart({ course }: { course: NonNullable<FunctionRe
     return <div className="cp-continue"><Link className="cp-start site-btn site-btn--primary" href={href}>{finished ? t.review : started ? t.continue : t.start}<ArrowRight size={18} className="cp-arrow" aria-hidden /></Link>{meter}</div>;
   }
   const start = async () => {
-    setBusy(true); 
+    setBusy(true);
     try { await enroll(signedIn ? undefined : name); router.push(href); }
     catch (err) { toast.error(err); setBusy(false); }
   };
@@ -61,3 +62,4 @@ export default function CourseStart({ course }: { course: NonNullable<FunctionRe
     </div>
   </form>;
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */

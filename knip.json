@@ -1,0 +1,14 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "entry": ["convex/**/*.ts", "scripts/**/*.{ts,mjs}", "proxy.ts"],
+  "project": ["**/*.{ts,tsx,mts,mjs}"],
+  "ignore": [
+    "convex/**/_generated/**",
+    ".claude/**",
+    "test-results/**",
+    "playwright-report/**",
+    "blob-report/**",
+    "coverage/**"
+  ],
+  "ignoreDependencies": ["shadcn", "tw-animate-css"]
+}

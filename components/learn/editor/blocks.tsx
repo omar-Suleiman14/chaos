@@ -1,5 +1,7 @@
 "use client";
 
+import { ContentImage } from "@/components/ContentImage";
+
 import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import { createContext, useContext, useEffect, useMemo, useState } from "react";
 import katex from "katex";
@@ -128,7 +130,7 @@ export const LessonImage = createReactBlockSpec(
       return (
         <FileWrapper {...(props as object)} buttonIcon={<ImageIcon size={24} />}>
           <figure className="lx-figure" data-kind={block.props.figureKind}>
-            <img className="bn-visual-media" src={resolved.loadingState === "loading" ? block.props.url : resolved.downloadUrl} alt={block.props.alt}
+            <ContentImage className="bn-visual-media" src={resolved.loadingState === "loading" ? block.props.url : resolved.downloadUrl} alt={block.props.alt}
               width={block.props.previewWidth} contentEditable={false} draggable={false} />
             {!bridge.readOnly && (
               <button type="button" contentEditable={false} className="lx-figure__alt" data-missing={!block.props.alt || undefined} onClick={() => bridge.editImage(block.id)}>
@@ -147,6 +149,7 @@ export const LessonImage = createReactBlockSpec(
 
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
+/* oxlint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-static-element-interactions -- These containers stop editor shortcuts bubbling from embedded form controls; they are not separate interactive controls. */
 export const YouTube = createReactBlockSpec(
   {
     type: "youtube",
@@ -193,7 +196,7 @@ export const YouTube = createReactBlockSpec(
         <div className="lx-youtube" contentEditable={false}>
           <div className="lx-youtube__frame">
             {/* A still image while editing: an iframe would swallow clicks and keys inside the editor. */}
-            <img src={`https://i.ytimg.com/vi/${block.props.videoId}/hqdefault.jpg`} alt="" loading="lazy" />
+            <ContentImage src={`https://i.ytimg.com/vi/${block.props.videoId}/hqdefault.jpg`} alt="" loading="lazy" />
             <span className="lx-youtube__play" aria-hidden><PlayCircle size={42} /></span>
             {range && <span className="lx-youtube__range">{t.ytWatch(range)}</span>}
           </div>
@@ -213,11 +216,13 @@ export const YouTube = createReactBlockSpec(
     },
   },
 );
+/* oxlint-enable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-static-element-interactions */
 
 /* ── Source card and inline citation ─────────────────────────────────────── */
 
 
 
+/* oxlint-disable jsx-a11y/no-static-element-interactions -- These containers stop editor shortcuts bubbling from embedded form controls; they are not separate interactive controls. */
 export const SourceBlock = createReactBlockSpec(
   { type: "source", content: "none", propSchema: { sourceId: { default: "" }, locator: { default: "" }, note: { default: "" } } },
   {
@@ -260,6 +265,7 @@ export const SourceBlock = createReactBlockSpec(
     },
   },
 );
+/* oxlint-enable jsx-a11y/no-static-element-interactions */
 
 export const Citation = createReactInlineContentSpec(
   { type: "citation", propSchema: { sourceId: { default: "" }, locator: { default: "" } }, content: "none" },
@@ -289,6 +295,7 @@ export const Citation = createReactInlineContentSpec(
 /* ── Schema ──────────────────────────────────────────────────────────────── */
 
 /** Block types lessons use. Audio and generic file blocks stay out of the slash menu; sources cover documents. */
+/* oxlint-disable jsx-a11y/no-static-element-interactions -- These containers stop editor shortcuts bubbling from embedded form controls; they are not separate interactive controls. */
 export const LessonDiagram = createReactBlockSpec(
   { type: "lessonDiagram", content: "none", propSchema: { format: { default: "mermaid" }, text: { default: "flowchart LR\n  A[Learn] --> B[Practice] --> C[Understand]" } } },
   { render: function DiagramBlock({ block, editor }) {
@@ -299,13 +306,14 @@ export const LessonDiagram = createReactBlockSpec(
     </div>;
   } },
 );
+/* oxlint-enable jsx-a11y/no-static-element-interactions */
 export const LessonQuiz = createReactBlockSpec(
  { type: "lessonQuiz", propSchema: { required: { default: false }, assetKind: { default: "form", values: ["form", "quiz"] as const }, assetId: { default: "" } }, content: "none" },
  { render: function QuizBlock({ block, editor }) {
   const { locale } = useLocale();
   return <div contentEditable={false} className="lx-panel">
     {editor.isEditable && <label><input type="checkbox" checked={block.props.required} onChange={e => editor.updateBlock(block, { props: { required: e.target.checked } })} /> {locale === "ar" ? "مطلوب لإكمال الدرس" : "Required to complete the lesson"}</label>}
-    {editor.isEditable ? <QuizBlockEditor kind={block.props.assetKind} assetId={block.props.assetId} onSelect={asset => editor.updateBlock(block, { props: { assetKind: asset.kind, assetId: asset.id } })} /> : block.props.assetId ? <InlineQuiz asset={{ kind: block.props.assetKind, id: block.props.assetId }} /> : null}
+    {editor.isEditable ? <QuizBlockEditor assetId={block.props.assetKind === "form" ? block.props.assetId : ""} onSelect={asset => editor.updateBlock(block, { props: { assetKind: asset.kind, assetId: asset.id } })} /> : block.props.assetId ? <InlineQuiz asset={{ kind: block.props.assetKind, id: block.props.assetId }} /> : null}
   </div>;
  } }
 );

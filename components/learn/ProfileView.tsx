@@ -56,11 +56,11 @@ export default function ProfileView({ id }: { id: string }) {
           {!self && viewer?.signedIn && caps.reports && <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setReporting(true)}><Flag size={15} aria-hidden />{t.report}</button>}
         </div>
       </header>
-      <div className="lx-stats" role="list">
+      <ul className="lx-stats" >
         {([["lessons", person.lessons.length], ["views", totals.views], ["saves", totals.saves], ["helpful", totals.helpful]] as const).map(([k, n]) => (
-          <div key={k} role="listitem"><strong>{formatNumber(locale, n)}</strong><span>{t.stats[k]}</span></div>
+          <li key={k} ><strong>{formatNumber(locale, n)}</strong><span>{t.stats[k]}</span></li>
         ))}
-      </div>
+      </ul>
       <section className="lx-section" aria-labelledby="profile-lessons">
         <header><h2 id="profile-lessons">{t.lessons}</h2></header>
         {person.lessons.length ? <div className="lx-grid">{person.lessons.map((l) => <LessonCard key={l.id} lesson={l} href={`/learn/${l.id}`} progress={progress[l.id]} />)}</div> : <p className="lx-muted">{t.noLessons}</p>}

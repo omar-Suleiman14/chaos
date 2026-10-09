@@ -2,7 +2,7 @@
 
 Generated from the public and administrator MCP registries with `pnpm mcp:inventory`. Administrator tools are advertised only to verified administrator connections; see [MCP permissions](mcp-permissions.md).
 
-119 public tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
+132 public tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
 
 - `accept_team_invitation`
 - `add_course_lesson`
@@ -11,8 +11,10 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `advance_game`
 - `attach_lesson_flashcards`
 - `attach_lesson_quiz`
+- `build_study_lesson`
 - `change_form_collaborator`
 - `change_team_member_role`
+- `checkpoint_study_lesson`
 - `create_course`
 - `create_flashcard_set`
 - `create_folder`
@@ -30,6 +32,7 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `end_game`
 - `export_course_manifest`
 - `export_form_responses`
+- `finalize_study_lesson`
 - `fork_lesson`
 - `fork_quiz`
 - `get_course`
@@ -56,6 +59,10 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `get_results`
 - `get_student_card_preferences`
 - `get_student_card_visibility`
+- `get_study_lesson_checkpoint`
+- `get_study_lesson_job`
+- `get_study_lesson_skill`
+- `get_study_source_content`
 - `get_weak_area_actions`
 - `host_game`
 - `import_course_lesson`
@@ -88,6 +95,10 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `publish_flashcard_set`
 - `publish_form`
 - `publish_lesson`
+- `publish_study_lesson`
+- `publish_study_source`
+- `refresh_study_lesson_placement`
+- `register_study_reference`
 - `remember_course`
 - `remove_team_member`
 - `rename_team`
@@ -116,12 +127,14 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `set_lesson_lifecycle`
 - `set_student_card_preferences`
 - `set_student_card_visibility`
+- `set_study_teaching_profile`
 - `share_with_team`
 - `unpublish_course`
 - `unshare_from_team`
 - `update_course`
 - `update_form`
 - `update_lesson_blocks`
+- `upload_study_source`
 - `upsert_form_file_question`
 
 ## Administrator tools

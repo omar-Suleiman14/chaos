@@ -19,6 +19,7 @@ import { useTilt } from "./useTilt";
 import "./student-orbit.css";
 
 /** All eligible students are reachable; only the visible side rows mount. */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-tabindex -- The labelled group describes card actions or an interactive student visualisation, not a form fieldset. The student orbit is a scrollable viewport with native card links; focus enables keyboard scrolling. */
 export default function StudentOrbit({ username }: { username: string }) {
   const { locale } = useLocale();
   const { results, status, loadMore } = usePaginatedQuery(
@@ -169,15 +170,16 @@ export default function StudentOrbit({ username }: { username: string }) {
         );
       })}
       {(status === "LoadingMore" || status === "LoadingFirstPage") && (
-        <span className="sr-only" role="status">
+        <output className="sr-only" >
           {locale === "ar"
             ? "جارٍ تحميل بطاقات الطلاب"
             : "Loading student cards"}
-        </span>
+        </output>
       )}
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-tabindex */
 
 /** Per-teacher opt-out, alongside the global preference in settings. */
 export function StudentVisibility({ username }: { username: string }) {

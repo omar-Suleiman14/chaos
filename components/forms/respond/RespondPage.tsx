@@ -1,5 +1,7 @@
 "use client";
 
+import { FocusInput } from "@/components/InitialFocus";
+
 import { copyText } from "@/lib/clipboard";
 import { Suspense, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
 import type { FunctionReturnType } from "convex/server";
@@ -25,6 +27,8 @@ import { useInitialTheme } from "./initial-theme";
 import { formatScheduleTime } from "@/convex/formSchedule";
 import type { Id } from "@/convex/_generated/dataModel";
 import { StudyProgressOptIn } from "./StudyProgressOptIn";
+import { QuizReview } from "./QuizReview";
+import type { QuizReviewItem } from "@/convex/formQuiz";
 import { linkOrigin } from "@/lib/hosts";
 
 function randomHex(bytes: number) {
@@ -76,7 +80,7 @@ function readHidden(names: string[]): Record<string, string> | undefined {
   for (const name of names) { const value = params.get(name); if (value?.trim()) out[name] = value.slice(0, 500); }
   return Object.keys(out).length ? out : undefined;
 }
-interface Receipt { receiptCode: string; endingId: string | null; editToken?: string; submittedAt: number; answers: Answers; language: Language; quizScore?: number | null; quizMaxScore?: number | null }
+interface Receipt { receiptCode: string; endingId: string | null; editToken?: string; submittedAt: number; answers: Answers; language: Language; quizScore?: number | null; quizMaxScore?: number | null; quizReview?: QuizReviewItem[] | null }
 
 /** The respondent experience for one form; also served at custom links (chaos.fail/<username>/<slug>). */
 /** `minimal` (inline only): just the questions, without the toolbar, progress bar, cover or full-height stage. */
@@ -164,7 +168,7 @@ function RespondPage({ shareId, inline = false, studyProgress = false, onComplet
     );
   }
   if (form.state === "code") {
-    return <Shell embed={embed} def={gateDef} plain={plain}><CodeGate autoFocus={!embed} title={form.title} lang={lang} error={codeError ?? (form.invalidCode ? "wrong" : null)} onSubmit={(code) => void tryCode(code)} /></Shell>;
+    return <Shell embed={embed} def={gateDef} plain={plain}><CodeGate focusOnMount={!embed} title={form.title} lang={lang} error={codeError ?? (form.invalidCode ? "wrong" : null)} onSubmit={(code) => void tryCode(code)} /></Shell>;
   }
   if (editToken && editing === null) return <Shell embed={embed} def={gateDef} plain={plain}><Message title={form.title} body="This edit link is no longer valid." /></Shell>;
   if (resumeToken && resumed === null) return <Shell embed={embed} def={gateDef} plain={plain}><Message title={form.title} body="This resume link is no longer valid." /></Shell>;
@@ -224,6 +228,8 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   const [progress, setProgress] = useState<LocalProgress | null>(null);
   const [restored, setRestored] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
+  // Celebrate a submission once, when it happens; a receipt restored after a refresh just shows the result.
+  const [justSubmitted, setJustSubmitted] = useState(false);
   // Never trust a receipt restored from shared-device storage as account evidence.
   const [studyResponseId, setStudyResponseId] = useState<Id<"formResponses"> | null>(null);
   const [submitting, setSubmitting] = useState(false);
@@ -268,7 +274,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
     const base = local ?? { answers: {}, language, startedAt: Date.now(), submissionKey: randomHex(16), version: form.version };
     setProgress(fromLink ? { ...base, hidden: { ...base.hidden, ...fromLink } } : base);
     setReady(true);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- load once per version
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- load once per version
   }, []);
 
   const persist = useCallback((next: LocalProgress) => {
@@ -335,7 +341,8 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
       if (editing && editToken) {
         const result = await update({ shareId, editToken, answers: progress.answers, language: progress.language, accessCode });
         posthog.capture("form_response_updated", { language: progress.language, form_type: def.quiz?.enabled ? "quiz" : "form" });
-        setReceipt({ receiptCode: result.receiptCode, endingId: result.endingId, editToken, submittedAt: Date.now(), answers: progress.answers, language: progress.language, quizScore: result.quizScore, quizMaxScore: result.quizMaxScore });
+        setJustSubmitted(true);
+        setReceipt({ receiptCode: result.receiptCode, endingId: result.endingId, editToken, submittedAt: Date.now(), answers: progress.answers, language: progress.language, quizScore: result.quizScore, quizMaxScore: result.quizMaxScore, quizReview: result.quizReview ?? null });
         return;
       }
       const token = form.allowEditAfterSubmit ? responseEditToken.current ?? progress.editToken ?? randomHex(24) : undefined;
@@ -347,10 +354,11 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
         startedAt: progress.startedAt, accessCode, editToken: token, resumeToken: resumeToken ?? undefined, lastFieldId: progress.lastFieldId,
         honeypot: honeypot || undefined, hidden: progress.hidden,
       });
-      const r: Receipt = { receiptCode: result.receiptCode, endingId: result.endingId, editToken: token, submittedAt: Date.now(), answers: progress.answers, language: progress.language, quizScore: result.quizScore, quizMaxScore: result.quizMaxScore };
+      const r: Receipt = { receiptCode: result.receiptCode, endingId: result.endingId, editToken: token, submittedAt: Date.now(), answers: progress.answers, language: progress.language, quizScore: result.quizScore, quizMaxScore: result.quizMaxScore, quizReview: result.quizReview ?? null };
       if (result.status === "completed") onComplete?.();
       setStudyResponseId(result.status === "completed" ? result.responseId : null);
       posthog.capture("form_response_submitted", { language: progress.language, form_type: def.quiz?.enabled ? "quiz" : "form" });
+      setJustSubmitted(true);
       setReceipt(r);
       try {
         window.localStorage.removeItem(storageKey);
@@ -404,13 +412,13 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   if (!ready || !progress) return <Shell embed={embed} def={def} plain={form.hideBranding}><FormLoading /></Shell>;
 
   const languageSwitch = def.languages.length > 1 && (
-    <div className="form-lang" role="group" aria-label="Language">
+    <fieldset className="form-lang"  aria-label="Language">
       {def.languages.map((l) => (
         <button key={l} type="button" onClick={() => setLanguage(l)} aria-pressed={language === l} lang={l}>
           {languageNames[l]}
         </button>
       ))}
-    </div>
+    </fieldset>
   );
   const dir = isRtl(language) ? "rtl" : "ltr";
   const score = def.quiz?.enabled && receipt && receipt.quizScore !== undefined && receipt.quizScore !== null
@@ -419,7 +427,8 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   return (
     <Shell embed={embed} def={def} plain={form.hideBranding} languageSwitch={languageSwitch} immersive={receipt ? def.presentation === "conversational" || def.presentation === "swipe" : !(form.alreadyResponded && !editing) && !notOpen}>
       {receipt ? (
-        <EndingView ending={ending} def={def} language={receipt.language} answers={receipt.answers} score={score}>
+        <EndingView ending={ending} def={def} language={receipt.language} answers={receipt.answers} score={score} celebrate={justSubmitted}>
+          {def.quiz?.enabled && receipt.quizReview && <QuizReview def={def} review={receipt.quizReview} answers={receipt.answers} language={receipt.language} />}
           {studyProgress && form.signedIn && form.responseIdentityLinked && def.quiz?.enabled && studyResponseId && (
             <StudyProgressOptIn key={studyResponseId} responseId={studyResponseId} language={receipt.language} />
           )}
@@ -447,10 +456,10 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
       ) : (
         <>
           {(editing || restored) && (
-            <div className="form-toast" dir={dir} role="status">
+            <output className="form-toast" dir={dir} >
               <span>{editing ? t.editing : t.restored}</span>
               {!editing && <button type="button" onClick={startOver}>{t.startOver}</button>}
-            </div>
+            </output>
           )}
           <FormRenderer
             journey
@@ -561,7 +570,7 @@ function FormLoading() {
       </div>
     );
   }
-  return <div className="grid place-items-center py-24 form-muted" role="status" aria-label="Loading"><span className="form-spinner" /></div>;
+  return <output className="grid place-items-center py-24 form-muted"  aria-label="Loading"><span className="form-spinner" /></output>;
 }
 
 /** `plain` hides the Chaos brand (Pro, enforced by the server); Privacy and Terms links stay. */
@@ -637,7 +646,7 @@ function Message({ title, body, lang = "en", children }: { title: string; body?:
   );
 }
 
-function CodeGate({ title, lang, error, onSubmit, autoFocus }: { title: string; lang: Language; error: "wrong" | "locked" | null; onSubmit: (code: string) => void; autoFocus: boolean }) {
+function CodeGate({ title, lang, error, onSubmit, focusOnMount }: { title: string; lang: Language; error: "wrong" | "locked" | null; onSubmit: (code: string) => void; focusOnMount: boolean }) {
   const invalid = error !== null;
   const [code, setCode] = useState("");
   const t = text[lang];
@@ -646,7 +655,7 @@ function CodeGate({ title, lang, error, onSubmit, autoFocus }: { title: string; 
       <h1 className="form-page-title form-heading" style={{ ["--i" as string]: 0 }}>{title}</h1>
       <label className="block space-y-2" style={{ ["--i" as string]: 1 }}>
         <span className="form-q-label">{t.code}</span>
-        <input value={code} onChange={(e) => setCode(e.target.value)} className="form-input" autoComplete="off" autoFocus={autoFocus} aria-invalid={invalid} aria-describedby={invalid ? "code-error" : undefined} />
+        <FocusInput value={code} onChange={(e) => setCode(e.target.value)} className="form-input" autoComplete="off" focusOnMount={focusOnMount} aria-invalid={invalid} aria-describedby={invalid ? "code-error" : undefined} />
       </label>
       {invalid && <p id="code-error" role="alert" className="form-error-text">{error === "locked" ? t.codeLocked : t.codeWrong}</p>}
       <div style={{ ["--i" as string]: 2 }}><button className="form-btn">{t.continue} <span aria-hidden="true" className="form-btn-arrow">{isRtl(lang) ? "←" : "→"}</span></button></div>

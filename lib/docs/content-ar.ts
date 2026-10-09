@@ -1229,7 +1229,7 @@ export const sectionsAr: DocSection[] = [
             items: [
               "تتولى بنفسك النسخ الاحتياطي والمراقبة والتحديثات.",
               "اضبط `NEXT_PUBLIC_APP_URL` و`CHAOS_APP_URL` على عنوانك، وإلا أشارت الروابط إلى chaos.fail.",
-              "يعمل كل شيء على عنوان واحد ما لم تضبط `NEXT_PUBLIC_DASHBOARD_ORIGIN` أو `NEXT_PUBLIC_LEARN_ORIGIN` أو `NEXT_PUBLIC_DOCS_ORIGIN` لتعطي قسمًا نطاقًا فرعيًا خاصًا به.",
+              "يعمل كل شيء على عنوان واحد ما لم تضبط `NEXT_PUBLIC_DASHBOARD_ORIGIN` أو `NEXT_PUBLIC_LEARN_ORIGIN` أو `NEXT_PUBLIC_DOCS_ORIGIN` أو `NEXT_PUBLIC_PLAY_ORIGIN` لتعطي قسمًا نطاقًا فرعيًا خاصًا به.",
               "يحتاج API التكامل والـ webhooks إلى أن يكون منفذ HTTP في الخادم متاحًا.",
               "التحليلات متوقفة ما لم تضبطها.",
             ],

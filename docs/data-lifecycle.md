@@ -8,7 +8,7 @@ The question row is permanently removed only when its entire quiz is deleted.
 
 ## Quiz deletion
 
-Deletion is permanent. The confirmation names the form or quiz and states how many recorded responses will be destroyed (for old quizzes it is counted on the server by `getQuizDeletionImpact`). Native Learn folders exist. Folder deletion has separate nonempty-folder checks and does not cascade into assets (see below).
+Deletion is permanent. The confirmation names the form or quiz and states how many recorded responses will be destroyed. Native Learn folders exist. Folder deletion has separate nonempty-folder checks and does not cascade into assets (see below).
 
 Deleting a quiz:
 
@@ -71,4 +71,4 @@ Pure age-based policy, run by Convex crons in small batches (`convex/crons.ts`, 
 | Rollout state for flags no longer in `lib/flags.ts` | next daily sweep |
 | Consistency reports | newest 30 kept |
 
-Old usernames that appeared in a public link (a form custom link, a classic quiz route or the public author listing) stay reserved permanently, up to 10 per account; username changes are limited to 5 per 30 days.
+Old usernames that appeared in a public link (a form custom link, an old classic quiz address or the public author listing) stay reserved permanently, up to 10 per account; username changes are limited to 5 per 30 days.

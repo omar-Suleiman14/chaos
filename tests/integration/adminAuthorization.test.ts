@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { api } from "@/convex/_generated/api";
 import { createTestConvex, createTestConvexWithAdmin } from "./setup";
-import { creatorIdentity, quizFixture } from "../fixtures";
+import { creatorIdentity } from "../fixtures";
 
 const adminIdentity = {
   ...creatorIdentity,
@@ -12,22 +12,12 @@ const adminIdentity = {
 };
 
 async function seedAdminTargets(t: ReturnType<typeof createTestConvex>) {
-  return await t.run(async (ctx) => {
-    await ctx.db.insert("users", {
-      clerkId: creatorIdentity.subject,
-      name: creatorIdentity.name,
-      email: creatorIdentity.email,
-      username: creatorIdentity.nickname,
-      createdAt: quizFixture.createdAt,
-    });
-
-    return await ctx.db.insert("quizzes", {
-      ...quizFixture,
-      creatorId: creatorIdentity.subject,
-      creatorUsername: creatorIdentity.nickname,
-    });
-  });
+  const owner = t.withIdentity(creatorIdentity);
+  await owner.mutation(api.quizFunctions.getOrCreateUser, {});
+  return await owner.mutation(api.forms.createForm, { quizMode: true });
 }
+
+const paginationOpts = { numItems: 25, cursor: null };
 
 describe("admin authorization", () => {
   it("exposes only a derived isAdmin boolean from the configured Clerk user ID", async () => {
@@ -44,13 +34,13 @@ describe("admin authorization", () => {
 
   it("rejects non-admin and anonymous callers for every admin operation", async () => {
     const t = await createTestConvexWithAdmin(adminIdentity.subject);
-    const quizId = await seedAdminTargets(t);
+    const formId = await seedAdminTargets(t);
     const user = t.withIdentity(creatorIdentity);
 
     const nonAdminCalls = [
       user.query(api.quizFunctions.getAdminStats, {}),
       user.query(api.quizFunctions.getAdminUsers, {}),
-      user.query(api.quizFunctions.getAdminQuizzes, {}),
+      user.query(api.admin.content, { kind: "forms", paginationOpts }),
       user.mutation(api.quizFunctions.adminToggleUserBan, {
         clerkId: creatorIdentity.subject,
         ban: true,
@@ -59,10 +49,8 @@ describe("admin authorization", () => {
         clerkId: creatorIdentity.subject,
         elevate: true,
       }),
-      user.mutation(api.quizFunctions.adminToggleQuizElevation, { quizId, elevate: true }),
-      user.mutation(api.quizFunctions.adminToggleQuizBan, { quizId, ban: true }),
+      user.mutation(api.admin.moderateContent, { targetId: formId, hold: true, reason: "Review" }),
       user.mutation(api.quizFunctions.updateGlobalConfig, { playerLimitErrorText: "blocked" }),
-      user.mutation(api.quizFunctions.adminDeleteQuiz, { quizId }),
     ];
 
     for (const call of nonAdminCalls) {
@@ -72,7 +60,7 @@ describe("admin authorization", () => {
     const anonymousCalls = [
       t.query(api.quizFunctions.getAdminStats, {}),
       t.query(api.quizFunctions.getAdminUsers, {}),
-      t.query(api.quizFunctions.getAdminQuizzes, {}),
+      t.query(api.admin.content, { kind: "forms", paginationOpts }),
       t.mutation(api.quizFunctions.adminToggleUserBan, {
         clerkId: creatorIdentity.subject,
         ban: true,
@@ -81,10 +69,8 @@ describe("admin authorization", () => {
         clerkId: creatorIdentity.subject,
         elevate: true,
       }),
-      t.mutation(api.quizFunctions.adminToggleQuizElevation, { quizId, elevate: true }),
-      t.mutation(api.quizFunctions.adminToggleQuizBan, { quizId, ban: true }),
+      t.mutation(api.admin.moderateContent, { targetId: formId, hold: true, reason: "Review" }),
       t.mutation(api.quizFunctions.updateGlobalConfig, { playerLimitErrorText: "blocked" }),
-      t.mutation(api.quizFunctions.adminDeleteQuiz, { quizId }),
     ];
 
     for (const call of anonymousCalls) {
@@ -94,12 +80,12 @@ describe("admin authorization", () => {
 
   it("allows the configured admin to use every admin operation", async () => {
     const t = await createTestConvexWithAdmin(adminIdentity.subject);
-    const quizId = await seedAdminTargets(t);
+    const formId = await seedAdminTargets(t);
     const admin = t.withIdentity(adminIdentity);
 
     await admin.query(api.quizFunctions.getAdminStats, {});
     await admin.query(api.quizFunctions.getAdminUsers, {});
-    await admin.query(api.quizFunctions.getAdminQuizzes, {});
+    await admin.query(api.admin.content, { kind: "forms", paginationOpts });
     await admin.mutation(api.quizFunctions.adminToggleUserBan, {
       clerkId: creatorIdentity.subject,
       ban: true,
@@ -108,8 +94,7 @@ describe("admin authorization", () => {
       clerkId: creatorIdentity.subject,
       elevate: true,
     });
-    await admin.mutation(api.quizFunctions.adminToggleQuizElevation, { quizId, elevate: true });
-    await admin.mutation(api.quizFunctions.adminToggleQuizBan, { quizId, ban: true });
+    await admin.mutation(api.admin.moderateContent, { targetId: formId, hold: true, reason: "Review" });
     await admin.mutation(api.quizFunctions.updateGlobalConfig, { playerLimitErrorText: "configured" });
 
     const state = await t.run(async (ctx) => ({
@@ -117,16 +102,12 @@ describe("admin authorization", () => {
         .query("users")
         .withIndex("by_clerkId", (q) => q.eq("clerkId", creatorIdentity.subject))
         .first(),
-      quiz: await ctx.db.get(quizId),
+      form: await ctx.db.get(formId),
       config: await ctx.db.query("globalConfig").first(),
     }));
     expect(state.user?.isBanned).toBe(true);
     expect(state.user?.isElevated).toBe(true);
-    expect(state.quiz?.isBanned).toBe(true);
-    expect(state.quiz?.isElevated).toBe(true);
+    expect(state.form?.isBanned).toBe(true);
     expect(state.config?.playerLimitErrorText).toBe("configured");
-
-    await admin.mutation(api.quizFunctions.adminDeleteQuiz, { quizId });
-    await expect(t.run(async (ctx) => ctx.db.get(quizId))).resolves.toBeNull();
   });
 });

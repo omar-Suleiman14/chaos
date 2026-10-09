@@ -139,14 +139,12 @@ export async function publicationProblems(ctx: MutationCtx, lesson: Doc<"lessons
       }
     }
     if (block.type === "quiz") {
-      const asset = block.asset.kind === "form" ? await ctx.db.get("forms", block.asset.id) : await ctx.db.get("quizzes", block.asset.id);
-      // Public embeds require an actual published assessment; never snapshot quiz data.
+      const asset = block.asset.kind === "form" ? await ctx.db.get("forms", block.asset.id) : null;
+      // Public embeds require an actual published quiz form; never snapshot quiz data.
       let eligible = false;
-      if (asset && !asset.isBanned) {
-        if ("ownerId" in asset && asset.ownerId === lesson.ownerId && asset.status === "live" && asset.publishedVersion !== undefined) {
-          const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", asset._id).eq("version", asset.publishedVersion!)).unique();
-          eligible = !!version?.definition.quiz?.enabled;
-        } else if ("creatorId" in asset) eligible = asset.creatorId === lesson.ownerId && asset.isPublished && !!asset.publishedSnapshot;
+      if (asset && !asset.isBanned && asset.ownerId === lesson.ownerId && asset.status === "live" && asset.publishedVersion !== undefined) {
+        const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", asset._id).eq("version", asset.publishedVersion!)).unique();
+        eligible = !!version?.definition.quiz?.enabled;
       }
       if (!eligible) errors.push({ path: `blocks.${block.id}.asset`, code: "QUIZ", message: "Attach an owned, published assessment." });
     }

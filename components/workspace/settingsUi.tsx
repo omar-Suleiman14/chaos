@@ -28,9 +28,9 @@ export function Row({ id, label, help, isDefault, children, stack }: { id?: stri
 
 export function Segmented<T extends string>({ label, options, value, onChange }: { label: string; options: { id: T; label: string }[]; value: T; onChange: (v: T) => void }) {
   return (
-    <div className="ws-segmented" role="group" aria-label={label}>
+    <fieldset className="ws-segmented"  aria-label={label}>
       {options.map((o) => <button key={o.id} type="button" aria-pressed={value === o.id} onClick={() => onChange(o.id)}>{o.label}</button>)}
-    </div>
+    </fieldset>
   );
 }
 

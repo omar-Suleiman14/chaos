@@ -1,5 +1,9 @@
 "use client";
 
+import { ContentImage } from "@/components/ContentImage";
+
+import { FocusTextarea } from "@/components/InitialFocus";
+
 import { useKeptQuery } from "@/lib/queryCache";
 import { useCourseProgress } from "@/lib/learn/courseProgress";
 import { useCourseEnrollment } from "@/lib/learn/courseEnrollment";
@@ -17,15 +21,13 @@ import { legacyFlashcardBlocks } from "@/lib/learn/inlineStudy";
 import { defaultCover, isCoverUrl } from "@/lib/learn/covers";
 import Link from "@/components/site/SiteLink";
 import { useRouter } from "next/navigation";
-import { memo, useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, type MouseEvent as ReactMouseEvent } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { flushSync } from "react-dom";
+import dynamic from "next/dynamic";
 import { useStableCallback } from "@/lib/stableCallback";
-import {
-  ArrowRight, BookOpen, ChevronLeft, Bookmark, BookmarkCheck, ExternalLink, Flag, GitFork, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus,
-  Lock, MoreHorizontal, NotebookPen, PenLine, Share2, ThumbsDown, ThumbsUp, Type, X,
-} from "lucide-react";
+import { ArrowRight, BookOpen, ChevronLeft, Bookmark, BookmarkCheck, ExternalLink, Flag, GitFork, Headphones, MessageCircleQuestion, Image as ImageIcon, Link2, MessageSquare, MessageSquarePlus, Lock, MoreHorizontal, NotebookPen, PenLine, Share2, ThumbsUp, X } from "lucide-react";
 import { WsConfirm, WsMenu } from "@/components/workspace/primitives";
 import { toast } from "@/lib/toast";
-import { ThemeToggle } from "@/components/ThemeToggle";
 import { useIsPhone } from "@/components/workspace/useIsPhone";
 import { useModal } from "@/components/workspace/useModal";
 import {
@@ -41,28 +43,38 @@ import { CurriculumBadges, ExternalRefLine, ModerationNotice, ProvenanceLine, Qu
 import { AiMark } from "@/components/site/aiMarks";
 import BlockRenderer from "./BlockRenderer";
 import { GlossaryContext, TermCard, type OpenTerm } from "./Glossary";
+import { BlockCallout } from "./BlockCallout";
 import { findEntry, glossaryMatcher } from "@/lib/learn/glossary";
 import DiscussionPanel from "./DiscussionPanel";
 import HandoffDialog, { type HandoffContext } from "./HandoffDialog";
 import Lightbox from "./Lightbox";
-import { jumpTo, MobileOutline, Outline, useActiveHeading } from "./Outline";
+import { DesktopOutline, jumpTo, MobileOutline, useActiveHeading } from "./Outline";
 import PracticeTab from "./PracticeTab";
 import ReportDialog from "./ReportDialog";
 import SelectionToolbar, { useTextSelection, type SelectionAction } from "./SelectionToolbar";
+import ReadingMenu from "./ReadingMenu";
+import ListenMenu from "./ListenMenu";
+import type { NarrationRequest } from "./Narration";
+import { useReaderPrefs } from "@/lib/learn/readerPrefs";
+import { activityOf } from "@/lib/learn/narration/activity";
+import { primeSpeech, speechSupported } from "@/lib/learn/narration/support";
+import { prefersReducedMotion } from "@/lib/learn/motion";
 import { useUsableMark } from "@/lib/journeys";
 import { linkOrigin } from "@/lib/hosts";
+
+// Read aloud loads only when a reader asks for it: no speech code on a normal lesson load.
+const Narration = dynamic(() => import("./Narration"), { ssr: false });
 
 const copy = {
   en: {
     back: "Back", untitled: "Untitled lesson", by: "By", createdWith: (name: string) => `Created with ${name}`, minutes: (n: number) => `${n} min read`, version: (n: number) => `Version ${n}`, updated: (d: string) => `Published ${d}`,
     ask: "Ask", discussion: "Discussion", save: "Save", saved: "Saved", more: "More", fork: "Copy to my library", forkHelp: "Make an editable copy. The original author stays credited.",
     report: "Report", copyLink: "Copy link", linkCopied: "Link copied", askChatgpt: "Ask ChatGPT", askClaude: "Ask Claude", edit: "Edit lesson",
-    reading: "Reading settings", size: "Text size", sizes: { small: "Small", normal: "Normal", large: "Large" }, width: "Line width", widths: { narrow: "Narrow", normal: "Normal", wide: "Wide" },
-    font: "Typeface", fonts: { sans: "Sans", serif: "Serif" }, appearance: "Appearance",
+    listen: "Listen", listenHelp: "Read this lesson aloud", speechUnavailable: "Read aloud isn't available in this browser.",
     tabs: { lesson: "Lesson", practice: "Practice" }, sources: "Sources", openSource: "Open", noSourceLink: "No link or file for this source.",
     helpful: "Was this lesson helpful?", yes: "Helpful", no: "Not helpful", thanks: "Thanks for the feedback.",
     complete: "Mark as completed", completed: "Completed", reset: "Start over", resumeLabel: "Continue where you left off", resumeTop: "Your last reading position", resumeGo: "Resume", resumeDismiss: "Dismiss",
-    blockMenu: "Actions for this part", saveBlock: "Save this part", note: "Add private note", discuss: "Discuss this part", copyPart: "Copy link to this part",
+    blockMenu: "Actions for this part", actSave: "Save", actNote: "Note", actDiscuss: "Discuss", actThreads: "Threads", actLink: "Copy link", actExplain: "Explain", actAsk: "Ask", saveBlock: "Save this part", note: "Add private note", discuss: "Discuss this part", copyPart: "Copy link to this part",
     explainImage: "Explain image", askImage: "Ask about this", savedToast: "Saved to your Learn library", noteSaved: "Note saved (only you can see it)",
     highlightSaved: "Highlighted (only you can see it)", removeHighlight: "Remove highlight", highlightRemoved: "Highlight removed",
     noteTitle: "Private note", notePh: "Only you can see this note.", noteSave: "Save note", noteCancel: "Cancel", noteDelete: "Delete note", noteDeleted: "Note deleted", copyFailed: "Could not copy the link",
@@ -77,12 +89,11 @@ const copy = {
     back: "رجوع", untitled: "درس بلا عنوان", by: "بقلم", createdWith: (name: string) => `أُنشئ باستخدام ${name}`, minutes: (n: number) => `${n} د قراءة`, version: (n: number) => `الإصدار ${n}`, updated: (d: string) => `نُشر ${d}`,
     ask: "اسأل", discussion: "النقاش", save: "احفظ", saved: "محفوظ", more: "المزيد", fork: "انسخ إلى مكتبتي", forkHelp: "أنشئ نسخة قابلة للتعديل. يبقى الكاتب الأصلي منسوبًا.",
     report: "إبلاغ", copyLink: "انسخ الرابط", linkCopied: "نُسخ الرابط", askChatgpt: "اسأل ChatGPT", askClaude: "اسأل Claude", edit: "عدّل الدرس",
-    reading: "إعدادات القراءة", size: "حجم النص", sizes: { small: "صغير", normal: "عادي", large: "كبير" }, width: "عرض السطر", widths: { narrow: "ضيق", normal: "عادي", wide: "عريض" },
-    font: "الخط", fonts: { sans: "بلا زوائد", serif: "بزوائد" }, appearance: "المظهر",
+    listen: "استمع", listenHelp: "اقرأ هذا الدرس بصوت عالٍ", speechUnavailable: "القراءة بصوت عالٍ غير متاحة في هذا المتصفح.",
     tabs: { lesson: "الدرس", practice: "التدريب" }, sources: "المصادر", openSource: "افتح", noSourceLink: "لا رابط أو ملف لهذا المصدر.",
     helpful: "هل كان هذا الدرس مفيدًا؟", yes: "مفيد", no: "غير مفيد", thanks: "شكرًا على رأيك.",
     complete: "علّم كمكتمل", completed: "مكتمل", reset: "ابدأ من جديد", resumeLabel: "تابع من حيث توقفت", resumeTop: "آخر موضع قرأته", resumeGo: "تابع", resumeDismiss: "إخفاء",
-    blockMenu: "إجراءات لهذا الجزء", saveBlock: "احفظ هذا الجزء", note: "أضف ملاحظة خاصة", discuss: "ناقش هذا الجزء", copyPart: "انسخ رابط هذا الجزء",
+    blockMenu: "إجراءات لهذا الجزء", actSave: "احفظ", actNote: "ملاحظة", actDiscuss: "ناقش", actThreads: "النقاشات", actLink: "انسخ الرابط", actExplain: "اشرح", actAsk: "اسأل", saveBlock: "احفظ هذا الجزء", note: "أضف ملاحظة خاصة", discuss: "ناقش هذا الجزء", copyPart: "انسخ رابط هذا الجزء",
     explainImage: "اشرح الصورة", askImage: "اسأل عن هذا", savedToast: "حُفظ في مكتبة Learn", noteSaved: "حُفظت الملاحظة (لا يراها غيرك)",
     highlightSaved: "ظُلّل النص (لا يراه غيرك)", removeHighlight: "أزل التظليل", highlightRemoved: "أُزيل التظليل",
     noteTitle: "ملاحظة خاصة", notePh: "لا يرى هذه الملاحظة غيرك.", noteSave: "احفظ الملاحظة", noteCancel: "إلغاء", noteDelete: "احذف الملاحظة", noteDeleted: "حُذفت الملاحظة", copyFailed: "تعذّر نسخ الرابط",
@@ -96,25 +107,6 @@ const copy = {
 };
 type Copy = (typeof copy)["en"];
 
-type ReaderPrefs = { size: "small" | "normal" | "large"; width: "narrow" | "normal" | "wide"; font: "sans" | "serif" };
-const PREFS_KEY = "chaos.learn.reader";
-const DEFAULT_PREFS: ReaderPrefs = { size: "normal", width: "normal", font: "sans" };
-let prefsCache: { raw: string | null; value: ReaderPrefs } = { raw: null, value: DEFAULT_PREFS };
-function readPrefs(): ReaderPrefs {
-  let raw: string | null = null;
-  try { raw = localStorage.getItem(PREFS_KEY); } catch { /* unavailable */ }
-  if (raw === prefsCache.raw) return prefsCache.value;
-  let value = DEFAULT_PREFS;
-  try { value = { ...DEFAULT_PREFS, ...(raw ? JSON.parse(raw) : {}) }; } catch { /* ignore */ }
-  prefsCache = { raw, value };
-  return value;
-}
-const subscribePrefs = (cb: () => void) => { window.addEventListener("chaos-reader-prefs", cb); return () => window.removeEventListener("chaos-reader-prefs", cb); };
-function useReaderPrefs(): [ReaderPrefs, (patch: Partial<ReaderPrefs>) => void] {
-  const prefs = useSyncExternalStore(subscribePrefs, readPrefs, () => DEFAULT_PREFS);
-  return [prefs, (patch) => { try { localStorage.setItem(PREFS_KEY, JSON.stringify({ ...readPrefs(), ...patch })); } catch { /* unavailable */ } window.dispatchEvent(new Event("chaos-reader-prefs")); }];
-}
-
 export interface LessonReaderProps {
   lesson: Lesson;
   /** Owner previewing the draft instead of the published version. */
@@ -125,6 +117,7 @@ export interface LessonReaderProps {
   courseId?: string | null;
 }
 
+/* oxlint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/prefer-tag-over-role -- Article taps complement native block action buttons; backdrop dismissal complements the modal Escape handler. This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 export default function LessonReader({ lesson, previewDraft, backHref = "/dashboard/learn", embedded, courseId }: LessonReaderProps) {
   const t = useCopy(copy);
   const bt = useBlockCopy();
@@ -154,14 +147,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
     try { localStorage.setItem(activityKey, JSON.stringify(next)); } catch { /* device storage unavailable */ }
     return next;
   });
-  const requiredKeys = [...walk(asBlocks(view.content))].flatMap(({ block }) => {
-    let props = block.props;
-    try { if (props.lessonData) props = { ...props, ...JSON.parse(String(props.lessonData)) }; } catch { /* incomplete block */ }
-    if (!props.required) return [];
-    if (block.type === "flashcards" || block.type === "lessonFlashcards") return [`flashcards:${props.setId}`];
-    if (block.type === "quiz" || block.type === "lessonQuiz") return [`${props.assetKind ?? (props.asset as { kind?: string })?.kind}:${props.assetId ?? (props.asset as { id?: string })?.id}`];
-    return [];
-  });
+  const requiredKeys = [...walk(asBlocks(view.content))].flatMap(({ block }) => { const activity = activityOf(block); return activity?.required ? [activity.key] : []; });
   const remainingActivities = requiredKeys.filter(key => !activities[key]).length;
   const meta = view.meta;
   const items = useMemo(() => outline(view.content), [view.content]);
@@ -182,7 +168,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const readingSeconds = useReadingSeconds(`${activityKey}:seconds`, !previewDraft && !completed);
   const [prefs, setPrefs] = useReaderPrefs();
   const [panel, setPanel] = useState<"discussion" | null>(null);
-  const [tab, setTab] = useState<"lesson" | "practice">("lesson");
+  const [tab] = useState<"lesson" | "practice">("lesson");
   const [handoff, setHandoff] = useState<HandoffContext | null>(null);
   const [reporting, setReporting] = useState(false);
   const [lightbox, setLightbox] = useState<{ url: string; alt: string; caption?: string } | null>(null);
@@ -191,15 +177,26 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const [scrolled, setScrolled] = useState(0);
   const [openSource, setOpenSource] = useState<{ source: LessonSource; locator: string } | null>(null);
   const article = useRef<HTMLElement>(null);
-  // Phones and tablets have no hover, so a block's ⋯ menu appears only on the block the reader tapped.
+  // Phones and tablets have no hover and no gutter beside the text, so tapping a block opens its
+  // actions in a callout pointing at it (BlockCallout): one tap, no ⋯ menu in between.
   const [tappedBlock, setTappedBlock] = useState<string>();
+  const closeCallout = useCallback(() => setTappedBlock(undefined), []);
   const tapBlock = (event: ReactMouseEvent<HTMLElement>) => {
     if (!window.matchMedia("(max-width: 1180px), (hover: none)").matches) return;
     const target = event.target as HTMLElement;
-    if (target.closest("a, button, input, textarea, select, summary, [role='menu'], .lx-block__handle")) return;
-    const id = target.closest<HTMLElement>(".lx-block")?.dataset.blockId;
+    if (target.closest("a, button, input, textarea, select, summary, [role='menu'], [role='button'], .lx-block__handle")) return;
+    if (window.getSelection()?.toString()) return; // selecting text shows the selection toolbar instead
+    const id = target.closest<HTMLElement>("[data-block-id]")?.dataset.blockId;
     setTappedBlock((current) => (current === id ? undefined : id));
   };
+  const [narration, setNarration] = useState<NarrationRequest | null>(null);
+  const narrationIds = useRef(0);
+  const startNarration = (request: { mode: "lesson"; from?: string } | { mode: "selection"; text: string; title?: string }) => {
+    if (!speechSupported()) { toast.error(t.speechUnavailable); return; }
+    primeSpeech(); // inside the click: iOS only starts speech from a user gesture
+    setNarration({ ...request, id: ++narrationIds.current } as NarrationRequest);
+  };
+  const main = useRef<HTMLElement>(null);
   const [selection, clearSelection] = useTextSelection(article);
   const say = (text: string) => toast.success(text);
 
@@ -218,7 +215,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
       void actions.recordView(lesson.id, { blockId, engagedSeconds: seconds }).catch(err => toast.error(err, { id: "lesson-sync" }));
     }, 1000);
     return () => window.clearInterval(timer);
-  }, [lesson.id, active, previewDraft, signedIn]); // eslint-disable-line react-hooks/exhaustive-deps -- timer belongs to the engagement target
+  }, [lesson.id, active, previewDraft, signedIn]); // oxlint-disable-line react-hooks/exhaustive-deps -- timer belongs to the engagement target
 
   const positionKey = `${activityKey}:position`;
   const [resumePosition, setResumePosition] = useState<number | null>(null);
@@ -279,7 +276,8 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const onSelectionAction = (action: SelectionAction) => {
     if (!selection) return;
     const { text, blockId, offset } = selection;
-    if (action === "lookup") { const entry = findEntry(glossary.matcher, text); if (entry) setOpenTerm({ entry, rect: selection.rect }); }
+    if (action === "read") startNarration({ mode: "selection", text });
+    else if (action === "lookup") { const entry = findEntry(glossary.matcher, text); if (entry) setOpenTerm({ entry, rect: selection.rect }); }
     else if (action.startsWith("highlight:")) {
       guard(async () => { await actions.addHighlight({ lessonId: lesson.id, blockId, quote: text, offset, color: action.slice(10) as "yellow" }); say(t.highlightSaved); });
     } else if (action === "save") guard(async () => { await actions.saveBlock(lesson, blockId, text); say(t.savedToast); });
@@ -339,7 +337,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
           <form className="lx-note-inline" onSubmit={(e) => { e.preventDefault(); if (editingNote.body.trim()) void guard(async () => { await actions.upsertNote({ id: editingNote.id, lessonId: lesson.id, blockId: block.id, body: editingNote.body }); say(t.noteSaved); setEditingNote(null); }); }}>
             <header><span><NotebookPen size={12} aria-hidden /> {t.noteTitle}</span></header>
             { }
-            <textarea autoFocus className="lx-textarea" rows={3} value={editingNote.body} placeholder={t.notePh} aria-label={t.noteTitle} maxLength={4000} onChange={(e) => setEditingNote({ ...editingNote, body: e.target.value })}
+            <FocusTextarea focusOnMount className="lx-textarea" rows={3} value={editingNote.body} placeholder={t.notePh} aria-label={t.noteTitle} maxLength={4000} onChange={(e) => setEditingNote({ ...editingNote, body: e.target.value })}
               onKeyDown={(e) => { if (e.key === "Escape") setEditingNote(null); }} />
             <div className="lx-actions" style={{ justifyContent: "flex-end", marginTop: 6 }}>
               <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" onClick={() => setEditingNote(null)}>{t.noteCancel}</button>
@@ -357,28 +355,26 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
     <DiscussionPanel lesson={lesson} draftAnchor={discussAnchor} onClearAnchor={() => setDiscussAnchor(undefined)} onClose={() => setPanel(null)} blockExists={(id) => blockIds.has(id)} />
   ) : null;
 
-  const readingMenu = (
-    <WsMenu label={t.reading} trigger={<Type size={17} />}>
-      {() => (
-        <div style={{ display: "grid", gap: 10, padding: 8, minWidth: 220 }}>
-          {([["size", t.size, t.sizes], ["width", t.width, t.widths], ["font", t.font, t.fonts]] as const).map(([key, label, options]) => (
-            <div key={key} role="group" aria-label={label} style={{ display: "grid", gap: 4 }}>
-              <span className="lx-muted" style={{ fontSize: 12 }}>{label}</span>
-              <div className="lx-chips">
-                {(Object.keys(options) as (keyof typeof options)[]).map((value) => (
-                  <button key={String(value)} type="button" role="menuitemradio" aria-checked={prefs[key] === value} className="lx-chip" onClick={() => setPrefs({ [key]: value } as Partial<ReaderPrefs>)}>{options[value]}</button>
-                ))}
-              </div>
-            </div>
-          ))}
-          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}><span className="lx-muted" style={{ fontSize: 12 }}>{t.appearance}</span><ThemeToggle className="ws-icon-button" /></div>
-        </div>
-      )}
-    </WsMenu>
-  );
+  // The outline folds with the lesson sliding into its place (FLIP: transforms only, no animated layout).
+  const toggleOutline = useStableCallback(() => {
+    const before = main.current?.getBoundingClientRect().left;
+    flushSync(() => setPrefs({ outline: prefs.outline === "closed" ? "open" : "closed" }));
+    const after = main.current?.getBoundingClientRect().left;
+    if (before === undefined || after === undefined || before === after || prefersReducedMotion()) return;
+    main.current?.animate?.([{ transform: `translateX(${before - after}px)` }, { transform: "none" }], { duration: 420, easing: "cubic-bezier(0.32, 0.72, 0, 1)" });
+  });
+  const listenFrom = () => {
+    // Start where the reader is: the section on screen once they have scrolled into the lesson.
+    const index = items.findIndex((i) => i.id === active);
+    return index > 0 && scrolled > 3 ? items[index].id : undefined;
+  };
+  // Listen closes the lesson player; while a selection is being read it starts the lesson instead.
+  const listening = narration?.mode === "lesson";
+  const toggleListen = useStableCallback(() => (listening ? setNarration(null) : startNarration({ mode: "lesson", from: listenFrom() })));
+  const tapped = tappedBlock ? findBlock(view.content, tappedBlock) : undefined;
 
   return (
-    <div className={embedded ? "" : "lx-reader-root"} dir={locale === "ar" ? "rtl" : "ltr"}>
+    <div className={embedded ? "" : "lx-reader-root"} dir={locale === "ar" ? "rtl" : "ltr"} data-narrating={narration ? true : undefined}>
       <header className="lx-reader-top" data-scrolled={scrolled > 4}>
         <Link href={backHref} className="ws-icon-button lx-reader-back" aria-label={t.back}><ChevronLeft size={18} strokeWidth={2} className="lx-flip lx-back-chevron" aria-hidden /></Link>
         <span className="lx-reader-top__title" aria-hidden={scrolled <= 4}>{meta.title || t.untitled}</span>
@@ -393,7 +389,8 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
           {/* Chaos runs no AI: questions go to the reader's own ChatGPT or Claude with the lesson as context. */}
           <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" onClick={() => setHandoff({ lessonTitle: meta.title || t.untitled, selection: "", publicUrl, action: "ask" })}><MessageCircleQuestion size={15} aria-hidden /><span className="lx-phone-label">{t.ask}</span></button>
           {caps.discussions && <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" aria-pressed={panel === "discussion"} onClick={() => setPanel(panel === "discussion" ? null : "discussion")}><MessageSquare size={15} aria-hidden /><span className="lx-phone-label">{t.discussion}{threads.filter((th) => !th.resolved).length ? ` (${threads.filter((th) => !th.resolved).length})` : ""}</span></button>}
-          {readingMenu}
+          <ListenMenu prefs={prefs} setPrefs={setPrefs} listening={listening} onToggle={toggleListen} />
+          <ReadingMenu prefs={prefs} setPrefs={setPrefs} />
           <WsMenu label={t.more}>
             {(close) => (
               <>
@@ -409,22 +406,23 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
         <div className="lx-reader-progress" aria-hidden><span style={{ transform: `scaleX(${scrolled / 100})` }} /></div>
       </header>
 
-      <div className="lx-reader" data-side={panel ? "open" : "closed"} data-width={prefs.width}>
-        <aside className="lx-reader__toc"><Outline items={items} active={active} /></aside>
-        <main className="lx-reader__main" id="lesson">
+      <div className="lx-reader" data-side={panel ? "open" : "closed"} data-width={prefs.width} data-outline={items.length ? prefs.outline : undefined}>
+        <aside className="lx-reader__toc"><DesktopOutline items={items} active={active} collapsed={prefs.outline === "closed"} onToggle={toggleOutline} /></aside>
+        <main ref={main} className="lx-reader__main" id="lesson">
           {previewDraft && <p className="lx-notice" data-tone="info" style={{ marginBottom: 16 }}>{t.draftPreview}</p>}
           {isOwner && !caps.sharedPublishing && lesson.published && !previewDraft && <p className="lx-notice" style={{ marginBottom: 16 }}>{t.devicePublish}</p>}
           <ModerationNotice state={lesson.moderation} note={isOwner ? lesson.moderationNote : undefined} owner={isOwner} />
           <LessonActivity.Provider value={reportActivity}><article ref={article} onClick={tapBlock} className="lx-article" data-size={prefs.size} data-font={prefs.font} lang={meta.language} dir={contentDirection(meta.language)} aria-labelledby="lesson-title">
-            <img className="lx-article__cover" src={isCoverUrl(meta.coverUrl) ? meta.coverUrl : defaultCover(lesson.id)} alt="" style={{ objectPosition: `center ${meta.coverY ?? 50}%` }} />
+            <ContentImage className="lx-article__cover" src={isCoverUrl(meta.coverUrl) ? meta.coverUrl : defaultCover(lesson.id)} alt="" style={{ objectPosition: `center ${meta.coverY ?? 50}%` }} />
             <h1 id="lesson-title" className="lx-article__title">{meta.title || t.untitled}</h1>
-            {meta.description && <p className="lx-article__lead">{meta.description}</p>}
+            {meta.description && <p id="lesson-lead" className="lx-article__lead">{meta.description}</p>}
             <div className="lx-article__byline">
               <span>{t.by} <Link href={`/learn/people/${encodeURIComponent(lesson.ownerId)}`}>{meta.authorDisplay || lesson.ownerName}</Link></span>
               {lesson.createdWith && <span className="lx-created-with"><AiMark client={lesson.createdWith.client} size={14} /><bdi>{t.createdWith(lesson.createdWith.name)}</bdi></span>}
               {author && <VerificationBadges verifications={author.verifications} />}
               <QualityBadge quality={lesson.quality} note={lesson.qualityNote} />
               <span>{t.minutes(readingMinutes(view.content))}</span>
+              <ListenButton className="lx-listen-chip" size={13} pressed={listening} label={t.listen} title={t.listenHelp} onClick={toggleListen} />
               {view.version > 0 && <span title={t.version(view.version)}>{t.updated(formatDate(locale, view.publishedAt, { dateStyle: "medium" }))} · v{view.version}</span>}
               <CurriculumBadges refs={meta.curricula} max={4} />
               {lesson.forkedFrom && <ProvenanceLine provenance={lesson.forkedFrom} hrefFor={lessonPath} />}
@@ -492,7 +490,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
                           </span>
                         )}
                       </div>
-                      {remainingActivities > 0 && progress?.state !== "completed" && <p role="status" className="lx-muted">{locale === "ar" ? `أكمل الأنشطة المطلوبة المتبقية: ${remainingActivities}` : `Complete ${remainingActivities} remaining required activities first.`}</p>}
+                      {remainingActivities > 0 && progress?.state !== "completed" && <output  className="lx-muted">{locale === "ar" ? `أكمل الأنشطة المطلوبة المتبقية: ${remainingActivities}` : `Complete ${remainingActivities} remaining required activities first.`}</output>}
                       {completed && <ActivitySummary seconds={readingSeconds} activities={Object.values(activities)} />}
                       <CourseNavigation courseId={courseId} lessonId={lesson.id} completed={completed} />
                     </footer>
@@ -509,9 +507,19 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
       {panel && !phone && <NarrowPanel onClose={() => setPanel(null)}>{sidePanel}</NarrowPanel>}
 
       {selection && tab === "lesson" && (
-        <SelectionToolbar selection={selection} onAction={onSelectionAction} canWrite={signedIn} aiLabel={t.aiOff} canLookUp={!!findEntry(glossary.matcher, selection.text)} />
+        <SelectionToolbar selection={selection} onAction={onSelectionAction} canWrite={signedIn} aiLabel={t.aiOff} canLookUp={!!findEntry(glossary.matcher, selection.text)} canRead={speechSupported()} within={main} />
       )}
-      {openTerm && <TermCard term={openTerm} onClose={closeTerm} />}
+      {tapped && (
+        <BlockCallout key={tapped.id} blockId={tapped.id} label={t.blockMenu} onClose={closeCallout}>
+          <BlockActions block={tapped} t={t} discussions={!!caps.discussions} onAction={(action, block) => { closeCallout(); asideAction(action, block); }}
+            threadCount={threads.filter((th) => th.blockId === tapped.id && !th.resolved).length} />
+        </BlockCallout>
+      )}
+      {narration && (
+        <Narration key={lesson.id} request={narration} lessonId={lesson.id} content={view.content} title={meta.title || t.untitled} description={meta.description}
+          language={meta.language} article={article} activities={activities} onClose={() => setNarration(null)} />
+      )}
+      {openTerm && <TermCard term={openTerm} onClose={closeTerm} canSpeak={speechSupported()} />}
       {handoff && <HandoffDialog input={handoff} onClose={() => setHandoff(null)} />}
       {reporting && <ReportDialog target={{ kind: "lesson", id: lesson.id }} title={meta.title} onClose={() => setReporting(false)} />}
       {lightbox && <Lightbox {...lightbox} onClose={() => setLightbox(null)} />}
@@ -523,6 +531,7 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/prefer-tag-over-role */
 
 /** Tablets: the side column is hidden by CSS below 1180px, so the panel floats as a sheet instead. */
 type AsideAction = "explain" | "ask" | "save" | "note" | "discuss" | "copy" | "threads";
@@ -532,7 +541,7 @@ const BlockAside = memo(function BlockAside({ block, t, discussions, noteCount, 
   const isImage = block.type === "image";
   return (
     <>
-      <WsMenu label={t.blockMenu} triggerClassName="lx-block-action" trigger={<MoreHorizontal size={15} />}>
+      <WsMenu label={t.blockMenu} align="end" triggerClassName="lx-block-action" trigger={<MoreHorizontal size={15} />}>
         {(close) => (
           <>
             {isImage && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); onAction("explain", block); }}><ImageIcon size={15} />{t.explainImage}</button>}
@@ -553,6 +562,34 @@ const BlockAside = memo(function BlockAside({ block, t, discussions, noteCount, 
   );
 });
 
+/** The touch callout's actions, laid out like iOS's edit menu: each one a single tap. */
+function BlockActions({ block, t, discussions, threadCount, onAction }: { block: Block; t: Copy; discussions: boolean; threadCount: number; onAction: (action: AsideAction, block: Block) => void }) {
+  const isImage = block.type === "image";
+  const actions: { action: AsideAction; icon: typeof Bookmark; label: string; title: string; badge?: number }[] = [
+    ...(isImage ? [{ action: "explain" as const, icon: ImageIcon, label: t.actExplain, title: t.explainImage }, { action: "ask" as const, icon: MessageCircleQuestion, label: t.actAsk, title: t.askImage }] : []),
+    { action: "save", icon: Bookmark, label: t.actSave, title: t.saveBlock },
+    { action: "note", icon: NotebookPen, label: t.actNote, title: t.note },
+    ...(discussions ? [{ action: "discuss" as const, icon: MessageSquarePlus, label: t.actDiscuss, title: t.discuss }] : []),
+    ...(discussions && threadCount > 0 ? [{ action: "threads" as const, icon: MessageSquare, label: t.actThreads, title: t.marks(threadCount, "thread"), badge: threadCount }] : []),
+    { action: "copy", icon: Link2, label: t.actLink, title: t.copyPart },
+  ];
+  return actions.map(({ action, icon: Icon, label, title, badge }) => (
+    <button key={action} type="button" className="lx-actbar__action" title={title} onClick={() => onAction(action, block)}>
+      <span className="lx-actbar__icon" aria-hidden><Icon size={18} strokeWidth={1.9} />{badge ? <span className="lx-actbar__badge">{badge}</span> : null}</span>
+      <span>{label}</span>
+    </button>
+  ));
+}
+
+/** Memoized so lesson updates do not re-render it; `onClick` is a stable callback. */
+const ListenButton = memo(function ListenButton({ className, size, pressed, label, title, onClick }: { className: string; size: number; pressed: boolean; label: string; title: string; onClick: () => void }) {
+  return (
+    <button type="button" className={className} aria-pressed={pressed} title={title} onClick={onClick}>
+      <Headphones size={size} aria-hidden /><span>{label}</span>
+    </button>
+  );
+});
+
 function NarrowPanel({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   const [narrow, setNarrow] = useState(false);
   useEffect(() => {
@@ -566,6 +603,7 @@ function NarrowPanel({ children, onClose }: { children: React.ReactNode; onClose
   return <PhoneSheet onClose={onClose}>{children}</PhoneSheet>;
 }
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 function PhoneSheet({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
   const panel = useModal<HTMLDivElement>({ onClose });
   return (
@@ -575,7 +613,9 @@ function PhoneSheet({ children, onClose }: { children: React.ReactNode; onClose:
     </>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
+/* oxlint-disable jsx-a11y/no-static-element-interactions, jsx-a11y/prefer-tag-over-role -- Article taps complement native block action buttons; backdrop dismissal complements the modal Escape handler. This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 function SourceSheet({ source, locator, onOpen, onClose, noLink, openLabel }: { source: LessonSource; locator: string; onOpen: () => void; onClose: () => void; noLink: string; openLabel: string }) {
   const bt = useBlockCopy();
   const panel = useModal<HTMLDivElement>({ onClose });
@@ -604,6 +644,7 @@ function SourceSheet({ source, locator, onOpen, onClose, noLink, openLabel }: { 
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/no-static-element-interactions, jsx-a11y/prefer-tag-over-role */
 
 export function UnavailableLesson({ backHref = "/dashboard/learn" }: { backHref?: string }) {
   const t = useCopy(copy);

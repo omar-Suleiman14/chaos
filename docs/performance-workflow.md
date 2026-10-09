@@ -1,60 +1,46 @@
 # Performance workflow
 
-Chaos gets faster through measurements, issues and people choosing what to
-fix. No model watches production or decides on its own.
+Chaos keeps performance measurement available without running a permanent
+benchmark lab in CI.
 
 ## The loop
 
-1. **Measure.** Budgets gate every pull request (`perf.yml`), the nightly run
-   covers the slow suites and Chromium (`perf-nightly.yml`), and scheduled
-   checks watch production: MCP every 6 hours (`mcp-synthetic.yml`), real users
-   daily (`production-health.yml`), flags weekly (`flags.yml`). See
-   [production monitoring](production-monitoring.md).
-2. **Open an issue, not an alert.** A regression opens or updates one issue per
-   journey (label `perf-regression`) with the benchmark, the old and new value,
-   the commit, the run's traces and artifacts, and the affected page. A
-   production threshold opens a `production-health` issue. Green runs close
-   them.
-3. **Hand it over when you want it fixed.** Give the issue to an agent (Opus,
-   Astra, Sol). The issue already holds the target and how to reproduce it.
-4. **Review the evidence.** Run "Performance budgets" (`perf.yml`, manual) on the branch; its comment on the pull request shows headline changes,
-   for example "lesson load −18%", "dashboard payload +7%" or "React commits
-   unchanged", together with the correctness verdict. The guard keeps the
-   harness and budgets out of the same change.
-
-## One optimisation issue per journey
-
-`perf-targets.yml` (run it from the Actions tab) keeps one `Optimise: <journey>`
-issue per journey (label `perf-target`) with the current budgets and the
-real-user p75/p95 target from `perf/production-thresholds.json`. That gives an
-agent a measurable target instead of a vague "make Chaos faster". Rerunning it
-comments fresh numbers on the open issue.
-
-## Keep climbing, by hand
-
-When a fix lands and another round looks worth it, open the "Keep climbing"
-issue template (or say it directly): find the next bottleneck, propose three
-options, include one unconventional approach. This costs nothing between
-rounds. Nothing keeps a model running in the background.
+1. **Keep pull requests correct.** Normal PR CI runs static checks, unit tests,
+   integration tests and a production build. `pnpm perf:guard` also runs there
+   so product changes cannot quietly weaken the performance harness or budgets.
+2. **Measure when performance matters.** Run **Performance** from the Actions
+   tab and choose `budgets`, `browser` or `all`. The deterministic budget
+   suite covers Convex reads, rendering, stylesheets and bundles. The browser
+   suite covers real journeys, keystrokes, render health, idle churn and memory
+   against the dedicated E2E environment.
+3. **Use production checks where they are useful.** The MCP synthetic runs
+   after a successful production deployment and can also be run manually.
+   Production telemetry is manual while Chaos has low traffic.
+4. **Open an issue when there is evidence to act on.** Record the affected
+   journey, the measurement, the expected outcome and how to reproduce it.
+   Performance work should start from a measured problem, not a standing queue
+   of optimisation tasks.
+5. **Review the evidence.** Performance numbers can show a regression or an
+   improvement; a person still decides whether the product tradeoff is worth
+   making.
 
 ## Correctness before speed
 
 A faster form editor that loses answers is a failure. So is a faster
 publication that exposes drafts, or a faster cache that shows deleted content.
-`pnpm test:correctness` runs before every measurement, and a failure fails the
-perf run whatever the numbers say (perf/README.md).
+The deterministic performance run starts with `pnpm test:correctness`, and
+normal integration tests protect those boundaries on every pull request.
 
 ## Human taste stays human
 
-Automation measures movement, jank, payloads and waits. It does not decide
-whether a design is good. These stay with a person:
+Automation can measure movement, payloads, waits, subscription counts and
+memory. It does not decide whether a design is good. Visual and interaction
+changes should be reviewed by a person. Run **Visual regression** manually when
+pixel-level comparison is useful.
 
-- Flow and the quiz experience, `/card`, the course UI, loading states and the
-  Forms UX;
-- what a skeleton, transition or animation should feel like;
-- whether a visual change is an improvement (`visual.yml` reports pixel
-  differences; a person accepts or rejects them).
+## Keeping the harness honest
 
-An agent may report "the card fan drops 12 frames at 120 Hz". It must not
-decide on its own to remove the fan, shorten an animation or simplify a
-layout to pass a budget. Propose it in the issue and let a person choose.
+The harness and its budgets are owned separately from product code.
+`pnpm perf:guard` runs in normal PR CI. A pull request that changes product
+code and the measurement harness together needs the `perf-harness-change`
+label so the coupling is explicit and reviewed.

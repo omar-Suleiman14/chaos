@@ -44,6 +44,17 @@ describe("ChatGPT app contract", () => {
     expect(edited.title).toBe(def.title);
   });
 
+  it("carries whether respondents see the answers after submitting, and keeps it on edits that leave it out", () => {
+    expect(fromDefinition(toDefinition(quiz)).showAnswers).toBe(true);
+    const hidden = toDefinition({ ...quiz, showAnswers: false });
+    expect(hidden.quiz).toEqual({ enabled: true, showAnswers: false });
+    expect(fromDefinition(hidden).showAnswers).toBe(false);
+    expect(toDefinition({ title: "Renamed" }, hidden).quiz).toEqual({ enabled: true, showAnswers: false });
+    expect(toDefinition({ showAnswers: true }, hidden).quiz).toEqual({ enabled: true });
+    expect(fromDefinition(toDefinition({ ...quiz, quizMode: false })).showAnswers).toBeUndefined();
+    expect(parseFormInput({ ...quiz, showAnswers: "no" })).toMatchObject({ errors: expect.arrayContaining(["showAnswers must be true or false."]) });
+  });
+
   it("rejects answer keys that do not match an option and keys on text questions", () => {
     const bad = parseFormInput({ title: "x", questions: [
       { type: "single_choice", label: "Q", options: ["A", "B"], correctAnswers: ["C"] },

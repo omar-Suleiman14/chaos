@@ -32,7 +32,8 @@ const contentSecurityPolicy = [
   "img-src 'self' data: blob: https:",
   "font-src 'self' data:",
   `connect-src 'self' ${[...clerk, "https://clerk-telemetry.com", ...convex, ...posthog, ...vercelLive, "wss://ws-us3.pusher.com"].join(" ")}`,
-  `frame-src 'self' https://challenges.cloudflare.com ${vercelLive.join(" ")}`,
+  // Lesson YouTube blocks play in the privacy-enhanced player.
+  `frame-src 'self' https://challenges.cloudflare.com https://www.youtube-nocookie.com ${vercelLive.join(" ")}`,
   "worker-src 'self' blob: data:",
   "media-src 'self' blob: data: https:",
   "object-src 'none'",
@@ -61,6 +62,7 @@ const noFraming = Object.entries(DENY_FRAMING).map(([key, value]) => ({ key, val
  * Kept as a single negative match so new routes are unframable by default.
  */
 const nextConfig: NextConfig = {
+  outputFileTracingIncludes: { "/mcp": ["./skills/create-study-lesson/**/*"], "/api/plugins/*": ["./skills/create-study-lesson/**/*"] },
   // NEXT_OUTPUT=standalone (set by the Dockerfile) emits a self-contained server
   // bundle. Left unset the build is unchanged, so Vercel deployments are unaffected.
   ...(process.env.NEXT_OUTPUT === "standalone" ? { output: "standalone" as const } : {}),
@@ -69,6 +71,8 @@ const nextConfig: NextConfig = {
   // CI typechecks every push (pnpm typecheck), so Vercel skips the repeat and deploys sooner.
   typescript: { ignoreBuildErrors: Boolean(process.env.VERCEL) },
   experimental: {
+    // TypeScript 7 exposes a native CLI rather than the TypeScript 6 JS compiler API.
+    useTypeScriptCli: true,
     // Keep visited workspace pages in the client router cache for 30 s, so Back and sidebar hops
     // re-render at once. Their data comes live from Convex, so nothing shown goes stale.
     staleTimes: { dynamic: 30 },

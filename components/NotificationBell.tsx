@@ -21,6 +21,7 @@ const copy = {
   },
 };
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 export default function NotificationBell() {
   const t = useCopy(copy);
   const { locale } = useLocale();
@@ -93,3 +94,4 @@ export default function NotificationBell() {
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */

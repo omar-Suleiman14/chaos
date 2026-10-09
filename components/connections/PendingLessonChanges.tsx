@@ -74,7 +74,7 @@ export function ReviewModeSwitch({ tokenId, value }: { tokenId: Id<"integrationT
   const set = useMutation(api.lessonProposals.setReviewMode);
   const [saving, setSaving] = useState(false);
   return (
-    <label className="flex items-start gap-2 text-sm">
+    <label className="flex items-start gap-2 text-sm" aria-label={t.review}>
       <input type="checkbox" className="mt-1" checked={value} disabled={saving} onChange={(e) => { setSaving(true); void set({ tokenId, review: e.target.checked }).finally(() => setSaving(false)); }} />
       <span><span className="block">{t.review}</span><span className="block text-xs text-muted-foreground">{t.reviewHelp}</span></span>
     </label>

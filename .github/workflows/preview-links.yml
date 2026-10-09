@@ -39,7 +39,8 @@ jobs:
         run: |
           headers=()
           if [ -n "$BYPASS" ]; then headers=(-H "x-vercel-protection-bypass: $BYPASS"); fi
-          if curl -fsS "${headers[@]}" "$PREVIEW_URL/preview/links.json" -o links.json; then
+          if curl -fsS "${headers[@]}" "$PREVIEW_URL/preview/links.json" -o links.json \
+            && jq -e '.links | type == "array"' links.json > /dev/null 2>&1; then
             rows=$(jq -r --arg base "$PREVIEW_URL" '.links[] | "- [\(.label)](\($base)\(.path))"' links.json)
             seeded=$(jq -r '"Seeded \(.seededAt) as `\(.owner)`."' links.json)
           else

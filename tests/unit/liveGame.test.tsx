@@ -4,7 +4,7 @@ import { LocaleProvider } from "@/lib/i18n";
 import { AnswerTile } from "@/components/live/tiles";
 import { Countdown, useSecondsLeft } from "@/components/live/clock";
 import {
-  answerPoints, cleanNickname, clockOffset, isCorrectAnswer, isProfane, nicknameProblem, questionsFromForm, questionsFromLegacy,
+  answerPoints, cleanNickname, clockOffset, isCorrectAnswer, isProfane, nicknameProblem, questionsFromForm,
   rankScores, secondsLeft, streakBonus,
 } from "@/convex/liveLogic";
 import { emptyDefinition } from "@/convex/formLogic";
@@ -122,15 +122,6 @@ describe("live rules", () => {
     for (const chosen of [["x", "y"], ["y", "x"], ["x"], ["x", "y", "z"]]) {
       expect(isCorrectAnswer(questions[0], chosen)).toBe((gradeQuiz(def, { a: chosen })!.score) > 0);
     }
-    const legacy = questionsFromLegacy([
-      { _id: "q1", type: "mcq", questionText: "2+2", options: ["3", "4"], correctAnswer: "4", points: 10 },
-      { _id: "q2", type: "true_false", questionText: "Sky", correctAnswer: "True", points: 5 },
-      { _id: "q3", type: "written", questionText: "Why", points: 5 },
-    ]);
-    expect(legacy.skipped).toBe(1);
-    expect(isCorrectAnswer(legacy.questions[0], ["1"])).toBe(true);
-    expect(isCorrectAnswer(legacy.questions[1], ["true"])).toBe(true);
-    expect(isCorrectAnswer(legacy.questions[1], ["false"])).toBe(false);
   });
 
   it("cleans and checks nicknames", () => {

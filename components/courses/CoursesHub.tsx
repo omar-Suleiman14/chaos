@@ -142,7 +142,7 @@ export default function CoursesHub({
               <span className="cx-meta">{t.lessons(c.lessons)} · {timeAgo(locale, c.updatedAt)}</span>
             </div>
             </Link>
-            <div className="absolute top-2 end-2 rounded-md bg-white/90 text-[#37352f]" onClick={event => event.stopPropagation()}>{rowActions(c)}</div>
+            <div className="absolute top-2 end-2 rounded-md bg-white/90 text-[#37352f]" onClick={event => event.stopPropagation()} onKeyDown={event => event.stopPropagation()} role="presentation">{rowActions(c)}</div>
           </article>
         ))}
       </div>)}

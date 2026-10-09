@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { ChevronRight, CircleUser, SunMoon } from "lucide-react";
-import { useClerk, useUser } from "@/lib/auth/client";
+import { useAccount, useUser } from "@/lib/auth/client";
 import { useConfirmedQuery } from "@/lib/confirmedQuery";
 import { api } from "@/convex/_generated/api";
 import { useCopy, useLocale } from "@/lib/i18n";
@@ -51,7 +51,7 @@ export default function ProfilePage() {
   const t = useCopy(copy);
   const { locale, setLocale } = useLocale();
   const { user } = useUser();
-  const clerk = useClerk();
+  const accountActions = useAccount();
   const { mode } = useTheme();
   const { preferences: p, set } = usePreferences();
   const card = useConfirmedQuery(api.memberCards.mine).data;
@@ -72,13 +72,13 @@ export default function ProfilePage() {
       </details>
       <Section id="account" icon={CircleUser} title={t.account} description={t.accountAbout}>
         <Row id="settings-account" label={user?.fullName || card.name || t.yourAccount} help={user?.primaryEmailAddress?.emailAddress}>
-          <button type="button" className="ws-btn ws-btn--sm" onClick={() => clerk.openUserProfile()}>{t.manage}</button>
+          <button type="button" className="ws-btn ws-btn--sm" onClick={() => accountActions.openUserProfile()}>{t.manage}</button>
         </Row>
         <Row id="settings-password" label={t.security} help={t.securityHelp}>
-          <button type="button" className="ws-btn ws-btn--sm" onClick={() => clerk.openUserProfile()} aria-label={t.security}>{t.open} <ChevronRight size={14} className="rtl:-scale-x-100" /></button>
+          <button type="button" className="ws-btn ws-btn--sm" onClick={() => accountActions.openUserProfile()} aria-label={t.security}>{t.open} <ChevronRight size={14} className="rtl:-scale-x-100" /></button>
         </Row>
         <Row id="settings-sign-out" label={t.signOut} help={t.signOutHelp}>
-          <button type="button" className="ws-btn ws-btn--sm ws-btn--danger" onClick={() => void clerk.signOut({ redirectUrl: "/" })}>{t.signOut}</button>
+          <button type="button" className="ws-btn ws-btn--sm ws-btn--danger" onClick={() => void accountActions.signOut({ redirectUrl: "/" })}>{t.signOut}</button>
         </Row>
       </Section>
 

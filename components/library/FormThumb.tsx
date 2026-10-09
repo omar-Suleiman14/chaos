@@ -8,15 +8,15 @@ const hex = (value: string | undefined, fallback: string) => (value && /^#[0-9a-
 const copy = { en: { untitled: "Untitled" }, ar: { untitled: "بلا عنوان" } };
 
 /** A miniature of how a form looks to respondents: theme colours, font and presentation mode. */
-function FormThumb({ theme, presentation, title, legacy }: { theme?: FormTheme; presentation?: Presentation; title: string; legacy?: boolean }) {
+function FormThumb({ theme, presentation, title }: { theme?: FormTheme; presentation?: Presentation; title: string }) {
   const t = useCopy(copy);
   const themed = theme?.version === 1;
   const page = themed ? hex(theme.pageColor, "#f5f4f0") : "#f0efea";
   const surface = themed ? hex(theme.surfaceColor, "#ffffff") : "#ffffff";
   const text = themed ? hex(theme.textColor, "#202020") : "#111111";
-  const accent = hex(theme?.accent, legacy ? "#2f5333" : "#22c55e");
+  const accent = hex(theme?.accent, "#22c55e");
   const font = theme?.font ?? "display";
-  const mode = legacy ? "legacy" : presentation ?? "page";
+  const mode = presentation ?? "page";
   const line = (width: string, color = text, opacity = 0.18) => <span className="block h-[5px] rounded-full" style={{ width, background: color, opacity }} />;
 
   return (
@@ -42,10 +42,10 @@ function FormThumb({ theme, presentation, title, legacy }: { theme?: FormTheme; 
         </span>
       ) : (
         <span className="absolute inset-x-5 top-4 bottom-[-10px] rounded-t-[8px] p-3 flex flex-col gap-2" style={{ background: themed && theme.layout === "card" ? surface : "transparent", boxShadow: themed && theme.layout === "card" ? `0 6px 18px -8px ${text}40` : "none" }}>
-          <span className="block text-[13px] font-bold leading-tight line-clamp-1" style={{ fontFamily: "var(--thumb-font)", textTransform: legacy || theme?.buttons === "brutal" ? "uppercase" : undefined }}>{title || t.untitled}</span>
+          <span className="block text-[13px] font-bold leading-tight line-clamp-1" style={{ fontFamily: "var(--thumb-font)", textTransform: theme?.buttons === "brutal" ? "uppercase" : undefined }}>{title || t.untitled}</span>
           {line("80%")}
           <span className="block h-[14px] rounded-[4px]" style={{ border: `1px solid ${text}30`, background: surface }} />
-          <span className="block h-[12px] w-[34%] rounded-[4px]" style={{ background: accent, boxShadow: legacy || theme?.buttons === "brutal" ? `2px 2px 0 ${text}` : "none" }} />
+          <span className="block h-[12px] w-[34%] rounded-[4px]" style={{ background: accent, boxShadow: theme?.buttons === "brutal" ? `2px 2px 0 ${text}` : "none" }} />
         </span>
       )}
     </span>

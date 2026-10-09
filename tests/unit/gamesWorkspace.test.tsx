@@ -12,12 +12,12 @@ vi.mock("convex/react", () => ({
   useMutation: (ref: Parameters<typeof getFunctionName>[0]) => getFunctionName(ref) === "forms:createForm" ? mocks.create : mocks.host,
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => getFunctionName(ref) === "live:myGames"
     ? [
-      { _id: "room-live", title: "Friday quiz", state: "question", createdAt: Date.now() - 60_000, endedAt: null, formId: "ready", quizId: null, questionCount: 5, players: 12, savedResponses: 0 },
-      { _id: "room-done", title: "Monday quiz", state: "ended", createdAt: Date.now() - 86_400_000, endedAt: Date.now() - 80_000_000, formId: "ready", quizId: null, questionCount: 1, players: 3, savedResponses: 3 },
+      { _id: "room-live", title: "Friday quiz", state: "question", createdAt: Date.now() - 60_000, endedAt: null, formId: "ready", questionCount: 5, players: 12, savedResponses: 0 },
+      { _id: "room-done", title: "Monday quiz", state: "ended", createdAt: Date.now() - 86_400_000, endedAt: Date.now() - 80_000_000, formId: "ready", questionCount: 1, players: 3, savedResponses: 3 },
     ]
     : getFunctionName(ref) === "forms:listMyForms"
     ? { owned: [{ _id: "draft", title: "Draft game", status: "draft", quizMode: true }, { _id: "ready", title: "Ready game", status: "live", quizMode: true, publishedVersion: 1 }, { _id: "archived", title: "Archived game", status: "archived", quizMode: true, publishedVersion: 1 }], shared: [{ _id: "editor", title: "Shared editable game", status: "live", quizMode: true, publishedVersion: 1, role: "editor" }, { _id: "viewer", title: "View-only game", status: "live", quizMode: true, publishedVersion: 1, role: "viewer" }] }
-    : [{ _id: "legacy", title: "Older game", isPublished: true }],
+    : undefined,
 }));
 
 beforeEach(() => {
@@ -47,11 +47,11 @@ describe("Games workspace", () => {
     expect(mocks.push).toHaveBeenCalledWith("/dashboard/live/new-room");
   });
 
-  it("applies an explicit override to older games, and can return to Apple styling", async () => {
+  it("applies an explicit style override, and can return to Apple styling", async () => {
     render(<LocaleProvider initial="en"><GamesPage /></LocaleProvider>);
     fireEvent.click(screen.getByRole("radio", { name: "Terracotta" }));
-    fireEvent.click(within(screen.getByText("Older game").closest("article")!).getByRole("button", { name: "Host live" }));
-    await waitFor(() => expect(mocks.host).toHaveBeenCalledWith(expect.objectContaining({ quizId: "legacy", timeLimitSec: 20, showAnswerLabels: true, theme: expect.objectContaining({ preset: "terracotta" }) })));
+    fireEvent.click(within(screen.getByText("Ready game").closest("article")!).getByRole("button", { name: "Host live" }));
+    await waitFor(() => expect(mocks.host).toHaveBeenCalledWith(expect.objectContaining({ formId: "ready", timeLimitSec: 20, showAnswerLabels: true, theme: expect.objectContaining({ preset: "terracotta" }) })));
     fireEvent.click(screen.getByRole("radio", { name: "Flow (default)" }));
     fireEvent.click(within(screen.getByText("Shared editable game").closest("article")!).getByRole("button", { name: "Host live" }));
     await waitFor(() => expect(mocks.host).toHaveBeenLastCalledWith({ formId: "editor", language: "en", timeLimitSec: 20, showAnswerLabels: true }));
@@ -66,7 +66,7 @@ describe("Games workspace", () => {
     expect(within(drafts).getByText("Draft game")).toBeInTheDocument();
     expect(within(drafts).queryByRole("button", { name: "Host live" })).toBeNull();
     expect(within(drafts).getByRole("link", { name: /Finish & publish/ })).toHaveAttribute("href", "/dashboard/forms/draft");
-    expect(within(screen.getByRole("region", { name: "Ready to host" })).getAllByRole("button", { name: "Host live" })).toHaveLength(3);
+    expect(within(screen.getByRole("region", { name: "Ready to host" })).getAllByRole("button", { name: "Host live" })).toHaveLength(2);
   });
 
   it("labels creation and session settings in Arabic", async () => {

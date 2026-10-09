@@ -1223,7 +1223,7 @@ export const sectionsEn: DocSection[] = [
             items: [
               "You run backups, monitoring and updates yourself.",
               "Set `NEXT_PUBLIC_APP_URL` and `CHAOS_APP_URL` to your own address, or links point at chaos.fail.",
-              "Everything runs on one address unless you set `NEXT_PUBLIC_DASHBOARD_ORIGIN`, `NEXT_PUBLIC_LEARN_ORIGIN` or `NEXT_PUBLIC_DOCS_ORIGIN` to give a section its own subdomain.",
+              "Everything runs on one address unless you set `NEXT_PUBLIC_DASHBOARD_ORIGIN`, `NEXT_PUBLIC_LEARN_ORIGIN`, `NEXT_PUBLIC_DOCS_ORIGIN` or `NEXT_PUBLIC_PLAY_ORIGIN` to give a section its own subdomain.",
               "The integration API and webhooks need the backend's HTTP port to be reachable.",
               "Analytics is off unless you set it up.",
             ],

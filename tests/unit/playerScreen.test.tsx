@@ -16,6 +16,7 @@ vi.mock("convex/react", () => ({
 
 beforeEach(() => {
   vi.clearAllMocks();
+  localStorage.clear();
   mocks.now.mockImplementation(async () => Date.now());
   mocks.submit.mockResolvedValue({ status: "received" });
   localStorage.setItem("chaos-live-session", JSON.stringify({ gameId: "room", token: "a".repeat(32), pin: "123456" }));
@@ -30,7 +31,7 @@ describe("player answer controls", () => {
   it("locks an accepted answer until the server view catches up", async () => {
     render(<LocaleProvider initial="en"><PlayerScreen /></LocaleProvider>);
     fireEvent.click(await screen.findByRole("button", { name: "Diamond: Saturn" }));
-    await screen.findByText("Answer sent");
+    await screen.findByText("Answer saved");
     fireEvent.keyDown(window, { key: "1" });
     expect(mocks.submit).toHaveBeenCalledTimes(1);
   });
@@ -57,11 +58,11 @@ describe("player answer controls", () => {
     mocks.view = { ...mocks.view, questionIndex: 1 };
     rerender(<LocaleProvider initial="en"><PlayerScreen /></LocaleProvider>);
     await act(async () => { accept({ status: "received" }); });
-    expect(screen.queryByText("Answer sent")).toBeNull();
+    expect(screen.queryByText("Answer saved")).toBeNull();
     expect(screen.getByRole("button", { name: "Triangle: Earth" })).toBeEnabled();
     fireEvent.click(screen.getByRole("button", { name: "Triangle: Earth" }));
     await waitFor(() => expect(mocks.submit).toHaveBeenLastCalledWith(expect.objectContaining({ questionIndex: 1 })));
-    await screen.findByText("Answer sent");
+    await screen.findByText("Answer saved");
   });
 
   it("allows retrying a rejected answer", async () => {
@@ -69,7 +70,7 @@ describe("player answer controls", () => {
     render(<LocaleProvider initial="en"><PlayerScreen /></LocaleProvider>);
     fireEvent.click(await screen.findByRole("button", { name: "Diamond: Saturn" }));
     await screen.findByRole("alert");
-    fireEvent.click(screen.getByRole("button", { name: "Diamond: Saturn" }));
+    fireEvent.click(screen.getByRole("button", { name: "Retry saved answer" }));
     await waitFor(() => expect(mocks.submit).toHaveBeenCalledTimes(2));
   });
 
@@ -107,5 +108,30 @@ describe("player answer controls", () => {
     expect(screen.getByRole("button", { name: "Diamond: Saturn" })).toHaveAttribute("aria-pressed", "true");
     fireEvent.click(screen.getByRole("button", { name: "Submit" }));
     await waitFor(() => expect(mocks.submit).toHaveBeenCalledWith(expect.objectContaining({ optionIds: ["earth", "saturn"] })));
+  });
+});
+
+
+describe("live answer recovery", () => {
+  it("backs up before sending and retries the same answer after a reload", async () => {
+    let reject!: (error: Error) => void;
+    mocks.submit.mockImplementationOnce(() => new Promise((_, fail) => { reject = fail; }));
+    const first = render(<LocaleProvider initial="en"><PlayerScreen /></LocaleProvider>);
+    fireEvent.click(await screen.findByRole("button", {name:"Diamond: Saturn"}));
+    expect(JSON.parse(localStorage.getItem("chaos-live-answer:room:0")!).optionIds).toEqual(["saturn"]);
+    await act(async () => { reject(new Error("Offline")); });
+    expect(screen.getByText("Saved on this device · waiting to send")).toBeVisible();
+    first.unmount();
+    render(<LocaleProvider initial="en"><PlayerScreen /></LocaleProvider>);
+    await screen.findByText("Answer saved");
+    expect(mocks.submit).toHaveBeenLastCalledWith(expect.objectContaining({questionIndex:0,optionIds:["saturn"]}));
+    expect(localStorage.getItem("chaos-live-answer:room:0")).toBeNull();
+  });
+  it("does not send a saved answer after its question has closed", async () => {
+    localStorage.setItem("chaos-live-answer:room:0", JSON.stringify({token:"a".repeat(32),questionIndex:0,optionIds:["saturn"]}));
+    mocks.view = {...mocks.view,state:"reveal",correct:false,points:0,bonus:0,rank:1,score:0};
+    render(<LocaleProvider initial="en"><PlayerScreen /></LocaleProvider>);
+    await screen.findByText("Your saved answer could not reach the server before this question closed.");
+    expect(mocks.submit).not.toHaveBeenCalled();
   });
 });

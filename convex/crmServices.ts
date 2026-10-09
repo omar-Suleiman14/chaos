@@ -38,6 +38,20 @@ export async function listCrmContacts(ctx: QueryCtx, args: ListArgs) {
     (args.search?.length ?? 0) > 200
   )
     throw new Error("VALIDATION_FAILED: Invalid CRM search or page size.");
+  // Follow-up searches use the name search index (word and prefix matches, by relevance),
+  // like the main list; an exact-name filter missed "omar" for "Omar Suleiman".
+  if (args.followUps && args.search?.trim())
+    return (
+      ctx.db
+        .query("crmContacts")
+        .withSearchIndex("search_name", (q) => {
+          const search = q.search("name", args.search!.trim());
+          return args.stage ? search.eq("stage", args.stage) : search;
+        })
+        // eslint-disable-next-line @convex-dev/no-filter-in-query
+        .filter((q) => q.and(q.gt(q.field("nextFollowUp"), 0), q.neq(q.field("stage"), "closed")))
+        .paginate(args.paginationOpts)
+    );
   if (args.followUps)
     return (
       ctx.db
@@ -49,9 +63,6 @@ export async function listCrmContacts(ctx: QueryCtx, args: ListArgs) {
           q.and(
             q.neq(q.field("stage"), "closed"),
             args.stage ? q.eq(q.field("stage"), args.stage) : true,
-            args.search?.trim()
-              ? q.eq(q.field("name"), args.search.trim())
-              : true,
           ),
         )
         .order("asc")

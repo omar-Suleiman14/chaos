@@ -89,7 +89,7 @@ describe("plugin packages", () => {
         expect(content, path).not.toMatch(SECRET);
         for (const url of content.match(/https?:\/\/[^\s"')`]+/g) ?? []) {
           const host = new URL(url).host;
-          expect([new URL(chaosIntegration.siteUrl).host, "github.com", "www.w3.org"], `${path}: ${url}`).toContain(host);
+          expect([new URL(chaosIntegration.siteUrl).host, "github.com", "www.w3.org", "agent-plugins.org"], `${path}: ${url}`).toContain(host);
         }
       }
     }
