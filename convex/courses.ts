@@ -5,6 +5,7 @@ import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { courseSearchText } from "./courseSearchModel";
 import { v, type Infer } from "convex/values";
+import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser, isPaidPlan, creatorRestricted } from "./authz";
@@ -272,6 +273,27 @@ export const getPublic = query({
 });
 
 /** Public course catalogue for Explore and the sitemap, newest first. */
+/** Every public, published course for the sitemap, a bounded page at a time; follow continueCursor until isDone. */
+export const listIndexable = query({
+  args: { paginationOpts: paginationOptsValidator },
+  returns: paginationResultValidator(v.object({ id: v.id("learnCollections"), updatedAt: v.number() })),
+  handler: async (ctx, args) => {
+    if (!Number.isSafeInteger(args.paginationOpts.numItems) || args.paginationOpts.numItems < 1 || args.paginationOpts.numItems > 100) throw new Error("VALIDATION_FAILED: Page size must be 1–100.");
+    const result = await ctx.db.query("learnCollections").withIndex("by_visibility_and_updatedAt", (q) => q.eq("visibility", "public")).order("desc").paginate(args.paginationOpts);
+    const page = [];
+    const restricted = new Map<string, boolean>();
+    for (const row of result.page) {
+      if (!row.publishedVersionId || row.archived || row.communityState !== "ok") continue;
+      if (!restricted.has(row.ownerId)) restricted.set(row.ownerId, await creatorRestricted(ctx, row.ownerId));
+      if (restricted.get(row.ownerId)) continue;
+      const version = await ctx.db.get("collectionVersions", row.publishedVersionId);
+      if (!version || version.collectionId !== row._id) continue;
+      page.push({ id: row._id, updatedAt: version.publishedAt });
+    }
+    return { ...result, page };
+  },
+});
+
 export const listPublic = query({
   args: { limit: v.optional(v.number()) },
   returns: v.array(v.object({
