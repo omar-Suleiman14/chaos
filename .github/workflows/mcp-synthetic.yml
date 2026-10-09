@@ -1,14 +1,9 @@
 name: MCP synthetic check
 
-# Every 6 hours against production (and staging when STAGING_MCP_URL is set):
-# deployed tool list vs the repository snapshot, authenticated reads with
-# response schemas checked, an isolated create → delete → archive in the
-# synthetic account, and p50/p75/p95 latency compared with
-# perf/baselines/mcp-synthetic.json. A failure or regression opens one issue
-# (label production-health) or comments on it; the next green run closes it.
+# Verify the deployed MCP after a successful production deployment. It can
+# also be run manually; there is no periodic six-hour poll.
 on:
-  schedule:
-    - cron: "41 */6 * * *"
+  deployment_status:
   workflow_dispatch:
 
 permissions:
@@ -20,29 +15,24 @@ concurrency:
 
 jobs:
   synthetic:
-    name: ${{ matrix.target.name }}
+    name: Production MCP
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'deployment_status' && github.event.deployment_status.state == 'success' && github.event.deployment.environment == 'Production')
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:
       contents: read
       issues: write
-    strategy:
-      fail-fast: false
-      matrix:
-        target:
-          - { name: production, url_var: PRODUCTION_MCP_URL, token_secret: MCP_SYNTHETIC_TOKEN }
-          - { name: staging, url_var: STAGING_MCP_URL, token_secret: STAGING_MCP_SYNTHETIC_TOKEN }
     env:
-      MCP_SYNTHETIC_URL: ${{ vars[matrix.target.url_var] || (matrix.target.name == 'production' && 'https://chaos.fail/mcp' || '') }}
-      MCP_SYNTHETIC_TOKEN: ${{ secrets[matrix.target.token_secret] }}
+      MCP_SYNTHETIC_URL: ${{ vars.PRODUCTION_MCP_URL || 'https://chaos.fail/mcp' }}
+      MCP_SYNTHETIC_TOKEN: ${{ secrets.MCP_SYNTHETIC_TOKEN }}
       MCP_SYNTHETIC_SAMPLES: "7"
       GITHUB_TOKEN: ${{ github.token }}
     steps:
       - name: Target configured
         id: env
         run: |
-          if [ -z "$MCP_SYNTHETIC_URL" ] || [ -z "$MCP_SYNTHETIC_TOKEN" ]; then
-            echo "${{ matrix.target.name }}: URL or token not configured, skipped." | tee -a "$GITHUB_STEP_SUMMARY"
+          if [ -z "$MCP_SYNTHETIC_TOKEN" ]; then
+            echo "MCP_SYNTHETIC_TOKEN is not configured: skipped." | tee -a "$GITHUB_STEP_SUMMARY"
             echo "ready=false" >> "$GITHUB_OUTPUT"
           else
             echo "ready=true" >> "$GITHUB_OUTPUT"
@@ -50,17 +40,17 @@ jobs:
 
       - name: Checkout
         if: steps.env.outputs.ready == 'true'
-        uses: actions/checkout@08c6903cd8c0fde910a37f88322edcfb5dd907a8 # v5.0.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
       - name: Setup pnpm
         if: steps.env.outputs.ready == 'true'
-        uses: pnpm/action-setup@41ff72655975bd51cab0327fa583b6e92b6d3061 # v4.2.0
+        uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
-          version: 12.4.2
+          version: 12.10.1
 
       - name: Setup Node
         if: steps.env.outputs.ready == 'true'
-        uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5.0.0
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: "24"
           cache: pnpm
@@ -75,7 +65,6 @@ jobs:
         run: pnpm mcp:synthetic
         continue-on-error: true
 
-      # Latency gates with a 50% band (perf/baselines/mcp-synthetic.json); a missing baseline proposes one.
       - name: Compare latency with baseline
         id: latency
         if: steps.env.outputs.ready == 'true'
@@ -90,17 +79,17 @@ jobs:
           cat perf/results/mcp-synthetic.md perf/results/summary.md > perf/results/report.md 2>/dev/null || true
 
       - name: Open or close the issue
-        if: always() && steps.env.outputs.ready == 'true' && github.ref == 'refs/heads/main'
+        if: always() && steps.env.outputs.ready == 'true'
         run: >
-          pnpm exec tsx scripts/check-report.ts --key "mcp-synthetic-${{ matrix.target.name }}"
-          --title "MCP synthetic check failing (${{ matrix.target.name }})" --label production-health
+          pnpm exec tsx scripts/check-report.ts --key "mcp-synthetic-production"
+          --title "MCP synthetic check failing (production)" --label production-health
           --failed "${{ steps.check.outcome == 'failure' || steps.latency.outcome == 'failure' }}"
           --body-file perf/results/report.md
 
       - name: Upload results
         if: always() && steps.env.outputs.ready == 'true'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
-          name: mcp-synthetic-${{ matrix.target.name }}
+          name: mcp-synthetic-production
           path: perf/results
-          retention-days: 90
+          retention-days: 30

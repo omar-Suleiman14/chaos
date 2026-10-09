@@ -7,20 +7,22 @@ import { splitLocale } from "./locale";
  * - app.chaos.fail (NEXT_PUBLIC_DASHBOARD_ORIGIN): create. The dashboard, admin and print pages.
  * - learn.chaos.fail (NEXT_PUBLIC_LEARN_ORIGIN): learn. Lessons, courses, flashcards.
  * - docs.chaos.fail (NEXT_PUBLIC_DOCS_ORIGIN): understand and build. The guides.
+ * - play.chaos.fail (NEXT_PUBLIC_PLAY_ORIGIN): play. Players join live games with a PIN.
  * Paths are the same on every host (app.chaos.fail/dashboard/forms, docs.chaos.fail/docs/first-form);
  * a path opened on the wrong host redirects to its own (proxy.ts). Unset origins keep that section
  * on the main host, which is how local development, previews and self-hosting run. See docs/hosts.md.
  */
-export type Section = "main" | "dashboard" | "learn" | "docs";
+export type Section = "main" | "dashboard" | "learn" | "docs" | "play";
 
 const configuredOrigins: Record<Exclude<Section, "main">, string | null> = {
   dashboard: optionalHttpsOrigin(process.env.NEXT_PUBLIC_DASHBOARD_ORIGIN),
   learn: optionalHttpsOrigin(process.env.NEXT_PUBLIC_LEARN_ORIGIN),
   docs: optionalHttpsOrigin(process.env.NEXT_PUBLIC_DOCS_ORIGIN),
+  play: optionalHttpsOrigin(process.env.NEXT_PUBLIC_PLAY_ORIGIN),
 };
 
 /** Section roots, the page a bare subdomain opens. */
-export const SECTION_HOME: Record<Exclude<Section, "main">, string> = { dashboard: "/dashboard", learn: "/learn", docs: "/docs" };
+export const SECTION_HOME: Record<Exclude<Section, "main">, string> = { dashboard: "/dashboard", learn: "/learn", docs: "/docs", play: "/play" };
 
 /**
  * Served on whichever host asked: sign-in (Clerk keeps one session across *.chaos.fail), the OAuth
@@ -35,11 +37,17 @@ export function pathSection(pathname: string): Section | null {
   if (/^\/(?:dashboard|admin|print|homework)(?:\/|$)/.test(path)) return "dashboard";
   if (/^\/learn(?:\/|$)/.test(path)) return "learn";
   if (/^\/docs(?:\/|$)/.test(path)) return "docs";
+  if (/^\/play(?:\/|$)/.test(path)) return "play";
   return "main";
 }
 
 export function sectionOrigin(section: Section, origins = configuredOrigins, main = siteUrl): string {
   return section === "main" ? main : origins[section] ?? main;
+}
+
+/** True when this section has its own host (play.chaos.fail), not a path on the main one. */
+export function hasOwnHost(section: Exclude<Section, "main">, origins = configuredOrigins): boolean {
+  return Boolean(origins[section]);
 }
 
 /** True once at least one section has its own host. */

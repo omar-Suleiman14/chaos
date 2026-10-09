@@ -105,7 +105,7 @@ describe("MCP games: trusted transport, shared live rules", () => {
     expect(row.draft.fields[0].quiz?.correctOptionIds).toHaveLength(1);
   });
 
-  it("validates game questions again on the backend and hosts an owned published classic quiz", async () => {
+  it("validates game questions again on the backend and refuses classic quiz ids", async () => {
     const t = await setup();
     await expect(t.mutation(internal.mcp.createGameDraft, { userId, input: { ...input, questions: [{ ...input.questions[0], correctAnswers: [] }] } })).rejects.toThrow(/VALIDATION_FAILED/);
     await expect(t.mutation(internal.mcp.createGameDraft, { userId, input: { ...input, theme: { pageColor: "url(private)" } } })).rejects.toThrow(/VALIDATION_FAILED/);
@@ -114,10 +114,9 @@ describe("MCP games: trusted transport, shared live rules", () => {
       await ctx.db.insert("questions", { quizId: id, type: "mcq", questionText: "Two plus two?", options: ["3", "4"], correctAnswer: "4", points: 1, order: 0 });
       return id;
     });
+    // Classic quizzes are converted to quiz forms; their old ids are not hostable, even by the owner.
     await expect(t.mutation(internal.mcp.hostGame, { userId: otherId, id: `quiz_${quizId}` })).rejects.toThrow(/NOT_FOUND/);
-    const room = await t.mutation(internal.mcp.hostGame, { userId, id: `quiz_${quizId}` });
-    expect(room).toMatchObject({ state: "lobby", sourceId: `quiz_${quizId}`, questionCount: 1, settings: { showAnswerLabels: true } });
-    safe(room);
+    await expect(t.mutation(internal.mcp.hostGame, { userId, id: `quiz_${quizId}` })).rejects.toThrow(/NOT_FOUND/);
   });
 
   it("refuses drafts, closed forms and published quizzes without eligible graded choices", async () => {

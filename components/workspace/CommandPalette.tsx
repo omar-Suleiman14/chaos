@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useId, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useQuery } from "convex/react";
-import { Archive, BarChart3, BookOpen, Bookmark, ChevronDown, FileText, Folder, GraduationCap, IdCard, Keyboard, Layers, Library, Link2, ListChecks, Moon, Plus, Search, Settings, Sparkles, Trophy, Users } from "lucide-react";
+import { Archive, BookOpen, Bookmark, ChevronDown, FileText, Folder, GraduationCap, IdCard, Keyboard, Layers, Library, Link2, ListChecks, Moon, Plus, Search, Settings, Trophy, Users } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useTheme } from "@/components/ThemeProvider";
 import FallbackBoundary from "@/components/FallbackBoundary";
@@ -16,7 +16,7 @@ import { settingsIndexFor } from "@/lib/settingsIndex";
 import type { SettingsEntry } from "@/lib/settingsIndex";
 import { useModal } from "./useModal";
 
-export interface PaletteItem { id: string; title: string; kind: "form" | "quiz" | "legacy" | "lesson" | "folder" | "course" | "flashcards" | "game" | "team"; href: string; accent?: string; archived?: boolean; body?: string }
+export interface PaletteItem { id: string; title: string; kind: "form" | "quiz" | "lesson" | "folder" | "course" | "flashcards" | "game" | "team"; href: string; accent?: string; archived?: boolean; body?: string }
 export type PaletteCreate = "form" | "quiz" | "course" | "flashcards";
 
 type Entry = { key: string; group: string; label: string; hint?: string; icon: React.ReactNode; run: () => void; titleRanges?: Range[]; snippet?: Snippet; keepOpen?: boolean };
@@ -25,7 +25,7 @@ type IndexRow = { id: string; title: string; status: "draft" | "live" | "closed"
 const GROUP_LIMIT = 6;
 
 const KIND_ICONS: Record<PaletteItem["kind"], React.ReactNode> = {
-  form: <FileText size={16} />, quiz: <ListChecks size={16} />, legacy: <Sparkles size={16} />, lesson: <BookOpen size={16} />, folder: <Folder size={16} />,
+  form: <FileText size={16} />, quiz: <ListChecks size={16} />, lesson: <BookOpen size={16} />, folder: <Folder size={16} />,
   course: <GraduationCap size={16} />, flashcards: <Layers size={16} />, game: <Trophy size={16} />, team: <Users size={16} />,
 };
 const kindIcon = (kind: PaletteItem["kind"]) => KIND_ICONS[kind];
@@ -35,9 +35,9 @@ const copy = {
     groupActions: "Actions", groupForms: "Your work", groupSettings: "Settings", groupDocs: "Docs",
     newForm: "New form", newQuiz: "New quiz", newLesson: "New lesson", newCourse: "New course", newFlashcards: "New flashcard set", newHint: "Blank draft",
     library: "Open library", saved: "Saved", teams: "Teams & invitations", profile: "Profile and card",
-    courseHint: "Course", flashcardsHint: "Flashcards", gameHint: "Live game", teamHint: "Team", openArchive: "Open archive", openResults: "Open results", connections: "Connections",
+    courseHint: "Course", flashcardsHint: "Flashcards", gameHint: "Live game", teamHint: "Team", openArchive: "Open archive", connections: "Connections",
     settings: "Settings", shortcuts: "Keyboard shortcuts", docs: "Docs", darkMode: "Toggle dark mode",
-    archivedHint: "Archived", legacyHint: "Legacy quiz", quizHint: "Quiz", formHint: "Form", lessonHint: "Lesson", folderHint: "Folder", untitled: "Untitled", learn: "Open Learn",
+    archivedHint: "Archived", quizHint: "Quiz", formHint: "Form", lessonHint: "Lesson", folderHint: "Folder", untitled: "Untitled", learn: "Open Learn",
     showAll: (n: number) => `Show all ${n}`,
     dialog: "Search and commands", placeholder: "Search everything or type a command…", search: "Search", list: "Commands and pages",
     noMatches: (q: string) => `No matches for “${q}”.`, navigate: "Navigate", select: "Select", close: "Close",
@@ -46,9 +46,9 @@ const copy = {
     groupActions: "الإجراءات", groupForms: "أعمالك", groupSettings: "الإعدادات", groupDocs: "الدليل",
     newForm: "نموذج جديد", newQuiz: "اختبار جديد", newLesson: "درس جديد", newCourse: "دورة جديدة", newFlashcards: "مجموعة بطاقات جديدة", newHint: "مسودة فارغة",
     library: "افتح المكتبة", saved: "المحفوظات", teams: "الفرق والدعوات", profile: "الملف الشخصي والبطاقة",
-    courseHint: "دورة", flashcardsHint: "بطاقات", gameHint: "لعبة مباشرة", teamHint: "فريق", openArchive: "افتح الأرشيف", openResults: "افتح النتائج", connections: "الاتصالات",
+    courseHint: "دورة", flashcardsHint: "بطاقات", gameHint: "لعبة مباشرة", teamHint: "فريق", openArchive: "افتح الأرشيف", connections: "الاتصالات",
     settings: "الإعدادات", shortcuts: "اختصارات لوحة المفاتيح", docs: "الدليل", darkMode: "بدّل الوضع الداكن",
-    archivedHint: "مؤرشف", legacyHint: "اختبار قديم", quizHint: "اختبار", formHint: "نموذج", lessonHint: "درس", folderHint: "مجلد", untitled: "بلا عنوان", learn: "افتح Learn",
+    archivedHint: "مؤرشف", quizHint: "اختبار", formHint: "نموذج", lessonHint: "درس", folderHint: "مجلد", untitled: "بلا عنوان", learn: "افتح Learn",
     showAll: (n: number) => `اعرض الكل (${n})`,
     dialog: "البحث والأوامر", placeholder: "ابحث في كل شيء أو اكتب أمرًا…", search: "بحث", list: "الأوامر والصفحات",
     noMatches: (q: string) => `لا نتائج لـ «${q}».`, navigate: "تنقل", select: "اختر", close: "إغلاق",
@@ -103,6 +103,7 @@ export default function CommandPalette(props: PaletteProps) {
   return <DocsProvider><Palette {...props} /></DocsProvider>;
 }
 
+/* oxlint-disable jsx-a11y/no-static-element-interactions, jsx-a11y/prefer-tag-over-role -- Backdrop mouse dismissal complements the modal Escape handler and labelled Close button. The custom combobox uses managed focus and active-descendant options; native select and option cannot host this rich popup. */
 function Palette({ open, onClose, items, onCreate }: PaletteProps) {
   const router = useRouter();
   const { toggleTheme } = useTheme();
@@ -137,7 +138,6 @@ function Palette({ open, onClose, items, onCreate }: PaletteProps) {
       make("teams", t.teams, "teams invitations business workspace members", <Users size={16} />, go("/dashboard/teams")),
       make("profile", t.profile, "profile card username avatar account", <IdCard size={16} />, go("/dashboard/card")),
       make("archive", t.openArchive, "archived restore delete trash bin", <Archive size={16} />, go("/dashboard/archive")),
-      make("results", t.openResults, "old quiz results legacy scores", <BarChart3 size={16} />, go("/dashboard/results")),
       make("learn", t.learn, "learn lessons courses study explore curriculum", <BookOpen size={16} />, go("/dashboard/learn")),
       make("connections", t.connections, "max chatgpt apps integrations mcp", <Link2 size={16} />, go("/dashboard/connections")),
       make("settings", t.settings, "preferences options account appearance", <Settings size={16} />, go("/dashboard/settings")),
@@ -157,9 +157,9 @@ function Palette({ open, onClose, items, onCreate }: PaletteProps) {
       seen.add(item.id);
       const row = byId.get(item.id);
       const archived = item.archived || row?.status === "archived";
-      const hints: Record<PaletteItem["kind"], string> = { form: t.formHint, quiz: t.quizHint, legacy: t.legacyHint, lesson: t.lessonHint, folder: t.folderHint, course: t.courseHint, flashcards: t.flashcardsHint, game: t.gameHint, team: t.teamHint };
+      const hints: Record<PaletteItem["kind"], string> = { form: t.formHint, quiz: t.quizHint, lesson: t.lessonHint, folder: t.folderHint, course: t.courseHint, flashcards: t.flashcardsHint, game: t.gameHint, team: t.teamHint };
       const hint = archived ? t.archivedHint : hints[item.kind];
-      const extra = [hint, row?.status ?? "", item.kind === "legacy" ? "old" : ""].join(" ");
+      const extra = [hint, row?.status ?? ""].join(" ");
       return { id: item.id, title: item.title || t.untitled, extra, body: row?.text ?? item.body ?? "", item, hint, archived };
     });
     // Forms that the workspace list left out (for example, shared and archived ones).
@@ -258,7 +258,7 @@ function Palette({ open, onClose, items, onCreate }: PaletteProps) {
         <div ref={list} id={listId} role="listbox" aria-label={t.list} className="ws-palette__list">
           {entries.length === 0 && <p className="ws-palette__empty">{t.noMatches(query)}</p>}
           {groups.map((group) => (
-            <div key={group} role="group" aria-label={group}>
+            <fieldset key={group}  aria-label={group}>
               <p className="ws-palette__group">{group}</p>
               {entries.filter((e) => e.group === group).map((entry) => {
                 const index = entries.indexOf(entry);
@@ -275,7 +275,7 @@ function Palette({ open, onClose, items, onCreate }: PaletteProps) {
                   </button>
                 );
               })}
-            </div>
+            </fieldset>
           ))}
         </div>
         <div className="ws-palette__footer" aria-hidden="true">
@@ -287,3 +287,4 @@ function Palette({ open, onClose, items, onCreate }: PaletteProps) {
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/no-static-element-interactions, jsx-a11y/prefer-tag-over-role */

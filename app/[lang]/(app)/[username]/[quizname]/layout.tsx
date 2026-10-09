@@ -8,7 +8,7 @@ import { formMetadata } from "@/lib/seo";
 
 type Params = Promise<{ username: string; quizname: string }>;
 
-/** A custom form link, if this address is one; old quizzes live at the same shape of address. */
+/** A custom form link, or an old quiz address leading to the quiz form it became. */
 const publicForm = cache(async (username: string, quizname: string) => {
   try {
     const link = await fetchQuery(api.links.resolveLink, { username: decodeURIComponent(username), slug: decodeURIComponent(quizname) });
@@ -21,8 +21,7 @@ const publicForm = cache(async (username: string, quizname: string) => {
 export async function generateMetadata({ params }: { params: Params }): Promise<Metadata> {
   const { username, quizname } = await params;
   const result = await publicForm(username, quizname);
-  // Classic quizzes have no creator indexing opt-in. Keep them out of search.
-  if (!result) return { title: "Quiz", robots: { index: false, follow: false } };
+  if (!result) return { title: "Page not found", robots: { index: false, follow: false } };
   return formMetadata(result.form, result.shareId);
 }
 

@@ -4,7 +4,6 @@ import { createTestConvexWithAdmin } from "./setup";
 import {
   creatorIdentity,
   otherCreatorIdentity,
-  quizFixture,
 } from "../fixtures";
 import { emptyDefinition } from "@/convex/formLogic";
 
@@ -104,9 +103,7 @@ describe("admin plans and moderation", () => {
         }),
       );
     for (let i = 0; i < 2; i++)
-      await owner.mutation(api.quizFunctions.createQuiz, {
-        title: `Quiz ${i}`,
-      });
+      await owner.mutation(api.forms.createForm, { quizMode: true });
     await expect(
       owner.mutation(api.forms.createForm, { definition: definition() }),
     ).resolves.toBeTruthy();
@@ -173,7 +170,7 @@ describe("admin plans and moderation", () => {
     });
     expect((await t.run((ctx) => ctx.db.get(userId)))?.isBanned).toBe(true);
   });
-  it("holds forms and quizzes without deleting data or permitting republish", async () => {
+  it("holds forms without deleting data or permitting republish", async () => {
     const { t, admin, owner } = await setup();
     const formId = await owner.mutation(api.forms.createForm, {
       definition: definition(),
@@ -199,29 +196,6 @@ describe("admin plans and moderation", () => {
       reason: "Reviewed",
     });
     expect((await t.run((ctx) => ctx.db.get(formId)))?.status).toBe("closed");
-    const quizId = await t.run((ctx) =>
-      ctx.db.insert("quizzes", {
-        ...quizFixture,
-        creatorId: creatorIdentity.subject,
-        creatorUsername: "creator",
-      }),
-    );
-    const sessionId = await t.mutation(api.quizFunctions.startQuizSession, {
-      quizId,
-      playerName: "Student",
-    });
-    await admin.mutation(api.admin.moderateContent, {
-      targetId: quizId,
-      hold: true,
-      reason: "Review",
-    });
-    await expect(
-      owner.mutation(api.quizFunctions.publishQuiz, { quizId }),
-    ).rejects.toThrow("CONTENT_HELD");
-    await expect(
-      t.mutation(api.quizFunctions.completeQuizSession, { sessionId }),
-    ).rejects.toThrow("QUIZ_UNAVAILABLE");
-    expect(await t.run((ctx) => ctx.db.get(sessionId))).not.toBeNull();
   });
   it("bulk updates selected accounts and all accounts across pages", async () => {
     const { t, admin, userId } = await setup();
@@ -262,14 +236,10 @@ describe("admin plans and moderation", () => {
 
 it("computes platform-wide analytics over multiple pages and excludes restricted owners from live counts", async () => {
   const { t, admin, owner, userId } = await setup();
-  await t.run(async (ctx) => {
-    for (let i = 0; i < 31; i++)
-      await ctx.db.insert("quizzes", {
-        ...quizFixture,
-        creatorId: creatorIdentity.subject,
-        creatorUsername: "creator",
-      });
-  });
+  const formIds = [];
+  for (let i = 0; i < 31; i++)
+    formIds.push(await owner.mutation(api.forms.createForm, i % 2 ? { quizMode: true } : { definition: definition() }));
+  await owner.mutation(api.forms.publishForm, { formId: formIds[0], expectedRevision: 1 });
   await admin.mutation(api.admin.moderateUser, {
     userId,
     state: "banned",
@@ -284,8 +254,9 @@ it("computes platform-wide analytics over multiple pages and excludes restricted
   expect(report?.running).toBe(false);
   expect(report?.counts).toMatchObject({
     users: 1,
-    quizzes: 31,
-    liveQuizzes: 0,
+    forms: 31,
+    liveForms: 0,
+    quizzes: 0,
     restricted: 1,
   });
   await expect(owner.mutation(api.adminAnalytics.refresh, {})).rejects.toThrow(

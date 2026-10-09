@@ -1,6 +1,6 @@
 import { recordStudent } from "./studentRoster";
 import { getAuthIdentity } from "./authIdentity";
-import { authorDb } from "./authorIndex";
+
 import { homeworkUploadAccess } from "./homeworkUploadAccess";
 import { hasPro } from "./authz";
 import { planLimits } from "../lib/planCatalog";
@@ -17,12 +17,14 @@ import { answersValidator, languageValidator } from "./formModel";
 import { scheduleState } from "./formSchedule";
 import { consumeRate, notify, randomCode, randomHex, sha256Hex } from "./serverUtils";
 import { ruleHolds, visibleFieldIds } from "./formLogic";
-import { gradeQuiz, publicQuizDefinition } from "./formQuiz";
+import { gradeQuiz, publicQuizDefinition, quizReview } from "./formQuiz";
 import { emitWebhookEvent, formResponseData } from "./webhookEvents";
 import { releasedDefinition, releasedFieldIds, nextFieldReleaseAt, releasedAnswers, assertReleasedAnswers } from "./formRelease";
 import { captureHidden, captureTypedHidden } from "./formRespondent";
 import { teamOrEmailCheck } from "./businessAccess";
 import { changeFormCounts, readFormCounts } from "./formCounts";
+
+const quizReviewValidator = v.union(v.null(), v.array(v.object({ fieldId: v.string(), earned: v.number(), possible: v.number(), correctOptionIds: v.array(v.string()), explanation: v.optional(v.string()) })));
 
 export const DEFAULT_FORM_RESPONSE_LIMIT = planLimits.free.responsesPerForm;
 const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
@@ -314,6 +316,8 @@ export const submitResponse = mutation({
     duplicate: v.boolean(),
     quizScore: v.union(v.number(), v.null()),
     quizMaxScore: v.union(v.number(), v.null()),
+    /** Final quiz submissions: each graded question with its key, for the respondent's own review. */
+    quizReview: v.optional(quizReviewValidator),
   }),
   handler: async (ctx, args) => {
     if (!/^[A-Za-z0-9-]{8,100}$/.test(args.submissionKey)) throw new Error("INVALID_SUBMISSION: Missing submission key.");
@@ -336,7 +340,9 @@ export const submitResponse = mutation({
     // Idempotent retry: a completed submission is returned unchanged, so a
     // lost confirmation never creates a second response.
     if (existing && existing.status === "completed") {
-      return { responseId: existing._id, status: existing.status, receiptCode: existing.receiptCode, endingId: existing.endingId ?? null, duplicate: true, quizScore: existing.quizScore ?? null, quizMaxScore: existing.quizMaxScore ?? null };
+      const done = await definitionForResponse(ctx, existing);
+      const review = done ? quizReview(done, gradeQuiz(done, existing.answers as Answers)) : null;
+      return { responseId: existing._id, status: existing.status, receiptCode: existing.receiptCode, endingId: existing.endingId ?? null, duplicate: true, quizScore: existing.quizScore ?? null, quizMaxScore: existing.quizMaxScore ?? null, quizReview: review };
     }
 
     const { identity } = await assertCanCollect(ctx, form, args.accessCode);
@@ -442,7 +448,7 @@ export const submitResponse = mutation({
         if (resume) await ctx.db.delete("formResumeDrafts", resume._id);
       }
     }
-    return { responseId, status, receiptCode, endingId: ending?.id ?? null, duplicate: false, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null };
+    return { responseId, status, receiptCode, endingId: ending?.id ?? null, duplicate: false, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: quizReview(def, grade) };
   },
 });
 
@@ -463,7 +469,7 @@ export const getSubmissionForEdit = query({
 
 export const updateSubmission = mutation({
   args: { shareId: v.string(), editToken: v.string(), answers: answersValidator, language: languageValidator, accessCode: v.optional(v.string()) },
-  returns: v.object({ receiptCode: v.string(), endingId: v.union(v.string(), v.null()), quizScore: v.union(v.number(), v.null()), quizMaxScore: v.union(v.number(), v.null()) }),
+  returns: v.object({ receiptCode: v.string(), endingId: v.union(v.string(), v.null()), quizScore: v.union(v.number(), v.null()), quizMaxScore: v.union(v.number(), v.null()), quizReview: v.optional(quizReviewValidator) }),
   handler: async (ctx, args) => {
     const form = await formByShareId(ctx, args.shareId);
     if (!form?.settings.allowEditAfterSubmit) throw new Error("EDIT_DISABLED: This form does not allow editing responses.");
@@ -482,7 +488,7 @@ export const updateSubmission = mutation({
     const grade = gradeQuiz(available, checked.answers);
     // An unchanged resubmission is not an edit: no history entry, no notification.
     if (args.language === response.language && stableJson(checked.answers) === stableJson(response.answers)) {
-      return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null };
+      return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: quizReview(available, grade) };
     }
     if (!response.spam) await adjustAggregates(ctx, form._id, def, response.answers as Answers, -1);
     const now = Date.now();
@@ -498,7 +504,7 @@ export const updateSubmission = mutation({
     if (!response.spam) await adjustAggregates(ctx, form._id, def, checked.answers, 1);
     for (const upload of uploads.docs) if (!upload.responseId) await ctx.db.patch("formUploads", upload._id, { responseId: response._id });
     await notify(ctx, form.ownerId, "response", `A respondent edited their response to “${form.title}”.`, `edit:${response._id}:${Date.now() - (Date.now() % 3_600_000)}`, form._id);
-    return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null };
+    return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: quizReview(available, grade) };
   },
 });
 
@@ -631,6 +637,7 @@ export const checkUploadTicket = internalQuery({
 });
 
 /** Consumes the ticket and records a file the endpoint itself stored. */
+/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export const recordUpload = internalMutation({
   args: { token: v.string(), storageId: v.id("_storage"), name: v.string(), contentType: v.string(), size: v.number() },
   returns: uploadResult,
@@ -651,6 +658,7 @@ export const recordUpload = internalMutation({
     return { uploadId, name, size: args.size };
   },
 });
+/* oxlint-enable eslint/no-control-regex */
 
 /** Shared limits for the HTTP endpoint. */
 export function uploadRejection(contentType: string, size: number): string | null {

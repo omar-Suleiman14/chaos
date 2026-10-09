@@ -101,7 +101,7 @@ export function usePrefersReducedMotion(): boolean {
 
 /** A polite live region; set `text` to announce it. */
 export function Announcer({ text }: { text: string }) {
-  return <div className="sr-only" role="status" aria-live="polite" aria-atomic="true">{text}</div>;
+  return <output className="sr-only"  aria-live="polite" aria-atomic="true">{text}</output>;
 }
 
 /** The 5-4-3-2-1 before the first question, on the host screen and on phones. */

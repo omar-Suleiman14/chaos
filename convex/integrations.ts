@@ -1,7 +1,4 @@
 import { getAuthIdentity } from "./authIdentity";
-import { authorDb } from "./authorIndex";
-import { parseMultiAnswer } from "./grading";
-import { consumeCreation } from "./plans";
 import { v } from "convex/values";
 import { env, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
@@ -11,10 +8,10 @@ import { checkDefinition, MINIMUM_GROUP_SIZE, publicSummary } from "./formLogic"
 import type { Aggregates, FormDefinition } from "./formLogic";
 import { createFormRecord, replaceDraft } from "./forms";
 import {
-  API_FORM_FIELD_TYPES, API_QUIZ_FIELD_TYPES, API_VERSION, fromFormDefinition, fromQuizQuestions,
-  parseDraftBody, suppressBuckets, toFormDefinition, toQuizQuestions,
+  API_FORM_FIELD_TYPES, API_QUIZ_FIELD_TYPES, API_VERSION, fromFormDefinition,
+  parseDraftBody, toFormDefinition, toQuizFormDefinition,
 } from "./integrationContract";
-import type { DraftBody, QuizType } from "./integrationContract";
+import type { QuizType } from "./integrationContract";
 import {
   activeIntegrationToken, findIdempotent, integrationScopes, logConnectionActivity, ROTATION_GRACE_MS, scopeValidator,
 } from "./integrationModel";
@@ -85,18 +82,14 @@ export const listConnections = query({
   },
 });
 
-/** Owner's forms and quizzes, for choosing what a connection may reach. */
+/** Owner's forms (quiz forms included), for choosing what a connection may reach. */
 export const listShareableItems = query({
   args: {},
   handler: async (ctx) => {
     const identity = await getAuthIdentity(ctx);
     if (!identity) return [];
     const forms = await ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", identity.subject)).order("desc").take(300);
-    const quizzes = await ctx.db.query("quizzes").withIndex("by_creator", (q) => q.eq("creatorId", identity.subject)).take(300);
-    return [
-      ...forms.map((f) => ({ ref: `form_${f._id}`, kind: "form" as const, title: f.title, updatedAt: f.updatedAt })),
-      ...quizzes.map((q) => ({ ref: `quiz_${q._id}`, kind: "quiz" as const, title: q.title, updatedAt: q.updatedAt })),
-    ].sort((a, b) => b.updatedAt - a.updatedAt);
+    return forms.map((f) => ({ ref: `form_${f._id}`, kind: "form" as const, title: f.title, updatedAt: f.updatedAt }));
   },
 });
 
@@ -245,25 +238,18 @@ export const endRotationGrace = mutation({
 
 // ── Items ───────────────────────────────────────────────────────────────────
 
-type Item =
-  | { kind: "form"; ref: string; doc: Doc<"forms"> }
-  | { kind: "quiz"; ref: string; doc: Doc<"quizzes"> };
+type Item = { kind: "form"; ref: string; doc: Doc<"forms"> };
 
+/** Items are forms; `quiz_` refs named classic quizzes, which were converted to quiz forms. */
 async function loadItem(ctx: Ctx, ref: string): Promise<Item | null> {
-  const match = /^(form|quiz)_([A-Za-z0-9]+)$/.exec(ref);
-  if (!match) return null;
-  if (match[1] === "form") {
-    const id = ctx.db.normalizeId("forms", match[2]);
-    const doc = id ? await ctx.db.get("forms", id) : null;
-    return doc ? { kind: "form", ref, doc } : null;
-  }
-  const id = ctx.db.normalizeId("quizzes", match[2]);
-  const doc = id ? await ctx.db.get("quizzes", id) : null;
-  return doc ? { kind: "quiz", ref, doc } : null;
+  const match = /^form_([A-Za-z0-9]+)$/.exec(ref);
+  const id = match ? ctx.db.normalizeId("forms", match[1]) : null;
+  const doc = id ? await ctx.db.get("forms", id) : null;
+  return doc ? { kind: "form", ref, doc } : null;
 }
 
 function itemOwner(item: Item): string {
-  return item.kind === "form" ? item.doc.ownerId : item.doc.creatorId;
+  return item.doc.ownerId;
 }
 
 async function createdRow(ctx: Ctx, token: Token, ref: string) {
@@ -280,7 +266,6 @@ async function createdByToken(ctx: Ctx, token: Token, ref: string): Promise<bool
 async function accessibleItem(ctx: Ctx, token: Token, ref: string): Promise<Item | null> {
   const item = await loadItem(ctx, ref);
   if (!item || itemOwner(item) !== token.ownerId) return null;
-  if (item.kind === "quiz" && item.doc.isBanned) return null;
   if (token.access === "all" || token.itemRefs.includes(ref) || (await createdByToken(ctx, token, ref))) return item;
   return null;
 }
@@ -290,35 +275,18 @@ function appUrl(path: string | null): string | null {
   return base && path ? `${base}${path}` : null;
 }
 
-function quizStatus(q: Doc<"quizzes">) {
-  if (q.isPublished) return "live" as const;
-  return q.publishedAt !== undefined || q.publishedSnapshot ? ("closed" as const) : ("draft" as const);
-}
-
 async function itemView(ctx: Ctx, token: Token, item: Item) {
   const row = await createdRow(ctx, token, item.ref);
   const created = !!row;
   // Only the connection that sent the source gets it back, for reconciliation.
   const source = row?.source ?? null;
-  if (item.kind === "form") {
-    const f = item.doc;
-    const editPath = `/dashboard/forms/${f._id}`;
-    const sharePath = f.publishedVersion !== undefined ? `/f/${f.shareId}` : null;
-    const resultsPath = `/dashboard/forms/${f._id}/responses`;
-    return {
-      id: item.ref, kind: "form" as const, title: f.title, status: f.status, revision: String(f.draftRevision), updatedAt: f.updatedAt,
-      hasUnpublishedChanges: f.publishedRevision !== undefined && f.draftRevision > f.publishedRevision,
-      editPath, sharePath, resultsPath, editUrl: appUrl(editPath), shareUrl: appUrl(sharePath), resultsUrl: appUrl(resultsPath),
-      createdByThisConnection: created, source,
-    };
-  }
-  const q = item.doc;
-  const editPath = `/dashboard/editor?id=${q._id}`;
-  const sharePath = q.isPublished || q.publishedSnapshot ? `/${q.creatorUsername}/${q.slug}` : null;
-  const resultsPath = `/dashboard/results?id=${q._id}`;
+  const f = item.doc;
+  const editPath = `/dashboard/forms/${f._id}`;
+  const sharePath = f.publishedVersion !== undefined ? `/f/${f.shareId}` : null;
+  const resultsPath = `/dashboard/forms/${f._id}/responses`;
   return {
-    id: item.ref, kind: "quiz" as const, title: q.title, status: quizStatus(q), revision: String(q.updatedAt), updatedAt: q.updatedAt,
-    hasUnpublishedChanges: q.publishedAt !== undefined && q.updatedAt > q.publishedAt,
+    id: item.ref, kind: "form" as const, title: f.title, status: f.status, revision: String(f.draftRevision), updatedAt: f.updatedAt,
+    hasUnpublishedChanges: f.publishedRevision !== undefined && f.draftRevision > f.publishedRevision,
     editPath, sharePath, resultsPath, editUrl: appUrl(editPath), shareUrl: appUrl(sharePath), resultsUrl: appUrl(resultsPath),
     createdByThisConnection: created, source,
   };
@@ -479,22 +447,18 @@ export const listItems = internalQuery({
     if (!Number.isInteger(offset) || offset < 0) return fail(400, "VALIDATION_FAILED", "Invalid cursor.");
     let items: Item[] = [];
     if (token.access === "all") {
-      if (args.kind !== "quiz") {
-        const forms = await ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", token.ownerId)).order("desc").take(1000);
-        items.push(...forms.map((doc) => ({ kind: "form" as const, ref: `form_${doc._id}`, doc })));
-      }
-      if (args.kind !== "form") {
-        const quizzes = await ctx.db.query("quizzes").withIndex("by_creator", (q) => q.eq("creatorId", token.ownerId)).take(1000);
-        items.push(...quizzes.filter((doc) => !doc.isBanned).map((doc) => ({ kind: "quiz" as const, ref: `quiz_${doc._id}`, doc })));
-      }
+      const forms = await ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", token.ownerId)).order("desc").take(1000);
+      items.push(...forms.map((doc) => ({ kind: "form" as const, ref: `form_${doc._id}`, doc })));
     } else {
       const created = await ctx.db.query("integrationCreatedItems").withIndex("by_tokenId_and_itemRef", (q) => q.eq("tokenId", token._id)).take(1000);
       const refs = new Set([...token.itemRefs, ...created.map((c) => c.itemRef)]);
       for (const ref of refs) {
         const item = await accessibleItem(ctx, token, ref);
-        if (item && (!args.kind || item.kind === args.kind)) items.push(item);
+        if (item) items.push(item);
       }
     }
+    // Quizzes are quiz forms: `kind=quiz` lists the forms with quiz mode on.
+    if (args.kind === "quiz") items = items.filter((item) => (item.doc.draft as FormDefinition).quiz?.enabled);
     items = items.sort((a, b) => b.doc.updatedAt - a.doc.updatedAt);
     const page = items.slice(offset, offset + PAGE_SIZE);
     const views = [];
@@ -525,14 +489,6 @@ async function publishedFormDefinition(ctx: Ctx, form: Doc<"forms">): Promise<Fo
   return form.draft as FormDefinition;
 }
 
-async function quizQuestionsForReporting(ctx: Ctx, quiz: Doc<"quizzes">) {
-  if (quiz.publishedSnapshot) return quiz.publishedSnapshot.questions;
-  const rows = await ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", quiz._id)).take(1000);
-  return rows.filter((r) => r.deletedAt === undefined).sort((a, b) => a.order - b.order);
-}
-
-const QUIZ_SUMMARY_SAMPLE = 5000;
-
 export const getSummary = internalQuery({
   args: { tokenId: v.id("integrationTokens"), now: v.number(), ref: v.string() },
   handler: async (ctx, args): Promise<ApiResult> => {
@@ -542,58 +498,21 @@ export const getSummary = internalQuery({
     const item = await accessibleItem(ctx, token, args.ref);
     if (!item) return notFound();
     const min = MINIMUM_GROUP_SIZE;
-    if (item.kind === "form") {
-      const form = item.doc;
-      const def = await publishedFormDefinition(ctx, form);
-      const agg = await ctx.db.query("formAggregates").withIndex("by_formId", (q) => q.eq("formId", form._id)).unique();
-      const counts = await readFormCounts(ctx, form);
-      const summary = publicSummary(def, (agg?.counts ?? {}) as Aggregates, counts.responseCount, min);
-      return ok({
-        itemId: item.ref, kind: "form", status: form.status,
-        responseCount: summary.suppressed ? null : counts.responseCount,
-        suppressed: summary.suppressed, minimumGroupSize: min,
-        completedCount: summary.suppressed ? null : counts.responseCount,
-        averageScorePercent: null,
-        questions: summary.questions,
-        updatedAt: counts.lastResponseAt ?? form.updatedAt,
-      });
-    }
-    const quiz = item.doc;
-    const sessions = await ctx.db.query("quizSessions").withIndex("by_quiz", (q) => q.eq("quizId", quiz._id)).take(QUIZ_SUMMARY_SAMPLE);
-    const completed = sessions.filter((s) => s.status === "completed" || (s.status === undefined && s.completedAt !== undefined));
-    const suppressed = completed.length < min;
-    const questions = await quizQuestionsForReporting(ctx, quiz);
-    const results = [];
-    if (!suppressed) {
-      for (const question of questions) {
-        const answers = completed.flatMap((s) => s.answers.filter((a) => a.questionId === question._id));
-        const answered = answers.filter((a) => a.answer.trim()).length;
-        let distribution = null;
-        if (question.type !== "written" && answered >= min) {
-          const counts = new Map<string, number>();
-          const labels = question.options ?? [];
-          for (const a of answers) {
-            const picks = question.type === "multi_select" ? parseMultiAnswer(a.answer) : [a.answer.trim()];
-            for (const p of picks) {
-              const label = labels.find((l) => l.toLowerCase() === p.toLowerCase());
-              if (label) counts.set(label, (counts.get(label) ?? 0) + 1);
-            }
-          }
-          distribution = suppressBuckets(labels.map((l) => ({ option: l, count: counts.get(l) ?? 0 })), min);
-        }
-        results.push({ fieldId: question._id, label: question.questionText, type: question.type, answeredCount: answered >= min ? answered : null, distribution });
-      }
-    }
-    const percents = completed.filter((s) => s.totalPoints > 0).map((s) => (s.score / s.totalPoints) * 100);
+    const form = item.doc;
+    const def = await publishedFormDefinition(ctx, form);
+    const agg = await ctx.db.query("formAggregates").withIndex("by_formId", (q) => q.eq("formId", form._id)).unique();
+    const counts = await readFormCounts(ctx, form);
+    const summary = publicSummary(def, (agg?.counts ?? {}) as Aggregates, counts.responseCount, min);
     return ok({
-      itemId: item.ref, kind: "quiz", status: quizStatus(quiz),
-      responseCount: suppressed ? null : sessions.length,
-      suppressed, minimumGroupSize: min,
-      completedCount: suppressed ? null : completed.length,
-      averageScorePercent: suppressed || !percents.length ? null : Math.round((percents.reduce((s, n) => s + n, 0) / percents.length) * 10) / 10,
-      questions: results,
-      updatedAt: Math.max(quiz.updatedAt, ...completed.map((s) => s.completedAt ?? 0)),
+      itemId: item.ref, kind: "form", status: form.status,
+      responseCount: summary.suppressed ? null : counts.responseCount,
+      suppressed: summary.suppressed, minimumGroupSize: min,
+      completedCount: summary.suppressed ? null : counts.responseCount,
+      averageScorePercent: null,
+      questions: summary.questions,
+      updatedAt: counts.lastResponseAt ?? form.updatedAt,
     });
+
   },
 });
 
@@ -605,22 +524,10 @@ export const getDefinition = internalQuery({
     if (!token.scopes.includes("definitions:read")) return fail(403, "INSUFFICIENT_SCOPE", "This connection does not have the definitions:read permission.");
     const item = await accessibleItem(ctx, token, args.ref);
     if (!item) return notFound();
-    if (item.kind === "form") {
-      const def = await publishedFormDefinition(ctx, item.doc);
-      const { fields, dropped } = fromFormDefinition(def);
-      return ok({ kind: "form", title: def.title, description: def.description, fields, compatibility: { dropped } });
-    }
-    const quiz = item.doc;
-    const questions = await quizQuestionsForReporting(ctx, quiz);
-    // Tokens only ever reach their owner's items, so answer keys are the owner's own.
-    const { fields, dropped } = fromQuizQuestions(questions as Parameters<typeof fromQuizQuestions>[0], true);
-    return ok({
-      kind: "quiz",
-      title: quiz.publishedSnapshot?.title ?? quiz.title,
-      description: quiz.publishedSnapshot?.description ?? quiz.description ?? "",
-      fields,
-      compatibility: { dropped },
-    });
+    const def = await publishedFormDefinition(ctx, item.doc);
+    const { fields, dropped } = fromFormDefinition(def);
+    return ok({ kind: "form", title: def.title, description: def.description, fields, compatibility: { dropped } });
+
   },
 });
 
@@ -646,46 +553,6 @@ async function remember(ctx: MutationCtx, token: Token, key: string, requestHash
   await ctx.db.insert("integrationIdempotency", { tokenId: token._id, key, requestHash, status: result.status, body: JSON.stringify(result.body), createdAt: Date.now() });
 }
 
-async function defaultPoints(ctx: MutationCtx, ownerId: string) {
-  const teacher = await ctx.db.query("teacherSettings").withIndex("by_clerkId", (q) => q.eq("clerkId", ownerId)).first();
-  const config = await ctx.db.query("globalConfig").first();
-  return teacher?.defaultPointsPerQuestion ?? config?.defaultPointsPerQuestion ?? 10;
-}
-
-async function uniqueQuizSlug(ctx: MutationCtx, username: string, title: string) {
-  const base = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 80) || "quiz";
-  for (let i = 0; i < 100; i++) {
-    const slug = i ? `${base}-${i}` : base;
-    const clash = await ctx.db.query("quizzes").withIndex("by_creator_slug", (q) => q.eq("creatorUsername", username).eq("slug", slug)).first();
-    if (!clash) return slug;
-  }
-  return `${base}-${randomHex(3)}`;
-}
-
-async function createQuizDraft(ctx: MutationCtx, token: Token, body: DraftBody): Promise<{ quizId: Id<"quizzes">; warnings: string[] }> {
-  const user = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", token.ownerId)).first();
-  const username = user?.username || token.ownerId;
-  const { questions, warnings } = toQuizQuestions(body, await defaultPoints(ctx, token.ownerId));
-  const now = Date.now();
-  await consumeCreation(ctx, token.ownerId);
-  const quizId = await authorDb(ctx).insert("quizzes", {
-    title: body.title,
-    description: body.description || undefined,
-    slug: await uniqueQuizSlug(ctx, username, body.title),
-    creatorId: token.ownerId,
-    creatorUsername: username,
-    isPublished: false,
-    tags: body.sourceLabel ? [`from:${body.sourceLabel.slice(0, 60)}`] : body.source ? [`from:${body.source.type}`] : undefined,
-    timePerQuestion: 60,
-    coverColor: "#22c55e",
-    isElevated: user?.isElevated ?? false,
-    createdAt: now,
-    updatedAt: now,
-  });
-  for (const [order, q] of questions.entries()) await ctx.db.insert("questions", { quizId, ...q, order });
-  return { quizId, warnings };
-}
-
 export const createDraft = internalMutation({
   args: { tokenId: v.id("integrationTokens"), idempotencyKey: v.string(), requestHash: v.string(), body: v.any() },
   handler: async (ctx, args): Promise<ApiResult> => {
@@ -701,18 +568,13 @@ export const createDraft = internalMutation({
     let ref: string;
     let warnings: string[];
     try {
-      if (body.kind === "form") {
-        const { definition, warnings: w } = toFormDefinition(body);
-        const formId = await createFormRecord(ctx, token.ownerId, definition, {
-          source: { kind: "integration", label: sourceLabel, connectionId: token._id, ...(body.source && { external: body.source }) },
-        });
-        ref = `form_${formId}`;
-        warnings = [...w, ...checkDefinition(definition).errors.map((e) => `Before publishing: ${e}`)];
-      } else {
-        const created = await createQuizDraft(ctx, token, body);
-        ref = `quiz_${created.quizId}`;
-        warnings = created.warnings;
-      }
+      // A quiz draft becomes a quiz form.
+      const { definition, warnings: w } = body.kind === "form" ? toFormDefinition(body) : toQuizFormDefinition(body);
+      const formId = await createFormRecord(ctx, token.ownerId, definition, {
+        source: { kind: "integration", label: sourceLabel, connectionId: token._id, ...(body.source && { external: body.source }) },
+      });
+      ref = `form_${formId}`;
+      warnings = [...w, ...checkDefinition(definition).errors.map((e) => `Before publishing: ${e}`)];
     } catch (error) {
       const { message } = errorCode(error);
       return fail(400, "VALIDATION_FAILED", message);
@@ -744,28 +606,14 @@ export const updateDraft = internalMutation({
     if ("errors" in parsed) return fail(400, "VALIDATION_FAILED", "The draft is invalid.", parsed.errors);
     let warnings: string[];
     try {
-      if (item.kind === "form") {
-        if (item.doc.status === "archived") return fail(409, "NOT_A_DRAFT", "This form is archived.");
-        const { definition, warnings: w } = toFormDefinition(parsed.body, item.doc.draft as FormDefinition);
-        await replaceDraft(ctx, item.doc, definition, "integration");
-        warnings = [
-          ...w,
-          ...(item.doc.publishedVersion !== undefined ? ["The live form is unchanged until you publish the draft in Chaos."] : []),
-          ...checkDefinition(definition).errors.map((e) => `Before publishing: ${e}`),
-        ];
-      } else {
-        const quiz = item.doc;
-        const attempt = await ctx.db.query("quizSessions").withIndex("by_quiz", (q) => q.eq("quizId", quiz._id)).first();
-        if (quiz.isPublished || quiz.publishedSnapshot || attempt) {
-          return fail(409, "NOT_A_DRAFT", "This quiz has been published or has attempts; edit it in Chaos instead.");
-        }
-        const { questions, warnings: w } = toQuizQuestions(parsed.body, await defaultPoints(ctx, token.ownerId));
-        const existing = await ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", quiz._id)).take(1000);
-        for (const q of existing) if (q.deletedAt === undefined) await ctx.db.patch("questions", q._id, { deletedAt: Date.now() });
-        for (const [order, q] of questions.entries()) await ctx.db.insert("questions", { quizId: quiz._id, ...q, order });
-        await authorDb(ctx).patch("quizzes", quiz._id, { title: parsed.body.title, description: parsed.body.description || undefined, updatedAt: Math.max(Date.now(), quiz.updatedAt + 1) });
-        warnings = w;
-      }
+      if (item.doc.status === "archived") return fail(409, "NOT_A_DRAFT", "This form is archived.");
+      const { definition, warnings: w } = toFormDefinition(parsed.body, item.doc.draft as FormDefinition);
+      await replaceDraft(ctx, item.doc, definition, "integration");
+      warnings = [
+        ...w,
+        ...(item.doc.publishedVersion !== undefined ? ["The live form is unchanged until you publish the draft in Chaos."] : []),
+        ...checkDefinition(definition).errors.map((e) => `Before publishing: ${e}`),
+      ];
     } catch (error) {
       return fail(400, "VALIDATION_FAILED", errorCode(error).message);
     }

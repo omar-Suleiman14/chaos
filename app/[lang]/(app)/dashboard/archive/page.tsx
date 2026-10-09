@@ -52,7 +52,7 @@ export default function ArchivePage() {
     <div className="ws-page-header"><div><h1 className="ws-page-title">{t.title}</h1><p className="ws-page-subtitle">{locale === "ar" ? "استعد المحتوى المؤرشف إلى مكتبتك. النماذج وحدها تدعم الحذف النهائي." : "Restore archived content to your library. Forms also support permanent deletion."}</p></div></div>
     <WsTabs tabs={["forms", "quizzes", "courses", "lessons", "flashcards"] as const} value={tab} onChange={setTab} label={locale === "ar" ? "أنواع المحتوى المؤرشف" : "Archived content types"}
       labels={locale === "ar" ? { forms: "النماذج", quizzes: "الاختبارات", courses: "الدورات", lessons: "الدروس", flashcards: "البطاقات" } : { forms: "Forms", quizzes: "Quizzes", courses: "Courses", lessons: "Lessons", flashcards: "Flashcards" }} />
-    <div className="mt-6">{tab === "forms" ? <FormsArchive key={tab} quizzes={false} /> : tab === "quizzes" ? <div className="space-y-8"><section><h2 className="ws-section-title mb-3">{locale === "ar" ? "اختبارات النماذج" : "Quiz forms"}</h2><FormsArchive key={tab} quizzes /></section><LearningArchive kind="legacy_quizzes" title={locale === "ar" ? "الاختبارات الكلاسيكية" : "Classic quizzes"} /></div> : <LearningArchive key={tab} kind={tab} />}</div>
+    <div className="mt-6">{tab === "forms" ? <FormsArchive key={tab} quizzes={false} /> : tab === "quizzes" ? <FormsArchive key={tab} quizzes /> : <LearningArchive key={tab} kind={tab} />}</div>
   </div>;
 }
 
@@ -126,7 +126,7 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
             <tbody>
               {rows.map((f) => (
                 <tr key={f._id}>
-                  <td>
+                  <td aria-label={locale === "ar" ? "الإجراءات" : "Actions"}>
                     <Link href={`/dashboard/forms/${f._id}`} className="flex items-center gap-2.5 font-medium">
                       <span className="ws-recent-icon" aria-hidden="true" style={{ background: /^#[0-9a-f]{6}$/i.test(f.theme.accent) ? f.theme.accent : "var(--primary)", opacity: 0.6 }}>
                         {(f.title || "U").trim().charAt(0).toUpperCase()}
@@ -136,7 +136,7 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
                   </td>
                   <td className="ws-num">{formatNumber(locale, f.responseCount)}</td>
                   <td className="text-muted-foreground">{timeAgo(locale, f.updatedAt)}</td>
-                  <td>
+                  <td aria-label={locale === "ar" ? "الإجراءات" : "Actions"}>
                     <span className="flex items-center justify-end gap-1">
                       <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => void restore(f._id, f.title || t.untitled, f.publishedVersion !== undefined)}>
                         <ArchiveRestore size={15} /> {t.restore}

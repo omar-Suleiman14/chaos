@@ -1,5 +1,9 @@
 "use client";
 
+import { ContentImage } from "@/components/ContentImage";
+
+import { FocusInput } from "@/components/InitialFocus";
+
 import { useEffect, useRef, useState } from "react";
 import { ImageIcon, MoveVertical, Shuffle } from "lucide-react";
 import { coverCategories, coverGallery, defaultCover, isCoverUrl, randomCover } from "@/lib/learn/covers";
@@ -40,6 +44,7 @@ function useDismiss(open: boolean, close: () => void) {
   return ref;
 }
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 function CoverPicker({ current, onPick, onClose }: { current: string; onPick: (url: string) => void; onClose: () => void }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
@@ -74,7 +79,7 @@ function CoverPicker({ current, onPick, onClose }: { current: string; onPick: (u
           if (!isCoverUrl(v) || !v.startsWith("https://")) { setError(t.linkInvalid); return; }
           onPick(v); onClose();
         }}>
-          <input className="lx-input" type="url" inputMode="url" value={link} placeholder={t.linkPh} aria-label={t.link} autoFocus onChange={(e) => { setLink(e.target.value); setError(""); }} />
+          <FocusInput className="lx-input" type="url" inputMode="url" value={link} placeholder={t.linkPh} aria-label={t.link} focusOnMount onChange={(e) => { setLink(e.target.value); setError(""); }} />
           <button type="submit" className="ws-btn ws-btn--primary ws-btn--sm">{t.submit}</button>
           {error ? <small className="lx-error" role="alert">{error}</small> : <small>{t.linkHelp}</small>}
         </form>
@@ -82,6 +87,7 @@ function CoverPicker({ current, onPick, onClose }: { current: string; onPick: (u
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
 /** Full-width cover band. Without a saved cover it shows the item's default one, so no page is bare. */
 export function LessonCover({ id, meta, editable, onChange }: { id: string; meta: PageLook; editable: boolean; onChange: (patch: Partial<PageLook>) => void }) {
@@ -94,7 +100,7 @@ export function LessonCover({ id, meta, editable, onChange }: { id: string; meta
   const src = isCoverUrl(meta.coverUrl) ? meta.coverUrl : defaultCover(id);
   return (
     <div className="lx-cover" data-moving={moving}>
-      <img src={src} alt="" draggable={false} style={{ objectPosition: `center ${y}%` }}
+      <ContentImage src={src} alt="" draggable={false} style={{ objectPosition: `center ${y}%` }}
         onPointerDown={(e) => { if (!moving) return; e.currentTarget.setPointerCapture(e.pointerId); drag.current = { startY: e.clientY, startPos: y, height: e.currentTarget.getBoundingClientRect().height }; }}
         onPointerMove={(e) => { const d = drag.current; if (!d) return; setY(Math.max(0, Math.min(100, d.startPos - ((e.clientY - d.startY) / d.height) * 100))); }}
         onPointerUp={() => { drag.current = null; }} />

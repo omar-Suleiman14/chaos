@@ -27,14 +27,14 @@ export default function ConnectivityBanner() {
   if (!showDisconnected || connection.isWebSocketConnected) return null;
 
   return (
-    <div
-      role="status"
+    <output
+
       aria-live="polite"
       className="fixed inset-x-0 top-0 z-[100] border-b-2 border-destructive bg-destructive text-on-error px-4 py-2 text-center text-xs font-semibold chaos-heading"
     >
       {connection.hasEverConnected
         ? t.lost
         : t.connecting}
-    </div>
+    </output>
   );
 }

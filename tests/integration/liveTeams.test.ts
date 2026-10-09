@@ -1,16 +1,14 @@
-import { convexTest } from "convex-test";
+import { createTestConvex } from "./setup";
 import { makeFunctionReference } from "convex/server";
 import { describe, expect, it } from "vitest";
-import schema from "../../convex/schema";
 import { sha256Hex } from "../../convex/serverUtils";
 import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
-const modules = import.meta.glob("../../convex/**/*.*s");
 const create = makeFunctionReference<"mutation">("liveTeams:create");
 const assign = makeFunctionReference<"mutation">("liveTeams:assign");
 const join = makeFunctionReference<"mutation">("liveTeams:join");
 const standings = makeFunctionReference<"query">("liveTeams:standings");
 async function fixture() {
-  const t = convexTest(schema, modules);
+  const t = createTestConvex();
   const owner = t.withIdentity(creatorIdentity);
   const ids = await t.run(async ctx => {
     const gameId = await ctx.db.insert("liveGames", { hostId: creatorIdentity.subject, title: "Teams", pin: "123456", state: "lobby", questionIndex: -1, questions: [], skippedQuestions: 0, settings: { timeLimitSec: 20, maxPlayers: 100, language: "en" }, lastActivityAt: 0, createdAt: 0 });

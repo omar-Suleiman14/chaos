@@ -153,10 +153,10 @@ export function ModerationNotice({ state, note, owner }: { state: ModerationStat
   if (state === "unavailable" && !owner) return null;
   const tone = state === "under_review" ? "info" : state === "restricted" ? "warn" : "danger";
   return (
-    <div className="lx-notice" data-tone={tone} role="status">
+    <output className="lx-notice" data-tone={tone} >
       {state === "under_review" ? <Info size={16} aria-hidden /> : state === "restricted" ? <AlertTriangle size={16} aria-hidden /> : <ShieldAlert size={16} aria-hidden />}
       <span>{t.moderation[state]}{note ? ` ${note}` : ""}</span>
-    </div>
+    </output>
   );
 }
 

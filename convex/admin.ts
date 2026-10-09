@@ -143,8 +143,8 @@ export async function teamsForActor(ctx: QueryCtx, args: ObjectType<typeof teams
     const result = await ctx.db.query("businessTeams").order("desc").paginate({ ...paginationOpts, maximumBytesRead: 2_000_000 });
     const page = await Promise.all(result.page.map(async row => {
       const [members, shares] = await Promise.all([
-        ctx.db.query("businessMembers").withIndex("by_team_user", q => q.eq("teamId", row._id)).collect(),
-        ctx.db.query("businessShares").withIndex("by_team_asset", q => q.eq("teamId", row._id)).collect(),
+        ctx.db.query("businessMembers").withIndex("by_team_user", q => q.eq("teamId", row._id)).take(101),
+        ctx.db.query("businessShares").withIndex("by_team_asset", q => q.eq("teamId", row._id)).take(101),
       ]);
       return { ...(await inventoryOwner(ctx, row.ownerId)), id: row._id, name: row.name, ownerId: row.ownerId, createdAt: row.createdAt, members: members.length, sharedResources: shares.length };
     }));
@@ -217,7 +217,7 @@ export async function usersForActor(ctx: QueryCtx, args: ObjectType<typeof users
 export const users = query({ args: usersArgs, returns: v.object({ page: v.array(userRow), ...pageFields }), handler: (ctx, args) => usersForActor(ctx, args) });
 
 export const contentArgs = {
-    kind: v.union(v.literal("forms"), v.literal("quizzes")),
+    kind: v.literal("forms"),
     paginationOpts: paginationOptsValidator,
     /** Title words or an exact id. Returns the best matches in one page. */
     search: v.optional(v.string()),
@@ -225,49 +225,26 @@ export const contentArgs = {
 export async function contentForActor(ctx: QueryCtx, args: ObjectType<typeof contentArgs>, actorId?: string) {
     await requireAdminForActor(ctx, actorId);
     const search = args.search?.trim();
-    if (args.kind === "forms") {
-      const result = search
-        ? searchPage(uniqueById([
-            await (async () => { const id = ctx.db.normalizeId("forms", search); return id ? ctx.db.get("forms", id) : null; })(),
-            ...await ctx.db.query("forms").withSearchIndex("search_title", (q) => q.search("title", search)).take(SEARCH_LIMIT),
-          ]))
-        : await ctx.db
-          .query("forms")
-          .order("desc")
-          .paginate({ ...args.paginationOpts, maximumBytesRead: 2_000_000 });
-      const counts = await Promise.all(result.page.map((f) => readFormCounts(ctx, f)));
-      return {
-        ...result,
-        page: result.page.map((f, i) => ({
-          id: String(f._id),
-          title: f.title,
-          ownerId: f.ownerId,
-          status: f.status,
-          held: !!f.isBanned,
-          responses: counts[i].responseCount,
-          createdAt: f.createdAt,
-        })),
-      };
-    }
     const result = search
       ? searchPage(uniqueById([
-          await (async () => { const id = ctx.db.normalizeId("quizzes", search); return id ? ctx.db.get("quizzes", id) : null; })(),
-          ...await ctx.db.query("quizzes").withSearchIndex("search_title", (q) => q.search("title", search)).take(SEARCH_LIMIT),
+          await (async () => { const id = ctx.db.normalizeId("forms", search); return id ? ctx.db.get("forms", id) : null; })(),
+          ...await ctx.db.query("forms").withSearchIndex("search_title", (q) => q.search("title", search)).take(SEARCH_LIMIT),
         ]))
       : await ctx.db
-        .query("quizzes")
+        .query("forms")
         .order("desc")
         .paginate({ ...args.paginationOpts, maximumBytesRead: 2_000_000 });
+    const counts = await Promise.all(result.page.map((f) => readFormCounts(ctx, f)));
     return {
       ...result,
-      page: result.page.map((q) => ({
-        id: String(q._id),
-        title: q.title,
-        ownerId: q.creatorId,
-        status: q.archived ? "archived" : q.isPublished ? "live" : "draft",
-        held: !!q.isBanned,
-        responses: null,
-        createdAt: q.createdAt,
+      page: result.page.map((f, i) => ({
+        id: String(f._id),
+        title: f.title,
+        ownerId: f.ownerId,
+        status: f.status,
+        held: !!f.isBanned,
+        responses: counts[i].responseCount,
+        createdAt: f.createdAt,
       })),
     };
 
@@ -448,41 +425,20 @@ export const sweepExpiries = internalMutation({
 });
 
 export const moderateContentArgs = {
-    targetId: v.union(v.id("forms"), v.id("quizzes")),
+    targetId: v.id("forms"),
     hold: v.boolean(),
     reason: v.string(),
   };
 export async function moderateContentForActor(ctx: MutationCtx, args: ObjectType<typeof moderateContentArgs>, actorId?: string) {
     await requireAdminForActor(ctx, actorId);
     const reason = reasonText(args.reason);
-    const formId = ctx.db.normalizeId("forms", args.targetId);
-    const quizId = ctx.db.normalizeId("quizzes", args.targetId);
-    const item = formId
-      ? await ctx.db.get("forms", formId)
-      : quizId
-        ? await ctx.db.get("quizzes", quizId)
-        : null;
+    const item = await ctx.db.get("forms", args.targetId);
     if (!item) throw new Error("Content not found");
-    if ("shareId" in item) {
-      await authorDb(ctx).patch("forms", item._id, {
-        isBanned: args.hold,
-        ...(args.hold
-          ? {
-              status:
-                item.publishedVersion === undefined
-                  ? ("draft" as const)
-                  : ("closed" as const),
-            }
-          : {}),
-        updatedAt: Date.now(),
-      });
-    } else {
-      await authorDb(ctx).patch("quizzes", item._id, {
-        isBanned: args.hold,
-        ...(args.hold ? { isPublished: false } : {}),
-        updatedAt: Date.now(),
-      });
-    }
+    await authorDb(ctx).patch("forms", item._id, {
+      isBanned: args.hold,
+      ...(args.hold ? { status: item.publishedVersion === undefined ? ("draft" as const) : ("closed" as const) } : {}),
+      updatedAt: Date.now(),
+    });
     await audit(
       ctx,
       args.hold ? "content_held" : "content_released",

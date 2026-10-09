@@ -30,7 +30,7 @@ const copy = {
   },
 };
 
-/** Creates a live game for a quiz-mode form or an old quiz and opens the host screen; problems show as a toast. */
+/** Creates a live game for a quiz-mode form and opens the host screen; problems show as a toast. */
 export function useHostLive() {
   const t = useCopy(copy);
   const { locale } = useLocale();
@@ -38,7 +38,7 @@ export function useHostLive() {
   const create = useMutation(api.live.createGame);
   const [busy, setBusy] = useState(false);
   const pending = useRef(false);
-  const start = async (target: ({ formId: Id<"forms"> } | { quizId: Id<"quizzes"> }) & { theme?: FormTheme; timeLimitSec?: number; showAnswerLabels?: boolean }): Promise<boolean> => {
+  const start = async (target: { formId: Id<"forms">; theme?: FormTheme; timeLimitSec?: number; showAnswerLabels?: boolean }): Promise<boolean> => {
     if (pending.current) return false;
     pending.current = true;
     setBusy(true);

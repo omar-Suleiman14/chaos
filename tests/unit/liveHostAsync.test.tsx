@@ -41,10 +41,10 @@ describe("host async controls", () => {
     mocks.create.mockRejectedValueOnce(new Error("Offline")).mockResolvedValue("game");
     const { result } = renderHook(() => useHostLive());
     toast.dismiss();
-    await act(async () => { expect(await result.current.start({ quizId: "quiz" as Id<"quizzes"> })).toBe(false); });
+    await act(async () => { expect(await result.current.start({ formId: "form" as Id<"forms"> })).toBe(false); });
     // The failure is reported once, as an error toast.
     expect(toastStore.get().filter(item => !item.leaving)).toMatchObject([{ kind: "error", title: "Offline" }]);
-    await act(async () => { await result.current.start({ quizId: "quiz" as Id<"quizzes"> }); });
+    await act(async () => { await result.current.start({ formId: "form" as Id<"forms"> }); });
     expect(mocks.create).toHaveBeenCalledTimes(2);
     expect(result.current.busy).toBe(false);
   });

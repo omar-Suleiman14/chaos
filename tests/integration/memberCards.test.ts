@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { api, internal } from "@/convex/_generated/api";
+import { api } from "@/convex/_generated/api";
 import { emptyDefinition } from "@/convex/formLogic";
 import { createTestConvex } from "./setup";
 import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
@@ -111,34 +111,6 @@ describe("card identity and public privacy", () => {
     await other.mutation(api.quizFunctions.getOrCreateUser, {});
     await expect(other.mutation(api.links.chooseUsername, { username: "casey" })).rejects.toThrow(/USERNAME_TAKEN/);
     expect(await t.query(api.memberCards.byUsername, { username: "casey" })).toBeNull();
-  });
-
-  it("backfills pre-existing quiz route names in bounded pages and keeps reservations after quiz deletion", async () => {
-    const { t, owner } = await setup();
-    await t.run(async (ctx) => {
-      for (let n = 0; n < 103; n++) await ctx.db.insert("quizzes", {
-        title: "Private history", creatorId: creatorIdentity.subject, creatorUsername: `old-name-${n}`, slug: "history",
-        isPublished: false, createdAt: 1, updatedAt: 1,
-      });
-    });
-    let cursor: string | null = null;
-    let processed = 0;
-    let pages = 0;
-    for (;;) {
-      const result: { cursor: string; done: boolean; processed: number } = await t.mutation(internal.links.backfillUsernameAliases, { phase: "quizzes", cursor });
-      expect(result.processed).toBeLessThanOrEqual(100);
-      processed += result.processed; pages++;
-      if (result.done) break;
-      cursor = result.cursor;
-    }
-    expect(processed).toBe(103); expect(pages).toBe(2);
-    await owner.mutation(api.links.chooseUsername, { username: "casey-new" });
-    expect(await t.query(api.memberCards.byUsername, { username: "old-name-102" })).toMatchObject({ username: "casey-new" });
-    const quiz = await t.run((ctx) => ctx.db.query("quizzes").withIndex("by_creator_slug", (q) => q.eq("creatorUsername", "old-name-102")).first());
-    await t.run((ctx) => ctx.db.delete("quizzes", quiz!._id));
-    const other = t.withIdentity(otherCreatorIdentity);
-    await other.mutation(api.quizFunctions.getOrCreateUser, {});
-    await expect(other.mutation(api.links.chooseUsername, { username: "old-name-102" })).rejects.toThrow(/USERNAME_TAKEN/);
   });
 
   it("old card and custom form aliases never disclose private drafts or respondent data", async () => {

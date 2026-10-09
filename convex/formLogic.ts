@@ -208,7 +208,8 @@ export interface FormDefinition {
   fields: FormField[];
   endings: Ending[];
   theme: FormTheme;
-  quiz?: { enabled: boolean };
+  /** showAnswers: after submitting, respondents see the key and explanations (default true). */
+  quiz?: { enabled: boolean; showAnswers?: boolean };
   translations?: Record<string, { title?: string; description?: string }>;
 }
 

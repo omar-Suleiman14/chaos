@@ -116,7 +116,7 @@ export default function SheetImport({ busy, onImport }: { busy: boolean; onImpor
 
           {rows.length > 0 && (
             <div className="space-y-2">
-              <p className="text-xs font-semibold text-muted-foreground" role="status">{t.rows} · {t.summary(kept.length, bad, skipped.size)}</p>
+              <output className="text-xs font-semibold text-muted-foreground" >{t.rows} · {t.summary(kept.length, bad, skipped.size)}</output>
               <ol className="rounded-lg border divide-y max-h-72 overflow-y-auto text-sm">
                 {rows.map((r) => {
                   const off = skipped.has(r.line);

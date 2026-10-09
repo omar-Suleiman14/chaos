@@ -14,19 +14,22 @@ const key = () => crypto.randomUUID().replaceAll("-", "_");
 export function useLibraryAnnotations() {
   const auth = useConvexAuth();
   const page = usePaginatedQuery(api.learnLibrary.annotations, auth.isAuthenticated ? {} : "skip", { initialNumItems: 25 });
-  useEffect(() => { if (page.status === "CanLoadMore") page.loadMore(25); }, [page.status, page.loadMore]);
+  const { status: pageStatus, loadMore: pageLoadMore} = page;
+  useEffect(() => { if (pageStatus === "CanLoadMore") pageLoadMore(25); }, [pageStatus, pageLoadMore]);
   return auth.isLoading || (auth.isAuthenticated && page.status !== "Exhausted") ? undefined : auth.isAuthenticated ? page.results : [];
 }
 export function useLibraryFolders(): Folder[] | undefined {
   const auth = useConvexAuth();
   const page = usePaginatedQuery(api.learnLibrary.folders, auth.isAuthenticated ? {} : "skip", { initialNumItems: 25 });
-  useEffect(() => { if (page.status === "CanLoadMore") page.loadMore(25); }, [page.status, page.loadMore]);
+  const { status: pageStatus, loadMore: pageLoadMore} = page;
+  useEffect(() => { if (pageStatus === "CanLoadMore") pageLoadMore(25); }, [pageStatus, pageLoadMore]);
   return auth.isLoading || (auth.isAuthenticated && page.status !== "Exhausted") ? undefined : page.results.map(r => ({ id: r._id, ownerId: r.ownerId, name: r.name, parentId: r.parentId ?? undefined, createdAt: r.createdAt, updatedAt: r.updatedAt }));
 }
 export function useLibraryMembers() {
   const auth = useConvexAuth();
   const page = usePaginatedQuery(api.learnLibrary.members, auth.isAuthenticated ? {} : "skip", { initialNumItems: 25 });
-  useEffect(() => { if (page.status === "CanLoadMore") page.loadMore(25); }, [page.status, page.loadMore]);
+  const { status: pageStatus, loadMore: pageLoadMore} = page;
+  useEffect(() => { if (pageStatus === "CanLoadMore") pageLoadMore(25); }, [pageStatus, pageLoadMore]);
   return auth.isLoading || (auth.isAuthenticated && page.status !== "Exhausted") ? undefined : auth.isAuthenticated ? page.results : [];
 }
 export function useLibraryFolderItems(): FolderItem[] | undefined {
@@ -94,14 +97,16 @@ export function flashcardUi(r: Doc<"flashcardSets">): FlashcardSet {
 export function useLibraryFlashcardRows() {
   const auth = useConvexAuth();
   const page = usePaginatedQuery(api.learnLibrary.flashcards, auth.isAuthenticated ? {} : "skip", { initialNumItems: 25 });
-  useEffect(() => { if (page.status === "CanLoadMore") page.loadMore(25); }, [page.status, page.loadMore]);
+  const { status: pageStatus, loadMore: pageLoadMore} = page;
+  useEffect(() => { if (pageStatus === "CanLoadMore") pageLoadMore(25); }, [pageStatus, pageLoadMore]);
   return auth.isLoading || (auth.isAuthenticated && page.status !== "Exhausted") ? undefined : auth.isAuthenticated ? page.results : [];
 }
 export function useLibraryFlashcards() { return useLibraryFlashcardRows()?.filter(r => !r.archived).map(flashcardUi); }
 export function useLibraryCollections() {
   const auth = useConvexAuth();
   const page = usePaginatedQuery(api.learnLibrary.collections, auth.isAuthenticated ? {} : "skip", { initialNumItems: 25 });
-  useEffect(() => { if (page.status === "CanLoadMore") page.loadMore(25); }, [page.status, page.loadMore]);
+  const { status: pageStatus, loadMore: pageLoadMore} = page;
+  useEffect(() => { if (pageStatus === "CanLoadMore") pageLoadMore(25); }, [pageStatus, pageLoadMore]);
   return auth.isLoading || (auth.isAuthenticated && page.status !== "Exhausted") ? undefined : page.results;
 }
 

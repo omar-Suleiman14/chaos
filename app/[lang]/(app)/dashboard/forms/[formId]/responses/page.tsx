@@ -1,5 +1,6 @@
 "use client";
 
+import TeachingInsights from "@/components/teaching/TeachingInsights";
 import Link from "next/link";
 import { useState } from "react";
 import { useParams } from "next/navigation";
@@ -43,6 +44,7 @@ export default function ResponsesPage() {
           {tab !== "export" && <> · <button type="button" className="ws-link-quiet inline-flex items-center gap-1" onClick={() => setTab("export")}><Download size={13} aria-hidden="true" /> {t.exportShortcut}</button></>}
         </p>
       </header>
+      {quiz && <TeachingInsights formId={formId} />}
       <SummaryHeader analysis={analysis ?? undefined} />
       <WsTabs tabs={tabs} value={tab} onChange={setTab} label={t.tabsLabel} labels={t.tabs}
         icons={{ summary: BarChart3, responses: Inbox, segments: BarChart3, export: Download }}

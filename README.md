@@ -2,21 +2,31 @@
 
 Turn what you know into something people can use.
 
-Chaos is an open platform for creating, teaching, learning and testing. Build lessons and courses, create forms and quizzes, turn quizzes into live games, and connect [Claude](https://chaos.fail/claude) or [ChatGPT](https://chaos.fail/chatgpt) to work directly on your content. It works in English and Arabic and runs no AI itself. Try [chaos.fail](https://chaos.fail), or host your own copy.
+Chaos is an open platform for teaching and learning. Write lessons and put them in order as courses, then make them stick with quizzes, flashcards and live games. Connect [Claude](https://chaos.fail/claude) or [ChatGPT](https://chaos.fail/chatgpt) and ask them to draft courses, quizzes and live sessions for you. Chaos runs no AI itself. It works in English and Arabic, is AGPL licensed, and you can try [chaos.fail](https://chaos.fail) or host your own copy with Docker.
+
+**A typical loop:** turn your notes into a lesson → add a quiz and flashcards → run the quiz as a live game in class → see who struggled and what to review.
 
 ## What it does
 
-**Main features**
+**Teach and learn**
 
-- **Forms, surveys and quizzes.** 16 question types, sections, branching and required rules. Quiz mode adds answer keys, points and automatic marking.
 - **Lessons and courses.** A document-like editor with covers, icons, images, video, equations, tables, sources and citations. Put lessons in order as a course and publish it.
-- **Learning.** Public courses and community lessons, saved lessons, progress and weak areas, and copies that keep the original author credited.
+- **Quizzes and flashcards.** Answer keys, points, explanations and automatic marking. Attach them to lessons so learners can practise.
 - **Live games.** Host a quiz on a big screen; people join from their phones with a PIN, answer against the clock and watch the leaderboard.
+- **Learning.** Public courses and community lessons, saved lessons, progress and weak areas, and copies that keep the original author credited.
+
+**Build it with ChatGPT or Claude**
+
+- **MCP connection.** Connect your account once, then ask your assistant to turn notes into a course draft, write a quiz with explanations, open a live game lobby or review your weak areas. New content arrives as a draft for you to review. Setup guides: [Claude](https://chaos.fail/claude), [ChatGPT](https://chaos.fail/chatgpt).
+
+**Forms, results and teams**
+
+- **Forms and surveys.** 16 question types, sections, branching and required rules, built in the same editor.
 - **Results you can use.** Live summaries and charts, every response in detail, CSV, Excel and JSON export, webhooks and an HTTP API.
 - **Business teams.** Teams with owner, admin and member roles edit shared forms, lessons, courses and folders together, and publish team-only lessons, courses, flashcards, forms, quizzes and live games. Free for a limited time.
 - **A look for every form.** 18 themes (including Google Forms and Microsoft Forms styles), four ways to answer (page, sections, one at a time, swipe), optional sounds, your own colours and logo.
 
-**Also included:** English and Arabic with right-to-left layouts, 21 templates, collaborators with roles, team-only (internal) publishing, version history and undo, opening and closing times with time zones, response limits and access codes, respondent edits with history, links, QR codes and embedding, use from ChatGPT or Claude through MCP, a Max integration, and step-by-step guides at [`/docs`](https://chaos.fail/docs).
+**Also included:** English and Arabic with right-to-left layouts, 21 templates, collaborators with roles, team-only (internal) publishing, version history and undo, opening and closing times with time zones, response limits and access codes, respondent edits with history, links, QR codes and embedding, a Max integration, and step-by-step guides at [`/docs`](https://chaos.fail/docs).
 
 ## Stack
 
@@ -118,5 +128,5 @@ Find planned work in [issues](https://github.com/omar-Suleiman14/chaos/issues) a
 [GNU Affero General Public License v3.0 or later](./LICENSE). If you run a modified version for others over a network, you must offer them its source.
 
 <!-- mcp-inventory:start -->
-The public MCP registry currently exposes **119 tools**. See the [generated inventory](docs/mcp-tool-inventory.md) and [connection guide](https://chaos.fail/connect).
+The public MCP registry currently exposes **132 tools**. See the [generated inventory](docs/mcp-tool-inventory.md) and [connection guide](https://chaos.fail/connect).
 <!-- mcp-inventory:end -->

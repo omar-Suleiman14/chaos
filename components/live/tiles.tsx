@@ -73,7 +73,7 @@ export function AnswerTile({ index, label, showLabel = true, toggle, selected, d
   const className = `live-tile live-tile--${size}${selected ? " live-tile--selected" : ""}${dim ? " live-tile--dim" : ""}`;
   const accessible = `${name}: ${label}${extra ? ` (${extra})` : ""}`;
   if (!onSelect) {
-    return <div className={className} role="listitem" aria-label={accessible} data-shape={shape} data-labelled={showLabel} data-result={result}>{content}</div>;
+    return <li className={className}  aria-label={accessible} data-shape={shape} data-labelled={showLabel} data-result={result}>{content}</li>;
   }
   return (
     <button

@@ -1,5 +1,7 @@
 "use client";
 
+import { FocusInput } from "@/components/InitialFocus";
+
 import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "@/lib/toast";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
@@ -59,7 +61,7 @@ function ScheduleRows({ s, set }: { s: EditableSettings; set: <K extends keyof E
         <input list="form-time-zones" value={zoneDraft ?? zone} dir="ltr" className="kb-input w-60" aria-label={t.timezone} aria-invalid={invalidZone}
           onChange={(e) => { setZoneDraft(e.target.value); if (isValidTimeZone(e.target.value)) set("timezone", e.target.value); }}
           onBlur={() => setZoneDraft(null)} />
-        <datalist id="form-time-zones">{zones.map((z) => <option key={z} value={z} />)}</datalist>
+        <datalist id="form-time-zones">{zones.map((z) => <option key={z} value={z}>{z}</option>)}</datalist>
       </Row>
       {invalidZone && <p role="alert" className="text-xs text-destructive px-1">{t.timezoneInvalid}</p>}
       {timeRow("opensAt", t.opens, t.clearOpening, t.scheduleOpens)}
@@ -259,14 +261,14 @@ function CustomLink({ formId, slug, shareId, title, announce }: {
             <label className="grid gap-1.5">
               <span className="ws-row__label flex items-center gap-2"><UserRound size={16} aria-hidden="true" /> {t.chooseUsername}</span>
               <span className="ws-row__help">{t.usernameHelp}</span>
-              <input className="kb-input max-w-sm" value={username} onChange={(e) => setUsername(e.target.value)} placeholder={t.usernamePlaceholder} autoComplete="username" autoFocus />
+              <FocusInput className="kb-input max-w-sm" value={username} onChange={(e) => setUsername(e.target.value)} placeholder={t.usernamePlaceholder} autoComplete="username" focusOnMount />
             </label>
           )}
           <label className="grid gap-1.5">
             <span className="ws-row__label flex items-center gap-2"><Link2 size={16} aria-hidden="true" /> {t.linkName}</span>
             <span className="ws-link-field" dir="ltr">
               <span className="ws-link-field__prefix">{host}/{needsUsername ? (username.trim().toLowerCase() || t.usernamePlaceholder) : me?.username ?? "…"}/</span>
-              <input value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={() => setDraft(slugify(draft))} placeholder={t.linkNamePlaceholder} autoFocus={!needsUsername} aria-label={t.linkName} />
+              <FocusInput value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={() => setDraft(slugify(draft))} placeholder={t.linkNamePlaceholder} focusOnMount={!needsUsername} aria-label={t.linkName} />
             </span>
           </label>
           {error && <p role="alert" className="text-sm text-[var(--error)]">{error}</p>}
@@ -410,7 +412,7 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
           s.retentionDays !== undefined ? t.sumRetention(s.retentionDays) : t.sumKept,
         ].filter(Boolean).join(" · ")}</p>
         <Row label={access.row} help={access.help} isDefault={s.access === "public"}>
-          <div className="ws-segmented" role="group" aria-label={t.whoCanRespond}>
+          <fieldset className="ws-segmented"  aria-label={t.whoCanRespond}>
             {accessOptions.map((a) => (
               <button key={a.id} type="button" aria-pressed={accessId === a.id} title={a.help}
                 onClick={() => {
@@ -421,7 +423,7 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
                 <a.icon size={14} aria-hidden="true" /> {a.label}
               </button>
             ))}
-          </div>
+          </fieldset>
         </Row>
         {accessId === "team" && teams && teams.length > 1 && (
           <Row label={t.whichTeam} isDefault={false}>
@@ -558,13 +560,13 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
       </details>
 
       {dirty && (
-        <div className="ws-savebar" role="region" aria-label={t.unsaved}>
+        <section className="ws-savebar"  aria-label={t.unsaved}>
           <span className="text-sm text-muted-foreground">{t.unsavedChanges}</span>
           <span className="ms-auto flex gap-2">
             {dirty && !saving && <button type="button" onClick={discard} className="ws-btn ws-btn--ghost">{t.discard}</button>}
             <button type="button" onClick={save} disabled={!dirty || saving || !!hiddenError} className="ws-btn ws-btn--primary">{saving ? t.saving : t.save}</button>
           </span>
-        </div>
+        </section>
       )}
     </div>
   );

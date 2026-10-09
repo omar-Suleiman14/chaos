@@ -86,14 +86,16 @@
 /* Course page as a Notion page (app/dashboard/courses/[id]): a full-bleed cover band, the page icon
    overlapping it, a large borderless title, and quiet list rows instead of boxed cards. */
 .cb-page { max-width: none; padding-top: 0; gap: 0; }
-.cb-page > * { width: 100%; max-width: 860px; margin-inline: auto; }
+/* In-flow sections only: the version browser and dialogs are fixed overlays and must keep covering the screen. */
+.cb-page > :not(.vb, .ws-overlay) { width: 100%; max-width: 860px; margin-inline: auto; }
 .cb-page > .lx-cover { width: auto; max-width: none; margin-inline: -48px; }
 .cb-page > .cb-hero { margin-top: 40px; border: 0; border-radius: 0; overflow: visible; }
 .cb-page > .lx-cover + .cb-hero { margin-top: 0; }
 .cb-page .cb-hero__body { padding: 4px 0 0; gap: 6px; }
-.cb-page .cb-title { font-size: clamp(32px, 5vw, 40px); font-weight: 700; letter-spacing: -.025em; }
+.cb-page .cb-title { font-size: clamp(32px, 5vw, 40px); font-weight: 700; letter-spacing: -.025em; line-height: 1.35; }
 .cb-page .cb-title:focus-visible, .cb-page .cb-desc:focus-visible { box-shadow: none; }
-.cb-page .cb-desc { font-size: 16px; }
+/* Grows with its text (CoursePage sizes it where field-sizing is unsupported), so it never scrolls inside itself. */
+.cb-page .cb-desc { font-size: 16px; field-sizing: content; min-height: 1.5lh; overflow: hidden; }
 .cb-page > .cb-section { margin-top: 32px; }
 .cb-page .cb-section h2 { margin: 0 0 6px; padding-bottom: 6px; border-bottom: 1px solid var(--ws-line, rgba(127,127,127,.2)); font-size: 14px; font-weight: 600; letter-spacing: 0; text-transform: none; }
 .cb-page .cb-lessons { gap: 1px; }
@@ -160,3 +162,8 @@ a.cs-who:hover strong { text-decoration: underline; text-underline-offset: 3px; 
 .cb-module__quiz summary { cursor: pointer; }
 .cb-module__ungrouped { margin: 16px 8px 4px; font-size: 13px; font-weight: 600; color: var(--on-surface-variant); }
 .cb-lesson__actions .ws-select { min-width: 120px; }
+
+.cp-back { display: flex; width: fit-content; align-items: center; gap: 6px; min-height: 44px; padding-inline: 8px; margin-block-end: 16px; border-radius: 8px; color: var(--s-soft); text-decoration: none; font-size: 14px; }
+.cp-back:hover { color: var(--s-text); background: var(--s-bg); }
+.cp-back:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+.cp-back:dir(rtl) svg { transform: rotate(180deg); }

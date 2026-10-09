@@ -112,7 +112,7 @@ export const definitionValidator = v.object({
   fields: v.array(fieldValidator),
   endings: v.array(endingValidator),
   theme: themeValidator,
-  quiz: v.optional(v.object({ enabled: v.boolean() })),
+  quiz: v.optional(v.object({ enabled: v.boolean(), showAnswers: v.optional(v.boolean()) })),
   translations: v.optional(v.record(v.string(), v.object({ title: v.optional(v.string()), description: v.optional(v.string()) }))),
 });
 
@@ -274,6 +274,9 @@ export const formTables = {
     .index("by_formId_and_status_and_submittedAt", ["formId", "status", "submittedAt"])
     // The responses inbox and the spam folder, newest first, without scanning past the other folder.
     .index("by_formId_and_spam_and_submittedAt", ["formId", "spam", "submittedAt"])
+    .index("by_form_status_spam_submitted", ["formId", "status", "spam", "submittedAt"])
+    .index("by_form_status_spam_reviewed_submitted", ["formId", "status", "spam", "reviewed", "submittedAt"])
+    .index("by_form_spam_reviewed_submitted", ["formId", "spam", "reviewed", "submittedAt"])
     .searchIndex("search_text", { searchField: "searchText", filterFields: ["formId", "status", "reviewed", "spam"] }),
 
   /** Append-only: the version of a response that an edit replaced. The response row always holds the latest. */

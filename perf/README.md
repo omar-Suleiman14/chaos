@@ -50,8 +50,8 @@ detail):
 | MCP → persisted | measured in the backend suite: the tool call's write is visible to the dashboard |
 
 `perf/backend/journeys.perf.test.ts` budgets the Convex work each journey
-needs. `perf/browser/journeys.spec.ts` times the same marks in Chromium
-(`.github/workflows/perf-journeys.yml`); it runs against the E2E environment
+needs. `perf/browser/journeys.spec.ts` times the same marks in Chromium through the manual
+`Performance` workflow (`.github/workflows/perf.yml`); it runs against the E2E environment
 only and needs `E2E_PERF_FORM_ID`, `E2E_PERF_COURSE_ID`, `E2E_PERF_LESSON_ID`,
 `E2E_PERF_QUIZ_SHARE_ID` and `E2E_PERF_LIVE_PIN` repository variables (and
 `E2E_PERF_GIANT_LESSON_ID`, a 500-block lesson, for the giant-lesson render) for the
@@ -85,7 +85,7 @@ Bytes are ratcheted at three levels, each with a 1% band:
 ## Protecting the harness
 
 An optimisation is judged by the harness, so it must not also change the
-harness. On every pull request, `pnpm perf:guard` (`.github/workflows/perf-guard.yml`, about a minute, no build):
+harness. On every pull request, `pnpm perf:guard` runs inside the normal CI static-check job:
 
 - fails when one change edits product code (`app`, `components`, `lib`,
   `convex`) and harness files (`perf/lib`, `perf/backend`, `perf/client`,
@@ -171,8 +171,8 @@ a cache that shows deleted content is a failure. Every perf suite asserts the
 result is correct before recording a number, and a failed assertion fails the
 ratchet.
 
-`pnpm test:correctness` (`scripts/correctness.ts`) runs first in every perf
-workflow: `tests/integration/correctnessGates.test.ts` states the three
+`pnpm test:correctness` (`scripts/correctness.ts`) runs first in the deterministic
+performance budget job: `tests/integration/correctnessGates.test.ts` states the three
 failures end to end (every answer stored exactly while the owner edits; the
 published form and lesson served while a newer draft exists; archived, deleted
 and unpublished content gone), together with the reactivity, form integrity,
@@ -202,15 +202,13 @@ the confirmed result then replaces the copy whole.
 - Sidebar destinations prefetch their whole page (`IntentLink eager`), so
   switching pages does not stop at the loading skeleton.
 
-## Nightly run
+## Manual performance runs
 
-`.github/workflows/perf-nightly.yml` runs every night on main: `pnpm perf`
-(large forms, the 500-block giant lesson in the census, Convex journeys),
-stylesheets, bundles, the MCP suites and, when the E2E environment is
-configured, the Chromium journeys, keystrokes and render health (layout shift,
-JS heap after garbage collection, DOM nodes). A failure opens an issue
-labelled `perf-nightly`, or comments on the open one; the next green night
-closes it.
+Expensive performance suites run only when they are useful. Start
+`.github/workflows/perf.yml` from the Actions tab and choose deterministic
+budgets, browser measurements or both. The underlying commands remain
+available locally, so removing scheduled CI does not remove any performance
+coverage.
 
 ## Off the main thread
 
@@ -236,7 +234,8 @@ or `load` from navigation start) for every journey above, and `journey_step`
 for funnels: `form.create` reports `first_edit` and `published` as time since
 the click that created the draft. Errors arrive as `$exception`.
 `scripts/production-health.ts` reads p50/p75/p95 per journey and the error
-count from PostHog every day (docs/production-monitoring.md).
+count from PostHog when the manual production-health workflow is run
+(docs/production-monitoring.md).
 
 ## Loading states
 

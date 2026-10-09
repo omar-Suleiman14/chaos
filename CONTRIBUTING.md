@@ -37,11 +37,11 @@ Use Clerk or the [Better Auth setup](./docs/better-auth.md). Better Auth uses a 
 
 ## Checks
 
-Run these before opening a pull request. CI runs the same ones.
+Run these before opening a pull request. CI runs the same checks.
 
 ```bash
 pnpm typecheck
-pnpm lint        # 0 errors; warnings are allowed but don't add new ones
+pnpm lint
 pnpm test
 pnpm build
 ```
@@ -50,10 +50,13 @@ Check dependency advisories with `pnpm audit` and `pnpm audit --prod`. Report un
 
 ## Pull requests
 
+- Open pull requests against **`main`**. Work happens on short-lived branches; `main` should stay releasable.
+- `main` is protected. Pull requests are squash-merged once Static checks, Unit tests, Integration tests and Production build pass and review conversations are resolved. The pull request title becomes the commit message, so write it as one, e.g. `fix: keep live answers after reconnect`.
+- Pull requests that only touch Markdown docs or issue/PR templates skip the test and build jobs.
 - Keep each pull request to one change, and link the issue it closes (`Closes #123`).
-- Describe what you changed and how you checked it, including anything you could not check (for example, no real Clerk keys).
-- Screenshots help for visual changes, ideally in both English and Arabic.
-- A maintainer reviews every pull request. Changes to the public API, the data model or security-sensitive code get a closer look and may take longer.
+- Describe what you changed and how you checked it, including anything you could not check.
+- **Every visible change needs screenshots in the pull request description.** Show each changed screen in English and Arabic, in light and dark appearance, at desktop and phone widths where they apply. Show motion with a short recording or before/after frames. The `PR screenshots` check fails when pages, components or styles change without an image in the description. Use the `no-visual-change` label only when those files change and nothing visible does.
+- Changes to the public API, data model, authentication, authorization or other security-sensitive code get extra scrutiny.
 
 ## Issues
 
@@ -61,7 +64,7 @@ Use the templates: **Bug report** for something broken, **Feature request** for 
 
 ## Find planned work and report problems
 
-The current roadmap lives in [GitHub issues](https://github.com/omar-Suleiman14/chaos/issues) and [milestones](https://github.com/omar-Suleiman14/chaos/milestones). Milestones group Learn/courses, MCP/portability, public product/trust and Chaos Cards. Issues describe the outcome, current state, acceptance criteria and verification; pull requests link their issue.
+The current roadmap lives in [GitHub issues](https://github.com/omar-Suleiman14/chaos/issues) and [milestones](https://github.com/omar-Suleiman14/chaos/milestones). Issues describe the outcome, current state, acceptance criteria and verification; pull requests link their issue.
 
 Use the **Bug report** template for a reproducible problem, including browser, language, expected/actual behavior and a minimal example without real respondent data. Use **Feature request** for a desired outcome and who needs it. Use **Task** for agreed implementation work. Check existing issues first; link duplicates instead of opening parallel work. Security reports use the private reporting process in SECURITY.md.
 

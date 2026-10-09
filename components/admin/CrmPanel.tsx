@@ -1,5 +1,7 @@
 "use client";
 
+import { useNow } from "@/lib/useNow";
+
 import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import { useState } from "react";
 import { toast } from "@/lib/toast";
@@ -58,6 +60,7 @@ export default function CrmPanel({
   followUps?: boolean;
   pipeline?: boolean;
 }) {
+  const now = useNow();
   const [searchInput, setSearchInput] = useState("");
   const [search, setSearch] = useState("");
   const [stage, setStage] = useState<Stage | "">("");
@@ -259,7 +262,7 @@ export default function CrmPanel({
                       <p
                         className={
                           contact.nextFollowUp &&
-                          contact.nextFollowUp < Date.now()
+                          now !== null && contact.nextFollowUp < now
                             ? "crm-overdue"
                             : ""
                         }
@@ -292,10 +295,10 @@ export default function CrmPanel({
           ))}
         </div>
       ) : !contacts.length ? (
-        <div className="ws-empty" role="status">
+        <output className="ws-empty" >
           <h2>{status === "LoadingFirstPage" ? "Loading contacts..." : search || stage || owner ? "No contacts match" : followUps ? "No follow-ups due" : "No contacts yet"}</h2>
           <p>{status === "LoadingFirstPage" ? "" : search || stage || owner ? "Try another search or clear the filters." : followUps ? "Scheduled follow-ups will appear here." : "Add an organization contact, or add someone from Accounts."}</p>
-        </div>
+        </output>
       ) : (
         <div className="crm-table-scroll">
           <Table>
@@ -362,7 +365,7 @@ export default function CrmPanel({
                   <TableCell>{contact.owner || "Unassigned"}</TableCell>
                   <TableCell>
                     <span
-                      className={`inline-flex items-center gap-2 ${contact.nextFollowUp && contact.nextFollowUp < Date.now() ? "crm-overdue" : ""}`}
+                      className={`inline-flex items-center gap-2 ${contact.nextFollowUp && now !== null && contact.nextFollowUp < now ? "crm-overdue" : ""}`}
                     >
                       <CalendarClock size={14} />
                       {formatDate(contact.nextFollowUp)}
@@ -441,9 +444,9 @@ function ContactDetail({
   const [busy, setBusy] = useState(false);
   if (contact === undefined)
     return (
-      <p role="status" className="p-5">
+      <output  className="p-5">
         Loading contact…
-      </p>
+      </output>
     );
   if (contact === null) return <p className="p-5">Contact no longer exists.</p>;
   return (
@@ -662,7 +665,7 @@ function ContactNotes({ contactId }: { contactId: Id<"crmContacts"> }) {
           {busy ? "Saving…" : "Add note"}
         </Button>
       </form>
-      {notes === undefined || activity === undefined ? <p role="status">Loading activity…</p> : (
+      {notes === undefined || activity === undefined ? <output >Loading activity…</output> : (
         <ol className="crm-timeline">
           {[
             ...notes.map(note => ({ id: note._id, title: "Note", body: note.body, createdAt: note.createdAt, actorId: note.actorId })),

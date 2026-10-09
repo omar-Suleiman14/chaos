@@ -2,7 +2,7 @@ import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { indexNowAssetTables, withIndexNow, type IndexNowTable } from "./indexNow";
 
-export const authorTables = ["forms", "quizzes", "lessons", "learnCollections"] as const;
+export const authorTables = ["forms", "lessons", "learnCollections"] as const;
 export type AuthorTable = typeof authorTables[number];
 
 /** The published snapshot decides discovery. Draft edits never expose private work. */
@@ -14,10 +14,6 @@ async function eligibility(ctx: MutationCtx, table: AuthorTable, id: string) {
       const eligible = row.status === "live" && !row.isBanned && row.settings.access === "public" && row.settings.allowIndexing && row.publishedVersion !== undefined;
       const version = eligible ? await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", row._id).eq("version", row.publishedVersion!)).unique() : null;
       return { ownerId: row.ownerId, eligible: !!version };
-    }
-    case "quizzes": {
-      const row = await ctx.db.get("quizzes", id as Id<"quizzes">);
-      return row ? { ownerId: row.creatorId, eligible: row.isPublished && !row.archived && !row.isBanned && !!row.publishedSnapshot } : null;
     }
     case "lessons": {
       const row = await ctx.db.get("lessons", id as Id<"lessons">);
@@ -36,7 +32,7 @@ async function eligibility(ctx: MutationCtx, table: AuthorTable, id: string) {
   }
 }
 
-async function changeCount(ctx: MutationCtx, ownerId: string, delta: number) {
+export async function changeCount(ctx: MutationCtx, ownerId: string, delta: number) {
   const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", ownerId)).unique();
   if (user) await ctx.db.patch("users", user._id, { publicAuthorAssets: Math.max(0, (user.publicAuthorAssets ?? 0) + delta) });
 }

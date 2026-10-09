@@ -38,27 +38,37 @@
       "unit": "count"
     },
     "giantLesson.appendBlock.renders": {
-      "budget": 1083,
+      "budget": 1081,
       "unit": "count"
     },
     "giantLesson.domNodes": {
-      "budget": 4793,
-      "unit": "count"
+      "budget": 4808,
+      "unit": "count",
+      "raised": {
+        "from": 4807,
+        "reason": "Listen icon becomes a menu holding the read-aloud settings (moved out of Reading settings); the settings themselves still load on demand.",
+        "at": "2026-10-07"
+      }
     },
     "giantLesson.mount.blockBodies": {
       "budget": 500,
       "unit": "count"
     },
     "giantLesson.mount.renders": {
-      "budget": 5074,
-      "unit": "count"
+      "budget": 5085,
+      "unit": "count",
+      "raised": {
+        "from": 5083,
+        "reason": "Listen icon becomes a menu holding the read-aloud settings (moved out of Reading settings); the settings themselves still load on demand.",
+        "at": "2026-10-07"
+      }
     },
     "lesson.appendBlock.blockBodies": {
       "budget": 1,
       "unit": "count"
     },
     "lesson.appendBlock.renders": {
-      "budget": 203,
+      "budget": 201,
       "unit": "count"
     },
     "lesson.duplicateSubscriptions": {
@@ -66,7 +76,7 @@
       "unit": "count"
     },
     "lesson.maxRendersPerCommit": {
-      "budget": 105,
+      "budget": 104,
       "unit": "count"
     },
     "lesson.mount.blockBodies": {
@@ -74,8 +84,13 @@
       "unit": "count"
     },
     "lesson.mount.renders": {
-      "budget": 677,
-      "unit": "count"
+      "budget": 688,
+      "unit": "count",
+      "raised": {
+        "from": 686,
+        "reason": "Listen icon becomes a menu holding the read-aloud settings (moved out of Reading settings); the settings themselves still load on demand.",
+        "at": "2026-10-07"
+      }
     },
     "lesson.sameFunctionManyArgs": {
       "budget": 0,

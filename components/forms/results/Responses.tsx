@@ -1,5 +1,7 @@
 "use client";
 
+import { FocusInput } from "@/components/InitialFocus";
+
 import { useEffect, useRef, useState } from "react";
 import { toast } from "@/lib/toast";
 import { useMutation, usePaginatedQuery } from "convex/react";
@@ -56,6 +58,7 @@ function FilterChip<V extends string>({ name, value, options, onChange, empty }:
   );
 }
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-interactions -- This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. The list delegates arrow keys between its native row buttons; the list itself is not a control. */
 export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role: "owner" | "editor" | "viewer"; quiz: boolean }) {
   const t = useCopy(resultsCopy);
   const { locale } = useLocale();
@@ -80,6 +83,15 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
   }, [searchText]);
 
   const { results, status, loadMore } = usePaginatedQuery(api.formResults.listResponses, { formId, filter, order }, { initialNumItems: 25 });
+  // Tag matches are picked out of each scanned page on the server, so a page can hold few or
+  // none. Keep reading until the list has as many rows as were asked for, or nothing is left.
+  const viewKey = JSON.stringify([filter, order]);
+  const [wantedFor, setWantedFor] = useState({ key: viewKey, rows: 25 });
+  const wanted = wantedFor.key === viewKey ? wantedFor.rows : 25;
+  useEffect(() => {
+    if (filter.tag && status === "CanLoadMore" && results.length < wanted) loadMore(25);
+  }, [filter.tag, status, results.length, wanted, loadMore]);
+  const showMore = () => { setWantedFor({ key: viewKey, rows: results.length + 25 }); loadMore(25); };
   const tags = useQuery(api.formResults.listTags, { formId }) ?? [];
   const views = useQuery(api.formResults.listSavedViews, { formId }) ?? [];
   const setReviewed = useOptimisticMutation(api.formResults.setReviewed, setReviewedLocally);
@@ -257,7 +269,7 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
               </ul>
             </div>
           )}
-          {status === "CanLoadMore" && <button type="button" className="ws-btn ws-btn--sm mt-3" onClick={() => loadMore(25)}>{t.loadMore}</button>}
+          {status === "CanLoadMore" && <button type="button" className="ws-btn ws-btn--sm mt-3" onClick={showMore}>{t.loadMore}</button>}
           {filter.tag && <p className="ws-muted text-[13px] mt-2">{t.tagPageNote}</p>}
         </div>
         {wide && openId && <aside className="ws-results-detail" aria-label={t.responseLabel}>{detail}</aside>}
@@ -285,7 +297,7 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
             saveView({ formId, name: viewName, filter }).then(() => { toast.success(t.viewSaved(viewName)); setViewName(""); setSavingView(false); }).catch((err) => toast.error(err));
           }}>
             <label className="grid gap-1.5 text-sm font-medium">{t.viewName}
-              <input className="kb-input" value={viewName} maxLength={60} onChange={(e) => setViewName(e.target.value)} autoFocus />
+              <FocusInput className="kb-input" value={viewName} maxLength={60} onChange={(e) => setViewName(e.target.value)} focusOnMount />
             </label>
             <div className="flex justify-end gap-2">
               <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setSavingView(false)}>{t.cancel}</button>
@@ -304,7 +316,7 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
             act(setTags({ formId, responseIds: target, add: tagInput }), () => { setTagInput(""); setTagDialog(null); });
           }}>
             <label className="grid gap-1.5 text-sm font-medium">{t.tagName}
-              <input className="kb-input" value={tagInput} maxLength={40} onChange={(e) => setTagInput(e.target.value)} autoFocus />
+              <FocusInput className="kb-input" value={tagInput} maxLength={40} onChange={(e) => setTagInput(e.target.value)} focusOnMount />
             </label>
             <div className="flex justify-end gap-2">
               <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setTagDialog(null)}>{t.cancel}</button>
@@ -316,3 +328,4 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-interactions */

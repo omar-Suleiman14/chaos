@@ -56,7 +56,7 @@ export default function LearnHome() {
 
   // Each section shows as soon as its own data is in (most come from the device cache at once);
   // the page used to wait for the slowest of six before showing anything.
-  const wait = <div role="status" aria-busy="true"><span className="sr-only">{t.loading}</span><span className="ws-skeleton" style={{ display: "block", height: 112 }} aria-hidden="true" /></div>;
+  const wait = <output  aria-busy="true"><span className="sr-only">{t.loading}</span><span className="ws-skeleton" style={{ display: "block", height: 112 }} aria-hidden="true" /></output>;
   const hrefFor = (id: string, ownerId: string) => mine?.some((l) => l.id === id && l.ownerId === ownerId) ? `/dashboard/learn/lessons/${id}` : `/learn/${id}`;
   const studied = recent && progress ? recent : undefined;
   const inProgress = studied ? studied.filter(({ lesson }) => progress![lesson.id]?.state === "in_progress").slice(0, 3) : [];
@@ -75,6 +75,7 @@ export default function LearnHome() {
             {(close) => (
               <div className="ws-new-choices">
                 <button type="button" role="menuitem" onClick={() => { close(); void newLesson(); }}><BookOpenText size={16} /><span><strong>{t.lessonItem}</strong><small>{t.lessonHelp}</small></span></button>
+                <button type="button" role="menuitem" onClick={() => { close(); router.push("/dashboard/learn/study"); }}><BookOpenText size={16} /><span><strong>{locale === "ar" ? "درس للمذاكرة" : "Study lesson"}</strong><small>{locale === "ar" ? "تدريس ملف أو محاضرة مع مساعدك" : "Teach a PDF or lecture with your assistant"}</small></span></button>
                 <button type="button" role="menuitem" onClick={() => { close(); void newCourse(); }}><GraduationCap size={16} /><span><strong>{t.courseItem}</strong><small>{t.courseHelp}</small></span></button>
                 <button type="button" role="menuitem" onClick={() => { close(); void newSet(); }}><Layers size={16} /><span><strong>{t.setItem}</strong><small>{t.setHelp}</small></span></button>
               </div>

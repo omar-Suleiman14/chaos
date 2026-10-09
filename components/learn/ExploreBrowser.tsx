@@ -195,9 +195,9 @@ export default function ExploreBrowser({ initial = [] }: { initial?: DirectoryCo
         aria-label={ar ? "الدورات" : "Courses"}
         aria-busy={status === "LoadingFirstPage" && !visibleResults.length}
       >
-        <div
+        <output
           className="sr-only"
-          role="status"
+
           aria-live="polite"
         >
           {status === "LoadingFirstPage"
@@ -205,7 +205,7 @@ export default function ExploreBrowser({ initial = [] }: { initial?: DirectoryCo
               ? "جارٍ البحث…"
               : "Finding courses…"
             : ""}
-        </div>
+        </output>
         <>
           {!results.length && status === "Exhausted" && (
             <div className="lx-empty">

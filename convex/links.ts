@@ -91,40 +91,49 @@ export const setFormSlug = mutation({
     if (!SLUG.test(slug)) throw new Error("INVALID_SLUG: Use letters, numbers and dashes.");
     const clash = await ctx.db.query("forms").withIndex("by_ownerId_and_slug", (q) => q.eq("ownerId", form.ownerId).eq("slug", slug)).first();
     if (clash && clash._id !== form._id) throw new Error("SLUG_TAKEN: Another of your forms already uses that link.");
-    const quiz = await ctx.db.query("quizzes").withIndex("by_creator_slug", (q) => q.eq("creatorUsername", user.username).eq("slug", slug)).first();
-    if (quiz) throw new Error("SLUG_TAKEN: One of your older quizzes already uses that link.");
+    // An old quiz address keeps pointing at the quiz form it became.
+    const converted = await ctx.db.query("classicQuizConversions").withIndex("by_username_and_slug", (q) => q.eq("username", user.username.toLowerCase()).eq("slug", slug)).first();
+    if (converted && converted.formId !== form._id) throw new Error("SLUG_TAKEN: One of your older quizzes already uses that link.");
     await authorDb(ctx).patch("forms", form._id, { slug, updatedAt: Date.now() });
     return slug;
   },
 });
 
-/** chaos.fail/<username>/<slug> → the form's share id, or null (old quizzes use the same address). */
+/** chaos.fail/<username>/<slug> → the form's share id, or null. Old quiz addresses lead to the quiz form they became. */
 export const resolveLink = query({
   args: { username: v.string(), slug: v.string() },
   returns: v.union(v.null(), v.object({ shareId: v.string() })),
   handler: async (ctx, args) => {
     const user = await userByUsername(ctx, args.username.toLowerCase());
     if (!user) return null;
-    // A form created later must never shadow an existing classic quiz URL.
-    const quiz = await ctx.db.query("quizzes").withIndex("by_creator_slug", (q) => q.eq("creatorUsername", args.username.toLowerCase()).eq("slug", args.slug.toLowerCase())).first();
-    if (quiz) return null;
-    const form = await ctx.db.query("forms").withIndex("by_ownerId_and_slug", (q) => q.eq("ownerId", user.clerkId).eq("slug", args.slug.toLowerCase())).first();
-    return form ? { shareId: form.shareId } : null;
+    const converted = await ctx.db.query("classicQuizConversions").withIndex("by_username_and_slug", (q) => q.eq("username", args.username.toLowerCase()).eq("slug", args.slug.toLowerCase())).first();
+    const form = converted
+      ? await ctx.db.get("forms", converted.formId)
+      : await ctx.db.query("forms").withIndex("by_ownerId_and_slug", (q) => q.eq("ownerId", user.clerkId).eq("slug", args.slug.toLowerCase())).first();
+    return form && form.ownerId === user.clerkId ? { shareId: form.shareId } : null;
+  },
+});
+
+/** An old quiz editor link (/dashboard/editor?id=…) → the quiz form it became, for its owner. */
+export const convertedQuiz = query({
+  args: { quizId: v.string() },
+  returns: v.union(v.null(), v.id("forms")),
+  handler: async (ctx, args) => {
+    const identity = await getAuthIdentity(ctx);
+    if (!identity) return null;
+    const row = await ctx.db.query("classicQuizConversions").withIndex("by_quizId", (q) => q.eq("quizId", args.quizId)).unique();
+    const form = row ? await ctx.db.get("forms", row.formId) : null;
+    return form && form.ownerId === identity.subject ? form._id : null;
   },
 });
 
 /** Release migration: call each phase with the returned cursor until done. No deployment side effects. */
 export const backfillUsernameAliases = internalMutation({
-  args: { phase: v.union(v.literal("users"), v.literal("quizzes")), cursor: v.union(v.string(), v.null()) },
+  args: { phase: v.literal("users"), cursor: v.union(v.string(), v.null()) },
   returns: v.object({ cursor: v.string(), done: v.boolean(), processed: v.number() }),
   handler: async (ctx, args) => {
-    const page = args.phase === "users"
-      ? await ctx.db.query("users").withIndex("by_username").paginate({ cursor: args.cursor, numItems: 100 })
-      : await ctx.db.query("quizzes").withIndex("by_creator_slug").paginate({ cursor: args.cursor, numItems: 100 });
-    for (const row of page.page) {
-      if ("clerkId" in row) await reserveUsername(ctx, row.username, row.clerkId);
-      else await reserveUsername(ctx, row.creatorUsername, row.creatorId);
-    }
+    const page = await ctx.db.query("users").withIndex("by_username").paginate({ cursor: args.cursor, numItems: 100 });
+    for (const row of page.page) await reserveUsername(ctx, row.username, row.clerkId);
     return { cursor: page.continueCursor, done: page.isDone, processed: page.page.length };
   },
 });

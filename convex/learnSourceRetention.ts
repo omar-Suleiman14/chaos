@@ -1,6 +1,7 @@
 import { makeFunctionReference } from "convex/server";
 import { v } from "convex/values";
-import { internalMutation, mutation } from "./_generated/server";
+import type { Id } from "./_generated/dataModel";
+import { internalMutation, mutation, type MutationCtx } from "./_generated/server";
 import { creatorRestricted, requireActiveUser } from "./authz";
 
 export const SOURCE_RETENTION_LIMITS = { graceMs: 30 * 86400_000, orphanGraceMs: 86400_000, jobsPerBatch: 1, versionsPerStep: 2 } as const;
@@ -12,12 +13,17 @@ export const trackUpload = internalMutation({
   args: { storageId: v.id("_storage") }, returns: v.null(),
   handler: async (ctx, args) => {
     const { identity } = await requireActiveUser(ctx);
-    if (!(await ctx.db.system.get("_storage", args.storageId))) throw new Error("Upload missing");
-    const prior = await ctx.db.query("learnSourceCleanup").withIndex("by_storageId", q => q.eq("storageId", args.storageId)).first();
-    if (!prior) await ctx.db.insert("learnSourceCleanup", { storageId: args.storageId, ownerId: identity.subject, dueAt: Date.now() + SOURCE_RETENTION_LIMITS.orphanGraceMs, cursor: null });
-    return null;
+    return trackSourceUploadForActor(ctx,identity.subject,args.storageId);
   },
 });
+
+/** Shared orphan tracking for the native and actor-verified MCP upload actions. */
+export async function trackSourceUploadForActor(ctx: MutationCtx, actor: string, storageId: Id<"_storage">) {
+    if (!(await ctx.db.system.get("_storage", storageId))) throw new Error("Upload missing");
+    const prior = await ctx.db.query("learnSourceCleanup").withIndex("by_storageId", q => q.eq("storageId", storageId)).first();
+    if (!prior) await ctx.db.insert("learnSourceCleanup", { storageId: storageId, ownerId: actor, dueAt: Date.now() + SOURCE_RETENTION_LIMITS.orphanGraceMs, cursor: null });
+    return null;
+}
 
 /** Explicit owner consent deletes bytes only; the citation/provenance row survives.
  * Removed sources cannot be republished, so history cannot gain new references

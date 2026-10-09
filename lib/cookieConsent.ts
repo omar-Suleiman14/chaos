@@ -33,7 +33,11 @@ export function saveCookieConsent(analytics: boolean) {
   const at = Date.now();
   memory = { analytics, at };
   try {
-    const domain = sharedCookieDomain();
+    const sharedDomain = sharedCookieDomain();
+    // Production origins are also configured in previews. Browsers silently
+    // reject a cookie for chaos.fail when the current host is a preview URL.
+    const host = window.location.hostname;
+    const domain = sharedDomain && (host === sharedDomain || host.endsWith(`.${sharedDomain}`)) ? sharedDomain : null;
     const secure = window.location.protocol === "https:" ? "; Secure" : "";
     if (domain) document.cookie = `${CONSENT_COOKIE}=; Path=/; Max-Age=0; SameSite=Lax${secure}`;
     document.cookie = `${CONSENT_COOKIE}=${encodeURIComponent(`1:${analytics ? "yes" : "no"}:${at}`)}; Path=/; Max-Age=${MAX_AGE / 1000}; SameSite=Lax${secure}${domain ? `; Domain=${domain}` : ""}`;

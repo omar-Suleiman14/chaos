@@ -1,10 +1,9 @@
 /**
- * MCP tools return forms as `form_<id>` and classic quizzes as `quiz_<id>`
- * (convex/mcp.ts), while assessment references (lesson attachments, quiz
- * blocks, course module assessments, live games from lessons) store bare
- * ids. Assistants pass back exactly what a tool returned, so every asset
- * reference in a tool input accepts both. The prefix is authoritative for
- * the kind: `quiz_` is always a classic quiz, `form_` always a form.
+ * MCP tools return forms (quizzes are quiz forms) as `form_<id>` (convex/mcp.ts),
+ * while assessment references (lesson attachments, quiz blocks, course module
+ * assessments, live games from lessons) store bare ids. Assistants pass back
+ * exactly what a tool returned, so every asset reference in a tool input
+ * accepts both.
  */
 const PREFIXED = /^(form|quiz)_([A-Za-z0-9]+)$/;
 

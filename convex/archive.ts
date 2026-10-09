@@ -3,7 +3,7 @@ import { v } from "convex/values";
 import { query } from "./_generated/server";
 import { requireIdentity } from "./authz";
 
-const kind = v.union(v.literal("forms"), v.literal("quizzes"), v.literal("legacy_quizzes"), v.literal("courses"), v.literal("lessons"), v.literal("flashcards"));
+const kind = v.union(v.literal("forms"), v.literal("quizzes"), v.literal("courses"), v.literal("lessons"), v.literal("flashcards"));
 const row = v.object({ id: v.string(), title: v.string(), updatedAt: v.number(), count: v.number(), published: v.boolean(), revision: v.optional(v.number()), accent: v.optional(v.string()) });
 
 /** Owner-only, bounded recovery inventory. No drafts, questions, cards, answers or invite data leave this query. */
@@ -14,10 +14,6 @@ export const list = query({ args: { kind, paginationOpts: paginationOptsValidato
   if (args.kind === "forms" || args.kind === "quizzes") {
     const result = await ctx.db.query("forms").withIndex("by_ownerId_and_status_and_updatedAt", q => q.eq("ownerId", identity.subject).eq("status", "archived")).order("desc").paginate(page);
     return { ...result, page: result.page.filter(form => !!form.draft.quiz?.enabled === (args.kind === "quizzes")).map(form => ({ id: String(form._id), title: form.title, updatedAt: form.updatedAt, count: form.responseCount, published: form.publishedVersion !== undefined, accent: form.draft.theme.accent, revision: undefined })) };
-  }
-  if (args.kind === "legacy_quizzes") {
-    const result = await ctx.db.query("quizzes").withIndex("by_creator_archived", q => q.eq("creatorId", identity.subject).eq("archived", true)).order("desc").paginate(page);
-    return { ...result, page: result.page.map(quiz => ({ id: String(quiz._id), title: quiz.title, updatedAt: quiz.updatedAt, count: 0, published: quiz.isPublished , revision: undefined, accent: undefined })) };
   }
   if (args.kind === "courses") {
     const result = await ctx.db.query("learnCollections").withIndex("by_ownerId_and_archived_and_updatedAt", q => q.eq("ownerId", identity.subject).eq("archived", true)).order("desc").paginate(page);

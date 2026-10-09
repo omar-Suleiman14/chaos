@@ -3,6 +3,7 @@ import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { ImageResponse } from "next/og";
 import { zipSync, strToU8 } from "fflate";
+import { readStudySkillFiles } from "@/lib/integrations/studySkill";
 import { chaosIntegration, integrationPlatformList } from "@/lib/integrations";
 import { integrationPackage, platformForPackageFile, type LogoAssets } from "@/lib/integrations/packages";
 
@@ -45,7 +46,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ fil
   const platform = platformForPackageFile(file);
   if (!platform) return new Response("Not found", { status: 404 });
   const logo: LogoAssets = { svg, png512: await renderPng(svg, 512), png128: await renderPng(svg, 128) };
-  const files = integrationPackage(platform, logo);
+  const files = integrationPackage(platform, logo, await readStudySkillFiles());
   const zip = zipSync(
     Object.fromEntries(Object.entries(files).map(([path, content]) => [path, [typeof content === "string" ? strToU8(content) : content, { mtime }]])),
     { level: 9 },

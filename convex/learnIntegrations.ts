@@ -183,8 +183,8 @@ async function referenceProblem(ctx: Ctx, token: Token, document: LessonDocument
       const ref = `${block.asset.kind}_${block.asset.id}`;
       if (!token.scopes.includes("items:read")) return fail(403, "INSUFFICIENT_SCOPE", "Assessment references need items:read.");
       if (!(await selected(ctx, token, ref))) return missing();
-      const asset = block.asset.kind === "form" ? await ctx.db.get("forms", block.asset.id) : await ctx.db.get("quizzes", block.asset.id);
-      if (!asset || ("ownerId" in asset ? asset.ownerId : asset.creatorId) !== token.ownerId || ("isBanned" in asset && asset.isBanned)) return missing();
+      const asset = block.asset.kind === "form" ? await ctx.db.get("forms", block.asset.id) : null;
+      if (!asset || asset.ownerId !== token.ownerId || asset.isBanned) return missing();
     }
   }
   if (sources.size > LEARN_LIMITS.sources) return fail(400, "VALIDATION_FAILED", "Too many referenced sources.");

@@ -1,5 +1,7 @@
 "use client";
 
+import { useNow } from "@/lib/useNow";
+
 import { useEffect, useRef, useState } from "react";
 import Link from "@/components/site/SiteLink";
 import { SignInButton, SignUpButton, useUser } from "@/lib/auth/client";
@@ -17,7 +19,7 @@ const copy = {
     getFree: "Get Chaos free", open: "Open Chaos", logIn: "Log in", skip: "Skip to content", main: "Main", footer: "Footer",
     explore: "Explore", modes: "Modes", themes: "Themes", features: "Features", docs: "Docs", pricing: "Pricing", play: "Join a game",
     menu: "Menu", closeMenu: "Close menu", language: "Language",
-    tagline: "Forms, quizzes, live games and Learn. One open-source workspace.",
+    tagline: "Lessons, courses, quizzes and live games. Open source, in English and Arabic.",
     product: "Product", ways: "Ways to answer", chatgpt: "Chaos in ChatGPT", claude: "Chaos in Claude", connect: "Connect Claude or ChatGPT", compare: "Compare",
     openSource: "Build and connect", source: "Source code", selfHost: "Self-hosting", api: "API and connections", webhooks: "Webhooks",
     start: "Get started", help: "Support", faq: "FAQ", status: "Status", issues: "Report an issue",
@@ -27,7 +29,7 @@ const copy = {
     getFree: "ابدأ مجانًا", open: "افتح Chaos", logIn: "تسجيل الدخول", skip: "انتقل إلى المحتوى", main: "التنقل الرئيسي", footer: "التذييل",
     explore: "استكشف", modes: "طرق العرض", themes: "المظاهر", features: "المزايا", docs: "الدليل", pricing: "الأسعار", play: "انضم إلى لعبة",
     menu: "القائمة", closeMenu: "إغلاق القائمة", language: "اللغة",
-    tagline: "نماذج واختبارات وألعاب مباشرة وLearn. مساحة عمل واحدة مفتوحة المصدر.",
+    tagline: "دروس ودورات واختبارات وألعاب مباشرة. مفتوح المصدر، بالعربية والإنجليزية.",
     product: "المنتج", ways: "طرق الإجابة", chatgpt: "Chaos في ChatGPT", claude: "Chaos في Claude", connect: "اربط Claude أو ChatGPT", compare: "المقارنة",
     openSource: "البناء والربط", source: "الشيفرة المصدرية", selfHost: "الاستضافة الذاتية", api: "API والاتصالات", webhooks: "Webhooks",
     start: "ابدأ الآن", help: "الدعم", faq: "الأسئلة الشائعة", status: "حالة الخدمة", issues: "أبلغ عن مشكلة",
@@ -59,6 +61,7 @@ function LanguageButton() {
 }
 
 /** Footer and menu: both languages, current one marked. */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- Styled button radios preserve native button activation and expose their selection to assistive technology. */
 function LanguageChoice() {
   const { locale, setLocale } = useLocale();
   const t = useCopy(copy);
@@ -70,6 +73,7 @@ function LanguageChoice() {
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
 /** `tag` sits beside the brand (the docs label); `center` replaces the page links (the docs search). */
 export function SiteNav({ tag, center }: { links?: boolean; tag?: React.ReactNode; center?: React.ReactNode }) {
@@ -135,6 +139,7 @@ export function SiteNav({ tag, center }: { links?: boolean; tag?: React.ReactNod
 }
 
 export function SiteFooter() {
+  const now = useNow();
   const t = useCopy(copy);
   return (
     <footer className="site-footer">
@@ -148,9 +153,9 @@ export function SiteFooter() {
         <nav className="site-footer__cols" aria-label={t.footer}>
           <div>
             <h2>{t.product}</h2>
-            <Link href="/#modes">{t.ways}</Link>
-            <Link href="/#themes">{t.themes}</Link>
-            <Link href="/#features">{t.features}</Link>
+            <Link href="/docs/answer-modes">{t.ways}</Link>
+            <Link href="/docs/themes">{t.themes}</Link>
+            <Link href="/#teach">{t.features}</Link>
             <Link href="/learn">{t.explore}</Link>
             <Link href="/compare">{t.compare}</Link>
             <Link href="/pricing">{t.pricing}</Link>
@@ -186,7 +191,7 @@ export function SiteFooter() {
           </div>
         </nav>
       </div>
-      <p className="site-footer__legal">© {new Date().getFullYear()} chaos · <Link href="/sitemap">{t.siteMap}</Link></p>
+      <p className="site-footer__legal">© {now === null ? "" : new Date(now).getFullYear()} chaos · <Link href="/sitemap">{t.siteMap}</Link></p>
     </footer>
   );
 }

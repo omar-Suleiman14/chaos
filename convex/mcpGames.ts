@@ -55,10 +55,10 @@ function view(game: Doc<"liveGames">) {
   const base = (env.CHAOS_APP_URL ?? "https://chaos.fail").replace(/\/+$/, "");
   return {
     id: `game_${game._id}`, kind: "live_game" as const, title: game.title, state: game.state,
-    sourceId: game.formId ? `form_${game.formId}` : game.quizId ? `quiz_${game.quizId}` : null,
+    sourceId: game.formId ? `form_${game.formId}` : null,
     pin: game.pin, hostUrl: `${base}/dashboard/live/${game._id}`,
     joinUrl: game.state === "ended" ? null : `${base}/play?pin=${game.pin}`,
-    questionIndex: game.questionIndex, questionCount: game.questions.length, skippedQuestions: game.skippedQuestions,
+    questionIndex: game.questionIndex, questionCount: game.questionCount ?? game.questions.length, skippedQuestions: game.skippedQuestions,
     questionEndsAt: game.questionEndsAt ?? null,
     settings: {
       timeLimitSec: game.settings.timeLimitSec, showAnswerLabels: game.settings.showAnswerLabels ?? true, maxPlayers: game.settings.maxPlayers, language: game.settings.language,
@@ -83,26 +83,19 @@ function timer(seconds?: number) {
 
 /** Source ownership is stricter than web editor access: MCP hosts only the account's own quizzes. */
 async function source(ctx: Ctx, userId: string, ref: string) {
-  const match = /^(form|quiz)_([A-Za-z0-9]+)$/.exec(ref.trim());
-  if (!match) fail("NOT_FOUND", "Use a form_ or quiz_ id from search_forms.");
-  if (match[1] === "form") {
-    const id = ctx.db.normalizeId("forms", match[2]);
-    const form = id ? await ctx.db.get("forms", id) : null;
-    if (!form || form.ownerId !== userId) fail("NOT_FOUND", "No owned quiz with that id in this account.");
-    if (form.status !== "live" || form.isBanned || form.publishedVersion === undefined) fail("LIVE_NOT_PUBLISHED", "Publish and reopen this quiz in Chaos before hosting.");
-    const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", (q) => q.eq("formId", form._id).eq("version", form.publishedVersion!)).unique();
-    if (!version) fail("LIVE_NOT_PUBLISHED", "Publish this quiz before hosting.");
-    return { formId: form._id, theme: (version.definition as FormDefinition).theme };
-  }
-  const id = ctx.db.normalizeId("quizzes", match[2]);
-  const quiz = id ? await ctx.db.get("quizzes", id) : null;
-  if (!quiz || quiz.creatorId !== userId) fail("NOT_FOUND", "No owned quiz with that id in this account.");
-  if (quiz.archived || !quiz.isPublished || quiz.isBanned) fail("LIVE_NOT_PUBLISHED", "Publish this quiz before hosting.");
-  return { quizId: quiz._id, theme: emptyDefinition().theme };
+  const match = /^form_([A-Za-z0-9]+)$/.exec(ref.trim());
+  if (!match) fail("NOT_FOUND", "Use a form_ id from search_forms.");
+  const id = ctx.db.normalizeId("forms", match[1]);
+  const form = id ? await ctx.db.get("forms", id) : null;
+  if (!form || form.ownerId !== userId) fail("NOT_FOUND", "No owned quiz with that id in this account.");
+  if (form.status !== "live" || form.isBanned || form.publishedVersion === undefined) fail("LIVE_NOT_PUBLISHED", "Publish and reopen this quiz in Chaos before hosting.");
+  const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", (q) => q.eq("formId", form._id).eq("version", form.publishedVersion!)).unique();
+  if (!version) fail("LIVE_NOT_PUBLISHED", "Publish this quiz before hosting.");
+  return { formId: form._id, theme: (version.definition as FormDefinition).theme };
 }
 
 type CreateDraft = (ctx: MutationCtx, userId: string, raw: unknown) => Promise<{
-  id: string; kind: "form" | "classic_quiz"; title: string; status: string; editUrl: string; shareUrl: string | null; resultsUrl: string;
+  id: string; kind: "form"; title: string; status: string; editUrl: string; shareUrl: string | null; resultsUrl: string;
   readyToPublish: boolean; problems: string[];
 }>;
 
@@ -144,7 +137,7 @@ export function registerMcpGames(createDraft: CreateDraft) {
         timer(args.timeLimitSec);
         const target = await source(ctx, args.userId, args.id);
         const id = await createGameForAccount(ctx, args.userId, {
-          ...("formId" in target ? { formId: target.formId } : { quizId: target.quizId }),
+          formId: target.formId,
           language: args.language, timeLimitSec: args.timeLimitSec, showAnswerLabels: args.showAnswerLabels,
           autoAdvance: args.autoAdvance, breakSec: args.breakSec, startWhenPlayers: args.startWhenPlayers, teamId: args.teamId,
           ...(args.theme === undefined ? {} : { theme: applyThemePatch(target.theme, themePatch(args.theme)) }),

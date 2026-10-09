@@ -1,0 +1,62 @@
+{
+  "$schema": "./node_modules/oxlint/configuration_schema.json",
+  "plugins": [
+    "typescript",
+    "react",
+    "jsx-a11y"
+  ],
+  "categories": {
+    "correctness": "error"
+  },
+  "rules": {
+    "no-unused-vars": [
+      "warn",
+      {
+        "argsIgnorePattern": "^_",
+        "varsIgnorePattern": "^_",
+        "ignoreRestSiblings": true
+      }
+    ],
+    "react/set-state-in-effect": "off",
+    "react/refs": "warn",
+    "jsx-a11y/no-static-element-interactions": "warn",
+    "jsx-a11y/no-redundant-roles": "warn",
+    "no-useless-rename": "warn",
+    "jsx-a11y/no-noninteractive-element-interactions": "warn",
+    "react/purity": "warn",
+    "react/exhaustive-deps": "warn",
+    "no-loss-of-precision": "warn",
+    "jsx-a11y/anchor-has-content": "warn",
+    "jsx-a11y/prefer-tag-over-role": "warn",
+    "jsx-a11y/no-noninteractive-element-to-interactive-role": "warn",
+    "jsx-a11y/no-autofocus": "warn",
+    "jsx-a11y/no-noninteractive-tabindex": "warn",
+    "jsx-a11y/autocomplete-valid": "warn",
+    "react/immutability": "warn",
+    "jsx-a11y/label-has-associated-control": [
+      "warn",
+      {
+        "controlComponents": [
+          "Input",
+          "Select",
+          "ChaosSelect"
+        ],
+        "depth": 5
+      }
+    ],
+    "jsx-a11y/click-events-have-key-events": "warn",
+    "jsx-a11y/interactive-supports-focus": "warn",
+    "no-control-regex": "warn",
+    "jsx-a11y/control-has-associated-label": "warn"
+  },
+  "ignorePatterns": [
+    "convex/_generated/**",
+    "convex/*/_generated/**",
+    ".next/**",
+    ".claude/**",
+    "test-results/**",
+    "playwright-report/**",
+    "blob-report/**",
+    "coverage/**"
+  ]
+}

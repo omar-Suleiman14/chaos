@@ -35,6 +35,7 @@ const copy = {
 };
 
 /** QR for the form's public link. Nothing is generated for drafts. */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- This custom dialog uses the existing focus, Escape and dismissal lifecycle; a native dialog would require a different open and top-layer lifecycle. */
 export default function QrShare({ link, title, published }: { link: string; title: string; published: boolean }) {
   const t = useCopy(copy);
   const [big, setBig] = useState(false);
@@ -81,3 +82,4 @@ export default function QrShare({ link, title, published }: { link: string; titl
     </section>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */

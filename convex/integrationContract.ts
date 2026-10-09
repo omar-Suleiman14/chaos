@@ -5,6 +5,7 @@ import {
   emptyDefinition, fieldTypes, isValidId, LIMITS, newId, suppressSmallBuckets,
 } from "./formLogic";
 import type { Choice, FieldType, FormDefinition, FormField } from "./formLogic";
+import { toDefinition, type McpQuestion } from "./mcpContract";
 
 export const API_VERSION = "1";
 export const API_FORM_FIELD_TYPES = [
@@ -181,6 +182,7 @@ export function looksLikePrivatePath(value: string): boolean {
  * structured field is sent. Unknown keys, private paths and private hosts are
  * rejected; query strings and fragments are stripped from `url`.
  */
+/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export function parseSource(raw: unknown): { label?: string; source?: ExternalSource; warnings: string[] } | { errors: string[] } {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { errors: ["source must be an object."] };
   const s = raw as Record<string, unknown>;
@@ -238,6 +240,7 @@ export function parseSource(raw: unknown): { label?: string; source?: ExternalSo
     : undefined;
   return { label: label ?? title, source, warnings };
 }
+/* oxlint-enable eslint/no-control-regex */
 
 /** Choices keep their ids when the label is unchanged, so reporting stays stable across edits. */
 function toChoices(labels: string[] | undefined, previous: Choice[] | undefined, prefix: string): Choice[] | undefined {
@@ -356,26 +359,24 @@ export function toQuizQuestions(body: DraftBody, defaultPoints: number): { quest
   return { questions, warnings };
 }
 
-export function fromQuizQuestions(
-  questions: { _id: string; type: QuizType; questionText: string; options?: string[]; correctAnswer?: string; correctAnswers?: string[]; keywords?: string[]; points: number; hint?: string; explanation?: string; timeLimit?: number }[],
-  includeAnswers: boolean
-): { fields: ApiField[]; dropped: string[] } {
-  const dropped = new Set<string>();
-  const fields = questions.map((q, i) => {
-    if (q.hint) dropped.add("hints");
-    if (q.explanation) dropped.add("explanations");
-    if (q.timeLimit !== undefined) dropped.add("timers");
-    const out: ApiField = { id: `q${i + 1}`, type: q.type, label: q.questionText, required: true, points: q.points };
-    if (q.options && q.type !== "written") out.options = q.options;
-    if (includeAnswers) {
-      if (q.correctAnswer) out.correctAnswer = q.correctAnswer;
-      if (q.correctAnswers) out.correctAnswers = q.correctAnswers;
-      if (q.keywords) out.keywords = q.keywords;
-    }
-    return out;
-  });
-  if (!includeAnswers) dropped.add("answer keys");
-  return { fields, dropped: [...dropped] };
+/**
+ * A quiz-style question (the API's quiz field types, and the retired classic quizzes) as a quiz-form
+ * question. Written answers have no automatic grading in forms: they become long-text questions without a key.
+ */
+export function quizFormQuestion(q: { type: string; questionText: string; options?: string[]; correctAnswer?: string; correctAnswers?: string[]; explanation?: string; points: number }): McpQuestion {
+  const base = { label: q.questionText.trim() || "Question", required: true, points: Math.max(1, q.points || 1), ...(q.explanation?.trim() ? { explanation: q.explanation.trim().slice(0, 2000) } : {}) };
+  if (q.type === "true_false") return { ...base, type: "single_choice", options: ["True", "False"], correctAnswers: [q.correctAnswer?.toLowerCase() === "false" ? "False" : "True"] };
+  if (q.type === "mcq") return { ...base, type: "single_choice", options: q.options ?? [], correctAnswers: q.correctAnswer ? [q.correctAnswer] : [] };
+  if (q.type === "multi_select") return { ...base, type: "multiple_choice", options: q.options ?? [], correctAnswers: q.correctAnswers ?? [] };
+  return { type: "long_text", label: base.label, required: true };
+}
+
+/** A `kind: "quiz"` draft as a quiz form. */
+export function toQuizFormDefinition(body: DraftBody): { definition: FormDefinition; warnings: string[] } {
+  const { questions, warnings } = toQuizQuestions(body, 1);
+  const definition = toDefinition({ title: body.title, description: body.description, quizMode: true, questions: questions.map(quizFormQuestion) });
+  if (questions.some((q) => q.type === "written")) warnings.push("Written questions are not graded automatically; they become long-text questions.");
+  return { definition, warnings };
 }
 
 /** Merge buckets smaller than the minimum group size into one suppressed bucket. */

@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { useMutation } from "convex/react";
 import { useConfirmedQuery } from "@/lib/confirmedQuery";
 import { toast } from "@/lib/toast";
-import { ChevronRight, Cookie, Keyboard, Library, LifeBuoy, Palette, Timer, UserRound } from "lucide-react";
+import { ChevronRight, Cookie, Keyboard, Library, LifeBuoy, Palette, UserRound } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { presentationLabels } from "@/convex/formLogic";
 import { useBuilderLabels } from "@/components/forms/formThemeLabels";
@@ -21,7 +21,7 @@ import { hostHref } from "@/lib/hosts";
 import { useCookieChoice } from "@/components/CookieConsent";
 import { saveCookieConsent } from "@/lib/cookieConsent";
 
-/* Content settings: new forms, library, shortcuts, old quizzes and help. Account and app appearance live on the profile page (/dashboard/card). */
+/* Content settings: new forms, library, shortcuts and help. Account and app appearance live on the profile page (/dashboard/card). */
 
 const copy = {
   en: {
@@ -52,10 +52,6 @@ const copy = {
       ["Search and commands", "Ctrl K"], ["Show or hide the sidebar", "Ctrl B"], ["Undo", "Ctrl Z"], ["Redo", "Ctrl Y"],
       ["Choose an answer (one question at a time)", "A – Z"], ["Next question", "Enter"], ["Submit a long answer", "Ctrl Enter"], ["Close a dialog or menu", "Esc"],
     ] as [string, string][],
-    oldQuiz: "Old quiz editor", oldQuizAbout: "Only for the old quiz editor.",
-    mcqTimer: "Multiple-choice timer", writtenTimer: "Written-answer timer", points: "Points per question", sec: "sec", pts: "pts",
-    shuffleQuestions: "Shuffle questions", shuffleOptions: "Shuffle answer options", showCorrect: "Show correct answers", showExplanations: "Show explanations",
-    resultsAs: "Show results as", score: "Score", passFail: "Pass or fail", passMark: "Pass mark", halfMarks: "Half marks from", halfMarksHelp: "For written answers: if this share of keywords match, the answer gets half the points.",
     help: "Help", helpAbout: "Questions, feedback and the fine print.", feedback: "Help and feedback", email: "Email us", docs: "Docs", docsHelp: "Step-by-step guides for everything in Chaos.",
     cookies: "Cookies and analytics", cookiesAbout: "Sign-in, language and saved progress always use cookies. Analytics is your choice.", analytics: "Usage analytics", analyticsHelp: "Anonymous usage data that helps us improve Chaos. Do Not Track and Global Privacy Control keep it off. Applies to this browser.", analyticsOn: "Analytics allowed", analyticsOff: "Analytics off", cookiePolicy: "Cookie policy",
     privacy: "Privacy policy", terms: "Terms", signOut: "Sign out", signOutHelp: "You can sign back in any time.",
@@ -88,64 +84,11 @@ const copy = {
       ["البحث والأوامر", "Ctrl K"], ["إظهار الشريط الجانبي أو إخفاؤه", "Ctrl B"], ["تراجع", "Ctrl Z"], ["إعادة", "Ctrl Y"],
       ["اختيار إجابة (سؤال واحد في كل مرة)", "A – Z"], ["السؤال التالي", "Enter"], ["إرسال إجابة طويلة", "Ctrl Enter"], ["إغلاق نافذة أو قائمة", "Esc"],
     ] as [string, string][],
-    oldQuiz: "محرر الاختبارات القديم", oldQuizAbout: "لمحرر الاختبارات القديم فقط.",
-    mcqTimer: "مؤقت الاختيار من متعدد", writtenTimer: "مؤقت الإجابة المكتوبة", points: "النقاط لكل سؤال", sec: "ث", pts: "نقطة",
-    shuffleQuestions: "خلط الأسئلة", shuffleOptions: "خلط الخيارات", showCorrect: "إظهار الإجابات الصحيحة", showExplanations: "إظهار الشروح",
-    resultsAs: "عرض النتيجة", score: "الدرجة", passFail: "ناجح أو راسب", passMark: "درجة النجاح", halfMarks: "نصف الدرجة من", halfMarksHelp: "للإجابات الكتابية: إذا وردت هذه النسبة من الكلمات المفتاحية نالت الإجابة نصف الدرجة.",
     help: "المساعدة", helpAbout: "الأسئلة والملاحظات والشروط.", feedback: "المساعدة والملاحظات", email: "راسلنا", docs: "الدليل", docsHelp: "أدلة خطوة بخطوة لكل ما في Chaos.",
     cookies: "ملفات تعريف الارتباط والتحليلات", cookiesAbout: "يستخدم تسجيل الدخول واللغة وحفظ التقدّم ملفات تعريف الارتباط دائمًا. أما التحليلات فاختيارك.", analytics: "تحليلات الاستخدام", analyticsHelp: "بيانات استخدام تساعدنا على تحسين Chaos. إشارتا Do Not Track وGlobal Privacy Control تُبقيانها متوقفة. ينطبق على هذا المتصفح.", analyticsOn: "تم السماح بالتحليلات", analyticsOff: "التحليلات متوقفة", cookiePolicy: "سياسة ملفات تعريف الارتباط",
     privacy: "سياسة الخصوصية", terms: "الشروط", signOut: "تسجيل الخروج", signOutHelp: "يمكنك تسجيل الدخول مجددًا في أي وقت.",
   },
 };
-type Copy = typeof copy.en;
-
-function QuizDefaults({ t }: { t: Copy }) {
-  const { data: settings, confirmed } = useConfirmedQuery(api.quizFunctions.getTeacherSettings);
-  const update = useMutation(api.quizFunctions.updateTeacherSettings);
-  const [local, setLocal] = useState<NonNullable<typeof settings> | null>(null);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  // Starts from the device's copy; the live settings replace it once, when Convex confirms them.
-  const live = useRef(false);
-  useEffect(() => {
-    if (!settings || (local && (live.current || !confirmed))) return;
-    live.current = confirmed;
-    setLocal(settings);
-  }, [settings, local, confirmed]);
-  if (!local) return <p className="ws-row__help py-3">{t.loading}</p>;
-  const change = <K extends keyof typeof local>(key: K, value: (typeof local)[K]) => {
-    const next = { ...local, [key]: value };
-    setLocal(next);
-    if (timer.current) clearTimeout(timer.current);
-    // One toast for the whole burst of edits, updated in place once the debounced save lands.
-    timer.current = setTimeout(() => { update(next).then(() => toast.success(t.quizDefaultsSaved, { id: "quiz-defaults" }), (e) => toast.error(e, { id: "quiz-defaults" })); }, 500);
-  };
-  const number = (key: "defaultMcqTimer" | "defaultWrittenTimer" | "defaultPointsPerQuestion" | "passingThreshold" | "halfMarkThreshold", label: string, suffix: string, min: number, max: number, help?: string) => (
-    <Row label={label} help={help}>
-      <input type="number" inputMode="numeric" min={min} max={max} value={local[key]} aria-label={label} className="kb-input w-24 text-end tabular-nums"
-        onChange={(e) => change(key, Math.min(max, Math.max(min, Number(e.target.value) || min)))} />
-      <span className="ws-row__value">{suffix}</span>
-    </Row>
-  );
-  const toggle = (key: "randomizeQuestions" | "randomizeOptions" | "showCorrectAnswers" | "showExplanations", label: string) => (
-    <Row label={label}><WsSwitch label={label} hideLabel checked={local[key]} onChange={(v) => change(key, v)} /></Row>
-  );
-  return (
-    <>
-      {number("defaultMcqTimer", t.mcqTimer, t.sec, 5, 3600)}
-      {number("defaultWrittenTimer", t.writtenTimer, t.sec, 10, 7200)}
-      {number("defaultPointsPerQuestion", t.points, t.pts, 0, 1000)}
-      {toggle("randomizeQuestions", t.shuffleQuestions)}
-      {toggle("randomizeOptions", t.shuffleOptions)}
-      {toggle("showCorrectAnswers", t.showCorrect)}
-      {toggle("showExplanations", t.showExplanations)}
-      <Row label={t.resultsAs}>
-        <Segmented label={t.resultsAs} value={local.displayMode as "score" | "pass_fail"} onChange={(v) => change("displayMode", v)} options={[{ id: "score", label: t.score }, { id: "pass_fail", label: t.passFail }]} />
-      </Row>
-      {local.displayMode === "pass_fail" && number("passingThreshold", t.passMark, "%", 0, 100)}
-      {number("halfMarkThreshold", t.halfMarks, "%", 0, 100, t.halfMarksHelp)}
-    </>
-  );
-}
 
 export default function SettingsPage() {
   const t = useCopy(copy);
@@ -155,11 +98,10 @@ export default function SettingsPage() {
   const setStudentVisibility = useMutation(api.studentRoster.setGlobalVisibility);
   const [studentSaving, setStudentSaving] = useState(false);
   const [listingSaving, setListingSaving] = useState(false);
-  const quizzes = useConfirmedQuery(api.quizFunctions.getMyQuizzes).data;
   const { preferences: p, set } = usePreferences();
   const cookieChoice = useCookieChoice();
   const mac = typeof navigator !== "undefined" && /Mac|iPhone|iPad/.test(navigator.platform);
-  useScrollToHash(me !== undefined && quizzes !== undefined);
+  useScrollToHash(me !== undefined);
 
   return (
     <div className="max-w-3xl w-full mx-auto pb-16 font-sans">
@@ -230,12 +172,6 @@ export default function SettingsPage() {
           ))}
         </div>
       </Section>
-
-      {(quizzes?.length ?? 0) > 0 && (
-        <Section id="old-quiz" icon={Timer} title={t.oldQuiz} description={t.oldQuizAbout}>
-          <div id="settings-quiz-timers"><QuizDefaults t={t} /></div>
-        </Section>
-      )}
 
       <Section id="cookies" icon={Cookie} title={t.cookies} description={t.cookiesAbout}>
         <Row id="settings-analytics" label={t.analytics} help={t.analyticsHelp} isDefault={cookieChoice !== true}>

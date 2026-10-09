@@ -9,16 +9,16 @@ Set `NEXT_PUBLIC_SUPPORT_EMAIL` (frontend build) and `CHAOS_SUPPORT_EMAIL`
 
 Suspend an account for 1-365 days, ban until manually restored, or restore it. Restricted accounts retain read access to their records but cannot edit, create, collect responses on their content, or use integration tokens. A workspace notice links to support. Suspensions end through a scheduled mutation, with a five-minute recovery sweep for overdue jobs.
 
-Forms and legacy quizzes can be taken offline under an admin hold. Hold release permits the owner to publish again; it does not automatically publish content. Published definitions, responses, attempts and scores remain intact. New admin controls require a reason and record actor, target and timestamp in the activity log.
+Forms (quizzes included) can be taken offline under an admin hold. Hold release permits the owner to publish again; it does not automatically publish content. Published definitions, responses and scores remain intact. New admin controls require a reason and record actor, target and timestamp in the activity log.
 
 ## Plans
 
 - New accounts receive one 30-day Pro trial at first profile creation. Signing in again does not renew it.
 - Granting or renewing Pro sets expiry to 30 days from the grant. Stale expiry jobs cannot revoke a later renewal.
-- Free allows five creations per UTC calendar month, shared across forms and legacy quizzes. Copies, imports and integration-created drafts count. Deleting content does not refund usage.
-- Pro removes the monthly creation cap and the platform response caps. A creator's own per-form response limit still applies. Existing Free response limits remain (100 completed legacy quiz attempts and the configured per-form cap, default 1,000).
+- Free allows five creations per UTC calendar month, shared across forms and quizzes. Copies, imports and integration-created drafts count. Deleting content does not refund usage.
+- Pro removes the monthly creation cap and the platform response caps. A creator's own per-form response limit still applies. Existing Free response limits remain (the configured per-form cap, default 1,000).
 - Downgrades preserve all content. Creations made while on Pro count toward that month's Free allowance if the account is downgraded.
-- Existing legacy elevated accounts retain their grant until an administrator explicitly sets a plan. Plan-based accounts ignore legacy quiz elevation snapshots, preventing permanent entitlement after expiry.
+- Existing legacy elevated accounts retain their grant until an administrator explicitly sets a plan. Plan-based accounts ignore the legacy elevation flag, preventing permanent entitlement after expiry.
 - Select loaded users (up to 100), individual users, or **Select all accounts**. Selected updates are atomic. All-account jobs process bounded batches and exclude accounts created after the job starts. Their progress appears in the admin page while it stays open.
 
 This is manual plan administration, not checkout, recurring billing or automatic charging.

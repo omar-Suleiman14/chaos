@@ -79,7 +79,7 @@ function useQueries(queries: Record<string, { query: unknown; args: unknown }>) 
     for (const n of names) subscriptions.set(n, (subscriptions.get(n) ?? 0) + 1);
     for (const k of keys) mount(k, 1);
     return () => { for (const n of names) { const c = (subscriptions.get(n) ?? 1) - 1; if (c) subscriptions.set(n, c); else subscriptions.delete(n); } for (const k of keys) mount(k, -1); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed by content
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- keyed by content
   }, [key]);
   const snapshot = useSyncExternalStore(subscribe, () => version, () => 0);
   void snapshot;
