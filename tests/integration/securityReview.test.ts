@@ -196,11 +196,12 @@ describe("security review: access codes", () => {
     expect(editor?.settings.accessCodeHash).toBeUndefined();
   });
 
-  it("locks code guessing after 20 tries in 10 minutes, and a pass works only for its own form", async () => {
+  it("locks anonymous code guessing after 20 wrong tries in 10 minutes, and a pass works only for its own form", async () => {
     const t = createTestConvex();
     const { owner, formId, shareId } = await ownerWithForm(t);
     await owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, access: "code" }, accessCode: "open-sesame" });
     for (let i = 0; i < 20; i++) expect(await t.mutation(api.respond.unlockForm, { shareId, code: `guess-${i}` })).toEqual({ ok: false });
+    // Locked before the code is checked, so a guesser learns nothing more.
     await expect(t.mutation(api.respond.unlockForm, { shareId, code: "open-sesame" })).rejects.toThrow(/RATE_LIMITED/);
     const other = await ownerWithForm(t);
     await other.owner.mutation(api.forms.updateFormSettings, { formId: other.formId, settings: { ...defaultFormSettings, access: "code" }, accessCode: "another-code" });
@@ -208,6 +209,53 @@ describe("security review: access codes", () => {
     if (!pass.ok) throw new Error("expected a pass");
     expect((await t.query(api.respond.getPublicForm, { shareId, accessCode: pass.grant })).state).toBe("code");
     await expect(owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, access: "code" }, accessCode: "1234" })).rejects.toThrow(/6–100/);
+  });
+
+  it("never spends the guessing budget on correct codes, so a whole class can enter", async () => {
+    const t = createTestConvex();
+    const { owner, formId, shareId } = await ownerWithForm(t);
+    await owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, access: "code" }, accessCode: "open-sesame" });
+    for (let i = 0; i < 60; i++) expect((await t.mutation(api.respond.unlockForm, { shareId, code: "open-sesame" })).ok).toBe(true);
+    for (let i = 0; i < 19; i++) await t.mutation(api.respond.unlockForm, { shareId, code: `typo-${i}` });
+    expect((await t.mutation(api.respond.unlockForm, { shareId, code: "open-sesame" })).ok).toBe(true);
+  });
+
+  it("keeps signed-in respondents able to unlock during anonymous guessing, with their own budget", async () => {
+    const t = createTestConvex();
+    const { owner, formId, shareId } = await ownerWithForm(t);
+    await owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, access: "code" }, accessCode: "open-sesame" });
+    for (let i = 0; i < 20; i++) await t.mutation(api.respond.unlockForm, { shareId, code: `guess-${i}` });
+    await expect(t.mutation(api.respond.unlockForm, { shareId, code: "open-sesame" })).rejects.toThrow(/RATE_LIMITED/);
+    const student = t.withIdentity(otherCreatorIdentity);
+    expect((await student.mutation(api.respond.unlockForm, { shareId, code: "open-sesame" })).ok).toBe(true);
+    // An account that guesses is limited on its own, without affecting anyone else.
+    for (let i = 0; i < 10; i++) expect(await student.mutation(api.respond.unlockForm, { shareId, code: `guess-${i}` })).toEqual({ ok: false });
+    await expect(student.mutation(api.respond.unlockForm, { shareId, code: "open-sesame" })).rejects.toThrow(/RATE_LIMITED/);
+    expect((await owner.mutation(api.respond.unlockForm, { shareId, code: "open-sesame" })).ok).toBe(true);
+  });
+
+  it("lifts a form-wide lock when the owner changes the code", async () => {
+    const t = createTestConvex();
+    const { owner, formId, shareId } = await ownerWithForm(t);
+    await owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, access: "code" }, accessCode: "open-sesame" });
+    for (let i = 0; i < 20; i++) await t.mutation(api.respond.unlockForm, { shareId, code: `guess-${i}` });
+    await expect(t.mutation(api.respond.unlockForm, { shareId, code: "open-sesame" })).rejects.toThrow(/RATE_LIMITED/);
+    // Saving other settings with the same code keeps the lock.
+    await owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, access: "code" }, accessCode: "open-sesame" });
+    await expect(t.mutation(api.respond.unlockForm, { shareId, code: "open-sesame" })).rejects.toThrow(/RATE_LIMITED/);
+    await owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, access: "code" }, accessCode: "new-sesame" });
+    expect((await t.mutation(api.respond.unlockForm, { shareId, code: "new-sesame" })).ok).toBe(true);
+  });
+
+  it("gives a locked signed-in account a fresh budget when the owner changes the code", async () => {
+    const t = createTestConvex();
+    const { owner, formId, shareId } = await ownerWithForm(t);
+    await owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, access: "code" }, accessCode: "open-sesame" });
+    const student = t.withIdentity(otherCreatorIdentity);
+    for (let i = 0; i < 10; i++) await student.mutation(api.respond.unlockForm, { shareId, code: `guess-${i}` });
+    await expect(student.mutation(api.respond.unlockForm, { shareId, code: "open-sesame" })).rejects.toThrow(/RATE_LIMITED/);
+    await owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, access: "code" }, accessCode: "new-sesame" });
+    expect((await student.mutation(api.respond.unlockForm, { shareId, code: "new-sesame" })).ok).toBe(true);
   });
 
   it("stops a burst of public submissions at the per-form rate limit", async () => {

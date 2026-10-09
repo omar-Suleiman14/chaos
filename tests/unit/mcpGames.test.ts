@@ -31,15 +31,15 @@ describe("MCP game contract", () => {
     }
   });
 
-  it("resolves the chosen theme, publishes the quiz by default, and never hosts", async () => {
+  it("resolves the chosen theme, keeps the quiz a draft by default, and never hosts", async () => {
     const call = vi.fn<McpCaller>(async () => ({ id: "form_1", kind: "form", title: input.title, status: "draft", editUrl: "e", shareUrl: null, resultsUrl: "r", readyToPublish: true, problems: [] }));
     const client = await connect(call);
     expect((await client.callTool({ name: "create_game_draft", arguments: { ...input, theme: "Midnight", sound: "off" } })).isError).toBeFalsy();
-    expect(call.mock.calls.map(([tool]) => tool)).toEqual(["create_game_draft", "publish_form"]);
+    expect(call.mock.calls.map(([tool]) => tool)).toEqual(["create_game_draft"]);
     expect(call).toHaveBeenCalledWith("create_game_draft", { form: expect.objectContaining({ theme: expect.objectContaining({ preset: "midnight" }), sound: "off", questions: input.questions }) });
     call.mockClear();
-    await client.callTool({ name: "create_game_draft", arguments: { ...input, publish: false } });
-    expect(call.mock.calls.map(([tool]) => tool)).toEqual(["create_game_draft"]);
+    await client.callTool({ name: "create_game_draft", arguments: { ...input, publish: true } });
+    expect(call.mock.calls.map(([tool]) => tool)).toEqual(["create_game_draft", "publish_form"]);
   });
 
   it("forwards timer/label settings and guarded advances with safe output", async () => {

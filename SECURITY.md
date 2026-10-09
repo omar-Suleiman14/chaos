@@ -28,4 +28,4 @@ For Better Auth, use a random deployment secret, include its Convex component in
 
 The operator is responsible for TLS, protected backend and administration endpoints, credential rotation, backups and restore testing, software updates, and the privacy of stored respondent data. Follow the [self-hosting guide](./docs/self-hosting.md) and use synthetic data for security testing.
 
-Run `pnpm audit --prod` to inspect runtime dependency advisories and `pnpm audit` to include development tools. Report actionable dependency findings privately when they expose application data or permissions. These checks do not replace an independent security review.
+Run `pnpm audit --prod` to inspect runtime dependency advisories; [docs/dependency-advisories.md](docs/dependency-advisories.md) records how each current one reaches Chaos and how it is handled. Run `pnpm audit` to include development tools. Report actionable dependency findings privately when they expose application data or permissions. These checks do not replace an independent security review.

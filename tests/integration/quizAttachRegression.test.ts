@@ -23,11 +23,11 @@ async function quizAndLesson() {
   await signIn(t, creator, "perry");
   const mcp = await connectMcp(convexMcpCaller(t, creator.subject));
   const quiz = structured(await mcp.callTool({ name: "create_form", arguments: {
-    title: "Cranial nerves check", quizMode: true,
+    title: "Cranial nerves check", quizMode: true, publish: true,
     questions: [{ type: "single_choice", label: "Which nerve moves the lateral rectus?", options: ["Abducens", "Trochlear"], correctAnswers: ["Abducens"], points: 1 }],
   } }));
   const lesson = structured(await mcp.callTool({ name: "create_lesson", arguments: {
-    metadata: { title: "Cranial nerves", description: "The twelve pairs", language: "en", tags: [] },
+    metadata: { title: "Cranial nerves", description: "The twelve pairs", language: "en", tags: [] }, publish: true,
     document: { schemaVersion: 1, blocks: [{ id: "intro", type: "paragraph", text: "Twelve pairs.", citations: [], conceptIds: [] }] },
   } }));
   return { t, mcp, quiz, lesson };

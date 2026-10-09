@@ -115,7 +115,11 @@ describe("Learn MCP", () => {
       const tool = tools.find(t => t.name === "create_lesson")!;
       expect(tool.inputSchema.properties).not.toHaveProperty("userId"); expect(tool.annotations?.readOnlyHint).toBe(false);
       expect(tools.find(t => t.name === "publish_lesson")?.annotations?.openWorldHint).toBe(true);
+      // A private draft unless the person asked to publish.
       await client.callTool({ name: "create_lesson", arguments: { metadata, document } });
+      expect(calls).toEqual([{ tool: "create_lesson", input: { metadata, document } }]);
+      calls.length = 0;
+      await client.callTool({ name: "create_lesson", arguments: { metadata, document, publish: true } });
       expect(calls).toEqual([
         { tool: "create_lesson", input: { metadata, document } },
         { tool: "publish_lesson", input: { lessonId: "lesson", expectedRevision: 0, visibility: "public" } },
