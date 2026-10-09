@@ -264,11 +264,11 @@
       "unit": "count"
     },
     "mcp.admin.listToolsBytes": {
-      "budget": 312297,
+      "budget": 312682,
       "unit": "bytes",
       "raised": {
         "from": 271782,
-        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. The MCP tool list grew with the study-lesson workflow and course tools (#122). Follow-up: shorten tool descriptions.",
+        "reason": "Measured after combining the existing study-lesson/course tools with #125, #126 and #131. Explicit student consent, private assistant drafts and configured self-hosted links add 385 bytes over the initial PR baseline. Accept the combined measured admin inventory as the starting budget with no extra headroom; shorten descriptions in follow-up work.",
         "at": "2026-10-09"
       }
     },
@@ -311,11 +311,11 @@
       }
     },
     "mcp.listToolsBytes": {
-      "budget": 287809,
+      "budget": 288194,
       "unit": "bytes",
       "raised": {
         "from": 247277,
-        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. The MCP tool list grew with the study-lesson workflow and course tools (#122). Follow-up: shorten tool descriptions.",
+        "reason": "Measured after combining the existing study-lesson/course tools with #125, #126 and #131. Explicit student consent, private assistant drafts and configured self-hosted links add 385 bytes over the initial PR baseline. Accept the combined measured inventory as the starting budget with no extra headroom; shorten descriptions in follow-up work.",
         "at": "2026-10-09"
       }
     },
