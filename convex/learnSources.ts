@@ -1,5 +1,6 @@
 import { getAuthIdentity } from "./authIdentity";
 import { consumeRate } from "./serverUtils";
+import { assertSourceStorageAvailable, changeSourceStorage, sourceUploadRateKey, SOURCE_UPLOADS_PER_HOUR, SOURCE_UPLOAD_WINDOW_MS } from "./sourceStorage";
 import { observeHttp } from "../lib/backendTelemetry";
 import { v, type Infer } from "convex/values";
 import { makeFunctionReference, type HttpRouter } from "convex/server";
@@ -516,8 +517,8 @@ export const registerUpload = internalMutation({
 });
 /** Shared validated registration; actor is verified by the UI or MCP transport. */
 export async function registerSourceUploadForActor(ctx: MutationCtx, actor: string, args: { metadata: Metadata; metadataVisibility: Infer<typeof visibility>; contentVisibility: Infer<typeof visibility>; storageId: Id<"_storage">; contentType: string; fingerprint?: Infer<typeof sourceFingerprint> }) {
-    // Bounds storage one account can add (each file is up to 25 MB); a refused upload's file is deleted by the caller.
-    await consumeRate(ctx, `learn:source-upload:${actor}`, 40, 60 * 60 * 1000);
+    // Bounds how fast one account can add files (each up to 25 MB); a refused upload's file is deleted by the caller.
+    await consumeRate(ctx, sourceUploadRateKey(actor), SOURCE_UPLOADS_PER_HOUR, SOURCE_UPLOAD_WINDOW_MS);
     validateMetadata(args.metadata);
     const file = await ctx.db.system.get("_storage", args.storageId);
     if (
@@ -552,6 +553,8 @@ export async function registerSourceUploadForActor(ctx: MutationCtx, actor: stri
       (await ctx.db.system.get("_storage", duplicate.storageId))
     )
       return { sourceId: duplicate._id, duplicate: true };
+    // A duplicate above reuses a kept file; anything new must fit the account's storage allowance.
+    await assertSourceStorageAvailable(ctx, actor, file.size);
     if (args.fingerprint && (args.fingerprint.chunks.length > SOURCE_SIMILARITY_LIMITS.sampledChunks || args.fingerprint.chunks.some(chunk => !/^[0-9a-f]{16}$/.test(chunk)))) throw new Error("Invalid source fingerprint");
     const nearCandidates = args.fingerprint ? await ctx.db.query("learnSources").withIndex("by_ownerId_and_contentType_and_status", q => q.eq("ownerId", actor).eq("contentType", args.contentType).eq("status", "active")).order("desc").take(SOURCE_SIMILARITY_LIMITS.candidates) : [];
     const near = nearCandidates.find(source => source.fingerprint && source.size !== undefined && source.sha256 !== file.sha256 && nearByteDuplicate(args.fingerprint!, file.size, source.fingerprint, source.size));
@@ -566,8 +569,10 @@ export async function registerSourceUploadForActor(ctx: MutationCtx, actor: stri
       createdAt: Date.now(),
       status: "active",
     });
+    await changeSourceStorage(ctx, actor, file.size);
     return { sourceId, duplicate: false, ...(near ? { nearDuplicateOf: near._id } : {}) };
 }
+const admitUpload = makeFunctionReference<"query", { bytes: number }, { ok: true } | { ok: false; status: number; message: string }>("sourceStorage:admitUpload");
 const registration = makeFunctionReference<
   "mutation",
   {
@@ -612,6 +617,9 @@ export const upload = httpAction(async (ctx, request) => observeHttp(ctx, "sourc
     (!/^\d+$/.test(declared) || Number(declared) > LEARN_LIMITS.fileBytes)
   )
     return new Response("File too large", { status: 413, headers });
+  // Refuse before reading the body, so a spent hourly budget or a full allowance never stores a file.
+  const admission = await ctx.runQuery(admitUpload, { bytes: declared ? Number(declared) : 1 });
+  if (!admission.ok) return new Response(admission.message, { status: admission.status, headers });
   const reader = request.body?.getReader();
   if (!reader) return new Response("Empty file", { status: 400, headers });
   let storageId: Id<"_storage"> | undefined;

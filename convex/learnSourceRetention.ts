@@ -1,3 +1,4 @@
+import { changeSourceStorage } from "./sourceStorage";
 import { makeFunctionReference } from "convex/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
@@ -84,6 +85,7 @@ export const cleanup = internalMutation({
       // validator in learnAssetModel), with no source IDs or file references.
       if (await ctx.db.system.get("_storage", job.storageId)) { await ctx.storage.delete(job.storageId); deleted++; }
       await ctx.db.patch("learnSources", source._id, { storageId: undefined });
+      await changeSourceStorage(ctx, source.ownerId, -(source.size ?? 0));
       await ctx.db.delete("learnSourceCleanup", job._id);
     }
     if (jobs.length) await ctx.scheduler.runAfter(0, worker, {});

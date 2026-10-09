@@ -21,7 +21,8 @@ describe("public plan catalog", () => {
   it("does not advertise active checkout or a made-up storage allowance", () => {
     expect(planCatalog.billing.available).toBe(false);
     expect(planCatalog.billing.automaticCharges).toBe(false);
-    expect(planCatalog.uploads.totalStorageQuota).toBe("not-enforced");
+    expect(planCatalog.uploads.totalStorageQuota).toBe("teaching-sources");
+    expect(planCatalog.uploads.teachingStorageBytes).toBe(2 * 1024 ** 3);
     expect(planCatalog.uploads.teachingFileBytes).toBe(LEARN_LIMITS.fileBytes);
     expect(planCatalog.uploads.formFileBytes).toBe(10 * 1024 * 1024);
   });
