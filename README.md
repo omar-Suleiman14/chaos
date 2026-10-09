@@ -37,7 +37,7 @@ Chaos is an open platform for teaching and learning. Write lessons and put them 
 
 ## Run it locally
 
-You need Node.js 24.x, [pnpm](https://pnpm.io) 12.4.2 (pinned in `package.json`), a backend deployment and a configured authentication provider. Choose Clerk + Convex, Better Auth + Convex Cloud, or Better Auth + self-hosted Convex with no required paid service. The complete setup and migration instructions are in [self-hosting](./docs/self-hosting.md).
+You need Node.js 24.x, [pnpm](https://pnpm.io) 12.10.1 (pinned in `package.json`), a backend deployment and a configured authentication provider. Choose Clerk + Convex, Better Auth + Convex Cloud, or Better Auth + self-hosted Convex with no required paid service. The complete setup and migration instructions are in [self-hosting](./docs/self-hosting.md).
 
 ```bash
 pnpm install
