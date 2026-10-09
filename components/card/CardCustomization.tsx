@@ -22,7 +22,7 @@ export default function CardCustomization({ card, actorId, onboarding = false, s
   const save = useMutation(api.memberCards.customizeCard);
   const me = useQuery(api.quizFunctions.getCurrentUser);
   const [studentChoice, setStudentChoice] = useState<boolean | null>(null);
-  const showStudentCards = studentChoice ?? !me?.hideStudentCards;
+  const showStudentCards = studentChoice ?? (!!me && !me.hideStudentCards && me.studentCardsPublic === true);
   const shapeSeed = (index: number | null) => index === null ? parseAvatarSeed(card.seed).name : `${avatarSeed(actorId)}:avatar:${index}`;
   const withHue = (base: string) => hue === null ? base : `${base}:hue:${hue}`;
   const seed = withHue(shapeSeed(avatar));
@@ -31,7 +31,7 @@ export default function CardCustomization({ card, actorId, onboarding = false, s
   async function submit(skip = false) {
     if (!skip && !name.trim()) { setErrorField("name"); toast.error(ar ? "أدخل اسمك." : "Enter your name.", { id: "card-save" }); return; }
     setBusy(true); setErrorField(null);
-    try { await save(skip ? { skip: true, ...(studentChoice === null ? {} : { showStudentCards }) } : { name, ...(username.trim().toLowerCase() === card.username ? {} : { username }), style, ...(avatar === null ? {} : { avatar }), avatarHue: hue, showStudentCards, finishOnboarding: onboarding }); if (skip) onDone?.(); else { setReady(true); setJustSaved(true); toast.success(ar ? "تم حفظ بطاقتك" : "Your card is saved", { id: "card-save" }); } }
+    try { await save(skip ? { skip: true, ...(studentChoice === null ? {} : { showStudentCards }) } : { name, ...(username.trim().toLowerCase() === card.username ? {} : { username }), style, ...(avatar === null ? {} : { avatar }), avatarHue: hue, ...(studentChoice === null ? {} : { showStudentCards }), finishOnboarding: onboarding }); if (skip) onDone?.(); else { setReady(true); setJustSaved(true); toast.success(ar ? "تم حفظ بطاقتك" : "Your card is saved", { id: "card-save" }); } }
     catch (e) {
       const parsed = parseError(e);
       if (["INVALID_USERNAME", "USERNAME_TAKEN", "USERNAME_CONFLICT"].includes(parsed.code)) {
@@ -56,7 +56,7 @@ export default function CardCustomization({ card, actorId, onboarding = false, s
       <fieldset><legend>{ar ? "تصميم البطاقة" : "Card design"}</legend><div className="mc-customize__swatches">
         {CARD_THEMES.map((theme, index) => <button type="button" key={theme.name} className="mc-swatch mc-swatch--design" style={{ background: `linear-gradient(135deg, ${theme.art[0]}, ${theme.art[1]} 55%, ${theme.art[2]})` }} aria-pressed={style === index} aria-label={theme.name} title={theme.name} onClick={() => setStyle(index)} />)}
       </div></fieldset>
-      <div className="mc-customize__visibility"><div><span id="card-student-label">{ar ? "أظهر بطاقتي لدى معلّميّ" : "Show my Card with my teachers"}</span><p className="mc-help">{ar ? "تظهر بطاقتك علنًا مع معلّميك تلقائيًا. يمكنك إيقاف ذلك هنا أو في الإعدادات." : "Visible publicly by default. You can turn this off here or in settings."}</p></div><WsSwitch label={ar ? "أظهر بطاقتي لدى معلّميّ" : "Show my Card with my teachers"} hideLabel checked={showStudentCards} disabled={!me || busy} onChange={setStudentChoice} /></div>
+      <div className="mc-customize__visibility"><div><span id="card-student-label">{ar ? "أظهر بطاقتي لدى معلّميّ" : "Show my Card with my teachers"}</span><p className="mc-help">{ar ? "بطاقتك خاصة ما لم تشغّل هذا الخيار. يمكنك تغييره هنا أو في الإعدادات." : "Private unless you turn this on. You can change it here or in settings."}</p></div><WsSwitch label={ar ? "أظهر بطاقتي لدى معلّميّ" : "Show my Card with my teachers"} hideLabel checked={showStudentCards} disabled={!me || busy} onChange={setStudentChoice} /></div>
       <div className="mc-customize__actions"><button className="ws-btn ws-btn--primary" disabled={busy || !me}>{busy ? (ar ? "جارٍ الحفظ…" : "Saving…") : (ar ? "احفظ بطاقتي" : "Save my Card")}</button>{onboarding && <button type="button" className="ws-btn" disabled={busy} onClick={() => void submit(true)}>{ar ? "تخطَّ الآن" : "Skip for now"}</button>}</div>
     </form>}</div>
   </section>;

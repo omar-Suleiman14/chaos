@@ -40,6 +40,14 @@ it("preserves an existing opt-out and saves changes from the accessible switch",
   await waitFor(() => expect(state.save).toHaveBeenCalledWith({ skip: true, showStudentCards: true }));
 });
 
+it("starts private and saves no Card preference the person did not choose", async () => {
+  state.query = { hideStudentCards: false };
+  const view = render(<CardCustomization card={card} actorId="student" onboarding onDone={vi.fn()} />);
+  expect(view.getByRole("switch", { name: "Show my Card with my teachers" })).not.toBeChecked();
+  fireEvent.click(view.getByRole("button", { name: "Skip for now" }));
+  await waitFor(() => expect(state.save).toHaveBeenCalledWith({ skip: true }));
+});
+
 it("does not submit the app-generated username again when saving other card changes", async () => {
   state.query = {};
   const view = render(<CardCustomization card={{ ...card, username: "user98049" }} actorId="student" />);
