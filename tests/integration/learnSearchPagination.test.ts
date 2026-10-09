@@ -2,15 +2,18 @@ import { expect, it } from "vitest";
 import { api } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { measureConvex } from "../../perf/lib/convex";
-import { readSearchCursor, writeSearchCursor } from "../../convex/learnSearchCursor";
+import { authorSearchCursor, readSearchCursor, writeSearchCursor } from "../../convex/learnSearchCursor";
 import { creatorIdentity } from "../fixtures";
 import { createTestConvex } from "./setup";
 
 const metadata = { title: "Synthetic lesson", description: "", language: "en", tags: [] };
 const document = { schemaVersion: 1 as const, blocks: [{ id: "p", type: "paragraph" as const, text: "Public teaching", citations: [], conceptIds: [] }] };
-async function fixture(count = 3, fullTextCount = 0) {
+async function fixture(count = 3, fullTextCount = 0, prefixUsers = 0) {
   const t = createTestConvex();
   const seeded = await t.run(async ctx => {
+    for (let i = 0; i < prefixUsers; i++) {
+      await ctx.db.insert("users", { clerkId: `unrelated-${i}`, name: "Unrelated", username: `unrelated-${i}`, email: `unrelated-${i}@example.test`, createdAt: i });
+    }
     const userId = await ctx.db.insert("users", { clerkId: creatorIdentity.subject, name: "NoraSubstring", username: "synthetic-author", email: creatorIdentity.email, createdAt: 0 });
     const lessonIds: Id<"lessons">[] = [];
     for (let i = 0; i < count; i++) {
@@ -31,6 +34,40 @@ it("supports an exact timestamp/owner search probe without unrelated lesson read
   const measured = await measureConvex(() => f.t.run(ctx => ctx.db.query("lessons").withSearchIndex("search_text", q => q.search("searchText", "substring").eq("ownerId", lesson.ownerId).eq("_creationTime", lesson._creationTime)).filter(q => q.eq(q.field("_id"), lesson._id)).paginate({ cursor: null, numItems: 1, maximumRowsRead: 20 })));
   expect(measured.result.page.map(row => row._id)).toEqual([lesson._id]);
   expect(measured.cost.documentsRead).toBe(1);
+});
+
+it("finds English substring author matches beyond the first 100 directory records with bounded requests", async () => {
+  const f = await fixture(3, 0, 120);
+  const first = await measureConvex(() => f.search(null, 20));
+  expect(first.result.page).toEqual([]);
+  expect(first.result.isDone).toBe(false);
+  expect(first.cost.documentsRead).toBeLessThanOrEqual(100);
+  const second = await measureConvex(() => f.search(first.result.continueCursor, 20));
+  expect(second.result.page.map(row => row.lessonId)).toEqual(f.lessonIds);
+  expect(second.result.isDone).toBe(true);
+  expect(second.cost.documentsRead).toBeLessThanOrEqual(40);
+  expect((await allPages(f)).map(row => row.lessonId)).toEqual(f.lessonIds);
+});
+
+it("preserves Arabic substring author matches beyond the old directory ceiling", async () => {
+  const f = await fixture(3, 0, 120);
+  await f.t.run(ctx => ctx.db.patch("users", f.userId, { name: "مدرسسامر" }));
+  expect((await allPages(f, 1, "سامر unknown")).map(row => row.lessonId)).toEqual(f.lessonIds);
+});
+
+it("resumes an existing author cursor at the old 100-user boundary", async () => {
+  const f = await fixture(1, 0, 120);
+  const directory = await f.t.run(ctx => ctx.db.query("users").paginate({ cursor: null, numItems: 100 }));
+  const cursor = authorSearchCursor("substring");
+  cursor.userCursor = directory.continueCursor;
+  cursor.usersRead = 100;
+  const result = await f.search(writeSearchCursor(cursor));
+  expect(result.page.map(row => row.lessonId)).toEqual(f.lessonIds);
+  if (!result.isDone) {
+    const exhausted = await f.search(result.continueCursor);
+    expect(exhausted.page).toEqual([]);
+    expect(exhausted.isDone).toBe(true);
+  }
 });
 
 it("does not trust client-controlled pending IDs to broaden owner or publication access", async () => {
