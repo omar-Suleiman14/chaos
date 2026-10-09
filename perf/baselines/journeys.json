@@ -42,16 +42,26 @@
       }
     },
     "journey.dashboard.documentsRead": {
-      "budget": 41,
-      "unit": "count"
+      "budget": 42,
+      "unit": "count",
+      "raised": {
+        "from": 41,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Dashboard and lesson reads grew with version history and course navigation (#121-#123).",
+        "at": "2026-10-09"
+      }
     },
     "journey.dashboard.documentsWritten": {
       "budget": 1,
       "unit": "count"
     },
     "journey.dashboard.payloadBytes": {
-      "budget": 25506,
-      "unit": "bytes"
+      "budget": 25507,
+      "unit": "bytes",
+      "raised": {
+        "from": 25506,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Dashboard and lesson reads grew with version history and course navigation (#121-#123).",
+        "at": "2026-10-09"
+      }
     },
     "journey.dashboard.readAmplification": {
       "budget": 12,
@@ -147,8 +157,13 @@
       "unit": "bytes"
     },
     "journey.liveJoin.databaseQueries": {
-      "budget": 10,
-      "unit": "count"
+      "budget": 13,
+      "unit": "count",
+      "raised": {
+        "from": 10,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Live rooms read game content (liveGameContent) and player counts (livePlayerCounts) from separate tables so phones avoid reading the whole game. Follow-up: skip the content read while a room is in the lobby.",
+        "at": "2026-10-09"
+      }
     },
     "journey.liveJoin.documentsRead": {
       "budget": 36,

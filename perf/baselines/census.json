@@ -10,24 +10,44 @@
       "unit": "count"
     },
     "editor.keystroke.renders": {
-      "budget": 93,
-      "unit": "count"
+      "budget": 94,
+      "unit": "count",
+      "raised": {
+        "from": 93,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Render counts grew with the classroom tools, reader menus and version history (#113-#123). Lower with pnpm perf:ratchet as they are trimmed.",
+        "at": "2026-10-09"
+      }
     },
     "editor.maxRendersPerCommit": {
-      "budget": 84,
-      "unit": "count"
+      "budget": 85,
+      "unit": "count",
+      "raised": {
+        "from": 84,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Render counts grew with the classroom tools, reader menus and version history (#113-#123). Lower with pnpm perf:ratchet as they are trimmed.",
+        "at": "2026-10-09"
+      }
     },
     "editor.mount.renders": {
-      "budget": 907,
-      "unit": "count"
+      "budget": 908,
+      "unit": "count",
+      "raised": {
+        "from": 907,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Render counts grew with the classroom tools, reader menus and version history (#113-#123). Lower with pnpm perf:ratchet as they are trimmed.",
+        "at": "2026-10-09"
+      }
     },
     "editor.sameFunctionManyArgs": {
       "budget": 0,
       "unit": "count"
     },
     "editor.serverEcho.renders": {
-      "budget": 93,
-      "unit": "count"
+      "budget": 94,
+      "unit": "count",
+      "raised": {
+        "from": 93,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Render counts grew with the classroom tools, reader menus and version history (#113-#123). Lower with pnpm perf:ratchet as they are trimmed.",
+        "at": "2026-10-09"
+      }
     },
     "editor.subscriptions": {
       "budget": 1,
@@ -38,8 +58,13 @@
       "unit": "count"
     },
     "giantLesson.appendBlock.renders": {
-      "budget": 1081,
-      "unit": "count"
+      "budget": 1083,
+      "unit": "count",
+      "raised": {
+        "from": 1081,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Render counts grew with the classroom tools, reader menus and version history (#113-#123). Lower with pnpm perf:ratchet as they are trimmed.",
+        "at": "2026-10-09"
+      }
     },
     "giantLesson.domNodes": {
       "budget": 4808,
@@ -55,12 +80,12 @@
       "unit": "count"
     },
     "giantLesson.mount.renders": {
-      "budget": 5085,
+      "budget": 5090,
       "unit": "count",
       "raised": {
-        "from": 5083,
-        "reason": "Listen icon becomes a menu holding the read-aloud settings (moved out of Reading settings); the settings themselves still load on demand.",
-        "at": "2026-10-07"
+        "from": 5085,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Render counts grew with the classroom tools, reader menus and version history (#113-#123). Lower with pnpm perf:ratchet as they are trimmed.",
+        "at": "2026-10-09"
       }
     },
     "lesson.appendBlock.blockBodies": {
@@ -68,28 +93,38 @@
       "unit": "count"
     },
     "lesson.appendBlock.renders": {
-      "budget": 201,
-      "unit": "count"
+      "budget": 203,
+      "unit": "count",
+      "raised": {
+        "from": 201,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Render counts grew with the classroom tools, reader menus and version history (#113-#123). Lower with pnpm perf:ratchet as they are trimmed.",
+        "at": "2026-10-09"
+      }
     },
     "lesson.duplicateSubscriptions": {
       "budget": 3,
       "unit": "count"
     },
     "lesson.maxRendersPerCommit": {
-      "budget": 104,
-      "unit": "count"
+      "budget": 105,
+      "unit": "count",
+      "raised": {
+        "from": 104,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Render counts grew with the classroom tools, reader menus and version history (#113-#123). Lower with pnpm perf:ratchet as they are trimmed.",
+        "at": "2026-10-09"
+      }
     },
     "lesson.mount.blockBodies": {
       "budget": 60,
       "unit": "count"
     },
     "lesson.mount.renders": {
-      "budget": 688,
+      "budget": 690,
       "unit": "count",
       "raised": {
-        "from": 686,
-        "reason": "Listen icon becomes a menu holding the read-aloud settings (moved out of Reading settings); the settings themselves still load on demand.",
-        "at": "2026-10-07"
+        "from": 688,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Render counts grew with the classroom tools, reader menus and version history (#113-#123). Lower with pnpm perf:ratchet as they are trimmed.",
+        "at": "2026-10-09"
       }
     },
     "lesson.sameFunctionManyArgs": {

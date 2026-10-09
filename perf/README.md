@@ -202,13 +202,17 @@ the confirmed result then replaces the copy whole.
 - Sidebar destinations prefetch their whole page (`IntentLink eager`), so
   switching pages does not stop at the loading skeleton.
 
-## Manual performance runs
+## Performance runs
 
-Expensive performance suites run only when they are useful. Start
+The deterministic budgets (Convex reads, render counts, stylesheet costs and
+bundle sizes) run on every pull request in CI's **Production build** job, after
+the build, and fail it on a regression. Raising a budget needs
+`pnpm perf:ratchet raise <metric> --reason "..."`; the perf guard in Static
+checks rejects a quiet raise.
+
+Expensive suites run only when they are useful. Start
 `.github/workflows/perf.yml` from the Actions tab and choose deterministic
-budgets, browser measurements or both. The underlying commands remain
-available locally, so removing scheduled CI does not remove any performance
-coverage.
+budgets, browser measurements or both.
 
 ## Off the main thread
 

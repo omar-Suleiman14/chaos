@@ -103,12 +103,22 @@
       }
     },
     "dashboard.documentsRead": {
-      "budget": 36,
-      "unit": "count"
+      "budget": 37,
+      "unit": "count",
+      "raised": {
+        "from": 36,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Dashboard and lesson reads grew with version history and course navigation (#121-#123).",
+        "at": "2026-10-09"
+      }
     },
     "dashboard.payloadBytes": {
-      "budget": 21111,
-      "unit": "bytes"
+      "budget": 21112,
+      "unit": "bytes",
+      "raised": {
+        "from": 21111,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Dashboard and lesson reads grew with version history and course navigation (#121-#123).",
+        "at": "2026-10-09"
+      }
     },
     "dashboard.readAmplification": {
       "budget": 11,
@@ -184,32 +194,62 @@
       "unit": "count"
     },
     "live.host.bytesRead": {
-      "budget": 10500,
-      "unit": "bytes"
+      "budget": 10762,
+      "unit": "bytes",
+      "raised": {
+        "from": 10500,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Live rooms read game content (liveGameContent) and player counts (livePlayerCounts) from separate tables so phones avoid reading the whole game. Follow-up: skip the content read while a room is in the lobby.",
+        "at": "2026-10-09"
+      }
     },
     "live.host.databaseQueries": {
-      "budget": 2,
-      "unit": "count"
+      "budget": 4,
+      "unit": "count",
+      "raised": {
+        "from": 2,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Live rooms read game content (liveGameContent) and player counts (livePlayerCounts) from separate tables so phones avoid reading the whole game. Follow-up: skip the content read while a room is in the lobby.",
+        "at": "2026-10-09"
+      }
     },
     "live.host.documentsRead": {
-      "budget": 31,
-      "unit": "count"
+      "budget": 33,
+      "unit": "count",
+      "raised": {
+        "from": 31,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Live rooms read game content (liveGameContent) and player counts (livePlayerCounts) from separate tables so phones avoid reading the whole game. Follow-up: skip the content read while a room is in the lobby.",
+        "at": "2026-10-09"
+      }
     },
     "live.host.payloadBytes": {
-      "budget": 3784,
-      "unit": "bytes"
+      "budget": 3788,
+      "unit": "bytes",
+      "raised": {
+        "from": 3784,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Live rooms read game content (liveGameContent) and player counts (livePlayerCounts) from separate tables so phones avoid reading the whole game. Follow-up: skip the content read while a room is in the lobby.",
+        "at": "2026-10-09"
+      }
     },
     "live.host.readAmplification": {
-      "budget": 10,
-      "unit": "count"
+      "budget": 11,
+      "unit": "count",
+      "raised": {
+        "from": 10,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Live rooms read game content (liveGameContent) and player counts (livePlayerCounts) from separate tables so phones avoid reading the whole game. Follow-up: skip the content read while a room is in the lobby.",
+        "at": "2026-10-09"
+      }
     },
     "live.player.bytesRead": {
       "budget": 1758,
       "unit": "bytes"
     },
     "live.player.databaseQueries": {
-      "budget": 2,
-      "unit": "count"
+      "budget": 3,
+      "unit": "count",
+      "raised": {
+        "from": 2,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Live rooms read game content (liveGameContent) and player counts (livePlayerCounts) from separate tables so phones avoid reading the whole game. Follow-up: skip the content read while a room is in the lobby.",
+        "at": "2026-10-09"
+      }
     },
     "live.player.documentsRead": {
       "budget": 2,
@@ -224,44 +264,74 @@
       "unit": "count"
     },
     "mcp.admin.listToolsBytes": {
-      "budget": 271782,
-      "unit": "bytes"
+      "budget": 312297,
+      "unit": "bytes",
+      "raised": {
+        "from": 271782,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. The MCP tool list grew with the study-lesson workflow and course tools (#122). Follow-up: shorten tool descriptions.",
+        "at": "2026-10-09"
+      }
     },
     "mcp.admin.tools": {
-      "budget": 137,
-      "unit": "count"
+      "budget": 150,
+      "unit": "count",
+      "raised": {
+        "from": 137,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. The MCP tool list grew with the study-lesson workflow and course tools (#122). Follow-up: shorten tool descriptions.",
+        "at": "2026-10-09"
+      }
     },
     "mcp.getLesson.bytesRead": {
-      "budget": 9837,
-      "unit": "bytes"
+      "budget": 10347,
+      "unit": "bytes",
+      "raised": {
+        "from": 9837,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Dashboard and lesson reads grew with version history and course navigation (#121-#123).",
+        "at": "2026-10-09"
+      }
     },
     "mcp.getLesson.databaseQueries": {
       "budget": 7,
       "unit": "count"
     },
     "mcp.getLesson.documentsRead": {
-      "budget": 6,
-      "unit": "count"
+      "budget": 8,
+      "unit": "count",
+      "raised": {
+        "from": 6,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Dashboard and lesson reads grew with version history and course navigation (#121-#123).",
+        "at": "2026-10-09"
+      }
     },
     "mcp.getLesson.payloadBytes": {
       "budget": 14634,
       "unit": "bytes"
     },
     "mcp.getLesson.readAmplification": {
-      "budget": 60,
-      "unit": "count"
+      "budget": 80,
+      "unit": "count",
+      "raised": {
+        "from": 60,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Dashboard and lesson reads grew with version history and course navigation (#121-#123).",
+        "at": "2026-10-09"
+      }
     },
     "mcp.largestToolBytes": {
-      "budget": 12072,
-      "unit": "bytes"
-    },
-    "mcp.listToolsBytes": {
-      "budget": 247277,
+      "budget": 14759,
       "unit": "bytes",
       "raised": {
-        "from": 246805,
-        "reason": "OAuth offline_access is now advertised in tool security metadata so MCP clients can refresh expired access tokens; measured in nightly run 37594838168.",
-        "at": "2026-10-07"
+        "from": 12072,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. The MCP tool list grew with the study-lesson workflow and course tools (#122). Follow-up: shorten tool descriptions.",
+        "at": "2026-10-09"
+      }
+    },
+    "mcp.listToolsBytes": {
+      "budget": 287809,
+      "unit": "bytes",
+      "raised": {
+        "from": 247277,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. The MCP tool list grew with the study-lesson workflow and course tools (#122). Follow-up: shorten tool descriptions.",
+        "at": "2026-10-09"
       }
     },
     "mcp.searchForms.bytesRead": {
@@ -290,8 +360,13 @@
       "unit": "count"
     },
     "mcp.tools": {
-      "budget": 119,
-      "unit": "count"
+      "budget": 132,
+      "unit": "count",
+      "raised": {
+        "from": 119,
+        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. The MCP tool list grew with the study-lesson workflow and course tools (#122). Follow-up: shorten tool descriptions.",
+        "at": "2026-10-09"
+      }
     },
     "quizzes.respondent.bytesRead": {
       "budget": 5052,
