@@ -101,9 +101,14 @@ async function readPublicLesson(id: string): Promise<Lesson | null> {
     moderation: "ok", quality: "none", createdAt: result.createdAt, updatedAt: published.publishedAt };
 }
 
-/** A sitemap file holds at most 50,000 URLs; discovery stops there and later entries need sitemap shards. */
-const SITEMAP_URL_LIMIT = 50_000;
-const SITEMAP_PAGE_LIMIT = 1_000;
+/**
+ * Discovery reads every page; the sitemap splits the result into 50,000-URL shards (lib/sitemap.ts).
+ * The page bound only stops a runaway loop (a million scanned rows), and hitting it is logged, never silent.
+ */
+const DISCOVERY_PAGE_LIMIT = 20_000;
+function warnIfTruncated(what: string, pages: number, done: boolean) {
+  if (!done && pages >= DISCOVERY_PAGE_LIMIT) console.error(`sitemap: ${what} discovery stopped after ${pages} pages; later entries are missing`);
+}
 
 /** Published, explicitly indexable lesson ids. Preview deployments return no entries. */
 export async function listIndexableLessons(): Promise<{ id: string; publishedAt: number }[]> {
@@ -112,13 +117,15 @@ export async function listIndexableLessons(): Promise<{ id: string; publishedAt:
   const result: { id: string; publishedAt: number }[] = [];
   let cursor: string | null = null;
   // Follows every page (filtered pages can be empty), bounded by the sitemap's URL limit.
-  for (let page = 0; page < SITEMAP_PAGE_LIMIT && result.length < SITEMAP_URL_LIMIT; page++) {
+  let page = 0, done = false;
+  for (; page < DISCOVERY_PAGE_LIMIT && !done; page++) {
     const batch: { page: { lessonId: string; publishedAt: number }[]; isDone: boolean; continueCursor: string } = await backend.query(api.learnFrontend.listIndexableLessons, { paginationOpts: { numItems: 50, cursor } });
     result.push(...batch.page.map(entry => ({ id: entry.lessonId, publishedAt: entry.publishedAt })));
-    if (batch.isDone) break;
+    done = batch.isDone;
     cursor = batch.continueCursor;
   }
-  return result.slice(0, SITEMAP_URL_LIMIT);
+  warnIfTruncated("lesson", page, done);
+  return result;
 }
 
 /** Server read of a published public course for the course page, metadata and sitemap. */
@@ -138,13 +145,15 @@ export async function listPublicCourses(): Promise<{ id: string; updatedAt: numb
   if (!backend || (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production")) return [];
   const result: { id: string; updatedAt: number }[] = [];
   let cursor: string | null = null;
-  for (let page = 0; page < SITEMAP_PAGE_LIMIT && result.length < SITEMAP_URL_LIMIT; page++) {
+  let page = 0, done = false;
+  for (; page < DISCOVERY_PAGE_LIMIT && !done; page++) {
     const batch: { page: { id: string; updatedAt: number }[]; isDone: boolean; continueCursor: string } = await backend.query(api.courses.listIndexable, { paginationOpts: { numItems: 100, cursor } });
     result.push(...batch.page);
-    if (batch.isDone) break;
+    done = batch.isDone;
     cursor = batch.continueCursor;
   }
-  return result.slice(0, SITEMAP_URL_LIMIT);
+  warnIfTruncated("course", page, done);
+  return result;
 }
 
 /** The newest public courses, first page of the directory, for the first HTML of /learn. */

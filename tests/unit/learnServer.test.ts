@@ -37,10 +37,13 @@ describe("published Learn server metadata", () => {
       .mockResolvedValueOnce({ page: [{ lessonId: "public", publishedAt: 10 }], isDone: true, continueCursor: "done" });
     expect(await listIndexableLessons()).toEqual([{ id: "public", publishedAt: 10 }]);
     expect(query.mock.calls[1][1].paginationOpts.cursor).toBe("next");
-    // Empty filtered pages never end discovery early; only the sitemap's own bounds do.
+    // Empty filtered pages never end discovery early; only the runaway-loop bound does, and it is logged.
     query.mockReset().mockResolvedValue({ page: [], isDone: false, continueCursor: "next" });
+    const error = vi.spyOn(console, "error").mockImplementation(() => {});
     await listIndexableLessons();
-    expect(query).toHaveBeenCalledTimes(1000);
+    expect(query).toHaveBeenCalledTimes(20_000);
+    expect(error).toHaveBeenCalledWith(expect.stringContaining("lesson discovery stopped"));
+    error.mockRestore();
   });
   it("lists every public course across pages, not just the newest hundred", async () => {
     query.mockResolvedValueOnce({ page: Array.from({ length: 100 }, (_, i) => ({ id: `c${i}`, updatedAt: i })), isDone: false, continueCursor: "p2" })
