@@ -30,7 +30,8 @@ describe("published Learn server metadata", () => {
     expect(await fetchPublicLesson("private")).toBeNull();
     vi.stubEnv("VERCEL_ENV", "preview");
     expect(await listIndexableLessons()).toEqual([]);
-    expect(query).toHaveBeenCalledTimes(1);
+    // The cached miss is confirmed with one live read, so a fresh publication shows at once.
+    expect(query).toHaveBeenCalledTimes(2);
   });
   it("follows filtered empty pages and bounds discovery work", async () => {
     query.mockResolvedValueOnce({ page: [], isDone: false, continueCursor: "next" })
