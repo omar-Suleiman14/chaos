@@ -190,7 +190,7 @@ export const unlockForm = mutation({
     const form = await formByShareId(ctx, args.shareId);
     if (!form || form.settings.access !== "code" || !form.settings.accessCodeHash) return { ok: false as const };
     const identity = await getAuthIdentity(ctx);
-    const budgets = unlockBudgets(form._id, identity?.subject ?? null);
+    const budgets = await unlockBudgets(form._id, form.settings.accessCodeHash, identity?.subject ?? null);
     for (const { key, limit } of budgets) await assertRateAvailable(ctx, key, limit, UNLOCK_WINDOW_MS);
     const code = args.code.trim().slice(0, 100);
     if (!code || (await sha256Hex(`${form._id}:${code}`)) !== form.settings.accessCodeHash) {

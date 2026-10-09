@@ -560,7 +560,7 @@ export const sectionsEn: DocSection[] = [
             items: [
               "**Anyone**: anyone with the link. Answers are anonymous, so Chaos cannot limit one person to one response.",
               "**Signed in**: people signed in to Chaos. Their responses are linked to their account. Turn on **One response per person** if you need it.",
-              "**With a code**: people you give an access code to, for example invited guests. Type a code of at least 6 characters. Only wrong codes count toward the guessing limit. After 20 wrong tries in 10 minutes from people who aren't signed in, the form stops accepting codes from them for up to 10 minutes; signed-in people have their own limit and can still enter. Changing the code lifts the lock straight away. When you edit a form that already has a code, leave the box empty to keep it.",
+              "**With a code**: people you give an access code to, for example invited guests. Type a code of at least 6 characters. Only wrong codes count toward the guessing limit. After 20 wrong tries in 10 minutes from people who aren't signed in, the form stops accepting codes from them for up to 10 minutes; signed-in people have their own limit and can still enter. Changing the code lifts every lock straight away, including a signed-in person's own. When you edit a form that already has a code, leave the box empty to keep it.",
             ],
           },
           { type: "heading", id: "limits", text: "Limits" },

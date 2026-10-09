@@ -247,6 +247,17 @@ describe("security review: access codes", () => {
     expect((await t.mutation(api.respond.unlockForm, { shareId, code: "new-sesame" })).ok).toBe(true);
   });
 
+  it("gives a locked signed-in account a fresh budget when the owner changes the code", async () => {
+    const t = createTestConvex();
+    const { owner, formId, shareId } = await ownerWithForm(t);
+    await owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, access: "code" }, accessCode: "open-sesame" });
+    const student = t.withIdentity(otherCreatorIdentity);
+    for (let i = 0; i < 10; i++) await student.mutation(api.respond.unlockForm, { shareId, code: `guess-${i}` });
+    await expect(student.mutation(api.respond.unlockForm, { shareId, code: "open-sesame" })).rejects.toThrow(/RATE_LIMITED/);
+    await owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, access: "code" }, accessCode: "new-sesame" });
+    expect((await student.mutation(api.respond.unlockForm, { shareId, code: "new-sesame" })).ok).toBe(true);
+  });
+
   it("stops a burst of public submissions at the per-form rate limit", async () => {
     const t = createTestConvex();
     const { formId, shareId } = await ownerWithForm(t);

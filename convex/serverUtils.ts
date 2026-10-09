@@ -46,11 +46,6 @@ export async function assertRateAvailable(ctx: MutationCtx, key: string, limit: 
   if (existing && existing.count >= limit) rateLimited(windowStart, windowMs, now);
 }
 
-/** Clears the current window for `key`, for example after the thing it protected was replaced. */
-export async function resetRate(ctx: MutationCtx, key: string, windowMs: number): Promise<void> {
-  const { existing } = await currentRateWindow(ctx, key, windowMs);
-  if (existing) await ctx.db.delete("rateWindows", existing._id);
-}
 
 export async function consumeRate(ctx: MutationCtx, key: string, limit: number, windowMs: number): Promise<void> {
   const { now, windowStart, existing } = await currentRateWindow(ctx, key, windowMs);

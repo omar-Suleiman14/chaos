@@ -16,8 +16,7 @@ import { checkDefinition, emptyDefinition, FORM_SCHEMA_VERSION, LIMITS } from ".
 import type { FormDefinition } from "./formLogic";
 import { isValidTimeZone } from "./formSchedule";
 import { defaultFormSettings, definitionValidator, formRoleValidator, formSettingsValidator, themeValidator } from "./formModel";
-import { displayName, logActivity, notify, randomCode, resetRate, sha256Hex } from "./serverUtils";
-import { UNLOCK_WINDOW_MS, formWideUnlockKeys } from "./accessCodeBudget";
+import { displayName, logActivity, notify, randomCode, sha256Hex } from "./serverUtils";
 import { builtInTemplates } from "./formTemplates";
 import { emitFormStatusChange, emitWebhookEvent, formItem } from "./webhookEvents";
 import { withFormCounts, withOwnerFormCounts } from "./formCounts";
@@ -353,8 +352,6 @@ export async function applyFormSettingsForActor(ctx: MutationCtx, form: Doc<"for
       const code = args.accessCode.trim();
       if (code && (code.length < 6 || code.length > 100)) throw new Error("INVALID_SETTINGS: Access codes need 6–100 characters.");
       accessCodeHash = code ? await sha256Hex(`${form._id}:${code}`) : undefined;
-      // A new code makes earlier guessing moot, so it also lifts a form-wide lock.
-      if (accessCodeHash !== form.settings.accessCodeHash) for (const key of formWideUnlockKeys(form._id)) await resetRate(ctx, key, UNLOCK_WINDOW_MS);
     }
     if (s.access === "code" && !accessCodeHash) throw new Error("INVALID_SETTINGS: Set an access code.");
     const hiddenFields = s.hiddenFields ? checkHiddenFieldNames(s.hiddenFields) : undefined;
