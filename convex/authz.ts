@@ -121,6 +121,10 @@ export function ownsRecord(record: { ownerId: string }, identity: Identity): boo
 /** State is cleared by scheduled mutations so queries stay reactive. */
 export async function creatorRestricted(ctx: DbCtx, clerkId: string): Promise<boolean> {
   const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", clerkId)).first();
+  return restrictedCreatorAccount(user);
+}
+/** Reuse the exact moderation policy when a read already needs the creator's account. */
+export function restrictedCreatorAccount(user: Pick<Doc<"users">, "isBanned" | "suspendedUntil"> | null): boolean {
   return !!(user?.isBanned || user?.suspendedUntil);
 }
 /** A paid Business seat or admin grant (reporting only). Mutations pass now for exact expiry. */

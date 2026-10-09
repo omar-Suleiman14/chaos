@@ -4,7 +4,7 @@ import { lessonAccessForActor } from "./lessons";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 import { query } from "./_generated/server";
-import { creatorRestricted, requireActiveUser } from "./authz";
+import { creatorRestricted, restrictedCreatorAccount, requireActiveUser } from "./authz";
 import { lessonAccess, lessonSummary } from "./lessons";
 import { createdWith, lessonMeta } from "./learnModel";
 import { questionsFromForm } from "./liveLogic";
@@ -26,10 +26,11 @@ export const publicLesson = query({
     const lesson = await ctx.db.get("lessons", id);
     // Team-only lessons read like public ones for members of their team.
     const team = !!lesson && await teamAudienceAllows(ctx, lesson, (await getAuthIdentity(ctx))?.subject);
-    if (!lesson || lesson.status !== "active" || (lesson.visibility !== "public" && !team) || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) return null;
+    if (!lesson || lesson.status !== "active" || (lesson.visibility !== "public" && !team) || lesson.communityState !== "ok" || !lesson.publishedVersionId) return null;
+    const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
+    if (restrictedCreatorAccount(owner)) return null;
     const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
     if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) return null;
-    const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
     return { lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", ...(lesson.createdWith ? { createdWith: lesson.createdWith } : {}), createdAt: lesson.createdAt, version };
   },
 });

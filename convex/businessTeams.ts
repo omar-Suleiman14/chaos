@@ -1,5 +1,7 @@
 import { v, type Infer } from "convex/values";
-import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { mutation, query, internalMutation, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { syncCourseMembership } from "./courseMembership";
 import type { ObjectType } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import schema from "./schema";
@@ -260,3 +262,33 @@ export async function folderResourcesForActor(ctx: QueryCtx, actorId: string | u
   return { ...page, page: result };
 }
 export const folderResources = query({ args: folderResourcesArgs, returns: paginationResultValidator(v.object({ memberId: v.id("folderMembers"), asset: teamAsset, title: v.string(), ownerId: v.string(), href: v.string() })), handler: (ctx, args) => folderResourcesForActor(ctx, undefined, args) });
+
+/** Operator-only, restartable backfill. Existing courses/content/permissions are never rewritten. */
+export const backfillCourseMemberships = internalMutation({
+  args: { restart: v.optional(v.boolean()) },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    const state = await ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v1")).unique();
+    if (state && !args.restart && (state.complete || state.cursor !== undefined)) return null;
+    const generation = (state?.generation ?? 0) + 1;
+    const value = { key: "v1" as const, complete: false, generation, cursor: null };
+    if (state) await ctx.db.patch("courseMembershipState", state._id, value);
+    else await ctx.db.insert("courseMembershipState", value);
+    await ctx.scheduler.runAfter(0, internal.businessTeams.backfillCourseMembershipsPage, { generation, cursor: null });
+    return null;
+  },
+});
+
+export const backfillCourseMembershipsPage = internalMutation({
+  args: { generation: v.number(), cursor: v.union(v.string(), v.null()) },
+  returns: v.null(),
+  handler: async (ctx, args): Promise<null> => {
+    const state = await ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v1")).unique();
+    if (!state || state.generation !== args.generation || state.cursor !== args.cursor) return null;
+    const page = await ctx.db.query("learnCollections").paginate({ cursor: args.cursor, numItems: 20, maximumRowsRead: 20, maximumBytesRead: 1_000_000 });
+    for (const course of page.page) await syncCourseMembership(ctx, course._id);
+    await ctx.db.patch("courseMembershipState", state._id, { complete: page.isDone, cursor: page.isDone ? undefined : page.continueCursor });
+    if (!page.isDone) await ctx.scheduler.runAfter(0, internal.businessTeams.backfillCourseMembershipsPage, { generation: args.generation, cursor: page.continueCursor });
+    return null;
+  },
+});

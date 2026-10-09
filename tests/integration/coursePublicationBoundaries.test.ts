@@ -33,6 +33,29 @@ it("rechecks lesson access and course moderation for public outlines", async () 
   expect(await t.query(api.courses.listPublic, {})).toEqual([]);
 });
 
+it("resolves course links with the same header boundaries without requiring readable lesson summaries", async () => {
+  const { t, owner, courseId, lessonId } = await publishedCourse();
+  const link = () => t.query(api.courses.courseForLesson, { lessonId });
+  await t.run(ctx => ctx.db.patch("lessons", lessonId, { visibility: "private" }));
+  expect((await t.query(api.courses.getPublic, { courseId }))?.lessons).toEqual([]);
+  expect(await link()).toBe(courseId); // Existing behavior: the readable course may have an empty outline.
+  await t.run(ctx => ctx.db.patch("learnCollections", courseId, { visibility: "private" }));
+  expect(await link()).toBeNull();
+  expect(await owner.query(api.courses.courseForLesson, { lessonId })).toBe(courseId);
+  for (const communityState of ["hidden", "removed"] as const) {
+    await t.run(ctx => ctx.db.patch("learnCollections", courseId, { visibility: "public", communityState }));
+    expect(await link()).toBeNull();
+    expect(await owner.query(api.courses.courseForLesson, { lessonId })).toBeNull();
+  }
+  await t.run(async ctx => {
+    await ctx.db.patch("learnCollections", courseId, { communityState: "ok" });
+    const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", creatorIdentity.subject)).unique();
+    await ctx.db.patch("users", user!._id, { isBanned: true });
+  });
+  expect(await link()).toBeNull();
+  expect(await owner.query(api.courses.courseForLesson, { lessonId })).toBeNull();
+});
+
 it("excludes restricted creators and rejects malformed catalogue limits", async () => {
   const { t, courseId } = await publishedCourse();
   await t.run(async ctx => {

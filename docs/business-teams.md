@@ -71,3 +71,20 @@ Team-only publishing is available on existing tools:
 
 Tests are in `tests/integration/businessTeams.test.ts` and
 `tests/integration/teamOnlyContent.test.ts`.
+
+## Course membership lookup
+
+Team inheritance and lesson publication use `courseLessonMemberships`, maintained
+transactionally by the shared course writer. Associations are candidates only:
+reads recheck the course's current owner/outline and current team/folder membership.
+No copied editor grants survive revocation. Existing installations need the
+[course membership backfill](migrations.md#course-membership-index-2026-10) before
+lookup is complete beyond the historical 500-course window.
+
+The 501-course synthetic regression uses two lesson associations. Before backfill,
+the beyond-window lesson is unavailable and its read costs 502 documents / 133,482
+bytes; after backfill it is available and costs 8 documents / 2,264 bytes (one
+transaction each). These are `convex-test` read costs, not production latency.
+Exact association and migration-state queries increase from 9 to 12 while avoiding
+the broad scan. The standard reader budgets remain unchanged: the public lesson
+read shares its creator-account lookup between moderation and display metadata.
