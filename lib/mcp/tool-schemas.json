@@ -1233,7 +1233,7 @@
   },
   "create_flashcard_set": {
    "title": null,
-   "description": "Create a flashcard set with up to 500 cards (front is the prompt, back the answer) and publish it (public by default). publish false keeps a private draft. Returns versionId for attach_lesson_flashcards when published. Each call creates a new set; check list_flashcard_sets before retrying an uncertain success.",
+   "description": "Create a flashcard set with up to 500 cards (front is the prompt, back the answer) as a private draft; publish true also publishes it (public unless visibility says otherwise), only when the person explicitly asks. Returns versionId for attach_lesson_flashcards when published. Each call creates a new set; check list_flashcard_sets before retrying an uncertain success.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,
@@ -1392,7 +1392,7 @@
   },
   "create_form": {
    "title": "Create a form or quiz",
-   "description": "Create a new form, survey or quiz as a draft in the person's Chaos library, with all its questions. For a quiz set quizMode true and give correctAnswers (exact option labels) and points on choice questions. Pass a theme (a preset name) that suits the form; the default is Lilac. Sound is on (Glass) unless you pass sound, e.g. off for formal or sensitive forms. Publishes straight away and returns the share link, unless publish is false or something must be fixed first (then it stays a draft and the problems are listed).",
+   "description": "Create a new form, survey or quiz as a draft in the person's Chaos library, with all its questions. For a quiz set quizMode true and give correctAnswers (exact option labels) and points on choice questions. Pass a theme (a preset name) that suits the form; the default is Lilac. Sound is on (Glass) unless you pass sound, e.g. off for formal or sensitive forms. Stays a private draft and returns the edit link. With publish true it publishes and returns the share link, unless something must be fixed first (then it stays a draft and the problems are listed).",
    "permission": "edit_content",
    "annotations": {
     "title": "Create a form or quiz",
@@ -1546,7 +1546,7 @@
       "maxLength": 20
      },
      "publish": {
-      "description": "Default true: publish right after creating so the link works. Pass false only when the person asks for a draft.",
+      "description": "Default false: create a private draft to review. Pass true only when the person explicitly asks to publish it now.",
       "type": "boolean"
      }
     },
@@ -2238,7 +2238,7 @@
   },
   "create_game_draft": {
    "title": "Create a quiz game draft",
-   "description": "Create a private quiz draft for live play using the ordinary Chaos builder and themes. Needs 1–100 single_choice, multiple_choice or dropdown questions, each with 2–4 distinct options and correctAnswers. Publishes the quiz straight away (publish false keeps a draft) but never opens a room: call host_game when the person asks to host.",
+   "description": "Create a private quiz draft for live play using the ordinary Chaos builder and themes. Needs 1–100 single_choice, multiple_choice or dropdown questions, each with 2–4 distinct options and correctAnswers. Stays a draft unless publish is true; never opens a room: call host_game when the person asks to host.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,
@@ -2367,7 +2367,7 @@
       "maxLength": 20
      },
      "publish": {
-      "description": "Default true: publish right after creating so the link works. Pass false only when the person asks for a draft.",
+      "description": "Default false: create a private draft to review. Pass true only when the person explicitly asks to publish it now.",
       "type": "boolean"
      }
     },
@@ -2439,7 +2439,7 @@
   },
   "create_lesson": {
    "title": "Create a lesson",
-   "description": "Create a lesson from Chaos blocks and publish it (public by default). Set a cover with metadata.coverUrl (https image link or /covers/ gallery path), metadata.coverY and an optional Lucide icon name or emoji metadata.icon. publish false keeps a private draft; visibility private or restricted limits who can read it. If publication is blocked the lesson stays a draft and problems are listed. Never changes source sharing.",
+   "description": "Create a lesson from Chaos blocks as a private draft; publish true also publishes it (public unless visibility says otherwise). Set a cover with metadata.coverUrl (https image link or /covers/ gallery path), metadata.coverY and an optional Lucide icon name or emoji metadata.icon. Pass publish true only when the person explicitly asks to publish now; visibility private or restricted limits who can read it. If publication is blocked the lesson stays a draft and problems are listed. Never changes source sharing.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,

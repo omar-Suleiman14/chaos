@@ -69,10 +69,16 @@ describe("Chaos MCP server", () => {
     } });
     expect(result.isError).toBeFalsy();
     expect(call).toHaveBeenCalledWith("create_form", { form: expect.objectContaining({ title: "Quiz", quizMode: true }) });
-    // Ready drafts publish straight away; the publish flag never reaches the form definition.
+    // A ready form still stays a draft to review unless the person asked to publish.
+    expect(call.mock.calls.map(([tool]) => tool)).toEqual(["create_form"]);
+    expect(result.structuredContent).toMatchObject({ id: "form_1", readyToPublish: true, published: false });
+
+    // Asked to publish: publishes, and the publish flag never reaches the form definition.
+    call.mockClear();
+    const published = await client.callTool({ name: "create_form", arguments: { title: "Quiz", questions: [{ type: "short_text", label: "Name" }], publish: true } });
     expect(call).toHaveBeenLastCalledWith("publish_form", { id: "form_1" });
     expect(call.mock.calls[0][1]).not.toHaveProperty("form.publish");
-    expect(result.structuredContent).toMatchObject({ id: "form_1", readyToPublish: true, published: true });
+    expect(published.structuredContent).toMatchObject({ id: "form_1", published: true });
 
     const invalid = await client.callTool({ name: "create_form", arguments: { title: "Q", questions: [{ type: "essay", label: "x" }] } });
     expect(invalid.isError).toBe(true);
@@ -81,7 +87,7 @@ describe("Chaos MCP server", () => {
     // Not ready: stays a draft and lists problems instead of publishing.
     call.mockClear();
     call.mockImplementationOnce(async () => ({ id: "form_2", kind: "form", title: "Q", status: "draft", editUrl: "e", shareUrl: null, resultsUrl: "r", readyToPublish: false, problems: ["Add a question."] }));
-    const blocked = await client.callTool({ name: "create_form", arguments: { title: "Q", questions: [] } });
+    const blocked = await client.callTool({ name: "create_form", arguments: { title: "Q", questions: [], publish: true } });
     expect(blocked.structuredContent).toMatchObject({ published: false, problems: ["Add a question."] });
     expect(call.mock.calls.map(([tool]) => tool)).toEqual(["create_form"]);
   });

@@ -45,7 +45,7 @@ const securitySchemes = [{ type: "oauth2", scopes: MCP_REQUESTED_SCOPES }];
 const baseInstructions = `Chaos (chaos.fail) is where this person builds forms, surveys, quizzes, Learn lessons and courses, organises owned content in folders, and reads authorized published material and requested answers.
 - The Chaos app is free on every plan.
 - Cards: list_public_authors browses the opted-in author directory; get_public_card resolves current usernames and retained aliases. list_public_student_cards pages through all eligible students, public by default unless opted out. Follow cursors until isDone. get_student_card_preferences and set_student_card_preferences read/change the global default for this person; customize_my_card also accepts showStudentCards. get_student_card_visibility and set_student_card_visibility concern only this person's existing teacher relationship. set_author_listing_visibility controls only this person's directory listing. The card fan animation is a browser interaction at https://chaos.fail/card.
-- The person has chosen that new things go live: create_form, create_game_draft, create_lesson, create_full_course and create_flashcard_set publish as soon as they are created (lessons, courses and flashcards as public). Pass publish false only when the person asks for a draft or private work. If publishing is blocked, the result lists the problems and the item stays a draft: tell the person what to fix. Later edits to existing content are drafts until publish_form, publish_lesson or publish_course. Folders are private organisation, not publishable content.
+- New things start as private drafts the person can review: create_form, create_game_draft, create_lesson, create_full_course and create_flashcard_set publish only with publish true. Pass publish true only when the person explicitly asks for it to go live or be shared now; otherwise give them the edit link and offer to publish after they review it. If publishing is blocked, the result lists the problems and the item stays a draft: tell the person what to fix. Later edits to existing content are drafts until publish_form, publish_lesson or publish_course. Folders are private organisation, not publishable content.
 - Work only on content the person selected or asked to find. Authorization is enforced for the connected account; never supply an actor/userId or infer permission from a reference. Folder membership and source metadata do not grant content access. Only request source metadata through the supported tools; no source file bytes are exposed here.
 - Forms return shareUrl: share it only when returned and published. Lesson and course tools do not return shareUrl. After publish_lesson returns ok true, use the lessonId from a verified create/get response to construct https://chaos.fail/learn/<lessonId>. After publish_course returns ok true, use courseId from verified create_course (or id from get_course) to construct https://chaos.fail/learn/courses/<courseId>. Never invent IDs, claim draft links are public, or imply private/restricted links grant access. Visibility values are public, restricted and private; restricted/private require Business.
 - Courses: create_course creates a draft; add_course_lesson creates a blank lesson draft; use lesson tools to write it. get_course reads the owner's outline and metadata. update_course edits draft metadata. set_course_outline replaces the full ordered list, so read get_course first and preserve wanted lessons. publish_course publishes the course and all its lessons together; lessons in an unpublished course can't be published on their own. Inspect blockers when ok is false. Do not automatically retry course/lesson creation or publication after uncertain success. list_courses lists the person's courses; set_course_archived archives or restores one; unpublish_course takes a course offline. Every course and lesson has a cover: new ones get a random gallery cover, so set one only when the person asks; change it with update_course coverUrl or lesson metadata.coverUrl. Page icons are not shown, so don't set them.
@@ -100,7 +100,7 @@ const formFields = {
   questions: z.array(question).max(200),
   theme: z.string().max(60).optional().describe("Optional look by name, e.g. Lilac (default), Banner, Paper, Evergreen, Spotlight (Typeform-like), Midnight (dark). See list_themes."),
   sound: z.string().max(20).optional().describe(`Optional sound pack for respondents: ${MCP_SOUNDS.join(", ")} (soft = Glass, the default; off = silent). Choose one that suits the form.`),
-  publish: z.boolean().optional().describe("Default true: publish right after creating so the link works. Pass false only when the person asks for a draft."),
+  publish: z.boolean().optional().describe("Default false: create a private draft to review. Pass true only when the person explicitly asks to publish it now."),
 };
 
 const soundField = z.string().max(20).describe(`One of ${MCP_SOUNDS.join(", ")}. soft is called Glass; off means silent.`);
@@ -226,7 +226,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
     if (!options.call) return authRequired(options.resourceMetadataUrl);
     try { const { text, data } = await work(); return ok(text, data); } catch (error) { return problem(error); }
   };
-  /** Creates a form, then publishes it unless asked not to or it isn't ready yet. */
+  /** Creates a form draft, then publishes it only when asked to and it is ready. */
   const createThenPublish = (tool: string, input: Record<string, unknown>, publish: boolean, noun: string) => flow(async () => {
     const d = await call(tool, input);
     if (!publish) return { text: `Created ${noun} draft “${d.title}”. Edit: ${d.editUrl}`, data: { ...d, published: false } };
@@ -237,7 +237,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
 
   server.registerTool("create_game_draft", {
     title: "Create a quiz game draft",
-    description: "Create a private quiz draft for live play using the ordinary Chaos builder and themes. Needs 1–100 single_choice, multiple_choice or dropdown questions, each with 2–4 distinct options and correctAnswers. Publishes the quiz straight away (publish false keeps a draft) but never opens a room: call host_game when the person asks to host.",
+    description: "Create a private quiz draft for live play using the ordinary Chaos builder and themes. Needs 1–100 single_choice, multiple_choice or dropdown questions, each with 2–4 distinct options and correctAnswers. Stays a draft unless publish is true; never opens a room: call host_game when the person asks to host.",
     inputSchema: {
       title: formFields.title, description: formFields.description,
       questions: z.array(question.extend({ type: z.enum(["single_choice", "multiple_choice", "dropdown"]), options: z.array(z.string().trim().min(1).max(500)).min(2).max(4), correctAnswers: z.array(z.string()).min(1).max(4) })).min(1).max(100),
@@ -249,7 +249,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
   }, ({ theme, sound, publish, ...input }) => {
     try {
       const form = { ...input, theme: buildThemePatch({ preset: theme ?? "Evergreen" }).patch, ...(sound ? { sound: requireSound(sound) } : {}) };
-      return createThenPublish("create_game_draft", { form }, publish !== false, "game quiz");
+      return createThenPublish("create_game_draft", { form }, publish === true, "game quiz");
     } catch (error) { return Promise.resolve(problem(error)); }
   });
 
@@ -358,7 +358,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
 
   server.registerTool("create_form", {
     title: "Create a form or quiz",
-    description: "Create a new form, survey or quiz as a draft in the person's Chaos library, with all its questions. For a quiz set quizMode true and give correctAnswers (exact option labels) and points on choice questions. Pass a theme (a preset name) that suits the form; the default is Lilac. Sound is on (Glass) unless you pass sound, e.g. off for formal or sensitive forms. Publishes straight away and returns the share link, unless publish is false or something must be fixed first (then it stays a draft and the problems are listed).",
+    description: "Create a new form, survey or quiz as a draft in the person's Chaos library, with all its questions. For a quiz set quizMode true and give correctAnswers (exact option labels) and points on choice questions. Pass a theme (a preset name) that suits the form; the default is Lilac. Sound is on (Glass) unless you pass sound, e.g. off for formal or sensitive forms. Stays a private draft and returns the edit link. With publish true it publishes and returns the share link, unless something must be fixed first (then it stays a draft and the problems are listed).",
     inputSchema: formFields,
     outputSchema: { ...itemShape, readyToPublish: z.boolean(), problems: z.array(z.string()), published: z.boolean() },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true, idempotentHint: false, title: "Create a form or quiz" },
@@ -374,7 +374,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
     } catch (error) {
       return Promise.resolve(problem(error));
     }
-    return createThenPublish("create_form", { form: { ...form, ...extra } }, publish !== false, form.quizMode ? "quiz" : "form");
+    return createThenPublish("create_form", { form: { ...form, ...extra } }, publish === true, form.quizMode ? "quiz" : "form");
   });
 
   server.registerTool("update_form", {

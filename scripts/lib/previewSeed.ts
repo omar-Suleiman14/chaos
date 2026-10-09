@@ -37,6 +37,7 @@ export async function seed(client: Client, owner: string): Promise<PreviewLinks>
       { type: "single_choice", label: "How useful was the session?", options: ["Very", "Somewhat", "Not really"], required: true },
       { type: "long_text", label: "What should change next time?" },
     ],
+    publish: true,
   });
   const quiz = await tool<{ id: string; shareUrl: string | null }>(client, "create_form", {
     title: "Preview: capitals quiz",
@@ -45,10 +46,12 @@ export async function seed(client: Client, owner: string): Promise<PreviewLinks>
       { type: "single_choice", label: "Capital of France?", options: ["Paris", "Lyon", "Nice"], correctAnswers: ["Paris"], points: 1, required: true },
       { type: "single_choice", label: "Capital of Japan?", options: ["Osaka", "Tokyo", "Kyoto"], correctAnswers: ["Tokyo"], points: 1, required: true },
     ],
+    publish: true,
   });
   const lesson = await tool<{ lessonId: string }>(client, "create_lesson", {
     metadata: { title: "Preview: how plants make food", description: "A short seeded lesson.", language: "en", tags: ["preview"] },
     document: { schemaVersion: 1, blocks: [paragraph("p1", "Plants turn light, water and carbon dioxide into sugar."), paragraph("p2", "The process is called photosynthesis.")] },
+    publish: true,
     visibility: "public",
   });
   const course = await tool<{ courseId: string }>(client, "create_full_course", {
@@ -62,6 +65,7 @@ export async function seed(client: Client, owner: string): Promise<PreviewLinks>
   const cards = await tool<{ setId: string }>(client, "create_flashcard_set", {
     title: "Preview: capitals",
     cards: [{ id: "fr", front: "France", back: "Paris" }, { id: "jp", front: "Japan", back: "Tokyo" }],
+    publish: true,
     visibility: "public",
   });
 
