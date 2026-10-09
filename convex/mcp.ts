@@ -61,7 +61,7 @@ export const begin = internalMutation({
   handler: async (ctx, args) => {
     const existing = await userRow(ctx, args.userId);
     if (!existing) {
-      if (!args.profile) fail("ACCOUNT_REQUIRED", "Open chaos.fail and sign in once, then try again.");
+      if (!args.profile) fail("ACCOUNT_REQUIRED", `Open ${appUrl("/")} and sign in once, then try again.`);
       await insertNewUser(ctx, { clerkId: args.userId, name: args.profile.name || "Anonymous", email: args.profile.email, imageUrl: args.profile.imageUrl });
     }
     // The ChatGPT app is a Pro feature (new accounts start with a 30-day Pro trial).
