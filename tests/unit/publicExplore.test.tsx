@@ -49,11 +49,12 @@ describe("public course discovery", () => {
   expect(screen.getByRole("searchbox")).toBe(input);
   expect(screen.getByRole("link",{name:/Biology basics/})).toBe(card);
   expect(screen.getByRole("status")).toHaveTextContent("Finding courses");
-  expect(screen.queryByText("No matching courses")).toBeNull();
+  expect(screen.queryByText(/No (matching|public) courses/)).toBeNull();
   backend.paginate.mockReturnValue({results:[],status:"Exhausted",loadMore:backend.loadMore});
   rerender(<PublicExplore/>);
   expect(screen.queryByRole("link",{name:/Biology basics/})).toBeNull();
-  expect(screen.getByText("No matching courses")).toBeInTheDocument();
+  // No search or filter is set, so the empty directory says so instead of "No matching courses".
+  expect(screen.getByText("No public courses yet")).toBeInTheDocument();
  });
   it("lists only courses and allows unsigned browsing with pagination", () => {
     backend.paginate.mockReturnValue({
