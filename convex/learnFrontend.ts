@@ -4,6 +4,7 @@ import { lessonAccessForActor } from "./lessons";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 import { query } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import { creatorRestricted, requireActiveUser } from "./authz";
 import { lessonAccess, lessonSummary } from "./lessons";
 import { createdWith, lessonMeta } from "./learnModel";
@@ -39,20 +40,34 @@ export const publicLessonsBatch = query({
   args: { ids: v.array(v.string()) },
   returns: v.array(v.object({ lessonId: v.id("lessons"), ownerId: v.string(), ownerName: v.string(), createdWith: v.optional(createdWith), createdAt: v.number(), version: schema.doc("lessonVersions") })),
   handler: async (ctx, args) => {
-    const results = [], viewer = (await getAuthIdentity(ctx))?.subject;
-    for (const rawId of args.ids.slice(0, 50)) {
-      if (!rawId || rawId.length > 100) continue;
+    const viewer = (await getAuthIdentity(ctx))?.subject;
+    // Request-local promises share concurrent reads, never authorization across requests.
+    const restrictions = new Map<string, Promise<boolean>>();
+    const owners = new Map<string, Promise<Doc<"users"> | null>>();
+    const results = await Promise.all(args.ids.slice(0, 50).map(async rawId => {
+      if (!rawId || rawId.length > 100) return null;
       const id = ctx.db.normalizeId("lessons", rawId);
-      if (!id) continue;
+      if (!id) return null;
       const lesson = await ctx.db.get("lessons", id);
       const team = !!lesson && await teamAudienceAllows(ctx, lesson, viewer);
-      if (!lesson || lesson.status !== "active" || (lesson.visibility !== "public" && !team) || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) continue;
+      if (!lesson || lesson.status !== "active" || (lesson.visibility !== "public" && !team) || lesson.communityState !== "ok" || !lesson.publishedVersionId) return null;
+      let restricted = restrictions.get(lesson.ownerId);
+      if (!restricted) {
+        restricted = creatorRestricted(ctx, lesson.ownerId);
+        restrictions.set(lesson.ownerId, restricted);
+      }
+      if (await restricted) return null;
       const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
-      if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) continue;
-      const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
-      results.push({ lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", ...(lesson.createdWith ? { createdWith: lesson.createdWith } : {}), createdAt: lesson.createdAt, version });
-    }
-    return results;
+      if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) return null;
+      let ownerRead = owners.get(lesson.ownerId);
+      if (!ownerRead) {
+        ownerRead = ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
+        owners.set(lesson.ownerId, ownerRead);
+      }
+      const owner = await ownerRead;
+      return { lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", ...(lesson.createdWith ? { createdWith: lesson.createdWith } : {}), createdAt: lesson.createdAt, version };
+    }));
+    return results.filter(row => row !== null);
   },
 });
 
