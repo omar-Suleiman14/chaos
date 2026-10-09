@@ -14,7 +14,7 @@ const can: Record<Locale, DocBlock[]> = {
       type: "list",
       items: [
         "Find your forms, quizzes, lessons and courses.",
-        "Create a form, survey, quiz, lesson, course or flashcard set with all its content, published straight away unless you ask for a draft. Quizzes get correct answers, points and explanations.",
+        "Create a form, survey, quiz, lesson, course or flashcard set with all its content, as a private draft to review. It is published only when you ask. Quizzes get correct answers, points and explanations.",
         "Edit a draft: title, introduction, quiz mode, layout, questions and lesson blocks.",
         "Change a form's theme and sounds, and a course or lesson cover.",
         "Publish when you ask, and give you the link.",
@@ -26,7 +26,7 @@ const can: Record<Locale, DocBlock[]> = {
     { type: "heading", id: "cannot", text: "What it cannot do" },
     { type: "list", items: ["Delete anything. Deleting happens only in the Archive, in Chaos.", "Change the live version without publishing.", "Edit classic quizzes from the old editor; they are read-only.", "Create file upload questions or custom endings. Existing ones are kept when it edits."] },
     { type: "heading", id: "drafts", text: "Publishing and drafts" },
-    { type: "p", text: "New things your assistant creates publish straight away so links work, unless you ask for a draft or private work. Content imported from Google Forms, Microsoft Forms, spreadsheets or Max always starts as a private draft. Later edits to published content stay drafts until you publish them." },
+    { type: "p", text: "New things your assistant creates start as private drafts so you can review them first. Ask it to publish when you want a link that works for others. Content imported from Google Forms, Microsoft Forms, spreadsheets or Max always starts as a private draft. Later edits to published content stay drafts until you publish them." },
   ],
   ar: [
     { type: "heading", id: "can", text: "ما يستطيع فعله" },
@@ -34,7 +34,7 @@ const can: Record<Locale, DocBlock[]> = {
       type: "list",
       items: [
         "البحث عن نماذجك واختباراتك ودروسك ودوراتك.",
-        "إنشاء نموذج أو استبيان أو اختبار أو درس أو دورة أو مجموعة بطاقات بكل محتوياتها، وتُنشر فورًا ما لم تطلب مسودة. وفي الاختبار يضبط الإجابات الصحيحة والدرجات والشروح.",
+        "إنشاء نموذج أو استبيان أو اختبار أو درس أو دورة أو مجموعة بطاقات بكل محتوياتها، كمسودة خاصة لتراجعها. ولا تُنشر إلا عندما تطلب. وفي الاختبار يضبط الإجابات الصحيحة والدرجات والشروح.",
         "تعديل مسودة: العنوان والمقدمة ووضع الاختبار والتخطيط والأسئلة وكتل الدرس.",
         "تغيير سمة النموذج وأصواته، وغلاف الدورة أو الدرس.",
         "النشر حين تطلب، وإعطاؤك الرابط.",
@@ -46,7 +46,7 @@ const can: Record<Locale, DocBlock[]> = {
     { type: "heading", id: "cannot", text: "ما لا يستطيع فعله" },
     { type: "list", items: ["حذف أي شيء. الحذف في الأرشيف فقط، داخل Chaos.", "تغيير النسخة المنشورة دون نشر.", "تعديل الاختبارات الكلاسيكية من المحرّر القديم؛ فهي للقراءة فقط.", "إنشاء أسئلة رفع الملفات أو الخواتم المخصصة. تبقى الموجودة منها كما هي عند التعديل."] },
     { type: "heading", id: "drafts", text: "النشر والمسودات" },
-    { type: "p", text: "يُنشر ما ينشئه مساعدك فورًا لتعمل الروابط، ما لم تطلب مسودة أو عملًا خاصًا. ويبدأ المحتوى المستورد من Google Forms أو Microsoft Forms أو جداول البيانات أو Max دائمًا كمسودة خاصة. والتعديلات اللاحقة على المحتوى المنشور تبقى مسودات حتى تنشرها." },
+    { type: "p", text: "يبدأ ما ينشئه مساعدك مسودات خاصة لتراجعها أولًا. اطلب منه النشر عندما تريد رابطًا يعمل للآخرين. ويبدأ المحتوى المستورد من Google Forms أو Microsoft Forms أو جداول البيانات أو Max دائمًا كمسودة خاصة. والتعديلات اللاحقة على المحتوى المنشور تبقى مسودات حتى تنشرها." },
   ],
 };
 

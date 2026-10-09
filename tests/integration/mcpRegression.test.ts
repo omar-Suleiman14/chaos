@@ -36,7 +36,7 @@ async function setup() {
 }
 
 const paragraph = (id: string, body: string) => ({ id, type: "paragraph", text: body, citations: [], conceptIds: [] });
-const quizForm = { title: "Checkpoint", quizMode: true, questions: [{ type: "single_choice", label: "Largest planet?", options: ["Mars", "Jupiter"], correctAnswers: ["Jupiter"] }] };
+const quizForm = { title: "Checkpoint", quizMode: true, publish: true, questions: [{ type: "single_choice", label: "Largest planet?", options: ["Mars", "Jupiter"], correctAnswers: ["Jupiter"] }] };
 
 async function connectWith(t: T, permissions: readonly McpPermission[]) {
   const server = createChaosMcpServer({ call: convexMcpCaller(t, perfCreator.subject), permissions, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" });
