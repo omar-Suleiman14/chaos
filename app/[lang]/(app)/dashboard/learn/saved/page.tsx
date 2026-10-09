@@ -99,7 +99,7 @@ export default function SavedPage() {
       <p className="lx-notice"><Lock size={15} aria-hidden /><span>{t.private}{caps.deviceSync ? "" : ` ${t.device}`}</span></p>
       <WsTabs tabs={["lessons", "parts", "highlights", "notes"] as const} value={tab} onChange={setTab} label={t.title} icons={icons}
         labels={{ lessons: `${t.tabs.lessons} (${counts.lessons})`, parts: `${t.tabs.parts} (${counts.parts})`, highlights: `${t.tabs.highlights} (${counts.highlights})`, notes: `${t.tabs.notes} (${counts.notes})` }} />
-      {list.length ? <div className="lx-list">{list}</div> : <EmptyState level={2} icon={icons[tab]} title={t.empty[tab]} body={t.emptyBody[tab]} />}
+      {list.length ? <div className="lx-list">{list}</div> : <EmptyState level={2} illustration="learn" title={t.empty[tab]} body={t.emptyBody[tab]} />}
     </div>
   );
 }

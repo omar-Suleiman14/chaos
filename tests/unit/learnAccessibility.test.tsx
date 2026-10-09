@@ -137,12 +137,42 @@ describe("Learn home", () => {
     expect((await axe(document.body, AXE)).violations).toEqual([]);
   });
 
+  it("illustrates only the larger first-use sections and keeps the inline ones text-first", async () => {
+    inWorkspace(<LearnHome />);
+    const art = (heading: string) => screen.getByRole("heading", { level: 2, name: heading }).closest("section")!.querySelector(".state-illustration");
+    expect(await screen.findByRole("button", { name: "New lesson" })).toBeInTheDocument();
+    expect(art("Your lessons")).toHaveAttribute("data-variant", "create");
+    expect(art("My courses")).toHaveAttribute("data-variant", "learn");
+    expect(art("Continue learning")).toBeNull();
+    expect(art("Saved")).toBeNull();
+    for (const svg of document.querySelectorAll(".state-illustration")) expect(svg).toHaveAttribute("aria-hidden", "true");
+  });
+
   it("New lesson opens a blank lesson in the editor", async () => {
     inWorkspace(<LearnHome />);
     fireEvent.click((await screen.findAllByRole("button", { name: "New lesson" }))[0]);
     await waitFor(() => expect(push).toHaveBeenCalledWith("/dashboard/learn/lessons/lesson_created"));
     expect(getFunctionName(backend.mutation.mock.calls[0][0])).toBe("lessons:create");
     expect(backend.mutation.mock.calls[0][1]).toMatchObject({ document: { schemaVersion: 1, blocks: [] }, metadata: { language: "en", indexing: "noindex" } });
+  });
+});
+
+describe("Learn library and saved empty states", () => {
+  it("draws the learning illustration for an empty library and the no-results one when search finds nothing", async () => {
+    const { default: Library } = await import("@/app/[lang]/(app)/dashboard/learn/library/page");
+    inWorkspace(<Library />);
+    expect(await screen.findByRole("heading", { level: 2, name: "Nothing here yet" })).toBeInTheDocument();
+    expect(document.querySelector(".state-illustration")).toHaveAttribute("data-variant", "learn");
+    fireEvent.change(screen.getByRole("searchbox"), { target: { value: "zzzz" } });
+    expect(await screen.findByRole("heading", { level: 2, name: "Nothing matches." })).toBeInTheDocument();
+    expect(document.querySelector(".state-illustration")).toHaveAttribute("data-variant", "search");
+  });
+
+  it("draws the learning illustration when a Saved tab is empty", async () => {
+    const { default: Saved } = await import("@/app/[lang]/(app)/dashboard/learn/saved/page");
+    inWorkspace(<Saved />);
+    expect(await screen.findByRole("heading", { level: 2, name: "No saved lessons" })).toBeInTheDocument();
+    expect(document.querySelector(".state-illustration")).toHaveAttribute("data-variant", "learn");
   });
 });
 
