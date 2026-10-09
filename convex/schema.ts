@@ -104,8 +104,13 @@ export default defineSchema({
     publicAuthorAssets: v.optional(v.number()),
     /** Opt out of public author directories; direct published links stay available. */
     hideFromAuthorLists: v.optional(v.boolean()),
-    /** Public student Cards are enabled unless the account opts out. */
+    /** Global opt-out from public student Cards; it wins over every opt-in. */
     hideStudentCards: v.optional(v.boolean()),
+    /**
+     * Explicit opt-in to show the student Card with every teacher. Student Cards are private unless the
+     * student opts in here or for one teacher (`authorStudents.publicHidden === false`).
+     */
+    studentCardsPublic: v.optional(v.boolean()),
     /** Member card colour theme index (lib/memberCard.ts CARD_THEMES). */
     cardStyle: v.optional(v.number()),
     cardAvatarSeed: v.optional(v.string()),

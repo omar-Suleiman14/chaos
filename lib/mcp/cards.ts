@@ -43,7 +43,7 @@ export function registerCardTools(
     "get_student_card_preferences",
     {
       description:
-        "Read YOUR global student Card visibility preference. Public by default; visible=false hides your Card from every teacher's public page and the authors carousel. Individual teacher opt-outs can still apply when globally enabled.",
+        "Read YOUR global student Card visibility preference. Private by default; visible=true means you chose to show your Card on every teacher's public page and the authors carousel. Individual teacher opt-outs still apply when globally enabled.",
       inputSchema: {},
       outputSchema: { visible: z.boolean() },
       annotations: read,
@@ -60,7 +60,7 @@ export function registerCardTools(
     "set_student_card_preferences",
     {
       description:
-        "Set YOUR global student Card visibility. Public by default; visible=false opts out of all teachers' public student Cards. visible=true restores the default without clearing individual teacher opt-outs. This is the same preference as settings and the card creation checkbox.",
+        "Set YOUR global student Card visibility. Private by default; visible=true shows your Card with every teacher, visible=false hides it from all teachers' public pages. visible=true keeps individual teacher opt-outs. This is the same preference as settings and the card creation switch. Only change it when the person explicitly asks.",
       inputSchema: { visible: z.boolean() },
       outputSchema: { ok: z.boolean() },
       annotations: { ...read, readOnlyHint: false, openWorldHint: true },
@@ -103,7 +103,7 @@ export function registerCardTools(
     "list_public_student_cards",
     {
       description:
-        "Read all eligible student Cards for a teacher, public by default unless opted out globally or per teacher. Defaults to 24 per page; follow cursors until isDone to reach every student. No guests, private contexts, answers or grades. Visibility is controlled by each student.",
+        "Read the student Cards a teacher's public page shows: only students who chose to show their Card, globally or for this teacher. Defaults to 24 per page; follow cursors until isDone to reach every student. No guests, private contexts, answers or grades. Visibility is controlled by each student.",
       inputSchema: { username: ref, ...page },
       outputSchema: {
         page: z.array(
