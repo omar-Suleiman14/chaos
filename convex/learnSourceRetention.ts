@@ -1,3 +1,4 @@
+import { changeSourceStorage } from "./sourceStorage";
 import { makeFunctionReference } from "convex/server";
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
@@ -83,7 +84,9 @@ export const cleanup = internalMutation({
       // Flashcard versions currently contain only text and concept IDs (cards
       // validator in learnAssetModel), with no source IDs or file references.
       if (await ctx.db.system.get("_storage", job.storageId)) { await ctx.storage.delete(job.storageId); deleted++; }
-      await ctx.db.patch("learnSources", source._id, { storageId: undefined });
+      await ctx.db.patch("learnSources", source._id, { storageId: undefined, storageCounted: false });
+      // Only bytes that were counted are uncounted, so a file the backfill has not reached never goes negative.
+      if (source.storageCounted) await changeSourceStorage(ctx, source.ownerId, -(source.size ?? 0));
       await ctx.db.delete("learnSourceCleanup", job._id);
     }
     if (jobs.length) await ctx.scheduler.runAfter(0, worker, {});

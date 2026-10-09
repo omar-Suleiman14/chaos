@@ -1166,7 +1166,7 @@ export const sectionsEn: DocSection[] = [
         title: "Plans",
         summary: "Personal is for one user. Business teams are free for a limited time.",
         blocks: [
-          { type: "p", text: "Personal is free for one user, without team sharing. Business includes teams, roles and shared editing, normally 50 EGP per active seat per month, discounted by 100% to 0 for a limited time. Anyone can create a Business team. There is no checkout and there are no charges. Respondents, students and Live players are free. Every account allows up to 10 MiB per form upload and 25 MiB per teaching source file; these are not total storage allowances. See [Pricing](/pricing)." },
+          { type: "p", text: "Personal is free for one user, without team sharing. Business includes teams, roles and shared editing, normally 50 EGP per active seat per month, discounted by 100% to 0 for a limited time. Anyone can create a Business team. There is no checkout and there are no charges. Respondents, students and Live players are free. Every account allows up to 10 MiB per form upload and 25 MiB per teaching source file; teaching source files can use up to 2 GiB per account in total, and removing a source frees its space once cleanup runs. See [Pricing](/pricing)." },
           { type: "heading", id: "free", text: "Personal" },
           { type: "p", text: "Unlimited forms, quizzes, lessons, courses and responses, live games, exports, use from ChatGPT or Claude, and no Chaos branding. Rate limits and security checks still apply." },
           { type: "heading", id: "pro", text: "Business" },
