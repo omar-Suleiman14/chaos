@@ -108,10 +108,14 @@ export async function listIndexableLessons(): Promise<{ id: string; publishedAt:
   return result;
 }
 
-/** Server read of a published public course for the course page, metadata and sitemap. */
+/**
+ * Server read of a published public course for the course page and metadata. `null` means the course
+ * is not public; a backend error is thrown rather than read as "not found", so an outage renders the
+ * error page (a temporary 5xx crawlers retry) instead of a 404 that tells them the course is gone.
+ */
 export const fetchPublicCourse = cache(async (id: string) => {
   if (!client()) return undefined;
-  return cachedCourse(id).catch(() => null);
+  return cachedCourse(id);
 });
 const cachedCourse = publicCache("public-course-v2", (id: string) => client()!.query(api.courses.getPublic, { courseId: id }));
 

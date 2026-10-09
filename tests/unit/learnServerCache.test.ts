@@ -84,6 +84,14 @@ describe("public Learn cache revocation", () => {
     expect(await request(() => fetchPublicLessonResult("lesson"))).toMatchObject({ lessonId: "lesson" });
   });
 
+  it("treats a backend outage as an error, not as a removed course", async () => {
+    const { fetchPublicCourse } = await import("@/lib/learn/server");
+    query.mockRejectedValue(new Error("network"));
+    await expect(request(() => fetchPublicCourse("course"))).rejects.toThrow("network");
+    query.mockResolvedValue(null);
+    expect(await request(() => fetchPublicCourse("other"))).toBeNull();
+  });
+
   it("keeps the last good copy while the backend is unreachable", async () => {
     const { fetchPublicLessonResult } = await import("@/lib/learn/server");
     query.mockResolvedValue(lesson);
