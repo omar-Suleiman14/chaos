@@ -95,7 +95,11 @@ const nextConfig: NextConfig = {
   },
   async rewrites() {
     // IndexNow key file at the site root (app/api/indexnow/key/[key]/route.ts checks it against INDEXNOW_KEY).
-    return [{ source: "/:key([a-zA-Z0-9-]{8,128}).txt", destination: "/api/indexnow/key/:key" }];
+    return [
+      { source: "/:key([a-zA-Z0-9-]{8,128}).txt", destination: "/api/indexnow/key/:key" },
+      // The sitemap index robots.txt names; the 50,000-URL shards it lists are app/sitemap.ts.
+      { source: "/sitemap.xml", destination: "/api/sitemap" },
+    ];
   },
   async headers() {
     return [
