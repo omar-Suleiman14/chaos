@@ -73,7 +73,7 @@ export default function PrivacyView() {
           يمكنك ربط حسابك في Chaos بـ ChatGPT أو Claude أو أي مساعد يدعم بروتوكول MCP. تسجل الدخول بحسابك في Chaos وتوافق على الربط؛ ويمكنك إلغاء الاتصال في أي وقت من إعدادات المساعد أو عبر لوحة الاتصالات في Chaos.
         </p>
         <ul>
-          <li>يستطيع المساعد إنشاء النماذج والاختبارات والدروس والدورات والبطاقات وتعديلها ونشرها، وقراءة محتواك ونتائجك وإجاباتك، ولكن فقط عند طلبك منه ذلك. تُنشر الأشياء الجديدة التي ينشئها فورًا ما لم تطلب صراحةً إنشاء مسودة.</li>
+          <li>يستطيع المساعد إنشاء النماذج والاختبارات والدروس والدورات والبطاقات وتعديلها ونشرها، وقراءة محتواك ونتائجك وإجاباتك، ولكن فقط عند طلبك منه ذلك. تبدأ الأشياء الجديدة التي ينشئها مسودات خاصة، ولا تُنشر إلا عندما تطلب ذلك.</li>
           <li>ما يقرؤه المساعد (مثل ملخص النتائج أو الإجابات التي تطلب منه تحليلها) يُرسل إلى مزود المساعد ويخضع لسياسة الخصوصية الخاصة به، مثل سياسة <a href="https://openai.com/policies/privacy-policy">OpenAI</a> أو سياسة <a href="https://www.anthropic.com/legal/privacy">Anthropic</a>. لا تطلب منه قراءة إجابات فردية إلا إذا كان مصرحًا لك بمشاركتها.</li>
           <li>أزرار <strong>اسأل ChatGPT / اسأل Claude</strong> في الدروس تفتح المساعد مع نص الدرس أو الجزء المحدد منه. لا يُرسل أي شيء حتى تختار ذلك بنفسك.</li>
           <li>لا يرسل Chaos إجابات المجيبين تلقائيًا إلى أي مساعد، ولا تستطيع المساعدات حذف النماذج أو الإجابات.</li>
@@ -192,7 +192,7 @@ export default function PrivacyView() {
         you can disconnect it at any time in the assistant&rsquo;s settings, or ask us to revoke it.
       </p>
       <ul>
-        <li>The assistant can create, edit and publish forms, quizzes, lessons, courses and flashcards, and read your content, results and responses, only when you ask it to. New things it creates are published straight away unless you ask for a draft.</li>
+        <li>The assistant can create, edit and publish forms, quizzes, lessons, courses and flashcards, and read your content, results and responses, only when you ask it to. New things it creates start as private drafts and are published only when you ask.</li>
         <li>What the assistant reads (for example a results summary or the answers you ask it to look at) is sent to its provider and handled under their policy, such as{" "}
           <a href="https://openai.com/policies/privacy-policy">OpenAI&rsquo;s</a> or <a href="https://www.anthropic.com/legal/privacy">Anthropic&rsquo;s</a>. Only ask it to read individual answers when you are allowed to share them.</li>
         <li><strong>Ask ChatGPT / Ask Claude</strong> buttons in lessons open the assistant with the lesson text or your selection. Nothing is sent until you choose to.</li>

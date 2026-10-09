@@ -15,13 +15,13 @@ const copy = {
   en: {
     review: "Review course", continue: "Continue course", start: "Start course", starting: "Starting…",
     done: (n: number, total: number) => `${n} / ${total} lessons completed`, progress: "Course progress",
-    locked: "Start the course to unlock its lessons. The teacher will see you in their students.",
+    locked: "Start the course to unlock its lessons. The teacher sees your name and this course in their private student list. Your Card is shown publicly only if you choose.",
     name: "Your name", namePh: "Shown to the teacher (optional)", signIn: "Sign in instead", guest: "Start as a guest",
   },
   ar: {
     review: "راجع الدورة", continue: "تابع الدورة", start: "ابدأ الدورة", starting: "جارٍ البدء…",
     done: (n: number, total: number) => `${n} / ${total} دروس مكتملة`, progress: "تقدم الدورة",
-    locked: "ابدأ الدورة لفتح دروسها. سيراك المعلّم ضمن طلابه.",
+    locked: "ابدأ الدورة لفتح دروسها. يرى المعلّم اسمك وهذه الدورة في قائمة طلابه الخاصة. لا تظهر بطاقتك علنًا إلا إذا اخترت ذلك.",
     name: "اسمك", namePh: "يظهر للمعلّم (اختياري)", signIn: "سجّل الدخول بدلًا من ذلك", guest: "ابدأ كضيف",
   },
 };

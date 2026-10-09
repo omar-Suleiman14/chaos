@@ -198,6 +198,54 @@ describe("learn source boundaries", () => {
     expect(await t.run(ctx => ctx.db.system.query("_storage").collect())).toHaveLength(1);
     expect(await t.run(ctx => ctx.db.query("learnSources").collect())).toHaveLength(1);
   });
+  it("counts kept bytes, refuses uploads past the storage allowance before reading them, and backfills", async () => {
+    const t = createProxyConvex(), owner = t.withIdentity(ownerIdentity);
+    const send = (body: string, length?: number) => owner.fetch(`${SOURCE_UPLOAD_PATH}?title=Notes&origin=Library`, { method: "POST", headers: { "Content-Type": "text/plain", ...(length ? { "Content-Length": String(length) } : {}) }, body });
+    expect((await send("first file")).status).toBe(201);
+    const usage = () => t.run(async ctx => (await ctx.db.query("sourceStorageUsage").collect()).map(r => [r.ownerId, r.bytes]));
+    expect(await usage()).toEqual([["owner", 10]]);
+    // The same private file again reuses the kept copy and costs nothing.
+    expect((await send("first file")).status).toBe(201);
+    expect(await usage()).toEqual([["owner", 10]]);
+    // Near the allowance: the declared size is refused before any byte is stored.
+    const quota = 2 * 1024 ** 3;
+    await t.run(async ctx => { const row = (await ctx.db.query("sourceStorageUsage").first())!; await ctx.db.patch("sourceStorageUsage", row._id, { bytes: quota - 5 }); });
+    const before = (await t.run(ctx => ctx.db.system.query("_storage").collect())).length;
+    expect((await send("too large", 9)).status).toBe(413);
+    expect(await t.run(ctx => ctx.db.system.query("_storage").collect())).toHaveLength(before);
+    // An undeclared size is still checked at registration, and the stored blob is deleted.
+    expect((await send("too large")).status).toBe(400);
+    expect(await t.run(ctx => ctx.db.system.query("_storage").collect())).toHaveLength(before);
+    // A spent hourly budget is refused before reading the body too.
+    await t.run(async ctx => { const now = Date.now(), hour = 3_600_000; await ctx.db.insert("rateWindows", { key: "learn:source-upload:other", windowStart: now - (now % hour), count: 40 }); });
+    expect((await t.withIdentity(otherIdentity).fetch(`${SOURCE_UPLOAD_PATH}?title=Notes&origin=Library`, { method: "POST", headers: { "Content-Type": "text/plain" }, body: "hello" })).status).toBe(429);
+  });
+
+  it("backfills kept files exactly once, even with uploads between its pages", async () => {
+    const t = createProxyConvex(), owner = t.withIdentity(ownerIdentity);
+    const backfill = makeFunctionReference<"mutation">("sourceStorage:backfill");
+    // 150 files kept before counting started: no storageCounted mark and no usage row.
+    await t.run(async ctx => {
+      for (let i = 0; i < 150; i++) {
+        const storageId = await ctx.storage.store(new Blob(["x"]));
+        await ctx.db.insert("learnSources", { ownerId: "owner", uploadedBy: "owner", metadata: { ...sourceMeta, kind: "file" }, metadataVisibility: "private", contentVisibility: "private", storageId, size: 1, createdAt: i, status: "active",
+          // High hashes, so a new upload sorts among rows an owner-ordered walk has already passed.
+          sha256: `zz${"z".repeat(48)}${String(i).padStart(14, "0")}` });
+      }
+    });
+    const counted = () => t.run(async ctx => (await ctx.db.query("sourceStorageUsage").collect()).reduce((sum, r) => sum + r.bytes, 0));
+    const stored = () => t.run(async ctx => (await ctx.db.query("learnSources").collect()).reduce((sum, r) => sum + (r.storageId ? r.size ?? 0 : 0), 0));
+    // First backfill page only, then an upload lands before the next page runs.
+    await t.mutation(backfill, { restart: true });
+    expect((await owner.fetch(`${SOURCE_UPLOAD_PATH}?title=New&origin=Library`, { method: "POST", headers: { "Content-Type": "text/plain" }, body: "hi" })).status).toBe(201);
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    expect(await stored()).toBe(152);
+    expect(await counted()).toBe(152);
+    // Running it again counts nothing twice.
+    await t.mutation(backfill, { restart: true });
+    await t.finishAllScheduledFunctions(vi.runAllTimers);
+    expect(await counted()).toBe(152);
+  });
   it("returns safe uploader attribution, immutable upload time/origin and an opaque fallback", async () => {
     const { t, sourceId } = await seeded();
     expect((await t.query(metadata, { sourceId })).provenance).toEqual({

@@ -72,6 +72,30 @@ The proxy must overwrite forwarded headers. Remove `CONVEX_DO_NOT_REQUIRE_SSL` b
 
 Back up `convex-data`, including auth component data and signing keys, plus server configuration/secrets consistently. Rehearse a restore. Never run `docker compose down -v` against retained data. Review release/security notes before upgrades; pin Convex images to tested releases. Deploy schema/functions before swapping the app. High availability and managed monitoring are operator responsibilities.
 
+## Versions and upgrades
+
+`docker-compose.yml` and `.env.example` pin the Convex backend and dashboard images to a tested build
+(`CONVEX_BACKEND_TAG`, `CONVEX_DASHBOARD_TAG`) instead of `latest`, so a restart never upgrades the
+database engine by surprise. To upgrade, back up `convex-data`, change both tags to the same newer
+build, then deploy functions again. The app image builds with the pnpm version pinned in
+`package.json` (`packageManager`).
+
+Links the MCP server gives assistants (lessons, courses, cards and guides) use `NEXT_PUBLIC_APP_URL`
+and the section origins from [hosts.md](hosts.md); backend links use `CHAOS_APP_URL`. Set both to your
+own origin.
+
+## What is not covered yet
+
+Check these before relying on a self-hosted installation:
+
+- **Email delivery.** With Better Auth, verification and forgotten-password emails are not configured
+  ([better-auth.md](better-auth.md#email-and-recovery)). Until you add a mail integration, people who
+  forget their password need an operator to reset it, and email-based invitations cannot be accepted.
+- **Restore.** The backup steps above have not been rehearsed against a full restore by the project.
+  Rehearse one on your own data before you depend on it.
+- **Load.** No sustained load test or large live-game run has been published for the Docker setup.
+  Measure with your expected class sizes first.
+
 ## Optional integrations
 
 MCP requires `CHAOS_MCP_SECRET` shared by Next.js and Convex. Better Auth additionally requires explicitly registered PKCE clients and a nonempty Next.js `CHAOS_MCP_CLIENT_IDS` allowlist. Request the app's `/mcp` URL as the OAuth resource. Registration and consent are described in [Better Auth MCP setup](./better-auth.md#mcp-oauth). Dynamic client registration is disabled; test external connector callbacks before enabling them.

@@ -6,6 +6,21 @@ import { getAuthIdentity } from "./authIdentity";
 import { userByUsername } from "./usernameModel";
 import { requireLearnActor } from "./mcpLearn";
 import { avatarSeed } from "../lib/avatarSeed";
+import type { Doc } from "./_generated/dataModel";
+
+/**
+ * Whether a student's Card may appear on a teacher's public page. Private unless the student chose it:
+ * an explicit per-teacher opt-in (`publicHidden === false`, written only by setVisibility) or the
+ * global opt-in. `publicVisible` is not consent: older rows default it either way. Any opt-out wins.
+ */
+export function studentCardPublic(user: Pick<Doc<"users">, "hideStudentCards" | "studentCardsPublic"> | null | undefined, row: Pick<Doc<"authorStudents">, "publicHidden">) {
+  if (!user || user.hideStudentCards || row.publicHidden === true) return false;
+  return row.publicHidden === false || user.studentCardsPublic === true;
+}
+/** The global preference as the settings switch shows it: on only after an explicit opt-in. */
+export function studentCardsGloballyPublic(user: Pick<Doc<"users">, "hideStudentCards" | "studentCardsPublic"> | null | undefined) {
+  return !!user && !user.hideStudentCards && user.studentCardsPublic === true;
+}
 
 /** Call only after a validated interaction. Anonymous experiences never acquire account identity here. */
 export async function recordStudent(ctx: MutationCtx, input: { authorId: string; studentId?: string; guestKey?: string; guestName?: string; context: string }) {
@@ -15,20 +30,19 @@ export async function recordStudent(ctx: MutationCtx, input: { authorId: string;
   const existing = await ctx.db.query("authorStudents").withIndex("by_author_key", q => q.eq("authorId", input.authorId).eq("key", key)).unique();
   const fields = { context: input.context.slice(0, 200), updatedAt: Date.now(), ...(input.guestName ? { guestName: input.guestName.slice(0, 80) } : {}) };
   if (existing) { await ctx.db.patch("authorStudents", existing._id, fields); return; }
-  await ctx.db.insert("authorStudents", { authorId: input.authorId, key, studentId: input.studentId, publicVisible: true, ...fields });
+  await ctx.db.insert("authorStudents", { authorId: input.authorId, key, studentId: input.studentId, publicVisible: false, ...fields });
   const count = await ctx.db.query("authorStudentCounts").withIndex("by_author", q => q.eq("authorId", input.authorId)).unique();
   if (count) await ctx.db.patch("authorStudentCounts", count._id, { count: count.count + 1 });
   else await ctx.db.insert("authorStudentCounts", { authorId: input.authorId, count: 1 });
 }
 export async function pageFor(ctx: QueryCtx, authorId: string, options: { numItems: number; cursor: string | null }, isPublic = false) {
-  // Include legacy rows created under the former private-by-default policy.
-  // Explicit opt-outs are distinct from that old default and are applied below.
+  // Public pages list only students who opted in (studentCardPublic); the private roster lists everyone.
   const rows = ctx.db.query("authorStudents").withIndex("by_author_updated", q => q.eq("authorId", authorId));
   const result = await rows.order("desc").paginate({ ...options, numItems: Math.min(48, Math.max(1, options.numItems)), maximumBytesRead: 500_000 });
   const mapped = await Promise.all(result.page.map(async row => {
     const user = row.studentId ? await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", row.studentId!)).first() : null;
     const visible = user && !user.isBanned && !user.suspendedUntil;
-    if (isPublic && (!visible || user.hideStudentCards || row.publicHidden)) return null;
+    if (isPublic && (!visible || !studentCardPublic(user, row))) return null;
     return { id: row._id, name: visible ? user.name : row.guestName || `Guest ${row._id.slice(-6)}`, username: visible ? user.username : null,
       seed: visible ? user.cardAvatarSeed ?? avatarSeed(user.clerkId) : avatarSeed(row._id), style: visible ? user.cardStyle ?? 0 : 0, context: isPublic ? null : row.context };
   }));
@@ -49,7 +63,7 @@ export const myVisibility = query({ args: { username: v.string() }, handler: asy
   const row = await ctx.db.query("authorStudents").withIndex("by_author_key", q => q.eq("authorId", author.clerkId).eq("key", `user:${identity.subject}`)).unique();
   if (!row) return null;
   const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", identity.subject)).first();
-  return !user?.hideStudentCards && !row.publicHidden;
+  return studentCardPublic(user, row);
 } });
 async function setVisibility(ctx: MutationCtx, studentId: string, username: string, visible: boolean) {
   const author = await userByUsername(ctx, username.trim().toLowerCase()); if (!author) throw new Error("Author unavailable");
@@ -60,7 +74,7 @@ async function setVisibility(ctx: MutationCtx, studentId: string, username: stri
 export async function setGlobalStudentVisibility(ctx: MutationCtx, userId: string, visible: boolean) {
   const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", userId)).unique();
   if (!user) throw new Error("ACCOUNT_REQUIRED: Sign in first.");
-  await ctx.db.patch("users", user._id, { hideStudentCards: !visible }); return { ok: true };
+  await ctx.db.patch("users", user._id, { hideStudentCards: !visible, studentCardsPublic: visible }); return { ok: true };
 }
 export const setGlobalVisibility = mutation({ args: { visible: v.boolean() }, handler: async (ctx, args) => {
   const { identity } = await requireActiveUser(ctx); return setGlobalStudentVisibility(ctx, identity.subject, args.visible);
