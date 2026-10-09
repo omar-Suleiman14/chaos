@@ -49,6 +49,7 @@ export interface HandoffContext {
   target?: HandoffTarget;
 }
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-tabindex -- Styled button radios preserve native button activation and expose their selection to assistive technology. The bounded prompt preview is focusable for keyboard scrolling and selecting text. */
 export default function HandoffDialog({ input, onClose }: { input: HandoffContext; onClose: () => void }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
@@ -89,7 +90,7 @@ export default function HandoffDialog({ input, onClose }: { input: HandoffContex
       <div className="lx-form">
         <div className="lx-field">
           <span>{t.action}</span>
-          <div className="lx-chips" role="radiogroup" aria-label={t.action} onKeyDown={e => {
+          <div className="lx-chips" role="radiogroup" tabIndex={-1} aria-label={t.action} onKeyDown={e => {
             const choices = Object.keys(t.actions) as HandoffAction[];
             const index = choices.indexOf(action);
             const rtl = getComputedStyle(e.currentTarget).direction === "rtl";
@@ -140,3 +141,4 @@ export default function HandoffDialog({ input, onClose }: { input: HandoffContex
     </WsDialog>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-tabindex */

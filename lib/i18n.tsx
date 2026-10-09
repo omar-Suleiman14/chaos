@@ -43,7 +43,6 @@ export function LocaleProvider({ initial, children }: { initial: Locale; childre
     document.documentElement.dir = localeDir(next);
     const { path } = splitLocale(window.location.pathname);
     // A full load, so the other language's static page and its <html lang dir> arrive together.
-    // eslint-disable-next-line @next/next/no-location-assign-relative-destination -- deliberate document navigation
     if (isSitePath(path)) window.location.assign(`${localePath(path, next)}${window.location.search}${window.location.hash}`);
   }, []);
   return <Context.Provider value={{ locale, dir: localeDir(locale), setLocale }}>{children}</Context.Provider>;

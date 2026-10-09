@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { checkDefinition, emptyDefinition } from "@/convex/formLogic";
-import { gradeQuiz, publicQuizDefinition } from "@/convex/formQuiz";
+import { gradeQuiz, publicQuizDefinition, quizReview } from "@/convex/formQuiz";
 
 describe("form quiz mode", () => {
   const quiz = () => {
@@ -21,6 +21,26 @@ describe("form quiz mode", () => {
     expect(gradeQuiz(quiz(), { single: "a", multi: ["z", "x"] })).toMatchObject({ score: 5, maxScore: 5 });
     expect(gradeQuiz(quiz(), { single: "b", multi: ["x"] })).toMatchObject({ score: 0, maxScore: 5 });
     expect(gradeQuiz(quiz(), { single: "a" })).toMatchObject({ score: 2, maxScore: 5 });
+  });
+
+  it("reviews a submission question by question, with the key and the explanation", () => {
+    const def = quiz();
+    def.fields[1].quiz!.explanation = "Two and three are prime.";
+    expect(quizReview(def, gradeQuiz(def, { single: "b", multi: ["x", "z"] }))).toEqual([
+      { fieldId: "single", earned: 0, possible: 2, correctOptionIds: ["a"] },
+      { fieldId: "multi", earned: 3, possible: 3, correctOptionIds: ["x", "z"], explanation: "Two and three are prime." },
+    ]);
+    expect(quizReview(def, null)).toBeNull();
+  });
+
+  it("returns only marks when the creator hides the answers", () => {
+    const def = quiz();
+    def.quiz = { enabled: true, showAnswers: false };
+    def.fields[0].quiz!.explanation = "A is right.";
+    expect(quizReview(def, gradeQuiz(def, { single: "b", multi: ["x", "z"] }))).toEqual([
+      { fieldId: "single", earned: 0, possible: 2, correctOptionIds: [] },
+      { fieldId: "multi", earned: 3, possible: 3, correctOptionIds: [] },
+    ]);
   });
 
   it("does not send answer keys or option scores to respondents", () => {

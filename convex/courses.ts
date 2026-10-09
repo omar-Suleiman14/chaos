@@ -101,6 +101,7 @@ export const create = mutation({
 });
 
 const updateArgs = v.object({ courseId: v.id("learnCollections"), title: v.optional(v.string()), description: v.optional(v.string()), coverUrl: v.optional(v.union(v.string(), v.null())), coverY: v.optional(v.union(v.number(), v.null())), icon: v.optional(v.union(v.string(), v.null())), language: v.optional(v.string()), tags: v.optional(v.array(v.string())), details: v.optional(courseDetails) });
+/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export async function updateCourse(ctx: MutationCtx, args: Infer<typeof updateArgs>, asActor?: string) {
     const { row } = await ownedCourse(ctx, args.courseId, asActor, true);
     const m = { ...row.metadata };
@@ -116,6 +117,7 @@ export async function updateCourse(ctx: MutationCtx, args: Infer<typeof updateAr
     await authorDb(ctx).patch("learnCollections", row._id, { metadata: m, ...(args.details ? { details: args.details } : {}), updatedAt: Date.now() });
     return null;
 }
+/* oxlint-enable eslint/no-control-regex */
 export const update = mutation({
   args: updateArgs.fields,
   returns: v.null(),
@@ -168,8 +170,8 @@ export async function publishCourse(ctx: MutationCtx, args: Infer<typeof publish
     const audienceTeamId = await resolveAudienceTeam(ctx, actor, args.visibility, args.teamId, row.audienceTeamId);
     if (row.communityState !== "ok") throw new Error("MODERATED: This course is under review and can't be published right now.");
     for (const courseModuleItem of row.modules ?? []) for (const asset of courseModuleItem.assessments) {
-      if (asset.kind === "form") { const id = ctx.db.normalizeId("forms", asset.id); const form = id ? await ctx.db.get("forms", id) : null; if (!form || form.ownerId !== actor || form.status !== "live" || form.isBanned || form.publishedVersion === undefined) throw new Error("ASSESSMENT_UNPUBLISHED: Publish each module quiz before publishing this course."); }
-      else { const id = ctx.db.normalizeId("quizzes", asset.id); const quiz = id ? await ctx.db.get("quizzes", id) : null; if (!quiz || quiz.creatorId !== actor || !quiz.isPublished || quiz.isBanned || !quiz.publishedSnapshot) throw new Error("ASSESSMENT_UNPUBLISHED: Publish each module quiz before publishing this course."); }
+      const id = asset.kind === "form" ? ctx.db.normalizeId("forms", asset.id) : null; const form = id ? await ctx.db.get("forms", id) : null;
+      if (!form || form.ownerId !== actor || form.status !== "live" || form.isBanned || form.publishedVersion === undefined) throw new Error("ASSESSMENT_UNPUBLISHED: Publish each module quiz before publishing this course.");
     }
     const ids = outline(row);
     if (!ids.length) throw new Error("EMPTY: Add at least one lesson before publishing.");
@@ -339,10 +341,10 @@ export async function setCourseModules(ctx: MutationCtx, args: { courseId: Id<"l
     for (const id of courseModuleItem.lessonIds) { if (seen.has(id) || !current.includes(id)) throw new Error("VALIDATION_FAILED: Each outlined lesson belongs to at most one module."); seen.add(id); }
     for (const asset of courseModuleItem.assessments) {
       if (editor !== row.ownerId && !(row.modules ?? []).some(module => module.assessments.some(existing => existing.kind === asset.kind && existing.id === asset.id))) throw new Error("Only the owner can add assessments to this course.");
-      const id = ctx.db.normalizeId(asset.kind === "form" ? "forms" : "quizzes", asset.id);
+      const id = asset.kind === "form" ? ctx.db.normalizeId("forms", asset.id) : null;
       if (!id) throw new Error("NOT_FOUND: Assessment not found.");
-      if (asset.kind === "form") { const form = await ctx.db.get("forms", id as Id<"forms">); if (!form || form.ownerId !== actor || !form.draft.quiz?.enabled) throw new Error("NOT_FOUND: Quiz not owned by you."); }
-      else { const quiz = await ctx.db.get("quizzes", id as Id<"quizzes">); if (!quiz || quiz.creatorId !== actor) throw new Error("NOT_FOUND: Quiz not owned by you."); }
+      const form = await ctx.db.get("forms", id);
+      if (!form || form.ownerId !== actor || !form.draft.quiz?.enabled) throw new Error("NOT_FOUND: Quiz not owned by you.");
     }
   }
   await authorDb(ctx).patch("learnCollections", row._id, { modules: args.modules.map(m => ({ ...m, title: m.title.trim() })), lessonIds: [...args.modules.flatMap(m => m.lessonIds), ...current.filter(id => !seen.has(id))], updatedAt: Date.now() });
@@ -424,3 +426,50 @@ export const courseForLesson = query({ args: { lessonId: v.string() }, returns: 
   }
   return null;
 } });
+
+// ── Version history ─────────────────────────────────────────────────────────
+
+const courseVersionView = v.object({
+  number: v.number(), publishedAt: v.number(), title: v.string(), description: v.string(), outcomes: v.array(v.string()),
+  modules: v.array(v.object({ id: v.string(), title: v.string(), lessonIds: v.array(v.id("lessons")) })),
+  lessons: v.array(v.object({ id: v.id("lessons"), title: v.string() })),
+});
+
+/** The newest published versions of a course for its owner or team editors: outline, lesson titles as published, outcomes. */
+export async function listCourseVersions(ctx: QueryCtx, args: { courseId: Id<"learnCollections"> }, asActor?: string) {
+  const { row } = await ownedCourse(ctx, args.courseId, asActor, true);
+  const rows = await ctx.db.query("collectionVersions").withIndex("by_collectionId_and_number", (q) => q.eq("collectionId", row._id)).order("desc").take(20);
+  // Each lesson reads with the title it had in that publication; versions mostly share lesson versions.
+  const titles = new Map<string, string>();
+  for (const r of rows) for (const item of r.items) {
+    if (item.kind !== "lesson" || titles.has(item.versionId)) continue;
+    titles.set(item.versionId, (await ctx.db.get("lessonVersions", item.versionId))?.metadata.title ?? "");
+  }
+  return rows.map((r) => ({
+    number: r.number, publishedAt: r.publishedAt, title: r.metadata.title, description: r.metadata.description, outcomes: r.details?.outcomes ?? [],
+    modules: (r.modules ?? []).map((m) => ({ id: m.id, title: m.title, lessonIds: m.lessonIds })),
+    lessons: r.items.flatMap((item) => (item.kind === "lesson" ? [{ id: item.id, title: titles.get(item.versionId) ?? "" }] : [])),
+  }));
+}
+export const listVersions = query({ args: { courseId: v.id("learnCollections") }, returns: v.array(courseVersionView), handler: (ctx, args) => listCourseVersions(ctx, args) });
+
+/**
+ * Copies a published version into the draft: title, description, details, modules and lesson order.
+ * Lessons deleted or moved out of the owner's library since are left out. Readers keep the live version until the next publish.
+ */
+export async function restoreCourseVersion(ctx: MutationCtx, args: { courseId: Id<"learnCollections">; number: number }, asActor?: string) {
+  // Owner only: a restore can bring back lessons, which team editors may not add.
+  const { row } = await ownedCourse(ctx, args.courseId, asActor);
+  const version = await ctx.db.query("collectionVersions").withIndex("by_collectionId_and_number", (q) => q.eq("collectionId", row._id).eq("number", args.number)).unique();
+  if (!version) throw new Error("NOT_FOUND: Version not found.");
+  const lessonIds: Id<"lessons">[] = [];
+  for (const item of version.items) {
+    if (item.kind !== "lesson" || lessonIds.includes(item.id)) continue;
+    const lesson = await ctx.db.get("lessons", item.id);
+    if (lesson && lesson.ownerId === row.ownerId) lessonIds.push(item.id);
+  }
+  const modules = version.modules?.map((m) => ({ ...m, lessonIds: m.lessonIds.filter((id) => lessonIds.includes(id)) }));
+  await authorDb(ctx).patch("learnCollections", row._id, { metadata: version.metadata, details: version.details, modules, lessonIds, updatedAt: Date.now() });
+  return null;
+}
+export const restoreVersion = mutation({ args: { courseId: v.id("learnCollections"), number: v.number() }, returns: v.null(), handler: (ctx, args) => restoreCourseVersion(ctx, args) });

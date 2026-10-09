@@ -1,13 +1,11 @@
 // Pure rules for live games (host-led, Kahoot-style play of a quiz). No Convex imports,
 // so the server, the host and player screens and the unit tests share one copy.
 //
-// Grading is not re-implemented here: form questions use choiceIsCorrect from
-// formQuiz.ts and old quiz questions use gradeSingle/gradeMulti from grading.ts,
+// Grading is not re-implemented here: questions use choiceIsCorrect from formQuiz.ts,
 // exactly as a normal attempt would be marked.
 
 import type { FormDefinition, Language } from "./formLogic";
 import { choiceIsCorrect } from "./formQuiz";
-import { gradeMulti, gradeSingle } from "./grading";
 
 export const PIN_LENGTH = 6;
 /** Answer tiles. Shapes carry the meaning; colours only reinforce it. */
@@ -49,7 +47,7 @@ export interface LiveQuestion {
   /** Option ids that are correct. Never sent to players before the reveal. */
   correct: string[];
   image?: { url: string; alt: string };
-  /** Old quiz questions only: grading type and marks, for the stored attempt. */
+  /** Games hosted from classic quizzes before they were retired (stored rows only; `correct` grades them). */
   legacyType?: "mcq" | "true_false" | "multi_select";
   legacyCorrect?: string;
   legacyCorrectList?: string[];
@@ -84,16 +82,6 @@ export function rankScores<T extends { score: number }>(players: T[]): (T & { ra
 // ── Correctness (shared grading helpers) ──────────────────────────────────
 
 export function isCorrectAnswer(question: LiveQuestion, chosen: string[]): boolean {
-  if (question.legacyType) {
-    const labels = chosen.map((id) => question.options.find((o) => o.id === id)?.label ?? "");
-    if (question.legacyType === "multi_select") return gradeMulti(labels, question.legacyCorrectList ?? [], 1).isCorrect;
-    if (question.legacyType === "true_false") {
-      // True/false tiles carry "true"/"false" as their stored answer.
-      const stored = chosen.length === 1 ? chosen[0] : "";
-      return chosen.length === 1 && gradeSingle(stored, question.legacyCorrect, 1).isCorrect;
-    }
-    return chosen.length === 1 && gradeSingle(labels[0], question.legacyCorrect, 1).isCorrect;
-  }
   return choiceIsCorrect({ type: question.kind === "multi" ? "multi_choice" : "choice", quiz: { correctOptionIds: question.correct, points: 1 } }, chosen);
 }
 
@@ -136,51 +124,6 @@ export function questionsFromForm(def: FormDefinition, language: Language = def.
     });
   }
   return { questions, skipped };
-}
-
-export interface LegacyQuestionLike {
-  _id: string;
-  type: "mcq" | "true_false" | "multi_select" | "written";
-  questionText: string;
-  options?: string[];
-  correctAnswer?: string;
-  correctAnswers?: string[];
-  points: number;
-}
-
-/** Old quiz questions that fit on tiles. Written answers and more than four options are left out. */
-export function questionsFromLegacy(list: LegacyQuestionLike[]): { questions: LiveQuestion[]; skipped: number } {
-  const questions: LiveQuestion[] = [];
-  let skipped = 0;
-  for (const q of list) {
-    if (questions.length >= MAX_LIVE_QUESTIONS) { skipped++; continue; }
-    if (q.type === "true_false") {
-      const options = [{ id: "true", label: "True" }, { id: "false", label: "False" }];
-      const correct = (q.correctAnswer ?? "").trim().toLowerCase();
-      if (correct !== "true" && correct !== "false") { skipped++; continue; }
-      questions.push({ key: q._id, text: q.questionText.slice(0, 500), kind: "single", options, correct: [correct], legacyType: "true_false", legacyCorrect: q.correctAnswer, points: q.points });
-      continue;
-    }
-    if (q.type !== "mcq" && q.type !== "multi_select") { skipped++; continue; }
-    const labels = q.options ?? [];
-    if (labels.length < 2 || labels.length > MAX_TILES) { skipped++; continue; }
-    const options = labels.map((label, i) => ({ id: String(i), label: label.slice(0, 200) }));
-    const fold = (s: string) => s.trim().toLowerCase();
-    const correctLabels = q.type === "mcq" ? (q.correctAnswer ? [q.correctAnswer] : []) : (q.correctAnswers ?? []);
-    const correct = options.filter((o) => correctLabels.some((c) => fold(c) === fold(labels[Number(o.id)]))).map((o) => o.id);
-    if (!correct.length) { skipped++; continue; }
-    questions.push({
-      key: q._id, text: q.questionText.slice(0, 500), kind: q.type === "multi_select" ? "multi" : "single", options, correct,
-      legacyType: q.type, legacyCorrect: q.correctAnswer, legacyCorrectList: q.correctAnswers, points: q.points,
-    });
-  }
-  return { questions, skipped };
-}
-
-/** The text an old quiz attempt stores for a choice: the option label, or labels joined by commas. */
-export function legacyAnswerText(question: LiveQuestion, chosen: string[]): string {
-  if (question.legacyType === "true_false") return chosen[0] ?? "";
-  return chosen.map((id) => question.options.find((o) => o.id === id)?.label ?? "").join(",");
 }
 
 // ── Nicknames ─────────────────────────────────────────────────────────────

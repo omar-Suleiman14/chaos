@@ -356,6 +356,8 @@ html[lang="ar"] .site-ui :is(h1, h2, h3, .site-brand) { letter-spacing: 0; }
 /* Two assistants on one card: the marks overlap a little, like stacked avatars. */
 .site-partner__marks { display: inline-flex; }
 .site-partner__marks .site-partner__mark + .site-partner__mark { margin-inline-start: -10px; box-shadow: 0 0 0 3px var(--s-card); }
+.site-section-heading > .site-partner__marks { margin-bottom: 18px; }
+.site-section-heading > .site-partner__marks .site-partner__mark + .site-partner__mark { box-shadow: 0 0 0 3px var(--s-bg); }
 /* Header icons (theme, log in, menu): one size, one stroke, one hover, so the row reads as a set. */
 .site-nav__actions :is(.site-icon-btn, .site-login) svg { width: 19px; height: 19px; stroke-width: 1.75; }
 .site-nav__actions .site-icon-btn { display: inline-grid !important; place-items: center; width: 40px !important; height: 40px !important; padding: 0 !important; transition: background 150ms, color 150ms; }

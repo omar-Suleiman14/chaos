@@ -1,0 +1,214 @@
+import { readFileSync } from "node:fs";
+import { expect, test, type Page } from "@playwright/test";
+
+/**
+ * Reader geometry in Chromium with the shipped stylesheets: the theme toggle keeps its size,
+ * block ⋯ menus never cover text, the outline folds, and 320px phones do not scroll sideways.
+ * The markup mirrors what BlockRenderer, LessonReader, Outline and ReadingMenu render.
+ */
+const css = ["app/workspace.css", "components/learn/learn.css"].map((p) => readFileSync(p, "utf8")).join("\n");
+const handle = `<div class="lx-block__handle"><div class="relative"><button type="button" class="lx-block-action" aria-label="Actions">⋯</button></div></div>`;
+const long = "Cerebrospinal fluid circulates from the lateral ventricles through the interventricular foramina into the third ventricle and onward.";
+const article = (dir: "ltr" | "rtl") => `
+  <article class="lx-article" dir="${dir}">
+    <div class="lx-block" id="h" data-block-id="h" data-type="heading">${handle}<h2>Lecture 1: Anatomical Parts of the Nervous System and Spinal Cord</h2></div>
+    <div class="lx-block" id="p" data-block-id="p" data-type="paragraph">${handle}<p>${long}</p></div>
+    <ol class="lx-block" data-type="list"><li id="li" data-block-id="li" style="position:relative">${handle}<p>${long}</p></li></ol>
+    <div class="lx-block" id="ar" data-block-id="ar" data-type="paragraph" dir="rtl">${handle}<p>يمر السائل الدماغي الشوكي من البطينات الجانبية عبر الثقب بين البطينين إلى البطين الثالث ثم إلى CSF.</p></div>
+  </article>`;
+const page = (dir: "ltr" | "rtl" = "ltr", outline: "open" | "closed" = "open") => `<!doctype html><html dir="${dir}"><head><meta name="viewport" content="width=device-width, initial-scale=1"><style>${css}
+  .relative { position: relative; } body { margin: 0; font-family: system-ui, sans-serif; }
+  .ws-menu { animation: none; } /* measured settled, not mid pop-in */</style></head>
+  <body class="workspace-ui"><div class="lx-reader-root" dir="${dir}">
+    <div class="lx-reader" data-side="closed" data-width="normal" data-outline="${outline}">
+      <aside class="lx-reader__toc"><div class="lx-toc-desk" ${outline === "closed" ? "data-collapsed" : ""}>
+        <div class="lx-toc-desk__head"><button type="button" class="ws-icon-button lx-toc-toggle" aria-label="Toggle sidebar">▢</button><p class="lx-toc__title lx-toc-desk__title">On this page</p></div>
+        <div class="lx-toc-desk__body" ${outline === "closed" ? "inert" : ""}><nav class="lx-toc"><a href="#h" data-level="1">Lecture 1: Anatomical Parts of the Nervous System</a></nav></div>
+      </div></aside>
+      <main class="lx-reader__main">${article(dir)}</main>
+    </div></div>
+    <div class="ws-menu ws-glass lx-reading-menu" role="menu" style="position:fixed; top: 60px; right: 12px">
+      <div class="lx-reading-menu__body">
+        <div class="lx-reading-menu__group"><span class="lx-reading-menu__label">Text size</span><div class="lx-chips"><button class="lx-chip" role="menuitemradio">Small</button><button class="lx-chip" role="menuitemradio" aria-checked="true">Normal</button><button class="lx-chip" role="menuitemradio">Large</button></div></div>
+        <div class="lx-reading-menu__appearance"><span class="lx-reading-menu__label">Appearance</span>
+          <button type="button" class="theme-toggle relative inline-flex h-11 w-11 items-center justify-center overflow-hidden rounded-lg border border-border bg-card text-foreground transition-colors hover:bg-muted ws-icon-button" aria-label="Use dark appearance">
+            <svg class="theme-toggle__sun" width="16" height="16"></svg><svg class="theme-toggle__moon" width="16" height="16"></svg></button></div>
+      </div>
+    </div>
+  </body></html>`;
+
+/** Bounding boxes of the rendered text of an element (one per line), via a DOM range. */
+const textBoxes = (p: Page, selector: string) => p.evaluate((sel) => {
+  const el = document.querySelector(sel)!;
+  const range = document.createRange();
+  range.selectNodeContents(el);
+  return Array.from(range.getClientRects()).map((r) => ({ x: r.x, y: r.y, width: r.width, height: r.height }));
+}, selector);
+const overlaps = (a: { x: number; y: number; width: number; height: number }, b: typeof a) =>
+  a.x < b.x + b.width && b.x < a.x + a.width && a.y < b.y + b.height && b.y < a.y + a.height;
+
+test.describe("theme toggle", () => {
+  test("keeps an icon-sized, stable box at rest, on hover and on focus", async ({ page: p }) => {
+    await p.setViewportSize({ width: 1280, height: 800 });
+    await p.setContent(page());
+    const toggle = p.locator(".theme-toggle");
+    const rest = (await toggle.boundingBox())!;
+    expect(rest.width).toBeLessThanOrEqual(44);
+    expect(rest.height).toBeCloseTo(rest.width, 1);
+    await toggle.hover();
+    expect(await toggle.boundingBox()).toEqual(rest);
+    await toggle.focus();
+    expect(await toggle.boundingBox()).toEqual(rest);
+    // The Appearance label keeps its row: the toggle does not swallow it.
+    const label = (await p.locator(".lx-reading-menu__appearance .lx-reading-menu__label").boundingBox())!;
+    expect(label.x + label.width).toBeLessThan(rest.x);
+  });
+
+  test("chips stay chips inside the menu instead of full-width rows", async ({ page: p }) => {
+    await p.setContent(page());
+    const chips = await p.locator(".lx-chip").evaluateAll((els) => els.map((e) => e.getBoundingClientRect().top));
+    expect(new Set(chips.map(Math.round)).size).toBe(1);
+  });
+});
+
+test.describe("block ⋯ menu", () => {
+  for (const dir of ["ltr", "rtl"] as const) {
+    test(`sits in the gutter beside the text on large screens (${dir})`, async ({ page: p }) => {
+      await p.setViewportSize({ width: 1400, height: 900 });
+      await p.setContent(page(dir));
+      for (const id of ["h", "p", "li", "ar"]) {
+        await p.locator(`#${id}`).hover({ position: { x: 40, y: 5 } });
+        const button = (await p.locator(`#${id} > .lx-block__handle .lx-block-action`).boundingBox())!;
+        expect(button, id).not.toBeNull();
+        await expect(p.locator(`#${id} > .lx-block__handle`), id).toHaveCSS("opacity", "1");
+        for (const line of await textBoxes(p, `#${id} > :is(p, h2)`)) expect(overlaps(button, line), `${dir} ${id}`).toBe(false);
+        if (id === "li") {
+          // Ordered-list numbers are text too.
+          const marker = await p.locator("#li").evaluate((li) => { const r = li.getBoundingClientRect(); return { x: getComputedStyle(li).direction === "rtl" ? r.right : r.left - 24, y: r.top, width: 24, height: 20 }; });
+          expect(overlaps(button, marker), `${dir} list number`).toBe(false);
+        }
+      }
+    });
+  }
+
+  for (const width of [320, 390, 820]) {
+    test(`never covers text on a ${width}px touch screen and does not shift layout`, async ({ browser }) => {
+      const context = await browser.newContext({ viewport: { width, height: 700 }, hasTouch: true, isMobile: true });
+      const p = await context.newPage();
+      for (const dir of ["ltr", "rtl"] as const) {
+        await p.setContent(page(dir));
+        const before = await p.locator("#p").boundingBox();
+        await p.locator("#p").evaluate((el) => el.setAttribute("data-active", "true"));
+        await p.locator("#li").evaluate((el) => el.setAttribute("data-active", "true"));
+        expect(await p.locator("#p").boundingBox()).toEqual(before);
+        for (const id of ["p", "li"]) {
+          const handle = await p.locator(`#${id} > .lx-block__handle`).evaluate((e) => getComputedStyle(e).display);
+          expect(handle, `${dir} ${id}`).toBe("none");
+        }
+        expect(await p.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(width);
+      }
+      // The callout fits the screen with every action showing, even an image's six.
+      await p.evaluate(() => document.body.insertAdjacentHTML("beforeend", `<div class="lx-actbar ws-glass" data-side="above" role="toolbar" style="top:200px;left:8px">${["Explain", "Ask", "Save", "Note", "Discuss", "Copy link"].map((l) => `<button class="lx-actbar__action"><span class="lx-actbar__icon">•</span><span>${l}</span></button>`).join("")}</div>`));
+      const bar = (await p.locator(".lx-actbar").boundingBox())!;
+      expect(bar.x).toBeGreaterThanOrEqual(0);
+      expect(bar.x + bar.width).toBeLessThanOrEqual(width);
+      expect(bar.y + bar.height).toBeLessThanOrEqual(700);
+      await context.close();
+    });
+  }
+});
+
+test.describe("outline sidebar", () => {
+  test("folded, the lesson centres and the toggle stays reachable without covering it", async ({ page: p }) => {
+    await p.setViewportSize({ width: 1440, height: 900 });
+    await p.setContent(page("ltr", "closed"));
+    const main = (await p.locator(".lx-reader__main").boundingBox())!;
+    const reader = (await p.locator(".lx-reader").boundingBox())!;
+    const centre = reader.x + reader.width / 2;
+    expect(Math.abs(main.x + main.width / 2 - centre)).toBeLessThan(40);
+    const toggle = (await p.locator(".lx-toc-toggle").boundingBox())!;
+    expect(overlaps(toggle, main)).toBe(false);
+    expect(await p.locator(".lx-toc-desk__body").evaluate((e) => getComputedStyle(e).visibility)).toBe("hidden");
+  });
+
+  test("open, the outline takes its column beside the lesson (and mirrors in RTL)", async ({ page: p }) => {
+    await p.setViewportSize({ width: 1440, height: 900 });
+    for (const dir of ["ltr", "rtl"] as const) {
+      await p.setContent(page(dir, "open"));
+      const toc = (await p.locator(".lx-toc").boundingBox())!;
+      const main = (await p.locator(".lx-reader__main").boundingBox())!;
+      expect(overlaps(toc, main)).toBe(false);
+      expect(dir === "ltr" ? toc.x < main.x : toc.x > main.x).toBe(true);
+    }
+  });
+
+  test("on tablets and phones the desktop sidebar is not shown at all", async ({ page: p }) => {
+    await p.setViewportSize({ width: 900, height: 900 });
+    await p.setContent(page("ltr", "closed"));
+    expect(await p.locator(".lx-reader__toc").evaluate((e) => getComputedStyle(e).display)).toBe("none");
+  });
+});
+
+const tools = (ai = true) => `<div class="lx-seltools ws-glass" role="toolbar" style="left:8px;top:8px">
+  ${["Read aloud", "Explain", "Simplify", "Example", "Quiz me"].map((l) => `<button type="button"><svg width="15" height="15"></svg>${l}</button>`).join("")}
+  ${ai ? `<span class="lx-muted lx-seltools__note" style="font-size:11px;padding-inline:4px">opens outside Chaos</span>` : ""}<span class="lx-seltools__sep"></span>
+  <span class="lx-seltools__swatches">${["#facc15", "#4ade80", "#60a5fa", "#f472b6"].map((c) => `<button type="button" aria-label="Highlight"><span class="lx-seltools__swatch" style="background:${c}"></span></button>`).join("")}</span>
+  ${["Note", "Save", "Discuss"].map((l) => `<button type="button"><svg width="15" height="15"></svg>${l}</button>`).join("")}<span class="lx-seltools__sep"></span>
+  ${["Ask ChatGPT", "Ask Claude"].map((l) => `<button type="button"><svg width="15" height="15"></svg>${l}</button>`).join("")}</div>`;
+
+test.describe("selection toolbar", () => {
+  for (const width of [320, 390]) {
+    test(`is a compact square of tiles on a ${width}px phone, not a sideways strip`, async ({ browser }) => {
+      const context = await browser.newContext({ viewport: { width, height: 800 }, hasTouch: true, isMobile: true });
+      const p = await context.newPage();
+      await p.setContent(page());
+      await p.evaluate((html) => document.body.insertAdjacentHTML("beforeend", html), tools());
+      const bar = (await p.locator(".lx-seltools").boundingBox())!;
+      expect(bar.width).toBeLessThanOrEqual(width - 16);
+      expect(bar.height / bar.width).toBeGreaterThan(0.55);
+      expect(await p.locator(".lx-seltools").evaluate((e) => e.scrollWidth <= e.clientWidth)).toBe(true);
+      const rows = new Set(await p.locator(".lx-seltools > button, .lx-seltools__swatches").evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().top))));
+      expect(rows.size).toBe(3);
+      await context.close();
+    });
+  }
+});
+
+test.describe("phone top bar", () => {
+  test("fits the Listen icon beside the other actions at 320px without scrolling sideways", async ({ browser }) => {
+    const context = await browser.newContext({ viewport: { width: 320, height: 640 }, hasTouch: true, isMobile: true });
+    const p = await context.newPage();
+    const icon = (label: string) => `<button type="button" class="ws-btn ws-btn--sm ws-btn--ghost"><svg width="15" height="15"></svg><span class="lx-phone-label">${label}</span></button>`;
+    await p.setContent(page().replace('<div class="lx-reader-root" dir="ltr">', `<div class="lx-reader-root" dir="ltr"><header class="lx-reader-top"><a class="ws-icon-button lx-reader-back" href="#">‹</a><span class="lx-reader-top__title">T</span><div class="lx-actions" style="gap:2px">${["Save", "Ask", "Discussion", "Listen"].map(icon).join("")}<button class="ws-icon-button">T</button><button class="ws-icon-button">⋯</button></div></header>`));
+    const last = (await p.locator(".lx-reader-top .lx-actions > :last-child").boundingBox())!;
+    expect(last.x + last.width).toBeLessThanOrEqual(320);
+    expect(await p.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(320);
+    await context.close();
+  });
+});
+
+test.describe("Listen menu overflow", () => {
+  for (const dir of ["ltr", "rtl"] as const) {
+    for (const width of [280, 320, 390, 1280]) {
+      test(`wraps settings and long voices at ${width}px (${dir})`, async ({ page: p }) => {
+        await p.setViewportSize({ width, height: 800 });
+        await p.setContent(page(dir));
+        await p.locator('.lx-reading-menu').evaluate((menu) => {
+          (menu as HTMLElement).style.overflowY = 'auto';
+          menu.innerHTML = `<div class="lx-reading-menu__body"><div class="lx-level">
+            <button class="lx-reading-menu__row lx-voice-row"><span style="flex:1">English voice</span><span class="lx-reading-menu__value">A very long device-provided voice name</span><svg width="16"></svg></button>
+            <div class="lx-reading-menu__group"><span>Highlight colour</span><div class="lx-narr-swatches">${Array.from({length:9}, () => '<button class="lx-narr-swatch"></button>').join('')}</div></div>
+            <div class="lx-reading-menu__group"><span>Speed</span><div class="lx-chips">${[0.5,0.75,1,1.25,1.5,1.75,2].map(s => `<button class="lx-chip">${s}×</button>`).join('')}</div></div>
+            <button class="lx-reading-menu__row"><span style="flex:1">Automatic (ExtremelyLongUnbrokenDeviceVoiceNameWithNoSpaces)</span><svg width="15"></svg></button>
+          </div></div>`;
+        });
+        expect(await p.locator('.lx-reading-menu').evaluate(el => el.scrollWidth <= el.clientWidth)).toBe(true);
+        const bounds = (await p.locator('.lx-reading-menu').boundingBox())!;
+        for (const box of await p.locator('.lx-narr-swatch, .lx-chip').evaluateAll(els => els.map(el => ({left:el.getBoundingClientRect().left,right:el.getBoundingClientRect().right})))) {
+          expect(box.left).toBeGreaterThanOrEqual(bounds.x);
+          expect(box.right).toBeLessThanOrEqual(bounds.x + bounds.width);
+        }
+      });
+    }
+  }
+});

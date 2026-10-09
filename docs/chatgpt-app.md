@@ -45,7 +45,7 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 
 | Tool | What it does | readOnly | destructive | openWorld |
 |---|---|---|---|---|
-| `search_forms` | List/search the person's forms, quizzes and classic quizzes | true | false | false |
+| `search_forms` | List/search the person's forms and quizzes | true | false | false |
 | `get_form` | Questions, options, answer key, publish readiness, links | true | false | false |
 | `get_results` | Counts, completion, averages, per-question distributions, quiz average | true | false | false |
 | `list_responses` | Individual completed responses as text (paged, max 25) | true | false | false |
@@ -169,7 +169,7 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 - `create_game_draft`: creates an ordinary quiz draft with 1–100 questions and publishes it only with `publish: true`. Each must be single choice, multiple choice or dropdown, with 2–4 distinct nonempty options and an explicit correct answer. Uses the same themes and builder as forms; default theme is Evergreen. Returns the `form_…` ID and links; never opens a room. Read-only: false; destructive: false; open-world: true; idempotent: false.
 - `list_games`: lists only the signed-in account's hosted rooms, newest first, with cursor pagination (default 20, max 50). Includes ended rooms; use `search_forms` to find quiz drafts. Read-only and idempotent.
 - `get_game`: gets the owned room's state, question index, timer, settings, source ID and host/join links. No question text, answer keys, participant names, player tokens or individual answers are returned, including after reveal. Read-only and idempotent.
-- `host_game`: snapshots an owned, already published quiz into a joinable lobby. Takes the source `form_…` or `quiz_…` ID, optional language (`en`/`ar`), theme preset name, `timeLimitSec` (5–240), `showAnswerLabels` (default true), `autoAdvance` (default true), `breakSec` (3–60, default 5) and `startWhenPlayers` (0 = host starts). Closed/archived forms, drafts, non-quizzes, and quizzes without eligible graded choices are refused. Does not publish draft changes or start play. Opening a room is an open-world write, non-destructive and non-idempotent: do not retry automatically after an uncertain response.
+- `host_game`: snapshots an owned, already published quiz into a joinable lobby. Takes the source `form_…` ID, optional language (`en`/`ar`), theme preset name, `timeLimitSec` (5–240), `showAnswerLabels` (default true), `autoAdvance` (default true), `breakSec` (3–60, default 5) and `startWhenPlayers` (0 = host starts). Closed/archived forms, drafts, non-quizzes, and quizzes without eligible graded choices are refused. Does not publish draft changes or start play. Opening a room is an open-world write, non-destructive and non-idempotent: do not retry automatically after an uncertain response.
 - `set_game_settings`: theme, timer, answer labels and `startWhenPlayers` change only in the lobby; `autoAdvance` and `breakSec` change at any time (false pauses autoplay, true resumes it). Send at least one setting. The source quiz and published version are untouched. Open-world write, non-destructive and idempotent.
 - `advance_game`: advances exactly one step using `from` and `questionIndex` from `get_game`. Lobby → question → reveal → leaderboard → next question/end. With autoplay on, only needed to start without the countdown or to skip ahead. Requires a joined player to start. Advancing from question ends that question early, so it requires the host's explicit request. Repeating the same state/index is harmless. Open-world write, destructive and idempotent.
 - `end_game`: explicitly stops an owned room and uses the ordinary live-game result-saving workflow. Does not delete the source or collected responses. Returns aggregate save status/counts; repeating for an ended room is harmless. Open-world write, destructive and idempotent.
@@ -178,7 +178,7 @@ Creation makes a quiz draft (published only on request); hosting stays a separat
 
 Games use the existing account-wide OAuth grant (`openid profile email`), with no new external scope or client-supplied account identity. Next.js verifies Clerk OAuth, then the secret-protected Convex transport passes the verified user ID to internal-only MCP functions. Each game wrapper rechecks Pro entitlement; writes recheck moderation and source/host ownership. Shared nonregistered helpers from `convex/live.ts` enforce live eligibility, clock, grading, transition and result-saving rules. Public live mutations continue deriving identity from `ctx.auth`; MCP never fabricates auth or invokes registered handlers directly. Account Pro checks and the existing 120-calls/minute gate run before dispatch; lobby creation also uses the existing 30/hour live-create limit.
 
-MCP hosting requires source ownership; being a source editor/viewer does not grant access to another person's rooms. Classic quizzes remain read-only for editing/publication, but their owner can host an already published classic quiz. The game tools intentionally omit player moderation, individual participant data, and results analysis; these stay in the host UI or the separately permissioned results tools.
+MCP hosting requires source ownership; being a source editor/viewer does not grant access to another person's rooms. The game tools intentionally omit player moderation, individual participant data, and results analysis; these stay in the host UI or the separately permissioned results tools.
 
 #### Themes and sounds
 
@@ -234,7 +234,7 @@ You do these steps; they change production.
 1. In ChatGPT web, open **Settings > Security and login** and enable **Developer mode** if your account and workspace policy allow it.
 2. Open **Plugins**, choose the plus button, and create a connection named `Chaos` with public MCP URL `https://chaos.fail/mcp`.
 3. Complete Chaos OAuth sign-in and review the discovered tools. Start a new conversation and add Chaos from the tools menu.
-4. Try “Create a quiz about what we discussed using Chaos” or “Show my Chaos forms.” New valid content publishes by default; ask for a draft to keep it private.
+4. Try “Create a quiz about what we discussed using Chaos” or “Show my Chaos forms.” New content stays a private draft; ask ChatGPT to publish it when you are ready.
 5. After tool changes, open the connection and select **Refresh** before starting a new test conversation.
 
 Interface labels vary by rollout. Current official instructions: [OpenAI connection guide](https://developers.openai.com/plugins/deploy/connect-chatgpt).
@@ -293,7 +293,7 @@ Before you start: the submitting account needs the **Apps Management: Write** ro
 - **Plugin name:** Chaos
 - **Short description:** Create quizzes, forms, lessons, and courses, and check the results, in your Chaos account.
 - **Long description:**
-  Chaos is a simple, beautiful form, quiz, and course builder. With the Chaos app, ChatGPT works in your own Chaos account: turn a conversation into a quiz with right answers and points, draft a survey or signup form, create lessons and courses, edit content, and publish when you're ready. Ask how a form is doing and get response counts, answer breakdowns and average quiz scores, or read individual responses when you need them. New things ChatGPT creates are published straight away unless you ask for a draft, edits stay drafts until you choose to publish, and nothing is ever deleted from ChatGPT. Works in English and Arabic. The Chaos app is included on every plan, including free Personal accounts.
+  Chaos is a simple, beautiful form, quiz, and course builder. With the Chaos app, ChatGPT works in your own Chaos account: turn a conversation into a quiz with right answers and points, draft a survey or signup form, create lessons and courses, edit content, and publish when you're ready. Ask how a form is doing and get response counts, answer breakdowns and average quiz scores, or read individual responses when you need them. New things ChatGPT creates start as private drafts and edits stay drafts until you choose to publish, and nothing is ever deleted from ChatGPT. Works in English and Arabic. The Chaos app is included on every plan, including free Personal accounts.
 - **Category:** Productivity (alternative: Education)
 - **Logo:** `public/icon.svg` exported as a square PNG (at least 512×512, no transparency padding issues)
 - **Website:** https://chaos.fail
@@ -352,7 +352,6 @@ Initial release of the Chaos app (available on every plan). Lets people create q
 
 ## Limits and known gaps
 - No inline UI widget yet; ChatGPT shows text with links. A card widget would need CSP and a dedicated widget domain for review.
-- Classic quizzes (the old quiz editor) are read-only for editing/publication through ChatGPT; owners can host a published classic quiz with host_game.
 - Themes: ChatGPT can pick presets and change colours, fonts, buttons, start screen, backdrop and layout, but cannot upload a logo or a background image. An existing logo is kept.
 - File-upload questions and custom endings can't be created from ChatGPT; they are kept when editing.
 - Each person's calls are limited to 120 per minute.

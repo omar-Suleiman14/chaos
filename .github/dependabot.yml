@@ -1,0 +1,66 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      next-react:
+        patterns:
+          [
+            "next",
+            "@next/eslint-plugin-next",
+            "react",
+            "react-dom",
+            "@types/react",
+            "@types/react-dom",
+          ]
+      vite-vitest:
+        patterns: ["vitest", "vite", "@vitejs/plugin-react"]
+      blocknote:
+        patterns: ["@blocknote/*"]
+      auth:
+        patterns:
+          [
+            "better-auth",
+            "@better-auth/*",
+            "@convex-dev/better-auth",
+            "@clerk/*",
+          ]
+      remaining:
+        patterns: ["*"]
+        exclude-patterns: ["@modelcontextprotocol/sdk"]
+    ignore:
+      - dependency-name: next
+        update-types: [version-update:semver-major]
+      - dependency-name: "@next/eslint-plugin-next"
+        update-types: [version-update:semver-major]
+      - dependency-name: "@types/react"
+        update-types: [version-update:semver-major]
+      - dependency-name: "@types/react-dom"
+        update-types: [version-update:semver-major]
+      - dependency-name: react
+        update-types: [version-update:semver-major]
+      - dependency-name: react-dom
+        update-types: [version-update:semver-major]
+      - dependency-name: zod
+        update-types: [version-update:semver-major]
+      - dependency-name: "@types/node"
+        update-types: [version-update:semver-major]
+      # @convex-dev/better-auth (0.12.5, the latest) supports better-auth >=1.6.11 <1.7.0.
+      # Keep taking 1.6 patches; lift this once a @convex-dev/better-auth release accepts 1.7.
+      - dependency-name: better-auth
+        update-types: [version-update:semver-minor, version-update:semver-major]
+      - dependency-name: "@better-auth/*"
+        update-types: [version-update:semver-minor, version-update:semver-major]
+  - package-ecosystem: github-actions
+    directory: /
+    target-branch: main
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]

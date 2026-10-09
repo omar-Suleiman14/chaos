@@ -1,5 +1,7 @@
 "use client";
 
+import { FocusInput } from "@/components/InitialFocus";
+
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
@@ -37,9 +39,9 @@ export default function TeamsHome() {
   }
   return <div className="ws-page ws-teams-page">
     <header className="ws-page-header"><div><h1 className="ws-page-title">{t.title}</h1><p className="ws-page-subtitle">{t.lead}</p></div><button className="ws-btn ws-btn--primary" disabled={!isAuthenticated} onClick={() => setCreating(true)}><Plus size={16} aria-hidden />{t.create}</button></header>
-    {creating && <WsDialog initialFocusRef={nameInput} title={t.create} onClose={() => setCreating(false)}><form className="ws-team-create" onSubmit={event => { event.preventDefault(); void run(() => create({ name })); }}><label>{t.name}<input ref={nameInput} className="kb-input" value={name} onChange={event => setName(event.target.value)} required maxLength={120} disabled={busy} autoFocus /></label><button className="ws-btn ws-btn--primary" disabled={busy || !name.trim()}>{busy ? t.creating : t.create}</button></form></WsDialog>}
+    {creating && <WsDialog initialFocusRef={nameInput} title={t.create} onClose={() => setCreating(false)}><form className="ws-team-create" onSubmit={event => { event.preventDefault(); void run(() => create({ name })); }}><label>{t.name}<FocusInput ref={nameInput} className="kb-input" value={name} onChange={event => setName(event.target.value)} required maxLength={120} disabled={busy} focusOnMount /></label><button className="ws-btn ws-btn--primary" disabled={busy || !name.trim()}>{busy ? t.creating : t.create}</button></form></WsDialog>}
     <div className="ws-team-grid">{teams?.map(row => <Link key={row.team._id} href={`/dashboard/teams/${row.team._id}`} className="ws-team-tile"><span className="ws-workspace-avatar"><Users size={18} aria-hidden /></span><span><strong>{row.team.name}</strong><small>{t.roles[row.role]}</small></span><ArrowUpRight size={16} aria-hidden /></Link>)}</div>
-    {teams === undefined ? <LibrarySkeleton label={t.loading} view="list" count={2} /> : !teams.length && <p role="status">{t.empty}</p>}
+    {teams === undefined ? <LibrarySkeleton label={t.loading} view="list" count={2} /> : !teams.length && <output >{t.empty}</output>}
     <section className="ws-team-card"><h2>{t.invites}</h2><p>{t.verified}</p>{invites?.map(row => <div key={row.invite.id} className="ws-team-row"><span>{row.teamName} · {t.roles[row.invite.role]}</span><button className="ws-btn" disabled={busy} onClick={() => void run(() => accept({ inviteId: row.invite.id }))}>{t.accept}</button></div>)}</section>
     <section className="ws-team-card"><h2>{t.link}</h2><p>{t.linkHelp}</p><form onSubmit={event => { event.preventDefault(); let token = link.trim(); try { token = new URLSearchParams(new URL(token).hash.slice(1)).get("invite") ?? ""; } catch {} void run(() => accept({ token })); }}><input className="kb-input" aria-label={t.link} value={link} onChange={event => setLink(event.target.value)} required disabled={busy} autoComplete="off" /><button className="ws-btn" disabled={busy || !isAuthenticated}>{t.join}</button></form></section>
   </div>;

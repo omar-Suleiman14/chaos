@@ -9,12 +9,12 @@ export const extraArticles: Record<Locale, DocArticle[]> = {
       title: "What is Chaos?",
       summary: "Turn what you know into something people can use.",
       blocks: [
-        { type: "p", text: "Chaos is where you create, teach, learn and test. You make forms, quizzes and lessons, put lessons into courses, and run quizzes as live games. Everything is made by hand in the editor; nothing needs AI." },
+        { type: "p", text: "Chaos is a place to teach and learn. You write lessons, put them in order as courses, and make them interactive with quizzes, flashcards and live games. Forms and surveys use the same editor. You can make everything by hand, or connect ChatGPT or Claude and ask them to draft it for you; Chaos itself runs no AI." },
         { type: "heading", id: "flow", text: "How it fits together" },
         { type: "list", items: ["Start from notes, a PDF or an idea.", "Write a **lesson**: a page with headings, images, video, equations, tables and cited sources.", "Turn it into a **quiz**, **flashcards** or part of a **course**.", "People practise on their own, or you run the quiz as a **live game**."] },
         { type: "heading", id: "areas", text: "Where things live" },
         { type: "list", items: ["**Library**: everything you own, with tabs for forms, quizzes, courses and games.", "**Learn**: courses, community lessons and your progress.", "**Play**: live games, started from a quiz.", "**Connections**: Max, ChatGPT and Claude, plus developer tools."] },
-        { type: "p", text: "Next: [Make your first form](/docs/first-form) or [Write a lesson](/docs/lessons)." },
+        { type: "p", text: "Next: [Write a lesson](/docs/lessons), [connect Claude](/docs/claude) or [ChatGPT](/docs/chatgpt), or [make your first form](/docs/first-form)." },
       ],
     },
     {
@@ -115,12 +115,12 @@ export const extraArticles: Record<Locale, DocArticle[]> = {
       title: "ما هو Chaos؟",
       summary: "حوّل ما تعرفه إلى شيء يستفيد منه الناس.",
       blocks: [
-        { type: "p", text: "Chaos مكان للإنشاء والتعليم والتعلّم والاختبار. تُنشئ نماذج واختبارات ودروسًا، وتجمع الدروس في دورات، وتشغّل الاختبارات كألعاب مباشرة. كل شيء يُصنع يدويًا في المحرر؛ لا شيء يحتاج إلى ذكاء اصطناعي." },
+        { type: "p", text: "Chaos مكان للتعليم والتعلّم. تكتب دروسًا وترتّبها في دورات، وتجعلها تفاعلية باختبارات وبطاقات وألعاب مباشرة. والنماذج والاستطلاعات تستخدم المحرر نفسه. يمكنك صنع كل شيء يدويًا، أو ربط ChatGPT أو Claude وطلب كتابة المسودة منهما؛ Chaos نفسه لا يشغّل أي ذكاء اصطناعي." },
         { type: "heading", id: "flow", text: "كيف يترابط كل شيء" },
         { type: "list", items: ["ابدأ من ملاحظات أو ملف PDF أو فكرة.", "اكتب **درسًا**: صفحة بعناوين وصور وفيديو ومعادلات وجداول ومصادر موثقة.", "حوّله إلى **اختبار** أو **بطاقات** أو جزء من **دورة**.", "يتدرّب الناس بأنفسهم، أو تشغّل الاختبار كـ**لعبة مباشرة**."] },
         { type: "heading", id: "areas", text: "أين تجد الأشياء" },
         { type: "list", items: ["**المكتبة**: كل ما تملكه، بتبويبات للنماذج والاختبارات والدورات والألعاب.", "**تعلّم**: الدورات ودروس المجتمع وتقدّمك.", "**العب**: الألعاب المباشرة، تبدأ من اختبار.", "**الاتصالات**: Max وChatGPT وClaude، وأدوات المطورين."] },
-        { type: "p", text: "التالي: [أنشئ نموذجك الأول](/docs/first-form) أو [اكتب درسًا](/docs/lessons)." },
+        { type: "p", text: "التالي: [اكتب درسًا](/docs/lessons)، أو [اربط Claude](/docs/claude) أو [ChatGPT](/docs/chatgpt)، أو [أنشئ نموذجك الأول](/docs/first-form)." },
       ],
     },
     {

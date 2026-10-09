@@ -10,9 +10,9 @@ export const dynamic = "force-static";
 
 const size = { width: defaultOgImage.width, height: defaultOgImage.height };
 
-const products = ["Forms", "Quizzes", "Lessons", "Courses", "Live games"];
+const products = ["Lessons", "Courses", "Quizzes", "Forms", "Live games"];
 
-/** The default share card: the Chaos mark, the four verbs and what you can make. */
+/** The default share card: the Chaos mark, the landing headline and what you can make. */
 export function GET() {
   return new ImageResponse(
     (
@@ -33,8 +33,11 @@ export function GET() {
           <div style={{ width: 88, height: 88, borderRadius: 23, background: "linear-gradient(135deg, #fca535, #e9482b)" }} />
           <div style={{ fontSize: 52, fontWeight: 700, letterSpacing: -1 }}>Chaos</div>
         </div>
-        <div style={{ display: "flex", flexDirection: "column", gap: 36 }}>
-          <div style={{ fontSize: 72, fontWeight: 700, lineHeight: 1.05, letterSpacing: -2 }}>Create. Teach. Learn. Test.</div>
+        <div style={{ display: "flex", flexDirection: "column", gap: 28 }}>
+          <div style={{ display: "flex", flexDirection: "column", fontSize: 68, fontWeight: 700, lineHeight: 1.1, letterSpacing: -2 }}>
+            <div>Turn what you know</div>
+            <div>into lessons that stick.</div>
+          </div>
           <div style={{ display: "flex", flexWrap: "wrap", gap: 14 }}>
             {products.map((product) => (
               <div key={product} style={{ display: "flex", padding: "10px 22px", borderRadius: 999, border: "2px solid #e7e3de", fontSize: 30, color: "#4a4844" }}>

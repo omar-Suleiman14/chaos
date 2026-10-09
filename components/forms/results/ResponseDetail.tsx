@@ -58,10 +58,10 @@ export function ResponseDetail({ responseId, formId, tags, position, onPrevious,
 
   if (r === undefined) {
     return (
-      <div role="status" aria-busy="true" className="ws-detail">
+      <output  aria-busy="true" className="ws-detail">
         <span className="sr-only">{t.loadingResponse}</span>
         <span aria-hidden="true" className="ws-skeleton" style={{ height: 320 }} />
-      </div>
+      </output>
     );
   }
   if (r === null) {

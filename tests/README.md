@@ -1,6 +1,6 @@
 # Tests
 
-Three layers, each with its own runner and reasons:
+Layers, each with its own runner and reasons:
 
 - **`tests/unit`** — Vitest + jsdom. Pure logic and
   React component tests. Convex and Clerk are mocked at the module boundary;
@@ -17,9 +17,9 @@ Three layers, each with its own runner and reasons:
   a live provider deployment. Run
   locally with `pnpm test:e2e`.
 - **`tests/visual`** — Playwright screenshot diffs, desktop and mobile, light
-  and dark (`.github/workflows/visual.yml`). `site.spec.ts` screenshots the
-  public pages of a pull request's own build with no backend, against the
-  baseline recorded by the last run on main; baselines are CI artifacts, never
+  and dark (`.github/workflows/visual.yml`). The workflow is manual: run it when
+  a change is expected to affect the UI. `site.spec.ts` screenshots public pages
+  against the most recent recorded baseline; baselines are CI artifacts, never
   committed, so every image comes from the same Linux renderer. A deliberate
   look change gets the `visual-change` label. `app.spec.ts`
   (`VISUAL_SUITE=app`, run by hand) builds the branch against the dev Convex
@@ -28,6 +28,11 @@ Three layers, each with its own runner and reasons:
   lesson, course, dashboard and editor when their fixtures and test login exist.
   Locally:
   `pnpm build && pnpm test:visual --update-snapshots`, then `pnpm test:visual`.
+- **`tests/layout`** — Playwright geometry checks against the shipped
+  stylesheets in a static page: no app server, no backend (reader theme toggle
+  sizing, block ⋯ menu placement at 320px and in RTL, outline sidebar folding).
+  Needs a local Chromium; not part of `pnpm test`. Run with `pnpm test:layout`
+  (set `CHAOS_CHROMIUM` to a Chromium binary if Playwright's own is not installed).
 
 `pnpm test` runs `test:unit` and `test:integration` only — the suites that
 work from a clean checkout with no credentials. `pnpm test:e2e` is separate

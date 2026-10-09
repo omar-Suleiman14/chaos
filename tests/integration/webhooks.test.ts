@@ -11,7 +11,7 @@ import type { ResolvedAddress, SendRequest, SendResult } from "@/convex/webhookD
 import { verifySignature } from "@/convex/webhookCrypto";
 import { AUTO_DISABLE_AFTER, MAX_ATTEMPTS, ROTATION_GRACE_MS } from "@/convex/webhookModel";
 import { createTestConvex } from "./setup";
-import { creatorIdentity, otherCreatorIdentity, questionFixtures } from "../fixtures";
+import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
 
 type T = ReturnType<typeof createTestConvex>;
 
@@ -125,6 +125,15 @@ describe("webhooks: subscriptions and secrets", () => {
     const other = t.withIdentity(otherCreatorIdentity);
     await other.mutation(api.quizFunctions.getOrCreateUser, {});
     await expect(hook(other, { target: "selected", itemRefs: [`form_${formId}`] })).rejects.toThrow(/INVALID_ITEM/);
+  });
+
+  it("does not accept classic quiz refs, even for the creator's own unconverted quiz", async () => {
+    const t = createTestConvex();
+    const { owner } = await setup(t);
+    const quizId = await t.run(async (ctx) => await ctx.db.insert("quizzes", {
+      title: "Quiz", slug: "quiz", creatorId: creatorIdentity.subject, creatorUsername: "creator", isPublished: true, createdAt: 1, updatedAt: 1,
+    }));
+    await expect(hook(owner, { target: "selected", itemRefs: [`quiz_${quizId}`] })).rejects.toThrow(/INVALID_ITEM/);
   });
 });
 
@@ -261,56 +270,6 @@ describe("webhooks: events", () => {
     const rows = await deliveries(t);
     expect(rows).toHaveLength(1);
     expect(rows[0].itemRef).toBe(`form_${otherForm}`);
-  });
-
-  it("emits for classic quizzes: published, response.completed, response.graded and closed", async () => {
-    const t = createTestConvex();
-    const owner = t.withIdentity(creatorIdentity);
-    await owner.mutation(api.quizFunctions.getOrCreateUser, {});
-    await hook(owner, { includeAnswers: true });
-    const sent = mockNetwork();
-    const quizId = await t.run(async (ctx) => {
-      const id = await ctx.db.insert("quizzes", {
-        title: "Quiz", slug: "quiz", creatorId: creatorIdentity.subject, creatorUsername: "creator", isPublished: false, createdAt: 1, updatedAt: 1,
-      });
-      await ctx.db.insert("questions", { ...questionFixtures.mcq, quizId: id });
-      await ctx.db.insert("questions", { ...questionFixtures.written, quizId: id });
-      return id;
-    });
-    await owner.mutation(api.quizFunctions.publishQuiz, { quizId });
-    const sessionId = await t.mutation(api.quizFunctions.startQuizSession, { quizId, playerName: "Sam Student" });
-    const questions = await t.run(async (ctx) => await ctx.db.query("questions").withIndex("by_quiz", (q) => q.eq("quizId", quizId)).collect());
-    const written = questions.find((q) => q.type === "written")!;
-    await t.mutation(api.quizFunctions.gradeAnswer, { sessionId, questionId: questions.find((q) => q.type === "mcq")!._id, answer: "4" });
-    await t.mutation(api.quizFunctions.gradeAnswer, { sessionId, questionId: written._id, answer: "Plants use sunlight" });
-    await t.mutation(api.quizFunctions.completeQuizSession, { sessionId });
-    await t.mutation(api.quizFunctions.completeQuizSession, { sessionId }); // idempotent: no second event
-    await owner.mutation(api.quizFunctions.overrideScore, { sessionId, questionId: written._id, newPoints: 4 });
-    await owner.mutation(api.quizFunctions.unpublishQuiz, { quizId });
-    await step(t);
-    const byEvent = Object.fromEntries(sent.map((r) => [r.headers["Chaos-Event"], JSON.parse(r.body)]));
-    expect(sent.map((r) => r.headers["Chaos-Event"]).sort()).toEqual(["form.closed", "form.published", "response.completed", "response.graded"]);
-    expect(byEvent["form.published"].data.item).toMatchObject({ id: `quiz_${quizId}`, kind: "quiz", status: "live" });
-    expect(byEvent["response.completed"].data.response).toMatchObject({ id: `attempt_${sessionId}`, maxScore: expect.any(Number) });
-    expect(byEvent["response.completed"].data.respondent).toEqual({ name: "Sam Student" });
-    expect(byEvent["response.graded"].data.grading).toMatchObject({ fieldId: written._id, points: 4 });
-  });
-
-  it("leaves respondent names out of quiz events by default", async () => {
-    const t = createTestConvex();
-    const owner = t.withIdentity(creatorIdentity);
-    await owner.mutation(api.quizFunctions.getOrCreateUser, {});
-    await hook(owner, { events: ["response.completed"] });
-    const sent = mockNetwork();
-    const sessionId = await t.run(async (ctx) => {
-      const quizId = await ctx.db.insert("quizzes", { title: "Q", slug: "q", creatorId: creatorIdentity.subject, creatorUsername: "creator", isPublished: true, createdAt: 1, updatedAt: 1 });
-      return await ctx.db.insert("quizSessions", { quizId, playerName: "Private Person", status: "in_progress", score: 3, totalPoints: 5, answers: [], startedAt: Date.now() });
-    });
-    await t.mutation(api.quizFunctions.completeQuizSession, { sessionId });
-    await step(t);
-    expect(sent).toHaveLength(1);
-    expect(sent[0].body).not.toContain("Private Person");
-    expect(JSON.parse(sent[0].body).data.response).toMatchObject({ score: 3, maxScore: 5 });
   });
 });
 

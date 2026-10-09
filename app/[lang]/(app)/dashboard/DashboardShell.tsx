@@ -1,18 +1,20 @@
 "use client";
 
+import { FocusButton } from "@/components/InitialFocus";
+
 import Link from "next/link";
 import AccountMenu from "@/components/workspace/AccountMenu";
 import "@/components/workspace/teams.css";
 import dynamic from "next/dynamic";
 import { usePathname, useRouter } from "next/navigation";
 
-import { useClerk, useUser } from "@/lib/auth/client";
+import { useAccount, useUser } from "@/lib/auth/client";
 import { CardOnboarding, CardSetupSkeleton } from "@/components/card/CardCustomization";
 import { avatarSeed } from "@/lib/avatarSeed";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Archive, BarChart3, Bookmark, ChevronDown, ChevronUp, FileText, GraduationCap, Home, Layers, Library, Link2, ListChecks, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Trophy, X } from "lucide-react";
+import { Archive, Bookmark, ChevronDown, ChevronUp, FileText, GraduationCap, Home, Layers, Library, Link2, ListChecks, Menu, PanelLeft, PanelRight, Pin, PinOff, Plus, Search, Settings, Trophy, X } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import type { Id } from "@/convex/_generated/dataModel";
 import { ThemeToggle } from "@/components/ThemeToggle";
@@ -49,8 +51,8 @@ const clampWidth = (width: number) => Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN
 
 const copy = {
   en: {
-    games: "Games", library: "Library", legacyResults: "Old quiz results", archive: "Archive", connections: "Connections", settings: "Settings",
-    legacyEditor: "Legacy quiz editor", results: "Results", builder: "Builder", dashboard: "Dashboard",
+    games: "Games", library: "Library", archive: "Archive", connections: "Connections", settings: "Settings",
+    results: "Results", builder: "Builder", dashboard: "Dashboard",
     pinned: "Pinned", recent: "Recent", untitled: "Untitled",
     initFailed: "Your account could not be initialized. Please retry.",
     skip: "Skip to content", workspace: "Workspace", closeMenu: "Close menu", openMenu: "Open menu",
@@ -69,8 +71,8 @@ const copy = {
     newLesson: "New lesson", folders: "Folders", lessons: "Recent lessons", untitledLesson: "Untitled lesson", lesson: "Lesson",
   },
   ar: {
-    games: "الألعاب", library: "المكتبة", legacyResults: "نتائج الاختبارات القديمة", archive: "الأرشيف", connections: "الاتصالات", settings: "الإعدادات",
-    legacyEditor: "محرر الاختبارات القديم", results: "النتائج", builder: "المحرر", dashboard: "لوحة التحكم",
+    games: "الألعاب", library: "المكتبة", archive: "الأرشيف", connections: "الاتصالات", settings: "الإعدادات",
+    results: "النتائج", builder: "المحرر", dashboard: "لوحة التحكم",
     pinned: "المثبّتة", recent: "الأخيرة", untitled: "بلا عنوان",
     initFailed: "تعذّرت تهيئة حسابك. أعد المحاولة.",
     skip: "تخطَّ إلى المحتوى", workspace: "مساحة العمل", closeMenu: "إغلاق القائمة", openMenu: "فتح القائمة",
@@ -93,11 +95,9 @@ type Copy = typeof copy.en;
 /** One row in the sidebar's Pinned or Recent list. Forms and courses can be pinned (pinId); games can't. */
 interface SidebarItem { key: string; title: string; href: string; time: number; formId?: Id<"forms">; pinId?: string; color?: string; icon?: LucideIcon }
 
-type NavKey = "library" | "games" | "legacyResults" | "archive" | "connections" | "settings" | "learnHome" | "courses" | "learnLibrary" | "saved" | "flashcards";
+type NavKey = "library" | "games" | "archive" | "connections" | "settings" | "learnHome" | "courses" | "learnLibrary" | "saved" | "flashcards";
 
 const libraryItem = { href: "/dashboard", key: "library", icon: Library } as const;
-/** Only shown to people who still have quizzes from the old quiz editor. */
-const legacyResultsItem = { href: "/dashboard/results", key: "legacyResults", icon: BarChart3 } as const;
 const savedItem = { href: "/dashboard/learn/saved", key: "saved", icon: Bookmark } as const;
 const workspaceItems = [
   { href: "/dashboard/connections", key: "connections", icon: Link2 },
@@ -122,21 +122,21 @@ function pageLabel(pathname: string, t: Copy): string {
     return match && match.key !== "learnHome" ? t[match.key] : t.learn;
   }
   if (pathname.startsWith("/admin")) return t.admin;
-  if (pathname.startsWith("/dashboard/editor")) return t.legacyEditor;
   if (/^\/dashboard\/forms\/[^/]+\/responses/.test(pathname)) return t.results;
   if (/^\/dashboard\/forms\/[^/]+$/.test(pathname)) return t.builder;
   if (pathname === "/dashboard/forms") return t.library;
   if (pathname.startsWith("/dashboard/courses")) return t.courses;
   if (pathname.startsWith("/dashboard/card")) return t.myCard;
-  const item = [libraryItem, legacyResultsItem, ...workspaceItems, archiveItem, settingsItem].find((i) => (i.href === "/dashboard" ? pathname === i.href : pathname.startsWith(i.href)));
+  const item = [libraryItem, ...workspaceItems, archiveItem, settingsItem].find((i) => (i.href === "/dashboard" ? pathname === i.href : pathname.startsWith(i.href)));
   return item ? t[item.key] : t.dashboard;
 }
 
+/* oxlint-disable jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/prefer-tag-over-role -- The sidebar delegates native link clicks to close the drawer; keyboard link activation also dispatches click. The focusable vertical separator supports keyboard and pointer resizing; a native hr is not an interactive splitter. */
 export default function DashboardShell({ children }: { children: React.ReactNode }) {
   const t = useCopy(copy);
   const { locale, dir } = useLocale();
   const { user, isLoaded } = useUser();
-  const clerk = useClerk();
+  const accountActions = useAccount();
   const pathname = usePathname();
   const getOrCreateUser = useMutation(api.quizFunctions.getOrCreateUser);
   // Shown from the device cache until Convex confirms them (lib/confirmedQuery.ts), so a reload opens at once.
@@ -147,7 +147,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const [cardStarted, setCardStarted] = useState(false), [cardDismissed, setCardDismissed] = useState(false);
   useEffect(() => { if (account?.cardOnboardingPending) setCardStarted(true); }, [account?.cardOnboardingPending]);
   const forms = useConfirmedQuery(api.forms.listMyForms).data;
-  const quizzes = useConfirmedQuery(api.quizFunctions.getMyQuizzes).data;
   const myCourses = useConfirmedQuery(api.courses.listMine).data;
   const myGames = useConfirmedQuery(api.live.myGames).data;
   /** Only for first-time account setup, which blocks the workspace; actions report through toasts. */
@@ -227,7 +226,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
         setInitError(errorMessage(err, t.initFailed));
       });
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mutation ref is stable in behavior
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- mutation ref is stable in behavior
   }, [isLoaded, user]);
 
   // The app has rendered (with any cached content), so skeletons may show again (dashboard/layout.tsx).
@@ -255,14 +254,13 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const paletteItems = useMemo<PaletteItem[]>(() => [
     ...(forms?.owned ?? []).map((f) => ({ id: f._id, title: f.title, kind: f.quizMode ? "quiz" as const : "form" as const, href: f.status === "archived" ? "/dashboard/archive" : `/dashboard/forms/${f._id}`, archived: f.status === "archived" })),
     ...(forms?.shared ?? []).map((f) => ({ id: f._id, title: f.title, kind: f.quizMode ? "quiz" as const : "form" as const, href: f.status === "archived" ? "/dashboard/archive" : `/dashboard/forms/${f._id}`, archived: f.status === "archived" })),
-    ...(quizzes ?? []).filter(q => !q.archived).map((q) => ({ id: q._id, title: q.title, kind: "legacy" as const, href: `/dashboard/editor?id=${q._id}` })),
     ...(myLessons ?? []).map((l) => ({ id: l.id, title: l.draft.meta.title, kind: "lesson" as const, href: `/dashboard/learn/lessons/${l.id}`, body: [l.draft.meta.description, l.draft.meta.tags.join(" ")].join(" ") })),
     ...(learnFolders ?? []).filter((f) => !f.archived).map((f) => ({ id: f.id, title: f.name, kind: "folder" as const, href: `/dashboard/learn/library?folder=${f.id}` })),
     ...(myCourses ?? []).map((c) => ({ id: c.id, title: c.title, kind: "course" as const, href: c.archived ? "/dashboard/archive" : `/dashboard/courses/${c.id}`, archived: c.archived, body: c.description })),
     ...(flashcardSets ?? []).map((f) => ({ id: f.id, title: f.title, kind: "flashcards" as const, href: `/dashboard/learn/flashcards/${f.id}`, body: [f.description, ...f.cards.flatMap((card) => [card.front, card.back])].join(" ") })),
     ...(myGames ?? []).map((g) => ({ id: g._id, title: g.title, kind: "game" as const, href: g.state !== "ended" ? `/dashboard/live/${g._id}` : g.formId ? `/dashboard/forms/${g.formId}/responses` : "/dashboard?tab=games" })),
     ...(teams ?? []).map((row) => ({ id: row.team._id, title: row.team.name, kind: "team" as const, href: `/dashboard/teams/${row.team._id}` })),
-  ], [forms, quizzes, myLessons, learnFolders, myCourses, flashcardSets, myGames, teams]);
+  ], [forms, myLessons, learnFolders, myCourses, flashcardSets, myGames, teams]);
   const { pinned: pinnedIds, toggle: togglePin } = usePinned();
   const { preferences } = usePreferences();
   // Settings → Reduce motion applies across the workspace.
@@ -284,7 +282,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     ...(forms?.owned ?? []).filter((f) => f.status !== "archived" && !pinnedIds.includes(f._id)).map(formItem),
     ...(myCourses ?? []).filter((c) => !c.archived && !pinnedIds.includes(c.id)).map(courseItem),
     ...(myGames ?? []).filter(g => !g.formId || !allForms.some(f => f._id === g.formId && f.status === "archived")).map((g) => ({ key: g._id, title: g.title || t.untitled, time: g.endedAt ?? g.createdAt, icon: Trophy,
-      href: g.state !== "ended" ? `/dashboard/live/${g._id}` : g.formId ? `/dashboard/forms/${g.formId}/responses` : g.quizId ? `/dashboard/results?id=${g.quizId}` : "/dashboard?tab=games" })),
+      href: g.state !== "ended" ? `/dashboard/live/${g._id}` : g.formId ? `/dashboard/forms/${g.formId}/responses` : "/dashboard?tab=games" })),
   ].sort((a, b) => b.time - a.time);
   // Pinned and Recent sit at the bottom of the sidebar in at most half its height. Recent starts closed;
   // whatever the person leaves open stays open on this device. Each list shows as many rows as fit, the
@@ -315,7 +313,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     return () => observer.disconnect();
   }, [recentsArea]);
 
-  const wide = pathname.startsWith("/admin") || pathname.startsWith("/dashboard/learn/flashcards/") || pathname.startsWith("/dashboard/forms/") || pathname.startsWith("/dashboard/editor") || pathname.startsWith("/dashboard/learn/lessons/");
+  const wide = pathname.startsWith("/admin") || pathname.startsWith("/dashboard/learn/flashcards/") || pathname.startsWith("/dashboard/forms/") || pathname.startsWith("/dashboard/learn/lessons/");
   const isActive = (href: string) => (href === "/dashboard" ? pathname === href || pathname === "/dashboard/forms" : href === "/dashboard/learn" ? pathname === href : pathname.startsWith(href));
 
   const rail = collapsed && !mobile;
@@ -369,8 +367,8 @@ export default function DashboardShell({ children }: { children: React.ReactNode
               <span className="ws-plus" aria-hidden="true"><Plus size={14} strokeWidth={2.6} /></span> <span>{busy ? t.creating : t.new}</span>
             </button>
             {newOpen && (
-              <div role="menu" className="ws-new-menu__list ws-glass" onKeyDown={(e) => { if (e.key === "Escape") setNewOpen(false); }}>
-                <button type="button" role="menuitem" autoFocus className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(); }}><FileText size={16} aria-hidden="true" /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>
+              <div role="menu" tabIndex={-1} className="ws-new-menu__list ws-glass" onKeyDown={(e) => { if (e.key === "Escape") setNewOpen(false); }}>
+                <FocusButton type="button" role="menuitem" focusOnMount className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(); }}><FileText size={16} aria-hidden="true" /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></FocusButton>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void create(newQuizArgs(locale)); }}><ListChecks size={16} aria-hidden="true" /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createCourse(); }}><GraduationCap size={16} aria-hidden="true" /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>
                 <button type="button" role="menuitem" className="ws-new-menu__item" onClick={() => { setNewOpen(false); void createFlashcards(); }}><Layers size={16} aria-hidden="true" /><span><strong>{t.newFlashcards}</strong><small>{t.newFlashcardsHelp}</small></span></button>
@@ -382,7 +380,6 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           <nav aria-label={t.library} className="grid gap-px mt-4">
             {link(libraryItem)}
             {link(savedItem)}
-            {(quizzes?.length ?? 0) > 0 && link(legacyResultsItem)}
           </nav>
 
           <div ref={setRecentsArea} className="ws-sidebar__scroll ws-recents">
@@ -443,7 +440,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
             {(user || account) && !account?.isBanned && !account?.suspendedUntil && (
               <AccountMenu compact={rail} admin={isAdmin}
                 user={{ name: user?.fullName || user?.username || account?.name || t.myCard, email: user?.primaryEmailAddress?.emailAddress ?? account?.email, imageUrl: user && "hasImage" in user && user.hasImage ? user.imageUrl : undefined, avatarSeed: account ? account.cardAvatarSeed ?? avatarSeed(account.clerkId) : user ? avatarSeed(user.id) : undefined }}
-                onManageAccount={() => clerk.openUserProfile()} onSignOut={() => void clerk.signOut({ redirectUrl: "/" })} />
+                onManageAccount={() => accountActions.openUserProfile()} onSignOut={() => void accountActions.signOut({ redirectUrl: "/" })} />
             )}
           </div>
           {!mobile && !rail && (
@@ -487,7 +484,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
           </header>
 
           <main id="workspace-content" tabIndex={-1} className={`ws-content cache-state ${wide ? "ws-content--wide" : ""}`} data-cache-state={cachePending ? "cached" : "live"} aria-busy={cachePending || undefined}>
-            <div key={pathname} className="ws-page">{(account?.isBanned || account?.suspendedUntil) && <div role="status" className="mb-5 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">{account.isBanned ? t.banned : t.suspended(new Date(account.suspendedUntil!).toLocaleString(dateLocale(locale)))} {t.paused} <a className="underline" href={`mailto:${supportEmail}`}>{t.contact}</a>.</div>}{children}</div>
+            <div key={pathname} className="ws-page">{(account?.isBanned || account?.suspendedUntil) && <output  className="mb-5 rounded-lg border border-destructive/30 bg-destructive/5 p-4 text-sm">{account.isBanned ? t.banned : t.suspended(new Date(account.suspendedUntil!).toLocaleString(dateLocale(locale)))} {t.paused} <a className="underline" href={`mailto:${supportEmail}`}>{t.contact}</a>.</output>}{children}</div>
           </main>
         </div>
       </div>
@@ -495,3 +492,4 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/click-events-have-key-events, jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/prefer-tag-over-role */

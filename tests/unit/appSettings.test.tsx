@@ -15,7 +15,7 @@ vi.mock("@clerk/nextjs", () => ({
 vi.mock("@/components/ThemeProvider", () => ({ useTheme: () => ({ mode: "system", setMode: mocks.setMode }) }));
 vi.mock("convex/react", () => ({
   usePaginatedQuery: () => ({ results: [], status: "Exhausted", loadMore: vi.fn() }),
-  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "quizFunctions:getCurrentUser" ? { username: "user12345", name: "Omar", email: "omar@example.com" } : getFunctionName(ref) === "quizFunctions:getMyQuizzes" ? [] : getFunctionName(ref) === "memberCards:mine" ? { name: "Omar", username: "omar", seed: "chaos-abc", memberSince: 0, style: 1 } : undefined),
+  useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "quizFunctions:getCurrentUser" ? { username: "user12345", name: "Omar", email: "omar@example.com" } : getFunctionName(ref) === "memberCards:mine" ? { name: "Omar", username: "omar", seed: "chaos-abc", memberSince: 0, style: 1 } : undefined),
   useMutation: (ref: Parameters<typeof getFunctionName>[0]) => getFunctionName(ref) === "publicAuthors:setListingVisibility" ? mocks.setListingVisibility : Object.assign(vi.fn(), { withOptimisticUpdate: () => vi.fn() }),
 }));
 

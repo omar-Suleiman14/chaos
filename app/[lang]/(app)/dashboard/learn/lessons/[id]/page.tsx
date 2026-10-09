@@ -85,6 +85,7 @@ export default function LessonEditorPage() {
   return <LessonEditorSession key={`${id}:${viewer?.id ?? "loading"}`} id={id} />;
 }
 
+/* oxlint-disable jsx-a11y/no-noninteractive-element-interactions -- The settings region delegates Escape from its focusable child controls to close the drawer. */
 function LessonEditorSession({ id }: { id: string }) {
   const t = useCopy(copy);
   const router = useRouter();
@@ -127,6 +128,7 @@ function LessonEditorSession({ id }: { id: string }) {
   const [look, setLook] = useState<Partial<LessonMeta>>({});
   const [description, setDescription] = useState<string>();
   const pending = useRef<{ content?: unknown[]; meta?: Partial<LessonMeta>; timer?: ReturnType<typeof setTimeout> }>({});
+  const [pendingView, setPendingView] = useState<{ content?: unknown[]; meta?: Partial<LessonMeta> }>({});
   const actionRef = useRef(actions);
   useEffect(() => { actionRef.current = actions; }, [actions]);
   const flushTail = useRef<Promise<void>>(Promise.resolve());
@@ -189,7 +191,7 @@ function LessonEditorSession({ id }: { id: string }) {
       if (p.content === content) p.content = undefined;
       if (p.meta === meta) p.meta = undefined;
       if (!p.content && !p.meta) { try { localStorage.removeItem(recoveryKey); } catch { /* Successful server writes do not depend on browser storage. */ } setRetained(null); }
-    } finally { setSaving(false); }
+    } finally { setPendingView({ content: p.content, meta: p.meta }); setSaving(false); }
     });
     flushTail.current = next;
     return next;
@@ -197,6 +199,7 @@ function LessonEditorSession({ id }: { id: string }) {
   const schedule = () => {
     const p = pending.current;
     if (p.timer) clearTimeout(p.timer);
+    setPendingView({ content: p.content, meta: p.meta });
     setSaving(true); retain();
     if (!conflict) p.timer = setTimeout(() => { p.timer = undefined; void run(flush); }, 600);
   };
@@ -233,7 +236,7 @@ function LessonEditorSession({ id }: { id: string }) {
     try { return await media.upload(file); }
     finally { uploadCountRef.current--; setUploadCount(uploadCountRef.current); }
   };
-  const editorLesson = { ...lesson, sources, draft: { ...lesson.draft, content: editorContent ?? recoveredContent ?? lesson.draft.content, meta: { ...lesson.draft.meta, ...pending.current.meta, title: title ?? lesson.draft.meta.title, description: description ?? lesson.draft.meta.description } } };
+  const editorLesson = { ...lesson, sources, draft: { ...lesson.draft, content: editorContent ?? recoveredContent ?? lesson.draft.content, meta: { ...lesson.draft.meta, ...pendingView.meta, title: title ?? lesson.draft.meta.title, description: description ?? lesson.draft.meta.description } } };
   const changes = hasUnpublishedChanges(lesson);
 
   // Chaos runs no AI: a selection goes to the writer's own ChatGPT or Claude with the lesson as context.
@@ -269,7 +272,7 @@ function LessonEditorSession({ id }: { id: string }) {
       <div className="lx-edit__bar">
         <Link href={courseId && /^[a-z0-9]+$/i.test(courseId) ? `/dashboard/courses/${courseId}` : "/dashboard?tab=courses"} className="ws-btn ws-btn--sm ws-btn--ghost" aria-label={t.back}><ChevronLeft size={18} strokeWidth={2} className="lx-flip lx-back-chevron" aria-hidden /><span className="lx-phone-label">{courseId ? t.backCourse : t.courses}</span></Link>
         <LessonStatus lesson={lesson} />
-        <span className="lx-save" role="status">{saving ? t.saving : error || pending.current.content || pending.current.meta ? "Unsaved changes" : <><Check size={13} aria-hidden />{caps.sharedPublishing ? t.savedCloud : t.saved}</>}</span>
+        <output className="lx-save" >{saving ? t.saving : error || pendingView.content || pendingView.meta ? "Unsaved changes" : <><Check size={13} aria-hidden />{caps.sharedPublishing ? t.savedCloud : t.saved}</>}</output>
         <span style={{ flex: 1 }} />
         <Link href={`${lessonPath(lesson.id)}?preview=draft`} className="ws-btn ws-btn--sm ws-btn--ghost" onClick={(e) => { e.preventDefault(); void run(async () => { await flush(); router.push(`${lessonPath(lesson.id)}?preview=draft`); }); }}><Eye size={15} aria-hidden /><span className="lx-phone-label">{t.preview}</span></Link>
         <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" onClick={() => void run(async () => { await flush(); setDialog("history"); })}><History size={15} aria-hidden /><span className="lx-phone-label">{t.history}</span></button>
@@ -311,7 +314,7 @@ function LessonEditorSession({ id }: { id: string }) {
 
       </section>}
       {sourceError && <p className="lx-error" role="alert">Source {sourceError} is unavailable or its metadata access was revoked. Its stable reference remains in the draft.</p>}
-      {uploadCount > 0 && <p className="lx-help" role="status">Uploading {uploadCount} image(s) to private Chaos sources…</p>}
+      {uploadCount > 0 && <output className="lx-help" >Uploading {uploadCount} image(s) to private Chaos sources…</output>}
 
       <LessonCover id={lesson.id} meta={{ ...lesson.draft.meta, ...look }} editable={!conflict} onChange={saveLook} />
       <div className="lx-edit__body" data-panel={panelOpen ? "open" : "closed"}
@@ -398,3 +401,4 @@ function LessonEditorSession({ id }: { id: string }) {
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/no-noninteractive-element-interactions */

@@ -17,6 +17,7 @@ import { resultsCopy } from "./copy";
 import { hostHref } from "@/lib/hosts";
 
 /** Downloads every visible response. Column headers stay in English: they are a file format other tools read. */
+/* oxlint-disable react/purity -- The export timestamp is captured inside the user-triggered async export handler, not during render. */
 export function ExportTab({ formId, title }: { formId: Id<"forms">; title: string }) {
   const t = useCopy(resultsCopy);
   const convex = useConvex();
@@ -101,3 +102,4 @@ export function ExportTab({ formId, title }: { formId: Id<"forms">; title: strin
     </section>
   );
 }
+/* oxlint-enable react/purity */

@@ -98,7 +98,7 @@ export default function LearnProfilePage() {
             );
           })}
         </div>
-        {claims === undefined && auth.isAuthenticated && <p className="lx-muted" role="status">{t.loading}</p>}
+        {claims === undefined && auth.isAuthenticated && <output className="lx-muted" >{t.loading}</output>}
         <form className="lx-form lx-panel" onSubmit={async (e) => {
           e.preventDefault(); if (!auth.isAuthenticated || submitting || !institution.trim()) return;
           setSubmitting(true); setClaimError(""); setClaimMessage("");
@@ -112,7 +112,7 @@ export default function LearnProfilePage() {
           </div>
           <p className="lx-notice"><ShieldCheck size={15} aria-hidden /><span>{t.privacy}</span></p>
           {claimError && <p className="lx-error" role="alert">{claimError}</p>}
-          {claimMessage && <p className="lx-muted" role="status">{claimMessage}</p>}
+          {claimMessage && <output className="lx-muted" >{claimMessage}</output>}
           <div className="lx-actions" style={{ justifyContent: "flex-end" }}><button type="submit" className="ws-btn ws-btn--primary" disabled={!auth.isAuthenticated || claims === undefined || submitting || !institution.trim()}>{t.submit}</button></div>
         </form>
       </section>

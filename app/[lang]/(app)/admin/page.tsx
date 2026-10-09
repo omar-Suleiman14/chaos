@@ -138,8 +138,8 @@ function AdminConsole() {
             </section>
             <Overview />
           </> : tab === "users" ? <UsersPanel choose={choose} /> : tab === "teams" ? <PlatformTeams /> : tab === "activity" ? <Activity /> : <>
-            <WsTabs tabs={["forms", "quizzes", "courses", "lessons", "flashcards"]} value={contentKind} onChange={setContentKind} label="Content types" labels={{ forms: "Forms & quizzes", quizzes: "Legacy quizzes", courses: "Courses", lessons: "Lessons", flashcards: "Flashcards" }} />
-            {contentKind === "forms" || contentKind === "quizzes" ? <ContentPanel key={contentKind} kind={contentKind} choose={choose} /> : <PlatformContent key={contentKind} kind={contentKind as "courses" | "lessons" | "flashcards"} />}
+            <WsTabs tabs={["forms", "courses", "lessons", "flashcards"]} value={contentKind} onChange={setContentKind} label="Content types" labels={{ forms: "Forms & quizzes", courses: "Courses", lessons: "Lessons", flashcards: "Flashcards" }} />
+            {contentKind === "forms" ? <ContentPanel choose={choose} /> : <PlatformContent key={contentKind} kind={contentKind as "courses" | "lessons" | "flashcards"} />}
           </>}
 
         </main>
@@ -168,7 +168,7 @@ function AdminConsole() {
           <label className="space-y-2 text-sm">
             Reason for the activity log
             <Input
-              autoFocus
+
               maxLength={500}
               value={reason}
               onChange={(e) => setReason(e.target.value)}
@@ -216,7 +216,7 @@ function Overview() {
       toast.error(e, { fallback: "Could not refresh analytics. Try again." });
     }
   };
-  if (report === undefined) return <p role="status">Loading analytics…</p>;
+  if (report === undefined) return <output >Loading analytics…</output>;
   if (!report || !report.completedAt)
     return (
       <div className="space-y-3">
@@ -235,15 +235,8 @@ function Overview() {
     ["Accounts", stats.users],
     ["Restricted accounts", stats.restricted],
     ["Live forms", `${stats.liveForms} / ${stats.forms}`],
-    ["Live legacy quizzes", `${stats.liveQuizzes} / ${stats.quizzes}`],
     ["Form responses", stats.responses],
     ["Partial responses", stats.partials],
-    [
-      "Quiz completion",
-      stats.attempts
-        ? `${Math.round((stats.completedAttempts / stats.attempts) * 100)}%`
-        : "—",
-    ],
   ];
   return (
     <section className="space-y-6">
@@ -341,9 +334,9 @@ function UsersPanel({ choose }: { choose: ChooseAction }) {
           </Button>
         )}
       </div>
-      {crmMessage && <p role="status">{crmMessage}</p>}
+      {crmMessage && <output >{crmMessage}</output>}
       {status === "LoadingFirstPage" ? (
-        <p role="status">Loading accounts…</p>
+        <output >Loading accounts…</output>
       ) : !results.length ? (
         <p className="py-8 text-muted-foreground">No accounts found.</p>
       ) : (
@@ -417,19 +410,13 @@ function UsersPanel({ choose }: { choose: ChooseAction }) {
     </section>
   );
 }
-function ContentPanel({
-  kind,
-  choose,
-}: {
-  kind: "forms" | "quizzes";
-  choose: ChooseAction;
-}) {
+function ContentPanel({ choose }: { choose: ChooseAction }) {
   // Title words or an exact id; searched on the server across all content as you type.
   const [searchInput, setSearchInput] = useState("");
   const search = useSettled(searchInput);
   const { results, status, loadMore } = usePaginatedQuery(
     api.admin.content,
-    search ? { kind, search } : { kind },
+    search ? { kind: "forms", search } : { kind: "forms" },
     { initialNumItems: 25 },
   );
   const moderate = useMutation(api.admin.moderateContent);
@@ -442,7 +429,7 @@ function ContentPanel({
         : "This content will stop accepting responses. The owner cannot republish until you release the hold. Responses and scores are preserved.",
       run: (reason) =>
         moderate({
-          targetId: item.id as Id<"forms"> | Id<"quizzes">,
+          targetId: item.id as Id<"forms">,
           hold: !item.held,
           reason,
         }),
@@ -465,7 +452,7 @@ function ContentPanel({
         {search ? `${results.length} ${results.length === 1 ? "match" : "matches"}` : `${results.length} loaded, newest first.`}
       </p>
       {status === "LoadingFirstPage" ? (
-        <p role="status">Loading content…</p>
+        <output >Loading content…</output>
       ) : !visible.length ? (
         <p className="py-8 text-muted-foreground">No matching content.</p>
       ) : (
@@ -517,7 +504,7 @@ function Activity() {
         The latest 50 moderation and plan changes.
       </p>
       {!rows ? (
-        <p role="status">Loading activity…</p>
+        <output >Loading activity…</output>
       ) : !rows.length ? (
         <p>No changes recorded yet.</p>
       ) : (

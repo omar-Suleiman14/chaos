@@ -7,7 +7,7 @@ import { useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
-import { useCopy } from "@/lib/i18n";
+import { useCopy, useLocale } from "@/lib/i18n";
 import QueryErrorBoundary from "../QueryErrorBoundary";
 import AttemptHistory from "./AttemptHistory";
 import { homeworkCopy, homeworkError } from "./copy";
@@ -21,6 +21,7 @@ function StudentReport({ assignmentId, studentId }: { assignmentId: Id<"homework
 
 export default function HomeworkManager({ formId }: { formId: Id<"forms"> }) {
   const t = useCopy(homeworkCopy);
+  const { locale } = useLocale();
   const form = useQuery(api.forms.getFormForEditor, { formId });
   const [selectedVersion, setVersion] = useState<number | null>(null);
   const versionNumber = selectedVersion ?? form?.publishedVersion;
@@ -39,7 +40,7 @@ export default function HomeworkManager({ formId }: { formId: Id<"forms"> }) {
     try { await work(); toast.success(message); } catch (e) { toast.error(homeworkError(e, t)); }
     finally { pending.current = false; setBusy(false); }
   };
-  if (form === undefined) return <p role="status">{t.loading}</p>;
+  if (form === undefined) return <output >{t.loading}</output>;
   if (!form) return <p className="ws-empty">{t.unavailable}</p>;
   if (form.role !== "owner") return <p className="ws-empty">{t.ownerOnly}</p>;
   return <div className="grid gap-6">
@@ -71,13 +72,13 @@ export default function HomeworkManager({ formId }: { formId: Id<"forms"> }) {
       </form>
       <p id="homework-student-hint" className="ws-muted">{t.studentHint}</p>
       <h2 className="text-base font-semibold">{t.roster}</h2>
-      {roster === undefined ? <p role="status">{t.loading}</p> : roster.length === 0 ? <p className="ws-muted">{t.noStudents}</p> : <div className="overflow-x-auto"><table className="w-full text-sm">
+      {roster === undefined ? <output >{t.loading}</output> : roster.length === 0 ? <p className="ws-muted">{t.noStudents}</p> : <div className="overflow-x-auto"><table className="w-full text-sm">
         <thead><tr className="text-start"><th className="text-start p-2">{t.student}</th><th className="text-start p-2">{t.submitted}</th><th className="text-start p-2">{t.best}</th><th className="p-2"><span className="sr-only">{t.manage}</span></th></tr></thead>
         <tbody>{roster.map(r => <tr key={r.studentId} className="border-t">
           <td className="p-2"><span className="block">{r.name || r.email}</span><span className="block ws-muted" dir="ltr">{r.email}</span>{!r.active && <span className="ws-muted"> · {t.inactive}</span>}</td>
           <td className="p-2">{r.submitted}/{r.attempts}{r.lastSubmittedAt ? <span className="block ws-muted">{new Date(r.lastSubmittedAt).toLocaleString()}</span> : null}</td>
           <td className="p-2">{r.bestScore === null ? "—" : `${r.bestScore}/${r.maxScore ?? "?"}`}</td>
-          <td className="p-2"><div className="flex gap-2 justify-end flex-wrap">
+          <td className="p-2" aria-label={locale === "ar" ? "الإجراءات" : "Actions"}><div className="flex gap-2 justify-end flex-wrap">
             <button className="ws-btn ws-btn--sm" type="button" onClick={() => setReportStudent(r.studentId)}>{t.report}</button>
             <button className="ws-btn ws-btn--sm" type="button" disabled={busy} onClick={() => void run(() => enroll({ assignmentId, studentId: r.studentId, active: !r.active }), t.enrolled)}>{r.active ? t.revoke : t.reenroll}</button>
           </div></td>

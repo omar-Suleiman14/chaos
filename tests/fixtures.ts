@@ -88,24 +88,3 @@ export const questionFixtures: Record<
     order: 3,
   },
 };
-
-/** Session shapes (without `quizId`, which each test supplies). */
-export const sessionFixtures = {
-  inProgress: {
-    playerName: anonymousRespondentName,
-    status: "in_progress" as const,
-    score: 0,
-    totalPoints: 0,
-    answers: [] as never[],
-    startedAt: 1_700_000_000_000,
-  },
-  completed: {
-    playerName: anonymousRespondentName,
-    status: "completed" as const,
-    score: 0,
-    totalPoints: 0,
-    answers: [] as never[],
-    startedAt: 1_700_000_000_000,
-    completedAt: 1_700_000_060_000,
-  },
-};

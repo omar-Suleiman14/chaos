@@ -6,7 +6,7 @@ import type { Lesson } from "@/lib/learn/types";
 import { getFunctionName } from "convex/server";
 
 vi.mock("@clerk/nextjs", () => ({ useUser: () => ({ isLoaded: true, user: { id: "reader", fullName: "Reader One", username: "reader", imageUrl: "" } }) }));
-const backend = vi.hoisted(() => ({ mutation: vi.fn(), query: vi.fn(), loadMore: vi.fn(), page: { results: [], status: "Exhausted" }, assessments: [] as { kind: "quiz"; id: string; title: string; questionCount: number }[] }));
+const backend = vi.hoisted(() => ({ mutation: vi.fn(), query: vi.fn(), loadMore: vi.fn(), page: { results: [], status: "Exhausted" }, assessments: [] as { kind: "form"; id: string; title: string; questionCount: number }[] }));
 vi.mock("convex/react", () => ({
   useConvex: () => backend,
   useConvexAuth: () => ({ isAuthenticated: true, isLoading: false }),
@@ -121,11 +121,11 @@ describe("lesson reader", () => {
   });
 
   it("keeps practice inside the lesson without a separate tab", () => {
-    backend.assessments = [{ kind: "quiz", id: "quiz", title: "Checkpoint", questionCount: 3 }];
+    backend.assessments = [{ kind: "form", id: "form", title: "Checkpoint", questionCount: 3 }];
     const l = lesson(); seed(l); inWorkspace(<LessonReader lesson={l} />);
     expect(screen.queryByRole("tab", { name: "Practice" })).toBeNull();
     expect(screen.getByRole("region", { name: "Practice" })).toBeInTheDocument();
-    expect(screen.getByText("Checkpoint")).toBeInTheDocument();
+    expect(screen.getByText("Checkpoint · 3 questions")).toBeInTheDocument();
   });
 });
 

@@ -30,7 +30,7 @@ function useLoadingTiming(surface: string) {
 export function LibrarySkeleton({ label, view = "gallery", count = 6 }: { label: string; view?: "gallery" | "list"; count?: number }) {
   useLoadingTiming(`library-${view}`);
   return (
-    <div role="status" aria-busy="true">
+    <output  aria-busy="true">
       <span className="sr-only">{label}</span>
       {view === "gallery" ? (
         <ul className="ws-gallery" aria-hidden="true">
@@ -49,7 +49,7 @@ export function LibrarySkeleton({ label, view = "gallery", count = 6 }: { label:
           {Array.from({ length: count }, (_, i) => <span key={i} className="ws-skeleton" style={{ height: 48 }} />)}
         </div>
       )}
-    </div>
+    </output>
   );
 }
 
@@ -57,13 +57,13 @@ export function LibrarySkeleton({ label, view = "gallery", count = 6 }: { label:
 export function PageSkeleton({ label }: { label: string }) {
   useLoadingTiming("page");
   return (
-    <div role="status" aria-busy="true">
+    <output  aria-busy="true">
       <span className="sr-only">{label}</span>
       <div aria-hidden="true" className="grid gap-5">
         <span className="ws-skeleton ws-skeleton--title" />
         <span className="ws-skeleton ws-skeleton--line" style={{ width: "30%" }} />
         <span className="ws-skeleton ws-skeleton--panel" />
       </div>
-    </div>
+    </output>
   );
 }

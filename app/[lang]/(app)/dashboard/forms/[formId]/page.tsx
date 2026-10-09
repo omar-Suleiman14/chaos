@@ -1,5 +1,7 @@
 "use client";
 
+import { useNow } from "@/lib/useNow";
+
 import Link from "next/link";
 import dynamic from "next/dynamic";
 import { Activity, useEffect, useMemo, useState } from "react";
@@ -85,7 +87,7 @@ const copy = {
     results: (n: number) => `Results${n > 0 ? ` (${n})` : ""}`, preview: "Preview",
     publishing: "Publishing…", awaiting: "Awaiting approval", requestPublication: "Request publication", publishChanges: "Publish changes", publishedLabel: "Published", publish: "Publish",
     share: "Share", moreActions: "More actions", unpin: "Unpin from sidebar", pin: "Pin to sidebar", openLive: "Open live page", copyLink: "Copy link",
-    quizTitle: "Quiz title", formTitle: "Form title", untitledQuiz: "Untitled quiz", untitledForm: "Untitled form", quizMode: "Quiz mode", changeLimits: "Change limits in Settings",
+    quizTitle: "Quiz title", formTitle: "Form title", untitledQuiz: "Untitled quiz", untitledForm: "Untitled form", quizMode: "Quiz mode", showAnswers: "Show answers after submitting", showAnswersHelp: "Respondents see what they got wrong, the correct answers and your explanations. Turn off to show only their score.", changeLimits: "Change limits in Settings",
     kindQuiz: "quiz", kindForm: "form",
     role: (role: string, kind: string) => `You are ${role === "editor" ? "an editor" : "a viewer"} of this ${kind}. `,
     createdFrom: (kind: string, label: string) => `Created from ${kind === "integration" ? "a connected app" : kind}: ${label}`,
@@ -111,7 +113,7 @@ const copy = {
     results: (n: number) => `النتائج${n > 0 ? ` (${n})` : ""}`, preview: "معاينة",
     publishing: "جارٍ النشر…", awaiting: "بانتظار الموافقة", requestPublication: "اطلب النشر", publishChanges: "انشر التغييرات", publishedLabel: "منشور", publish: "انشر",
     share: "مشاركة", moreActions: "إجراءات أخرى", unpin: "إلغاء التثبيت من الشريط الجانبي", pin: "ثبّت في الشريط الجانبي", openLive: "افتح الصفحة المنشورة", copyLink: "انسخ الرابط",
-    quizTitle: "عنوان الاختبار", formTitle: "عنوان النموذج", untitledQuiz: "اختبار بلا عنوان", untitledForm: "نموذج بلا عنوان", quizMode: "وضع الاختبار", changeLimits: "غيّر الحدود من الإعدادات",
+    quizTitle: "عنوان الاختبار", formTitle: "عنوان النموذج", untitledQuiz: "اختبار بلا عنوان", untitledForm: "نموذج بلا عنوان", quizMode: "وضع الاختبار", showAnswers: "إظهار الإجابات بعد الإرسال", showAnswersHelp: "يرى المجيبون ما أخطؤوا فيه والإجابات الصحيحة وشروحك. أوقفه لإظهار الدرجة فقط.", changeLimits: "غيّر الحدود من الإعدادات",
     kindQuiz: "الاختبار", kindForm: "النموذج",
     role: (role: string, kind: string) => `أنت ${role === "editor" ? "محرر" : "مشاهد"} في هذا ${kind === "الاختبار" ? "الاختبار" : "النموذج"}. `,
     createdFrom: (kind: string, label: string) => `أُنشئ من ${{ integration: "تطبيق متصل", template: "قالب", import: "استيراد", copy: "نسخة" }[kind] ?? kind}: ${label}`,
@@ -145,6 +147,7 @@ export default function FormBuilderPage() {
 }
 
 function FormBuilder({ formId }: { formId: Id<"forms"> }) {
+  const now = useNow();
   const t = useCopy(copy);
   const { locale } = useLocale();
   const data = useQuery(api.forms.getFormForEditor, { formId });
@@ -258,8 +261,8 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
   const fmtZoned = (ms: number) => formatScheduleTime(ms, data.settings.timezone, locale);
   // Limits are easy to forget once set, so they stay visible under the title.
   const limits = [
-    data.settings.opensAt !== undefined && data.settings.opensAt > Date.now() ? t.opens(fmtZoned(data.settings.opensAt)) : "",
-    data.settings.closesAt !== undefined ? (data.settings.closesAt > Date.now() ? t.closes : t.closed)(fmtZoned(data.settings.closesAt)) : "",
+    data.settings.opensAt !== undefined && now !== null && data.settings.opensAt > now ? t.opens(fmtZoned(data.settings.opensAt)) : "",
+    now !== null && data.settings.closesAt !== undefined ? (data.settings.closesAt > now ? t.closes : t.closed)(fmtZoned(data.settings.closesAt)) : "",
     data.settings.responseLimit !== undefined ? t.ofLimit(data.responseCount, data.settings.responseLimit) : "",
   ].filter(Boolean);
 
@@ -312,7 +315,16 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
           <div className="flex items-center gap-3 flex-wrap mt-2">
             <StatusBadge status={data.status} edited={data.hasUnpublishedChanges || (published && dirty)} />
             <span className="text-[var(--ws-line-strong)]" aria-hidden="true">|</span>
-            <WsSwitch checked={quiz} disabled={!canEdit} label={t.quizMode} onChange={(on) => d.change((x) => ({ ...x, quiz: { enabled: on } }))} />
+            <WsSwitch checked={quiz} disabled={!canEdit} label={t.quizMode} onChange={(on) => d.change((x) => ({ ...x, quiz: { ...x.quiz, enabled: on } }))} />
+            {quiz && (
+              <>
+                <span className="text-[var(--ws-line-strong)]" aria-hidden="true">|</span>
+                <span title={t.showAnswersHelp}>
+                  <WsSwitch checked={def.quiz?.showAnswers !== false} disabled={!canEdit} label={t.showAnswers}
+                    onChange={(on) => d.change((x) => ({ ...x, quiz: { enabled: true, ...(on ? {} : { showAnswers: false }) } }))} />
+                </span>
+              </>
+            )}
             {limits.length > 0 && (
               <>
                 <span className="text-[var(--ws-line-strong)]" aria-hidden="true">|</span>
@@ -341,13 +353,13 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
         const index = steps.findIndex((s) => !s.done);
         const step = steps[index];
         return (
-          <div className="ws-next-step ws-page" role="status" aria-label={t.guideLabel}>
+          <output className="ws-next-step ws-page"  aria-label={t.guideLabel}>
             <span className="ws-next-step__count" aria-hidden="true">{index + 1}</span>
             <span className="min-w-0 flex-1">{step.text}</span>
             <span className="ws-next-step__dots" aria-label={t.stepOf(index + 1, steps.length)}>{steps.map((s, i) => <span key={i} data-done={i < index} />)}</span>
             <button type="button" className="ws-btn ws-btn--sm ws-btn--primary" onClick={step.run}>{step.action}</button>
             <button type="button" className="ws-icon-button" aria-label={t.hideGuide} onClick={() => { setGuide((g) => ({ ...g, dismissed: true })); try { localStorage.setItem("chaos.ui.guide-dismissed", "1"); } catch { /* storage unavailable */ } }}><X size={15} /></button>
-          </div>
+          </output>
         );
       })()}
       {d.recovery && canEdit && (

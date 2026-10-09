@@ -1,4 +1,5 @@
-import { clerkMiddleware, createRouteMatcher } from "@clerk/nextjs/server";
+import { clerkMiddleware } from "@clerk/nextjs/server";
+import { isProtectedPath } from "@/lib/protectedRoutes";
 import { NextResponse, type NextFetchEvent, type NextRequest } from "next/server";
 import { fetchQuery } from "convex/nextjs";
 import { api } from "@/convex/_generated/api";
@@ -9,9 +10,9 @@ import { isSitePath, LOCALE_COOKIE, splitLocale, type Locale } from "@/lib/local
 import { routeLocale, type LocaleRoute } from "@/lib/localeRouting";
 import type { EmbedPolicy, EmbedTarget } from "@/lib/embed";
 
-// /print shows a quiz with its answer key; the queries already check ownership, and
-// signing in first keeps anonymous visitors off the page entirely.
-const isProtectedRoute = createRouteMatcher(["/dashboard(.*)", "/admin(.*)", "/print(.*)", "/homework(.*)", "/auth(.*)"]);
+// Signed-in areas. /print is retired (it printed classic quizzes) but stays reserved and
+// protected so no custom link can take the path.
+const isProtectedRoute = (req: NextRequest) => isProtectedPath(req.nextUrl.pathname);
 
 /** Past this the frame is denied rather than holding up the page. */
 const POLICY_TIMEOUT_MS = 2500;

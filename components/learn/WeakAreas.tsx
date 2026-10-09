@@ -32,7 +32,7 @@ const copy = {
 function PracticeLink({ formId, version, recentlyAnswered }: { formId: Id<"forms">; version: number; recentlyAnswered: boolean }) {
   const t = useCopy(copy);
   const link = useQuery(studyReads.practiceLink, { formId, version });
-  if (link === undefined) return <p className="lx-muted" role="status">{t.loading}</p>;
+  if (link === undefined) return <output className="lx-muted" >{t.loading}</output>;
   if (!link) return <p className="lx-muted">{t.unavailable}</p>;
   return <div className="lx-row"><span className="lx-row__main"><strong>{link.title}</strong>{recentlyAnswered && <small className="lx-muted">{t.recent}</small>}</span><Link className="ws-btn ws-btn--sm" href={link.href}>{t.start}</Link></div>;
 }
@@ -48,13 +48,13 @@ export default function WeakAreas() {
   const concepts = catalog?.concepts.slice(offset, offset + 10) ?? [];
   const { states, practice, refresh } = useStudyEvidence(concepts.map(c => c.id));
   const references = [...new Map((practice ?? []).map(p => [`${p.formId}:${p.version}`, p])).values()];
-  if (auth.isLoading || (auth.isAuthenticated && catalog === undefined)) return <p className="lx-muted" role="status">{t.loading}</p>;
+  if (auth.isLoading || (auth.isAuthenticated && catalog === undefined)) return <output className="lx-muted" >{t.loading}</output>;
   if (!auth.isAuthenticated) return <p className="lx-muted">{t.signIn}</p>;
   return <section className="lx-section" aria-labelledby="weak-areas-title">
     <header><h2 id="weak-areas-title">{t.title}</h2><button className="ws-btn ws-btn--sm" type="button" onClick={refresh}>{t.refresh}</button></header>
     <p className="lx-help">{t.lead}</p>
     <p className="lx-muted">{t.bounded}</p>
-    {!concepts.length ? <p className="lx-muted">{t.empty}</p> : states === undefined ? <p role="status">{t.loading}</p> : <div className="lx-list">{states.map(state => <article key={state.conceptId} className="lx-panel">
+    {!concepts.length ? <p className="lx-muted">{t.empty}</p> : states === undefined ? <output >{t.loading}</output> : <div className="lx-list">{states.map(state => <article key={state.conceptId} className="lx-panel">
       <div className="lx-panel__row"><strong><Target size={14} aria-hidden /> {concepts.find(c => c.id === state.conceptId)?.title}</strong><span className="lx-badge" data-tone={state.state === "weak" ? "amber" : undefined}>{t.states[state.state]}</span></div>
       <p className="lx-help">{state.reason}</p>
       {material?.filter(m => m.conceptId === state.conceptId).map(m => <div className="lx-actions" key={m.conceptId}>{m.lessonId && <Link className="ws-btn ws-btn--sm" href={`/learn/${m.lessonId}#${m.blockId ?? ""}`}>{locale === "ar" ? "أعد قراءة الفقرة" : "Re-read section"}</Link>}{m.lessonId && m.flashcardBlockId && <Link className="ws-btn ws-btn--sm" href={`/learn/${m.lessonId}#${m.flashcardBlockId}`}>{locale === "ar" ? "راجع البطاقات" : "Review cards"}</Link>}{m.quizHref && <Link className="ws-btn ws-btn--sm" href={m.quizHref}>{t.start}</Link>}</div>)}
@@ -64,6 +64,6 @@ export default function WeakAreas() {
       {state.lastAnsweredAt !== null && <p className="lx-muted">{t.last}: {formatDate(locale, state.lastAnsweredAt)}</p>}
     </article>)}</div>}
     {(catalog?.concepts.length ?? 0) > 10 && <div className="lx-actions"><button className="ws-btn ws-btn--sm" type="button" disabled={!offset} onClick={() => setOffset(Math.max(0, offset - 10))}>{t.previous}</button><button className="ws-btn ws-btn--sm" type="button" disabled={offset + 10 >= (catalog?.concepts.length ?? 0)} onClick={() => setOffset(offset + 10)}>{t.next}</button></div>}
-    {concepts.length > 0 && <><h3>{t.practice}</h3>{practice === undefined ? <p role="status">{t.loading}</p> : references.length ? references.map(p => <PracticeLink key={`${p.formId}:${p.version}`} {...p} />) : <p className="lx-muted">{t.none}</p>}</>}
+    {concepts.length > 0 && <><h3>{t.practice}</h3>{practice === undefined ? <output >{t.loading}</output> : references.length ? references.map(p => <PracticeLink key={`${p.formId}:${p.version}`} {...p} />) : <p className="lx-muted">{t.none}</p>}</>}
   </section>;
 }

@@ -37,9 +37,9 @@ in as an admin):
 ## Cleaning up
 
 `pnpm flags:check` fails on expired or malformed flags and warns 14 days
-before expiry. `.github/workflows/flags.yml` runs it every Monday and keeps one
-`flag-cleanup` issue open while anything is due. CI runs it with `--ci`, which
-fails only on malformed flags, so an expiry never blocks an unrelated fix.
+before expiry. Normal PR CI runs it with `--ci`, which fails only on malformed
+flags, so an expiry never blocks an unrelated fix. Run `pnpm flags:check`
+manually when reviewing or cleaning up old ramps.
 
 To finish a ramp, keep the winning code path, then delete the flag from
 `lib/flags.ts` and remove its `useFlag`/`flagEnabled` calls (TypeScript lists

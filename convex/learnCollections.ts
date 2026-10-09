@@ -69,8 +69,9 @@ export async function attachAssessmentForActor(ctx: MutationCtx, actor: string, 
   const lesson = await lessonAccessForActor(ctx, actor, args.lessonId, true);
   if (lesson.ownerId !== actor) throw new Error("FORBIDDEN: Only the lesson owner can attach assessments.");
   if (!args.label.trim() || args.label.length > 200 || !Number.isSafeInteger(args.order) || args.order < 0 || args.order > 1000) throw new Error("VALIDATION_FAILED: Give a label up to 200 characters and an order from 0 to 1000.");
-  if (args.asset.kind === "form") { const form = await ctx.db.get("forms", args.asset.id); if (!form || form.ownerId !== actor) throw new Error("NOT_FOUND: Quiz form not found in your library."); if (!form.draft.quiz?.enabled) throw new Error("VALIDATION_FAILED: That form is not a quiz; turn on quiz mode first."); }
-  else { const quiz = await ctx.db.get("quizzes", args.asset.id); if (!quiz || quiz.creatorId !== actor) throw new Error("NOT_FOUND: Quiz not found in your library."); }
+  const form = args.asset.kind === "form" ? await ctx.db.get("forms", args.asset.id) : null;
+  if (!form || form.ownerId !== actor) throw new Error("NOT_FOUND: Quiz form not found in your library.");
+  if (!form.draft.quiz?.enabled) throw new Error("VALIDATION_FAILED: That form is not a quiz; turn on quiz mode first.");
   const prior = await ctx.db.query("lessonAssessments").withIndex("by_lessonId_and_asset", q => q.eq("lessonId", lesson._id).eq("asset", args.asset)).unique();
   if (prior) { await ctx.db.patch("lessonAssessments", prior._id, { label: args.label, order: args.order }); return prior._id; }
   if ((await ctx.db.query("lessonAssessments").withIndex("by_lessonId_and_order", q => q.eq("lessonId", lesson._id)).take(51)).length >= 50) throw new Error("VALIDATION_FAILED: At most 50 assessments per lesson.");

@@ -4,7 +4,7 @@ import "./live.css";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { ArrowLeft, Check, Copy, Maximize, Minimize, Pause, Play, Users, Volume2, VolumeX, X } from "lucide-react";
+import { ArrowLeft, Check, Copy, History, Maximize, Minimize, Pause, Play, Users, Volume2, VolumeX, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { BREAKS, TIME_LIMITS } from "@/convex/liveLogic";
@@ -18,10 +18,12 @@ import { Announcer, Countdown, StartCountdown, usePrefersReducedMotion, useSecon
 import { gameSound, gameThemeProps } from "./GameTheme";
 import { ThemePicker } from "@/components/ThemePicker";
 import { themeFromPreset } from "@/components/forms/formThemes";
+import RehearsalPanel from "./RehearsalPanel";
+import "./classroom.css";
 import TeamPanel, { TEAMS_ENABLED } from "./TeamPanel";
 import { toast } from "@/lib/toast";
 import { copyText } from "@/lib/clipboard";
-import { linkOrigin } from "@/lib/hosts";
+import { hasOwnHost, linkOrigin } from "@/lib/hosts";
 import { hostHref } from "@/lib/hosts";
 
 const copy = {
@@ -67,10 +69,15 @@ const copy = {
   },
 };
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- This labelled graphic is composed from inline SVG or multiple elements; a native img cannot represent it. */
 export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
-  const game = useQuery(api.live.hostView, { gameId });
+  const scene = useQuery(api.live.hostView, { gameId, activity: false });
+  const activity = useQuery(api.live.hostActivity, { gameId });
+  const game = useMemo(() => scene == null ? scene : activity === undefined ? undefined
+    : activity && activity.state === scene.state && activity.questionIndex === scene.questionIndex
+      ? { ...scene, ...activity } : scene, [scene, activity]);
   const advance = useMutation(api.live.advance);
   const endGame = useMutation(api.live.endGameNow);
   const kick = useMutation(api.live.kickPlayer);
@@ -95,8 +102,10 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
     return () => document.removeEventListener("fullscreenchange", update);
   }, []);
 
-  const origin = linkOrigin("main");
+  // Players join on play.chaos.fail when it is set up; the bare host opens /play, so the lobby shows just the host.
+  const origin = linkOrigin("play");
   const joinUrl = game ? `${origin}/play?pin=${game.pin}` : "";
+  const joinHost = `${origin.replace(/^https?:\/\//, "")}${hasOwnHost("play") ? "" : "/play"}`;
   const qr = useMemo(() => (joinUrl ? qrSvg(joinUrl) : ""), [joinUrl]);
   const copyJoinLink = () => copyText(joinUrl, { success: t.linkCopied, failure: t.copyFailed });
 
@@ -145,7 +154,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
 
   const onTick = useCallback((left: number) => { if (left > 0 && left <= 5) sfx.play("tap", pack); }, [pack]);
 
-  if (game === undefined) return <div className="live-root"><div className="live-center live-muted" role="status">{t.loading}</div></div>;
+  if (game === undefined) return <div className="live-root"><output className="live-center live-muted" >{t.loading}</output></div>;
   if (game === null) {
     return (
       <div className="live-root">
@@ -167,7 +176,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
     if (document.fullscreenElement) void document.exitFullscreen().catch(() => {});
     else void document.documentElement.requestFullscreen?.().catch(() => {});
   };
-  const resultsHref = game.formId ? `/dashboard/forms/${game.formId}/responses` : game.quizId ? `/dashboard/results?id=${game.quizId}` : "/dashboard";
+  const resultsHref = game.formId ? `/dashboard/forms/${game.formId}/responses` : "/dashboard";
   const fmt = (n: number) => formatNumber(locale, n);
   const question = game.question;
   const correct = new Set(question?.correct ?? []);
@@ -191,6 +200,8 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
       </header>
 
       <main className="live-main" id="live-main">
+        {game.rehearsal && <RehearsalPanel gameId={gameId} pin={game.pin} maxPlayers={game.settings.maxPlayers} lobby={game.state === "lobby" && !game.startsAt} />}
+        {game.state === "ended" && <div className="live-replay"><Link className="live-btn" href={hostHref(`/dashboard/live/${gameId}/replay`)}><History size={16} aria-hidden />{locale === "ar" ? "افتح آلة زمن الفصل" : "Open classroom time machine"}</Link></div>}
         {TEAMS_ENABLED && <TeamPanel gameId={gameId} frozen={game.state !== "lobby" || game.startsAt != null} maxPlayers={game.settings.maxPlayers} players={game.players} />}
 
         {game.state === "lobby" && game.startsAt && (
@@ -207,7 +218,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
           <>
             <section className="live-join live-card" aria-label={t.withPin}>
               <div className="flex flex-col gap-3">
-                <p className="text-2xl">{t.joinAt} <strong dir="ltr">{origin.replace(/^https?:\/\//, "")}/play</strong></p>
+                <p className="text-2xl">{t.joinAt} <strong dir="ltr">{joinHost}</strong></p>
                 <p className="live-muted text-xl">{t.withPin}</p>
                 <p className="live-pin" aria-label={game.pin.split("").join(" ")}>{game.pin.slice(0, 3)} {game.pin.slice(3)}</p>
                 <button type="button" className="live-copy-link" title={t.copyLink} aria-label={`${t.copyLink}: ${joinUrl}`} onClick={() => void copyJoinLink()}>
@@ -297,13 +308,13 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
               </div>
             )}
             {game.state === "reveal" && <p className="sr-only">{t.correctIs(question.options.filter((o) => correct.has(o.id)).map((o) => o.label).join(", "))}</p>}
-            <div className="live-tiles" role="list">
+            <ul className="live-tiles" >
               {question.options.map((o, i) => (
                 <AnswerTile key={o.id} index={i} label={o.label} size="host"
                   result={game.state === "reveal" ? (correct.has(o.id) ? "correct" : "wrong") : undefined}
                   count={game.state === "reveal" ? game.distribution?.[o.id] ?? 0 : undefined} />
               ))}
-            </div>
+            </ul>
             <div className="flex justify-end items-center gap-3 flex-wrap">
               {game.state === "reveal" && <AutoplayControls game={game} offset={offset} busy={busy} t={t} onToggle={(on) => void run(() => setAutoplay({ gameId, autoAdvance: on }))} />}
               <button ref={nextRef} type="button" className="live-btn live-btn--primary" onClick={step} disabled={busy}>{nextLabel}</button>
@@ -364,9 +375,9 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
                 </ol>
               </>
             )}
-            <p className="live-muted" role="status">
+            <output className="live-muted" >
               {game.resultsStatus === "saved" ? `${t.saved(game.savedResponses)}${game.unsavedResponses ? ` ${t.unsaved(game.unsavedResponses)}` : ""}` : t.saving}
-            </p>
+            </output>
             <Link href={resultsHref} className="live-btn live-btn--primary">{t.openResults}</Link>
           </div>
         )}
@@ -374,6 +385,7 @@ export default function HostScreen({ gameId }: { gameId: Id<"liveGames"> }) {
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
 /** "Next in 4" with pause and resume while autoplay waits on an answer or leaderboard screen. */
 function AutoplayControls({ game, offset, busy, t, onToggle }: {

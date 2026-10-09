@@ -5,6 +5,8 @@ import CookiesView from "@/components/site/CookiesView";
 import { analyticsAllowed, CONSENT_COOKIE, CONSENT_DAYS, cookieConsent, saveCookieConsent } from "@/lib/cookieConsent";
 import { LocaleProvider } from "@/lib/i18n";
 
+vi.mock("@/lib/hosts", () => ({ sharedCookieDomain: () => "chaos.fail" }));
+
 vi.mock("@/components/site/SiteLink", () => ({ default: ({ href, children }: { href: string; children: React.ReactNode }) => <a href={href}>{children}</a> }));
 vi.mock("@/components/site/LegalPage", () => ({ default: ({ title, children }: { title: string; children: React.ReactNode }) => <main><h1>{title}</h1>{children}</main> }));
 beforeEach(() => {
@@ -49,6 +51,17 @@ it("updates when another tab changes the choice", () => {
   act(() => window.dispatchEvent(new StorageEvent("storage", { key: "chaos-consent-change" })));
   expect(screen.queryByRole("region", { name: "Privacy choices" })).toBeNull();
   expect(analyticsAllowed()).toBe(false);
+});
+
+it.each([false, true])("keeps the %s choice after a remount and focus on a preview host", (choice) => {
+  const view = render(<LocaleProvider initial="en"><CookieConsent /></LocaleProvider>);
+  fireEvent.click(screen.getByRole("button", { name: choice ? "Allow analytics" : "Reject analytics" }));
+  expect(document.cookie).toContain(CONSENT_COOKIE);
+  view.unmount();
+  render(<LocaleProvider initial="en"><CookieConsent /></LocaleProvider>);
+  act(() => window.dispatchEvent(new Event("focus")));
+  expect(cookieConsent()).toBe(choice);
+  expect(screen.queryByRole("region", { name: "Privacy choices" })).toBeNull();
 });
 
 it("provides the policy and consent choices in Arabic", () => {

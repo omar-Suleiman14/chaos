@@ -1,0 +1,38 @@
+name: PR screenshots
+
+# Pull requests that change what people see must show it. When a pull request touches
+# pages, components or styles, its description needs at least one screenshot (Markdown
+# image or <img>). A change that touches those files without changing anything visible
+# can carry the `no-visual-change` label instead. Editing the description re-runs the check.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+  pull-requests: read
+
+concurrency:
+  group: pr-screenshots-${{ github.event.pull_request.number }}
+  cancel-in-progress: true
+
+jobs:
+  screenshots:
+    name: Screenshots for visible changes
+    runs-on: ubuntu-latest
+    if: github.event.pull_request.user.type != 'Bot'
+    steps:
+      - name: Require screenshots when UI files change
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BODY: ${{ github.event.pull_request.body }}
+          LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          files=$(gh api --paginate "repos/${{ github.repository }}/pulls/${{ github.event.pull_request.number }}/files" --jq '.[].filename')
+          ui=$(printf '%s\n' "$files" | grep -E '^(app|components)/.*\.(tsx|css)$' || true)
+          if [ -z "$ui" ]; then echo "No page, component or style files changed."; exit 0; fi
+          if printf '%s' ",$LABELS," | grep -q ',no-visual-change,'; then echo "Labelled no-visual-change."; exit 0; fi
+          if printf '%s' "$BODY" | grep -Eq '!\[[^]]*\]\([^)]+\)|<img[^>]+src='; then echo "Screenshots found."; exit 0; fi
+          echo "Changed UI files:"; printf '%s\n' "$ui"
+          echo "::error::This pull request changes pages, components or styles but its description has no screenshots. Add them under Screenshots (English and Arabic, light and dark, desktop and phone where it applies), or add the no-visual-change label if nothing visible changed."
+          exit 1

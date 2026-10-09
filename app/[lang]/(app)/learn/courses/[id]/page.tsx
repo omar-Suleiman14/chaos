@@ -1,3 +1,4 @@
+import { ChevronLeft } from "lucide-react";
 import CourseStart from "@/components/courses/CourseStart";
 import CourseOutline from "@/components/courses/CourseOutline";
 import { contentDirection } from "@/lib/learn/direction";
@@ -50,6 +51,7 @@ export default async function PublicCoursePage({ params }: Props) {
       <main id="main-content" tabIndex={-1} className="cp" dir={contentDirection(course.language)} lang={course.language}>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }} />
       <header className="cp-hero">
+        <Link href="/learn" className="cp-back"><ChevronLeft size={18} aria-hidden />{ar ? "الدورات" : "Courses"}</Link>
         <Link href="/learn" className="cp-kicker">{labels.explore}</Link>
         {/* A real image, like the lesson cover, so the picture isn't cut down to a thin band. */}
         {/* eslint-disable-next-line @next/next/no-img-element -- covers can be any https URL a creator pastes */}

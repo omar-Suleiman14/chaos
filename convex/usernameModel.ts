@@ -19,13 +19,14 @@ export function lookupUsername(value: string): string | null {
   return /^[a-z0-9][a-z0-9_.-]{2,63}$/.test(username) ? username : null;
 }
 
-/** Constant-size indexed reads; current users and legacy quiz routes protect pre-migration names. */
+/** Constant-size indexed reads; current users and old quiz addresses protect pre-migration names. */
 export async function usernameOwner(ctx: ReadCtx, username: string): Promise<string | null> {
   const alias = live(await ctx.db.query("usernameAliases").withIndex("by_username", (q) => q.eq("username", username)).unique(), Date.now());
   const users = await ctx.db.query("users").withIndex("by_username", (q) => q.eq("username", username)).take(2);
   if (users.length > 1) throw new Error("USERNAME_CONFLICT: This legacy username has conflicting owners.");
-  const legacy = await ctx.db.query("quizzes").withIndex("by_creator_slug", (q) => q.eq("creatorUsername", username)).first();
-  const owners = [alias?.ownerId, users[0]?.clerkId, legacy?.creatorId].filter((id): id is string => id !== undefined);
+  const converted = await ctx.db.query("classicQuizConversions").withIndex("by_username_and_slug", (q) => q.eq("username", username)).first();
+  const legacy = converted ? await ctx.db.get("forms", converted.formId) : null;
+  const owners = [alias?.ownerId, users[0]?.clerkId, legacy?.ownerId].filter((id): id is string => id !== undefined);
   if (owners.some((id) => id !== owners[0])) throw new Error("USERNAME_CONFLICT: This legacy username has conflicting owners.");
   return owners[0] ?? null;
 }
@@ -45,13 +46,13 @@ export async function reserveUsername(ctx: MutationCtx, username: string, ownerI
 
 /**
  * True when `username` appeared in a public link of this account: a form custom link
- * (chaos.fail/<username>/<slug>), a classic quiz route, or the public author listing.
+ * (chaos.fail/<username>/<slug>), an old quiz address, or the public author listing.
  */
 async function usedInPublicLinks(ctx: ReadCtx, user: Doc<"users">, username: string): Promise<boolean> {
   if ((user.publicAuthorAssets ?? 0) > 0) return true;
   const slugged = await ctx.db.query("forms").withIndex("by_ownerId_and_slug", (q) => q.eq("ownerId", user.clerkId).gt("slug", "")).first();
   if (slugged) return true;
-  return (await ctx.db.query("quizzes").withIndex("by_creator_slug", (q) => q.eq("creatorUsername", username)).first()) !== null;
+  return (await ctx.db.query("classicQuizConversions").withIndex("by_username_and_slug", (q) => q.eq("username", username)).first()) !== null;
 }
 
 /**

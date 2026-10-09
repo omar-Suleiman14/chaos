@@ -102,19 +102,19 @@ describe("Learn integration v2", () => {
     const { t, owner, other, tokenId, read, update } = await setup();
     const lessonId = await owner.mutation(api.lessons.create, { metadata, document });
     const foreignId = await other.mutation(api.lessons.create, { metadata, document });
-    const quizId = await owner.mutation(api.quizFunctions.createQuiz, { title: "Keep v1 selection" });
-    await select(t, tokenId, [`quiz_${quizId}`]);
+    const formId = await owner.mutation(api.forms.createForm, { title: "Keep v1 selection", quizMode: true });
+    await select(t, tokenId, [`form_${formId}`]);
     const ref = `lesson_${lessonId}`;
     expect((await read(ref)).status).toBe(404);
     await expect(t.mutation(api.learnIntegrations.setLessonSelection, { tokenId, lessonIds: [lessonId] })).rejects.toThrow();
     await expect(other.mutation(api.learnIntegrations.setLessonSelection, { tokenId, lessonIds: [lessonId] })).rejects.toThrow("unauthorized");
     await expect(owner.mutation(api.learnIntegrations.setLessonSelection, { tokenId, lessonIds: [foreignId] })).rejects.toThrow("unauthorized");
     expect(await owner.mutation(api.learnIntegrations.setLessonSelection, { tokenId, lessonIds: [lessonId, lessonId] })).toEqual({ lessonRefs: [ref] });
-    expect((await t.run(ctx => ctx.db.get("integrationTokens", tokenId)))?.itemRefs).toEqual([`quiz_${quizId}`, ref]);
+    expect((await t.run(ctx => ctx.db.get("integrationTokens", tokenId)))?.itemRefs).toEqual([`form_${formId}`, ref]);
     expect((await read(ref)).status).toBe(200); expect((await update(ref)).status).toBe(200);
     await owner.mutation(api.learnIntegrations.setLessonSelection, { tokenId, lessonIds: [] });
     expect((await read(ref)).status).toBe(404); expect((await update(ref, "1", "revoked-selection")).status).toBe(404);
-    expect((await t.run(ctx => ctx.db.get("integrationTokens", tokenId)))?.itemRefs).toEqual([`quiz_${quizId}`]);
+    expect((await t.run(ctx => ctx.db.get("integrationTokens", tokenId)))?.itemRefs).toEqual([`form_${formId}`]);
     expect((await owner.query(api.lessons.getDraft, { lessonId })).revision).toBe(1);
   });
 

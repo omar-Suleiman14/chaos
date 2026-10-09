@@ -1,0 +1,160 @@
+/* The version browser shared by quizzes, forms and games, lessons, courses and flashcards
+   (VersionBrowser.tsx): the current version beside a stack of earlier ones, with a date timeline. */
+.vb { position: fixed; inset: 0; z-index: 80; isolation: isolate; display: grid; grid-template-rows: auto minmax(0, 1fr) auto; color: #fff; outline: none; font-family: var(--ws-font); animation: vb-fade .3s ease both; }
+@keyframes vb-fade { from { opacity: 0; } }
+/* The starfield settles from a slight zoom as the browser opens, so it feels like stepping into space. */
+.vb-backdrop { animation: vb-space .9s cubic-bezier(.16, 1, .3, 1) both; }
+@keyframes vb-space { from { transform: scale(1.12); filter: brightness(1.6); } }
+.vb-backdrop { position: absolute; inset: 0; z-index: -1; background:
+  radial-gradient(ellipse 70% 50% at 50% -10%, rgb(110 130 200 / .28), transparent 70%),
+  radial-gradient(1px 1px at 37px 51px, rgb(255 255 255 / .55), transparent 1.5px) 0 0 / 220px 220px,
+  radial-gradient(1px 1px at 151px 133px, rgb(255 255 255 / .4), transparent 1.5px) 0 0 / 220px 220px,
+  linear-gradient(180deg, #14161f 0%, #0b0c12 100%); }
+.vb-status { place-self: center; grid-row: 2; font-size: 15px; color: rgb(255 255 255 / .75); }
+.vb-phone-switch { display: none; grid-row: 1; }
+.vb-layout { grid-row: 2; }
+.vb-bar { grid-row: 3; }
+.vb-status { grid-row: 2; }
+.vb-layout { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 64px; gap: clamp(16px, 3vw, 44px); min-height: 0; padding: 24px clamp(16px, 4vw, 56px) 4px; }
+.vb-pane { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 14px; min-height: 0; min-width: 0; }
+/* Opening: the current version rises into place, then the older ones deal in from the back, one by one. */
+.vb-pane--current { animation: vb-rise .6s cubic-bezier(.16, 1, .3, 1) .05s backwards; }
+.vb-pane--past { animation: vb-fade .3s ease .1s backwards; }
+@keyframes vb-rise { from { opacity: 0; transform: translateY(36px) scale(.94); } }
+@keyframes vb-in-start { from { opacity: 0; transform: translateX(22%) scale(1.06); } }
+@keyframes vb-in-end { from { opacity: 0; transform: translateX(-22%) scale(.94); } }
+[dir="rtl"] .vb-pane--current { animation-name: vb-in-end; }
+[dir="rtl"] .vb-pane--past { animation-name: vb-in-start; }
+.vb-stack { display: grid; grid-template-areas: "d"; min-height: 0; padding-top: 54px; }
+.vb-stack > * { grid-area: d; min-height: 0; }
+.vb-card { display: grid; min-height: 0; z-index: calc(10 - var(--d)); transform-origin: 50% 0; transform: translateY(calc(var(--d) * -18px)) scale(calc(1 - var(--d) * .05)); filter: brightness(calc(1 - var(--d) * .16)) blur(0); transition: transform .62s cubic-bezier(.2, 1.1, .3, 1), opacity .4s ease, filter .45s ease; transition-delay: calc(var(--d) * 45ms); animation: vb-deal .7s cubic-bezier(.16, 1, .3, 1) calc(.18s + var(--d) * 90ms) backwards; }
+/* A card joining the stack comes out of the distance (backwards fill only, so it never pins the transform). */
+@keyframes vb-deal { from { opacity: 0; transform: translateY(calc(var(--d) * -18px - 70px)) scale(calc(.8 - var(--d) * .05)); filter: brightness(.3) blur(6px); } }
+.vb-card:not([data-depth="0"]):not([data-depth="ahead"]):hover { transform: translateY(calc(var(--d) * -18px - 8px)) scale(calc(1 - var(--d) * .05)); filter: brightness(calc(1.08 - var(--d) * .16)); transition-delay: 0s; }
+.vb-card:not([data-depth="0"]):not([data-depth="ahead"]) { cursor: pointer; }
+.vb-card:not([data-depth="0"]) .vb-doc { overflow: hidden; }
+/* Going further back in time, the front sheet flies past the viewer and blurs away. */
+.vb-card[data-depth="ahead"] { opacity: 0; transform: translateY(90px) scale(1.12); filter: blur(8px); pointer-events: none; transition-delay: 0s; }
+.vb-doc { min-height: 0; overflow: auto; overscroll-behavior: contain; border-radius: 10px; background: var(--ws-card); color: var(--on-surface); box-shadow: 0 34px 80px rgb(0 0 0 / .55), 0 0 0 .5px rgb(255 255 255 / .12); }
+.vb-doc--empty { display: grid; place-content: center; justify-items: center; gap: 12px; min-height: 260px; padding: 40px 28px; color: var(--on-surface-variant); font-size: 14px; line-height: 1.5; text-align: center; }
+.vb-doc__head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: 6px; padding: 10px 18px; border-bottom: .5px solid var(--ws-line-strong); background: var(--ws-canvas-subtle); color: var(--on-surface-variant); font-size: 12.5px; font-weight: 600; }
+.vb-questions { margin: 0; padding: 6px 22px 22px; list-style: none; }
+.vb-q { --chg: transparent; position: relative; padding: 14px 0; border-bottom: .5px solid var(--ws-line); }
+.vb-q:last-child { border-bottom: 0; }
+.vb-q[data-change="added"] { --chg: var(--ws-success); }
+.vb-q[data-change="removed"] { --chg: var(--error); }
+.vb-q[data-change="changed"] { --chg: var(--ws-warning); }
+.vb-q::before { content: ""; position: absolute; inset-block: 12px; inset-inline-start: -12px; width: 3px; border-radius: 2px; background: var(--chg); transform-origin: 50% 0; }
+/* When a version comes to the front, its change marks draw in down the page and the badges pop. */
+.vb-card[data-depth="0"] .vb-q:not([data-change="same"])::before, .vb-pane--current .vb-q:not([data-change="same"])::before { animation: vb-draw .5s cubic-bezier(.16, 1, .3, 1) calc(.25s + var(--n, 0) * 40ms) backwards; }
+.vb-card[data-depth="0"] .vb-badge, .vb-pane--current .vb-badge { animation: vb-pop .45s cubic-bezier(.3, 1.5, .5, 1) calc(.3s + var(--n, 0) * 40ms) backwards; }
+@keyframes vb-draw { from { transform: scaleY(0); } }
+@keyframes vb-pop { from { opacity: 0; transform: scale(.5); } }
+.vb-q[data-change="removed"] .vb-q__head p { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--error) 70%, transparent); opacity: .75; }
+.vb-q__head { display: flex; align-items: baseline; gap: 10px; }
+.vb-q__num { min-width: 18px; font-size: 12px; font-weight: 600; color: var(--on-surface-variant); font-variant-numeric: tabular-nums; }
+.vb-q__head p { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+.vb mark { padding: 0 2px; border-radius: 3px; background: color-mix(in srgb, #ffcc00 38%, transparent); color: inherit; }
+.vb-badge { flex: none; padding: 2px 8px; border-radius: 999px; font-size: 11px; font-weight: 600; }
+.vb-badge[data-change="added"] { background: color-mix(in srgb, var(--ws-success) 15%, transparent); color: var(--ws-success); }
+.vb-badge[data-change="removed"] { background: color-mix(in srgb, var(--error) 13%, transparent); color: var(--error); }
+.vb-badge[data-change="changed"] { background: color-mix(in srgb, var(--ws-warning) 15%, transparent); color: var(--ws-warning); }
+.vb-q__options { display: grid; gap: 5px; margin: 8px 0 0; padding: 0; padding-inline-start: 28px; list-style: none; }
+.vb-q__options li { display: flex; align-items: center; gap: 8px; font-size: 13.5px; line-height: 1.4; overflow-wrap: anywhere; }
+.vb-q__mark { display: grid; place-items: center; flex: none; width: 16px; height: 16px; border: 1.5px solid var(--ws-line-strong); border-radius: 999px; color: #fff; }
+.vb-q__options li[data-key] .vb-q__mark { border-color: var(--ws-success); background: var(--ws-success); }
+.vb-q__options li[data-key] { font-weight: 600; }
+.vb-q__options li[data-diff="added"] > span:nth-child(2) { padding: 0 3px; border-radius: 3px; background: color-mix(in srgb, var(--ws-success) 18%, transparent); }
+.vb-q__options li[data-diff="removed"] > span:nth-child(2) { color: var(--error); text-decoration: line-through; }
+.vb-q__meta { margin-top: 8px; padding-inline-start: 28px; font-size: 12px; color: var(--on-surface-variant); }
+.vb-q__key { margin-inline-start: 8px; color: var(--ws-warning); font-weight: 600; }
+.vb-caption { display: grid; gap: 2px; text-align: center; }
+.vb-caption[data-swap] { animation: vb-swap .35s cubic-bezier(.16, 1, .3, 1) backwards; }
+@keyframes vb-swap { from { opacity: 0; transform: translateY(6px); } }
+.vb-caption strong { font-size: 15px; font-weight: 600; }
+.vb-caption span { font-size: 13px; color: rgb(255 255 255 / .62); }
+
+/* Timeline: dates on the trailing edge, oldest at the top and now at the bottom, as in Time Machine. */
+.vb-timeline { display: flex; flex-direction: column; align-items: center; gap: 8px; align-self: center; height: min(100%, 560px); color: rgb(255 255 255 / .62); }
+.vb-timeline ol { display: flex; flex: 1; flex-direction: column; justify-content: space-between; width: 100%; margin: 0; padding: 4px 0; list-style: none; }
+.vb-timeline li { display: flex; flex: 1; max-height: 34px; }
+.vb-timeline li button, .vb-timeline__now { display: flex; flex: 1; align-items: center; justify-content: flex-end; gap: 8px; padding: 0; border: 0; background: none; color: inherit; font: inherit; cursor: pointer; }
+.vb-timeline__tick { width: 12px; height: 2px; flex: none; border-radius: 1px; background: rgb(255 255 255 / .42); transition: width .35s cubic-bezier(.3, 1.4, .5, 1), height .2s, background .2s; }
+.vb-timeline__label { font-size: 11px; font-weight: 600; white-space: nowrap; opacity: 0; transition: opacity .2s; }
+.vb-timeline li:hover .vb-timeline__tick { width: 24px; background: rgb(255 255 255 / .9); }
+.vb-timeline li:hover .vb-timeline__label { opacity: 1; }
+.vb-timeline li:has(+ li:hover) .vb-timeline__tick, .vb-timeline li:hover + li .vb-timeline__tick { width: 18px; }
+.vb-timeline button[aria-current] { color: #fff; }
+.vb-timeline button[aria-current] .vb-timeline__tick { width: 28px; height: 3px; background: #fff; }
+.vb-timeline button[aria-current] .vb-timeline__label { opacity: 1; font-size: 12px; }
+.vb-timeline__now { cursor: default; color: #fff; }
+.vb-timeline__now .vb-timeline__label { opacity: 1; }
+.vb-timeline__now .vb-timeline__tick { width: 20px; background: rgb(255 255 255 / .85); }
+.vb-timeline button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; border-radius: 4px; }
+.vb-arrow { display: grid; place-items: center; flex: none; width: 36px; height: 36px; border: 0; border-radius: 999px; background: rgb(255 255 255 / .12); box-shadow: inset 0 0 0 .5px rgb(255 255 255 / .16); color: #fff; cursor: pointer; transition: background .15s, opacity .15s; }
+.vb-arrow:hover:not(:disabled) { background: rgb(255 255 255 / .2); }
+.vb-arrow:disabled { opacity: .3; cursor: default; }
+
+.vb-bar { display: flex; flex-direction: column; align-items: center; gap: 10px; padding: 12px 16px calc(18px + env(safe-area-inset-bottom, 0px)); }
+.vb-changes { padding: 4px 12px; border-radius: 999px; background: rgb(255 255 255 / .1); color: rgb(255 255 255 / .82); font-size: 13px; font-variant-numeric: tabular-nums; }
+.vb-footnote { max-width: 640px; color: rgb(255 255 255 / .55); font-size: 12px; line-height: 1.5; text-align: center; }
+.vb-done { min-height: 34px; padding: 0 28px; border: 0; border-radius: 999px; background: rgb(255 255 255 / .92); color: #111; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: transform var(--ws-press-out, .16s ease), background .15s; }
+.vb-done:hover { background: #fff; }
+.vb-done:active { transform: scale(.96); }
+.vb-done:focus-visible, .vb-phone-switch button:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+
+@media (max-width: 760px) {
+  .vb-phone-switch { display: inline-flex; justify-self: center; margin-top: 14px; background: rgb(255 255 255 / .12); }
+  .vb-phone-switch button { color: rgb(255 255 255 / .75); }
+  .vb-phone-switch button[aria-pressed="true"] { background: rgb(255 255 255 / .9); color: #111; }
+  .vb-layout { grid-template-columns: minmax(0, 1fr); grid-template-rows: minmax(0, 1fr) auto; gap: 10px; padding: 10px 12px 0; }
+  .vb[data-phone-view="past"] .vb-pane--current, .vb[data-phone-view="current"] .vb-pane--past { display: none; }
+  .vb-pane--current, .vb-pane--past { animation: none; }
+  .vb-stack { padding-top: 40px; }
+  .vb-questions { padding: 4px 16px 16px; }
+  .vb-timeline { flex-direction: row; width: 100%; height: auto; }
+  .vb-timeline ol { flex-direction: row; padding: 0 4px; }
+  .vb-timeline li { max-height: none; max-width: 48px; justify-content: center; }
+  .vb-timeline li button, .vb-timeline__now { flex-direction: column-reverse; justify-content: flex-start; gap: 4px; min-height: 40px; }
+  .vb-timeline__tick, .vb-timeline li:hover .vb-timeline__tick, .vb-timeline li:has(+ li:hover) .vb-timeline__tick, .vb-timeline li:hover + li .vb-timeline__tick { width: 2px; height: 12px; }
+  .vb-timeline button[aria-current] .vb-timeline__tick, .vb-timeline__now .vb-timeline__tick { width: 3px; height: 20px; }
+  .vb-timeline li button, .vb-timeline__now { align-items: center; justify-content: flex-end; }
+  .vb-timeline__label { visibility: hidden; }
+  .vb-timeline button[aria-current] .vb-timeline__label, .vb-timeline__now .vb-timeline__label { visibility: visible; }
+  .vb-arrow svg { transform: rotate(-90deg); }
+  [dir="rtl"] .vb-arrow svg { transform: rotate(90deg); }
+}
+/* Restore: the footer's second action, confirmed in place. */
+.vb-actions { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 10px; }
+.vb-restore { min-height: 34px; padding: 0 18px; border: 0; border-radius: 999px; background: rgb(255 255 255 / .14); box-shadow: inset 0 0 0 .5px rgb(255 255 255 / .2); color: #fff; font: inherit; font-size: 14px; font-weight: 600; cursor: pointer; transition: background .15s, transform var(--ws-press-out, .16s ease); }
+.vb-restore:hover:not(:disabled) { background: rgb(255 255 255 / .22); }
+.vb-restore:active:not(:disabled) { transform: scale(.96); }
+.vb-restore:disabled { opacity: .45; cursor: default; }
+.vb-restore[data-confirm] { background: var(--primary); box-shadow: none; }
+.vb-restore:focus-visible { outline: 2px solid #fff; outline-offset: 2px; }
+.vb-confirm { max-width: 560px; color: rgb(255 255 255 / .78); font-size: 13px; line-height: 1.5; text-align: center; animation: vb-swap .3s cubic-bezier(.16, 1, .3, 1) backwards; }
+.vb-error { color: #ffb4ab; font-size: 13px; }
+/* Generic sheets (lessons, courses, flashcards): one row per item, marked like questions. */
+.vb-items { margin: 0; padding: 6px 22px 22px; list-style: none; }
+.vb-item { --chg: transparent; position: relative; padding: 12px 0; border-bottom: .5px solid var(--ws-line); }
+.vb-item:last-child { border-bottom: 0; }
+.vb-item[data-change="added"] { --chg: var(--ws-success); }
+.vb-item[data-change="removed"] { --chg: var(--error); }
+.vb-item[data-change="changed"] { --chg: var(--ws-warning); }
+.vb-item::before { content: ""; position: absolute; inset-block: 10px; inset-inline-start: -12px; width: 3px; border-radius: 2px; background: var(--chg); transform-origin: 50% 0; }
+.vb-card[data-depth="0"] .vb-item:not([data-change="same"])::before, .vb-pane--current .vb-item:not([data-change="same"])::before { animation: vb-draw .5s cubic-bezier(.16, 1, .3, 1) calc(.25s + var(--n, 0) * 40ms) backwards; }
+.vb-item[data-change="removed"] .vb-item__title { text-decoration: line-through; text-decoration-color: color-mix(in srgb, var(--error) 70%, transparent); opacity: .75; }
+.vb-item__head { display: flex; align-items: baseline; gap: 10px; }
+.vb-item__title { flex: 1; min-width: 0; font-size: 14.5px; font-weight: 600; line-height: 1.45; overflow-wrap: anywhere; }
+.vb-item[data-level="heading"] .vb-item__title { font-size: 16px; font-weight: 700; }
+.vb-item[data-level="group"] { padding-top: 16px; }
+.vb-item[data-level="group"] .vb-item__title { font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--on-surface-variant); }
+.vb-item__body { margin-top: 4px; font-size: 13.5px; line-height: 1.5; color: var(--on-surface-variant); overflow-wrap: anywhere; white-space: pre-line; }
+.vb-item__body:empty { display: none; }
+.vb-meta { padding: 10px 22px 0; font-size: 12.5px; color: var(--on-surface-variant); }
+@media (prefers-reduced-motion: reduce) {
+  .vb, .vb-backdrop, .vb-pane--current, .vb-pane--past, .vb-card, .vb-q::before, .vb-item::before, .vb-badge, .vb-caption, .vb-confirm { animation: none !important; }
+  .vb-card { transition: opacity .2s; transition-delay: 0s; }
+}
+.reduce-motion :is(.vb, .vb-backdrop, .vb-pane--current, .vb-pane--past, .vb-card, .vb-q::before, .vb-item::before, .vb-badge, .vb-caption, .vb-confirm) { animation: none !important; }
+.reduce-motion .vb-card { transition: opacity .2s; transition-delay: 0s; }

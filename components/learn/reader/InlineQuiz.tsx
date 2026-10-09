@@ -11,9 +11,7 @@ import QueryErrorBoundary from "@/components/forms/QueryErrorBoundary";
 import { localeDir } from "@/lib/locale";
 import { BlockPlaceholder, useNearViewport } from "./LazyBlock";
 const loadForm = () => import("@/components/forms/respond/RespondPage").then((m) => m.RespondToForm);
-const loadQuiz = () => import("@/components/quizzes/QuizPlayer");
 const Form = dynamic(() => import("@/components/forms/respond/RespondPage").then((m) => m.RespondToForm));
-const Quiz = dynamic(() => import("@/components/quizzes/QuizPlayer"));
 export default function InlineQuiz({
   asset,
   shareId,
@@ -26,70 +24,51 @@ export default function InlineQuiz({
   const report = useLessonActivity();
   const { locale } = useLocale();
   const ar = locale === "ar";
-  // Classic quizzes still open on request; forms show their questions straight away.
-  const [started, setStarted] = useState(false);
   const [view, setView] = useQuizView();
   // Loaded when the reader scrolls near it, not with the lesson (components/learn/reader/LazyBlock.tsx).
   const [ref, near] = useNearViewport<HTMLDivElement>();
-  const details = useQuery(api.learnFrontend.embeddedQuiz, near ? {
-    asset:
-      asset.kind === "form"
-        ? { kind: "form", id: asset.id as Id<"forms"> }
-        : { kind: "quiz", id: asset.id as Id<"quizzes"> },
-  } : "skip");
+  // Quiz blocks name quiz forms; an old classic quiz reference that was not converted shows as unavailable.
+  const form = asset.kind === "form";
+  const details = useQuery(api.learnFrontend.embeddedQuiz, near && form ? { asset: { kind: "form", id: asset.id as Id<"forms"> } } : "skip");
   // Start code and metadata together instead of waiting for metadata before downloading code.
   useEffect(() => {
-    if (!near) return;
-    void (asset.kind === "form" ? loadForm() : loadQuiz()).catch(() => {
+    if (!near || !form) return;
+    void loadForm().catch(() => {
       // Rendering retries the import and the local error boundary handles a persistent failure.
     });
-  }, [near, asset.kind]);
+  }, [near, form]);
   const publicShareId = details?.shareId || shareId;
-  const available = !!details;
   useEffect(() => {
-    if (near && asset.kind === "form" && publicShareId) warmQuery(api.respond.getPublicForm, { shareId: publicShareId });
-  }, [near, asset.kind, publicShareId]);
-  useEffect(() => {
-    if (near && asset.kind === "quiz" && available) warmQuery(api.quizFunctions.getQuizForPlayer, { quizId: asset.id as Id<"quizzes"> });
-  }, [near, asset.kind, asset.id, available]);
-  if (details === undefined)
+    if (near && form && publicShareId) warmQuery(api.respond.getPublicForm, { shareId: publicShareId });
+  }, [near, form, publicShareId]);
+  if (form && details === undefined)
     return <div ref={ref}><BlockPlaceholder label={ar ? "جارٍ تحميل التدريب…" : "Loading practice…"} height={280} /></div>;
-  if (!details)
+  if (!form || !details)
     return (
       <p className="lx-muted">
         {ar ? "هذا الاختبار غير متاح." : "This quiz is unavailable."}
       </p>
     );
-  const form = asset.kind === "form";
   return (
-    <section className="lx-inline-quiz" data-view={form ? view : "full"} aria-label={title || details.title} dir={localeDir(locale)}>
+    <section className="lx-inline-quiz" data-view={view} aria-label={title || details.title} dir={localeDir(locale)}>
       <header className="lx-inline-quiz__head">
         <div className="lx-inline-quiz__title">
           <strong dir="auto">{title || details.title}</strong>
           <span className="lx-muted">{ar ? `${details.questionCount} سؤال` : `${details.questionCount} questions`} · <Link className="lx-link" href={details.href}>{ar ? "افتح الاختبار الكامل" : "Open full quiz"}</Link></span>
         </div>
-        {form ? (
-          <div className="lx-inline-quiz__views" role="group" aria-label={ar ? "طريقة العرض" : "View"}>
-            {(["minimal", "full"] as const).map((v) => (
-              <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>
-                {v === "minimal" ? (ar ? "مختصر" : "Minimal") : (ar ? "كامل" : "Full")}
-              </button>
-            ))}
-          </div>
-        ) : (
-          <button type="button" className="ws-btn ws-btn--primary ws-btn--sm" aria-expanded={started} onClick={() => setStarted(!started)}>
-            {started ? (ar ? "إغلاق التدريب" : "Close practice") : (ar ? "ابدأ التدريب" : "Start practice")}
-          </button>
-        )}
+        <fieldset className="lx-inline-quiz__views"  aria-label={ar ? "طريقة العرض" : "View"}>
+          {(["minimal", "full"] as const).map((v) => (
+            <button key={v} type="button" aria-pressed={view === v} onClick={() => setView(v)}>
+              {v === "minimal" ? (ar ? "مختصر" : "Minimal") : (ar ? "كامل" : "Full")}
+            </button>
+          ))}
+        </fieldset>
       </header>
-      {(form || started) && <QueryErrorBoundary key={`${asset.kind}:${asset.id}:${view}`}>
+      <QueryErrorBoundary key={`${asset.kind}:${asset.id}:${view}`}>
         {/* Keep a lazy player download from hiding the lesson and resetting its scroll. */}
         <Suspense fallback={<BlockPlaceholder label={ar ? "جارٍ تحميل التدريب…" : "Loading practice…"} height={280} />}>
-        {form ? (
-          <Form shareId={details.shareId || shareId || ""} inline minimal={view === "minimal"} studyProgress onComplete={() => report(asset)} />
-        ) : (
-          <Quiz quizId={asset.id as Id<"quizzes">} inline onComplete={() => report(asset)} />
-        )}</Suspense></QueryErrorBoundary>}
+        <Form shareId={details.shareId || shareId || ""} inline minimal={view === "minimal"} studyProgress onComplete={() => report(asset)} />
+        </Suspense></QueryErrorBoundary>
     </section>
   );
 }

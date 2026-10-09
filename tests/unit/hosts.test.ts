@@ -2,8 +2,8 @@ import { describe, expect, it } from "vitest";
 import { absoluteUrl, canonicalUrl, hostHref, hostRedirect, hostSection, pathSection, sharedCookieDomain } from "@/lib/hosts";
 
 const main = "https://chaos.fail";
-const split = { dashboard: "https://app.chaos.fail", learn: "https://learn.chaos.fail", docs: "https://docs.chaos.fail" };
-const single = { dashboard: null, learn: null, docs: null };
+const split = { dashboard: "https://app.chaos.fail", learn: "https://learn.chaos.fail", docs: "https://docs.chaos.fail", play: "https://play.chaos.fail" };
+const single = { dashboard: null, learn: null, docs: null, play: null };
 
 describe("pathSection", () => {
   it("files each path under its section", () => {
@@ -15,6 +15,9 @@ describe("pathSection", () => {
     expect(pathSection("/ar/learn")).toBe("learn");
     expect(pathSection("/docs/first-form")).toBe("docs");
     expect(pathSection("/ar/docs")).toBe("docs");
+    expect(pathSection("/play")).toBe("play");
+    expect(pathSection("/ar/play")).toBe("play");
+    expect(pathSection("/player")).toBe("main");
     expect(pathSection("/")).toBe("main");
     expect(pathSection("/pricing")).toBe("main");
     expect(pathSection("/f/abc")).toBe("main");
@@ -34,12 +37,14 @@ describe("hostRedirect", () => {
     expect(hostRedirect("https://chaos.fail/ar/docs/first-form", split, main)).toBe("https://docs.chaos.fail/ar/docs/first-form");
     expect(hostRedirect("https://app.chaos.fail/learn/abc", split, main)).toBe("https://learn.chaos.fail/learn/abc");
     expect(hostRedirect("https://learn.chaos.fail/pricing", split, main)).toBe("https://chaos.fail/pricing");
+    expect(hostRedirect("https://chaos.fail/play?pin=123456", split, main)).toBe("https://play.chaos.fail/play?pin=123456");
   });
 
   it("opens a section's home page on a bare subdomain", () => {
     expect(hostRedirect("https://app.chaos.fail/", split, main)).toBe("https://app.chaos.fail/dashboard");
     expect(hostRedirect("https://learn.chaos.fail/", split, main)).toBe("https://learn.chaos.fail/learn");
     expect(hostRedirect("https://docs.chaos.fail/?q=forms", split, main)).toBe("https://docs.chaos.fail/docs?q=forms");
+    expect(hostRedirect("https://play.chaos.fail/?pin=123456", split, main)).toBe("https://play.chaos.fail/play?pin=123456");
   });
 
   it("serves paths already on their host, shared paths, and unknown hosts", () => {

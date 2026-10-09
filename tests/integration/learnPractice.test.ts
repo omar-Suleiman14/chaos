@@ -730,7 +730,7 @@ describe("version-stable private practice", () => {
 });
 
 it("schedules private evidence-based review using the server clock", async () => {
-  const { t, owner, other, conceptId, mapping, response } = await setup();
+  const { owner, other, conceptId, mapping, response } = await setup();
   const { vi } = await import("vitest");
   vi.setSystemTime(now);
   await owner.mutation(mapField, mapping);

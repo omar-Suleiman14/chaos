@@ -27,8 +27,9 @@ description: Create, edit, publish and review Chaos forms, surveys, quizzes, les
 
 Chaos (${chaos.siteUrl}) is where this person builds forms, quizzes, lessons, courses, flashcards and live games. The Chaos tools act in their own Chaos account, with the same permissions they have on the website.
 
+- For educational material, use the packaged create-study-lesson skill and build_study_lesson workflow.
 - Use the Chaos tools instead of writing the content into the chat when the person wants something in Chaos.
-- New forms, quizzes, lessons and courses start as private drafts. Publish only when the person asks; otherwise give them the edit link to review. Later edits stay drafts until published.
+- New forms, quizzes, lessons and courses start as private drafts. Publish only when the person asks; otherwise give them the edit link to review. Study jobs follow their stored publishing preference and remain drafts by default. Later edits stay drafts until published.
 - Read individual responses only when the person asks; they can contain personal information.
 - Keep replies short: say what you made and give the link the tool returned. Never invent links or ids.
 - If a tool asks to connect, tell the person to sign in to Chaos from ${platform}'s connector settings.
@@ -48,6 +49,7 @@ ${extra}
 
 - \`.mcp.json\`: the Chaos MCP server, ${chaos.mcpUrl}. You sign in with your Chaos account (${chaos.auth}); nothing private is stored in this package.
 - \`skills/${chaos.id}/SKILL.md\`: tells ${platform} when to use Chaos.
+- \`skills/create-study-lesson/\`: complete teaching workflow, including references, durable jobs and explicit file transfer.
 - \`assets/\`: the Chaos logo.
 
 ## Try
@@ -58,7 +60,24 @@ Version ${chaos.version}. Help: ${docs} or ${chaos.supportEmail}. Privacy: ${cha
 `;
 }
 
-const common = (platform: string, docs: string, logo: LogoAssets, install: string[], extra?: string): PackageFiles => ({
+/** Portable Agent Plugins discovery, alongside the existing host compatibility manifests. */
+const portableManifest = (platform: string, docs: string) => json({
+  $schema: "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  name: chaos.id, version: chaos.version, description: chaos.description,
+  author: { name: chaos.developer, email: chaos.supportEmail, url: chaos.siteUrl },
+  homepage: docs, repository: chaos.repoUrl, license: chaos.license, keywords: chaos.keywords,
+  extensions: { "com.openai": { interface: {
+    displayName: chaos.name, shortDescription: "Create and study with Chaos", longDescription: chaos.longDescription,
+    developerName: chaos.developer, category: "Productivity", capabilities: ["Interactive", "Read", "Write"],
+    websiteURL: chaos.siteUrl, privacyPolicyURL: chaos.privacyUrl, termsOfServiceURL: chaos.termsUrl,
+    defaultPrompt: chaos.prompts.slice(0, 3), brandColor: chaos.brandColor,
+    composerIcon: platform === "ChatGPT" ? "./assets/icon.png" : "./assets/logo.png", logo: "./assets/logo.png",
+  } } },
+});
+const common = (platform: string, docs: string, logo: LogoAssets, install: string[], extra?: string, studyFiles: PackageFiles = {}): PackageFiles => ({
+  ...studyFiles,
+  "plugin.json": portableManifest(platform, docs),
+  "mcp.json": json({ $schema: "https://agent-plugins.org/schemas/1.0.0/mcp.schema.json", mcpServers: { [chaos.id]: { type: "streamable-http", url: chaos.mcpUrl } } }),
   ".mcp.json": mcpConfig(),
   [`skills/${chaos.id}/SKILL.md`]: skill(platform),
   "assets/logo.svg": logo.svg,
@@ -67,7 +86,7 @@ const common = (platform: string, docs: string, logo: LogoAssets, install: strin
 });
 
 /** A Claude plugin: .claude-plugin/plugin.json plus the remote connector. Upload the ZIP in Claude or install it in Claude Code. */
-export function claudePackage(logo: LogoAssets): PackageFiles {
+export function claudePackage(logo: LogoAssets, studyFiles: PackageFiles = {}): PackageFiles {
   return {
     ".claude-plugin/plugin.json": json({
       name: chaos.id,
@@ -89,12 +108,12 @@ export function claudePackage(logo: LogoAssets): PackageFiles {
       "In Claude, open the plugin settings (Customize, then Plugins), choose to upload a plugin, and pick this ZIP.",
       "Turn on Chaos and choose Connect. Sign in to Chaos and allow access.",
       "In Claude Code, unzip it and start Claude Code with `claude --plugin-dir <folder>`, then run `/mcp` to sign in.",
-    ]),
+    ], undefined, studyFiles),
   };
 }
 
 /** An OpenAI plugin (Codex and ChatGPT): .codex-plugin/plugin.json with its interface block, plus the remote connector. */
-export function chatGptPackage(logo: LogoAssets): PackageFiles {
+export function chatGptPackage(logo: LogoAssets, studyFiles: PackageFiles = {}): PackageFiles {
   return {
     ".codex-plugin/plugin.json": json({
       name: chaos.id,
@@ -109,7 +128,7 @@ export function chatGptPackage(logo: LogoAssets): PackageFiles {
       mcpServers: "./.mcp.json",
       interface: {
         displayName: chaos.name,
-        shortDescription: chaos.tagline,
+        shortDescription: "Create and study with Chaos",
         longDescription: chaos.longDescription,
         developerName: chaos.developer,
         category: "Productivity",
@@ -133,12 +152,12 @@ export function chatGptPackage(logo: LogoAssets): PackageFiles {
 \`\`\`json
 ${json({ name: "personal", plugins: [{ name: chaos.id, source: { source: "local", path: `./plugins/${chaos.id}` }, policy: { installation: "AVAILABLE", authentication: "ON_INSTALL" }, category: "Productivity" }] }).trim()}
 \`\`\`
-`),
+`, studyFiles),
   };
 }
 
-export function integrationPackage(id: IntegrationPlatformId, logo: LogoAssets): PackageFiles {
-  return id === "claude" ? claudePackage(logo) : chatGptPackage(logo);
+export function integrationPackage(id: IntegrationPlatformId, logo: LogoAssets, studyFiles: PackageFiles = {}): PackageFiles {
+  return id === "claude" ? claudePackage(logo, studyFiles) : chatGptPackage(logo, studyFiles);
 }
 
 /** Maps a download file name to its platform, or null for anything else. */

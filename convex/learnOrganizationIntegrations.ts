@@ -43,7 +43,6 @@ function parseAsset(ctx: Ctx, value: unknown): Infer<typeof folderAsset> {
   const x = object(value, ["kind", "id"]);
   switch (x.kind) {
     case "form": return { kind: x.kind, id: id(ctx, "forms", x.id) };
-    case "quiz": return { kind: x.kind, id: id(ctx, "quizzes", x.id) };
     case "lesson": return { kind: x.kind, id: id(ctx, "lessons", x.id) };
     case "source": return { kind: x.kind, id: id(ctx, "learnSources", x.id) };
     case "collection": return { kind: x.kind, id: id(ctx, "learnCollections", x.id) };

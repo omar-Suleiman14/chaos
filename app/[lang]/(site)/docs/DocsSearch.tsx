@@ -52,6 +52,7 @@ export default function DocsSearch({ trigger: showTrigger = true }: { trigger?: 
   );
 }
 
+/* oxlint-disable jsx-a11y/no-static-element-interactions, jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role, jsx-a11y/click-events-have-key-events -- Backdrop mouse dismissal complements the modal Escape handler and labelled Close button. The custom combobox uses managed focus and active-descendant options; native select and option cannot host this rich popup. The searchable rich list uses active-descendant options; focus and keyboard selection stay on the search input. The search input owns Enter and arrow-key activation of these active-descendant results. */
 function SearchDialog({ onClose, returnFocus }: { onClose: () => void; returnFocus: React.RefObject<HTMLButtonElement | null> }) {
   const t = useCopy(docsCopy);
   const router = useRouter();
@@ -130,3 +131,4 @@ function SearchDialog({ onClose, returnFocus }: { onClose: () => void; returnFoc
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/no-static-element-interactions, jsx-a11y/prefer-tag-over-role, jsx-a11y/no-noninteractive-element-to-interactive-role, jsx-a11y/click-events-have-key-events */

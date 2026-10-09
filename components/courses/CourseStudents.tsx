@@ -39,7 +39,7 @@ export default function CourseStudents({ courseId }: { courseId: Id<"learnCollec
   return (
     <section className="cb-section grid gap-4" aria-labelledby="cb-students">
       <h2 id="cb-students">{t.title}</h2>
-      {data === undefined ? <div className="ws-stats ws-skeleton" style={{ minHeight: 88 }} role="status" aria-label={t.loading} />
+      {data === undefined ? <output className="ws-stats ws-skeleton" style={{ minHeight: 88 }}  aria-label={t.loading} />
         : !data.published && data.enrolled === 0 ? <p className="cb-note">{t.unpublished}</p>
         : data.enrolled === 0 ? <p className="cb-note">{t.empty}</p>
         : <>

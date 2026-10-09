@@ -17,11 +17,8 @@ describe("durable study client", () => {
     expect(getFunctionName(mutation.mock.calls[0][0])).toBe("quizForks:fork");
     expect(mutation.mock.calls[0][1]).toEqual({ asset: { kind: "form", id: "original" }, formVersionId: "publication" });
   });
-  it("uses the inspected classic builder id parameter and publication timestamp", async () => {
-    const { client, query, mutation } = fixture(); query.mockResolvedValue({ expectedPublishedAt: 123 }); mutation.mockResolvedValue({ asset: { kind: "quiz", id: "classic-copy" } });
-    expect((await client.forkAssessment({ kind: "quiz", id: "classic-original" as Id<"quizzes"> })).href).toBe("/dashboard/editor?id=classic-copy");
-    expect(mutation.mock.calls[0][1]).toEqual({ asset: { kind: "quiz", id: "classic-original" }, expectedPublishedAt: 123 });
-    expect(assessmentEditorHref({ kind: "quiz", id: "a&b" as Id<"quizzes"> })).toBe("/dashboard/editor?id=a%26b");
+  it("links a copied assessment to its form builder with an encoded id", () => {
+    expect(assessmentEditorHref({ kind: "form", id: "a&b" as Id<"forms"> })).toBe("/dashboard/forms/a%26b");
   });
   it("refuses missing publications without creating a draft", async () => {
     const { client, query, mutation } = fixture(); query.mockResolvedValue(null);

@@ -23,10 +23,11 @@ export default function HomeworkStudent({ assignmentId }: { assignmentId: Id<"ho
   const t = useCopy(homeworkCopy);
   const { isAuthenticated, isLoading } = useConvexAuth();
   return <main className="workspace-ui max-w-4xl mx-auto p-5 sm:p-8 grid gap-5"><Link href="/" className="ws-link-quiet">{t.backHome}</Link>
-    {isLoading ? <p role="status">{t.loading}</p> : !isAuthenticated ? <section className="kb-card-bordered p-6 grid gap-3"><h1 className="ws-page-title">{t.signIn}</h1><p>{t.signInHelp}</p><SignInButton mode="modal"><button className="ws-btn w-fit">{t.signIn}</button></SignInButton></section> : <QueryErrorBoundary key={assignmentId}><StudentAttempt assignmentId={assignmentId} /></QueryErrorBoundary>}
+    {isLoading ? <output >{t.loading}</output> : !isAuthenticated ? <section className="kb-card-bordered p-6 grid gap-3"><h1 className="ws-page-title">{t.signIn}</h1><p>{t.signInHelp}</p><SignInButton mode="modal"><button className="ws-btn w-fit">{t.signIn}</button></SignInButton></section> : <QueryErrorBoundary key={assignmentId}><StudentAttempt assignmentId={assignmentId} /></QueryErrorBoundary>}
   </main>;
 }
 
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The completed homework section is a live announcement containing its heading and score. */
 function StudentAttempt({ assignmentId }: { assignmentId: Id<"homeworkAssignments"> }) {
   const t = useCopy(homeworkCopy), { locale } = useLocale();
   const convex = useConvex(), { getToken } = useAuth();
@@ -61,10 +62,10 @@ function StudentAttempt({ assignmentId }: { assignmentId: Id<"homeworkAssignment
   return <>
     <header><h1 className="ws-page-title">{delivery?.title ?? t.title}</h1>{delivery && <p className="ws-page-subtitle">{t.due}: {formatDateTime(locale, delivery.deadline)} · {t.remaining}: {delivery.attemptsRemaining}</p>}</header>
     {finished ? <section role="status" className="kb-card-bordered p-6"><h2 className="text-xl font-semibold">{t.done}</h2><p>{t.score}: {finished.score} / {finished.maxScore}</p></section> : !delivery ? <button className="ws-btn w-fit" disabled={busy} onClick={() => void run(async () => { const attemptId = await start({ assignmentId }); await load(attemptId); })}>{busy ? t.busy : t.start}</button> : <>
-      {expired && <p role="status">{t.expired}</p>}
+      {expired && <output >{t.expired}</output>}
       <div className="flex gap-3 flex-wrap items-end"><label className="grid gap-1">{t.language}<ChaosSelect className="kb-input" value={language} disabled={busy || expired} onChange={e => setLanguage(e.target.value as Language)}>{delivery.definition.languages.map(value => <option key={value} value={value}>{value === "ar" ? "العربية" : "English"}</option>)}</ChaosSelect></label><button className="ws-btn" disabled={busy || expired} onClick={() => void run(() => load(delivery.attemptId))}>{t.refresh}</button></div>
       <p className="ws-muted">{t.refreshHelp}</p>
-      {!delivery.definition.fields.length ? <p role="status">{t.noQuestions}</p> : <fieldset disabled={busy || expired} className="min-w-0"><div className={`ws-respondent-preview ${themeClass(delivery.definition)}`} style={themeStyle(delivery.definition)}><FormRenderer definition={delivery.definition} language={language} answers={answers} files={files} skipCover submitting={busy} submitLabel={t.submit}
+      {!delivery.definition.fields.length ? <output >{t.noQuestions}</output> : <fieldset disabled={busy || expired} className="min-w-0"><div className={`ws-respondent-preview ${themeClass(delivery.definition)}`} style={themeStyle(delivery.definition)}><FormRenderer definition={delivery.definition} language={language} answers={answers} files={files} skipCover submitting={busy} submitLabel={t.submit}
         onAnswer={(id, value) => setAnswers(previous => { const next = { ...previous }; if (value === undefined) delete next[id]; else next[id] = value; return next; })}
         onSubmit={() => void run(async () => { if (serverNow() > delivery.deadline) { toast.error(t.expired, { id: "homework" }); return; } setReceipt(await submit({ attemptId: delivery.attemptId, answers, language })); })}
         uploadFile={async (field, file) => {
@@ -84,3 +85,4 @@ function StudentAttempt({ assignmentId }: { assignmentId: Id<"homeworkAssignment
     {finished && <button className="ws-btn w-fit" disabled={busy} onClick={() => void run(async () => { const attemptId = await start({ assignmentId }); setAnswers({}); setFiles({}); await load(attemptId); setReceipt(null); })}>{busy ? t.busy : t.start}</button>}
   </>;
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */

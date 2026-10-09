@@ -47,7 +47,7 @@ async function join(ctx: MutationCtx, teamId: Id<"businessTeams">, userId: strin
   await record(ctx, teamId, userId, "joined", role);
 }
 const listArgs = {};
-export async function listForActor(ctx: QueryCtx, actorId: string | undefined, args: ObjectType<typeof listArgs>) {
+export async function listForActor(ctx: QueryCtx, actorId: string | undefined, _args: ObjectType<typeof listArgs>) {
   if (actorId === undefined && !await getAuthIdentity(ctx)) return [];
   const { identity } = await actorOf(ctx, actorId);
   const memberships = await ctx.db.query("businessMembers").withIndex("by_user", q => q.eq("userId", identity.subject)).take(20);
@@ -138,7 +138,7 @@ export async function invitationsForActor(ctx: QueryCtx, actorId: string | undef
 }
 export const invitations = query({ args: invitationsArgs, returns: v.array(inviteSummary), handler: (ctx, args) => invitationsForActor(ctx, undefined, args) });
 const inboxArgs = {};
-export async function inboxForActor(ctx: QueryCtx, actorId: string | undefined, args: ObjectType<typeof inboxArgs>) {
+export async function inboxForActor(ctx: QueryCtx, actorId: string | undefined, _args: ObjectType<typeof inboxArgs>) {
   if (actorId === undefined && !await getAuthIdentity(ctx)) return [];
   const { identity } = await actorOf(ctx, actorId), email = verifiedEmail(identity);
   if (!email) return [];
@@ -218,7 +218,7 @@ export async function resourcesForActor(ctx: QueryCtx, actorId: string | undefin
 }
 export const resources = query({ args: resourcesArgs, returns: v.array(v.object({ shareId: v.id("businessShares"), asset: teamAsset, title: v.string(), ownerId: v.string(), href: v.string() })), handler: (ctx, args) => resourcesForActor(ctx, undefined, args) });
 const ownedResourcesArgs = {};
-export async function ownedResourcesForActor(ctx: QueryCtx, actorId: string | undefined, args: ObjectType<typeof ownedResourcesArgs>) {
+export async function ownedResourcesForActor(ctx: QueryCtx, actorId: string | undefined, _args: ObjectType<typeof ownedResourcesArgs>) {
   const { identity } = await actorOf(ctx, actorId), ownerId = identity.subject;
   const [forms, lessons, courses, folders] = await Promise.all([
     ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", q => q.eq("ownerId", ownerId)).order("desc").take(200),

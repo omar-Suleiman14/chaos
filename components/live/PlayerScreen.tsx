@@ -1,10 +1,14 @@
 "use client";
 
+import { FocusInput } from "@/components/InitialFocus";
+
+import { clearLiveAnswer, readLiveAnswer, saveLiveAnswer } from "@/lib/liveRecovery";
 import TeamPanel, { TEAMS_ENABLED } from "./TeamPanel";
+import { SaveStatus } from "@/components/quizzes/SaveStatus";
 
 import "./live.css";
 import "./apple.css";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useRef, useState } from "react";
 import { useConvexConnectionState, useMutation, useQuery } from "convex/react";
 import { Check, Trophy, Volume2, VolumeX, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -63,7 +67,8 @@ const copy = {
     } as Record<string, string>,
     youreIn: "You're in!", waitStart: "Starting soon",
     questionOf: (i: number, n: number) => `Question ${i} of ${n}`, pickMany: "Pick every right answer, then press Submit.", submit: "Submit",
-    sent: "Answer sent", waitOthers: "Waiting for the others…", tooSlow: "Time's up", noAnswer: "You didn't answer this one.",
+    saving: "Saved on this device · saving…", deviceSaved: "Saved on this device · waiting to send", backupUnavailable: "Device backup unavailable", retry: "Retry saved answer", closedBackup: "Your saved answer could not reach the server before this question closed.",
+    sent: "Answer saved", waitOthers: "Waiting for the others…", tooSlow: "Time's up", noAnswer: "You didn't answer this one.",
     correct: "Correct", wrong: "Not quite", points: (n: string) => `+${n} points`, streak: (n: number, bonus: string) => `${n} in a row: +${bonus} bonus`,
     rank: (n: string) => `You are in place ${n}`, score: (n: string) => `${n} points`, lookUp: "Look at the big screen for the leaderboard.",
     finalRank: (n: string) => `You finished in place ${n}`, correctCount: (n: number, total: number) => `${n} of ${total} correct`, podium: "Top 3",
@@ -84,7 +89,8 @@ const copy = {
     } as Record<string, string>,
     youreIn: "انضممت!", waitStart: "تبدأ قريبًا",
     questionOf: (i: number, n: number) => `السؤال ${i} من ${n}`, pickMany: "اختر كل الإجابات الصحيحة، ثم اضغط إرسال.", submit: "إرسال",
-    sent: "أُرسلت الإجابة", waitOthers: "بانتظار الآخرين…", tooSlow: "انتهى الوقت", noAnswer: "لم تُجب عن هذا السؤال.",
+    saving: "محفوظ على الجهاز · جارٍ الإرسال…", deviceSaved: "محفوظ على الجهاز · بانتظار الإرسال", backupUnavailable: "الحفظ على الجهاز غير متاح", retry: "أعد إرسال الإجابة المحفوظة", closedBackup: "لم تصل إجابتك المحفوظة إلى الخادم قبل إغلاق السؤال.",
+    sent: "حُفظت الإجابة", waitOthers: "بانتظار الآخرين…", tooSlow: "انتهى الوقت", noAnswer: "لم تُجب عن هذا السؤال.",
     correct: "صحيح", wrong: "ليست صحيحة", points: (n: string) => `+${n} نقطة`, streak: (n: number, bonus: string) => `${n} على التوالي: مكافأة +${bonus}`,
     rank: (n: string) => `ترتيبك ${n}`, score: (n: string) => `${n} نقطة`, lookUp: "انظر إلى الشاشة الكبيرة لرؤية لوحة الصدارة.",
     finalRank: (n: string) => `أنهيت في المركز ${n}`, correctCount: (n: number, total: number) => `${n} من ${total} صحيحة`, podium: "المراكز الثلاثة الأولى",
@@ -135,7 +141,7 @@ function PlayerSession({ initialPin }: { initialPin?: string }) {
       <Announcer text={announce} />
       <header className="live-bar">
         <Link href="/" className="live-bar__title live-brand"><Logo size={28} />Chaos<span>live</span></Link>
-        {offline && <span className="live-muted live-pulse" role="status">{t.reconnecting}</span>}
+        {offline && <output className="live-muted live-pulse" >{t.reconnecting}</output>}
         <button type="button" className="live-icon-btn" onClick={toggleSound} aria-label={sound ? t.mute : t.unmute} aria-pressed={!sound}>{sound ? <Volume2 size={20} /> : <VolumeX size={20} />}</button>
         <button type="button" className="live-btn" onClick={() => setLocale((locale === "ar" ? "en" : "ar") as Locale)} lang={locale === "ar" ? "en" : "ar"}>{t.language}</button>
       </header>
@@ -192,13 +198,13 @@ function JoinForm({ t, initialPin, onJoined }: { t: Copy; initialPin: string; on
       <h2 className="sr-only">{t.details}</h2>
       <label className="live-field">
         <span className="font-semibold">{t.pin}</span>
-        <input className="live-input live-input--pin" inputMode="numeric" autoComplete="off" pattern="[0-9]*" maxLength={6} required
-          placeholder="000 000" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))} aria-describedby="pin-hint" autoFocus={!initialPin} />
+        <FocusInput className="live-input live-input--pin" inputMode="numeric" autoComplete="off" pattern="[0-9]*" maxLength={6} required
+          placeholder="000 000" value={pin} onChange={(e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 6))} aria-describedby="pin-hint" focusOnMount={!initialPin} />
         <span id="pin-hint" className="live-muted text-sm">{t.pinHint}</span>
       </label>
       <label className="live-field">
         <span className="font-semibold">{t.nickname}</span>
-        <input ref={nameRef} className="live-input" autoComplete="nickname" maxLength={NICKNAME_MAX} required
+        <input ref={nameRef} className="live-input" autoComplete="off" maxLength={NICKNAME_MAX} required
           value={nickname} onChange={(e) => setNickname(e.target.value)} aria-describedby="nick-hint" />
         <span id="nick-hint" className="live-muted text-sm">{t.nicknameHint}</span>
       </label>
@@ -214,6 +220,8 @@ function JoinForm({ t, initialPin, onJoined }: { t: Copy; initialPin: string; on
 function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; view: PlayerView | undefined; t: Copy; onLeave: () => void; setAnnounce: (s: string) => void }) {
   const { locale } = useLocale();
   const submit = useMutation(api.live.submitAnswer);
+  const connection = useConvexConnectionState();
+  const [backupStatus, setBackupStatus] = useState<"saving" | "deviceSaved" | "backupUnavailable" | null>(null);
   useUsableMark("live.join", !!view);
   const offset = useServerClock();
   const pack = gameSound(view && "theme" in view ? view.theme : null);
@@ -240,20 +248,27 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
       setAnnounce(t.announceResult(view.correct, fmt(view.points)));
     }
     if (view.state === "ended") sfx.play("finish", pack);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- runs once per phase
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- runs once per phase
   }, [phase]);
 
   const send = useCallback(async (ids: string[]) => {
     if (!view || view.state !== "question" || view.answered || sent || pending.current) return;
     pending.current = true;
+    const questionIndex = view.questionIndex;
+    const backedUp = saveLiveAnswer(session.gameId, { token: session.token, questionIndex, optionIds: ids });
+    setBackupStatus(backedUp ? "saving" : "backupUnavailable");
+    setPicked(ids);
     setSending(true);
     setError("");
     haptics.select();
     sfx.play("select", pack);
     try {
       await submit({ gameId: session.gameId, token: session.token, questionIndex: view.questionIndex, optionIds: ids });
+      clearLiveAnswer(session.gameId, questionIndex);
+      setBackupStatus(null);
       setSent(true);
     } catch (e) {
+      setBackupStatus(backedUp ? "deviceSaved" : "backupUnavailable");
       setError(errorText(t, e));
       haptics.error();
     } finally {
@@ -261,6 +276,24 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
       setSending(false);
     }
   }, [view, sent, submit, session, t, pack]);
+
+  const recoverSaved = useEffectEvent(() => {
+    if (!view || !("questionIndex" in view)) return;
+    const saved = readLiveAnswer(session.gameId, session.token, view.questionIndex);
+    if (!saved) return;
+    if ("myAnswer" in view && view.myAnswer) { clearLiveAnswer(session.gameId, view.questionIndex); return; }
+    if (view.state === "question") {
+      setPicked(saved.optionIds);
+      if (!pending.current && !sent) void send(saved.optionIds);
+    } else if (view.state === "reveal" || view.state === "leaderboard") setError(t.closedBackup);
+  });
+  const answered = view?.state === "question" ? view.answered : false;
+  useEffect(() => { recoverSaved(); }, [phase, connection.isWebSocketConnected, answered]);
+  useEffect(() => {
+    const online = () => recoverSaved();
+    window.addEventListener("online", online);
+    return () => window.removeEventListener("online", online);
+  }, []);
 
   const choose = useCallback((id: string) => {
     if (!view || view.state !== "question" || view.answered || sent || pending.current) return;
@@ -281,11 +314,11 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
     return () => window.removeEventListener("keydown", onKey);
   }, [view, choose]);
 
-  if (view === undefined) return <div className="live-center live-muted" role="status">…</div>;
+  if (view === undefined) return <output className="live-center live-muted" >…</output>;
   if (view.state === "missing" || view.state === "unknown" || view.state === "kicked") {
     return (
       <div className="live-center">
-        <p className="text-2xl font-bold" role="status">{view.state === "kicked" ? t.kicked : t.ended}</p>
+        <output className="text-2xl font-bold" >{view.state === "kicked" ? t.kicked : t.ended}</output>
         <button type="button" className="live-btn live-btn--primary" onClick={onLeave}>{t.playAgain}</button>
       </div>
     );
@@ -318,23 +351,25 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
           {view.answered || sent ? (
             <div className="live-center">
               <Check size={56} aria-hidden="true" />
-              <p className="text-2xl font-bold" role="status">{t.sent}</p>
+              <output className="text-2xl font-bold" >{t.sent}</output>
               {view.myAnswer && <p className="live-muted">{view.myAnswer.map((id) => view.question.options.find((o) => o.id === id)?.label).filter(Boolean).join(", ")}</p>}
               <p className="live-muted live-pulse">{t.waitOthers}</p>
             </div>
           ) : (
             <>
               {multi && <p className="live-muted">{t.pickMany}</p>}
-              <div className="live-tiles live-player-answers" data-labelled={view.showAnswerLabels} role="group" aria-label={view.question.text}>
+              <fieldset className="live-tiles live-player-answers" data-labelled={view.showAnswerLabels}  aria-label={view.question.text}>
                 {view.question.options.map((o, i) => (
                   <AnswerTile key={o.id} index={i} label={o.label} showLabel={view.showAnswerLabels} toggle={multi} selected={picked.includes(o.id)} disabled={locked} onSelect={() => choose(o.id)} />
                 ))}
-              </div>
+              </fieldset>
               {multi && <button type="button" className="live-btn live-btn--primary w-full" disabled={locked || picked.length === 0} onClick={() => void send(picked)}>{t.submit}</button>}
               <p className="live-muted text-sm sr-only">{t.shortcuts}</p>
             </>
           )}
+          {backupStatus && <div className="flex justify-center"><SaveStatus state={backupStatus === "saving" ? "saving" : backupStatus === "deviceSaved" ? "device" : "unavailable"} label={t[backupStatus]} /></div>}
           {error && <p className="live-error" role="alert">{error}</p>}
+          {error && picked.length > 0 && !view.answered && !sent && <button type="button" className="live-btn" disabled={sending} onClick={() => void send(picked)}>{t.retry}</button>}
         </div>
       );
     }
@@ -350,6 +385,7 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
             {view.correct && <span className="text-xl">{t.points(fmt(view.points))}</span>}
             {!answered && <span className="text-base font-semibold">{t.noAnswer}</span>}
           </div>
+          {error && <p className="live-error" role="alert">{error}</p>}
           {view.bonus > 0 && <p className="text-lg font-semibold">{t.streak(view.streak, fmt(view.bonus))}</p>}
           {view.rank !== null && <p className="text-2xl font-bold">{t.rank(fmt(view.rank))}</p>}
           <p className="live-muted">{t.score(fmt(view.score))}</p>
@@ -361,7 +397,7 @@ function InGame({ session, view, t, onLeave, setAnnounce }: { session: Session; 
       return (
         <div className="live-center">
           <Trophy size={56} aria-hidden="true" />
-          <p className="text-3xl font-bold" role="status">{view.rank !== null ? t.finalRank(fmt(view.rank)) : t.ended}</p>
+          <output className="text-3xl font-bold" >{view.rank !== null ? t.finalRank(fmt(view.rank)) : t.ended}</output>
           <p className="text-xl">{t.score(fmt(view.score))} · {t.correctCount(view.correctCount, view.questionCount)}</p>
           {TEAMS_ENABLED && <TeamPanel gameId={session.gameId} token={session.token} frozen />}
           {view.podium.length > 0 && (

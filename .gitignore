@@ -65,3 +65,6 @@ pnpm_install.log
 # visual baselines come from CI artifacts (tests/visual, visual.yml)
 /tests/visual/__screenshots__/
 /public/preview/
+
+# stray local copies of the repo
+/chaos-basecheck/

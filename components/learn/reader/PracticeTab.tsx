@@ -49,13 +49,12 @@ export default function PracticeTab({ lesson, isOwner }: { lesson: Lesson; isOwn
   const editable = new Set([...(mine?.owned ?? []), ...(mine?.shared ?? []).filter((f) => f.role === "editor")].map((f) => f._id as string));
   const attachments = useQuery(api.learnFrontend.attachedQuizzes, { lessonId: lesson.id as Id<"lessons"> });
   const inline = inlineQuizKeys(lesson.published?.content ?? lesson.draft.content);
-  const quizzes = (attachments === undefined ? lesson.quizzes : (attachments ?? []).filter(q => q.kind === "form").map((q, order) => {
+  const quizzes = (attachments === undefined ? lesson.quizzes : (attachments ?? []).map((q, order) => {
     const prior = lesson.quizzes.find(x => x.formId === q.id);
     return { formId: q.id, shareId: q.shareId ?? "", title: q.title, label: prior?.label ?? "", kind: prior?.kind ?? "custom" as QuizKind, order, questionCount: q.questionCount };
   })).filter(q => !inline.has(`form:${q.formId}`)).sort((a, b) => a.order - b.order);
 
-  const classic = (attachments ?? []).filter(q => q.kind === "quiz" && !inline.has(`quiz:${q.id}`));
-  if (!quizzes.length && !classic.length) return null;
+  if (!quizzes.length) return null;
   return (
     <section id="practice" className="lx-section" aria-label={t.title} style={{ marginTop: 32, borderTop: "1px solid var(--ws-line)", paddingTop: 24 }}>
     <h2>{t.title}</h2>
@@ -89,19 +88,7 @@ export default function PracticeTab({ lesson, isOwner }: { lesson: Lesson; isOwn
           <InlineQuiz asset={{kind:"form",id:quiz.formId}} shareId={quiz.shareId} title={quiz.title}/>
         </article>
       ))}
-      {classic.map(quiz => <article key={quiz.id} className="lx-quiz-card">
-        <span className="lx-row__icon" data-kind="quiz" aria-hidden><Target size={16} /></span>
-        <div className="lx-quiz-card__main"><strong>{quiz.title}</strong><span className="lx-muted">{t.questions(quiz.questionCount)}</span></div>
-        <div className="lx-actions">
-          <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" title={t.forkHelp} disabled={!capabilities.quizForks || copying !== null} onClick={async () => {
-            setCopying(quiz.id);
-            try { const result = await study.forkAssessment({ kind: "quiz", id: quiz.id as Id<"quizzes"> }); router.push(result.href); }
-            catch (err) { toast.error(err, { fallback: t.copyFailed }); }
-            finally { setCopying(null); }
-          }}><GitFork size={14} aria-hidden />{t.copyQuiz}</button>
-        </div>
-        <InlineQuiz asset={{kind:"quiz",id:quiz.id}} title={quiz.title}/>
-      </article>)}
+
 
     </div>
     </section>

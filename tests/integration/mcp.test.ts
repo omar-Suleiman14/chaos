@@ -28,6 +28,15 @@ describe("ChatGPT app backend", () => {
     expect(user?.email).toBe("new@example.com");
   });
 
+  it("creates a quiz that keeps its answers hidden after submitting, and turns them back on", async () => {
+    const t = await setup();
+    const created = await t.mutation(internal.mcp.createForm, { userId: owner, input: { ...quizInput, showAnswers: false } });
+    const form = (await t.query(internal.mcp.getForm, { userId: owner, id: created.id })) as { revision: number; showAnswers?: boolean };
+    expect(form.showAnswers).toBe(false);
+    await t.mutation(internal.mcp.updateForm, { userId: owner, id: created.id, expectedRevision: form.revision, input: { showAnswers: true } });
+    expect(((await t.query(internal.mcp.getForm, { userId: owner, id: created.id })) as { showAnswers?: boolean }).showAnswers).toBe(true);
+  });
+
   it("creates a quiz draft, edits it, publishes it and summarizes results", async () => {
     const t = await setup();
     const created = await t.mutation(internal.mcp.createForm, { userId: owner, input: quizInput });

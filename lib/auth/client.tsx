@@ -16,6 +16,34 @@ import {
 } from "react";
 import { safeAuthReturn } from "./redirect";
 
+/** Provider-neutral session values consumed by application components. */
+interface SessionUser {
+  id: string;
+  fullName: string | null;
+  username?: string | null;
+  imageUrl?: string;
+  hasImage: boolean;
+  primaryEmailAddress?: { emailAddress: string } | null;
+}
+interface UserSession {
+  isLoaded: boolean;
+  isSignedIn: boolean;
+  user: SessionUser | null;
+}
+interface AuthSession {
+  isLoaded: boolean;
+  isSignedIn: boolean;
+  userId: string | null;
+  getToken: (options?: {
+    template?: string;
+    skipCache?: boolean;
+  }) => Promise<string | null>;
+}
+interface AccountActions {
+  signOut: (options?: { redirectUrl?: string }) => Promise<void>;
+  openUserProfile: () => void;
+}
+
 const better = process.env.NEXT_PUBLIC_AUTH_PROVIDER === "betterauth";
 export function AuthProvider({
   children,
@@ -60,6 +88,7 @@ function useBetterUser() {
               fullName: data.user.name,
               username: undefined,
               imageUrl: data.user.image ?? undefined,
+              hasImage: !!data.user.image,
               primaryEmailAddress: data.user.email
                 ? { emailAddress: data.user.email }
                 : undefined,
@@ -69,8 +98,28 @@ function useBetterUser() {
     [isPending, isLoading, isAuthenticated, identity, signedIn, data],
   );
 }
-export function useUser() {
-  const useSelectedUser = better ? useBetterUser : Clerk.useUser;
+function useClerkUser(): UserSession {
+  const session = Clerk.useUser();
+  const user = session.user;
+  return {
+    isLoaded: session.isLoaded,
+    isSignedIn: !!session.isSignedIn,
+    user: user
+      ? {
+          id: user.id,
+          fullName: user.fullName,
+          username: user.username,
+          imageUrl: user.imageUrl,
+          hasImage: user.hasImage,
+          primaryEmailAddress: user.primaryEmailAddress
+            ? { emailAddress: user.primaryEmailAddress.emailAddress }
+            : null,
+        }
+      : null,
+  };
+}
+export function useUser(): UserSession {
+  const useSelectedUser = better ? useBetterUser : useClerkUser;
   return useSelectedUser();
 }
 function useBetterAuth() {
@@ -84,9 +133,15 @@ function useBetterAuth() {
   );
   return { isLoaded, isSignedIn, userId: user?.id ?? null, getToken };
 }
-export function useAuth() {
+export function useAuth(): AuthSession {
   const useSelectedAuth = better ? useBetterAuth : Clerk.useAuth;
-  return useSelectedAuth();
+  const session = useSelectedAuth();
+  return {
+    isLoaded: session.isLoaded,
+    isSignedIn: !!session.isSignedIn,
+    userId: session.userId ?? null,
+    getToken: session.getToken,
+  };
 }
 function useBetterAccount() {
   const router = useRouter();
@@ -101,9 +156,10 @@ function useBetterAccount() {
     },
   };
 }
-export function useClerk() {
+export function useAccount(): AccountActions {
   const useSelectedAccount = better ? useBetterAccount : Clerk.useClerk;
-  return useSelectedAccount();
+  const { signOut, openUserProfile } = useSelectedAccount();
+  return { signOut, openUserProfile };
 }
 type ButtonProps = {
   children: ReactNode;

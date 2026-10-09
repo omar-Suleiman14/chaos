@@ -59,17 +59,16 @@ describe("native Learn frontend reads", () => {
     const { t, owner, lessonId } = await setup();
     await expect(t.query(quizzes, { lessonId })).rejects.toThrow("unauthorized");
     await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 0, visibility: "public" });
-    await t.run(async ctx => {
-      const questionId = ctx.db.normalizeId("questions", "not-an-id");
-      expect(questionId).toBeNull();
-      const quizId = await ctx.db.insert("quizzes", { title: "Draft secret", slug: "quiz", creatorId: creatorIdentity.subject, creatorUsername: "creator", isPublished: true, createdAt: 0, updatedAt: 0 });
-      const qid = await ctx.db.insert("questions", { quizId, type: "mcq", questionText: "Q", options: ["A", "B"], correctAnswer: "A", points: 1, order: 0 });
-      await ctx.db.patch("quizzes", quizId, { publishedSnapshot: { title: "Published quiz", questions: [{ _id: qid, type: "mcq", questionText: "Q", options: ["A", "B"], correctAnswer: "A", points: 1, order: 0 }] } });
-      await ctx.db.insert("lessonAssessments", { lessonId, asset: { kind: "quiz", id: quizId }, label: "Quiz", order: 0 });
-    });
+    await owner.mutation(api.quizFunctions.getOrCreateUser, {});
+    const formId = await owner.mutation(api.forms.createForm, { title: "Draft secret", quizMode: true });
+    const draft = (await owner.query(api.forms.getFormForEditor, { formId }))!;
+    const definition = { ...draft.draft, title: "Published quiz", fields: [{ id: "q", type: "choice" as const, label: "Q", required: true, options: [{ id: "a", label: "A" }, { id: "b", label: "B" }], quiz: { correctOptionIds: ["a"], points: 1 } }] };
+    const saved = await owner.mutation(api.forms.saveFormDraft, { formId, expectedRevision: draft.draftRevision, definition });
+    await owner.mutation(api.forms.publishForm, { formId, expectedRevision: saved.draftRevision });
+    await t.run(ctx => ctx.db.insert("lessonAssessments", { lessonId, asset: { kind: "form", id: formId }, label: "Quiz", order: 0 }).then(() => undefined));
     const result = await t.query(quizzes, { lessonId });
-    expect(result[0]).toMatchObject({ title: "Published quiz", questionCount: 1, liveEligible: true, published: true, shareId: null });
-    expect(JSON.stringify(result)).not.toContain("correctAnswer");
+    expect(result[0]).toMatchObject({ title: "Published quiz", questionCount: 1, liveEligible: true, published: true, shareId: draft.shareId });
+    expect(JSON.stringify(result)).not.toContain("correctOptionIds");
     expect(JSON.stringify(await owner.query(quizzes, { lessonId }))).not.toContain("questions");
     await t.run(ctx => ctx.db.patch("lessons", lessonId, { visibility: "restricted" }));
     await expect(t.query(quizzes, { lessonId })).rejects.toThrow();

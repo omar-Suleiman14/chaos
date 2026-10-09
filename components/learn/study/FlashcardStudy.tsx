@@ -57,6 +57,7 @@ export default function FlashcardStudy({ setId, onEdit }: { setId: string; onEdi
   </section>;
 }
 
+/* oxlint-disable jsx-a11y/no-noninteractive-tabindex, jsx-a11y/prefer-tag-over-role -- The focusable study region scopes the documented study keyboard shortcuts. This labelled graphic is composed from inline SVG or multiple elements; a native img cannot represent it. */
 export function StudyRound({ setId, cards: draftCards, reviews, onEdit, onReview }: { setId: string; cards: Flashcard[]; reviews: { cardId: string; box: number; reviewedAt: number }[]; onEdit?: () => void; onReview: (cardId: string, knewIt: boolean) => Promise<void> }) {
   const t = useCopy(copy);
   const report = useLessonActivity();
@@ -90,7 +91,7 @@ export function StudyRound({ setId, cards: draftCards, reviews, onEdit, onReview
   if (!cards.length) return <div className="lx-empty"><p>{t.noCards}</p>{onEdit && <button type="button" className="ws-btn" onClick={onEdit}>{t.addFirst}</button>}</div>;
   return (
     <div ref={round} tabIndex={0} className="lx-section" style={{ gap: 16 }}>
-      <div className="lx-panel__row"><span className="lx-muted" role="status">{t.progress(known, cards.length)}</span>
+      <div className="lx-panel__row"><output className="lx-muted" >{t.progress(known, cards.length)}</output>
         <button type="button" className="lx-link" disabled={pending} onClick={restart}><RotateCcw size={12} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} /> {t.reset}</button>
       </div>
       <nav className="lx-actions" aria-label={t.back} style={{ justifyContent: "space-between" }}>
@@ -123,3 +124,4 @@ export function StudyRound({ setId, cards: draftCards, reviews, onEdit, onReview
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/no-noninteractive-tabindex, jsx-a11y/prefer-tag-over-role */

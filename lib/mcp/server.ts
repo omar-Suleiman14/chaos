@@ -1,3 +1,4 @@
+import { readStudySkillFiles, studySkillPaths } from "@/lib/integrations/studySkill";
 import { registerDocumentationTools } from "./docs";
 import { registerCardTools } from "./cards";
 import { registerCrmTools } from "./crm";
@@ -13,6 +14,7 @@ import {
   MCP_APPEARANCES, MCP_BACKDROPS, MCP_BUTTONS, MCP_COVERS, MCP_FONTS, MCP_GAME_STATES, MCP_GAME_STEPS, MCP_LAYOUTS, MCP_PRESENTATIONS, MCP_QUESTION_TYPES, MCP_RADII, MCP_SOUNDS, normalizeSound,
 } from "@/convex/mcpContract";
 import { buildThemePatch, themeCatalog } from "./themes";
+import { registerStudyLessonTools } from "./studyLessons";
 import { registerLearnTools } from "./learn";
 import { registerTools as registerAdvancedFormTools } from "./advancedForms";
 import { registerTools as registerFormManagementTools } from "./formManagement";
@@ -46,7 +48,8 @@ const baseInstructions = `Chaos (chaos.fail) is where this person builds forms, 
 - The Chaos app is free on every plan.
 - Cards: list_public_authors browses the opted-in author directory; get_public_card resolves current usernames and retained aliases. list_public_student_cards pages through all eligible students, public by default unless opted out. Follow cursors until isDone. get_student_card_preferences and set_student_card_preferences read/change the global default for this person; customize_my_card also accepts showStudentCards. get_student_card_visibility and set_student_card_visibility concern only this person's existing teacher relationship. set_author_listing_visibility controls only this person's directory listing. The card fan animation is a browser interaction at https://chaos.fail/card.
 - New things start as private drafts the person can review: create_form, create_game_draft, create_lesson, create_full_course and create_flashcard_set publish only with publish true. Pass publish true only when the person explicitly asks for it to go live or be shared now; otherwise give them the edit link and offer to publish after they review it. If publishing is blocked, the result lists the problems and the item stays a draft: tell the person what to fix. Later edits to existing content are drafts until publish_form, publish_lesson or publish_course. Folders are private organisation, not publishable content.
-- Work only on content the person selected or asked to find. Authorization is enforced for the connected account; never supply an actor/userId or infer permission from a reference. Folder membership and source metadata do not grant content access. Only request source metadata through the supported tools; no source file bytes are exposed here.
+- For requests to study, teach, explain or create educational material, use build_study_lesson and read get_study_lesson_skill (including its workflow/teaching references). The same instructions are at chaos://skills/create-study-lesson/SKILL.md. Read the complete source including visuals; generate excellent teaching content in this client, save durable checkpoints, finalize and publish only with user/profile authorization. Resume jobs after interruption. Never claim inaccessible sources were read.
+- Work only on content the person selected or asked to find. Authorization is enforced for the connected account; never supply an actor/userId or infer permission from a reference. Folder membership and source metadata do not grant content access. Use upload_study_source to explicitly transfer client-readable files; a client attachment ID or local path is never a backend file. Source reads still require separate content authorization.
 - Forms return shareUrl: share it only when returned and published. Lesson and course tools do not return shareUrl. After publish_lesson returns ok true, use the lessonId from a verified create/get response to construct https://chaos.fail/learn/<lessonId>. After publish_course returns ok true, use courseId from verified create_course (or id from get_course) to construct https://chaos.fail/learn/courses/<courseId>. Never invent IDs, claim draft links are public, or imply private/restricted links grant access. Visibility values are public, restricted and private; restricted/private require Business.
 - Courses: create_course creates a draft; add_course_lesson creates a blank lesson draft; use lesson tools to write it. get_course reads the owner's outline and metadata. update_course edits draft metadata. set_course_outline replaces the full ordered list, so read get_course first and preserve wanted lessons. publish_course publishes the course and all its lessons together; lessons in an unpublished course can't be published on their own. Inspect blockers when ok is false. Do not automatically retry course/lesson creation or publication after uncertain success. list_courses lists the person's courses; set_course_archived archives or restores one; unpublish_course takes a course offline. Every course and lesson has a cover: new ones get a random gallery cover, so set one only when the person asks; change it with update_course coverUrl or lesson metadata.coverUrl. Page icons are not shown, so don't set them.
 - Flashcards: create_flashcard_set makes a private set; get_flashcard_set returns cards and revision; save_flashcard_set replaces the whole card list, so keep card IDs. publish_flashcard_set makes an immutable version only on request; attach_lesson_flashcards links that version to an owned lesson. set_flashcard_set_lifecycle archives, restores or unpublishes.
@@ -55,11 +58,11 @@ const baseInstructions = `Chaos (chaos.fail) is where this person builds forms, 
 - Lessons: search_lessons/list_lessons use scope owned for drafts or public for published discovery. get_lesson draft and get_lesson_outline with outlineFrom draft require edit permission; outlines default to published. get_lesson and get_lesson_outline return bounded pages: offset 0?500, limit 1?100; follow nextOffset until null instead of claiming the first page is complete. Keep stable block IDs and use the current expectedRevision for edits; on conflict reload before making a reviewed change.
 - Teams: Personal is one user. Business teams (free for a limited time) share editing: list_teams, create_team, invite_team_member (returns a single-use link; Chaos sends no email), list_team_members, change_team_member_role, remove_team_member, share_with_team and list_team_resources. Team-only (internal) content: publish_lesson, publish_course and publish_flashcard_set with visibility restricted and teamId; set_form_response_controls with access signed_in and audienceTeamId for forms and quizzes; host_game with teamId. Only members of that team can read, respond or join. Invite, remove or change roles only on explicit request.
 - Folders: list_folders and list_folder_contents use paginationOpts and continueCursor, including empty partial pages. create_folder creates an owned private folder; add_folder_member requires ownership of both folder and asset; move_folder needs explicit relocation intent. Folder changes never publish content.
-- A quiz is a form with quizMode on. For "make a quiz about what we discussed", write the questions from the conversation yourself: mostly single_choice with 3–4 options, set correctAnswers to the exact option label, and give points.
+- A quiz is a form with quizMode on. For "make a quiz about what we discussed", write the questions from the conversation yourself: mostly single_choice with 3–4 options, set correctAnswers to the exact option label, and give points. Respondents see the correct answers and explanations after submitting; set showAnswers false for a graded test whose key must stay private.
 - Write like a real teacher or organiser, not a brochure. Each question is one short, direct sentence (usually under 15 words) that tests one fact or asks one thing. Options are 1–5 words, parallel in form, and every wrong option is plausible; no "All of the above", joke options or filler. Leave question descriptions empty unless a hint is truly needed. A quiz explanation, if any, is one plain sentence saying why the answer is right. Titles are 2–6 words; the intro is one sentence or empty. No emojis, exclamation marks, hype ("ultimate", "fun-filled", "dive into", "journey", "test your knowledge") or restating the question in the options.
 - Use natural, human language in all content and chat replies. Write short, clear sentences. Avoid em dashes; use periods or commas instead. Avoid promotional wording, jargon, stock phrases and filler. Match the person's language, including natural Arabic when they write in Arabic.
 - Keep chat replies short: one or two sentences on what you made, then the link. Do not list the questions back unless the person asks.
-- Ids look like form_… (forms and quizzes) or quiz_… (classic quizzes, read-only). Find them with search_forms.
+- Ids look like form_… (forms and quizzes; a quiz is a form with quiz mode on). Find them with search_forms.
 - update_form replaces the question list when you send questions: call get_form first, keep each question's id, and send the full list.
 - Looks: every form has a theme (colours, font, buttons, start screen). When you create a form, pick a preset that suits it and pass it as theme: "Lilac" for everyday forms and sign-ups, "Banner" for work and school, and a livelier one (Candy, Arcade, Neon, Sunset, Aurora) for games, parties and fun quizzes. Use list_themes to see them all, and set_form_theme for "make it dark", "use the Typeform look" or a brand colour. If the person names a look, use theirs. If set_form_theme returns warnings about hard-to-read colours, fix them.
 - Sounds: forms you create have sound on (Glass). Pick a pack that suits the mood with sound (soft is Glass, pop, wood, arcade), and use off only when the person asks for silence or the form is formal or sensitive (health, HR, legal).
@@ -96,6 +99,7 @@ const formFields = {
   title: z.string().min(1).max(200),
   description: z.string().max(5000).optional().describe("Intro text shown at the top."),
   quizMode: z.boolean().optional().describe("true for a scored quiz with an answer key."),
+  showAnswers: z.boolean().optional().describe("Quiz mode only: after submitting, respondents see which answers were right, the correct answers and the explanations (default true). false shows only their marks, for tests whose key must stay private."),
   presentation: z.enum(MCP_PRESENTATIONS).optional().describe("page = all questions on one page (default); one_at_a_time = one question per screen; sections = one page per section; swipe = full-screen cards."),
   questions: z.array(question).max(200),
   theme: z.string().max(60).optional().describe("Optional look by name, e.g. Lilac (default), Banner, Paper, Evergreen, Spotlight (Typeform-like), Midnight (dark). See list_themes."),
@@ -127,7 +131,7 @@ const read: ToolAnnotations = { readOnlyHint: true, destructiveHint: false, open
 /** Loose output shapes: key fields are named for reviewers; extra fields pass through. */
 const itemShape = {
   id: z.string(),
-  kind: z.enum(["form", "classic_quiz"]),
+  kind: z.enum(["form"]),
   title: z.string(),
   status: z.string(),
   editUrl: z.string(),
@@ -212,6 +216,9 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
     if (!options.call) return authRequired(options.resourceMetadataUrl);
     try {
       requireToolPermission(tool, options.permissions);
+      if (tool === "register_study_reference" && input.metadataVisibility === "public") {
+        requireToolPermission("publish_study_source", options.permissions);
+      }
       const data = (await options.call(tool, input)) as Record<string, unknown>;
       return ok(summarize(data), data);
     } catch (error) {
@@ -387,6 +394,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
         title: formFields.title.optional(),
         description: formFields.description,
         quizMode: formFields.quizMode,
+        showAnswers: formFields.showAnswers,
         presentation: formFields.presentation,
         questions: formFields.questions.optional().describe("The complete new question list."),
       }),
@@ -482,6 +490,19 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
   if (options.admin) registerAdminTools(server, run, securitySchemes);
   registerCardTools(server, run, securitySchemes);
   registerLearnTools(server, run, securitySchemes, { call, flow });
+  registerStudyLessonTools(server, run, securitySchemes);
+  for (const path of studySkillPaths) {
+    const uri = `chaos://skills/create-study-lesson/${path}`;
+    server.registerResource(`create-study-lesson/${path}`, uri, { description: "Complete Chaos teaching workflow; read before building a study lesson.", mimeType: "text/markdown" }, async () => ({ contents: [{ uri, mimeType: "text/markdown", text: (await readStudySkillFiles())[`skills/create-study-lesson/${path}`] }] }));
+  }
+  server.registerTool("get_study_lesson_skill", {
+    description: "Read the complete create-study-lesson skill or its workflow/teaching reference. Use before teaching educational material in Chaos. This static instruction tool supports clients that expose MCP tools but do not expose resources or packaged skills. No source content or account data.",
+    inputSchema: { path:z.enum(studySkillPaths).optional() },
+    outputSchema: { name:z.string(),path:z.string(),text:z.string() },
+    annotations: { readOnlyHint:true,destructiveHint:false,openWorldHint:false,idempotentHint:true },
+    _meta:{securitySchemes},
+  }, async ({path = "SKILL.md"}) => ok("Study lesson instructions loaded.", { name:"create-study-lesson",path,text:(await readStudySkillFiles())[`skills/create-study-lesson/${path}`] }));
+  server.registerPrompt("create-study-lesson", { description: "Teach complete educational material using Chaos durable lessons, native assessments and flashcards." }, async () => ({ messages: [{ role: "user", content: { type: "text", text: (await readStudySkillFiles())["skills/create-study-lesson/SKILL.md"] } }] }));
   registerOrganizationTools(server, run, securitySchemes);
   registerTeamTools(server, run, securitySchemes);
   registerCourseTools(server, run, securitySchemes, { call, flow });

@@ -72,7 +72,6 @@ function usePersonal(): PersonalState | undefined {
 
 /* ── Queries ─────────────────────────────────────────────────────────────── */
 
-
 const durableRows = new Map<string, Doc<"lessons">>();
 const progressTargets = new Map<string, { lessonId: Id<"lessons">; versionId: Id<"lessonVersions">; blockIds: string[] }>();
 const listeners = new Set<() => void>();
@@ -87,7 +86,8 @@ function rememberProgress(userId: string, row: { lessonId: Id<"lessons">; versio
 function useOwnedRows() {
   const auth = useConvexAuth();
   const page = usePaginatedQuery(api.lessons.listOwned, auth.isAuthenticated ? {} : "skip", { initialNumItems: 10 });
-  useEffect(() => { if (page.status === "CanLoadMore" && page.results.length < 250) page.loadMore(10); }, [page.status, page.results.length, page.loadMore]);
+  const { status: pageStatus, loadMore: pageLoadMore, results: pageResults } = page;
+  useEffect(() => { if (pageStatus === "CanLoadMore" && pageResults.length < 250) pageLoadMore(10); }, [pageStatus, pageLoadMore, pageResults.length]);
   return auth.isLoading || (auth.isAuthenticated && page.status === "LoadingFirstPage") ? undefined : auth.isAuthenticated ? page.results : [];
 }
 function uiMeta(metadata: Doc<"lessons">["metadata"]): LessonMeta { return { ...metadata, curricula: [], indexing: metadata.indexing ?? "noindex" }; }
@@ -162,7 +162,8 @@ export function useLessonVersions(lessonId: string | undefined): LessonVersion[]
   const auth = useConvexAuth();
   const own = useQuery(api.learnFrontend.editableLesson, auth.isAuthenticated && lessonId ? { id: lessonId } : "skip");
   const result = usePaginatedQuery(api.lessons.listVersions, own ? { lessonId: own._id } : "skip", { initialNumItems: 10 });
-  useEffect(() => { if (result.status === "CanLoadMore" && result.results.length < 100) result.loadMore(10); }, [result.status, result.results.length, result.loadMore]);
+  const { status: resultStatus, loadMore: resultLoadMore, results: resultResults } = result;
+  useEffect(() => { if (resultStatus === "CanLoadMore" && resultResults.length < 100) resultLoadMore(10); }, [resultStatus, resultLoadMore, resultResults.length]);
   if (auth.isLoading || (auth.isAuthenticated && own === undefined) || (own && result.status === "LoadingFirstPage")) return undefined;
   return result.results.map(v => ({ lessonId: v.lessonId, version: v.number, meta: uiMeta(v.metadata), content: fromDurableDocument(v.document), publishedAt: v.publishedAt, publishedBy: v.authorId, note: v.note }));
 }
@@ -193,16 +194,6 @@ export function useCollectionLessons(folderId: string | undefined): Lesson[] | u
   for (let i = 0; i < 8; i++) for (const f of folders) if (f.parentId && ids.has(f.parentId)) ids.add(f.id);
   const lessonIds = new Set(members.filter(m => ids.has(m.folderId) && m.asset.kind === "lesson").map(m => m.asset.id));
   return lessons.filter(l => lessonIds.has(l.id as Id<"lessons">));
-}
-
-function descendantFolderIds(state: LearnState, rootId: string): Set<string> {
-  const ids = new Set([rootId]);
-  let grew = true;
-  while (grew) {
-    grew = false;
-    for (const f of Object.values(state.folders)) if (f.parentId && ids.has(f.parentId) && !ids.has(f.id)) { ids.add(f.id); grew = true; }
-  }
-  return ids;
 }
 
 export function useCurriculumNodes(): CurriculumNode[] | undefined { return useConfirmed("learn.curriculumNodes", useLibraryCurriculum()).data; }
@@ -340,16 +331,6 @@ export function useWeakAreas(): WeakArea[] | undefined {
 export const blankMeta = (language: string, title = ""): LessonMeta => ({ title, description: "", tags: [], language, curricula: [], indexing: "noindex" });
 
 const cleanTags = (tags: string[]) => [...new Set(tags.map((t) => t.trim().replace(/^#/, "").slice(0, 40)).filter(Boolean))].slice(0, 12);
-
-function requireOwned(state: LearnState, id: string, userId: string): Lesson {
-  const lesson = state.lessons[id];
-  if (!lesson || lesson.ownerId !== userId) throw new Error("NOT_FOUND");
-  return lesson;
-}
-
-function putLesson(state: LearnState, lesson: Lesson): LearnState {
-  return { ...state, lessons: { ...state.lessons, [lesson.id]: lesson } };
-}
 
 export class LearnError extends Error {}
 
@@ -576,7 +557,6 @@ export type LearnActions = ReturnType<typeof useLearnActions>;
 
 /** Plain text of a lesson for search and previews. */
 export const lessonText = (lesson: Lesson) => documentText((lesson.published ?? lesson.draft).content);
-
 
 export const hasUnpublishedChanges = (lesson: Lesson) => !!lesson.published && lesson.draft.updatedAt !== lesson.publishedDraftAt;
 

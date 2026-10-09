@@ -93,7 +93,7 @@ export default function AccountPage() {
         >
           {ar ? "تغيير كلمة المرور" : "Change password"}
         </button>
-        {message && <p role="status">{message}</p>}
+        {message && <output >{message}</output>}
       </form>
     </main>
   );

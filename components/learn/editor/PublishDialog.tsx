@@ -58,7 +58,6 @@ const copy = {
   },
 };
 
-const visIcon = { private: Lock, public: Globe } as const;
 
 export default function PublishDialog({ lesson, onClose, onPublish, sources = [], error, disabled = false, inCourse = false }: {
   lesson: Lesson; onClose: () => void; onPublish: (input: { visibility: Visibility; teamId?: string; indexing: IndexingChoice; note: string }) => void | Promise<unknown>;

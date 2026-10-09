@@ -4,11 +4,11 @@ import { requireActiveUser } from "./authz";
 import { getCourse, setOutlineCourse } from "./courses";
 import { createLessonForActor } from "./lessons";
 import { lessonDocument, lessonMeta } from "./learnModel";
-import { authorDb } from "./authorIndex";
+import { createFormRecord } from "./forms";
+import { quizFormQuestion } from "./integrationContract";
+import { toDefinition } from "./mcpContract";
 import { quizQuestionFields } from "./quizModel";
-import { consumeCreation } from "./plans";
-import { randomCode } from "./serverUtils";
-const ref = v.object({ kind: v.union(v.literal("form"),v.literal("quiz"),v.literal("flashcards"),v.literal("source")), id:v.string() });
+const ref = v.object({ kind: v.union(v.literal("form"),v.literal("flashcards"),v.literal("source")), id:v.string() });
 export async function exportCourseManifest(ctx: QueryCtx, courseId: import("./_generated/dataModel").Id<"learnCollections">, actor: string) {
  const course = await getCourse(ctx,{courseId},actor);
  const row = await ctx.db.get("learnCollections",courseId);
@@ -25,17 +25,14 @@ export const lesson = query({args:{lessonId:v.id("lessons")},handler:async(ctx,{
 export const asset = query({args:{asset:ref},handler:async(ctx,{asset})=>{
  const {identity}=await requireActiveUser(ctx);
  if(asset.kind==="form"){const id=ctx.db.normalizeId("forms",asset.id),r=id?await ctx.db.get("forms",id):null;if(!r||r.ownerId!==identity.subject)throw new Error("NOT_FOUND: Quiz not owned.");return {kind:"form" as const,id:asset.id,definition:r.draft};}
- if(asset.kind==="quiz"){const id=ctx.db.normalizeId("quizzes",asset.id),r=id?await ctx.db.get("quizzes",id):null;if(!r||r.creatorId!==identity.subject)throw new Error("NOT_FOUND: Quiz not owned.");const questions=await ctx.db.query("questions").withIndex("by_quiz",q=>q.eq("quizId",r._id)).take(501);if(questions.length>500)throw new Error("EXPORT_LIMIT: Maximum 500 questions.");return {kind:"quiz" as const,id:asset.id,title:r.title,description:r.description,questions:questions.map(({_id,_creationTime,quizId,...q})=>q)};}
  if(asset.kind==="flashcards"){const id=ctx.db.normalizeId("flashcardSets",asset.id),r=id?await ctx.db.get("flashcardSets",id):null;if(!r||r.ownerId!==identity.subject)throw new Error("NOT_FOUND: Deck not owned.");return {kind:"flashcards" as const,id:asset.id,title:r.title,cards:r.cards};}
  const id=ctx.db.normalizeId("learnSources",asset.id),r=id?await ctx.db.get("learnSources",id):null;if(!r||r.ownerId!==identity.subject||r.status==="removed")throw new Error("NOT_FOUND: Source not owned.");return {kind:"source" as const,id:asset.id,metadata:r.metadata,hasFile:!!r.storageId,contentType:r.contentType};
 }});
-export const importClassicQuiz = mutation({args:{title:v.string(),description:v.optional(v.string()),questions:v.array(v.object(quizQuestionFields))},returns:v.id("quizzes"),handler:async(ctx,args)=>{
- const {identity}=await requireActiveUser(ctx);if(args.questions.length>500||args.title.length>200||new TextEncoder().encode(JSON.stringify(args)).length>300000)throw new Error("IMPORT_LIMIT");
- // Imports preserve unfinished drafts; publication performs answer-quality validation later.
- if(args.description && args.description.length>4000)throw new Error("IMPORT_LIMIT");
- await consumeCreation(ctx,identity.subject);const user=await ctx.db.query("users").withIndex("by_clerkId",q=>q.eq("clerkId",identity.subject)).unique();if(!user)throw new Error("ACCOUNT_REQUIRED");
- const now=Date.now();const id=await authorDb(ctx).insert("quizzes",{creatorId:identity.subject,creatorUsername:user.username,title:args.title,description:args.description,slug:`import-${randomCode(20).toLowerCase()}`,isPublished:false,createdAt:now,updatedAt:now});
- for(const question of args.questions)await ctx.db.insert("questions",{...question,quizId:id});return id;
+/** A quiz from a course archive made before classic quizzes were retired, imported as a private quiz form. */
+export const importArchivedQuiz = mutation({args:{title:v.string(),description:v.optional(v.string()),questions:v.array(v.object(quizQuestionFields))},returns:v.id("forms"),handler:async(ctx,args)=>{
+ const {identity}=await requireActiveUser(ctx);if(args.questions.length>200||args.title.length>200||(args.description?.length??0)>4000||new TextEncoder().encode(JSON.stringify(args)).length>300000)throw new Error("IMPORT_LIMIT");
+ const definition=toDefinition({title:args.title,description:args.description,quizMode:true,questions:[...args.questions].sort((a,b)=>a.order-b.order).map(quizFormQuestion)});
+ return createFormRecord(ctx,identity.subject,definition);
 }});
 const importLessonArgs={courseId:v.id("learnCollections"),metadata:lessonMeta,document:lessonDocument};
 export const importLesson = mutation({args:importLessonArgs,returns:v.id("lessons"),handler:async(ctx,args)=>importCourseLesson(ctx,args,(await requireActiveUser(ctx)).identity.subject)});
@@ -43,7 +40,7 @@ export async function importCourseLesson(ctx:MutationCtx,args:Infer<ReturnType<t
  const identity={subject:actor};const course=await getCourse(ctx,{courseId:args.courseId},identity.subject);if(!course.isOwner)throw new Error("NOT_FOUND: Course not found.");if(course.lessons.length>=100)throw new Error("COURSE_LIMIT");
  for(const block of args.document.blocks){
   if(block.type==="flashcards"){const r=await ctx.db.get("flashcardSets",block.setId);if(!r||r.ownerId!==identity.subject)throw new Error("NOT_OWNED");}
-  if(block.type==="quiz"){const r=block.asset.kind==="form"?await ctx.db.get("forms",block.asset.id):await ctx.db.get("quizzes",block.asset.id);if(!r||!("ownerId" in r?r.ownerId===identity.subject:r.creatorId===identity.subject))throw new Error("NOT_OWNED");}
+  if(block.type==="quiz"){const r=block.asset.kind==="form"?await ctx.db.get("forms",block.asset.id):null;if(!r||r.ownerId!==identity.subject)throw new Error("NOT_OWNED");}
   const sources=[...block.citations.map(c=>c.sourceId),...("sourceId" in block?[block.sourceId]:[])];for(const id of sources){const r=await ctx.db.get("learnSources",id);if(!r||r.ownerId!==identity.subject||r.status==="removed")throw new Error("SOURCE_NOT_OWNED");}
  }
  const id=await createLessonForActor(ctx,identity.subject,{metadata:args.metadata,document:args.document},true);

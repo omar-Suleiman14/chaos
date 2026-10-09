@@ -1,12 +1,15 @@
 "use client";
 
+import { FocusTextarea } from "@/components/InitialFocus";
+
 import { useConvexAuth, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import FlashcardStudy from "@/components/learn/study/FlashcardStudy";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { ArrowDown, ArrowLeft, ArrowUp, BookOpen, GitFork, Plus, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowLeft, ArrowUp, BookOpen, GitFork, History, Plus, Trash2 } from "lucide-react";
+import FlashcardVersionHistory from "@/components/learn/study/FlashcardVersionHistory";
 import { WsConfirm, WsTabs } from "@/components/workspace/primitives";
 import { Select } from "@/components/workspace/Select";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
@@ -28,11 +31,11 @@ const copy = {
     progress: (done: number, total: number) => `${done} of ${total} known well`, finished: "Round done. Cards you missed come back first.", restart: "Start another round", reset: "Reset progress",
     noCards: "This set has no cards yet.", addFirst: "Add cards", fork: "Copy to my sets", forked: "Copied to your sets", deleteSet: "Archive set",
     deleteTitle: "Archive this set?", deleteBody: "The set moves to Archive. Your cards and study progress are preserved, and you can restore it there.", card: (i: number, n: number) => `Card ${i} of ${n}`,
-    boxLabel: (b: number) => `Review level ${b} of 5`, save: "Save draft", publish: "Save and publish",
+    boxLabel: (b: number) => `Review level ${b} of 5`, save: "Save draft", publish: "Save and publish", history: "Version history",
   },
   ar: {
     back: "البطاقات", modes: { study: "ذاكر", edit: "عدّل" }, loading: "جارٍ تحميل المجموعة…",
-    save: "احفظ المسودة", publish: "احفظ وانشر",
+    save: "احفظ المسودة", publish: "احفظ وانشر", history: "سجل النسخ",
     title: "العنوان", description: "الوصف", visibility: "من يستطيع رؤيتها", teamOnly: (name: string) => `للفريق فقط · ${name}`, vis: { private: "أنا فقط", unlisted: "كل من لديه الرابط", public: "عامة" } as Record<Visibility, string>,
     front: "الوجه", back2: "الظهر", add: "أضف بطاقة", remove: "أزل البطاقة", up: "لأعلى", down: "لأسفل", fromLesson: "من الدرس",
     flip: "اعرض الإجابة", hint: "المسافة أو Enter للقلب · 1 مرة أخرى · 2 عرفتها", again: "مرة أخرى", knew: "عرفتها",
@@ -54,6 +57,9 @@ function FlashcardSetPage() {
   const [mode, setMode] = useState<"study" | "edit">(params.get("mode") === "edit" ? "edit" : "study");
   const [error, setError] = useState("");
   const [confirm, setConfirm] = useState(false);
+  const [history, setHistory] = useState(false);
+  // A restore replaces the draft: the card editor starts over from it.
+  const [editKey, setEditKey] = useState(0);
   const owner = !!set && set.ownerId === viewer?.id;
 
   if (set === undefined) return <PageSkeleton label={t.loading} />;
@@ -72,13 +78,15 @@ function FlashcardSetPage() {
         </div>
         <div className="lx-actions">
           {!owner && viewer?.signedIn && <button type="button" className="ws-btn" onClick={() => run(async () => { const id = await actions.forkFlashcardSet(set.id); router.push(`/dashboard/learn/flashcards/${id}`); })}><GitFork size={16} aria-hidden />{t.fork}</button>}
+          {owner && <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setHistory(true)}><History size={16} aria-hidden />{t.history}</button>}
           {owner && <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setConfirm(true)}><Trash2 size={16} aria-hidden />{t.deleteSet}</button>}
         </div>
       </header>
       {error && <p className="lx-error" role="alert">{error}</p>}
       {owner && <WsTabs tabs={["edit", "study"] as const} value={mode} onChange={setMode} label={set.title} labels={t.modes} />}
-      {mode === "edit" && owner ? <EditCards setId={set.id} title={set.title} description={set.description} cards={set.cards} visibility={set.visibility} teamId={set.teamId} onError={setError} onSaved={() => { setMode("study"); router.replace(`/dashboard/learn/flashcards/${set.id}`); }} />
+      {mode === "edit" && owner ? <EditCards key={editKey} setId={set.id} title={set.title} description={set.description} cards={set.cards} visibility={set.visibility} teamId={set.teamId} onError={setError} onSaved={() => { setMode("study"); router.replace(`/dashboard/learn/flashcards/${set.id}`); }} />
         : <FlashcardStudy setId={set.id} onEdit={owner ? () => setMode("edit") : undefined} />}
+      {history && owner && <FlashcardVersionHistory setId={set.id} title={set.title} cards={set.cards} onClose={() => setHistory(false)} onRestored={() => { setMode("study"); setEditKey((k) => k + 1); }} />}
       {confirm && <WsConfirm title={t.deleteTitle} body={t.deleteBody} confirmLabel={t.deleteSet} onClose={() => setConfirm(false)} onConfirm={() => run(async () => { await actions.deleteFlashcardSet(set.id); router.push("/dashboard?tab=flashcards"); })} />}
     </div>
   );
@@ -106,7 +114,7 @@ function EditCards({ setId, title, cards, visibility, teamId, onError, onSaved }
     <label className="lx-field">{t.visibility}<Select label={t.visibility} value={draftVisibility} onChange={setVisibility} options={[{ value: "private", label: t.vis.private }, ...(teams ?? []).map(row => ({ value: `team:${row.team._id}`, label: t.teamOnly(row.team.name) })), { value: "public", label: t.vis.public }]} /></label>
     <div className="lx-cards-edit">{draftCards.map((c,i) => <div key={c.id} className="lx-cards-edit__row">
       <span className="lx-muted">{i+1}</span>
-      <textarea className="kb-input ws-flashcard-text" value={c.front} aria-label={t.front} placeholder={t.front} autoFocus={i === 0 && cards.length === 0} maxLength={1000} onChange={e => setCards(draftCards.map(x => x.id === c.id ? {...x,front:e.target.value} : x))} />
+      <FocusTextarea className="kb-input ws-flashcard-text" value={c.front} aria-label={t.front} placeholder={t.front} focusOnMount={i === 0 && cards.length === 0} maxLength={1000} onChange={e => setCards(draftCards.map(x => x.id === c.id ? {...x,front:e.target.value} : x))} />
       <textarea className="kb-input ws-flashcard-text" value={c.back} aria-label={t.back2} placeholder={t.back2} maxLength={2000} onChange={e => setCards(draftCards.map(x => x.id === c.id ? {...x,back:e.target.value} : x))} />
       <span><button type="button" className="ws-icon-button" disabled={i===0} aria-label={t.up} onClick={() => move(i,-1)}><ArrowUp size={13} /></button><button type="button" className="ws-icon-button" disabled={i===draftCards.length-1} aria-label={t.down} onClick={() => move(i,1)}><ArrowDown size={13} /></button><button type="button" className="ws-icon-button" aria-label={t.remove} onClick={() => setCards(draftCards.filter(x=>x.id!==c.id))}><Trash2 size={13} /></button></span>
     </div>)}</div>

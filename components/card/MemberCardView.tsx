@@ -26,6 +26,7 @@ const copy = {
  * downloads as a crisp PNG. `onStyle` (owner only) cycles the colour theme.
  */
 /** `actions` adds more buttons to the end of the card's button row (the public page's "Get your own card"). */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- The labelled group describes card actions or an interactive student visualisation, not a form fieldset. */
 export default function MemberCardView({ data, onStyle, framed = true, actions }: { data: MemberCardData; onStyle?: (style: number) => unknown; framed?: boolean; actions?: React.ReactNode }) {
   const t = useCopy(copy);
   const { locale } = useLocale();
@@ -107,6 +108,7 @@ export default function MemberCardView({ data, onStyle, framed = true, actions }
     </div>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */
 
 /** The grain as a bitmap once it's ready; until then the card paints the filter itself. */
 function useGrain() {

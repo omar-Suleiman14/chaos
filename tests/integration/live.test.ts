@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { api, internal } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { createTestConvex } from "./setup";
-import { creatorIdentity, otherCreatorIdentity, questionFixtures } from "../fixtures";
+import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
 import { themeFromPreset } from "@/components/forms/formThemes";
 import { sha256Hex } from "@/convex/serverUtils";
 
@@ -56,6 +56,61 @@ async function gameWithPlayers(t: T, names: string[], options: { autoAdvance?: b
 }
 
 describe("live games: create, join, start", () => {
+  it("keeps new snapshots immutable and still reads legacy inline rooms", async () => {
+    const t = createTestConvex();
+    const { owner, formId } = await publishedQuiz(t);
+    const gameId = await owner.mutation(api.live.createGame, { formId });
+    const content = await t.run(async ctx => {
+      const game = (await ctx.db.get("liveGames", gameId))!;
+      expect(game.questions).toEqual([]);
+      expect(game.questionCount).toBe(3);
+      return (await ctx.db.get("liveGameContent", game.contentId!))!;
+    });
+    const lobby = (await owner.query(api.live.hostView, { gameId }))!;
+    await t.mutation(api.live.joinGame, { pin: lobby.pin, nickname: "Sam", token: token(1) });
+    await owner.mutation(api.live.advance, { gameId, from: "lobby", questionIndex: -1 });
+    expect((await owner.query(api.live.hostView, { gameId }))!.question).toMatchObject({ text: "Capital of France?", correct: null });
+    expect((await t.query(api.live.playerView, { gameId, token: token(1) })).state).toBe("question");
+    const scene = await owner.query(api.live.hostView, { gameId, activity: false });
+    await t.mutation(api.live.submitAnswer, { gameId, token: token(1), questionIndex: 0, optionIds: ["paris"] });
+    expect(await owner.query(api.live.hostView, { gameId, activity: false })).toEqual(scene);
+    expect(await owner.query(api.live.hostActivity, { gameId })).toMatchObject({ answeredCount: 1, playerCount: 1 });
+    expect(await t.query(api.live.hostActivity, { gameId })).toBeNull();
+    await t.run(async ctx => {
+      expect(await ctx.db.get("liveGameContent", content._id)).toEqual(content);
+      await ctx.db.patch("liveGames", gameId, { contentId: undefined, questionCount: undefined, questions: content.questions });
+    });
+    expect((await owner.query(api.live.hostView, { gameId }))!.questionCount).toBe(3);
+    expect((await owner.query(api.live.myGames, {}))[0].questionCount).toBe(3);
+  });
+
+  it("serves host activity while answering without reading the question snapshot", async () => {
+    const t = createTestConvex();
+    const { owner, formId } = await publishedQuiz(t);
+    const gameId = await owner.mutation(api.live.createGame, { formId });
+    const { pin } = (await owner.query(api.live.hostView, { gameId }))!;
+    await t.mutation(api.live.joinGame, { pin, nickname: "Sam", token: token(1) });
+    await owner.mutation(api.live.advance, { gameId, from: "lobby", questionIndex: -1 });
+    await t.mutation(api.live.submitAnswer, { gameId, token: token(1), questionIndex: 0, optionIds: ["paris"] });
+    const content = await t.run(async ctx => {
+      const contentId = (await ctx.db.get("liveGames", gameId))!.contentId!;
+      const doc = (await ctx.db.get("liveGameContent", contentId))!;
+      await ctx.db.delete("liveGameContent", contentId);
+      return doc;
+    });
+    // Any snapshot read would now throw LIVE_NOT_FOUND.
+    expect(await owner.query(api.live.hostActivity, { gameId })).toMatchObject({ state: "question", answeredCount: 1, playerCount: 1, distribution: null });
+    await t.run(async ctx => {
+      const { _id, _creationTime, ...questions } = content;
+      const contentId = await ctx.db.insert("liveGameContent", questions);
+      await ctx.db.patch("liveGames", gameId, { contentId });
+    });
+    await owner.mutation(api.live.advance, { gameId, from: "question", questionIndex: 0 });
+    const reveal = (await owner.query(api.live.hostActivity, { gameId }))!;
+    expect(reveal.state).toBe("reveal");
+    expect(reveal.distribution).toMatchObject({ paris: 1 });
+  });
+
   it("hides archived quizzes' sessions from history and restores them when unarchived", async () => {
     const t = createTestConvex();
     const { owner, formId } = await publishedQuiz(t);
@@ -127,7 +182,12 @@ describe("live games: create, join, start", () => {
   it("keeps rooms created before themes readable", async () => {
     const t = createTestConvex();
     const { owner, gameId, players } = await gameWithPlayers(t, ["Sam"]);
-    await t.run(async (ctx) => { await ctx.db.patch("liveGames", gameId, { theme: undefined, appearance: undefined }); });
+    await t.run(async (ctx) => {
+      await ctx.db.patch("liveGames", gameId, { theme: undefined, appearance: undefined });
+      const projection = await ctx.db.query("livePhoneStates").withIndex("by_gameId", q => q.eq("gameId", gameId)).unique();
+      if (projection) await ctx.db.delete("livePhoneStates", projection._id);
+      for (const row of await ctx.db.query("liveQuestions").withIndex("by_gameId_and_questionIndex", q => q.eq("gameId", gameId)).collect()) await ctx.db.delete("liveQuestions", row._id);
+    });
     expect((await owner.query(api.live.hostView, { gameId }))!.theme).toBeNull();
     expect((await owner.query(api.live.hostView, { gameId }))!.appearance).toBe("theme");
     expect(await t.query(api.live.playerView, { gameId, token: players[0].token })).toMatchObject({ state: "lobby", theme: null, appearance: "apple" });
@@ -278,6 +338,18 @@ describe("live games: safety", () => {
     expect((await owner.query(api.live.hostView, { gameId }))!.playerCount).toBe(1);
   });
 
+  it("keeps the player count off the game document every phone watches", async () => {
+    const t = createTestConvex();
+    const { owner, formId } = await publishedQuiz(t);
+    const gameId = await owner.mutation(api.live.createGame, { formId });
+    const pin = (await owner.query(api.live.hostView, { gameId }))!.pin;
+    const before = await t.run((ctx) => ctx.db.get("liveGames", gameId));
+    for (let i = 0; i < 3; i++) await t.mutation(api.live.joinGame, { pin, nickname: `P${i}`, token: token(i + 1) });
+    // Each write to liveGames would re-run every phone's playerView.
+    expect(await t.run((ctx) => ctx.db.get("liveGames", gameId))).toEqual(before);
+    expect((await owner.query(api.live.hostView, { gameId }))!.playerCount).toBe(3);
+  });
+
   it("gives Personal hosts the 500-player maximum", async () => {
     const t = createTestConvex();
     const { owner, formId } = await publishedQuiz(t);
@@ -293,6 +365,9 @@ describe("live games: safety", () => {
       for (let i = 0; i < 500; i++) {
         await ctx.db.insert("livePlayers", { gameId, nickname: `P${i}`, nicknameKey: `p${i}`, tokenHash: `h${i}`, score: 0, streak: 0, correctCount: 0, kicked: false, joinedAt: 0 });
       }
+      // Joins check capacity against the stored count, which joinGame keeps in step.
+      const counter = (await ctx.db.query("livePlayerCounts").withIndex("by_gameId", (q) => q.eq("gameId", gameId)).unique())!;
+      await ctx.db.patch("livePlayerCounts", counter._id, { count: 500 });
     });
     await expect(t.mutation(api.live.joinGame, { pin, nickname: "Late", token: token(200) })).rejects.toThrow(/LIVE_FULL/);
   });
@@ -388,38 +463,6 @@ describe("live games: results", () => {
     expect(detail).toMatchObject({ respondent: "Sam", quizScore: 2, quizMaxScore: 6, tags: ["live"], live: { gameId } });
     const stored = await t.run(async (ctx) => await ctx.db.query("formResponses").collect());
     expect(stored.every((r) => r.source === "live" && r.live?.gameId === gameId)).toBe(true);
-  });
-
-  it("hosts an old quiz and saves attempts to it", async () => {
-    const t = createTestConvex();
-    const owner = t.withIdentity(creatorIdentity);
-    await owner.mutation(api.quizFunctions.getOrCreateUser, {});
-    const quizId = await t.run(async (ctx) => {
-      const id = await ctx.db.insert("quizzes", { title: "Old", slug: "old", creatorId: creatorIdentity.subject, creatorUsername: "creator", isPublished: true, createdAt: 0, updatedAt: 0 });
-      const snapshot = [];
-      for (const q of [questionFixtures.mcq, questionFixtures.trueFalse, questionFixtures.written]) {
-        const qid = await ctx.db.insert("questions", { ...q, quizId: id });
-        const { order, ...rest } = q;
-        snapshot.push({ ...rest, order, _id: qid });
-      }
-      await ctx.db.patch("quizzes", id, { publishedSnapshot: { title: "Old", questions: snapshot } });
-      return id;
-    });
-    const gameId = await owner.mutation(api.live.createGame, { quizId });
-    const view = await owner.query(api.live.hostView, { gameId });
-    expect(view).toMatchObject({ questionCount: 2, skippedQuestions: 1 });
-    await t.mutation(api.live.joinGame, { pin: view!.pin, nickname: "Sam", token: token(1) });
-    await owner.mutation(api.live.advance, { gameId, from: "lobby", questionIndex: -1 });
-    await t.mutation(api.live.submitAnswer, { gameId, token: token(1), questionIndex: 0, optionIds: ["1"] }); // "4"
-    await owner.mutation(api.live.advance, { gameId, from: "reveal", questionIndex: 0 }).catch(() => {});
-    await settle(t);
-    expect(await t.query(api.live.playerView, { gameId, token: token(1) })).toMatchObject({ correct: true });
-    await owner.mutation(api.live.endGameNow, { gameId });
-    await t.finishAllScheduledFunctions(() => vi.runAllTimers());
-    const sessions = await t.run(async (ctx) => await ctx.db.query("quizSessions").collect());
-    expect(sessions).toHaveLength(1);
-    expect(sessions[0]).toMatchObject({ playerName: "Sam", status: "completed", score: 10, totalPoints: 20, source: "live", liveGameId: gameId });
-    expect(sessions[0].answers[0]).toMatchObject({ answer: "4", isCorrect: true, pointsEarned: 10 });
   });
 });
 

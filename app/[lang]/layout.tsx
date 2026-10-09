@@ -4,7 +4,8 @@ import type { Metadata, Viewport } from "next";
 import { siteUrl } from "@/lib/site";
 import { defaultOgImage, siteDescription } from "@/lib/seo";
 import { notFound } from "next/navigation";
-import { Cairo, Fraunces, IBM_Plex_Sans_Arabic, Instrument_Serif, Inter, Nunito, Roboto, Space_Grotesk, Space_Mono } from "next/font/google";
+import { Cairo, Fraunces, IBM_Plex_Sans_Arabic, Instrument_Serif, Nunito, Roboto, Space_Grotesk, Space_Mono } from "next/font/google";
+import { inter } from "@/components/fonts/inter";
 import "@/app/globals.css";
 import "@/app/workspace.css";
 import ConvexClientProvider from "@/components/ConvexClientProvider";
@@ -25,13 +26,6 @@ const spaceGrotesk = Space_Grotesk({
   variable: "--font-grotesk",
   display: "swap",
   preload: false,
-});
-
-const inter = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700"],
-  variable: "--font-inter",
-  display: "swap",
 });
 
 const spaceMono = Space_Mono({
@@ -64,7 +58,7 @@ const instrumentSerif = Instrument_Serif({ subsets: ["latin"], weight: "400", va
 export const metadata: Metadata = {
   metadataBase: new URL(siteUrl),
   applicationName: "Chaos",
-  title: { default: "Chaos · Forms, quizzes, live games and Learn", template: "%s · Chaos" },
+  title: { default: "Chaos · Turn what you know into lessons that stick", template: "%s · Chaos" },
   description: siteDescription,
   // No default canonical: pages render under an internal /en or /ar segment (proxy.ts), so a
   // relative "./" would point at that internal path. Indexable pages set their own.

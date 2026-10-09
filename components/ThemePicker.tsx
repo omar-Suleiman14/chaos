@@ -60,6 +60,7 @@ interface ThemePickerProps {
  * Compact, named palette choices. All presets remain available through expansion/search.
  * A single radio group supports arrow keys, Home/End and a visible keyboard focus.
  */
+/* oxlint-disable jsx-a11y/prefer-tag-over-role -- Styled button radios preserve native button activation and expose their selection to assistive technology. */
 export function ThemePicker({ value, onChange, label, ids, defaultOption, expandable = !ids, className = "" }: ThemePickerProps) {
   const t = useCopy(copy);
   const { dir } = useLocale();
@@ -138,9 +139,10 @@ export function ThemePicker({ value, onChange, label, ids, defaultOption, expand
         );
       })}
       </div>
-      {!presets.length && <p className="theme-picker__empty" role="status">{t.empty}</p>}
+      {!presets.length && <output className="theme-picker__empty" >{t.empty}</output>}
       {expandable && <button type="button" className="theme-picker__expand" aria-expanded={expanded} aria-controls={groupId} onClick={() => { setExpanded(!expanded); setSearch(""); }}>{expanded ? t.collapse : `${t.expand} (${available.length})`}</button>}
     </div>
     </>
   );
 }
+/* oxlint-enable jsx-a11y/prefer-tag-over-role */

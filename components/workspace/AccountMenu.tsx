@@ -3,7 +3,7 @@
 /* eslint-disable @next/next/no-img-element -- account photos come from the auth provider's CDN */
 import { usePathname, useRouter } from "next/navigation";
 import { useConvexAuth, useQuery } from "convex/react";
-import { Archive, BookOpen, Check, ChevronsUpDown, IdCard, Link2, LogOut, Plus, Settings, Shield, SlidersHorizontal, UserCog, UserPlus, Users } from "lucide-react";
+import { Archive, BookOpen, GraduationCap, Check, ChevronsUpDown, IdCard, Link2, LogOut, Plus, Settings, Shield, SlidersHorizontal, UserCog, UserPlus, Users } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import MemberAvatar from "@/components/MemberAvatar";
 import { useCopy } from "@/lib/i18n";
@@ -14,13 +14,13 @@ const copy = {
     label: "Account", personal: "Personal", personalHelp: "Just you", business: "Business", switchTo: "Workspaces",
     roles: { owner: "Owner", admin: "Admin", member: "Member" }, create: "Create a Business team",
     workspaceSettings: "Workspace settings", teams: "Teams & invitations", profile: "Profile and card", settings: "Settings",
-    archive: "Archive", manage: "Manage account", signOut: "Sign out", connections: "Connections", docs: "Docs", admin: "Admin",
+    courses: "Courses", archive: "Archive", manage: "Manage account", signOut: "Sign out", connections: "Connections", docs: "Docs", admin: "Admin",
   },
   ar: {
     label: "الحساب", personal: "شخصي", personalHelp: "لك وحدك", business: "أعمال", switchTo: "مساحات العمل",
     roles: { owner: "مالك", admin: "مسؤول", member: "عضو" }, create: "أنشئ فريق أعمال",
     workspaceSettings: "إعدادات مساحة العمل", teams: "الفرق والدعوات", profile: "الملف الشخصي والبطاقة", settings: "الإعدادات",
-    archive: "الأرشيف", manage: "إدارة الحساب", signOut: "تسجيل الخروج", connections: "الاتصالات", docs: "الدليل", admin: "الإدارة",
+    courses: "الدورات", archive: "الأرشيف", manage: "إدارة الحساب", signOut: "تسجيل الخروج", connections: "الاتصالات", docs: "الدليل", admin: "الإدارة",
   },
 };
 
@@ -67,6 +67,7 @@ export default function AccountMenu({ user, compact = false, admin = false, onMa
         {current
           ? <button type="button" role="menuitem" onClick={() => navigate(`/dashboard/teams/${current.team._id}?tab=settings`, close)}><SlidersHorizontal size={17} />{t.workspaceSettings}</button>
           : <button type="button" role="menuitem" onClick={() => navigate("/dashboard/teams", close)}><UserPlus size={17} />{t.teams}</button>}
+        <button type="button" role="menuitem" onClick={() => navigate("/dashboard?tab=courses", close)}><GraduationCap size={17} />{t.courses}</button>
         <button type="button" role="menuitem" aria-current={pathname.startsWith("/dashboard/card") ? "page" : undefined} onClick={() => navigate("/dashboard/card", close)}><IdCard size={17} />{t.profile}</button>
         <button type="button" role="menuitem" aria-current={pathname.endsWith("/dashboard/settings") ? "page" : undefined} onClick={() => navigate("/dashboard/settings", close)}><Settings size={17} />{t.settings}</button>
         <button type="button" role="menuitem" aria-current={pathname.startsWith("/dashboard/archive") ? "page" : undefined} onClick={() => navigate("/dashboard/archive", close)}><Archive size={17} />{t.archive}</button>

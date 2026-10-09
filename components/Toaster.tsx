@@ -20,6 +20,7 @@ const ICONS = {
 } as const;
 
 /** Mounted once in the root layout. Newest toast in front; hover, focus or a tap fans the stack out. */
+/* oxlint-disable jsx-a11y/no-noninteractive-element-interactions -- Live-region toast containers handle hover, swipe and Escape; their labelled dismiss buttons provide keyboard actions. */
 export default function Toaster() {
   const items = useSyncExternalStore(toastStore.subscribe, toastStore.get, () => toastStore.empty);
   const t = useCopy(copy);
@@ -63,7 +64,9 @@ export default function Toaster() {
     </section>
   );
 }
+/* oxlint-enable jsx-a11y/no-noninteractive-element-interactions */
 
+/* oxlint-disable jsx-a11y/no-noninteractive-element-interactions -- Live-region toast containers handle hover, swipe and Escape; their labelled dismiss buttons provide keyboard actions. */
 function ToastCard({ item, t, depth, offset, expanded, frontHeight, paused, onHeight }: {
   item: ToastItem; t: (typeof copy)["en"]; depth: number; offset: number; expanded: boolean; frontHeight: number; paused: boolean; onHeight: (height: number) => void;
 }) {
@@ -94,7 +97,7 @@ function ToastCard({ item, t, depth, offset, expanded, frontHeight, paused, onHe
     const observer = new ResizeObserver(() => onHeight(el.offsetHeight));
     observer.observe(el);
     return () => observer.disconnect();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- onHeight is a fresh closure each render; the element is stable
+    // oxlint-disable-next-line react-hooks/exhaustive-deps -- onHeight is a fresh closure each render; the element is stable
   }, []);
   useEffect(() => { const frame = requestAnimationFrame(() => setMounted(true)); return () => cancelAnimationFrame(frame); }, []);
   // The timer pauses while the stack is open, the toast is expanded or the tab is hidden, and restarts when the toast is updated.
@@ -158,4 +161,5 @@ function ToastCard({ item, t, depth, offset, expanded, frontHeight, paused, onHe
     </li>
   );
 }
+/* oxlint-enable jsx-a11y/no-noninteractive-element-interactions */
 
