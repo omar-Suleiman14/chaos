@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { inter } from "@/components/fonts/inter";
-import ErrorScreen from "@/components/site/ErrorScreen";
+import NotFoundScreen from "@/components/site/NotFoundScreen";
 import { siteUrl } from "@/lib/site";
 import { themeInitScript } from "@/lib/theme";
 import "./globals.css";
@@ -19,7 +19,7 @@ export default function GlobalNotFound() {
         <script dangerouslySetInnerHTML={{ __html: themeInitScript }} />
       </head>
       <body className="antialiased noise-bg">
-        <ErrorScreen title="Nothing here" body="This page doesn't exist or isn't available to you." primary={{ label: "Go home", href: "/" }} />
+        <NotFoundScreen />
       </body>
     </html>
   );

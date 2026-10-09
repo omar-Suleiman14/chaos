@@ -2,6 +2,7 @@
 
 import Link from "@/components/site/SiteLink";
 import Logo from "@/components/Logo";
+import StateIllustration, { type IllustrationVariant } from "@/components/StateIllustration";
 import { useCopy } from "@/lib/i18n";
 import { statusPageUrl } from "@/lib/site";
 
@@ -20,12 +21,13 @@ function ActionButton({ action, primary }: { action: Action; primary?: boolean }
 }
 
 /**
- * The creator-side error and not-found screen, in the workspace look: the logo,
- * one plain sentence, one main action. `inline` renders inside the dashboard
- * shell instead of filling the screen. Never shows error messages or stacks;
- * only Next's digest, as a reference someone can quote to support.
+ * The creator-side error and not-found screen, in the workspace look: the logo
+ * (or a state illustration), one plain sentence, one main action. `inline`
+ * renders inside the dashboard shell instead of filling the screen. Never shows
+ * error messages or stacks; only Next's digest, as a reference someone can
+ * quote to support.
  */
-export default function ErrorScreen({ title, body, primary, secondary, digest, inline, showStatus }: {
+export default function ErrorScreen({ title, body, primary, secondary, digest, inline, showStatus, illustration }: {
   title: string;
   body: string;
   primary: Action;
@@ -34,11 +36,13 @@ export default function ErrorScreen({ title, body, primary, secondary, digest, i
   inline?: boolean;
   /** Link to the hosted status page (NEXT_PUBLIC_STATUS_PAGE_URL) when one is configured. */
   showStatus?: boolean;
+  /** Draws this state illustration in place of the logo: large on a full page, compact inline. */
+  illustration?: IllustrationVariant;
 }) {
   const t = useCopy(copy);
   const content = (
     <div className="mx-auto grid w-full max-w-md justify-items-center gap-4 text-center">
-      {!inline && <Logo size={44} className="mb-2" />}
+      {illustration ? <StateIllustration variant={illustration} size={inline ? "compact" : "hero"} /> : !inline && <Logo size={44} className="mb-2" />}
       <h1 className="text-[1.75rem] font-bold leading-tight tracking-[-0.02em] text-[var(--on-background)]">{title}</h1>
       <p className="text-[17px] leading-relaxed text-[var(--on-surface-variant)]">{body}</p>
       <div className="mt-3 flex w-full flex-col-reverse items-stretch justify-center gap-2 sm:w-auto sm:flex-row sm:items-center">
