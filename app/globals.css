@@ -202,6 +202,8 @@
 
 /* Dark mode — ink-black with green accents */
 .dark {
+  /* State illustrations (public/illustrations) read these through <use>; light values are the files' own fallbacks. */
+  --ill-ink: #d6d4cf; --ill-paper: #262626; --ill-shade: #1d1d1d; --ill-accent: #1d3b55; --ill-warm: #7d5338; --ill-leaf: #263f30; --ill-pop: #4aa3ea;
   --surface:                   #0E0E0C;
   --surface-dim:               #080806;
   --surface-bright:            #1A1A18;
@@ -492,21 +494,4 @@
   .tiktok-container { scroll-behavior: auto; }
   .tiktok-slide .animate-in, .tiktok-slide .animate-bounce { animation: none !important; }
   .tiktok-slide, .tiktok-slide * { transition-duration: .01ms !important; }
-}
-
-/* ============================================================
-   STATE ILLUSTRATIONS (components/StateIllustration.tsx)
-   The drawings in public/illustrations read these tokens through <use>, so
-   they follow the appearance without a second set of files. A surface with its
-   own palette (a respondent theme) can override any --ill-* token.
-   ============================================================ */
-.state-illustration {
-  --ill-ink: #37352f; --ill-paper: #ffffff; --ill-shade: #eeede9; --ill-accent: #cfe4f7;
-  --ill-warm: #f7d9bb; --ill-leaf: #d3e8d9; --ill-pop: #3595e3;
-  display: block; flex: none; width: 128px; height: auto; aspect-ratio: 4 / 3; overflow: visible;
-}
-.state-illustration[data-size="hero"] { width: min(240px, 72vw); }
-.dark .state-illustration:not([data-tone="light"]), .state-illustration[data-tone="dark"] {
-  --ill-ink: #d6d4cf; --ill-paper: #262626; --ill-shade: #1d1d1d; --ill-accent: #1d3b55;
-  --ill-warm: #7d5338; --ill-leaf: #263f30; --ill-pop: #4aa3ea;
 }

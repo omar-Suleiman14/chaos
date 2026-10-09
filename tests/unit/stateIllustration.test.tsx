@@ -30,10 +30,11 @@ describe("state illustration", () => {
     expect((await axe(container)).violations).toEqual([]);
   });
 
-  it("can pin a palette and keeps caller classes", () => {
-    const { container } = render(<StateIllustration variant="offline" tone="dark" className="mx-auto" />);
+  it("sizes itself from its attributes and keeps caller classes", () => {
+    const { container } = render(<StateIllustration variant="offline" className="mx-auto" />);
     const svg = container.querySelector("svg")!;
-    expect(svg).toHaveAttribute("data-tone", "dark");
+    expect(svg).toHaveAttribute("width", "128");
+    expect(svg).toHaveAttribute("height", "96");
     expect(svg).toHaveClass("state-illustration", "mx-auto");
   });
 });
@@ -59,14 +60,13 @@ describe("illustration files", () => {
     expect(tokenised.length).toBe(colours.length);
   });
 
-  it("defines every token the drawings use, for light and dark", () => {
+  it("gives every token the drawings use a dark value, in the existing .dark rule", () => {
     const used = new Set(illustrationVariants.flatMap((variant) => [...read(`${variant}.svg`).matchAll(/var\((--ill-[a-z]+)/g)].map((m) => m[1])));
     const css = readFileSync(join(process.cwd(), "app/globals.css"), "utf8");
-    const light = css.match(/\.state-illustration \{([^}]*)\}/)?.[1] ?? "";
-    const dark = css.match(/\.state-illustration\[data-tone="dark"\] \{([^}]*)\}/)?.[1] ?? "";
-    for (const token of used) {
-      expect(light).toContain(`${token}:`);
-      expect(dark).toContain(`${token}:`);
-    }
+    const dark = css.match(/\n\.dark \{([^}]*)\}/)?.[1] ?? "";
+    expect(used.size).toBe(7);
+    for (const token of used) expect(dark).toMatch(new RegExp(`${token}: #[0-9a-f]{6};`));
+    // No rules of its own: the drawings add nothing to the CSS rule and selector budgets.
+    expect(css).not.toContain(".state-illustration");
   });
 });
