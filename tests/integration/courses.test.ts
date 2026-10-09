@@ -37,6 +37,9 @@ it("creates a course like a form, publishes it publicly with its lessons, and ke
   expect(pub?.lessons.map((l) => l.title)).toEqual(["Portal hypertension", "Lesson 1"]);
   expect(pub?.icon).toBe("🩺");
   expect((await t.query(api.courses.listPublic, {})).map((c) => c.id)).toContain(courseId);
+  const indexable = await t.query(api.courses.listIndexable, { paginationOpts: { numItems: 100, cursor: null } });
+  expect(indexable.page.map((c) => c.id)).toContain(courseId);
+  await expect(t.query(api.courses.listIndexable, { paginationOpts: { numItems: 101, cursor: null } })).rejects.toThrow("VALIDATION_FAILED");
   // Lessons were explicitly published before the course.
   expect((await t.run((ctx) => ctx.db.get("lessons", first)))?.visibility).toBe("public");
 

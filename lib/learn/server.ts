@@ -101,20 +101,24 @@ async function readPublicLesson(id: string): Promise<Lesson | null> {
     moderation: "ok", quality: "none", createdAt: result.createdAt, updatedAt: published.publishedAt };
 }
 
+/** A sitemap file holds at most 50,000 URLs; discovery stops there and later entries need sitemap shards. */
+const SITEMAP_URL_LIMIT = 50_000;
+const SITEMAP_PAGE_LIMIT = 1_000;
+
 /** Published, explicitly indexable lesson ids. Preview deployments return no entries. */
 export async function listIndexableLessons(): Promise<{ id: string; publishedAt: number }[]> {
   const backend = client();
   if (!backend || (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production")) return [];
   const result: { id: string; publishedAt: number }[] = [];
   let cursor: string | null = null;
-  // Bound each sitemap build to 1,000 scanned assets; expand through sitemap shards later.
-  for (let page = 0; page < 20; page++) {
+  // Follows every page (filtered pages can be empty), bounded by the sitemap's URL limit.
+  for (let page = 0; page < SITEMAP_PAGE_LIMIT && result.length < SITEMAP_URL_LIMIT; page++) {
     const batch: { page: { lessonId: string; publishedAt: number }[]; isDone: boolean; continueCursor: string } = await backend.query(api.learnFrontend.listIndexableLessons, { paginationOpts: { numItems: 50, cursor } });
     result.push(...batch.page.map(entry => ({ id: entry.lessonId, publishedAt: entry.publishedAt })));
     if (batch.isDone) break;
     cursor = batch.continueCursor;
   }
-  return result;
+  return result.slice(0, SITEMAP_URL_LIMIT);
 }
 
 /** Server read of a published public course for the course page, metadata and sitemap. */
@@ -128,11 +132,19 @@ const cachedCourse = unstable_cache(async (id: string) => {
   return course;
 }, ["public-course"], { revalidate: PUBLIC_TTL });
 
-/** Public courses for the sitemap; empty on preview deployments or when the backend is unreachable. */
+/** Every public course for the sitemap; empty on preview deployments. Errors propagate so the caller can keep its last sitemap. */
 export async function listPublicCourses(): Promise<{ id: string; updatedAt: number }[]> {
   const backend = client();
   if (!backend || (process.env.VERCEL_ENV && process.env.VERCEL_ENV !== "production")) return [];
-  try { return (await backend.query(api.courses.listPublic, { limit: 100 })).map(c => ({ id: c.id, updatedAt: c.updatedAt })); } catch { return []; }
+  const result: { id: string; updatedAt: number }[] = [];
+  let cursor: string | null = null;
+  for (let page = 0; page < SITEMAP_PAGE_LIMIT && result.length < SITEMAP_URL_LIMIT; page++) {
+    const batch: { page: { id: string; updatedAt: number }[]; isDone: boolean; continueCursor: string } = await backend.query(api.courses.listIndexable, { paginationOpts: { numItems: 100, cursor } });
+    result.push(...batch.page);
+    if (batch.isDone) break;
+    cursor = batch.continueCursor;
+  }
+  return result.slice(0, SITEMAP_URL_LIMIT);
 }
 
 /** The newest public courses, first page of the directory, for the first HTML of /learn. */

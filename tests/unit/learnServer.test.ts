@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fetchPublicLesson, listIndexableLessons } from "@/lib/learn/server";
+import { fetchPublicLesson, listIndexableLessons, listPublicCourses } from "@/lib/learn/server";
 import { outline } from "@/lib/learn/doc";
 
 const query = vi.hoisted(() => vi.fn());
@@ -37,8 +37,16 @@ describe("published Learn server metadata", () => {
       .mockResolvedValueOnce({ page: [{ lessonId: "public", publishedAt: 10 }], isDone: true, continueCursor: "done" });
     expect(await listIndexableLessons()).toEqual([{ id: "public", publishedAt: 10 }]);
     expect(query.mock.calls[1][1].paginationOpts.cursor).toBe("next");
+    // Empty filtered pages never end discovery early; only the sitemap's own bounds do.
     query.mockReset().mockResolvedValue({ page: [], isDone: false, continueCursor: "next" });
     await listIndexableLessons();
-    expect(query).toHaveBeenCalledTimes(20);
+    expect(query).toHaveBeenCalledTimes(1000);
+  });
+  it("lists every public course across pages, not just the newest hundred", async () => {
+    query.mockResolvedValueOnce({ page: Array.from({ length: 100 }, (_, i) => ({ id: `c${i}`, updatedAt: i })), isDone: false, continueCursor: "p2" })
+      .mockResolvedValueOnce({ page: [{ id: "c100", updatedAt: 100 }], isDone: true, continueCursor: "done" });
+    const courses = await listPublicCourses();
+    expect(courses).toHaveLength(101);
+    expect(query.mock.calls[1][1].paginationOpts.cursor).toBe("p2");
   });
 });
