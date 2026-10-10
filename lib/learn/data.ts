@@ -1,5 +1,5 @@
-import { cleanTags } from "./normalizeTags";
 "use client";
+import { cleanTags } from "./normalizeTags";
 import { useKeptQuery } from "@/lib/queryCache";
 import { useQuery } from "@/lib/convexCache";
 import { useConfirmed } from "@/lib/confirmedQuery";
