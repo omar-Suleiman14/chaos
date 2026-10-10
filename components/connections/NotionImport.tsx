@@ -61,7 +61,7 @@ export function CourseNotionImport({ courseId, moduleId, disabled }: { courseId:
   const connection = useQuery(api.notion.connection, isAuthenticated ? {} : "skip");
   const [open, setOpen] = useState(false);
   if (!available || connection === undefined) return null;
-  if (!connection) return <Link className="cb-add w-full" href="/dashboard/connections"><NotionMark size={16} /> {t.connect}</Link>;
+  if (!connection) return <Link className="cb-add w-full no-underline" href="/dashboard/connections"><NotionMark size={16} /> {t.connect}</Link>;
   if (!open) return <button type="button" className="cb-add w-full" disabled={disabled} onClick={() => setOpen(true)}><NotionMark size={16} /> {t.open}</button>;
   return <NotionImportPanel courseId={courseId} moduleId={moduleId} onClose={() => setOpen(false)} />;
 }
@@ -81,13 +81,14 @@ function NotionImportPanel({ courseId, moduleId, onClose }: { courseId: Id<"lear
     } catch (err) { toast.error(err); setBusy(false); }
   };
   return (
-    <fieldset className="cb-notion" aria-label={t.open}>
-      <span className="cb-notion__mark" aria-hidden><NotionMark size={16} /></span>
-      {failed !== null ? <p className="cb-note" role="alert">{failed || t.error}</p>
-        : pages === null ? <p className="cb-note">{t.loading}</p>
-        : pages.length === 0 ? <p className="cb-note">{t.empty}</p>
-        : <div className="cb-notion__pick"><NotionPageSelect pages={pages} value={pageId} onChange={setPageId} disabled={busy} /></div>}
-      <div className="cb-notion__actions">
+    <fieldset className="my-1 flex min-w-0 flex-wrap items-center gap-2 rounded-[10px] border border-[var(--ws-line)] bg-[var(--ws-card)] p-2.5">
+      <legend className="sr-only">{t.open}</legend>
+      <span className="grid size-7 shrink-0 place-items-center rounded-[7px] border border-[var(--ws-line)] text-[var(--on-background)]" aria-hidden><NotionMark size={16} /></span>
+      {failed !== null ? <p className="cb-note m-0 min-w-0 flex-[1_1_220px]" role="alert">{failed || t.error}</p>
+        : pages === null ? <p className="cb-note m-0 min-w-0 flex-[1_1_220px]">{t.loading}</p>
+        : pages.length === 0 ? <p className="cb-note m-0 min-w-0 flex-[1_1_220px]">{t.empty}</p>
+        : <div className="min-w-0 flex-[1_1_220px]"><NotionPageSelect pages={pages} value={pageId} onChange={setPageId} disabled={busy} /></div>}
+      <div className="ms-auto flex gap-1.5">
         <button type="button" className="ws-btn ws-btn--primary ws-btn--sm" disabled={!pageId || busy} onClick={() => void run()}>{busy ? t.importing : t.import}</button>
         <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={busy} onClick={onClose}>{t.cancel}</button>
       </div>
