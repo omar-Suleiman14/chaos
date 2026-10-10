@@ -1,4 +1,5 @@
 import { parseResourceRef } from "./resourceRefs";
+import { webhookHealth } from "./webhookHealth";
 import { getAuthIdentity } from "./authIdentity";
 import { v } from "convex/values";
 import { env, internalMutation, internalQuery, mutation, query } from "./_generated/server";
@@ -12,12 +13,13 @@ import { consumeRate, notify, randomHex } from "./serverUtils";
 import { encryptSecret, newWebhookSecret, secretHint, webhookKeyMaterial } from "./webhookCrypto";
 import { buildBody, enqueueDelivery } from "./webhookEvents";
 import {
-  ANSWER_PAYLOAD_RETENTION_MS, AUTO_DISABLE_AFTER, eventTypeValidator, FAILING_AFTER, HISTORY_RETENTION_MS, isRetryable, MAX_ATTEMPTS,
+  ANSWER_PAYLOAD_RETENTION_MS, AUTO_DISABLE_AFTER, eventTypeValidator, HISTORY_RETENTION_MS, isRetryable, MAX_ATTEMPTS,
   MAX_SUBSCRIPTIONS_PER_CONNECTION, MAX_SUBSCRIPTIONS_PER_OWNER, outcomeValidator, ROTATION_GRACE_MS, backoffDelay,
   PAYLOAD_RETENTION_MS, webhookEventTypes,
 } from "./webhookModel";
 import type { WebhookEventType } from "./webhookModel";
 import { checkWebhookUrl } from "./webhookUrl";
+import { validEvents } from "./webhookSubscriptionModel";
 import { isLearnWebhookEvent, learnWebhookOwnerTitle, mayDeliverLearnWebhook } from "./learnWebhookEvents";
 
 type Ctx = QueryCtx | MutationCtx;
@@ -43,11 +45,6 @@ function validUrl(raw: string): string {
   return check.url.toString();
 }
 
-function validEvents(events: WebhookEventType[]): WebhookEventType[] {
-  const chosen = webhookEventTypes.filter((e) => events.includes(e));
-  if (!chosen.length) throw new Error("INVALID_EVENTS: Choose at least one event.");
-  return chosen;
-}
 
 async function ownerRefTitle(ctx: Ctx, ownerId: string, ref: string): Promise<string | null> {
   if (/^(lesson|collection)_/.test(ref)) return await learnWebhookOwnerTitle(ctx, ownerId, ref);
@@ -68,11 +65,6 @@ async function validRefs(ctx: Ctx, ownerId: string, refs: string[]): Promise<str
   return out;
 }
 
-function health(sub: Subscription): "paused" | "disabled" | "failing" | "healthy" | "new" {
-  if (sub.status !== "active") return sub.status;
-  if (sub.consecutiveFailures >= FAILING_AFTER) return "failing";
-  return sub.lastAttemptAt === undefined ? "new" : "healthy";
-}
 
 async function ownedSubscription(ctx: MutationCtx, subscriptionId: Id<"webhookSubscriptions">) {
   const { identity } = await requireActiveUser(ctx);
@@ -150,7 +142,7 @@ export const listWebhooks = query({
         _id: s._id, url: s.url, description: s.description, events: s.events, target: s.target, items,
         includeAnswers: s.includeAnswers, secretHint: s.secretHint,
         previousSecretExpiresAt: s.previousSecretCiphertext ? (s.previousSecretExpiresAt ?? null) : null,
-        status: s.status, disabledReason: s.disabledReason ?? null, health: health(s),
+        status: s.status, disabledReason: s.disabledReason ?? null, health: webhookHealth(s),
         consecutiveFailures: s.consecutiveFailures,
         lastAttemptAt: s.lastAttemptAt ?? null, lastSuccessAt: s.lastSuccessAt ?? null, lastFailureAt: s.lastFailureAt ?? null,
         lastOutcome: s.lastOutcome ?? null,
@@ -517,7 +509,7 @@ async function activeToken(ctx: Ctx, tokenId: Id<"integrationTokens">, now: numb
 function apiView(s: Subscription) {
   return {
     id: s._id, url: s.url, description: s.description, events: s.events, status: s.status,
-    health: health(s), secretHint: s.secretHint,
+    health: webhookHealth(s), secretHint: s.secretHint,
     previousSecretExpiresAt: s.previousSecretCiphertext ? (s.previousSecretExpiresAt ?? null) : null,
     lastSuccessAt: s.lastSuccessAt ?? null, lastFailureAt: s.lastFailureAt ?? null, createdAt: s.createdAt,
   };

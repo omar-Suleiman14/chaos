@@ -1,4 +1,5 @@
 import { revision } from "./studyLessonRevision";
+import { bounded, fail } from "./studyLessonBounds";
 import { studyValue } from "./studyLessonValue";
 import { v, type Infer } from "convex/values";
 import {
@@ -37,13 +38,6 @@ import { attachFlashcardsForActor } from "./flashcardStudy";
 import { assertDocument } from "./learnValidation";
 import type { LessonBlock } from "./learnModel";
 
-function fail(message: string): never {
-  throw new Error(`VALIDATION_FAILED: ${message}`);
-}
-const bounded = (value: unknown, max: number) => {
-  if (new TextEncoder().encode(studyValue(value)).length > max)
-    fail("Input exceeds workflow limits; split into smaller checkpoints.");
-};
 const base = { jobId: v.id("studyLessonJobs") };
 const edit = { ...base, expectedRevision: v.number() };
 const actor = { userId: v.string() };

@@ -1,5 +1,7 @@
 "use client";
 
+import { parseStoredJson } from "@/lib/storageJson";
+
 import type {
   CardReview, ContentReport, CurriculumNode, DiscussionThread, FlashcardSet, Folder, FolderItem, Highlight, Lesson,
   LessonProgress, LessonVersion, MyCourse, PersonalNote, Person, SavedItem,
@@ -60,14 +62,11 @@ let cache: { raw: string | null; state: LearnState } | null = null;
 let memoryOnly: LearnState | null = null;
 
 function parse(raw: string | null): LearnState {
-  if (!raw) return emptyState();
-  try {
-    const parsed = JSON.parse(raw) as Partial<LearnState>;
-    if (parsed?.v !== 1) return emptyState();
-    return { ...emptyState(), ...parsed } as LearnState;
-  } catch {
-    return emptyState();
-  }
+  const parsed = parseStoredJson<Partial<LearnState> & { v: 1 }>(
+    raw, () => ({ v: 1 }), (value): value is Partial<LearnState> & { v: 1 } =>
+      value !== null && typeof value === "object" && (value as { v?: unknown }).v === 1,
+  );
+  return { ...emptyState(), ...parsed } as LearnState;
 }
 
 export function readState(): LearnState {

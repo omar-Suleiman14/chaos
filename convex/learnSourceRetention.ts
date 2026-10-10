@@ -5,7 +5,12 @@ import type { Id } from "./_generated/dataModel";
 import { internalMutation, mutation, type MutationCtx } from "./_generated/server";
 import { creatorRestricted, requireActiveUser } from "./authz";
 
-export const SOURCE_RETENTION_LIMITS = { graceMs: 30 * 86400_000, orphanGraceMs: 86400_000, jobsPerBatch: 1, versionsPerStep: 2 } as const;
+export const SOURCE_RETENTION_LIMITS = { graceMs: 30 * 86400_000, orphanGraceMs: 86400_000, jobsPerBatch: 1, versionsPerStep: 5 } as const;
+
+/** Bound historical verification reads independently of an individual version's size. */
+export function sourceVersionPage(cursor: string | null) {
+  return { numItems: SOURCE_RETENTION_LIMITS.versionsPerStep, cursor, maximumRowsRead: SOURCE_RETENTION_LIMITS.versionsPerStep, maximumBytesRead: 1_800_000 };
+}
 const worker = makeFunctionReference<"mutation", { cursor?: string | null }, unknown>("learnSourceRetention:cleanup");
 
 /** Only the authenticated upload action calls this with the blob it just stored.
@@ -47,7 +52,7 @@ export const requestPurge = mutation({
   },
 });
 
-/** Cron entry point. Each transaction processes <=1 job and <=2 versions.
+/** Cron entry point. Each transaction processes <=1 job and <=5 versions.
  * Continuations revisit the bounded due index, never an unbounded scan. */
 export const cleanup = internalMutation({
   args: { cursor: v.optional(v.union(v.string(), v.null())) },
@@ -68,7 +73,7 @@ export const cleanup = internalMutation({
       if (!source || source.ownerId !== job.ownerId || source.storageId !== job.storageId || source.status !== "removed" || linked.length !== 1 || await ctx.db.query("learnSourceAudit").withIndex("by_sourceId", q => q.eq("sourceId", job.sourceId!)).first()) {
         held++; await ctx.db.delete("learnSourceCleanup", job._id); continue;
       }
-      const options = { numItems: SOURCE_RETENTION_LIMITS.versionsPerStep, cursor: job.cursor, maximumRowsRead: 2, maximumBytesRead: 600_000 };
+      const options = sourceVersionPage(job.cursor);
       // Older jobs have lesson cursors and no phase. Never reuse one table's
       // cursor for another table; phase transitions commit a fresh null cursor.
       if ((job.phase ?? "lessons") === "lessons") {
