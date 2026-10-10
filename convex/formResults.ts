@@ -1,4 +1,5 @@
 import { questionQuality, type QualityQuestion, type QualityObservation } from "./questionQuality";
+import { responsePreview } from "./formResultPreview";
 import { gradeQuiz } from "./formQuiz";
 import { nicknameKey, questionsFromForm, MAX_LIVE_QUESTIONS } from "./liveLogic";
 
@@ -9,7 +10,7 @@ import { internal } from "./_generated/api";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { getFormIfRole, ownsRecord, requireFormRole } from "./authz";
-import { answerText, isAnswerable, isEmptyAnswer, visibleFieldIds } from "./formLogic";
+import { isEmptyAnswer, visibleFieldIds } from "./formLogic";
 import type { Aggregates, Answers, FormDefinition, FormField } from "./formLogic";
 import { countResponse, definitionForResponse } from "./respond";
 import { dateSpread, histogram, median, mostCommonWrong, scoreSummary, tallyQuizAnswer } from "./formAnalysis";
@@ -69,17 +70,6 @@ export function columnLabel(f: FormField): string {
   return `${f.label} (${ends})`;
 }
 
-function preview(def: FormDefinition | null, answers: Answers): string {
-  if (!def) return "";
-  const parts: string[] = [];
-  for (const f of def.fields) {
-    if (!isAnswerable(f) || f.type === "file") continue;
-    const text = answerText(f, answers[f.id]);
-    if (text) parts.push(text);
-    if (parts.length === 3) break;
-  }
-  return parts.join(" · ").slice(0, 200);
-}
 
 const TAG_SCAN_PAGE = 200;
 
@@ -143,7 +133,7 @@ export const listResponses = query({
         editedAt: r.editedAt ?? null,
         quizScore: r.quizScore ?? null,
         quizMaxScore: r.quizMaxScore ?? null,
-        preview: preview(await definition(r.version), r.answers as Answers),
+        preview: responsePreview(await definition(r.version), r.answers as Answers),
         hidden: r.hidden ?? null, typedHidden: r.typedHidden ?? null,
       });
     }
