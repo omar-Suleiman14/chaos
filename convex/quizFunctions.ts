@@ -51,8 +51,9 @@ export const getOrCreateUser = mutation({
       const updates: Record<string, unknown> = {};
       if (!existing.profileNameChosen && identity.name && identity.name !== existing.name) updates.name = identity.name;
       // The address and whether the provider verified it always change together.
+      // Stored only when true, so unverified rows stay as they were; absence means unverified.
       const emailVerified = verifiedIdentityEmail(identity) !== undefined;
-      if (identity.email && (identity.email !== existing.email || existing.emailVerified !== emailVerified)) Object.assign(updates, { email: identity.email, emailVerified });
+      if (identity.email && (identity.email !== existing.email || (existing.emailVerified === true) !== emailVerified)) Object.assign(updates, { email: identity.email, emailVerified: emailVerified || undefined });
       if (identity.pictureUrl && identity.pictureUrl !== existing.imageUrl) updates.imageUrl = identity.pictureUrl;
 
       // Identity-provider sync must not rename public URLs or rewrite historical quizzes.
@@ -86,7 +87,7 @@ export async function insertNewUser(ctx: MutationCtx, profile: { clerkId: string
     clerkId: profile.clerkId,
     name: profile.name,
     email: profile.email,
-    emailVerified: profile.emailVerified,
+    ...(profile.emailVerified ? { emailVerified: true } : {}),
     username,
     imageUrl: profile.imageUrl,
     cardOnboardingPending: true,

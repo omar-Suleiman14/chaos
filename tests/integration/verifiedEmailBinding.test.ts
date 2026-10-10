@@ -61,7 +61,9 @@ describe("Better Auth: an unverified address never grants homework access", () =
     // Convex exposes those claims as the identity; the account syncs its profile.
     const squatter = t.withIdentity({ subject: claims.sub, issuer: claims.iss, tokenIdentifier: `${claims.iss}|${claims.sub}`, email: claims.email, emailVerified: claims.emailVerified });
     await squatter.mutation(api.quizFunctions.getOrCreateUser, {});
-    expect((await squatter.query(api.quizFunctions.getCurrentUser, {}))).toMatchObject({ email: "student@school.test", emailVerified: false });
+    const stored = await squatter.query(api.quizFunctions.getCurrentUser, {});
+    expect(stored?.email).toBe("student@school.test");
+    expect(stored?.emailVerified).toBeUndefined(); // absent means unverified
 
     const teacherSubject = "teacher_subject";
     const teacher = t.withIdentity({ subject: teacherSubject, issuer: claims.iss, tokenIdentifier: `${claims.iss}|${teacherSubject}` });
@@ -96,7 +98,7 @@ describe("Clerk and MCP accounts", () => {
 
     // Losing verification (for example a new, unverified address) withdraws the binding.
     await t.withIdentity({ ...studentIdentity, email: "new@school.test", emailVerified: false }).mutation(api.quizFunctions.getOrCreateUser, {});
-    expect(await t.run(async (ctx) => (await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", "user_student")).first())?.emailVerified)).toBe(false);
+    expect(await t.run(async (ctx) => (await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", "user_student")).first())?.emailVerified === true)).toBe(false);
   });
 
   it("MCP first use records whether the provider verified the address", async () => {
