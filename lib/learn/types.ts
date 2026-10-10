@@ -182,6 +182,15 @@ export interface Lesson {
   updatedAt: number;
 }
 
+/** Compact public fields used by metadata and structured-data generation. */
+export interface PublicLessonSeoSummary {
+  id: LearnId;
+  ownerName: string;
+  visibility: "public";
+  moderation: "ok";
+  published: { version: number; meta: LessonMeta; publishedAt: number; outline: { id: string; level: 1 | 2 | 3; text: string }[] };
+}
+
 export interface LessonVersion {
   lessonId: LearnId;
   version: number;

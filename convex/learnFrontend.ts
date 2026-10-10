@@ -36,6 +36,43 @@ export const publicLesson = query({
   },
 });
 
+/** Compact anonymous projection for server metadata; never returns the published document. */
+export const publicLessonSummary = query({
+  args: { id: v.string() },
+  returns: v.union(v.null(), v.object({
+    lessonId: v.id("lessons"),
+    ownerName: v.string(),
+    version: v.number(),
+    metadata: lessonMeta,
+    publishedAt: v.number(),
+    outline: v.array(v.object({ id: v.string(), level: v.union(v.literal(1), v.literal(2), v.literal(3)), text: v.string() })),
+  })),
+  handler: async (ctx, args) => {
+    if (!args.id || args.id.length > 100) return null;
+    const id = ctx.db.normalizeId("lessons", args.id);
+    if (!id) return null;
+    const lesson = await ctx.db.get("lessons", id);
+    // This projection serves anonymous metadata, so team-only lessons remain private here.
+    if (!hasLiveLessonPublication(lesson) || lesson.visibility !== "public" || await creatorRestricted(ctx, lesson.ownerId)) return null;
+    const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
+    if (!version || version.lessonId !== id || (version.visibility !== undefined && version.visibility !== "public")) return null;
+    const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
+    const outline = version.document.blocks.flatMap(block => {
+      if (block.type !== "heading") return [];
+      const text = (block.inline?.map(run => run.text).join("") ?? block.text).trim();
+      return text ? [{ id: block.id, level: block.level, text }] : [];
+    });
+    return {
+      lessonId: id,
+      ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator",
+      version: version.number,
+      metadata: version.metadata,
+      publishedAt: version.publishedAt,
+      outline,
+    };
+  },
+});
+
 /**
  * Read the first 50 input IDs, returning metadata and full immutable lesson versions
  * (including documents). Omit invalid/unavailable IDs; preserve input order and
