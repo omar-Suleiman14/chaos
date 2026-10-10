@@ -1,23 +1,26 @@
-/** Read the newest sample in pages; do not read rows after the result cap is reached. */
-export async function scanRecentSampleUntilLimit<Row, Result>(
-  readPage: (cursor: string | null, numItems: number) => Promise<{ page: Row[]; continueCursor: string; isDone: boolean }>,
+/**
+ * Convex permits only one paginate() per function, so use an indexed take()
+ * fast path and run the existing full sample only when it cannot be complete.
+ */
+export async function findTextAnswersWithFastPath<Row, Result>(
+  readRows: (limit: number) => Promise<Row[]>,
   project: (row: Row) => Promise<Result | null>,
-  limits: { sampleLimit: number; resultLimit: number; pageSize: number },
+  resultLimit: number,
+  sampleLimit: number,
 ): Promise<Result[]> {
-  const results: Result[] = [];
-  let cursor: string | null = null;
-  let scanned = 0;
-  while (scanned < limits.sampleLimit && results.length < limits.resultLimit) {
-    const page = await readPage(cursor, Math.min(limits.pageSize, limits.sampleLimit - scanned));
-    for (const row of page.page) {
-      scanned++;
-      const projected = await project(row);
-      if (projected !== null) results.push(projected);
-      if (results.length >= limits.resultLimit) break;
+  async function eligible(rows: Row[]): Promise<Result[]> {
+    const results: Result[] = [];
+    for (const row of rows) {
+      const value = await project(row);
+      if (value !== null) results.push(value);
+      if (results.length === resultLimit) break;
     }
-    if (page.isDone) break;
-    if (page.continueCursor === cursor) throw new Error("Response scan did not advance");
-    cursor = page.continueCursor;
+    return results;
   }
-  return results;
+  const recent = await readRows(resultLimit);
+  const first = await eligible(recent);
+  // Reaching the result cap proves newer rows cannot contribute more.
+  // Fewer physical rows than requested means the index is already exhausted.
+  if (first.length === resultLimit || recent.length < resultLimit) return first;
+  return eligible(await readRows(sampleLimit));
 }
