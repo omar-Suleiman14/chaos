@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { createTestConvex } from "./setup";
 import { creatorIdentity } from "../fixtures";
 
@@ -11,7 +12,7 @@ describe("indexable lesson owner lookups", () => {
     const t = createTestConvex();
     const lessonIds = await t.run(async ctx => {
       await ctx.db.insert("users", { clerkId: creatorIdentity.subject, name: "Creator", username: "creator", email: creatorIdentity.email, createdAt: 0 });
-      const ids = [];
+      const ids: Id<"lessons">[] = [];
       for (let i = 0; i < 3; i++) {
         const lessonId = await ctx.db.insert("lessons", {
           ownerId: creatorIdentity.subject, metadata, draft: document, revision: 1,
