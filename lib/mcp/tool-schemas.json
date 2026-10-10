@@ -15292,7 +15292,7 @@
   },
   "search_forms": {
    "title": "Find forms and quizzes",
-   "description": "Find forms/quizzes, newest first; returns IDs, counts and links. Archived items need status archived/any. truncated flags an incomplete scan/page; narrow filters.",
+   "description": "Find forms/quizzes, newest first. Archived items need status archived/any. truncated flags an incomplete scan/page; narrow filters.",
    "permission": "read_content",
    "annotations": {
     "title": "Find forms and quizzes",
