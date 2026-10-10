@@ -17,7 +17,7 @@ import type { Bin, DateSpread, QuizQuestionTally } from "./formAnalysis";
 import { displayName, logActivity } from "./serverUtils";
 import { changeFormCounts, readFormCounts } from "./formCounts";
 import { readCompletedResponseSample } from "./formResponseSample";
-import { scanRecentSampleUntilLimit } from "./formTextSample";
+import { findTextAnswersWithFastPath } from "./formTextSample";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -484,10 +484,10 @@ export const getTextAnswers = query({
     const field = def.fields.find((f) => f.id === args.fieldId);
     if (!field || !textTypes.includes(field.type)) return [];
     const definition = versionCache(ctx, form._id);
-    return scanRecentSampleUntilLimit(
-      (cursor, numItems) => ctx.db.query("formResponses")
+    return findTextAnswersWithFastPath(
+      (limit) => ctx.db.query("formResponses")
         .withIndex("by_formId_and_status_and_submittedAt", q => q.eq("formId", form._id).eq("status", "completed"))
-        .order("desc").paginate({ cursor, numItems }),
+        .order("desc").take(limit),
       async (r): Promise<{ responseId: Id<"formResponses">; text: string; submittedAt: number } | null> => {
         if (r.spam) return null;
         const value = (r.answers as Answers)[args.fieldId];
@@ -496,7 +496,8 @@ export const getTextAnswers = query({
         if (!rDef || !visibleFieldIds(rDef, r.answers as Answers).has(args.fieldId)) return null;
         return { responseId: r._id, text: value.slice(0, 2000), submittedAt: r.submittedAt };
       },
-      { sampleLimit: ANALYSIS_SAMPLE, resultLimit: TEXT_ANSWERS, pageSize: 100 },
+      TEXT_ANSWERS,
+      ANALYSIS_SAMPLE,
     );
   },
 });
