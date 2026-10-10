@@ -1,4 +1,7 @@
+import { error, respond } from "./httpResponses";
+import { rateHeaders } from "./httpRateHeaders";
 import { observeHttp } from "../lib/backendTelemetry";
+import { readBoundedBody } from "./httpBody";
 import { normalizeAssetRefs } from "./mcpIds";
 import { parseCreatedWith } from "../lib/aiClients";
 import { httpRouter, makeFunctionReference } from "convex/server";
@@ -12,7 +15,6 @@ import { env, httpAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import type { ApiResult } from "./integrations";
 import type { IntegrationScope } from "./integrationModel";
 import { API_VERSION } from "./integrationContract";
 import { errorCode, sha256Hex } from "./serverUtils";
@@ -25,17 +27,6 @@ const MAX_BODY_BYTES = 256 * 1024;
 // MCP calls carry whole lesson documents (LEARN_LIMITS.documentBytes, 300 KB) plus the envelope.
 const MAX_MCP_BODY_BYTES = 350_000;
 
-function respond(result: ApiResult): Response {
-  return new Response(JSON.stringify(result.body), {
-    status: result.status,
-    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...(result.headers ?? {}) },
-  });
-}
-
-function error(status: number, code: string, message: string, details?: unknown, headers?: Record<string, string>): Response {
-  return respond({ status, body: { error: details === undefined ? { code, message } : { code, message, details } }, headers });
-}
-
 async function readJson(request: Request, limit = MAX_BODY_BYTES): Promise<{ value: unknown; text: string } | Response> {
   const bytes = await readBoundedBody(request, (size) => size > limit);
   if (bytes === null) return error(400, "VALIDATION_FAILED", limit === MAX_BODY_BYTES ? "The body is larger than 256 KiB." : `The body is larger than ${Math.floor(limit / 1000)} KB.`);
@@ -47,38 +38,6 @@ async function readJson(request: Request, limit = MAX_BODY_BYTES): Promise<{ val
   }
 }
 
-async function readBoundedBody(request: Request, tooLarge: (size: number) => boolean): Promise<Uint8Array<ArrayBuffer> | null> {
-  const declared = Number(request.headers.get("Content-Length"));
-  if (Number.isFinite(declared) && tooLarge(declared)) {
-    await request.body?.cancel();
-    return null;
-  }
-  const reader = request.body?.getReader();
-  if (!reader) return new Uint8Array(0);
-  const chunks: Uint8Array[] = [];
-  let size = 0;
-  try {
-    while (true) {
-      const { done, value } = await reader.read();
-      if (done) break;
-      size += value.byteLength;
-      if (tooLarge(size)) {
-        await reader.cancel();
-        return null;
-      }
-      chunks.push(value);
-    }
-  } finally {
-    reader.releaseLock();
-  }
-  const bytes = new Uint8Array(size);
-  let offset = 0;
-  for (const chunk of chunks) {
-    bytes.set(chunk, offset);
-    offset += chunk.byteLength;
-  }
-  return bytes;
-}
 
 function idempotencyKey(request: Request): string | Response {
   const key = request.headers.get("Idempotency-Key")?.trim() ?? "";
@@ -87,19 +46,8 @@ function idempotencyKey(request: Request): string | Response {
   return key;
 }
 
-type RateState = { limit: number; remaining: number; reset: number; policy: string };
-
 /** Per-request state: headers added to whatever response the route returns. */
 type RequestState = { headers: Record<string, string>; tokenHash?: string };
-
-function rateHeaders(rate: RateState): Record<string, string> {
-  return {
-    "RateLimit-Limit": String(rate.limit),
-    "RateLimit-Remaining": String(rate.remaining),
-    "RateLimit-Reset": String(rate.reset),
-    "RateLimit-Policy": rate.policy,
-  };
-}
 
 const WRITE_METHODS = new Set(["POST", "PATCH", "DELETE"]);
 

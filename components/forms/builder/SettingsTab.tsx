@@ -1,5 +1,7 @@
 "use client";
 
+import { slugify } from "@/lib/forms/formSlug";
+
 import { FocusInput } from "@/components/InitialFocus";
 
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -19,7 +21,8 @@ import { errorMessage } from "@/lib/errors";
 import { useCopy } from "@/lib/i18n";
 import { WsSwitch } from "@/components/workspace/primitives";
 import FallbackBoundary from "@/components/FallbackBoundary";
-import { HIDDEN_FIELD_LIMITS, hiddenFieldNameError } from "@/convex/formRespondent";
+import { HIDDEN_FIELD_LIMITS } from "@/convex/formRespondent";
+import { validateHiddenFieldNames } from "@/lib/forms/validateHiddenFieldNames";
 import DocHint from "@/components/forms/DocHint";
 import { Select } from "@/components/workspace/Select";
 import RuleEditor from "./RuleEditor";
@@ -33,7 +36,7 @@ function browserTimeZone() {
 function knownTimeZones(): string[] {
   try { return (Intl as unknown as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf?.("timeZone") ?? []; } catch { return []; }
 }
-const slugify = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
+
 
 function ScheduleRows({ s, set }: { s: EditableSettings; set: <K extends keyof EditableSettings>(key: K, value: EditableSettings[K]) => void }) {
   const t = useCopy(copy);
@@ -376,14 +379,11 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
   const accessId = s.access === "signed_in" && s.audienceTeamId ? "team" : s.access;
   const access = accessOptions.find((a) => a.id === accessId) ?? accessOptions[0];
   // Same rules as the server (convex/formRespondent.ts), shown before saving.
-  const hiddenError = (() => {
-    const names = s.hiddenFields ?? [];
-    if (names.length > HIDDEN_FIELD_LIMITS.count) return t.hiddenTooMany(HIDDEN_FIELD_LIMITS.count);
-    const bad = names.find((n) => hiddenFieldNameError(n));
-    if (bad) return t.hiddenInvalid(bad);
-    const dupe = names.find((n, i) => names.findIndex((m) => m.toLowerCase() === n.toLowerCase()) !== i);
-    return dupe ? t.hiddenDuplicate(dupe) : null;
-  })();
+  const hiddenValidation = validateHiddenFieldNames(s.hiddenFields ?? []);
+  const hiddenError = hiddenValidation?.kind === "too-many" ? t.hiddenTooMany(HIDDEN_FIELD_LIMITS.count)
+    : hiddenValidation?.kind === "invalid" ? t.hiddenInvalid(hiddenValidation.name)
+    : hiddenValidation?.kind === "duplicate" ? t.hiddenDuplicate(hiddenValidation.name)
+    : null;
 
   return (
     <div className="max-w-2xl w-full mx-auto pb-24">

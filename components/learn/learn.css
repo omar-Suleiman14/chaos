@@ -467,7 +467,6 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 .lx-cover-picker__link { grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 8px; }
 .lx-cover-picker__link small { grid-column: 1 / -1; color: var(--on-surface-variant); }
 
-@media (hover: none) { .lx-cover__actions { opacity: 1; } }
 /* Touch screens have no hover: keep the page-top and cover controls visible. */
 @media (hover: none) { .lx-cover__actions { opacity: 1; } }
 

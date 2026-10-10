@@ -30,6 +30,7 @@ import { StudyProgressOptIn } from "./StudyProgressOptIn";
 import { QuizReview } from "./QuizReview";
 import type { QuizReviewItem } from "@/convex/formQuiz";
 import { linkOrigin } from "@/lib/hosts";
+import { readRespondentStorage } from "@/lib/forms/respondentStorage";
 
 function randomHex(bytes: number) {
   const buf = new Uint8Array(bytes);
@@ -253,13 +254,9 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
     const language = initialLanguage();
     let local: LocalProgress | null = null;
     try {
-      const raw = window.localStorage.getItem(storageKey);
-      if (raw) local = JSON.parse(raw);
-      const savedReceipt = window.localStorage.getItem(receiptKey);
-      if (savedReceipt && !editing && !resumeToken) {
-        const r = JSON.parse(savedReceipt) as Receipt;
-        if (r?.receiptCode) setReceipt(r);
-      }
+      const saved = readRespondentStorage<LocalProgress, Receipt>(window.localStorage, storageKey, receiptKey, !editing && !resumeToken);
+      local = saved.progress;
+      if (saved.receipt) setReceipt(saved.receipt);
     } catch { setStorageOk(false); }
     if (editing) {
       local = { answers: editing.answers, language: editing.language, startedAt: Date.now(), submissionKey: "edit", version: form.version };

@@ -325,13 +325,13 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
 
   server.registerTool("search_forms", {
     title: "Find forms and quizzes",
-    description: "List or search the person's Chaos forms, surveys and quizzes (newest first). Returns ids, status, response counts and links. Archived items are hidden unless status is archived or any.",
+    description: "Find forms/quizzes, newest first. Archived items need status archived/any. truncated flags an incomplete scan/page; narrow filters.",
     inputSchema: {
       query: z.string().max(200).optional().describe("Words in the title. Leave empty to list recent items."),
       status: z.enum(["live", "draft", "closed", "archived", "any"]).optional(),
       limit: z.number().int().min(1).max(50).optional().describe("Default 20."),
     },
-    outputSchema: { total: z.number(), items: z.array(itemOutput) },
+    outputSchema: { total: z.number(), items: z.array(itemOutput), truncated: z.boolean() },
     annotations: { ...read, title: "Find forms and quizzes" },
     _meta: meta("Looking through Chaos…", "Found your forms"),
   }, (input) => run("search_forms", input, (d) => `${d.total} matching item${d.total === 1 ? "" : "s"}.`));

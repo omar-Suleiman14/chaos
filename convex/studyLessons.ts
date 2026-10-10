@@ -1,5 +1,7 @@
+import { revision } from "./studyLessonRevision";
+import { bounded, fail } from "./studyLessonBounds";
 import { studyValue } from "./studyLessonValue";
-import { v, ConvexError, type Infer } from "convex/values";
+import { v, type Infer } from "convex/values";
 import {
   internalMutation,
   internalQuery,
@@ -36,13 +38,6 @@ import { attachFlashcardsForActor } from "./flashcardStudy";
 import { assertDocument } from "./learnValidation";
 import type { LessonBlock } from "./learnModel";
 
-function fail(message: string): never {
-  throw new Error(`VALIDATION_FAILED: ${message}`);
-}
-const bounded = (value: unknown, max: number) => {
-  if (new TextEncoder().encode(studyValue(value)).length > max)
-    fail("Input exceeds workflow limits; split into smaller checkpoints.");
-};
 const base = { jobId: v.id("studyLessonJobs") };
 const edit = { ...base, expectedRevision: v.number() };
 const actor = { userId: v.string() };
@@ -56,13 +51,7 @@ async function owned(
     throw new Error("NOT_FOUND: Study job not found.");
   return job;
 }
-function revision(current: number, expected: number) {
-  if (!Number.isSafeInteger(expected) || current !== expected)
-    throw new ConvexError({
-      code: "REVISION_CONFLICT",
-      currentRevision: current,
-    });
-}
+
 async function parts(ctx: QueryCtx, jobId: Id<"studyLessonJobs">) {
   return ctx.db
     .query("studyLessonParts")
