@@ -19,6 +19,7 @@ import type { Bin, DateSpread, QuizQuestionTally } from "./formAnalysis";
 import { displayName, logActivity } from "./serverUtils";
 import { changeFormCounts, readFormCounts } from "./formCounts";
 import { readCompletedResponseSample } from "./formResponseSample";
+import { findTextAnswersWithFastPath } from "./formTextSample";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -471,17 +472,21 @@ export const getTextAnswers = query({
     const field = def.fields.find((f) => f.id === args.fieldId);
     if (!field || !textTypes.includes(field.type)) return [];
     const definition = versionCache(ctx, form._id);
-    const completed = await readCompletedResponseSample(ctx, form._id, ANALYSIS_SAMPLE);
-    const texts: { responseId: Id<"formResponses">; text: string; submittedAt: number }[] = [];
-    for (const r of completed) {
-      if (r.spam || texts.length >= TEXT_ANSWERS) continue;
-      const value = (r.answers as Answers)[args.fieldId];
-      if (typeof value !== "string" || !value.trim()) continue;
-      const rDef = await definition(r.version);
-      if (!rDef || !visibleFieldIds(rDef, r.answers as Answers).has(args.fieldId)) continue;
-      texts.push({ responseId: r._id, text: value.slice(0, 2000), submittedAt: r.submittedAt });
-    }
-    return texts;
+    return findTextAnswersWithFastPath(
+      (limit) => ctx.db.query("formResponses")
+        .withIndex("by_formId_and_status_and_submittedAt", q => q.eq("formId", form._id).eq("status", "completed"))
+        .order("desc").take(limit),
+      async (r): Promise<{ responseId: Id<"formResponses">; text: string; submittedAt: number } | null> => {
+        if (r.spam) return null;
+        const value = (r.answers as Answers)[args.fieldId];
+        if (typeof value !== "string" || !value.trim()) return null;
+        const rDef = await definition(r.version);
+        if (!rDef || !visibleFieldIds(rDef, r.answers as Answers).has(args.fieldId)) return null;
+        return { responseId: r._id, text: value.slice(0, 2000), submittedAt: r.submittedAt };
+      },
+      TEXT_ANSWERS,
+      ANALYSIS_SAMPLE,
+    );
   },
 });
 
