@@ -1,3 +1,4 @@
+import { randomPin } from "./livePin";
 import { MIN_READ_TIME_MS } from "./questionQuality";
 import { recordStudent } from "./studentRoster";
 import { businessMember } from "./businessAccess";
@@ -114,11 +115,6 @@ async function activeGameByPin(ctx: Ctx, pin: string): Promise<Game | null> {
   return null;
 }
 
-function randomPin(): string {
-  const buf = new Uint32Array(1);
-  crypto.getRandomValues(buf);
-  return String(100000 + (buf[0] % 900000));
-}
 
 async function playersOf(ctx: Ctx, gameId: Id<"liveGames">, limit = PLAYER_READ_CAP): Promise<Player[]> {
   return await ctx.db.query("livePlayers").withIndex("by_gameId_and_kicked_and_score", (q) => q.eq("gameId", gameId).eq("kicked", false)).order("desc").take(limit);
