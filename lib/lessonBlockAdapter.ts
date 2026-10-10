@@ -1,3 +1,4 @@
+import { customFields, customTypes, nativeTypes } from "./lessonBlockMappings";
 import { string as zString, number as zNumber, strictObject as zStrictObject, discriminatedUnion as zDiscriminatedUnion, literal as zLiteral, boolean as zBoolean, array as zArray, enum as zEnum, union as zUnion, type infer as ZodInfer } from "zod";
 import type { Id } from "../convex/_generated/dataModel";
 import type { LessonDocument } from "../convex/learnModel";
@@ -149,31 +150,6 @@ const documentSchema = zStrictObject({
   schemaVersion: zLiteral(1),
   blocks: zArray(blockSchema).max(500),
 });
-const nativeTypes = {
-  paragraph: "paragraph",
-  heading: "heading",
-  bulletListItem: "bullet",
-  numberedListItem: "number",
-  checkListItem: "check",
-  callout: "callout", codeBlock: "code", quote: "quote", toggleListItem: "toggle", divider: "divider",
-} as const;
-const customFields: Record<string, string[]> = {
-  image: ["sourceId", "alt", "caption", "credit", "creditUrl", "figureKind", "annotations", "name", "showPreview", "previewWidth"],
-  youtube: ["videoId", "start", "end", "caption"],
-  equation: ["text", "display"], source: ["sourceId", "label"],
-  diagram: ["format", "text"], table: ["headerRows"], quiz: ["required"], flashcards: ["setId", "required"],
-};
-const customTypes: Record<string, string> = {
-  lessonImage: "image",
-  lessonSource: "source",
-  lessonDiagram: "diagram",
-  lessonYoutube: "youtube",
-  lessonEquation: "equation",
-  lessonTable: "table",
-  lessonQuiz: "quiz",
-  lessonFlashcards: "flashcards", flashcards: "flashcards",
-  image: "image", source: "source", diagram: "diagram", youtube: "youtube", equation: "equation", table: "table", quiz: "quiz",
-};
 function problem(
   path: string,
   message: string,
