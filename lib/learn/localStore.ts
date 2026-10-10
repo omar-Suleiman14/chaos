@@ -1,5 +1,6 @@
-import { parseStoredJson } from "@/lib/storageJson";
 "use client";
+
+import { parseStoredJson } from "@/lib/storageJson";
 
 import type {
   CardReview, ContentReport, CurriculumNode, DiscussionThread, FlashcardSet, Folder, FolderItem, Highlight, Lesson,
