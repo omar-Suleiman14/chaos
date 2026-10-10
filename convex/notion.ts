@@ -243,7 +243,10 @@ async function pageBlocks(accessToken: string, pageId: string): Promise<Array<{ 
       for (const block of response.results) {
         if (result.length >= 400) throw new Error("NOTION_PAGE_TOO_LARGE: Import pages with at most 400 blocks.");
         result.push({ block, ...(parentId ? { parentId } : {}) });
-        if (block.has_children && depth < 2 && PAGE_ID.test(block.id)) await read(block.id, depth + 1, block.id);
+        if (block.has_children) {
+          if (depth >= 2) throw new Error("NOTION_PAGE_TOO_DEEP: Import pages with no more than two nested levels.");
+          if (PAGE_ID.test(block.id)) await read(block.id, depth + 1, block.id);
+        }
       }
       cursor = response.has_more ? response.next_cursor : null;
     } while (cursor);
@@ -291,7 +294,7 @@ export async function queueResult(ctx: MutationCtx, form: Doc<"forms">, response
     const existing = await ctx.db.query("notionResultDeliveries").withIndex("by_connectionId_and_responseId", q => q.eq("connectionId", conn._id).eq("responseId", response._id)).unique();
     if (existing) return;
     const id = await ctx.db.insert("notionResultDeliveries", {
-      ownerId: form.ownerId, connectionId: conn._id, responseId: response._id, formId: form._id,
+      ownerId: form.ownerId, connectionId: conn._id, dataSourceId: conn.dataSourceId, responseId: response._id, formId: form._id,
       formTitle: form.title, ...(response.quizScore !== undefined ? { score: response.quizScore } : {}),
       ...(response.quizMaxScore !== undefined ? { maxScore: response.quizMaxScore } : {}),
       submittedAt: response.submittedAt ?? Date.now(), attempts: 0, status: "pending", createdAt: Date.now(),
@@ -308,7 +311,10 @@ export const pendingDelivery = internalQuery({
     const delivery = await ctx.db.get("notionResultDeliveries", args.id);
     if (!delivery || delivery.status !== "pending") return null;
     const conn = await ctx.db.get("notionConnections", delivery.connectionId);
-    if (!conn || conn.ownerId !== delivery.ownerId || !conn.dataSourceId) return null;
+    // Reconfiguring or disconnecting must never send a queued response to a different destination.
+    if (!conn || conn.ownerId !== delivery.ownerId || conn.dataSourceId !== delivery.dataSourceId) return null;
+    const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", delivery.ownerId)).unique();
+    if (owner?.isBanned || owner?.suspendedUntil) return null;
     return { delivery, conn };
   },
 });

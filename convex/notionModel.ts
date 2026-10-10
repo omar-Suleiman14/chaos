@@ -29,6 +29,7 @@ export const notionTables = {
   notionResultDeliveries: defineTable({
     ownerId: v.string(),
     connectionId: v.id("notionConnections"),
+    dataSourceId: v.string(),
     responseId: v.id("formResponses"),
     formId: v.id("forms"),
     formTitle: v.string(),
