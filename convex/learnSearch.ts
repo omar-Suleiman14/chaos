@@ -38,7 +38,7 @@ export const authorLessonPage = internalQuery({
   handler: async (ctx, args): Promise<PaginationResult<Doc<"lessons">>> => ctx.db.query("lessons").withIndex("by_ownerId_and_visibility_and_communityState_and_status", q => q.eq("ownerId", args.ownerId).eq("visibility", "public").eq("communityState", "ok").eq("status", "active")).paginate({ cursor: args.cursor, numItems: 1, maximumRowsRead: 1, maximumBytesRead: 1_000_000 }),
 });
 async function publishedHit(ctx: QueryCtx, lesson: Doc<"lessons">, words: string[], snippets: boolean): Promise<Infer<typeof searchHit> | null> {
-  if (!hasLiveLessonPublication(lesson)) return null;
+  if (!hasLiveLessonPublication(lesson) || lesson.visibility !== "public") return null;
   const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
   if (!version || version.lessonId !== lesson._id || version.visibility !== undefined && version.visibility !== "public") return null;
   const matchingBlocks = snippets ? version.document.blocks.filter(b => "text" in b && words.some(w => b.text.toLocaleLowerCase().includes(w))).slice(0, 5).map(b => ({ id: b.id, text: "text" in b ? b.text.slice(0, 300) : "" })) : [];
