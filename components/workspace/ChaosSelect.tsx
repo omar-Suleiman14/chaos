@@ -1,8 +1,9 @@
 "use client";
 
-import { Children, Fragment, isValidElement, useEffect, useId, useRef, useState } from "react";
-import type { ReactNode, SelectHTMLAttributes } from "react";
-import { Select, type SelectOption } from "./Select";
+import { useEffect, useId, useRef, useState } from "react";
+import type { SelectHTMLAttributes } from "react";
+import { Select } from "./Select";
+import { optionsFrom } from "./selectOptions";
 
 type Change = { target: { value: string }; currentTarget: { value: string } };
 type Props = Omit<SelectHTMLAttributes<HTMLSelectElement>, "onChange" | "value" | "defaultValue" | "size" | "multiple"> & {
@@ -11,19 +12,6 @@ type Props = Omit<SelectHTMLAttributes<HTMLSelectElement>, "onChange" | "value" 
   defaultValue?: string | number;
   onChange?: (event: Change) => void;
 };
-
-function text(node: ReactNode): string {
-  return Children.toArray(node).map(child => isValidElement<{ children?: ReactNode }>(child) ? text(child.props.children) : String(child)).join("");
-}
-
-function optionsFrom(children: ReactNode): SelectOption[] {
-  return Children.toArray(children).flatMap(child => {
-    if (!isValidElement<{ children?: ReactNode; value?: string | number; disabled?: boolean }>(child)) return [];
-    if (child.type === Fragment) return optionsFrom(child.props.children);
-    if (child.type !== "option") return [];
-    return [{ value: String(child.props.value ?? text(child.props.children)), label: text(child.props.children), disabled: child.props.disabled }];
-  });
-}
 
 /** Keeps existing option markup and value callbacks while using the Chaos listbox. */
 export function ChaosSelect({ children, value, defaultValue, onChange, name, required, disabled, id, className, form, focusOnMount, ...attributes }: Props) {
