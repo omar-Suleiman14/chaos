@@ -1,3 +1,4 @@
+import { newSecret } from "./integrationTokenSecret";
 import { parseResourceRef } from "./resourceRefs";
 import { getAuthIdentity } from "./authIdentity";
 import { v } from "convex/values";
@@ -39,11 +40,6 @@ export const DEFAULT_API_RATE = { read: 300, write: 60 } as const;
 export type RateClass = keyof typeof DEFAULT_API_RATE;
 const RATE_WINDOW_MS = 60_000;
 const MAX_TOKENS = 20;
-
-function newSecret() {
-  const secret = randomHex(32);
-  return { token: `chaos_${secret}`, hint: `chaos_${secret.slice(0, 6)}…` };
-}
 
 // ── Owner-facing connection management ──────────────────────────────────────
 
