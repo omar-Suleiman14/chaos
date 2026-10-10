@@ -1,3 +1,5 @@
+import { assertDraftSize } from "./formDraftSize";
+export { assertDraftSize } from "./formDraftSize";
 import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { consumeCreation } from "./plans";
@@ -5,14 +7,15 @@ import { businessMember, requireBusinessWorkspace } from "./businessAccess";
 import { deleteUploadRecord } from "./formResults";
 import { supportEmail } from "./support";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import type { Infer } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
-import { getFormIfRole, hasPro, matchesAccountFormCollaborator, matchesFormCollaborator, ownsRecord, requireActiveUser, requireFormRole } from "./authz";
+import { getFormIfRole, hasPro, matchesAccountFormCollaborator, matchesFormCollaborator, verifiedIdentityEmail, ownsRecord, requireActiveUser, requireFormRole } from "./authz";
 import { checkHiddenFieldNames, checkHiddenParameters, normalizeEmailRules } from "./formRespondent";
-import { checkDefinition, emptyDefinition, FORM_SCHEMA_VERSION, LIMITS } from "./formLogic";
+import { checkDefinition, emptyDefinition, LIMITS } from "./formLogic";
 import type { FormDefinition } from "./formLogic";
 import { isValidTimeZone } from "./formSchedule";
 import { defaultFormSettings, definitionValidator, formRoleValidator, formSettingsValidator, themeValidator } from "./formModel";
@@ -30,20 +33,6 @@ export async function ownerHasPro(ctx: QueryCtx | MutationCtx, ownerId: string):
   return hasPro(owner, Date.now());
 }
 
-const MAX_DEFINITION_BYTES = 600_000;
-
-/** Size limits apply to drafts too; semantic checks only block publication. */
-export function assertDraftSize(def: Definition) {
-  if (def.schemaVersion !== FORM_SCHEMA_VERSION) throw new Error("UNSUPPORTED_SCHEMA: This form was made with an unsupported format version.");
-  if (def.fields.length > LIMITS.fields) throw new Error(`DRAFT_LIMIT: A form can contain at most ${LIMITS.fields} fields.`);
-  if (def.endings.length > LIMITS.endings) throw new Error(`DRAFT_LIMIT: Use at most ${LIMITS.endings} endings.`);
-  if (def.title.length > LIMITS.title * 2) throw new Error("DRAFT_LIMIT: The title is too long.");
-  for (const f of def.fields) {
-    if ((f.options?.length ?? 0) > LIMITS.options || (f.rows?.length ?? 0) > LIMITS.rows) throw new Error("DRAFT_LIMIT: Too many options.");
-  }
-  if (JSON.stringify(def).length > MAX_DEFINITION_BYTES) throw new Error("DRAFT_LIMIT: This form is too large to save.");
-  if (!def.languages.length || new Set(def.languages).size !== def.languages.length) throw new Error("DRAFT_LIMIT: Choose each language once.");
-}
 
 async function uniqueShareId(ctx: MutationCtx): Promise<string> {
   for (let i = 0; i < 5; i++) {
@@ -146,6 +135,70 @@ export const listMyForms = query({
       }
     }
     return { owned: (await withOwnerFormCounts(ctx, identity.subject, inventory.owned)).map(formSummary), shared, invites };
+  },
+});
+
+/** Cursor-paginated replacement for the legacy capped listMyForms/searchIndex snapshots. */
+export const listMyFormsPage = query({
+  args: {
+    source: v.union(v.literal("owned"), v.literal("account"), v.literal("email")),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const identity = await getAuthIdentity(ctx);
+    const empty = { owned: [], shared: [], invites: [], searchIndex: [] };
+    if (!identity) return { page: empty, isDone: true, continueCursor: "" };
+    const limit = args.paginationOpts.numItems;
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 50) throw new Error("VALIDATION_FAILED: Page size must be from 1 to 50.");
+    if (args.source === "owned") {
+      const batch = await ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", identity.subject)).order("desc").paginate(args.paginationOpts);
+      const forms = await withOwnerFormCounts(ctx, identity.subject, batch.page);
+      const searchIndex = forms.map((form) => ({ id: form._id, title: form.title, status: form.status, quiz: form.draft.quiz?.enabled ?? false, text: searchText(form.draft) }));
+      return { ...batch, page: { ...empty, owned: forms.map(formSummary), searchIndex } };
+    }
+    if (args.source === "account") {
+      const batch = await ctx.db.query("formCollaborators").withIndex("by_userId", (q) => q.eq("userId", identity.subject)).paginate(args.paginationOpts);
+      const shared = [];
+      const searchIndex = [];
+      const seen = new Set<string>();
+      const ownerNames = new Map<string, string>();
+      for (const membership of batch.page) {
+        if (membership.status === "pending" || !matchesFormCollaborator(membership, identity) || seen.has(membership.formId)) continue;
+        seen.add(membership.formId);
+        const stored = await ctx.db.get("forms", membership.formId);
+        if (!stored || stored.ownerId === identity.subject) continue;
+        const form = await withFormCounts(ctx, stored);
+        let ownerName = ownerNames.get(form.ownerId);
+        if (ownerName === undefined) ownerNames.set(form.ownerId, (ownerName = await displayName(ctx, form.ownerId)));
+        shared.push({ ...formSummary(form), role: membership.role, ownerName });
+        searchIndex.push({ id: form._id, title: form.title, status: form.status, quiz: form.draft.quiz?.enabled ?? false, text: searchText(form.draft) });
+      }
+      return { ...batch, page: { ...empty, shared, searchIndex } };
+    }
+    const email = verifiedIdentityEmail(identity);
+    if (!email) return { page: empty, isDone: true, continueCursor: "" };
+    const batch = await ctx.db.query("formCollaborators").withIndex("by_email", (q) => q.eq("email", email)).paginate(args.paginationOpts);
+    const shared = [];
+    const invites = [];
+    const searchIndex = [];
+    const seen = new Set<string>();
+    const ownerNames = new Map<string, string>();
+    for (const membership of batch.page) {
+      if ((membership.userId && membership.status !== "pending") || !matchesFormCollaborator(membership, identity) || seen.has(membership.formId)) continue;
+      seen.add(membership.formId);
+      const stored = await ctx.db.get("forms", membership.formId);
+      if (!stored || stored.ownerId === identity.subject) continue;
+      const form = await withFormCounts(ctx, stored);
+      let ownerName = ownerNames.get(form.ownerId);
+      if (ownerName === undefined) ownerNames.set(form.ownerId, (ownerName = await displayName(ctx, form.ownerId)));
+      searchIndex.push({ id: form._id, title: form.title, status: form.status, quiz: form.draft.quiz?.enabled ?? false, text: searchText(form.draft) });
+      if (membership.status === "pending") {
+        invites.push({ collaboratorId: membership._id, formId: form._id, title: form.title, role: membership.role, ownerName, createdAt: membership.createdAt });
+      } else {
+        shared.push({ ...formSummary(form), role: membership.role, ownerName });
+      }
+    }
+    return { ...batch, page: { ...empty, shared, invites, searchIndex } };
   },
 });
 
