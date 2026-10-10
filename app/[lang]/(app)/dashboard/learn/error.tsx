@@ -14,5 +14,5 @@ const copy = {
 export default function LearnError({ error, reset }: { error: Error & { digest?: string }; reset: () => void }) {
   const t = useCopy(copy);
   useEffect(() => { posthog.captureException(error); }, [error]);
-  return <ErrorScreen inline title={t.title} body={t.body} primary={{ label: t.retry, onClick: reset }} secondary={{ label: t.home, href: "/dashboard/learn" }} digest={error.digest} />;
+  return <ErrorScreen inline illustration="error" title={t.title} body={t.body} primary={{ label: t.retry, onClick: reset }} secondary={{ label: t.home, href: "/dashboard/learn" }} digest={error.digest} />;
 }

@@ -115,8 +115,21 @@ describe("upload claims and response deletion", () => {
     await t.run(async (ctx) => {
       for (let revision = 1; revision <= 9; revision++) await ctx.db.insert("formResponseRevisions", { formId, responseId, revision, answers, language: "en", savedAt: 0, replacedAt: 1 });
     });
+    // Delayed or stale cleanup must not touch a form/response that still exists.
+    await t.mutation(internal.forms.purgeFormData, { formId });
+    await t.mutation(internal.formResults.cleanupResponseArtifacts, { responseId });
+    const artifacts = () => t.run(async ctx => ({ uploads: (await ctx.db.query("formUploads").collect()).length, revisions: (await ctx.db.query("formResponseRevisions").collect()).length }));
+    expect(await artifacts()).toEqual({ uploads: 55, revisions: 9 });
+    expect(await owner.query(api.forms.getFormForEditor, { formId })).toMatchObject({ responseCount: 1 });
     expect(await owner.mutation(api.formResults.deleteResponses, { formId, responseIds: [responseId, responseId] })).toBe(1);
     expect(await owner.query(api.formResults.getResponse, { responseId })).toBeNull();
+    expect(await owner.query(api.forms.getFormForEditor, { formId })).toMatchObject({ responseCount: 0 });
+    expect(await artifacts()).toEqual({ uploads: 35, revisions: 7 });
+    // Retry interrupted work before its originally queued continuation runs.
+    await t.mutation(internal.formResults.cleanupResponseArtifacts, { responseId });
+    expect(await artifacts()).toEqual({ uploads: 15, revisions: 5 });
+    await t.mutation(internal.formResults.cleanupResponseArtifacts, { responseId });
+    expect(await artifacts()).toEqual({ uploads: 0, revisions: 3 });
     expect(await owner.query(api.forms.getFormForEditor, { formId })).toMatchObject({ responseCount: 0 });
     await finish(t);
     await t.mutation(internal.formResults.cleanupResponseArtifacts, { responseId });

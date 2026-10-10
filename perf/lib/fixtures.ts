@@ -113,6 +113,9 @@ export const resumeClock = () => vi.setSystemTime(clock);
 
 /** Seeds the standard workspace. Returns ids for each surface's primary object. */
 export async function seedWorkspace(t: T) {
+  // Shared beforeAll fixtures run before setup.ts enables per-test fake timers.
+  // Future scheduled jobs must not become native, clamped 1 ms callbacks.
+  vi.useFakeTimers();
   vi.setSystemTime(PERF_EPOCH);
   seedRandom();
   const owner = await signIn(t, perfCreator, "perry");

@@ -1,3 +1,5 @@
+import { codedMessage } from "./codedMessage";
+
 /**
  * Convex errors arrive as "[CONVEX M(x)] [Request ID: …] Server Error\nUncaught
  * Error: CODE: message\n    at handler (…)". Extract the code and the
@@ -6,8 +8,8 @@
 export function parseError(err: unknown, fallback = "Something went wrong. Please try again."): { code: string; message: string } {
   const raw = err instanceof Error ? err.message : typeof err === "string" ? err : "";
   const withoutStack = raw.split(/\n\s+at /)[0].replace(/\s*Called by client[\s\S]*$/i, "");
-  const match = withoutStack.match(/([A-Z][A-Z_]{2,}): ([\s\S]*)$/);
-  if (match) return { code: match[1], message: match[2].trim() || fallback };
+  const coded = codedMessage(withoutStack, "client");
+  if (coded) return { code: coded.code, message: coded.message || fallback };
   const uncaught = withoutStack.match(/Uncaught Error: ([\s\S]*)$/);
   if (uncaught) return { code: "ERROR", message: uncaught[1].trim() || fallback };
   if (/network|fetch|connection/i.test(raw)) return { code: "NETWORK", message: "You appear to be offline. Your work is kept here; try again when connected." };

@@ -133,6 +133,7 @@ describe("Learn integration v2", () => {
   it("makes canonical creation and updates idempotent, isolates keys by connection and API version", async () => {
     const { t, owner, tokenId, create, update } = await setup();
     const first = createdItem(await create());
+    expect((await t.run(ctx => ctx.db.query("integrationIdempotency").withIndex("by_tokenId_and_key", q => q.eq("tokenId", tokenId).eq("key", "v2:create")).unique()))?.requestHash).toBe("a7a42f35335c29457dd84333ce0c72edf6dbcb76ef2eaf46d624460479272352");
     const retry = await create("create", { source, document, metadata, kind: "lesson" });
     expect(createdItem(retry).lessonId).toBe(first.lessonId); expect(retry.headers?.["Idempotent-Replayed"]).toBe("true");
     expect((await create("create", { ...draft, metadata: { ...metadata, title: "Different" } })).status).toBe(422);
