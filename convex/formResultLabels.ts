@@ -1,7 +1,7 @@
 import type { FormField } from "./formLogic";
 
 /** A scale's endpoints, for showing what the low and high ends of an answer mean. */
-function scaleInfo(f: FormField) {
+export function scaleInfo(f: FormField) {
   if (f.type !== "scale") return null;
   return { min: f.min ?? 1, max: f.max ?? 5, step: f.step ?? 1, minLabel: f.minLabel ?? null, maxLabel: f.maxLabel ?? null };
 }
