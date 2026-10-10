@@ -1,6 +1,7 @@
 import { columnLabel, scaleInfo } from "./formResultLabels";
 export { columnLabel } from "./formResultLabels";
 import { questionQuality, type QualityQuestion, type QualityObservation } from "./questionQuality";
+import { responsePreview } from "./formResultPreview";
 import { gradeQuiz } from "./formQuiz";
 import { nicknameKey, questionsFromForm, MAX_LIVE_QUESTIONS } from "./liveLogic";
 
@@ -56,18 +57,6 @@ async function reportingDefinition(ctx: Ctx, form: Doc<"forms">): Promise<FormDe
     if (row) return row.definition as FormDefinition;
   }
   return form.draft as FormDefinition;
-}
-
-function preview(def: FormDefinition | null, answers: Answers): string {
-  if (!def) return "";
-  const parts: string[] = [];
-  for (const f of def.fields) {
-    if (!isAnswerable(f) || f.type === "file") continue;
-    const text = answerText(f, answers[f.id]);
-    if (text) parts.push(text);
-    if (parts.length === 3) break;
-  }
-  return parts.join(" · ").slice(0, 200);
 }
 
 const TAG_SCAN_PAGE = 200;
@@ -132,7 +121,7 @@ export const listResponses = query({
         editedAt: r.editedAt ?? null,
         quizScore: r.quizScore ?? null,
         quizMaxScore: r.quizMaxScore ?? null,
-        preview: preview(await definition(r.version), r.answers as Answers),
+        preview: responsePreview(await definition(r.version), r.answers as Answers),
         hidden: r.hidden ?? null, typedHidden: r.typedHidden ?? null,
       });
     }
