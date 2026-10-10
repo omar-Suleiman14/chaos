@@ -65,12 +65,16 @@ export function matchesAccountFormCollaborator(row: Doc<"formCollaborators">, us
 }
 
 export function matchesFormCollaborator(row: Doc<"formCollaborators">, identity: Identity): boolean {
+  return matchesCollaboratorForActor(row, identity.subject, verifiedIdentityEmail(identity));
+}
+
+/** `verifiedEmail` is present only for native sign-in with a positive provider claim. */
+function matchesCollaboratorForActor(row: Doc<"formCollaborators">, actor: string, verifiedEmail: string | undefined): boolean {
   if (row.status === "declined") return false;
   // Old pending invitations may have been bound through an unverified profile.
   // Accepted and legacy explicit account grants retain their stable ID access.
-  if (row.status !== "pending" && row.userId) return matchesAccountFormCollaborator(row, identity.subject);
-  const email = verifiedIdentityEmail(identity);
-  return !!email && row.email.toLowerCase() === email;
+  if (row.status !== "pending" && row.userId) return matchesAccountFormCollaborator(row, actor);
+  return !!verifiedEmail && row.email.toLowerCase() === verifiedEmail;
 }
 
 export function isFormOwner(form: Doc<"forms">, identity: Identity | null): boolean {
@@ -78,15 +82,25 @@ export function isFormOwner(form: Doc<"forms">, identity: Identity | null): bool
 }
 
 export async function formRoleFor(ctx: DbCtx, form: Doc<"forms">, identity: Identity | null): Promise<FormRole | null> {
-  if (!identity) return null;
-  if (form.ownerId === identity.subject) return "owner";
-  if (!form.isBanned && !await creatorRestricted(ctx, form.ownerId) && await canEditTeamAsset(ctx, identity.subject, { kind: "form", id: form._id })) return "editor";
+  return identity ? await formRoleForActor(ctx, form, identity.subject, verifiedIdentityEmail(identity)) : null;
+}
+
+/**
+ * The single form-role rule for every transport (web, MCP). Account-ID transports pass no
+ * email, so pending email invitations only match through verified native sign-in.
+ * Moderation freezes non-owner writes: while the form is held or its owner is banned or
+ * suspended, team access is withdrawn and direct collaborators can only view.
+ */
+export async function formRoleForActor(ctx: DbCtx, form: Doc<"forms">, actor: string, verifiedEmail?: string): Promise<FormRole | null> {
+  if (form.ownerId === actor) return "owner";
+  const moderated = form.isBanned === true || await creatorRestricted(ctx, form.ownerId);
+  if (!moderated && await canEditTeamAsset(ctx, actor, { kind: "form", id: form._id })) return "editor";
   const collaborators = await ctx.db
     .query("formCollaborators")
     .withIndex("by_formId", (q) => q.eq("formId", form._id))
     .take(100);
-  const match = collaborators.find((c) => matchesFormCollaborator(c, identity));
-  return match ? match.role : null;
+  const role = collaborators.find((c) => matchesCollaboratorForActor(c, actor, verifiedEmail))?.role ?? null;
+  return moderated && role === "editor" ? "viewer" : role;
 }
 
 export async function getFormIfRole(

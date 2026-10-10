@@ -13,6 +13,10 @@ const app = defineApp({
     CHAOS_MCP_SECRET: v.optional(v.string()),
     /** Encrypts webhook signing secrets at rest (32+ random characters). Webhooks are off without it. */
     CHAOS_WEBHOOK_KEY: v.optional(v.string()),
+    NOTION_CLIENT_ID: v.optional(v.string()),
+    NOTION_CLIENT_SECRET: v.optional(v.string()),
+    NOTION_REDIRECT_URI: v.optional(v.string()),
+    NOTION_ENCRYPTION_KEY: v.optional(v.string()),
     /** "1" lets webhooks target http://localhost for local development. Never set it in production. */
     CHAOS_WEBHOOK_ALLOW_LOCALHOST: v.optional(v.string()),
     /** Integration API reads allowed per connection per minute (default 300). globalConfig overrides it. */

@@ -959,6 +959,7 @@ export const sectionsEn: DocSection[] = [
           { type: "p", text: "**Revoke** cuts access at once: the app can no longer read items, create or update drafts, read summaries or receive webhooks. Drafts and items it created stay in Chaos." },
           { type: "p", text: "A connection reaches only items you own. Forms and quizzes that others share with you are not included; their owner has to connect them." },
           { type: "tip", text: "Drafts that an app creates are marked in the builder as created from a connected app. When the app sends details about where the content came from, such as a page link, the builder shows them too. People who answer never see them." },
+          { type: "p", text: "For Notion, use **Connect Notion** under **Apps** in [Connections](/dashboard/connections)—no API token is needed. See the [Notion setup and import guide](/docs/notion)." },
           { type: "p", text: "Developers: see [Integration API](/docs/integration-api)." },
         ],
       },

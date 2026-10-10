@@ -6,6 +6,7 @@ import { normalizeAssetRefs } from "./mcpIds";
 import { parseCreatedWith } from "../lib/aiClients";
 import { httpRouter, makeFunctionReference } from "convex/server";
 import { registerLearnIntegrationRoutes } from "./learnIntegrations";
+import { oauthCallback as notionOauthCallback } from "./notion";
 import { registerLearnStudyIntegrationRoutes } from "./learnStudyIntegrations";
 import { registerCommunityIntegrationRoutes } from "./learnCommunityHttp";
 import { registerOrganizationIntegrationRoutes } from "./learnOrganizationIntegrations";
@@ -521,6 +522,7 @@ if (process.env.CHAOS_AUTH_PROVIDER?.trim() === "betterauth") {
   http.route({ path: "/.well-known/oauth-authorization-server", method: "GET", handler: authHandler });
 }
 http.route({ path: "/api/status/v1", method: "GET", handler: httpAction(async ctx => Response.json(await ctx.runQuery(makeFunctionReference<"query">("observability:publicStatus"), {}), { headers: { "Cache-Control": "public, max-age=30" } })) });
+http.route({ path: "/api/notion/oauth/callback", method: "GET", handler: notionOauthCallback });
 registerLearnIntegrationRoutes(http);
 registerOrganizationIntegrationRoutes(http);
 registerCommunityIntegrationRoutes(http);

@@ -158,12 +158,17 @@ with the scopes they chose, so it can never do more than that user can.
   the previous rotate response), Chaos replaces the unseen new token and
   leaves the old token's deadline unchanged. Rotating is therefore safe to
   retry and needs no `Idempotency-Key`.
+- When the **owner** presses **New token** in Chaos (for example because a
+  token leaked), the old token keeps reading until its deadline but can no
+  longer call `POST /connection/rotate`; it gets `403 TOKEN_REPLACED`. Only
+  the holder of the owner's new token can rotate again.
 - The connection keeps its id, scopes, shared items, created drafts, webhooks
   and history across rotations.
 
 ### `POST /connection/rotate`
 
-Any valid token (current, or old within its grace period). No body.
+Any valid token (current, or old within its grace period unless the owner
+replaced it from Chaos, which returns `403 TOKEN_REPLACED`). No body.
 
 ```json
 { "token": "chaos_…", "previousTokenExpiresAt": 1790086400000 }

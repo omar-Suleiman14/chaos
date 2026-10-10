@@ -37,6 +37,7 @@ import { attachAssessmentForActor } from "./learnCollections";
 import { attachFlashcardsForActor } from "./flashcardStudy";
 import { assertDocument } from "./learnValidation";
 import type { LessonBlock } from "./learnModel";
+import { canReadSourcePart } from "./sourceAccess";
 
 const base = { jobId: v.id("studyLessonJobs") };
 const edit = { ...base, expectedRevision: v.number() };
@@ -265,20 +266,7 @@ export async function accessibleStudySource(
   const s = await ctx.db.get("learnSources", sourceId);
   if (!s || s.status !== "active" || (await creatorRestricted(ctx, s.ownerId)))
     throw new Error("NOT_FOUND: Source unavailable.");
-  const grant =
-    s.ownerId !== ownerId
-      ? await ctx.db
-          .query("learnSourceGrants")
-          .withIndex("by_sourceId_and_userId", (q) =>
-            q.eq("sourceId", sourceId).eq("userId", ownerId),
-          )
-          .unique()
-      : null;
-  if (
-    s.ownerId !== ownerId &&
-    ((s.contentVisibility !== "public" && !grant?.content) ||
-      (s.metadataVisibility !== "public" && !grant?.metadata))
-  )
+  if (!(await canReadSourcePart(ctx, s, ownerId, "content")) || !(await canReadSourcePart(ctx, s, ownerId, "metadata")))
     throw new Error("FORBIDDEN: Source content and metadata access required.");
   if (s.storageId && !(await ctx.db.system.get("_storage", s.storageId)))
     fail("Source file is missing.");
