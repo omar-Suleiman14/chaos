@@ -3,7 +3,7 @@
 import { FocusInput, FocusTextarea } from "@/components/InitialFocus";
 
 import { useNow } from "@/lib/useNow";
-import { buildSteps } from "@/lib/forms/formSteps";
+import { buildSteps, type Step } from "@/lib/forms/formSteps";
 
 import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
