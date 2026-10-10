@@ -8,6 +8,7 @@ import { internalMutation, internalQuery, type QueryCtx, type MutationCtx } from
 import { LEARN_LIMITS, createdWith, lessonBlock, lessonDocument, lessonMeta, sourceMetadata, visibility } from "./learnModel";
 import { creatorRestricted } from "./authz";
 import { lessonAccessForActor, createLessonForActor, saveLessonDraftForActor, publishLessonForActor, restoreLessonVersionForActor, setLessonLifecycleForActor, forkLessonForActor, editLessonBlocksForActor, readLessonForActor, summarizeLesson, lessonSummary, lessonReadResult, lessonBlockOperation } from "./lessons";
+import { canReadSourcePart } from "./sourceAccess";
 
 export async function requireLearnActor(ctx: QueryCtx | MutationCtx, userId: string) {
   const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", userId)).first();
@@ -60,8 +61,7 @@ const sourceView = v.object({ sourceId: v.id("learnSources"), metadata: sourceMe
 async function sourceMetadataForActor(ctx: QueryCtx, userId: string, sourceId: import("./_generated/dataModel").Id<"learnSources">) {
   const source = await ctx.db.get("learnSources", sourceId);
   if (!source || source.status === "removed" || await creatorRestricted(ctx, source.ownerId)) return null;
-  const grant = source.metadataVisibility === "restricted" ? await ctx.db.query("learnSourceGrants").withIndex("by_sourceId_and_userId", q => q.eq("sourceId", source._id).eq("userId", userId)).unique() : null;
-  if (source.ownerId !== userId && source.metadataVisibility !== "public" && !grant?.metadata) return null;
+  if (!await canReadSourcePart(ctx, source, userId, "metadata")) return null;
   return { sourceId: source._id, metadata: source.metadata, metadataVisibility: source.metadataVisibility, contentVisibility: source.contentVisibility, createdAt: source.createdAt };
 }
 export const getSourceMetadata = internalQuery({ args: { ...actor, sourceId: v.id("learnSources") }, returns: v.union(v.null(), sourceView), handler: async (ctx, args) => sourceMetadataForActor(ctx, await requireLearnActor(ctx, args.userId), args.sourceId) });

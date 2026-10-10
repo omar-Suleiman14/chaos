@@ -40,6 +40,10 @@ type Env = {
   readonly CONSISTENCY_GITHUB_REPO: string | undefined;
   readonly CONSISTENCY_GITHUB_TOKEN: string | undefined;
   readonly INDEXNOW_KEY: string | undefined;
+  readonly NOTION_CLIENT_ID: string | undefined;
+  readonly NOTION_CLIENT_SECRET: string | undefined;
+  readonly NOTION_REDIRECT_URI: string | undefined;
+  readonly NOTION_ENCRYPTION_KEY: string | undefined;
 };
 
 /**
