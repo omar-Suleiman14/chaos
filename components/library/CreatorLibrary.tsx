@@ -38,6 +38,7 @@ import { useUsableMark } from "@/lib/journeys";
 import { useConfirmedQuery } from "@/lib/confirmedQuery";
 import { CacheState } from "@/components/workspace/CacheState";
 import { linkOrigin } from "@/lib/hosts";
+import { writeClipboardText } from "@/lib/clipboard";
 
 const kinds = ["Forms", "Quizzes", "Flashcards", "Courses", "Games"] as const;
 type Kind = (typeof kinds)[number];
@@ -284,10 +285,7 @@ export default function CreatorLibrary() {
   const { toggle: togglePin, isPinned } = usePinned();
   const copyLink = async (url: string) => {
     try {
-      if (typeof navigator.clipboard?.writeText !== "function") {
-        throw new Error(t.clipboardUnavailable);
-      }
-      await navigator.clipboard.writeText(url);
+      await writeClipboardText(url, t.clipboardUnavailable);
       toast.success(t.linkCopied, { id: "copy-link" });
     } catch (e) {
       toast.error(e, { fallback: t.copyFailed, id: "copy-link" });
