@@ -38,6 +38,7 @@ import { useUsableMark } from "@/lib/journeys";
 import { useConfirmedQuery } from "@/lib/confirmedQuery";
 import { CacheState } from "@/components/workspace/CacheState";
 import { linkOrigin } from "@/lib/hosts";
+import { selectLibraryRows } from "@/lib/library/selectLibraryRows";
 
 const kinds = ["Forms", "Quizzes", "Flashcards", "Courses", "Games"] as const;
 type Kind = (typeof kinds)[number];
@@ -52,7 +53,6 @@ const sortOptions: { id: SortKey }[] = [{ id: "edited" }, { id: "name" }, { id: 
 const naturalDir: Record<SortKey, SortDir> = { count: "desc", edited: "desc", responses: "desc", name: "asc", status: "asc" };
 /** Internal marker for the group of forms other people shared; shown as "Shared with you". */
 const SHARED_GROUP = "Shared with you";
-const statusOrder: Record<Status, number> = { live: 0, draft: 1, closed: 2, archived: 3 };
 
 const copy = {
   en: {
@@ -259,21 +259,7 @@ export default function CreatorLibrary() {
     return [...own, ...shared];
   }, [forms, t]);
 
-  const visible = useMemo(() => {
-    // Ascending comparators; the direction flips them.
-    const compare: Record<SortKey, (a: Row, b: Row) => number> = {
-      count: (a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0),
-      edited: (a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0),
-      name: (a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base", numeric: true }),
-      responses: (a, b) => a.responses - b.responses,
-      status: (a, b) => statusOrder[a.status] - statusOrder[b.status],
-    };
-    const ordered = (a: Row, b: Row) => (dir === "asc" ? 1 : -1) * compare[activeSort](a, b);
-    // Archived forms live on the Archive page, never in the library.
-    return rows.filter((r) => r.status !== "archived" && (!statuses.length || statuses.includes(r.status)))
-      .filter((r) => kind === "Forms" ? r.kind === "form" : r.kind !== "form")
-      .sort(ordered);
-  }, [rows, kind, statuses, activeSort, dir]);
+  const visible = useMemo(() => selectLibraryRows(rows, kind, statuses, activeSort, dir), [rows, kind, statuses, activeSort, dir]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Row[]>();
