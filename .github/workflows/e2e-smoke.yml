@@ -40,3 +40,6 @@ jobs:
 
       - name: Run core smoke
         run: pnpm test:e2e -- tests/e2e/core-production-smoke.spec.ts
+
+      - name: Run archive navigation smoke
+        run: pnpm test:e2e -- tests/e2e/archive-navigation-smoke.spec.ts

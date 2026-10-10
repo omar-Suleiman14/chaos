@@ -17,9 +17,9 @@ export function smokeEnvironment() {
   const allowProduction = process.env.E2E_ALLOW_PRODUCTION === "true";
   const hostname = new URL(baseURL).hostname.toLowerCase();
 
-  if (!allowProduction && (hostname === "chaos.fail" || hostname === "www.chaos.fail")) {
+  if (!allowProduction && (hostname === "chaos.fail" || hostname.endsWith(".chaos.fail"))) {
     throw new Error(
-      "Refusing to run the E2E smoke test against chaos.fail. Set E2E_ALLOW_PRODUCTION=true only for an intentional production run.",
+      "Refusing to run the E2E smoke test against production Chaos hosts. Set E2E_ALLOW_PRODUCTION=true only for an intentional production run.",
     );
   }
 
