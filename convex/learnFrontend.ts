@@ -8,7 +8,7 @@ import { creatorRestricted, requireActiveUser } from "./authz";
 import { lessonAccess, lessonSummary } from "./lessons";
 import { createdWith, lessonMeta } from "./learnModel";
 import { questionsFromForm } from "./liveLogic";
-import { canonicalCommunityActor } from "./learnCommunityIntegrations";
+import { publicIdentityFacts } from "./publicIdentityPolicy";
 import schema from "./schema";
 import { hasLiveLessonPublication } from "./publicationEligibility";
 
@@ -128,12 +128,10 @@ export const publicProfile = query({
   args: { username: v.string() },
   returns: v.union(v.null(), v.object({ username: v.string(), name: v.string(), imageUrl: v.union(v.string(), v.null()), verifiedRoles: v.array(v.union(v.literal("student"), v.literal("educator"))) })),
   handler: async (ctx, args) => {
-    if (!args.username || args.username.length > 100) return null;
-    const user = await ctx.db.query("users").withIndex("by_username", q => q.eq("username", args.username)).unique();
-    if (!user || await creatorRestricted(ctx, user.clerkId)) return null;
-    const userKey = (await canonicalCommunityActor(ctx, user.clerkId)).tokenIdentifier;
-    const claims = await ctx.db.query("learnIdentityClaims").withIndex("by_userKey_and_role", q => q.eq("userKey", userKey)).take(2);
-    return { username: user.username, name: user.name, imageUrl: user.imageUrl ?? null, verifiedRoles: claims.filter(c => c.status === "verified" && c.method === "manual_review" && !!c.reviewedBy && (c.expiresAt ?? 0) > Date.now()).map(c => c.role) };
+    const facts = await publicIdentityFacts(ctx, args.username);
+    if (!facts) return null;
+    const { user, verified } = facts;
+    return { username: user.username, name: user.name, imageUrl: user.imageUrl ?? null, verifiedRoles: verified.map(c => c.role) };
   },
 });
 
