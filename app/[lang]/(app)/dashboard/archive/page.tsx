@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useMemo, useState } from "react";
-import { useConvexAuth, usePaginatedQuery } from "convex/react";
+import { useConvexAuth, usePaginatedQuery, useMutation } from "convex/react";
 import { deleteFormLocally, setFormStatusLocally, useOptimisticMutation } from "@/lib/optimistic";
 import { Archive, ArchiveRestore, ArrowDown, ArrowUp, Trash2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
@@ -10,6 +10,7 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { LibrarySkeleton } from "@/components/workspace/Skeletons";
 import { WsDialog, WsMenu, WsTabs } from "@/components/workspace/primitives";
 import { toast } from "@/lib/toast";
+import HoldToConfirm from "@/components/workspace/HoldToConfirm";
 import LearningArchive from "@/components/library/LearningArchive";
 import { formatNumber, pluralForm, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
@@ -21,9 +22,9 @@ const copy = {
     loading: "Loading archive...", nothing: "Nothing archived", nothingBody: "Archive a form from its “…” menu in the library. It waits here until you restore or delete it.", backToLibrary: "Back to library",
     name: "Name", responses: "Responses", archived: "Archived", actions: "Actions", untitled: "Untitled", restore: "Restore", deleteForever: "Delete forever",
     moreFor: (title: string) => `More for ${title}`,
-    restoredToast: (title: string) => `Restored “${title}” to your library`, deletedToast: (title: string) => `Deleted “${title}”`,
+    restoredToast: (title: string) => `Restored “${title}” to your library`, deletedToast: (title: string) => `Deleting “${title}” in 5 seconds`,
     confirmTitle: (title: string) => `Delete “${title}” forever?`,
-    confirmBody: (n: number) => `Its ${n} response${n === 1 ? "" : "s"}, uploaded files, versions and history are deleted too. This can’t be undone.`,
+    confirmBody: (n: number) => `After a 5-second Undo window, its ${n} response${n === 1 ? "" : "s"}, uploaded files, versions and history will be deleted. Hold to confirm.`,
     cancel: "Cancel",
   },
   ar: {
@@ -31,9 +32,9 @@ const copy = {
     loading: "جارٍ تحميل الأرشيف...", nothing: "لا شيء مؤرشف", nothingBody: "أرشِف نموذجًا من قائمة «…» في المكتبة. يبقى هنا حتى تستعيده أو تحذفه.", backToLibrary: "العودة إلى المكتبة",
     name: "الاسم", responses: "الردود", archived: "تاريخ الأرشفة", actions: "الإجراءات", untitled: "بلا عنوان", restore: "استعادة", deleteForever: "احذف نهائيًا",
     moreFor: (title: string) => `المزيد لـ ${title}`,
-    restoredToast: (title: string) => `تمت استعادة «${title}» إلى مكتبتك`, deletedToast: (title: string) => `تم حذف «${title}»`,
+    restoredToast: (title: string) => `تمت استعادة «${title}» إلى مكتبتك`, deletedToast: (title: string) => `سيُحذف «${title}» خلال ٥ ثوانٍ`,
     confirmTitle: (title: string) => `حذف «${title}» نهائيًا؟`,
-    confirmBody: (n: number) => `سيُحذف أيضًا ${n === 0 ? "ما فيه من" : pluralForm("ar", n, { one: "ردّه الواحد و", two: "ردّاه و", few: `${n} ردود و`, many: `${n} ردًّا و`, other: `${n} ردّ و` })}ملفات مرفوعة وإصدارات وسجل. لا يمكن التراجع عن ذلك.`,
+    confirmBody: (n: number) => `بعد مهلة تراجع مدتها ٥ ثوانٍ، سيُحذف ${n === 0 ? "ما فيه من" : pluralForm("ar", n, { one: "ردّه الواحد و", two: "ردّاه و", few: `${n} ردود و`, many: `${n} ردًّا و`, other: `${n} ردّ و` })}ملفات مرفوعة وإصدارات وسجل. اضغط مطولًا للتأكيد.`,
     cancel: "إلغاء",
   },
 };
@@ -65,6 +66,7 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
   const forms = useConfirmed(`archive.list:${quizzes ? "quizzes" : "forms"}`, status === "LoadingFirstPage" ? undefined : { owned: results.map(row => ({ _id: row.id as Id<"forms">, title: row.title, responseCount: row.count, updatedAt: row.updatedAt, publishedVersion: row.published ? 1 : undefined, theme: { accent: row.accent ?? "#3595e3" } })) }).data;
   const setStatus = useOptimisticMutation(api.forms.setFormStatus, setFormStatusLocally);
   const deleteForm = useOptimisticMutation(api.forms.deleteForm, deleteFormLocally);
+  const undoDeleteForm = useMutation(api.forms.undoDeleteForm);
   const [sort, setSort] = useState<{ key: SortKey; dir: "asc" | "desc" }>({ key: "archived", dir: "desc" });
   const [confirming, setConfirming] = useState<{ id: Id<"forms">; title: string; responses: number } | null>(null);
 
@@ -91,12 +93,16 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
     if (!confirming) return;
     const { id, title } = confirming;
     setConfirming(null);
-    const toastId = toast.success(t.deletedToast(title));
     try {
-      await deleteForm({ formId: id });
-    } catch (e) {
-      toast.error(e, { id: toastId });
-    }
+      const expiresAt = await deleteForm({ formId: id });
+      if (Date.now() >= expiresAt) return;
+      toast.success(t.deletedToast(title), {
+        undo: () => { void undoDeleteForm({ formId: id }).catch(error => toast.error(error)); },
+        expiresAt,
+        duration: Math.max(0, expiresAt - Date.now()),
+        pauseOnHover: false,
+      });
+    } catch (e) { toast.error(e); }
   };
 
   const header = (key: SortKey, label: string, numeric?: boolean) => (
@@ -166,7 +172,7 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
           </p>
           <div className="mt-5 flex justify-end gap-2">
             <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setConfirming(null)}>{t.cancel}</button>
-            <button type="button" className="ws-btn ws-btn--danger" onClick={() => void remove()}><Trash2 size={14} /> {t.deleteForever}</button>
+            <HoldToConfirm label={t.deleteForever} onConfirm={() => void remove()} />
           </div>
         </WsDialog>
       )}

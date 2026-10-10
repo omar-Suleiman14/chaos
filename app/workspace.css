@@ -638,6 +638,12 @@ html.dark:has(.workspace-ui), html.dark:has(.workspace-ui) body { background: #1
 .chaos-toast__body[data-open] .chaos-toast__text strong { white-space: normal; overflow-wrap: anywhere; }
 .chaos-toast__text p { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--toast-muted); overflow-wrap: anywhere; }
 .chaos-toast__action { flex: none; min-height: 26px; padding: 0 8px; border: 1px solid var(--toast-line); border-radius: 6px; background: var(--toast-hover); color: var(--toast-fg); font: inherit; font-size: 12px; font-weight: 600; cursor: pointer; }
+.ws-hold-confirm { position: relative; overflow: hidden; isolation: isolate; touch-action: none; user-select: none; }
+.ws-hold-confirm__fill { position: absolute; inset: 0; z-index: -1; background: rgba(0,0,0,.24); transform: scaleX(0); transform-origin: left center; transition: transform 130ms ease-out; pointer-events: none; }
+[dir="rtl"] .ws-hold-confirm__fill { transform-origin: right center; }
+.ws-hold-confirm[data-holding] .ws-hold-confirm__fill { transform: scaleX(1); transition: transform var(--hold-duration, 1400ms) linear; }
+.ws-hold-confirm__content { display: inline-flex; align-items: center; gap: 6px; position: relative; }
+@media (prefers-reduced-motion: reduce) { .ws-hold-confirm__fill { transition: none !important; } }
 .chaos-toast__progress { position: absolute; inset-inline: 0; bottom: 0; height: 2px; background: var(--toast-info); opacity: .7; transform-origin: left center; animation: chaos-toast-drain var(--toast-duration, 5000ms) linear both; pointer-events: none; }
 [dir="rtl"] .chaos-toast__progress { transform-origin: right center; }
 .chaos-toast[data-progress-paused] .chaos-toast__progress { animation-play-state: paused; }
