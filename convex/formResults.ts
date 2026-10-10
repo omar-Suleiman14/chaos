@@ -1,4 +1,4 @@
-import { columnLabel } from "./formResultLabels";
+import { columnLabel, scaleInfo } from "./formResultLabels";
 export { columnLabel } from "./formResultLabels";
 import { questionQuality, type QualityQuestion, type QualityObservation } from "./questionQuality";
 import { gradeQuiz } from "./formQuiz";
