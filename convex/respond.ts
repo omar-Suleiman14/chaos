@@ -641,7 +641,6 @@ export const checkUploadTicket = internalQuery({
 });
 
 /** Consumes the ticket and records a file the endpoint itself stored. */
-/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export const recordUpload = internalMutation({
   args: { token: v.string(), storageId: v.id("_storage"), name: v.string(), contentType: v.string(), size: v.number() },
   returns: uploadResult,
@@ -653,6 +652,7 @@ export const recordUpload = internalMutation({
     if (!form || form.status === "archived") throw new Error("FORM_UNAVAILABLE: This form is not available.");
     const metadata = await ctx.db.system.get("_storage", args.storageId);
     if (!metadata || metadata.size !== args.size || (metadata.contentType !== undefined && metadata.contentType !== args.contentType) || uploadRejection(args.contentType, args.size)) throw new Error("UPLOAD_INVALID: Invalid stored file");
+    // oxlint-disable-next-line eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs.
     const name = args.name.replace(/[\\/\u0000-\u001f]/g, "_").slice(0, 200) || "upload";
     const uploadId = await ctx.db.insert("formUploads", {
       formId: ticket.formId, storageId: args.storageId, uploadKey: ticket.uploadKey, fieldId: ticket.fieldId,
@@ -662,7 +662,6 @@ export const recordUpload = internalMutation({
     return { uploadId, name, size: args.size };
   },
 });
-/* oxlint-enable eslint/no-control-regex */
 
 /** Shared limits for the HTTP endpoint. */
 export function uploadRejection(contentType: string, size: number): string | null {
