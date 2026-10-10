@@ -35,7 +35,11 @@ export const publicLesson = query({
   },
 });
 
-/** Fast batched metadata + version lookup for multiple public lessons in one roundtrip. */
+/**
+ * Read the first 50 input IDs, returning metadata and full immutable lesson versions
+ * (including documents). Omit invalid/unavailable IDs; preserve input order and
+ * duplicates. Current creator restrictions and team audience checks still apply.
+ */
 export const publicLessonsBatch = query({
   args: { ids: v.array(v.string()) },
   returns: v.array(v.object({ lessonId: v.id("lessons"), ownerId: v.string(), ownerName: v.string(), createdWith: v.optional(createdWith), createdAt: v.number(), version: schema.doc("lessonVersions") })),
