@@ -73,20 +73,20 @@
       }
     },
     "source.rules": {
-      "budget": 3663,
+      "budget": 3670,
       "unit": "count",
       "raised": {
-        "from": 3654,
-        "reason": "Native magnetic file-drop component adds ten scoped CSS rules/selectors for drag highlight, compact layout, keyboard focus and reduced motion. No global selectors or infinite animation; measured after #305 and #306 for PR #307.",
+        "from": 3663,
+        "reason": "Tab-row overflow hint for phones: edge fade and scroll chevron so hidden tabs (e.g. Games in the library) are discoverable, plus its RTL flip. Seven scoped rules; no global selectors, layout transitions or infinite animation.",
         "at": "2026-10-10"
       }
     },
     "source.selectors": {
-      "budget": 4031,
+      "budget": 4038,
       "unit": "count",
       "raised": {
-        "from": 4022,
-        "reason": "Native magnetic file-drop component adds ten scoped CSS rules/selectors for drag highlight, compact layout, keyboard focus and reduced motion. No global selectors or infinite animation; measured after #305 and #306 for PR #307.",
+        "from": 4031,
+        "reason": "Tab-row overflow hint for phones: edge fade and scroll chevron so hidden tabs (e.g. Games in the library) are discoverable, plus its RTL flip. Seven scoped rules; no global selectors, layout transitions or infinite animation.",
         "at": "2026-10-10"
       }
     },

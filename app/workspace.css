@@ -346,6 +346,14 @@
 /* ── Tabs with a sliding indicator ────────────────────────────────────── */
 .ws-tabs { position: relative; display: flex; gap: 24px; overflow-x: auto; box-shadow: inset 0 -1px 0 var(--ws-line); scrollbar-width: none; -webkit-overflow-scrolling: touch; }
 .ws-tabs::-webkit-scrollbar { display: none; }
+/* Fade whichever edge has tabs out of view; a chevron at the end says the row scrolls. */
+.ws-tabs-wrap { position: relative; --tabs-fade-start: 0px; --tabs-fade-end: 0px; }
+.ws-tabs-wrap[data-overflow-start] { --tabs-fade-start: 28px; }
+.ws-tabs-wrap[data-overflow-end] { --tabs-fade-end: 48px; }
+.ws-tabs-wrap > .ws-tabs { -webkit-mask-image: linear-gradient(to var(--tabs-fade-dir, right), transparent 0, #000 var(--tabs-fade-start), #000 calc(100% - var(--tabs-fade-end)), transparent 100%); mask-image: linear-gradient(to var(--tabs-fade-dir, right), transparent 0, #000 var(--tabs-fade-start), #000 calc(100% - var(--tabs-fade-end)), transparent 100%); }
+[dir="rtl"] .ws-tabs-wrap { --tabs-fade-dir: left; }
+.ws-tabs-more { position: absolute; inset-inline-end: 0; top: 50%; display: grid; place-items: center; width: 28px; height: 28px; translate: 0 -50%; border-radius: 999px; background: var(--ws-card); box-shadow: var(--ws-shadow-sm); color: var(--on-surface-variant); cursor: pointer; }
+[dir="rtl"] .ws-tabs-more svg { transform: scaleX(-1); }
 .ws-tab { position: relative; display: inline-flex; flex: none; align-items: center; gap: 8px; padding: 12px 2px 13px; color: var(--on-surface-variant); font-size: 15px; font-weight: 500; white-space: nowrap; cursor: pointer; transition: color 120ms ease; }
 .ws-tab:hover { color: var(--on-background); }
 .ws-tab[aria-selected="true"] { color: var(--on-background); }

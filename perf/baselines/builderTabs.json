@@ -6,8 +6,13 @@
       "unit": "count"
     },
     "builder.questions100.domElements": {
-      "budget": 2332,
-      "unit": "count"
+      "budget": 2333,
+      "unit": "count",
+      "raised": {
+        "from": 2332,
+        "reason": "One wrapper element around each workspace tab row (WsTabs) to hold the phone overflow fade and scroll chevron; nothing else changes.",
+        "at": "2026-10-10"
+      }
     },
     "builder.tabReturn.elementsAdded": {
       "budget": 0,
