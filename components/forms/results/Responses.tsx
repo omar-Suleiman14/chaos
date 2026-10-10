@@ -16,6 +16,7 @@ import { formatDateTime, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
 import { resultsCopy } from "./copy";
 import { ResponseDetail } from "./ResponseDetail";
+import StateIllustration from "@/components/StateIllustration";
 
 export type Filter = { status?: "completed" | "partial"; reviewed?: boolean; tag?: string; search?: string; spam?: boolean };
 type Order = "desc" | "asc";
@@ -221,6 +222,7 @@ export function ResponsesTab({ formId, role, quiz }: { formId: Id<"forms">; role
         <div className="min-w-0">
           {status === "LoadingFirstPage" ? <LibrarySkeleton label={t.loadingResponses} view="list" count={6} /> : results.length === 0 ? (
             <div className="ws-empty">
+              <StateIllustration variant={filter.spam || filtered ? "search" : "create"} />
               <p className="ws-muted max-w-sm">{filter.spam ? t.noSpam : filtered ? t.noMatches : t.noneYet}</p>
               {filtered && <button type="button" className="ws-btn ws-btn--sm" onClick={clearAll}>{t.clearFilters}</button>}
             </div>
