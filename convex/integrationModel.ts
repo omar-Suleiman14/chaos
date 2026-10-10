@@ -14,7 +14,8 @@ export async function activeIntegrationToken(ctx: MutationCtx | QueryCtx, tokenI
   const token = await ctx.db.get("integrationTokens", tokenId);
   if (!token || token.revokedAt || (token.expiresAt !== undefined && token.expiresAt <= now)) return null;
   const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", token.ownerId)).first();
-  return owner?.isBanned || owner?.suspendedUntil ? null : token;
+  // No account row means no owner to act for: fail closed rather than treat it as active.
+  return !owner || owner.isBanned || owner.suspendedUntil ? null : token;
 }
 
 export const scopeValidator = v.union(
@@ -89,6 +90,11 @@ export const integrationTables = {
     /** Set by rotation: the old token's hash keeps working until previousTokenExpiresAt. */
     previousTokenHash: v.optional(v.string()),
     previousTokenExpiresAt: v.optional(v.number()),
+    /**
+     * True when the owner replaced the previous token from Chaos (for example after a leak).
+     * That token may still authenticate during its grace period but can no longer rotate.
+     */
+    previousReplacedByOwner: v.optional(v.boolean()),
     rotatedAt: v.optional(v.number()),
   })
     .index("by_tokenHash", ["tokenHash"])

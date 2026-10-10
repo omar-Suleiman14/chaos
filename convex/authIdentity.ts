@@ -9,7 +9,7 @@ export async function getAuthIdentity(ctx: Context) {
   const identity = await ctx.auth.getUserIdentity();
   if (!identity) return null;
   // eslint-disable-next-line @convex-dev/no-process-env -- installation auth configuration
-  const provider = process.env.CHAOS_AUTH_PROVIDER ?? "clerk";
+  const provider = process.env.CHAOS_AUTH_PROVIDER?.trim() || "clerk";
   if (provider !== "betterauth") return identity;
   // eslint-disable-next-line @convex-dev/no-process-env -- installation auth configuration
   const issuer = process.env.CONVEX_SITE_URL?.trim().replace(/\/+$/, "");

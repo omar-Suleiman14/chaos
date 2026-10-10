@@ -59,7 +59,7 @@ async function oidcKeys(issuer: string) {
 export type VerifiedOidcMcp = {
   userId: string;
   clientId: string;
-  profile: { name: string; email: string; imageUrl?: string };
+  profile: { name: string; email: string; emailVerified: boolean; imageUrl?: string };
 };
 
 /** OAuth access tokens must target this resource and a registered, allowed client. */
@@ -77,7 +77,7 @@ export async function verifyBetterAuthMcpToken(token: string): Promise<VerifiedO
   const email = payload.email_verified === true && typeof payload.email === "string" ? payload.email : "";
   const name = typeof payload.name === "string" ? payload.name : typeof payload.preferred_username === "string" ? payload.preferred_username : "Anonymous";
   const imageUrl = typeof payload.picture === "string" && payload.picture.startsWith("https://") ? payload.picture : undefined;
-  return { userId: await oidcActorId(oidcUrl(process.env.NEXT_PUBLIC_CONVEX_SITE_URL).href.replace(/\/+$/, ""), payload.sub), clientId, profile: { name, email, ...(imageUrl ? { imageUrl } : {}) } };
+  return { userId: await oidcActorId(oidcUrl(process.env.NEXT_PUBLIC_CONVEX_SITE_URL).href.replace(/\/+$/, ""), payload.sub), clientId, profile: { name, email, emailVerified: email !== "", ...(imageUrl ? { imageUrl } : {}) } };
 }
 
 /** RFC 9728 protected resource metadata for this installation's selected provider. */

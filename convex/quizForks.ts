@@ -8,7 +8,7 @@ import { quizForkTables } from "./quizForkModel";
 import { createFormRecord } from "./forms";
 import { creatorRestricted, requireActiveUser } from "./authz";
 import { requireLearnActor } from "./mcpLearn";
-import { publicQuizDefinition } from "./formQuiz";
+import { respondentDefinition } from "./formRelease";
 
 /** Forks are of quiz forms; lineage rows keep the wider reference type for history. */
 const formRef = v.object({ kind: v.literal("form"), id: v.id("forms") });
@@ -27,8 +27,9 @@ export async function forkAssessmentForActor(ctx: MutationCtx, actor: string, in
   if (!form || !version || version.formId !== form._id || form.isBanned || await creatorRestricted(ctx, form.ownerId)) throw new Error("NOT_FOUND_OR_UNAUTHORIZED");
   if (form.ownerId !== actor && (form.status !== "live" || form.settings.access !== "public" || form.settings.allowedEmails?.length || form.settings.allowedDomains?.length || version.version !== form.publishedVersion)) throw new Error("NOT_FOUND_OR_UNAUTHORIZED");
   const parentCreatorId = form.ownerId;
-  // Someone else's quiz is forked without its answer key, as respondents see it; the owner keeps theirs.
-  const definition = form.ownerId === actor ? version.definition : publicQuizDefinition(version.definition);
+  // Someone else's quiz is forked exactly as respondents see it now: no answer key and no
+  // questions still waiting for their release time. The owner keeps everything.
+  const definition = form.ownerId === actor ? version.definition : respondentDefinition(version.definition, Date.now());
   const asset = { kind: "form" as const, id: await createFormRecord(ctx, actor, { ...definition, title: `${definition.title} (fork)`.slice(0, 200) }) };
   const parentVersion = { kind: "form" as const, id: version._id };
   await ctx.db.insert("quizForkLineage", { asset, parent, parentVersion, root: previous?.root ?? parent, rootVersion: previous?.rootVersion ?? parentVersion, parentCreatorId, rootCreatorId: previous?.rootCreatorId ?? parentCreatorId, ownerId: actor, depth: (previous?.depth ?? 0) + 1, createdAt: Date.now() });

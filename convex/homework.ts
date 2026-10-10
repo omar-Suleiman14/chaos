@@ -11,10 +11,10 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import { HOMEWORK_LIMITS } from "./homeworkModel";
-import { gradeQuiz, publicQuizDefinition } from "./formQuiz";
+import { gradeQuiz } from "./formQuiz";
 import { definitionValidator, answersValidator, languageValidator } from "./formModel";
-import { releasedDefinition, nextFieldReleaseAt, assertReleasedAnswers } from "./formRelease";
-import { creatorRestricted } from "./authz";
+import { respondentDefinition, releasedDefinition, nextFieldReleaseAt, assertReleasedAnswers } from "./formRelease";
+import { creatorRestricted, userByVerifiedEmail } from "./authz";
 import { checkAnswers, searchTextFor, selectEnding } from "./formLogic";
 import { countResponse, responseCap } from "./respond";
 import { consumeRate, randomCode } from "./serverUtils";
@@ -101,10 +101,10 @@ export const enroll = mutation({
     const student = args.studentId
       ? await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.studentId!)).first()
       : email
-        ? (await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email)).first()) ?? (await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email.toLowerCase())).first())
+        ? await userByVerifiedEmail(ctx, email)
         : null;
     if (!student || student.isBanned || student.suspendedUntil)
-      throw new Error("NOT_FOUND: No active Chaos account uses that email. Ask the student to sign in once first.");
+      throw new Error("NOT_FOUND: No active Chaos account has verified that email. Ask the student to sign in once and verify their email first.");
     const studentId = student.clerkId;
     const existing = await ctx.db
       .query("homeworkEnrollments")
@@ -215,7 +215,7 @@ export const getAttemptDefinition = query({
     const form = await ctx.db.get("forms", assignment.formId);
     const version = await ctx.db.get("formVersions", assignment.versionId);
     if (!form || form.status === "archived" || form.isBanned || await creatorRestricted(ctx, form.ownerId) || !version || version.formId !== form._id || !version.definition.quiz?.enabled) throw new Error("Assignment content unavailable");
-    return { assignmentId: assignment._id, attemptId: attempt._id, title: assignment.title, formId: form._id, versionId: version._id, version: version.version, definition: publicQuizDefinition(releasedDefinition(version.definition, now)), deadline: assignment.deadline, attemptNumber: attempt.number, attemptsRemaining: Math.max(0, assignment.maxAttempts - enrollment.attempts), serverTime: now, nextFieldReleaseAt: nextFieldReleaseAt(version.definition, now) };
+    return { assignmentId: assignment._id, attemptId: attempt._id, title: assignment.title, formId: form._id, versionId: version._id, version: version.version, definition: respondentDefinition(version.definition, now), deadline: assignment.deadline, attemptNumber: attempt.number, attemptsRemaining: Math.max(0, assignment.maxAttempts - enrollment.attempts), serverTime: now, nextFieldReleaseAt: nextFieldReleaseAt(version.definition, now) };
   },
 });
 export const generateUploadUrl = mutation({

@@ -182,8 +182,11 @@ export const revokeConnection = mutation({
  * integration can switch over; everything else about the connection stays.
  * Rotating with the old token during its grace period keeps that old token and
  * replaces only the current one, so a retried rotation never locks a client out.
+ * That retry is only allowed when the client rotated itself: once the owner
+ * replaces a token from Chaos, the old token cannot mint a successor
+ * (callers check previousReplacedByOwner before calling this).
  */
-async function rotateToken(ctx: MutationCtx, token: Token, presentedHash?: string) {
+async function rotateToken(ctx: MutationCtx, token: Token, rotatedBy: "owner" | "connection", presentedHash?: string) {
   const { token: secret, hint } = newSecret();
   const now = Date.now();
   const viaPrevious = presentedHash !== undefined && presentedHash === token.previousTokenHash && (token.previousTokenExpiresAt ?? 0) > now;
@@ -193,6 +196,7 @@ async function rotateToken(ctx: MutationCtx, token: Token, presentedHash?: strin
     tokenHint: hint,
     previousTokenHash: viaPrevious ? token.previousTokenHash : token.tokenHash,
     previousTokenExpiresAt,
+    previousReplacedByOwner: viaPrevious ? token.previousReplacedByOwner : rotatedBy === "owner",
     rotatedAt: now,
   });
   await logConnectionActivity(ctx, token._id, "token.rotated");
@@ -209,7 +213,7 @@ export const rotateConnection = mutation({
     if (token.revokedAt) throw new Error("REVOKED: This connection was revoked.");
     if (token.expiresAt !== undefined && token.expiresAt <= Date.now()) throw new Error("EXPIRED: This connection has expired. Create a new one.");
     // The new secret is returned once and never stored.
-    return await rotateToken(ctx, token);
+    return await rotateToken(ctx, token, "owner");
   },
 });
 
@@ -222,7 +226,7 @@ export const endRotationGrace = mutation({
     const token = await ctx.db.get("integrationTokens", args.tokenId);
     if (!token || !ownsRecord(token, identity)) throw new Error("NOT_FOUND: Connection not found.");
     if (token.previousTokenHash !== undefined) {
-      await ctx.db.patch("integrationTokens", token._id, { previousTokenHash: undefined, previousTokenExpiresAt: undefined });
+      await ctx.db.patch("integrationTokens", token._id, { previousTokenHash: undefined, previousTokenExpiresAt: undefined, previousReplacedByOwner: undefined });
       await logConnectionActivity(ctx, token._id, "token.previous_revoked");
     }
     return null;
@@ -366,7 +370,7 @@ export const authenticate = internalMutation({
       return { ok: false as const, status: 401, code: "TOKEN_REVOKED", message: "This connection was revoked or has expired. Reconnect from Chaos." };
     }
     const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", token.ownerId)).first();
-    if (owner?.isBanned || owner?.suspendedUntil) return { ok: false as const, status: 401, code: "TOKEN_REVOKED", message: "This connection is no longer active." };
+    if (!owner || owner.isBanned || owner.suspendedUntil) return { ok: false as const, status: 401, code: "TOKEN_REVOKED", message: "This connection is no longer active." };
     if (args.scope && !token.scopes.includes(args.scope)) {
       return { ok: false as const, status: 403, code: "INSUFFICIENT_SCOPE", message: `This connection does not have the ${args.scope} permission.` };
     }
@@ -393,7 +397,11 @@ export const apiRotate = internalMutation({
     if (!token) return fail(401, "TOKEN_REVOKED", "This connection was revoked.");
     const presented = await findToken(ctx, args.tokenHash);
     if (!presented || presented.token._id !== token._id) return fail(401, "UNAUTHORIZED", "The connection token is not recognised.");
-    const rotated = await rotateToken(ctx, token, args.tokenHash);
+    // A token the owner replaced keeps reading until its deadline but cannot mint a successor.
+    if (presented.previousExpiresAt !== null && token.previousReplacedByOwner) {
+      return fail(403, "TOKEN_REPLACED", "The connection owner replaced this token. Ask them for the new token.");
+    }
+    const rotated = await rotateToken(ctx, token, "connection", args.tokenHash);
     return ok({ token: rotated.token, previousTokenExpiresAt: rotated.previousTokenExpiresAt });
   },
 });
@@ -498,7 +506,8 @@ export const getSummary = internalQuery({
       completedCount: summary.suppressed ? null : counts.responseCount,
       averageScorePercent: null,
       questions: summary.questions,
-      updatedAt: counts.lastResponseAt ?? form.updatedAt,
+      // A last-response time would reveal activity on forms too small to report.
+      updatedAt: summary.suppressed ? form.updatedAt : counts.lastResponseAt ?? form.updatedAt,
     });
 
   },

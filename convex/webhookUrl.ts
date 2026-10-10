@@ -126,7 +126,9 @@ function blockedV6(ip: string): boolean {
   if (zeroUpTo(8)) return true; // ::
   if (zeroUpTo(7) && g[7] === 1) return true; // ::1
   if (zeroUpTo(5) && g[5] === 0xffff) return blockedV4(embeddedV4(g, 6)); // IPv4-mapped
+  if (zeroUpTo(4) && g[4] === 0xffff && g[5] === 0) return blockedV4(embeddedV4(g, 6)); // IPv4-translated (SIIT) ::ffff:0:0:0/96
   if (zeroUpTo(6)) return blockedV4(embeddedV4(g, 6)); // IPv4-compatible (deprecated)
+  if (g[0] === 0x64 && g[1] === 0xff9b && g[2] === 1) return true; // local-use NAT64 64:ff9b:1::/48 reaches private IPv4 space
   if (g[0] === 0x64 && g[1] === 0xff9b) return blockedV4(embeddedV4(g, 6)); // NAT64 well-known prefix
   if (g[0] === 0x2002) return blockedV4(embeddedV4(g, 1)); // 6to4 carries an IPv4 address
   if ((g[0] & 0xfe00) === 0xfc00) return true; // unique local fc00::/7

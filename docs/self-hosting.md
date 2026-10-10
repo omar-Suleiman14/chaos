@@ -44,7 +44,7 @@ Deploy backend schema/functions before the app. The deploy container configures 
 
 Visit `/sign-up` to create a Better Auth account. Passwords require at least 12 characters. `/auth/account` changes passwords and revokes other sessions. New email addresses remain unverified; invitation access requires genuine verification. Automated email verification and forgotten-password delivery need an operator-provided mail integration. They are not configured by default.
 
-After signing in once, an operator can grant application administration with `pnpm exec convex run admin:grantAdmin '{"email":"you@example.com"}'` against the intended backend.
+After signing in once, an operator can grant application administration with `pnpm exec convex run admin:grantAdmin '{"email":"you@example.com"}'` against the intended backend. The address must be verified by the sign-in provider; with Better Auth, configure email verification first.
 
 ## Migrating an existing installation
 

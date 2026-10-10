@@ -82,6 +82,18 @@ describe("integration operation permissions", () => {
     expect((await t.mutation(internal.integrations.createDraft, { tokenId, idempotencyKey: "state", requestHash: "state", body: {} })).status).toBe(401);
   });
 
+  it("treats a token whose owner account no longer exists as revoked", async () => {
+    const { t, tokenId, token } = await setup();
+    const tokenHash = await sha256Hex(token);
+    expect((await t.mutation(internal.integrations.authenticate, { tokenHash })).ok).toBe(true);
+    await t.run(async (ctx) => {
+      const row = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", creatorIdentity.subject)).first();
+      await ctx.db.delete("users", row!._id);
+    });
+    expect(await t.mutation(internal.integrations.authenticate, { tokenHash })).toMatchObject({ ok: false, code: "TOKEN_REVOKED" });
+    expect((await t.mutation(internal.integrations.createDraft, { tokenId, idempotencyKey: "orphan", requestHash: "orphan", body: {} })).status).toBe(401);
+  });
+
   it("requires the presented rotation credential to remain current", async () => {
     const { t, owner, tokenId, token } = await setup();
     const tokenHash = await sha256Hex(token);
