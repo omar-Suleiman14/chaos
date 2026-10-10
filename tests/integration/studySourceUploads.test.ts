@@ -1,5 +1,7 @@
-import { expect, it } from "vitest";
+import { expect, it, vi } from "vitest";
 import { makeFunctionReference } from "convex/server";
+import { api } from "@/convex/_generated/api";
+import { creatorIdentity } from "../fixtures";
 import { createTestConvex } from "./setup";
 const actor = "file_owner",
   other = "file_other";
@@ -190,4 +192,35 @@ it("publishes only authorized citation metadata and never exposes PDF bytes", as
   await expect(
     t.action(action("readContent"), { userId: other, sourceId }),
   ).rejects.toThrow("FORBIDDEN");
+});
+
+it("making a granted source private revokes the grant on every read path (web and MCP)", async () => {
+  vi.stubEnv("CONVEX_SITE_URL", "https://backend.example.test");
+  const t = await setup();
+  const as = (subject: string) => t.withIdentity({ ...creatorIdentity, subject, tokenIdentifier: `${creatorIdentity.issuer}|${subject}` });
+  const owner = as(actor), grantee = as(other);
+  await t.action(action("upload"), { ...args, index: 0, data: btoa("%PDF-1.7\n") });
+  const { sourceId } = await t.action(action("upload"), { ...args, index: 1, data: btoa("private notes") });
+  await owner.mutation(api.learnSources.update, { sourceId, metadataVisibility: "restricted", contentVisibility: "restricted" });
+  await owner.mutation(api.learnSources.setGrant, { sourceId, userId: other, metadata: true, content: true });
+  const sourceMetadata = makeFunctionReference<"query">("mcpLearn:getSourceMetadata");
+
+  // While restricted, the grantee reads on both paths.
+  expect(atob((await t.action(action("readContent"), { userId: other, sourceId })).data)).toContain("private notes");
+  expect(await t.query(sourceMetadata, { userId: other, sourceId })).not.toBeNull();
+  expect(await grantee.query(api.learnSources.getContentUrl, { sourceId })).not.toBeNull();
+
+  // Moving both parts to private revokes the grant without deleting it.
+  await owner.mutation(api.learnSources.update, { sourceId, metadataVisibility: "private", contentVisibility: "private" });
+  expect(await t.run(ctx => ctx.db.query("learnSourceGrants").collect())).toHaveLength(1);
+  await expect(t.action(action("readContent"), { userId: other, sourceId })).rejects.toThrow("FORBIDDEN");
+  expect(await t.query(sourceMetadata, { userId: other, sourceId })).toBeNull();
+  expect(await grantee.query(api.learnSources.getContentUrl, { sourceId })).toBeNull();
+  expect(await grantee.query(api.learnSources.getMetadata, { sourceId })).toBeNull();
+  // The owner is unaffected.
+  expect(atob((await t.action(action("readContent"), { userId: actor, sourceId })).data)).toContain("private notes");
+
+  // Restoring restricted visibility restores the same grant.
+  await owner.mutation(api.learnSources.update, { sourceId, metadataVisibility: "restricted", contentVisibility: "restricted" });
+  expect(atob((await t.action(action("readContent"), { userId: other, sourceId })).data)).toContain("private notes");
 });

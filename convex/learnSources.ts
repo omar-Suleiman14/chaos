@@ -18,6 +18,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { LEARN_LIMITS, sourceMetadata, visibility } from "./learnModel";
 import { creatorRestricted, requireActiveUser } from "./authz";
 import { fingerprintBytes, nearByteDuplicate, sourceFingerprint, SOURCE_SIMILARITY_LIMITS } from "./sourceFingerprint";
+import { canReadSourcePart } from "./sourceAccess";
 
 type Metadata = Infer<typeof sourceMetadata>;
 export const SOURCE_UPLOAD_PATH = "/learn/sources/upload";
@@ -291,18 +292,7 @@ async function accessible(
     return null;
   const identity = await getAuthIdentity(ctx);
   if (identity && (await creatorRestricted(ctx, identity.subject))) return null;
-  if (identity?.subject === source.ownerId) return source;
-  const level =
-    part === "metadata" ? source.metadataVisibility : source.contentVisibility;
-  if (level === "public") return source;
-  if (level !== "restricted" || !identity) return null;
-  const grant = await ctx.db
-    .query("learnSourceGrants")
-    .withIndex("by_sourceId_and_userId", (q) =>
-      q.eq("sourceId", sourceId).eq("userId", identity.subject),
-    )
-    .unique();
-  return grant?.[part] ? source : null;
+  return (await canReadSourcePart(ctx, source, identity?.subject ?? null, part)) ? source : null;
 }
 export const create = mutation({
   args: visibilityArgs,
