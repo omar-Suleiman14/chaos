@@ -297,7 +297,10 @@ describe("forms: deleting", () => {
     await expect(owner.mutation(api.forms.setFormStatus, { formId, status: "live" })).rejects.toThrow(/DELETE_PENDING/);
     expect(await owner.query(api.forms.getFormForEditor, { formId })).toBeNull();
     expect(await t.run(ctx => ctx.db.get(formId))).not.toBeNull();
+    const ownedPage = () => owner.query(api.forms.listMyFormsPage, { source: "owned", paginationOpts: { numItems: 10, cursor: null } });
+    expect((await ownedPage()).page.owned.map(form => form._id)).not.toContain(formId);
     await owner.mutation(api.forms.undoDeleteForm, { formId });
+    expect((await ownedPage()).page.owned.map(form => form._id)).toContain(formId);
     await t.mutation(internal.forms.finalizePendingFormDeletion, { formId, deleteAt, revision: 1 });
     expect((await owner.query(api.forms.getFormForEditor, { formId }))?.status).toBe("archived");
     const secondDeadline = await owner.mutation(api.forms.deleteForm, { formId });

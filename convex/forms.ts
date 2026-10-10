@@ -1,4 +1,5 @@
 import { searchText } from "./formSearchText";
+import { DELETE_GRACE_MS } from "./formDeletion";
 import { assertDraftSize } from "./formDraftSize";
 export { assertDraftSize } from "./formDraftSize";
 import { getAuthIdentity } from "./authIdentity";
@@ -154,7 +155,7 @@ export const listMyFormsPage = query({
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 50) throw new Error("VALIDATION_FAILED: Page size must be from 1 to 50.");
     if (args.source === "owned") {
       const batch = await ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", identity.subject)).order("desc").paginate(args.paginationOpts);
-      const forms = await withOwnerFormCounts(ctx, identity.subject, batch.page);
+      const forms = await withOwnerFormCounts(ctx, identity.subject, batch.page.filter((form) => form.pendingDeleteAt === undefined));
       const searchIndex = forms.map((form) => ({ id: form._id, title: form.title, status: form.status, quiz: form.draft.quiz?.enabled ?? false, text: searchText(form.draft) }));
       return { ...batch, page: { ...empty, owned: forms.map(formSummary), searchIndex } };
     }
@@ -168,7 +169,7 @@ export const listMyFormsPage = query({
         if (membership.status === "pending" || !matchesFormCollaborator(membership, identity) || seen.has(membership.formId)) continue;
         seen.add(membership.formId);
         const stored = await ctx.db.get("forms", membership.formId);
-        if (!stored || stored.ownerId === identity.subject) continue;
+        if (!stored || stored.ownerId === identity.subject || stored.pendingDeleteAt !== undefined) continue;
         const form = await withFormCounts(ctx, stored);
         let ownerName = ownerNames.get(form.ownerId);
         if (ownerName === undefined) ownerNames.set(form.ownerId, (ownerName = await displayName(ctx, form.ownerId)));
@@ -189,7 +190,7 @@ export const listMyFormsPage = query({
       if ((membership.userId && membership.status !== "pending") || !matchesFormCollaborator(membership, identity) || seen.has(membership.formId)) continue;
       seen.add(membership.formId);
       const stored = await ctx.db.get("forms", membership.formId);
-      if (!stored || stored.ownerId === identity.subject) continue;
+      if (!stored || stored.ownerId === identity.subject || stored.pendingDeleteAt !== undefined) continue;
       const form = await withFormCounts(ctx, stored);
       let ownerName = ownerNames.get(form.ownerId);
       if (ownerName === undefined) ownerNames.set(form.ownerId, (ownerName = await displayName(ctx, form.ownerId)));
@@ -494,7 +495,6 @@ export const duplicateForm = mutation({
  * Queue irreversible deletion on the server. The row and every dependent record
  * remain intact for five seconds, even if the browser closes or changes device.
  */
-const DELETE_GRACE_MS = 5_000;
 export const deleteForm = mutation({
   args: { formId: v.id("forms") },
   returns: v.number(),

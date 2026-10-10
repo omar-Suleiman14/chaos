@@ -11,6 +11,7 @@ import { LibrarySkeleton } from "@/components/workspace/Skeletons";
 import { WsDialog, WsMenu, WsTabs } from "@/components/workspace/primitives";
 import { toast } from "@/lib/toast";
 import HoldToConfirm from "@/components/workspace/HoldToConfirm";
+import { DELETE_GRACE_MS } from "@/convex/formDeletion";
 import LearningArchive from "@/components/library/LearningArchive";
 import { formatNumber, pluralForm, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
@@ -22,7 +23,7 @@ const copy = {
     loading: "Loading archive...", nothing: "Nothing archived", nothingBody: "Archive a form from its “…” menu in the library. It waits here until you restore or delete it.", backToLibrary: "Back to library",
     name: "Name", responses: "Responses", archived: "Archived", actions: "Actions", untitled: "Untitled", restore: "Restore", deleteForever: "Delete forever",
     moreFor: (title: string) => `More for ${title}`,
-    restoredToast: (title: string) => `Restored “${title}” to your library`, deletedToast: (title: string) => `Deleting “${title}” in 5 seconds`,
+    restoredToast: (title: string) => `Restored “${title}” to your library`, deletedToast: (title: string) => `Deleting “${title}” in 5 seconds`, deletedNow: (title: string) => `Deleted “${title}”`,
     confirmTitle: (title: string) => `Delete “${title}” forever?`,
     confirmBody: (n: number) => `After a 5-second Undo window, its ${n} response${n === 1 ? "" : "s"}, uploaded files, versions and history will be deleted. Hold to confirm.`,
     cancel: "Cancel",
@@ -32,7 +33,7 @@ const copy = {
     loading: "جارٍ تحميل الأرشيف...", nothing: "لا شيء مؤرشف", nothingBody: "أرشِف نموذجًا من قائمة «…» في المكتبة. يبقى هنا حتى تستعيده أو تحذفه.", backToLibrary: "العودة إلى المكتبة",
     name: "الاسم", responses: "الردود", archived: "تاريخ الأرشفة", actions: "الإجراءات", untitled: "بلا عنوان", restore: "استعادة", deleteForever: "احذف نهائيًا",
     moreFor: (title: string) => `المزيد لـ ${title}`,
-    restoredToast: (title: string) => `تمت استعادة «${title}» إلى مكتبتك`, deletedToast: (title: string) => `سيُحذف «${title}» خلال ٥ ثوانٍ`,
+    restoredToast: (title: string) => `تمت استعادة «${title}» إلى مكتبتك`, deletedToast: (title: string) => `سيُحذف «${title}» خلال ٥ ثوانٍ`, deletedNow: (title: string) => `تم حذف «${title}»`,
     confirmTitle: (title: string) => `حذف «${title}» نهائيًا؟`,
     confirmBody: (n: number) => `بعد مهلة تراجع مدتها ٥ ثوانٍ، سيُحذف ${n === 0 ? "ما فيه من" : pluralForm("ar", n, { one: "ردّه الواحد و", two: "ردّاه و", few: `${n} ردود و`, many: `${n} ردًّا و`, other: `${n} ردّ و` })}ملفات مرفوعة وإصدارات وسجل. اضغط مطولًا للتأكيد.`,
     cancel: "إلغاء",
@@ -93,9 +94,12 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
     if (!confirming) return;
     const { id, title } = confirming;
     setConfirming(null);
+    // Measure the Undo window on this device's clock from before the request, so it always
+    // closes no later than the server's deadline whatever the clock skew between them.
+    const expiresAt = Date.now() + DELETE_GRACE_MS;
     try {
-      const expiresAt = await deleteForm({ formId: id });
-      if (Date.now() >= expiresAt) return;
+      await deleteForm({ formId: id });
+      if (Date.now() >= expiresAt) { toast.success(t.deletedNow(title)); return; }
       toast.success(t.deletedToast(title), {
         undo: () => { void undoDeleteForm({ formId: id }).catch(error => toast.error(error)); },
         expiresAt,

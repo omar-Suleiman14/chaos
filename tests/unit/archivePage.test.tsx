@@ -45,7 +45,7 @@ describe("archive page", () => {
     fireEvent.click(screen.getByRole("button", { name: "More for Old signup" }));
     fireEvent.click(screen.getByRole("menuitem", { name: /Delete forever/ }));
     expect(screen.getByRole("dialog", { name: /Delete “Old signup” forever/ })).toBeInTheDocument();
-    fireEvent.keyDown(screen.getByRole("button", { name: /^Delete forever$/ }), { key: "Enter" });
+    fireEvent.click(screen.getByRole("button", { name: /^Delete forever$/ }), { detail: 0 });
     await screen.findByText(/Deleting “Old signup”/);
     expect(m.deleteForm).toHaveBeenCalledWith({ formId: "b" });
   });

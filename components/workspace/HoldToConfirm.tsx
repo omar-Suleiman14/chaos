@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { Trash2 } from "lucide-react";
 
-/** Press and hold (pointer), or Enter/Space (keyboard) in an already-open confirmation dialog. */
+/** Press and hold (pointer), or activate from the keyboard or a screen reader, in an already-open confirmation dialog. */
 export default function HoldToConfirm({ label, onConfirm, disabled = false, duration = 1_400 }: {
   label: string; onConfirm: () => void; disabled?: boolean; duration?: number;
 }) {
@@ -35,10 +35,13 @@ export default function HoldToConfirm({ label, onConfirm, disabled = false, dura
         if (event.clientX < rect.left - 8 || event.clientX > rect.right + 8 || event.clientY < rect.top - 8 || event.clientY > rect.bottom + 8) stop();
       }}
       onPointerUp={stop} onPointerCancel={stop} onLostPointerCapture={stop} onBlur={stop}
-      onKeyDown={(event) => {
-        if (!disabled && !event.repeat && (event.key === "Enter" || event.key === " ")) { event.preventDefault(); if (!fired.current) { fired.current = true; onConfirm(); } }
-      }}
-      onKeyUp={() => { fired.current = false; }}>
+      // Keyboard (Enter/Space) and screen readers activate with a click that has no pointer
+      // press (detail 0); they confirm at once, since the dialog itself is the first step.
+      onClick={(event) => {
+        if (disabled || event.detail !== 0 || fired.current) return;
+        fired.current = true;
+        onConfirm();
+      }}>
       <span className="ws-hold-confirm__fill" aria-hidden="true" />
       <span className="ws-hold-confirm__content"><Trash2 size={14} aria-hidden="true" /> {label}</span>
     </button>
