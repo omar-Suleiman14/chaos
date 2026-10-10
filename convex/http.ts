@@ -13,7 +13,6 @@ import { env, httpAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import type { ApiResult } from "./integrations";
 import type { IntegrationScope } from "./integrationModel";
 import { API_VERSION } from "./integrationContract";
 import { errorCode, sha256Hex } from "./serverUtils";
