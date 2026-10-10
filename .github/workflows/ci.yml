@@ -1,10 +1,12 @@
 name: CI
 
-# Pull requests run the required gate. main is protected (PR required, these
-# checks required), so the squash-merged commit is not tested a second time.
+# Pull requests gate merges. The resulting combined main commit is checked too:
+# individually passing PRs cannot prove that sequential merges work together.
 # Docs-only PRs skip tests and build; a skipped required job counts as passing.
 on:
   pull_request:
+  push:
+    branches: [main]
   workflow_dispatch:
 
 permissions:
