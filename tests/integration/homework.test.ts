@@ -29,6 +29,7 @@ async function setup() {
       clerkId: "student",
       name: "Student",
       email: "s@test.com",
+      emailVerified: true,
       username: "student",
       createdAt: now,
     });

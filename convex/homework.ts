@@ -14,7 +14,7 @@ import { HOMEWORK_LIMITS } from "./homeworkModel";
 import { gradeQuiz } from "./formQuiz";
 import { definitionValidator, answersValidator, languageValidator } from "./formModel";
 import { respondentDefinition, releasedDefinition, nextFieldReleaseAt, assertReleasedAnswers } from "./formRelease";
-import { creatorRestricted } from "./authz";
+import { creatorRestricted, userByVerifiedEmail } from "./authz";
 import { checkAnswers, searchTextFor, selectEnding } from "./formLogic";
 import { countResponse, responseCap } from "./respond";
 import { consumeRate, randomCode } from "./serverUtils";
@@ -101,10 +101,10 @@ export const enroll = mutation({
     const student = args.studentId
       ? await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", args.studentId!)).first()
       : email
-        ? (await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email)).first()) ?? (await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", email.toLowerCase())).first())
+        ? await userByVerifiedEmail(ctx, email)
         : null;
     if (!student || student.isBanned || student.suspendedUntil)
-      throw new Error("NOT_FOUND: No active Chaos account uses that email. Ask the student to sign in once first.");
+      throw new Error("NOT_FOUND: No active Chaos account has verified that email. Ask the student to sign in once and verify their email first.");
     const studentId = student.clerkId;
     const existing = await ctx.db
       .query("homeworkEnrollments")

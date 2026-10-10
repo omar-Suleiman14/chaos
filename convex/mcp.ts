@@ -57,14 +57,14 @@ async function requireWritable(ctx: MutationCtx, userId: string) {
 export const begin = internalMutation({
   args: {
     userId: v.string(),
-    profile: v.optional(v.object({ name: v.string(), email: v.string(), imageUrl: v.optional(v.string()) })),
+    profile: v.optional(v.object({ name: v.string(), email: v.string(), emailVerified: v.optional(v.boolean()), imageUrl: v.optional(v.string()) })),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const existing = await userRow(ctx, args.userId);
     if (!existing) {
       if (!args.profile) fail("ACCOUNT_REQUIRED", `Open ${appUrl("/")} and sign in once, then try again.`);
-      await insertNewUser(ctx, { clerkId: args.userId, name: args.profile.name || "Anonymous", email: args.profile.email, imageUrl: args.profile.imageUrl });
+      await insertNewUser(ctx, { clerkId: args.userId, name: args.profile.name || "Anonymous", email: args.profile.email, emailVerified: args.profile.emailVerified === true, imageUrl: args.profile.imageUrl });
     }
     // The ChatGPT app is a Pro feature (new accounts start with a 30-day Pro trial).
     const user = await userRow(ctx, args.userId);

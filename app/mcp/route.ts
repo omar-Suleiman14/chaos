@@ -48,7 +48,7 @@ function unauthorized(request: Request, description: string): Response {
   ));
 }
 
-type Verified = { userId: string; clientId?: string; profile?: { name: string; email: string; imageUrl?: string }; provider: "clerk" | "betterauth" };
+type Verified = { userId: string; clientId?: string; profile?: { name: string; email: string; emailVerified?: boolean; imageUrl?: string }; provider: "clerk" | "betterauth" };
 async function verifiedUser(request: Request): Promise<Verified | null | Response> {
   if (!/^Bearer\s+\S+/i.test(request.headers.get("authorization") ?? "")) return null;
   try {
@@ -125,8 +125,9 @@ function convexCaller(verified: Verified, client?: CreatedWith): McpCaller {
     // First visit from ChatGPT: create the Chaos account from the Clerk profile, then retry once.
     if (!outcome.ok && outcome.code === "ACCOUNT_REQUIRED" && !profile && verified.provider === "clerk") {
       const user = await (await clerkClient()).users.getUser(userId);
-      const email = user.primaryEmailAddress?.emailAddress ?? user.emailAddresses[0]?.emailAddress ?? "";
-      profile = { name: user.fullName || user.username || user.firstName || "Anonymous", email, imageUrl: user.imageUrl || undefined };
+      const address = user.primaryEmailAddress ?? user.emailAddresses[0];
+      // The address is shown on the account; only a Clerk-verified one may later grant access.
+      profile = { name: user.fullName || user.username || user.firstName || "Anonymous", email: address?.emailAddress ?? "", emailVerified: address?.verification?.status === "verified", imageUrl: user.imageUrl || undefined };
       outcome = await send(tool, input);
     }
     if (!outcome.ok) throw new McpToolError(outcome.code, outcome.message, outcome.details);

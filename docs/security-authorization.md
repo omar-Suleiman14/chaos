@@ -23,6 +23,10 @@ or unbound grants. Profile creation does not bind invitations using unverified
 email addresses, and stored profile email alone cannot grant access. Accepted
 and legacy explicit account grants retain their account ID authorization. The
 same matching policy governs listing, accepting, declining and leaving forms.
+Each account records whether its provider verified its address
+(`users.emailVerified`). Homework enrollment by email and the operator's
+`admin:grantAdmin` resolve an address only to an account that verified it
+(`userByVerifiedEmail`), so registering someone else's address grants nothing.
 
 Moderation applies to shared access as well. While a form is held or its owner is
 banned or suspended, team access is withdrawn and direct collaborators can only view;

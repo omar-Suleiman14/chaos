@@ -7,7 +7,7 @@ import { mutation, query, internalMutation } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import { isPaidPlan, requireAdmin, requireIdentity } from "./authz";
+import { isPaidPlan, requireAdmin, requireIdentity, userByVerifiedEmail } from "./authz";
 import { readFormCounts } from "./formCounts";
 
 const DAY = 86_400_000;
@@ -577,13 +577,10 @@ export const grantAdmin = internalMutation({
   returns: v.object({ clerkId: v.string(), alreadyAdmin: v.boolean() }),
   handler: async (ctx, args) => {
     const email = args.email.trim().toLowerCase();
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_email", (q) => q.eq("email", email))
-      .first();
+    const user = await userByVerifiedEmail(ctx, email);
     if (!user)
       throw new Error(
-        "USER_NOT_FOUND: Sign in to Chaos with this email once, then try again.",
+        "USER_NOT_FOUND: Sign in to Chaos once with this email, verified, then try again.",
       );
     const existing = await ctx.db
       .query("admins")
