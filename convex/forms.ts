@@ -1,4 +1,5 @@
 import { searchText } from "./formSearchText";
+import { DELETE_GRACE_MS } from "./formDeletion";
 import { assertDraftSize } from "./formDraftSize";
 export { assertDraftSize } from "./formDraftSize";
 import { getAuthIdentity } from "./authIdentity";
@@ -126,6 +127,7 @@ export const listMyForms = query({
     // One name lookup per owner, not per shared form.
     const ownerNames = new Map<string, string>();
     for (const { form: stored, membership: m } of inventory.shared) {
+      if (stored.pendingDeleteAt !== undefined) continue;
       const form = await withFormCounts(ctx, stored);
       let ownerName = ownerNames.get(form.ownerId);
       if (ownerName === undefined) ownerNames.set(form.ownerId, (ownerName = await displayName(ctx, form.ownerId)));
@@ -135,7 +137,7 @@ export const listMyForms = query({
         shared.push({ ...formSummary(form), role: m.role, ownerName });
       }
     }
-    return { owned: (await withOwnerFormCounts(ctx, identity.subject, inventory.owned)).map(formSummary), shared, invites };
+    return { owned: (await withOwnerFormCounts(ctx, identity.subject, inventory.owned.filter(form => form.pendingDeleteAt === undefined))).map(formSummary), shared, invites };
   },
 });
 
@@ -153,7 +155,7 @@ export const listMyFormsPage = query({
     if (!Number.isSafeInteger(limit) || limit < 1 || limit > 50) throw new Error("VALIDATION_FAILED: Page size must be from 1 to 50.");
     if (args.source === "owned") {
       const batch = await ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", identity.subject)).order("desc").paginate(args.paginationOpts);
-      const forms = await withOwnerFormCounts(ctx, identity.subject, batch.page);
+      const forms = await withOwnerFormCounts(ctx, identity.subject, batch.page.filter((form) => form.pendingDeleteAt === undefined));
       const searchIndex = forms.map((form) => ({ id: form._id, title: form.title, status: form.status, quiz: form.draft.quiz?.enabled ?? false, text: searchText(form.draft) }));
       return { ...batch, page: { ...empty, owned: forms.map(formSummary), searchIndex } };
     }
@@ -167,7 +169,7 @@ export const listMyFormsPage = query({
         if (membership.status === "pending" || !matchesFormCollaborator(membership, identity) || seen.has(membership.formId)) continue;
         seen.add(membership.formId);
         const stored = await ctx.db.get("forms", membership.formId);
-        if (!stored || stored.ownerId === identity.subject) continue;
+        if (!stored || stored.ownerId === identity.subject || stored.pendingDeleteAt !== undefined) continue;
         const form = await withFormCounts(ctx, stored);
         let ownerName = ownerNames.get(form.ownerId);
         if (ownerName === undefined) ownerNames.set(form.ownerId, (ownerName = await displayName(ctx, form.ownerId)));
@@ -188,7 +190,7 @@ export const listMyFormsPage = query({
       if ((membership.userId && membership.status !== "pending") || !matchesFormCollaborator(membership, identity) || seen.has(membership.formId)) continue;
       seen.add(membership.formId);
       const stored = await ctx.db.get("forms", membership.formId);
-      if (!stored || stored.ownerId === identity.subject) continue;
+      if (!stored || stored.ownerId === identity.subject || stored.pendingDeleteAt !== undefined) continue;
       const form = await withFormCounts(ctx, stored);
       let ownerName = ownerNames.get(form.ownerId);
       if (ownerName === undefined) ownerNames.set(form.ownerId, (ownerName = await displayName(ctx, form.ownerId)));
@@ -212,7 +214,7 @@ export const searchIndex = query({
     const identity = await getAuthIdentity(ctx);
     if (!identity) return [];
     const inventory = await enumerateForms(ctx, { kind: "identity", identity }, { owned: SEARCH_FORM_CAP, memberships: 100 });
-    const forms = [...inventory.owned, ...inventory.shared.map(row => row.form)];
+    const forms = [...inventory.owned, ...inventory.shared.map(row => row.form)].filter(form => form.pendingDeleteAt === undefined);
     return forms.map((form) => ({
       id: form._id,
       title: form.title,
@@ -234,7 +236,7 @@ export const getFormForEditor = query({
   args: { formId: v.id("forms") },
   handler: async (ctx, args) => {
     const access = await getFormIfRole(ctx, args.formId, "viewer");
-    if (!access) return null;
+    if (!access || access.form.pendingDeleteAt !== undefined) return null;
     const { role } = access;
     const form = await withFormCounts(ctx, access.form);
     const versions = await ctx.db
@@ -447,6 +449,7 @@ export const setFormStatus = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const { form, identity } = await requireFormRole(ctx, args.formId, "owner");
+    if (form.pendingDeleteAt !== undefined) throw new Error("DELETE_PENDING: Undo the pending deletion first.");
     if (args.status === "live" && form.isBanned) throw new Error("CONTENT_HELD: This form is held by an administrator.");
     if (args.status === "live" && form.publishedVersion === undefined) throw new Error("NOT_PUBLISHED: Publish the form first.");
     // "draft" is only valid to restore an archived, never-published form.
@@ -488,13 +491,46 @@ export const duplicateForm = mutation({
   },
 });
 
+/**
+ * Queue irreversible deletion on the server. The row and every dependent record
+ * remain intact for five seconds, even if the browser closes or changes device.
+ */
 export const deleteForm = mutation({
+  args: { formId: v.id("forms") },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const { form } = await requireFormRole(ctx, args.formId, "owner");
+    if (form.status !== "archived") throw new Error("ARCHIVE_FIRST: Archive the form before deleting it.");
+    if (form.pendingDeleteAt !== undefined) throw new Error("DELETE_PENDING: This form is already scheduled for deletion.");
+    const deleteAt = Date.now() + DELETE_GRACE_MS;
+    const revision = (form.deleteRevision ?? 0) + 1;
+    await authorDb(ctx).patch("forms", form._id, { pendingDeleteAt: deleteAt, deleteRevision: revision });
+    await ctx.scheduler.runAt(deleteAt, internal.forms.finalizePendingFormDeletion, { formId: form._id, deleteAt, revision });
+    return deleteAt;
+  },
+});
+
+/** Undo is owner-only; once the deadline has passed there is no way to revive data. */
+export const undoDeleteForm = mutation({
   args: { formId: v.id("forms") },
   returns: v.null(),
   handler: async (ctx, args) => {
     const { form } = await requireFormRole(ctx, args.formId, "owner");
-    // Deleting is final, so it only happens from the Archive: archive first, then delete.
-    if (form.status !== "archived") throw new Error("ARCHIVE_FIRST: Archive the form before deleting it.");
+    if (form.status !== "archived" || form.pendingDeleteAt === undefined || Date.now() >= form.pendingDeleteAt) {
+      throw new Error("UNDO_EXPIRED: The deletion grace period has ended.");
+    }
+    await authorDb(ctx).patch("forms", form._id, { pendingDeleteAt: undefined });
+    return null;
+  },
+});
+
+/** Scheduled jobs cannot delete a row that was undone or rescheduled. */
+export const finalizePendingFormDeletion = internalMutation({
+  args: { formId: v.id("forms"), deleteAt: v.number(), revision: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const form = await ctx.db.get("forms", args.formId);
+    if (!form || form.status !== "archived" || form.pendingDeleteAt !== args.deleteAt || form.deleteRevision !== args.revision || Date.now() < args.deleteAt) return null;
     await authorDb(ctx).delete("forms", form._id);
     await ctx.scheduler.runAfter(0, internal.forms.purgeFormData, { formId: form._id });
     return null;
