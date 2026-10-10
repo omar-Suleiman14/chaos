@@ -25,7 +25,7 @@ export const notionTables = {
     pageId: v.string(),
     lessonId: v.id("lessons"),
     importedAt: v.number(),
-  }).index("by_ownerId_and_pageId", ["ownerId", "pageId"]),
+  }).index("by_ownerId_and_pageId", ["ownerId", "pageId"]).index("by_ownerId_and_importedAt", ["ownerId", "importedAt"]),
   notionResultDeliveries: defineTable({
     ownerId: v.string(),
     connectionId: v.id("notionConnections"),

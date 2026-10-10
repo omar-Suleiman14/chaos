@@ -75,6 +75,6 @@ describe("Import from the Connections card", () => {
     fireEvent.click(importButton);
     await waitFor(() => expect(m.importPage).toHaveBeenCalledWith({ pageId: "page-1", courseId: "course-new" }));
     expect(m.createCourse).toHaveBeenCalledWith({ title: "Photosynthesis", language: "en" });
-    expect(screen.getByRole("link", { name: /Lesson draft created/ }).getAttribute("href")).toBe("/en/dashboard/learn/lessons/lesson1?course=course-new");
+    expect(screen.getByRole("link", { name: /Lesson draft created/ }).getAttribute("href")).toBe("/dashboard/learn/lessons/lesson1?course=course-new");
   });
 });

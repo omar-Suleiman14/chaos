@@ -24,6 +24,7 @@ describe("Notion connection: ownership and OAuth", () => {
   it("answers a not-yet-signed-in page load without throwing", async () => {
     const t = createTestConvex();
     expect(await t.query(api.notion.connection, {})).toBeNull();
+    expect(await t.query(api.notion.listImports, {})).toEqual([]);
   });
 
   it("requires a one-use, expiring OAuth state and never shows the stored token", async () => {
@@ -97,10 +98,24 @@ describe("Notion connection: ownership and OAuth", () => {
     const stored = await t.run(ctx => ctx.db.get("lessons", first));
     expect(stored).toMatchObject({ ownerId: creatorIdentity.subject, visibility: "private", revision: 0 });
     expect(stored?.publishedVersionId).toBeUndefined();
+    const history = await owner.query(api.notion.listImports, {});
+    expect(history).toEqual([{ lessonId: first, title: metadata.title, importedAt: expect.any(Number) }]);
+    expect(await other.query(api.notion.listImports, {})).toEqual([]);
+
+    // The account-scoped Chaos MCP already discovers Notion imports through its lesson tools.
+    const listed = await t.query(internal.mcpLearn.listLessons, { userId: creatorIdentity.subject, scope: "owned", query: "Imported private lesson" });
+    expect(listed.items.some(item => item.lessonId === first)).toBe(true);
+    const draft = await t.query(internal.mcpLearn.getLesson, { userId: creatorIdentity.subject, lessonId: first, view: "draft" });
+    expect(draft.document?.blocks).toMatchObject(document.blocks);
+    const otherListed = await t.query(internal.mcpLearn.listLessons, { userId: otherCreatorIdentity.subject, scope: "owned", query: "Imported private lesson" });
+    expect(otherListed.items).toEqual([]);
+    await expect(t.query(internal.mcpLearn.getLesson, { userId: otherCreatorIdentity.subject, lessonId: first, view: "draft" })).rejects.toThrow();
+
     await other.mutation(api.notion.disconnect, {});
     expect(await owner.query(api.notion.connection, {})).toMatchObject({ connected: true });
     await expect(other.mutation(internal.notion.storeDataSource, { connectionId, dataSourceId: "b".repeat(32), title: "Scores" })).rejects.toThrow(/NOTION_NOT_CONNECTED/);
     await owner.mutation(api.notion.disconnect, {});
     expect(await owner.query(api.notion.connection, {})).toBeNull();
+    expect(await owner.query(api.notion.listImports, {})).toEqual(history);
   });
 });

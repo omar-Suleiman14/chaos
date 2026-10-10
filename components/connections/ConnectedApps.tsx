@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Link from "next/link";
 import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import { ArrowUpRight } from "lucide-react";
 import { NotionMark } from "@/components/site/marks";
@@ -25,6 +26,9 @@ const copy = {
       skipped: "Some unsupported blocks were skipped.", empty: "Nothing shared yet. Share pages or databases with the Chaos integration in Notion.",
       loading: "Working…", error: "Could not complete that action. Try again.",
       privacy: "Only scores and submission details are sent; individual answers and respondent names stay in Chaos.",
+      importedTitle: "Imported lesson drafts",
+      importedHint: "These drafts stay in your Library, even after disconnecting Notion.",
+      mcpHint: "In ChatGPT or Claude, ask the connected Chaos MCP to list your owned lessons and open one as a draft. Imported lessons can be edited with the existing lesson tools.",
       soon: "Coming soon",
       returned: { connected: "Notion is connected.", denied: "Notion access was not granted.", failed: "Could not connect Notion. Try again." },
     },
@@ -42,6 +46,9 @@ const copy = {
       skipped: "تم تجاهل بعض الكتل غير المدعومة.", empty: "لا توجد عناصر مشتركة بعد. شارك الصفحات أو قواعد البيانات مع Chaos في Notion.",
       loading: "جارٍ العمل…", error: "تعذر إتمام الإجراء. حاول مجددًا.",
       privacy: "تُرسل الدرجات وبيانات الإرسال فقط، وتبقى الإجابات الفردية وأسماء المشاركين في Chaos.",
+      importedTitle: "مسودات الدروس المستوردة",
+      importedHint: "تبقى هذه المسودات في مكتبتك حتى بعد فصل Notion.",
+      mcpHint: "يمكنك عبر MCP المتصل بحساب Chaos في ChatGPT أو Claude طلب عرض دروسك وفتح المسودة وتعديلها بأدوات الدروس الحالية.",
       soon: "قريبًا",
       returned: { connected: "تم ربط Notion.", denied: "لم يُمنح الوصول إلى Notion.", failed: "تعذر ربط Notion. حاول مجددًا." },
     },
@@ -59,6 +66,7 @@ export default function ConnectedApps() {
   const { isAuthenticated } = useConvexAuth();
   // Wait for sign-in: before it, "not connected" would be a guess and would offer Connect.
   const status = useQuery(api.notion.connection, isAuthenticated ? {} : "skip");
+  const importedLessons = useQuery(api.notion.listImports, isAuthenticated ? {} : "skip");
   const connect = useMutation(api.notion.beginConnect);
   const disconnect = useMutation(api.notion.disconnect);
   const getPages = useAction(api.notion.listPages);
@@ -143,7 +151,7 @@ export default function ConnectedApps() {
                   })}>{t.notion.importPage}</button>
                 </> : <p>{t.notion.empty}</p>}
               </>}
-              {imported && <p><a className="underline" href={`/${locale}/dashboard/learn/lessons/${imported.lessonId}?course=${imported.courseId}`}>{t.notion.success}</a>{skipped ? ` ${t.notion.skipped}` : ""}</p>}
+              {imported && <p><Link className="underline" href={`/dashboard/learn/lessons/${imported.lessonId}?course=${imported.courseId}`}>{t.notion.success}</Link>{skipped ? ` ${t.notion.skipped}` : ""}</p>}
               <button className="ws-btn ws-btn--sm" disabled={busy} onClick={() => void act(async () => { setSources(await getDataSources({})); })}>{t.notion.loadDatabases}</button>
               {sources !== null && <>
                 {sources.length ? <>
@@ -157,6 +165,20 @@ export default function ConnectedApps() {
               <button className="ws-btn ws-btn--sm" disabled={busy} onClick={() => void act(async () => { await disconnect({}); setPages(null); setSources(null); setImported(null); })}>{t.notion.disconnect}</button>
             </div>
           ) : <p>{t.notion.loading}</p>}
+          {importedLessons && importedLessons.length > 0 && (
+            <section className="mt-4 border-t pt-3" aria-label={t.notion.importedTitle}>
+              <h4 className="font-semibold">{t.notion.importedTitle}</h4>
+              <p className="text-sm opacity-70">{t.notion.importedHint}</p>
+              <ul className="mt-2 space-y-2">
+                {importedLessons.map(lesson => (
+                  <li key={lesson.lessonId}>
+                    <Link className="underline" href={`/dashboard/learn/lessons/${lesson.lessonId}`}>{lesson.title}</Link>
+                  </li>
+                ))}
+              </ul>
+              <p className="mt-2 text-xs opacity-70">{t.notion.mcpHint}</p>
+            </section>
+          )}
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         </article>
         )}
