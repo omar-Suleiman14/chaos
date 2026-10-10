@@ -1,3 +1,4 @@
+import { slugify } from "@/lib/forms/formSlug";
 "use client";
 
 import { FocusInput } from "@/components/InitialFocus";
@@ -33,7 +34,7 @@ function browserTimeZone() {
 function knownTimeZones(): string[] {
   try { return (Intl as unknown as { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf?.("timeZone") ?? []; } catch { return []; }
 }
-const slugify = (value: string) => value.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").slice(0, 64);
+
 
 function ScheduleRows({ s, set }: { s: EditableSettings; set: <K extends keyof EditableSettings>(key: K, value: EditableSettings[K]) => void }) {
   const t = useCopy(copy);
