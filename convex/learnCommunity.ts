@@ -1,3 +1,4 @@
+import { text, integer } from "./learnCommunityValidation";
 import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { consumeRate } from "./serverUtils";
@@ -25,15 +26,6 @@ import { lessonDocument, lessonMeta, LEARN_WRITE_LIMITS } from "./learnModel";
 import type { Id } from "./_generated/dataModel";
 
 const lessonArg = { lessonId: v.id("lessons") };
-function text(value: string, max = 2000) {
-  const clean = value.trim();
-  if (!clean || clean.length > max) throw new Error("Invalid text length");
-  return clean;
-}
-function integer(value: number, min = 0) {
-  if (!Number.isSafeInteger(value) || value < min)
-    throw new Error("Invalid sequence or revision");
-}
 async function actor(ctx: ReadCtx | WriteCtx) {
   return (await requireActiveUser(ctx)).identity;
 }
