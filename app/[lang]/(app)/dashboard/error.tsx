@@ -20,6 +20,7 @@ export default function DashboardError({ error, reset, retry }: { error: Error &
   return (
     <ErrorScreen
       inline
+      illustration="error"
       title={t.title}
       body={t.body}
       primary={{ label: t.retry, onClick: retry ?? reset }}

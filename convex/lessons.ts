@@ -62,7 +62,7 @@ export async function buildLessonSearchText(
 ): Promise<string> {
   const owner = await ctx.db
     .query("users")
-    .withIndex("by_clerkId", (q: any) => q.eq("clerkId", ownerId))
+    .withIndex("by_clerkId", (q) => q.eq("clerkId", ownerId))
     .first();
   const blockTexts = blocks.flatMap((b) => [
     "text" in b && b.text ? b.text : "",

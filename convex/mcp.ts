@@ -22,6 +22,8 @@ import { consumeRate, logActivity } from "./serverUtils";
 import { emitFormStatusChange } from "./webhookEvents";
 import { registerMcpGames } from "./mcpGames";
 import { withFormCounts, withOwnerFormCounts } from "./formCounts";
+import { enumerateForms } from "./formInventory";
+import { readCompletedResponseSample } from "./formResponseSample";
 
 type Ctx = QueryCtx | MutationCtx;
 type Role = "owner" | "editor" | "viewer";
@@ -132,17 +134,9 @@ export const searchForms = internalQuery({
     // Archived forms only appear when asked for, like the library.
     const statusOk = (status: string) => (args.status === "any" ? true : args.status ? status === args.status : status !== "archived");
     const items: Item[] = [];
-    const owned = await ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", args.userId)).order("desc").take(500);
-    for (const doc of owned) items.push({ kind: "form", ref: `form_${doc._id}`, doc, role: "owner" });
-    const memberships = await ctx.db.query("formCollaborators").withIndex("by_userId", (q) => q.eq("userId", args.userId)).take(200);
-    const seen = new Set(owned.map((f) => f._id as string));
-    for (const m of memberships) {
-      if (!matchesAccountFormCollaborator(m, args.userId)) continue;
-      if (seen.has(m.formId)) continue;
-      seen.add(m.formId);
-      const doc = await ctx.db.get("forms", m.formId);
-      if (doc) items.push({ kind: "form", ref: `form_${doc._id}`, doc, role: m.role });
-    }
+    const inventory = await enumerateForms(ctx, { kind: "account", userId: args.userId }, { owned: 500, memberships: 200 });
+    for (const doc of inventory.owned) items.push({ kind: "form", ref: `form_${doc._id}`, doc, role: "owner" });
+    for (const { form: doc, membership } of inventory.shared) items.push({ kind: "form", ref: `form_${doc._id}`, doc, role: membership.role });
     const filtered = items
       .filter((i) => matches(i.doc.title) && statusOk(i.doc.status))
       .sort((a, b) => b.doc.updatedAt - a.doc.updatedAt);
@@ -205,9 +199,7 @@ export const getResults = internalQuery({
     });
     let quiz: { averageScore: number; maxScore: number; averagePercent: number; graded: number } | null = null;
     if (def.quiz?.enabled) {
-      const recent = await ctx.db.query("formResponses")
-        .withIndex("by_formId_and_status_and_submittedAt", (q) => q.eq("formId", form._id).eq("status", "completed"))
-        .order("desc").take(ANALYSIS_SAMPLE);
+      const recent = await readCompletedResponseSample(ctx, form._id, ANALYSIS_SAMPLE);
       const graded = recent.filter((r) => !r.spam && r.quizScore !== undefined && (r.quizMaxScore ?? 0) > 0);
       if (graded.length) {
         const avg = graded.reduce((s, r) => s + r.quizScore!, 0) / graded.length;

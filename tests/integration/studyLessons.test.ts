@@ -211,6 +211,63 @@ async function setup(course = false, uploaded = false) {
     courseId,
   };
 }
+
+async function multipleSources() {
+  const s = await setup();
+  const sourceIds = [s.sourceId];
+  for (let i = 1; i < 3; i++) {
+    const source = await s.t.mutation(makeFunctionReference<"mutation">("studySourceUploads:reference"), {
+      userId,
+      metadata: { title: `Lecture ${i + 1}`, kind: "reference", origin: `Provided lecture ${i + 1}` },
+      metadataVisibility: "public",
+    });
+    sourceIds.push(source.sourceId);
+  }
+  s.job = await s.t.mutation(m("start"), {
+    userId,
+    request: { ...s.request, key: "multiple-sources", sources: sourceIds.map((sourceId, i) => ({ sourceId, label: `Lecture ${i + 1}` })) },
+  });
+  await s.fill();
+  // Checkpoint key order deliberately differs from requested source order.
+  for (const i of [2, 1]) await s.save(`reading-${3 - i}`, { ...s.reading, kind: "reading", sourceIndex: i, sourceId: sourceIds[i] });
+  await s.save("teaching", {
+    kind: "section", order: 0, concepts: ["diffusion"],
+    blocks: [{ id: "teach", type: "paragraph", text: "Random movement in both directions creates a net flux down a concentration gradient until equilibrium.", citations: sourceIds.map(sourceId => ({ sourceId, locator: { kind: "section", label: "Diffusion" } })), conceptIds: [] }],
+  });
+  return { ...s, sourceIds, get job() { return s.job; }, set job(job) { s.job = job; } };
+}
+
+it("finalizes multiple sources in request order despite differently ordered reading checkpoints", async () => {
+  const s = await multipleSources();
+  const request = s.job.request;
+  const result = await s.t.mutation(m("finalize"), { userId, jobId: s.job.jobId, expectedRevision: s.job.revision });
+  expect(result.status).toBe("draft");
+  expect(result.problems).toEqual([]);
+  expect(result.summary.sources).toBe(3);
+  expect(result.request).toEqual(request);
+  const lesson = await s.t.run(ctx => ctx.db.get("lessons", result.lessonId!));
+  expect(lesson?.draft.blocks.find(b => b.id === "teach")?.citations.map(c => c.sourceId)).toEqual(s.sourceIds);
+  expect(await s.t.mutation(m("finalize"), { userId, jobId: result.jobId, expectedRevision: result.revision })).toEqual(result);
+});
+
+it("reports missing, duplicate and incomplete source readings in request order without consuming checkpoints", async () => {
+  const s = await multipleSources();
+  await s.t.run(async ctx => {
+    const reading = await ctx.db.query("studyLessonParts").withIndex("by_job_key", q => q.eq("jobId", s.job.jobId).eq("key", "reading")).unique();
+    await ctx.db.delete("studyLessonParts", reading!._id);
+  });
+  await s.save("duplicate", { ...s.reading, kind: "reading", sourceIndex: 1, sourceId: s.sourceIds[1] });
+  await s.save("reading-1", { ...s.reading, kind: "reading", sourceIndex: 2, sourceId: s.sourceIds[2], readUnits: [1] });
+  const parts = () => s.t.run(ctx => ctx.db.query("studyLessonParts").withIndex("by_job_key", q => q.eq("jobId", s.job.jobId)).collect());
+  const before = await parts();
+  const result = await s.t.mutation(m("finalize"), { userId, jobId: s.job.jobId, expectedRevision: s.job.revision });
+  expect(result.status).toBe("validation_failed");
+  expect(result.problems).toEqual([1, 2, 3].map(i => `Source ${i}: record complete reading and inspection of all figures, tables and captions.`));
+  expect(result.lessonId).toBeNull();
+  expect(result.assets).toEqual([]);
+  expect(await parts()).toEqual(before);
+});
+
 it("completes the native lesson/quiz/card/glossary workflow, grades answers and persists card reviews without duplication", async () => {
   const s = await setup(true, true);
   await s.fill();

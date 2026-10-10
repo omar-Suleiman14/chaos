@@ -1,5 +1,6 @@
 import { recordStudent } from "./studentRoster";
 import { getAuthIdentity } from "./authIdentity";
+import { canonicalJson } from "./canonicalJson";
 
 import { homeworkUploadAccess } from "./homeworkUploadAccess";
 import { hasPro } from "./authz";
@@ -40,13 +41,6 @@ const RESUME_TTL_MS =30 * 24 * 60 * 60 * 1000;
 const MIN_HUMAN_MS = 2500;
 
 type Ctx = QueryCtx | MutationCtx;
-
-/** JSON with object keys sorted, so stored answers (whose key order the database does not keep) compare equal. */
-function stableJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableJson).join(",")}]`;
-  if (value && typeof value === "object") return `{${Object.entries(value).sort(([a], [b]) => (a < b ? -1 : 1)).map(([k, v]) => `${JSON.stringify(k)}:${stableJson(v)}`).join(",")}}`;
-  return JSON.stringify(value);
-}
 
 async function formByShareId(ctx: Ctx, shareId: string) {
   return await ctx.db.query("forms").withIndex("by_shareId", (q) => q.eq("shareId", shareId)).unique();
@@ -491,7 +485,7 @@ export const updateSubmission = mutation({
     const ending = selectEnding(available, checked.answers);
     const grade = gradeQuiz(available, checked.answers);
     // An unchanged resubmission is not an edit: no history entry, no notification.
-    if (args.language === response.language && stableJson(checked.answers) === stableJson(response.answers)) {
+    if (args.language === response.language && canonicalJson(checked.answers, "answers") === canonicalJson(response.answers, "answers")) {
       return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: quizReview(available, grade) };
     }
     if (!response.spam) await adjustAggregates(ctx, form._id, def, response.answers as Answers, -1);
@@ -641,7 +635,6 @@ export const checkUploadTicket = internalQuery({
 });
 
 /** Consumes the ticket and records a file the endpoint itself stored. */
-/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export const recordUpload = internalMutation({
   args: { token: v.string(), storageId: v.id("_storage"), name: v.string(), contentType: v.string(), size: v.number() },
   returns: uploadResult,
@@ -653,6 +646,7 @@ export const recordUpload = internalMutation({
     if (!form || form.status === "archived") throw new Error("FORM_UNAVAILABLE: This form is not available.");
     const metadata = await ctx.db.system.get("_storage", args.storageId);
     if (!metadata || metadata.size !== args.size || (metadata.contentType !== undefined && metadata.contentType !== args.contentType) || uploadRejection(args.contentType, args.size)) throw new Error("UPLOAD_INVALID: Invalid stored file");
+    // oxlint-disable-next-line eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs.
     const name = args.name.replace(/[\\/\u0000-\u001f]/g, "_").slice(0, 200) || "upload";
     const uploadId = await ctx.db.insert("formUploads", {
       formId: ticket.formId, storageId: args.storageId, uploadKey: ticket.uploadKey, fieldId: ticket.fieldId,
@@ -662,7 +656,6 @@ export const recordUpload = internalMutation({
     return { uploadId, name, size: args.size };
   },
 });
-/* oxlint-enable eslint/no-control-regex */
 
 /** Shared limits for the HTTP endpoint. */
 export function uploadRejection(contentType: string, size: number): string | null {
