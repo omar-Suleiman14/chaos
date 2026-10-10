@@ -22,7 +22,7 @@ const configuredOrigins: Record<Exclude<Section, "main">, string | null> = {
 };
 
 /** Section roots, the page a bare subdomain opens. */
-export const SECTION_HOME: Record<Exclude<Section, "main">, string> = { dashboard: "/dashboard", learn: "/learn", docs: "/docs", play: "/play" };
+const SECTION_HOME: Record<Exclude<Section, "main">, string> = { dashboard: "/dashboard", learn: "/learn", docs: "/docs", play: "/play" };
 
 /**
  * Served on whichever host asked: sign-in (Clerk keeps one session across *.chaos.fail), the OAuth
@@ -51,7 +51,7 @@ export function hasOwnHost(section: Exclude<Section, "main">, origins = configur
 }
 
 /** True once at least one section has its own host. */
-export const splitHosts = Object.values(configuredOrigins).some(Boolean);
+const splitHosts = Object.values(configuredOrigins).some(Boolean);
 
 /**
  * A link that works from any host: "/learn/abc" becomes "https://learn.chaos.fail/learn/abc" when
