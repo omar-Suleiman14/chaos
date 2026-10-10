@@ -1,6 +1,6 @@
 import type { LessonDocument, LessonBlock } from "../convex/learnModel";
 
-export type NotionRichText = { plain_text?: string; href?: string | null; annotations?: { bold?: boolean; italic?: boolean; underline?: boolean; strikethrough?: boolean; code?: boolean } };
+type NotionRichText = { plain_text?: string; href?: string | null; annotations?: { bold?: boolean; italic?: boolean; underline?: boolean; strikethrough?: boolean; code?: boolean } };
 export type NotionBlock = {
   id: string;
   type: string;
