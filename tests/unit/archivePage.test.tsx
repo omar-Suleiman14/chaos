@@ -1,5 +1,5 @@
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getFunctionName } from "convex/server";
 import ArchivePage from "@/app/[lang]/(app)/dashboard/archive/page";
 
@@ -9,19 +9,32 @@ const forms = { owned: [
   { _id: "b", title: "Old signup", status: "archived", updatedAt: Date.now() - 1000, responseCount: 9, theme, publishedVersion: 2 },
   { _id: "c", title: "Old assessment", status: "archived", quizMode: true, updatedAt: Date.now() - 1000, responseCount: 3, theme },
 ], shared: [] };
-const m = vi.hoisted(() => ({ setFormStatus: vi.fn(async () => null), deleteForm: vi.fn(async () => Date.now() + 5000), undoDeleteForm: vi.fn(async () => null) }));
+const m = vi.hoisted(() => ({ emptyFirstPage: false, loadMore: vi.fn(), setFormStatus: vi.fn(async () => null), deleteForm: vi.fn(async () => Date.now() + 5000), undoDeleteForm: vi.fn(async () => null) }));
 vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: { href: string; children: React.ReactNode }) => <a href={href} {...rest}>{children}</a> }));
 vi.mock("convex/react", () => ({
   useConvexAuth: () => ({ isAuthenticated: true }),
   // archive:list returns only archived rows of the requested kind.
-  usePaginatedQuery: (_ref: unknown, args: { kind?: string } | "skip") => ({ status: "Exhausted", loadMore: vi.fn(), results: args === "skip" ? [] : forms.owned
+  usePaginatedQuery: (_ref: unknown, args: { kind?: string } | "skip") => ({ status: m.emptyFirstPage ? "CanLoadMore" : "Exhausted", loadMore: m.loadMore, results: args === "skip" || m.emptyFirstPage ? [] : forms.owned
     .filter(f => f.status === "archived" && (args.kind === "quizzes" ? !!f.quizMode : args.kind === "forms" ? !f.quizMode : false))
     .map(f => ({ id: f._id, title: f.title, updatedAt: f.updatedAt, count: f.responseCount, published: f.publishedVersion !== undefined, accent: f.theme.accent })) }),
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? forms : undefined),
   useMutation: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:deleteForm" ? m.deleteForm : getFunctionName(ref) === "forms:undoDeleteForm" ? m.undoDeleteForm : m.setFormStatus),
 }));
 
+beforeEach(() => {
+  m.emptyFirstPage = false;
+  m.loadMore.mockClear();
+});
+
 describe("archive page", () => {
+  it("loads past an empty filtered page instead of claiming the archive is empty", async () => {
+    m.emptyFirstPage = true;
+    render(<ArchivePage />);
+    expect(screen.getByText("Loading archive...")).toBeInTheDocument();
+    expect(screen.queryByText("Nothing archived")).toBeNull();
+    await waitFor(() => expect(m.loadMore).toHaveBeenCalledWith(25));
+  });
+
   it("keeps forms as the default and provides separate learning recovery tabs", () => {
     render(<ArchivePage />);
     expect(screen.getByRole("tab", { name: "Forms" })).toHaveAttribute("aria-selected", "true");
