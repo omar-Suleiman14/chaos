@@ -1,4 +1,5 @@
 import { authorDb } from "./authorIndex";
+import { memoizeRead } from "./readMemo";
 import { v } from "convex/values";
 import {
   paginationOptsValidator,
@@ -56,6 +57,9 @@ export const browse = query({
           )
           .order("desc")
           .paginate(args.paginationOpts);
+    const ownerById = memoizeRead((ownerId: string) =>
+      ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", ownerId)).unique(),
+    );
     const page = [];
     for (const row of result.page) {
       if (
@@ -74,10 +78,7 @@ export const browse = query({
         (args.topic && !m.tags.includes(args.topic))
       )
         continue;
-      const owner = await ctx.db
-        .query("users")
-        .withIndex("by_clerkId", (q) => q.eq("clerkId", row.ownerId))
-        .unique();
+      const owner = await ownerById(row.ownerId);
       page.push({
         id: row._id,
         title: m.title,
