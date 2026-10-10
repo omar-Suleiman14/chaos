@@ -5,19 +5,9 @@ import { buildThemePatch } from "./themes";
 import { applyThemePatch } from "@/convex/mcpContract";
 import { defaultTheme } from "@/convex/formLogic";
 import { learnBlockInput, lessonMetadataSchema } from "./learn";
+import { studyLessonProfile as profile } from "./studyLessonProfile";
 const id = z.string().min(1).max(160);
 const text = z.string().trim().min(1);
-const profile = z.object({
-  teamId: id.optional(),
-  language: z.string().max(35).optional(),
-  lookupLanguage: z.string().max(35).optional(),
-  style: z.string().max(4000).optional(),
-  level: z.string().max(200).optional(),
-  theme: z.string().max(100).optional(),
-  sound: z.enum(["soft", "pop", "wood", "arcade", "off"]).optional(),
-  publish: z.boolean().optional(),
-  visibility: z.enum(["public", "private", "restricted"]).optional(),
-});
 const citation = z.object({
   sourceId: id,
   locator: z.discriminatedUnion("kind", [

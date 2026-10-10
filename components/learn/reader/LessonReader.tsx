@@ -61,6 +61,7 @@ import { primeSpeech, speechSupported } from "@/lib/learn/narration/support";
 import { prefersReducedMotion } from "@/lib/learn/motion";
 import { useUsableMark } from "@/lib/journeys";
 import { linkOrigin } from "@/lib/hosts";
+import { readReaderActivities, saveReaderActivity } from "@/lib/learn/readerActivityStorage";
 
 // Read aloud loads only when a reader asks for it: no speech code on a normal lesson load.
 const Narration = dynamic(() => import("./Narration"), { ssr: false });
@@ -141,12 +142,9 @@ export default function LessonReader({ lesson, previewDraft, backHref = "/dashbo
   const legacyDeckBlocks = legacyFlashcardBlocks(view.content, attachedDecks ?? []);
   const activityKey = `chaos.lesson.activities:${viewer?.id ?? "guest"}:${lesson.id}:${view.version}`;
   const [activities, setActivities] = useState<Record<string, Activity>>({});
-  useEffect(() => { try { setActivities(JSON.parse(localStorage.getItem(activityKey) ?? "{}")); } catch { setActivities({}); } }, [activityKey]);
-  const reportActivity = (activity: Activity) => setActivities(current => {
-    const next = { ...current, [`${activity.kind}:${activity.id}`]: activity };
-    try { localStorage.setItem(activityKey, JSON.stringify(next)); } catch { /* device storage unavailable */ }
-    return next;
-  });
+  useEffect(() => { setActivities(readReaderActivities<Activity>(localStorage, activityKey)); }, [activityKey]);
+  const reportActivity = (activity: Activity) => setActivities(current =>
+    saveReaderActivity(localStorage, activityKey, current, activity));
   const requiredKeys = [...walk(asBlocks(view.content))].flatMap(({ block }) => { const activity = activityOf(block); return activity?.required ? [activity.key] : []; });
   const remainingActivities = requiredKeys.filter(key => !activities[key]).length;
   const meta = view.meta;
