@@ -1,4 +1,7 @@
 "use client";
+
+import { isListed } from "./publicVisibility";
+export { isListed };
 import { cleanTags } from "./normalizeTags";
 import { useKeptQuery } from "@/lib/queryCache";
 import { useQuery } from "@/lib/convexCache";
@@ -133,7 +136,7 @@ export function useLesson(id: string | undefined, readerFirst = false): Lesson |
   }
   return editable ? uiLesson(editable, published) : result ? publicUiLesson(result) : null;
 }
-export function isListed(lesson: Lesson): boolean { return !!lesson.published && lesson.visibility === "public" && !lesson.archived && lesson.moderation === "ok"; }
+
 export function usePublicLessons(filters: SearchFilters = {}): Lesson[] | undefined {
   // Rounded to five minutes, so every page and remount in that window shares one kept subscription
   // (and its cached result) instead of opening a new query per mount.
