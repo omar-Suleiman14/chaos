@@ -4,6 +4,7 @@ import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { deleteResponseRecord, deleteUploadRecord } from "./formResults";
 import { pruneUsernameChanges, releaseExpiredAliases } from "./usernameModel";
+import { nextRetentionPageCursor } from "./retentionPaging";
 
 const BATCH = 100;
 const DAY_MS = 86_400_000;
@@ -35,8 +36,8 @@ export const applyRetention = internalMutation({
         break;
       }
     }
-    if (unfinished) await ctx.scheduler.runAfter(0, internal.crons.applyRetention, { cursor: args.cursor });
-    else if (!page.isDone) await ctx.scheduler.runAfter(0, internal.crons.applyRetention, { cursor: page.continueCursor });
+    const nextCursor = nextRetentionPageCursor(args.cursor, page.continueCursor, page.isDone, unfinished);
+    if (nextCursor !== undefined) await ctx.scheduler.runAfter(0, internal.crons.applyRetention, { cursor: nextCursor });
     return null;
   },
 });
