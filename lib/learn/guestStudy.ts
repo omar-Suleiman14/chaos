@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { parseStoredJson } from "@/lib/storageJson";
 import type { CardReview, LessonProgress, ProgressState } from "./types";
 
 // Guest evidence is device-only and never mixed into an account's server evidence.
@@ -19,10 +20,11 @@ function read(): State {
   try { raw = localStorage.getItem(GUEST_STUDY_KEY); } catch { return cached; }
   if (raw === cachedRaw) return cached;
   cachedRaw = raw;
-  try {
-    const value = raw ? JSON.parse(raw) : null;
-    cached = value && typeof value.progress === "object" && value.progress && typeof value.reviews === "object" && value.reviews ? value : EMPTY;
-  } catch { cached = EMPTY; }
+  cached = parseStoredJson<State>(raw, () => EMPTY, (value): value is State =>
+    value !== null && typeof value === "object"
+    && "progress" in value && !!value.progress && typeof value.progress === "object"
+    && "reviews" in value && !!value.reviews && typeof value.reviews === "object",
+  );
   return cached;
 }
 function write(next: State) {
