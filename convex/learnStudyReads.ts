@@ -5,7 +5,8 @@ import { creatorRestricted, requireActiveUser } from "./authz";
 import { lessonAccess, lessonAccessForActor } from "./lessons";
 import { recentEvidence } from "./learnPractice";
 import { summarizeEvidence } from "./learnPracticeModel";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
+import { cachedVersionRead } from "./learnVersionCache";
 import { attachAssessmentForActor } from "./learnCollections";
 import { canonicalCommunityActor } from "./learnCommunityIntegrations";
 import { publicIdentityFacts } from "./publicIdentityPolicy";
@@ -101,6 +102,8 @@ export async function readWeakAreas(ctx: QueryCtx, args: { now: number }, asActo
     const rows = await ctx.db.query("learnPracticeEvidence").withIndex("by_userId_and_formResponseId_and_fieldId_and_conceptId", q => q.eq("userId", identity.tokenIdentifier)).order("desc").take(200);
     const conceptIds = [...new Set(rows.map(row => row.conceptId))].slice(0, 20);
     const out = [];
+    // Request-local only; each mapping still passes the actor-specific lesson access check.
+    const versionCache = new Map<Id<"lessonVersions">, Doc<"lessonVersions"> | null>();
     for (const conceptId of conceptIds) {
       const evidence = await recentEvidence(ctx, identity.tokenIdentifier, conceptId, args.now);
       if (!evidence.length || summarizeEvidence(conceptId, evidence, args.now).state !== "weak") continue;
@@ -112,7 +115,7 @@ export async function readWeakAreas(ctx: QueryCtx, args: { now: number }, asActo
         try {
           const lesson = await lessonAccessForActor(ctx, identity.subject, mapping.lessonId);
           if (lesson.publishedVersionId !== mapping.versionId || lesson.status !== "active" || lesson.communityState !== "ok") continue;
-          const version = await ctx.db.get("lessonVersions", mapping.versionId);
+          const version = await cachedVersionRead(versionCache, mapping.versionId, () => ctx.db.get("lessonVersions", mapping.versionId));
           if (!version?.document.blocks.some(b => b.id === mapping.blockId)) continue;
           const cards = version.document.blocks.find(b => b.type === "flashcards" && (b.conceptIds.includes(conceptId) || b.conceptIds.includes(concept.slug)));
           place = { lessonId: mapping.lessonId, blockId: mapping.blockId, ...(cards ? { flashcardBlockId: cards.id } : {}) }; break;

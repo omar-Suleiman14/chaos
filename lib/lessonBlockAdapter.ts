@@ -1,4 +1,5 @@
 import { customFields, customTypes, nativeTypes } from "./lessonBlockMappings";
+import { problem, bounded } from "./lessonAdapterGuards";
 import { string as zString, number as zNumber, strictObject as zStrictObject, discriminatedUnion as zDiscriminatedUnion, literal as zLiteral, boolean as zBoolean, array as zArray, enum as zEnum, union as zUnion, type infer as ZodInfer } from "zod";
 import type { Id } from "../convex/_generated/dataModel";
 import type { LessonDocument } from "../convex/learnModel";
@@ -150,20 +151,6 @@ const documentSchema = zStrictObject({
   schemaVersion: zLiteral(1),
   blocks: zArray(blockSchema).max(500),
 });
-function problem(
-  path: string,
-  message: string,
-  code: LessonAdapterProblem["code"] = "invalid",
-): LessonAdapterProblem {
-  return { code, path, message };
-}
-function bounded(value: unknown): boolean {
-  try {
-    return new TextEncoder().encode(JSON.stringify(value)).length <= 300_000;
-  } catch {
-    return false;
-  }
-}
 export function validateLessonDocument(value: unknown): LessonAdapterResult<LessonDocument> {
   if (!bounded(value))
     return {

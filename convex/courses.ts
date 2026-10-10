@@ -1,3 +1,4 @@
+import { publicCourseMetadata } from "./publicCourseMetadata";
 import { courseModule, courseDetails } from "./learnAssetModel";
 import { randomCover } from "../lib/learn/covers";
 import { canonicalCommunityActor } from "./learnCommunityIntegrations";
@@ -17,6 +18,7 @@ import { recordAssetPublicationAction } from "./learnPublicationAudit";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 import { pendingCourseChanges } from "./courseStructure";
 import { hasLiveCoursePublication } from "./publicationEligibility";
+import { memoizeRead } from "./readMemo";
 
 /**
  * Courses are created like forms: a titled, ordered set of lessons that is published as
@@ -317,13 +319,16 @@ export const listPublic = query({
     const rows = await ctx.db.query("learnCollections").withIndex("by_visibility_and_updatedAt", (q) => q.eq("visibility", "public")).order("desc").take(limit * 3);
     const result = [];
     const restricted = new Map<string, boolean>();
+    const ownerById = memoizeRead((ownerId: string) =>
+      ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", ownerId)).first(),
+    );
     for (const row of rows) {
       if (!hasLiveCoursePublication(row)) continue;
       if (!restricted.has(row.ownerId)) restricted.set(row.ownerId, await creatorRestricted(ctx, row.ownerId));
       if (restricted.get(row.ownerId)) continue;
       const version = await ctx.db.get("collectionVersions", row.publishedVersionId);
       if (!version || version.collectionId !== row._id) continue;
-      const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", row.ownerId)).first();
+      const owner = await ownerById(row.ownerId);
       const lessonItems = version.items.filter((item) => item.kind === "lesson");
       const lessonIds = lessonItems.map((item) => item.id as Id<"lessons">);
       const lessonTitles: string[] = [];
@@ -333,12 +338,7 @@ export const listPublic = query({
       }
       result.push({
         id: row._id,
-        title: version.metadata.title,
-        description: version.metadata.description,
-        coverUrl: version.metadata.coverUrl,
-        icon: version.metadata.icon,
-        language: version.metadata.language,
-        tags: version.metadata.tags,
+        ...publicCourseMetadata(version.metadata),
         lessons: lessonItems.length,
         lessonIds,
         lessonTitles,
