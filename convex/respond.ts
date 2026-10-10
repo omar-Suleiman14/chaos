@@ -22,9 +22,9 @@ import { scheduleState } from "./formSchedule";
 import { UNLOCK_WINDOW_MS, unlockBudgets } from "./accessCodeBudget";
 import { assertRateAvailable, consumeRate, notify, randomCode, randomHex, sha256Hex } from "./serverUtils";
 import { ruleHolds, visibleFieldIds } from "./formLogic";
-import { gradeQuiz, publicQuizDefinition, quizReview } from "./formQuiz";
+import { gradeQuiz, quizReview } from "./formQuiz";
 import { emitWebhookEvent, formResponseData } from "./webhookEvents";
-import { releasedDefinition, releasedFieldIds, nextFieldReleaseAt, releasedAnswers, assertReleasedAnswers } from "./formRelease";
+import { respondentDefinition, releasedDefinition, releasedFieldIds, nextFieldReleaseAt, releasedAnswers, assertReleasedAnswers } from "./formRelease";
 import { captureHidden, captureTypedHidden } from "./formRespondent";
 import { teamOrEmailCheck } from "./businessAccess";
 import { changeFormCounts, readFormCounts } from "./formCounts";
@@ -132,7 +132,7 @@ export const getPublicForm = query({
       ...base,
       shareId: form.shareId,
       version: version.version,
-      definition: publicQuizDefinition(releasedDefinition(def as FormDefinition, now)),
+      definition: respondentDefinition(def as FormDefinition, now),
       nextFieldReleaseAt: nextFieldReleaseAt(def as FormDefinition, now),
       serverTime: now,
       ...schedule,
@@ -457,7 +457,7 @@ export const getSubmissionForEdit = query({
     if (!response) return null;
     const def = await definitionForResponse(ctx, response);
     if (!def) return null;
-    return { answers: releasedAnswers(def, response.answers as Answers, Date.now()), language: response.language, definition: publicQuizDefinition(releasedDefinition(def, Date.now())), receiptCode: response.receiptCode, submittedAt: response.submittedAt, editCount: response.editCount ?? 0 };
+    return { answers: releasedAnswers(def, response.answers as Answers, Date.now()), language: response.language, definition: respondentDefinition(def, Date.now()), receiptCode: response.receiptCode, submittedAt: response.submittedAt, editCount: response.editCount ?? 0 };
   },
 });
 
