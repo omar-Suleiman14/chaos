@@ -42,6 +42,7 @@ it("rechecks scopes, selection and token validity before replay and prevents cro
   expect(await t.mutation(write, start)).toMatchObject({ status: 403 });
   await t.run(ctx => ctx.db.patch("integrationTokens", target.tokenId, { itemRefs: [] }));
   expect(await t.query(read, target)).toMatchObject({ status: 404 });
+  await other.mutation(api.quizFunctions.getOrCreateUser, {});
   await t.run(ctx => ctx.db.patch("integrationTokens", target.tokenId, { itemRefs: [`lesson_${target.lessonId}`], ownerId: otherCreatorIdentity.subject }));
   expect(await t.query(read, target)).toMatchObject({ status: 404 });
   await expect(other.query(api.learnCommunity.getProgress, { lessonId: target.lessonId, versionId: target.versionId })).rejects.toThrow();

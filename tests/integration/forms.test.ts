@@ -174,11 +174,15 @@ describe("forms: responses", () => {
       const response = await t.fetch(`/api/integrations/v1/items/form_${formId}/summary`, { headers: { Authorization: `Bearer ${token}` } });
       return { status: response.status, body: await response.json() };
     };
+    const formUpdatedAt = (await t.run(ctx => ctx.db.get("forms", formId)))!.updatedAt;
+    vi.advanceTimersByTime(60_000);
     for (let i = 0; i < 4; i++) await t.mutation(api.respond.submitResponse, { ...submission(`key-small-${i}0000`, { attend: "yes", rating: 5 }), shareId });
     let result = await summary();
     expect(result.status).toBe(200);
     expect(result.body.suppressed).toBe(true);
     expect(result.body.responseCount).toBeNull();
+    // A suppressed summary must not reveal when the last response arrived.
+    expect(result.body.updatedAt).toBe(formUpdatedAt);
     await t.mutation(api.respond.submitResponse, { ...submission("key-small-50000", { attend: "no", email: "private@example.com" }), shareId });
     result = await summary();
     expect(result.body.suppressed).toBe(false);

@@ -370,7 +370,7 @@ export const authenticate = internalMutation({
       return { ok: false as const, status: 401, code: "TOKEN_REVOKED", message: "This connection was revoked or has expired. Reconnect from Chaos." };
     }
     const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", token.ownerId)).first();
-    if (owner?.isBanned || owner?.suspendedUntil) return { ok: false as const, status: 401, code: "TOKEN_REVOKED", message: "This connection is no longer active." };
+    if (!owner || owner.isBanned || owner.suspendedUntil) return { ok: false as const, status: 401, code: "TOKEN_REVOKED", message: "This connection is no longer active." };
     if (args.scope && !token.scopes.includes(args.scope)) {
       return { ok: false as const, status: 403, code: "INSUFFICIENT_SCOPE", message: `This connection does not have the ${args.scope} permission.` };
     }
@@ -506,7 +506,8 @@ export const getSummary = internalQuery({
       completedCount: summary.suppressed ? null : counts.responseCount,
       averageScorePercent: null,
       questions: summary.questions,
-      updatedAt: counts.lastResponseAt ?? form.updatedAt,
+      // A last-response time would reveal activity on forms too small to report.
+      updatedAt: summary.suppressed ? form.updatedAt : counts.lastResponseAt ?? form.updatedAt,
     });
 
   },

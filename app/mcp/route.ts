@@ -108,7 +108,8 @@ function convexCaller(verified: Verified, client?: CreatedWith): McpCaller {
   const secret = process.env.CHAOS_MCP_SECRET;
   let profile = verified.profile;
   const send = async (tool: string, input: Record<string, unknown>) => {
-    if (!secret) throw new McpToolError("NOT_CONFIGURED", "The Chaos app is not configured on this server yet.");
+    // Convex refuses secrets shorter than 32 characters; fail here with a clear error instead.
+    if (!secret || secret.length < 32) throw new McpToolError("NOT_CONFIGURED", "The Chaos app is not configured on this server yet.");
     const response = await fetch(`${convexSiteUrl()}/api/mcp/v1`, {
       method: "POST",
       headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
