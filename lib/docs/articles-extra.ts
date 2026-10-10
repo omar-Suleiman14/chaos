@@ -105,11 +105,11 @@ export const extraArticles: Record<Locale, DocArticle[]> = {
         ] },
         { type: "heading", id: "import", text: "Import a Notion page as a lesson" },
         { type: "steps", items: [
-          "Select **Choose a page to import** and pick a page.",
-          "Select **Import as lesson draft**.",
-          "Open the new **private Chaos lesson**, review it in the editor, and publish only when you are ready.",
+          "In a course, select **Import from Notion** under **Add a lesson** (in any module) and pick a page. The lesson is added to that course and opens in the editor.",
+          "Or, under Notion in Connections, select **Choose a page to import**, pick a page and the **course** it belongs in (or **New course**), then select **Import as lesson draft**.",
+          "Review the new **private lesson draft** in the editor, and publish only when you are ready.",
         ] },
-        { type: "tip", text: "Import is one-time, not ongoing two-way sync. Re-importing the same page reuses the existing Chaos lesson without overwriting your edits. Supported content includes headings, text, lists, code, quotes, toggles and callouts; unsupported media is skipped. Pages exceeding 400 blocks or two nested levels cannot be imported." },
+        { type: "tip", text: "Import is one-time, not ongoing two-way sync. Re-importing the same page reuses the existing Chaos lesson without overwriting your edits, and adds it to the course you choose. Supported content includes headings, text, lists, code, quotes, toggles and callouts; unsupported media is skipped. Pages exceeding 400 blocks or two nested levels cannot be imported." },
         { type: "heading", id: "results", text: "Send completed quiz and form results" },
         { type: "steps", items: [
           "Under Notion in Connections, select **Choose a results database**.",
@@ -239,11 +239,11 @@ export const extraArticles: Record<Locale, DocArticle[]> = {
         ] },
         { type: "heading", id: "import", text: "استيراد صفحة Notion كدرس" },
         { type: "steps", items: [
-          "اضغط **اختر صفحة لاستيرادها** (Choose a page to import) ثم اختر الصفحة.",
-          "اضغط **استيراد كمسودة درس** (Import as lesson draft).",
-          "افتح **مسودة الدرس الخاصة** في Chaos وراجعها داخل المحرّر، ثم انشرها عندما تصبح جاهزًا.",
+          "داخل الدورة، اضغط **استيراد من Notion** أسفل **أضف درسًا** (في أي وحدة) واختر الصفحة. يُضاف الدرس إلى الدورة ويُفتح في المحرّر.",
+          "أو من قسم Notion في الاتصالات اضغط **اختر صفحة لاستيرادها** واختر الصفحة و**الدورة** التي ينتمي إليها (أو **دورة جديدة**)، ثم اضغط **استيراد كمسودة درس**.",
+          "راجع **مسودة الدرس الخاصة** داخل المحرّر، ثم انشرها عندما تصبح جاهزًا.",
         ] },
-        { type: "tip", text: "الاستيراد يحدث مرة واحدة، وليس مزامنة مستمرة في الاتجاهين. عند إعادة استيراد الصفحة نفسها تُستخدم مسودة الدرس الموجودة دون الكتابة فوق تعديلاتك. يدعم النص والعناوين والقوائم والأكواد والاقتباسات والتبديلات والتنبيهات، ويتجاوز الوسائط غير المدعومة. لا يمكن استيراد صفحة تتجاوز 400 كتلة أو مستويين من التداخل." },
+        { type: "tip", text: "الاستيراد يحدث مرة واحدة، وليس مزامنة مستمرة في الاتجاهين. عند إعادة استيراد الصفحة نفسها تُستخدم مسودة الدرس الموجودة دون الكتابة فوق تعديلاتك، وتُضاف إلى الدورة التي تختارها. يدعم النص والعناوين والقوائم والأكواد والاقتباسات والتبديلات والتنبيهات، ويتجاوز الوسائط غير المدعومة. لا يمكن استيراد صفحة تتجاوز 400 كتلة أو مستويين من التداخل." },
         { type: "heading", id: "results", text: "إرسال نتائج النماذج والاختبارات المكتملة" },
         { type: "steps", items: [
           "من قسم Notion في الاتصالات اضغط **اختر قاعدة بيانات للنتائج** (Choose a results database).",
