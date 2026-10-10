@@ -1,3 +1,4 @@
+import { error, respond } from "./httpResponses";
 import { observeHttp } from "../lib/backendTelemetry";
 import { normalizeAssetRefs } from "./mcpIds";
 import { parseCreatedWith } from "../lib/aiClients";
@@ -24,17 +25,6 @@ const PREFIX = "/api/integrations/";
 const MAX_BODY_BYTES = 256 * 1024;
 // MCP calls carry whole lesson documents (LEARN_LIMITS.documentBytes, 300 KB) plus the envelope.
 const MAX_MCP_BODY_BYTES = 350_000;
-
-function respond(result: ApiResult): Response {
-  return new Response(JSON.stringify(result.body), {
-    status: result.status,
-    headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store", ...(result.headers ?? {}) },
-  });
-}
-
-function error(status: number, code: string, message: string, details?: unknown, headers?: Record<string, string>): Response {
-  return respond({ status, body: { error: details === undefined ? { code, message } : { code, message, details } }, headers });
-}
 
 async function readJson(request: Request, limit = MAX_BODY_BYTES): Promise<{ value: unknown; text: string } | Response> {
   const bytes = await readBoundedBody(request, (size) => size > limit);
