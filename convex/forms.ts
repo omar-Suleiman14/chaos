@@ -14,7 +14,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
 import { getFormIfRole, hasPro, matchesAccountFormCollaborator, matchesFormCollaborator, ownsRecord, requireActiveUser, requireFormRole } from "./authz";
 import { checkHiddenFieldNames, checkHiddenParameters, normalizeEmailRules } from "./formRespondent";
-import { checkDefinition, emptyDefinition, FORM_SCHEMA_VERSION, LIMITS } from "./formLogic";
+import { checkDefinition, emptyDefinition, LIMITS } from "./formLogic";
 import type { FormDefinition } from "./formLogic";
 import { isValidTimeZone } from "./formSchedule";
 import { defaultFormSettings, definitionValidator, formRoleValidator, formSettingsValidator, themeValidator } from "./formModel";
