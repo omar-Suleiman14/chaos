@@ -13,6 +13,9 @@ vi.mock("convex/react", () => ({
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? state.forms : undefined),
   useMutation: () => vi.fn(),
 }));
+vi.mock("@/lib/forms/useFormInventoryPages", () => ({
+  useFormInventoryPages: () => ({ forms: state.forms, confirmed: state.forms !== undefined, hasMore: false, loadMore: vi.fn() }),
+}));
 vi.mock("@/lib/learn/data", () => ({ useLearnActions: () => ({ createLesson: vi.fn() }) }));
 vi.mock("@/components/workspace/useCreateForm", () => ({ useCreateForm: () => ({ create: vi.fn(), busy: false }) }));
 vi.mock("@/components/library/FormThumb", () => ({ default: () => null }));

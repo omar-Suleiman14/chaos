@@ -15,6 +15,9 @@ vi.mock("convex/react", () => ({
   },
   useMutation: () => state.create,
 }));
+vi.mock("@/lib/forms/useFormInventoryPages", () => ({
+  useFormInventoryPages: () => ({ forms: { owned: [], shared: [] }, confirmed: true, hasMore: false, loadMore: vi.fn() }),
+}));
 vi.mock("@/lib/learn/data", () => ({ useLearnActions: () => ({ createFlashcardSet: state.create }) }));
 vi.mock("@/components/learn/FlashcardsHub", () => ({ default: ({ view }: { view: string }) => <div data-testid="hub" data-view={view}>Flashcards</div> }));
 vi.mock("@/components/courses/CoursesHub", () => ({ default: ({ view }: { view: string }) => <div data-testid="hub" data-view={view}>Courses</div> }));
