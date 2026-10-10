@@ -270,7 +270,7 @@ export default function ConnectionsPage() {
         </div>
       </div>
 
-      <ConnectedApps />
+      <FallbackBoundary fallback={null}><ConnectedApps /></FallbackBoundary>
 
       <div className="cx-dev flex flex-wrap items-end justify-between gap-3">
         <div>

@@ -28,6 +28,11 @@ Each account records whether its provider verified its address
 `admin:grantAdmin` resolve an address only to an account that verified it
 (`userByVerifiedEmail`), so registering someone else's address grants nothing.
 
+Moderation applies to shared access as well. While a form is held or its owner is
+banned or suspended, team access is withdrawn and direct collaborators can only view;
+web and MCP resolve roles through the same `formRoleForActor` rule. Banned or suspended
+accounts are read-only everywhere, including course enrollment and progress.
+
 Read functions may return `null` or an empty collection when access is denied,
 where the existing client expects that behavior. Creator mutations reject an
 unauthorized caller. Possessing a document ID does not grant creator access.

@@ -5,6 +5,7 @@ import { lessonAccessForActor } from "./lessons";
 import { lessonBlock, lessonMeta, sourceMetadata } from "./learnModel";
 import { storedSourceExcerpt, CONTEXT_LIMITS } from "./learnContextModel";
 import { nodeKind } from "./curriculumModel";
+import { canReadSourcePart } from "./sourceAccess";
 const curriculumContext = v.object({ versionId: v.id("curriculumVersions"), nodeId: v.id("curriculumNodes"), institution: v.string(), program: v.string(), version: v.string(), node: v.string(), kind: nodeKind, blockIds: v.array(v.string()), conceptKeys: v.array(v.string()) });
 /** Controlled export only. This module neither calls a model nor sends data to a provider. */
 export const contextSelection = v.object({ lessonId: v.id("lessons"), versionId: v.id("lessonVersions"), blockIds: v.array(v.string()), sourceIds: v.array(v.id("learnSources")), includeMyProgress: v.boolean(), includeCurriculum: v.optional(v.boolean()), excerptSelections: v.optional(v.array(v.object({ sourceId: v.id("learnSources"), excerptIds: v.array(v.string()) }))) });
@@ -32,8 +33,7 @@ export async function assembleForActor(ctx: QueryCtx | MutationCtx, actor: { sub
       if (!args.sourceIds.includes(selection.sourceId) || !selection.excerptIds.length || new Set(selection.excerptIds).size !== selection.excerptIds.length) throw new Error("Excerpts require explicit selected source metadata and distinct IDs");
       const source = await ctx.db.get("learnSources", selection.sourceId);
       if (!source || source.status === "removed" || await creatorRestricted(ctx, source.ownerId)) throw new Error("Source content unavailable");
-      const grant = await ctx.db.query("learnSourceGrants").withIndex("by_sourceId_and_userId", q => q.eq("sourceId", source._id).eq("userId", identity.subject)).unique();
-      if (source.ownerId !== identity.subject && source.contentVisibility !== "public" && !(source.contentVisibility === "restricted" && grant?.content)) throw new Error("Source content unavailable");
+      if (!await canReadSourcePart(ctx, source, identity.subject, "content")) throw new Error("Source content unavailable");
       for (const id of selection.excerptIds) {
         const excerpt = source.excerpts?.find(e => e.id === id);
         if (!excerpt || new TextEncoder().encode(excerpt.text).length > CONTEXT_LIMITS.excerptBytes) throw new Error("Stored excerpt unavailable or exceeds limit");

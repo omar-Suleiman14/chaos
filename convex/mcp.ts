@@ -16,7 +16,7 @@ import type { Aggregates, Answers, FormDefinition } from "./formLogic";
 import { createFormRecord, publishNow, replaceDraft } from "./forms";
 import { fromDefinition, parseFormInput, themeView, themeWarnings, toDefinition } from "./mcpContract";
 import type { McpFormInput } from "./mcpContract";
-import { hasPro, matchesAccountFormCollaborator } from "./authz";
+import { formRoleForActor, hasPro } from "./authz";
 import { insertNewUser } from "./quizFunctions";
 import { consumeRate, logActivity } from "./serverUtils";
 import { emitFormStatusChange } from "./webhookEvents";
@@ -80,13 +80,6 @@ export const begin = internalMutation({
 
 type Item = { kind: "form"; ref: string; doc: Doc<"forms">; role: Role };
 
-async function formRole(ctx: Ctx, form: Doc<"forms">, userId: string): Promise<Role | null> {
-  if (form.ownerId === userId) return "owner";
-  const rows = await ctx.db.query("formCollaborators").withIndex("by_formId", (q) => q.eq("formId", form._id)).take(100);
-  // This transport proves an account ID, not email verification. Pending email
-  // invitations must be accepted through the verified native identity flow.
-  return rows.find((c) => matchesAccountFormCollaborator(c, userId))?.role ?? null;
-}
 
 /** Ids are `form_<id>`; a bare form id also works. Quizzes are quiz forms. */
 async function loadItem(ctx: Ctx, userId: string, ref: string, minimum: Role = "viewer"): Promise<Item> {
@@ -94,7 +87,7 @@ async function loadItem(ctx: Ctx, userId: string, ref: string, minimum: Role = "
   if (match) {
     const id = ctx.db.normalizeId("forms", match[1]);
     const form = id ? await ctx.db.get("forms", id) : null;
-    const role = form ? await formRole(ctx, form, userId) : null;
+    const role = form ? await formRoleForActor(ctx, form, userId) : null;
     if (form && role) {
       if (roleRank[role] < roleRank[minimum]) fail("FORBIDDEN", `You are a ${role} on this form; this needs ${minimum} access.`);
       return { kind: "form", ref: `form_${form._id}`, doc: await withFormCounts(ctx, form), role };

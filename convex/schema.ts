@@ -23,6 +23,7 @@ import { quizSnapshot, savedQuestion } from "./quizModel";
 import { formTables } from "./formModel";
 import { integrationTables } from "./integrationModel";
 import { webhookTables } from "./webhookModel";
+import { notionTables } from "./notionModel";
 import { liveTables } from "./liveModel";
 import { glossaryTables } from "./lessonGlossaryModel";
 
@@ -56,6 +57,7 @@ export default defineSchema({
   ...formTables,
   ...integrationTables,
   ...webhookTables,
+  ...notionTables,
   ...liveTables,
   ...glossaryTables,
 
