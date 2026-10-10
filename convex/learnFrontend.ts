@@ -5,7 +5,7 @@ import { paginationOptsValidator, paginationResultValidator } from "convex/serve
 import { v } from "convex/values";
 import { query, type QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
-import { creatorRestricted, requireActiveUser } from "./authz";
+import { creatorRestricted, restrictedCreatorAccount, requireActiveUser } from "./authz";
 import { lessonAccess, lessonSummary } from "./lessons";
 import { createdWith, lessonMeta } from "./learnModel";
 import { questionsFromForm } from "./liveLogic";
@@ -18,12 +18,11 @@ function pageCheck(count: number) {
 }
 
 type PublicReadCache = {
-  restrictions: Map<string, Promise<boolean>>;
   owners: Map<string, Promise<Doc<"users"> | null>>;
 };
 
 function publicReadCache(): PublicReadCache {
-  return { restrictions: new Map(), owners: new Map() };
+  return { owners: new Map() };
 }
 
 /** One publication/visibility projection for single and batch reads. Caches live only within the request. */
@@ -35,22 +34,17 @@ async function readPublishedLesson(ctx: QueryCtx, rawId: string, viewer: string 
   const team = !!lesson && await teamAudienceAllows(ctx, lesson, viewer);
   if (!hasLiveLessonPublication(lesson) || (lesson.visibility !== "public" && !team)) return null;
 
-  let restricted = cache.restrictions.get(lesson.ownerId);
-  if (!restricted) {
-    restricted = creatorRestricted(ctx, lesson.ownerId);
-    cache.restrictions.set(lesson.ownerId, restricted);
-  }
-  if (await restricted) return null;
-
-  const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
-  if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) return null;
-
   let ownerRead = cache.owners.get(lesson.ownerId);
   if (!ownerRead) {
     ownerRead = ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
     cache.owners.set(lesson.ownerId, ownerRead);
   }
   const owner = await ownerRead;
+  if (restrictedCreatorAccount(owner)) return null;
+
+  const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
+  if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) return null;
+
   return {
     lessonId: id, ownerId: lesson.ownerId,
     ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator",

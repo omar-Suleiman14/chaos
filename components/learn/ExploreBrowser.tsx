@@ -4,13 +4,14 @@ import { toast } from "@/lib/toast";
 import { useState, useEffect } from "react";
 import { usePaginatedQuery, useMutation } from "convex/react";
 import { useRouter } from "next/navigation";
-import { Search, Plus, GraduationCap } from "lucide-react";
+import { Search, Plus } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
 import { useLearnViewer } from "@/lib/learn/data";
 import { useLocale } from "@/lib/i18n";
 import { coverStyle, courseCopy } from "@/components/courses/shared";
 import { Select } from "@/components/workspace/Select";
+import StateIllustration from "@/components/StateIllustration";
 import "@/components/courses/courses.css";
 export type DirectoryCourse = FunctionReturnType<typeof api.courseDirectory.browse>["page"][number];
 
@@ -207,9 +208,16 @@ export default function ExploreBrowser({ initial = [] }: { initial?: DirectoryCo
             : ""}
         </output>
         <>
-          {!results.length && status === "Exhausted" && (
+          {/* Only once the query is exhausted: during a fetch the list shows the last or server results. */}
+          {!results.length && status === "Exhausted" && (defaults ? (
             <div className="lx-empty">
-              <GraduationCap size={26} />
+              <StateIllustration variant="learn" />
+              <h2>{ar ? "لا دورات عامة بعد" : "No public courses yet"}</h2>
+              <p>{ar ? "تظهر هنا الدورات المنشورة للعامة." : "Courses published to Explore appear here."}</p>
+            </div>
+          ) : (
+            <div className="lx-empty">
+              <StateIllustration variant="search" />
               <h2>{ar ? "لا توجد دورات مطابقة" : "No matching courses"}</h2>
               <p>
                 {ar
@@ -217,7 +225,7 @@ export default function ExploreBrowser({ initial = [] }: { initial?: DirectoryCo
                   : "Try another search or clear your filters."}
               </p>
             </div>
-          )}
+          ))}
           <div className="lx-grid">
             {visibleResults.map((course) => (
               <Link

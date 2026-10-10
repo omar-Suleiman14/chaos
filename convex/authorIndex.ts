@@ -1,6 +1,7 @@
 import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { indexNowAssetTables, withIndexNow, type IndexNowTable } from "./indexNow";
+import { syncCourseMembership } from "./courseMembership";
 
 export const authorTables = ["forms", "lessons", "learnCollections"] as const;
 export type AuthorTable = typeof authorTables[number];
@@ -56,20 +57,25 @@ export async function syncAuthorAsset(ctx: MutationCtx, table: AuthorTable, asse
 
 const discoveryFields = new Set(["status", "settings", "publishedVersion", "publishedVersionId", "isPublished", "publishedSnapshot", "isBanned", "visibility", "communityState", "archived", "ownerId", "creatorId"]);
 
-/** Preserve the generated writer signatures while observing only publication-related writes.
+/** Preserve the generated writer signatures while observing publication and course membership writes.
  * Call sites retain Convex's table/id/value checking; the internal bridge forwards the same arguments.
  */
 export function authorDb(ctx: MutationCtx): Pick<MutationCtx["db"], "insert" | "patch" | "replace" | "delete"> {
   const observe = (method: "insert" | "patch" | "replace" | "delete") => async (...args: unknown[]) => {
     const table = args[0] as AuthorTable;
-    if (method === "patch" && !Object.keys(args[2] as object).some(key => discoveryFields.has(key))) return Reflect.apply(ctx.db[method], ctx.db, args);
+    const fields = method === "patch" ? Object.keys(args[2] as object) : [];
+    const discoveryWrite = method !== "patch" || fields.some(key => discoveryFields.has(key));
+    const membershipWrite = table === "learnCollections" && (method !== "patch" || fields.some(key => ["lessonIds", "items", "ownerId"].includes(key)));
+    if (!discoveryWrite && !membershipWrite) return Reflect.apply(ctx.db[method], ctx.db, args);
     const write = async () => {
       const result: unknown = await Reflect.apply(ctx.db[method], ctx.db, args);
-      await syncAuthorAsset(ctx, table, (method === "insert" ? result : args[1]) as string, method === "delete");
+      const id = (method === "insert" ? result : args[1]) as string;
+      if (membershipWrite) await syncCourseMembership(ctx, id as Id<"learnCollections">, method === "insert");
+      if (discoveryWrite) await syncAuthorAsset(ctx, table, id, method === "delete");
       return result;
     };
     // Public pages whose indexable state changes are queued for IndexNow (convex/indexNow.ts).
-    if (!indexNowAssetTables.includes(table)) return write();
+    if (!discoveryWrite || !indexNowAssetTables.includes(table)) return write();
     return withIndexNow(ctx, table as IndexNowTable, method === "insert" ? null : args[1] as string, write, result => (method === "insert" ? result : args[1]) as string);
   };
   return {
