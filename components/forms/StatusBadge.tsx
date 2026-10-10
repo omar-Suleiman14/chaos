@@ -1,12 +1,13 @@
 "use client";
 
 import { useCopy } from "@/lib/i18n";
+import { formStatusLabels, type FormStatus } from "@/lib/formStatusLabels";
 
-type Status = "draft" | "live" | "closed" | "archived";
+type Status = FormStatus;
 
 const copy = {
-  en: { labels: { draft: "Draft", live: "Live", closed: "Closed", archived: "Archived" } as Record<Status, string>, edited: " · unpublished changes" },
-  ar: { labels: { draft: "مسودة", live: "منشور", closed: "مغلق", archived: "مؤرشف" } as Record<Status, string>, edited: " · تغييرات غير منشورة" },
+  en: { labels: formStatusLabels.en, edited: " · unpublished changes" },
+  ar: { labels: formStatusLabels.ar, edited: " · تغييرات غير منشورة" },
 };
 
 export default function StatusBadge({ status, edited }: { status: Status; edited?: boolean }) {

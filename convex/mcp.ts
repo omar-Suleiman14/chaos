@@ -134,7 +134,7 @@ export const searchForms = internalQuery({
     // Archived forms only appear when asked for, like the library.
     const statusOk = (status: string) => (args.status === "any" ? true : args.status ? status === args.status : status !== "archived");
     const items: Item[] = [];
-    const inventory = await enumerateForms(ctx, { kind: "account", userId: args.userId }, { owned: 500, memberships: 200 });
+    const inventory = await enumerateForms(ctx, { kind: "account", userId: args.userId }, { owned: 500, memberships: 200, detectTruncation: true });
     for (const doc of inventory.owned) items.push({ kind: "form", ref: `form_${doc._id}`, doc, role: "owner" });
     for (const { form: doc, membership } of inventory.shared) items.push({ kind: "form", ref: `form_${doc._id}`, doc, role: membership.role });
     const filtered = items
@@ -143,7 +143,7 @@ export const searchForms = internalQuery({
     const shown = filtered.slice(0, limit);
     const counted = new Map((await withOwnerFormCounts(ctx, args.userId, shown.map((i) => i.doc))).map((doc) => [doc._id as string, doc]));
     const page = shown.map((i) => ({ ...i, doc: counted.get(i.doc._id)! }));
-    return { total: filtered.length, items: page.map(summary) };
+    return { total: filtered.length, items: page.map(summary), truncated: inventory.truncated || filtered.length > shown.length };
   },
 });
 

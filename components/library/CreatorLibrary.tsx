@@ -1,5 +1,7 @@
 "use client";
 
+import { kinds, kindFromParam, type Kind } from "@/lib/forms/libraryTabs";
+
 import StateIllustration from "@/components/StateIllustration";
 import CoursesHub from "@/components/courses/CoursesHub";
 import GamesHub from "@/components/live/GamesHub";
@@ -39,12 +41,10 @@ import { useConfirmedQuery } from "@/lib/confirmedQuery";
 import { CacheState } from "@/components/workspace/CacheState";
 import { linkOrigin } from "@/lib/hosts";
 import { selectLibraryRows } from "@/lib/library/selectLibraryRows";
+import { formStatusLabels, type FormStatus } from "@/lib/formStatusLabels";
+import { writeClipboardText } from "@/lib/clipboard";
 
-const kinds = ["Forms", "Quizzes", "Flashcards", "Courses", "Games"] as const;
-type Kind = (typeof kinds)[number];
-/** The open tab lives in the address (?tab=games) so links, Back and refresh keep it. */
-const kindFromParam = (value: string | null): Kind => kinds.find((k) => k.toLowerCase() === value) ?? "Forms";
-type Status = "live" | "draft" | "closed" | "archived";
+type Status = FormStatus;
 const statusOptions: { id: Status }[] = [{ id: "live" }, { id: "draft" }, { id: "closed" }];
 type SortKey = "edited" | "name" | "responses" | "status" | "count";
 type SortDir = "asc" | "desc";
@@ -57,7 +57,7 @@ const SHARED_GROUP = "Shared with you";
 const copy = {
   en: {
     kinds: { Forms: "Forms", Quizzes: "Quizzes", Flashcards: "Flashcards", Courses: "Courses", Games: "Games" },
-    status_: { live: "Live", draft: "Draft", closed: "Closed", archived: "Archived" },
+    status_: formStatusLabels.en,
     sort_: { count: "Most items", edited: "Last edited", name: "Name", responses: "Most responses", status: "Status" },
     colName: "Name", colStatus: "Status", colResponses: "Responses", colEdited: "Edited", colActions: "Actions",
     untitledQuiz: "Untitled quiz", untitledForm: "Untitled form", untitled: "Untitled",
@@ -91,7 +91,7 @@ const copy = {
   },
   ar: {
     kinds: { Forms: "النماذج", Quizzes: "الاختبارات", Flashcards: "البطاقات", Courses: "الدورات", Games: "الألعاب" },
-    status_: { live: "منشور", draft: "مسودة", closed: "مغلق", archived: "مؤرشف" },
+    status_: formStatusLabels.ar,
     sort_: { count: "\u0627\u0644\u0623\u0643\u062b\u0631 \u0639\u0646\u0627\u0635\u0631", edited: "آخر تعديل", name: "الاسم", responses: "الأكثر ردودًا", status: "الحالة" },
     colName: "الاسم", colStatus: "الحالة", colResponses: "الردود", colEdited: "آخر تعديل", colActions: "الإجراءات",
     untitledQuiz: "اختبار بلا عنوان", untitledForm: "نموذج بلا عنوان", untitled: "بلا عنوان",
@@ -270,10 +270,7 @@ export default function CreatorLibrary() {
   const { toggle: togglePin, isPinned } = usePinned();
   const copyLink = async (url: string) => {
     try {
-      if (typeof navigator.clipboard?.writeText !== "function") {
-        throw new Error(t.clipboardUnavailable);
-      }
-      await navigator.clipboard.writeText(url);
+      await writeClipboardText(url, t.clipboardUnavailable);
       toast.success(t.linkCopied, { id: "copy-link" });
     } catch (e) {
       toast.error(e, { fallback: t.copyFailed, id: "copy-link" });
