@@ -57,7 +57,7 @@ function foldSlow(ch: string, code: number): string {
 }
 
 /** Normalize text. `map[i]` is the index in the original text of normalized character i. */
-export function normalizeWithMap(text: string): { norm: string; map: number[] } {
+function normalizeWithMap(text: string): { norm: string; map: number[] } {
   let norm = "";
   const map: number[] = [];
   for (let i = 0; i < text.length; i++) {

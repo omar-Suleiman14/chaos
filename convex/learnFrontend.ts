@@ -4,12 +4,14 @@ import { lessonAccessForActor } from "./lessons";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 import { query } from "./_generated/server";
+import type { Doc } from "./_generated/dataModel";
 import { creatorRestricted, requireActiveUser } from "./authz";
 import { lessonAccess, lessonSummary } from "./lessons";
 import { createdWith, lessonMeta } from "./learnModel";
 import { questionsFromForm } from "./liveLogic";
-import { canonicalCommunityActor } from "./learnCommunityIntegrations";
+import { publicIdentityFacts } from "./publicIdentityPolicy";
 import schema from "./schema";
+import { hasLiveLessonPublication } from "./publicationEligibility";
 
 function pageCheck(count: number) {
   if (!Number.isSafeInteger(count) || count < 1 || count > 50) throw new Error("Page size must be 1–50");
@@ -26,7 +28,7 @@ export const publicLesson = query({
     const lesson = await ctx.db.get("lessons", id);
     // Team-only lessons read like public ones for members of their team.
     const team = !!lesson && await teamAudienceAllows(ctx, lesson, (await getAuthIdentity(ctx))?.subject);
-    if (!lesson || lesson.status !== "active" || (lesson.visibility !== "public" && !team) || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) return null;
+    if (!hasLiveLessonPublication(lesson) || (lesson.visibility !== "public" && !team) || await creatorRestricted(ctx, lesson.ownerId)) return null;
     const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
     if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) return null;
     const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
@@ -34,25 +36,80 @@ export const publicLesson = query({
   },
 });
 
-/** Fast batched metadata + version lookup for multiple public lessons in one roundtrip. */
+/** Compact anonymous projection for server metadata; never returns the published document. */
+export const publicLessonSummary = query({
+  args: { id: v.string() },
+  returns: v.union(v.null(), v.object({
+    lessonId: v.id("lessons"),
+    ownerName: v.string(),
+    version: v.number(),
+    metadata: lessonMeta,
+    publishedAt: v.number(),
+    outline: v.array(v.object({ id: v.string(), level: v.union(v.literal(1), v.literal(2), v.literal(3)), text: v.string() })),
+  })),
+  handler: async (ctx, args) => {
+    if (!args.id || args.id.length > 100) return null;
+    const id = ctx.db.normalizeId("lessons", args.id);
+    if (!id) return null;
+    const lesson = await ctx.db.get("lessons", id);
+    // This projection serves anonymous metadata, so team-only lessons remain private here.
+    if (!hasLiveLessonPublication(lesson) || lesson.visibility !== "public" || await creatorRestricted(ctx, lesson.ownerId)) return null;
+    const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
+    if (!version || version.lessonId !== id || (version.visibility !== undefined && version.visibility !== "public")) return null;
+    const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
+    const outline = version.document.blocks.flatMap(block => {
+      if (block.type !== "heading") return [];
+      const text = (block.inline?.map(run => run.text).join("") ?? block.text).trim();
+      return text ? [{ id: block.id, level: block.level, text }] : [];
+    });
+    return {
+      lessonId: id,
+      ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator",
+      version: version.number,
+      metadata: version.metadata,
+      publishedAt: version.publishedAt,
+      outline,
+    };
+  },
+});
+
+/**
+ * Read the first 50 input IDs, returning metadata and full immutable lesson versions
+ * (including documents). Omit invalid/unavailable IDs; preserve input order and
+ * duplicates. Current creator restrictions and team audience checks still apply.
+ */
 export const publicLessonsBatch = query({
   args: { ids: v.array(v.string()) },
   returns: v.array(v.object({ lessonId: v.id("lessons"), ownerId: v.string(), ownerName: v.string(), createdWith: v.optional(createdWith), createdAt: v.number(), version: schema.doc("lessonVersions") })),
   handler: async (ctx, args) => {
-    const results = [], viewer = (await getAuthIdentity(ctx))?.subject;
-    for (const rawId of args.ids.slice(0, 50)) {
-      if (!rawId || rawId.length > 100) continue;
+    const viewer = (await getAuthIdentity(ctx))?.subject;
+    // Request-local promises share concurrent reads, never authorization across requests.
+    const restrictions = new Map<string, Promise<boolean>>();
+    const owners = new Map<string, Promise<Doc<"users"> | null>>();
+    const results = await Promise.all(args.ids.slice(0, 50).map(async rawId => {
+      if (!rawId || rawId.length > 100) return null;
       const id = ctx.db.normalizeId("lessons", rawId);
-      if (!id) continue;
+      if (!id) return null;
       const lesson = await ctx.db.get("lessons", id);
       const team = !!lesson && await teamAudienceAllows(ctx, lesson, viewer);
-      if (!lesson || lesson.status !== "active" || (lesson.visibility !== "public" && !team) || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) continue;
+      if (!hasLiveLessonPublication(lesson) || (lesson.visibility !== "public" && !team)) return null;
+      let restricted = restrictions.get(lesson.ownerId);
+      if (!restricted) {
+        restricted = creatorRestricted(ctx, lesson.ownerId);
+        restrictions.set(lesson.ownerId, restricted);
+      }
+      if (await restricted) return null;
       const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
-      if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) continue;
-      const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
-      results.push({ lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", ...(lesson.createdWith ? { createdWith: lesson.createdWith } : {}), createdAt: lesson.createdAt, version });
-    }
-    return results;
+      if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) return null;
+      let ownerRead = owners.get(lesson.ownerId);
+      if (!ownerRead) {
+        ownerRead = ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
+        owners.set(lesson.ownerId, ownerRead);
+      }
+      const owner = await ownerRead;
+      return { lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", ...(lesson.createdWith ? { createdWith: lesson.createdWith } : {}), createdAt: lesson.createdAt, version };
+    }));
+    return results.filter(row => row !== null);
   },
 });
 
@@ -94,7 +151,7 @@ export const listIndexableLessons = query({
     const result = await ctx.db.query("lessons").withIndex("by_visibility_and_communityState", q => q.eq("visibility", "public").eq("communityState", "ok")).paginate(args.paginationOpts);
     const page = [];
     for (const lesson of result.page) {
-      if (lesson.status !== "active" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) continue;
+      if (!hasLiveLessonPublication(lesson) || await creatorRestricted(ctx, lesson.ownerId)) continue;
       const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
       if (!version || version.lessonId !== lesson._id || version.metadata.indexing !== "index" || (version.visibility !== undefined && version.visibility !== "public")) continue;
       page.push({ lessonId: lesson._id, versionId: version._id, metadata: version.metadata, publishedAt: version.publishedAt });
@@ -127,12 +184,10 @@ export const publicProfile = query({
   args: { username: v.string() },
   returns: v.union(v.null(), v.object({ username: v.string(), name: v.string(), imageUrl: v.union(v.string(), v.null()), verifiedRoles: v.array(v.union(v.literal("student"), v.literal("educator"))) })),
   handler: async (ctx, args) => {
-    if (!args.username || args.username.length > 100) return null;
-    const user = await ctx.db.query("users").withIndex("by_username", q => q.eq("username", args.username)).unique();
-    if (!user || await creatorRestricted(ctx, user.clerkId)) return null;
-    const userKey = (await canonicalCommunityActor(ctx, user.clerkId)).tokenIdentifier;
-    const claims = await ctx.db.query("learnIdentityClaims").withIndex("by_userKey_and_role", q => q.eq("userKey", userKey)).take(2);
-    return { username: user.username, name: user.name, imageUrl: user.imageUrl ?? null, verifiedRoles: claims.filter(c => c.status === "verified" && c.method === "manual_review" && !!c.reviewedBy && (c.expiresAt ?? 0) > Date.now()).map(c => c.role) };
+    const facts = await publicIdentityFacts(ctx, args.username);
+    if (!facts) return null;
+    const { user, verified } = facts;
+    return { username: user.username, name: user.name, imageUrl: user.imageUrl ?? null, verifiedRoles: verified.map(c => c.role) };
   },
 });
 

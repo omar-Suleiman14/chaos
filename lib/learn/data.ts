@@ -25,12 +25,12 @@ import type {
 } from "./types";
 
 /**
- * Every Learn screen reads and writes through these hooks. Loading returns `undefined`,
- * like Convex's `useQuery`, so swapping the local store for the backend keeps the
- * screens unchanged.
+ * Learn hooks adapt Convex queries/service clients and remaining device-local
+ * compatibility state to the frontend models. Loading returns `undefined`, like
+ * Convex's `useQuery`; each hook below defines its actual persistence boundary.
  */
 
-/** Durable library/student flows; discussions, folder pins and tutor history remain local-only. */
+/** Shared library/student flows and discussions use Convex; folder pins remain device-local. */
 export const localCapabilities: LearnCapabilities = {
   sharedPublishing: true, versionRestore: true, verification: false, discussions: true, reports: true,
   deviceSync: true, weakAreas: false, curriculumDirectory: true, quizForks: false,
@@ -152,6 +152,11 @@ export function usePublicLessons(filters: SearchFilters = {}): Lesson[] | undefi
   const [asOf] = useState(() => Math.floor(Date.now() / 300_000) * 300_000);
   const rank = useQuery(api.learnCommunity.rank, { asOf, limit: 20, ...(filters.moduleId ? { nodeId: filters.moduleId as Id<"curriculumNodes"> } : {}), ...(filters.versionId ? { curriculumVersionId: filters.versionId as Id<"curriculumVersions"> } : {}) });
   const search = usePaginatedQuery(api.learnSearch.searchPublic, filters.q?.trim() ? { text: filters.q.trim().slice(0, 200) } : "skip", { initialNumItems: 20 });
+  const { status: searchStatus, loadMore: loadMoreSearch, results: searchResults } = search;
+  const searchText = filters.q?.trim().slice(0, 200);
+  useEffect(() => {
+    if (searchText && searchStatus === "CanLoadMore" && searchResults.length < 20) loadMoreSearch(20);
+  }, [searchText, searchStatus, searchResults.length, loadMoreSearch]);
   const ids = filters.q?.trim() ? search.results.map(r => r.lessonId) : rank?.map(r => r.lessonId);
   const batch = useQuery(api.learnFrontend.publicLessonsBatch, ids && ids.length > 0 ? { ids } : "skip");
   if (ids === undefined || (ids.length > 0 && batch === undefined)) return undefined;

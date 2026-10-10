@@ -6,13 +6,16 @@ import type {
 } from "./types";
 
 /**
- * The local Learn store: one JSON document in localStorage (per device, shared by the
- * people who sign in on it and keyed by their id) plus uploaded files in IndexedDB.
+ * Learn's device-local compatibility store: one JSON document in localStorage,
+ * shared on this browser, with personal state under `mine[viewerId]`. Legacy asset
+ * snapshots, recent items, profile edits and folder pins still have local readers.
+ * Legacy `chaos-learn-file:` references resolve files from this browser's IndexedDB.
  *
- * It stands in for the Learn backend so every screen works before that lands. Nothing
- * here leaves the device, which is why `capabilities.sharedPublishing` is false: a lesson
- * "published" here is readable in this browser only. The hooks in `data.ts` are the only
- * callers; replacing them with Convex queries retires this file.
+ * Lessons, publication/version history, library assets, discussions, reports and
+ * signed-in study already use Convex through the Learn hooks and service clients.
+ * Public visibility and access are decided by those server APIs; local snapshots
+ * remain device-only compatibility data. Preserve storage keys, schema and legacy
+ * file resolution until their readers have a verified migration.
  */
 
 export interface LearnState {

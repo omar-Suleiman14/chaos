@@ -3,6 +3,7 @@ import { api } from "@/convex/_generated/api";
 import { createTestConvex } from "./setup";
 import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
 const owned = api.learnFrontend.listOwned, index = api.learnFrontend.listIndexableLessons, quizzes = api.learnFrontend.attachedQuizzes, profile = api.learnFrontend.publicProfile;
+const publicLesson = api.learnFrontend.publicLesson, publicLessonSummary = api.learnFrontend.publicLessonSummary;
 const metadata = { title: "Published title", description: "Public description", language: "en", tags: [], indexing: "index" as const };
 async function setup() {
   const t = createTestConvex(), owner = t.withIdentity(creatorIdentity);
@@ -34,6 +35,25 @@ describe("native Learn frontend reads", () => {
     expect(read).not.toHaveProperty("draft");
     await owner.mutation(api.lessons.setLifecycle, { lessonId, expectedRevision: 2, action: "archive" });
     expect(await t.query(api.learnFrontend.publicLesson, { id: lessonId })).toBeNull();
+  });
+  it("returns a compact SEO summary without the full published document", async () => {
+    const { t, owner, lessonId } = await setup();
+    const document = { schemaVersion: 1 as const, blocks: [
+      { id: "heading", type: "heading" as const, level: 2 as const, text: "Overview", citations: [], conceptIds: [] },
+      { id: "body", type: "paragraph" as const, text: "Published content ".repeat(600), citations: [], conceptIds: [] },
+    ] };
+    await owner.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: 0, metadata, document });
+    await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 1, visibility: "public" });
+    await owner.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: 2, metadata: { ...metadata, title: "SECRET DRAFT" }, document: { schemaVersion: 1, blocks: [] } });
+    const [full, summary] = await Promise.all([
+      t.query(publicLesson, { id: lessonId }),
+      t.query(publicLessonSummary, { id: lessonId }),
+    ]);
+    expect(summary?.metadata.title).toBe(metadata.title);
+    expect(summary?.outline).toEqual([{ id: "heading", level: 2, text: "Overview" }]);
+    expect(summary).not.toHaveProperty("document");
+    expect(summary).not.toHaveProperty("version.document");
+    expect(JSON.stringify(summary).length).toBeLessThan(JSON.stringify(full).length / 10);
   });
   it("bounds owned cards and excludes documents and other owners", async () => {
     const { t, owner, lessonId } = await setup();

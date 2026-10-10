@@ -9,6 +9,7 @@ import { createFolderForActor, listFolderForActor, moveFolderForActor, listMembe
 import { folderAsset } from "./folderModel";
 import { createLessonMappingForActor } from "./curricula";
 import { sha256Hex } from "./serverUtils";
+import { canonicalJson } from "./canonicalJson";
 
 type Ctx = QueryCtx | MutationCtx;
 type Result = { status: number; body: unknown; headers?: Record<string, string> };
@@ -89,11 +90,6 @@ export const read = internalQuery({
   },
 });
 const writes = v.union(v.literal("create"), v.literal("move"), v.literal("member"), v.literal("mapping"));
-function canonical(x: unknown): string {
-  if (Array.isArray(x)) return `[${x.map(canonical).join(",")}]`;
-  if (x && typeof x === "object") return `{${Object.entries(x).sort(([a], [b]) => a.localeCompare(b)).map(([k, value]) => `${JSON.stringify(k)}:${canonical(value)}`).join(",")}}`;
-  return JSON.stringify(x) ?? "null";
-}
 export const write = internalMutation({
   args: { tokenId: v.id("integrationTokens"), operation: writes, idempotencyKey: v.string(), body: v.any() }, returns: result,
   handler: async (ctx, args): Promise<Result> => {
@@ -113,7 +109,7 @@ export const write = internalMutation({
         if ((await ctx.db.get("lessons", lessonId))?.ownerId !== token.ownerId) throw new Error("NOT_FOUND");
       }
       const key = `v2:organization:${args.idempotencyKey}`;
-      const hash = await sha256Hex(canonical({ operation: args.operation, body: p }));
+      const hash = await sha256Hex(canonicalJson({ operation: args.operation, body: p }, "organization"));
       const prior = await findIdempotent(ctx, token._id, key);
       if (prior) {
         if (prior.requestHash !== hash) return fail(422, "IDEMPOTENCY_KEY_REUSED");

@@ -24,6 +24,8 @@ it("team-only lessons, courses and flashcards are readable by team members only"
   expect((await member.query(api.learnFrontend.publicLesson, { id: lessonId }))?.version.metadata.title).toBe("Team handbook");
   expect(await outsider.query(api.learnFrontend.publicLesson, { id: lessonId })).toBeNull();
   expect(await t.query(api.learnFrontend.publicLesson, { id: lessonId })).toBeNull();
+  expect(await member.query(api.learnFrontend.publicLessonSummary, { id: lessonId })).toBeNull();
+  expect(await t.query(api.learnFrontend.publicLessonSummary, { id: lessonId })).toBeNull();
 
   // Publishing to a team you don't belong to is refused.
   const foreign = await outsider.mutation(api.lessons.create, { metadata: meta, document: paragraph });

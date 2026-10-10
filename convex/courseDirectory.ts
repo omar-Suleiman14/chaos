@@ -8,6 +8,7 @@ import { query, internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { creatorRestricted } from "./authz";
 import { courseSearchText } from "./courseSearchModel";
+import { hasLiveCoursePublication } from "./publicationEligibility";
 const card = v.object({
   id: v.id("learnCollections"),
   title: v.string(),
@@ -58,9 +59,7 @@ export const browse = query({
     const page = [];
     for (const row of result.page) {
       if (
-        !row.publishedVersionId ||
-        row.archived ||
-        row.communityState !== "ok" ||
+        !hasLiveCoursePublication(row) ||
         (await creatorRestricted(ctx, row.ownerId))
       )
         continue;
