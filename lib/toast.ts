@@ -23,6 +23,10 @@ export interface ToastOptions {
   action?: ToastAction;
   /** Shorthand for an Undo action. */
   undo?: () => void;
+  /** An absolute server-owned deadline, useful for actions with a fixed undo window. */
+  expiresAt?: number;
+  /** Prevent an undo window from appearing longer than a server-side deadline. */
+  pauseOnHover?: boolean;
 }
 export interface ToastItem {
   id: string;
@@ -32,6 +36,8 @@ export interface ToastItem {
   duration: number;
   action?: ToastAction;
   undo?: () => void;
+  expiresAt?: number;
+  pauseOnHover?: boolean;
   /** Bumped on every update so the timer restarts and the toast replays its entrance. */
   version: number;
   leaving?: boolean;
@@ -53,7 +59,7 @@ function show(kind: ToastKind, title: string, options: ToastOptions = {}): strin
   const id = options.id ?? `t${++counter}`;
   const prior = items.find(item => item.id === id);
   const duration = options.duration ?? DURATION[kind];
-  const item: ToastItem = { id, kind, title, description: options.description, duration, action: options.action, undo: options.undo, version: (prior?.version ?? 0) + 1 };
+  const item: ToastItem = { id, kind, title, description: options.description, duration, action: options.action, undo: options.undo, expiresAt: options.expiresAt, pauseOnHover: options.pauseOnHover, version: (prior?.version ?? 0) + 1 };
   if (prior) { set(items.map(existing => existing.id === id ? item : existing)); return id; }
   const kept = items.filter(existing => !existing.leaving);
   // Drop the oldest finished toasts first; a running task stays visible.
