@@ -1,3 +1,6 @@
+import { answerText, isEmptyAnswer } from "./formAnswers";
+export { answerText, isEmptyAnswer } from "./formAnswers";
+
 import { isIsoDate, isClockTime, isOnStep } from "./formValuePrimitives";
 export { isIsoDate, isClockTime, isOnStep, parseNumberInput } from "./formValuePrimitives";
 // Pure form logic shared by the Convex backend and the Next.js client.
@@ -344,14 +347,6 @@ export function missingTranslations(def: FormDefinition): Record<string, string[
 
 // ── Answers and logic ───────────────────────────────────────────────────────
 
-export function isEmptyAnswer(value: AnswerValue | undefined): boolean {
-  if (value === undefined || value === null) return true;
-  if (typeof value === "string") return !value.trim();
-  if (typeof value === "number") return !Number.isFinite(value);
-  if (Array.isArray(value)) return value.length === 0;
-  return Object.keys(value).length === 0;
-}
-
 export function calculatedScore(def: FormDefinition, answers: Answers, visible?: Set<string>): number {
   let total = 0;
   for (const f of def.fields) {
@@ -468,22 +463,6 @@ export function selectEnding(def: FormDefinition, answers: Answers): Ending | nu
   const visible = visibleFieldIds(def, answers);
   for (const e of def.endings) if (e.showIf && e.showIf.conditions.length && ruleHolds(e.showIf, answers, visible, def)) return e;
   return def.endings.find((e) => !e.showIf || e.showIf.conditions.length === 0) ?? null;
-}
-
-/** Display text for an answer, in the requested language. */
-export function answerText(field: FormField, value: AnswerValue | undefined): string {
-  if (value === undefined || isEmptyAnswer(value)) return "";
-  const label = (id: string) => field.options?.find((o) => o.id === id)?.label ?? id;
-  switch (field.type) {
-    case "choice": case "dropdown": return label(String(value));
-    case "multi_choice": return Array.isArray(value) ? value.map(label).join(", ") : String(value);
-    case "ranking": return Array.isArray(value) ? value.map((id, i) => `${i + 1}. ${label(id)}`).join("; ") : String(value);
-    case "matrix":
-      if (typeof value !== "object" || Array.isArray(value)) return String(value);
-      return (field.rows ?? []).filter((r) => value[r.id]).map((r) => `${r.label}: ${label(value[r.id])}`).join("; ");
-    case "file": return Array.isArray(value) ? `${value.length} file${value.length === 1 ? "" : "s"}` : "";
-    default: return String(value);
-  }
 }
 
 /** Replace {{fieldId}} (and {{score}}) with the respondent's answers. */
