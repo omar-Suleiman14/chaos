@@ -385,8 +385,16 @@ export async function finalizeStudyLesson(
     n <= 10000 &&
     new Set(units).size === n &&
     units.every((i) => Number.isSafeInteger(i) && i >= 1 && i <= n);
+  // Keep every checkpoint in its original order: duplicates must still fail validation.
+  const readingsBySource = new Map<number, typeof readings>();
+  for (const reading of readings) {
+    const sourceIndex = reading.sourceIndex;
+    const group = readingsBySource.get(sourceIndex) ?? [];
+    group.push(reading);
+    readingsBySource.set(sourceIndex, group);
+  }
   for (let i = 0; i < job.request.sources.length; i++) {
-    const rs = readings.filter((r) => r.sourceIndex === i);
+    const rs = readingsBySource.get(i) ?? [];
     if (
       rs.length !== 1 ||
       !complete(rs[0].totalUnits, rs[0].readUnits) ||

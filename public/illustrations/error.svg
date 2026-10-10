@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180"><!-- Original artwork drawn for Chaos. AGPL-3.0-or-later. See README.md. --><g id="art"><path style="fill:var(--ill-shade,#eeede9)" d="M34 153c26-8 140-10 170-2 11 4 5 10-11 12-42 3-120 4-148-1-15-3-18-6-11-9z"/>
+<path style="fill:var(--ill-paper,#fff);stroke:var(--ill-ink,#37352f);stroke-width:2.25;stroke-linejoin:round;fill:var(--ill-shade,#eeede9)" d="M78 56l78 12-10 66-78-12z"/>
+<path style="fill:var(--ill-accent,#cfe4f7)" d="M70 76l78-4 4 66-78 4z"/>
+<path style="fill:var(--ill-paper,#fff);stroke:var(--ill-ink,#37352f);stroke-width:2.25;stroke-linejoin:round" d="M64 70l78-4 4 66-78 4z"/>
+<g style="fill:none;stroke:var(--ill-ink,#37352f);stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round"><path d="M78 86c16-1 32-2 48-2M79 100c12-1 24-1 36-2M80 114c14-1 28-1 42-2"/></g>
+<path style="fill:none;stroke:var(--ill-pop,#3595e3);stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round;stroke-width:2.5" d="M140 112c20-4 36-24 28-38-8-14-30-4-24 10 6 14 34 16 40-4 6-20-16-30-26-18-10 12 4 34 22 30 14-3 20-14 16-22"/>
+<path style="fill:none;stroke:var(--ill-pop,#3595e3);stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round;stroke-width:2.5" d="M196 70c6-9 15-12 22-6"/>
+<g style="fill:none;stroke:var(--ill-ink,#37352f);stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round"><path d="M52 48l8 6M48 62h9M200 112l8 4"/></g>
+<circle style="fill:var(--ill-warm,#f7d9bb)" cx="186" cy="132" r="6"/><circle style="fill:var(--ill-pop,#3595e3)" cx="46" cy="124" r="2.5"/>
+</g></svg>

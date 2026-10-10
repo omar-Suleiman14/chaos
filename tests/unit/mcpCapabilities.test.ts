@@ -1,15 +1,10 @@
 import { expect, it, vi } from "vitest";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createChaosMcpServer, type McpCaller } from "@/lib/mcp/server";
+import type { McpCaller } from "@/lib/mcp/server";
+import { connectMcpTestClient } from "../helpers/mcpClient";
 import { mcpToolGroups } from "@/convex/learnCapabilityModel";
 
 async function connect(call: McpCaller | null) {
-  const server = createChaosMcpServer({ call, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" });
-  const client = new Client({ name: "test", version: "1" });
-  const [a, b] = InMemoryTransport.createLinkedPair();
-  await Promise.all([server.connect(a), client.connect(b)]);
-  return client;
+  return connectMcpTestClient({ call, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" }, { name: "test", version: "1" });
 }
 
 it("advertises only registered tools and covers courses, flashcards and games", async () => {

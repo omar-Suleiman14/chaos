@@ -2,17 +2,19 @@ import { readFile, writeFile } from "node:fs/promises";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createChaosMcpServer } from "../lib/mcp/server";
-import { byName, describeChanges } from "./lib/mcpContract";
+import { byName, describeChanges, withMcpInventorySession } from "./lib/mcpContract";
 
 
 async function listTools(admin: boolean) {
  const server = createChaosMcpServer({ call: null, admin, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" });
  const client = new Client({ name: admin ? "admin-inventory" : "inventory", version: "1" });
- const [a,b] = InMemoryTransport.createLinkedPair();
- await Promise.all([server.connect(a),client.connect(b)]);
- const { tools } = await client.listTools();
- await client.close(); await server.close();
- return tools;
+ const [serverTransport, clientTransport] = InMemoryTransport.createLinkedPair();
+ return withMcpInventorySession(
+  () => Promise.all([server.connect(serverTransport), client.connect(clientTransport)]).then(() => undefined),
+  async () => (await client.listTools()).tools,
+  () => client.close(),
+  () => server.close(),
+ );
 }
 
 async function main() {

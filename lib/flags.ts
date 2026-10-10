@@ -104,8 +104,8 @@ export const defaultFlags = (): Record<FlagKey, boolean> =>
   Object.fromEntries(FLAG_KEYS.map((key) => [key, FLAGS[key].defaultValue])) as Record<FlagKey, boolean>;
 
 const DAY_MS = 86_400_000;
-export const MAX_RAMP_DAYS = 90;
-export const EXPIRY_WARNING_DAYS = 14;
+const MAX_RAMP_DAYS = 90;
+const EXPIRY_WARNING_DAYS = 14;
 
 export type FlagFinding = { key: string; level: "error" | "warning"; message: string };
 
