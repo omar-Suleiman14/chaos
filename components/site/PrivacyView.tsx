@@ -87,6 +87,7 @@ export default function PrivacyView() {
           <li><strong>Convex</strong> لقاعدة البيانات وتخزين الملفات والدوال السحابية.</li>
           <li><strong>Vercel</strong> لاستضافة الموقع وتشغيله.</li>
           <li><strong>PostHog</strong> لتحليلات الاستخدام الاختيارية بعد موافقتك (عند تهيئتها): مثل الصفحات التي تتم زيارتها (مع حذف الروابط والأسماء والرموز من العنوان)، وبعض الأحداث البرمجية والأخطاء، دون تسجيل أي إجابات مطلقًا.</li>
+          <li><strong>Vercel Speed Insights</strong> على chaos.fail بعد السماح بالتحليلات فقط: سرعة تحميل الصفحات (مؤشرات الويب الأساسية) مع نمط مسار الصفحة بدل عنوانها. بلا ملفات تعريف ارتباط أو تخزين في المتصفح.</li>
         </ul>
 
         <h2>مدة الاحتفاظ بالبيانات</h2>
@@ -207,6 +208,7 @@ export default function PrivacyView() {
         <li><strong>Convex</strong> for the database, file storage and server functions.</li>
         <li><strong>Vercel</strong> for hosting the website.</li>
         <li><strong>PostHog</strong> for optional product analytics when configured and you consent: which pages are visited (with links, names and codes removed from the address, so a form link is recorded only as “a form”), a few named events and errors, never answers. It keeps an anonymous id in your browser’s local storage, not a cookie. When you are signed in, these are linked to your account id (not your email or name); people answering forms stay anonymous.</li>
+        <li><strong>Vercel Speed Insights</strong> on chaos.fail, only after you allow analytics: page load speed (Core Web Vitals) with the page’s route pattern instead of its address. No cookies or browser storage.</li>
       </ul>
 
       <h2>How long we keep data</h2>
