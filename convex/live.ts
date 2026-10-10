@@ -1,3 +1,5 @@
+import { validateTimeLimit } from "./liveTimeLimit";
+import { randomPin } from "./livePin";
 import { MIN_READ_TIME_MS } from "./questionQuality";
 import { recordStudent } from "./studentRoster";
 import { businessMember } from "./businessAccess";
@@ -31,11 +33,12 @@ import { countResponse, ownerBanned, responseCap } from "./respond";
 import { emitWebhookEvent, formResponseData } from "./webhookEvents";
 import {
   answerPoints, cleanChoice, cleanNickname, DEFAULT_BREAK, DEFAULT_TIME_LIMIT, MAX_BREAK, MIN_BREAK, START_COUNTDOWN_MS, FREE_PLAYER_LIMIT, IDLE_EXPIRY_MS, isCorrectAnswer,
-  isValidPin, MAX_LIVE_QUESTIONS, MAX_TIME_LIMIT, MIN_TIME_LIMIT, nicknameKey, nicknameProblem,
+  isValidPin, MAX_LIVE_QUESTIONS, nicknameKey, nicknameProblem,
   PRO_PLAYER_LIMIT, questionsFromForm, rankScores, streakBonus,
 } from "./liveLogic";
 import type { LiveQuestion } from "./liveLogic";
 import { readFormCounts } from "./formCounts";
+import { historicalScoreBefore } from "./liveReplay";
 
 type Ctx = QueryCtx | MutationCtx;
 type Game = Doc<"liveGames">;
@@ -114,11 +117,6 @@ async function activeGameByPin(ctx: Ctx, pin: string): Promise<Game | null> {
   return null;
 }
 
-function randomPin(): string {
-  const buf = new Uint32Array(1);
-  crypto.getRandomValues(buf);
-  return String(100000 + (buf[0] % 900000));
-}
 
 async function playersOf(ctx: Ctx, gameId: Id<"liveGames">, limit = PLAYER_READ_CAP): Promise<Player[]> {
   return await ctx.db.query("livePlayers").withIndex("by_gameId_and_kicked_and_score", (q) => q.eq("gameId", gameId).eq("kicked", false)).order("desc").take(limit);
@@ -388,11 +386,7 @@ export function validateStartTarget(players: number) {
   }
 }
 
-function validateTimeLimit(seconds: number) {
-  if (!Number.isInteger(seconds) || seconds < MIN_TIME_LIMIT || seconds > MAX_TIME_LIMIT) {
-    throw new Error(`LIVE_INVALID: Choose between ${MIN_TIME_LIMIT} and ${MAX_TIME_LIMIT} seconds.`);
-  }
-}
+
 
 /** Theme and phone layout are agreed before starting, so all players see the same choices. */
 export const setGameSettings = mutation({
@@ -1009,12 +1003,9 @@ export const questionReplay = query({
         const current = currentScores.get(p._id);
         let score = current?.scoreBefore ?? prior?.scoreAfter ?? 0, streak = prior?.streakAfter ?? 0;
         if (historical) {
-          const byIndex = new Map(histories[i].map(a => [a.questionIndex, a]));
-          for (let qi = 0; qi < args.questionIndex; qi++) {
-            const a = byIndex.get(qi);
-            streak = a?.correct ? streak + 1 : 0;
-            if (a?.correct) score += a.points + streakBonus(streak);
-          }
+          const restored = historicalScoreBefore(histories[i], args.questionIndex, score, streak);
+          score = restored.score;
+          streak = restored.streak;
         }
         const a = currentAnswers.get(p._id);
         return { id: p._id, nickname: p.nickname, scoreBefore: score,
