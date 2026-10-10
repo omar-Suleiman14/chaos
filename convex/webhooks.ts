@@ -1,3 +1,4 @@
+import { parseResourceRef } from "./resourceRefs";
 import { getAuthIdentity } from "./authIdentity";
 import { v } from "convex/values";
 import { env, internalMutation, internalQuery, mutation, query } from "./_generated/server";
@@ -50,8 +51,8 @@ function validEvents(events: WebhookEventType[]): WebhookEventType[] {
 
 async function ownerRefTitle(ctx: Ctx, ownerId: string, ref: string): Promise<string | null> {
   if (/^(lesson|collection)_/.test(ref)) return await learnWebhookOwnerTitle(ctx, ownerId, ref);
-  const match = /^form_([A-Za-z0-9]+)$/.exec(ref);
-  const id = match ? ctx.db.normalizeId("forms", match[1]) : null;
+  const rawId = parseResourceRef(ref, "form");
+  const id = rawId ? ctx.db.normalizeId("forms", rawId) : null;
   const form = id ? await ctx.db.get("forms", id) : null;
   return form && form.ownerId === ownerId ? form.title : null;
 }
@@ -326,8 +327,8 @@ async function mayDeliver(ctx: MutationCtx, sub: Subscription, delivery: Doc<"we
   if (!sub.events.includes(delivery.event) || !delivery.itemRef) return false;
   if (isLearnWebhookEvent(delivery.event)) return !delivery.containsAnswers && await mayDeliverLearnWebhook(ctx, sub, delivery.event, delivery.itemRef);
   const ref = delivery.itemRef;
-  const match = /^form_([A-Za-z0-9]+)$/.exec(ref);
-  const id = match ? ctx.db.normalizeId("forms", match[1]) : null;
+  const rawId = parseResourceRef(ref, "form");
+  const id = rawId ? ctx.db.normalizeId("forms", rawId) : null;
   const form = id ? await ctx.db.get("forms", id) : null;
   if (!form || form.ownerId !== sub.ownerId || form.isBanned) return false;
   if (token) {
