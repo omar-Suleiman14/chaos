@@ -1,6 +1,6 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { percentChange, percentile, quantiles, regressions } from "@/scripts/lib/stats";
-import { describeChanges } from "@/scripts/lib/mcpContract";
+import { describeChanges, withMcpInventorySession } from "@/scripts/lib/mcpContract";
 import { evaluateErrors, evaluateJourneys, evaluateStatus, type Thresholds } from "@/scripts/lib/health";
 import productionThresholds from "@/perf/production-thresholds.json";
 import { JOURNEYS } from "@/lib/journeys";
@@ -34,6 +34,18 @@ describe("MCP contract drift", () => {
     const before = { keep: { description: "a" }, gone: { description: "x" } };
     const after = { keep: { description: "b" }, added: { description: "y" } };
     expect(describeChanges(before, after)).toEqual(["+ added (added)", "- gone (removed)", "~ keep: description changed"]);
+  });
+});
+
+describe("MCP inventory sessions", () => {
+  it("closes both linked SDK sessions when tool listing fails", async () => {
+    const connect = vi.fn(async () => undefined);
+    const closeClient = vi.fn(async () => undefined);
+    const closeServer = vi.fn(async () => undefined);
+    await expect(withMcpInventorySession(connect, async () => { throw new Error("list failed"); }, closeClient, closeServer)).rejects.toThrow("list failed");
+    expect(connect).toHaveBeenCalledOnce();
+    expect(closeClient).toHaveBeenCalledOnce();
+    expect(closeServer).toHaveBeenCalledOnce();
   });
 });
 

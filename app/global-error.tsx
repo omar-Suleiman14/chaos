@@ -2,16 +2,19 @@
 
 import posthog from "@/lib/analytics";
 import { useEffect } from "react";
-import Logo from "@/components/Logo";
+import StateIllustration from "@/components/StateIllustration";
 import { statusPageUrl } from "@/lib/site";
 
 /**
  * Replaces the root layout when it fails, so it carries its own styles:
- * the workspace colours and Cairo-first font stack, light and dark.
+ * the workspace colours and Cairo-first font stack, light and dark, and the
+ * dark values of the state illustration tokens (app/globals.css sets them for
+ * every other page).
  */
 const css = `
   :root { color-scheme: light dark; --bg: #fbfaf9; --text: #37352f; --muted: #787774; --accent: #3595e3; --accent-hover: #2384d6; --hover: rgba(55,53,47,0.06); }
-  @media (prefers-color-scheme: dark) { :root { --bg: #121212; --text: #e6e6e6; --muted: #9b9a97; --hover: rgba(255,255,255,0.06); } }
+  @media (prefers-color-scheme: dark) { :root { --bg: #121212; --text: #e6e6e6; --muted: #9b9a97; --hover: rgba(255,255,255,0.06);
+    --ill-ink: #d6d4cf; --ill-paper: #262626; --ill-shade: #1d1d1d; --ill-accent: #1d3b55; --ill-warm: #7d5338; --ill-leaf: #263f30; --ill-pop: #4aa3ea; } }
   html, body { margin: 0; background: var(--bg); color: var(--text); font-family: Cairo, "IBM Plex Sans Arabic", ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; -webkit-font-smoothing: antialiased; }
   .ge-main { min-height: 100dvh; display: grid; place-items: center; padding: 64px 24px; box-sizing: border-box; }
   .ge-box { display: grid; justify-items: center; gap: 16px; max-width: 28rem; text-align: center; }
@@ -43,7 +46,7 @@ export default function GlobalError({ error, reset, retry }: { error: Error & { 
       <body>
         <main className="ge-main">
           <div className="ge-box">
-            <Logo size={44} />
+            <StateIllustration variant="error" size="hero" />
             <h1>Something went wrong</h1>
             <p>Chaos didn&apos;t load. Try again, or go back to the home page.</p>
             <div className="ge-actions">

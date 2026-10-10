@@ -18,6 +18,7 @@ it("creates once, rejects reused keys, rechecks scopes and revocation", async ()
   const { t, connection, w, r } = await setup();
   const first = await w("create", { name: "Study", parentId: null });
   expect(first.status).toBe(200);
+  expect((await t.run(ctx => ctx.db.query("integrationIdempotency").withIndex("by_tokenId_and_key", q => q.eq("tokenId", connection.tokenId).eq("key", "v2:organization:create")).unique()))?.requestHash).toBe("cb3b3e25ac3423c794929ce47dbc2b621230428c7b9feb329699ef2d4c67f96a");
   expect(await w("create", { parentId: null, name: "Study" })).toMatchObject({ body: first.body, headers: { "Idempotent-Replayed": "true" } });
   expect((await w("create", { name: "Different", parentId: null })).status).toBe(422);
   expect(await r("folders")).toMatchObject({ status: 200, body: { page: [{ name: "Study" }] } });
