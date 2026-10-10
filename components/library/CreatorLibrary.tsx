@@ -1,5 +1,7 @@
 "use client";
 
+import { kinds, kindFromParam, type Kind } from "@/lib/forms/libraryTabs";
+
 import StateIllustration from "@/components/StateIllustration";
 import CoursesHub from "@/components/courses/CoursesHub";
 import GamesHub from "@/components/live/GamesHub";
@@ -38,12 +40,11 @@ import { useUsableMark } from "@/lib/journeys";
 import { useConfirmedQuery } from "@/lib/confirmedQuery";
 import { CacheState } from "@/components/workspace/CacheState";
 import { linkOrigin } from "@/lib/hosts";
+import { selectLibraryRows } from "@/lib/library/selectLibraryRows";
+import { formStatusLabels, type FormStatus } from "@/lib/formStatusLabels";
+import { writeClipboardText } from "@/lib/clipboard";
 
-const kinds = ["Forms", "Quizzes", "Flashcards", "Courses", "Games"] as const;
-type Kind = (typeof kinds)[number];
-/** The open tab lives in the address (?tab=games) so links, Back and refresh keep it. */
-const kindFromParam = (value: string | null): Kind => kinds.find((k) => k.toLowerCase() === value) ?? "Forms";
-type Status = "live" | "draft" | "closed" | "archived";
+type Status = FormStatus;
 const statusOptions: { id: Status }[] = [{ id: "live" }, { id: "draft" }, { id: "closed" }];
 type SortKey = "edited" | "name" | "responses" | "status" | "count";
 type SortDir = "asc" | "desc";
@@ -52,12 +53,11 @@ const sortOptions: { id: SortKey }[] = [{ id: "edited" }, { id: "name" }, { id: 
 const naturalDir: Record<SortKey, SortDir> = { count: "desc", edited: "desc", responses: "desc", name: "asc", status: "asc" };
 /** Internal marker for the group of forms other people shared; shown as "Shared with you". */
 const SHARED_GROUP = "Shared with you";
-const statusOrder: Record<Status, number> = { live: 0, draft: 1, closed: 2, archived: 3 };
 
 const copy = {
   en: {
     kinds: { Forms: "Forms", Quizzes: "Quizzes", Flashcards: "Flashcards", Courses: "Courses", Games: "Games" },
-    status_: { live: "Live", draft: "Draft", closed: "Closed", archived: "Archived" },
+    status_: formStatusLabels.en,
     sort_: { count: "Most items", edited: "Last edited", name: "Name", responses: "Most responses", status: "Status" },
     colName: "Name", colStatus: "Status", colResponses: "Responses", colEdited: "Edited", colActions: "Actions",
     untitledQuiz: "Untitled quiz", untitledForm: "Untitled form", untitled: "Untitled",
@@ -91,7 +91,7 @@ const copy = {
   },
   ar: {
     kinds: { Forms: "النماذج", Quizzes: "الاختبارات", Flashcards: "البطاقات", Courses: "الدورات", Games: "الألعاب" },
-    status_: { live: "منشور", draft: "مسودة", closed: "مغلق", archived: "مؤرشف" },
+    status_: formStatusLabels.ar,
     sort_: { count: "\u0627\u0644\u0623\u0643\u062b\u0631 \u0639\u0646\u0627\u0635\u0631", edited: "آخر تعديل", name: "الاسم", responses: "الأكثر ردودًا", status: "الحالة" },
     colName: "الاسم", colStatus: "الحالة", colResponses: "الردود", colEdited: "آخر تعديل", colActions: "الإجراءات",
     untitledQuiz: "اختبار بلا عنوان", untitledForm: "نموذج بلا عنوان", untitled: "بلا عنوان",
@@ -259,21 +259,7 @@ export default function CreatorLibrary() {
     return [...own, ...shared];
   }, [forms, t]);
 
-  const visible = useMemo(() => {
-    // Ascending comparators; the direction flips them.
-    const compare: Record<SortKey, (a: Row, b: Row) => number> = {
-      count: (a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0),
-      edited: (a, b) => (a.updatedAt ?? 0) - (b.updatedAt ?? 0),
-      name: (a, b) => a.title.localeCompare(b.title, undefined, { sensitivity: "base", numeric: true }),
-      responses: (a, b) => a.responses - b.responses,
-      status: (a, b) => statusOrder[a.status] - statusOrder[b.status],
-    };
-    const ordered = (a: Row, b: Row) => (dir === "asc" ? 1 : -1) * compare[activeSort](a, b);
-    // Archived forms live on the Archive page, never in the library.
-    return rows.filter((r) => r.status !== "archived" && (!statuses.length || statuses.includes(r.status)))
-      .filter((r) => kind === "Forms" ? r.kind === "form" : r.kind !== "form")
-      .sort(ordered);
-  }, [rows, kind, statuses, activeSort, dir]);
+  const visible = useMemo(() => selectLibraryRows(rows, kind, statuses, activeSort, dir), [rows, kind, statuses, activeSort, dir]);
 
   const groups = useMemo(() => {
     const map = new Map<string, Row[]>();
@@ -284,10 +270,7 @@ export default function CreatorLibrary() {
   const { toggle: togglePin, isPinned } = usePinned();
   const copyLink = async (url: string) => {
     try {
-      if (typeof navigator.clipboard?.writeText !== "function") {
-        throw new Error(t.clipboardUnavailable);
-      }
-      await navigator.clipboard.writeText(url);
+      await writeClipboardText(url, t.clipboardUnavailable);
       toast.success(t.linkCopied, { id: "copy-link" });
     } catch (e) {
       toast.error(e, { fallback: t.copyFailed, id: "copy-link" });

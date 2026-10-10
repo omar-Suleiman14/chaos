@@ -1,4 +1,7 @@
+import { columnLabel, scaleInfo } from "./formResultLabels";
+export { columnLabel } from "./formResultLabels";
 import { questionQuality, type QualityQuestion, type QualityObservation } from "./questionQuality";
+import { responsePreview } from "./formResultPreview";
 import { gradeQuiz } from "./formQuiz";
 import { nicknameKey, questionsFromForm, MAX_LIVE_QUESTIONS } from "./liveLogic";
 
@@ -17,6 +20,7 @@ import type { Bin, DateSpread, QuizQuestionTally } from "./formAnalysis";
 import { displayName, logActivity } from "./serverUtils";
 import { changeFormCounts, readFormCounts } from "./formCounts";
 import { readCompletedResponseSample } from "./formResponseSample";
+import { findTextAnswersWithFastPath } from "./formTextSample";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -53,32 +57,6 @@ async function reportingDefinition(ctx: Ctx, form: Doc<"forms">): Promise<FormDe
     if (row) return row.definition as FormDefinition;
   }
   return form.draft as FormDefinition;
-}
-
-/** A scale's endpoints, for showing what the low and high ends of an answer mean. */
-function scaleInfo(f: FormField) {
-  if (f.type !== "scale") return null;
-  return { min: f.min ?? 1, max: f.max ?? 5, step: f.step ?? 1, minLabel: f.minLabel ?? null, maxLabel: f.maxLabel ?? null };
-}
-
-/** Export/column label; scales carry their endpoint labels, e.g. "How likely? (1 = Unlikely; 5 = Very likely)". */
-export function columnLabel(f: FormField): string {
-  const info = scaleInfo(f);
-  if (!info || (!info.minLabel && !info.maxLabel)) return f.label;
-  const ends = [info.minLabel ? `${info.min} = ${info.minLabel}` : "", info.maxLabel ? `${info.max} = ${info.maxLabel}` : ""].filter(Boolean).join("; ");
-  return `${f.label} (${ends})`;
-}
-
-function preview(def: FormDefinition | null, answers: Answers): string {
-  if (!def) return "";
-  const parts: string[] = [];
-  for (const f of def.fields) {
-    if (!isAnswerable(f) || f.type === "file") continue;
-    const text = answerText(f, answers[f.id]);
-    if (text) parts.push(text);
-    if (parts.length === 3) break;
-  }
-  return parts.join(" · ").slice(0, 200);
 }
 
 const TAG_SCAN_PAGE = 200;
@@ -143,7 +121,7 @@ export const listResponses = query({
         editedAt: r.editedAt ?? null,
         quizScore: r.quizScore ?? null,
         quizMaxScore: r.quizMaxScore ?? null,
-        preview: preview(await definition(r.version), r.answers as Answers),
+        preview: responsePreview(await definition(r.version), r.answers as Answers),
         hidden: r.hidden ?? null, typedHidden: r.typedHidden ?? null,
       });
     }
@@ -483,17 +461,21 @@ export const getTextAnswers = query({
     const field = def.fields.find((f) => f.id === args.fieldId);
     if (!field || !textTypes.includes(field.type)) return [];
     const definition = versionCache(ctx, form._id);
-    const completed = await readCompletedResponseSample(ctx, form._id, ANALYSIS_SAMPLE);
-    const texts: { responseId: Id<"formResponses">; text: string; submittedAt: number }[] = [];
-    for (const r of completed) {
-      if (r.spam || texts.length >= TEXT_ANSWERS) continue;
-      const value = (r.answers as Answers)[args.fieldId];
-      if (typeof value !== "string" || !value.trim()) continue;
-      const rDef = await definition(r.version);
-      if (!rDef || !visibleFieldIds(rDef, r.answers as Answers).has(args.fieldId)) continue;
-      texts.push({ responseId: r._id, text: value.slice(0, 2000), submittedAt: r.submittedAt });
-    }
-    return texts;
+    return findTextAnswersWithFastPath(
+      (limit) => ctx.db.query("formResponses")
+        .withIndex("by_formId_and_status_and_submittedAt", q => q.eq("formId", form._id).eq("status", "completed"))
+        .order("desc").take(limit),
+      async (r): Promise<{ responseId: Id<"formResponses">; text: string; submittedAt: number } | null> => {
+        if (r.spam) return null;
+        const value = (r.answers as Answers)[args.fieldId];
+        if (typeof value !== "string" || !value.trim()) return null;
+        const rDef = await definition(r.version);
+        if (!rDef || !visibleFieldIds(rDef, r.answers as Answers).has(args.fieldId)) return null;
+        return { responseId: r._id, text: value.slice(0, 2000), submittedAt: r.submittedAt };
+      },
+      TEXT_ANSWERS,
+      ANALYSIS_SAMPLE,
+    );
   },
 });
 
