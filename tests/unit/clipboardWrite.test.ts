@@ -12,7 +12,7 @@ describe("shared clipboard writer", () => {
   });
   it("preserves localized unavailable messages and write failures", async () => {
     vi.stubGlobal("navigator", { clipboard: undefined });
-    await expect(writeClipboardText("text", "الحافظة غير متاحة")).rejects.toThrow("الحافظة غير متاحة");
+    expect(() => writeClipboardText("text", "الحافظة غير متاحة")).toThrow("الحافظة غير متاحة");
     const failure = new Error("permission denied");
     vi.stubGlobal("navigator", { clipboard: { writeText: vi.fn().mockRejectedValue(failure) } });
     await expect(writeClipboardText("text")).rejects.toBe(failure);

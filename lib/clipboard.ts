@@ -6,9 +6,9 @@ const DEFAULTS = {
 };
 
 /** Low-level clipboard write. Caller chooses its own toast and translated fallback. */
-export async function writeClipboardText(text: string, unavailable = "Clipboard unavailable"): Promise<void> {
+export function writeClipboardText(text: string, unavailable = "Clipboard unavailable"): Promise<void> {
   if (typeof navigator.clipboard?.writeText !== "function") throw new Error(unavailable);
-  await navigator.clipboard.writeText(text);
+  return navigator.clipboard.writeText(text);
 }
 
 /** Copies text and confirms with a toast, so every Copy button reports the same way. Resolves to whether it worked. */
