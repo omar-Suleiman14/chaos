@@ -114,7 +114,7 @@ export default function SourcesPanel({ sources, content, onSave, onRemove, onOpe
                 onReject={reason => setError(reason === "size" ? t.tooLarge : t.uploadFailed)}
                 onFile={chosen => {
                   setFile(chosen); setError("");
-                  setEditing(s => s && { ...s, fileName: chosen.name, title: s.title || chosen.name.replace(/\\.[^.]+$/, ""), origin: s.origin || chosen.name });
+                  setEditing(s => s && { ...s, fileName: chosen.name, title: s.title || chosen.name.replace(/\.[^.]+$/, ""), origin: s.origin || chosen.name });
                 }} />
               <small>{busy ? t.uploading : editing.fileName ? t.fileKept(editing.fileName) : t.fileHelp}</small>
             </div>
