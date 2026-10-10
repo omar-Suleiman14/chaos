@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useConvexAuth, usePaginatedQuery, useMutation } from "convex/react";
 import { deleteFormLocally, setFormStatusLocally, useOptimisticMutation } from "@/lib/optimistic";
 import { Archive, ArchiveRestore, ArrowDown, ArrowUp, Trash2 } from "lucide-react";
@@ -65,6 +65,13 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
   const { results, status, loadMore } = usePaginatedQuery(api.archive.list, isAuthenticated ? { kind: quizzes ? "quizzes" : "forms" } : "skip", { initialNumItems: 25 });
   // The device's copy shows until Convex answers (lib/confirmedQuery.ts).
   const forms = useConfirmed(`archive.list:${quizzes ? "quizzes" : "forms"}`, status === "LoadingFirstPage" ? undefined : { owned: results.map(row => ({ _id: row.id as Id<"forms">, title: row.title, responseCount: row.count, updatedAt: row.updatedAt, publishedVersion: row.published ? 1 : undefined, theme: { accent: row.accent ?? "#3595e3" } })) }).data;
+  // The index contains both archived forms and quizzes. A paginated backend batch may
+  // contain only the other kind; continue until this tab has rows or the index ends.
+  // Otherwise the Archive incorrectly says "Nothing archived" on a nonempty list.
+  const scanning = results.length === 0 && (status === "CanLoadMore" || status === "LoadingMore");
+  useEffect(() => {
+    if (isAuthenticated && status === "CanLoadMore" && results.length === 0) loadMore(25);
+  }, [isAuthenticated, status, results, loadMore]);
   const setStatus = useOptimisticMutation(api.forms.setFormStatus, setFormStatusLocally);
   const deleteForm = useOptimisticMutation(api.forms.deleteForm, deleteFormLocally);
   const undoDeleteForm = useMutation(api.forms.undoDeleteForm);
@@ -121,7 +128,7 @@ function FormsArchive({ quizzes }: { quizzes: boolean }) {
   return (
     <div className="font-sans">
 
-      {forms === undefined ? <LibrarySkeleton label={t.loading} view="list" count={4} /> :rows.length === 0 ? (
+      {forms === undefined || scanning ? <LibrarySkeleton label={t.loading} view="list" count={4} /> : rows.length === 0 ? (
         <div className="ws-empty ws-page">
           <span className="ws-empty__art"><Archive size={24} /></span>
           <h2 className="text-xl font-semibold">{t.nothing}</h2>
