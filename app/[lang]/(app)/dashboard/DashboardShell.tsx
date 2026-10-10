@@ -1,3 +1,4 @@
+import { SIDEBAR_DEFAULT, clampWidth } from "@/components/workspace/sidebarWidth";
 "use client";
 
 import { FocusButton } from "@/components/InitialFocus";
@@ -43,11 +44,6 @@ import { useFlashcardSets, useFolders, useMyLessons } from "@/lib/learn/data";
  */
 const loadPalette = () => import("@/components/workspace/CommandPalette");
 const CommandPalette = dynamic(loadPalette, { ssr: false });
-
-const SIDEBAR_MIN = 200;
-const SIDEBAR_MAX = 420;
-const SIDEBAR_DEFAULT = 256;
-const clampWidth = (width: number) => Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, width));
 
 const copy = {
   en: {
