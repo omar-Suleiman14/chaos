@@ -490,17 +490,27 @@ function useStepFocus(rootRef: React.RefObject<HTMLDivElement | null>, key: stri
 
 function useAutoAdvance(flow: Flow) {
   const flowRef = useLatest(flow);
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  useEffect(() => () => { if (timer.current) clearTimeout(timer.current); }, []);
-  useEffect(() => { if (timer.current) clearTimeout(timer.current); }, [flow.step?.key]);
+  const pendingAdvance = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => () => {
+    if (pendingAdvance.current) clearTimeout(pendingAdvance.current);
+  }, []);
+
+  useEffect(() => {
+    if (pendingAdvance.current) clearTimeout(pendingAdvance.current);
+  }, [flow.step?.key]);
+
   return useCallback(() => {
-    if (timer.current) clearTimeout(timer.current);
+    if (pendingAdvance.current) clearTimeout(pendingAdvance.current);
     const { step, navigationRevision, last } = flowRef.current;
     if (last) return;
-    const version = navigationRevision();
-    timer.current = setTimeout(() => {
+
+    const scheduledRevision = navigationRevision();
+    pendingAdvance.current = setTimeout(() => {
       const current = flowRef.current;
-      if (!current.last && current.step?.key === step?.key && current.navigationRevision() === version) current.advance();
+      if (!current.last && current.step?.key === step?.key && current.navigationRevision() === scheduledRevision) {
+        current.advance();
+      }
     }, 520);
   }, [flowRef]);
 }
