@@ -1,6 +1,8 @@
 "use client";
 
-import { createContext, useContext, useEffect, useLayoutEffect, useSyncExternalStore } from "react";
+import { useContext, useEffect, useLayoutEffect, useSyncExternalStore } from "react";
+import { CacheZone } from "@/lib/workspaceQueryAuth";
+export { CacheZone } from "@/lib/workspaceQueryAuth";
 import { getFunctionName, type FunctionArgs, type FunctionReference, type FunctionReturnType } from "convex/server";
 import { convexToJson, jsonToConvex, type Value } from "convex/values";
 import { useQuery } from "@/lib/convexCache";
@@ -140,7 +142,6 @@ export function setCacheScope(userId: string | null) {
  * with whether Convex has authenticated the visitor yet. Hooks shared with public pages (lesson
  * lists, progress) pass live values straight through elsewhere.
  */
-export const CacheZone = createContext<{ authenticated: boolean } | null>(null);
 
 /**
  * How many mounted views are showing cached, unconfirmed data. The workspace fades its content

@@ -1,4 +1,5 @@
 import { render } from "@testing-library/react";
+import { CacheZone } from "@/lib/workspaceQueryAuth";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/convex/_generated/api";
 
@@ -7,7 +8,8 @@ const client = vi.hoisted(() => {
   return { release, watchQuery: vi.fn(() => ({ onUpdate: vi.fn(() => release) })), prewarmQuery: vi.fn() };
 });
 vi.mock("@/lib/convexClient", () => ({ convex: client }));
-vi.mock("convex/react", () => ({ useQuery: () => "value" }));
+const reads = vi.hoisted(() => ({ args: [] as unknown[] }));
+vi.mock("convex/react", () => ({ useQuery: (_q: unknown, args: unknown) => { reads.args.push(args); return args === "skip" ? undefined : "value"; } }));
 
 import { KEEP_ALIVE_MS, useQuery, warmForm } from "@/lib/convexCache";
 
@@ -16,7 +18,7 @@ function Page({ formId }: { formId: string | "skip" }) {
   return <p>{String(value)}</p>;
 }
 
-afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); });
+afterEach(() => { vi.useRealTimers(); vi.clearAllMocks(); reads.args = []; });
 
 describe("cached useQuery", () => {
   it("keeps the subscription for a few minutes after the page unmounts", () => {
@@ -27,6 +29,28 @@ describe("cached useQuery", () => {
     expect(client.release).not.toHaveBeenCalled();
     vi.advanceTimersByTime(KEEP_ALIVE_MS);
     expect(client.release).toHaveBeenCalledTimes(1);
+  });
+
+  it("defers all cached workspace queries until Convex authentication is ready", () => {
+    const page = (authenticated: boolean) => (
+      <CacheZone.Provider value={{ authenticated }}><Page formId="form1" /></CacheZone.Provider>
+    );
+    const view = render(page(false));
+    expect(reads.args.at(-1)).toBe("skip");
+    expect(client.watchQuery).not.toHaveBeenCalled();
+
+    view.rerender(page(true));
+    expect(reads.args.at(-1)).toEqual({ formId: "form1" });
+    expect(client.watchQuery).toHaveBeenCalledWith(api.forms.getFormForEditor, { formId: "form1" });
+
+    view.rerender(page(false));
+    expect(reads.args.at(-1)).toBe("skip");
+    view.unmount();
+  });
+
+  it("leaves public queries outside the workspace untouched", () => {
+    render(<Page formId="public" />).unmount();
+    expect(reads.args.at(-1)).toEqual({ formId: "public" });
   });
 
   it("holds nothing for skipped queries", () => {

@@ -1,6 +1,7 @@
 "use client";
 
-import { useEffect } from "react";
+import { useContext, useEffect } from "react";
+import { CacheZone } from "@/lib/workspaceQueryAuth";
 import { useQuery as useConvexQuery } from "convex/react";
 import type { FunctionReference } from "convex/server";
 import { getFunctionName } from "convex/server";
@@ -23,8 +24,12 @@ const retained = new Map<string, { users: number; release: () => void; timer?: R
  * The same idea as convex-helpers' ConvexQueryCacheProvider, without the extra dependency.
  */
 export const useQuery = ((query: FunctionReference<"query">, ...rest: [Record<string, Value> | "skip"] | []) => {
-  const args = rest[0];
-  const result = useConvexQuery(query, ...(rest as [Record<string, Value>]));
+  const zone = useContext(CacheZone);
+  // Workspace-only: direct refresh can precede Convex token restoration.
+  // Skip private reads until authenticated; public queries outside the workspace stay unchanged.
+  const args = zone && !zone.authenticated ? "skip" : rest[0];
+  const effective = args === undefined ? [] : [args];
+  const result = useConvexQuery(query, ...(effective as [Record<string, Value>]));
   const key = args === "skip" ? null : JSON.stringify(convexToJson(args ?? {}));
   useEffect(() => {
     if (key === null || !convex) return;

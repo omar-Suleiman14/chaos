@@ -12,6 +12,7 @@ import CoursePortability from "@/components/courses/CoursePortability";
 import CourseDetailsEditor from "@/components/courses/CourseDetailsEditor";
 import CourseModulesEditor from "@/components/courses/CourseModulesEditor";
 import CourseStudents from "@/components/courses/CourseStudents";
+import { useCourseEditorQuery } from "@/lib/courses/useCourseEditorQuery";
 import CourseVersionHistory from "@/components/courses/CourseVersionHistory";
 import { contentDirection } from "@/lib/learn/direction";
 import { localeDir } from "@/lib/locale";
@@ -58,7 +59,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
   const t = useCopy(copy);
   const { locale } = useLocale();
   const router = useRouter();
-  const course = useQuery(api.courses.get, { courseId });
+  const course = useCourseEditorQuery(courseId);
   const update = useMutation(api.courses.update);
   const publish = useMutation(api.courses.publish), unpublish = useMutation(api.courses.unpublish), setArchived = useMutation(api.courses.setArchived);
   const [title, setTitle] = useState(""), [desc, setDesc] = useState(""), [tags, setTags] = useState("");

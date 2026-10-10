@@ -42,6 +42,7 @@ import { useFormInventoryPages } from "@/lib/forms/useFormInventoryPages";
 import { CacheState } from "@/components/workspace/CacheState";
 import { linkOrigin } from "@/lib/hosts";
 import { selectLibraryRows } from "@/lib/library/selectLibraryRows";
+import { shouldAdvanceEmptyLibraryPage } from "@/lib/library/autoPagination";
 import { formStatusLabels, type FormStatus } from "@/lib/formStatusLabels";
 import { writeClipboardText } from "@/lib/clipboard";
 
@@ -259,6 +260,17 @@ export default function CreatorLibrary() {
   }, [forms, t]);
 
   const visible = useMemo(() => selectLibraryRows(rows, kind, statuses, activeSort, dir), [rows, kind, statuses, activeSort, dir]);
+  const [autoPageAdvances, setAutoPageAdvances] = useState(0);
+  // A first page of quizzes or archived forms may be empty in the selected tab despite
+  // older matching forms existing. Advance a few pages automatically before asking for a tap.
+  const autoFetchEmpty = shouldAdvanceEmptyLibraryPage(kind, confirmed, visible.length, hasMore, autoPageAdvances);
+  useEffect(() => { setAutoPageAdvances(0); }, [kind, statuses]);
+  useEffect(() => {
+    if (!autoFetchEmpty) return;
+    setAutoPageAdvances(n => n + 1);
+    loadMore();
+  }, [autoFetchEmpty, loadMore]);
+
 
   const groups = useMemo(() => {
     const map = new Map<string, Row[]>();
@@ -411,7 +423,7 @@ export default function CreatorLibrary() {
       </div>
 
       <CacheState confirmed={confirmed || kind === "Courses" || kind === "Flashcards" || kind === "Games"}>
-      {kind === "Courses" ? <CoursesHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Flashcards" ? <FlashcardsHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 && hasMore ? (
+      {kind === "Courses" ? <CoursesHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Flashcards" ? <FlashcardsHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Games" ? <GamesHub embedded /> : loading || autoFetchEmpty ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 && hasMore ? (
         <div className="ws-empty ws-page"><button type="button" className="ws-btn" onClick={loadMore}>{t.loadMore}</button></div>
       ) : visible.length === 0 ? (
         <div className="ws-empty ws-page">
