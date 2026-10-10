@@ -202,6 +202,8 @@
 
 /* Dark mode — ink-black with green accents */
 .dark {
+  /* State illustrations (public/illustrations) read these through <use>; light values are the files' own fallbacks. */
+  --ill-ink: #d6d4cf; --ill-paper: #262626; --ill-shade: #1d1d1d; --ill-accent: #1d3b55; --ill-warm: #7d5338; --ill-leaf: #263f30; --ill-pop: #4aa3ea;
   --surface:                   #0E0E0C;
   --surface-dim:               #080806;
   --surface-bright:            #1A1A18;

@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 240 180"><!-- Original artwork drawn for Chaos. AGPL-3.0-or-later. See README.md. --><g id="art"><path style="fill:var(--ill-shade,#eeede9)" d="M34 153c26-8 140-10 170-2 11 4 5 10-11 12-42 3-120 4-148-1-15-3-18-6-11-9z"/>
+<path style="fill:var(--ill-accent,#cfe4f7)" d="M55 95l5 55c22-6 44-4 60 4 16-8 38-10 60-4l6-55z"/>
+<g style="fill:var(--ill-paper,#fff);stroke:var(--ill-ink,#37352f);stroke-width:2.25;stroke-linejoin:round"><path d="M120 92c-20-12-46-12-64-6l4 54c18-6 42-6 60 6z"/><path d="M120 92c20-12 46-12 64-6l-4 54c-18-6-42-6-60 6z"/></g>
+<g style="fill:none;stroke:var(--ill-ink,#37352f);stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round"><path d="M120 92v54M70 101c12-3 26-3 38 2M71 113c12-3 26-3 38 2M72 125c10-2 20-2 28 1M132 103c12-5 24-5 36-2M133 115c12-5 24-5 36-2"/></g>
+<path style="fill:var(--ill-paper,#fff);stroke:var(--ill-ink,#37352f);stroke-width:2.25;stroke-linejoin:round;fill:var(--ill-warm,#f7d9bb)" d="M152 84v32l-5-5-5 5v-30z"/>
+<path style="fill:none;stroke:var(--ill-ink,#37352f);stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round" d="M120 92c0-12 2-23 7-32"/>
+<path style="fill:var(--ill-paper,#fff);stroke:var(--ill-ink,#37352f);stroke-width:2.25;stroke-linejoin:round;fill:var(--ill-leaf,#d3e8d9)" d="M126 62c5-11 17-15 26-10-4 10-15 14-26 10z"/>
+<path style="fill:var(--ill-paper,#fff);stroke:var(--ill-ink,#37352f);stroke-width:2.25;stroke-linejoin:round;fill:var(--ill-leaf,#d3e8d9)" d="M123 72c-5-9-16-12-23-7 4 8 14 11 23 7z"/>
+<g style="fill:none;stroke:var(--ill-pop,#3595e3);stroke-width:2.25;stroke-linecap:round;stroke-linejoin:round"><path d="M64 44v14M57 51h14M182 54v10M177 59h10"/></g>
+<circle style="fill:var(--ill-warm,#f7d9bb)" cx="196" cy="128" r="5"/><circle style="fill:var(--ill-pop,#3595e3)" cx="44" cy="118" r="2.5"/>
+</g></svg>

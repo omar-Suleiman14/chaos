@@ -6,6 +6,7 @@ import schema from "./schema";
 import type { Doc, Id } from "./_generated/dataModel";
 import { creatorRestricted } from "./authz";
 import { lessonMeta } from "./learnModel";
+import { hasLiveLessonPublication } from "./publicationEligibility";
 import { authorSearchCursor, readSearchCursor, writeSearchCursor } from "./learnSearchCursor";
 export const searchHit = v.object({ lessonId: v.id("lessons"), versionId: v.id("lessonVersions"), metadata: lessonMeta, matchingBlocks: v.array(v.object({ id: v.string(), text: v.string() })) });
 
@@ -37,7 +38,7 @@ export const authorLessonPage = internalQuery({
   handler: async (ctx, args): Promise<PaginationResult<Doc<"lessons">>> => ctx.db.query("lessons").withIndex("by_ownerId_and_visibility_and_communityState_and_status", q => q.eq("ownerId", args.ownerId).eq("visibility", "public").eq("communityState", "ok").eq("status", "active")).paginate({ cursor: args.cursor, numItems: 1, maximumRowsRead: 1, maximumBytesRead: 1_000_000 }),
 });
 async function publishedHit(ctx: QueryCtx, lesson: Doc<"lessons">, words: string[], snippets: boolean): Promise<Infer<typeof searchHit> | null> {
-  if (lesson.status !== "active" || lesson.visibility !== "public" || lesson.communityState !== "ok" || !lesson.publishedVersionId) return null;
+  if (!hasLiveLessonPublication(lesson)) return null;
   const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
   if (!version || version.lessonId !== lesson._id || version.visibility !== undefined && version.visibility !== "public") return null;
   const matchingBlocks = snippets ? version.document.blocks.filter(b => "text" in b && words.some(w => b.text.toLocaleLowerCase().includes(w))).slice(0, 5).map(b => ({ id: b.id, text: "text" in b ? b.text.slice(0, 300) : "" })) : [];
@@ -60,7 +61,7 @@ export const searchPublic = query({
       if (end && end.phase !== "text") throw new Error("Search endCursor must remain within the full-text stream.");
       const result = await ctx.runQuery(internal.learnSearch.indexedPage, { text, cursor: cursor.cursor, numItems: size, ...(end?.phase === "text" && end.cursor !== null ? { endCursor: end.cursor } : {}) });
       for (const lesson of result.page) {
-        if (!lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) continue;
+        if (!hasLiveLessonPublication(lesson) || await creatorRestricted(ctx, lesson.ownerId)) continue;
         const hit = await publishedHit(ctx, lesson, words, true);
         if (hit) page.push(hit);
       }

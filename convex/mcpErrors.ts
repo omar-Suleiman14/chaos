@@ -1,4 +1,5 @@
 import { ConvexError } from "convex/values";
+import { codedMessage } from "../lib/codedMessage";
 
 /**
  * The code, message and details an MCP tool failure is reported with. Coded errors (`CODE: message`
@@ -15,8 +16,8 @@ export function mcpErrorCode(caught: unknown): { code: string; message: string; 
   const raw = caught instanceof Error ? caught.message : String(caught);
   // Convex prefixes messages with request ids and "Uncaught Error:" and appends stack frames; neither belongs in a tool result.
   const text = raw.replace(/\n\s+at [\s\S]*$/, "").replace(/^\[Request ID: [^\]]+\]\s*(Server Error\s*)?/, "").replace(/^Uncaught (\w*Error): /, (_, kind: string) => kind === "Error" ? "" : `${kind}: `).trim();
-  const coded = /\b([A-Z][A-Z_]{2,}): ([\s\S]*)$/.exec(text);
-  if (coded) return { code: coded[1], message: coded[2].trim() };
+  const coded = codedMessage(text, "convex-mcp");
+  if (coded) return coded;
   if (/^(TypeError|RangeError|ReferenceError|SyntaxError|EvalError|URIError)\b/.test(text)) return { code: "ERROR", message: text };
   if (/ArgumentValidationError|Validator error|does not match validator/i.test(text)) {
     const path = /Path: (\S+)/.exec(text)?.[1];

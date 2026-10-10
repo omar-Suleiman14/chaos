@@ -1,6 +1,25 @@
 import { expect, it } from "vitest";
 import { permissionForTool, requireToolPermission } from "@/lib/mcp/permissions";
 import { McpToolError } from "@/lib/mcp/errors";
+import schemas from "@/lib/mcp/tool-schemas.json";
+
+it("preserves every public and administrator tool's reviewed permission", () => {
+ for (const group of Object.values(schemas)) {
+  for (const [tool, descriptor] of Object.entries(group)) {
+   expect(permissionForTool(tool), tool).toBe(descriptor.permission);
+   expect(() => requireToolPermission(tool, [descriptor.permission])).not.toThrow();
+   expect(() => requireToolPermission(tool, [])).toThrow(McpToolError);
+  }
+ }
+});
+
+it("rejects unclassified operations instead of inferring access from their names", () => {
+ for (const tool of ["get_new_tool", "publish_new_tool", "new_tool", "toString", "__proto__", "constructor"]) {
+  expect(() => permissionForTool(tool)).toThrow("has no permission classification");
+  expect(() => requireToolPermission(tool)).toThrow(McpToolError);
+  expect(() => requireToolPermission(tool, ["edit_content", "read_content", "publish_content"])).toThrow(McpToolError);
+ }
+});
 it("separates sensitive answers, collaborators and destructive changes from summary reads", () => {
  expect(permissionForTool("get_results")).toBe("aggregate_analytics");
  expect(permissionForTool("export_form_responses")).toBe("individual_responses");

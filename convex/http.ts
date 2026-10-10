@@ -16,6 +16,7 @@ import type { ApiResult } from "./integrations";
 import type { IntegrationScope } from "./integrationModel";
 import { API_VERSION } from "./integrationContract";
 import { errorCode, sha256Hex } from "./serverUtils";
+import { canonicalJson } from "./canonicalJson";
 import { mcpErrorCode } from "./mcpErrors";
 import { UPLOAD_PATH, uploadRejection } from "./respond";
 
@@ -77,16 +78,6 @@ async function readBoundedBody(request: Request, tooLarge: (size: number) => boo
     offset += chunk.byteLength;
   }
   return bytes;
-}
-
-/** JSON with sorted object keys, so a retry that reorders keys or whitespace is the same request. */
-function canonicalJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonicalJson).join(",")}]`;
-  if (value && typeof value === "object") {
-    const entries = Object.entries(value as Record<string, unknown>).filter(([, v]) => v !== undefined).sort(([a], [b]) => (a < b ? -1 : a > b ? 1 : 0));
-    return `{${entries.map(([k, v]) => `${JSON.stringify(k)}:${canonicalJson(v)}`).join(",")}}`;
-  }
-  return JSON.stringify(value) ?? "null";
 }
 
 function idempotencyKey(request: Request): string | Response {
@@ -198,7 +189,7 @@ async function route(ctx: ActionCtx, request: Request, state: RequestState): Pro
       if (!ifMatch) return error(400, "VALIDATION_FAILED", "Send If-Match with the revision you edited.");
       const body = await readJson(request);
       if (body instanceof Response) return body;
-      const requestHash = await sha256Hex(`PATCH ${id}\n${ifMatch}\n${canonicalJson(body.value)}`);
+      const requestHash = await sha256Hex(`PATCH ${id}\n${ifMatch}\n${canonicalJson(body.value, "integration")}`);
       return respond(await ctx.runMutation(internal.integrations.updateDraft, { tokenId, ref: id, ifMatch, idempotencyKey: key, requestHash, body: body.value }));
     }
   }
@@ -212,7 +203,7 @@ async function route(ctx: ActionCtx, request: Request, state: RequestState): Pro
       if (key instanceof Response) return key;
       const body = await readJson(request);
       if (body instanceof Response) return body;
-      const requestHash = await sha256Hex(`POST webhooks\n${canonicalJson(body.value)}`);
+      const requestHash = await sha256Hex(`POST webhooks\n${canonicalJson(body.value, "integration")}`);
       return respond(await ctx.runMutation(internal.webhooks.apiCreateWebhook, { tokenId, idempotencyKey: key, requestHash, body: body.value }));
     }
     if (method === "DELETE" && id && !sub) return respond(await ctx.runMutation(internal.webhooks.apiWebhookAction, { tokenId, id, action: "delete" }));
@@ -229,7 +220,7 @@ async function route(ctx: ActionCtx, request: Request, state: RequestState): Pro
     if (key instanceof Response) return key;
     const body = await readJson(request);
     if (body instanceof Response) return body;
-    const requestHash = await sha256Hex(`POST\n${canonicalJson(body.value)}`);
+    const requestHash = await sha256Hex(`POST\n${canonicalJson(body.value, "integration")}`);
     return respond(await ctx.runMutation(internal.integrations.createDraft, { tokenId, idempotencyKey: key, requestHash, body: body.value }));
   }
 

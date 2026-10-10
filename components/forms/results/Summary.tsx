@@ -11,6 +11,7 @@ import { timeAgo } from "@/lib/timeAgo";
 import { BarList, Columns, Sparkline, lastDays } from "./charts";
 import { formatDuration, resultsCopy } from "./copy";
 import DocHint from "@/components/forms/DocHint";
+import StateIllustration from "@/components/StateIllustration";
 
 export type Analysis = NonNullable<FunctionReturnType<typeof api.formResults.getAnalysis>>;
 type FieldResult = Analysis["fields"][number];
@@ -250,6 +251,7 @@ export function SummaryTab({ analysis, formId }: { analysis: Analysis | undefine
   if (a.responseCount === 0 && a.partialCount === 0) {
     return (
       <div className="ws-empty">
+        <StateIllustration variant="create" />
         <h2 className="text-xl font-semibold">{t.emptyTitle}</h2>
         <p className="ws-muted max-w-sm">{t.emptyBody}</p>
         <DocHint slug="results">{t.emptyTips}</DocHint>

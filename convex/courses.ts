@@ -16,6 +16,7 @@ import { visibility } from "./learnModel";
 import { recordAssetPublicationAction } from "./learnPublicationAudit";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 import { pendingCourseChanges } from "./courseStructure";
+import { hasLiveCoursePublication } from "./publicationEligibility";
 
 /**
  * Courses are created like forms: a titled, ordered set of lessons that is published as
@@ -102,7 +103,6 @@ export const create = mutation({
 });
 
 const updateArgs = v.object({ courseId: v.id("learnCollections"), title: v.optional(v.string()), description: v.optional(v.string()), coverUrl: v.optional(v.union(v.string(), v.null())), coverY: v.optional(v.union(v.number(), v.null())), icon: v.optional(v.union(v.string(), v.null())), language: v.optional(v.string()), tags: v.optional(v.array(v.string())), details: v.optional(courseDetails) });
-/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export async function updateCourse(ctx: MutationCtx, args: Infer<typeof updateArgs>, asActor?: string) {
     const { row } = await ownedCourse(ctx, args.courseId, asActor, true);
     const m = { ...row.metadata };
@@ -111,6 +111,7 @@ export async function updateCourse(ctx: MutationCtx, args: Infer<typeof updateAr
     // Covers are an https link or a bundled gallery image (public/covers, lib/learn/covers.ts), as on lessons.
     if (args.coverUrl !== undefined) { if (args.coverUrl && !/^https:\/\/\S{1,2000}$/.test(args.coverUrl) && !/^\/covers\/[a-z0-9/_-]+\.(jpg|svg)$/.test(args.coverUrl)) throw new Error("VALIDATION_FAILED: Use an https image link or a gallery cover."); if (args.coverUrl) m.coverUrl = args.coverUrl; else { delete m.coverUrl; delete m.coverY; } }
     if (args.coverY !== undefined) { if (args.coverY === null) delete m.coverY; else if (Number.isFinite(args.coverY) && args.coverY >= 0 && args.coverY <= 100) m.coverY = Math.round(args.coverY); else throw new Error("VALIDATION_FAILED: Cover position is a percentage from 0 to 100."); }
+    // oxlint-disable-next-line eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs.
     if (args.icon !== undefined) { if (!args.icon) delete m.icon; else if (args.icon.length <= 40 && !/[\s\u0000-\u001f\u007f<>]/.test(args.icon)) m.icon = args.icon; else throw new Error("VALIDATION_FAILED: Use a valid Lucide icon name or emoji as the course icon."); }
     if (args.language !== undefined) m.language = args.language.slice(0, 35) || "en";
     if (args.tags !== undefined) m.tags = [...new Set(args.tags.map((t) => t.trim().slice(0, 40)).filter(Boolean))].slice(0, 12);
@@ -118,7 +119,6 @@ export async function updateCourse(ctx: MutationCtx, args: Infer<typeof updateAr
     await authorDb(ctx).patch("learnCollections", row._id, { metadata: m, ...(args.details ? { details: args.details } : {}), updatedAt: Date.now() });
     return null;
 }
-/* oxlint-enable eslint/no-control-regex */
 export const update = mutation({
   args: updateArgs.fields,
   returns: v.null(),
@@ -283,7 +283,7 @@ export const listIndexable = query({
     const page = [];
     const restricted = new Map<string, boolean>();
     for (const row of result.page) {
-      if (!row.publishedVersionId || row.archived || row.communityState !== "ok") continue;
+      if (!hasLiveCoursePublication(row)) continue;
       if (!restricted.has(row.ownerId)) restricted.set(row.ownerId, await creatorRestricted(ctx, row.ownerId));
       if (restricted.get(row.ownerId)) continue;
       const version = await ctx.db.get("collectionVersions", row.publishedVersionId);
@@ -318,7 +318,7 @@ export const listPublic = query({
     const result = [];
     const restricted = new Map<string, boolean>();
     for (const row of rows) {
-      if (!row.publishedVersionId || row.archived || row.communityState !== "ok") continue;
+      if (!hasLiveCoursePublication(row)) continue;
       if (!restricted.has(row.ownerId)) restricted.set(row.ownerId, await creatorRestricted(ctx, row.ownerId));
       if (restricted.get(row.ownerId)) continue;
       const version = await ctx.db.get("collectionVersions", row.publishedVersionId);
