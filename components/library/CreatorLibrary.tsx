@@ -1,5 +1,7 @@
 "use client";
 
+import { kinds, kindFromParam, type Kind } from "@/lib/forms/libraryTabs";
+
 import StateIllustration from "@/components/StateIllustration";
 import CoursesHub from "@/components/courses/CoursesHub";
 import GamesHub from "@/components/live/GamesHub";
@@ -40,10 +42,7 @@ import { CacheState } from "@/components/workspace/CacheState";
 import { linkOrigin } from "@/lib/hosts";
 import { writeClipboardText } from "@/lib/clipboard";
 
-const kinds = ["Forms", "Quizzes", "Flashcards", "Courses", "Games"] as const;
-type Kind = (typeof kinds)[number];
-/** The open tab lives in the address (?tab=games) so links, Back and refresh keep it. */
-const kindFromParam = (value: string | null): Kind => kinds.find((k) => k.toLowerCase() === value) ?? "Forms";
+
 type Status = "live" | "draft" | "closed" | "archived";
 const statusOptions: { id: Status }[] = [{ id: "live" }, { id: "draft" }, { id: "closed" }];
 type SortKey = "edited" | "name" | "responses" | "status" | "count";
