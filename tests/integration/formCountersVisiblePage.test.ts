@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { api } from "../../convex/_generated/api";
+import type { Id } from "../../convex/_generated/dataModel";
 import { withOwnerFormCounts } from "../../convex/formCounts";
 import { createTestConvex } from "./setup";
 import { creatorIdentity } from "../fixtures";
@@ -9,7 +10,7 @@ describe("creator library visible form counters", () => {
     const t = createTestConvex();
     const owner = t.withIdentity(creatorIdentity);
     await owner.mutation(api.quizFunctions.getOrCreateUser, {});
-    const ids = [];
+    const ids: Id<"forms">[] = [];
     for (let index = 0; index < count; index++) ids.push(await owner.mutation(api.forms.createForm, {}));
     const forms = await t.run(async ctx => {
       for (const [i, formId] of ids.entries()) {
