@@ -3,7 +3,7 @@ import { teamAudienceAllows } from "./businessAccess";
 import { lessonAccessForActor } from "./lessons";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
-import { query } from "./_generated/server";
+import { query, type QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
 import { creatorRestricted, requireActiveUser } from "./authz";
 import { lessonAccess, lessonSummary } from "./lessons";
@@ -17,22 +17,55 @@ function pageCheck(count: number) {
   if (!Number.isSafeInteger(count) || count < 1 || count > 50) throw new Error("Page size must be 1–50");
 }
 
+type PublicReadCache = {
+  restrictions: Map<string, Promise<boolean>>;
+  owners: Map<string, Promise<Doc<"users"> | null>>;
+};
+
+function publicReadCache(): PublicReadCache {
+  return { restrictions: new Map(), owners: new Map() };
+}
+
+/** One publication/visibility projection for single and batch reads. Caches live only within the request. */
+async function readPublishedLesson(ctx: QueryCtx, rawId: string, viewer: string | undefined, cache: PublicReadCache) {
+  if (!rawId || rawId.length > 100) return null;
+  const id = ctx.db.normalizeId("lessons", rawId);
+  if (!id) return null;
+  const lesson = await ctx.db.get("lessons", id);
+  const team = !!lesson && await teamAudienceAllows(ctx, lesson, viewer);
+  if (!hasLiveLessonPublication(lesson) || (lesson.visibility !== "public" && !team)) return null;
+
+  let restricted = cache.restrictions.get(lesson.ownerId);
+  if (!restricted) {
+    restricted = creatorRestricted(ctx, lesson.ownerId);
+    cache.restrictions.set(lesson.ownerId, restricted);
+  }
+  if (await restricted) return null;
+
+  const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
+  if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) return null;
+
+  let ownerRead = cache.owners.get(lesson.ownerId);
+  if (!ownerRead) {
+    ownerRead = ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
+    cache.owners.set(lesson.ownerId, ownerRead);
+  }
+  const owner = await ownerRead;
+  return {
+    lessonId: id, ownerId: lesson.ownerId,
+    ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator",
+    ...(lesson.createdWith ? { createdWith: lesson.createdWith } : {}),
+    createdAt: lesson.createdAt, version,
+  };
+}
+
 /** An anonymous, fail-closed metadata read. Owner/editor grants cannot make a private asset indexable. */
 export const publicLesson = query({
   args: { id: v.string() },
   returns: v.union(v.null(), v.object({ lessonId: v.id("lessons"), ownerId: v.string(), ownerName: v.string(), createdWith: v.optional(createdWith), createdAt: v.number(), version: schema.doc("lessonVersions") })),
   handler: async (ctx, args) => {
-    if (!args.id || args.id.length > 100) return null;
-    const id = ctx.db.normalizeId("lessons", args.id);
-    if (!id) return null;
-    const lesson = await ctx.db.get("lessons", id);
-    // Team-only lessons read like public ones for members of their team.
-    const team = !!lesson && await teamAudienceAllows(ctx, lesson, (await getAuthIdentity(ctx))?.subject);
-    if (!hasLiveLessonPublication(lesson) || (lesson.visibility !== "public" && !team) || await creatorRestricted(ctx, lesson.ownerId)) return null;
-    const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
-    if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) return null;
-    const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
-    return { lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", ...(lesson.createdWith ? { createdWith: lesson.createdWith } : {}), createdAt: lesson.createdAt, version };
+    if (!args.id || args.id.length > 100 || !ctx.db.normalizeId("lessons", args.id)) return null;
+    return readPublishedLesson(ctx, args.id, (await getAuthIdentity(ctx))?.subject, publicReadCache());
   },
 });
 
@@ -83,32 +116,9 @@ export const publicLessonsBatch = query({
   returns: v.array(v.object({ lessonId: v.id("lessons"), ownerId: v.string(), ownerName: v.string(), createdWith: v.optional(createdWith), createdAt: v.number(), version: schema.doc("lessonVersions") })),
   handler: async (ctx, args) => {
     const viewer = (await getAuthIdentity(ctx))?.subject;
-    // Request-local promises share concurrent reads, never authorization across requests.
-    const restrictions = new Map<string, Promise<boolean>>();
-    const owners = new Map<string, Promise<Doc<"users"> | null>>();
-    const results = await Promise.all(args.ids.slice(0, 50).map(async rawId => {
-      if (!rawId || rawId.length > 100) return null;
-      const id = ctx.db.normalizeId("lessons", rawId);
-      if (!id) return null;
-      const lesson = await ctx.db.get("lessons", id);
-      const team = !!lesson && await teamAudienceAllows(ctx, lesson, viewer);
-      if (!hasLiveLessonPublication(lesson) || (lesson.visibility !== "public" && !team)) return null;
-      let restricted = restrictions.get(lesson.ownerId);
-      if (!restricted) {
-        restricted = creatorRestricted(ctx, lesson.ownerId);
-        restrictions.set(lesson.ownerId, restricted);
-      }
-      if (await restricted) return null;
-      const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
-      if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) return null;
-      let ownerRead = owners.get(lesson.ownerId);
-      if (!ownerRead) {
-        ownerRead = ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
-        owners.set(lesson.ownerId, ownerRead);
-      }
-      const owner = await ownerRead;
-      return { lessonId: id, ownerId: lesson.ownerId, ownerName: version.metadata.authorDisplay ?? owner?.name ?? "Chaos creator", ...(lesson.createdWith ? { createdWith: lesson.createdWith } : {}), createdAt: lesson.createdAt, version };
-    }));
+    // Reuse owner and restriction reads only inside this query, not across viewers or requests.
+    const cache = publicReadCache();
+    const results = await Promise.all(args.ids.slice(0, 50).map(rawId => readPublishedLesson(ctx, rawId, viewer, cache)));
     return results.filter(row => row !== null);
   },
 });
