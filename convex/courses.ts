@@ -392,6 +392,8 @@ export const myProgress = query({ args: { courseId: v.string() }, returns: v.arr
 export async function rememberCourse(ctx: MutationCtx, args: { courseId: string }, asActor?: string) {
   const identity = asActor ? { subject: asActor } : await getAuthIdentity(ctx);
   if (!identity) throw new Error("UNAUTHENTICATED");
+  // MCP callers were already checked by requireLearnActor; native callers are checked here.
+  if (!asActor) await requireActiveUser(ctx);
   const course = await readPublicCourse(ctx, args, identity.subject);
   if (!course) throw new Error("NOT_FOUND: Course unavailable.");
   const actor = await canonicalCommunityActor(ctx, identity.subject);
