@@ -26,6 +26,7 @@
     "perf": "vitest run --config vitest.perf.config.mts",
     "perf:bundles": "tsx scripts/perf-bundles.ts",
     "perf:css": "tsx scripts/perf-css.ts",
+    "css:build-audit": "tsx scripts/css-build-audit.ts",
     "perf:check": "tsx scripts/perf-ratchet.ts check",
     "perf:ratchet": "tsx scripts/perf-ratchet.ts update",
     "perf:guard": "tsx scripts/perf-guard.ts",

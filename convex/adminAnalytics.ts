@@ -6,6 +6,7 @@ import { creatorRestricted, isPaidPlan } from "./authz";
 import { requireAdminForActor } from "./adminAccess";
 import { emptyMetrics, metricsValidator } from "./adminModel";
 import { readFormCounts } from "./formCounts";
+import { memoizeOwnerRestriction } from "./adminAnalyticsReadMemo";
 
 async function start(ctx: MutationCtx) {
   const prior = await ctx.db
@@ -78,7 +79,7 @@ export const scan = internalMutation({
     const pending = { ...job.pending };
     const options = {
       cursor: job.cursor,
-      numItems: 25,
+      numItems: 50,
       maximumBytesRead: 2_000_000,
     };
     let phase = job.phase,
@@ -97,6 +98,7 @@ export const scan = internalMutation({
       // Forms are the last phase (quizzes are quiz forms).
       phase = "forms";
       const page = await ctx.db.query("forms").paginate(options);
+      const restrictedOwner = memoizeOwnerRestriction((ownerId) => creatorRestricted(ctx, ownerId));
       for (const form of page.page) {
         const counts = await readFormCounts(ctx, form);
         pending.forms++;
@@ -105,7 +107,7 @@ export const scan = internalMutation({
         if (
           form.status === "live" &&
           !form.isBanned &&
-          !(await creatorRestricted(ctx, form.ownerId))
+          !(await restrictedOwner(form.ownerId))
         )
           pending.liveForms++;
       }

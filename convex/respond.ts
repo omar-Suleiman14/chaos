@@ -1,3 +1,6 @@
+import { effectiveResponseCap } from "./responseCap";
+import { uploadRejection } from "./respondUploadValidation";
+export { uploadRejection } from "./respondUploadValidation";
 import { recordStudent } from "./studentRoster";
 import { getAuthIdentity } from "./authIdentity";
 import { canonicalJson } from "./canonicalJson";
@@ -29,12 +32,6 @@ import { changeFormCounts, readFormCounts } from "./formCounts";
 const quizReviewValidator = v.union(v.null(), v.array(v.object({ fieldId: v.string(), earned: v.number(), possible: v.number(), correctOptionIds: v.array(v.string()), explanation: v.optional(v.string()) })));
 
 export const DEFAULT_FORM_RESPONSE_LIMIT = planLimits.free.responsesPerForm;
-const MAX_UPLOAD_BYTES = 10 * 1024 * 1024;
-const ALLOWED_UPLOAD_TYPES = [
-  "application/pdf", "image/png", "image/jpeg", "image/webp", "image/gif", "text/plain", "text/csv",
-  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-];
 export const UPLOAD_PATH = "/forms/upload";
 const RESUME_TTL_MS =30 * 24 * 60 * 60 * 1000;
 /** Submissions faster than this are flagged for spam review, never discarded. */
@@ -60,8 +57,7 @@ export async function responseCap(ctx: Ctx, form: Doc<"forms">, now?: number): P
   const config = await ctx.db.query("globalConfig").first();
   const platform = hasPro(owner, now) ? planLimits.pro.responsesPerForm : config?.formResponseLimit ?? DEFAULT_FORM_RESPONSE_LIMIT;
   const own = form.settings.responseLimit ?? null;
-  if (platform === null) return own;
-  return own === null ? platform : Math.min(own, platform);
+  return effectiveResponseCap(platform, own);
 }
 
 async function ownerOf(ctx: Ctx, form: Doc<"forms">) {
@@ -657,10 +653,4 @@ export const recordUpload = internalMutation({
   },
 });
 
-/** Shared limits for the HTTP endpoint. */
-export function uploadRejection(contentType: string, size: number): string | null {
-  if (size > MAX_UPLOAD_BYTES) return "UPLOAD_TOO_LARGE: Files can be at most 10 MB.";
-  if (!Number.isFinite(size) || !Number.isInteger(size) || size <= 0) return "UPLOAD_MISSING: The file is empty.";
-  if (!ALLOWED_UPLOAD_TYPES.includes(contentType)) return "UPLOAD_TYPE: Upload a PDF, image, text, CSV, Word or Excel file.";
-  return null;
-}
+
