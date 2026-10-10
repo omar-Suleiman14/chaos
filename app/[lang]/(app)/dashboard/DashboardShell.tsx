@@ -35,7 +35,7 @@ import { formIntentHandlers } from "@/lib/convexCache";
 import { usePreferences } from "@/lib/preferences";
 import { dateLocale, useCopy, useLocale } from "@/lib/i18n";
 import { supportEmail } from "@/lib/site";
-import { clampWidth, readSidebarPreferences, SIDEBAR_DEFAULT } from "@/lib/dashboard/sidebarPreferences";
+import { clampWidth, readSidebarPreferences, SIDEBAR_DEFAULT, SIDEBAR_MIN, SIDEBAR_MAX } from "@/lib/dashboard/sidebarPreferences";
 import { useFlashcardSets, useFolders, useMyLessons } from "@/lib/learn/data";
 
 /**
