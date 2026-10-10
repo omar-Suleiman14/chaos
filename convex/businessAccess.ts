@@ -1,8 +1,9 @@
 import type { Infer } from "convex/values";
 import type { QueryCtx, MutationCtx } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { teamAsset } from "./businessModel";
 import { checkEmailRules, type EmailCheck } from "./formRespondent";
+import { coursesWithLesson } from "./courseMembership";
 
 type Ctx = Pick<QueryCtx | MutationCtx, "db">;
 export async function businessMember(ctx: Ctx, teamId: Id<"businessTeams">, userId: string) {
@@ -23,7 +24,7 @@ async function directTeamAccess(ctx: Ctx, userId: string, asset: Infer<typeof te
   return false;
 }
 /** Team grants are resolved at read time; revoking membership never leaves stale editor rows. */
-export async function canEditTeamAsset(ctx: Ctx, userId: string, asset: Infer<typeof teamAsset>, inherit = true, depth = 0): Promise<boolean> {
+export async function canEditTeamAsset(ctx: Ctx, userId: string, asset: Infer<typeof teamAsset>, inherit = true, depth = 0, knownLesson?: Doc<"lessons">): Promise<boolean> {
   if (depth > 8) return false;
   if (await directTeamAccess(ctx, userId, asset)) return true;
   if (asset.kind === "folder") {
@@ -38,9 +39,9 @@ export async function canEditTeamAsset(ctx: Ctx, userId: string, asset: Infer<ty
     if (await canEditTeamAsset(ctx, userId, { kind: "folder", id: member.folderId })) return true;
   }
   if (asset.kind === "lesson") {
-    const lesson = await ctx.db.get("lessons", asset.id);
+    const lesson = knownLesson?._id === asset.id ? knownLesson : await ctx.db.get("lessons", asset.id);
     if (!lesson) return false;
-    const courses = await ctx.db.query("learnCollections").withIndex("by_ownerId_and_updatedAt", q => q.eq("ownerId", lesson.ownerId)).take(500);
+    const courses = await coursesWithLesson(ctx, lesson.ownerId, asset.id);
     for (const course of courses) {
       if ((course.lessonIds ?? course.items.flatMap(item => item.kind === "lesson" ? [item.id] : [])).includes(asset.id) && await canEditTeamAsset(ctx, userId, { kind: "course", id: course._id })) return true;
     }

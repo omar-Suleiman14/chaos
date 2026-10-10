@@ -1,6 +1,7 @@
 import { getAuthIdentity } from "./authIdentity";
 import { randomCover } from "../lib/learn/covers";
 import { authorDb } from "./authorIndex";
+import { coursesWithLesson } from "./courseMembership";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 import { requireVisibilityAllowed } from "./plans";
 import { canEditTeamAsset, resolveAudienceTeam, teamAudienceAllows } from "./businessAccess";
@@ -26,7 +27,7 @@ export async function lessonAccessForActor(ctx: QueryCtx | MutationCtx, actor: s
   if (!lesson) throw new Error("NOT_FOUND: Lesson not found or unavailable.");
   if (actor === lesson.ownerId) return lesson;
   const grant = actor ? await ctx.db.query("lessonPermissions").withIndex("by_lessonId_and_userId", q => q.eq("lessonId", id).eq("userId", actor!)).unique() : null;
-  if ((grant && (!edit || grant.role === "editor")) || (actor && await canEditTeamAsset(ctx, actor, { kind: "lesson", id }))) {
+  if ((grant && (!edit || grant.role === "editor")) || (actor && await canEditTeamAsset(ctx, actor, { kind: "lesson", id }, true, 0, lesson))) {
     // Explicit policy: Direct grants do NOT bypass platform moderation or creator restriction.
     if (lesson.communityState === "removed" || await creatorRestricted(ctx, lesson.ownerId)) {
       throw new Error("NOT_FOUND: Lesson not found or unauthorized.");
@@ -184,8 +185,7 @@ export const publish = mutation({ args: { lessonId: v.id("lessons"), expectedRev
 } });
 /** The owner's non-archived courses whose draft outline includes this lesson. */
 export async function coursesContainingLesson(ctx: QueryCtx | MutationCtx, ownerId: string, lessonId: Id<"lessons">) {
-  const courses = await ctx.db.query("learnCollections").withIndex("by_ownerId_and_updatedAt", q => q.eq("ownerId", ownerId)).order("desc").take(500);
-  return courses.filter(c => !c.archived && (c.lessonIds ?? c.items.flatMap(i => (i.kind === "lesson" ? [i.id] : []))).includes(lessonId));
+  return (await coursesWithLesson(ctx, ownerId, lessonId, "desc")).filter(c => !c.archived);
 }
 
 /**

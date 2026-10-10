@@ -143,3 +143,52 @@ future field becomes required, ship it optional first, backfill, then tighten.
 Compatibility readers and adapters remain supported while they are referenced by current paths and fixtures. `legacyFlashcardBlocks` is used by the lesson reader for stored inline flashcards; `lessonBlockAdapter` preserves the serialized `lessonData` shapes read by published lessons and round-trip tests; the legacy identity, response and course records in `tests/fixtures/legacyDataset.ts` are checked by `tests/integration/legacyData.test.ts`. The migration ledger documents old repair tooling and the self-hosted account binding procedure. Remove a compatibility path only with evidence that its stored data has been migrated or retired and with fixtures covering that decision.
 
 The package install remains locked by `pnpm-lock.yaml`. Production app and Convex deploy images use the declared dependencies, and the repository supports both Clerk and Better Auth, so each provider's build adapter is intentional.
+
+## Course membership index (2026-10)
+
+`courseLessonMemberships` and `courseMembershipState` are additive projection
+tables. Existing lessons, courses, immutable versions, connector provenance,
+responses, scores and permission rows are not rewritten. The course's current
+`lessonIds` wins, including an empty array; legacy collections without that
+field use their lesson `items`.
+
+Course insert/outline/item/owner updates through `authorDb` maintain associations
+in the same transaction. Course deletion removes them. Reads verify each current
+course owner and outline, then resolve current team/folder grants; the index never
+stores editor permissions. Archived courses retain the existing editing semantics
+but remain excluded from lesson-publication propagation.
+
+A new empty installation marks the index complete when its first managed course
+is created. Existing multi-course installations keep the historical bounded
+lookup, augmented by already indexed associations, until backfill completes.
+**The old 500-course completeness limit is removed only after completion.**
+
+On an approved scratch deployment, regenerate Convex bindings/deploy the additive
+schema/functions, then run:
+
+```sh
+npx convex run businessTeams:backfillCourseMemberships '{}'
+```
+
+The internal job pages at most 20 courses / 1 MB per transaction and schedules its
+next page. It writes only derived association/state rows. Current outline writes
+remain transactional during the backfill; no write pause is needed. A generation
+and expected cursor reject duplicate or stale scheduled pages. The singleton
+`courseMembershipState` row with key `v1` must show `complete: true` and no `cursor`
+before considering the repair finished. `restart: true` restarts an interrupted
+repair or rebuilds projections after an operator import; restarting never deletes
+course content or valid independent permissions.
+
+Follow the backup, scratch verification and owner-approval procedure above before
+running on production. No deployment or backfill was run during local development.
+Restores/imports must include both projection tables or rerun this backfill; do not
+import a completed state marker without its matching associations. Rolling back
+functions retains all content and returns to the old bounded lookup. The new
+projection tables may remain stored without affecting old functions.
+
+Regression coverage in `tests/integration/courseMembership.test.ts` includes
+501-course owners, first/beyond-limit memberships, publication gating and older
+live-course propagation, legacy items, empty outlines, revocation, stale/forged
+associations, rejected edits, interrupted/repeated pages and edits during backfill.
+Indexed lookup cost is proportional to actual course memberships for that lesson,
+not unrelated owner courses; normal Convex transaction limits still apply.
