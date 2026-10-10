@@ -1,3 +1,4 @@
+import { newSecret } from "./integrationTokenSecret";
 import { validScopes } from "./integrationScopeValidation";
 import { parseResourceRef } from "./resourceRefs";
 import { configuredRate } from "./integrationRate";
@@ -18,7 +19,7 @@ import type { QuizType } from "./integrationContract";
 import {
   activeIntegrationToken, findIdempotent, logConnectionActivity, ROTATION_GRACE_MS, scopeValidator,
 } from "./integrationModel";
-import { displayName, errorCode, randomHex, sha256Hex } from "./serverUtils";
+import { displayName, errorCode, sha256Hex } from "./serverUtils";
 import { disableConnectionWebhooks } from "./webhooks";
 import { readFormCounts } from "./formCounts";
 
@@ -40,11 +41,6 @@ export const DEFAULT_API_RATE = { read: 300, write: 60 } as const;
 export type RateClass = keyof typeof DEFAULT_API_RATE;
 const RATE_WINDOW_MS = 60_000;
 const MAX_TOKENS = 20;
-
-function newSecret() {
-  const secret = randomHex(32);
-  return { token: `chaos_${secret}`, hint: `chaos_${secret.slice(0, 6)}…` };
-}
 
 // ── Owner-facing connection management ──────────────────────────────────────
 
