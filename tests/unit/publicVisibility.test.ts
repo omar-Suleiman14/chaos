@@ -19,6 +19,6 @@ describe("public lesson frontend listing predicate", () => {
     expect(isListed(lesson({ published: undefined }))).toBe(false);
     expect(isListed(lesson({ visibility: "private" }))).toBe(false);
     expect(isListed(lesson({ archived: true }))).toBe(false);
-    expect(isListed(lesson({ moderation: "pending" }))).toBe(false);
+    expect(isListed(lesson({ moderation: "under_review" }))).toBe(false);
   });
 });
