@@ -21,6 +21,11 @@ describe("Notion connection: ownership and OAuth", () => {
     expect(await t.query(api.notion.available, {})).toBe(false);
   });
 
+  it("answers a not-yet-signed-in page load without throwing", async () => {
+    const t = createTestConvex();
+    expect(await t.query(api.notion.connection, {})).toBeNull();
+  });
+
   it("requires a one-use, expiring OAuth state and never shows the stored token", async () => {
     const t = createTestConvex();
     const owner = t.withIdentity(creatorIdentity);
@@ -57,17 +62,38 @@ describe("Notion connection: ownership and OAuth", () => {
     const document = { schemaVersion: 1 as const, blocks: [
       { id: "intro", type: "paragraph" as const, text: "Source page", citations: [], conceptIds: [] },
     ] };
+    const courseId = await owner.mutation(api.courses.create, { title: "Biology" });
+    const otherCourse = await other.mutation(api.courses.create, { title: "Not yours" });
     expect(await other.query(api.notion.connection, {})).toBeNull();
     await expect(other.mutation(internal.notion.createImportedLesson, {
-      connectionId, pageId: "a".repeat(32), metadata, document,
+      connectionId, pageId: "a".repeat(32), courseId: otherCourse, metadata, document,
     })).rejects.toThrow(/NOTION_NOT_CONNECTED/);
+    // A Notion import can only file into the importer's own course.
+    await expect(owner.mutation(internal.notion.createImportedLesson, {
+      connectionId, pageId: "a".repeat(32), courseId: otherCourse, metadata, document,
+    })).rejects.toThrow(/Course not found/);
     const first = await owner.mutation(internal.notion.createImportedLesson, {
-      connectionId, pageId: "a".repeat(32), metadata, document,
+      connectionId, pageId: "a".repeat(32), courseId, metadata, document,
     });
+    expect((await owner.query(api.courses.get, { courseId })).lessons.map(l => l.id)).toEqual([first]);
+    // Reimporting into a module of another course reuses the draft and files it there, once.
+    const unit = await owner.mutation(api.courses.create, { title: "Unit two" });
+    await owner.mutation(api.courses.setModules, { courseId: unit, modules: [{ id: "m1", title: "Cells", lessonIds: [], assessments: [] }] });
     const duplicate = await owner.mutation(internal.notion.createImportedLesson, {
-      connectionId, pageId: "a".repeat(32), metadata, document,
+      connectionId, pageId: "a".repeat(32), courseId: unit, moduleId: "m1", metadata, document,
     });
     expect(duplicate).toBe(first);
+    await owner.mutation(internal.notion.createImportedLesson, { connectionId, pageId: "a".repeat(32), courseId: unit, moduleId: "m1", metadata, document });
+    const filed = await owner.query(api.courses.get, { courseId: unit });
+    expect(filed.lessons.map(l => l.id)).toEqual([first]);
+    expect(filed.modules[0].lessonIds).toEqual([first]);
+    await expect(owner.mutation(internal.notion.createImportedLesson, {
+      connectionId, pageId: "c".repeat(32), courseId: unit, moduleId: "missing", metadata, document,
+    })).rejects.toThrow(/Module not found/);
+    await owner.mutation(api.courses.setArchived, { courseId, archived: true });
+    await expect(owner.mutation(internal.notion.createImportedLesson, {
+      connectionId, pageId: "d".repeat(32), courseId, metadata, document,
+    })).rejects.toThrow(/COURSE_ARCHIVED/);
     const stored = await t.run(ctx => ctx.db.get("lessons", first));
     expect(stored).toMatchObject({ ownerId: creatorIdentity.subject, visibility: "private", revision: 0 });
     expect(stored?.publishedVersionId).toBeUndefined();
