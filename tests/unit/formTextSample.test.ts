@@ -1,31 +1,33 @@
 import { describe, expect, it, vi } from "vitest";
-import { scanRecentSampleUntilLimit } from "../../convex/formTextSample";
+import { findTextAnswersWithFastPath } from "../../convex/formTextSample";
 
 const fixtures = Array.from({ length: 2500 }, (_, i) => i);
-const readPage = vi.fn(async (cursor: string | null, numItems: number) => {
-  const start = Number(cursor ?? 0);
-  const end = Math.min(fixtures.length, start + numItems);
-  return { page: fixtures.slice(start, end), continueCursor: String(end), isDone: end === fixtures.length };
-});
+const readRows = vi.fn(async (limit: number) => fixtures.slice(0, limit));
 
-const bounds = { sampleLimit: 2000, resultLimit: 200, pageSize: 100 };
-
-describe("capped response text sample", () => {
-  it("stops after 200 ordered matching results, before scanning all 2,000", async () => {
-    readPage.mockClear();
-    const result = await scanRecentSampleUntilLimit(readPage, async value => value, bounds);
+describe("text-answer sample fast path", () => {
+  it("reads only 200 rows when all 200 are eligible and ordered", async () => {
+    readRows.mockClear();
+    const result = await findTextAnswersWithFastPath(readRows, async value => value, 200, 2000);
     expect(result).toEqual(fixtures.slice(0, 200));
-    expect(readPage).toHaveBeenCalledTimes(2);
+    expect(readRows).toHaveBeenCalledTimes(1);
+    expect(readRows).toHaveBeenCalledWith(200);
   });
 
-  it("still checks at most the original 2,000 rows when matching answers are sparse", async () => {
-    readPage.mockClear();
-    const result = await scanRecentSampleUntilLimit(readPage, async value => value % 100 === 0 ? value : null, bounds);
+  it("falls back to exactly the original 2,000-row window for sparse fields", async () => {
+    readRows.mockClear();
+    const result = await findTextAnswersWithFastPath(readRows, async value => value % 100 === 0 ? value : null, 200, 2000);
     expect(result).toEqual(fixtures.slice(0, 2000).filter(value => value % 100 === 0));
-    expect(readPage).toHaveBeenCalledTimes(20);
+    expect(readRows).toHaveBeenCalledTimes(2);
+    expect(readRows).toHaveBeenLastCalledWith(2000);
   });
 
-  it("does not suppress projection errors", async () => {
-    await expect(scanRecentSampleUntilLimit(readPage, async () => { throw new Error("visibility read failed"); }, bounds)).rejects.toThrow("visibility read failed");
+  it("does not run a fallback on a smaller exhausted dataset", async () => {
+    const short = vi.fn(async (limit: number) => fixtures.slice(0, Math.min(12, limit)));
+    expect(await findTextAnswersWithFastPath(short, async v => v, 200, 2000)).toHaveLength(12);
+    expect(short).toHaveBeenCalledTimes(1);
+  });
+
+  it("propagates field version and visibility projection failures", async () => {
+    await expect(findTextAnswersWithFastPath(readRows, async () => { throw new Error("visibility read failed"); }, 200, 2000)).rejects.toThrow("visibility read failed");
   });
 });
