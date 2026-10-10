@@ -4,7 +4,7 @@ import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
  * What kind of failure a tool error is, so people and assistants know how to recover:
  * fix the arguments, ask for access, reload and retry, finish the content first, wait, or report a fault.
  */
-export const MCP_ERROR_CATEGORIES = ["validation", "auth", "permission", "ownership", "not_found", "revision_conflict", "publication", "rate_limit", "plan", "internal"] as const;
+const MCP_ERROR_CATEGORIES = ["validation", "auth", "permission", "ownership", "not_found", "revision_conflict", "publication", "rate_limit", "plan", "internal"] as const;
 export type McpErrorCategory = (typeof MCP_ERROR_CATEGORIES)[number];
 
 const CATEGORY: Record<string, McpErrorCategory> = {

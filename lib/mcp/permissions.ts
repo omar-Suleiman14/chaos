@@ -1,6 +1,6 @@
 import { ADMIN_CRM_TOOLS, ADMIN_PLATFORM_TOOLS } from "./admin";
 import { McpToolError } from "./errors";
-export const MCP_PERMISSIONS = ["read_content", "edit_content", "publish_content", "aggregate_analytics", "individual_responses", "collaborators", "destructive", "admin_crm", "admin_operations"] as const;
+const MCP_PERMISSIONS = ["read_content", "edit_content", "publish_content", "aggregate_analytics", "individual_responses", "collaborators", "destructive", "admin_crm", "admin_operations"] as const;
 export type McpPermission = (typeof MCP_PERMISSIONS)[number];
 /** Categories are separate from identity scopes; provider-issued grants can map here later. */
 export function permissionForTool(tool: string): McpPermission {
