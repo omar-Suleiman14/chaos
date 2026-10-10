@@ -1,0 +1,1337 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`preserves error boundary outputs for "[CONVEX M(synthetic)] Server Error\\nUncaught Error: Private diagnostic\\n    at handler (convex/synthetic.ts:1:1)" 1`] = `
+{
+  "backend": {
+    "code": "ERROR",
+    "message": "[CONVEX M(synthetic)] Server Error
+Uncaught Error: Private diagnostic
+    at handler (convex/synthetic.ts:1:1)",
+  },
+  "client": {
+    "code": "ERROR",
+    "message": "Private diagnostic",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "[CONVEX M(synthetic)] Server Error",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "[Request ID: synthetic] Server Error\\nUncaught Error: NOT_FOUND: Missing synthetic lesson\\n    at handler (convex/synthetic.ts:1:1)\\nCalled by client" 1`] = `
+{
+  "backend": {
+    "code": "ID",
+    "message": "synthetic] Server Error
+Uncaught Error: NOT_FOUND: Missing synthetic lesson
+    at handler (convex/synthetic.ts:1:1)
+Called by client",
+  },
+  "client": {
+    "code": "NOT_FOUND",
+    "message": "Missing synthetic lesson",
+  },
+  "mcp": {
+    "code": "NOT_FOUND",
+    "message": "Missing synthetic lesson",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "_ABC: Leading underscore" 1`] = `
+{
+  "backend": {
+    "code": "ABC",
+    "message": "Leading underscore",
+  },
+  "client": {
+    "code": "ABC",
+    "message": "Leading underscore",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "_ABC: Leading underscore",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "A: Single letter" 1`] = `
+{
+  "backend": {
+    "code": "ERROR",
+    "message": "A: Single letter",
+  },
+  "client": {
+    "code": "ERROR",
+    "message": "A: Single letter",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "A: Single letter",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "AB: Short code" 1`] = `
+{
+  "backend": {
+    "code": "AB",
+    "message": "Short code",
+  },
+  "client": {
+    "code": "ERROR",
+    "message": "AB: Short code",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "AB: Short code",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "validation",
+        "code": "AB",
+        "retryable": false,
+      },
+    },
+    "content": [
+      {
+        "text": "AB (validation): Short code. Fix the arguments and try again.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "INVALID_2: Digit in code" 1`] = `
+{
+  "backend": {
+    "code": "ERROR",
+    "message": "INVALID_2: Digit in code",
+  },
+  "client": {
+    "code": "ERROR",
+    "message": "INVALID_2: Digit in code",
+  },
+  "mcp": {
+    "code": "VALIDATION_FAILED",
+    "message": "INVALID_2: Digit in code",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "NOT_FOUND:  Multi-line\\nsecond line  " 1`] = `
+{
+  "backend": {
+    "code": "NOT_FOUND",
+    "message": "Multi-line
+second line",
+  },
+  "client": {
+    "code": "NOT_FOUND",
+    "message": "Multi-line
+second line",
+  },
+  "mcp": {
+    "code": "NOT_FOUND",
+    "message": "Multi-line
+second line",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "not_found",
+        "code": "NOT_FOUND",
+        "retryable": false,
+      },
+    },
+    "content": [
+      {
+        "text": "NOT_FOUND (not_found): Multi-line
+second line. Use an id returned by a Chaos tool; it may have been deleted or not shared with this account.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "NOT_FOUND: " 1`] = `
+{
+  "backend": {
+    "code": "NOT_FOUND",
+    "message": "",
+  },
+  "client": {
+    "code": "NOT_FOUND",
+    "message": "Synthetic fallback",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "NOT_FOUND:",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "not_found",
+        "code": "NOT_FOUND",
+        "retryable": false,
+      },
+    },
+    "content": [
+      {
+        "text": "NOT_FOUND (not_found): . Use an id returned by a Chaos tool; it may have been deleted or not shared with this account.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "NOT_FOUND: Missing synthetic lesson" 1`] = `
+{
+  "backend": {
+    "code": "NOT_FOUND",
+    "message": "Missing synthetic lesson",
+  },
+  "client": {
+    "code": "NOT_FOUND",
+    "message": "Missing synthetic lesson",
+  },
+  "mcp": {
+    "code": "NOT_FOUND",
+    "message": "Missing synthetic lesson",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "not_found",
+        "code": "NOT_FOUND",
+        "retryable": false,
+      },
+    },
+    "content": [
+      {
+        "text": "NOT_FOUND (not_found): Missing synthetic lesson. Use an id returned by a Chaos tool; it may have been deleted or not shared with this account.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "Network connection failed" 1`] = `
+{
+  "backend": {
+    "code": "ERROR",
+    "message": "Network connection failed",
+  },
+  "client": {
+    "code": "NETWORK",
+    "message": "You appear to be offline. Your work is kept here; try again when connected.",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "Network connection failed",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "PERMISSION_DENIED: Only the owner may change this." 1`] = `
+{
+  "backend": {
+    "code": "PERMISSION_DENIED",
+    "message": "Only the owner may change this.",
+  },
+  "client": {
+    "code": "PERMISSION_DENIED",
+    "message": "Only the owner may change this.",
+  },
+  "mcp": {
+    "code": "PERMISSION_DENIED",
+    "message": "Only the owner may change this.",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "ownership",
+        "code": "PERMISSION_DENIED",
+        "retryable": false,
+      },
+    },
+    "content": [
+      {
+        "text": "PERMISSION_DENIED (ownership): Only the owner may change this. Only the owner can do this.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "RATE_LIMITED: Wait before retrying." 1`] = `
+{
+  "backend": {
+    "code": "RATE_LIMITED",
+    "message": "Wait before retrying.",
+  },
+  "client": {
+    "code": "RATE_LIMITED",
+    "message": "Wait before retrying.",
+  },
+  "mcp": {
+    "code": "RATE_LIMITED",
+    "message": "Wait before retrying.",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "rate_limit",
+        "code": "RATE_LIMITED",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "RATE_LIMITED (rate_limit): Wait before retrying. Wait a moment before trying again.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "REVISION_CONFLICT: Reload this synthetic item." 1`] = `
+{
+  "backend": {
+    "code": "REVISION_CONFLICT",
+    "message": "Reload this synthetic item.",
+  },
+  "client": {
+    "code": "REVISION_CONFLICT",
+    "message": "Reload this synthetic item.",
+  },
+  "mcp": {
+    "code": "REVISION_CONFLICT",
+    "message": "Reload this synthetic item.",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "revision_conflict",
+        "code": "REVISION_CONFLICT",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "REVISION_CONFLICT (revision_conflict): Reload this synthetic item. Reload the current state, then retry with its revision.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "TypeError: Internal diagnostic" 1`] = `
+{
+  "backend": {
+    "code": "ERROR",
+    "message": "TypeError: Internal diagnostic",
+  },
+  "client": {
+    "code": "ERROR",
+    "message": "TypeError: Internal diagnostic",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "TypeError: Internal diagnostic",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "Uncaught Error: Readable failure" 1`] = `
+{
+  "backend": {
+    "code": "ERROR",
+    "message": "Uncaught Error: Readable failure",
+  },
+  "client": {
+    "code": "ERROR",
+    "message": "Readable failure",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "Readable failure",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "prefix NOT_FOUND: Embedded code" 1`] = `
+{
+  "backend": {
+    "code": "NOT_FOUND",
+    "message": "Embedded code",
+  },
+  "client": {
+    "code": "NOT_FOUND",
+    "message": "Embedded code",
+  },
+  "mcp": {
+    "code": "NOT_FOUND",
+    "message": "Embedded code",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves error boundary outputs for "prefixNOT_FOUND: Embedded code" 1`] = `
+{
+  "backend": {
+    "code": "NOT_FOUND",
+    "message": "Embedded code",
+  },
+  "client": {
+    "code": "NOT_FOUND",
+    "message": "Embedded code",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "prefixNOT_FOUND: Embedded code",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "[CONVEX M(synthetic)] Server Error\\nUncaught Error: Private diagnostic\\n    at handler (convex/synthetic.ts:1:1)" 1`] = `
+{
+  "backend": {
+    "code": "ERROR",
+    "message": "[CONVEX M(synthetic)] Server Error
+Uncaught Error: Private diagnostic
+    at handler (convex/synthetic.ts:1:1)",
+  },
+  "client": {
+    "code": "ERROR",
+    "message": "Private diagnostic",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "[CONVEX M(synthetic)] Server Error",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "[Request ID: synthetic] Server Error\\nUncaught Error: NOT_FOUND: Missing synthetic lesson\\n    at handler (convex/synthetic.ts:1:1)\\nCalled by client" 1`] = `
+{
+  "backend": {
+    "code": "ID",
+    "message": "synthetic] Server Error
+Uncaught Error: NOT_FOUND: Missing synthetic lesson
+    at handler (convex/synthetic.ts:1:1)
+Called by client",
+  },
+  "client": {
+    "code": "NOT_FOUND",
+    "message": "Missing synthetic lesson",
+  },
+  "mcp": {
+    "code": "NOT_FOUND",
+    "message": "Missing synthetic lesson",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "_ABC: Leading underscore" 1`] = `
+{
+  "backend": {
+    "code": "ABC",
+    "message": "Leading underscore",
+  },
+  "client": {
+    "code": "ABC",
+    "message": "Leading underscore",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "_ABC: Leading underscore",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "A: Single letter" 1`] = `
+{
+  "backend": {
+    "code": "ERROR",
+    "message": "A: Single letter",
+  },
+  "client": {
+    "code": "ERROR",
+    "message": "A: Single letter",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "A: Single letter",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "AB: Short code" 1`] = `
+{
+  "backend": {
+    "code": "AB",
+    "message": "Short code",
+  },
+  "client": {
+    "code": "ERROR",
+    "message": "AB: Short code",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "AB: Short code",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "INVALID_2: Digit in code" 1`] = `
+{
+  "backend": {
+    "code": "ERROR",
+    "message": "INVALID_2: Digit in code",
+  },
+  "client": {
+    "code": "ERROR",
+    "message": "INVALID_2: Digit in code",
+  },
+  "mcp": {
+    "code": "VALIDATION_FAILED",
+    "message": "INVALID_2: Digit in code",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "NOT_FOUND:  Multi-line\\nsecond line  " 1`] = `
+{
+  "backend": {
+    "code": "NOT_FOUND",
+    "message": "Multi-line
+second line",
+  },
+  "client": {
+    "code": "NOT_FOUND",
+    "message": "Multi-line
+second line",
+  },
+  "mcp": {
+    "code": "NOT_FOUND",
+    "message": "Multi-line
+second line",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "NOT_FOUND: " 1`] = `
+{
+  "backend": {
+    "code": "NOT_FOUND",
+    "message": "",
+  },
+  "client": {
+    "code": "NOT_FOUND",
+    "message": "Synthetic fallback",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "NOT_FOUND:",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "NOT_FOUND: Missing synthetic lesson" 1`] = `
+{
+  "backend": {
+    "code": "NOT_FOUND",
+    "message": "Missing synthetic lesson",
+  },
+  "client": {
+    "code": "NOT_FOUND",
+    "message": "Missing synthetic lesson",
+  },
+  "mcp": {
+    "code": "NOT_FOUND",
+    "message": "Missing synthetic lesson",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "Network connection failed" 1`] = `
+{
+  "backend": {
+    "code": "ERROR",
+    "message": "Network connection failed",
+  },
+  "client": {
+    "code": "NETWORK",
+    "message": "You appear to be offline. Your work is kept here; try again when connected.",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "Network connection failed",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "PERMISSION_DENIED: Only the owner may change this." 1`] = `
+{
+  "backend": {
+    "code": "PERMISSION_DENIED",
+    "message": "Only the owner may change this.",
+  },
+  "client": {
+    "code": "PERMISSION_DENIED",
+    "message": "Only the owner may change this.",
+  },
+  "mcp": {
+    "code": "PERMISSION_DENIED",
+    "message": "Only the owner may change this.",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "RATE_LIMITED: Wait before retrying." 1`] = `
+{
+  "backend": {
+    "code": "RATE_LIMITED",
+    "message": "Wait before retrying.",
+  },
+  "client": {
+    "code": "RATE_LIMITED",
+    "message": "Wait before retrying.",
+  },
+  "mcp": {
+    "code": "RATE_LIMITED",
+    "message": "Wait before retrying.",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "REVISION_CONFLICT: Reload this synthetic item." 1`] = `
+{
+  "backend": {
+    "code": "REVISION_CONFLICT",
+    "message": "Reload this synthetic item.",
+  },
+  "client": {
+    "code": "REVISION_CONFLICT",
+    "message": "Reload this synthetic item.",
+  },
+  "mcp": {
+    "code": "REVISION_CONFLICT",
+    "message": "Reload this synthetic item.",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "TypeError: Internal diagnostic" 1`] = `
+{
+  "backend": {
+    "code": "ERROR",
+    "message": "TypeError: Internal diagnostic",
+  },
+  "client": {
+    "code": "ERROR",
+    "message": "TypeError: Internal diagnostic",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "TypeError: Internal diagnostic",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "Uncaught Error: Readable failure" 1`] = `
+{
+  "backend": {
+    "code": "ERROR",
+    "message": "Uncaught Error: Readable failure",
+  },
+  "client": {
+    "code": "ERROR",
+    "message": "Readable failure",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "Readable failure",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "prefix NOT_FOUND: Embedded code" 1`] = `
+{
+  "backend": {
+    "code": "NOT_FOUND",
+    "message": "Embedded code",
+  },
+  "client": {
+    "code": "NOT_FOUND",
+    "message": "Embedded code",
+  },
+  "mcp": {
+    "code": "NOT_FOUND",
+    "message": "Embedded code",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves string boundary outputs for "prefixNOT_FOUND: Embedded code" 1`] = `
+{
+  "backend": {
+    "code": "NOT_FOUND",
+    "message": "Embedded code",
+  },
+  "client": {
+    "code": "NOT_FOUND",
+    "message": "Embedded code",
+  },
+  "mcp": {
+    "code": "ERROR",
+    "message": "prefixNOT_FOUND: Embedded code",
+  },
+  "tool": {
+    "_meta": {
+      "chaos/error": {
+        "category": "internal",
+        "code": "ERROR",
+        "retryable": true,
+      },
+    },
+    "content": [
+      {
+        "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+        "type": "text",
+      },
+    ],
+    "isError": true,
+  },
+}
+`;
+
+exports[`preserves structured Convex errors, tool details and unknown input fallbacks 1`] = `
+[
+  {
+    "backend": {
+      "code": "ERROR",
+      "message": "undefined",
+    },
+    "client": {
+      "code": "ERROR",
+      "message": "Synthetic fallback",
+    },
+    "mcp": {
+      "code": "ERROR",
+      "message": "undefined",
+    },
+    "tool": {
+      "_meta": {
+        "chaos/error": {
+          "category": "internal",
+          "code": "ERROR",
+          "retryable": true,
+        },
+      },
+      "content": [
+        {
+          "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+          "type": "text",
+        },
+      ],
+      "isError": true,
+    },
+  },
+  {
+    "backend": {
+      "code": "ERROR",
+      "message": "null",
+    },
+    "client": {
+      "code": "ERROR",
+      "message": "Synthetic fallback",
+    },
+    "mcp": {
+      "code": "ERROR",
+      "message": "null",
+    },
+    "tool": {
+      "_meta": {
+        "chaos/error": {
+          "category": "internal",
+          "code": "ERROR",
+          "retryable": true,
+        },
+      },
+      "content": [
+        {
+          "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+          "type": "text",
+        },
+      ],
+      "isError": true,
+    },
+  },
+  {
+    "backend": {
+      "code": "ERROR",
+      "message": "0",
+    },
+    "client": {
+      "code": "ERROR",
+      "message": "Synthetic fallback",
+    },
+    "mcp": {
+      "code": "ERROR",
+      "message": "0",
+    },
+    "tool": {
+      "_meta": {
+        "chaos/error": {
+          "category": "internal",
+          "code": "ERROR",
+          "retryable": true,
+        },
+      },
+      "content": [
+        {
+          "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+          "type": "text",
+        },
+      ],
+      "isError": true,
+    },
+  },
+  {
+    "backend": {
+      "code": "ERROR",
+      "message": "[object Object]",
+    },
+    "client": {
+      "code": "ERROR",
+      "message": "Synthetic fallback",
+    },
+    "mcp": {
+      "code": "ERROR",
+      "message": "[object Object]",
+    },
+    "tool": {
+      "_meta": {
+        "chaos/error": {
+          "category": "internal",
+          "code": "ERROR",
+          "retryable": true,
+        },
+      },
+      "content": [
+        {
+          "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+          "type": "text",
+        },
+      ],
+      "isError": true,
+    },
+  },
+  {
+    "backend": {
+      "code": "ERROR",
+      "message": "{"code":"VALIDATION","message":"Synthetic validation","problems":[{"path":"title"}]}",
+    },
+    "client": {
+      "code": "ERROR",
+      "message": "{"code":"VALIDATION","message":"Synthetic validation","problems":[{"path":"title"}]}",
+    },
+    "mcp": {
+      "code": "VALIDATION_FAILED",
+      "details": {
+        "problems": [
+          {
+            "path": "title",
+          },
+        ],
+      },
+      "message": "Synthetic validation",
+    },
+    "tool": {
+      "_meta": {
+        "chaos/error": {
+          "category": "internal",
+          "code": "ERROR",
+          "retryable": true,
+        },
+      },
+      "content": [
+        {
+          "text": "ERROR (internal): Chaos hit an unexpected problem. Try again in a moment.",
+          "type": "text",
+        },
+      ],
+      "isError": true,
+    },
+  },
+  {
+    "backend": {
+      "code": "ERROR",
+      "message": "Reload synthetic item",
+    },
+    "client": {
+      "code": "ERROR",
+      "message": "Reload synthetic item",
+    },
+    "mcp": {
+      "code": "ERROR",
+      "message": "Reload synthetic item",
+    },
+    "tool": {
+      "_meta": {
+        "chaos/error": {
+          "category": "revision_conflict",
+          "code": "REVISION_CONFLICT",
+          "details": {
+            "currentRevision": 3,
+          },
+          "retryable": true,
+        },
+      },
+      "content": [
+        {
+          "text": "REVISION_CONFLICT (revision_conflict): Reload synthetic item. Reload the current state, then retry with its revision.
+
+{"currentRevision":3}",
+          "type": "text",
+        },
+      ],
+      "isError": true,
+    },
+  },
+]
+`;

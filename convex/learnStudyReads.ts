@@ -8,18 +8,15 @@ import { summarizeEvidence } from "./learnPracticeModel";
 import type { Id } from "./_generated/dataModel";
 import { attachAssessmentForActor } from "./learnCollections";
 import { canonicalCommunityActor } from "./learnCommunityIntegrations";
+import { publicIdentityFacts } from "./publicIdentityPolicy";
 
 /** Public badge facts only, with expiry so an open client cannot keep a stale badge. */
 export const publicIdentity = query({
   args: { username: v.string() },
   returns: v.array(v.object({ kind: v.union(v.literal("student"), v.literal("educator")), expiresAt: v.number() })),
   handler: async (ctx, args) => {
-    if (!args.username || args.username.length > 100) return [];
-    const user = await ctx.db.query("users").withIndex("by_username", q => q.eq("username", args.username)).unique();
-    if (!user || await creatorRestricted(ctx, user.clerkId)) return [];
-    const key = (await canonicalCommunityActor(ctx, user.clerkId)).tokenIdentifier;
-    const claims = await ctx.db.query("learnIdentityClaims").withIndex("by_userKey_and_role", q => q.eq("userKey", key)).take(2);
-    return claims.filter(c => c.status === "verified" && c.method === "manual_review" && !!c.reviewedBy && (c.expiresAt ?? 0) > Date.now()).map(c => ({ kind: c.role, expiresAt: c.expiresAt! }));
+    const facts = await publicIdentityFacts(ctx, args.username);
+    return facts ? facts.verified.map(c => ({ kind: c.role, expiresAt: c.expiresAt! })) : [];
   },
 });
 

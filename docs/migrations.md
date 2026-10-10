@@ -135,3 +135,11 @@ future field becomes required, ship it optional first, backfill, then tighten.
   Unfinished responses are completed against the version they started on.
 - There is no fixture for production-scale data. Run the repairs on a copy of real data with the
   owner before any production run.
+
+## Dependency and compatibility audit (2026-10)
+
+`pnpm knip:check` reports no unlisted, unresolved or unused dependencies. The tracked unused-export baseline is reviewed separately by issue #185; those findings are not package-removal evidence. In particular, keep both authentication providers and their adapters, MCP SDK integrations, editor/accessibility test tools, and browser/runtime libraries that are imported by runtime or test entry points.
+
+Compatibility readers and adapters remain supported while they are referenced by current paths and fixtures. `legacyFlashcardBlocks` is used by the lesson reader for stored inline flashcards; `lessonBlockAdapter` preserves the serialized `lessonData` shapes read by published lessons and round-trip tests; the legacy identity, response and course records in `tests/fixtures/legacyDataset.ts` are checked by `tests/integration/legacyData.test.ts`. The migration ledger documents old repair tooling and the self-hosted account binding procedure. Remove a compatibility path only with evidence that its stored data has been migrated or retired and with fixtures covering that decision.
+
+The package install remains locked by `pnpm-lock.yaml`. Production app and Convex deploy images use the declared dependencies, and the repository supports both Clerk and Better Auth, so each provider's build adapter is intentional.

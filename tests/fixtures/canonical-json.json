@@ -1,0 +1,54 @@
+{
+  "answers": {
+    "null": "null",
+    "undefined": {
+      "undefined": true
+    },
+    "nested": "{\"a\":[3,null,{\"x\":\"quote\\\"\\n\",\"y\":false}],\"z\":{\"a\":1,\"b\":2}}",
+    "undefined object": "{\"a\":1,\"nested\":{\"missing\":undefined,\"present\":null},\"z\":undefined}",
+    "undefined array": "[,null,{\"missing\":undefined},1]",
+    "sparse array": "[,]",
+    "number edges": "[0,null,null,null,1e-7,1e+21]",
+    "unicode keys": "{\"10\":6,\"2\":7,\"Z\":2,\"a\":4,\"z\":1,\"ä\":3,\"سامر\":5}",
+    "historical keys": "{\"__proto__\":{\"x\":1},\"constructor\":2,\"toString\":null}",
+    "date": "{}",
+    "bigint": {
+      "throws": "TypeError"
+    },
+    "function": {
+      "undefined": true
+    }
+  },
+  "integration": {
+    "null": "null",
+    "undefined": "null",
+    "nested": "{\"a\":[3,null,{\"x\":\"quote\\\"\\n\",\"y\":false}],\"z\":{\"a\":1,\"b\":2}}",
+    "undefined object": "{\"a\":1,\"nested\":{\"present\":null}}",
+    "undefined array": "[null,null,{},1]",
+    "sparse array": "[,]",
+    "number edges": "[0,null,null,null,1e-7,1e+21]",
+    "unicode keys": "{\"10\":6,\"2\":7,\"Z\":2,\"a\":4,\"z\":1,\"ä\":3,\"سامر\":5}",
+    "historical keys": "{\"__proto__\":{\"x\":1},\"constructor\":2,\"toString\":null}",
+    "date": "{}",
+    "bigint": {
+      "throws": "TypeError"
+    },
+    "function": "null"
+  },
+  "organization": {
+    "null": "null",
+    "undefined": "null",
+    "nested": "{\"a\":[3,null,{\"x\":\"quote\\\"\\n\",\"y\":false}],\"z\":{\"a\":1,\"b\":2}}",
+    "undefined object": "{\"a\":1,\"nested\":{\"missing\":null,\"present\":null},\"z\":null}",
+    "undefined array": "[null,null,{\"missing\":null},1]",
+    "sparse array": "[,]",
+    "number edges": "[0,null,null,null,1e-7,1e+21]",
+    "unicode keys": "{\"10\":6,\"2\":7,\"a\":4,\"ä\":3,\"z\":1,\"Z\":2,\"سامر\":5}",
+    "historical keys": "{\"__proto__\":{\"x\":1},\"constructor\":2,\"toString\":null}",
+    "date": "{}",
+    "bigint": {
+      "throws": "TypeError"
+    },
+    "function": "null"
+  }
+}

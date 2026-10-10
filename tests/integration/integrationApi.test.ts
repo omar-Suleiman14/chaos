@@ -149,6 +149,7 @@ describe("integration API: idempotency", () => {
 
     const created = await call("POST", "/drafts", { body: draft, headers: key });
     expect(created.status).toBe(201);
+    expect((await t.run(ctx => ctx.db.query("integrationIdempotency").first()))?.requestHash).toBe("76f4f64472d773cc4e0abcfe42122ac2dc41182e3a7c34e175e9230d39cd3d0c");
     expect(created.headers.get("Idempotent-Replayed")).toBeNull();
 
     // Same JSON with keys in another order and different whitespace is the same request.

@@ -12,6 +12,7 @@ import { LEARN_WRITE_LIMITS, LEARN_LIMITS, lessonDocument, lessonMeta, type Less
 import { assertDocument } from "./learnValidation";
 import { applyBlockOperations, createLessonForActor, saveLessonDraftForActor, editLessonBlocksForActor, lessonBlockOperation, readLessonForActor, summarizeLesson } from "./lessons";
 import { errorCode, sha256Hex } from "./serverUtils";
+import { canonicalJson } from "./canonicalJson";
 
 const PREFIX = "/api/integrations/v2/";
 const MAX_BODY_BYTES = 350_000;
@@ -197,13 +198,8 @@ async function referenceProblem(ctx: Ctx, token: Token, document: LessonDocument
   return null;
 }
 
-function canonical(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(canonical).join(",")}]`;
-  if (value && typeof value === "object") return `{${Object.entries(value).filter(([, x]) => x !== undefined).sort(([a], [b]) => a < b ? -1 : a > b ? 1 : 0).map(([k, x]) => `${JSON.stringify(k)}:${canonical(x)}`).join(",")}}`;
-  return JSON.stringify(value) ?? "null";
-}
 async function requestDigest(operation: string, ref: string, revision: string, body: unknown) {
-  return sha256Hex(canonical({ apiVersion: "2", operation, ref, revision, body }));
+  return sha256Hex(canonicalJson({ apiVersion: "2", operation, ref, revision, body }, "integration"));
 }
 function validKey(key: string) { return /^[\x21-\x7e]{1,200}$/.test(key); }
 async function replay(ctx: MutationCtx, token: Token, key: string, hash: string): Promise<LearnApiResult | null> {
