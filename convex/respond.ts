@@ -1,3 +1,4 @@
+import { effectiveResponseCap } from "./responseCap";
 import { recordStudent } from "./studentRoster";
 import { getAuthIdentity } from "./authIdentity";
 import { canonicalJson } from "./canonicalJson";
@@ -60,8 +61,7 @@ export async function responseCap(ctx: Ctx, form: Doc<"forms">, now?: number): P
   const config = await ctx.db.query("globalConfig").first();
   const platform = hasPro(owner, now) ? planLimits.pro.responsesPerForm : config?.formResponseLimit ?? DEFAULT_FORM_RESPONSE_LIMIT;
   const own = form.settings.responseLimit ?? null;
-  if (platform === null) return own;
-  return own === null ? platform : Math.min(own, platform);
+  return effectiveResponseCap(platform, own);
 }
 
 async function ownerOf(ctx: Ctx, form: Doc<"forms">) {
