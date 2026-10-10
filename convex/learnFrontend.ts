@@ -10,6 +10,7 @@ import { createdWith, lessonMeta } from "./learnModel";
 import { questionsFromForm } from "./liveLogic";
 import { canonicalCommunityActor } from "./learnCommunityIntegrations";
 import schema from "./schema";
+import { hasLiveLessonPublication } from "./publicationEligibility";
 
 function pageCheck(count: number) {
   if (!Number.isSafeInteger(count) || count < 1 || count > 50) throw new Error("Page size must be 1–50");
@@ -26,7 +27,7 @@ export const publicLesson = query({
     const lesson = await ctx.db.get("lessons", id);
     // Team-only lessons read like public ones for members of their team.
     const team = !!lesson && await teamAudienceAllows(ctx, lesson, (await getAuthIdentity(ctx))?.subject);
-    if (!lesson || lesson.status !== "active" || (lesson.visibility !== "public" && !team) || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) return null;
+    if (!hasLiveLessonPublication(lesson) || (lesson.visibility !== "public" && !team) || await creatorRestricted(ctx, lesson.ownerId)) return null;
     const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
     if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) return null;
     const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
@@ -46,7 +47,7 @@ export const publicLessonsBatch = query({
       if (!id) continue;
       const lesson = await ctx.db.get("lessons", id);
       const team = !!lesson && await teamAudienceAllows(ctx, lesson, viewer);
-      if (!lesson || lesson.status !== "active" || (lesson.visibility !== "public" && !team) || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) continue;
+      if (!hasLiveLessonPublication(lesson) || (lesson.visibility !== "public" && !team) || await creatorRestricted(ctx, lesson.ownerId)) continue;
       const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
       if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) continue;
       const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
@@ -94,7 +95,7 @@ export const listIndexableLessons = query({
     const result = await ctx.db.query("lessons").withIndex("by_visibility_and_communityState", q => q.eq("visibility", "public").eq("communityState", "ok")).paginate(args.paginationOpts);
     const page = [];
     for (const lesson of result.page) {
-      if (lesson.status !== "active" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) continue;
+      if (!hasLiveLessonPublication(lesson) || await creatorRestricted(ctx, lesson.ownerId)) continue;
       const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
       if (!version || version.lessonId !== lesson._id || version.metadata.indexing !== "index" || (version.visibility !== undefined && version.visibility !== "public")) continue;
       page.push({ lessonId: lesson._id, versionId: version._id, metadata: version.metadata, publishedAt: version.publishedAt });

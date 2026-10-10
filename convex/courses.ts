@@ -16,6 +16,7 @@ import { visibility } from "./learnModel";
 import { recordAssetPublicationAction } from "./learnPublicationAudit";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 import { pendingCourseChanges } from "./courseStructure";
+import { hasLiveCoursePublication } from "./publicationEligibility";
 
 /**
  * Courses are created like forms: a titled, ordered set of lessons that is published as
@@ -282,7 +283,7 @@ export const listIndexable = query({
     const page = [];
     const restricted = new Map<string, boolean>();
     for (const row of result.page) {
-      if (!row.publishedVersionId || row.archived || row.communityState !== "ok") continue;
+      if (!hasLiveCoursePublication(row)) continue;
       if (!restricted.has(row.ownerId)) restricted.set(row.ownerId, await creatorRestricted(ctx, row.ownerId));
       if (restricted.get(row.ownerId)) continue;
       const version = await ctx.db.get("collectionVersions", row.publishedVersionId);
@@ -317,7 +318,7 @@ export const listPublic = query({
     const result = [];
     const restricted = new Map<string, boolean>();
     for (const row of rows) {
-      if (!row.publishedVersionId || row.archived || row.communityState !== "ok") continue;
+      if (!hasLiveCoursePublication(row)) continue;
       if (!restricted.has(row.ownerId)) restricted.set(row.ownerId, await creatorRestricted(ctx, row.ownerId));
       if (restricted.get(row.ownerId)) continue;
       const version = await ctx.db.get("collectionVersions", row.publishedVersionId);
