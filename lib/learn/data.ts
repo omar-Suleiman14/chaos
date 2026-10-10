@@ -1,3 +1,4 @@
+import { cleanTags } from "./normalizeTags";
 "use client";
 import { useKeptQuery } from "@/lib/queryCache";
 import { useQuery } from "@/lib/convexCache";
@@ -335,7 +336,6 @@ export function useWeakAreas(): WeakArea[] | undefined {
 
 export const blankMeta = (language: string, title = ""): LessonMeta => ({ title, description: "", tags: [], language, curricula: [], indexing: "noindex" });
 
-const cleanTags = (tags: string[]) => [...new Set(tags.map((t) => t.trim().replace(/^#/, "").slice(0, 40)).filter(Boolean))].slice(0, 12);
 
 export class LearnError extends Error {}
 
