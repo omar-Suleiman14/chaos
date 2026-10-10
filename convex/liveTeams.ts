@@ -34,12 +34,12 @@ async function membership(ctx: Ctx, gameId: Id<"liveGames">, playerId: Id<"liveP
   return ctx.db.query("liveTeamMembers").withIndex("by_gameId_and_playerId", q => q.eq("gameId", gameId).eq("playerId", playerId)).unique();
 }
 
-/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export const create = mutation({
   args: { gameId: v.id("liveGames"), name: v.string(), maxMembers: v.number() },
   handler: async (ctx, args) => {
     const { game, limit } = await hostFor(ctx, args.gameId); lobby(game);
     const name = args.name.trim().normalize("NFKC");
+    // oxlint-disable-next-line eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs.
     if (!name || name.length > LIVE_TEAM_LIMITS.nameLength || /[\u0000-\u001f\u007f]/.test(name) || !Number.isInteger(args.maxMembers) || args.maxMembers < 1 || args.maxMembers > limit) throw new Error("LIVE_TEAM_INVALID");
     const teams = await ctx.db.query("liveTeams").withIndex("by_gameId", q => q.eq("gameId", game._id)).take(21);
     const nameKey = name.toLowerCase();
@@ -48,7 +48,6 @@ export const create = mutation({
     return ctx.db.insert("liveTeams", { gameId: game._id, name, nameKey, maxMembers: args.maxMembers });
   },
 });
-/* oxlint-enable eslint/no-control-regex */
 
 async function assignPlayer(ctx: MutationCtx, game: Doc<"liveGames">, playerId: Id<"livePlayers">, teamId: Id<"liveTeams">) {
   lobby(game);

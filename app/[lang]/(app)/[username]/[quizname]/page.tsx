@@ -17,5 +17,5 @@ export default function UsernameLinkRoute() {
  const params = useParams(); const username = params.username as string; const slug = params.quizname as string;
  const link = useQuery(api.links.resolveLink, username && slug ? {username,slug} : "skip");
  if(link===undefined) return <RespondLoading/>;
- return link ? <RespondToForm shareId={link.shareId}/> : <ErrorScreen title={t.title} body={t.body} primary={{ label: t.home, href: "/" }}/>;
+ return link ? <RespondToForm shareId={link.shareId}/> : <ErrorScreen illustration="not-found" title={t.title} body={t.body} primary={{ label: t.home, href: "/" }}/>;
 }

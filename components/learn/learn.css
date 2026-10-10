@@ -65,7 +65,7 @@ svg.lx-flip:dir(rtl) { transform: scaleX(-1); }
 .lx-empty { display: grid; justify-items: center; gap: 10px; text-align: center; padding: 36px 16px; border: 1px dashed var(--ws-line-strong); border-radius: 12px; color: var(--on-surface-variant); }
 .lx-empty :is(h2, h3) { color: var(--on-surface); font-size: 15px; font-weight: 600; }
 .lx-empty p { font-size: 13px; max-width: 420px; line-height: 1.55; }
-.lx-empty svg { opacity: .7; }
+.lx-empty svg:not(.state-illustration) { opacity: .7; }
 
 /* ── Badges ─────────────────────────────────────────────────────────────── */
 .lx-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11.5px; font-weight: 600; line-height: 1; padding: 4px 7px; border-radius: 999px; background: var(--ws-canvas-subtle); color: var(--ws-text-soft); border: 1px solid var(--ws-line); white-space: nowrap; max-width: 100%; overflow: hidden; text-overflow: ellipsis; }

@@ -1,5 +1,6 @@
 import type { Doc, Id } from "./_generated/dataModel";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
+import { codedMessage } from "../lib/codedMessage";
 
 export async function sha256Hex(value: string): Promise<string> {
   const bytes = new TextEncoder().encode(value);
@@ -93,6 +94,5 @@ export async function notify(
 /** Extract "CODE: message" from an Error for consistent client handling. */
 export function errorCode(error: unknown): { code: string; message: string } {
   const raw = error instanceof Error ? error.message : String(error);
-  const match = raw.match(/([A-Z][A-Z_]+): ([\s\S]*)/);
-  return match ? { code: match[1], message: match[2].trim() } : { code: "ERROR", message: raw };
+  return codedMessage(raw, "backend") ?? { code: "ERROR", message: raw };
 }
