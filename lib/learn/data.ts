@@ -25,12 +25,12 @@ import type {
 } from "./types";
 
 /**
- * Every Learn screen reads and writes through these hooks. Loading returns `undefined`,
- * like Convex's `useQuery`, so swapping the local store for the backend keeps the
- * screens unchanged.
+ * Learn hooks adapt Convex queries/service clients and remaining device-local
+ * compatibility state to the frontend models. Loading returns `undefined`, like
+ * Convex's `useQuery`; each hook below defines its actual persistence boundary.
  */
 
-/** Durable library/student flows; discussions, folder pins and tutor history remain local-only. */
+/** Shared library/student flows and discussions use Convex; folder pins remain device-local. */
 export const localCapabilities: LearnCapabilities = {
   sharedPublishing: true, versionRestore: true, verification: false, discussions: true, reports: true,
   deviceSync: true, weakAreas: false, curriculumDirectory: true, quizForks: false,

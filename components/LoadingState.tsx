@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useCopy } from "@/lib/i18n";
+import StateIllustration from "@/components/StateIllustration";
 
 const copy = {
   en: { stalled: "This is taking longer than expected. Check your connection and try again.", retry: "RETRY" },
@@ -27,9 +28,12 @@ export default function LoadingState({
     return () => window.clearTimeout(timer);
   }, []);
 
+  // Only the stalled state gets a picture: a load still in progress keeps its plain line, and
+  // content-shaped skeletons (components/workspace/Skeletons.tsx) are left alone.
   if (stalled) {
     return (
       <div className={`${className} text-center`}>
+        <StateIllustration variant="offline" className="mx-auto mb-4 block" />
         <p className="chaos-heading text-sm text-destructive">{stalledLabel ?? t.stalled}</p>
         <button
           type="button"
