@@ -1,3 +1,4 @@
+import { rateHeaders } from "./httpRateHeaders";
 import { observeHttp } from "../lib/backendTelemetry";
 import { normalizeAssetRefs } from "./mcpIds";
 import { parseCreatedWith } from "../lib/aiClients";
@@ -87,19 +88,8 @@ function idempotencyKey(request: Request): string | Response {
   return key;
 }
 
-type RateState = { limit: number; remaining: number; reset: number; policy: string };
-
 /** Per-request state: headers added to whatever response the route returns. */
 type RequestState = { headers: Record<string, string>; tokenHash?: string };
-
-function rateHeaders(rate: RateState): Record<string, string> {
-  return {
-    "RateLimit-Limit": String(rate.limit),
-    "RateLimit-Remaining": String(rate.remaining),
-    "RateLimit-Reset": String(rate.reset),
-    "RateLimit-Policy": rate.policy,
-  };
-}
 
 const WRITE_METHODS = new Set(["POST", "PATCH", "DELETE"]);
 
