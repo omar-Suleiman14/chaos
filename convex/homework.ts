@@ -11,9 +11,9 @@ import {
   type QueryCtx,
 } from "./_generated/server";
 import { HOMEWORK_LIMITS } from "./homeworkModel";
-import { gradeQuiz, publicQuizDefinition } from "./formQuiz";
+import { gradeQuiz } from "./formQuiz";
 import { definitionValidator, answersValidator, languageValidator } from "./formModel";
-import { releasedDefinition, nextFieldReleaseAt, assertReleasedAnswers } from "./formRelease";
+import { respondentDefinition, releasedDefinition, nextFieldReleaseAt, assertReleasedAnswers } from "./formRelease";
 import { creatorRestricted, userByVerifiedEmail } from "./authz";
 import { checkAnswers, searchTextFor, selectEnding } from "./formLogic";
 import { countResponse, responseCap } from "./respond";
@@ -215,7 +215,7 @@ export const getAttemptDefinition = query({
     const form = await ctx.db.get("forms", assignment.formId);
     const version = await ctx.db.get("formVersions", assignment.versionId);
     if (!form || form.status === "archived" || form.isBanned || await creatorRestricted(ctx, form.ownerId) || !version || version.formId !== form._id || !version.definition.quiz?.enabled) throw new Error("Assignment content unavailable");
-    return { assignmentId: assignment._id, attemptId: attempt._id, title: assignment.title, formId: form._id, versionId: version._id, version: version.version, definition: publicQuizDefinition(releasedDefinition(version.definition, now)), deadline: assignment.deadline, attemptNumber: attempt.number, attemptsRemaining: Math.max(0, assignment.maxAttempts - enrollment.attempts), serverTime: now, nextFieldReleaseAt: nextFieldReleaseAt(version.definition, now) };
+    return { assignmentId: assignment._id, attemptId: attempt._id, title: assignment.title, formId: form._id, versionId: version._id, version: version.version, definition: respondentDefinition(version.definition, now), deadline: assignment.deadline, attemptNumber: attempt.number, attemptsRemaining: Math.max(0, assignment.maxAttempts - enrollment.attempts), serverTime: now, nextFieldReleaseAt: nextFieldReleaseAt(version.definition, now) };
   },
 });
 export const generateUploadUrl = mutation({

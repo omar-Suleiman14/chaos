@@ -276,8 +276,20 @@ export const fork = mutation({ args: { lessonId: v.id("lessons"), versionId: v.i
   const { identity } = await requireActiveUser(ctx);
   return forkLessonForActor(ctx, identity.subject, args);
 } });
+/** A lesson anyone may copy: active, public, unmoderated, with a public published version. */
+export async function requirePublicLesson(ctx: QueryCtx | MutationCtx, subject: string, lessonId: Id<"lessons">) {
+  const lesson = await lessonAccessForActor(ctx, subject, lessonId);
+  if (lesson.status !== "active" || lesson.visibility !== "public" || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) throw new Error("Lesson is not public");
+  const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
+  if (!version || version.lessonId !== lessonId || (version.visibility !== undefined && version.visibility !== "public")) throw new Error("Published version unavailable");
+  return { lesson, version };
+}
 export async function forkLessonForActor(ctx: MutationCtx, actor: string, args: { lessonId: Id<"lessons">; versionId: Id<"lessonVersions"> }) {
-  const parent = await lessonAccessForActor(ctx, actor, args.lessonId);
+  // Owners may copy any of their versions. Everyone else, including team members and
+  // grantees who can read restricted or private lessons, may only copy public lessons,
+  // so team-only and shared content never leaves its audience.
+  const owned = await ctx.db.get("lessons", args.lessonId);
+  const parent = owned?.ownerId === actor ? await lessonAccessForActor(ctx, actor, args.lessonId) : (await requirePublicLesson(ctx, actor, args.lessonId)).lesson;
   const version = await ctx.db.get("lessonVersions", args.versionId);
   if (!version || version.lessonId !== parent._id || (actor !== parent.ownerId && version._id !== parent.publishedVersionId)) throw new Error("Version not accessible");
   // Content is copied by value; source IDs remain citations with independent access.

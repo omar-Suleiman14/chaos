@@ -1,4 +1,5 @@
 import type { Answers, FormDefinition } from "./formLogic";
+import { publicQuizDefinition } from "./formQuiz";
 
 /** Clients can refresh at this boundary without receiving unreleased field identifiers. */
 export function nextFieldReleaseAt(def: FormDefinition, now: number): number | null {
@@ -25,6 +26,14 @@ export function releasedDefinition(def: FormDefinition, now: number): FormDefini
   const ids = releasedFieldIds(def, now);
   return { ...def, fields: def.fields.filter(f => ids.has(f.id)),
     endings: def.endings.filter(e => !e.showIf?.conditions.some(c => c.fieldId !== "calc:score" && !ids.has(c.fieldId))) };
+}
+
+/**
+ * What anyone other than the owner may see of a form version at `now`: released content only,
+ * without answer keys. Every non-owner projection (respondents, homework, forks) uses this.
+ */
+export function respondentDefinition(def: FormDefinition, now: number): FormDefinition {
+  return publicQuizDefinition(releasedDefinition(def, now));
 }
 
 /** Reject early writes rather than silently accepting/dropping guessed answers. */
