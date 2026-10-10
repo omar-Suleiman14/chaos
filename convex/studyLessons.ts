@@ -1,5 +1,6 @@
+import { revision } from "./studyLessonRevision";
 import { studyValue } from "./studyLessonValue";
-import { v, ConvexError, type Infer } from "convex/values";
+import { v, type Infer } from "convex/values";
 import {
   internalMutation,
   internalQuery,
@@ -56,13 +57,7 @@ async function owned(
     throw new Error("NOT_FOUND: Study job not found.");
   return job;
 }
-function revision(current: number, expected: number) {
-  if (!Number.isSafeInteger(expected) || current !== expected)
-    throw new ConvexError({
-      code: "REVISION_CONFLICT",
-      currentRevision: current,
-    });
-}
+
 async function parts(ctx: QueryCtx, jobId: Id<"studyLessonJobs">) {
   return ctx.db
     .query("studyLessonParts")
