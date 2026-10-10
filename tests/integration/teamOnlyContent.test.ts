@@ -97,3 +97,34 @@ it("MCP team tools act as the connected account and never return member emails o
   expect(await t.mutation(internal.mcpBusiness.share, { userId, teamId, asset: { kind: "form", id: formId } })).toEqual({ ok: true });
   expect((await t.query(internal.mcpBusiness.listResources, { userId: creatorIdentity.subject, teamId })).resources.map(row => row.asset.id)).toEqual([formId]);
 });
+
+it("team members and grantees cannot copy team-only or private lessons out of their audience (web and MCP)", async () => {
+  const { t, owner, member, outsider, teamId } = await team();
+  const fork = internal.mcpLearn.forkLesson;
+  const lessonId = await owner.mutation(api.lessons.create, { metadata: meta, document: paragraph });
+  const published = await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 0, visibility: "restricted", teamId });
+  if (!published.ok) throw new Error("publish failed");
+  // Members can read it...
+  expect(await member.query(api.learnFrontend.publicLesson, { id: lessonId })).not.toBeNull();
+  // ...but not fork it, natively or through MCP.
+  await expect(member.mutation(api.lessons.fork, { lessonId, versionId: published.versionId })).rejects.toThrow("not public");
+  await expect(t.mutation(fork, { userId: otherCreatorIdentity.subject, lessonId, versionId: published.versionId })).rejects.toThrow("not public");
+  await expect(outsider.mutation(api.lessons.fork, { lessonId, versionId: published.versionId })).rejects.toThrow();
+
+  // A private lesson shared with a reader grant is readable by the grantee but not copyable.
+  const shared = await owner.mutation(api.lessons.create, { metadata: meta, document: paragraph });
+  const sharedVersion = await owner.mutation(api.lessons.publish, { lessonId: shared, expectedRevision: 0, visibility: "private" });
+  if (!sharedVersion.ok) throw new Error("publish failed");
+  await owner.mutation(api.lessonPermissions.set, { lessonId: shared, userId: otherCreatorIdentity.subject, role: "reader" });
+  await expect(member.mutation(api.lessons.fork, { lessonId: shared, versionId: sharedVersion.versionId })).rejects.toThrow("not public");
+  await expect(t.mutation(fork, { userId: otherCreatorIdentity.subject, lessonId: shared, versionId: sharedVersion.versionId })).rejects.toThrow("not public");
+  expect(await t.run(ctx => ctx.db.query("lessons").withIndex("by_ownerId_and_updatedAt", q => q.eq("ownerId", otherCreatorIdentity.subject)).collect())).toHaveLength(0);
+
+  // Owners keep copying their own lessons, and public lessons stay forkable by anyone.
+  expect(await owner.mutation(api.lessons.fork, { lessonId, versionId: published.versionId })).toBeTruthy();
+  const open = await owner.mutation(api.lessons.create, { metadata: meta, document: paragraph });
+  const openVersion = await owner.mutation(api.lessons.publish, { lessonId: open, expectedRevision: 0, visibility: "public" });
+  if (!openVersion.ok) throw new Error("publish failed");
+  expect(await member.mutation(api.lessons.fork, { lessonId: open, versionId: openVersion.versionId })).toBeTruthy();
+  expect((await t.mutation(fork, { userId: otherCreatorIdentity.subject, lessonId: open, versionId: openVersion.versionId })).lessonId).toBeTruthy();
+});

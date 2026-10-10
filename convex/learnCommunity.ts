@@ -11,7 +11,9 @@ import {
   type QueryCtx as ReadCtx,
   type MutationCtx as WriteCtx,
 } from "./_generated/server";
-import { lessonAccess, lessonAccessForActor } from "./lessons";
+import { lessonAccess, requirePublicLesson } from "./lessons";
+/** Saving, rating and integration forks only reach public lessons. */
+export const requirePublicCommunityLesson = requirePublicLesson;
 import { requireActiveUser, requireAdmin, creatorRestricted } from "./authz";
 import {
   communityTables,
@@ -99,13 +101,6 @@ export const get = query({
     };
   },
 });
-export async function requirePublicCommunityLesson(ctx: ReadCtx | WriteCtx, subject: string, lessonId: Id<"lessons">) {
-  const lesson = await lessonAccessForActor(ctx, subject, lessonId);
-  if (lesson.status !== "active" || lesson.visibility !== "public" || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) throw new Error("Lesson is not public");
-  const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
-  if (!version || version.lessonId !== lessonId || (version.visibility !== undefined && version.visibility !== "public")) throw new Error("Published version unavailable");
-  return { lesson, version };
-}
 /** Actor must come from native auth or a trusted internal transport, never client input. */
 export async function setSignalsForActor(ctx: WriteCtx, identity: { subject: string; tokenIdentifier: string }, args: { lessonId: Id<"lessons">; saved?: boolean; helpful?: boolean }) {
     // Withdrawal remains possible after unpublication/moderation without revealing content.
