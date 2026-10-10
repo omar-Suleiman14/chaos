@@ -97,7 +97,7 @@ export default function LearnHome() {
           <div className="lx-level-grid">
             {courses.slice(0, 6).map(c => <Link key={c.id} className="lx-node" href={c.nextLessonId ? `/learn/${c.nextLessonId}?course=${c.id}` : `/learn/courses/${c.id}`} {...hrefIntentHandlers(c.nextLessonId ? `/learn/${c.nextLessonId}?course=${c.id}` : `/learn/courses/${c.id}`)}><GraduationCap size={18} aria-hidden /><span dir="auto">{c.title}<small>{c.completed} / {c.total} · {t.continue}</small></span></Link>)}
           </div>
-        ) : <EmptyState icon={GraduationCap} title={t.courses} body={t.coursesEmpty}><Link className="ws-btn" href={hostHref("/learn/courses")}>{t.browse}</Link></EmptyState>}
+        ) : <EmptyState illustration="learn" title={t.courses} body={t.coursesEmpty}><Link className="ws-btn" href={hostHref("/learn/courses")}>{t.browse}</Link></EmptyState>}
       </section>
 
       {caps.weakAreas && weak && weak.length > 0 && (
@@ -143,7 +143,7 @@ export default function LearnHome() {
         <header><h2 id="learn-mine">{t.mine}</h2>{!!mine?.length && <Link className="lx-link" href="/dashboard/learn/library">{t.all}</Link>}</header>
         {!mine ? wait : mine.length ? (
           <div className="lx-grid">{mine.slice(0, 6).map((l) => <LessonCard key={l.id} lesson={l} href={`/dashboard/learn/lessons/${l.id}`} showStatus />)}</div>
-        ) : <EmptyState icon={BookOpen} title={t.mine} body={t.mineEmpty}><button type="button" className="ws-btn ws-btn--primary" onClick={newLesson}><Plus size={16} aria-hidden />{t.newLesson}</button></EmptyState>}
+        ) : <EmptyState illustration="create" title={t.mine} body={t.mineEmpty}><button type="button" className="ws-btn ws-btn--primary" onClick={newLesson}><Plus size={16} aria-hidden />{t.newLesson}</button></EmptyState>}
       </section>
 
       <section className="lx-section" aria-labelledby="learn-discover">

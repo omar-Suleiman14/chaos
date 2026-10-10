@@ -6,7 +6,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useMemo, useState } from "react";
 import { useConfirmedQuery } from "@/lib/confirmedQuery";
-import { Archive, ArchiveRestore, BookOpen, ChevronRight, Copy, FileText, Folder, FolderInput, FolderOpen, FolderPlus, Globe, Layers, Pencil, Pin, Plus, Search, Target, X } from "lucide-react";
+import { Archive, ArchiveRestore, BookOpen, ChevronRight, Copy, FileText, Folder, FolderInput, FolderPlus, Globe, Layers, Pencil, Pin, Plus, Search, Target, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { WsDialog, WsMenu } from "@/components/workspace/primitives";
 import { toast } from "@/lib/toast";
@@ -157,7 +157,7 @@ function Library() {
       {results ? (
         <section className="lx-section" aria-live="polite">
           <p className="lx-muted">{t.results(results.length)}</p>
-          {!results.length ? <p className="lx-muted">{t.noResults}</p> : (
+          {!results.length ? <EmptyState level={2} illustration="search" title={t.noResults} /> : (
             <div className="lx-list">
               {results.map((r) => (
                 <Link key={r.key} className="lx-row" href={r.href}>
@@ -169,7 +169,7 @@ function Library() {
           )}
         </section>
       ) : empty ? (
-        folder ? <EmptyState level={2} icon={FolderOpen} title={t.empty} body={t.emptyBody} /> : <EmptyState level={2} icon={Folder} title={t.rootEmpty} body={t.rootEmptyBody}><button type="button" className="ws-btn" onClick={() => setDialog({ kind: "new" })}><FolderPlus size={16} aria-hidden />{t.newFolder}</button></EmptyState>
+        folder ? <EmptyState level={2} illustration="create" title={t.empty} body={t.emptyBody} /> : <EmptyState level={2} illustration="learn" title={t.rootEmpty} body={t.rootEmptyBody}><button type="button" className="ws-btn" onClick={() => setDialog({ kind: "new" })}><FolderPlus size={16} aria-hidden />{t.newFolder}</button></EmptyState>
       ) : (
         <>
           {visibleFolders.length > 0 && (
