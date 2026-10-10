@@ -73,21 +73,21 @@
       }
     },
     "source.rules": {
-      "budget": 3644,
+      "budget": 3648,
       "unit": "count",
       "raised": {
-        "from": 3172,
-        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Stylesheets grew with the classroom tools, reader menus and version history redesign (#113-#123). Follow-up: move route-only rules out of the global workspace styles loaded by app/[lang]/layout.tsx.",
-        "at": "2026-10-09"
+        "from": 3644,
+        "reason": "Five-second Undo progress adds four small CSS rules/selectors: drain animation, RTL origin and pause. No layout animation or infinite work; validated in CI css census for PR #305.",
+        "at": "2026-10-10"
       }
     },
     "source.selectors": {
-      "budget": 4012,
+      "budget": 4016,
       "unit": "count",
       "raised": {
-        "from": 3489,
-        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Stylesheets grew with the classroom tools, reader menus and version history redesign (#113-#123). Follow-up: move route-only rules out of the global workspace styles loaded by app/[lang]/layout.tsx.",
-        "at": "2026-10-09"
+        "from": 4012,
+        "reason": "Five-second Undo progress adds four small CSS rules/selectors: drain animation, RTL origin and pause. No layout animation or infinite work; validated in CI css census for PR #305.",
+        "at": "2026-10-10"
       }
     },
     "source.transitionAll": {
