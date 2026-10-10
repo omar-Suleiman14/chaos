@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { api } from "@/convex/_generated/api";
+import { api, internal } from "@/convex/_generated/api";
 import { createTestConvex, createTestConvexWithAdmin } from "./setup";
 import { creatorIdentity } from "../fixtures";
 
@@ -76,6 +76,24 @@ describe("admin authorization", () => {
     for (const call of anonymousCalls) {
       await expect(call).rejects.toThrow(/not authenticated/i);
     }
+  });
+
+  it.each([
+    ["banned", { isBanned: true }, "ACCOUNT_BANNED"],
+    ["suspended", { suspendedUntil: Date.now() + 86_400_000 }, "ACCOUNT_SUSPENDED"],
+  ] as const)("refuses admin operations to a %s admin (web), as MCP already does", async (_label, restriction, code) => {
+    const t = await createTestConvexWithAdmin(adminIdentity.subject);
+    const formId = await seedAdminTargets(t);
+    const admin = t.withIdentity(adminIdentity);
+    await admin.mutation(api.quizFunctions.getOrCreateUser, {});
+    await t.run(async (ctx) => {
+      const row = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", adminIdentity.subject)).first();
+      await ctx.db.patch("users", row!._id, restriction);
+    });
+    await expect(admin.query(api.quizFunctions.getAdminUsers, {})).rejects.toThrow(code);
+    await expect(admin.mutation(api.quizFunctions.adminToggleUserBan, { clerkId: creatorIdentity.subject, ban: true })).rejects.toThrow(code);
+    await expect(admin.mutation(api.admin.moderateContent, { targetId: formId, hold: true, reason: "Review" })).rejects.toThrow(code);
+    await expect(t.query(internal.mcpAdmin.users, { userId: adminIdentity.subject, paginationOpts })).rejects.toThrow("ACCOUNT_RESTRICTED");
   });
 
   it("allows the configured admin to use every admin operation", async () => {
