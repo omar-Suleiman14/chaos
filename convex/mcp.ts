@@ -16,7 +16,7 @@ import type { Aggregates, Answers, FormDefinition } from "./formLogic";
 import { createFormRecord, publishNow, replaceDraft } from "./forms";
 import { fromDefinition, parseFormInput, themeView, themeWarnings, toDefinition } from "./mcpContract";
 import type { McpFormInput } from "./mcpContract";
-import { hasPro, matchesAccountFormCollaborator } from "./authz";
+import { formRoleForActor, hasPro } from "./authz";
 import { insertNewUser } from "./quizFunctions";
 import { consumeRate, logActivity } from "./serverUtils";
 import { emitFormStatusChange } from "./webhookEvents";
@@ -57,14 +57,14 @@ async function requireWritable(ctx: MutationCtx, userId: string) {
 export const begin = internalMutation({
   args: {
     userId: v.string(),
-    profile: v.optional(v.object({ name: v.string(), email: v.string(), imageUrl: v.optional(v.string()) })),
+    profile: v.optional(v.object({ name: v.string(), email: v.string(), emailVerified: v.optional(v.boolean()), imageUrl: v.optional(v.string()) })),
   },
   returns: v.null(),
   handler: async (ctx, args) => {
     const existing = await userRow(ctx, args.userId);
     if (!existing) {
       if (!args.profile) fail("ACCOUNT_REQUIRED", `Open ${appUrl("/")} and sign in once, then try again.`);
-      await insertNewUser(ctx, { clerkId: args.userId, name: args.profile.name || "Anonymous", email: args.profile.email, imageUrl: args.profile.imageUrl });
+      await insertNewUser(ctx, { clerkId: args.userId, name: args.profile.name || "Anonymous", email: args.profile.email, emailVerified: args.profile.emailVerified === true, imageUrl: args.profile.imageUrl });
     }
     // The ChatGPT app is a Pro feature (new accounts start with a 30-day Pro trial).
     const user = await userRow(ctx, args.userId);
@@ -80,13 +80,6 @@ export const begin = internalMutation({
 
 type Item = { kind: "form"; ref: string; doc: Doc<"forms">; role: Role };
 
-async function formRole(ctx: Ctx, form: Doc<"forms">, userId: string): Promise<Role | null> {
-  if (form.ownerId === userId) return "owner";
-  const rows = await ctx.db.query("formCollaborators").withIndex("by_formId", (q) => q.eq("formId", form._id)).take(100);
-  // This transport proves an account ID, not email verification. Pending email
-  // invitations must be accepted through the verified native identity flow.
-  return rows.find((c) => matchesAccountFormCollaborator(c, userId))?.role ?? null;
-}
 
 /** Ids are `form_<id>`; a bare form id also works. Quizzes are quiz forms. */
 async function loadItem(ctx: Ctx, userId: string, ref: string, minimum: Role = "viewer"): Promise<Item> {
@@ -94,7 +87,7 @@ async function loadItem(ctx: Ctx, userId: string, ref: string, minimum: Role = "
   if (match) {
     const id = ctx.db.normalizeId("forms", match[1]);
     const form = id ? await ctx.db.get("forms", id) : null;
-    const role = form ? await formRole(ctx, form, userId) : null;
+    const role = form ? await formRoleForActor(ctx, form, userId) : null;
     if (form && role) {
       if (roleRank[role] < roleRank[minimum]) fail("FORBIDDEN", `You are a ${role} on this form; this needs ${minimum} access.`);
       return { kind: "form", ref: `form_${form._id}`, doc: await withFormCounts(ctx, form), role };

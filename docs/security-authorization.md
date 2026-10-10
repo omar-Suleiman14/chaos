@@ -23,6 +23,15 @@ or unbound grants. Profile creation does not bind invitations using unverified
 email addresses, and stored profile email alone cannot grant access. Accepted
 and legacy explicit account grants retain their account ID authorization. The
 same matching policy governs listing, accepting, declining and leaving forms.
+Each account records whether its provider verified its address
+(`users.emailVerified`). Homework enrollment by email and the operator's
+`admin:grantAdmin` resolve an address only to an account that verified it
+(`userByVerifiedEmail`), so registering someone else's address grants nothing.
+
+Moderation applies to shared access as well. While a form is held or its owner is
+banned or suspended, team access is withdrawn and direct collaborators can only view;
+web and MCP resolve roles through the same `formRoleForActor` rule. Banned or suspended
+accounts are read-only everywhere, including course enrollment and progress.
 
 Read functions may return `null` or an empty collection when access is denied,
 where the existing client expects that behavior. Creator mutations reject an
@@ -47,10 +56,14 @@ content selection. It creates imports as drafts. Respondent data is available
 only through the corresponding permission; it is not implicitly shared with
 another product. See [integration-api-v1.md](./integration-api-v1.md).
 
-The Next.js `/mcp` route verifies the selected provider's OAuth tokens and the client
-allowlist before forwarding a verified account ID through the shared-secret
-Convex endpoint. Backend tools recheck content permissions. Configure the same
-`CHAOS_MCP_SECRET` in both processes.
+The Next.js `/mcp` route verifies the selected provider's OAuth tokens before
+forwarding a verified account ID through the shared-secret Convex endpoint.
+Better Auth always requires the `CHAOS_MCP_CLIENT_IDS` allowlist. With Clerk the
+allowlist is optional: when it is empty, any OAuth client of the Clerk instance
+that a person approves on the consent screen (including dynamically registered
+clients) can act for that person, so keep the consent screen on, or set the
+allowlist when your clients have fixed IDs. Backend tools recheck content
+permissions. Configure the same `CHAOS_MCP_SECRET` (32+ characters) in both processes.
 
 Webhooks require management permission. Signing secrets are encrypted with
 `CHAOS_WEBHOOK_KEY`. Delivery validates and pins DNS, refuses private and reserved

@@ -1,5 +1,5 @@
 /// <reference types="vite/client" />
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { convexTest } from "convex-test";
 import { makeFunctionReference } from "convex/server";
 import schema from "../../convex/schema";
@@ -83,5 +83,41 @@ describe("assessment fork provenance", () => {
     // A classic quiz can no longer be forked; it is rejected by the argument validator.
     const quizId = await t.run(ctx => ctx.db.insert("quizzes", { creatorId: creatorIdentity.subject, creatorUsername: "creator", title: "Classic", slug: "classic", isPublished: true, createdAt: 0, updatedAt: 0 }));
     await expect(t.withIdentity(creatorIdentity).mutation(fork, { asset: { kind: "quiz", id: quizId }, expectedPublishedAt: 1 })).rejects.toThrow("Validator");
+  });
+});
+
+describe("forks respect scheduled release", () => {
+  it("never copies questions that respondents cannot see yet (web and MCP)", async () => {
+    const instant = 1_800_000_000_000;
+    vi.setSystemTime(instant);
+    const { t, owner, other } = await setup();
+    const def = emptyDefinition("Scheduled quiz");
+    def.fields = [
+      { id: "first", type: "text", label: "Available", required: true },
+      { id: "later", type: "section", label: "Secret section", required: false, releasesAt: instant + 60_000 },
+      { id: "child", type: "text", label: "Secret question", required: true },
+      { id: "next", type: "section", label: "Next section", required: false },
+      { id: "branch", type: "text", label: "Secret-dependent branch", required: false, showIf: { match: "all", conditions: [{ fieldId: "child", op: "answered" }] } },
+    ];
+    const { formId, versionId } = await t.run(async ctx => {
+      const formId = await ctx.db.insert("forms", { ownerId: creatorIdentity.subject, title: "Scheduled quiz", shareId: "scheduled", status: "live", draft: def, draftRevision: 1, settings: defaultFormSettings, responseCount: 0, partialCount: 0, publishedVersion: 1, createdAt: 0, updatedAt: 1 });
+      const versionId = await ctx.db.insert("formVersions", { formId, version: 1, definition: def, publishedAt: 1, publishedBy: "Casey", draftRevision: 1 });
+      return { formId, versionId };
+    });
+    const input = { asset: { kind: "form" as const, id: formId }, formVersionId: versionId };
+    const mcpFork = makeFunctionReference<"mutation">("quizForks:mcpFork");
+    const copies = [(await other.mutation(fork, input)).asset, (await t.mutation(mcpFork, { userId: otherCreatorIdentity.subject, ...input })).asset];
+    for (const copy of copies) {
+      const draft = (await t.run(ctx => ctx.db.get("forms", copy.id as typeof formId)))!.draft;
+      expect(JSON.stringify(draft)).not.toContain("Secret");
+      expect(draft.fields.map(f => f.id)).toEqual(["first", "next"]);
+    }
+    // The owner's own copy keeps everything; after release anyone's copy includes it.
+    const own = (await owner.mutation(fork, input)).asset;
+    expect((await t.run(ctx => ctx.db.get("forms", own.id as typeof formId)))!.draft.fields).toHaveLength(5);
+    vi.setSystemTime(instant + 60_001);
+    const later = (await other.mutation(fork, input)).asset;
+    expect((await t.run(ctx => ctx.db.get("forms", later.id as typeof formId)))!.draft.fields.map(f => f.label)).toContain("Secret question");
+    vi.useRealTimers();
   });
 });

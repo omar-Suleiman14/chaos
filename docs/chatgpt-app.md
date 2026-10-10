@@ -212,7 +212,7 @@ You do these steps; they change production.
 4. **Clerk dashboard (production instance) → Configure → OAuth applications → Settings:**
    - Turn on **Dynamic client registration (DCR)** and require PKCE. Turn on **CIMD** support too if offered; ChatGPT prefers it.
    - Default scopes for dynamic clients: `openid profile email offline_access` (offline_access gives clients a refresh token, so connections do not lapse after a day).
-   - Keep the **consent screen** on, so people see "ChatGPT wants to access your Chaos account".
+   - Keep the **consent screen** on, so people see "ChatGPT wants to access your Chaos account". With `CHAOS_MCP_CLIENT_IDS` empty, this screen is the only check on which app acts for a person: any client registered on this Clerk instance can request access. Set `CHAOS_MCP_CLIENT_IDS` in Vercel if your clients have fixed IDs.
    - If Clerk asks for allowed redirect URIs, add `https://chatgpt.com/connector_platform_oauth_redirect` (and allow `https://chatgpt.com/connector/oauth/*` if patterns are supported).
 5. **Deploy:** merge the PR. With `CONVEX_DEPLOY_KEY` set in Vercel's Production environment, the production deploy runs `convex deploy` before building the site (`scripts/vercel-build.mjs`); without it, run `npx convex deploy` yourself. This adds the `admins` table and the MCP functions.
 6. **Restore your admin access.** Admins now live in the database, so run this once after the Convex deploy:

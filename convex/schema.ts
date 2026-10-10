@@ -23,6 +23,7 @@ import { quizSnapshot, savedQuestion } from "./quizModel";
 import { formTables } from "./formModel";
 import { integrationTables } from "./integrationModel";
 import { webhookTables } from "./webhookModel";
+import { notionTables } from "./notionModel";
 import { liveTables } from "./liveModel";
 import { glossaryTables } from "./lessonGlossaryModel";
 
@@ -56,6 +57,7 @@ export default defineSchema({
   ...formTables,
   ...integrationTables,
   ...webhookTables,
+  ...notionTables,
   ...liveTables,
   ...glossaryTables,
 
@@ -99,6 +101,8 @@ export default defineSchema({
     clerkId: v.string(),
     name: v.string(),
     email: v.string(),
+    /** True only when the sign-in provider verified `email`. Only verified addresses may grant access. */
+    emailVerified: v.optional(v.boolean()),
     username: v.string(),
     /** True once the person picks a username; sign-in sync then stops overwriting it. */
     usernameChosen: v.optional(v.boolean()),
