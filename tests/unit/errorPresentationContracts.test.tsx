@@ -1,5 +1,5 @@
 import { act, fireEvent, render, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../lib/i18n";
 import QueryErrorBoundary from "../../components/forms/QueryErrorBoundary";
 import LoadingState from "../../components/LoadingState";
