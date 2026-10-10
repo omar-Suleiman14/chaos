@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useAction, useMutation, useQuery } from "convex/react";
+import { useAction, useConvexAuth, useMutation, useQuery } from "convex/react";
 import { ArrowUpRight } from "lucide-react";
 import { NotionMark } from "@/components/site/marks";
 import { useCopy, useLocale } from "@/lib/i18n";
@@ -49,7 +49,9 @@ export default function ConnectedApps() {
   const t = useCopy(copy);
   const { locale } = useLocale();
   const available = useQuery(api.notion.available);
-  const status = useQuery(api.notion.connection);
+  const { isAuthenticated } = useConvexAuth();
+  // Wait for sign-in: before it, "not connected" would be a guess and would offer Connect.
+  const status = useQuery(api.notion.connection, isAuthenticated ? {} : "skip");
   const connect = useMutation(api.notion.beginConnect);
   const disconnect = useMutation(api.notion.disconnect);
   const getPages = useAction(api.notion.listPages);

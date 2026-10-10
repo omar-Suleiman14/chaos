@@ -4,6 +4,7 @@ import type { MutationCtx, ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser } from "./authz";
+import { getAuthIdentity } from "./authIdentity";
 import { createLessonForActor } from "./lessons";
 import { lessonDocument, lessonMeta } from "./learnModel";
 import { randomHex, sha256Hex } from "./serverUtils";
@@ -67,7 +68,9 @@ export const available = query({
 export const connection = query({
   args: {},
   handler: async (ctx) => {
-    const { identity } = await requireActiveUser(ctx);
+    // A full page load (such as the return from Notion's OAuth) queries before sign-in is restored.
+    const identity = await getAuthIdentity(ctx);
+    if (!identity) return null;
     const row = await ctx.db.query("notionConnections").withIndex("by_ownerId", (q) => q.eq("ownerId", identity.subject)).unique();
     return row ? { workspaceName: row.workspaceName, workspaceId: row.workspaceId, dataSourceTitle: row.dataSourceTitle ?? null, dataSourceId: row.dataSourceId ?? null, connected: true } : null;
   },

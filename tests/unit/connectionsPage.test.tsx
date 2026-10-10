@@ -28,6 +28,7 @@ vi.mock("@/app/[lang]/(app)/dashboard/connections/WebhooksSection", () => ({ def
 vi.mock("@/lib/learn/data", () => ({ useMyLessons: () => [], useFolders: () => [], useCurriculumNodes: () => [] }));
 vi.mock("convex/react", () => ({
   useAction: () => m.other,
+  useConvexAuth: () => ({ isLoading: false, isAuthenticated: true }),
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => query(ref),
   useMutation: (ref: Parameters<typeof getFunctionName>[0]) => {
     const name = getFunctionName(ref);

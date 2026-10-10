@@ -21,6 +21,11 @@ describe("Notion connection: ownership and OAuth", () => {
     expect(await t.query(api.notion.available, {})).toBe(false);
   });
 
+  it("answers a not-yet-signed-in page load without throwing", async () => {
+    const t = createTestConvex();
+    expect(await t.query(api.notion.connection, {})).toBeNull();
+  });
+
   it("requires a one-use, expiring OAuth state and never shows the stored token", async () => {
     const t = createTestConvex();
     const owner = t.withIdentity(creatorIdentity);
