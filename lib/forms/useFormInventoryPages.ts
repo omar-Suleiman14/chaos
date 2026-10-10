@@ -4,11 +4,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { useConvexAuth, useQueries } from "convex/react";
 import type { FunctionReturnType } from "convex/server";
 import { api } from "@/convex/_generated/api";
+import type { Id } from "@/convex/_generated/dataModel";
+import type { formSummary } from "@/convex/forms";
 import { useConfirmed } from "@/lib/confirmedQuery";
 
 const SOURCES = ["owned", "account", "email"] as const;
 type Source = (typeof SOURCES)[number];
 type Page = FunctionReturnType<typeof api.forms.listMyFormsPage>;
+type Summary = ReturnType<typeof formSummary>;
+type SharedSummary = Summary & { role: "editor" | "viewer"; ownerName: string };
+type Invite = { collaboratorId: Id<"formCollaborators">; formId: Id<"forms">; title: string; role: "editor" | "viewer"; ownerName: string; createdAt: number };
 type CursorPages = Record<Source, (string | null)[]>;
 const INITIAL: CursorPages = { owned: [null], account: [null], email: [null] };
 const PAGE_SIZE = 50;
@@ -39,9 +44,9 @@ export function useFormInventoryPages() {
 
   const live = useMemo(() => {
     if (!isAuthenticated || Object.keys(requests).some(key => responses[key] === undefined)) return undefined;
-    const owned: Page["page"]["owned"] = [];
-    const shared: Page["page"]["shared"] = [];
-    const invites: Page["page"]["invites"] = [];
+    const owned: Summary[] = [];
+    const shared: SharedSummary[] = [];
+    const invites: Invite[] = [];
     const ownedIds = new Set<string>(), sharedIds = new Set<string>(), inviteIds = new Set<string>();
     // Account grants take priority over email grants; omit duplicates even
     // when the same form appears on different pages of one index.
