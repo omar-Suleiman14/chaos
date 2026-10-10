@@ -132,9 +132,13 @@ export const searchForms = internalQuery({
     // Archived forms only appear when asked for, like the library.
     const statusOk = (status: string) => (args.status === "any" ? true : args.status ? status === args.status : status !== "archived");
     const items: Item[] = [];
-    const owned = await ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", args.userId)).order("desc").take(500);
+    const ownedRows = await ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", args.userId)).order("desc").take(501);
+    const ownedTruncated = ownedRows.length > 500;
+    const owned = ownedRows.slice(0, 500);
     for (const doc of owned) items.push({ kind: "form", ref: `form_${doc._id}`, doc, role: "owner" });
-    const memberships = await ctx.db.query("formCollaborators").withIndex("by_userId", (q) => q.eq("userId", args.userId)).take(200);
+    const membershipRows = await ctx.db.query("formCollaborators").withIndex("by_userId", (q) => q.eq("userId", args.userId)).take(201);
+    const membershipsTruncated = membershipRows.length > 200;
+    const memberships = membershipRows.slice(0, 200);
     const seen = new Set(owned.map((f) => f._id as string));
     for (const m of memberships) {
       if (!matchesAccountFormCollaborator(m, args.userId)) continue;
@@ -149,7 +153,7 @@ export const searchForms = internalQuery({
     const shown = filtered.slice(0, limit);
     const counted = new Map((await withOwnerFormCounts(ctx, args.userId, shown.map((i) => i.doc))).map((doc) => [doc._id as string, doc]));
     const page = shown.map((i) => ({ ...i, doc: counted.get(i.doc._id)! }));
-    return { total: filtered.length, items: page.map(summary) };
+    return { total: filtered.length, items: page.map(summary), truncated: ownedTruncated || membershipsTruncated || filtered.length > shown.length };
   },
 });
 
