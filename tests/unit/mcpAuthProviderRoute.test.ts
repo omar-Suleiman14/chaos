@@ -53,6 +53,19 @@ describe("MCP auth provider routing", () => {
     expect(mocks.verify).not.toHaveBeenCalled();
     expect(JSON.parse(mocks.backend.mock.calls[0][1].body).userId).toBe("user_original");
   });
+  it.each([["verified", true], ["unverified", false]] as const)("passes Clerk's %s email status on first use", async (status, expected) => {
+    vi.stubEnv("NEXT_PUBLIC_AUTH_PROVIDER", "clerk");
+    vi.stubEnv("CHAOS_MCP_CLIENT_IDS", "");
+    const getUser = vi.fn().mockResolvedValue({ fullName: "Casey", primaryEmailAddress: { emailAddress: "casey@example.com", verification: { status } }, emailAddresses: [], imageUrl: "" });
+    mocks.clerk.mockResolvedValue({ authenticateRequest: async () => ({ isAuthenticated: true, toAuth: () => ({ tokenType: "oauth_token", userId: "user_new" }) }), users: { getUser } });
+    mocks.backend.mockReset();
+    mocks.backend.mockResolvedValueOnce(Response.json({ error: { code: "ACCOUNT_REQUIRED", message: "Sign in" } }, { status: 403 }));
+    mocks.backend.mockResolvedValue(Response.json({ result: { admin: false } }));
+    const { POST } = await import("@/app/mcp/route");
+    await POST(new Request("https://chaos.example/mcp", { method: "POST", headers: { Authorization: "Bearer clerk-token" } }));
+    const retry = JSON.parse(mocks.backend.mock.calls[1][1].body);
+    expect(retry.profile).toMatchObject({ email: "casey@example.com", emailVerified: expected });
+  });
   it("answers 401 to token-less clients that sign in at the transport, but lets ChatGPT list tools first", async () => {
     const { POST } = await import("@/app/mcp/route");
     const claude = await POST(new Request("https://chaos.example/mcp", { method: "POST", headers: { "User-Agent": "claude-code/2.1" } }));

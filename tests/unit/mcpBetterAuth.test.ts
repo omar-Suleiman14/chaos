@@ -34,7 +34,7 @@ describe("self-hosted MCP OAuth", () => {
   it("verifies the resource audience and derives an issuer-scoped actor from verified claims", async () => {
     const { verifyBetterAuthMcpToken } = await import("@/lib/mcp/oauth");
     const user = await verifyBetterAuthMcpToken(await token());
-    expect(user).toEqual({ userId: `oidc_${createHash("sha256").update(`${issuer}|same-person`).digest("hex")}`, clientId: "chat-client", profile: { name: "Creator", email: "creator@example.com" } });
+    expect(user).toEqual({ userId: `oidc_${createHash("sha256").update(`${issuer}|same-person`).digest("hex")}`, clientId: "chat-client", profile: { name: "Creator", email: "creator@example.com", emailVerified: true } });
     expect(fetch).toHaveBeenCalledWith(`${issuer}/.well-known/oauth-authorization-server`, expect.objectContaining({ redirect: "error" }));
     expect(mocks.clerkMetadata).not.toHaveBeenCalled();
   });
@@ -71,7 +71,7 @@ describe("self-hosted MCP OAuth", () => {
 
   it("does not forward unverified email or unsafe picture claims", async () => {
     const { verifyBetterAuthMcpToken } = await import("@/lib/mcp/oauth");
-    expect((await verifyBetterAuthMcpToken(await token({ email_verified: false, picture: "javascript:bad" }))).profile).toEqual({ name: "Creator", email: "" });
+    expect((await verifyBetterAuthMcpToken(await token({ email_verified: false, picture: "javascript:bad" }))).profile).toEqual({ name: "Creator", email: "", emailVerified: false });
   });
 
   it("rejects mismatched discovery metadata", async () => {

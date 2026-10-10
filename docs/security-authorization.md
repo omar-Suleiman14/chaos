@@ -23,6 +23,10 @@ or unbound grants. Profile creation does not bind invitations using unverified
 email addresses, and stored profile email alone cannot grant access. Accepted
 and legacy explicit account grants retain their account ID authorization. The
 same matching policy governs listing, accepting, declining and leaving forms.
+Each account records whether its provider verified its address
+(`users.emailVerified`). Homework enrollment by email and the operator's
+`admin:grantAdmin` resolve an address only to an account that verified it
+(`userByVerifiedEmail`), so registering someone else's address grants nothing.
 
 Read functions may return `null` or an empty collection when access is denied,
 where the existing client expects that behavior. Creator mutations reject an

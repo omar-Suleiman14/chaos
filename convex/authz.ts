@@ -71,6 +71,19 @@ export function matchesFormCollaborator(row: Doc<"formCollaborators">, identity:
   return !!email && row.email.toLowerCase() === email;
 }
 
+/**
+ * The account an email address grants authority to: only an account whose provider verified that
+ * address. Unverified profile emails stay usable for display but never resolve here.
+ */
+export async function userByVerifiedEmail(ctx: DbCtx, email: string): Promise<Doc<"users"> | null> {
+  for (const candidate of new Set([email.trim(), email.trim().toLowerCase()])) {
+    const rows = await ctx.db.query("users").withIndex("by_email", (q) => q.eq("email", candidate)).take(20);
+    const verified = rows.find((row) => row.emailVerified === true);
+    if (verified) return verified;
+  }
+  return null;
+}
+
 export function isFormOwner(form: Doc<"forms">, identity: Identity | null): boolean {
   return !!identity && form.ownerId === identity.subject;
 }

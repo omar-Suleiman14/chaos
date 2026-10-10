@@ -99,6 +99,8 @@ export default defineSchema({
     clerkId: v.string(),
     name: v.string(),
     email: v.string(),
+    /** True only when the sign-in provider verified `email`. Only verified addresses may grant access. */
+    emailVerified: v.optional(v.boolean()),
     username: v.string(),
     /** True once the person picks a username; sign-in sync then stops overwriting it. */
     usernameChosen: v.optional(v.boolean()),

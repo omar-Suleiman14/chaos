@@ -163,6 +163,9 @@ describe("ChatGPT app backend", () => {
     const admin = t.withIdentity(creatorIdentity);
     expect(await admin.query(api.quizFunctions.getIsAdmin, {})).toBe(false);
     await expect(t.mutation(internal.admin.grantAdmin, { email: "nobody@example.com" })).rejects.toThrow(/USER_NOT_FOUND/);
+    // An unverified first-use address cannot be granted admin; a verified one can.
+    await expect(t.mutation(internal.admin.grantAdmin, { email: creatorIdentity.email })).rejects.toThrow(/USER_NOT_FOUND/);
+    await t.withIdentity({ ...creatorIdentity, subject: owner, emailVerified: true }).mutation(api.quizFunctions.getOrCreateUser, {});
     expect(await t.mutation(internal.admin.grantAdmin, { email: creatorIdentity.email.toUpperCase() })).toEqual({ clerkId: owner, alreadyAdmin: false });
     expect(await admin.query(api.quizFunctions.getIsAdmin, {})).toBe(true);
     expect(await t.mutation(internal.admin.revokeAdmin, { email: creatorIdentity.email })).toBe(1);

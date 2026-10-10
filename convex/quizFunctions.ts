@@ -50,7 +50,9 @@ export const getOrCreateUser = mutation({
       // Update fields if changed
       const updates: Record<string, unknown> = {};
       if (!existing.profileNameChosen && identity.name && identity.name !== existing.name) updates.name = identity.name;
-      if (identity.email && identity.email !== existing.email) updates.email = identity.email;
+      // The address and whether the provider verified it always change together.
+      const emailVerified = verifiedIdentityEmail(identity) !== undefined;
+      if (identity.email && (identity.email !== existing.email || existing.emailVerified !== emailVerified)) Object.assign(updates, { email: identity.email, emailVerified });
       if (identity.pictureUrl && identity.pictureUrl !== existing.imageUrl) updates.imageUrl = identity.pictureUrl;
 
       // Identity-provider sync must not rename public URLs or rewrite historical quizzes.
@@ -63,13 +65,14 @@ export const getOrCreateUser = mutation({
       clerkId: identity.subject,
       name: identity.nickname || identity.name || identity.givenName || "Anonymous",
       email: identity.email || "",
+      emailVerified: verifiedIdentityEmail(identity) !== undefined,
       imageUrl: identity.pictureUrl,
     });
   },
 });
 
 /** First sign-in, from the web app or from a connected app such as ChatGPT. */
-export async function insertNewUser(ctx: MutationCtx, profile: { clerkId: string; name: string; email: string; imageUrl?: string }) {
+export async function insertNewUser(ctx: MutationCtx, profile: { clerkId: string; name: string; email: string; emailVerified: boolean; imageUrl?: string }) {
   const planExpiresAt = Date.now() + 30 * 86_400_000;
   let username = "";
   // Bounded retry; indexed reads participate in the transaction's uniqueness checks.
@@ -83,6 +86,7 @@ export async function insertNewUser(ctx: MutationCtx, profile: { clerkId: string
     clerkId: profile.clerkId,
     name: profile.name,
     email: profile.email,
+    emailVerified: profile.emailVerified,
     username,
     imageUrl: profile.imageUrl,
     cardOnboardingPending: true,

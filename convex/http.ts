@@ -207,8 +207,8 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
   const input = normalizeAssetRefs((b.input && typeof b.input === "object" ? b.input : {}) as Record<string, unknown>);
   const str = (x: unknown) => (typeof x === "string" ? x : undefined);
   const num = (x: unknown) => (typeof x === "number" && Number.isFinite(x) ? x : undefined);
-  const p = b.profile as { name?: unknown; email?: unknown; imageUrl?: unknown } | undefined;
-  const profile = p && typeof p.email === "string" ? { name: str(p.name) ?? "", email: p.email, imageUrl: str(p.imageUrl) } : undefined;
+  const p = b.profile as { name?: unknown; email?: unknown; emailVerified?: unknown; imageUrl?: unknown } | undefined;
+  const profile = p && typeof p.email === "string" ? { name: str(p.name) ?? "", email: p.email, emailVerified: p.emailVerified === true, imageUrl: str(p.imageUrl) } : undefined;
   const createdWith = parseCreatedWith((body.value as { client?: unknown }).client);
   const stamp = async (created: unknown) => {
     const lessonId = (created as { lessonId?: unknown } | null)?.lessonId;
