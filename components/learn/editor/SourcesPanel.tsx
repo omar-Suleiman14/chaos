@@ -4,6 +4,7 @@ import { useState } from "react";
 import { toast } from "@/lib/toast";
 import { PenLine, Plus, Trash2 } from "lucide-react";
 import { Select } from "@/components/workspace/Select";
+import MagneticFileDropZone from "@/components/workspace/MagneticFileDropZone";
 import { citations } from "@/lib/learn/doc";
 import { SOURCE_FILE_ACCEPT, type NativeSource, type NativeCitation } from "@/lib/learn/mediaClient";
 import { formatLocator } from "@/lib/learn/chaosDocument";
@@ -107,16 +108,16 @@ export default function SourcesPanel({ sources, content, onSave, onRemove, onOpe
           {field("origin", "Original material / origin", { maxLength: 500, required: true, disabled: !!editing.id || busy || disabled })}
           {field("url", t.link, { placeholder: t.linkPh, type: "url", inputMode: "url" })}
           {!editing.id && (editing.kind === "pdf" || editing.kind === "slides" || editing.kind === "reference") && (
-            <label className="lx-field">{t.file}
-              <input type="file" accept={SOURCE_FILE_ACCEPT} disabled={busy || disabled}
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (!file) return;
-                  setFile(file); setError("");
-                  setEditing(s => s && { ...s, fileName: file.name, title: s.title || file.name.replace(/\.[^.]+$/, ""), origin: s.origin || file.name });
+            <div className="lx-field"><span>{t.file}</span>
+              <MagneticFileDropZone accept={SOURCE_FILE_ACCEPT} maxBytes={25 * 1024 * 1024}
+                disabled={busy || disabled} compact label={t.file} selectedName={editing.fileName}
+                onReject={reason => setError(reason === "size" ? t.tooLarge : t.uploadFailed)}
+                onFile={chosen => {
+                  setFile(chosen); setError("");
+                  setEditing(s => s && { ...s, fileName: chosen.name, title: s.title || chosen.name.replace(/\.[^.]+$/, ""), origin: s.origin || chosen.name });
                 }} />
               <small>{busy ? t.uploading : editing.fileName ? t.fileKept(editing.fileName) : t.fileHelp}</small>
-            </label>
+            </div>
           )}
           {field("author", t.author, { maxLength: 160 })}
           {field("license", t.license, { placeholder: t.licensePh, maxLength: 160 })}

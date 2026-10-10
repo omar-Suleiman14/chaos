@@ -73,20 +73,20 @@
       }
     },
     "source.rules": {
-      "budget": 3654,
+      "budget": 3663,
       "unit": "count",
       "raised": {
-        "from": 3648,
-        "reason": "The new 1.4s Hold-to-Delete component requires six small scoped CSS rules for fill, RTL and reduced motion. No infinite animation or layout transition; PR #306 builds on #305.",
+        "from": 3654,
+        "reason": "Native magnetic file-drop component adds ten scoped CSS rules/selectors for drag highlight, compact layout, keyboard focus and reduced motion. No global selectors or infinite animation; measured after #305 and #306 for PR #307.",
         "at": "2026-10-10"
       }
     },
     "source.selectors": {
-      "budget": 4022,
+      "budget": 4031,
       "unit": "count",
       "raised": {
-        "from": 4016,
-        "reason": "The new 1.4s Hold-to-Delete component requires six small scoped CSS rules for fill, RTL and reduced motion. No infinite animation or layout transition; PR #306 builds on #305.",
+        "from": 4022,
+        "reason": "Native magnetic file-drop component adds ten scoped CSS rules/selectors for drag highlight, compact layout, keyboard focus and reduced motion. No global selectors or infinite animation; measured after #305 and #306 for PR #307.",
         "at": "2026-10-10"
       }
     },

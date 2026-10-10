@@ -32,6 +32,7 @@ import dynamic from "next/dynamic";
 // Spreadsheet parsing loads only when someone opens that import mode.
 const SheetImport = dynamic(() => import("@/components/forms/SheetImport"));
 import { WsDialog, WsMenu, WsTabs } from "@/components/workspace/primitives";
+import MagneticFileDropZone from "@/components/workspace/MagneticFileDropZone";
 import { toast } from "@/lib/toast";
 import { LibrarySkeleton } from "@/components/workspace/Skeletons";
 import { usePinned } from "@/components/workspace/usePinned";
@@ -569,20 +570,14 @@ function ImportPanel({ busy, onImport }: { busy: boolean; onImport: (result: Imp
       <p className="text-[13px] text-muted-foreground">
         {t.importHelp}
       </p>
-      <div className="flex gap-3 flex-wrap items-center">
-        <input type="file" accept=".json,.txt,application/json,text/plain" className="sr-only" id="import-file"
-          onChange={async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            if (file.size > 2_000_000) { setError(t.fileTooBig); return; }
-            setFileName(file.name);
-            const content = await file.text();
-            setText(content);
-            void preview(content);
-          }} />
-        <label htmlFor="import-file" className="ws-btn cursor-pointer"><FileUp size={14} /> {t.chooseFile}</label>
-        {fileName && <span className="text-xs text-muted-foreground">{fileName}</span>}
-      </div>
+      <MagneticFileDropZone accept=".json,.txt,application/json,text/plain" maxBytes={2_000_000} disabled={busy}
+        label={t.chooseFile} selectedName={fileName} onReject={reason => setError(reason === "size" ? t.fileTooBig : t.importFailed)}
+        onFile={async file => {
+          setFileName(file.name);
+          const content = await file.text();
+          setText(content);
+          await preview(content);
+        }} />
       <label className="block">
         <span className="text-xs font-semibold text-muted-foreground">{t.orPaste}</span>
         <textarea value={text} onChange={(e) => { setText(e.target.value); setFileName(""); }} onBlur={() => void preview(text)} rows={6} className="kb-input mt-1 font-mono text-xs"

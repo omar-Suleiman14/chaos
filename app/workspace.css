@@ -592,6 +592,18 @@ html.dark:has(.workspace-ui), html.dark:has(.workspace-ui) body { background: #1
 .ws-field-more[open] > summary svg { transform: rotate(90deg); }
 .ws-field-more > summary:hover { color: var(--on-background); }
 
+/* Native magnetic file zone: subtle file-only drag affordance. */
+.ws-file-drop { min-width: 0; border: 1px dashed var(--ws-line-strong, rgba(80,80,80,.24)); border-radius: 9px; background: var(--ws-card, #fff); transform: translate(var(--magnetic-x, 0px), var(--magnetic-y, 0px)); transition: transform 220ms cubic-bezier(.22,1,.36,1), border-color 150ms ease, background 150ms ease; }
+.ws-file-drop[data-active] { border-color: var(--primary, #3595e3); background: var(--ws-accent-soft, #ebf4fc); }
+.ws-file-drop:focus-within { outline: 2px solid var(--primary, #3595e3); outline-offset: 2px; }
+.ws-file-drop__button { display: flex; align-items: center; justify-content: center; gap: 9px; width: 100%; flex-wrap: wrap; padding: 20px 14px; font: inherit; font-size: 13px; font-weight: 500; color: var(--on-background, #37352f); background: transparent; border: 0; cursor: pointer; }
+.ws-file-drop__button small { color: var(--on-surface-variant, #787774); font-weight: 400; overflow-wrap: anywhere; }
+.ws-file-drop__button:focus-visible { outline: none; }
+.ws-file-drop__button:disabled { opacity: .55; cursor: not-allowed; }
+.ws-file-drop[data-compact] .ws-file-drop__button { padding: 10px 12px; }
+.ws-file-drop__error { margin: 0; padding: 0 10px 9px; font-size: 12px; color: var(--error, #c23b33); }
+@media (prefers-reduced-motion: reduce) { .ws-file-drop { transition: none !important; transform: none !important; } }
+
 /* ── Toasts (components/Toaster.tsx) ─────────────────────────────────────
    One stack for the whole app, bottom end corner, full width on phones. It lives
    outside .workspace-ui (it also serves the site and Learn), so it carries its own

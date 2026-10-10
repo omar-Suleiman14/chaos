@@ -1,7 +1,8 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { AlertCircle, Check, Download, FileSpreadsheet } from "lucide-react";
+import { AlertCircle, Check, Download } from "lucide-react";
+import MagneticFileDropZone from "@/components/workspace/MagneticFileDropZone";
 import { Select } from "@/components/workspace/Select";
 import { guessSheetRoles, sheetDefinition, sheetQuestions, sheetRoles, SHEET_TEMPLATE } from "@/lib/formImporters";
 import type { ImportResult, SheetRole } from "@/lib/formImporters";
@@ -83,11 +84,10 @@ export default function SheetImport({ busy, onImport }: { busy: boolean; onImpor
   return (
     <section className="space-y-4" aria-label={t.choose}>
       <p className="text-[13px] text-muted-foreground">{t.intro}</p>
+      <MagneticFileDropZone accept=".csv,.tsv,.txt,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+        maxBytes={5_000_000} disabled={busy} label={t.choose} selectedName={fileName}
+        onReject={reason => setError(reason === "size" ? t.tooBig : t.unreadable)} onFile={load} />
       <div className="flex gap-2 flex-wrap items-center">
-        <input type="file" accept=".csv,.tsv,.txt,.xlsx,text/csv,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" className="sr-only" id="sheet-file"
-          onChange={(e) => { const f = e.target.files?.[0]; if (f) void load(f); e.target.value = ""; }} />
-        <label htmlFor="sheet-file" className="ws-btn cursor-pointer"><FileSpreadsheet size={14} aria-hidden="true" /> {t.choose}</label>
-        {fileName && <span className="text-xs text-muted-foreground">{fileName}</span>}
         <span className="ms-auto flex gap-1.5">
           <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => downloadTemplate("csv")}><Download size={14} aria-hidden="true" /> {t.templateCsv}</button>
           <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => downloadTemplate("xlsx")}><Download size={14} aria-hidden="true" /> {t.templateXlsx}</button>
