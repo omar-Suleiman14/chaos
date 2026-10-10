@@ -1,3 +1,4 @@
+import { publicCourseMetadata } from "./publicCourseMetadata";
 import { authorDb } from "./authorIndex";
 import { v } from "convex/values";
 import {
@@ -80,12 +81,7 @@ export const browse = query({
         .unique();
       page.push({
         id: row._id,
-        title: m.title,
-        description: m.description,
-        coverUrl: m.coverUrl,
-        icon: m.icon,
-        language: m.language,
-        tags: m.tags,
+        ...publicCourseMetadata(m),
         lessons: version.items.filter((i) => i.kind === "lesson").length,
         ownerName: owner?.name ?? "Chaos creator",
         ownerUsername: owner?.username ?? "",

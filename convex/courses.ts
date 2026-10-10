@@ -1,3 +1,4 @@
+import { publicCourseMetadata } from "./publicCourseMetadata";
 import { courseModule, courseDetails } from "./learnAssetModel";
 import { randomCover } from "../lib/learn/covers";
 import { canonicalCommunityActor } from "./learnCommunityIntegrations";
@@ -333,12 +334,7 @@ export const listPublic = query({
       }
       result.push({
         id: row._id,
-        title: version.metadata.title,
-        description: version.metadata.description,
-        coverUrl: version.metadata.coverUrl,
-        icon: version.metadata.icon,
-        language: version.metadata.language,
-        tags: version.metadata.tags,
+        ...publicCourseMetadata(version.metadata),
         lessons: lessonItems.length,
         lessonIds,
         lessonTitles,
