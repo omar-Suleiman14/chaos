@@ -1,4 +1,4 @@
-import { beforeAll, beforeEach, describe, expect, it } from "vitest";
+import { beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { api } from "@/convex/_generated/api";
 import { createTestConvex } from "@/tests/integration/setup";
 import { measureConvex, readMetrics } from "../lib/convex";
@@ -94,8 +94,24 @@ describe("surface read budgets", () => {
     const largest = Math.max(...listing.tools.map((tool) => payloadBytes(tool)));
     await signIn(t, perfStudent);
     const client = await connectMcp(convexMcpCaller(t, perfCreator.subject));
-    const search = await measureConvex(() => client.callTool({ name: "search_forms", arguments: {} }));
-    const lesson = await measureConvex(() => client.callTool({ name: "get_lesson", arguments: { lessonId: ws.lessons[0], view: "draft" } }));
+    // Each HTTP request records telemetry to a random one of 16 hourly shards
+    // (lib/backendTelemetry.ts). A call that lands on a shard an earlier call
+    // already used reads that row too, so ~1 run in 16 counted two extra reads.
+    // Give each measured request its own shard so the counts are deterministic.
+    let shard = 0;
+    const random = crypto.getRandomValues.bind(crypto);
+    const shards = vi.spyOn(crypto, "getRandomValues").mockImplementation(((array: ArrayBufferView<ArrayBuffer>) => {
+      if (array instanceof Uint32Array && array.length === 1) { array[0] = shard++; return array; }
+      return random(array);
+    }) as typeof crypto.getRandomValues);
+    let search, lesson;
+    try {
+      search = await measureConvex(() => client.callTool({ name: "search_forms", arguments: {} }));
+      lesson = await measureConvex(() => client.callTool({ name: "get_lesson", arguments: { lessonId: ws.lessons[0], view: "draft" } }));
+    } finally {
+      shards.mockRestore();
+    }
+    expect(shard).toBe(2);
     expect(search.result.isError).toBeFalsy();
     expect(lesson.result.isError).toBeFalsy();
     recordPerf(ctx, {
