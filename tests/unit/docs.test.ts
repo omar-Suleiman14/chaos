@@ -26,6 +26,17 @@ describe("docs content", () => {
     expect(docSections.ar.map((s) => s.id)).toEqual(docSections.en.map((s) => s.id));
   });
 
+  it("explains Notion import and result-sync permissions in English and Arabic", () => {
+    const en = findArticle("en", "notion")!;
+    const ar = findArticle("ar", "notion")!;
+    expect(articleHeadings(en).map(h => h.id)).toEqual(["connect", "import", "results", "privacy", "troubleshooting"]);
+    expect(articleHeadings(ar).map(h => h.id)).toEqual(articleHeadings(en).map(h => h.id));
+    expect(en.blocks.flatMap(blockTexts).join(" ")).toContain("individual answers");
+    expect(ar.blocks.flatMap(blockTexts).join(" ")).toContain("الخصوصية");
+    expect(en.title).toBe("Notion");
+    expect(ar.title).toBe("Notion");
+  });
+
   it("has unique slugs and heading ids", () => {
     expect(new Set(docSlugs).size).toBe(docSlugs.length);
     for (const a of flatArticles("en")) {

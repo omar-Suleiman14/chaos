@@ -4,10 +4,12 @@ Connect Notion on **Dashboard → Connections → Apps → Notion**.
 
 ## Setup
 
-1. Register a **public OAuth** integration in Notion and give it read-content and insert-content capabilities.
-2. Configure its redirect URL as `https://YOUR-CONVEX-SITE.convex.site/api/notion/oauth/callback`.
+1. Register a **public OAuth** integration in Notion: select **Installable in → Any workspace / Public**. Enable only **Read content** and **Insert content**. Disable **Update content**, comments capabilities and user-information access (choose **No user information**). Leave page duplication during OAuth off. Notion webhook subscriptions are **not required**. You do not need a Marketplace listing.
+2. Configure **one production redirect URI** as `https://YOUR-CONVEX-SITE.convex.site/api/notion/oauth/callback`. Use the deployment's **HTTP Actions URL**, *not* the `.convex.cloud` URL or frontend domain. Add separate redirect URIs only if testing other deployments.
 3. On the **Convex backend deployment**, set `NOTION_CLIENT_ID`, `NOTION_CLIENT_SECRET`, `NOTION_REDIRECT_URI`, `NOTION_ENCRYPTION_KEY` (32+ random characters), and `CHAOS_APP_URL` (Chaos's public HTTPS app origin). Do not put secrets in Vercel public variables.
-4. Open Connections in Chaos, click **Connect Notion**, then authorize only the pages/databases you want Chaos to access.
+4. Open Connections in Chaos, click **Connect Notion**, then authorize only the pages/databases you want Chaos to access. Copy your **Client ID** and **Client Secret** directly to Convex environment variables. Do not share the secret in chat or commit it to the repository.
+
+The in-app end-user guide, in both English and Arabic, is available at `/docs/notion` after the feature is merged and deployed.
 
 ## Importing a lesson
 
