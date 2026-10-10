@@ -272,7 +272,6 @@ export const getPublic = query({
   handler: (ctx, args) => readPublicCourse(ctx, args),
 });
 
-/** Public course catalogue for Explore and the sitemap, newest first. */
 /** Every public, published course for the sitemap, a bounded page at a time; follow continueCursor until isDone. */
 export const listIndexable = query({
   args: { paginationOpts: paginationOptsValidator },
@@ -294,6 +293,7 @@ export const listIndexable = query({
   },
 });
 
+/** Legacy array snapshot retained for existing callers. Explore uses courseDirectory.browse pagination. */
 export const listPublic = query({
   args: { limit: v.optional(v.number()) },
   returns: v.array(v.object({
