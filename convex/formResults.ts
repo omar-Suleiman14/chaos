@@ -10,7 +10,7 @@ import { internal } from "./_generated/api";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { getFormIfRole, ownsRecord, requireFormRole } from "./authz";
-import { isEmptyAnswer, visibleFieldIds } from "./formLogic";
+import { answerText, isAnswerable, isEmptyAnswer, visibleFieldIds } from "./formLogic";
 import type { Aggregates, Answers, FormDefinition, FormField } from "./formLogic";
 import { countResponse, definitionForResponse } from "./respond";
 import { dateSpread, histogram, median, mostCommonWrong, scoreSummary, tallyQuizAnswer } from "./formAnalysis";
