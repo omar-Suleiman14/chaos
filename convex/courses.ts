@@ -155,6 +155,24 @@ export async function addLessonCourse(ctx: MutationCtx, args: Infer<typeof addLe
     await authorDb(ctx).patch("learnCollections", row._id, { lessonIds: [...current, lessonId], updatedAt: Date.now() });
     return lessonId;
 }
+/** Check the caller owns an active course with room for a lesson; for imports, before any lesson is created. */
+export async function courseForImport(ctx: MutationCtx, courseId: Id<"learnCollections">, moduleId?: string) {
+  const { row, actor } = await ownedCourse(ctx, courseId);
+  if (row.ownerId !== actor) throw new Error("NOT_FOUND: Course not found.");
+  if (row.archived) throw new Error("COURSE_ARCHIVED: Restore this course before adding lessons.");
+  if (moduleId && !row.modules?.some((m) => m.id === moduleId)) throw new Error("NOT_FOUND: Module not found.");
+  return row;
+}
+
+/** Put an existing lesson of the course owner at the end of the course (and of a module), once. */
+export async function attachLessonToCourse(ctx: MutationCtx, row: Doc<"learnCollections">, lessonId: Id<"lessons">, moduleId?: string) {
+  const current = outline(row);
+  const inCourse = current.includes(lessonId);
+  if (!inCourse && current.length >= MAX_LESSONS) throw new Error(`VALIDATION_FAILED: A course holds up to ${MAX_LESSONS} lessons.`);
+  const modules = moduleId ? row.modules?.map((m) => ({ ...m, lessonIds: m.id === moduleId ? [...m.lessonIds.filter((id) => id !== lessonId), lessonId] : m.lessonIds.filter((id) => id !== lessonId) })) : row.modules;
+  await authorDb(ctx).patch("learnCollections", row._id, { lessonIds: inCourse ? current : [...current, lessonId], ...(moduleId ? { modules } : {}), updatedAt: Date.now() });
+}
+
 export const addLesson = mutation({
   args: addLessonArgs.fields,
   returns: v.id("lessons"),

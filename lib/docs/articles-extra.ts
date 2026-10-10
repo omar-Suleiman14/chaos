@@ -93,10 +93,38 @@ export const extraArticles: Record<Locale, DocArticle[]> = {
     },
     {
       slug: "notion",
-      title: "Notion (coming soon)",
-      summary: "A Notion connection is planned. It isn't available yet.",
+      title: "Notion",
+      summary: "Import Notion pages as lesson drafts and send new quiz and form results to a database.",
       blocks: [
-        { type: "p", text: "There is no Notion connection yet, and nothing to set up. This page will explain it when it's ready." },
+        { type: "p", text: "Connect your Notion workspace under [Connections](/dashboard/connections) → Apps → Notion. This uses Notion OAuth, not a Chaos API token or a Max connection." },
+        { type: "heading", id: "connect", text: "Connect Notion" },
+        { type: "steps", items: [
+          "Open **Connections → Apps → Notion** and select **Connect Notion**.",
+          "Authorize a Notion workspace and share the pages or databases Chaos may access.",
+          "Return to Chaos. Your connected workspace appears in the Notion section.",
+        ] },
+        { type: "heading", id: "import", text: "Import a Notion page as a lesson" },
+        { type: "steps", items: [
+          "In a course, select **Import from Notion** under **Add a lesson** (in any module) and pick a page. The lesson is added to that course and opens in the editor.",
+          "Or, under Notion in Connections, select **Choose a page to import**, pick a page and the **course** it belongs in (or **New course**), then select **Import as lesson draft**.",
+          "Review the new **private lesson draft** in the editor, and publish only when you are ready.",
+        ] },
+        { type: "tip", text: "Import is one-time, not ongoing two-way sync. Re-importing the same page reuses the existing Chaos lesson without overwriting your edits, and adds it to the course you choose. Supported content includes headings, text, lists, code, quotes, toggles and callouts; unsupported media is skipped. Pages exceeding 400 blocks or two nested levels cannot be imported." },
+        { type: "heading", id: "results", text: "Send completed quiz and form results" },
+        { type: "steps", items: [
+          "Under Notion in Connections, select **Choose a results database**.",
+          "Pick a shared Notion database and select **Sync results here**.",
+          "New non-spam completed responses create Notion entries with Chaos response IDs, submitted time and quiz scores (when available). Select **Stop results sync** to stop.",
+        ] },
+        { type: "heading", id: "privacy", text: "Privacy and permissions" },
+        { type: "list", items: [
+          "Only new completions sync; existing results are not backfilled.",
+          "Individual answers, respondent names, emails and uploaded files are never sent to Notion.",
+          "The Notion integration needs **Read content** and **Insert content**. It does not need **Update content**, user information, comments access or a Notion webhook subscription.",
+          "Select **Disconnect** to remove the stored connection. Existing imported Chaos lessons and created Notion entries remain.",
+        ] },
+        { type: "heading", id: "troubleshooting", text: "Troubleshooting" },
+        { type: "p", text: "Chaos's administrator must deploy the Notion connector and set up OAuth first. If connection fails, check that the Notion redirect URI ends with `/api/notion/oauth/callback` on the Convex HTTP Actions URL. If pages or databases are missing, share them with the authorized Notion integration." },
       ],
     },
     {
@@ -199,10 +227,38 @@ export const extraArticles: Record<Locale, DocArticle[]> = {
     },
     {
       slug: "notion",
-      title: "Notion (قريبًا)",
-      summary: "اتصال Notion مخطط له، وغير متاح بعد.",
+      title: "Notion",
+      summary: "استورد صفحات Notion كمسودات دروس وأرسل نتائج الاختبارات والنماذج الجديدة إلى قاعدة بيانات.",
       blocks: [
-        { type: "p", text: "لا يوجد اتصال بـ Notion بعد، ولا شيء لإعداده. ستشرح هذه الصفحة الأمر حين يجهز." },
+        { type: "p", text: "اربط مساحة عمل Notion من [الاتصالات](/dashboard/connections) ← التطبيقات ← Notion. يستخدم هذا الربط OAuth الخاص بـ Notion، ولا يحتاج إلى رمز API من Chaos أو اتصال Max." },
+        { type: "heading", id: "connect", text: "ربط Notion" },
+        { type: "steps", items: [
+          "افتح **الاتصالات ← التطبيقات ← Notion** واضغط **ربط Notion** (Connect Notion).",
+          "اسمح بالوصول إلى مساحة عمل Notion واختر الصفحات وقواعد البيانات التي يمكن لـ Chaos الوصول إليها.",
+          "عند العودة إلى Chaos تظهر مساحة العمل المتصلة في قسم Notion.",
+        ] },
+        { type: "heading", id: "import", text: "استيراد صفحة Notion كدرس" },
+        { type: "steps", items: [
+          "داخل الدورة، اضغط **استيراد من Notion** أسفل **أضف درسًا** (في أي وحدة) واختر الصفحة. يُضاف الدرس إلى الدورة ويُفتح في المحرّر.",
+          "أو من قسم Notion في الاتصالات اضغط **اختر صفحة لاستيرادها** واختر الصفحة و**الدورة** التي ينتمي إليها (أو **دورة جديدة**)، ثم اضغط **استيراد كمسودة درس**.",
+          "راجع **مسودة الدرس الخاصة** داخل المحرّر، ثم انشرها عندما تصبح جاهزًا.",
+        ] },
+        { type: "tip", text: "الاستيراد يحدث مرة واحدة، وليس مزامنة مستمرة في الاتجاهين. عند إعادة استيراد الصفحة نفسها تُستخدم مسودة الدرس الموجودة دون الكتابة فوق تعديلاتك، وتُضاف إلى الدورة التي تختارها. يدعم النص والعناوين والقوائم والأكواد والاقتباسات والتبديلات والتنبيهات، ويتجاوز الوسائط غير المدعومة. لا يمكن استيراد صفحة تتجاوز 400 كتلة أو مستويين من التداخل." },
+        { type: "heading", id: "results", text: "إرسال نتائج النماذج والاختبارات المكتملة" },
+        { type: "steps", items: [
+          "من قسم Notion في الاتصالات اضغط **اختر قاعدة بيانات للنتائج** (Choose a results database).",
+          "اختر قاعدة بيانات Notion مشتركة مع التكامل واضغط **مزامنة النتائج هنا** (Sync results here).",
+          "ينشئ كل رد جديد مكتمل وغير مزعج سجلًا في Notion يتضمن معرّف الرد ووقت إرساله ودرجة الاختبار إن وُجدت. اضغط **إيقاف مزامنة النتائج** لإيقاف الإرسال.",
+        ] },
+        { type: "heading", id: "privacy", text: "الخصوصية والصلاحيات" },
+        { type: "list", items: [
+          "تشمل المزامنة الردود الجديدة فقط، ولا تُستورد النتائج القديمة تلقائيًا.",
+          "لا تُرسل الإجابات الفردية أو أسماء المشاركين أو بريدهم الإلكتروني أو ملفاتهم المرفوعة إلى Notion.",
+          "يحتاج التكامل إلى **قراءة المحتوى** (Read content) و**إدراج المحتوى** (Insert content) فقط. لا يحتاج تحديث المحتوى أو معلومات المستخدم أو التعليقات أو اشتراك Webhook من Notion.",
+          "اضغط **فصل الاتصال** (Disconnect) لإزالة التفويض المخزّن. تبقى دروس Chaos المستوردة وسجلات Notion الموجودة سابقًا.",
+        ] },
+        { type: "heading", id: "troubleshooting", text: "حل المشكلات" },
+        { type: "p", text: "يجب على مسؤول نشر Chaos تفعيل تكامل Notion وإعداد OAuth أولًا. إذا فشل الربط، تحقق من أن عنوان إعادة التوجيه ينتهي بـ `/api/notion/oauth/callback` على عنوان Convex HTTP Actions. وإذا اختفت صفحات أو قواعد بيانات، شاركها مع تكامل Notion المصرّح له." },
       ],
     },
     {

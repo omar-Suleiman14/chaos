@@ -24,6 +24,7 @@ import { assertRateAvailable, consumeRate, notify, randomCode, randomHex, sha256
 import { ruleHolds, visibleFieldIds } from "./formLogic";
 import { gradeQuiz, quizReview } from "./formQuiz";
 import { emitWebhookEvent, formResponseData } from "./webhookEvents";
+import { queueResult as queueNotionResult } from "./notion";
 import { respondentDefinition, releasedDefinition, releasedFieldIds, nextFieldReleaseAt, releasedAnswers, assertReleasedAnswers } from "./formRelease";
 import { captureHidden, captureTypedHidden } from "./formRespondent";
 import { teamOrEmailCheck } from "./businessAccess";
@@ -435,6 +436,7 @@ export const submitResponse = mutation({
         await countResponse(ctx, form, response, def, 1);
         await afterCompletion(ctx, form, response, def);
         await emitWebhookEvent(ctx, form.ownerId, "response.completed", `form_${form._id}`, () => formResponseData(form, response, def));
+        await queueNotionResult(ctx, form, response);
       }
       if (args.resumeToken) {
         const hash = await sha256Hex(args.resumeToken);
