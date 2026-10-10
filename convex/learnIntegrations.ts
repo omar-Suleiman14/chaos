@@ -1,3 +1,4 @@
+import { parseResourceRef } from "./resourceRefs";
 import { authorDb } from "./authorIndex";
 import { observeHttp } from "../lib/backendTelemetry";
 import { learnCapabilityLimits } from "./learnCapabilityModel";
@@ -78,7 +79,7 @@ export const setCollectionSelection = mutation({
 export const getCollection = internalQuery({ args: { ...base, ref: v.string() }, returns: resultValidator, handler: async (ctx, args): Promise<LearnApiResult> => {
   const token = await authorize(ctx, args.tokenId, args.now, "collections:read");
   if ("status" in token) return token;
-  const id = /^collection_([A-Za-z0-9]+)$/.exec(args.ref)?.[1];
+  const id = parseResourceRef(args.ref, "collection");
   const collectionId = id ? ctx.db.normalizeId("learnCollections", id) : null;
   if (!collectionId || !token.itemRefs.includes(args.ref)) return missing();
   const row = await ctx.db.get("learnCollections", collectionId);

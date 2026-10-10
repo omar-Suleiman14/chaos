@@ -35,6 +35,7 @@ import { formIntentHandlers } from "@/lib/convexCache";
 import { usePreferences } from "@/lib/preferences";
 import { dateLocale, useCopy, useLocale } from "@/lib/i18n";
 import { supportEmail } from "@/lib/site";
+import { clampWidth, readSidebarPreferences, SIDEBAR_DEFAULT, SIDEBAR_MIN, SIDEBAR_MAX } from "@/lib/dashboard/sidebarPreferences";
 import { useFlashcardSets, useFolders, useMyLessons } from "@/lib/learn/data";
 
 /**
@@ -44,10 +45,7 @@ import { useFlashcardSets, useFolders, useMyLessons } from "@/lib/learn/data";
 const loadPalette = () => import("@/components/workspace/CommandPalette");
 const CommandPalette = dynamic(loadPalette, { ssr: false });
 
-const SIDEBAR_MIN = 200;
-const SIDEBAR_MAX = 420;
-const SIDEBAR_DEFAULT = 256;
-const clampWidth = (width: number) => Math.min(SIDEBAR_MAX, Math.max(SIDEBAR_MIN, width));
+
 
 const copy = {
   en: {
@@ -197,11 +195,9 @@ export default function DashboardShell({ children }: { children: React.ReactNode
   const rtl = dir === "rtl";
   const resize = useRef<{ pointerId: number; startX: number; startWidth: number } | null>(null);
   useEffect(() => {
-    try {
-      setCollapsed(localStorage.getItem("chaos.ui.sidebar-collapsed") === "true");
-      const stored = Number(localStorage.getItem("chaos.ui.sidebar-width"));
-      if (stored) setSidebarWidth(clampWidth(stored));
-    } catch { /* storage unavailable */ }
+    const preferences = readSidebarPreferences(localStorage);
+    setCollapsed(preferences.collapsed);
+    setSidebarWidth(preferences.width);
   }, []);
   const remember = (key: string, value: string) => { try { localStorage.setItem(key, value); } catch { /* storage unavailable */ } };
   const toggleSidebar = useCallback(() => {

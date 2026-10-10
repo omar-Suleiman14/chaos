@@ -3,13 +3,14 @@
 import { FocusInput, FocusTextarea } from "@/components/InitialFocus";
 
 import { useNow } from "@/lib/useNow";
+import { buildSteps, type Step } from "@/lib/forms/formSteps";
 
 import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronUp, Clock, CornerDownLeft, Star, Upload, X } from "lucide-react";
 import "./formThemes.css";
 import {
-  answerError, isAnswerable, isEmptyAnswer, isRtl, localizeEnding, localizeField, localizedMeta, pipeText, sectionsOf, visibleFieldIds,
+  answerError, isAnswerable, isEmptyAnswer, isRtl, localizeEnding, localizeField, localizedMeta, pipeText, visibleFieldIds,
 } from "@/convex/formLogic";
 import { parseNumberInput } from "@/convex/formLogic";
 import type { AnswerValue, Answers, Ending, FormDefinition, FormField, Language } from "@/convex/formLogic";
@@ -69,20 +70,6 @@ const ui = {
 };
 export const formUi = ui;
 
-type Step = { key: string; title?: string; description?: string; fields: FormField[] };
-
-function buildSteps(def: FormDefinition, visible: Set<string>): Step[] {
-  if (def.presentation === "page") {
-    return [{ key: "all", fields: def.fields.filter((f) => visible.has(f.id)) }];
-  }
-  if (def.presentation === "sections") {
-    return sectionsOf(def)
-      .filter((g) => !g.section || visible.has(g.section.id))
-      .map((g, i) => ({ key: g.section?.id ?? `s${i}`, title: g.section?.label, description: g.section?.description, fields: g.fields.filter((f) => visible.has(f.id)) }))
-      .filter((s) => s.fields.length || s.title);
-  }
-  return def.fields.filter((f) => visible.has(f.id) && f.type !== "section").map((f) => ({ key: f.id, fields: [f] }));
-}
 
 /** Answers that complete a one-question step, so immersive modes move on by themselves. */
 const autoAdvanceTypes: FormField["type"][] = ["choice", "dropdown", "rating", "scale"];
