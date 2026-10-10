@@ -1,17 +1,11 @@
 import inventory from "@/lib/mcp/inventory.json";
 import { permissionForTool } from "@/lib/mcp/permissions";
 import { describe, expect, it, vi } from "vitest";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createChaosMcpServer } from "@/lib/mcp/server";
+import { connectMcpTestClient } from "../helpers/mcpClient";
 import type { McpCaller } from "@/lib/mcp/server";
 
 async function connect(call: McpCaller | null, admin = false) {
-  const server = createChaosMcpServer({ call, admin, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" });
-  const client = new Client({ name: "test", version: "1.0.0" });
-  const [a, b] = InMemoryTransport.createLinkedPair();
-  await Promise.all([server.connect(a), client.connect(b)]);
-  return client;
+  return connectMcpTestClient({ call, admin, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" }, { name: "test", version: "1.0.0" });
 }
 
 describe("Chaos MCP server", () => {
