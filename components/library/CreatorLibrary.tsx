@@ -1,5 +1,6 @@
 "use client";
 
+import StateIllustration from "@/components/StateIllustration";
 import CoursesHub from "@/components/courses/CoursesHub";
 import GamesHub from "@/components/live/GamesHub";
 import FlashcardsHub from "@/components/learn/FlashcardsHub";
@@ -430,7 +431,7 @@ export default function CreatorLibrary() {
       <CacheState confirmed={confirmed || kind === "Courses" || kind === "Flashcards" || kind === "Games"}>
       {kind === "Courses" ? <CoursesHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Flashcards" ? <FlashcardsHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
         <div className="ws-empty ws-page">
-          <span className="ws-empty__art"><Plus size={24} /></span>
+          <StateIllustration variant={statuses.length ? "search" : "create"} />
           <h2 className="text-xl font-semibold">{statuses.length ? t.nothingMatches : t.createFirst}</h2>
           <p className="text-muted-foreground max-w-sm">{statuses.length ? t.tryAnother : t.startBlank}</p>
           {statuses.length > 0 && <button type="button" className="ws-btn mt-3" onClick={() => chooseStatuses([])}>{t.clearFilter}</button>}
