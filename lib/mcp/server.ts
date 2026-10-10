@@ -325,7 +325,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
 
   server.registerTool("search_forms", {
     title: "Find forms and quizzes",
-    description: "Search forms and quizzes, newest first. Returns IDs, status, response counts and links. Archived items require status archived or any. truncated means scan/page is incomplete; narrow filters for older matches.",
+    description: "Find forms/quizzes, newest first; returns IDs, counts and links. Archived items need status archived/any. truncated flags an incomplete scan/page; narrow filters.",
     inputSchema: {
       query: z.string().max(200).optional().describe("Words in the title. Leave empty to list recent items."),
       status: z.enum(["live", "draft", "closed", "archived", "any"]).optional(),
