@@ -12,7 +12,7 @@ vi.mock("@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js", () => (
 
 beforeEach(() => {
   vi.stubEnv("NEXT_PUBLIC_AUTH_PROVIDER", "betterauth");
-  vi.stubEnv("CHAOS_MCP_SECRET", "test-only-backend-secret");
+  vi.stubEnv("CHAOS_MCP_SECRET", "test-only-backend-secret-32-characters");
   vi.stubEnv("CONVEX_SITE_URL", "https://backend.example");
   mocks.verify.mockResolvedValue({ userId: `oidc_${"a".repeat(64)}`, clientId: "chat-client", profile: { name: "Verified Creator", email: "" } });
   mocks.backend.mockResolvedValue(Response.json({ result: { admin: false } }));
@@ -52,6 +52,13 @@ describe("MCP auth provider routing", () => {
     expect(mocks.clerk).toHaveBeenCalled();
     expect(mocks.verify).not.toHaveBeenCalled();
     expect(JSON.parse(mocks.backend.mock.calls[0][1].body).userId).toBe("user_original");
+  });
+  it("never sends a secret the backend would refuse", async () => {
+    vi.stubEnv("CHAOS_MCP_SECRET", "too-short-secret");
+    const { POST } = await import("@/app/mcp/route");
+    const response = await POST(new Request("https://chaos.example/mcp", { method: "POST", headers: { Authorization: "Bearer signed-token" } }));
+    expect(response.status).toBe(200); // the capability probe fails quietly; tools report NOT_CONFIGURED
+    expect(mocks.backend).not.toHaveBeenCalled();
   });
   it("answers 401 to token-less clients that sign in at the transport, but lets ChatGPT list tools first", async () => {
     const { POST } = await import("@/app/mcp/route");

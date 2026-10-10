@@ -40,6 +40,8 @@ export async function isAdmin(ctx: DbCtx): Promise<boolean> {
 export async function requireAdmin(ctx: DbCtx): Promise<void> {
   await requireIdentity(ctx);
   if (!(await isAdmin(ctx))) throw new Error("Forbidden: admin access required");
+  // A banned or suspended admin is read-only like any other account (MCP checks the same).
+  await requireActiveUser(ctx);
 }
 
 // ── Forms ──────────────────────────────────────────────────────────────────

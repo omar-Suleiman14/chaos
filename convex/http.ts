@@ -512,7 +512,7 @@ const uploadHandler = httpAction(async (ctx, request) => observeHttp(ctx, "submi
 const http = httpRouter();
 // Keep auth endpoints disabled on Clerk installations.
 // eslint-disable-next-line @convex-dev/no-process-env -- installation provider
-if (process.env.CHAOS_AUTH_PROVIDER === "betterauth") {
+if (process.env.CHAOS_AUTH_PROVIDER?.trim() === "betterauth") {
   const authHandler = httpAction(async (ctx, request) => {
     const { createAuth } = await import("./betterAuth/auth");
     return createAuth(ctx).handler(request);
