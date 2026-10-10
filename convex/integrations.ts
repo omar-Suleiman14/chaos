@@ -1,4 +1,5 @@
 import { parseResourceRef } from "./resourceRefs";
+import { configuredRate } from "./integrationRate";
 import { getAuthIdentity } from "./authIdentity";
 import { v } from "convex/values";
 import { env, internalMutation, internalQuery, mutation, query } from "./_generated/server";
@@ -299,12 +300,7 @@ async function itemView(ctx: Ctx, token: Token, item: Item) {
  * Authenticates a request, applies the per-token rate limit and records use.
  * Called by the HTTP router before every operation.
  */
-function configuredRate(fromConfig: number | undefined, fromEnv: string | undefined, fallback: number): number {
-  for (const value of [fromConfig, fromEnv === undefined ? undefined : Number(fromEnv)]) {
-    if (typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 100_000) return value;
-  }
-  return fallback;
-}
+
 
 /**
  * Per-connection limits per minute. Operators change them without a deploy:
