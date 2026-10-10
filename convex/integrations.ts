@@ -18,7 +18,7 @@ import {
   activeIntegrationToken, findIdempotent, integrationScopes, logConnectionActivity, ROTATION_GRACE_MS, scopeValidator,
 } from "./integrationModel";
 import type { IntegrationScope } from "./integrationModel";
-import { displayName, errorCode, randomHex, sha256Hex } from "./serverUtils";
+import { displayName, errorCode, sha256Hex } from "./serverUtils";
 import { disableConnectionWebhooks } from "./webhooks";
 import { readFormCounts } from "./formCounts";
 
