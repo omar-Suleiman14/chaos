@@ -25,7 +25,7 @@ export function readSearchCursor(cursor: string | null, text: string): SearchCur
       value.phase !== "authors" || !nativeCursor(value.userCursor) ||
       !nativeCursor(value.lessonCursor) || !nativeCursor(value.currentUser) ||
       typeof value.usersRead !== "number" || !Number.isSafeInteger(value.usersRead) ||
-      value.usersRead < 0 || value.usersRead > 100 || typeof value.usersDone !== "boolean" ||
+      value.usersRead < 0 || typeof value.usersDone !== "boolean" ||
       !Array.isArray(value.remainingUsers) || value.remainingUsers.length > 20 ||
       !value.remainingUsers.every(id => typeof id === "string" && id.length <= 100)
     ) throw new Error();

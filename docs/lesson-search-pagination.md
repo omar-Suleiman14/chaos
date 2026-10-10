@@ -34,10 +34,12 @@ The existing `usePublicLessons` hook continues filtered pages until its current
 can expose subsequent pages for a larger search interface by using the existing
 pagination metadata; this change adds no layout or visual components.
 
-The historical first-100-user author-directory scope is retained in this change;
-removing that separate ceiling is tracked in #137. Pagination is complete within
-that scope. No `hideFromAuthorLists` policy changes are introduced: this is lesson
-search, distinct from the public author-directory endpoint.
+Author discovery continues through the full directory using its native cursor,
+including authors beyond the historical first-100-user ceiling. The 100-row limit
+applies per request, not to the entire search. No unbounded collection or prefix
+index replaces substring matching. Existing author continuations at the old
+boundary remain valid. No `hideFromAuthorLists` policy changes are introduced:
+this is lesson search, distinct from the public author-directory endpoint.
 
 Adding `_creationTime` to the existing search index's filter fields requires the
 normal Convex schema/function deployment and index backfill before using the new

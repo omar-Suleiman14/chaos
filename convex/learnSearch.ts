@@ -11,8 +11,6 @@ import { authorSearchCursor, readSearchCursor, writeSearchCursor } from "./learn
 export const searchHit = v.object({ lessonId: v.id("lessons"), versionId: v.id("lessonVersions"), metadata: lessonMeta, matchingBlocks: v.array(v.object({ id: v.string(), text: v.string() })) });
 
 const MAX_CANDIDATES = 20;
-// Preserve the historical author-directory scope here; removing this ceiling is tracked in #137.
-const AUTHOR_SCOPE = 100;
 const nativeCursor = v.union(v.string(), v.null());
 /** Convex permits only one paginate call per function; each bounded source step is internal. */
 export const indexedPage = internalQuery({
@@ -78,8 +76,8 @@ export const searchPublic = query({
     while (page.length < size && candidates < MAX_CANDIDATES) {
       if (!cursor.currentUser) {
         if (!cursor.remainingUsers.length) {
-          if (cursor.usersDone || cursor.usersRead >= AUTHOR_SCOPE || directoryPages >= 5) break;
-          const result = await ctx.runQuery(internal.learnSearch.authorPage, { cursor: cursor.userCursor, numItems: Math.min(MAX_CANDIDATES, AUTHOR_SCOPE - cursor.usersRead) });
+          if (cursor.usersDone || directoryPages >= 5) break;
+          const result = await ctx.runQuery(internal.learnSearch.authorPage, { cursor: cursor.userCursor, numItems: MAX_CANDIDATES });
           directoryPages++;
           cursor.userCursor = result.continueCursor;
           cursor.usersRead += result.page.length;
@@ -141,7 +139,7 @@ export const searchPublic = query({
       }
       cursor.pending = null;
     }
-    const isDone = (cursor.usersDone || cursor.usersRead >= AUTHOR_SCOPE) && !cursor.remainingUsers.length && !cursor.currentUser && !cursor.pending;
+    const isDone = cursor.usersDone && !cursor.remainingUsers.length && !cursor.currentUser && !cursor.pending;
     return { page, isDone, continueCursor: writeSearchCursor(cursor) };
   },
 });
