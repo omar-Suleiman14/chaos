@@ -1,5 +1,6 @@
-import { slugify } from "@/lib/forms/formSlug";
 "use client";
+
+import { slugify } from "@/lib/forms/formSlug";
 
 import { FocusInput } from "@/components/InitialFocus";
 
