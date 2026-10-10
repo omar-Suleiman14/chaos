@@ -69,7 +69,7 @@ test("history scans resume safely and a late citation prevents purge on retries"
     const metadata = { title: "History", description: "", language: "en", tags: [] };
     const document = { schemaVersion: 1 as const, blocks: [] };
     const lessonId = await ctx.db.insert("lessons", { ownerId: "owner", metadata, draft: document, revision: 1, status: "active", visibility: "private", communityState: "ok", createdAt: 0, updatedAt: 0, searchText: "" });
-    for (let number = 1; number <= 5; number++) await ctx.db.insert("lessonVersions", { lessonId, number, metadata, authorId: "owner", publishedAt: number, document: number === 5 ? { schemaVersion: 1, blocks: [{ id: "image", type: "image", sourceId, alt: "historical", caption: "", conceptIds: [], citations: [] }] } : document });
+    for (let number = 1; number <= 11; number++) await ctx.db.insert("lessonVersions", { lessonId, number, metadata, authorId: "owner", publishedAt: number, document: number === 11 ? { schemaVersion: 1, blocks: [{ id: "image", type: "image", sourceId, alt: "historical", caption: "", conceptIds: [], citations: [] }] } : document });
   });
   await owner.mutation(purge, { sourceId }); await due(t);
   expect(await t.mutation(cleanup, {})).toMatchObject({ deleted: 0, held: 0 });
@@ -95,7 +95,7 @@ test("published collection source resources hold bytes across bounded collection
   await t.run(async ctx => {
     const metadata = { title: "Pack", description: "", language: "en", tags: [] };
     const collectionId = await ctx.db.insert("learnCollections", { ownerId: "owner", metadata, items: [], revision: 5, visibility: "private", communityState: "removed", createdAt: 0, updatedAt: 0 });
-    for (let number = 1; number <= 5; number++) await ctx.db.insert("collectionVersions", { collectionId, metadata, number, publishedAt: number, items: number === 5 ? [{ kind: "source", id: sourceId }] : [] });
+    for (let number = 1; number <= 11; number++) await ctx.db.insert("collectionVersions", { collectionId, metadata, number, publishedAt: number, items: number === 11 ? [{ kind: "source", id: sourceId }] : [] });
   });
   await owner.mutation(purge, { sourceId }); await due(t);
   // Legacy jobs omit phase. Lesson completion commits a null collection cursor.

@@ -57,7 +57,7 @@ export default function Toaster() {
       <ol aria-live="polite" aria-relevant="additions text">
         {ordered.map((item, index) => {
           const depth = live.indexOf(item);
-          return <ToastCard key={item.id} item={item} t={t} depth={depth < 0 ? index : depth} offset={offsets[index]} expanded={expanded} frontHeight={front}
+          return <ToastCard key={`${item.id}:${item.version}`} item={item} t={t} depth={depth < 0 ? index : depth} offset={offsets[index]} expanded={expanded} frontHeight={front}
             paused={expanded || hidden} onHeight={(height) => setHeights(prior => prior[item.id] === height ? prior : { ...prior, [item.id]: height })} />;
         })}
       </ol>
@@ -103,11 +103,17 @@ function ToastCard({ item, t, depth, offset, expanded, frontHeight, paused, onHe
   // The timer pauses while the stack is open, the toast is expanded or the tab is hidden, and restarts when the toast is updated.
   useEffect(() => {
     if (version.current !== item.version) { version.current = item.version; remaining.current = item.duration; }
-    if (item.leaving || !Number.isFinite(item.duration) || paused || open) return;
+    if (item.leaving || !Number.isFinite(item.duration)) return;
+    const fixedDeadline = item.expiresAt !== undefined;
+    if (!fixedDeadline && item.pauseOnHover !== false && (paused || open)) return;
     const started = Date.now();
-    const timer = setTimeout(() => toast.dismiss(item.id), remaining.current);
-    return () => { clearTimeout(timer); remaining.current = Math.max(0, remaining.current - (Date.now() - started)); };
-  }, [item.id, item.version, item.duration, item.leaving, paused, open]);
+    const wait = fixedDeadline ? Math.max(0, item.expiresAt! - started) : remaining.current;
+    const timer = setTimeout(() => toast.dismiss(item.id), wait);
+    return () => {
+      clearTimeout(timer);
+      if (!fixedDeadline) remaining.current = Math.max(0, remaining.current - (Date.now() - started));
+    };
+  }, [item.id, item.version, item.duration, item.leaving, item.expiresAt, item.pauseOnHover, paused, open]);
   const Icon = ICONS[item.kind];
   const hiddenBehind = !expanded && depth >= VISIBLE;
   const y = expanded ? -offset : -depth * PEEK;
@@ -115,7 +121,7 @@ function ToastCard({ item, t, depth, offset, expanded, frontHeight, paused, onHe
   const dx = swipe?.dx ?? swiped;
   return (
     <li data-toast data-kind={item.kind} data-mounted={mounted || undefined} data-leaving={item.leaving || undefined} data-front={depth === 0 || undefined}
-      data-swiping={swipe ? true : undefined} role={item.kind === "error" ? "alert" : "status"} tabIndex={0}
+      data-swiping={swipe ? true : undefined} data-progress-paused={item.pauseOnHover !== false && item.expiresAt === undefined && (paused || open) || undefined} role={item.kind === "error" ? "alert" : "status"} tabIndex={0}
       className="chaos-toast ws-glass" aria-hidden={hiddenBehind || undefined}
       // Position comes in as variables; CSS composes them with the enter and exit motion.
       style={{
@@ -148,7 +154,10 @@ function ToastCard({ item, t, depth, offset, expanded, frontHeight, paused, onHe
           {item.description && open && <p dir="auto">{item.description}</p>}
         </div>
         {(item.undo || item.action) && (
-          <button type="button" className="chaos-toast__action" onClick={() => { (item.action?.onClick ?? item.undo)?.(); toast.dismiss(item.id); }}>
+          <button type="button" className="chaos-toast__action" onClick={() => {
+            if (item.expiresAt !== undefined && Date.now() >= item.expiresAt) { toast.dismiss(item.id); return; }
+            (item.action?.onClick ?? item.undo)?.(); toast.dismiss(item.id);
+          }}>
             {item.action?.label ?? t.undo}
           </button>
         )}
@@ -158,6 +167,9 @@ function ToastCard({ item, t, depth, offset, expanded, frontHeight, paused, onHe
           </button>
         )}
       </div>
+      {item.undo && Number.isFinite(item.duration) && (
+        <span aria-hidden="true" className="chaos-toast__progress" style={{ "--toast-duration": `${item.duration}ms` } as React.CSSProperties} />
+      )}
     </li>
   );
 }

@@ -4,20 +4,23 @@ import { internalMutation } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { deleteResponseRecord, deleteUploadRecord } from "./formResults";
 import { pruneUsernameChanges, releaseExpiredAliases } from "./usernameModel";
+import { nextRetentionPageCursor } from "./retentionPaging";
 
 const BATCH = 100;
 const DAY_MS = 86_400_000;
+const RETENTION_FORM_PAGE = 25;
 
 /**
  * Deletes responses older than each form's retention period. Walks the forms
- * table one page at a time and reschedules itself until every form is done.
+ * table in bounded pages and reschedules itself until every form is done.
  */
 export const applyRetention = internalMutation({
   args: { cursor: v.union(v.string(), v.null()) },
   returns: v.null(),
   handler: async (ctx, args) => {
-    // One potentially large form/response per transaction; artifact cleanup has its own budget.
-    const page = await ctx.db.query("forms").paginate({ numItems: 1, cursor: args.cursor, maximumBytesRead: 1024 * 1024 });
+    // Many policy-free forms per invocation, but still at most one potentially large
+    // response/artifact deletion per transaction. Replay this page after deletion.
+    const page = await ctx.db.query("forms").paginate({ numItems: RETENTION_FORM_PAGE, cursor: args.cursor, maximumBytesRead: 1024 * 1024 });
     let unfinished = false;
     for (const form of page.page) {
       const days = form.settings.retentionDays;
@@ -28,10 +31,13 @@ export const applyRetention = internalMutation({
         .withIndex("by_formId_and_submittedAt", (q) => q.eq("formId", form._id).lt("submittedAt", cutoff))
         .take(1);
       for (const r of old) await deleteResponseRecord(ctx, r);
-      if (old.length) unfinished = true;
+      if (old.length) {
+        unfinished = true;
+        break;
+      }
     }
-    if (unfinished) await ctx.scheduler.runAfter(0, internal.crons.applyRetention, { cursor: args.cursor });
-    else if (!page.isDone) await ctx.scheduler.runAfter(0, internal.crons.applyRetention, { cursor: page.continueCursor });
+    const nextCursor = nextRetentionPageCursor(args.cursor, page.continueCursor, page.isDone, unfinished);
+    if (nextCursor !== undefined) await ctx.scheduler.runAfter(0, internal.crons.applyRetention, { cursor: nextCursor });
     return null;
   },
 });

@@ -1,3 +1,7 @@
+import { searchText } from "./formSearchText";
+import { DELETE_GRACE_MS } from "./formDeletion";
+import { assertDraftSize } from "./formDraftSize";
+export { assertDraftSize } from "./formDraftSize";
 import { getAuthIdentity } from "./authIdentity";
 import { authorDb } from "./authorIndex";
 import { consumeCreation } from "./plans";
@@ -5,14 +9,15 @@ import { businessMember, requireBusinessWorkspace } from "./businessAccess";
 import { deleteUploadRecord } from "./formResults";
 import { supportEmail } from "./support";
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import type { Infer } from "convex/values";
 import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
-import { getFormIfRole, hasPro, matchesAccountFormCollaborator, matchesFormCollaborator, ownsRecord, requireActiveUser, requireFormRole } from "./authz";
+import { getFormIfRole, hasPro, matchesAccountFormCollaborator, matchesFormCollaborator, verifiedIdentityEmail, ownsRecord, requireActiveUser, requireFormRole } from "./authz";
 import { checkHiddenFieldNames, checkHiddenParameters, normalizeEmailRules } from "./formRespondent";
-import { checkDefinition, emptyDefinition, FORM_SCHEMA_VERSION, LIMITS } from "./formLogic";
+import { checkDefinition, emptyDefinition, LIMITS } from "./formLogic";
 import type { FormDefinition } from "./formLogic";
 import { isValidTimeZone } from "./formSchedule";
 import { defaultFormSettings, definitionValidator, formRoleValidator, formSettingsValidator, themeValidator } from "./formModel";
@@ -30,20 +35,6 @@ export async function ownerHasPro(ctx: QueryCtx | MutationCtx, ownerId: string):
   return hasPro(owner, Date.now());
 }
 
-const MAX_DEFINITION_BYTES = 600_000;
-
-/** Size limits apply to drafts too; semantic checks only block publication. */
-export function assertDraftSize(def: Definition) {
-  if (def.schemaVersion !== FORM_SCHEMA_VERSION) throw new Error("UNSUPPORTED_SCHEMA: This form was made with an unsupported format version.");
-  if (def.fields.length > LIMITS.fields) throw new Error(`DRAFT_LIMIT: A form can contain at most ${LIMITS.fields} fields.`);
-  if (def.endings.length > LIMITS.endings) throw new Error(`DRAFT_LIMIT: Use at most ${LIMITS.endings} endings.`);
-  if (def.title.length > LIMITS.title * 2) throw new Error("DRAFT_LIMIT: The title is too long.");
-  for (const f of def.fields) {
-    if ((f.options?.length ?? 0) > LIMITS.options || (f.rows?.length ?? 0) > LIMITS.rows) throw new Error("DRAFT_LIMIT: Too many options.");
-  }
-  if (JSON.stringify(def).length > MAX_DEFINITION_BYTES) throw new Error("DRAFT_LIMIT: This form is too large to save.");
-  if (!def.languages.length || new Set(def.languages).size !== def.languages.length) throw new Error("DRAFT_LIMIT: Choose each language once.");
-}
 
 async function uniqueShareId(ctx: MutationCtx): Promise<string> {
   for (let i = 0; i < 5; i++) {
@@ -136,6 +127,7 @@ export const listMyForms = query({
     // One name lookup per owner, not per shared form.
     const ownerNames = new Map<string, string>();
     for (const { form: stored, membership: m } of inventory.shared) {
+      if (stored.pendingDeleteAt !== undefined) continue;
       const form = await withFormCounts(ctx, stored);
       let ownerName = ownerNames.get(form.ownerId);
       if (ownerName === undefined) ownerNames.set(form.ownerId, (ownerName = await displayName(ctx, form.ownerId)));
@@ -145,33 +137,75 @@ export const listMyForms = query({
         shared.push({ ...formSummary(form), role: m.role, ownerName });
       }
     }
-    return { owned: (await withOwnerFormCounts(ctx, identity.subject, inventory.owned)).map(formSummary), shared, invites };
+    return { owned: (await withOwnerFormCounts(ctx, identity.subject, inventory.owned.filter(form => form.pendingDeleteAt === undefined))).map(formSummary), shared, invites };
   },
 });
 
-const SEARCH_TEXT_CAP = 20_000;
-const SEARCH_FORM_CAP = 300;
-
-/** Everything a person could type to find this form, as one plain-text blob. */
-function searchText(def: Doc<"forms">["draft"]): string {
-  const parts: string[] = [def.description];
-  for (const t of Object.values(def.translations ?? {})) parts.push(t.title ?? "", t.description ?? "");
-  for (const f of def.fields) {
-    parts.push(f.label, f.description ?? "", f.placeholder ?? "", f.minLabel ?? "", f.maxLabel ?? "");
-    for (const o of f.options ?? []) parts.push(o.label);
-    for (const r of f.rows ?? []) parts.push(r.label);
-    if (f.quiz?.explanation) parts.push(f.quiz.explanation);
-    for (const t of Object.values(f.translations ?? {})) {
-      parts.push(t.label ?? "", t.description ?? "", t.placeholder ?? "", t.minLabel ?? "", t.maxLabel ?? "");
-      parts.push(...Object.values(t.options ?? {}), ...Object.values(t.rows ?? {}));
+/** Cursor-paginated replacement for the legacy capped listMyForms/searchIndex snapshots. */
+export const listMyFormsPage = query({
+  args: {
+    source: v.union(v.literal("owned"), v.literal("account"), v.literal("email")),
+    paginationOpts: paginationOptsValidator,
+  },
+  handler: async (ctx, args) => {
+    const identity = await getAuthIdentity(ctx);
+    const empty = { owned: [], shared: [], invites: [], searchIndex: [] };
+    if (!identity) return { page: empty, isDone: true, continueCursor: "" };
+    const limit = args.paginationOpts.numItems;
+    if (!Number.isSafeInteger(limit) || limit < 1 || limit > 50) throw new Error("VALIDATION_FAILED: Page size must be from 1 to 50.");
+    if (args.source === "owned") {
+      const batch = await ctx.db.query("forms").withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", identity.subject)).order("desc").paginate(args.paginationOpts);
+      const forms = await withOwnerFormCounts(ctx, identity.subject, batch.page.filter((form) => form.pendingDeleteAt === undefined));
+      const searchIndex = forms.map((form) => ({ id: form._id, title: form.title, status: form.status, quiz: form.draft.quiz?.enabled ?? false, text: searchText(form.draft) }));
+      return { ...batch, page: { ...empty, owned: forms.map(formSummary), searchIndex } };
     }
-  }
-  for (const e of def.endings) {
-    parts.push(e.title, e.message);
-    for (const t of Object.values(e.translations ?? {})) parts.push(t.title ?? "", t.message ?? "");
-  }
-  return parts.filter(Boolean).join(" \n").slice(0, SEARCH_TEXT_CAP);
-}
+    if (args.source === "account") {
+      const batch = await ctx.db.query("formCollaborators").withIndex("by_userId", (q) => q.eq("userId", identity.subject)).paginate(args.paginationOpts);
+      const shared = [];
+      const searchIndex = [];
+      const seen = new Set<string>();
+      const ownerNames = new Map<string, string>();
+      for (const membership of batch.page) {
+        if (membership.status === "pending" || !matchesFormCollaborator(membership, identity) || seen.has(membership.formId)) continue;
+        seen.add(membership.formId);
+        const stored = await ctx.db.get("forms", membership.formId);
+        if (!stored || stored.ownerId === identity.subject || stored.pendingDeleteAt !== undefined) continue;
+        const form = await withFormCounts(ctx, stored);
+        let ownerName = ownerNames.get(form.ownerId);
+        if (ownerName === undefined) ownerNames.set(form.ownerId, (ownerName = await displayName(ctx, form.ownerId)));
+        shared.push({ ...formSummary(form), role: membership.role, ownerName });
+        searchIndex.push({ id: form._id, title: form.title, status: form.status, quiz: form.draft.quiz?.enabled ?? false, text: searchText(form.draft) });
+      }
+      return { ...batch, page: { ...empty, shared, searchIndex } };
+    }
+    const email = verifiedIdentityEmail(identity);
+    if (!email) return { page: empty, isDone: true, continueCursor: "" };
+    const batch = await ctx.db.query("formCollaborators").withIndex("by_email", (q) => q.eq("email", email)).paginate(args.paginationOpts);
+    const shared = [];
+    const invites = [];
+    const searchIndex = [];
+    const seen = new Set<string>();
+    const ownerNames = new Map<string, string>();
+    for (const membership of batch.page) {
+      if ((membership.userId && membership.status !== "pending") || !matchesFormCollaborator(membership, identity) || seen.has(membership.formId)) continue;
+      seen.add(membership.formId);
+      const stored = await ctx.db.get("forms", membership.formId);
+      if (!stored || stored.ownerId === identity.subject || stored.pendingDeleteAt !== undefined) continue;
+      const form = await withFormCounts(ctx, stored);
+      let ownerName = ownerNames.get(form.ownerId);
+      if (ownerName === undefined) ownerNames.set(form.ownerId, (ownerName = await displayName(ctx, form.ownerId)));
+      searchIndex.push({ id: form._id, title: form.title, status: form.status, quiz: form.draft.quiz?.enabled ?? false, text: searchText(form.draft) });
+      if (membership.status === "pending") {
+        invites.push({ collaboratorId: membership._id, formId: form._id, title: form.title, role: membership.role, ownerName, createdAt: membership.createdAt });
+      } else {
+        shared.push({ ...formSummary(form), role: membership.role, ownerName });
+      }
+    }
+    return { ...batch, page: { ...empty, shared, invites, searchIndex } };
+  },
+});
+
+const SEARCH_FORM_CAP = 300;
 
 /** For the Ctrl+K palette: every form the person owns or collaborates on (archived too) with the text inside it. */
 export const searchIndex = query({
@@ -180,7 +214,7 @@ export const searchIndex = query({
     const identity = await getAuthIdentity(ctx);
     if (!identity) return [];
     const inventory = await enumerateForms(ctx, { kind: "identity", identity }, { owned: SEARCH_FORM_CAP, memberships: 100 });
-    const forms = [...inventory.owned, ...inventory.shared.map(row => row.form)];
+    const forms = [...inventory.owned, ...inventory.shared.map(row => row.form)].filter(form => form.pendingDeleteAt === undefined);
     return forms.map((form) => ({
       id: form._id,
       title: form.title,
@@ -202,7 +236,7 @@ export const getFormForEditor = query({
   args: { formId: v.id("forms") },
   handler: async (ctx, args) => {
     const access = await getFormIfRole(ctx, args.formId, "viewer");
-    if (!access) return null;
+    if (!access || access.form.pendingDeleteAt !== undefined) return null;
     const { role } = access;
     const form = await withFormCounts(ctx, access.form);
     const versions = await ctx.db
@@ -415,6 +449,7 @@ export const setFormStatus = mutation({
   returns: v.null(),
   handler: async (ctx, args) => {
     const { form, identity } = await requireFormRole(ctx, args.formId, "owner");
+    if (form.pendingDeleteAt !== undefined) throw new Error("DELETE_PENDING: Undo the pending deletion first.");
     if (args.status === "live" && form.isBanned) throw new Error("CONTENT_HELD: This form is held by an administrator.");
     if (args.status === "live" && form.publishedVersion === undefined) throw new Error("NOT_PUBLISHED: Publish the form first.");
     // "draft" is only valid to restore an archived, never-published form.
@@ -456,13 +491,46 @@ export const duplicateForm = mutation({
   },
 });
 
+/**
+ * Queue irreversible deletion on the server. The row and every dependent record
+ * remain intact for five seconds, even if the browser closes or changes device.
+ */
 export const deleteForm = mutation({
+  args: { formId: v.id("forms") },
+  returns: v.number(),
+  handler: async (ctx, args) => {
+    const { form } = await requireFormRole(ctx, args.formId, "owner");
+    if (form.status !== "archived") throw new Error("ARCHIVE_FIRST: Archive the form before deleting it.");
+    if (form.pendingDeleteAt !== undefined) throw new Error("DELETE_PENDING: This form is already scheduled for deletion.");
+    const deleteAt = Date.now() + DELETE_GRACE_MS;
+    const revision = (form.deleteRevision ?? 0) + 1;
+    await authorDb(ctx).patch("forms", form._id, { pendingDeleteAt: deleteAt, deleteRevision: revision });
+    await ctx.scheduler.runAt(deleteAt, internal.forms.finalizePendingFormDeletion, { formId: form._id, deleteAt, revision });
+    return deleteAt;
+  },
+});
+
+/** Undo is owner-only; once the deadline has passed there is no way to revive data. */
+export const undoDeleteForm = mutation({
   args: { formId: v.id("forms") },
   returns: v.null(),
   handler: async (ctx, args) => {
     const { form } = await requireFormRole(ctx, args.formId, "owner");
-    // Deleting is final, so it only happens from the Archive: archive first, then delete.
-    if (form.status !== "archived") throw new Error("ARCHIVE_FIRST: Archive the form before deleting it.");
+    if (form.status !== "archived" || form.pendingDeleteAt === undefined || Date.now() >= form.pendingDeleteAt) {
+      throw new Error("UNDO_EXPIRED: The deletion grace period has ended.");
+    }
+    await authorDb(ctx).patch("forms", form._id, { pendingDeleteAt: undefined });
+    return null;
+  },
+});
+
+/** Scheduled jobs cannot delete a row that was undone or rescheduled. */
+export const finalizePendingFormDeletion = internalMutation({
+  args: { formId: v.id("forms"), deleteAt: v.number(), revision: v.number() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const form = await ctx.db.get("forms", args.formId);
+    if (!form || form.status !== "archived" || form.pendingDeleteAt !== args.deleteAt || form.deleteRevision !== args.revision || Date.now() < args.deleteAt) return null;
     await authorDb(ctx).delete("forms", form._id);
     await ctx.scheduler.runAfter(0, internal.forms.purgeFormData, { formId: form._id });
     return null;

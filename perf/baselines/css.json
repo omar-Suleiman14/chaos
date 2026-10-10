@@ -73,20 +73,20 @@
       }
     },
     "source.rules": {
-      "budget": 3654,
+      "budget": 3663,
       "unit": "count",
       "raised": {
-        "from": 3644,
-        "reason": "Native magnetic file-drop component adds ten scoped CSS rules/selectors for drag highlight, compact layout, keyboard focus and reduced motion. No global selectors or infinite animation; measured by CI for PR #307.",
+        "from": 3654,
+        "reason": "Native magnetic file-drop component adds ten scoped CSS rules/selectors for drag highlight, compact layout, keyboard focus and reduced motion. No global selectors or infinite animation; measured after #305 and #306 for PR #307.",
         "at": "2026-10-10"
       }
     },
     "source.selectors": {
-      "budget": 4022,
+      "budget": 4031,
       "unit": "count",
       "raised": {
-        "from": 4012,
-        "reason": "Native magnetic file-drop component adds ten scoped CSS rules/selectors for drag highlight, compact layout, keyboard focus and reduced motion. No global selectors or infinite animation; measured by CI for PR #307.",
+        "from": 4022,
+        "reason": "Native magnetic file-drop component adds ten scoped CSS rules/selectors for drag highlight, compact layout, keyboard focus and reduced motion. No global selectors or infinite animation; measured after #305 and #306 for PR #307.",
         "at": "2026-10-10"
       }
     },

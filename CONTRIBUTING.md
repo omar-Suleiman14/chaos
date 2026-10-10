@@ -18,7 +18,7 @@ Use Clerk or the [Better Auth setup](./docs/better-auth.md). Better Auth uses a 
 
 ## How the code is organised
 
-- **`app/`**: Next.js routes. The workspace lives under `app/dashboard`, public forms under `app/f` and `app/[username]/[quizname]`, live games under `app/play` and `app/dashboard/live`.
+- **`app/`**: Next.js App Router routes. Localized pages live under `app/[lang]`: the dashboard is in `(app)/dashboard`, public form responses in `(app)/f/[shareId]`, player join screens in `(app)/play`, and public lessons/courses in `(app)/learn`. Marketing pages live in `(site)`; route groups do not appear in URLs. Live hosting and replay live under `(app)/dashboard/live`.
 - **`components/`**: UI. `components/forms` holds the form renderer (what respondents see) and the builder (what creators edit).
 - **`convex/`**: the backend. Read [`convex/README.md`](./convex/README.md) and the [authorization guide](./docs/security-authorization.md) before changing backend code. `schema.ts` and `formModel.ts` define the data. Creator functions check identity and role on the server (`authz.ts`); anonymous respondent functions validate publication, access settings and respondent capabilities.
 - **`lib/`**: shared helpers, including the language layer (`i18n.tsx`, `locale.ts`) and the user guides (`lib/docs`).

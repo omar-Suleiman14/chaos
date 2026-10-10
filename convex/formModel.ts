@@ -189,6 +189,10 @@ export const formTables = {
     title: v.string(),
     shareId: v.string(),
     status: formStatusValidator,
+    /** Pending permanent deletion is reversible until this server-side deadline. */
+    pendingDeleteAt: v.optional(v.number()),
+    /** Monotone revision prevents a stale scheduled task deleting a new request. */
+    deleteRevision: v.optional(v.number()),
     isBanned: v.optional(v.boolean()),
     draft: definitionValidator,
     /** Increments on every draft change from any source. */
