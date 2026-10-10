@@ -69,3 +69,7 @@ The current roadmap lives in [GitHub issues](https://github.com/omar-Suleiman14/
 Use the **Bug report** template for a reproducible problem, including browser, language, expected/actual behavior and a minimal example without real respondent data. Use **Feature request** for a desired outcome and who needs it. Use **Task** for agreed implementation work. Check existing issues first; link duplicates instead of opening parallel work. Security reports use the private reporting process in SECURITY.md.
 
 After changing MCP registration, run `pnpm mcp:inventory`. CI checks the generated inventory and advertised count. Validate schema/auth/privacy changes with meaningful boundary tests and the complete user flow. Mark verification pending when an implementation is awaiting its agreed test pass.
+
+### CI dependency installation and check isolation
+
+The required CI jobs use `setup-node` with the pnpm store cache keyed by the lockfile and run `pnpm install --frozen-lockfile` on each independent GitHub-hosted runner. Each install reconstructs that runner's `node_modules`; sharing a runner would remove the current parallelism and isolation between static checks, unit tests, integration tests and the performance-gated build. Do not combine these jobs solely to remove repeated install commands. Revisit only with step-level install/cache measurements that show a material end-to-end saving while retaining the same required check names, gates, and independent test coverage.

@@ -3,6 +3,7 @@ import { paginationOptsValidator, paginationResultValidator } from "convex/serve
 import { query } from "./_generated/server";
 import { creatorRestricted } from "./authz";
 import { lessonMeta } from "./learnModel";
+import { hasLiveLessonPublication } from "./publicationEligibility";
 export const searchHit = v.object({ lessonId: v.id("lessons"), versionId: v.id("lessonVersions"), metadata: lessonMeta, matchingBlocks: v.array(v.object({ id: v.string(), text: v.string() })) });
 export const searchPublic = query({
   args: { text: v.string(), paginationOpts: paginationOptsValidator },
@@ -20,7 +21,7 @@ export const searchPublic = query({
     const seenIds = new Set<string>();
 
     for (const lesson of result.page) {
-      if (!lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) continue;
+      if (!hasLiveLessonPublication(lesson) || await creatorRestricted(ctx, lesson.ownerId)) continue;
       const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
       if (!version || version.lessonId !== lesson._id || (version.visibility !== undefined && version.visibility !== "public")) continue;
       seenIds.add(lesson._id);
@@ -47,7 +48,7 @@ export const searchPublic = query({
           .take(args.paginationOpts.numItems - page.length);
 
         for (const lesson of authorLessons) {
-          if (seenIds.has(lesson._id) || !lesson.publishedVersionId) continue;
+          if (seenIds.has(lesson._id) || !hasLiveLessonPublication(lesson)) continue;
           const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
           if (!version || version.lessonId !== lesson._id || (version.visibility !== undefined && version.visibility !== "public")) continue;
           seenIds.add(lesson._id);

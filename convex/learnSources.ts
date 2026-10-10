@@ -90,15 +90,14 @@ export function registerSourceRoutes(http: HttpRouter) {
   for (const path of [SOURCE_UPLOAD_PATH, SOURCE_CONTENT_PATH])
     http.route({ path, method: "OPTIONS", handler: sourcePreflight });
 }
-/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 function publicLabel(value: string) {
   const label = value.trim();
   // Legacy names may have been populated from email; never repeat them publicly.
+  // oxlint-disable-next-line eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs.
   return label && label.length <= 200 && !/[@\u0000-\u001f\u007f]/.test(label)
     ? label
     : undefined;
 }
-/* oxlint-enable eslint/no-control-regex */
 async function provenance(
   ctx: QueryCtx,
   source: Doc<"learnSources">,
@@ -209,7 +208,6 @@ function isPptx(bytes: Uint8Array): boolean {
     names.has("ppt/presentation.xml")
   );
 }
-/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export async function validSignature(
   blob: Blob,
   contentType: string,
@@ -239,6 +237,7 @@ export async function validSignature(
         const text = new TextDecoder("utf-8", { fatal: true }).decode(
           await blob.arrayBuffer(),
         );
+        // oxlint-disable-next-line eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs.
         return !/[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(text);
       } catch {
         return false;
@@ -248,17 +247,15 @@ export async function validSignature(
       return false;
   }
 }
-/* oxlint-enable eslint/no-control-regex */
-/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 function bounded(value: string, max: number) {
   if (
     !value.trim() ||
     value.length > max ||
+    // oxlint-disable-next-line eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs.
     /[\u0000-\u001f\u007f]/.test(value)
   )
     throw new Error("Invalid source metadata");
 }
-/* oxlint-enable eslint/no-control-regex */
 export function validateMetadata(metadata: Metadata) {
   bounded(metadata.title, LEARN_LIMITS.title);
   bounded(metadata.origin, 500);

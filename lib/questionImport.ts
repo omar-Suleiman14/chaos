@@ -1,6 +1,6 @@
 import { emptyDefinition, LIMITS, type FormDefinition } from "../convex/formLogic";
 
-export const QUESTION_IMPORT_LIMITS = { bytes: 500_000, expandedBytes: 2_000_000, rows: 200, columns: 106, errors: 100 } as const;
+const QUESTION_IMPORT_LIMITS = { bytes: 500_000, expandedBytes: 2_000_000, rows: 200, columns: 106, errors: 100 } as const;
 export type ImportProblem = { row: number; column: string; message: string };
 export class QuestionImportError extends Error {
   constructor(public readonly problems: ImportProblem[]) { super("QUESTION_IMPORT_INVALID"); }

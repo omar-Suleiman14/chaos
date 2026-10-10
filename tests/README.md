@@ -43,6 +43,10 @@ and is not part of `pnpm test` for that reason.
 the four supported types (`mcq`, `true_false`, `multi_select`, `written`).
 Import from there instead of inlining fixture data in a new test file.
 
+`tests/helpers/mcpClient.ts` connects MCP unit tests to the real registered
+server over the SDK's in-memory transport. It keeps per-test server options and
+client metadata intact, then closes both SDK sessions after each test.
+
 ## Core creator/respondent smoke
 
 `core-production-smoke.spec.ts` covers the production-shaped path in one test:

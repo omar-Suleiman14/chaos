@@ -1,16 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
-import { Client } from "@modelcontextprotocol/sdk/client/index.js";
-import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { createChaosMcpServer, McpToolError } from "@/lib/mcp/server";
+import { McpToolError } from "@/lib/mcp/server";
+import { connectMcpTestClient } from "../helpers/mcpClient";
 import type { McpCaller } from "@/lib/mcp/server";
 import { parseGameDraftInput } from "@/convex/mcpContract";
 
 async function connect(call: McpCaller | null) {
-  const server = createChaosMcpServer({ call, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" });
-  const client = new Client({ name: "games-test", version: "1.0.0" });
-  const [a, b] = InMemoryTransport.createLinkedPair();
-  await Promise.all([server.connect(a), client.connect(b)]);
-  return client;
+  return connectMcpTestClient({ call, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" }, { name: "games-test", version: "1.0.0" });
 }
 
 const input = { title: "Space quiz", questions: [{ type: "single_choice", label: "Largest planet?", options: ["Earth", "Jupiter"], correctAnswers: ["Jupiter"] }] };
