@@ -337,8 +337,13 @@
       "unit": "count"
     },
     "mcp.searchForms.payloadBytes": {
-      "budget": 19018,
-      "unit": "bytes"
+      "budget": 19054,
+      "unit": "bytes",
+      "raised": {
+        "from": 19018,
+        "reason": "Add the explicit truncated boolean to the MCP search result so callers can distinguish a bounded inventory/page from complete results; the boolean adds 36 bytes across the structured result and its text serialization, without additional database queries.",
+        "at": "2026-10-10"
+      }
     },
     "mcp.searchForms.readAmplification": {
       "budget": 340,

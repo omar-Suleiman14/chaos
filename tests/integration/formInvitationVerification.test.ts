@@ -23,6 +23,7 @@ describe("form invitations require verified email", () => {
           if (sync) await person.mutation(api.quizFunctions.getOrCreateUser, {});
           expect(await person.query(api.forms.getFormForEditor, { formId })).toBeNull();
           expect(await person.query(api.forms.searchIndex, {})).toEqual([]);
+          expect((await person.query(api.forms.listMyFormsPage, { source: "email", paginationOpts: { numItems: 10, cursor: null } })).page.invites).toEqual([]);
           expect((await person.query(api.forms.listMyForms, {})).invites).toEqual([]);
           expect((await person.query(api.formResults.listResponses, { formId, filter: {}, paginationOpts: { numItems: 10, cursor: null } })).page).toEqual([]);
           await expect(person.mutation(api.forms.acceptInvite, { collaboratorId: row._id })).rejects.toThrow("UNAUTHORIZED");
@@ -33,6 +34,9 @@ describe("form invitations require verified email", () => {
         const verified = t.withIdentity({ ...identity, emailVerified: true });
         expect(await verified.query(api.forms.getFormForEditor, { formId })).not.toBeNull();
         expect((await verified.query(api.forms.searchIndex, {})).map(row => row.id)).toContain(formId);
+        const verifiedEmailPage = await verified.query(api.forms.listMyFormsPage, { source: "email", paginationOpts: { numItems: 10, cursor: null } });
+        expect(verifiedEmailPage.page.invites.map(invite => invite.formId)).toContain(formId);
+        expect(verifiedEmailPage.page.searchIndex.map(row => row.id)).toContain(formId);
         await verified.mutation(api.forms.acceptInvite, { collaboratorId: row._id });
         // Accepted account grants survive a later absent email claim.
         expect(await person.query(api.forms.getFormForEditor, { formId })).not.toBeNull();

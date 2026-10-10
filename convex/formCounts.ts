@@ -35,11 +35,14 @@ export async function changeFormCounts(ctx: MutationCtx, form: Doc<"forms">, cha
 }
 
 /**
- * Many forms of one owner with their current counts, reading the owner's counters in one range
- * instead of one lookup per form. Forms owned by someone else are looked up one by one.
+ * Small pages read only visible form counters; larger pages use one owner range.
+ * Forms owned by someone else retain their individual indexed count lookup.
  */
 export async function withOwnerFormCounts(ctx: QueryCtx, ownerId: string, forms: Doc<"forms">[]): Promise<Doc<"forms">[]> {
   if (!forms.some((form) => form.publishedVersion !== undefined)) return forms;
+  // Avoid subscribing a 5-row library page to up to 1,000 unrelated counters.
+  // Above this threshold, one indexed owner range is less query-heavy.
+  if (forms.length <= 12) return Promise.all(forms.map((form) => withFormCounts(ctx, form)));
   const rows = await ctx.db.query("formCounters").withIndex("by_ownerId", (q) => q.eq("ownerId", ownerId)).take(1000);
   const byForm = new Map(rows.map((row) => [row.formId as string, row]));
   return await Promise.all(forms.map(async (form) => {

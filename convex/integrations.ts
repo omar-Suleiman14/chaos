@@ -1,5 +1,7 @@
 import { newSecret } from "./integrationTokenSecret";
+import { validScopes } from "./integrationScopeValidation";
 import { parseResourceRef } from "./resourceRefs";
+import { configuredRate } from "./integrationRate";
 import { getAuthIdentity } from "./authIdentity";
 import { v } from "convex/values";
 import { env, internalMutation, internalQuery, mutation, query } from "./_generated/server";
@@ -15,9 +17,8 @@ import {
 } from "./integrationContract";
 import type { QuizType } from "./integrationContract";
 import {
-  activeIntegrationToken, findIdempotent, integrationScopes, logConnectionActivity, ROTATION_GRACE_MS, scopeValidator,
+  activeIntegrationToken, findIdempotent, logConnectionActivity, ROTATION_GRACE_MS, scopeValidator,
 } from "./integrationModel";
-import type { IntegrationScope } from "./integrationModel";
 import { displayName, errorCode, sha256Hex } from "./serverUtils";
 import { disableConnectionWebhooks } from "./webhooks";
 import { readFormCounts } from "./formCounts";
@@ -100,11 +101,6 @@ async function validRefs(ctx: Ctx, ownerId: string, refs: string[]): Promise<str
   return out;
 }
 
-function validScopes(scopes: IntegrationScope[]): IntegrationScope[] {
-  const unique = [...new Set(scopes)];
-  if (!unique.length) throw new Error("INVALID_SCOPES: Choose at least one permission.");
-  return integrationScopes.filter((s) => unique.includes(s));
-}
 
 export const createConnection = mutation({
   args: {
@@ -295,12 +291,7 @@ async function itemView(ctx: Ctx, token: Token, item: Item) {
  * Authenticates a request, applies the per-token rate limit and records use.
  * Called by the HTTP router before every operation.
  */
-function configuredRate(fromConfig: number | undefined, fromEnv: string | undefined, fallback: number): number {
-  for (const value of [fromConfig, fromEnv === undefined ? undefined : Number(fromEnv)]) {
-    if (typeof value === "number" && Number.isInteger(value) && value >= 1 && value <= 100_000) return value;
-  }
-  return fallback;
-}
+
 
 /**
  * Per-connection limits per minute. Operators change them without a deploy:
