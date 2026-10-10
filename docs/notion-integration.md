@@ -15,6 +15,12 @@ The in-app end-user guide, in both English and Arabic, is available at `/docs/no
 
 Select **Choose a page to import**, select a shared page, and click **Import as lesson draft**. The page is read at that moment, and a private Chaos lesson draft is created via the same lesson service used by Max. You review and publish it yourself. Supported text, heading, list, quote, code and callout blocks are converted; unsupported media and embeds are skipped. Up to 400 blocks are imported, including up to two nested levels. Importing the same page again returns the original lesson; it does not overwrite edits.
 
+### Finding imported drafts and MCP access
+
+Open **Dashboard → Connections → Notion → Imported lesson drafts** to reopen an imported draft at any time. It also appears in **Library**, at the root unless you move it into a folder. Imported drafts remain accessible after disconnecting Notion.
+
+The **signed-in Chaos MCP** already supports imported lessons through its existing tools: `list_lessons({ scope: "owned", query: "<Notion page title>" })` and `get_lesson({ lessonId, view: "draft" })`. It can edit the same draft through revision-checked lesson tools. The MCP user must be the Chaos lesson owner; another user cannot read the draft. **Third-party bearer API connections** are separate and require the owner to select the lesson and grant suitable scopes. There is no automatic permission expansion on import.
+
 ## Sending form and quiz results
 
 Choose a Notion **data source** using **Choose a results database**. New, non-spam completed submissions create a page in the selected data source. Each page contains the Chaos response ID, time and score (when it's a quiz). **Answers, emails, student identities, uploaded files and respondent names are never synced.** Existing submissions are not backfilled. The sync uses a bounded retry queue and a stable response ID to reduce duplicates. Disable sync from the same screen at any time. Disconnecting removes Chaos's stored token and stops future delivery.

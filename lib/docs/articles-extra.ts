@@ -109,6 +109,7 @@ export const extraArticles: Record<Locale, DocArticle[]> = {
           "Select **Import as lesson draft**.",
           "Open the new **private Chaos lesson**, review it in the editor, and publish only when you are ready.",
         ] },
+        { type: "p", text: "To reopen a draft later, use **Connections → Notion → Imported lesson drafts** or find its title in [Library](/dashboard/learn/library). The lesson remains after disconnecting Notion. The signed-in Chaos MCP can use **list_lessons** with scope owned to find the draft, then **get_lesson** with view draft to read or edit it. Third-party API tokens still require explicit lesson selection and appropriate scopes." },
         { type: "tip", text: "Import is one-time, not ongoing two-way sync. Re-importing the same page reuses the existing Chaos lesson without overwriting your edits. Supported content includes headings, text, lists, code, quotes, toggles and callouts; unsupported media is skipped. Pages exceeding 400 blocks or two nested levels cannot be imported." },
         { type: "heading", id: "results", text: "Send completed quiz and form results" },
         { type: "steps", items: [
@@ -243,6 +244,7 @@ export const extraArticles: Record<Locale, DocArticle[]> = {
           "اضغط **استيراد كمسودة درس** (Import as lesson draft).",
           "افتح **مسودة الدرس الخاصة** في Chaos وراجعها داخل المحرّر، ثم انشرها عندما تصبح جاهزًا.",
         ] },
+        { type: "p", text: "للوصول إلى المسودة لاحقًا افتح **الاتصالات ← Notion ← مسودات الدروس المستوردة** أو ابحث عن عنوانها في [المكتبة](/dashboard/learn/library). تبقى المسودة بعد فصل Notion. يستطيع MCP المتصل بحسابك استخدام **list_lessons** مع owned للعثور عليها و**get_lesson** مع draft لقراءتها وتعديلها. رموز API الخارجية تحتاج منح وصول للدرس وصلاحيات مناسبة." },
         { type: "tip", text: "الاستيراد يحدث مرة واحدة، وليس مزامنة مستمرة في الاتجاهين. عند إعادة استيراد الصفحة نفسها تُستخدم مسودة الدرس الموجودة دون الكتابة فوق تعديلاتك. يدعم النص والعناوين والقوائم والأكواد والاقتباسات والتبديلات والتنبيهات، ويتجاوز الوسائط غير المدعومة. لا يمكن استيراد صفحة تتجاوز 400 كتلة أو مستويين من التداخل." },
         { type: "heading", id: "results", text: "إرسال نتائج النماذج والاختبارات المكتملة" },
         { type: "steps", items: [

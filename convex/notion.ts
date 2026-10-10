@@ -263,6 +263,26 @@ async function pageBlocks(accessToken: string, pageId: string): Promise<Array<{ 
   return result;
 }
 
+/** Private, durable history of imported lesson drafts; independent of OAuth connection lifetime. */
+export const listImports = query({
+  args: {},
+  returns: v.array(v.object({ lessonId: v.id("lessons"), title: v.string(), importedAt: v.number() })),
+  handler: async (ctx) => {
+    const { identity } = await requireActiveUser(ctx);
+    const rows = await ctx.db.query("notionImports")
+      .withIndex("by_ownerId_and_importedAt", q => q.eq("ownerId", identity.subject))
+      .order("desc").take(50);
+    const lessons: Array<{ lessonId: Id<"lessons">; title: string; importedAt: number }> = [];
+    for (const row of rows) {
+      const lesson = await ctx.db.get("lessons", row.lessonId);
+      if (lesson?.ownerId === identity.subject && lesson.communityState !== "removed") {
+        lessons.push({ lessonId: lesson._id, title: lesson.metadata.title || "Untitled lesson", importedAt: row.importedAt });
+      }
+    }
+    return lessons;
+  },
+});
+
 export const importPage = action({
   args: { pageId: v.string() },
   handler: async (ctx, args): Promise<{ lessonId: Id<"lessons">; skipped: number }> => {
