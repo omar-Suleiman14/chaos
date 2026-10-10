@@ -1,19 +1,13 @@
-import type { Lesson } from "./types";
+import type { PublicLessonSeoSummary } from "./types";
 import { cache } from "react";
 import { unstable_cache } from "next/cache";
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
 import type { FunctionReturnType } from "convex/server";
-import { lessonDocumentToEditorBlocks, type LessonEditorBlock } from "@/lib/lessonBlockAdapter";
 
 function client() {
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
   return url ? new ConvexHttpClient(url) : null;
-}
-
-// The SEO helpers consume text runs, whereas the editor adapter accepts strings too.
-function metadataBlocks(blocks: LessonEditorBlock[]): unknown[] {
-  return blocks.map(block => ({ ...block, content: typeof block.content === "string" ? [{ type: "text", text: block.content }] : block.content, children: metadataBlocks(block.children) }));
 }
 
 /**
@@ -36,6 +30,7 @@ export type PublicLessonResult = NonNullable<FunctionReturnType<typeof api.learn
 export type CourseLessonResult = NonNullable<FunctionReturnType<typeof api.courses.lesson>>;
 
 const cachedLessonResult = publicCache("public-lesson-result-v2", (id: string) => client()!.query(api.learnFrontend.publicLesson, { id }));
+const cachedLessonSummary = publicCache("public-lesson-summary-v1", (id: string) => client()!.query(api.learnFrontend.publicLessonSummary, { id }));
 
 /**
  * The published lesson exactly as the reader's own query returns it, so the page renders it in
@@ -55,11 +50,26 @@ export const fetchPublicLessonResult = cache(async (id: string): Promise<PublicL
  * This projection supports metadata only; client hooks own reader/editor rendering.
  * Cached per request, so generateMetadata and the page share one backend read.
  */
-export const fetchPublicLesson = cache(async (id: string): Promise<Lesson | null | undefined> => {
+export const fetchPublicLesson = cache(async (id: string): Promise<PublicLessonSeoSummary | null | undefined> => {
   if (!client()) return undefined;
-  const result = await fetchPublicLessonResult(id);
-  return result ? toPublicLesson(result) : null;
+  const result = await cachedLessonSummary(id).catch(() => null);
+  return result ? toPublicLessonSummary(result) : null;
 });
+
+function toPublicLessonSummary(result: NonNullable<FunctionReturnType<typeof api.learnFrontend.publicLessonSummary>>): PublicLessonSeoSummary {
+  return {
+    id: result.lessonId,
+    ownerName: result.ownerName,
+    visibility: "public",
+    moderation: "ok",
+    published: {
+      version: result.version,
+      meta: { ...result.metadata, indexing: result.metadata.indexing ?? "noindex", curricula: [] },
+      publishedAt: result.publishedAt,
+      outline: result.outline,
+    },
+  };
+}
 
 /**
  * The public course a plain lesson link belongs to. Misses are cached too (as null), so a lesson
@@ -78,19 +88,6 @@ export const fetchCourseLesson = cache(async (courseId: string, lessonId: string
   if (!client()) return null;
   return cachedCourseLesson(courseId, lessonId).catch(() => null);
 });
-
-function toPublicLesson(result: PublicLessonResult): Lesson | null {
-  const converted = lessonDocumentToEditorBlocks(result.version.document);
-  if (!converted.ok) return null;
-  const meta = { ...result.version.metadata, indexing: result.version.metadata.indexing ?? "noindex" as const, curricula: [] };
-  const content = metadataBlocks(converted.value);
-  const published = { version: result.version.number, meta, content, publishedAt: result.version.publishedAt };
-  // Metadata projection only: no private draft, notes, source bytes or grading data.
-  return { id: result.lessonId, ownerId: result.ownerId, ownerName: result.ownerName,
-    draft: { meta, content, updatedAt: published.publishedAt }, published, publishedDraftAt: published.publishedAt,
-    visibility: "public", sources: [], quizzes: [], stats: { views: 0, saves: 0, helpful: 0, notHelpful: 0, forks: 0 },
-    moderation: "ok", quality: "none", createdAt: result.createdAt, updatedAt: published.publishedAt };
-}
 
 /**
  * Discovery reads every page; the sitemap splits the result into 50,000-URL shards (lib/sitemap.ts).
