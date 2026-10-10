@@ -20,3 +20,17 @@ export function describeChanges(before: Record<string, Contract>, after: Record<
 }
 
 export const byName = (tools: Tool[]) => Object.fromEntries([...tools].sort((x, y) => x.name.localeCompare(y.name)).map((t) => [t.name, contract(t)]));
+
+export async function withMcpInventorySession<T>(
+  connect: () => Promise<void>,
+  list: () => Promise<T>,
+  closeClient: () => Promise<void>,
+  closeServer: () => Promise<void>,
+): Promise<T> {
+  try {
+    await connect();
+    return await list();
+  } finally {
+    await Promise.allSettled([closeClient(), closeServer()]);
+  }
+}
