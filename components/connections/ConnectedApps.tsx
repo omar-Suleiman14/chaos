@@ -7,6 +7,9 @@ import { NotionMark } from "@/components/site/marks";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { api } from "@/convex/_generated/api";
 import { errorMessage } from "@/lib/errors";
+import type { Id } from "@/convex/_generated/dataModel";
+import { Select } from "@/components/workspace/Select";
+import { NotionPageSelect } from "@/components/connections/NotionImport";
 
 const copy = {
   en: {
@@ -18,6 +21,7 @@ const copy = {
       loadPages: "Choose a page to import", importPage: "Import as lesson draft", choosePage: "Choose a Notion page",
       loadDatabases: "Choose a results database", chooseDatabase: "Choose a database", enableSync: "Sync results here",
       disableSync: "Stop results sync", syncing: "Sending results to", success: "Lesson draft created. Open in Chaos",
+      course: "Course", chooseCourse: "Choose a course", newCourse: "New course", newCourseHint: "Named after the page",
       skipped: "Some unsupported blocks were skipped.", empty: "Nothing shared yet. Share pages or databases with the Chaos integration in Notion.",
       loading: "Working…", error: "Could not complete that action. Try again.",
       privacy: "Only scores and submission details are sent; individual answers and respondent names stay in Chaos.",
@@ -34,6 +38,7 @@ const copy = {
       loadPages: "اختر صفحة لاستيرادها", importPage: "استيراد كمسودة درس", choosePage: "اختر صفحة من Notion",
       loadDatabases: "اختر قاعدة بيانات للنتائج", chooseDatabase: "اختر قاعدة بيانات", enableSync: "مزامنة النتائج هنا",
       disableSync: "إيقاف مزامنة النتائج", syncing: "إرسال النتائج إلى", success: "تم إنشاء مسودة الدرس. افتحها في Chaos",
+      course: "الدورة", chooseCourse: "اختر دورة", newCourse: "دورة جديدة", newCourseHint: "باسم الصفحة",
       skipped: "تم تجاهل بعض الكتل غير المدعومة.", empty: "لا توجد عناصر مشتركة بعد. شارك الصفحات أو قواعد البيانات مع Chaos في Notion.",
       loading: "جارٍ العمل…", error: "تعذر إتمام الإجراء. حاول مجددًا.",
       privacy: "تُرسل الدرجات وبيانات الإرسال فقط، وتبقى الإجابات الفردية وأسماء المشاركين في Chaos.",
@@ -43,6 +48,8 @@ const copy = {
   },
 };
 type Item = { id: string; title: string; url?: string };
+/** Course choice that creates a course named after the page; never a real document id. */
+const NEW_COURSE = "new";
 type Returned = keyof typeof copy.en.notion.returned;
 
 export default function ConnectedApps() {
@@ -59,11 +66,15 @@ export default function ConnectedApps() {
   const importPage = useAction(api.notion.importPage);
   const chooseDataSource = useAction(api.notion.chooseDataSource);
   const disableSync = useMutation(api.notion.disableResultSync);
+  const createCourse = useMutation(api.courses.create);
   const [pages, setPages] = useState<Item[] | null>(null);
   const [sources, setSources] = useState<Item[] | null>(null);
   const [pageId, setPageId] = useState("");
   const [sourceId, setSourceId] = useState("");
-  const [lessonId, setLessonId] = useState<string | null>(null);
+  const [courseId, setCourseId] = useState("");
+  // Lessons live in courses (there is no standalone lesson list), so an import always names one.
+  const courses = useQuery(api.courses.listMine, isAuthenticated && pages !== null ? {} : "skip");
+  const [imported, setImported] = useState<{ lessonId: string; courseId: string } | null>(null);
   const [skipped, setSkipped] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
@@ -120,24 +131,30 @@ export default function ConnectedApps() {
               <p><strong>{t.notion.connected}:</strong> {status.workspaceName}</p>
               <button className="ws-btn ws-btn--sm" disabled={busy} onClick={() => void act(async () => { setPages(await getPages({})); })}>{t.notion.loadPages}</button>
               {pages !== null && <>
-                {pages.length ? <select aria-label={t.notion.choosePage} className="w-full rounded-md border p-2" value={pageId} onChange={(e) => setPageId(e.target.value)}>
-                  <option value="">{t.notion.choosePage}</option>{pages.map((page) => <option key={page.id} value={page.id}>{page.title}</option>)}
-                </select> : <p>{t.notion.empty}</p>}
-                <button className="ws-btn ws-btn--sm" disabled={!pageId || busy} onClick={() => void act(async () => {
-                  const result = await importPage({ pageId }); setLessonId(result.lessonId); setSkipped(result.skipped > 0);
-                })}>{t.notion.importPage}</button>
+                {pages.length ? <>
+                  <NotionPageSelect pages={pages} value={pageId} onChange={setPageId} disabled={busy} />
+                  <Select label={t.notion.course} placeholder={t.notion.chooseCourse} className="w-full" disabled={busy || courses === undefined} value={courseId} onChange={setCourseId}
+                    options={[...(courses ?? []).filter((c) => !c.archived).map((c) => ({ value: c.id as string, label: c.title })), { value: NEW_COURSE, label: t.notion.newCourse, description: t.notion.newCourseHint }]} />
+                  <button className="ws-btn ws-btn--primary ws-btn--sm" disabled={!pageId || !courseId || busy} onClick={() => void act(async () => {
+                    const page = pages.find((p) => p.id === pageId);
+                    const target = courseId === NEW_COURSE ? await createCourse({ title: page?.title ?? "", language: locale }) : courseId as Id<"learnCollections">;
+                    const result = await importPage({ pageId, courseId: target });
+                    setCourseId(target); setImported({ lessonId: result.lessonId, courseId: target }); setSkipped(result.skipped > 0);
+                  })}>{t.notion.importPage}</button>
+                </> : <p>{t.notion.empty}</p>}
               </>}
-              {lessonId && <p><a className="underline" href={`/${locale}/dashboard/learn/lessons/${lessonId}`}>{t.notion.success}</a>{skipped ? ` ${t.notion.skipped}` : ""}</p>}
+              {imported && <p><a className="underline" href={`/${locale}/dashboard/learn/lessons/${imported.lessonId}?course=${imported.courseId}`}>{t.notion.success}</a>{skipped ? ` ${t.notion.skipped}` : ""}</p>}
               <button className="ws-btn ws-btn--sm" disabled={busy} onClick={() => void act(async () => { setSources(await getDataSources({})); })}>{t.notion.loadDatabases}</button>
               {sources !== null && <>
-                {sources.length ? <select aria-label={t.notion.chooseDatabase} className="w-full rounded-md border p-2" value={sourceId} onChange={(e) => setSourceId(e.target.value)}>
-                  <option value="">{t.notion.chooseDatabase}</option>{sources.map((source) => <option key={source.id} value={source.id}>{source.title}</option>)}
-                </select> : <p>{t.notion.empty}</p>}
-                <button className="ws-btn ws-btn--sm" disabled={!sourceId || busy} onClick={() => void act(async () => { await chooseDataSource({ id: sourceId }); })}>{t.notion.enableSync}</button>
+                {sources.length ? <>
+                  <Select label={t.notion.chooseDatabase} placeholder={t.notion.chooseDatabase} className="w-full" disabled={busy} value={sourceId} onChange={setSourceId}
+                    options={sources.map((source) => ({ value: source.id, label: source.title }))} />
+                  <button className="ws-btn ws-btn--sm" disabled={!sourceId || busy} onClick={() => void act(async () => { await chooseDataSource({ id: sourceId }); })}>{t.notion.enableSync}</button>
+                </> : <p>{t.notion.empty}</p>}
               </>}
               {status.dataSourceId && <p>{t.notion.syncing}: {status.dataSourceTitle} <button className="underline" disabled={busy} onClick={() => void act(async () => { await disableSync({}); })}>{t.notion.disableSync}</button></p>}
               <p className="text-xs opacity-70">{t.notion.privacy}</p>
-              <button className="ws-btn ws-btn--sm" disabled={busy} onClick={() => void act(async () => { await disconnect({}); setPages(null); setSources(null); setLessonId(null); })}>{t.notion.disconnect}</button>
+              <button className="ws-btn ws-btn--sm" disabled={busy} onClick={() => void act(async () => { await disconnect({}); setPages(null); setSources(null); setImported(null); })}>{t.notion.disconnect}</button>
             </div>
           ) : <p>{t.notion.loading}</p>}
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
