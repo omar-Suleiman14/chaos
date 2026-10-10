@@ -1,3 +1,4 @@
+import { validateTimeLimit } from "./liveTimeLimit";
 import { MIN_READ_TIME_MS } from "./questionQuality";
 import { recordStudent } from "./studentRoster";
 import { businessMember } from "./businessAccess";
@@ -31,7 +32,7 @@ import { countResponse, ownerBanned, responseCap } from "./respond";
 import { emitWebhookEvent, formResponseData } from "./webhookEvents";
 import {
   answerPoints, cleanChoice, cleanNickname, DEFAULT_BREAK, DEFAULT_TIME_LIMIT, MAX_BREAK, MIN_BREAK, START_COUNTDOWN_MS, FREE_PLAYER_LIMIT, IDLE_EXPIRY_MS, isCorrectAnswer,
-  isValidPin, MAX_LIVE_QUESTIONS, MAX_TIME_LIMIT, MIN_TIME_LIMIT, nicknameKey, nicknameProblem,
+  isValidPin, MAX_LIVE_QUESTIONS, nicknameKey, nicknameProblem,
   PRO_PLAYER_LIMIT, questionsFromForm, rankScores, streakBonus,
 } from "./liveLogic";
 import type { LiveQuestion } from "./liveLogic";
@@ -388,11 +389,7 @@ export function validateStartTarget(players: number) {
   }
 }
 
-function validateTimeLimit(seconds: number) {
-  if (!Number.isInteger(seconds) || seconds < MIN_TIME_LIMIT || seconds > MAX_TIME_LIMIT) {
-    throw new Error(`LIVE_INVALID: Choose between ${MIN_TIME_LIMIT} and ${MAX_TIME_LIMIT} seconds.`);
-  }
-}
+
 
 /** Theme and phone layout are agreed before starting, so all players see the same choices. */
 export const setGameSettings = mutation({
