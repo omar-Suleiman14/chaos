@@ -1,8 +1,8 @@
 import { readFileSync } from "node:fs";
-import { fileURLToPath } from "node:url";
+import { resolve } from "node:path";
 import { describe, expect, it } from "vitest";
 
-const css = readFileSync(fileURLToPath(new URL("../../components/learn/learn.css", import.meta.url)), "utf8");
+const css = readFileSync(resolve(process.cwd(), "components/learn/learn.css"), "utf8");
 
 describe("Learn cover actions on touch devices", () => {
   it("retains exactly one identical hover:none override", () => {
