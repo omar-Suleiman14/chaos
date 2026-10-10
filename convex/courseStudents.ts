@@ -18,9 +18,14 @@ import { avatarSeed } from "../lib/avatarSeed";
 const GUEST_TOKEN = /^[A-Za-z0-9_-]{32,128}$/;
 const guestArgs = { guestToken: v.optional(v.string()) };
 
-/** The learner's enrollment key: their account when signed in, otherwise a hash of the device token. */
-async function learner(ctx: QueryCtx | MutationCtx, guestToken: string | undefined) {
+/**
+ * The learner's enrollment key: their account when signed in, otherwise a hash of the device token.
+ * Writes pass `write`: a banned or suspended account is read-only and cannot enroll or record
+ * progress into another author's roster.
+ */
+async function learner(ctx: QueryCtx | MutationCtx, guestToken: string | undefined, write = false) {
   const identity = await getAuthIdentity(ctx);
+  if (identity && write) await requireActiveUser(ctx);
   if (identity) return { key: `user:${identity.subject}`, studentId: identity.subject as string, guestHash: undefined };
   if (!guestToken || !GUEST_TOKEN.test(guestToken)) return null;
   const guestHash = await sha256Hex(guestToken);
@@ -51,7 +56,7 @@ export const enroll = mutation({
   handler: async (ctx, args) => {
     const course = await readPublicCourse(ctx, { courseId: args.courseId });
     if (!course) throw new Error("NOT_FOUND: Course unavailable.");
-    const who = await learner(ctx, args.guestToken);
+    const who = await learner(ctx, args.guestToken, true);
     if (!who) throw new Error("VALIDATION_FAILED: Sign in or continue as a guest to start this course.");
     const row = await ctx.db.get("learnCollections", course.id);
     if (!row || row.ownerId === who.studentId) return null;
@@ -83,7 +88,7 @@ export const recordLesson = mutation({
     const course = await readPublicCourse(ctx, { courseId: args.courseId });
     const lesson = course?.lessons.find(l => l.id === args.lessonId);
     if (!course || !lesson) return null;
-    const who = await learner(ctx, args.guestToken);
+    const who = await learner(ctx, args.guestToken, true);
     const row = who ? await enrollmentFor(ctx, course.id, who.key) : null;
     if (!row) return null;
     const done = new Set(row.completedLessonIds);

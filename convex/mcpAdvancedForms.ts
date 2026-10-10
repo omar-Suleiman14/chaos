@@ -3,16 +3,15 @@ import { ConvexError, v } from "convex/values";
 import { internalQuery, internalMutation, type MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireLearnActor } from "./mcpLearn";
-import { formRoleFor } from "./authz";
+import { formRoleForActor } from "./authz";
 import { applyFormSettingsForActor, replaceDraft } from "./forms";
 import { checkDefinition } from "./formLogic";
 import { formSettingsValidator, ruleValidator, hiddenParameterValidator } from "./formModel";
 
 async function editable(ctx: MutationCtx, userId: string, formId: Id<"forms">, expectedRevision: number) {
   await requireLearnActor(ctx, userId);
-  const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", userId)).first();
   const form = await ctx.db.get("forms", formId);
-  const role = form ? await formRoleFor(ctx, form, { subject: userId, issuer: "mcp", tokenIdentifier: `mcp|${userId}`, email: user!.email }) : null;
+  const role = form ? await formRoleForActor(ctx, form, userId) : null;
   if (!form || !role || role === "viewer" || form.isBanned) throw new Error("FORBIDDEN: Editable form required.");
   if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 1) throw new Error("INVALID_REVISION");
   if (form.draftRevision !== expectedRevision) throw new ConvexError({ code: "DRAFT_CONFLICT", currentRevision: form.draftRevision, expectedRevision });

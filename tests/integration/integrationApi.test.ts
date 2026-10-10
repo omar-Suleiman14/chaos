@@ -66,6 +66,41 @@ describe("integration API: token rotation", () => {
     expect((await asNew("GET", "/capabilities")).status).toBe(200);
   });
 
+  it("does not let a token the owner replaced mint a successor", async () => {
+    startOfMinute();
+    const t = createTestConvex();
+    const { owner, token: leaked, tokenId } = await connect(t);
+    const replaced = await owner.mutation(api.integrations.rotateConnection, { tokenId });
+    const asLeaked = caller(t, () => leaked);
+    // The replaced token still reads during its grace period...
+    expect((await asLeaked("GET", "/capabilities")).status).toBe(200);
+    // ...but cannot rotate itself into a fresh credential or displace the owner's token.
+    const attempt = await asLeaked("POST", "/connection/rotate");
+    expect(attempt.status).toBe(403);
+    expect(attempt.body.error.code).toBe("TOKEN_REPLACED");
+    expect((await caller(t, () => replaced.token)("GET", "/capabilities")).status).toBe(200);
+    vi.setSystemTime(replaced.previousTokenExpiresAt + 1000);
+    expect((await asLeaked("GET", "/capabilities")).status).toBe(401);
+    expect((await caller(t, () => replaced.token)("GET", "/capabilities")).status).toBe(200);
+  });
+
+  it("keeps the owner's containment after the connection rotated itself first", async () => {
+    startOfMinute();
+    const t = createTestConvex();
+    const { owner, token: original, tokenId } = await connect(t);
+    const self = await caller(t, () => original)("POST", "/connection/rotate");
+    expect(self.status).toBe(200);
+    const replaced = await owner.mutation(api.integrations.rotateConnection, { tokenId });
+    // The client's own token is now the replaced one; the original is gone entirely.
+    expect((await caller(t, () => self.body.token)("POST", "/connection/rotate")).body.error.code).toBe("TOKEN_REPLACED");
+    expect((await caller(t, () => original)("POST", "/connection/rotate")).status).toBe(401);
+    expect((await caller(t, () => replaced.token)("GET", "/capabilities")).status).toBe(200);
+    // A later self-rotation with the owner's token restores ordinary retry safety.
+    const next = await caller(t, () => replaced.token)("POST", "/connection/rotate");
+    expect(next.status).toBe(200);
+    expect((await caller(t, () => replaced.token)("POST", "/connection/rotate")).status).toBe(200);
+  });
+
   it("rotates through the API; a retry with the old token never locks the client out", async () => {
     startOfMinute();
     const t = createTestConvex();
