@@ -56,6 +56,14 @@ function titleFromPage(page: NotionPage): string {
   return title?.map((p) => p.plain_text ?? "").join("").trim().slice(0, 200) || "Untitled";
 }
 
+/** Whether this deployment has Notion OAuth configured; never exposes the values. */
+export const available = query({
+  args: {},
+  handler: async () => {
+    try { config(); return true; } catch { return false; }
+  },
+});
+
 export const connection = query({
   args: {},
   handler: async (ctx) => {

@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useAction, useMutation, useQuery } from "convex/react";
 import { ArrowUpRight } from "lucide-react";
 import { NotionMark } from "@/components/site/marks";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { api } from "@/convex/_generated/api";
+import { errorMessage } from "@/lib/errors";
 
 const copy = {
   en: {
@@ -20,6 +21,8 @@ const copy = {
       skipped: "Some unsupported blocks were skipped.", empty: "Nothing shared yet. Share pages or databases with the Chaos integration in Notion.",
       loading: "Working…", error: "Could not complete that action. Try again.",
       privacy: "Only scores and submission details are sent; individual answers and respondent names stay in Chaos.",
+      soon: "Coming soon",
+      returned: { connected: "Notion is connected.", denied: "Notion access was not granted.", failed: "Could not connect Notion. Try again." },
     },
   },
   ar: {
@@ -34,14 +37,18 @@ const copy = {
       skipped: "تم تجاهل بعض الكتل غير المدعومة.", empty: "لا توجد عناصر مشتركة بعد. شارك الصفحات أو قواعد البيانات مع Chaos في Notion.",
       loading: "جارٍ العمل…", error: "تعذر إتمام الإجراء. حاول مجددًا.",
       privacy: "تُرسل الدرجات وبيانات الإرسال فقط، وتبقى الإجابات الفردية وأسماء المشاركين في Chaos.",
+      soon: "قريبًا",
+      returned: { connected: "تم ربط Notion.", denied: "لم يُمنح الوصول إلى Notion.", failed: "تعذر ربط Notion. حاول مجددًا." },
     },
   },
 };
 type Item = { id: string; title: string; url?: string };
+type Returned = keyof typeof copy.en.notion.returned;
 
 export default function ConnectedApps() {
   const t = useCopy(copy);
   const { locale } = useLocale();
+  const available = useQuery(api.notion.available);
   const status = useQuery(api.notion.connection);
   const connect = useMutation(api.notion.beginConnect);
   const disconnect = useMutation(api.notion.disconnect);
@@ -58,11 +65,22 @@ export default function ConnectedApps() {
   const [skipped, setSkipped] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [returned, setReturned] = useState<Returned | null>(null);
+
+  // The OAuth callback lands here with ?notion=connected|denied|failed; show it once, then drop it from the URL.
+  useEffect(() => {
+    const url = new URL(window.location.href);
+    const value = url.searchParams.get("notion");
+    if (value !== "connected" && value !== "denied" && value !== "failed") return;
+    setReturned(value);
+    url.searchParams.delete("notion");
+    window.history.replaceState(window.history.state, "", url.pathname + url.search + url.hash);
+  }, []);
 
   const act = async (operation: () => Promise<void>) => {
     if (busy) return;
     setBusy(true); setError("");
-    try { await operation(); } catch (err) { setError(err instanceof Error ? err.message : t.notion.error); }
+    try { await operation(); } catch (err) { setError(errorMessage(err, t.notion.error)); }
     finally { setBusy(false); }
   };
 
@@ -78,11 +96,19 @@ export default function ConnectedApps() {
           <p>{t.max.body}</p>
           <a className="ws-btn ws-btn--sm" href="https://trymaxnow.vercel.app" target="_blank" rel="noreferrer">{t.max.action} <ArrowUpRight size={14} aria-hidden /></a>
         </article>
+        {available === false ? (
+        <article className="cx-app cx-app--soon" aria-label={`${t.notion.name}: ${t.notion.soon}`}>
+          <span className="cx-app__mark" aria-hidden><NotionMark size={20} /></span>
+          <h3>{t.notion.name}</h3>
+          <span className="ws-pill">{t.notion.soon}</span>
+        </article>
+        ) : (
         <article className="cx-app">
           <span className="cx-app__mark" aria-hidden><NotionMark size={20} /></span>
           <h3>{t.notion.name}</h3>
           <p>{t.notion.body}</p>
-          {status === null ? (
+          {returned && <output className={returned === "connected" ? "block text-sm" : "block text-sm text-red-600"}>{t.notion.returned[returned]}</output>}
+          {available === undefined ? <p>{t.notion.loading}</p> : status === null ? (
             <button className="ws-btn ws-btn--sm" disabled={busy} onClick={() => void act(async () => {
               const url = await connect({ locale: locale === "ar" ? "ar" : "en" });
               window.location.assign(url);
@@ -114,6 +140,7 @@ export default function ConnectedApps() {
           ) : <p>{t.notion.loading}</p>}
           {error && <p role="alert" className="text-sm text-red-600">{error}</p>}
         </article>
+        )}
       </div>
     </section>
   );

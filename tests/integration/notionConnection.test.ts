@@ -14,6 +14,13 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("Notion connection: ownership and OAuth", () => {
+  it("reports whether Notion OAuth is configured without exposing its settings", async () => {
+    const t = createTestConvex();
+    expect(await t.query(api.notion.available, {})).toBe(true);
+    vi.stubEnv("NOTION_ENCRYPTION_KEY", "too-short");
+    expect(await t.query(api.notion.available, {})).toBe(false);
+  });
+
   it("requires a one-use, expiring OAuth state and never shows the stored token", async () => {
     const t = createTestConvex();
     const owner = t.withIdentity(creatorIdentity);
