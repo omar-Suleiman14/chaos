@@ -23,6 +23,7 @@ import { emitFormStatusChange } from "./webhookEvents";
 import { registerMcpGames } from "./mcpGames";
 import { withFormCounts, withOwnerFormCounts } from "./formCounts";
 import { enumerateForms } from "./formInventory";
+import { readCompletedResponseSample } from "./formResponseSample";
 
 type Ctx = QueryCtx | MutationCtx;
 type Role = "owner" | "editor" | "viewer";
@@ -198,9 +199,7 @@ export const getResults = internalQuery({
     });
     let quiz: { averageScore: number; maxScore: number; averagePercent: number; graded: number } | null = null;
     if (def.quiz?.enabled) {
-      const recent = await ctx.db.query("formResponses")
-        .withIndex("by_formId_and_status_and_submittedAt", (q) => q.eq("formId", form._id).eq("status", "completed"))
-        .order("desc").take(ANALYSIS_SAMPLE);
+      const recent = await readCompletedResponseSample(ctx, form._id, ANALYSIS_SAMPLE);
       const graded = recent.filter((r) => !r.spam && r.quizScore !== undefined && (r.quizMaxScore ?? 0) > 0);
       if (graded.length) {
         const avg = graded.reduce((s, r) => s + r.quizScore!, 0) / graded.length;

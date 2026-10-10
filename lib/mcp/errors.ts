@@ -1,10 +1,11 @@
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
+import { codedMessage } from "../codedMessage";
 
 /**
  * What kind of failure a tool error is, so people and assistants know how to recover:
  * fix the arguments, ask for access, reload and retry, finish the content first, wait, or report a fault.
  */
-export const MCP_ERROR_CATEGORIES = ["validation", "auth", "permission", "ownership", "not_found", "revision_conflict", "publication", "rate_limit", "plan", "internal"] as const;
+const MCP_ERROR_CATEGORIES = ["validation", "auth", "permission", "ownership", "not_found", "revision_conflict", "publication", "rate_limit", "plan", "internal"] as const;
 export type McpErrorCategory = (typeof MCP_ERROR_CATEGORIES)[number];
 
 const CATEGORY: Record<string, McpErrorCategory> = {
@@ -47,8 +48,8 @@ export class McpToolError extends Error {
 /** Errors thrown as `CODE: message` (Convex mutations, permission checks) keep their code. */
 function coded(error: unknown): McpToolError | null {
   if (error instanceof McpToolError) return error;
-  const match = error instanceof Error ? /^([A-Z][A-Z_]+): ([\s\S]*)$/.exec(error.message) : null;
-  return match ? new McpToolError(match[1], match[2].trim()) : null;
+  const match = error instanceof Error ? codedMessage(error.message, "tool") : null;
+  return match ? new McpToolError(match.code, match.message) : null;
 }
 
 /** The SDK reports schema failures as "message at path" lines; turn them into "path: message" problems. */
