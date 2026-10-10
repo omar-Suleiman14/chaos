@@ -154,8 +154,17 @@ export const listIndexableLessons = query({
     pageCheck(args.paginationOpts.numItems);
     const result = await ctx.db.query("lessons").withIndex("by_visibility_and_communityState", q => q.eq("visibility", "public").eq("communityState", "ok")).paginate(args.paginationOpts);
     const page = [];
+    // Multiple public lessons on one SEO page can share a creator. Keep the
+    // restriction result only for this reactive query execution, not globally.
+    const ownerRestrictions = new Map<string, Promise<boolean>>();
     for (const lesson of result.page) {
-      if (!hasLiveLessonPublication(lesson) || await creatorRestricted(ctx, lesson.ownerId)) continue;
+      if (!hasLiveLessonPublication(lesson)) continue;
+      let restricted = ownerRestrictions.get(lesson.ownerId);
+      if (!restricted) {
+        restricted = creatorRestricted(ctx, lesson.ownerId);
+        ownerRestrictions.set(lesson.ownerId, restricted);
+      }
+      if (await restricted) continue;
       const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
       if (!version || version.lessonId !== lesson._id || version.metadata.indexing !== "index" || (version.visibility !== undefined && version.visibility !== "public")) continue;
       page.push({ lessonId: lesson._id, versionId: version._id, metadata: version.metadata, publishedAt: version.publishedAt });
