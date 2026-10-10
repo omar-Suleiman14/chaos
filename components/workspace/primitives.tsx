@@ -2,7 +2,7 @@
 
 import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { MoreHorizontal, X, type LucideIcon } from "lucide-react";
+import { ChevronRight, MoreHorizontal, X, type LucideIcon } from "lucide-react";
 import { useCopy } from "@/lib/i18n";
 import { useModal } from "./useModal";
 
@@ -157,6 +157,16 @@ export function WsTabs<T extends string>({ tabs, value, onChange, label, badge, 
 }) {
   const bar = useRef<HTMLDivElement>(null);
   const [indicator, setIndicator] = useState<{ left: number; width: number } | null>(null);
+  // Which edges have tabs scrolled out of view, so a phone shows that the row scrolls.
+  const [overflow, setOverflow] = useState({ start: false, end: false });
+  const updateOverflow = () => {
+    const box = bar.current;
+    if (!box) return;
+    // scrollLeft runs negative in right-to-left layouts; the distance from the start is what matters.
+    const from = Math.abs(box.scrollLeft), max = box.scrollWidth - box.clientWidth;
+    const next = { start: from > 1, end: from < max - 1 };
+    setOverflow(prior => prior.start === next.start && prior.end === next.end ? prior : next);
+  };
   useLayoutEffect(() => {
     const measure = () => {
       const el = bar.current?.querySelector<HTMLElement>('[aria-selected="true"]');
@@ -169,12 +179,14 @@ export function WsTabs<T extends string>({ tabs, value, onChange, label, badge, 
         }
       }
     };
-    measure();
-    window.addEventListener("resize", measure);
-    return () => window.removeEventListener("resize", measure);
+    const update = () => { measure(); updateOverflow(); };
+    update();
+    window.addEventListener("resize", update);
+    return () => window.removeEventListener("resize", update);
   }, [value, tabs]);
   return (
-    <div ref={bar} className="ws-tabs" role="tablist" tabIndex={-1} aria-label={label}
+    <div className="ws-tabs-wrap" data-overflow-start={overflow.start || undefined} data-overflow-end={overflow.end || undefined}>
+    <div ref={bar} className="ws-tabs" role="tablist" tabIndex={-1} aria-label={label} onScroll={updateOverflow}
       onKeyDown={(e) => {
         if (!["ArrowRight", "ArrowLeft", "Home", "End"].includes(e.key)) return;
         e.preventDefault();
@@ -192,6 +204,19 @@ export function WsTabs<T extends string>({ tabs, value, onChange, label, badge, 
         </button>
       ))}
       {indicator && <span className="ws-tab-indicator" style={indicator} aria-hidden="true" />}
+    </div>
+    {overflow.end && (
+      // Pointer shortcut only: keyboard users move between tabs with the arrow keys.
+      <button type="button" className="ws-tabs-more" tabIndex={-1} aria-hidden="true"
+        onClick={() => {
+          const box = bar.current;
+          if (!box) return;
+          const rtl = getComputedStyle(box).direction === "rtl";
+          box.scrollBy({ left: (rtl ? -1 : 1) * box.clientWidth * 0.7, behavior: "smooth" });
+        }}>
+        <ChevronRight size={16} />
+      </button>
+    )}
     </div>
   );
 }
