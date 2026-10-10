@@ -9,7 +9,7 @@ describe("form presentation step builder", () => {
     expect(buildSteps(def, new Set(["two"]))).toEqual([{ key: "all", fields: [def.fields[1]] }]);
   });
   it("immersive mode yields one step per visible non-section field", () => {
-    const def = { ...emptyDefinition("test"), presentation: "flow" as const, fields: [question("one"), question("two")] };
+    const def = { ...emptyDefinition("test"), presentation: "conversational" as const, fields: [question("one"), question("two")] };
     expect(buildSteps(def, new Set(["one"])).map(s => s.key)).toEqual(["one"]);
   });
 });
