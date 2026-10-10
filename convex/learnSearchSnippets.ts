@@ -7,8 +7,9 @@ export function matchingLessonSnippets<T extends { id: string }>(
   if (words.length === 0) return matches;
   for (const block of blocks) {
     if (!("text" in block) || typeof block.text !== "string") continue;
-    if (!words.some(word => block.text.toLocaleLowerCase().includes(word))) continue;
-    matches.push({ id: block.id, text: block.text.slice(0, 300) });
+    const text = block.text;
+    if (!words.some(word => text.toLocaleLowerCase().includes(word))) continue;
+    matches.push({ id: block.id, text: text.slice(0, 300) });
     if (matches.length === 5) break;
   }
   return matches;
