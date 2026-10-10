@@ -73,21 +73,21 @@
       }
     },
     "source.rules": {
-      "budget": 3644,
+      "budget": 3654,
       "unit": "count",
       "raised": {
-        "from": 3172,
-        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Stylesheets grew with the classroom tools, reader menus and version history redesign (#113-#123). Follow-up: move route-only rules out of the global workspace styles loaded by app/[lang]/layout.tsx.",
-        "at": "2026-10-09"
+        "from": 3644,
+        "reason": "Native magnetic file-drop component adds ten scoped CSS rules/selectors for drag highlight, compact layout, keyboard focus and reduced motion. No global selectors or infinite animation; measured by CI for PR #307.",
+        "at": "2026-10-10"
       }
     },
     "source.selectors": {
-      "budget": 4012,
+      "budget": 4022,
       "unit": "count",
       "raised": {
-        "from": 3489,
-        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Stylesheets grew with the classroom tools, reader menus and version history redesign (#113-#123). Follow-up: move route-only rules out of the global workspace styles loaded by app/[lang]/layout.tsx.",
-        "at": "2026-10-09"
+        "from": 4012,
+        "reason": "Native magnetic file-drop component adds ten scoped CSS rules/selectors for drag highlight, compact layout, keyboard focus and reduced motion. No global selectors or infinite animation; measured by CI for PR #307.",
+        "at": "2026-10-10"
       }
     },
     "source.transitionAll": {
