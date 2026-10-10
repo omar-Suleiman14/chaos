@@ -35,8 +35,8 @@ describe("batched published lesson reads", () => {
     })).toEqual(ids.map((_, i) => `Published content ${i}`));
     expect(result[0].ownerName).toBe("Publication author");
     if (count > 1) expect(result[1].ownerName).toBe("Synthetic 0");
-    expect(cost.databaseQueries).toBe(2 * count + 2);
-    expect(cost.documentsRead).toBe(2 * count + 2);
+    expect(cost.databaseQueries).toBe(2 * count + 1);
+    expect(cost.documentsRead).toBe(2 * count + 1);
     expect(payload).toBeGreaterThan(0);
   });
 
@@ -52,7 +52,7 @@ describe("batched published lesson reads", () => {
     const { t, ids } = await fixture(10, true);
     const measured = await measureConvex(() => t.query(api.learnFrontend.publicLessonsBatch, { ids }));
     expect(measured.result).toHaveLength(10);
-    expect(measured.cost.databaseQueries).toBe(40);
+    expect(measured.cost.databaseQueries).toBe(30);
     await t.run(async ctx => {
       const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", "synthetic_owner_0")).unique();
       await ctx.db.patch("users", user!._id, { isBanned: true });
