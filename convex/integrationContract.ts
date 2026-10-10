@@ -182,7 +182,6 @@ export function looksLikePrivatePath(value: string): boolean {
  * structured field is sent. Unknown keys, private paths and private hosts are
  * rejected; query strings and fragments are stripped from `url`.
  */
-/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 export function parseSource(raw: unknown): { label?: string; source?: ExternalSource; warnings: string[] } | { errors: string[] } {
   if (!raw || typeof raw !== "object" || Array.isArray(raw)) return { errors: ["source must be an object."] };
   const s = raw as Record<string, unknown>;
@@ -196,6 +195,7 @@ export function parseSource(raw: unknown): { label?: string; source?: ExternalSo
     if (!isString(value)) { errors.push(`source.${key} must be a string.`); return undefined; }
     const trimmed = value.trim();
     if (trimmed.length > max) { errors.push(`source.${key} can have at most ${max} characters.`); return undefined; }
+    // oxlint-disable-next-line eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs.
     if (/[\u0000-\u001f\u007f]/.test(trimmed)) { errors.push(`source.${key} contains control characters.`); return undefined; }
     if (looksLikePrivatePath(trimmed)) { errors.push(`source.${key} looks like a local file path. Send an opaque id instead.`); return undefined; }
     return trimmed || undefined;
@@ -240,7 +240,6 @@ export function parseSource(raw: unknown): { label?: string; source?: ExternalSo
     : undefined;
   return { label: label ?? title, source, warnings };
 }
-/* oxlint-enable eslint/no-control-regex */
 
 /** Choices keep their ids when the label is unchanged, so reporting stays stable across edits. */
 function toChoices(labels: string[] | undefined, previous: Choice[] | undefined, prefix: string): Choice[] | undefined {

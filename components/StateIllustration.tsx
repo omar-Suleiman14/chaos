@@ -21,12 +21,14 @@
 export const illustrationVariants = ["create", "learn", "search", "error", "not-found", "offline"] as const;
 export type IllustrationVariant = (typeof illustrationVariants)[number];
 
-export default function StateIllustration({ variant, size = "compact", label, className }: {
+export default function StateIllustration({ variant, size = "compact", label, className, style }: {
   variant: IllustrationVariant;
   /** `compact` (128px) sits above a short empty state; `hero` (up to 240px) heads a full-page state. */
   size?: "compact" | "hero";
   label?: string;
   className?: string;
+  /** Inline styles, usually --ill-* tokens mapped onto a surface's own palette (see respondentIllustrationTokens). */
+  style?: React.CSSProperties;
 }) {
   return (
     <svg
@@ -37,6 +39,7 @@ export default function StateIllustration({ variant, size = "compact", label, cl
       width={size === "hero" ? 240 : 128}
       height={size === "hero" ? 180 : 96}
       focusable="false"
+      style={style}
       {...(label ? { role: "img", "aria-label": label } : { "aria-hidden": true })}
     >
       <use href={`/illustrations/${variant}.svg#art`} />

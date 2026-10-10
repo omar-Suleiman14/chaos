@@ -11,7 +11,7 @@ import { internalMutation, mutation, query } from "./_generated/server";
 import type { MutationCtx, QueryCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id, TableNames } from "./_generated/dataModel";
-import { getFormIfRole, hasPro, matchesAccountFormCollaborator, matchesFormCollaborator, ownsRecord, requireActiveUser, requireFormRole, verifiedIdentityEmail } from "./authz";
+import { getFormIfRole, hasPro, matchesAccountFormCollaborator, matchesFormCollaborator, verifiedIdentityEmail, ownsRecord, requireActiveUser, requireFormRole } from "./authz";
 import { checkHiddenFieldNames, checkHiddenParameters, normalizeEmailRules } from "./formRespondent";
 import { checkDefinition, emptyDefinition, FORM_SCHEMA_VERSION, LIMITS } from "./formLogic";
 import type { FormDefinition } from "./formLogic";
@@ -21,6 +21,7 @@ import { displayName, logActivity, notify, randomCode, sha256Hex } from "./serve
 import { builtInTemplates } from "./formTemplates";
 import { emitFormStatusChange, emitWebhookEvent, formItem } from "./webhookEvents";
 import { withFormCounts, withOwnerFormCounts } from "./formCounts";
+import { enumerateForms } from "./formInventory";
 
 type Definition = Infer<typeof definitionValidator>;
 
@@ -130,38 +131,22 @@ export const listMyForms = query({
   handler: async (ctx) => {
     const identity = await getAuthIdentity(ctx);
     if (!identity) return { owned: [], shared: [] };
-    const owned = await ctx.db
-      .query("forms")
-      .withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", identity.subject))
-      .order("desc")
-      .take(500);
-    const email = verifiedIdentityEmail(identity);
-    const memberships = [
-      ...(await ctx.db.query("formCollaborators").withIndex("by_userId", (q) => q.eq("userId", identity.subject)).take(200)),
-      ...(email ? await ctx.db.query("formCollaborators").withIndex("by_email", (q) => q.eq("email", email)).take(200) : []),
-    ];
-    const seen = new Set<string>();
+    const inventory = await enumerateForms(ctx, { kind: "identity", identity }, { owned: 500, memberships: 200, excludeOwnedShared: true });
     const shared = [];
     const invites = [];
     // One name lookup per owner, not per shared form.
     const ownerNames = new Map<string, string>();
-    for (const m of memberships) {
-      if (!matchesFormCollaborator(m, identity)) continue;
-      if (seen.has(m.formId)) continue;
-      seen.add(m.formId);
-      const stored = await ctx.db.get("forms", m.formId);
-      if (!stored || stored.ownerId === identity.subject) continue;
+    for (const { form: stored, membership: m } of inventory.shared) {
       const form = await withFormCounts(ctx, stored);
       let ownerName = ownerNames.get(form.ownerId);
       if (ownerName === undefined) ownerNames.set(form.ownerId, (ownerName = await displayName(ctx, form.ownerId)));
-      if (m.status === "declined") continue;
       if (m.status === "pending") {
         invites.push({ collaboratorId: m._id, formId: form._id, title: form.title, role: m.role, ownerName, createdAt: m.createdAt });
       } else {
         shared.push({ ...formSummary(form), role: m.role, ownerName });
       }
     }
-    return { owned: (await withOwnerFormCounts(ctx, identity.subject, owned)).map(formSummary), shared, invites };
+    return { owned: (await withOwnerFormCounts(ctx, identity.subject, inventory.owned)).map(formSummary), shared, invites };
   },
 });
 
@@ -259,25 +244,8 @@ export const searchIndex = query({
   handler: async (ctx) => {
     const identity = await getAuthIdentity(ctx);
     if (!identity) return [];
-    const owned = await ctx.db
-      .query("forms")
-      .withIndex("by_ownerId_and_updatedAt", (q) => q.eq("ownerId", identity.subject))
-      .order("desc")
-      .take(SEARCH_FORM_CAP);
-    const email = verifiedIdentityEmail(identity);
-    const memberships = [
-      ...(await ctx.db.query("formCollaborators").withIndex("by_userId", (q) => q.eq("userId", identity.subject)).take(100)),
-      ...(email ? await ctx.db.query("formCollaborators").withIndex("by_email", (q) => q.eq("email", email)).take(100) : []),
-    ];
-    const forms = [...owned];
-    const seen = new Set<string>(owned.map((f) => f._id));
-    for (const m of memberships) {
-      if (!matchesFormCollaborator(m, identity)) continue;
-      if (seen.has(m.formId)) continue;
-      seen.add(m.formId);
-      const form = await ctx.db.get("forms", m.formId);
-      if (form) forms.push(form);
-    }
+    const inventory = await enumerateForms(ctx, { kind: "identity", identity }, { owned: SEARCH_FORM_CAP, memberships: 100 });
+    const forms = [...inventory.owned, ...inventory.shared.map(row => row.form)];
     return forms.map((form) => ({
       id: form._id,
       title: form.title,

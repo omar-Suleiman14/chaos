@@ -2,10 +2,10 @@ import type { CreatedWith } from "@/lib/aiClients";
 /**
  * Chaos Learn: the data the Learn screens read and write.
  *
- * This is the frontend contract. The screens only reach data through the hooks in
- * `lib/learn/data.ts`; today those hooks are backed by a local, per-device store
- * (`lib/learn/localStore.ts`) so every screen works end to end, and the Convex
- * backend replaces that store behind the same hooks. Keep field names product-neutral:
+ * This is the frontend contract used by the hooks in `lib/learn/data.ts`, which
+ * adapt durable Convex data and remaining per-device
+ * compatibility state (`lib/learn/localStore.ts`) to these models. Persistence and
+ * access rules belong to each implementation. Keep field names product-neutral:
  * external apps (Max, ChatGPT, Claude) are clients of this model, not part of it.
  */
 
@@ -180,6 +180,15 @@ export interface Lesson {
   archived?: boolean;
   createdAt: number;
   updatedAt: number;
+}
+
+/** Compact public fields used by metadata and structured-data generation. */
+export interface PublicLessonSeoSummary {
+  id: LearnId;
+  ownerName: string;
+  visibility: "public";
+  moderation: "ok";
+  published: { version: number; meta: LessonMeta; publishedAt: number; outline: { id: string; level: 1 | 2 | 3; text: string }[] };
 }
 
 export interface LessonVersion {

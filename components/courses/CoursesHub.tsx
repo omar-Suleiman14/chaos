@@ -10,6 +10,7 @@ import { Plus } from "lucide-react";
 import { useMutation } from "convex/react";
 import { useConfirmedQuery } from "@/lib/confirmedQuery";
 import { CacheState } from "@/components/workspace/CacheState";
+import StateIllustration from "@/components/StateIllustration";
 import { api } from "@/convex/_generated/api";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
@@ -91,9 +92,7 @@ export default function CoursesHub({
       </header>}
       {embedded && shown.length === 0 && (
         <div className="ws-empty ws-page">
-          <span className="ws-empty__art">
-            <Plus size={24} />
-          </span>
+          <StateIllustration variant={filtered ? "search" : "learn"} />
           <h2 className="text-xl font-semibold">
             {filtered ? locale === "ar" ? "لا نتائج" : "Nothing matches" : locale === "ar" ? "أنشئ دورتك الأولى" : "Create your first course"}
           </h2>

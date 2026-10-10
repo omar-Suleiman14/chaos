@@ -190,7 +190,7 @@ function requireSound(value: string) {
 }
 
 /** Result that asks ChatGPT to (re)connect the Chaos account. */
-export function authRequired(resourceMetadataUrl: string): CallToolResult {
+function authRequired(resourceMetadataUrl: string): CallToolResult {
   return {
     isError: true,
     content: [{ type: "text", text: "Connect your Chaos account to use this." }],

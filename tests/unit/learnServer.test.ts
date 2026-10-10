@@ -1,6 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fetchPublicLesson, listIndexableLessons, listPublicCourses } from "@/lib/learn/server";
-import { outline } from "@/lib/learn/doc";
 
 const query = vi.hoisted(() => vi.fn());
 vi.mock("convex/browser", () => ({ ConvexHttpClient: class { query = query; } }));
@@ -10,19 +9,18 @@ beforeEach(() => { query.mockReset(); vi.stubEnv("NEXT_PUBLIC_CONVEX_URL", "http
 afterEach(() => vi.unstubAllEnvs());
 
 describe("published Learn server metadata", () => {
-  it("uses published metadata and converts heading text for SEO without private state", async () => {
-    query.mockResolvedValue({ lessonId: "lesson", ownerId: "owner", ownerName: "Creator", createdAt: 1, version: { number: 2, publishedAt: 10,
+  it("uses the compact published summary for SEO without downloading the lesson document", async () => {
+    query.mockResolvedValue({ lessonId: "lesson", ownerName: "Creator", version: 2, publishedAt: 10,
       metadata: { title: "Published", description: "", tags: [], language: "en", indexing: "index" },
-      document: { schemaVersion: 1, blocks: [{ id: "heading", type: "heading", text: "Portal pressure", level: 2, citations: [], conceptIds: [] }] } } });
+      outline: [{ id: "heading", level: 2, text: "Portal pressure" }] });
     const lesson = await fetchPublicLesson("lesson");
     expect(lesson?.published?.meta.title).toBe("Published");
-    expect(outline(lesson?.published?.content)).toEqual([{ id: "heading", level: 2, text: "Portal pressure" }]);
-    expect(lesson?.sources).toEqual([]);
-    expect(lesson?.quizzes).toEqual([]);
+    expect(lesson?.published?.outline).toEqual([{ id: "heading", level: 2, text: "Portal pressure" }]);
+    expect(query).toHaveBeenCalledWith(expect.anything(), { id: "lesson" });
   });
   it("does not infer indexing consent for legacy metadata", async () => {
-    query.mockResolvedValue({ lessonId: "lesson", ownerId: "owner", ownerName: "Creator", createdAt: 1, version: { number: 1, publishedAt: 10,
-      metadata: { title: "Legacy", description: "", tags: [], language: "en" }, document: { schemaVersion: 1, blocks: [] } } });
+    query.mockResolvedValue({ lessonId: "lesson", ownerName: "Creator", version: 1, publishedAt: 10,
+      metadata: { title: "Legacy", description: "", tags: [], language: "en" }, outline: [] });
     expect((await fetchPublicLesson("lesson"))?.published?.meta.indexing).toBe("noindex");
   });
   it("keeps unavailable lessons absent and preview lessons out of sitemap discovery", async () => {

@@ -66,13 +66,12 @@ function zip(files: { name: string; data: Uint8Array }[]): Uint8Array<ArrayBuffe
   return out;
 }
 
-/* oxlint-disable eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs. */
 function escapeXml(s: string): string {
   // Remove characters XML 1.0 cannot represent.
+  // oxlint-disable-next-line eslint/no-control-regex -- Control characters are deliberately matched to sanitise untrusted text and URLs.
   return s.replace(/[\u0000-\u0008\u000b\u000c\u000e-\u001f￾￿]/g, "")
     .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
 }
-/* oxlint-enable eslint/no-control-regex */
 
 function columnName(index: number): string {
   let name = "";
