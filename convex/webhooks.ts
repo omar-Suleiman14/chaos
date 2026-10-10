@@ -18,6 +18,7 @@ import {
 } from "./webhookModel";
 import type { WebhookEventType } from "./webhookModel";
 import { checkWebhookUrl } from "./webhookUrl";
+import { validEvents } from "./webhookSubscriptionModel";
 import { isLearnWebhookEvent, learnWebhookOwnerTitle, mayDeliverLearnWebhook } from "./learnWebhookEvents";
 
 type Ctx = QueryCtx | MutationCtx;
@@ -43,11 +44,6 @@ function validUrl(raw: string): string {
   return check.url.toString();
 }
 
-function validEvents(events: WebhookEventType[]): WebhookEventType[] {
-  const chosen = webhookEventTypes.filter((e) => events.includes(e));
-  if (!chosen.length) throw new Error("INVALID_EVENTS: Choose at least one event.");
-  return chosen;
-}
 
 async function ownerRefTitle(ctx: Ctx, ownerId: string, ref: string): Promise<string | null> {
   if (/^(lesson|collection)_/.test(ref)) return await learnWebhookOwnerTitle(ctx, ownerId, ref);
