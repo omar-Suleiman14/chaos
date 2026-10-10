@@ -1,5 +1,6 @@
-import { SIDEBAR_DEFAULT, clampWidth } from "@/components/workspace/sidebarWidth";
 "use client";
+
+import { SIDEBAR_DEFAULT, clampWidth } from "@/components/workspace/sidebarWidth";
 
 import { FocusButton } from "@/components/InitialFocus";
 
