@@ -1,5 +1,6 @@
 "use client";
 
+import { schedulePalettePreload } from "@/lib/schedulePalettePreload";
 import { FocusButton } from "@/components/InitialFocus";
 
 import Link from "next/link";
@@ -161,11 +162,7 @@ export default function DashboardShell({ children }: { children: React.ReactNode
     setPaletteUsed(true);
     setPaletteOpenState(next);
   }, []);
-  useEffect(() => {
-    const idle = (window as Window & { requestIdleCallback?: (cb: () => void, o?: { timeout: number }) => number }).requestIdleCallback;
-    if (idle) idle(() => void loadPalette(), { timeout: 5000 });
-    else setTimeout(() => void loadPalette(), 3000);
-  }, []);
+  useEffect(() => schedulePalettePreload(window, () => void loadPalette()), []);
   const [scrolled, setScrolled] = useState(false);
   const { create, busy } = useCreateForm();
   const router = useRouter();
