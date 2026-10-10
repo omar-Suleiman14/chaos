@@ -2,6 +2,7 @@
 
 import { defaultCover, isCoverUrl } from "@/lib/learn/covers";
 import MemberAvatar from "@/components/MemberAvatar";
+import StateIllustration, { type IllustrationVariant } from "@/components/StateIllustration";
 import { avatarSeed } from "@/lib/avatarSeed";
 import Link from "next/link";
 import { AlertTriangle, Award, BadgeCheck, BookOpen, Bookmark, CheckCircle2, Circle, CircleDot, Clock, Eye, GitFork, GraduationCap, Info, Layers, ShieldAlert, ThumbsUp } from "lucide-react";
@@ -216,11 +217,12 @@ export function LessonCard({ lesson, href, progress, footer, showStatus, current
 }
 
 /** `level` keeps the outline continuous: 2 directly under a page title, 3 inside a section. */
-export function EmptyState({ icon: Icon = BookOpen, title, body, children, level = 3 }: { icon?: typeof BookOpen; title: string; body?: string; children?: React.ReactNode; level?: 2 | 3 }) {
+/** `illustration` draws one of the shared state drawings in place of the icon, for the larger first-use and no-results states. */
+export function EmptyState({ icon: Icon = BookOpen, illustration, title, body, children, level = 3 }: { icon?: typeof BookOpen; illustration?: IllustrationVariant; title: string; body?: string; children?: React.ReactNode; level?: 2 | 3 }) {
   const Heading = level === 2 ? "h2" : "h3";
   return (
     <div className="lx-empty">
-      <Icon size={28} aria-hidden />
+      {illustration ? <StateIllustration variant={illustration} /> : <Icon size={28} aria-hidden />}
       <Heading>{title}</Heading>
       {body && <p>{body}</p>}
       {children && <div className="lx-actions" style={{ justifyContent: "center" }}>{children}</div>}
