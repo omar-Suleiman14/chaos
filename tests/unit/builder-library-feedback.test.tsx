@@ -45,6 +45,9 @@ vi.mock("convex/react", () => ({
 vi.mock("@/app/[lang]/(app)/dashboard/forms/[formId]/use-form-draft", () => ({
   useFormDraft: () => fixtures.draftState,
 }));
+vi.mock("@/lib/forms/useFormInventoryPages", () => ({
+  useFormInventoryPages: () => ({ forms: { owned: [fixtures.form], shared: [] }, confirmed: true, hasMore: false, loadMore: vi.fn() }),
+}));
 vi.mock("@/lib/learn/data", () => ({ useMyLessons: () => [], useLearnActions: () => ({ createLesson: vi.fn() }) }));
 vi.mock("@/components/workspace/useCreateForm", () => ({
   useCreateForm: () => ({ create: vi.fn(), busy: false }),

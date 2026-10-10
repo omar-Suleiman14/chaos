@@ -38,7 +38,7 @@ import { LibrarySkeleton } from "@/components/workspace/Skeletons";
 import { usePinned } from "@/components/workspace/usePinned";
 import { useCreateForm } from "@/components/workspace/useCreateForm";
 import { useUsableMark } from "@/lib/journeys";
-import { useConfirmedQuery } from "@/lib/confirmedQuery";
+import { useFormInventoryPages } from "@/lib/forms/useFormInventoryPages";
 import { CacheState } from "@/components/workspace/CacheState";
 import { linkOrigin } from "@/lib/hosts";
 import { selectLibraryRows } from "@/lib/library/selectLibraryRows";
@@ -74,7 +74,7 @@ const copy = {
     games: "Games", library: "Library", newForm: "Form", newFormHelp: "Surveys, sign-ups and feedback", newQuiz: "Quiz", newQuizHelp: "Marked for you; host it live any time", newLesson: "Lesson", newLessonHelp: "A page to teach one thing", newCourse: "Course", newCourseHelp: "Lessons in order, for people to take", newFlashcards: "Flashcard set", newFlashcardsHelp: "Cards to study with spaced review", untitledSet: "Untitled set", newMenu: "Create something new", creating: "Creating…", newLabel: "New", moreWays: "More ways to start", blank: "Blank", fromTemplate: "From a template", import: "Import",
     dismissError: "Dismiss error", filterLibrary: "Filter library",
     filterByStatus: "Filter by status", status: "Status", clearFilter: "Clear filter", sort: "Sort", viewOptions: "View options", gallery: "Gallery", list: "List",
-    loadingLibrary: "Loading library...", nothingMatches: "Nothing matches", createFirst: "Create your first form",
+    loadingLibrary: "Loading library...", loadMore: "Load more", nothingMatches: "Nothing matches", createFirst: "Create your first form",
     tryAnother: "Try another status, or clear the filter.", startBlank: "Start with a blank page or a ready-made template.", templates: "Templates",
     actionsFor: (title: string) => `Actions for ${title}`,
     templatesTitle: "Start from a template", templatesDesc: "Templates open as drafts you can change.",
@@ -108,7 +108,7 @@ const copy = {
     games: "الألعاب", library: "المكتبة", newForm: "نموذج", newFormHelp: "استبيانات وتسجيل وآراء", newQuiz: "اختبار", newQuizHelp: "يُصحَّح تلقائيًا؛ استضفه مباشرة متى شئت", newLesson: "درس", newLessonHelp: "صفحة تشرح شيئًا واحدًا", newCourse: "دورة", newCourseHelp: "دروس مرتبة يأخذها الناس", newFlashcards: "مجموعة بطاقات", newFlashcardsHelp: "بطاقات للمذاكرة بالمراجعة المتباعدة", untitledSet: "مجموعة بلا عنوان", newMenu: "أنشئ شيئًا جديدًا", creating: "جارٍ الإنشاء…", newLabel: "جديد", moreWays: "طرق أخرى للبدء", blank: "فارغ", fromTemplate: "من قالب", import: "استيراد",
     dismissError: "أخفِ الخطأ", filterLibrary: "تصفية المكتبة",
     filterByStatus: "تصفية حسب الحالة", status: "الحالة", clearFilter: "امسح التصفية", sort: "ترتيب", viewOptions: "خيارات العرض", gallery: "معرض", list: "قائمة",
-    loadingLibrary: "جارٍ تحميل المكتبة...", nothingMatches: "لا نتائج", createFirst: "أنشئ أول نموذج لك",
+    loadingLibrary: "جارٍ تحميل المكتبة...", loadMore: "عرض المزيد", nothingMatches: "لا نتائج", createFirst: "أنشئ أول نموذج لك",
     tryAnother: "جرّب حالة أخرى، أو امسح التصفية.", startBlank: "ابدأ بصفحة فارغة أو بقالب جاهز.", templates: "القوالب",
     actionsFor: (title: string) => `إجراءات ${title}`,
     templatesTitle: "ابدأ من قالب", templatesDesc: "تُفتح القوالب كمسودات يمكنك تعديلها.",
@@ -154,9 +154,7 @@ export default function CreatorLibrary() {
   const { locale } = useLocale();
   const router = useRouter();
   // Last-known lists render at once, faded until Convex confirms them (lib/confirmedQuery.ts).
-  const formsQuery = useConfirmedQuery(api.forms.listMyForms);
-  const forms = formsQuery.data;
-  const confirmed = formsQuery.confirmed;
+  const { forms, confirmed, hasMore, loadMore } = useFormInventoryPages();
   const templates = useQuery(api.forms.listTemplates);
   const duplicateForm = useMutation(api.forms.duplicateForm);
   const createCourse = useMutation(api.courses.create);
@@ -413,7 +411,9 @@ export default function CreatorLibrary() {
       </div>
 
       <CacheState confirmed={confirmed || kind === "Courses" || kind === "Flashcards" || kind === "Games"}>
-      {kind === "Courses" ? <CoursesHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Flashcards" ? <FlashcardsHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
+      {kind === "Courses" ? <CoursesHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Flashcards" ? <FlashcardsHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Games" ? <GamesHub embedded /> : loading ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 && hasMore ? (
+        <div className="ws-empty ws-page"><button type="button" className="ws-btn" onClick={loadMore}>{t.loadMore}</button></div>
+      ) : visible.length === 0 ? (
         <div className="ws-empty ws-page">
           <StateIllustration variant={statuses.length ? "search" : "create"} />
           <h2 className="text-xl font-semibold">{statuses.length ? t.nothingMatches : t.createFirst}</h2>
@@ -476,7 +476,9 @@ export default function CreatorLibrary() {
         </div>
       )}
       </CacheState>
-
+      {(kind === "Forms" || kind === "Quizzes") && !loading && visible.length > 0 && hasMore && (
+        <button type="button" className="ws-btn mt-4" onClick={loadMore}>{t.loadMore}</button>
+      )}
 
       {dialog === "templates" && (
         <WsDialog title={t.templatesTitle} description={t.templatesDesc} onClose={() => setDialog("none")} wide>
