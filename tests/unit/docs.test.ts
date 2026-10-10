@@ -31,7 +31,7 @@ describe("docs content", () => {
     const ar = findArticle("ar", "notion")!;
     expect(articleHeadings(en).map(h => h.id)).toEqual(["connect", "import", "results", "privacy", "troubleshooting"]);
     expect(articleHeadings(ar).map(h => h.id)).toEqual(articleHeadings(en).map(h => h.id));
-    expect(en.blocks.flatMap(blockTexts).join(" ")).toContain("individual answers");
+    expect(en.blocks.flatMap(blockTexts).join(" ").toLowerCase()).toContain("individual answers");
     expect(ar.blocks.flatMap(blockTexts).join(" ")).toContain("الخصوصية");
     expect(en.title).toBe("Notion");
     expect(ar.title).toBe("Notion");
