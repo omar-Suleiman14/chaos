@@ -13,7 +13,7 @@ The in-app end-user guide, in both English and Arabic, is available at `/docs/no
 
 ## Importing a lesson
 
-Select **Choose a page to import**, select a shared page, and click **Import as lesson draft**. The page is read at that moment, and a private Chaos lesson draft is created via the same lesson service used by Max. You review and publish it yourself. Supported text, heading, list, quote, code and callout blocks are converted; unsupported media and embeds are skipped. Up to 400 blocks are imported, including up to two nested levels. Importing the same page again returns the original lesson; it does not overwrite edits.
+Chaos has no standalone lesson list, so every import goes into one of your courses. In the course builder, use **Import from Notion** under **Add a lesson** (it files the lesson into that course and module and opens it). From Connections, choose a page and a course (or **New course**, named after the page) and click **Import as lesson draft**. The page is read at that moment, and a private Chaos lesson draft is created via the same lesson service used by Max. You review and publish it yourself. Supported text, heading, list, quote, code and callout blocks are converted; unsupported media and embeds are skipped. Up to 400 blocks are imported, including up to two nested levels. Importing the same page again returns the original lesson and adds it to the chosen course; it does not overwrite edits.
 
 ### Finding imported drafts and MCP access
 
@@ -33,4 +33,4 @@ Tokens are encrypted with a stable dedicated Convex key. OAuth state is random, 
 
 ## العربية
 
-من لوحة التحكم ← الاتصالات ← Notion، اربط مساحة عملك بواسطة OAuth واختر الصفحات وقواعد البيانات التي تريد مشاركتها. يمكنك استيراد صفحة كمسودة درس **خاصة** لمراجعتها قبل النشر. ويمكنك اختيار قاعدة بيانات Notion لإرسال الدرجات ووقت إكمال الاختبارات والنماذج الجديدة دون إرسال إجابات الطلاب أو أسمائهم. يمكن إيقاف المزامنة وفصل الربط من نفس الصفحة.
+من لوحة التحكم ← الاتصالات ← Notion، اربط مساحة عملك بواسطة OAuth واختر الصفحات وقواعد البيانات التي تريد مشاركتها. يمكنك استيراد صفحة كمسودة درس **خاصة** داخل إحدى دوراتك لمراجعتها قبل النشر. ويمكنك اختيار قاعدة بيانات Notion لإرسال الدرجات ووقت إكمال الاختبارات والنماذج الجديدة دون إرسال إجابات الطلاب أو أسمائهم. يمكن إيقاف المزامنة وفصل الربط من نفس الصفحة.

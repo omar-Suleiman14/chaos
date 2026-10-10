@@ -10,6 +10,8 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { useCopy } from "@/lib/i18n";
 import { toast } from "@/lib/toast";
 import QuizBlockEditor from "@/components/learn/editor/QuizBlockEditor";
+import { CourseNotionImport } from "@/components/connections/NotionImport";
+import FallbackBoundary from "@/components/FallbackBoundary";
 import { hrefIntentHandlers } from "@/lib/convexCache";
 import { hostHref } from "@/lib/hosts";
 type Asset = { kind: "form" | "quiz"; id: string };
@@ -83,7 +85,10 @@ export default function CourseModulesEditor({ courseId, modules, lessons }: { co
     </li>
   );
   const list = (group: Lesson[]) => group.length > 0 && <ol className="cb-lessons mb-1">{group.map((l, i) => row(l, i + 1, group))}</ol>;
-  const addButton = (moduleId?: string) => <button type="button" className="cb-add w-full" disabled={busy} onClick={() => void add(moduleId)}><Plus size={18} aria-hidden /> {t.add}</button>;
+  const addButton = (moduleId?: string) => <>
+    <button type="button" className="cb-add w-full" disabled={busy} onClick={() => void add(moduleId)}><Plus size={18} aria-hidden /> {t.add}</button>
+    <FallbackBoundary fallback={null}><CourseNotionImport courseId={courseId} moduleId={moduleId} disabled={busy} /></FallbackBoundary>
+  </>;
 
   const ungrouped = lessons.filter((l) => !moduleOf(l.id));
   return (

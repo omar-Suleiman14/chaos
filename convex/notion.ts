@@ -4,7 +4,9 @@ import type { MutationCtx, ActionCtx } from "./_generated/server";
 import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser } from "./authz";
+import { getAuthIdentity } from "./authIdentity";
 import { createLessonForActor } from "./lessons";
+import { attachLessonToCourse, courseForImport } from "./courses";
 import { lessonDocument, lessonMeta } from "./learnModel";
 import { randomHex, sha256Hex } from "./serverUtils";
 import { encryptSecret, decryptSecret } from "./webhookCrypto";
@@ -67,7 +69,9 @@ export const available = query({
 export const connection = query({
   args: {},
   handler: async (ctx) => {
-    const { identity } = await requireActiveUser(ctx);
+    // A full page load (such as the return from Notion's OAuth) queries before sign-in is restored.
+    const identity = await getAuthIdentity(ctx);
+    if (!identity) return null;
     const row = await ctx.db.query("notionConnections").withIndex("by_ownerId", (q) => q.eq("ownerId", identity.subject)).unique();
     return row ? { workspaceName: row.workspaceName, workspaceId: row.workspaceId, dataSourceTitle: row.dataSourceTitle ?? null, dataSourceId: row.dataSourceId ?? null, connected: true } : null;
   },
@@ -268,7 +272,9 @@ export const listImports = query({
   args: {},
   returns: v.array(v.object({ lessonId: v.id("lessons"), title: v.string(), importedAt: v.number() })),
   handler: async (ctx) => {
-    const { identity } = await requireActiveUser(ctx);
+    // A full page load (such as the return from Notion's OAuth) queries before sign-in is restored.
+    const identity = await getAuthIdentity(ctx);
+    if (!identity) return [];
     const rows = await ctx.db.query("notionImports")
       .withIndex("by_ownerId_and_importedAt", q => q.eq("ownerId", identity.subject))
       .order("desc").take(50);
@@ -283,8 +289,11 @@ export const listImports = query({
   },
 });
 
+// Chaos has no standalone lesson list: every import lands in one of the person's courses.
+const importTarget = { courseId: v.id("learnCollections"), moduleId: v.optional(v.string()) };
+
 export const importPage = action({
-  args: { pageId: v.string() },
+  args: { pageId: v.string(), ...importTarget },
   handler: async (ctx, args): Promise<{ lessonId: Id<"lessons">; skipped: number }> => {
     if (!PAGE_ID.test(args.pageId)) throw new Error("Invalid Notion page ID.");
     const { conn, accessToken } = await token(ctx);
@@ -294,20 +303,27 @@ export const importPage = action({
     const { document, skipped } = notionBlocksToLesson(await pageBlocks(accessToken, args.pageId));
     if (!document.blocks.length) throw new Error("No supported text blocks to import from this page.");
     const metadata = { title, description: "Imported from Notion. Review before publishing.", language: /[\u0600-\u06ff]/.test(title + JSON.stringify(document.blocks.slice(0, 3))) ? "ar" : "en", tags: [] as string[] };
-    const lessonId = await ctx.runMutation(internal.notion.createImportedLesson, { connectionId: conn._id, pageId: args.pageId, metadata, document });
+    const lessonId = await ctx.runMutation(internal.notion.createImportedLesson, { connectionId: conn._id, pageId: args.pageId, courseId: args.courseId, moduleId: args.moduleId, metadata, document });
     return { lessonId, skipped };
   },
 });
 
 export const createImportedLesson = internalMutation({
-  args: { connectionId: v.id("notionConnections"), pageId: v.string(), metadata: lessonMeta, document: lessonDocument },
+  args: { connectionId: v.id("notionConnections"), pageId: v.string(), ...importTarget, metadata: lessonMeta, document: lessonDocument },
   handler: async (ctx, args) => {
     const { identity } = await requireActiveUser(ctx);
     const conn = await ctx.db.get("notionConnections", args.connectionId);
     if (!conn || conn.ownerId !== identity.subject) throw new Error("NOTION_NOT_CONNECTED");
+    const course = await courseForImport(ctx, args.courseId, args.moduleId);
     const existing = await ctx.db.query("notionImports").withIndex("by_ownerId_and_pageId", q => q.eq("ownerId", identity.subject).eq("pageId", args.pageId)).unique();
-    if (existing && await ctx.db.get("lessons", existing.lessonId)) return existing.lessonId;
+    const previous = existing ? await ctx.db.get("lessons", existing.lessonId) : null;
+    if (existing && previous?.status === "active") {
+      // Reimporting reuses the draft (never a second copy) and files it where the person chose.
+      await attachLessonToCourse(ctx, course, existing.lessonId, args.moduleId);
+      return existing.lessonId;
+    }
     const lessonId = await createLessonForActor(ctx, identity.subject, { metadata: args.metadata, document: args.document });
+    await attachLessonToCourse(ctx, course, lessonId, args.moduleId);
     if (existing) await ctx.db.patch("notionImports", existing._id, { lessonId, importedAt: Date.now() });
     else await ctx.db.insert("notionImports", { ownerId: identity.subject, pageId: args.pageId, lessonId, importedAt: Date.now() });
     return lessonId;
