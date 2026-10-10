@@ -13,7 +13,7 @@ export const list = query({ args: { kind, paginationOpts: paginationOptsValidato
   const page = { ...args.paginationOpts, maximumBytesRead: 2_000_000, maximumRowsRead: 100 };
   if (args.kind === "forms" || args.kind === "quizzes") {
     const result = await ctx.db.query("forms").withIndex("by_ownerId_and_status_and_updatedAt", q => q.eq("ownerId", identity.subject).eq("status", "archived")).order("desc").paginate(page);
-    return { ...result, page: result.page.filter(form => !!form.draft.quiz?.enabled === (args.kind === "quizzes")).map(form => ({ id: String(form._id), title: form.title, updatedAt: form.updatedAt, count: form.responseCount, published: form.publishedVersion !== undefined, accent: form.draft.theme.accent, revision: undefined })) };
+    return { ...result, page: result.page.filter(form => form.pendingDeleteAt === undefined && !!form.draft.quiz?.enabled === (args.kind === "quizzes")).map(form => ({ id: String(form._id), title: form.title, updatedAt: form.updatedAt, count: form.responseCount, published: form.publishedVersion !== undefined, accent: form.draft.theme.accent, revision: undefined })) };
   }
   if (args.kind === "courses") {
     const result = await ctx.db.query("learnCollections").withIndex("by_ownerId_and_archived_and_updatedAt", q => q.eq("ownerId", identity.subject).eq("archived", true)).order("desc").paginate(page);

@@ -1,5 +1,5 @@
-import { describe, expect, it } from "vitest";
-import { api } from "@/convex/_generated/api";
+import { describe, expect, it, vi } from "vitest";
+import { api, internal } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { createTestConvex } from "./setup";
 import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
@@ -282,14 +282,34 @@ describe("forms: presentation modes and themes", () => {
 });
 
 describe("forms: deleting", () => {
-  it("deletes only archived forms", async () => {
+  it("preserves deleted content during the 5-second grace period and protects rescheduled jobs", async () => {
     const t = createTestConvex();
     const owner = t.withIdentity(creatorIdentity);
+    const other = t.withIdentity(otherCreatorIdentity);
     await owner.mutation(api.quizFunctions.getOrCreateUser, {});
     const formId = await owner.mutation(api.forms.createForm, {});
     await expect(owner.mutation(api.forms.deleteForm, { formId })).rejects.toThrow(/ARCHIVE_FIRST/);
     await owner.mutation(api.forms.setFormStatus, { formId, status: "archived" });
-    await owner.mutation(api.forms.deleteForm, { formId });
+    const deleteAt = await owner.mutation(api.forms.deleteForm, { formId });
+    expect(deleteAt).toBe(Date.now() + 5000);
+    await expect(other.mutation(api.forms.undoDeleteForm, { formId })).rejects.toThrow(/FORM_NOT_FOUND/);
+    await expect(owner.mutation(api.forms.deleteForm, { formId })).rejects.toThrow(/DELETE_PENDING/);
+    await expect(owner.mutation(api.forms.setFormStatus, { formId, status: "live" })).rejects.toThrow(/DELETE_PENDING/);
     expect(await owner.query(api.forms.getFormForEditor, { formId })).toBeNull();
+    expect(await t.run(ctx => ctx.db.get(formId))).not.toBeNull();
+    const ownedPage = () => owner.query(api.forms.listMyFormsPage, { source: "owned", paginationOpts: { numItems: 10, cursor: null } });
+    expect((await ownedPage()).page.owned.map(form => form._id)).not.toContain(formId);
+    await owner.mutation(api.forms.undoDeleteForm, { formId });
+    expect((await ownedPage()).page.owned.map(form => form._id)).toContain(formId);
+    await t.mutation(internal.forms.finalizePendingFormDeletion, { formId, deleteAt, revision: 1 });
+    expect((await owner.query(api.forms.getFormForEditor, { formId }))?.status).toBe("archived");
+    const secondDeadline = await owner.mutation(api.forms.deleteForm, { formId });
+    vi.setSystemTime(secondDeadline + 1);
+    await expect(owner.mutation(api.forms.undoDeleteForm, { formId })).rejects.toThrow(/UNDO_EXPIRED/);
+    await t.mutation(internal.forms.finalizePendingFormDeletion, { formId, deleteAt, revision: 1 });
+    expect(await t.run(ctx => ctx.db.get(formId))).not.toBeNull();
+    await t.mutation(internal.forms.finalizePendingFormDeletion, { formId, deleteAt: secondDeadline, revision: 2 });
+    expect(await owner.query(api.forms.getFormForEditor, { formId })).toBeNull();
+    expect(await t.run(ctx => ctx.db.get(formId))).toBeNull();
   });
 });
