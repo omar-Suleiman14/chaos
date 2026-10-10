@@ -1,6 +1,6 @@
 import ProductAnalytics, { AnalyticsIdentity } from "@/components/ProductAnalytics";
 import CookieConsent from "@/components/CookieConsent";
-import { SpeedInsights } from "@vercel/speed-insights/next";
+import ConsentedSpeedInsights from "@/components/ConsentedSpeedInsights";
 import type { Metadata, Viewport } from "next";
 import { siteUrl } from "@/lib/site";
 import { defaultOgImage, siteDescription } from "@/lib/seo";
@@ -127,7 +127,7 @@ export default async function RootLayout({ children, params }: Readonly<{ childr
           <Toaster />
         </ThemeProvider>
         </LocaleProvider>
-        <SpeedInsights />
+        <ConsentedSpeedInsights enabled={!!process.env.VERCEL_ENV} />
       </body>
     </html>
   );
