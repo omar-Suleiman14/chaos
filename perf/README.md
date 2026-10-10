@@ -251,3 +251,16 @@ and then fade in, so a fast load shows no skeleton at all; a warm reload shows
 the cached copy instead. `loading_state` (surface, ms, shown) and
 `journey_usable` (journey, ms) events go to PostHog once it has loaded, so the
 delay can be tuned from real load times rather than guesses.
+
+### Built stylesheet audit (issue #184)
+
+The source CSS census above is **not** the CSS delivered by Next.js. To measure built CSS after an actual production build, run:
+
+```sh
+pnpm build
+pnpm css:build-audit
+```
+
+This scans the emitted `.next/static/**/*.css` files, records raw and gzip byte totals without double counting emitted assets, and uses Next's app/pages build manifests to show the CSS referenced by individual routes. The report is written to `perf/results/css-built.json`. Repeated route references to a shared asset count once **per route**; route totals intentionally overlap and must not be summed as site-wide transfer. A missing route manifest means per-route information is unavailable, not that a route loads zero CSS.
+
+This is a **build artifact size audit**, not real runtime coverage, style recalculation time, or proof that any selector is unused. Use the existing browser rendering/visual suites for runtime costs and EN/AR responsive light/dark comparisons. Do not delete rules or change budgets solely because a source file is large.
