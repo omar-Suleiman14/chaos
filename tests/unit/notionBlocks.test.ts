@@ -21,4 +21,13 @@ describe("Notion lesson import", () => {
     expect(document.blocks).toHaveLength(1);
     expect(document.blocks[0]).toMatchObject({ type: "paragraph", text: "Safe text" });
   });
+
+  it("promotes children of skipped blocks and normalizes Notion code languages", () => {
+    const { document } = notionBlocksToLesson([
+      { block: { id: "2".repeat(32), type: "code", code: { language: "plain text", rich_text: [{ plain_text: "hello" }] } } },
+      { block: { id: "3".repeat(32), type: "paragraph", paragraph: { rich_text: [{ plain_text: "Child" }] } }, parentId: "4".repeat(32) },
+    ]);
+    expect(document.blocks[0]).toMatchObject({ type: "code", language: "plaintext" });
+    expect(document.blocks[1]).not.toHaveProperty("parentId");
+  });
 });

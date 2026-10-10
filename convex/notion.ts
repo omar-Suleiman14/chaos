@@ -5,7 +5,7 @@ import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser } from "./authz";
 import { createLessonForActor } from "./lessons";
-import { lessonDocument, lessonMeta, type LessonBlock, type LessonDocument } from "./learnModel";
+import { lessonDocument, lessonMeta } from "./learnModel";
 import { randomHex, sha256Hex } from "./serverUtils";
 import { encryptSecret, decryptSecret } from "./webhookCrypto";
 import { notionBlocksToLesson, type NotionBlock } from "../lib/notionBlocks";
@@ -71,7 +71,9 @@ export const beginConnect = mutation({
     const { identity } = await requireActiveUser(ctx);
     const { clientId, redirectUri } = config();
     const state = randomHex(32);
-    await ctx.db.insert("notionOAuthStates", { stateHash: await sha256Hex(state), ownerId: identity.subject, locale: args.locale, expiresAt: Date.now() + STATE_TTL_MS });
+    const stateHash = await sha256Hex(state);
+    await ctx.db.insert("notionOAuthStates", { stateHash, ownerId: identity.subject, locale: args.locale, expiresAt: Date.now() + STATE_TTL_MS });
+    await ctx.scheduler.runAfter(STATE_TTL_MS, internal.notion.expireState, { stateHash });
     const url = new URL("https://api.notion.com/v1/oauth/authorize");
     url.searchParams.set("client_id", clientId);
     url.searchParams.set("response_type", "code");
@@ -79,6 +81,14 @@ export const beginConnect = mutation({
     url.searchParams.set("redirect_uri", redirectUri);
     url.searchParams.set("state", state);
     return url.toString();
+  },
+});
+
+export const expireState = internalMutation({
+  args: { stateHash: v.string() },
+  handler: async (ctx, args) => {
+    const row = await ctx.db.query("notionOAuthStates").withIndex("by_stateHash", q => q.eq("stateHash", args.stateHash)).unique();
+    if (row && row.expiresAt <= Date.now()) await ctx.db.delete("notionOAuthStates", row._id);
   },
 });
 

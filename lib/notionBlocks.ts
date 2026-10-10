@@ -22,8 +22,15 @@ export function notionBlocksToLesson(input: Array<{ block: NotionBlock; parentId
   let skipped = 0;
   for (const { block, parentId } of input) {
     const raw = block[block.type] as Record<string, unknown> | undefined;
-    const text = parts(block).map((p) => p.plain_text ?? "").join("").slice(0, 20_000);
-    const inline = parts(block).filter(p => p.plain_text).map(p => ({
+    // Keep the rich-text fallback exactly aligned with inline runs and stay within Chaos limits.
+    let remaining = 20_000;
+    const runs = parts(block).slice(0, 1000).map(part => {
+      const fragment = (part.plain_text ?? "").slice(0, remaining);
+      remaining -= fragment.length;
+      return { ...part, plain_text: fragment };
+    }).filter(p => p.plain_text);
+    const text = runs.map(p => p.plain_text).join("");
+    const inline = runs.map(p => ({
       text: p.plain_text!.slice(0, 20_000),
       ...(p.href && /^https?:\/\//.test(p.href) ? { href: p.href } : {}),
       ...(p.annotations ? { marks: {
@@ -34,7 +41,9 @@ export function notionBlocksToLesson(input: Array<{ block: NotionBlock; parentId
         ...(p.annotations.code ? { code: true } : {}),
       } } : {}),
     }));
-    const common = { id: block.id.replace(/-/g, ""), ...(parentId ? { parentId: parentId.replace(/-/g, "") } : {}), citations: [], conceptIds: [] };
+    const normalizedParent = parentId?.replace(/-/g, "");
+    // Unsupported parent blocks are skipped; promote supported children to top level.
+    const common = { id: block.id.replace(/-/g, ""), ...(normalizedParent && blocks.some(b => b.id === normalizedParent) ? { parentId: normalizedParent } : {}), citations: [], conceptIds: [] };
     const content = { ...common, text, ...(inline.length ? { inline } : {}) };
     let item: LessonBlock | null = null;
     switch (block.type) {
@@ -48,7 +57,7 @@ export function notionBlocksToLesson(input: Array<{ block: NotionBlock; parentId
       case "quote": item = { ...content, type: "quote" }; break;
       case "toggle": item = { ...content, type: "toggle" }; break;
       case "callout": item = { ...content, type: "callout", tone: "info" }; break;
-      case "code": item = { ...content, type: "code", language: typeof raw?.language === "string" ? raw.language : "plain text" }; break;
+      case "code": item = { ...content, type: "code", language: typeof raw?.language === "string" ? raw.language.replace(/[^A-Za-z0-9_+.#-]/g, "").slice(0, 100) : "text" }; break;
       case "divider": item = { ...common, type: "divider" }; break;
       default: skipped++; break; // Assets need Chaos source records; never invent them.
     }
