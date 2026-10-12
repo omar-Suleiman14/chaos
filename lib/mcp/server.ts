@@ -25,6 +25,7 @@ import { registerQuizForkTools } from "./quizForks";
 import { registerAssessmentTools } from "./assessments";
 import { registerGlossaryTools } from "./glossary";
 import { permissionForTool, requireToolPermission, type McpPermission } from "./permissions";
+import { hasToolInSurface, type McpSurface } from "./surfaces";
 import { registerCourseTools } from "./courses";
 import { registerFlashcardTools } from "./flashcards";
 import { registerOrganizationTools } from "./organization";
@@ -204,7 +205,7 @@ function authRequired(resourceMetadataUrl: string): CallToolResult {
   };
 }
 
-export function createChaosMcpServer(options: { call: McpCaller | null; resourceMetadataUrl: string; admin?: boolean; permissions?: readonly McpPermission[] }): McpServer {
+export function createChaosMcpServer(options: { call: McpCaller | null; resourceMetadataUrl: string; admin?: boolean; permissions?: readonly McpPermission[]; surface?: McpSurface }): McpServer {
   const server = new McpServer({
     name: MCP_SERVER_NAME, version: MCP_SERVER_VERSION, title: chaosIntegration.name, websiteUrl: chaosIntegration.siteUrl,
     // Clients that show server icons display the Chaos mark instead of a generic MCP icon.
@@ -212,15 +213,26 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
       { src: `${chaosIntegration.siteUrl}${chaosIntegration.logoPath}`, mimeType: "image/svg+xml", sizes: ["any"] },
       { src: `${chaosIntegration.siteUrl}/api/plugins/chaos-icon-512.png`, mimeType: "image/png", sizes: ["512x512"] },
     ],
-  }, { instructions: options.admin ? `${baseInstructions}\n${adminInstructions}` : baseInstructions });
+  }, { instructions: options.surface && options.surface !== "all"
+    ? `Chaos ${options.surface} MCP surface. Only tools for this workflow are listed. Use the full /mcp URL for other tasks. Every call still requires the signed-in account and its normal authorization; new content remains a draft unless the person explicitly asks to publish. Use the published tools to discover IDs rather than guessing them.`
+    : options.admin ? `${baseInstructions}\n${adminInstructions}` : baseInstructions });
 
   // Schema failures the SDK catches before a handler runs get the same code, category and readable problems.
   (server as unknown as { createToolError: (message: string) => CallToolResult }).createToolError = (message) => toolError(new Error(message));
   const register = server.registerTool.bind(server);
-  server.registerTool = (name, config, callback) => register(name, { ...config, _meta: { ...config._meta, "chaos/permission": permissionForTool(name) } }, callback);
+  server.registerTool = (name, config, callback) => {
+    const entry = register(name, { ...config, _meta: { ...config._meta, "chaos/permission": permissionForTool(name) } }, callback);
+    // Disable rather than alias: SDK excludes disabled tools from tools/list AND tools/call.
+    if (options.surface && !hasToolInSurface(options.surface, name)) entry.disable();
+    return entry;
+  };
+  const requireSurface = (tool: string) => {
+    if (options.surface && !hasToolInSurface(options.surface, tool)) throw new McpToolError("PERMISSION_DENIED", "This MCP tool is outside the selected workflow. Use the full Chaos connection or choose another surface.");
+  };
   const run = async (tool: string, input: Record<string, unknown>, summarize: (data: Record<string, unknown>) => string): Promise<CallToolResult> => {
     if (!options.call) return authRequired(options.resourceMetadataUrl);
     try {
+      requireSurface(tool);
       requireToolPermission(tool, options.permissions);
       if (tool === "register_study_reference" && input.metadataVisibility === "public") {
         requireToolPermission("publish_study_source", options.permissions);
@@ -234,7 +246,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
 
   // Multi-step tools chain existing, individually authorized calls. Each step is checked by Convex as the
   // connected account; a failure part-way returns what was created so the assistant can report it.
-  const call = async (tool: string, input: Record<string, unknown>) => { requireToolPermission(tool, options.permissions); return (await options.call!(tool, input)) as Record<string, unknown>; };
+  const call = async (tool: string, input: Record<string, unknown>) => { requireSurface(tool); requireToolPermission(tool, options.permissions); return (await options.call!(tool, input)) as Record<string, unknown>; };
   const flow = async (work: () => Promise<{ text: string; data: Record<string, unknown> }>): Promise<CallToolResult> => {
     if (!options.call) return authRequired(options.resourceMetadataUrl);
     try { const { text, data } = await work(); return ok(text, data); } catch (error) { return problem(error); }
