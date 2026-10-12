@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useMutation, useQuery } from "convex/react";
-import { AlertTriangle, Check, ChevronRight, Play, Maximize2, Monitor, RotateCcw, Shuffle, Smartphone, Trash2, Volume2 } from "lucide-react";
+import { AlertTriangle, Check, ChevronRight, Maximize2, Monitor, RotateCcw, Shuffle, Smartphone, Trash2, Volume2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { themeClass, themeStyle } from "@/components/forms/FormRenderer";
 import {
@@ -13,7 +13,6 @@ import { useBuilderLabels } from "@/components/forms/formThemeLabels";
 import { useCopy, useLocale } from "@/lib/i18n";
 import { sfx } from "@/lib/sfx";
 import { PreviewSurface } from "./FormPreview";
-import { useIsPhone } from "@/components/workspace/useIsPhone";
 import { WsSwitch } from "@/components/workspace/primitives";
 import { toast } from "@/lib/toast";
 
@@ -117,7 +116,6 @@ export default function DesignTab({ def, change, readOnly, onFullPreview, announ
   const t = useCopy(copy);
   const { locale } = useLocale();
   const labels = useBuilderLabels();
-  const phone = useIsPhone();
   const [language, setLanguage] = useState<Language>(def.defaultLanguage);
   const [device, setDevice] = useState<"desktop" | "mobile">("desktop");
   const [run, setRun] = useState(0);
@@ -368,12 +366,7 @@ export default function DesignTab({ def, change, readOnly, onFullPreview, announ
         </details>
       </fieldset>
 
-      {phone ? (
-        onFullPreview && (
-          <button type="button" className="ws-btn ws-btn--primary ws-fab" onClick={onFullPreview}><Play size={18} /> {t.preview}</button>
-        )
-      ) : (
-        <section aria-label={t.preview} className="min-w-0 order-1 md:order-2 md:sticky md:top-16 md:self-start space-y-3">
+      <section aria-label={t.preview} className="min-w-0 order-1 md:order-2 md:sticky md:top-16 md:self-start space-y-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <p className="text-[13px] font-semibold">{t.preview}</p>
             <div className="flex items-center gap-1.5">
@@ -393,8 +386,7 @@ export default function DesignTab({ def, change, readOnly, onFullPreview, announ
           <div className={`ws-preview-frame ${device === "mobile" ? "ws-preview-frame--mobile" : "w-full"}`}>
             <PreviewSurface def={def} language={language} height={previewHeight} runKey={run} />
           </div>
-        </section>
-      )}
+      </section>
     </div>
   );
 }
