@@ -14,6 +14,14 @@ export type Language = (typeof languages)[number];
 export const languageNames: Record<Language, string> = { en: "English", ar: "العربية" };
 export const rtlLanguages: Language[] = ["ar"];
 
+/** Determine authoring direction from authored text; useful for legacy forms created with an English default. */
+export function detectTextLanguage(parts: string[]): Language {
+  const text = parts.join(" ");
+  const arabic = (text.match(/[\u0621-\u064A]/g) ?? []).length;
+  const latin = (text.match(/[A-Za-z]/g) ?? []).length;
+  return arabic > latin ? "ar" : "en";
+}
+
 export const fieldTypes = [
   "text", "textarea", "email", "phone", "url", "number", "date", "time",
   "choice", "dropdown", "multi_choice", "rating", "scale", "ranking", "matrix",
@@ -260,6 +268,16 @@ export function emptyDefinition(title = "Untitled form"): FormDefinition {
     endings: [],
     theme: { ...flowTheme },
   };
+}
+
+/** Mirror only authored form content, independent of the user's workspace interface language. */
+export function formAuthoringDirection(def: FormDefinition): "rtl" | "ltr" {
+  if (def.defaultLanguage === "ar") return "rtl";
+  const authored = [def.title, def.description, ...def.fields.flatMap((field) => [
+    field.label, field.description ?? "", ...(field.options ?? []).map((option) => option.label),
+    ...(field.rows ?? []).map((row) => row.label),
+  ])];
+  return detectTextLanguage(authored) === "ar" ? "rtl" : "ltr";
 }
 
 export function blankField(type: FieldType): FormField {
