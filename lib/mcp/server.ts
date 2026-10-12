@@ -215,7 +215,10 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
   }, { instructions: options.admin && (!options.permissions || options.permissions.includes("admin_operations")) ? `${baseInstructions}\n${adminInstructions}` : baseInstructions });
 
   // Schema failures the SDK catches before a handler runs get the same code, category and readable problems.
-  (server as unknown as { createToolError: (message: string) => CallToolResult }).createToolError = (message) => toolError(new Error(message));
+  (server as unknown as { createToolError: (message: string) => CallToolResult }).createToolError = (message) =>
+    /\bTool \S+ disabled\b/i.test(message)
+      ? toolError(new McpToolError("PERMISSION_DENIED", "This connection is not authorized for that tool. Review permissions in Chaos Connections."))
+      : toolError(new Error(message));
   const register = server.registerTool.bind(server);
   server.registerTool = (name, config, callback) => {
     const category = permissionForTool(name);
