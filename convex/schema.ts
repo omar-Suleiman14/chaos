@@ -40,7 +40,7 @@ export default defineSchema({
   mcpClientGrants: defineTable({
     ownerId: v.string(), clientId: v.string(), label: v.string(),
     permissions: v.array(v.string()), createdAt: v.number(), updatedAt: v.number(), lastSeenAt: v.number(),
-  }).index("by_owner_client", ["ownerId", "clientId"]).index("by_owner", ["ownerId"]),
+  }).index("by_owner_client", ["ownerId", "clientId"]),
   ...docsTables,
   ...businessTables,
   ...indexNowTables,
