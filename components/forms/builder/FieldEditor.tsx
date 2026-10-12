@@ -174,7 +174,7 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
   const name = field.type === "section" ? t.sectionTitle : field.type === "statement" ? t.heading : t.question;
 
   return (
-    <fieldset dir={direction} lang={direction === "rtl" ? "ar" : "en"} disabled={readOnly} className="ws-form-authoring space-y-4">
+    <fieldset dir={direction} disabled={readOnly} className="ws-form-authoring space-y-4">
       {/* As in Google Forms: the question and its type side by side, so changing type is one click away. */}
       <div className="flex flex-wrap items-start gap-2">
         <label className="block flex-1 min-w-[min(100%,16rem)]">
