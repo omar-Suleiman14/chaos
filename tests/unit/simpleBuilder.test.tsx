@@ -80,9 +80,9 @@ describe("Arabic form authoring", () => {
     const ar = { ...emptyDefinition("Clinic registration"), defaultLanguage: "ar" as const, languages: ["ar" as const] };
     expect(formAuthoringDirection(en)).toBe("ltr");
     expect(formAuthoringDirection(ar)).toBe("rtl");
-    const { container, rerender } = render(<Builder initial={en} />);
+    const { container, rerender } = render(<Builder key="english" initial={en} />);
     expect(container.querySelector(".ws-form-authoring")).toHaveAttribute("dir", "ltr");
-    rerender(<Builder initial={ar} />);
+    rerender(<Builder key="arabic" initial={ar} />);
     // BuildTab also updates when the main language is changed in the same editor session.
     expect(container.querySelector(".ws-form-authoring")).toHaveAttribute("dir", "rtl");
   });
