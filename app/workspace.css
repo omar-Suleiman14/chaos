@@ -1185,3 +1185,11 @@ html[data-ws-warm] :is(.ws-skeleton, .ws-skeleton-card) { visibility: hidden; }
 .ws-recents .ws-sidebar-section + .ws-sidebar-section { margin-top: 4px; }
 .ws-recents .ws-section-toggle { margin-top: 0; }
 .ws-recents .ws-sidebar-section[data-open] .ws-section-toggle { position: sticky; top: 0; z-index: 1; background: var(--ws-sidebar); }
+
+/* Form authoring follows the content language, even when the workspace UI stays English. */
+.ws-form-authoring[dir="rtl"] { font-family: var(--font-cairo), "Cairo", sans-serif; text-align: start; }
+.ws-form-authoring[dir="rtl"] :is(input:not([type="number"]), textarea) {
+  font-family: var(--font-cairo), "Cairo", sans-serif;
+  text-align: start;
+}
+.ws-author-title[dir="rtl"] { font-family: var(--font-cairo), "Cairo", sans-serif; text-align: start; }

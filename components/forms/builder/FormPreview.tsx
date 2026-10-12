@@ -24,7 +24,7 @@ export function PreviewSurface({ def, language, height, runKey }: { def: FormDef
   const grade = useMemo(() => (done ? gradeQuiz(def, done) : null), [def, done]);
 
   return (
-    <div className={`ws-respondent-preview ws-preview-scroll ${themeClass(def)}`} style={{ ...themeStyle(def), ["--form-stage-h" as string]: height }}>
+    <div dir={language === "ar" ? "rtl" : "ltr"} lang={language} className={`ws-respondent-preview ws-preview-scroll ${themeClass(def)}`} style={{ ...themeStyle(def), ["--form-stage-h" as string]: height }}>
       {done ? (
         <div className={def.presentation === "conversational" || def.presentation === "swipe" ? "" : "form-page-body"}>
           <EndingView ending={selectEnding(def, done)} def={def} language={language} answers={done} score={grade ? { value: grade.score, max: grade.maxScore } : null}>

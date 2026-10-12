@@ -754,3 +754,12 @@ textarea.form-input { resize: vertical; min-height: 5rem; }
 .form-shell--minimal .form-ending, .form-shell--minimal .form-ending--stage { min-height: 0; padding: 1.5rem 1.25rem; }
 .form-shell--minimal .form-message { padding: 1.25rem; }
 .form-shell--minimal .form-mode-page, .form-shell--minimal .form-mode-sections { --form-stage-h: auto; padding: 1.25rem; }
+
+/* Arabic form content always uses Cairo, even when a theme selects a Latin font. */
+:is(.form-root, .ws-respondent-preview)[lang="ar"] {
+  --form-font-body: var(--font-cairo), "Cairo", sans-serif;
+  --form-font-heading: var(--font-cairo), "Cairo", sans-serif;
+  font-family: var(--form-font-body);
+  letter-spacing: normal;
+}
+:is(.form-root, .ws-respondent-preview)[lang="ar"] .form-heading { letter-spacing: normal; }

@@ -25,7 +25,7 @@ import HostLiveButton from "@/components/live/HostLiveButton";
 import { WsMenu, WsSwitch, WsTabs } from "@/components/workspace/primitives";
 import { toast } from "@/lib/toast";
 import { formatScheduleTime } from "@/convex/formSchedule";
-import { checkDefinition } from "@/convex/formLogic";
+import { checkDefinition, formAuthoringDirection } from "@/convex/formLogic";
 import type { FormDefinition } from "@/convex/formLogic";
 import { parseError } from "@/lib/errors";
 import { localizeMessage } from "@/lib/messages";
@@ -310,8 +310,8 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
         </div>
         <div className="min-w-0">
           <label className="sr-only" htmlFor="form-title">{quiz ? t.quizTitle : t.formTitle}</label>
-          <input id="form-title" value={def.title} disabled={!canEdit} maxLength={200} placeholder={quiz ? t.untitledQuiz : t.untitledForm}
-            onChange={(e) => d.change((x) => ({ ...x, title: e.target.value }))} className="ws-title-input" />
+          <input id="form-title" dir={formAuthoringDirection(def)} lang={formAuthoringDirection(def) === "rtl" ? "ar" : "en"} value={def.title} disabled={!canEdit} maxLength={200} placeholder={quiz ? t.untitledQuiz : t.untitledForm}
+            onChange={(e) => d.change((x) => ({ ...x, title: e.target.value }))} className="ws-title-input ws-author-title" />
           <div className="flex items-center gap-3 flex-wrap mt-2">
             <StatusBadge status={data.status} edited={data.hasUnpublishedChanges || (published && dirty)} />
             <span className="text-[var(--ws-line-strong)]" aria-hidden="true">|</span>

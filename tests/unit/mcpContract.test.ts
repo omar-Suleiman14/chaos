@@ -136,4 +136,35 @@ describe("ChatGPT app contract", () => {
     const next = toDefinition({ questions: [view.questions[1]] }, def);
     expect(next.fields[0].showIf).toBeUndefined();
   });
+  it("detects Arabic authoring, keeps language on edits and allows an explicit switch", () => {
+    const arabic = toDefinition({
+      title: "ابدأ فترتك التجريبية",
+      description: "املأ بيانات العيادة",
+      questions: [{ type: "short_text", label: "اسم العيادة؟" }],
+    });
+    expect(arabic.defaultLanguage).toBe("ar");
+    expect(arabic.languages).toEqual(["ar"]);
+    expect(fromDefinition(arabic).defaultLanguage).toBe("ar");
+
+    const edited = toDefinition({ title: "Clinic trial" }, arabic);
+    expect(edited.defaultLanguage).toBe("ar");
+    expect(edited.languages).toEqual(["ar"]);
+
+    const english = toDefinition({ defaultLanguage: "en" }, edited);
+    expect(english.defaultLanguage).toBe("en");
+    expect(english.languages).toEqual(["en"]);
+    expect(toDefinition({ title: "English form", questions: [] }).defaultLanguage).toBe("en");
+  });
+
+  it("validates explicit main language and keeps bilingual languages enabled", () => {
+    const arabicInput = { title: "أسئلة العيادة", questions: [{ type: "short_text", label: "اسم العيادة؟" }] };
+    expect(parseFormInput({ ...arabicInput, defaultLanguage: "fr" })).toEqual({
+      errors: ["defaultLanguage must be en or ar."],
+    });
+    expect(toDefinition({ ...arabicInput, defaultLanguage: "en" } as McpFormInput).defaultLanguage).toBe("en");
+    const bilingual = toDefinition({ ...arabicInput, defaultLanguage: "ar" } as McpFormInput);
+    bilingual.languages = ["ar", "en"];
+    expect(toDefinition({ defaultLanguage: "en" }, bilingual).languages).toEqual(["ar", "en"]);
+  });
+
 });

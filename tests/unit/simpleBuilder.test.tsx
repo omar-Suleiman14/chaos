@@ -4,7 +4,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import FieldEditor from "@/components/forms/builder/FieldEditor";
 import BuildTab from "@/components/forms/builder/BuildTab";
 import FormRenderer from "@/components/forms/FormRenderer";
-import { blankField, emptyDefinition } from "@/convex/formLogic";
+import { blankField, emptyDefinition, formAuthoringDirection } from "@/convex/formLogic";
 import type { Answers, FormDefinition, FormField } from "@/convex/formLogic";
 
 vi.mock("@/lib/sfx", () => ({ sfx: { play: vi.fn() } }));
@@ -56,6 +56,35 @@ describe("adding questions", () => {
     render(<Builder initial={{ ...emptyDefinition("Example"), fields: [blankField("choice")] }} />);
     fireEvent.keyDown(screen.getByRole("textbox", { name: "Options 2" }), { key: "Enter" });
     expect(screen.getByRole("textbox", { name: "Options 3" })).toHaveValue("Option 3");
+  });
+});
+
+describe("Arabic form authoring", () => {
+  it("mirrors the question editor for an Arabic form even when its stored main language is English", () => {
+    const arabic = { ...emptyDefinition("ابدأ فترتك التجريبية"), fields: [{
+      ...blankField("choice"), label: "بتدير إيه حاليًا؟",
+      options: [{ id: "a1", label: "عيادة واحدة" }, { id: "a2", label: "مركز طبي" }],
+    }] };
+    expect(arabic.defaultLanguage).toBe("en");
+    expect(formAuthoringDirection(arabic)).toBe("rtl");
+
+    const { container } = render(<Builder initial={arabic} />);
+    expect(container.querySelector(".ws-form-authoring")).toHaveAttribute("dir", "rtl");
+    expect(screen.getByPlaceholderText("Type your question")).toHaveAttribute("dir", "auto");
+    expect(screen.getByRole("textbox", { name: "Options 1" })).toHaveAttribute("dir", "auto");
+    expect(screen.getByRole("textbox", { name: "Options 1" })).toHaveValue("عيادة واحدة");
+  });
+
+  it("keeps intentionally Arabic forms RTL and ordinary English forms LTR", () => {
+    const en = emptyDefinition("Clinic registration");
+    const ar = { ...emptyDefinition("Clinic registration"), defaultLanguage: "ar" as const, languages: ["ar" as const] };
+    expect(formAuthoringDirection(en)).toBe("ltr");
+    expect(formAuthoringDirection(ar)).toBe("rtl");
+    const { container, rerender } = render(<Builder key="english" initial={en} />);
+    expect(container.querySelector(".ws-form-authoring")).toHaveAttribute("dir", "ltr");
+    rerender(<Builder key="arabic" initial={ar} />);
+    // BuildTab also updates when the main language is changed in the same editor session.
+    expect(container.querySelector(".ws-form-authoring")).toHaveAttribute("dir", "rtl");
   });
 });
 

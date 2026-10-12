@@ -3015,6 +3015,14 @@
       "type": "string",
       "maxLength": 5000
      },
+     "defaultLanguage": {
+      "description": "Main form language, ar or en. If omitted on creation, inferred from the authored title, intro and questions. Arabic enables RTL and Cairo.",
+      "type": "string",
+      "enum": [
+       "en",
+       "ar"
+      ]
+     },
      "quizMode": {
       "description": "true for a scored quiz with an answer key.",
       "type": "boolean"
@@ -17648,6 +17656,14 @@
         "description": "Intro text shown at the top.",
         "type": "string",
         "maxLength": 5000
+       },
+       "defaultLanguage": {
+        "description": "Main form language, ar or en. If omitted on creation, inferred from the authored title, intro and questions. Arabic enables RTL and Cairo.",
+        "type": "string",
+        "enum": [
+         "en",
+         "ar"
+        ]
        },
        "quizMode": {
         "description": "true for a scored quiz with an answer key.",

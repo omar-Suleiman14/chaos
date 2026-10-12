@@ -67,6 +67,7 @@ const baseInstructions = `Chaos (${new URL(siteUrl).host}) is where this person 
 - Use natural, human language in all content and chat replies. Write short, clear sentences. Avoid em dashes; use periods or commas instead. Avoid promotional wording, jargon, stock phrases and filler. Match the person's language, including natural Arabic when they write in Arabic.
 - Keep chat replies short: one or two sentences on what you made, then the link. Do not list the questions back unless the person asks.
 - Ids look like form_… (forms and quizzes; a quiz is a form with quiz mode on). Find them with search_forms.
+- For forms and quizzes, defaultLanguage is the respondent main language (ar or en), not the interface language. Set ar for Arabic content and en for English; when omitted, new forms infer it from the title, intro and question text. Existing form language changes must be explicit. This changes direction, not translations.
 - update_form replaces the question list when you send questions: call get_form first, keep each question's id, and send the full list.
 - Looks: every form has a theme (colours, font, buttons, start screen). When you create a form, pick a preset that suits it and pass it as theme: "Lilac" for everyday forms and sign-ups, "Banner" for work and school, and a livelier one (Candy, Arcade, Neon, Sunset, Aurora) for games, parties and fun quizzes. Use list_themes to see them all, and set_form_theme for "make it dark", "use the Typeform look" or a brand colour. If the person names a look, use theirs. If set_form_theme returns warnings about hard-to-read colours, fix them.
 - Sounds: forms you create have sound on (Glass). Pick a pack that suits the mood with sound (soft is Glass, pop, wood, arcade), and use off only when the person asks for silence or the form is formal or sensitive (health, HR, legal).
@@ -102,6 +103,7 @@ const question = z.object({
 const formFields = {
   title: z.string().min(1).max(200),
   description: z.string().max(5000).optional().describe("Intro text shown at the top."),
+  defaultLanguage: z.enum(["en", "ar"]).optional().describe("Main form language, ar or en. If omitted on creation, inferred from the authored title, intro and questions. Arabic enables RTL and Cairo."),
   quizMode: z.boolean().optional().describe("true for a scored quiz with an answer key."),
   showAnswers: z.boolean().optional().describe("Quiz mode only: after submitting, respondents see which answers were right, the correct answers and the explanations (default true). false shows only their marks, for tests whose key must stay private."),
   presentation: z.enum(MCP_PRESENTATIONS).optional().describe("page = all questions on one page (default); one_at_a_time = one question per screen; sections = one page per section; swipe = full-screen cards."),
@@ -397,6 +399,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
       changes: z.object({
         title: formFields.title.optional(),
         description: formFields.description,
+        defaultLanguage: formFields.defaultLanguage,
         quizMode: formFields.quizMode,
         showAnswers: formFields.showAnswers,
         presentation: formFields.presentation,

@@ -33,7 +33,7 @@ function Pair({ source, value, onChange, multiline, label, dir, empty }: { empty
   const missing = source.trim() && !value.trim();
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 items-start">
-      <p className="text-sm text-muted-foreground whitespace-pre-line py-2">{source || <em>{empty}</em>}</p>
+      <p dir="auto" className="text-sm text-muted-foreground whitespace-pre-line py-2">{source || <em>{empty}</em>}</p>
       {multiline ? (
         <textarea value={value} onChange={(e) => onChange(e.target.value)} dir={dir} rows={2} aria-label={label} className={`kb-input text-sm ${missing ? "border-primary/60" : ""}`} />
       ) : (

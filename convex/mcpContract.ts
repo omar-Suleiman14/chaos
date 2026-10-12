@@ -2,9 +2,9 @@
 // definitions. No Convex imports, so it is unit-testable and shared with the
 // Next.js /mcp route, which builds its input schemas from these constants.
 
-import { emptyDefinition, isValidId, LIMITS, newId, themePresetIds } from "./formLogic";
+import { detectTextLanguage, emptyDefinition, isValidId, LIMITS, newId, themePresetIds } from "./formLogic";
 import type {
-  Choice, FieldType, FormDefinition, FormField, FormTheme, Presentation, ThemeBackdrop, ThemeButtons, ThemeChrome, ThemeCover, ThemeFont, ThemePresetId, ThemeSound,
+  Choice, FieldType, FormDefinition, FormField, FormTheme, Language, Presentation, ThemeBackdrop, ThemeButtons, ThemeChrome, ThemeCover, ThemeFont, ThemePresetId, ThemeSound,
 } from "./formLogic";
 
 /** Question types in plain words; the model reads these names. */
@@ -77,6 +77,7 @@ export interface McpQuestion {
 export interface McpFormInput {
   title: string;
   description?: string;
+  defaultLanguage?: Language;
   quizMode?: boolean;
   /** Quiz mode: whether respondents see the answer key and explanations after submitting (default true). */
   showAnswers?: boolean;
@@ -89,6 +90,11 @@ export interface McpFormInput {
 const isString = (x: unknown): x is string => typeof x === "string";
 const isStringArray = (x: unknown): x is string[] => Array.isArray(x) && x.every(isString);
 const isNumber = (x: unknown): x is number => typeof x === "number" && Number.isFinite(x);
+
+/** Infer the authored language, not the MCP client language, for new drafts only. */
+export function inferFormLanguage(input: Partial<McpFormInput>): Language {
+  return detectTextLanguage([input.title ?? "", input.description ?? "", ...(input.questions ?? []).flatMap((q) => [q.label, q.description ?? ""])]);
+}
 
 // ── Themes and sounds ───────────────────────────────────────────────────────
 // Preset palettes live in components/forms/formThemes.ts, which Convex cannot
@@ -259,6 +265,10 @@ export function parseFormInput(raw: unknown, partial = false): { input: Partial<
     if (!isString(b.description) || b.description.length > LIMITS.description) errors.push(`description must be text of at most ${LIMITS.description} characters.`);
     else out.description = b.description;
   }
+  if (b.defaultLanguage !== undefined) {
+    if (b.defaultLanguage !== "en" && b.defaultLanguage !== "ar") errors.push("defaultLanguage must be en or ar.");
+    else out.defaultLanguage = b.defaultLanguage;
+  }
   if (b.quizMode !== undefined) {
     if (typeof b.quizMode !== "boolean") errors.push("quizMode must be true or false.");
     else out.quizMode = b.quizMode;
@@ -360,6 +370,11 @@ function toChoices(labels: string[], previous: Choice[] | undefined, prefix: str
  */
 export function toDefinition(input: Partial<McpFormInput>, previous?: FormDefinition): FormDefinition {
   const base: FormDefinition = previous ?? emptyDefinition(input.title ?? "Untitled form");
+  const defaultLanguage = input.defaultLanguage ?? (previous ? base.defaultLanguage : inferFormLanguage(input));
+  // A single-language form can change its main language without creating an untranslated secondary language.
+  const languages = !previous || (input.defaultLanguage && base.languages.length === 1 && input.defaultLanguage !== base.defaultLanguage)
+    ? [defaultLanguage]
+    : [...new Set([...base.languages, defaultLanguage])];
   const quizEnabled = input.quizMode ?? base.quiz?.enabled ?? false;
   let fields = base.fields;
   if (input.questions) {
@@ -419,6 +434,8 @@ export function toDefinition(input: Partial<McpFormInput>, previous?: FormDefini
     ...base,
     title: input.title ?? base.title,
     description: input.description ?? base.description,
+    defaultLanguage,
+    languages,
     presentation: input.presentation ? toPresentation[input.presentation] : base.presentation,
     fields,
   };
@@ -438,7 +455,7 @@ export interface McpQuestionView extends McpQuestion {
 }
 
 /** The draft as the model sees it. Answer keys are included: only the owner can call this. */
-export function fromDefinition(def: FormDefinition): { title: string; description: string; quizMode: boolean; showAnswers?: boolean; presentation: McpPresentation; questions: McpQuestionView[]; unsupported: string[]; theme: ReturnType<typeof themeView> } {
+export function fromDefinition(def: FormDefinition): { title: string; description: string; defaultLanguage: Language; quizMode: boolean; showAnswers?: boolean; presentation: McpPresentation; questions: McpQuestionView[]; unsupported: string[]; theme: ReturnType<typeof themeView> } {
   const unsupported = new Set<string>();
   const questions: McpQuestionView[] = [];
   for (const f of def.fields) {
@@ -469,6 +486,7 @@ export function fromDefinition(def: FormDefinition): { title: string; descriptio
   return {
     title: def.title,
     description: def.description,
+    defaultLanguage: def.defaultLanguage,
     quizMode: !!def.quiz?.enabled,
     ...(def.quiz?.enabled ? { showAnswers: def.quiz.showAnswers !== false } : {}),
     presentation: fromPresentation[def.presentation] ?? "page",
