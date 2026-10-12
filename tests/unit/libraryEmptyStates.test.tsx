@@ -7,14 +7,14 @@ const theme = { accent: "#3595e3", background: "plain", font: "sans", radius: "s
 const form = (id: string, title: string, status: string) => ({
   _id: id, title, status, updatedAt: 1, responseCount: 0, quizMode: false, hasUnpublishedChanges: false, groupName: "", theme, presentation: "page", shareId: id,
 });
-const state = vi.hoisted(() => ({ forms: undefined as unknown }));
+const state = vi.hoisted(() => ({ forms: undefined as unknown, hasMore: false, loadMore: vi.fn() }));
 vi.mock("next/navigation", () => ({ useRouter: () => ({ push: vi.fn(), replace: vi.fn() }), usePathname: () => "/dashboard", useSearchParams: () => new URLSearchParams() }));
 vi.mock("convex/react", () => ({
   useQuery: (ref: Parameters<typeof getFunctionName>[0]) => (getFunctionName(ref) === "forms:listMyForms" ? state.forms : undefined),
   useMutation: () => vi.fn(),
 }));
 vi.mock("@/lib/forms/useFormInventoryPages", () => ({
-  useFormInventoryPages: () => ({ forms: state.forms, confirmed: state.forms !== undefined, hasMore: false, loadMore: vi.fn() }),
+  useFormInventoryPages: () => ({ forms: state.forms, confirmed: state.forms !== undefined, hasMore: state.hasMore, loadMore: state.loadMore }),
 }));
 vi.mock("@/lib/learn/data", () => ({ useLearnActions: () => ({ createLesson: vi.fn() }) }));
 vi.mock("@/components/workspace/useCreateForm", () => ({ useCreateForm: () => ({ create: vi.fn(), busy: false }) }));
@@ -23,12 +23,45 @@ vi.mock("@/components/library/FormThumb", () => ({ default: () => null }));
 const illustration = () => document.querySelector(".state-illustration");
 
 beforeEach(() => {
+  state.hasMore = false;
+  state.loadMore.mockReset();
   localStorage.clear();
   localStorage.setItem("chaos-library-view", "list");
   Element.prototype.scrollIntoView = vi.fn();
 });
 
 describe("library empty states", () => {
+  it("loads older items automatically even when the selected tab already has rows", () => {
+    state.forms = { owned: [form("a", "Recent survey", "live")], shared: [] };
+    state.hasMore = true;
+    render(<CreatorLibrary />);
+    expect(state.loadMore).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("link", { name: /Recent survey/ })).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+  });
+
+  it("keeps loading through empty pages until older matching items arrive", () => {
+    state.forms = { owned: [], shared: [] };
+    state.hasMore = true;
+    const { rerender } = render(<CreatorLibrary />);
+    for (let i = 0; i < 5; i++) {
+      expect(screen.queryByRole("heading", { name: "Create your first form" })).toBeNull();
+      expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
+      state.hasMore = false; // A requested page is pending.
+      state.forms = undefined;
+      rerender(<CreatorLibrary />);
+      state.forms = { owned: [], shared: [] };
+      state.hasMore = true;
+      rerender(<CreatorLibrary />);
+    }
+    expect(state.loadMore).toHaveBeenCalledTimes(6);
+    state.forms = { owned: [form("older", "Older survey", "live")], shared: [] };
+    state.hasMore = false;
+    rerender(<CreatorLibrary />);
+    expect(screen.getByRole("link", { name: /Older survey/ })).toBeInTheDocument();
+    expect(state.loadMore).toHaveBeenCalledTimes(6);
+  });
+
   it("shows no illustration while the library is still loading", () => {
     state.forms = undefined;
     render(<CreatorLibrary />);
