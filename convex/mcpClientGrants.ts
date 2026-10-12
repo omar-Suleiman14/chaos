@@ -38,10 +38,10 @@ export const observeTransportClient = internalMutation({
     const now = Date.now();
     if (current) {
       // Avoid writing on each tool-list request: existing consent is never reset on reconnect.
-      if (now - current.lastSeenAt > 6 * 3600_000) await ctx.db.patch(current._id, { lastSeenAt: now });
+      if (now - current.lastSeenAt > 6 * 3600_000) await ctx.db.patch("mcpClientGrants", current._id, { lastSeenAt: now });
       return { permissions: validPermissions(current.permissions, true), label: current.label };
     }
-    const existing = await ctx.db.query("mcpClientGrants").withIndex("by_owner", q => q.eq("ownerId", userId)).take(CLIENT_LIMIT + 1);
+    const existing = await ctx.db.query("mcpClientGrants").withIndex("by_owner_client", q => q.eq("ownerId", userId)).take(CLIENT_LIMIT + 1);
     if (existing.length >= CLIENT_LIMIT) throw new Error("LIMIT: Too many OAuth clients; revoke an old connection.");
     const name = (label ?? "").trim().slice(0, 80) || "OAuth client";
     // Existing OAuth installations previously offered the full toolset. Default to
@@ -76,7 +76,7 @@ export const listMine = query({
   args: {},
   handler: async ctx => {
     const { identity } = await requireActiveUser(ctx);
-    const rows = await ctx.db.query("mcpClientGrants").withIndex("by_owner", q => q.eq("ownerId", identity.subject)).take(CLIENT_LIMIT + 1);
+    const rows = await ctx.db.query("mcpClientGrants").withIndex("by_owner_client", q => q.eq("ownerId", identity.subject)).take(CLIENT_LIMIT + 1);
     return rows.map(row => ({
       clientId: row.clientId, label: row.label, permissions: row.permissions,
       createdAt: row.createdAt, updatedAt: row.updatedAt, lastSeenAt: row.lastSeenAt,
@@ -103,7 +103,7 @@ export const updateMine = mutation({
     if (!row) throw new Error("NOT_FOUND: Connect the app once before changing its permissions.");
     const admin = await ctx.db.query("admins").withIndex("by_clerkId", q => q.eq("clerkId", identity.subject)).unique();
     const next = validPermissions(permissions, !!admin);
-    await ctx.db.patch(row._id, { permissions: next, updatedAt: Date.now() });
+    await ctx.db.patch("mcpClientGrants", row._id, { permissions: next, updatedAt: Date.now() });
     return { clientId, permissions: next };
   },
 });
