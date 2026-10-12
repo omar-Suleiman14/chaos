@@ -2,7 +2,7 @@
 
 import { FocusInput, FocusTextarea } from "@/components/InitialFocus";
 
-import { useRef, useState } from "react";
+import { createContext, useContext, useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronRight, Copy, GitBranch, Plus, Trash2, X } from "lucide-react";
 import { blankField, fieldTypes, isAnswerable, newId, optionTypes } from "@/convex/formLogic";
 import { formAuthoringDirection } from "@/convex/formLogic";
@@ -14,6 +14,13 @@ import { useCopy } from "@/lib/i18n";
 import RuleEditor from "./RuleEditor";
 import DocHint from "@/components/forms/DocHint";
 import { Select } from "@/components/workspace/Select";
+
+// Only visible branching controls subscribe to other questions' edits.
+export const BuilderDefinitionContext = createContext<FormDefinition | null>(null);
+function LiveRuleEditor(props: React.ComponentProps<typeof RuleEditor>) {
+  const definition = useContext(BuilderDefinitionContext);
+  return <RuleEditor {...props} def={definition ?? props.def} />;
+}
 
 /** Change type, keeping the label, description, logic and any options that still apply. */
 export function convertField(field: FormField, type: FieldType): FormField {
@@ -334,7 +341,7 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
       </div>
       {showLogic && index > 0 && (
         <div className="rounded-lg border border-dashed border-[var(--ws-line-strong)] p-3">
-          <RuleEditor def={def} rule={field.showIf} before={index} allowScore onChange={(showIf) => set({ showIf })}
+          <LiveRuleEditor def={def} rule={field.showIf} before={index} allowScore onChange={(showIf) => set({ showIf })}
             label={field.type === "section" ? t.showSectionIf : t.showQuestionIf} />
         </div>
       )}

@@ -10,30 +10,30 @@
       "unit": "count"
     },
     "editor.keystroke.renders": {
-      "budget": 94,
+      "budget": 411,
       "unit": "count",
       "raised": {
-        "from": 93,
-        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Render counts grew with the classroom tools, reader menus and version history (#113-#123). Lower with pnpm perf:ratchet as they are trimmed.",
-        "at": "2026-10-09"
+        "from": 94,
+        "reason": "Questions now start expanded at the maintainer request. All editors and existing branching controls are visible; branching sources must update as labels change. Keystrokes still render only one FieldEditor and preserve save/subscription budgets.",
+        "at": "2026-10-12"
       }
     },
     "editor.maxRendersPerCommit": {
-      "budget": 85,
+      "budget": 402,
       "unit": "count",
       "raised": {
-        "from": 84,
-        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Render counts grew with the classroom tools, reader menus and version history (#113-#123). Lower with pnpm perf:ratchet as they are trimmed.",
-        "at": "2026-10-09"
+        "from": 85,
+        "reason": "Questions now start expanded at the maintainer request. All editors and existing branching controls are visible; branching sources must update as labels change. Keystrokes still render only one FieldEditor and preserve save/subscription budgets.",
+        "at": "2026-10-12"
       }
     },
     "editor.mount.renders": {
-      "budget": 908,
+      "budget": 4612,
       "unit": "count",
       "raised": {
-        "from": 907,
-        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. Render counts grew with the classroom tools, reader menus and version history (#113-#123). Lower with pnpm perf:ratchet as they are trimmed.",
-        "at": "2026-10-09"
+        "from": 908,
+        "reason": "Questions now start expanded at the maintainer request. All editors and existing branching controls are visible; branching sources must update as labels change. Keystrokes still render only one FieldEditor and preserve save/subscription budgets.",
+        "at": "2026-10-12"
       }
     },
     "editor.sameFunctionManyArgs": {
