@@ -12,10 +12,11 @@ import { copyFields, duplicateSection, insertAfter, moveField, removeFields } fr
 import { useBuilderLabels } from "@/components/forms/formThemeLabels";
 import { useCopy } from "@/lib/i18n";
 import { pluralForm } from "@/lib/locale";
-import FieldEditor from "./FieldEditor";
+import FieldEditor, { BuilderDefinitionContext } from "./FieldEditor";
 
 const copy = {
   en: {
+    expandAll: "Expand all", collapseAll: "Collapse all",
     insertHere: "Add a question here", addQuestion: "Add a question", addQuestionButton: "Add question", addText: "Add text", addSection: "Add section",
     emptyTitle: "Start with your first question", emptyBody: "Type the question, then the answers. You can change its type at any time.",
     intro: "Introduction", introQuiz: "Add an introduction: what the quiz covers, how long it takes…", introForm: "Add an introduction: why you are asking, how long it takes…",
@@ -25,6 +26,7 @@ const copy = {
     deleted: (n: number) => (n === 1 ? "Question deleted" : `${n} questions deleted`),
   },
   ar: {
+    expandAll: "توسيع الكل", collapseAll: "طي الكل",
     insertHere: "أضف سؤالًا هنا", addQuestion: "أضف سؤالًا", addQuestionButton: "أضف سؤالًا", addText: "أضف نصًا", addSection: "أضف قسمًا",
     emptyTitle: "ابدأ بسؤالك الأول", emptyBody: "اكتب السؤال ثم الإجابات. يمكنك تغيير نوعه في أي وقت.",
     intro: "المقدمة", introQuiz: "أضف مقدمة: ما يغطيه الاختبار وكم يستغرق…", introForm: "أضف مقدمة: لماذا تسأل وكم يستغرق…",
@@ -61,7 +63,12 @@ function AddBar({ onAdd }: { onAdd: (type?: FieldType) => void }) {
   );
 }
 
-type RowActions = { toggle: (id: string) => void; expand: (id: string | null) => void; insert: (afterIndex: number) => void };
+type RowActions = {
+  toggle: (id: string) => void; expand: (id: string) => void; insert: (afterIndex: number) => void;
+  change: (updater: (d: FormDefinition) => FormDefinition) => void;
+  step: (updater: (d: FormDefinition) => FormDefinition) => void;
+  remove: (ids: Set<string>) => void;
+};
 
 /**
  * One question in the list. Memoized so a keystroke in one question re-renders
@@ -70,6 +77,7 @@ type RowActions = { toggle: (id: string) => void; expand: (id: string | null) =>
  */
 const QuestionRow = memo(function QuestionRow({ field, index, open, checked, selecting, last, readOnly, actions, children }: {
   field: FormDefinition["fields"][number]; index: number; open: boolean; checked: boolean; selecting: boolean; last: boolean; readOnly: boolean;
+  direction: "ltr" | "rtl"; quizEnabled: boolean; focused: boolean;
   actions: { current: RowActions }; children: ReactNode;
 }) {
   const t = useCopy(copy);
@@ -81,7 +89,7 @@ const QuestionRow = memo(function QuestionRow({ field, index, open, checked, sel
           {!readOnly && (
             <input type="checkbox" className="ws-reveal w-4 h-4" data-keep={selecting} checked={checked} onChange={() => actions.current.toggle(field.id)} aria-label={t.select(field.label || labels.fieldType(field.type))} />
           )}
-          <button type="button" onClick={() => actions.current.expand(open ? null : field.id)} className="flex-1 flex items-center gap-3 text-start min-w-0" aria-expanded={open}>
+          <button type="button" onClick={() => actions.current.expand(field.id)} className="flex-1 flex items-center gap-3 text-start min-w-0" aria-expanded={open}>
             {open ? <ChevronDown size={16} /> : <ChevronRight size={16} className="rtl:rotate-180" />}
             {(() => { const Icon = fieldIcons[field.type]; return <span className="grid place-items-center w-6 h-6 shrink-0 rounded-md bg-[var(--ws-active)] text-[var(--ws-text-soft)]" title={labels.fieldType(field.type)}><Icon size={13} aria-hidden="true" /></span>; })()}
             <span className="text-[11px] text-muted-foreground w-5 shrink-0 tabular-nums">{index + 1}</span>
@@ -102,7 +110,7 @@ const QuestionRow = memo(function QuestionRow({ field, index, open, checked, sel
       )}
     </li>
   );
-}, (a, b) => !a.open && !b.open && a.field === b.field && a.index === b.index && a.checked === b.checked && a.selecting === b.selecting && a.last === b.last && a.readOnly === b.readOnly);
+}, (a, b) => a.open === b.open && a.field === b.field && a.index === b.index && a.checked === b.checked && a.selecting === b.selecting && a.last === b.last && a.readOnly === b.readOnly && a.direction === b.direction && a.quizEnabled === b.quizEnabled && a.focused === b.focused);
 
 export default function BuildTab({ def, change: rawChange, readOnly, notice, announce }: {
   def: FormDefinition;
@@ -116,14 +124,19 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
   const direction = formAuthoringDirection(def);
   const change = (updater: (d: FormDefinition) => FormDefinition) => rawChange(updater);
   const step = useCallback((updater: (d: FormDefinition) => FormDefinition) => rawChange(updater, { checkpoint: true }), [rawChange]);
-  const [expanded, setExpanded] = useState<string | null>(def.fields[0]?.id ?? null);
+  const [collapsed, setCollapsed] = useState<Set<string>>(() => new Set());
+  const allCollapsed = def.fields.length > 0 && def.fields.every((field) => collapsed.has(field.id));
+  const expand = useCallback((id: string) => setCollapsed((previous) => {
+    const next = new Set(previous);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  }), []);
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [focusId, setFocusId] = useState<string | null>(null);
 
   const add = useCallback((afterIndex: number, type?: FieldType) => {
     const field = blankField(type ?? nextType(def, afterIndex));
     step((d) => insertAfter(d, afterIndex, [field]));
-    setExpanded(field.id);
     setFocusId(field.id);
   }, [def, step]);
   const remove = (ids: Set<string>) => {
@@ -143,8 +156,8 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
   }), []);
 
   // Rows call the latest handlers through this ref, so memoized rows never hold stale ones.
-  const actions = useRef<RowActions>({ toggle, expand: setExpanded, insert: add });
-  useLayoutEffect(() => { actions.current = { toggle, expand: setExpanded, insert: add }; }, [toggle, add]);
+  const actions = useRef<RowActions>({ toggle, expand, insert: add, change, step, remove });
+  useLayoutEffect(() => { actions.current = { toggle, expand, insert: add, change, step, remove }; });
 
   return (
     <div dir={direction} className="ws-form-authoring space-y-4">
@@ -173,11 +186,22 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
         </div>
       )}
 
+      {def.fields.length > 0 && (
+        <div className="flex justify-end">
+          <button type="button" className="ws-btn ws-btn--ghost" onClick={() => setCollapsed(allCollapsed ? new Set() : new Set(def.fields.map((field) => field.id)))}>
+            {allCollapsed ? <ChevronDown size={16} aria-hidden="true" /> : <ChevronRight size={16} aria-hidden="true" className="rtl:rotate-180" />}
+            {allCollapsed ? t.expandAll : t.collapseAll}
+          </button>
+        </div>
+      )}
+
+      <BuilderDefinitionContext.Provider value={def}>
       <ol className="space-y-2">
         {def.fields.map((field, index) => {
-          const open = expanded === field.id;
+          const open = !collapsed.has(field.id);
           return (
             <QuestionRow key={field.id} field={field} index={index} open={open} checked={selected.has(field.id)} selecting={selected.size > 0}
+              direction={direction} quizEnabled={!!def.quiz?.enabled} focused={focusId === field.id}
               last={index === def.fields.length - 1} readOnly={readOnly} actions={actions}>
               {open && (
                 <div className="px-4 pb-4">
@@ -186,10 +210,10 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
                     index={index}
                     def={def}
                     readOnly={readOnly}
-                    onChange={(next) => change((d) => ({ ...d, fields: d.fields.map((f) => (f.id === field.id ? next : f)) }))}
-                    onDuplicate={() => step((d) => (field.type === "section" ? duplicateSection(d, field.id) : insertAfter(d, index, copyFields([field]))))}
-                    onRemove={() => remove(new Set([field.id]))}
-                    onMove={(delta) => step((d) => moveField(d, index, index + delta))}
+                    onChange={(next) => actions.current.change((d) => ({ ...d, fields: d.fields.map((f) => (f.id === field.id ? next : f)) }))}
+                    onDuplicate={() => actions.current.step((d) => (field.type === "section" ? duplicateSection(d, field.id) : insertAfter(d, index, copyFields([field]))))}
+                    onRemove={() => actions.current.remove(new Set([field.id]))}
+                    onMove={(delta) => actions.current.step((d) => moveField(d, index, index + delta))}
                     focusOnMount={focusId === field.id}
                   />
                 </div>
@@ -198,6 +222,7 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
           );
         })}
       </ol>
+      </BuilderDefinitionContext.Provider>
 
       {!readOnly && (def.fields.length === 0 ? (
         <div className="chaos-card bg-card p-6 space-y-3 text-center grid justify-items-center">

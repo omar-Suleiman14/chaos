@@ -6,12 +6,12 @@
       "unit": "count"
     },
     "builder.questions100.domElements": {
-      "budget": 2333,
+      "budget": 11634,
       "unit": "count",
       "raised": {
-        "from": 2332,
-        "reason": "One wrapper element around each workspace tab row (WsTabs) to hold the phone overflow fade and scroll chevron; nothing else changes.",
-        "at": "2026-10-10"
+        "from": 2333,
+        "reason": "Questions now start expanded at the maintainer request. All editors and existing branching controls are visible; branching sources must update as labels change. Keystrokes still render only one FieldEditor and preserve save/subscription budgets.",
+        "at": "2026-10-12"
       }
     },
     "builder.tabReturn.elementsAdded": {

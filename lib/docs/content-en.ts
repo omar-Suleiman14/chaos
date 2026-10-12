@@ -145,6 +145,7 @@ export const sectionsEn: DocSection[] = [
           { type: "heading", id: "options", text: "Options" },
           { type: "p", text: "For choice, dropdown, checkbox and ranking questions, type each option in its own field. Press **Add an option** for another. Use the arrows to move one, and the cross to remove it. You can also edit all options as text, one per line." },
           { type: "heading", id: "edit", text: "Edit a question" },
+          { type: "p", text: "Questions start expanded. Use **Collapse all** above the question list to fold them, then **Expand all** to open them again. Press a question header to open or close just that question." },
           {
             type: "list",
             items: [

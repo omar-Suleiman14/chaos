@@ -59,6 +59,56 @@ describe("adding questions", () => {
   });
 });
 
+describe("question expansion", () => {
+  const definition = () => ({ ...emptyDefinition("Example"), fields: [
+    { ...blankField("text"), label: "First question" },
+    { ...blankField("text"), label: "Second question" },
+  ] });
+
+  it("opens every question by default and toggles all questions together", () => {
+    render(<Builder initial={definition()} />);
+    expect(screen.getAllByPlaceholderText("Type your question")).toHaveLength(2);
+    fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
+    expect(screen.queryByPlaceholderText("Type your question")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Expand all" }));
+    expect(screen.getAllByPlaceholderText("Type your question")).toHaveLength(2);
+  });
+
+  it("collapses individual questions independently and handles a mixed state", () => {
+    render(<Builder initial={definition()} />);
+    const first = screen.getByRole("button", { name: /First question/, expanded: true });
+    const second = screen.getByRole("button", { name: /Second question/, expanded: true });
+    fireEvent.click(first);
+    expect(first).toHaveAttribute("aria-expanded", "false");
+    expect(second).toHaveAttribute("aria-expanded", "true");
+    fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
+    expect(second).toHaveAttribute("aria-expanded", "false");
+    fireEvent.click(first);
+    expect(first).toHaveAttribute("aria-expanded", "true");
+    expect(second).toHaveAttribute("aria-expanded", "false");
+  });
+
+  it("opens a newly added question while keeping collapsed questions closed", () => {
+    render(<Builder initial={definition()} />);
+    fireEvent.click(screen.getByRole("button", { name: "Collapse all" }));
+    fireEvent.click(screen.getByRole("button", { name: "Add question" }));
+    expect(screen.getByPlaceholderText("Type your question")).toHaveFocus();
+    expect(screen.getByRole("button", { name: /First question/ })).toHaveAttribute("aria-expanded", "false");
+    expect(screen.getByRole("button", { name: "Collapse all" })).toBeInTheDocument();
+  });
+
+  it("updates branching labels and preserves other edits in memoized questions", () => {
+    const def = definition();
+    def.fields[1].showIf = { match: "all", conditions: [{ fieldId: def.fields[0].id, op: "answered" }] };
+    render(<Builder initial={def} />);
+    expect(screen.getByRole("combobox", { name: "Question" })).toHaveTextContent("First question");
+    fireEvent.change(screen.getAllByPlaceholderText("Type your question")[0], { target: { value: "Renamed question" } });
+    expect(screen.getByRole("combobox", { name: "Question" })).toHaveTextContent("Renamed question");
+    fireEvent.change(screen.getAllByPlaceholderText("Type your question")[1], { target: { value: "Edited second question" } });
+    expect(screen.getAllByPlaceholderText("Type your question")[0]).toHaveValue("Renamed question");
+  });
+});
+
 describe("Arabic form authoring", () => {
   it("mirrors the question editor for an Arabic form even when its stored main language is English", () => {
     const arabic = { ...emptyDefinition("ابدأ فترتك التجريبية"), fields: [{

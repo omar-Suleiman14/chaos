@@ -6,16 +6,26 @@
       "unit": "count"
     },
     "keystroke.q10.domAttributeChanges": {
-      "budget": 34,
-      "unit": "count"
+      "budget": 37,
+      "unit": "count",
+      "raised": {
+        "from": 34,
+        "reason": "Questions now start expanded at the maintainer request. All editors and existing branching controls are visible; branching sources must update as labels change. Keystrokes still render only one FieldEditor and preserve save/subscription budgets.",
+        "at": "2026-10-12"
+      }
     },
     "keystroke.q10.domElementsAdded": {
       "budget": 0,
       "unit": "count"
     },
     "keystroke.q10.domTextChanges": {
-      "budget": 2,
-      "unit": "count"
+      "budget": 3,
+      "unit": "count",
+      "raised": {
+        "from": 2,
+        "reason": "Questions now start expanded at the maintainer request. All editors and existing branching controls are visible; branching sources must update as labels change. Keystrokes still render only one FieldEditor and preserve save/subscription budgets.",
+        "at": "2026-10-12"
+      }
     },
     "keystroke.q10.fieldEditorRenders": {
       "budget": 1,
@@ -38,16 +48,26 @@
       "unit": "count"
     },
     "keystroke.q100.domAttributeChanges": {
-      "budget": 34,
-      "unit": "count"
+      "budget": 79,
+      "unit": "count",
+      "raised": {
+        "from": 34,
+        "reason": "Questions now start expanded at the maintainer request. All editors and existing branching controls are visible; branching sources must update as labels change. Keystrokes still render only one FieldEditor and preserve save/subscription budgets.",
+        "at": "2026-10-12"
+      }
     },
     "keystroke.q100.domElementsAdded": {
       "budget": 0,
       "unit": "count"
     },
     "keystroke.q100.domTextChanges": {
-      "budget": 2,
-      "unit": "count"
+      "budget": 3,
+      "unit": "count",
+      "raised": {
+        "from": 2,
+        "reason": "Questions now start expanded at the maintainer request. All editors and existing branching controls are visible; branching sources must update as labels change. Keystrokes still render only one FieldEditor and preserve save/subscription budgets.",
+        "at": "2026-10-12"
+      }
     },
     "keystroke.q100.fieldEditorRenders": {
       "budget": 1,
@@ -70,16 +90,26 @@
       "unit": "count"
     },
     "keystroke.q200.domAttributeChanges": {
-      "budget": 34,
-      "unit": "count"
+      "budget": 124,
+      "unit": "count",
+      "raised": {
+        "from": 34,
+        "reason": "Questions now start expanded at the maintainer request. All editors and existing branching controls are visible; branching sources must update as labels change. Keystrokes still render only one FieldEditor and preserve save/subscription budgets.",
+        "at": "2026-10-12"
+      }
     },
     "keystroke.q200.domElementsAdded": {
       "budget": 0,
       "unit": "count"
     },
     "keystroke.q200.domTextChanges": {
-      "budget": 2,
-      "unit": "count"
+      "budget": 3,
+      "unit": "count",
+      "raised": {
+        "from": 2,
+        "reason": "Questions now start expanded at the maintainer request. All editors and existing branching controls are visible; branching sources must update as labels change. Keystrokes still render only one FieldEditor and preserve save/subscription budgets.",
+        "at": "2026-10-12"
+      }
     },
     "keystroke.q200.fieldEditorRenders": {
       "budget": 1,
