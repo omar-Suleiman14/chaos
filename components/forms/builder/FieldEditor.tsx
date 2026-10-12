@@ -5,6 +5,7 @@ import { FocusInput, FocusTextarea } from "@/components/InitialFocus";
 import { useRef, useState } from "react";
 import { ArrowDown, ArrowUp, ChevronRight, Copy, GitBranch, Plus, Trash2, X } from "lucide-react";
 import { blankField, fieldTypes, isAnswerable, newId, optionTypes } from "@/convex/formLogic";
+import { formAuthoringDirection } from "@/convex/formLogic";
 import type { Choice, FieldType, FormDefinition, FormField } from "@/convex/formLogic";
 import { optionsFromText } from "@/lib/formBuilder";
 import { WsMenu, WsSwitch } from "@/components/workspace/primitives";
@@ -108,12 +109,12 @@ function ChoiceList({ kind, items, onChange, prefix, withScores }: { kind: "opti
         </button>
       </div>
       {asText ? (
-        <textarea value={text} onChange={(e) => setText(e.target.value)} rows={Math.min(12, Math.max(4, items.length + 1))} className="kb-input text-sm" aria-label={t.onePerLine(label)} />
+        <textarea dir="auto" value={text} onChange={(e) => setText(e.target.value)} rows={Math.min(12, Math.max(4, items.length + 1))} className="kb-input text-sm" aria-label={t.onePerLine(label)} />
       ) : (
         <ul className="space-y-1" ref={list}>
           {items.map((c, i) => (
             <li key={c.id} className="flex gap-2 items-center ws-reveal-host">
-              <input value={c.label} onChange={(e) => onChange(items.map((x) => (x.id === c.id ? { ...x, label: e.target.value } : x)))} className="kb-input py-1.5 text-sm flex-1" aria-label={t.itemN(label, i + 1)}
+              <input dir="auto" value={c.label} onChange={(e) => onChange(items.map((x) => (x.id === c.id ? { ...x, label: e.target.value } : x)))} className="kb-input py-1.5 text-sm flex-1" aria-label={t.itemN(label, i + 1)}
                 onFocus={(e) => { if (/^(Option|Row|Column|خيار|صف|عمود) \d+$/.test(c.label)) e.currentTarget.select(); }}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); addAfter(i); } }} />
               {withScores && (
@@ -153,6 +154,7 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
 }) {
   const t = useCopy(copy);
   const labels = useBuilderLabels();
+  const direction = formAuthoringDirection(def);
   const [showLogic, setShowLogic] = useState(!!field.showIf);
   const [scores, setScores] = useState(!!field.options?.some((o) => o.score !== undefined));
   const [showDescription, setShowDescription] = useState(false);
@@ -172,12 +174,12 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
   const name = field.type === "section" ? t.sectionTitle : field.type === "statement" ? t.heading : t.question;
 
   return (
-    <fieldset disabled={readOnly} className="space-y-4">
+    <fieldset dir={direction} lang={direction === "rtl" ? "ar" : "en"} disabled={readOnly} className="ws-form-authoring space-y-4">
       {/* As in Google Forms: the question and its type side by side, so changing type is one click away. */}
       <div className="flex flex-wrap items-start gap-2">
         <label className="block flex-1 min-w-[min(100%,16rem)]">
           <span className="sr-only">{name}</span>
-          <FocusInput value={field.label} onChange={(e) => set({ label: e.target.value })} className="kb-input !text-[17px] font-medium" maxLength={500} focusOnMount={focusOnMount}
+          <FocusInput dir={field.label ? "auto" : direction} value={field.label} onChange={(e) => set({ label: e.target.value })} className="kb-input !text-[17px] font-medium" maxLength={500} focusOnMount={focusOnMount}
             placeholder={field.type === "section" ? t.sectionTitle : field.type === "statement" ? t.headingOptional : t.typeQuestion} />
         </label>
         {field.type !== "section" && (
@@ -188,7 +190,7 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
       {showDescription || field.description || field.type === "statement" ? (
         <label className="block">
           <span className="sr-only">{field.type === "statement" ? t.text : t.description}</span>
-          <FocusTextarea value={field.description ?? ""} onChange={(e) => set({ description: e.target.value || undefined })} rows={field.type === "statement" ? 4 : 2}
+          <FocusTextarea dir={field.description ? "auto" : direction} value={field.description ?? ""} onChange={(e) => set({ description: e.target.value || undefined })} rows={field.type === "statement" ? 4 : 2}
             className="kb-input text-sm" maxLength={5000} placeholder={field.type === "statement" ? t.text : t.descriptionOptional} focusOnMount={showDescription && !field.description} />
         </label>
       ) : field.type !== "section" && (
@@ -213,7 +215,7 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
                       : [option.id];
                     set({ quiz: { correctOptionIds, points: field.quiz?.points ?? 1, explanation: field.quiz?.explanation } });
                   }} />
-                {option.label || t.untitledOption}
+                <bdi>{option.label || t.untitledOption}</bdi>
               </label>;
             })}
           </div>
@@ -226,7 +228,7 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
                   className="kb-input mt-1 w-28" />
               </label>
               <label className={`${labelClass} block`}>{t.explanation}
-                <textarea value={field.quiz?.explanation ?? ""} onChange={(e) => set({ quiz: { correctOptionIds: field.quiz?.correctOptionIds ?? [], points: field.quiz?.points ?? 1, explanation: e.target.value || undefined } })}
+                <textarea dir="auto" value={field.quiz?.explanation ?? ""} onChange={(e) => set({ quiz: { correctOptionIds: field.quiz?.correctOptionIds ?? [], points: field.quiz?.points ?? 1, explanation: e.target.value || undefined } })}
                   className="kb-input mt-1" rows={2} maxLength={2000} />
               </label>
             </div>
