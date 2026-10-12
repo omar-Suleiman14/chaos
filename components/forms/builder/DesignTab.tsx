@@ -170,11 +170,12 @@ export default function DesignTab({ def, change, readOnly, onFullPreview, announ
     );
   };
 
-  const previewHeight = device === "mobile" ? "640px" : "600px";
+  // Keep the preview visible in the viewport; the form content scrolls inside its frame.
+  const previewHeight = device === "mobile" ? "min(640px, calc(100dvh - 12rem))" : "min(600px, calc(100dvh - 12rem))";
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-[minmax(320px,390px)_1fr] gap-8">
-      <fieldset disabled={readOnly} className="min-w-0">
+    <div className="grid grid-cols-1 md:grid-cols-[minmax(260px,360px)_minmax(0,1fr)] gap-6 lg:gap-8">
+      <fieldset disabled={readOnly} className="min-w-0 order-2 md:order-1">
         <section className="ws-studio-section !pt-0">
           <h3>{t.mode}</h3>
           <div className="ws-tiles ws-tiles--wide">
@@ -372,7 +373,7 @@ export default function DesignTab({ def, change, readOnly, onFullPreview, announ
           <button type="button" className="ws-btn ws-btn--primary ws-fab" onClick={onFullPreview}><Play size={18} /> {t.preview}</button>
         )
       ) : (
-        <section aria-label={t.preview} className="min-w-0 lg:sticky lg:top-16 h-fit space-y-3">
+        <section aria-label={t.preview} className="min-w-0 order-1 md:order-2 md:sticky md:top-16 md:self-start space-y-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <p className="text-[13px] font-semibold">{t.preview}</p>
             <div className="flex items-center gap-1.5">
