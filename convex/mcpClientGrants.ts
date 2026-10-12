@@ -4,7 +4,7 @@
  * forwarded with CHAOS_MCP_SECRET. Browser mutations use ctx.auth instead.
  */
 import { v } from "convex/values";
-import { internalMutation, internalQuery, mutation, query } from "./_generated/server";
+import { env, internalMutation, internalQuery, mutation, query } from "./_generated/server";
 import { getAuthIdentity } from "./authIdentity";
 import { requireActiveUser } from "./authz";
 import { MCP_PERMISSIONS, permissionForTool, type McpPermission } from "../lib/mcp/permissions";
@@ -44,11 +44,14 @@ export const observeTransportClient = internalMutation({
     const existing = await ctx.db.query("mcpClientGrants").withIndex("by_owner", q => q.eq("ownerId", userId)).take(CLIENT_LIMIT + 1);
     if (existing.length >= CLIENT_LIMIT) throw new Error("LIMIT: Too many OAuth clients; revoke an old connection.");
     const name = (label ?? "").trim().slice(0, 80) || "OAuth client";
+    // Existing OAuth installations previously offered the full toolset. Default to
+    // that for compatibility until an operator opts into read-only onboarding.
+    const initial = env.CHAOS_MCP_NEW_CLIENT_DEFAULT === "read_only" ? [...DEFAULT_PERMISSIONS] : [...USER_PERMISSIONS];
     await ctx.db.insert("mcpClientGrants", {
       ownerId: userId, clientId, label: name,
-      permissions: DEFAULT_PERMISSIONS, createdAt: now, updatedAt: now, lastSeenAt: now,
+      permissions: initial, createdAt: now, updatedAt: now, lastSeenAt: now,
     });
-    return { permissions: DEFAULT_PERMISSIONS, label: name };
+    return { permissions: initial, label: name };
   },
 });
 
