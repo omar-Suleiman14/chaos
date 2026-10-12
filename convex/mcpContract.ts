@@ -2,7 +2,7 @@
 // definitions. No Convex imports, so it is unit-testable and shared with the
 // Next.js /mcp route, which builds its input schemas from these constants.
 
-import { emptyDefinition, isValidId, LIMITS, newId, themePresetIds } from "./formLogic";
+import { detectTextLanguage, emptyDefinition, isValidId, LIMITS, newId, themePresetIds } from "./formLogic";
 import type {
   Choice, FieldType, FormDefinition, FormField, FormTheme, Language, Presentation, ThemeBackdrop, ThemeButtons, ThemeChrome, ThemeCover, ThemeFont, ThemePresetId, ThemeSound,
 } from "./formLogic";
@@ -93,10 +93,7 @@ const isNumber = (x: unknown): x is number => typeof x === "number" && Number.is
 
 /** Infer the authored language, not the MCP client language, for new drafts only. */
 export function inferFormLanguage(input: Partial<McpFormInput>): Language {
-  const copy = [input.title ?? "", input.description ?? "", ...(input.questions ?? []).flatMap((q) => [q.label, q.description ?? ""])].join(" ");
-  const arabic = (copy.match(/[\u0621-\u064A]/g) ?? []).length;
-  const latin = (copy.match(/[A-Za-z]/g) ?? []).length;
-  return arabic > latin ? "ar" : "en";
+  return detectTextLanguage([input.title ?? "", input.description ?? "", ...(input.questions ?? []).flatMap((q) => [q.label, q.description ?? ""])]);
 }
 
 // ── Themes and sounds ───────────────────────────────────────────────────────
