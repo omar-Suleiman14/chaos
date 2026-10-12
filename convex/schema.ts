@@ -36,6 +36,11 @@ export default defineSchema({
   courseEnrollments: defineTable({ courseId: v.id("learnCollections"), ownerId: v.string(), key: v.string(), studentId: v.optional(v.string()), guestName: v.optional(v.string()), completedLessonIds: v.array(v.id("lessons")), lastLessonId: v.optional(v.id("lessons")), enrolledAt: v.number(), updatedAt: v.number(), completedAt: v.optional(v.number()) }).index("by_course_key", ["courseId", "key"]).index("by_course_updated", ["courseId", "updatedAt"]),
   authorStudentCounts: defineTable({ authorId: v.string(), count: v.number() }).index("by_author", ["authorId"]),
   authIdentityBindings: defineTable({ externalActorId: v.string(), actorId: v.string(), tokenIdentifier: v.string() }).index("by_externalActorId", ["externalActorId"]).index("by_actorId", ["actorId"]),
+  // Explicit MCP grants: one verified OAuth client per Chaos account. No credentials stored.
+  mcpClientGrants: defineTable({
+    ownerId: v.string(), clientId: v.string(), label: v.string(),
+    permissions: v.array(v.string()), createdAt: v.number(), updatedAt: v.number(), lastSeenAt: v.number(),
+  }).index("by_owner_client", ["ownerId", "clientId"]).index("by_owner", ["ownerId"]),
   ...docsTables,
   ...businessTables,
   ...indexNowTables,
