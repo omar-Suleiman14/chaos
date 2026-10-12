@@ -32,14 +32,15 @@ describe("focused MCP tool surfaces", () => {
       expect(names).toEqual([...expected].sort());
       expect(names.length).toBeLessThan(inventory.names.length);
       expect(names).not.toContain("save_documentation");
-      expect(names).not.toContain("list_responses".replace("list_responses", "save_documentation"));
+
     }
   });
 
   it("disabled tools cannot be called by name even with a valid account caller", async () => {
     const call = vi.fn().mockResolvedValue({ total: 0, items: [] });
     const client = await connectMcpTestClient({ call, resourceMetadataUrl, surface: "forms" }, { name: "test", version: "1.0" });
-    await expect(client.callTool({ name: "delete_lesson_blocks", arguments: { lessonId: "forged", blockIds: [] } })).rejects.toThrow();
+    const blocked = await client.callTool({ name: "delete_lesson_blocks", arguments: { lessonId: "forged", blockIds: [] } });
+    expect(blocked.isError).toBe(true);
     expect(call).not.toHaveBeenCalled();
   });
 
