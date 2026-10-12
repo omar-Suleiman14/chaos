@@ -6,7 +6,7 @@ import {
   Minus, Phone, Plus, SlidersHorizontal, SquareChevronDown, Star, Type, Text as TextIcon,
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { blankField, isAnswerable } from "@/convex/formLogic";
+import { blankField, formAuthoringDirection, isAnswerable } from "@/convex/formLogic";
 import type { FieldType, FormDefinition } from "@/convex/formLogic";
 import { copyFields, duplicateSection, insertAfter, moveField, removeFields } from "@/lib/formBuilder";
 import { useBuilderLabels } from "@/components/forms/formThemeLabels";
@@ -113,6 +113,7 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
 }) {
   /** Typing merges into one undo step; structural edits are always their own step. */
   const t = useCopy(copy);
+  const direction = formAuthoringDirection(def);
   const change = (updater: (d: FormDefinition) => FormDefinition) => rawChange(updater);
   const step = useCallback((updater: (d: FormDefinition) => FormDefinition) => rawChange(updater, { checkpoint: true }), [rawChange]);
   const [expanded, setExpanded] = useState<string | null>(def.fields[0]?.id ?? null);
@@ -146,11 +147,11 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
   useLayoutEffect(() => { actions.current = { toggle, expand: setExpanded, insert: add }; }, [toggle, add]);
 
   return (
-    <div className="space-y-4">
+    <div dir={direction} lang={direction === "rtl" ? "ar" : "en"} className="ws-form-authoring space-y-4">
       <div className="chaos-card p-5">
         <label className="block">
           <span className="sr-only">{t.intro}</span>
-          <textarea value={def.description} disabled={readOnly} onChange={(e) => change((d) => ({ ...d, description: e.target.value }))}
+          <textarea dir="auto" value={def.description} disabled={readOnly} onChange={(e) => change((d) => ({ ...d, description: e.target.value }))}
             className="w-full resize-y bg-transparent text-[15px] leading-relaxed outline-none placeholder:text-[var(--outline)]" rows={2} maxLength={5000}
             placeholder={def.quiz?.enabled ? t.introQuiz : t.introForm} />
         </label>
