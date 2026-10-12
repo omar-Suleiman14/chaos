@@ -9,6 +9,7 @@ import type { McpCaller } from "@/lib/mcp/server";
 import { resourceMetadataUrl, resourceUrl, verifyBetterAuthMcpToken } from "@/lib/mcp/oauth";
 import { detectAiClient, type CreatedWith } from "@/lib/aiClients";
 import { chaosIntegration } from "@/lib/integrations";
+import { MCP_PERMISSIONS, type McpPermission } from "@/lib/mcp/permissions";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -64,7 +65,8 @@ async function verifiedUser(request: Request): Promise<Verified | null | Respons
       // Only OAuth clients on the allow-list (the ChatGPT app) may act for a person. Unset = any client of this Clerk instance.
       const allowed = (process.env.CHAOS_MCP_CLIENT_IDS ?? "").split(",").map((id) => id.trim()).filter(Boolean);
       if (allowed.length && !allowed.includes(auth.clientId ?? "")) return unauthorized(request, "This app is not allowed to use Chaos.");
-      return { userId: auth.userId, clientId: auth.clientId ?? undefined, provider: "clerk" };
+      if (!auth.clientId) return unauthorized(request, "A verified OAuth client is required.");
+      return { userId: auth.userId, clientId: auth.clientId, provider: "clerk" };
     }
   } catch (error) {
     console.error("mcp: token verification failed", error instanceof Error ? error.message : error);
@@ -103,7 +105,7 @@ async function oauthClientName(clientId: string | undefined): Promise<string | u
   return undefined;
 }
 
-function convexCaller(verified: Verified, client?: CreatedWith): McpCaller {
+function convexCaller(verified: Verified, client?: CreatedWith, clientName?: string): McpCaller {
   const { userId } = verified;
   const secret = process.env.CHAOS_MCP_SECRET;
   let profile = verified.profile;
@@ -113,7 +115,7 @@ function convexCaller(verified: Verified, client?: CreatedWith): McpCaller {
     const response = await fetch(`${convexSiteUrl()}/api/mcp/v1`, {
       method: "POST",
       headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ userId, profile, tool, input, ...(client ? { client } : {}) }),
+      body: JSON.stringify({ userId, profile, clientId: verified.clientId, clientName, tool, input, ...(client ? { client } : {}) }),
       cache: "no-store",
     });
     const body = (await response.json().catch(() => null)) as { result?: unknown; error?: { code: string; message: string; details?: unknown } } | null;
@@ -142,10 +144,23 @@ async function handle(request: Request): Promise<Response> {
   if (!verified && !PER_TOOL_AUTH_CLIENT.test(request.headers.get("user-agent") ?? "")) return signInRequired(request);
   const userId = verified?.userId ?? null;
   // Which assistant is calling, so content it creates can say "Created with ChatGPT/Claude/…".
-  const client = verified ? detectAiClient(verified.provider === "clerk" ? await oauthClientName(verified.clientId) : undefined, request.headers.get("user-agent")) : undefined;
-  const call = verified ? convexCaller(verified, client) : null;
+  const clientName = verified?.provider === "clerk" ? await oauthClientName(verified.clientId) : undefined;
+  const client = verified ? detectAiClient(clientName, request.headers.get("user-agent")) : undefined;
+  if (verified && !verified.clientId) return unauthorized(request, "A verified OAuth client is required.");
+  const call = verified ? convexCaller(verified, client, clientName) : null;
+  let permissions: McpPermission[] | undefined;
+  if (call) {
+    try {
+      const grants = await call("get_mcp_grants", {}) as { permissions?: unknown };
+      permissions = Array.isArray(grants.permissions) && grants.permissions.every(p => typeof p === "string" && (MCP_PERMISSIONS as readonly string[]).includes(p))
+        ? grants.permissions as McpPermission[] : [];
+    } catch {
+      // Never advertise unrestricted tools if the grant service is unavailable.
+      permissions = [];
+    }
+  }
   let admin = false;
-  if (call && userId) {
+  if (call && userId && (!permissions || permissions.includes("admin_operations") || permissions.includes("admin_crm"))) {
     const cached = adminCapabilities.get(userId);
     if (cached && cached.expires > Date.now()) admin = cached.admin;
     else try {
@@ -154,7 +169,7 @@ async function handle(request: Request): Promise<Response> {
       adminCapabilities.set(userId, { admin, expires: Date.now() + 30_000 });
     } catch { /* Backend checks permissions again on every documentation operation. */ }
   }
-  const server = createChaosMcpServer({ call, admin, resourceMetadataUrl: resourceMetadataUrl(request) });
+  const server = createChaosMcpServer({ call, admin, permissions, resourceMetadataUrl: resourceMetadataUrl(request) });
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   try {
