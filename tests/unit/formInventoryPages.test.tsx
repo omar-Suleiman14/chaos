@@ -1,5 +1,7 @@
 import { act, renderHook } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { createElement, type ReactNode } from "react";
+import { CacheZone, clearConfirmedCache, flushConfirmedWrites, setCacheScope, useCachePending } from "@/lib/confirmedQuery";
 import { useFormInventoryPages } from "@/lib/forms/useFormInventoryPages";
 
 const fake = vi.hoisted(() => ({
@@ -14,9 +16,7 @@ vi.mock("convex/react", () => ({
     return Object.fromEntries(fake.requested.map(key => [key, fake.pages[key]]));
   },
 }));
-vi.mock("@/lib/confirmedQuery", () => ({
-  useConfirmed: (_name: string, value: unknown) => ({ data: value, confirmed: value !== undefined }),
-}));
+vi.mock("@/lib/convexClient", () => ({ convex: null }));
 const form = (id: string) => ({ _id: id, title: id, status: "draft", quizMode: false });
 const page = (rows: { owned?: ReturnType<typeof form>[]; shared?: ReturnType<typeof form>[] }, isDone: boolean, cursor: string) => ({
   page: { owned: rows.owned ?? [], shared: rows.shared ?? [], invites: [], searchIndex: [] },
@@ -35,7 +35,44 @@ beforeEach(() => {
   };
 });
 
+afterEach(() => {
+  act(() => setCacheScope(null));
+  clearConfirmedCache();
+  localStorage.clear();
+});
+
 describe("form inventory cursors", () => {
+  it("preserves cached rows and dimming while pages load, then replaces deleted or changed rows", () => {
+    act(() => setCacheScope("inventory-user"));
+    const wrapper = ({ children }: { children: ReactNode }) => createElement(CacheZone.Provider, { value: { authenticated: fake.authenticated } }, children);
+    const probe = () => ({ ...useFormInventoryPages(), dimmed: useCachePending() });
+    const first = renderHook(probe, { wrapper });
+    act(() => first.result.current.loadMore());
+    first.unmount();
+    flushConfirmedWrites();
+
+    delete fake.pages["owned:0"];
+    const next = renderHook(probe, { wrapper });
+    expect(next.result.current.forms?.owned.map(f => f._id)).toEqual(["recent", "older"]);
+    expect(next.result.current.confirmed).toBe(false);
+    expect(next.result.current.dimmed).toBe(true);
+
+    fake.pages["owned:0"] = page({ owned: [form("recent")] }, false, "next");
+    next.rerender();
+    act(() => next.result.current.loadMore());
+    fake.pages["owned:0"] = page({ owned: [{ ...form("recent"), title: "Renamed survey" }] }, false, "next");
+    fake.pages["owned:1"] = page({}, true, "");
+    next.rerender();
+    expect(next.result.current.forms?.owned.map(f => f.title)).toEqual(["Renamed survey"]);
+    expect(next.result.current.confirmed).toBe(true);
+    expect(next.result.current.dimmed).toBe(false);
+    next.unmount();
+    flushConfirmedWrites();
+    delete fake.pages["owned:0"];
+    const reload = renderHook(probe, { wrapper });
+    expect(reload.result.current.forms?.owned.map(f => f.title)).toEqual(["Renamed survey"]);
+    expect(reload.result.current.dimmed).toBe(true);
+  });
   it("preserves initial rows and reaches older owned forms without duplicate collaborators", () => {
     const { result } = renderHook(() => useFormInventoryPages());
     expect(result.current.forms?.owned.map(f => f._id)).toEqual(["recent"]);
