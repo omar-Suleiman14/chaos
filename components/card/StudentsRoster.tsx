@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import { toast } from "@/lib/toast";
-import { useMutation, usePaginatedQuery, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import { useLocale } from "@/lib/i18n";
 import { CARD_THEMES } from "@/lib/memberCard";
@@ -11,10 +11,13 @@ import Link from "@/components/site/SiteLink";
 /* oxlint-disable jsx-a11y/no-noninteractive-tabindex -- The virtualised scroll viewport must be keyboard-focusable so keyboard users can scroll to more students. */
 export default function StudentsRoster({ username }: { username?: string }) {
   const { locale } = useLocale(), ar = locale === "ar";
-  const own = usePaginatedQuery(api.studentRoster.mine, username ? "skip" : {}, { initialNumItems: 24 });
+  const { isAuthenticated } = useConvexAuth();
+  // A cached Profile can mount this roster before Convex restores the session.
+  const privateArgs = !username && isAuthenticated ? {} : "skip";
+  const own = usePaginatedQuery(api.studentRoster.mine, privateArgs, { initialNumItems: 24 });
   const publicRows = usePaginatedQuery(api.studentRoster.publicStudents, username ? { username } : "skip", { initialNumItems: 24 });
   const { results, status, loadMore } = username ? publicRows : own;
-  const count = useQuery(api.studentRoster.count, username ? "skip" : {});
+  const count = useQuery(api.studentRoster.count, privateArgs);
   const visibility = useQuery(api.studentRoster.myVisibility, username ? { username } : "skip");
   const setVisible = useMutation(api.studentRoster.setPublicVisibility);
   const viewport = useRef<HTMLDivElement>(null);
