@@ -95,7 +95,7 @@ function GrantCard({ grant, available, ar }: { grant: { clientId: string; label:
       <button type="button" className="ws-btn ws-btn--primary ws-btn--sm" disabled={busy || !modified} onClick={() => void save(chosen)}>{busy ? t.saving : t.save}</button>
       <button type="button" className="ws-btn ws-btn--sm" disabled={busy || grant.permissions.length === 0} onClick={() => void save([])}>{t.revoke}</button>
     </div>
-    {message && <p role="status" className="text-sm">{message}</p>}
+    {message && <output className="block text-sm">{message}</output>}
   </article>;
 }
 
