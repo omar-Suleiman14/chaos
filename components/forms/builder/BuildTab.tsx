@@ -147,7 +147,7 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
   useLayoutEffect(() => { actions.current = { toggle, expand: setExpanded, insert: add }; }, [toggle, add]);
 
   return (
-    <div dir={direction} lang={direction === "rtl" ? "ar" : "en"} className="ws-form-authoring space-y-4">
+    <div dir={direction} className="ws-form-authoring space-y-4">
       <div className="chaos-card p-5">
         <label className="block">
           <span className="sr-only">{t.intro}</span>
