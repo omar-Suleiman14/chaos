@@ -1115,7 +1115,7 @@ export const sectionsEn: DocSection[] = [
         blocks: [
           { type: "heading", id: "forms", text: "Forms in English and Arabic" },
           { type: "p", text: "Each form has a main language and can offer another. People can switch at any time. Their answers are the same in both languages because options keep the same identity." },
-          { type: "p", text: "Forms created through ChatGPT or another MCP client automatically use Arabic as the main language when the title, introduction and question text are mostly Arabic. Creators can set `defaultLanguage` to `ar` or `en` on creation or update. Arabic forms use Cairo and right-to-left layout; this does not translate text." },
+          { type: "p", text: "Forms created through ChatGPT or another MCP client automatically use Arabic as the main language when the title, introduction and question text are mostly Arabic. Creators can set `defaultLanguage` to `ar` or `en` on creation or update. The authoring editor also follows Arabic content right-to-left, including older forms stored with an English main language. Arabic forms use Cairo and right-to-left layout; this does not translate text." },
           {
             type: "steps",
             items: [
