@@ -59,11 +59,18 @@ describe("MCP OAuth connection consent", () => {
 
   it("enforces a revoked permission at the backend HTTP boundary, not only tools/list", async () => {
     vi.stubEnv("CHAOS_MCP_SECRET", secret);
-    const { t, caller } = await setup();
-    await caller.mutation(api.mcpClientGrants.updateMine, { clientId, permissions: ["read_content"] });
+    // The HTTP transport intentionally validates production-format Clerk IDs.
+    // The shared creatorIdentity fixture has underscores and is valid for Convex
+    // identity tests but *not* for the HTTP envelope regex.
+    const { t } = await setup();
+    const httpActor = "user_consenthttp1";
+    const auth = { ...creatorIdentity, subject: httpActor, tokenIdentifier: `${creatorIdentity.issuer}|${httpActor}` };
+    await t.mutation(internal.mcp.begin, { userId: httpActor, profile: { name: "HTTP consent tester", email: "consent@example.com" } });
+    await t.mutation(internal.mcpClientGrants.observeTransportClient, { userId: httpActor, clientId, label: "ChatGPT" });
+    await t.withIdentity(auth).mutation(api.mcpClientGrants.updateMine, { clientId, permissions: ["read_content"] });
     const send = (tool: string, input: Record<string, unknown> = {}) => t.fetch("/api/mcp/v1", {
       method: "POST", headers: { Authorization: `Bearer ${secret}`, "Content-Type": "application/json" },
-      body: JSON.stringify({ userId: owner, clientId, tool, input }),
+      body: JSON.stringify({ userId: httpActor, clientId, tool, input }),
     });
     const denied = await send("create_form", { form: { title: "Forbidden", questions: [] } });
     expect(denied.status).toBe(403);
