@@ -199,10 +199,11 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
   if (!secret || secret.length < 32 || !(await sameSecret(presented, secret))) return error(401, "UNAUTHORIZED", "Unknown caller.");
   const body = await readJson(request, MAX_MCP_BODY_BYTES);
   if (body instanceof Response) return body;
-  const b = body.value as { userId?: unknown; profile?: unknown; tool?: unknown; input?: unknown };
+  const b = body.value as { userId?: unknown; clientId?: unknown; clientName?: unknown; profile?: unknown; tool?: unknown; input?: unknown };
   if (typeof b?.userId !== "string" || !(/^(?:user_[A-Za-z0-9]+|oidc_[a-f0-9]{64})$/).test(b.userId) || typeof b.tool !== "string") {
     return error(400, "VALIDATION_FAILED", "userId and tool are required.");
   }
+  if (b.clientId !== undefined && (typeof b.clientId !== "string" || b.clientId.length < 1 || b.clientId.length > 256)) return error(400, "VALIDATION_FAILED", "Invalid verified OAuth client ID.");
   const userId = await ctx.runQuery(internal.authIdentity.resolveTransportActor, { externalActorId: b.userId });
   // Asset references accept the `form_<id>` ids other tools return (convex/mcpIds.ts).
   const input = normalizeAssetRefs((b.input && typeof b.input === "object" ? b.input : {}) as Record<string, unknown>);
@@ -217,6 +218,17 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
   };
   try {
     await ctx.runMutation(internal.mcp.begin, { userId, profile });
+    // Only our secret-authenticated Next.js OAuth adapter supplies clientId.
+    // Never accept a client identity from an MCP tool's argument object.
+    if (typeof b.clientId === "string") {
+      const grant = await ctx.runMutation(internal.mcpClientGrants.observeTransportClient, { userId, clientId: b.clientId, label: str(b.clientName)?.slice(0, 80) });
+      if (b.tool === "get_mcp_grants") return respond({ status: 200, body: { result: grant } });
+      if (b.tool !== "get_documentation_capabilities") {
+        await ctx.runQuery(internal.mcpClientGrants.checkTransportTool, { userId, clientId: b.clientId, tool: b.tool });
+      }
+    } else if (b.tool === "get_mcp_grants") {
+      return error(400, "VALIDATION_FAILED", "Verified OAuth client ID is required.");
+    }
     const id = str(input.id) ?? "";
     // Game arguments are optional, but malformed values must not silently
     // become defaults. Account identity always comes from the trusted envelope.

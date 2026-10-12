@@ -212,12 +212,21 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
       { src: `${chaosIntegration.siteUrl}${chaosIntegration.logoPath}`, mimeType: "image/svg+xml", sizes: ["any"] },
       { src: `${chaosIntegration.siteUrl}/api/plugins/chaos-icon-512.png`, mimeType: "image/png", sizes: ["512x512"] },
     ],
-  }, { instructions: options.admin ? `${baseInstructions}\n${adminInstructions}` : baseInstructions });
+  }, { instructions: options.admin && (!options.permissions || options.permissions.includes("admin_operations")) ? `${baseInstructions}\n${adminInstructions}` : baseInstructions });
 
   // Schema failures the SDK catches before a handler runs get the same code, category and readable problems.
-  (server as unknown as { createToolError: (message: string) => CallToolResult }).createToolError = (message) => toolError(new Error(message));
+  (server as unknown as { createToolError: (message: string) => CallToolResult }).createToolError = (message) =>
+    /\bTool \S+ disabled\b/i.test(message)
+      ? toolError(new McpToolError("PERMISSION_DENIED", "This connection is not authorized for that tool. Review permissions in Chaos Connections."))
+      : toolError(new Error(message));
   const register = server.registerTool.bind(server);
-  server.registerTool = (name, config, callback) => register(name, { ...config, _meta: { ...config._meta, "chaos/permission": permissionForTool(name) } }, callback);
+  server.registerTool = (name, config, callback) => {
+    const category = permissionForTool(name);
+    const entry = register(name, { ...config, _meta: { ...config._meta, "chaos/permission": category } }, callback);
+    // Hide prohibited capabilities from tool discovery. Convex checks again on every execution.
+    if (options.permissions && !options.permissions.includes(category)) entry.disable();
+    return entry;
+  };
   const run = async (tool: string, input: Record<string, unknown>, summarize: (data: Record<string, unknown>) => string): Promise<CallToolResult> => {
     if (!options.call) return authRequired(options.resourceMetadataUrl);
     try {
@@ -241,6 +250,9 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
   };
   /** Creates a form draft, then publishes it only when asked to and it is ready. */
   const createThenPublish = (tool: string, input: Record<string, unknown>, publish: boolean, noun: string) => flow(async () => {
+    // Avoid creating an unintended draft when the user requested immediate publication
+    // but this OAuth client lacks its distinct publish_content grant.
+    if (publish) requireToolPermission("publish_form", options.permissions);
     const d = await call(tool, input);
     if (!publish) return { text: `Created ${noun} draft “${d.title}”. Edit: ${d.editUrl}`, data: { ...d, published: false } };
     if (!d.readyToPublish) return { text: `Created ${noun} draft “${d.title}”, but it can't publish yet: ${(d.problems as string[]).join(" ")} Edit: ${d.editUrl}`, data: { ...d, published: false } };
