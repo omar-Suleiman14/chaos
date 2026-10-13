@@ -190,17 +190,17 @@ importers:
         specifier: 0.55.0
         version: 0.55.0(@floating-ui/dom@1.8.0)(@types/hast@3.0.5)(@types/react-dom@19.3.0(@types/react@19.3.0))(@types/react@19.3.0)(date-fns@4.4.0)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(tailwindcss@4.3.3)
       '@clerk/localizations':
-        specifier: ^4.21.2
-        version: 4.21.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        specifier: ^4.23.0
+        version: 4.23.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@clerk/mcp-tools':
         specifier: ^0.6.0
-        version: 0.6.0(@clerk/nextjs@7.9.10(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(express@5.2.1(supports-color@7.2.0))(hono@4.13.10)(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(supports-color@7.2.0)(zod@4.6.5)
+        version: 0.6.0(@clerk/nextjs@7.9.14(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(express@5.2.1(supports-color@7.2.0))(hono@4.13.10)(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(supports-color@7.2.0)(zod@4.6.5)
       '@clerk/nextjs':
-        specifier: ^7.9.10
-        version: 7.9.10(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+        specifier: ^7.9.14
+        version: 7.9.14(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       '@convex-dev/better-auth':
         specifier: 0.12.5
-        version: 0.12.5(@standard-schema/spec@1.1.0)(better-auth@1.6.33(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.3(@edge-runtime/vm@5.0.0)(@types/node@24.19.1)(jsdom@30.1.2(@noble/hashes@1.8.0))(msw@2.12.14(@types/node@24.19.1)(typescript@7.0.2))(vite@8.3.3(@types/node@24.19.1)(esbuild@0.27.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))))(convex@1.46.0(@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0))(hono@4.13.10)(react@19.3.0)(typescript@7.0.2)
+        version: 0.12.5(@standard-schema/spec@1.1.0)(better-auth@1.6.33(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.3(@edge-runtime/vm@5.0.0)(@types/node@24.19.1)(jsdom@30.1.2(@noble/hashes@1.8.0))(msw@2.12.14(@types/node@24.19.1)(typescript@7.0.2))(vite@8.3.3(@types/node@24.19.1)(esbuild@0.27.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))))(convex@1.46.0(@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0))(hono@4.13.10)(react@19.3.0)(typescript@7.0.2)
       '@modelcontextprotocol/sdk':
         specifier: ^1.32.1
         version: 1.32.1(supports-color@7.2.0)(zod@4.6.5)
@@ -224,7 +224,7 @@ importers:
         version: 2.1.1
       convex:
         specifier: ^1.46.0
-        version: 1.46.0(@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
+        version: 1.46.0(@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
       date-fns:
         specifier: ^4.4.0
         version: 4.4.0
@@ -285,7 +285,7 @@ importers:
         version: 8.0.6
       '@convex-dev/eslint-plugin':
         specifier: ^5.0.0
-        version: 5.0.0(convex@1.46.0(@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0))(eslint@10.12.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@7.0.2)
+        version: 5.0.0(convex@1.46.0(@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0))(eslint@10.12.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@7.0.2)
       '@edge-runtime/vm':
         specifier: ^5.0.0
         version: 5.0.0
@@ -327,7 +327,7 @@ importers:
         version: 6.1.2(vite@8.3.3(@types/node@24.19.1)(esbuild@0.27.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))
       convex-test:
         specifier: ^0.0.60
-        version: 0.0.60(convex@1.46.0(@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0))
+        version: 0.0.60(convex@1.46.0(@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0))
       eslint:
         specifier: ^10.12.0
         version: 10.12.0(jiti@2.7.0)(supports-color@7.2.0)
@@ -785,12 +785,12 @@ packages:
   '@chevrotain/utils@13.2.0':
     resolution: {integrity: sha512-SzKYY68rseOrb9KILVzPsl6SjkQtdWw01SRGB5aCVI5kFcHltQsOYV3JB0Ffst72DgkvHCyDQ0NLwxtmCCf97Q==}
 
-  '@clerk/backend@3.22.0':
-    resolution: {integrity: sha512-YBJtclx3ytvQGNYhf0/pG+WHUk1ams7Aai3D2AB8c96AkSnzUE+i1Q98HyupIulPDr3fUWeQJtex4DYyO9D4fA==}
+  '@clerk/backend@3.23.2':
+    resolution: {integrity: sha512-QW2qJPY7xQyn5SrNWJ+xO7o6va60X9/v4nX8y5zq8OJFS10X7GlEz8s5PDKTgo6W6SWb8L3APhrZH+LTp7yuNw==}
     engines: {node: '>=20.9.0'}
 
-  '@clerk/localizations@4.21.2':
-    resolution: {integrity: sha512-EKID1riJ8ShJ0FRIpsi4J8mTz+YeyrZ0mOHX1ZhGLp/u6KCW0jolQP+q7iomhUlVjmUO3WayLmuskeKzGVsEUw==}
+  '@clerk/localizations@4.23.0':
+    resolution: {integrity: sha512-6DiPH+qscEZroIPIm/fYOA4ToBI3kmfgiCn75XgqzU2vR8mFl033bA3PvdmTmvmwNOtdlKWtWKdoe66HXyYD1w==}
     engines: {node: '>=20.9.0'}
 
   '@clerk/mcp-tools@0.6.0':
@@ -825,23 +825,23 @@ packages:
       redis:
         optional: true
 
-  '@clerk/nextjs@7.9.10':
-    resolution: {integrity: sha512-nMzJYFSAhZHNl9Ut9l/sYn9tjSgZlwye4r1fem+48k7ED2cmujv9pG1rg427rW8Z1uZ3ANQbSkXSI3YdR3eAZg==}
+  '@clerk/nextjs@7.9.14':
+    resolution: {integrity: sha512-fHP9/D0zJCcC1DHJBoA/rlfMXLYBtgNoVE8T45jTBbdDeftLYIl6nJ4cbHERvNsc+D5MotTdrvZd5zenZ013EQ==}
     engines: {node: '>=20.9.0'}
     peerDependencies:
       next: ^15.2.8 || ^15.3.8 || ^15.4.10 || ^15.5.9 || ^15.6.0-0 || ^16.0.10 || ^16.1.0-0
       react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
       react-dom: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
 
-  '@clerk/react@6.17.5':
-    resolution: {integrity: sha512-ibTMS/bvo4W7+r+JrnzTig9s4QMVyybxxKCED8VgZE9LSE8XJ0VCH+dVj36hmvndXmpEqNuHRC61SQVJvv+40w==}
+  '@clerk/react@6.17.8':
+    resolution: {integrity: sha512-sNeMe+5ArLshOJgNtqUGHb7cLHjDjRhumBHBN2ovg4uHpL49kQ2UfDUTtxpRUdMNikUg0Oc1CwzLFBlUv1umXA==}
     engines: {node: '>=20.9.0'}
     peerDependencies:
       react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
       react-dom: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
 
-  '@clerk/shared@4.38.0':
-    resolution: {integrity: sha512-jVHz03682SJ3xsjsSjNX8YyWHllnr91qQEQZpZjCHGUIwGz3rYVavh69cofSuvPrqwOtXReukVEMtodzG2vVCQ==}
+  '@clerk/shared@4.40.0':
+    resolution: {integrity: sha512-80KM/uw5ZseYTKwJjIhJj7jsHqX6rFem6cwcFJVCUriE3R4tpzkhXsfbhtdho6cG2pQD3NVqKspxTVbSjATzPg==}
     engines: {node: '>=20.9.0'}
     peerDependencies:
       react: ^18.0.0 || ~19.0.3 || ~19.1.4 || ~19.2.3 || ~19.3.0-0
@@ -6832,27 +6832,27 @@ snapshots:
 
   '@chevrotain/utils@13.2.0': {}
 
-  '@clerk/backend@3.22.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@clerk/backend@3.23.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
-      '@clerk/shared': 4.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@clerk/shared': 4.40.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       standardwebhooks: 1.0.0
       tslib: 2.8.1
     transitivePeerDependencies:
       - react
       - react-dom
 
-  '@clerk/localizations@4.21.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@clerk/localizations@4.23.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
-      '@clerk/shared': 4.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@clerk/shared': 4.40.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
     transitivePeerDependencies:
       - react
       - react-dom
 
-  '@clerk/mcp-tools@0.6.0(@clerk/nextjs@7.9.10(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(express@5.2.1(supports-color@7.2.0))(hono@4.13.10)(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(supports-color@7.2.0)(zod@4.6.5)':
+  '@clerk/mcp-tools@0.6.0(@clerk/nextjs@7.9.14(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(express@5.2.1(supports-color@7.2.0))(hono@4.13.10)(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(supports-color@7.2.0)(zod@4.6.5)':
     dependencies:
       '@modelcontextprotocol/sdk': 1.32.1(supports-color@7.2.0)(zod@4.6.5)
     optionalDependencies:
-      '@clerk/nextjs': 7.9.10(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@clerk/nextjs': 7.9.14(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       express: 5.2.1(supports-color@7.2.0)
       hono: 4.13.10
       next: 16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
@@ -6861,25 +6861,25 @@ snapshots:
       - supports-color
       - zod
 
-  '@clerk/nextjs@7.9.10(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@clerk/nextjs@7.9.14(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
-      '@clerk/backend': 3.22.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@clerk/react': 6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
-      '@clerk/shared': 4.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@clerk/backend': 3.23.2(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@clerk/react': 6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@clerk/shared': 4.40.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       next: 16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
       server-only: 0.0.1
       tslib: 2.8.1
 
-  '@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
-      '@clerk/shared': 4.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@clerk/shared': 4.40.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
       tslib: 2.8.1
 
-  '@clerk/shared@4.38.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
+  '@clerk/shared@4.40.0(react-dom@19.3.0(react@19.3.0))(react@19.3.0)':
     dependencies:
       '@tanstack/query-core': 5.104.0
       dequal: 2.0.3
@@ -6889,13 +6889,13 @@ snapshots:
       react: 19.3.0
       react-dom: 19.3.0(react@19.3.0)
 
-  '@convex-dev/better-auth@0.12.5(@standard-schema/spec@1.1.0)(better-auth@1.6.33(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.3(@edge-runtime/vm@5.0.0)(@types/node@24.19.1)(jsdom@30.1.2(@noble/hashes@1.8.0))(msw@2.12.14(@types/node@24.19.1)(typescript@7.0.2))(vite@8.3.3(@types/node@24.19.1)(esbuild@0.27.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))))(convex@1.46.0(@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0))(hono@4.13.10)(react@19.3.0)(typescript@7.0.2)':
+  '@convex-dev/better-auth@0.12.5(@standard-schema/spec@1.1.0)(better-auth@1.6.33(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.3(@edge-runtime/vm@5.0.0)(@types/node@24.19.1)(jsdom@30.1.2(@noble/hashes@1.8.0))(msw@2.12.14(@types/node@24.19.1)(typescript@7.0.2))(vite@8.3.3(@types/node@24.19.1)(esbuild@0.27.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1))))(convex@1.46.0(@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0))(hono@4.13.10)(react@19.3.0)(typescript@7.0.2)':
     dependencies:
       '@better-fetch/fetch': 1.3.2
       better-auth: 1.6.33(next@16.4.0(@babel/core@8.0.6)(@playwright/test@1.63.0)(@types/node@24.19.1)(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react-dom@19.3.0(react@19.3.0))(react@19.3.0)(vitest@5.0.3(@edge-runtime/vm@5.0.0)(@types/node@24.19.1)(jsdom@30.1.2(@noble/hashes@1.8.0))(msw@2.12.14(@types/node@24.19.1)(typescript@7.0.2))(vite@8.3.3(@types/node@24.19.1)(esbuild@0.27.0)(jiti@2.7.0)(tsx@4.23.15)(yaml@2.9.1)))
       common-tags: 1.8.2
-      convex: 1.46.0(@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
-      convex-helpers: 0.1.125(@standard-schema/spec@1.1.0)(convex@1.46.0(@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0))(hono@4.13.10)(react@19.3.0)(typescript@7.0.2)(zod@4.6.5)
+      convex: 1.46.0(@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
+      convex-helpers: 0.1.125(@standard-schema/spec@1.1.0)(convex@1.46.0(@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0))(hono@4.13.10)(react@19.3.0)(typescript@7.0.2)(zod@4.6.5)
       jose: 6.2.12
       react: 19.3.0
       remeda: 2.50.0
@@ -6907,11 +6907,11 @@ snapshots:
       - hono
       - typescript
 
-  '@convex-dev/eslint-plugin@5.0.0(convex@1.46.0(@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0))(eslint@10.12.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@7.0.2)':
+  '@convex-dev/eslint-plugin@5.0.0(convex@1.46.0(@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0))(eslint@10.12.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@7.0.2)':
     dependencies:
       '@typescript-eslint/types': 8.58.0
       '@typescript-eslint/utils': 8.58.0(eslint@10.12.0(jiti@2.7.0)(supports-color@7.2.0))(supports-color@7.2.0)(typescript@7.0.2)
-      convex: 1.46.0(@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
+      convex: 1.46.0(@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
     transitivePeerDependencies:
       - eslint
       - supports-color
@@ -9398,9 +9398,9 @@ snapshots:
 
   convert-source-map@2.0.0: {}
 
-  convex-helpers@0.1.125(@standard-schema/spec@1.1.0)(convex@1.46.0(@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0))(hono@4.13.10)(react@19.3.0)(typescript@7.0.2)(zod@4.6.5):
+  convex-helpers@0.1.125(@standard-schema/spec@1.1.0)(convex@1.46.0(@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0))(hono@4.13.10)(react@19.3.0)(typescript@7.0.2)(zod@4.6.5):
     dependencies:
-      convex: 1.46.0(@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
+      convex: 1.46.0(@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
     optionalDependencies:
       '@standard-schema/spec': 1.1.0
       hono: 4.13.10
@@ -9408,17 +9408,17 @@ snapshots:
       typescript: 7.0.2
       zod: 4.6.5
 
-  convex-test@0.0.60(convex@1.46.0(@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)):
+  convex-test@0.0.60(convex@1.46.0(@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)):
     dependencies:
-      convex: 1.46.0(@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
+      convex: 1.46.0(@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0)
 
-  convex@1.46.0(@clerk/react@6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0):
+  convex@1.46.0(@clerk/react@6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0))(react@19.3.0):
     dependencies:
       esbuild: 0.27.0
       prettier: 3.9.9
       ws: 8.21.0
     optionalDependencies:
-      '@clerk/react': 6.17.5(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
+      '@clerk/react': 6.17.8(react-dom@19.3.0(react@19.3.0))(react@19.3.0)
       react: 19.3.0
     transitivePeerDependencies:
       - bufferutil
