@@ -23,7 +23,7 @@ import { Select } from "@/components/workspace/Select";
 import { CitationDialog, ImageDetailsDialog, type ImageDetails } from "@/components/learn/editor/EditorDialogs";
 import type { AssistRequest } from "@/components/learn/editor/LessonEditor";
 import type { LessonEditorType } from "@/components/learn/editor/blocks";
-import { focusLessonEnd } from "@/components/learn/editor/focusEnd";
+import { focusLessonEnd, focusLessonStart } from "@/components/learn/editor/focusEnd";
 import { MetadataPanel } from "@/components/learn/editor/MetadataPanel";
 import { LessonCover } from "@/components/learn/editor/PageHeader";
 import PracticePanel from "@/components/learn/editor/PracticePanel";
@@ -330,6 +330,7 @@ function LessonEditorSession({ id }: { id: string }) {
           )}
           <textarea className="lx-title-input" rows={1} value={title ?? ""} placeholder={t.titlePh} aria-label={t.titlePh} maxLength={200}
             onChange={(e) => { setTitle(e.target.value.replace(/\n/g, " ")); saveMeta({ title: e.target.value.replace(/\n/g, " ") }); }}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); focusLessonStart(editorRef.current); } }}
             onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }} />
           <textarea className="lx-desc-input" rows={1} value={description ?? ""} placeholder={t.descPh} aria-label={t.descPh} maxLength={400}
             onChange={(e) => { setDescription(e.target.value); saveMeta({ description: e.target.value }); }}

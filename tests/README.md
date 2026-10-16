@@ -28,6 +28,11 @@ Layers, each with its own runner and reasons:
   lesson, course, dashboard and editor when their fixtures and test login exist.
   Locally:
   `pnpm build && pnpm test:visual --update-snapshots`, then `pnpm test:visual`.
+- **`tests/editor`** — Playwright against the real lesson editor (LessonEditor, BlockNote,
+  shipped stylesheets) mounted by a Vite harness (`vite.editor.config.mts`) with only the Next and
+  Convex boundaries stubbed: drag and drop, the / menu, block actions, keyboard, paste, LTR/RTL
+  geometry, dark mode, reduced motion and a Pixel 7 project. No app server or backend. Run with
+  `pnpm test:editor` (set `CHAOS_CHROMIUM` to a Chromium binary if Playwright's own is not installed).
 - **`tests/layout`** — Playwright geometry checks against the shipped
   stylesheets in a static page: no app server, no backend (reader theme toggle
   sizing, block ⋯ menu placement at 320px and in RTL, outline sidebar folding).

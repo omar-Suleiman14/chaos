@@ -1,0 +1,389 @@
+{
+  "suite": "lessonEditor",
+  "metrics": {
+    "lessonEditor.b1000.ar.editAttributeChanges": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.ar.editCommits": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.ar.editElementsAdded": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.ar.editElementsRemoved": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.ar.editMutations": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.ar.editNotifications": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.ar.editTextChanges": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.ar.editUrlResolutions": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.ar.mountCommits": {
+      "budget": 5,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.ar.mountElements": {
+      "budget": 13555,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.ar.subscriptions": {
+      "budget": 150,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.ar.subscriptionsAfterUnmount": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.en.editAttributeChanges": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.en.editCommits": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.en.editElementsAdded": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.en.editElementsRemoved": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.en.editMutations": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.en.editNotifications": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.en.editTextChanges": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.en.editUrlResolutions": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.en.mountCommits": {
+      "budget": 5,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.en.mountElements": {
+      "budget": 13555,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.en.subscriptions": {
+      "budget": 150,
+      "unit": "count"
+    },
+    "lessonEditor.b1000.en.subscriptionsAfterUnmount": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b200.ar.editAttributeChanges": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b200.ar.editCommits": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b200.ar.editElementsAdded": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b200.ar.editElementsRemoved": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b200.ar.editMutations": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b200.ar.editNotifications": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b200.ar.editTextChanges": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b200.ar.editUrlResolutions": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b200.ar.mountCommits": {
+      "budget": 5,
+      "unit": "count"
+    },
+    "lessonEditor.b200.ar.mountElements": {
+      "budget": 2715,
+      "unit": "count"
+    },
+    "lessonEditor.b200.ar.subscriptions": {
+      "budget": 30,
+      "unit": "count"
+    },
+    "lessonEditor.b200.ar.subscriptionsAfterUnmount": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b200.en.editAttributeChanges": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b200.en.editCommits": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b200.en.editElementsAdded": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b200.en.editElementsRemoved": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b200.en.editMutations": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b200.en.editNotifications": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b200.en.editTextChanges": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b200.en.editUrlResolutions": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b200.en.mountCommits": {
+      "budget": 5,
+      "unit": "count"
+    },
+    "lessonEditor.b200.en.mountElements": {
+      "budget": 2715,
+      "unit": "count"
+    },
+    "lessonEditor.b200.en.subscriptions": {
+      "budget": 30,
+      "unit": "count"
+    },
+    "lessonEditor.b200.en.subscriptionsAfterUnmount": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b50.ar.editAttributeChanges": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b50.ar.editCommits": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b50.ar.editElementsAdded": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b50.ar.editElementsRemoved": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b50.ar.editMutations": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b50.ar.editNotifications": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b50.ar.editTextChanges": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b50.ar.editUrlResolutions": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b50.ar.mountCommits": {
+      "budget": 5,
+      "unit": "count"
+    },
+    "lessonEditor.b50.ar.mountElements": {
+      "budget": 674,
+      "unit": "count"
+    },
+    "lessonEditor.b50.ar.subscriptions": {
+      "budget": 6,
+      "unit": "count"
+    },
+    "lessonEditor.b50.ar.subscriptionsAfterUnmount": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b50.en.editAttributeChanges": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b50.en.editCommits": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b50.en.editElementsAdded": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b50.en.editElementsRemoved": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b50.en.editMutations": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b50.en.editNotifications": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b50.en.editTextChanges": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b50.en.editUrlResolutions": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b50.en.mountCommits": {
+      "budget": 3,
+      "unit": "count"
+    },
+    "lessonEditor.b50.en.mountElements": {
+      "budget": 674,
+      "unit": "count"
+    },
+    "lessonEditor.b50.en.subscriptions": {
+      "budget": 6,
+      "unit": "count"
+    },
+    "lessonEditor.b50.en.subscriptionsAfterUnmount": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b500.ar.editAttributeChanges": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b500.ar.editCommits": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b500.ar.editElementsAdded": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b500.ar.editElementsRemoved": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b500.ar.editMutations": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b500.ar.editNotifications": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b500.ar.editTextChanges": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b500.ar.editUrlResolutions": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b500.ar.mountCommits": {
+      "budget": 5,
+      "unit": "count"
+    },
+    "lessonEditor.b500.ar.mountElements": {
+      "budget": 6780,
+      "unit": "count"
+    },
+    "lessonEditor.b500.ar.subscriptions": {
+      "budget": 75,
+      "unit": "count"
+    },
+    "lessonEditor.b500.ar.subscriptionsAfterUnmount": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b500.en.editAttributeChanges": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b500.en.editCommits": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b500.en.editElementsAdded": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b500.en.editElementsRemoved": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b500.en.editMutations": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b500.en.editNotifications": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b500.en.editTextChanges": {
+      "budget": 1,
+      "unit": "count"
+    },
+    "lessonEditor.b500.en.editUrlResolutions": {
+      "budget": 0,
+      "unit": "count"
+    },
+    "lessonEditor.b500.en.mountCommits": {
+      "budget": 5,
+      "unit": "count"
+    },
+    "lessonEditor.b500.en.mountElements": {
+      "budget": 6780,
+      "unit": "count"
+    },
+    "lessonEditor.b500.en.subscriptions": {
+      "budget": 75,
+      "unit": "count"
+    },
+    "lessonEditor.b500.en.subscriptionsAfterUnmount": {
+      "budget": 0,
+      "unit": "count"
+    }
+  }
+}

@@ -111,22 +111,193 @@ button.lx-badge { cursor: pointer; font-family: inherit; }
 @keyframes lx-drawer { from { transform: translateX(24px); opacity: 0; } }
 [dir="rtl"] .lx-edit__side { box-shadow: 24px 0 60px -30px rgba(0,0,0,.6); }
 @media (prefers-reduced-motion: reduce) { .lx-edit__side { animation: none; } }
-.lx-title-input { width: 100%; font: inherit; font-size: clamp(26px, 4vw, 34px); font-weight: 750; letter-spacing: -0.02em; line-height: 1.2; border: 0; background: transparent; color: var(--on-surface); padding: 0; margin: 8px 0 6px; resize: none; }
-.lx-title-input:focus { outline: none; }
-.lx-desc-input { width: 100%; font: inherit; font-size: 16px; color: var(--ws-text-soft); border: 0; background: transparent; padding: 0; margin-bottom: 18px; resize: none; line-height: 1.5; }
-.lx-desc-input:focus { outline: none; }
 .lx-panel { border: 1px solid var(--ws-line); border-radius: 12px; padding: 14px; display: grid; gap: 12px; background: var(--ws-card); min-width: 0; }
 .lx-panel > h3 { font-size: 13px; font-weight: 650; display: flex; align-items: center; gap: 6px; }
 .lx-panel__row { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 13px; }
 
-/* BlockNote inside Chaos: our typeface, our surface, generous reading rhythm. */
+/* ── Lesson writing canvas ──────────────────────────────────────────────────
+   One set of tokens owns the page geometry (see docs/lesson-editor-baseline.md):
+   --lx-gutter is the room beside the text for the + / ⋮⋮ pair. The title, the description and
+   every block share the same text edge, and every rule uses logical properties, so an Arabic
+   document mirrors (handles on the right) without a second set of [dir] overrides. */
+.lx-edit__doc {
+  --lx-measure: 720px;
+  --lx-gutter: 54px;
+  --lx-gutter-end: 54px;
+  --lx-handle: color-mix(in srgb, var(--on-surface) 38%, transparent);
+  --lx-handle-hover: color-mix(in srgb, var(--on-surface) 70%, transparent);
+  --lx-select: color-mix(in srgb, var(--primary) 14%, transparent);
+  max-width: calc(var(--lx-measure) + var(--lx-gutter) + var(--lx-gutter-end));
+}
+@media (max-width: 900px) { .lx-edit__doc { --lx-gutter-end: 16px; } }
+@media (max-width: 640px) { .lx-edit__doc { --lx-gutter: 30px; --lx-gutter-end: 4px; } }
+
+.lx-title-input { width: 100%; font: inherit; font-size: clamp(30px, 4.4vw, 40px); font-weight: 700; letter-spacing: -0.015em; line-height: 1.2; border: 0; background: transparent; color: var(--on-surface); padding: 0; padding-inline: var(--lx-gutter, 0) var(--lx-gutter-end, 0); margin: 28px 0 4px; resize: none; field-sizing: content; }
+.lx-desc-input { width: 100%; font: inherit; font-size: 16px; color: var(--ws-text-soft); border: 0; background: transparent; padding: 0; padding-inline: var(--lx-gutter, 0) var(--lx-gutter-end, 0); margin-bottom: 14px; resize: none; line-height: 1.5; field-sizing: content; }
+.lx-title-input::placeholder, .lx-desc-input::placeholder { color: color-mix(in srgb, var(--on-surface) 28%, transparent); }
+.lx-title-input:focus, .lx-desc-input:focus { outline: none; }
+.lx-title-input:dir(rtl) { letter-spacing: normal; }
+
 .lx-editor { --bn-font-family: var(--ws-font); min-height: 60vh; cursor: text; }
 .lx-editor .bn-container, .lx-editor .bn-editor { background: transparent !important; font-family: var(--ws-font); }
-.lx-editor .bn-editor { padding-inline: 44px 8px; font-size: 16px; line-height: 1.7; color: var(--on-surface); }
-.lx-editor[dir="rtl"] .bn-editor { padding-inline: 44px 8px; }
-.lx-editor .bn-editor [data-content-type="heading"] { font-weight: 700; letter-spacing: -0.01em; }
+.lx-editor .bn-editor { padding-inline: var(--lx-gutter, 54px) var(--lx-gutter-end, 54px); padding-block: 2px 120px; min-height: 60vh; font-size: 16px; line-height: 1.5; color: var(--on-surface); }
+.lx-editor .bn-block-outer { scroll-margin-top: 100px; line-height: 1.5; }
 .lx-editor .bn-inline-content { word-break: normal; overflow-wrap: anywhere; }
-@media (max-width: 640px) { .lx-editor .bn-editor { padding-inline: 20px 0; font-size: 16px; } }
+.lx-editor .bn-block-content { padding-block: 3px; }
+/* Empty-line hint: quiet, and only on the line being written. */
+.lx-editor .bn-inline-content:has(> .ProseMirror-trailingBreak:only-child)::before { color: color-mix(in srgb, var(--on-surface) 30%, transparent); }
+
+/* Headings: one scale with the page title above it (40 › 30 › 24 › 20px). */
+.lx-editor [data-content-type="heading"] { --level: 1.875em; font-weight: 650; letter-spacing: -0.01em; line-height: 1.3; padding-top: 1.05em; padding-bottom: 2px; }
+.lx-editor [data-content-type="heading"][data-level="2"] { --level: 1.5em; padding-top: 0.95em; }
+.lx-editor [data-content-type="heading"][data-level="3"] { --level: 1.25em; padding-top: 0.8em; }
+.lx-editor [data-prev-level="1"] { --prev-level: 1.875em; } .lx-editor [data-prev-level="2"] { --prev-level: 1.5em; } .lx-editor [data-prev-level="3"] { --prev-level: 1.25em; }
+.lx-editor .bn-block-group:not(.bn-block-group .bn-block-group) > .bn-block-outer:first-child [data-content-type="heading"] { padding-top: 3px; }
+.lx-editor .bn-block-content:dir(rtl)[data-content-type="heading"] { letter-spacing: normal; }
+
+/* Nesting, lists, quotes and toggles on the start side in both directions (BlockNote uses left/right). */
+.lx-editor .bn-block-group .bn-block-group { margin-left: 0; margin-inline-start: 26px; }
+.lx-editor .bn-block-group .bn-block-group > .bn-block-outer:not([data-prev-depth-changed])::before { left: auto; inset-inline-start: -20px; }
+.lx-editor [data-prev-depth-change] { margin-left: 0; margin-inline-start: calc(10px * var(--x)); }
+.lx-editor .bn-block-content[data-content-type="numberedListItem"]::before,
+.lx-editor .bn-block-content[data-content-type="bulletListItem"]::before { padding-right: 0; padding-inline-end: 4px; }
+.lx-editor .bn-block-content[data-content-type="checkListItem"] > div > input { margin: 0; margin-inline: 4px 8px; width: 14px; accent-color: var(--primary); }
+.lx-editor .bn-block-content[data-content-type="checkListItem"][data-checked="true"] .bn-inline-content { color: color-mix(in srgb, var(--on-surface) 45%, transparent); }
+.lx-editor [data-content-type="quote"] blockquote { border-left: 0; border-inline-start: 3px solid currentColor; color: inherit; padding-left: 0; padding-inline-start: 14px; }
+.lx-editor [data-content-type="divider"] hr { border-top-color: var(--ws-line-strong, var(--ws-line)); margin-block: 0.6em; }
+.lx-editor .bn-toggle-add-block-button { margin-left: 0; margin-inline-start: 22px; color: var(--lx-handle); }
+.lx-editor .bn-toggle-button { color: var(--lx-handle-hover); border-radius: 4px; }
+.lx-editor .bn-toggle-button:dir(rtl) > svg { transform: scaleX(-1); }
+.lx-editor .bn-toggle-wrapper[data-show-children="true"] .bn-toggle-button:dir(rtl) > svg { transform: rotate(90deg); }
+.lx-editor .bn-block-content[data-content-type="codeBlock"] { border-radius: 6px; }
+.lx-editor .bn-block-content[data-content-type="codeBlock"] pre { direction: ltr; text-align: left; }
+.lx-editor .bn-block-content[data-content-type="table"] { overflow-x: auto; }
+.lx-editor .bn-block-content[data-content-type="table"] th { background: var(--ws-canvas-subtle); font-weight: 600; }
+/* Selected blocks (Esc, Shift+click, drag start): a flat tint instead of BlockNote's ringed box. */
+.lx-editor .bn-block-content.ProseMirror-selectednode > *::after,
+.lx-editor .ProseMirror-selectednode > .bn-block-content > *::after { background: var(--lx-select); box-shadow: none; border-radius: 4px; }
+.lx-editor .ProseMirror ::selection { background: color-mix(in srgb, var(--primary) 22%, transparent); }
+
+/* Gutter pair: + and ⋮⋮ beside the first line of the hovered block (components/learn/editor/sideMenu.tsx). */
+.lx-editor .bn-side-menu, .lx-side-menu { height: 24px; gap: 2px; padding-inline-end: 4px; animation: lx-fade-in 90ms ease-out; }
+.lx-side-menu .bn-button { height: 24px !important; min-width: 0; border-radius: 4px; padding: 0 !important; color: var(--lx-handle) !important; background: transparent; transition: background-color 80ms ease, color 80ms ease; }
+.lx-side-menu .lx-side-menu__add { width: 24px; }
+.lx-side-menu .lx-side-menu__handle { width: 18px; cursor: grab; }
+.lx-side-menu .lx-side-menu__handle:active { cursor: grabbing; }
+.lx-side-menu .bn-button:hover, .lx-side-menu .bn-button[aria-expanded="true"] { background: var(--ws-hover) !important; color: var(--lx-handle-hover) !important; }
+.lx-side-menu .bn-button:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.lx-side-menu .bn-button svg { width: auto; height: auto; }
+@keyframes lx-fade-in { from { opacity: 0; } }
+/* Touch: one larger handle (actions and long-press drag); "+" lives above the keyboard instead. */
+@media (pointer: coarse) {
+  .lx-side-menu .lx-side-menu__add { display: none; }
+  .lx-side-menu .lx-side-menu__handle { width: 26px; height: 28px !important; }
+}
+
+/* Drop indicator (BlockNote DropCursor, configured in LessonEditor with no inline colour). */
+.prosemirror-dropcursor-block, .prosemirror-dropcursor-vertical, .prosemirror-dropcursor-inline { background: color-mix(in srgb, var(--primary) 70%, transparent); border-radius: 2px; transition: top 70ms ease-out, left 70ms ease-out, width 70ms ease-out; }
+
+/* Dragging: the source blocks fade, text selection pauses, the preview looks like the block. */
+.lx-editor[data-dragging] { user-select: none; -webkit-user-select: none; }
+.lx-editor[data-dragging] .ProseMirror-selectednode > .bn-block-content > *::after, .lx-editor[data-dragging] .bn-block-content.ProseMirror-selectednode > *::after { background: transparent; }
+body[data-lx-block-drag] .bn-drag-preview { width: var(--lx-drag-width, 640px); padding: 4px 8px; border-radius: 6px; background: var(--ws-card); color: var(--on-surface); font-family: var(--ws-font); font-size: 16px; line-height: 1.5; box-shadow: 0 0 0 1px var(--ws-line); }
+body[data-lx-block-drag="rtl"] .bn-drag-preview { direction: rtl; }
+body[data-lx-block-drag] .bn-drag-preview [data-content-type="heading"] { --level: 1.5em; font-weight: 650; }
+body[data-lx-block-drag] .bn-drag-preview .ProseMirror-selectednode > *::after, body[data-lx-block-drag] .bn-drag-preview .bn-block-content > *::after { display: none; }
+/* Drop: the moved blocks settle into place (transform and opacity only). The per-block rules that
+   use these come from components/learn/editor/dragFeedback.ts. */
+@keyframes lx-settle { from { opacity: .55; transform: translateY(-3px); } }
+@keyframes lx-settle-tint { from { background-color: var(--lx-select); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .lx-editor .bn-side-menu, .lx-side-menu, .lx-editor .bn-block-outer, .lx-editor .bn-block-content { animation: none !important; }
+  .prosemirror-dropcursor-block, .prosemirror-dropcursor-vertical, .prosemirror-dropcursor-inline { transition: none; }
+  .lx-editor .bn-block-outer, .lx-editor .bn-block-content { transition: none; }
+}
+
+/* Editor menus (/ menu, ⋮⋮ actions, formatting toolbar, colours, emoji). BlockNote renders them
+   inside .bn-container, which the editor makes transparent, so they bring their own surface. They sit
+   over the text being written, so they stay readable at any workspace transparency setting (at
+   least 97% opaque, light blur). The solid declaration first is the fallback for browsers without
+   color-mix(). */
+.bn-container .bn-suggestion-menu, .bn-container .bn-grid-suggestion-menu, .bn-container .bn-menu-dropdown, .bn-container .bn-toolbar, .bn-container .bn-color-picker-dropdown,
+.bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-menu-dropdown, .bn-toolbar, .bn-color-picker-dropdown {
+  background: var(--ws-card, var(--surface-container-lowest, #fff)) !important;
+  background: color-mix(in srgb, var(--ws-card, #fff) calc(max(var(--popup-opacity, 0.85), 0.97) * 100%), transparent) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  color: var(--on-surface);
+  border: 0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--on-surface) 9%, transparent), 0 3px 6px color-mix(in srgb, var(--on-surface) 8%, transparent), 0 9px 24px color-mix(in srgb, var(--on-surface) 16%, transparent) !important;
+}
+@media (prefers-reduced-transparency: reduce) {
+  .bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-menu-dropdown, .bn-color-picker-dropdown, .bn-toolbar { background: var(--ws-card, #fff) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+.dark .bn-suggestion-menu, .dark .bn-grid-suggestion-menu, .dark .bn-menu-dropdown, .dark .bn-toolbar, .dark .bn-color-picker-dropdown { box-shadow: 0 0 0 1px rgba(255, 255, 255, .09), 0 3px 6px rgba(0, 0, 0, .3), 0 9px 24px rgba(0, 0, 0, .45) !important; }
+
+/* "/" menu: 320px, two-line rows with a 24px icon tile, group labels, quiet shortcut hints. */
+.bn-suggestion-menu { width: min(320px, calc(100vw - 24px)); max-height: min(380px, 60vh); padding: 4px !important; overscroll-behavior: contain; scroll-padding-block: 28px 4px; }
+.bn-suggestion-menu .bn-suggestion-menu-label { padding: 8px 8px 4px; font-size: 12px; font-weight: 550; color: var(--on-surface-variant); }
+.bn-suggestion-menu .bn-suggestion-menu-item { min-height: 40px; gap: 10px; padding: 3px 8px; border-radius: 5px; cursor: pointer; }
+.bn-suggestion-menu .bn-suggestion-menu-item [data-position="left"] { display: grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; border-radius: 5px; background: var(--ws-card); box-shadow: 0 0 0 1px var(--ws-line); color: var(--on-surface); }
+.bn-suggestion-menu .bn-suggestion-menu-item [data-position="left"] svg { width: 16px; height: 16px; }
+.bn-suggestion-menu .bn-suggestion-menu-item .text-base { font-size: 14px; line-height: 1.3; color: var(--on-surface); }
+.bn-suggestion-menu .bn-suggestion-menu-item .text-xs { font-size: 12px; line-height: 1.35; color: var(--on-surface-variant); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+.bn-suggestion-menu [data-position="right"] > *, .bn-suggestion-menu .mantine-Badge-root, .bn-suggestion-menu [data-slot="badge"] { padding: 0 !important; border: 0 !important; background: transparent !important; font-size: 11px; font-weight: 450; color: var(--on-surface-variant) !important; direction: ltr; }
+.bn-suggestion-menu .bn-suggestion-menu-item[aria-selected="true"], .bn-suggestion-menu .bn-suggestion-menu-item:hover { background: var(--ws-hover) !important; }
+.bn-suggestion-menu:has(> .bn-suggestion-menu-item:only-child:not([id])) { width: auto; min-width: 200px; }
+@media (pointer: coarse) { .bn-suggestion-menu .bn-suggestion-menu-item { min-height: 44px; } }
+
+/* Block action menu (⋮⋮): Notion-sized rows with a quiet shortcut hint. */
+.lx-block-menu { min-width: 236px; padding: 4px !important; }
+.lx-block-menu .lx-block-menu__item, .lx-block-menu [data-slot="dropdown-menu-sub-trigger"] { min-height: 28px; gap: 8px; padding: 4px 8px; font-size: 14px; border-radius: 4px; }
+.lx-block-menu .lx-block-menu__label { flex: 1; }
+.lx-block-menu svg { color: var(--on-surface-variant); }
+.lx-block-menu .lx-block-menu__kbd { margin-inline-start: auto; padding: 0; padding-inline-start: 16px; border: 0; background: none; box-shadow: none; font: inherit; font-size: 12px; color: var(--on-surface-variant); direction: ltr; }
+.lx-block-menu .lx-block-menu__item--danger:hover, .lx-block-menu .lx-block-menu__item--danger[data-highlighted] { color: var(--error); }
+.lx-block-menu .lx-block-menu__item--danger:hover svg, .lx-block-menu .lx-block-menu__item--danger[data-highlighted] svg { color: var(--error); }
+.bn-menu-dropdown .bn-menu-divider, .lx-block-menu [role="separator"] { height: 1px; margin: 4px 2px; background: var(--ws-line); }
+@media (pointer: coarse) { .lx-block-menu .lx-block-menu__item, .lx-block-menu [data-slot="dropdown-menu-sub-trigger"] { min-height: 40px; } }
+
+/* Formatting toolbar: one compact 36px row. */
+.bn-toolbar { gap: 1px !important; padding: 3px !important; min-height: 36px; align-items: center; }
+.bn-toolbar .bn-button, .bn-toolbar [data-slot="select-trigger"] { min-width: 28px; height: 28px !important; padding-inline: 6px !important; border-radius: 4px; color: var(--on-surface); }
+.bn-toolbar .bn-button:hover { background: var(--ws-hover); }
+.bn-toolbar .bn-button[data-selected], .bn-toolbar .bn-button[aria-pressed="true"] { color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }
+.bn-toolbar .bn-button svg { width: 16px; height: 16px; }
+
+/* ── Blocks while editing (components/learn/editor/blocks.tsx) ─────────────
+   Learning blocks share one quiet frame: icon + name, controls below, no heavy card. */
+.lx-edu { position: relative; width: 100%; min-width: 0; margin: 0; border: 0; display: grid; gap: 10px; padding: 44px 12px 12px; border-radius: 8px; background: var(--ws-canvas-subtle); box-shadow: inset 0 0 0 1px var(--ws-line); cursor: default; font-size: 14px; --lx-edu-tint: #3595e3; --lx-edu-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233595e3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 17 2 2 4-4'/%3E%3Cpath d='m3 7 2 2 4-4'/%3E%3Cpath d='M13 6h8'/%3E%3Cpath d='M13 12h8'/%3E%3Cpath d='M13 18h8'/%3E%3C/svg%3E"); }
+.lx-edu[data-kind="flashcards"] { --lx-edu-tint: #9065b0; --lx-edu-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239065b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z'/%3E%3Cpath d='m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65'/%3E%3Cpath d='m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65'/%3E%3C/svg%3E"); }
+.lx-edu[data-kind="diagram"] { --lx-edu-tint: #448361; --lx-edu-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23448361' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='16' y='16' width='6' height='6' rx='1'/%3E%3Crect x='2' y='16' width='6' height='6' rx='1'/%3E%3Crect x='9' y='2' width='6' height='6' rx='1'/%3E%3Cpath d='M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3'/%3E%3Cpath d='M12 12V8'/%3E%3C/svg%3E"); }
+/* Header drawn without extra elements: an icon tile and the block's name (data-title). */
+.lx-edu::before { content: ""; position: absolute; top: 10px; inset-inline-start: 12px; width: 24px; height: 24px; border-radius: 5px; background: var(--lx-edu-icon) center / 16px no-repeat, color-mix(in srgb, var(--lx-edu-tint) 14%, transparent); }
+.lx-edu::after { content: attr(data-title); position: absolute; top: 10px; inset-inline-start: 44px; line-height: 24px; font-size: 13px; font-weight: 600; color: var(--on-surface); pointer-events: none; }
+.lx-edu__required { position: absolute; top: 10px; inset-inline-end: 12px; height: 24px; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 400; color: var(--on-surface-variant); cursor: pointer; }
+.lx-edu__required input { accent-color: var(--primary); }
+.lx-edu > .lx-panel, .lx-edu .lx-panel { border: 0; padding: 0; background: transparent; }
+.lx-edu__source { display: grid; gap: 4px; font-size: 12px; color: var(--on-surface-variant); }
+.lx-edu__source textarea { width: 100%; min-width: 0; box-sizing: border-box; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--ws-line-strong, var(--ws-line)); background: var(--ws-card); color: var(--on-surface); resize: vertical; }
+.lx-edu__source textarea:focus-visible { outline: 2px solid var(--ws-ring); outline-offset: 0; }
+.lx-edu .lx-diagram > details { display: none; } /* The editable source is right below. */
+
+/* Images: caption under the picture on its start edge, teaching details as a quiet line that
+   appears with the block (a missing description stays visible as a warning). */
+.lx-editor [data-file-block] .bn-file-caption { font-size: 14px; color: var(--on-surface-variant); padding-block: 6px 0; text-align: start; }
+.lx-editor [data-file-block] .bn-add-file-button { border-radius: 6px; background: var(--ws-canvas-subtle); color: var(--on-surface-variant); }
+.lx-editor [data-file-block] .bn-add-file-button:hover { background: var(--ws-hover); }
+.lx-editor .lx-figure { justify-items: start; }
+.lx-editor .lx-figure__alt:not([data-missing]) { opacity: 0; transition: opacity 120ms ease; }
+.lx-editor .bn-block-outer:hover .lx-figure__alt, .lx-editor .lx-figure__alt:focus-visible, .lx-editor .ProseMirror-selectednode .lx-figure__alt { opacity: 1; }
+@media (hover: none) { .lx-editor .lx-figure__alt:not([data-missing]) { opacity: 1; } }
+/* Source and YouTube controls stay out of the way until the block is in use. */
+.lx-editor .lx-youtube__fields input, .lx-editor .lx-source input { border-color: transparent; background: var(--ws-hover); }
+.lx-editor .lx-youtube__fields input:hover, .lx-editor .lx-source input:hover { border-color: var(--ws-line-strong, var(--ws-line)); }
+.lx-editor .lx-youtube__fields input:focus, .lx-editor .lx-source input:focus { border-color: var(--primary); background: var(--ws-card); outline: none; }
+.lx-editor .bn-block-content[data-content-type="equation"] { border-radius: 6px; }
+.lx-editor .bn-block-content[data-content-type="equation"]:hover { background: var(--ws-hover); }
 
 /* ── Custom blocks (editor and reader share these) ──────────────────────── */
 .lx-callout { display: flex; gap: 10px; align-items: flex-start; width: 100%; padding: 12px 14px; border-radius: 10px; background: var(--ws-accent-soft); border-inline-start: 3px solid var(--primary); }
@@ -470,34 +641,6 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 /* Touch screens have no hover: keep the page-top and cover controls visible. */
 @media (hover: none) { .lx-cover__actions { opacity: 1; } }
 
-/* Editor popups (/ menu, formatting toolbar, block and colour menus) use the workspace glass. BlockNote
-   renders them inside .bn-container, which the editor makes transparent, so they need their own surface.
-   Solid fallbacks come first: browsers that drop the color-mix glass (older iOS Safari) still get a
-   solid, rounded popup instead of a see-through box with a black border. */
-.bn-toolbar, .bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-menu-dropdown, .bn-color-picker-dropdown {
-  background: var(--ws-card, var(--surface-container-lowest, #fff)) !important;
-  border: 1px solid var(--ws-line, rgba(127, 127, 127, .25)) !important;
-  border-radius: 10px !important;
-  color: var(--on-surface, inherit);
-}
-.bn-toolbar, .bn-container .bn-suggestion-menu, .bn-container .bn-grid-suggestion-menu, .bn-container .bn-menu-dropdown, .bn-container .bn-toolbar, .bn-container .bn-color-picker-dropdown,
-.bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-menu-dropdown, .bn-color-picker-dropdown {
-  background: color-mix(in srgb, var(--ws-card, var(--surface-container-lowest, #fff)) calc(var(--popup-opacity, 0.85) * 100%), transparent) !important;
-  -webkit-backdrop-filter: blur(calc(14px + (1 - var(--popup-opacity, 0.85)) * 40px)) saturate(1.6);
-  backdrop-filter: blur(calc(14px + (1 - var(--popup-opacity, 0.85)) * 40px)) saturate(1.6);
-  border: 1px solid var(--ws-line, rgba(127, 127, 127, .25)) !important;
-  border-radius: 10px !important;
-  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, .3) !important;
-  color: var(--on-surface);
-}
-.bn-suggestion-menu .bn-suggestion-menu-label { color: var(--on-surface-variant); font-size: 12px; font-weight: 600; }
-.bn-suggestion-menu .bn-suggestion-menu-item[aria-selected="true"], .bn-suggestion-menu .bn-suggestion-menu-item:hover { background: var(--ws-hover) !important; }
-.bn-suggestion-menu .bn-suggestion-menu-item-small, .bn-suggestion-menu .bn-suggestion-menu-item-subtitle { color: var(--on-surface-variant) !important; }
-.bn-suggestion-menu [data-position="right"] > *, .bn-suggestion-menu .mantine-Badge-root { background: transparent !important; color: var(--on-surface-variant) !important; border: 1px solid var(--ws-line) !important; font-weight: 500; text-transform: none; }
-@media (prefers-reduced-transparency: reduce) {
-  .bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-menu-dropdown, .bn-color-picker-dropdown, .bn-container .bn-toolbar { background: var(--ws-card, #fff) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
-}
-
 /* Phones: the formatting toolbar stays inside the screen and scrolls sideways instead of running off the edge. */
 @media (max-width: 640px) {
   .bn-toolbar { max-width: calc(100vw - 16px); overflow-x: auto; flex-wrap: nowrap !important; overscroll-behavior-x: contain; scrollbar-width: none; }
@@ -512,17 +655,12 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 /* List items start inside the list's indent: their ⋯ sits in the same gutter as other blocks', never over the number or text. */
 .lx-block[data-type="list"] > li > .lx-block__handle { inset-inline-start: calc(-34px - 1.4em); }
 .lx-article { padding-inline: 36px; }
-.lx-editor .bn-editor { padding-inline: 52px 16px; min-height: 60vh; }
-.lx-editor .bn-block-outer { scroll-margin-top: 100px; }
 /* No hover on phones and tablets: no gutter beside the text. A tapped block is tinted and its actions
    open in a callout just above it (.lx-actbar), so they never cover the block's words or shift layout. */
 @media (max-width: 1180px), (hover: none) {
   .lx-article { padding-inline: 0; }
   .lx-block__handle { display: none; }
   .lx-block[data-active="true"], li[data-active="true"] { background: var(--ws-hover); box-shadow: 0 0 0 6px var(--ws-hover); border-radius: 8px; }
-}
-@media (max-width: 640px) {
-  .lx-editor .bn-editor { padding-inline: 38px 8px; }
 }
 
 .lx-inline-quiz { margin-block: 12px; width: 100%; min-width: 0; border: 1px solid var(--ws-line); border-radius: 12px; overflow: hidden; padding: 16px; }
@@ -885,3 +1023,6 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 }
 @media (prefers-reduced-motion: reduce) { .lx-toc-desk__title, .lx-toc-desk__body, .lx-toc-desk[data-collapsed] .lx-toc-desk__body { transition: none; } }
 .reduce-motion .lx-toc-desk__title, .reduce-motion .lx-toc-desk__body, .reduce-motion .lx-toc-desk[data-collapsed] .lx-toc-desk__body { transition: none; }
+
+/* Page-top notices share the writing column's text edge with the title and blocks. */
+.lx-edit__doc > :not(.lx-editor, .lx-title-input, .lx-desc-input, .ws-skeleton) { margin-inline: var(--lx-gutter, 0) var(--lx-gutter-end, 0); }

@@ -13,12 +13,12 @@ import InlineFlashcards from "../reader/InlineFlashcards";
 import "katex/dist/katex.min.css";
 import { BlockNoteSchema, defaultBlockSpecs, defaultInlineContentSpecs, defaultProps, imageParse } from "@blocknote/core";
 import { createReactBlockSpec, createReactInlineContentSpec, ResizableFileBlockWrapper, SourceBlockWithPreview, useResolveUrl } from "@blocknote/react";
-import { createCodeBlockSpec } from "@blocknote/core";
+import { createCodeBlockSpec, createHeadingBlockSpec } from "@blocknote/core";
 import { codeBlockOptions } from "@blocknote/code-block";
 import { BookMarked, Image as ImageIcon, PlayCircle, Video } from "lucide-react";
 import { formatTimestamp, parseTimestamp, parseYouTube } from "@/lib/learn/doc";
 import type { LessonSource } from "@/lib/learn/types";
-import { useLocale } from "@/lib/i18n";
+import { useCopy } from "@/lib/i18n";
 
 /** What custom blocks need from the lesson around them (its sources, dialogs owned by the editor page). */
 export interface LessonEditorBridge {
@@ -294,42 +294,77 @@ export const Citation = createReactInlineContentSpec(
 
 /* ── Schema ──────────────────────────────────────────────────────────────── */
 
-/** Block types lessons use. Audio and generic file blocks stay out of the slash menu; sources cover documents. */
-/* oxlint-disable jsx-a11y/no-static-element-interactions -- These containers stop editor shortcuts bubbling from embedded form controls; they are not separate interactive controls. */
+/* ── Chaos learning blocks ───────────────────────────────────────────────── */
+
+const eduCopy = {
+  en: { quiz: "Quiz / checkpoint", flashcards: "Flashcards", diagram: "Diagram", required: "Required to complete", source: "Diagram source" },
+  ar: { quiz: "اختبار", flashcards: "البطاقات", diagram: "مخطط", required: "مطلوب لإكمال الدرس", source: "نص المخطط" },
+};
+
+/**
+ * The shared frame for quiz, flashcard and diagram blocks while editing: a quiet header with the
+ * block's icon and name (so it reads as part of the document, and is easy to grab and move), and its
+ * own controls below. Readers never see this frame; they get the block itself.
+ */
+/* oxlint-disable jsx-a11y/no-noninteractive-element-interactions -- The frame stops editor shortcuts bubbling from embedded form controls; it is not a control itself. */
+function EduBlock({ kind, aside, children }: { kind: "quiz" | "flashcards" | "diagram"; aside?: React.ReactNode; children: React.ReactNode }) {
+  const t = useCopy(eduCopy);
+  // No extra elements (title and icon are drawn from data-title): long lessons mount many of these.
+  return (
+    <fieldset className="lx-edu" data-kind={kind} data-title={t[kind]} aria-label={t[kind]} contentEditable={false} onKeyDown={stop}>
+      {aside}
+      {children}
+    </fieldset>
+  );
+}
+/* oxlint-enable jsx-a11y/no-noninteractive-element-interactions */
+
+function RequiredToggle({ checked, onChange }: { checked: boolean; onChange: (value: boolean) => void }) {
+  const t = useCopy(eduCopy);
+  return <label className="lx-edu__required"><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />{t.required}</label>;
+}
+
 export const LessonDiagram = createReactBlockSpec(
   { type: "lessonDiagram", content: "none", propSchema: { format: { default: "mermaid" }, text: { default: "flowchart LR\n  A[Learn] --> B[Practice] --> C[Understand]" } } },
   { render: function DiagramBlock({ block, editor }) {
-    const { locale } = useLocale();
-    return <div className="lx-panel" contentEditable={false} onKeyDown={stop}>
-      {editor.isEditable && <label className="lx-form">{locale === "ar" ? "نص المخطط" : "Diagram source"}<textarea dir="ltr" rows={5} maxLength={20000} value={block.props.text} onChange={e => editor.updateBlock(block, { props: { text: e.target.value } })} /></label>}
-      <Diagram text={block.props.text} />
-    </div>;
+    const t = useCopy(eduCopy);
+    if (!editor.isEditable) return <div className="lx-panel" contentEditable={false}><Diagram text={block.props.text} /></div>;
+    return (
+      <EduBlock kind="diagram">
+        <Diagram text={block.props.text} />
+        <label className="lx-edu__source">{t.source}<textarea dir="ltr" rows={Math.min(10, Math.max(3, block.props.text.split("\n").length))} maxLength={20000} spellCheck={false} value={block.props.text} onChange={e => editor.updateBlock(block, { props: { text: e.target.value } })} /></label>
+      </EduBlock>
+    );
   } },
 );
-/* oxlint-enable jsx-a11y/no-static-element-interactions */
 export const LessonQuiz = createReactBlockSpec(
  { type: "lessonQuiz", propSchema: { required: { default: false }, assetKind: { default: "form", values: ["form", "quiz"] as const }, assetId: { default: "" } }, content: "none" },
  { render: function QuizBlock({ block, editor }) {
-  const { locale } = useLocale();
-  return <div contentEditable={false} className="lx-panel">
-    {editor.isEditable && <label><input type="checkbox" checked={block.props.required} onChange={e => editor.updateBlock(block, { props: { required: e.target.checked } })} /> {locale === "ar" ? "مطلوب لإكمال الدرس" : "Required to complete the lesson"}</label>}
-    {editor.isEditable ? <QuizBlockEditor assetId={block.props.assetKind === "form" ? block.props.assetId : ""} onSelect={asset => editor.updateBlock(block, { props: { assetKind: asset.kind, assetId: asset.id } })} /> : block.props.assetId ? <InlineQuiz asset={{ kind: block.props.assetKind, id: block.props.assetId }} /> : null}
-  </div>;
+  if (!editor.isEditable) return <div contentEditable={false} className="lx-panel">{block.props.assetId ? <InlineQuiz asset={{ kind: block.props.assetKind, id: block.props.assetId }} /> : null}</div>;
+  return (
+    <EduBlock kind="quiz" aside={<RequiredToggle checked={block.props.required} onChange={required => editor.updateBlock(block, { props: { required } })} />}>
+      <QuizBlockEditor assetId={block.props.assetKind === "form" ? block.props.assetId : ""} onSelect={asset => editor.updateBlock(block, { props: { assetKind: asset.kind, assetId: asset.id } })} />
+    </EduBlock>
+  );
  } }
 );
 export const LessonFlashcards = createReactBlockSpec(
   { type: "lessonFlashcards", propSchema: { setId: { default: "" }, required: { default: false } }, content: "none" },
   { render: function FlashcardsBlock({ block, editor }) {
-    const { locale } = useLocale();
-    return <div contentEditable={false} className="lx-panel">
-      {editor.isEditable && <label><input type="checkbox" checked={block.props.required} onChange={e => editor.updateBlock(block, { props: { required: e.target.checked } })} /> {locale === "ar" ? "مطلوب لإكمال الدرس" : "Required to complete the lesson"}</label>}
-      {editor.isEditable ? <FlashcardBlockEditor setId={block.props.setId} onSelect={setId => editor.updateBlock(block, { props: { setId } })} /> : block.props.setId ? <InlineFlashcards setId={block.props.setId} /> : null}
-    </div>;
+    if (!editor.isEditable) return <div contentEditable={false} className="lx-panel">{block.props.setId ? <InlineFlashcards setId={block.props.setId} /> : null}</div>;
+    return (
+      <EduBlock kind="flashcards" aside={<RequiredToggle checked={block.props.required} onChange={required => editor.updateBlock(block, { props: { required } })} />}>
+        <FlashcardBlockEditor setId={block.props.setId} onSelect={setId => editor.updateBlock(block, { props: { setId } })} />
+      </EduBlock>
+    );
   } },
 );
 export const lessonSchema = BlockNoteSchema.create({
   blockSpecs: {
     ...defaultBlockSpecs,
+    // Lessons store heading levels 1-3 and no toggle headings (convex/learnModel.ts). Offering more
+    // would let a writer create a heading that the save path then has to reject.
+    heading: createHeadingBlockSpec({ levels: [1, 2, 3], allowToggleHeadings: false }),
     codeBlock: createCodeBlockSpec(codeBlockOptions),
     image: LessonImage(),
     callout: Callout(),

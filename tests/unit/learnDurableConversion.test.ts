@@ -24,6 +24,19 @@ describe("real Learn editor durable conversion", () => {
     const doc: LessonDocument = { schemaVersion: 1, blocks: [{ ...base, id: "tbl", type: "table", rows: [["A", "B"], ["1", "2"]], headerRows: 1 }] };
     expect(toDurableDocument(fromDurableDocument(doc), doc)).toEqual(doc);
   });
+  it("saves the table cells BlockNote reports (default-valued cell objects) exactly like plain cells", () => {
+    const doc: LessonDocument = { schemaVersion: 1, blocks: [{ ...base, id: "tbl", type: "table", rows: [["A", ""], ["1", "2"]], headerRows: 1 }] };
+    const cell = (text: string) => ({ type: "tableCell", props: { colspan: 1, rowspan: 1, backgroundColor: "default", textColor: "default", textAlignment: "left" }, content: text ? [{ type: "text", text, styles: {} }] : [] });
+    const editorTable = [{ id: "tbl", type: "table", props: { textColor: "default" }, content: { type: "tableContent", headerRows: 1, columnWidths: [null, null], rows: [{ cells: [cell("A"), cell("")] }, { cells: [cell("1"), cell("2")] }] }, children: [] }];
+    expect(toDurableDocument(editorTable, doc)).toEqual(toDurableDocument(fromDurableDocument(doc), doc));
+    const styled = { ...cell("A"), props: { ...cell("A").props, backgroundColor: "red" } };
+    expect(() => toDurableDocument([{ ...editorTable[0], content: { type: "tableContent", rows: [{ cells: [styled] }] } }])).toThrow("Merged or styled");
+  });
+  it("drops only the source block's empty editor-side note", () => {
+    const source = (note: string) => [{ id: "s", type: "source", props: { sourceId: "source1", locator: "page 2", note }, children: [] }];
+    expect(toDurableDocument(source("")).blocks[0]).toMatchObject({ type: "source", sourceId: "source1", label: "page 2" });
+    expect(() => toDurableDocument(source("Read before class"))).toThrow("Source notes");
+  });
   it("rejects merged cells, rich table text, custom inline citations and unknown block props", () => {
     const raw = (content: unknown, props = {}) => [{ id: "x", type: "table", props, content, children: [] }];
     expect(() => toDurableDocument(raw({ type: "tableContent", rows: [{ cells: [{ type: "tableCell", props: { colspan: 2 }, content: [] }] }] }))).toThrow("Merged");

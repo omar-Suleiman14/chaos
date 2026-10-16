@@ -1,5 +1,6 @@
 .layout :global(.lx-edit__doc) {
-  max-width: 980px;
+  /* The text column; the gutters for block handles are added around it (learn.css). */
+  --lx-measure: 760px;
 }
 .layout :global(.lx-edit__side) {
   width: min(400px, 94vw);

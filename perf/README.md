@@ -14,6 +14,14 @@ pnpm perf:ratchet    # after a genuine win: lower budgets, add new metrics
 
 ## What is measured
 
+The real lesson editor has a separate component baseline at 50, 200, 500 and
+1,000 mixed blocks in English and Arabic. Run only that suite with
+`pnpm exec vitest run --config vitest.perf.config.mts perf/client/lessonEditor.perf.test.tsx`,
+then `pnpm perf:check -- --suites lessonEditor`. These are deterministic mount
+and inline-transaction work counts, not typing latency or drag frame rates.
+See [the editor audit](../docs/lesson-editor-baseline.md) for fixture boundaries,
+pending browser measurements and the redesign's persistence constraints.
+
 | Layer | Where | Measures |
 |---|---|---|
 | Convex | `perf/backend` | Documents read, index ranges, bytes read, bytes sent to the client, transactions and writes, using convex-test's own transaction accounting. Deterministic. |

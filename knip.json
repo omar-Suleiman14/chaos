@@ -1,6 +1,11 @@
 {
   "$schema": "https://unpkg.com/knip@6/schema.json",
-  "entry": ["convex/**/*.ts", "scripts/**/*.{ts,mjs}", "proxy.ts"],
+  "entry": [
+    "convex/**/*.ts",
+    "scripts/**/*.{ts,mjs}",
+    "proxy.ts",
+    "tests/editor/harness/{main,next-dynamic,next-link,next-navigation,convex-react}.{ts,tsx}"
+  ],
   "project": ["**/*.{ts,tsx,mts,mjs}"],
   "ignore": [
     "convex/**/_generated/**",
