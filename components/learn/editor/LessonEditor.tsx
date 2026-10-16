@@ -6,16 +6,14 @@ import "@blocknote/core/fonts/inter.css";
 import "@blocknote/shadcn/style.css";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useUsableMark } from "@/lib/journeys";
-import { filterSuggestionItems, insertOrUpdateBlockForSlashMenu } from "@blocknote/core/extensions";
 import * as locales from "@blocknote/core/locales";
 import {
-  BlockColorsItem, DragHandleMenu, FormattingToolbar, FormattingToolbarController, getDefaultReactSlashMenuItems, getFormattingToolbarItems,
-  RemoveBlockItem, SideMenu, SideMenuController, SuggestionMenuController, TableColumnHeaderItem, TableRowHeaderItem, useBlockNoteEditor,
-  useComponentsContext, useCreateBlockNote, useEditorState, usePortalElement, useExtensionState, type DefaultReactSuggestionItem,
+  FormattingToolbar, FormattingToolbarController, getFormattingToolbarItems, SuggestionMenuController,
+  useBlockNoteEditor, useComponentsContext, useCreateBlockNote, useEditorState, usePortalElement, useUIMode,
 } from "@blocknote/react";
-import { SideMenuExtension } from "@blocknote/core/extensions";
+import { SuggestionMenu } from "@blocknote/core/extensions";
 import { BlockNoteView } from "@blocknote/shadcn";
-import { BookMarked, Copy, Image as ImageIcon, Info, MoveDown, MoveUp, PlayCircle, Quote, Sigma, MessageCircleQuestion } from "lucide-react";
+import { Image as ImageIcon, MessageCircleQuestion, Plus } from "lucide-react";
 import { blockText, parseYouTube } from "@/lib/learn/doc";
 import type { Block } from "@/lib/learn/doc";
 import type { LessonSource } from "@/lib/learn/types";
@@ -25,25 +23,19 @@ export type SelectionAction = "explain" | "simplify" | "expand" | "rewrite" | "o
 import { useCopy, useLocale } from "@/lib/i18n";
 import { EditorBridge, lessonSchema, type LessonEditorBridge, type LessonEditorType } from "./blocks";
 import { focusLessonEnd, isBlankEditorTarget } from "./focusEnd";
+import { lessonSlashItems, searchSlashItems } from "./slashMenu";
+import { LessonSideMenuController, runBlockAction } from "./sideMenu";
+import { announce, LIVE_REGION_ATTR } from "./announce";
+import { blockDropTarget, handleBlockDrop } from "./dragFeedback";
 
 const copy = {
   en: {
-    groups: { lesson: "Lesson" },
-    callout: "Callout", calloutHint: "Highlight a note, tip or caution", equation: "Equation", equationHint: "Math with LaTeX",
-    youtube: "YouTube", youtubeHint: "Embed a video, or just the useful part", source: "Source", sourceHint: "Show the material this is based on",
-    cite: "Citation", citeHint: "Point this sentence to a source (Lecture 8 · page 23)",
-    imageDetails: "Image details", assist: "Ask ChatGPT or Claude", duplicate: "Duplicate", moveUp: "Move up", moveDown: "Move down", delete: "Delete", colors: "Colours",
-    headerRow: "Header row", headerCol: "Header column",
+    imageDetails: "Image details", assist: "Ask ChatGPT or Claude", insert: "Insert block", duplicated: "Duplicated",
     actions: { explain: "Explain", simplify: "Simplify", expand: "Expand", rewrite: "Rewrite", organize: "Organize" } as Record<SelectionAction, string>,
     fileTooLarge: "Files can be at most 20 MB.", uploadFailed: "The file could not be stored on this device.",
   },
   ar: {
-    groups: { lesson: "الدرس" },
-    callout: "تنبيه", calloutHint: "أبرز ملاحظة أو نصيحة أو تحذيرًا", equation: "معادلة", equationHint: "رياضيات بصيغة LaTeX",
-    youtube: "YouTube", youtubeHint: "ضمّن فيديو أو الجزء المفيد منه فقط", source: "مصدر", sourceHint: "اعرض المادة التي بُني عليها هذا الجزء",
-    cite: "استشهاد", citeHint: "اربط هذه الجملة بمصدر (المحاضرة 8 · صفحة 23)",
-    imageDetails: "تفاصيل الصورة", assist: "اسأل ChatGPT أو Claude", duplicate: "تكرار", moveUp: "نقل لأعلى", moveDown: "نقل لأسفل", delete: "حذف", colors: "الألوان",
-    headerRow: "صف عناوين", headerCol: "عمود عناوين",
+    imageDetails: "تفاصيل الصورة", assist: "اسأل ChatGPT أو Claude", insert: "إدراج كتلة", duplicated: "تم التكرار",
     actions: { explain: "اشرح", simplify: "بسّط", expand: "وسّع", rewrite: "أعد الصياغة", organize: "نظّم" } as Record<SelectionAction, string>,
     fileTooLarge: "الحد الأقصى لحجم الملف 20 ميغابايت.", uploadFailed: "تعذّر حفظ الملف على هذا الجهاز.",
   },
@@ -104,6 +96,16 @@ export default function LessonEditor(props: LessonEditorProps) {
     },
     resolveFileUrl: reference => propsRef.current.resolveFileUrl(reference),
     tables: { splitCells: false, cellBackgroundColor: false, cellTextColor: false, headers: true },
+    // A thin accent line, styled in learn.css (.prosemirror-dropcursor-block); no inline colour.
+    dropCursor: {
+      width: 3, color: false,
+      hooks: {
+        computeDropPosition: ({ editor: view, event, defaultPosition }) => {
+          const target = blockDropTarget(view as LessonEditorType, event.clientX, event.clientY);
+          return target === undefined ? defaultPosition : target && { pos: target.pos, orientation: "block-horizontal" };
+        },
+      },
+    },
   }, [locale]);
 
   useEffect(() => { props.onReady?.(editor); }, [editor]); // oxlint-disable-line react-hooks/exhaustive-deps -- once per editor
@@ -117,38 +119,34 @@ export default function LessonEditor(props: LessonEditorProps) {
     editCitation: (...args) => propsRef.current.onEditCitation(...args),
   }), [props.sources, editor]);
 
-  const slashItems = (): DefaultReactSuggestionItem[] => {
-    const base = getDefaultReactSlashMenuItems(editor).filter((item) => !["audio", "file"].includes((item as { key?: string }).key ?? ""));
-    const group = t.groups.lesson;
-    return [
-      ...base,
-      { key: "callout", title: t.callout, subtext: t.calloutHint, group, icon: <Info size={18} />, aliases: ["note", "tip", "warning", "ملاحظة"], onItemClick: () => { insertOrUpdateBlockForSlashMenu(editor, { type: "callout" }); } },
-      { key: "equation", title: t.equation, subtext: t.equationHint, group, icon: <Sigma size={18} />, aliases: ["math", "latex", "formula", "معادلة"], onItemClick: () => { insertOrUpdateBlockForSlashMenu(editor, { type: "equation" }); } },
-      { key: "youtube", title: t.youtube, subtext: t.youtubeHint, group, icon: <PlayCircle size={18} />, aliases: ["video", "yt", "فيديو"], onItemClick: () => { insertOrUpdateBlockForSlashMenu(editor, { type: "youtube" }); } },
-      { key: "diagram", title: locale === "ar" ? "مخطط" : "Diagram", subtext: locale === "ar" ? "ارسم العلاقات بصيغة Mermaid" : "Draw relationships with Mermaid", group, icon: <MoveDown size={18} />, aliases: ["diagram", "mermaid", "flowchart", "مخطط"], onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "lessonDiagram" }) },
-      { key: "source", title: t.source, subtext: t.sourceHint, group, icon: <BookMarked size={18} />, aliases: ["reference", "pdf", "slides", "مرجع"], onItemClick: () => { insertOrUpdateBlockForSlashMenu(editor, { type: "source" }); } },
-      {
-        key: "citation", title: t.cite, subtext: t.citeHint, group, icon: <Quote size={18} />, aliases: ["cite", "ref", "page", "استشهاد"],
-        onItemClick: () => propsRef.current.onEditCitation(editor.getTextCursorPosition().block.id),
-      },
-      { key: "flashcards", title: locale === "ar" ? "البطاقات" : "Flashcards", subtext: locale === "ar" ? "أنشئ بطاقات أو أرفق مجموعة موجودة" : "Create or attach flashcards", group, icon: <BookMarked size={18} />, aliases: ["flashcards", "cards", "بطاقات"], onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "lessonFlashcards" }) },
-      { key: "quiz", title: locale === "ar" ? "اختبار" : "Quiz / checkpoint", subtext: locale === "ar" ? "أنشئ اختبارًا أو أرفق اختبارًا موجودًا" : "Create or attach a quiz", group, icon: <BookMarked size={18} />, aliases: ["quiz", "checkpoint", "practice", "assessment", "اختبار"], onItemClick: () => insertOrUpdateBlockForSlashMenu(editor, { type: "lessonQuiz" }) },
-    ] as DefaultReactSuggestionItem[];
-  };
+  const slashItems = () => lessonSlashItems(editor, locale === "ar" ? "ar" : "en", (blockId) => propsRef.current.onEditCitation(blockId));
+  const dir = contentDirection(props.language);
 
   return (
     <EditorBridge.Provider value={bridge}>
-      <div className="lx-editor" dir={contentDirection(props.language)} lang={props.language}
+      {/* oxlint-disable-next-line jsx-a11y/no-static-element-interactions -- Blank-canvas clicks and block shortcuts; the editor inside is the interactive element. */}
+      <div className="lx-editor" dir={dir} lang={props.language}
         onPointerDown={event => {
           if (props.editable === false || event.button !== 0 || !isBlankEditorTarget(event.target)) return;
           event.preventDefault();
           focusLessonEnd(editor);
+        }}
+        onDropCapture={event => { handleBlockDrop(editor, event); }}
+        onKeyDownCapture={event => {
+          // Notion's duplicate shortcut: the block (or selected blocks) under the caret, one undo step.
+          if (props.editable === false || !(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey || event.key.toLowerCase() !== "d") return;
+          if (!editor.isFocused()) return;
+          event.preventDefault();
+          const blocks = editor.getSelection()?.blocks ?? [editor.getTextCursorPosition().block];
+          runBlockAction(editor, "duplicate", blocks as never);
+          announce(t.duplicated);
         }}>
         <BlockNoteView editor={editor} editable={props.editable !== false} theme={dark ? "dark" : "light"} slashMenu={false} formattingToolbar={false} sideMenu={false}
           onChange={() => { if (!embedYouTubeVideos(editor)) propsRef.current.onChange(editor.document as unknown[]); }}>
-          <SuggestionMenuController triggerCharacter="/" getItems={async (query) => filterSuggestionItems(slashItems(), query)} />
+          <SuggestionMenuController triggerCharacter="/" getItems={async (query) => searchSlashItems(slashItems(), query)} />
           <FormattingToolbarController formattingToolbar={() => (
             <FormattingToolbar>
+              <MobileInsertButton label={t.insert} />
               {getFormattingToolbarItems()}
               <ImageDetailsButton label={t.imageDetails} onClick={(id) => propsRef.current.onEditImage(id, editor)} />
               <AssistButtons labels={t.actions} title={t.assist} onRun={(action) => {
@@ -159,44 +157,31 @@ export default function LessonEditor(props: LessonEditorProps) {
               }} />
             </FormattingToolbar>
           )} />
-          <SideMenuController sideMenu={(sideProps) => (
-            <SideMenu {...sideProps} dragHandleMenu={() => (
-              <DragHandleMenu>
-                <RemoveBlockItem>{t.delete}</RemoveBlockItem>
-                <BlockActionItem kind="duplicate" icon={<Copy size={14} />}>{t.duplicate}</BlockActionItem>
-                <BlockActionItem kind="up" icon={<MoveUp size={14} />}>{t.moveUp}</BlockActionItem>
-                <BlockActionItem kind="down" icon={<MoveDown size={14} />}>{t.moveDown}</BlockActionItem>
-                <BlockColorsItem>{t.colors}</BlockColorsItem>
-                <TableRowHeaderItem>{t.headerRow}</TableRowHeaderItem>
-                <TableColumnHeaderItem>{t.headerCol}</TableColumnHeaderItem>
-              </DragHandleMenu>
-            )} />
-          )} />
+          <LessonSideMenuController dir={dir} />
         </BlockNoteView>
+        <output className="sr-only" aria-live="polite" {...{ [LIVE_REGION_ATTR]: "" }} />
       </div>
     </EditorBridge.Provider>
   );
 }
 
-/** Duplicate and keyboard-free move for the block handle menu (dragging still works). */
-function BlockActionItem({ kind, icon, children }: { kind: "duplicate" | "up" | "down"; icon: React.ReactNode; children: React.ReactNode }) {
+/**
+ * On phones the formatting toolbar sits above the keyboard (BlockNote's mobile mode) and is the
+ * only always-reachable control, so it starts with "+": open the block menu without hunting for
+ * a gutter that touch screens do not have.
+ */
+function MobileInsertButton({ label }: { label: string }) {
   const Components = useComponentsContext()!;
-  const editor = useBlockNoteEditor();
-  const block = useExtensionState(SideMenuExtension, { editor, selector: (state) => state?.block });
-  if (!block) return null;
-  return (
-    <Components.Generic.Menu.Item className="bn-menu-item" icon={icon} onClick={() => {
-      if (kind === "duplicate") {
-        const strip = (b: typeof block): typeof block => ({ ...b, id: undefined as never, children: b.children.map(strip) });
-        editor.insertBlocks([strip(block) as never], block, "after");
-        return;
-      }
-      editor.setTextCursorPosition(block, "end");
-      if (kind === "up") editor.moveBlocksUp(); else editor.moveBlocksDown();
-    }}>
-      {children}
-    </Components.Generic.Menu.Item>
-  );
+  const editor = useBlockNoteEditor(lessonSchema);
+  const mode = useUIMode();
+  if (mode !== "mobile") return null;
+  return <Components.FormattingToolbar.Button className="bn-button lx-mobile-insert" label={label} mainTooltip={label} icon={<Plus size={18} />}
+    onClick={() => {
+      const block = editor.getTextCursorPosition().block;
+      const empty = block.type === "paragraph" && Array.isArray(block.content) && block.content.length === 0;
+      if (!empty) editor.setTextCursorPosition(editor.insertBlocks([{ type: "paragraph" }], block, "after")[0], "end");
+      editor.getExtension(SuggestionMenu)?.openSuggestionMenu("/");
+    }} />;
 }
 
 function ImageDetailsButton({ label, onClick }: { label: string; onClick: (blockId: string) => void }) {

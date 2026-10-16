@@ -22,6 +22,7 @@
     "test:e2e": "playwright test",
     "test:layout": "playwright test -c playwright.layout.config.ts",
     "test:visual": "playwright test -c playwright.visual.config.ts",
+    "test:editor": "playwright test -c playwright.editor.config.ts",
     "test:correctness": "tsx scripts/correctness.ts",
     "perf": "vitest run --config vitest.perf.config.mts",
     "perf:bundles": "tsx scripts/perf-bundles.ts",

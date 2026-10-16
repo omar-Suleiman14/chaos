@@ -15,3 +15,14 @@ export function focusLessonEnd(editor: LessonEditorType) {
   editor.setTextCursorPosition(last.id, "end");
   editor.focus();
 }
+
+/** Enter in the title continues into the document, like Notion: an empty first line, or a new one above media. */
+export function focusLessonStart(editor: LessonEditorType | null | undefined) {
+  if (!editor) return;
+  let first = editor.document[0];
+  if (!first) { editor.focus(); return; }
+  if (!Array.isArray(first.content)) first = editor.insertBlocks([{ type: "paragraph" }], first.id, "before")[0];
+  if (!first) { editor.focus(); return; }
+  editor.setTextCursorPosition(first.id, "start");
+  editor.focus();
+}

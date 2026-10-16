@@ -13,7 +13,7 @@ import InlineFlashcards from "../reader/InlineFlashcards";
 import "katex/dist/katex.min.css";
 import { BlockNoteSchema, defaultBlockSpecs, defaultInlineContentSpecs, defaultProps, imageParse } from "@blocknote/core";
 import { createReactBlockSpec, createReactInlineContentSpec, ResizableFileBlockWrapper, SourceBlockWithPreview, useResolveUrl } from "@blocknote/react";
-import { createCodeBlockSpec } from "@blocknote/core";
+import { createCodeBlockSpec, createHeadingBlockSpec } from "@blocknote/core";
 import { codeBlockOptions } from "@blocknote/code-block";
 import { BookMarked, Image as ImageIcon, PlayCircle, Video } from "lucide-react";
 import { formatTimestamp, parseTimestamp, parseYouTube } from "@/lib/learn/doc";
@@ -330,6 +330,9 @@ export const LessonFlashcards = createReactBlockSpec(
 export const lessonSchema = BlockNoteSchema.create({
   blockSpecs: {
     ...defaultBlockSpecs,
+    // Lessons store heading levels 1-3 and no toggle headings (convex/learnModel.ts). Offering more
+    // would let a writer create a heading that the save path then has to reject.
+    heading: createHeadingBlockSpec({ levels: [1, 2, 3], allowToggleHeadings: false }),
     codeBlock: createCodeBlockSpec(codeBlockOptions),
     image: LessonImage(),
     callout: Callout(),

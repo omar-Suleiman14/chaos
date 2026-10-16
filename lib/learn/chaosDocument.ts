@@ -174,6 +174,18 @@ export function fromChaosDocument(document: ChaosDocument, imageUrl: (sourceId: 
 import type { LessonDocument } from "../../convex/learnModel";
 import { editorBlocksToLessonDocument, lessonDocumentToEditorBlocks } from "../lessonBlockAdapter";
 
+/** BlockNote reports every table cell as an object with default props; those carry nothing to lose. */
+const DEFAULT_CELL_PROPS: Record<string, unknown> = { colspan: 1, rowspan: 1, backgroundColor: "default", textColor: "default", textAlignment: "left" };
+function plainTableCell(cell: unknown): { type?: string; text?: unknown; styles?: Record<string, unknown> }[] | undefined {
+  if (Array.isArray(cell)) return cell;
+  if (!cell || typeof cell !== "object") return undefined;
+  const c = cell as { type?: unknown; content?: unknown; props?: unknown };
+  if (c.type !== "tableCell" || !Array.isArray(c.content) || Object.keys(c).some(k => !["type", "content", "props"].includes(k))) return undefined;
+  const props = (c.props ?? {}) as Record<string, unknown>;
+  if (typeof props !== "object" || Object.entries(props).some(([k, v]) => v !== undefined && DEFAULT_CELL_PROPS[k] !== v)) return undefined;
+  return c.content;
+}
+
 /** Exact conversion for durable saves. Unsupported editor state is an error, never a partial save. */
 export function toDurableDocument(input: unknown, original?: LessonDocument): LessonDocument {
   if (!Array.isArray(input)) throw new Error("Lesson content must be a block array.");
@@ -201,8 +213,9 @@ export function toDurableDocument(input: unknown, original?: LessonDocument): Le
       if (table?.type !== "tableContent" || !Array.isArray(table.rows)) throw new Error("Invalid lesson table.");
       if (Object.keys(table).some(k => !["type", "rows", "headerRows", "headerCols", "columnWidths"].includes(k)) || table.rows.some(row => Object.keys(row).some(k => k !== "cells"))) throw new Error("Unknown table fields cannot be saved losslessly.");
       if ((table.headerCols ?? 0) !== 0 || table.columnWidths?.some(w => w !== undefined && w !== null)) throw new Error("Table column formatting cannot yet be saved losslessly.");
-      const rows = table.rows.map(row => row.cells.map(cell => {
-        if (!Array.isArray(cell)) throw new Error("Merged or styled table cells cannot yet be saved losslessly.");
+      const rows = table.rows.map(row => row.cells.map(rawCell => {
+        const cell = plainTableCell(rawCell);
+        if (!cell) throw new Error("Merged or styled table cells cannot yet be saved losslessly.");
         return cell.map(run => {
           if (!run || run.type !== "text" || typeof run.text !== "string" || Object.keys(run.styles ?? {}).length || Object.keys(run).some(k => !["type", "text", "styles"].includes(k))) throw new Error("Rich table cells cannot yet be saved losslessly.");
           return run.text;
@@ -230,6 +243,9 @@ export function toDurableDocument(input: unknown, original?: LessonDocument): Le
     if (type === "source") {
       props.label = props.locator ?? props.label ?? "";
       delete props.locator;
+      // The editor block declares a `note` the lesson document has no field for; only its empty default is dropped.
+      if (props.note) throw new Error("Source notes cannot yet be saved losslessly.");
+      delete props.note;
     }
     if (type === "lessonFlashcards" || type === "flashcards") {
       type = "lessonFlashcards";
