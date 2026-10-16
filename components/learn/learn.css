@@ -215,13 +215,91 @@ body[data-lx-block-drag] .bn-drag-preview .ProseMirror-selectednode > *::after, 
   .lx-editor .bn-block-outer, .lx-editor .bn-block-content { transition: none; }
 }
 
+/* Editor menus (/ menu, ⋮⋮ actions, formatting toolbar, colours, emoji). BlockNote renders them
+   inside .bn-container, which the editor makes transparent, so they bring their own surface. They sit
+   over the text being written, so they stay readable at any workspace transparency setting (at
+   least 97% opaque, light blur). The solid declaration first is the fallback for browsers without
+   color-mix(). */
+.bn-container .bn-suggestion-menu, .bn-container .bn-grid-suggestion-menu, .bn-container .bn-menu-dropdown, .bn-container .bn-toolbar, .bn-container .bn-color-picker-dropdown,
+.bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-menu-dropdown, .bn-toolbar, .bn-color-picker-dropdown {
+  background: var(--ws-card, var(--surface-container-lowest, #fff)) !important;
+  background: color-mix(in srgb, var(--ws-card, #fff) calc(max(var(--popup-opacity, 0.85), 0.97) * 100%), transparent) !important;
+  -webkit-backdrop-filter: blur(12px) saturate(1.4);
+  backdrop-filter: blur(12px) saturate(1.4);
+  color: var(--on-surface);
+  border: 0 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--on-surface) 9%, transparent), 0 3px 6px color-mix(in srgb, var(--on-surface) 8%, transparent), 0 9px 24px color-mix(in srgb, var(--on-surface) 16%, transparent) !important;
+}
+@media (prefers-reduced-transparency: reduce) {
+  .bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-menu-dropdown, .bn-color-picker-dropdown, .bn-toolbar { background: var(--ws-card, #fff) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
+}
+.dark .bn-suggestion-menu, .dark .bn-grid-suggestion-menu, .dark .bn-menu-dropdown, .dark .bn-toolbar, .dark .bn-color-picker-dropdown { box-shadow: 0 0 0 1px rgba(255, 255, 255, .09), 0 3px 6px rgba(0, 0, 0, .3), 0 9px 24px rgba(0, 0, 0, .45) !important; }
+
+/* "/" menu: 320px, two-line rows with a 24px icon tile, group labels, quiet shortcut hints. */
+.bn-suggestion-menu { width: min(320px, calc(100vw - 24px)); max-height: min(380px, 60vh); padding: 4px !important; overscroll-behavior: contain; scroll-padding-block: 28px 4px; }
+.bn-suggestion-menu .bn-suggestion-menu-label { padding: 8px 8px 4px; font-size: 12px; font-weight: 550; color: var(--on-surface-variant); }
+.bn-suggestion-menu .bn-suggestion-menu-item { min-height: 40px; gap: 10px; padding: 3px 8px; border-radius: 5px; cursor: pointer; }
+.bn-suggestion-menu .bn-suggestion-menu-item [data-position="left"] { display: grid; place-items: center; flex: none; width: 28px; height: 28px; padding: 0; border-radius: 5px; background: var(--ws-card); box-shadow: 0 0 0 1px var(--ws-line); color: var(--on-surface); }
+.bn-suggestion-menu .bn-suggestion-menu-item [data-position="left"] svg { width: 16px; height: 16px; }
+.bn-suggestion-menu .bn-suggestion-menu-item .text-base { font-size: 14px; line-height: 1.3; color: var(--on-surface); }
+.bn-suggestion-menu .bn-suggestion-menu-item .text-xs { font-size: 12px; line-height: 1.35; color: var(--on-surface-variant); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 200px; }
+.bn-suggestion-menu [data-position="right"] > *, .bn-suggestion-menu .mantine-Badge-root, .bn-suggestion-menu [data-slot="badge"] { padding: 0 !important; border: 0 !important; background: transparent !important; font-size: 11px; font-weight: 450; color: var(--on-surface-variant) !important; direction: ltr; }
+.bn-suggestion-menu .bn-suggestion-menu-item[aria-selected="true"], .bn-suggestion-menu .bn-suggestion-menu-item:hover { background: var(--ws-hover) !important; }
+.bn-suggestion-menu:has(> .bn-suggestion-menu-item:only-child:not([id])) { width: auto; min-width: 200px; }
+@media (pointer: coarse) { .bn-suggestion-menu .bn-suggestion-menu-item { min-height: 44px; } }
+
 /* Block action menu (⋮⋮): Notion-sized rows with a quiet shortcut hint. */
-.lx-block-menu { min-width: 232px; padding: 4px !important; }
-.lx-block-menu .lx-block-menu__item { min-height: 28px; gap: 8px; padding: 4px 8px; font-size: 14px; border-radius: 4px; }
+.lx-block-menu { min-width: 236px; padding: 4px !important; }
+.lx-block-menu .lx-block-menu__item, .lx-block-menu [data-slot="dropdown-menu-sub-trigger"] { min-height: 28px; gap: 8px; padding: 4px 8px; font-size: 14px; border-radius: 4px; }
 .lx-block-menu .lx-block-menu__label { flex: 1; }
-.lx-block-menu__kbd { margin-inline-start: auto; padding-inline-start: 16px; font: inherit; font-size: 12px; color: var(--on-surface-variant); direction: ltr; }
+.lx-block-menu svg { color: var(--on-surface-variant); }
+.lx-block-menu .lx-block-menu__kbd { margin-inline-start: auto; padding: 0; padding-inline-start: 16px; border: 0; background: none; box-shadow: none; font: inherit; font-size: 12px; color: var(--on-surface-variant); direction: ltr; }
 .lx-block-menu .lx-block-menu__item--danger:hover, .lx-block-menu .lx-block-menu__item--danger[data-highlighted] { color: var(--error); }
+.lx-block-menu .lx-block-menu__item--danger:hover svg, .lx-block-menu .lx-block-menu__item--danger[data-highlighted] svg { color: var(--error); }
 .bn-menu-dropdown .bn-menu-divider, .lx-block-menu [role="separator"] { height: 1px; margin: 4px 2px; background: var(--ws-line); }
+@media (pointer: coarse) { .lx-block-menu .lx-block-menu__item, .lx-block-menu [data-slot="dropdown-menu-sub-trigger"] { min-height: 40px; } }
+
+/* Formatting toolbar: one compact 36px row. */
+.bn-toolbar { gap: 1px !important; padding: 3px !important; min-height: 36px; align-items: center; }
+.bn-toolbar .bn-button, .bn-toolbar [data-slot="select-trigger"] { min-width: 28px; height: 28px !important; padding-inline: 6px !important; border-radius: 4px; color: var(--on-surface); }
+.bn-toolbar .bn-button:hover { background: var(--ws-hover); }
+.bn-toolbar .bn-button[data-selected], .bn-toolbar .bn-button[aria-pressed="true"] { color: var(--primary); background: color-mix(in srgb, var(--primary) 10%, transparent); }
+.bn-toolbar .bn-button svg { width: 16px; height: 16px; }
+
+/* ── Blocks while editing (components/learn/editor/blocks.tsx) ─────────────
+   Learning blocks share one quiet frame: icon + name, controls below, no heavy card. */
+.lx-edu { width: 100%; min-width: 0; display: grid; gap: 10px; padding: 10px 12px 12px; border-radius: 8px; background: var(--ws-canvas-subtle); box-shadow: inset 0 0 0 1px var(--ws-line); cursor: default; }
+.lx-edu__head { display: flex; align-items: center; gap: 8px; min-height: 24px; font-size: 13px; }
+.lx-edu__icon { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 5px; background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); flex: none; }
+.lx-edu[data-kind="flashcards"] .lx-edu__icon { background: color-mix(in srgb, var(--ws-purple, #9065b0) 14%, transparent); color: var(--ws-purple, #9065b0); }
+.lx-edu[data-kind="diagram"] .lx-edu__icon { background: color-mix(in srgb, var(--ws-success, #448361) 14%, transparent); color: var(--ws-success, #448361); }
+.lx-edu__title { font-weight: 600; color: var(--on-surface); }
+.lx-edu__aside { margin-inline-start: auto; }
+.lx-edu__required { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--on-surface-variant); cursor: pointer; }
+.lx-edu__required input { accent-color: var(--primary); }
+.lx-edu__body { display: grid; gap: 10px; min-width: 0; font-size: 14px; }
+.lx-edu__body .lx-panel { border: 0; padding: 0; background: transparent; }
+.lx-edu__source { display: grid; gap: 4px; font-size: 12px; color: var(--on-surface-variant); }
+.lx-edu__source textarea { width: 100%; min-width: 0; box-sizing: border-box; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--ws-line-strong, var(--ws-line)); background: var(--ws-card); color: var(--on-surface); resize: vertical; }
+.lx-edu__source textarea:focus-visible { outline: 2px solid var(--ws-ring); outline-offset: 0; }
+.lx-edu .lx-diagram > details { display: none; } /* The editable source is right below. */
+
+/* Images: caption under the picture on its start edge, teaching details as a quiet line that
+   appears with the block (a missing description stays visible as a warning). */
+.lx-editor [data-file-block] .bn-file-caption { font-size: 14px; color: var(--on-surface-variant); padding-block: 6px 0; text-align: start; }
+.lx-editor [data-file-block] .bn-add-file-button { border-radius: 6px; background: var(--ws-canvas-subtle); color: var(--on-surface-variant); }
+.lx-editor [data-file-block] .bn-add-file-button:hover { background: var(--ws-hover); }
+.lx-editor .lx-figure { justify-items: start; }
+.lx-editor .lx-figure__alt:not([data-missing]) { opacity: 0; transition: opacity 120ms ease; }
+.lx-editor .bn-block-outer:hover .lx-figure__alt, .lx-editor .lx-figure__alt:focus-visible, .lx-editor .ProseMirror-selectednode .lx-figure__alt { opacity: 1; }
+@media (hover: none) { .lx-editor .lx-figure__alt:not([data-missing]) { opacity: 1; } }
+/* Source and YouTube controls stay out of the way until the block is in use. */
+.lx-editor .lx-youtube__fields input, .lx-editor .lx-source input { border-color: transparent; background: var(--ws-hover); }
+.lx-editor .lx-youtube__fields input:hover, .lx-editor .lx-source input:hover { border-color: var(--ws-line-strong, var(--ws-line)); }
+.lx-editor .lx-youtube__fields input:focus, .lx-editor .lx-source input:focus { border-color: var(--primary); background: var(--ws-card); outline: none; }
+.lx-editor .bn-block-content[data-content-type="equation"] { border-radius: 6px; }
+.lx-editor .bn-block-content[data-content-type="equation"]:hover { background: var(--ws-hover); }
 
 /* ── Custom blocks (editor and reader share these) ──────────────────────── */
 .lx-callout { display: flex; gap: 10px; align-items: flex-start; width: 100%; padding: 12px 14px; border-radius: 10px; background: var(--ws-accent-soft); border-inline-start: 3px solid var(--primary); }
@@ -564,34 +642,6 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 
 /* Touch screens have no hover: keep the page-top and cover controls visible. */
 @media (hover: none) { .lx-cover__actions { opacity: 1; } }
-
-/* Editor popups (/ menu, formatting toolbar, block and colour menus) use the workspace glass. BlockNote
-   renders them inside .bn-container, which the editor makes transparent, so they need their own surface.
-   Solid fallbacks come first: browsers that drop the color-mix glass (older iOS Safari) still get a
-   solid, rounded popup instead of a see-through box with a black border. */
-.bn-toolbar, .bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-menu-dropdown, .bn-color-picker-dropdown {
-  background: var(--ws-card, var(--surface-container-lowest, #fff)) !important;
-  border: 1px solid var(--ws-line, rgba(127, 127, 127, .25)) !important;
-  border-radius: 10px !important;
-  color: var(--on-surface, inherit);
-}
-.bn-toolbar, .bn-container .bn-suggestion-menu, .bn-container .bn-grid-suggestion-menu, .bn-container .bn-menu-dropdown, .bn-container .bn-toolbar, .bn-container .bn-color-picker-dropdown,
-.bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-menu-dropdown, .bn-color-picker-dropdown {
-  background: color-mix(in srgb, var(--ws-card, var(--surface-container-lowest, #fff)) calc(var(--popup-opacity, 0.85) * 100%), transparent) !important;
-  -webkit-backdrop-filter: blur(calc(14px + (1 - var(--popup-opacity, 0.85)) * 40px)) saturate(1.6);
-  backdrop-filter: blur(calc(14px + (1 - var(--popup-opacity, 0.85)) * 40px)) saturate(1.6);
-  border: 1px solid var(--ws-line, rgba(127, 127, 127, .25)) !important;
-  border-radius: 10px !important;
-  box-shadow: 0 12px 32px -8px rgba(0, 0, 0, .3) !important;
-  color: var(--on-surface);
-}
-.bn-suggestion-menu .bn-suggestion-menu-label { color: var(--on-surface-variant); font-size: 12px; font-weight: 600; }
-.bn-suggestion-menu .bn-suggestion-menu-item[aria-selected="true"], .bn-suggestion-menu .bn-suggestion-menu-item:hover { background: var(--ws-hover) !important; }
-.bn-suggestion-menu .bn-suggestion-menu-item-small, .bn-suggestion-menu .bn-suggestion-menu-item-subtitle { color: var(--on-surface-variant) !important; }
-.bn-suggestion-menu [data-position="right"] > *, .bn-suggestion-menu .mantine-Badge-root { background: transparent !important; color: var(--on-surface-variant) !important; border: 1px solid var(--ws-line) !important; font-weight: 500; text-transform: none; }
-@media (prefers-reduced-transparency: reduce) {
-  .bn-suggestion-menu, .bn-grid-suggestion-menu, .bn-menu-dropdown, .bn-color-picker-dropdown, .bn-container .bn-toolbar { background: var(--ws-card, #fff) !important; -webkit-backdrop-filter: none; backdrop-filter: none; }
-}
 
 /* Phones: the formatting toolbar stays inside the screen and scrolls sideways instead of running off the edge. */
 @media (max-width: 640px) {

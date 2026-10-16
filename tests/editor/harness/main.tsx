@@ -7,6 +7,7 @@ import "@/components/learn/learn.css";
 import { StrictMode, useState } from "react";
 import { createRoot } from "react-dom/client";
 import { LocaleProvider } from "@/lib/i18n";
+import { ThemeProvider } from "@/components/ThemeProvider";
 import LessonEditor from "@/components/learn/editor/LessonEditor";
 import type { LessonEditorType } from "@/components/learn/editor/blocks";
 import { lessonEditorContent } from "@/perf/lib/lessonEditorContent";
@@ -53,5 +54,5 @@ function Page() {
 }
 
 createRoot(document.getElementById("root")!).render(
-  <StrictMode><LocaleProvider initial={ui}><Page /></LocaleProvider></StrictMode>,
+  <StrictMode><LocaleProvider initial={ui}><ThemeProvider><Page /></ThemeProvider></LocaleProvider></StrictMode>,
 );

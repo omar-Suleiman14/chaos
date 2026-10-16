@@ -5,7 +5,7 @@ import {
   blockTypeSelectItems, BlockColorsItem, SideMenuController, TableColumnHeaderItem, TableRowHeaderItem,
   useBlockNoteEditor, useComponentsContext, useDictionary, useExtension, useExtensionState, usePortalElement,
 } from "@blocknote/react";
-import { ArrowDown, ArrowUp, Copy, CopyPlus, GripVertical, Plus, Repeat2, Trash2 } from "lucide-react";
+import { ArrowDown, ArrowUp, Copy, CopyPlus, GripVertical, Palette, Plus, Repeat2, Trash2 } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { useCopy } from "@/lib/i18n";
 import type { LessonEditorType } from "./blocks";
@@ -143,7 +143,7 @@ function DragHandle() {
         <ActionItem kind="copy" icon={<Copy size={16} aria-hidden />}>{t.copy}</ActionItem>
         <ActionItem kind="up" icon={<ArrowUp size={16} aria-hidden />} shortcut="Ctrl+Shift+↑">{t.moveUp}</ActionItem>
         <ActionItem kind="down" icon={<ArrowDown size={16} aria-hidden />} shortcut="Ctrl+Shift+↓">{t.moveDown}</ActionItem>
-        <BlockColorsItem>{t.colors}</BlockColorsItem>
+        <BlockColorsItem><Palette size={16} aria-hidden /><span className="lx-block-menu__label">{t.colors}</span></BlockColorsItem>
         <TableRowHeaderItem>{t.headerRow}</TableRowHeaderItem>
         <TableColumnHeaderItem>{t.headerCol}</TableColumnHeaderItem>
         <Components.Generic.Menu.Divider className="bn-menu-divider" />

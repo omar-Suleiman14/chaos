@@ -15,6 +15,13 @@ export function harnessFixture(language: "en" | "ar"): Block[] {
     { id: "img1", type: "image", props: { url: "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='640' height='240'><rect width='640' height='240' fill='%233595e3'/></svg>", caption: ar ? "رسم" : "Heart diagram", alt: "Heart", credit: "Chaos", figureKind: "photo", previewWidth: 480 }, children: [] },
     { ...p("c1", ar ? "ملاحظة مهمة" : "Remember to warm up before measuring."), type: "callout", props: { tone: "tip" } },
     { id: "q1", type: "lessonQuiz", props: { assetKind: "form", assetId: "form_123", required: true }, children: [] },
+    { id: "f1", type: "lessonFlashcards", props: { setId: "", required: false }, children: [] },
+    { id: "eq1", type: "equation", props: {}, content: [{ type: "text", text: "E = mc^2", styles: {} }], children: [] },
+    { id: "yt1", type: "youtube", props: { videoId: "dQw4w9WgXcQ", start: 30, end: 90, caption: ar ? "شرح" : "Cardiac cycle" }, children: [] },
+    { id: "src1b", type: "source", props: { sourceId: "src1", locator: "page 4" }, children: [] },
+    { id: "d1", type: "lessonDiagram", props: { text: "flowchart LR\n  A[Atria] --> B[Ventricles]" }, children: [] },
+    { id: "tb1", type: "table", props: {}, content: { type: "tableContent", headerRows: 1, rows: [{ cells: [[{ type: "text", text: "Chamber", styles: {} }], [{ type: "text", text: "Role", styles: {} }]] }, { cells: [[{ type: "text", text: "Left ventricle", styles: {} }], [{ type: "text", text: "Systemic pump", styles: {} }]] }] }, children: [] },
+    { id: "cb1", type: "codeBlock", props: { language: "javascript" }, content: [{ type: "text", text: "const bpm = 72;", styles: {} }], children: [] },
     p("p3", ar ? "الفقرة الأخيرة." : "Last paragraph."),
   ];
 }
