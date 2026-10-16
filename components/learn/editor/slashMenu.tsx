@@ -17,8 +17,8 @@ import type { LessonEditorType } from "./blocks";
 /** BlockNote commands whose blocks the lesson document cannot store (see lib/lessonBlockMappings.ts). */
 export const UNSAVED_SLASH_KEYS = new Set(["audio", "file", "video"]);
 
-export type SlashGroup = "basic" | "headings" | "lesson" | "media" | "advanced" | "other";
-export const SLASH_GROUP_ORDER: SlashGroup[] = ["basic", "headings", "lesson", "media", "advanced", "other"];
+type SlashGroup = "basic" | "headings" | "lesson" | "media" | "advanced" | "other";
+const SLASH_GROUP_ORDER: SlashGroup[] = ["basic", "headings", "lesson", "media", "advanced", "other"];
 
 const groupLabels: Record<"en" | "ar", Record<SlashGroup, string>> = {
   en: { basic: "Basic blocks", headings: "Headings", lesson: "Lesson blocks", media: "Media", advanced: "Advanced", other: "Other" },

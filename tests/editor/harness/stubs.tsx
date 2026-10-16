@@ -2,7 +2,7 @@
    menus and custom renderers above them are the real ones. */
 import { lazy, Suspense, forwardRef, type ComponentType, type ReactNode } from "react";
 
-export function dynamic<P extends object>(load: () => Promise<ComponentType<P> | { default: ComponentType<P> }>, options?: { loading?: () => ReactNode }) {
+function dynamic<P extends object>(load: () => Promise<ComponentType<P> | { default: ComponentType<P> }>, options?: { loading?: () => ReactNode }) {
   const Lazy = lazy(async () => {
     const mod = await load();
     return { default: (typeof mod === "function" ? mod : (mod as { default: ComponentType<P> }).default) };

@@ -156,3 +156,70 @@ specific changed interaction rather than testing only a mocked drag callback.
 
 Later visual PRs must include before/after evidence and explicit pending checks.
 No merge or deployment is part of this baseline.
+
+## Redesign status (phases 2-11)
+
+Implemented on top of this baseline without replacing BlockNote 0.55.0, changing the stored
+document, or adding dependencies. Values below are **chosen Chaos values**, verified in Chromium
+by `pnpm test:editor`; live Notion captures are still pending, so none of them is claimed as a
+measured Notion dimension.
+
+| Area        | Chosen value / behaviour                                                                                           | Owner                                                  |
+| ----------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------------------------ |
+| Text column | 760px (`--lx-measure`), 54px gutters each side, 30px/4px at <=640px                                                | `learn.css` `.lx-edit__doc`, `EditorLayout.module.css` |
+| Text edge   | Title, description, notices and blocks share one start edge (LTR and RTL)                                          | `--lx-gutter` / `--lx-gutter-end`                      |
+| Type scale  | Title 40px/700; H1 30, H2 24, H3 20px/650; body 16px/1.5; 3px block padding                                        | `learn.css` lesson writing canvas                      |
+| Gutter pair | `+` 24x24, handle 18x24, 38% ink at rest; centred on the block's measured first line; start side (right in Arabic) | `sideMenu.tsx` `firstLineOffset`                       |
+| Touch       | Handle 26x28, no `+` (insert from the mobile toolbar), 40-44px menu rows                                           | `(pointer: coarse)` rules                              |
+| Menus       | >=97% opaque at any glass setting, 8px radius, layered shadow; `/` menu 320px                                      | `learn.css` editor menus                               |
+| Drag        | Source 40% opacity, 3px accent drop line (70ms move), 160ms settle, vertical-half drop rule                        | `dragFeedback.ts`                                      |
+
+Behaviour notes:
+
+- The handle starts a drag on press and opens the actions on click. BlockNote's menu trigger opened
+  on press, which swallowed drags; the press is stopped before the menu sees it.
+- The drop position comes from the pointer's vertical half of the block under it (the lower half of
+  a parent with visible children means "first child"). The indicator and the drop share this one
+  answer; dropping a block into its own subtree does nothing. Moves are one editor transaction, so
+  one undo step, and keep ids, children and props.
+- Per-block drag states (dimmed source, settle) are rules in one generated style sheet keyed by
+  block id. ProseMirror redraws nodes whose DOM attributes change under it, so nothing is written
+  onto blocks. Hover and drag never emit document changes (covered by a spec).
+- The `/` menu only offers commands whose blocks the lesson document stores; headings are limited
+  to levels 1-3 without toggle headings in the editor schema. Search folds case, accents, Arabic
+  diacritics/tatweel and alef/yaa/taa-marbuta spellings, and ranks prefixes first.
+- Save path fixes found while testing every command (`lib/learn/chaosDocument.ts`): BlockNote reports
+  every table cell as a default-valued cell object, so any lesson containing a table could not be
+  saved once opened; and source blocks carried an editor-only empty `note` that the converter
+  rejected. Only default values are accepted; merged or styled cells and non-empty notes are still
+  refused.
+
+Verification:
+
+```sh
+pnpm test:editor                        # Chromium: desktop and Pixel 7 projects (36 specs)
+pnpm exec vitest run --config vitest.unit.config.mts tests/unit/lessonSlashMenu.test.tsx tests/unit/lessonEditorPersistence.test.tsx tests/unit/learnDurableConversion.test.ts
+pnpm exec vitest run --config vitest.perf.config.mts perf/client/lessonEditor.perf.test.tsx && pnpm perf:check -- --suites lessonEditor
+```
+
+The 96 lesson editor work budgets hold unchanged. The first version of the learning-block header
+exceeded the mount-element budgets by up to 11%; it now draws its icon and name with
+pseudo-elements, and the live region for announcements is created on first use.
+
+### Deliberate differences and known limits
+
+- **No live Notion comparison yet.** Reference capture is still pending (see above); dimensions are
+  chosen, then pinned by geometry specs.
+- **Drag preview** is the browser's snapshot of the block (BlockNote uses `setDragImage`); it is
+  styled to the editor's width and theme but not animated.
+- **Touch dragging** depends on each mobile browser's native drag support; the tap menu's Move
+  up/down is the dependable path. The above-keyboard toolbar is BlockNote's mobile controller and is
+  not exercised by the automated suite (Playwright cannot raise a virtual keyboard).
+- **Outdent by dragging left** (Notion's horizontal drop targeting) is not implemented; Shift+Tab
+  and the drop rule above cover nesting.
+- **Placeholders** (image, YouTube, quiz, flashcards, source) still have to be completed before the
+  draft can save; the refusal is explicit and pinned by `lessonSlashMenu.test.tsx`.
+- **Inline citation chips** remain rejected by the durable converter (unchanged); citations are kept
+  as block metadata.
+- Native typing latency, drag frame rate and full-page autosave timing remain unmeasured in a real
+  browser deployment; the component budgets above are the regression guard.

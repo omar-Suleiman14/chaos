@@ -4,7 +4,7 @@
  * first announcement, so mounting the editor costs nothing; it is filled a moment after creation
  * so assistive technology registers the region before its content changes.
  */
-export const LIVE_REGION_ATTR = "data-lx-editor-live";
+const LIVE_REGION_ATTR = "data-lx-editor-live";
 
 export function announce(message: string) {
   if (typeof document === "undefined" || !message) return;

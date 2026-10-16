@@ -11,7 +11,6 @@ export async function openEditor(page: Page, query: Record<string, string> = {})
 }
 
 export const block = (page: Page, id: string) => page.locator(`.lx-editor .bn-block-outer[data-id="${id}"]`);
-export const blockText = (page: Page, id: string) => block(page, id).locator(".bn-inline-content").first();
 
 /** Top-level block ids in document order (or the children of `parent`). */
 export const order = (page: Page, parent?: string) =>

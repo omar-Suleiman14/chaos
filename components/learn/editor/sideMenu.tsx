@@ -35,14 +35,14 @@ const copy = {
 };
 
 /** Height of the gutter pair (CSS `.lx-editor .bn-side-menu`). */
-export const SIDE_MENU_HEIGHT = 24;
+const SIDE_MENU_HEIGHT = 24;
 
 /**
  * Vertical offset that centres the gutter pair on the block's first text line, measured from the
  * rendered block rather than hard-coded per type, so heading sizes, list markers, callouts and
  * Arabic line heights all line up. Blocks without text (images, quizzes, tables) align to their top.
  */
-export function firstLineOffset(block: Element, menuHeight = SIDE_MENU_HEIGHT): number {
+function firstLineOffset(block: Element, menuHeight = SIDE_MENU_HEIGHT): number {
   const content = block.querySelector(":scope > .bn-block-content") ?? block.firstElementChild;
   if (!content) return 0;
   const top = block.getBoundingClientRect().top;
