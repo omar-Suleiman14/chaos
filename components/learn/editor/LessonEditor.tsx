@@ -26,6 +26,7 @@ import { focusLessonEnd, isBlankEditorTarget } from "./focusEnd";
 import { lessonSlashItems, searchSlashItems } from "./slashMenu";
 import { LessonSideMenuController, runBlockAction } from "./sideMenu";
 import { announce } from "./announce";
+import { fromEditorCodeLanguages, toEditorCodeLanguages } from "./codeLanguages";
 import { blockDropTarget, handleBlockDrop } from "./dragFeedback";
 
 const copy = {
@@ -81,9 +82,11 @@ export default function LessonEditor(props: LessonEditorProps) {
   const propsRef = useRef(props);
   useEffect(() => { propsRef.current = props; });
 
+  // Once per editor: code languages the editor cannot open are shown as its own ids, restored on save.
+  const [languages] = useState(() => toEditorCodeLanguages(props.initialContent));
   const editor = useCreateBlockNote({
     schema: lessonSchema,
-    initialContent: props.initialContent.length ? (props.initialContent as never) : undefined,
+    initialContent: languages.blocks.length ? (languages.blocks as never) : undefined,
     dictionary: locale === "ar" ? locales.ar : locales.en,
     uploadFile: async (file: File) => {
       try {
@@ -142,7 +145,7 @@ export default function LessonEditor(props: LessonEditorProps) {
           announce(t.duplicated);
         }}>
         <BlockNoteView editor={editor} editable={props.editable !== false} theme={dark ? "dark" : "light"} slashMenu={false} formattingToolbar={false} sideMenu={false}
-          onChange={() => { if (!embedYouTubeVideos(editor)) propsRef.current.onChange(editor.document as unknown[]); }}>
+          onChange={() => { if (!embedYouTubeVideos(editor)) propsRef.current.onChange(fromEditorCodeLanguages(editor.document as unknown[], languages.restore)); }}>
           <SuggestionMenuController triggerCharacter="/" getItems={async (query) => searchSlashItems(slashItems(), query)} />
           <FormattingToolbarController formattingToolbar={() => (
             <FormattingToolbar>

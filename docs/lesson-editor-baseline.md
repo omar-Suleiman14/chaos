@@ -219,6 +219,9 @@ pseudo-elements, and the live region for announcements is created on first use.
   and the drop rule above cover nesting.
 - **Placeholders** (image, YouTube, quiz, flashcards, source) still have to be completed before the
   draft can save; the refusal is explicit and pinned by `lessonSlashMenu.test.tsx`.
+- **Code languages.** Stored names the editor's highlighter lacks (`js`, `Python`, `cobol`, empty) open as
+  its own language id or plain text and are saved back unchanged unless the writer picks another
+  language (`components/learn/editor/codeLanguages.ts`). Such lessons previously crashed the editor.
 - **Inline citation chips** remain rejected by the durable converter (unchanged); citations are kept
   as block metadata.
 - Native typing latency, drag frame rate and full-page autosave timing remain unmeasured in a real
