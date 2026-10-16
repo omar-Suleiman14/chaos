@@ -44,3 +44,27 @@ test("the / menu fits a 320px screen", async ({ page }) => {
   expect(menu.x).toBeGreaterThanOrEqual(0);
   expect(menu.x + menu.width).toBeLessThanOrEqual(320);
 });
+
+test("with the on-screen keyboard open, a toolbar sits above it and its + inserts a block", async ({ page }) => {
+  await openEditor(page);
+  const viewport = page.viewportSize()!;
+  const text = await rect(block(page, "p1").locator(".bn-inline-content"));
+  await page.touchscreen.tap(text.x + 40, text.y + 5);
+  await expect.poll(() => page.evaluate(() => window.__editor!.isFocused())).toBe(true);
+  // What a phone keyboard does with interactive-widget=resizes-content: same width, less height.
+  await page.setViewportSize({ width: viewport.width, height: viewport.height - 320 });
+  const toolbar = page.locator(".bn-mobile-formatting-toolbar");
+  await expect(toolbar).toBeVisible();
+  const bar = await rect(toolbar);
+  expect(bar.y + bar.height).toBeLessThanOrEqual(viewport.height - 320 + 1);
+  expect(bar.x).toBeGreaterThanOrEqual(0);
+  expect(bar.x + bar.width).toBeLessThanOrEqual(viewport.width + 1);
+  const before = (await order(page)).length;
+  await toolbar.locator(".lx-mobile-insert").tap();
+  await expect(page.locator(".bn-suggestion-menu")).toBeVisible();
+  await page.keyboard.type("callout");
+  await page.keyboard.press("Enter");
+  const ids = await order(page);
+  expect(ids).toHaveLength(before + 1);
+  expect((await page.evaluate(() => window.__editor!.document))[ids.indexOf("p1") + 1].type).toBe("callout");
+});

@@ -105,6 +105,9 @@ export default function LessonEditor(props: LessonEditorProps) {
       hooks: {
         computeDropPosition: ({ editor: view, event, defaultPosition }) => {
           const target = blockDropTarget(view as LessonEditorType, event.clientX, event.clientY);
+          // A nesting drop draws its line one indent in (learn.css).
+          const root = (view as LessonEditorType).prosemirrorView.dom.closest<HTMLElement>(".lx-editor");
+          if (root) root.dataset.dropNest = String(target?.placement === "child");
           return target === undefined ? defaultPosition : target && { pos: target.pos, orientation: "block-horizontal" };
         },
       },

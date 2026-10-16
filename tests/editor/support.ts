@@ -32,18 +32,21 @@ export async function hoverBlock(page: Page, id: string) {
 }
 
 /** Drags block `id` by its handle to just above (or below) block `target`. */
-export async function dragBlock(page: Page, id: string, target: string, where: "above" | "below", steps = 12) {
+export async function dragBlock(page: Page, id: string, target: string, where: "above" | "below", steps = 12, inward = 40) {
   const menu = await hoverBlock(page, id);
   const handle = menu.locator(".lx-side-menu__handle");
   const from = (await handle.boundingBox())!;
   const to = (await block(page, target).locator(".bn-block-content").first().boundingBox())!;
   const y = where === "above" ? to.y + 3 : to.y + to.height - 3;
+  // `inward`: pixels into the target's text from its start edge (negative: out into the gutter).
+  const rtl = await block(page, target).evaluate((el) => getComputedStyle(el).direction === "rtl");
+  const x = rtl ? to.x + to.width - inward : to.x + inward;
   await page.mouse.move(from.x + from.width / 2, from.y + from.height / 2);
   await page.mouse.down();
   await page.mouse.move(from.x + from.width / 2 + 4, from.y + 10, { steps: 2 });
-  await page.mouse.move(to.x + 40, y, { steps });
+  await page.mouse.move(x, y, { steps });
   // Chromium delivers dragover with pointer movement; one more nudge settles it at the final point.
-  await page.mouse.move(to.x + 41, y);
+  await page.mouse.move(x + (rtl ? -1 : 1), y);
   return {
     drop: async () => { await page.mouse.up(); },
   };

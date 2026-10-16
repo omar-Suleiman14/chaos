@@ -45,8 +45,8 @@ it("opens lessons with any stored code language and saves them unchanged", async
     </ThemeProvider></LocaleProvider>,
   );
   await act(async () => { await Promise.resolve(); });
-  expect(editor.getBlock("js")!.props.language).toBe("javascript");
-  expect(editor.getBlock("odd")!.props.language).toBe("text");
+  expect((editor.getBlock("js")!.props as { language?: string }).language).toBe("javascript");
+  expect((editor.getBlock("odd")!.props as { language?: string }).language).toBe("text");
 
   // An unrelated edit saves every stored language name as it was.
   act(() => { editor.updateBlock("p", { content: "After, edited." }); });
