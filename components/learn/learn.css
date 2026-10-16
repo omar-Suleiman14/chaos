@@ -142,6 +142,10 @@ button.lx-badge { cursor: pointer; font-family: inherit; }
 .lx-editor .bn-container, .lx-editor .bn-editor { background: transparent !important; font-family: var(--ws-font); }
 .lx-editor .bn-editor { padding-inline: var(--lx-gutter, 54px) var(--lx-gutter-end, 54px); padding-block: 2px 120px; min-height: 60vh; font-size: 16px; line-height: 1.5; color: var(--on-surface); }
 .lx-editor .bn-block-outer { scroll-margin-top: 100px; line-height: 1.5; }
+/* Long lessons: the browser skips layout for top-level blocks far off screen (remembering their last
+   size). Mounting a custom block re-reads the selection, which lays out the whole document each
+   time; without this, opening a 500-block lesson took over 10s, growing with the square of its size. */
+.lx-editor .bn-editor > .bn-block-group > .bn-block-outer { content-visibility: auto; contain-intrinsic-size: auto 30px; }
 .lx-editor .bn-inline-content { word-break: normal; overflow-wrap: anywhere; }
 .lx-editor .bn-block-content { padding-block: 3px; }
 /* Empty-line hint: quiet, and only on the line being written. */
@@ -197,6 +201,8 @@ button.lx-badge { cursor: pointer; font-family: inherit; }
 /* Drop indicator (BlockNote DropCursor, configured in LessonEditor with no inline colour). */
 .prosemirror-dropcursor-block, .prosemirror-dropcursor-vertical, .prosemirror-dropcursor-inline { background: color-mix(in srgb, var(--primary) 70%, transparent); border-radius: 2px; transition: top 70ms ease-out, left 70ms ease-out, width 70ms ease-out; }
 
+.lx-editor[data-drop-nest="true"] .prosemirror-dropcursor-block { transform: translateX(26px); }
+.lx-editor[dir="rtl"][data-drop-nest="true"] .prosemirror-dropcursor-block { transform: translateX(-26px); }
 /* Dragging: the source blocks fade, text selection pauses, the preview looks like the block. */
 .lx-editor[data-dragging] { user-select: none; -webkit-user-select: none; }
 .lx-editor[data-dragging] .ProseMirror-selectednode > .bn-block-content > *::after, .lx-editor[data-dragging] .bn-block-content.ProseMirror-selectednode > *::after { background: transparent; }

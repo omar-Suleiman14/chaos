@@ -116,3 +116,33 @@ test.describe("reduced motion", () => {
     expect(await block(page, "p3").evaluate((el) => getComputedStyle(el).animationName)).toBe("none");
   });
 });
+
+test.describe("drop depth follows the pointer, as in Notion", () => {
+  test.use({ viewport: { width: 1440, height: 1600 } });
+  for (const lang of ["en", "ar"] as const) {
+    const query: Record<string, string> = lang === "ar" ? { doc: "ar", ui: "ar" } : {};
+    test(`left of a nested last block's text drops at its parent's level (${lang})`, async ({ page }) => {
+      await openEditor(page, query);
+      await (await dragBlock(page, "p2", "b1c", "below", 12, -20)).drop();
+      expect(await order(page, "b1")).toEqual(["b1c"]);
+      expect(await order(page)).toEqual(["h1", "p1", "t1", "b1", "p2", "b2", "img1", "c1", "q1", "p3"]);
+    });
+
+    test(`inside that text it stays nested (${lang})`, async ({ page }) => {
+      await openEditor(page, query);
+      await (await dragBlock(page, "p2", "b1c", "below", 12, 20)).drop();
+      expect(await order(page, "b1")).toEqual(["b1c", "p2"]);
+    });
+
+    test(`well into a block's text nests under it, with the line drawn one indent in (${lang})`, async ({ page }) => {
+      await openEditor(page, query);
+      const drag = await dragBlock(page, "p2", "p1", "below", 12, 120);
+      await expect(page.locator('.lx-editor[data-drop-nest="true"]')).toHaveCount(1);
+      await drag.drop();
+      expect(await order(page, "p1")).toEqual(["p2"]);
+      expect((await order(page)).slice(0, 3)).toEqual(["h1", "p1", "t1"]);
+      await page.evaluate(() => window.__editor!.undo());
+      expect((await order(page)).slice(0, 4)).toEqual(["h1", "p1", "p2", "t1"]);
+    });
+  }
+});

@@ -123,6 +123,7 @@ function finish() {
   if (!active) return;
   active.stopScroll();
   delete active.root.dataset.dragging;
+  delete active.root.dataset.dropNest;
   setBlockStyles({});
   delete document.body.dataset.lxBlockDrag;
   document.body.style.removeProperty("--lx-drag-width");
@@ -155,10 +156,22 @@ export function blockDragEnded(editor: LessonEditorType, event: React.DragEvent,
    ProseMirror chooses "before" or "after" from the text position under the pointer, so releasing
    over the lower half of a short line could still land above it. Like Notion, the lesson editor
    uses the block's vertical half: upper half → above, lower half → below (or, for a block with
-   nested children, as its first child, which is where the line is drawn). The drop indicator
-   (DropCursor's computeDropPosition hook) and the drop itself use this same answer. */
+   nested children, as its first child, which is where the line is drawn). On the lower half the
+   pointer's horizontal position picks the depth, as in Notion: left of a nested last block's text
+   drops at its parent's level (further left, further out), and well into the text of a block
+   without children nests under it. The drop indicator (DropCursor's computeDropPosition hook) and
+   the drop itself use this same answer. Arabic documents mirror "left" and "right". */
 
-export interface BlockDropTarget { id: string; placement: "before" | "after" | "firstChild"; pos: number }
+export interface BlockDropTarget { id: string; placement: "before" | "after" | "firstChild" | "child"; pos: number }
+
+/** How far the pointer is inside a block's text column (negative: out in the gutter). */
+function inward(outer: HTMLElement, clientX: number) {
+  const content = outer.querySelector(":scope > .bn-block > .bn-block-content")?.getBoundingClientRect();
+  if (!content) return 0;
+  return getComputedStyle(outer).direction === "rtl" ? content.right - clientX : clientX - content.left;
+}
+const OUTDENT_SLACK = 8;
+const NEST_DISTANCE = 48;
 
 function blockOuterAt(root: Element, x: number, y: number): HTMLElement | undefined {
   const hit = (px: number) => document.elementsFromPoint(px, y).find((el) => root.contains(el) && el.closest(".bn-block-outer"))?.closest<HTMLElement>(".bn-block-outer") ?? undefined;
@@ -184,12 +197,36 @@ export function blockDropTarget(editor: LessonEditorType, clientX: number, clien
   const upper = !content || clientY < content.top + content.height / 2;
   const block = editor.getBlock(id);
   if (!block) return undefined;
-  const firstChild = !upper && block.children.length && !outer.querySelector(":scope > .bn-block > .bn-block-content [data-show-children='false']") ? block.children[0] : undefined;
-  const target = firstChild && !dragged.includes(firstChild.id) ? { id: firstChild.id, placement: "firstChild" as const } : { id, placement: upper ? ("before" as const) : ("after" as const) };
-  const info = getNodeById(target.placement === "firstChild" ? target.id : id, editor.prosemirrorView.state.doc);
-  if (!info) return undefined;
-  const pos = target.placement === "after" ? info.posBeforeNode + info.node.nodeSize : info.posBeforeNode;
-  return { ...target, id: target.placement === "firstChild" ? target.id : id, pos };
+  const doc = editor.prosemirrorView.state.doc;
+  const at = (blockId: string) => getNodeById(blockId, doc);
+  if (upper) {
+    const info = at(id);
+    return info && { id, placement: "before", pos: info.posBeforeNode };
+  }
+  const childrenShown = block.children.length > 0 && !outer.querySelector(":scope > .bn-block > .bn-block-content [data-show-children='false']");
+  if (childrenShown) {
+    const first = block.children[0];
+    const info = at(first.id);
+    return dragged.includes(first.id) || !info ? undefined : { id: first.id, placement: "firstChild", pos: info.posBeforeNode };
+  }
+  // Further out: a last nested block hands the drop to its parent while the pointer is left of its text.
+  let current: HTMLElement = outer;
+  for (;;) {
+    const parent = current.parentElement?.closest<HTMLElement>(".bn-block-outer");
+    const isLast = !current.nextElementSibling;
+    if (!parent || !root.contains(parent) || !isLast || inward(current, clientX) >= -OUTDENT_SLACK) break;
+    current = parent;
+  }
+  const afterId = current.dataset.id!;
+  if (afterId === id && !block.children.length && inward(outer, clientX) > NEST_DISTANCE) {
+    // Further in: nest under this block (it has no children yet).
+    const info = at(id);
+    if (!info) return undefined;
+    const content = info.node.firstChild!;
+    return { id, placement: "child", pos: info.posBeforeNode + 1 + content.nodeSize };
+  }
+  const info = at(afterId);
+  return info && { id: afterId, placement: "after", pos: info.posBeforeNode + info.node.nodeSize };
 }
 
 /** Moves the dragged blocks to `target` as one undoable change, keeping ids, children and props. */
@@ -198,7 +235,8 @@ export function moveBlocksTo(editor: LessonEditorType, ids: string[], target: Bl
   if (!blocks.length) return;
   editor.transact(() => {
     editor.removeBlocks(blocks.map((b) => b.id));
-    editor.insertBlocks(blocks as never, target.id, target.placement === "after" ? "after" : "before");
+    if (target.placement === "child") editor.updateBlock(target.id, { children: blocks } as never);
+    else editor.insertBlocks(blocks as never, target.id, target.placement === "after" ? "after" : "before");
   });
 }
 

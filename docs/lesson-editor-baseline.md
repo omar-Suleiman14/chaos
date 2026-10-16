@@ -213,10 +213,9 @@ pseudo-elements, and the live region for announcements is created on first use.
 - **Drag preview** is the browser's snapshot of the block (BlockNote uses `setDragImage`); it is
   styled to the editor's width and theme but not animated.
 - **Touch dragging** depends on each mobile browser's native drag support; the tap menu's Move
-  up/down is the dependable path. The above-keyboard toolbar is BlockNote's mobile controller and is
-  not exercised by the automated suite (Playwright cannot raise a virtual keyboard).
-- **Outdent by dragging left** (Notion's horizontal drop targeting) is not implemented; Shift+Tab
-  and the drop rule above cover nesting.
+  up/down is the dependable path. The above-keyboard toolbar (BlockNote's mobile controller plus the
+  Chaos `+`) is covered by a spec that shrinks the viewport the way a phone keyboard does; it has
+  not been tried on a physical phone.
 - **Placeholders** (image, YouTube, quiz, flashcards, source) still have to be completed before the
   draft can save; the refusal is explicit and pinned by `lessonSlashMenu.test.tsx`.
 - **Code languages.** Stored names the editor's highlighter lacks (`js`, `Python`, `cobol`, empty) open as
@@ -224,5 +223,24 @@ pseudo-elements, and the live region for announcements is created on first use.
   language (`components/learn/editor/codeLanguages.ts`). Such lessons previously crashed the editor.
 - **Inline citation chips** remain rejected by the durable converter (unchanged); citations are kept
   as block metadata.
-- Native typing latency, drag frame rate and full-page autosave timing remain unmeasured in a real
-  browser deployment; the component budgets above are the regression guard.
+- Drop depth follows the pointer horizontally too: left of a nested last block's text drops at its
+  parent's level, well into a childless block's text nests under it (line drawn one indent in).
+
+### Real-browser timing
+
+`LX_EDITOR_TIMING=1 pnpm test:editor timing --project desktop` (headless Chromium, the harness's
+production build, mixed-block fixture; one run on the CI-class container, so treat as indicative).
+Before = pre-redesign editor (`2cb02b5`) in the same harness.
+
+| Blocks | Mount before → after | Typing p50 / p95 (ms) after | Drag frame p50 / p95 (ms) after |
+| -----: | -------------------- | --------------------------- | ------------------------------- |
+|     50 | 0.96s → 1.27s        | 7.4 / 21.8                  | 16.7 / 16.8                     |
+|    200 | 2.35s → 2.02s        | 14.8 / 28.9                 | 16.7 / 50                       |
+|    500 | 11.1s → 4.2s         | 11 / 18.8                   | 16.7 / 33.4                     |
+|  1,000 | 37.8s → 9.8s         | 17 / 77.5                   | 16.7 / 83.4                     |
+
+Mount was dominated by tiptap's `ReactNodeView` reading the selection as each custom block with
+content mounts, which lays out the whole document every time. `content-visibility: auto` on top-level
+blocks lets the browser skip off-screen layout. Typing stays under the 50ms p95 target up to the
+500-block storage limit (gated in the spec); the 1,000-block stress case still has long frames while
+dragging, as it did before the redesign. Full-page autosave timing in a deployment is not measured.
