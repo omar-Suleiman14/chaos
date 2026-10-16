@@ -106,3 +106,13 @@ test.describe("block drag and drop", () => {
     expect(await page.evaluate(() => window.__changes.length)).toBe(changes);
   });
 });
+
+test.describe("reduced motion", () => {
+  test.use({ viewport: { width: 1440, height: 1600 }, reducedMotion: "reduce" });
+  test("a drop moves the block without the settle animation", async ({ page }) => {
+    await openEditor(page);
+    await (await dragBlock(page, "p3", "p2", "above")).drop();
+    expect((await order(page)).slice(0, 4)).toEqual(["h1", "p1", "p3", "p2"]);
+    expect(await block(page, "p3").evaluate((el) => getComputedStyle(el).animationName)).toBe("none");
+  });
+});

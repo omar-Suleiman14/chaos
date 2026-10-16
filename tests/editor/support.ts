@@ -55,3 +55,19 @@ export async function rect(locator: Locator) {
   if (!box) throw new Error("Element is not rendered");
   return box;
 }
+
+/** Puts the caret at the end of block `id` (through the editor API, as a click would). */
+export async function caretAtEnd(page: Page, id: string) {
+  await page.evaluate((blockId) => { const e = window.__editor!; e.setTextCursorPosition(blockId, "end"); e.focus(); }, id);
+}
+
+/** Pastes clipboard data into the editor the way the browser does (a paste event with a DataTransfer). */
+export async function paste(page: Page, data: Record<string, string>) {
+  await page.evaluate((entries) => {
+    const dt = new DataTransfer();
+    for (const [type, value] of Object.entries(entries)) dt.setData(type, value);
+    document.querySelector(".bn-editor")!.dispatchEvent(new ClipboardEvent("paste", { clipboardData: dt, bubbles: true, cancelable: true }));
+  }, data);
+}
+
+export const doc = (page: Page) => page.evaluate(() => window.__editor!.document);

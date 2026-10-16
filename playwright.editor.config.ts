@@ -16,6 +16,7 @@ export default defineConfig({
     timeout: 180_000,
   },
   projects: [
-    { name: "desktop", use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, launchOptions: { executablePath: process.env.CHAOS_CHROMIUM || undefined } } },
+    { name: "desktop", testIgnore: /mobile\.spec/, use: { ...devices["Desktop Chrome"], viewport: { width: 1440, height: 900 }, launchOptions: { executablePath: process.env.CHAOS_CHROMIUM || undefined } } },
+    { name: "mobile", testMatch: /mobile\.spec/, use: { ...devices["Pixel 7"], launchOptions: { executablePath: process.env.CHAOS_CHROMIUM || undefined } } },
   ],
 });

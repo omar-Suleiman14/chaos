@@ -153,6 +153,11 @@ function DragHandle() {
   );
 }
 
+/** The menu hands focus back to its trigger as it closes; take it on to the document after that. */
+function refocus(editor: LessonEditorType) {
+  window.setTimeout(() => requestAnimationFrame(() => editor.focus()), 0);
+}
+
 const stopPress = (event: React.SyntheticEvent) => event.stopPropagation();
 
 type Action = "duplicate" | "copy" | "up" | "down" | "delete";
@@ -176,6 +181,8 @@ function ActionItem({ kind, icon, shortcut, children }: { kind: Action; icon: Re
     <Components.Generic.Menu.Item className={`bn-menu-item lx-block-menu__item${kind === "delete" ? " lx-block-menu__item--danger" : ""}`} icon={icon}
       onClick={() => {
         runBlockAction(editor, kind, targetBlocks(editor, block));
+        // Back to the document, so the next key (Ctrl+Z, typing) acts on it, not on the closed menu.
+        if (kind !== "copy") refocus(editor);
         announce({ duplicate: t.duplicated, copy: t.copied, up: t.movedUp, down: t.movedDown, delete: t.deleted }[kind]);
       }}>
       <span className="lx-block-menu__label">{children}</span>
@@ -256,6 +263,7 @@ function TurnIntoItem({ label }: { label: string }) {
             onClick={() => {
               const targets = targetBlocks(editor, block).filter((b) => TURN_INTO.has(b.type));
               editor.transact(() => { for (const b of targets) editor.updateBlock(b, { type: item.type, props: withoutToggle(item.props) } as never); });
+              refocus(editor);
             }}>
             {item.name}
           </Components.Generic.Menu.Item>

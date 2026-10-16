@@ -25,7 +25,7 @@ import { EditorBridge, lessonSchema, type LessonEditorBridge, type LessonEditorT
 import { focusLessonEnd, isBlankEditorTarget } from "./focusEnd";
 import { lessonSlashItems, searchSlashItems } from "./slashMenu";
 import { LessonSideMenuController, runBlockAction } from "./sideMenu";
-import { announce, LIVE_REGION_ATTR } from "./announce";
+import { announce } from "./announce";
 import { blockDropTarget, handleBlockDrop } from "./dragFeedback";
 
 const copy = {
@@ -159,7 +159,6 @@ export default function LessonEditor(props: LessonEditorProps) {
           )} />
           <LessonSideMenuController dir={dir} />
         </BlockNoteView>
-        <output className="sr-only" aria-live="polite" {...{ [LIVE_REGION_ATTR]: "" }} />
       </div>
     </EditorBridge.Provider>
   );

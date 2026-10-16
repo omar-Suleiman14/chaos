@@ -12,6 +12,7 @@ import LessonEditor from "@/components/learn/editor/LessonEditor";
 import type { LessonEditorType } from "@/components/learn/editor/blocks";
 import { lessonEditorContent } from "@/perf/lib/lessonEditorContent";
 import { harnessFixture } from "./fixtures";
+import { focusLessonStart } from "@/components/learn/editor/focusEnd";
 
 const params = new URLSearchParams(location.search);
 const doc = params.get("doc") === "ar" ? "ar" : "en";
@@ -27,7 +28,7 @@ declare global {
 window.__changes = [];
 window.__events = [];
 
-const initial = fixture === "empty" ? [] : fixture === "long" ? lessonEditorContent(Number(params.get("size") ?? 200), doc) : harnessFixture(doc);
+const initial = fixture === "empty" ? [] : fixture === "long" ? lessonEditorContent(Number(params.get("size") ?? 200), doc) : harnessFixture(doc, fixture === "all");
 
 function Page() {
   const [title, setTitle] = useState(fixture === "empty" ? "" : doc === "ar" ? "الدورة الدموية" : "Circulation basics");
@@ -35,7 +36,8 @@ function Page() {
     <div className="lx-edit">
       <div className="lx-edit__body" data-panel="closed">
         <div className="lx-edit__doc" dir={doc === "ar" ? "rtl" : "ltr"} lang={doc}>
-          <textarea className="lx-title-input" rows={1} value={title} placeholder="Untitled" aria-label="Title" onChange={(e) => setTitle(e.target.value)} />
+          <textarea className="lx-title-input" rows={1} value={title} placeholder="Untitled" aria-label="Title" onChange={(e) => setTitle(e.target.value)}
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); focusLessonStart(window.__editor); } }} />
           <textarea className="lx-desc-input" rows={1} placeholder="Add a short description" aria-label="Description" />
           <LessonEditor initialContent={initial} language={doc} sources={[{ id: "src1", kind: "pdf", title: "Lecture 8 slides" } as never]}
             onChange={(content) => window.__changes.push(content)}

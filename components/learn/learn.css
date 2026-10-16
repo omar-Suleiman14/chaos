@@ -269,17 +269,15 @@ body[data-lx-block-drag] .bn-drag-preview .ProseMirror-selectednode > *::after, 
 
 /* ── Blocks while editing (components/learn/editor/blocks.tsx) ─────────────
    Learning blocks share one quiet frame: icon + name, controls below, no heavy card. */
-.lx-edu { width: 100%; min-width: 0; display: grid; gap: 10px; padding: 10px 12px 12px; border-radius: 8px; background: var(--ws-canvas-subtle); box-shadow: inset 0 0 0 1px var(--ws-line); cursor: default; }
-.lx-edu__head { display: flex; align-items: center; gap: 8px; min-height: 24px; font-size: 13px; }
-.lx-edu__icon { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 5px; background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary); flex: none; }
-.lx-edu[data-kind="flashcards"] .lx-edu__icon { background: color-mix(in srgb, var(--ws-purple, #9065b0) 14%, transparent); color: var(--ws-purple, #9065b0); }
-.lx-edu[data-kind="diagram"] .lx-edu__icon { background: color-mix(in srgb, var(--ws-success, #448361) 14%, transparent); color: var(--ws-success, #448361); }
-.lx-edu__title { font-weight: 600; color: var(--on-surface); }
-.lx-edu__aside { margin-inline-start: auto; }
-.lx-edu__required { display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; color: var(--on-surface-variant); cursor: pointer; }
+.lx-edu { position: relative; width: 100%; min-width: 0; margin: 0; border: 0; display: grid; gap: 10px; padding: 44px 12px 12px; border-radius: 8px; background: var(--ws-canvas-subtle); box-shadow: inset 0 0 0 1px var(--ws-line); cursor: default; font-size: 14px; --lx-edu-tint: #3595e3; --lx-edu-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%233595e3' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m3 17 2 2 4-4'/%3E%3Cpath d='m3 7 2 2 4-4'/%3E%3Cpath d='M13 6h8'/%3E%3Cpath d='M13 12h8'/%3E%3Cpath d='M13 18h8'/%3E%3C/svg%3E"); }
+.lx-edu[data-kind="flashcards"] { --lx-edu-tint: #9065b0; --lx-edu-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%239065b0' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z'/%3E%3Cpath d='m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65'/%3E%3Cpath d='m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65'/%3E%3C/svg%3E"); }
+.lx-edu[data-kind="diagram"] { --lx-edu-tint: #448361; --lx-edu-icon: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23448361' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='16' y='16' width='6' height='6' rx='1'/%3E%3Crect x='2' y='16' width='6' height='6' rx='1'/%3E%3Crect x='9' y='2' width='6' height='6' rx='1'/%3E%3Cpath d='M5 16v-3a1 1 0 0 1 1-1h12a1 1 0 0 1 1 1v3'/%3E%3Cpath d='M12 12V8'/%3E%3C/svg%3E"); }
+/* Header drawn without extra elements: an icon tile and the block's name (data-title). */
+.lx-edu::before { content: ""; position: absolute; top: 10px; inset-inline-start: 12px; width: 24px; height: 24px; border-radius: 5px; background: var(--lx-edu-icon) center / 16px no-repeat, color-mix(in srgb, var(--lx-edu-tint) 14%, transparent); }
+.lx-edu::after { content: attr(data-title); position: absolute; top: 10px; inset-inline-start: 44px; line-height: 24px; font-size: 13px; font-weight: 600; color: var(--on-surface); pointer-events: none; }
+.lx-edu__required { position: absolute; top: 10px; inset-inline-end: 12px; height: 24px; display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 400; color: var(--on-surface-variant); cursor: pointer; }
 .lx-edu__required input { accent-color: var(--primary); }
-.lx-edu__body { display: grid; gap: 10px; min-width: 0; font-size: 14px; }
-.lx-edu__body .lx-panel { border: 0; padding: 0; background: transparent; }
+.lx-edu > .lx-panel, .lx-edu .lx-panel { border: 0; padding: 0; background: transparent; }
 .lx-edu__source { display: grid; gap: 4px; font-size: 12px; color: var(--on-surface-variant); }
 .lx-edu__source textarea { width: 100%; min-width: 0; box-sizing: border-box; font: 13px/1.5 ui-monospace, SFMono-Regular, Menlo, monospace; padding: 8px 10px; border-radius: 6px; border: 1px solid var(--ws-line-strong, var(--ws-line)); background: var(--ws-card); color: var(--on-surface); resize: vertical; }
 .lx-edu__source textarea:focus-visible { outline: 2px solid var(--ws-ring); outline-offset: 0; }
