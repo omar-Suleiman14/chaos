@@ -27,6 +27,7 @@ import { isItemRef, lessonIdsFromRefs, lessonRef, sourceIdsFromRefs } from "@/co
 import { canSelectLessons, connectionAppName, describeConnectionAccess } from "@/components/connections/permissionText";
 import WebhooksSection from "./WebhooksSection";
 import ConnectedApps from "@/components/connections/ConnectedApps";
+import McpClientPermissions from "@/components/connections/McpClientPermissions";
 import FallbackBoundary from "@/components/FallbackBoundary";
 
 type ScopeText = Record<LegacyIntegrationScope, { label: string; help: string }>;
@@ -271,6 +272,7 @@ export default function ConnectionsPage() {
       </div>
 
       <FallbackBoundary fallback={null}><ConnectedApps /></FallbackBoundary>
+      <FallbackBoundary fallback={null}><McpClientPermissions /></FallbackBoundary>
 
       <div className="cx-dev flex flex-wrap items-end justify-between gap-3">
         <div>
