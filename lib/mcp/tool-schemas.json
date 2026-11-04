@@ -9538,7 +9538,7 @@
   },
   "get_results": {
    "title": "Summarize results",
-   "description": "Results summary for a form or quiz: response count, completion, average time, per-question answer counts and averages, and average quiz score. Contains no individual answers.",
+   "description": "Aggregate results: response counts, completion, per-question distributions and quiz scores. For individual answers, including written text, use list_responses.",
    "permission": "aggregate_analytics",
    "annotations": {
     "title": "Summarize results",
@@ -9591,6 +9591,73 @@
      },
      "resultsUrl": {
       "type": "string"
+     },
+     "responses": {
+      "type": "number"
+     },
+     "unfinished": {
+      "type": "number"
+     },
+     "questions": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string"
+        },
+        "label": {
+         "type": "string"
+        },
+        "type": {
+         "type": "string"
+        },
+        "answered": {
+         "type": "number"
+        },
+        "average": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "distribution": {
+         "anyOf": [
+          {
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "option": {
+              "type": "string"
+             },
+             "count": {
+              "type": "number"
+             }
+            },
+            "required": [
+             "option",
+             "count"
+            ],
+            "additionalProperties": false
+           }
+          },
+          {
+           "type": "null"
+          }
+         ]
+        }
+       },
+       "required": [
+        "id",
+        "label",
+        "type",
+        "answered",
+        "average",
+        "distribution"
+       ],
+       "additionalProperties": {}
+      }
      }
     },
     "required": [
@@ -9600,7 +9667,10 @@
      "status",
      "editUrl",
      "shareUrl",
-     "resultsUrl"
+     "resultsUrl",
+     "responses",
+     "unfinished",
+     "questions"
     ],
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false
@@ -12665,7 +12735,7 @@
   },
   "list_responses": {
    "title": "Read responses",
-   "description": "Read individual completed responses (newest first), with each answer as text and quiz scores. Answers may contain personal information; use only when the person asks to read or analyse individual responses. Uploaded files are not included.",
+   "description": "Read completed responses (newest first), including short/long written text, choice answers and quiz scores. Contains personal information; only use when asked for individual answers. Uploaded files excluded.",
    "permission": "individual_responses",
    "annotations": {
     "title": "Read responses",
@@ -12735,6 +12805,31 @@
       "items": {
        "type": "object",
        "properties": {
+        "submittedAt": {
+         "type": "string"
+        },
+        "receipt": {
+         "type": "string"
+        },
+        "answers": {
+         "type": "object",
+         "propertyNames": {
+          "type": "string"
+         },
+         "additionalProperties": {
+          "type": "string"
+         },
+         "description": "Question label to answer text, including written short/long answers and choice labels."
+        },
+        "score": {
+         "type": "number"
+        },
+        "maxScore": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
         "hidden": {
          "type": "object",
          "propertyNames": {
@@ -12758,6 +12853,11 @@
          }
         }
        },
+       "required": [
+        "submittedAt",
+        "receipt",
+        "answers"
+       ],
        "additionalProperties": {}
       }
      },

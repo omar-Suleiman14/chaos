@@ -72,7 +72,7 @@ const baseInstructions = `Chaos (${new URL(siteUrl).host}) is where this person 
 - Looks: every form has a theme (colours, font, buttons, start screen). When you create a form, pick a preset that suits it and pass it as theme: "Lilac" for everyday forms and sign-ups, "Banner" for work and school, and a livelier one (Candy, Arcade, Neon, Sunset, Aurora) for games, parties and fun quizzes. Use list_themes to see them all, and set_form_theme for "make it dark", "use the Typeform look" or a brand colour. If the person names a look, use theirs. If set_form_theme returns warnings about hard-to-read colours, fix them.
 - Sounds: forms you create have sound on (Glass). Pick a pack that suits the mood with sound (soft is Glass, pop, wood, arcade), and use off only when the person asks for silence or the form is formal or sensitive (health, HR, legal).
 - Theme and sound changes go to the draft, like other edits; respondents see them after publish_form.
-- Respondent answers can be personal. Only fetch them with list_responses when the person asks to read individual answers.
+- For written answers (short and long text) and individual choice responses, use list_responses and follow nextCursor until null. get_results only returns aggregates. Answers can be personal: only read them when the person asks.
 - Live games: create_game_draft makes a quiz draft with 1–100 choice questions, each with 2–4 distinct options and correctAnswers. It stays a private draft unless the person asked to publish it (publish true); host_game needs a published quiz, so publish it with publish_form only once they ask to host or share it. Call host_game only when asked to open a live lobby. Hosting does not publish or start the first question.
 - Games use game_… ids from list_games or host_game. get_game returns room state and host/join links, never player identities, tokens, individual answers or answer keys. Use hostUrl for the projected question and leaderboard.
 - Games run themselves by default: each question ends on its timer, the answer and then the leaderboard show for breakSec seconds (default 5), and the next question starts. startWhenPlayers makes the lobby count down 5-4-3-2-1 and start once that many have joined. Pass these to host_game when the host mentions them ("start when 20 join", "10 seconds between questions", "I'll click through myself" = autoAdvance false).
@@ -145,6 +145,17 @@ const itemShape = {
   resultsUrl: z.string(),
 };
 const itemOutput = z.looseObject(itemShape);
+
+/** Describe response data explicitly so MCP clients can discover text answers. */
+const responseOutput = z.looseObject({
+  submittedAt: z.string(),
+  receipt: z.string(),
+  answers: z.record(z.string(), z.string()).describe("Question label to answer text, including written short/long answers and choice labels."),
+  score: z.number().optional(),
+  maxScore: z.number().nullable().optional(),
+  hidden: z.record(z.string(), z.string()).optional(),
+  typedHidden: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional(),
+});
 
 const gameId = z.string().min(1).max(100).describe("game_… id from list_games or host_game, not a form_ or quiz_ id.");
 const timerField = z.number().int().min(5).max(240).optional().describe("Seconds per question; 5–240, default 20. Changes only in a lobby.");
@@ -349,22 +360,25 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
 
   server.registerTool("get_results", {
     title: "Summarize results",
-    description: "Results summary for a form or quiz: response count, completion, average time, per-question answer counts and averages, and average quiz score. Contains no individual answers.",
+    description: "Aggregate results: response counts, completion, per-question distributions and quiz scores. For individual answers, including written text, use list_responses.",
     inputSchema: { id: itemId },
-    outputSchema: itemShape,
+    outputSchema: { ...itemShape, responses: z.number(), unfinished: z.number(), questions: z.array(z.looseObject({
+      id: z.string(), label: z.string(), type: z.string(), answered: z.number(),
+      average: z.number().nullable(), distribution: z.array(z.object({ option: z.string(), count: z.number() })).nullable(),
+    })) },
     annotations: { ...read, title: "Summarize results" },
     _meta: meta("Adding up results…", "Results ready"),
   }, (input) => run("get_results", input, (d) => `Results for “${d.title}”.`));
 
   server.registerTool("list_responses", {
     title: "Read responses",
-    description: "Read individual completed responses (newest first), with each answer as text and quiz scores. Answers may contain personal information; use only when the person asks to read or analyse individual responses. Uploaded files are not included.",
+    description: "Read completed responses (newest first), including short/long written text, choice answers and quiz scores. Contains personal information; only use when asked for individual answers. Uploaded files excluded.",
     inputSchema: {
       id: itemId,
       limit: z.number().int().min(1).max(25).optional().describe("Default 10."),
       cursor: z.string().max(2000).optional().describe("nextCursor from the previous page."),
     },
-    outputSchema: { ...itemShape, responses: z.array(z.looseObject({ hidden: z.record(z.string(), z.string()).optional(), typedHidden: z.record(z.string(), z.union([z.string(), z.number(), z.boolean()])).optional() })), nextCursor: z.string().nullable() },
+    outputSchema: { ...itemShape, responses: z.array(responseOutput), nextCursor: z.string().nullable() },
     annotations: { ...read, title: "Read responses" },
     _meta: meta("Reading responses…", "Responses loaded"),
   }, (input) => run("list_responses", input, (d) => `${(d.responses as unknown[]).length} response(s) from “${d.title}”.`));
