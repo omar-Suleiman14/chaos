@@ -77,6 +77,15 @@ describe("google-forms chrome", () => {
     expect(saved.scrollIntoView).toHaveBeenCalled();
     expect(saved).toHaveFocus();
   });
+
+  it("renders the restored-progress notice inside the form layout before the title card", () => {
+    const def = definition(googleFormsTheme);
+    const { container } = render(<FormRenderer definition={def} language="en" answers={{}} onAnswer={vi.fn()} onSubmit={vi.fn()}
+      notice={<output className="form-toast">Continue your form</output>} />);
+    const layout = container.querySelector("[data-chrome='google'] .form-layout-flat")!;
+    expect(layout.firstElementChild).toHaveClass("form-inline-notice");
+    expect(layout.firstElementChild?.nextElementSibling).toHaveClass("form-title-card");
+  });
 });
 
 describe("microsoft-forms chrome", () => {
