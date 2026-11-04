@@ -130,6 +130,10 @@ it("cancels pending partial saves and clears the resume link on start over", asy
 it("continues a saved response at its last field without erasing answers", () => {
   localStorage.setItem("chaos-form:a:v1", JSON.stringify({ answers: { name: "Kept answer" }, lastFieldId: "name", language: "en", startedAt: 123, submissionKey: "saved", version: 1 }));
   const { container, unmount } = render(<RespondToForm shareId="a" />);
+  const notification = screen.getByRole("status", { name: "Saved progress" });
+  expect(notification).toHaveClass("workspace-ui", "ws-glass", "form-resume-notification");
+  expect(notification.parentElement).toBe(document.body);
+  expect(container.querySelector(".form-resume-notification")).toBeNull();
   expect(screen.getByText("We restored the answers you started earlier.")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Start over" })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Continue where you left off" }));
@@ -149,6 +153,7 @@ it("dismisses the resume notice without clearing stored progress", () => {
   localStorage.setItem("chaos-form:a:v1", JSON.stringify({ answers: { name: "Still here" }, language: "en", startedAt: 123, submissionKey: "saved", version: 1 }));
   const { container, unmount } = render(<RespondToForm shareId="a" />);
   fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+  expect(screen.queryByRole("status", { name: "Saved progress" })).not.toBeInTheDocument();
   expect(screen.queryByText("We restored the answers you started earlier.")).not.toBeInTheDocument();
   expect(container.querySelector("[data-continue-requested='false']")).toBeInTheDocument();
   expect(screen.getByText(/Answers:/)).toHaveTextContent("Still here");
