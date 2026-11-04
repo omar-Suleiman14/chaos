@@ -48,6 +48,8 @@ export interface FormRendererProps {
   resumeFieldId?: string;
   /** The respondent chose Continue from the restored-progress notice. */
   continueRequested?: boolean;
+  /** A dismissible notice placed above the form cards, without covering the header. */
+  notice?: React.ReactNode;
   /** Skip the theme's start screen (editing a submitted response, logic debugger). */
   skipCover?: boolean;
 }
@@ -458,6 +460,7 @@ function PagedFlow({ flow, props, showHeader }: { flow: Flow; props: FormRendere
     return (
       <div ref={topRef} className="form-page-body form-page-body--chrome" data-chrome="microsoft">
         <div className="form-layout-flat">
+          {props.notice && <div className="form-inline-notice">{props.notice}</div>}
           {header}
           <form noValidate onSubmit={submitForm} className="form-column">{progress}{questions}</form>
         </div>
@@ -468,6 +471,7 @@ function PagedFlow({ flow, props, showHeader }: { flow: Flow; props: FormRendere
     return (
       <div ref={topRef} className="form-page-body form-page-body--chrome" data-chrome={chrome}>
         <div className="form-layout-flat">
+          {props.notice && <div className="form-inline-notice">{props.notice}</div>}
           {logo}
           {header}
           {progress}
@@ -479,6 +483,7 @@ function PagedFlow({ flow, props, showHeader }: { flow: Flow; props: FormRendere
   return (
     <div ref={topRef} className="form-page-body">
       <div className={`form-layout-${layout}`}>
+        {props.notice && <div className="form-inline-notice">{props.notice}</div>}
         {logo}
         {header}
         {progress}
