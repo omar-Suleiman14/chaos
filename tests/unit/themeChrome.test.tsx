@@ -67,6 +67,16 @@ describe("google-forms chrome", () => {
     expect(container.querySelector("[data-field-id='name']")).not.toBeInTheDocument();
   });
 
+  it("highlights selected immersive choices without a trailing checkmark that crowds text", () => {
+    const def = { ...definition(googleFormsTheme), presentation: "conversational" as const };
+    const { container } = render(<FormRenderer definition={def} language="en" answers={{ day: "a" }}
+      onAnswer={vi.fn()} onSubmit={vi.fn()} resuming resumeFieldId="day" skipCover />);
+    const selected = container.querySelector(".form-choice[data-checked='true']");
+    expect(selected).toHaveTextContent("Mon");
+    expect(selected?.querySelector(".form-choice-key")).toHaveTextContent("A");
+    expect(selected?.querySelector(".form-choice-tick")).toBeNull();
+  });
+
   it("moves to the saved field when Continue is chosen on a single-page form", () => {
     const def = definition(googleFormsTheme);
     const props = { definition: def, language: "en" as const, answers: { name: "Sam" }, onAnswer: vi.fn(), onSubmit: vi.fn(), resuming: true, resumeFieldId: "day" };

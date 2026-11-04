@@ -12819,7 +12819,35 @@
          "additionalProperties": {
           "type": "string"
          },
-         "description": "Question label to answer text, including written short/long answers and choice labels."
+         "description": "ASCII-safe question label (or field ID on Unicode or duplicate labels) to answer text. For exact original labels, use answerItems."
+        },
+        "answerItems": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "fieldId": {
+            "type": "string"
+           },
+           "label": {
+            "type": "string"
+           },
+           "type": {
+            "type": "string"
+           },
+           "text": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "fieldId",
+           "label",
+           "type",
+           "text"
+          ],
+          "additionalProperties": false
+         },
+         "description": "Every answered question with its original Unicode label and written/choice answer, preserving duplicate labels."
         },
         "score": {
          "type": "number"
@@ -12856,7 +12884,8 @@
        "required": [
         "submittedAt",
         "receipt",
-        "answers"
+        "answers",
+        "answerItems"
        ],
        "additionalProperties": {}
       }

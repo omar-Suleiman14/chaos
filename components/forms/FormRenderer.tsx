@@ -1006,7 +1006,6 @@ function FieldView({ field, def, language, answers, error, onChange, uploadFile,
                   ? <span className="form-choice-key" aria-hidden="true">{String.fromCharCode(65 + i)}</span>
                   : <span className={`form-choice-mark ${multiple ? "form-choice-mark--box" : ""}`} aria-hidden="true"><Check size={12} strokeWidth={3} /></span>}
                 <span className="flex-1">{o.label}</span>
-                {immersive && checked && <Check size={18} className="form-choice-tick" aria-hidden="true" />}
               </label>
             );
           })}

@@ -55,17 +55,18 @@ describe("Chaos MCP server", () => {
     const item = { id: "form_1", kind: "form" as const, title: "Feedback", status: "live", editUrl: "e", shareUrl: "s", resultsUrl: "r" };
     const call = vi.fn<McpCaller>(async (tool) => tool === "get_results"
       ? { ...item, responses: 1, unfinished: 0, questions: [{ id: "comment", label: "Comment", type: "long_text", answered: 1, average: null, distribution: null }] }
-      : { ...item, responses: [{ submittedAt: "2026-11-04T00:00:00.000Z", receipt: "R1", answers: { Comment: "A complete free-text answer" } }], nextCursor: null });
+      : { ...item, responses: [{ submittedAt: "2026-11-04T00:00:00.000Z", receipt: "R1", answers: { comment_id: "A complete free-text answer" }, answerItems: [{ fieldId: "comment_id", label: "ملاحظة · Comment", type: "textarea", text: "A complete free-text answer" }] }], nextCursor: null });
     const client = await connect(call);
     const tools = (await client.listTools()).tools;
     const individual = tools.find((tool) => tool.name === "list_responses")!;
     const results = tools.find((tool) => tool.name === "get_results")!;
     expect(individual.outputSchema).toHaveProperty("properties.responses.items.properties.answers");
+    expect(individual.outputSchema).toHaveProperty("properties.responses.items.properties.answerItems");
     expect(results.outputSchema).toHaveProperty("properties.questions");
 
     const response = await client.callTool({ name: "list_responses", arguments: { id: "form_1" } });
     expect(response.isError).toBeFalsy();
-    expect(response.structuredContent).toMatchObject({ responses: [{ answers: { Comment: "A complete free-text answer" } }], nextCursor: null });
+    expect(response.structuredContent).toMatchObject({ responses: [{ answers: { comment_id: "A complete free-text answer" }, answerItems: [{ label: "ملاحظة · Comment", text: "A complete free-text answer" }] }], nextCursor: null });
     expect(call).toHaveBeenCalledWith("list_responses", { id: "form_1" });
   });
 

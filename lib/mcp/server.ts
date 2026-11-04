@@ -150,7 +150,13 @@ const itemOutput = z.looseObject(itemShape);
 const responseOutput = z.looseObject({
   submittedAt: z.string(),
   receipt: z.string(),
-  answers: z.record(z.string(), z.string()).describe("Question label to answer text, including written short/long answers and choice labels."),
+  answers: z.record(z.string(), z.string()).describe("ASCII-safe question label (or field ID on Unicode or duplicate labels) to answer text. For exact original labels, use answerItems."),
+  answerItems: z.array(z.object({
+    fieldId: z.string(),
+    label: z.string(),
+    type: z.string(),
+    text: z.string(),
+  })).describe("Every answered question with its original Unicode label and written/choice answer, preserving duplicate labels."),
   score: z.number().optional(),
   maxScore: z.number().nullable().optional(),
   hidden: z.record(z.string(), z.string()).optional(),
