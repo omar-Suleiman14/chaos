@@ -4,17 +4,18 @@ import { FocusInput } from "@/components/InitialFocus";
 
 import { copyText } from "@/lib/clipboard";
 import { Suspense, createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import type { FunctionReturnType } from "convex/server";
 import Link from "@/components/site/SiteLink";
 import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import posthog from "@/lib/analytics";
 import { SignInButton, SignOutButton } from "@/lib/auth/client";
-import { Copy, Download, RotateCcw, Volume2, VolumeX, X } from "lucide-react";
+import { Clock3, Copy, Download, RotateCcw, Volume2, VolumeX, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import FormRenderer, { EndingView, formUi, themeClass, themeStyle } from "@/components/forms/FormRenderer";
 import type { UploadedFile } from "@/components/forms/FormRenderer";
-import { themeCover, themeFollowsAppearance, themeSound } from "@/components/forms/formThemes";
+import { themeFollowsAppearance, themeSound } from "@/components/forms/formThemes";
 import Logo from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { emptyDefinition, isRtl, languageNames, localizedMeta, selectEnding } from "@/convex/formLogic";
@@ -31,6 +32,7 @@ import { QuizReview } from "./QuizReview";
 import type { QuizReviewItem } from "@/convex/formQuiz";
 import { linkOrigin } from "@/lib/hosts";
 import { readRespondentStorage } from "@/lib/forms/respondentStorage";
+import "./resume-notification.css";
 
 function randomHex(bytes: number) {
   const buf = new Uint8Array(bytes);
@@ -47,7 +49,7 @@ const text = {
     startOver: "Start over", resume: "Continue on another device", resumeHelp: "Anyone with this private link can see and continue your answers for 30 days.",
     copy: "Copy link", copied: "Copied", receipt: "Receipt", editLink: "Edit your response later with this private link:", download: "Save receipt",
     retry: "Try again", sending: "Sending…", restored: "We restored the answers you started earlier.", editing: "You are editing a submitted response.",
-    continueHere: "Continue where you left off", dismiss: "Dismiss",
+    continueHere: "Continue where you left off", savedProgress: "Saved progress", dismiss: "Dismiss",
     saved: "Saved", update: "Update response", notOpen: "Not open yet",
     notOpenYet: (d: string) => `This form is not open yet. It opens ${d}.`, closedOn: (d: string) => `This form closed ${d}.`,
     inFlight: "Answers sent after the closing time are not accepted.",
@@ -63,7 +65,7 @@ const text = {
     startOver: "البدء من جديد", resume: "المتابعة على جهاز آخر", resumeHelp: "يمكن لأي شخص لديه هذا الرابط الخاص رؤية إجاباتك ومتابعتها لمدة 30 يومًا.",
     copy: "نسخ الرابط", copied: "تم النسخ", receipt: "الإيصال", editLink: "يمكنك تعديل ردك لاحقًا عبر هذا الرابط الخاص:", download: "حفظ الإيصال",
     retry: "حاول مرة أخرى", sending: "جارٍ الإرسال…", restored: "استعدنا الإجابات التي بدأتها سابقًا.", editing: "أنت تعدّل ردًا تم إرساله.",
-    continueHere: "تابع من حيث توقفت", dismiss: "إخفاء",
+    continueHere: "تابع من حيث توقفت", savedProgress: "تقدمك محفوظ", dismiss: "إخفاء",
     saved: "تم الحفظ", update: "تحديث الرد", notOpen: "لم يفتح بعد",
     notOpenYet: (d: string) => `لم يفتح هذا النموذج بعد. يفتح ${d}.`, closedOn: (d: string) => `أُغلق هذا النموذج ${d}.`,
     inFlight: "لا تُقبل الإجابات المرسلة بعد وقت الإغلاق.",
@@ -446,14 +448,20 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   const dir = isRtl(language) ? "rtl" : "ltr";
   const score = def.quiz?.enabled && receipt && receipt.quizScore !== undefined && receipt.quizScore !== null
     ? { value: receipt.quizScore, max: receipt.quizMaxScore ?? 0 } : null;
-  const notice = (editing || restored) && noticeVisible && (
-    <output className="form-toast" dir={dir} >
-      <span>{editing ? t.editing : t.restored}</span>
-      {!editing && <button type="button" onClick={() => { setContinueRequested(true); acknowledgeRestore(); }}>{t.continueHere}</button>}
-      <button type="button" className="form-toast-dismiss" aria-label={t.dismiss} onClick={acknowledgeRestore}><X size={16} aria-hidden="true" /></button>
-    </output>
+  const notice = (editing || restored) && noticeVisible && createPortal(
+    <output className="workspace-ui ws-glass form-resume-notification" dir={dir} aria-label={editing ? t.editing : t.savedProgress}>
+      <div className="form-resume-notification__header">
+        <span className="form-resume-notification__icon" aria-hidden="true"><Clock3 size={18} /></span>
+        <div className="form-resume-notification__copy">
+          <p className="form-resume-notification__title">{editing ? t.editing : t.savedProgress}</p>
+          {!editing && <p className="form-resume-notification__description">{t.restored}</p>}
+        </div>
+        <button type="button" className="form-resume-notification__dismiss" aria-label={t.dismiss} onClick={acknowledgeRestore}><X size={17} aria-hidden="true" /></button>
+      </div>
+      {!editing && <button type="button" className="ws-btn ws-btn--primary form-resume-notification__action" onClick={() => { setContinueRequested(true); acknowledgeRestore(); }}>{t.continueHere}</button>}
+    </output>,
+    document.body,
   );
-  const inlineNotice = (def.presentation === "page" || def.presentation === "sections") && themeCover(def) === "none";
 
   return (
     <Shell embed={embed} def={def} plain={form.hideBranding} languageSwitch={languageSwitch} immersive={receipt ? def.presentation === "conversational" || def.presentation === "swipe" : !(form.alreadyResponded && !editing) && !notOpen}>
@@ -486,7 +494,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
         <Message title={localizedMeta(def, language).title} body={t.notOpenYet(formatScheduleTime(form.opensAt!, form.timezone ?? undefined, language))} lang={language} />
       ) : (
         <>
-          {!inlineNotice && notice}
+          {notice}
           <FormRenderer
             journey
             definition={def}
@@ -502,7 +510,6 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
             resuming={restored}
             resumeFieldId={progress.lastFieldId}
             continueRequested={continueRequested}
-            notice={inlineNotice ? notice : undefined}
             skipCover={!!editing || minimal}
             onProgress={(id) => {
               acknowledgeRestore();
