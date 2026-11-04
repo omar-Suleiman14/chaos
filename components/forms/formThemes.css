@@ -238,7 +238,6 @@ textarea.form-input { resize: vertical; min-height: 5rem; }
   transition: background 0.16s ease, color 0.16s ease;
 }
 .form-choice[data-checked="true"] .form-choice-key { background: var(--form-accent); color: var(--form-on-accent); border-color: var(--form-accent); }
-.form-choice-tick { color: var(--form-accent); animation: form-pop 0.35s var(--form-ease) both; }
 .form-choice-mark {
   display: inline-grid; place-items: center; flex-shrink: 0; width: 1.3rem; height: 1.3rem;
   border: 2px solid var(--form-line-strong); border-radius: 999px; color: transparent;
@@ -256,7 +255,6 @@ textarea.form-input { resize: vertical; min-height: 5rem; }
 .form-buttons-brutal .form-choice:hover { transform: translate(-1px, -1px); box-shadow: 4px 4px 0 var(--form-text); }
 .form-buttons-brutal .form-choice[data-checked="true"] { background: var(--form-accent); color: var(--form-on-accent); box-shadow: 3px 3px 0 var(--form-text); }
 .form-buttons-brutal .form-choice[data-checked="true"] .form-choice-key { background: var(--form-on-accent); color: var(--form-accent); }
-.form-buttons-brutal .form-choice[data-checked="true"] .form-choice-tick { color: var(--form-on-accent); }
 .form-buttons-pill .form-choice { border-radius: 999px; padding-inline: 1.1rem; }
 .form-buttons-pill .form-choice-key { border-radius: 999px; }
 

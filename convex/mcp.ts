@@ -234,11 +234,22 @@ export const listResponses = internalQuery({
       }
       const def = defs.get(r.version);
       const answers: Record<string, string> = {};
-      for (const f of def?.fields ?? []) {
+      const answerItems: { fieldId: string; label: string; type: string; text: string }[] = [];
+      for (const [index, f] of (def?.fields ?? []).entries()) {
         // Uploaded files stay in Chaos; only their count is shown.
         if (!isAnswerable(f)) continue;
         const text = answerText(f, (r.answers as Answers)[f.id]);
-        if (text) answers[f.label || f.id] = text;
+        if (!text) continue;
+        const label = f.label || f.id;
+        // MCP object property names must be non-control ASCII. Keep familiar
+        // labels as keys when safe, but never lose Unicode or duplicate labels.
+        const ascii = (key: string) => /^[\x20-\x7e]+$/.test(key);
+        const available = (key: string) => ascii(key) && !Object.hasOwn(answers, key);
+        const baseKey = available(label) ? label : available(f.id) ? f.id : `field_${index + 1}`;
+        let key = baseKey;
+        for (let suffix = 2; !available(key); suffix++) key = `${baseKey}_${suffix}`;
+        answers[key] = text;
+        answerItems.push({ fieldId: f.id, label, type: f.type, text });
       }
       responses.push({
         submittedAt: new Date(r.submittedAt).toISOString(),
@@ -248,6 +259,7 @@ export const listResponses = internalQuery({
         ...(r.typedHidden !== undefined ? { typedHidden: r.typedHidden } : {}),
         tags: r.tags,
         answers,
+        answerItems,
       });
     }
     return { ...summary(item), responses, nextCursor: page.isDone ? null : page.continueCursor };

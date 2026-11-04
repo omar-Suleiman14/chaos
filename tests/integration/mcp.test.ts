@@ -65,6 +65,10 @@ describe("ChatGPT app backend", () => {
     expect(results).toMatchObject({ responses: 1, quiz: { averageScore: 2, maxScore: 2, averagePercent: 100 } });
     const responses = await t.query(internal.mcp.listResponses, { userId: owner, id: created.id });
     expect((responses.responses[0] as { answers: Record<string, string> }).answers).toMatchObject({ "Largest planet?": "Jupiter", "Your name": "Sam" });
+    expect(responses.responses[0].answerItems).toMatchObject([
+      { label: "Largest planet?", text: "Jupiter", type: "choice" },
+      { label: "Your name", text: "Sam", type: "text" },
+    ]);
 
     const found = await t.query(internal.mcp.searchForms, { userId: owner, query: "discussed" });
     expect(found.items.map((i) => i.id)).toEqual([created.id]);
@@ -74,6 +78,44 @@ describe("ChatGPT app backend", () => {
     await t.mutation(internal.mcp.setFormStatus, { userId: owner, id: created.id, action: "archive" });
     expect((await t.query(internal.mcp.searchForms, { userId: owner })).total).toBe(0);
     expect((await t.query(internal.mcp.searchForms, { userId: owner, status: "archived" })).total).toBe(1);
+  });
+
+  it("returns Unicode and duplicate written-answer labels in quiz responses without invalid MCP map keys", async () => {
+    const t = await setup();
+    const created = await t.mutation(internal.mcp.createForm, { userId: owner, input: {
+      title: "Anatomy practical", quizMode: true,
+      questions: [
+        { type: "single_choice", label: "Identify the organ", options: ["Ear", "Eye"], correctAnswers: ["Ear"] },
+        { type: "short_text", label: "Photo 1 · Identify label 4" },
+        { type: "long_text", label: "اشرح الإجابة" },
+        { type: "short_text", label: "Repeated" },
+        { type: "short_text", label: "Repeated" },
+      ],
+    } });
+    const form = await t.query(internal.mcp.getForm, { userId: owner, id: created.id });
+    const questions = form.questions as { id: string }[];
+    const published = await t.mutation(internal.mcp.publishForm, { userId: owner, id: created.id });
+    const optionId = (await t.run((ctx) => ctx.db.query("forms").first()))!.draft.fields[0].options![0].id;
+    await t.mutation(api.respond.submitResponse, {
+      shareId: published.shareUrl!.split("/f/")[1], submissionKey: "unicode-mcp-response",
+      answers: { [questions[0].id]: optionId, ...Object.fromEntries(questions.slice(1).map((q, i) => [q.id, `Written answer ${i + 2}`])) },
+      language: "en", final: true, startedAt: Date.now() - 30_000,
+    });
+    const data = await t.query(internal.mcp.listResponses, { userId: owner, id: created.id });
+    const response = data.responses[0];
+    expect(response.answerItems).toEqual([
+      { fieldId: questions[0].id, label: "Identify the organ", type: "choice", text: "Ear" },
+      { fieldId: questions[1].id, label: "Photo 1 · Identify label 4", type: "text", text: "Written answer 2" },
+      { fieldId: questions[2].id, label: "اشرح الإجابة", type: "textarea", text: "Written answer 3" },
+      { fieldId: questions[3].id, label: "Repeated", type: "text", text: "Written answer 4" },
+      { fieldId: questions[4].id, label: "Repeated", type: "text", text: "Written answer 5" },
+    ]);
+    expect(Object.keys(response.answers).every((key) => /^[\x20-\x7e]+$/.test(key))).toBe(true);
+    expect(Object.values(response.answers).sort()).toEqual([
+      "Ear", "Written answer 2", "Written answer 3", "Written answer 4", "Written answer 5",
+    ].sort());
+    expect(response.answers.Repeated).toBe("Written answer 4");
+    expect(response.answers[questions[4].id]).toBe("Written answer 5");
   });
 
   it("never reaches another person's forms and blocks writes for restricted accounts", async () => {
