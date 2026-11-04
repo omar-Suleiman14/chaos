@@ -509,10 +509,15 @@ textarea.form-input { resize: vertical; min-height: 5rem; }
   box-shadow: 0 10px 30px -12px color-mix(in srgb, #000 40%, transparent); backdrop-filter: blur(10px);
   font-size: 0.85rem; transform: translateX(-50%); animation: form-toast-in 0.5s var(--form-ease) both;
 }
-.form-toast button { min-height: 44px; padding: 0.25rem 0.7rem; border-radius: 6px; background: var(--form-soft); font-weight: 600; white-space: nowrap; }
+.form-toast button { min-height: 44px; padding: 0.25rem 0.7rem; border-radius: 6px; background: var(--form-soft); color: var(--form-text); font-weight: 600; white-space: nowrap; }
 .form-toast .form-toast-dismiss { display: grid; place-items: center; min-width: 44px; padding: 0; background: transparent; color: var(--form-muted); }
 .form-toast .form-toast-dismiss:hover { background: var(--form-soft); color: var(--form-text); }
+.form-inline-notice { margin-bottom: 12px; }
+.form-inline-notice .form-toast { position: relative; inset: auto; width: 100%; max-width: none; transform: none; animation: none; }
+.form-inline-notice .form-toast > span { flex: 1; min-width: 0; }
 @media (max-width: 480px) { .form-toast { width: calc(100vw - 1rem); gap: 0.35rem; padding-inline: 0.6rem; flex-wrap: wrap; justify-content: center; } .form-toast > span { flex: 1 1 100%; text-align: center; } .form-toast button:not(.form-toast-dismiss) { white-space: normal; } }
+.form-inline-notice .form-toast { width: 100%; }
+@media (max-width: 480px) { .form-inline-notice .form-toast > span { flex: 1 1 100%; } }
 .ws-respondent-preview .form-toast { position: absolute; }
 @keyframes form-toast-in { from { opacity: 0; transform: translate(-50%, -12px); } to { opacity: 1; transform: translate(-50%, 0); } }
 .form-alert { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; padding: 0.75rem 0.9rem; border: 1px solid color-mix(in srgb, var(--form-error) 45%, transparent); border-radius: var(--form-radius); background: color-mix(in srgb, var(--form-error) 10%, transparent); color: var(--form-error); font-size: 0.875rem; font-weight: 600; }
