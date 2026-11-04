@@ -45,8 +45,11 @@ it("opens lessons with any stored code language and saves them unchanged", async
     </ThemeProvider></LocaleProvider>,
   );
   await act(async () => { await Promise.resolve(); });
-  expect(editor.getBlock("js")!.props.language).toBe("javascript");
-  expect(editor.getBlock("odd")!.props.language).toBe("text");
+  const jsBlock = editor.getBlock("js");
+  const oddBlock = editor.getBlock("odd");
+  if (jsBlock?.type !== "codeBlock" || oddBlock?.type !== "codeBlock") throw new Error("Expected code blocks");
+  expect(jsBlock.props.language).toBe("javascript");
+  expect(oddBlock.props.language).toBe("text");
 
   // An unrelated edit saves every stored language name as it was.
   act(() => { editor.updateBlock("p", { content: "After, edited." }); });

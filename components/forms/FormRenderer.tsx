@@ -44,6 +44,12 @@ export interface FormRendererProps {
   footer?: React.ReactNode;
   /** Earlier answers were restored: the start screen offers to continue. */
   resuming?: boolean;
+  /** Last saved question, used to restore the respondent's place in multi-step forms. */
+  resumeFieldId?: string;
+  /** The respondent chose Continue from the restored-progress notice. */
+  continueRequested?: boolean;
+  /** A dismissible notice placed above the form cards, without covering the header. */
+  notice?: React.ReactNode;
   /** Skip the theme's start screen (editing a submitted response, logic debugger). */
   skipCover?: boolean;
 }
@@ -81,7 +87,10 @@ function useFlow(props: FormRendererProps, rootRef: React.RefObject<HTMLDivEleme
   const t = ui[language];
   const visible = useMemo(() => visibleFieldIds(def, answers), [def, answers]);
   const steps = useMemo(() => buildSteps(def, visible), [def, visible]);
-  const [stepIndex, setStepIndex] = useState(0);
+  const [stepIndex, setStepIndex] = useState(() => {
+    const savedField = props.resuming ? props.resumeFieldId : undefined;
+    return savedField ? Math.max(0, steps.findIndex((s) => s.fields.some((f) => f.id === savedField))) : 0;
+  });
   const [direction, setDirection] = useState<1 | -1>(1);
   const [touched, setTouched] = useState<Set<string>>(new Set());
   const [showErrors, setShowErrors] = useState(false);
@@ -179,7 +188,25 @@ export default function FormRenderer(props: FormRendererProps) {
   const flow = useFlow(props, rootRef);
   const cover = themeCover(props.definition);
   const [started, setStarted] = useState(props.skipCover || cover === "none");
+  const [focusSavedField, setFocusSavedField] = useState(false);
   const mode = props.definition.presentation;
+
+  useEffect(() => {
+    if (!props.continueRequested) return;
+    setStarted(true);
+    setFocusSavedField(true);
+  }, [props.continueRequested]);
+
+  useLayoutEffect(() => {
+    if (!started || !focusSavedField) return;
+    const saved = Array.from(rootRef.current?.querySelectorAll<HTMLElement>("[data-field-id]") ?? [])
+      .find((el) => el.dataset.fieldId === props.resumeFieldId && !el.closest("[inert]"));
+    if (saved) {
+      saved.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
+      saved.focus({ preventScroll: true });
+    }
+    setFocusSavedField(false);
+  }, [started, focusSavedField, props.resumeFieldId]);
 
   useUsableMark("quiz.question", !!props.journey && started);
   useEffect(() => {
@@ -190,6 +217,7 @@ export default function FormRenderer(props: FormRendererProps) {
   const start = () => {
     if (props.journey) startJourney("quiz.question");
     setStarted(true);
+    if (props.resuming) setFocusSavedField(true);
     flow.play("start");
     haptics.medium();
   };
@@ -432,6 +460,7 @@ function PagedFlow({ flow, props, showHeader }: { flow: Flow; props: FormRendere
     return (
       <div ref={topRef} className="form-page-body form-page-body--chrome" data-chrome="microsoft">
         <div className="form-layout-flat">
+          {props.notice && <div className="form-inline-notice">{props.notice}</div>}
           {header}
           <form noValidate onSubmit={submitForm} className="form-column">{progress}{questions}</form>
         </div>
@@ -442,6 +471,7 @@ function PagedFlow({ flow, props, showHeader }: { flow: Flow; props: FormRendere
     return (
       <div ref={topRef} className="form-page-body form-page-body--chrome" data-chrome={chrome}>
         <div className="form-layout-flat">
+          {props.notice && <div className="form-inline-notice">{props.notice}</div>}
           {logo}
           {header}
           {progress}
@@ -453,6 +483,7 @@ function PagedFlow({ flow, props, showHeader }: { flow: Flow; props: FormRendere
   return (
     <div ref={topRef} className="form-page-body">
       <div className={`form-layout-${layout}`}>
+        {props.notice && <div className="form-inline-notice">{props.notice}</div>}
         {logo}
         {header}
         {progress}

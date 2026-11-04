@@ -19,7 +19,8 @@ vi.mock("@/lib/sfx", () => ({ sfx: { isEnabled: () => false } }));
 vi.mock("@/components/Logo", () => ({ default: () => null }));
 vi.mock("@/components/ThemeToggle", () => ({ ThemeToggle: () => null }));
 vi.mock("@/components/forms/FormRenderer", () => ({
-  default: (props: ComponentProps<typeof FormRenderer>) => <section>
+  default: (props: ComponentProps<typeof FormRenderer>) => <section data-continue-requested={String(!!props.continueRequested)} data-resume-field={props.resumeFieldId}>
+    {props.notice}
     <p>Answers: {JSON.stringify(props.answers)}</p>
     <button onClick={() => props.onAnswer("name", "Example answer")}>Answer</button>
     <button onClick={() => props.onSubmit()}>Submit</button>
@@ -118,10 +119,34 @@ it("cancels pending partial saves and clears the resume link on start over", asy
   render(<RespondToForm shareId="a" />);
   await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue on another device" })));
   expect(screen.getByRole("textbox", { name: "Copy link" })).toBeInTheDocument();
+  await act(async () => fireEvent.click(screen.getByRole("button", { name: "Submit" })));
   fireEvent.click(screen.getByRole("button", { name: "Start over" }));
   expect(screen.queryByRole("textbox", { name: "Copy link" })).not.toBeInTheDocument();
   act(() => vi.advanceTimersByTime(3000));
-  expect(m.submit).not.toHaveBeenCalled();
+  expect(m.submit).toHaveBeenCalledTimes(1);
+  expect(m.submit.mock.calls[0][0]).toMatchObject({ final: true });
+});
+
+it("continues a saved response at its last field without erasing answers", () => {
+  localStorage.setItem("chaos-form:a:v1", JSON.stringify({ answers: { name: "Kept answer" }, lastFieldId: "name", language: "en", startedAt: 123, submissionKey: "saved", version: 1 }));
+  const { container } = render(<RespondToForm shareId="a" />);
+  expect(screen.getByText("We restored the answers you started earlier.")).toBeInTheDocument();
+  expect(screen.queryByRole("button", { name: "Start over" })).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Continue where you left off" }));
+  expect(container.querySelector("[data-continue-requested='true']")).toHaveAttribute("data-resume-field", "name");
+  expect(screen.getByText(/Answers:/)).toHaveTextContent("Kept answer");
+  expect(screen.queryByText("We restored the answers you started earlier.")).not.toBeInTheDocument();
+  expect(JSON.parse(localStorage.getItem("chaos-form:a:v1")!).answers).toEqual({ name: "Kept answer" });
+});
+
+it("dismisses the resume notice without clearing stored progress", () => {
+  localStorage.setItem("chaos-form:a:v1", JSON.stringify({ answers: { name: "Still here" }, language: "en", startedAt: 123, submissionKey: "saved", version: 1 }));
+  const { container } = render(<RespondToForm shareId="a" />);
+  fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
+  expect(screen.queryByText("We restored the answers you started earlier.")).not.toBeInTheDocument();
+  expect(container.querySelector("[data-continue-requested='false']")).toBeInTheDocument();
+  expect(screen.getByText(/Answers:/)).toHaveTextContent("Still here");
+  expect(localStorage.getItem("chaos-form:a:v1")).toContain("Still here");
 });
 
 it("keeps the same edit token when a final submission is retried", async () => {
