@@ -20,6 +20,7 @@ vi.mock("@/components/Logo", () => ({ default: () => null }));
 vi.mock("@/components/ThemeToggle", () => ({ ThemeToggle: () => null }));
 vi.mock("@/components/forms/FormRenderer", () => ({
   default: (props: ComponentProps<typeof FormRenderer>) => <section data-continue-requested={String(!!props.continueRequested)} data-resume-field={props.resumeFieldId}>
+    {props.notice}
     <p>Answers: {JSON.stringify(props.answers)}</p>
     <button onClick={() => props.onAnswer("name", "Example answer")}>Answer</button>
     <button onClick={() => props.onSubmit()}>Submit</button>
