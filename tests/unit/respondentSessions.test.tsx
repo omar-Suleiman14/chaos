@@ -129,7 +129,7 @@ it("cancels pending partial saves and clears the resume link on start over", asy
 
 it("continues a saved response at its last field without erasing answers", () => {
   localStorage.setItem("chaos-form:a:v1", JSON.stringify({ answers: { name: "Kept answer" }, lastFieldId: "name", language: "en", startedAt: 123, submissionKey: "saved", version: 1 }));
-  const { container } = render(<RespondToForm shareId="a" />);
+  const { container, unmount } = render(<RespondToForm shareId="a" />);
   expect(screen.getByText("We restored the answers you started earlier.")).toBeInTheDocument();
   expect(screen.queryByRole("button", { name: "Start over" })).not.toBeInTheDocument();
   fireEvent.click(screen.getByRole("button", { name: "Continue where you left off" }));
@@ -137,16 +137,55 @@ it("continues a saved response at its last field without erasing answers", () =>
   expect(screen.getByText(/Answers:/)).toHaveTextContent("Kept answer");
   expect(screen.queryByText("We restored the answers you started earlier.")).not.toBeInTheDocument();
   expect(JSON.parse(localStorage.getItem("chaos-form:a:v1")!).answers).toEqual({ name: "Kept answer" });
+  expect(localStorage.getItem("chaos-resume-notice:a:v1:local")).toBe("1");
+  unmount();
+  const reopened = render(<RespondToForm shareId="a" />);
+  expect(screen.queryByRole("button", { name: "Continue where you left off" })).not.toBeInTheDocument();
+  expect(reopened.container.querySelector("[data-continue-requested='true']")).toHaveAttribute("data-resume-field", "name");
+  expect(screen.getByText(/Answers:/)).toHaveTextContent("Kept answer");
 });
 
 it("dismisses the resume notice without clearing stored progress", () => {
   localStorage.setItem("chaos-form:a:v1", JSON.stringify({ answers: { name: "Still here" }, language: "en", startedAt: 123, submissionKey: "saved", version: 1 }));
-  const { container } = render(<RespondToForm shareId="a" />);
+  const { container, unmount } = render(<RespondToForm shareId="a" />);
   fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
   expect(screen.queryByText("We restored the answers you started earlier.")).not.toBeInTheDocument();
   expect(container.querySelector("[data-continue-requested='false']")).toBeInTheDocument();
   expect(screen.getByText(/Answers:/)).toHaveTextContent("Still here");
   expect(localStorage.getItem("chaos-form:a:v1")).toContain("Still here");
+  unmount();
+  render(<RespondToForm shareId="a" />);
+  expect(screen.queryByRole("button", { name: "Continue where you left off" })).not.toBeInTheDocument();
+  expect(screen.getByText(/Answers:/)).toHaveTextContent("Still here");
+});
+
+it("acknowledges the restored notice after answering, without affecting other forms", () => {
+  for (const share of ["a", "b"]) {
+    localStorage.setItem(`chaos-form:${share}:v1`, JSON.stringify({ answers: { name: "Saved" }, language: "en", startedAt: 123, submissionKey: `saved-${share}`, version: 1 }));
+  }
+  const { unmount } = render(<RespondToForm shareId="a" />);
+  fireEvent.click(screen.getByRole("button", { name: "Answer" }));
+  unmount();
+  const reopened = render(<RespondToForm shareId="a" />);
+  expect(screen.queryByRole("button", { name: "Continue where you left off" })).not.toBeInTheDocument();
+  reopened.unmount();
+  render(<RespondToForm shareId="b" />);
+  expect(screen.getByRole("button", { name: "Continue where you left off" })).toBeInTheDocument();
+});
+
+it("scopes an acknowledged resume link to the exact token", () => {
+  m.search = "resume=first";
+  m.resumed = { answers: { name: "Private answer" }, language: "en", version: 1 };
+  const { unmount } = render(<RespondToForm shareId="a" />);
+  fireEvent.click(screen.getByRole("button", { name: "Continue where you left off" }));
+  expect(localStorage.getItem("chaos-resume-notice:a:v1:first")).toBe("1");
+  unmount();
+  const reopened = render(<RespondToForm shareId="a" />);
+  expect(screen.queryByRole("button", { name: "Continue where you left off" })).not.toBeInTheDocument();
+  reopened.unmount();
+  m.search = "resume=second";
+  render(<RespondToForm shareId="a" />);
+  expect(screen.getByRole("button", { name: "Continue where you left off" })).toBeInTheDocument();
 });
 
 it("keeps the same edit token when a final submission is retried", async () => {

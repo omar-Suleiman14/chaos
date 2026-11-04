@@ -191,10 +191,10 @@
 .form-input[aria-invalid="true"] { border-color: var(--form-error); }
 .form-input--line {
   padding: 0.55rem 0.1rem; border: 0; border-bottom: 2px solid color-mix(in srgb, var(--form-accent) 38%, transparent); border-radius: 0;
-  background: transparent; font-size: clamp(1.2rem, 3cqi, 1.6rem); color: var(--form-accent);
+  background: transparent; font-size: clamp(1.2rem, 3cqi, 1.6rem); color: var(--form-text);
 }
 .form-input--line:focus { box-shadow: 0 2px 0 0 var(--form-accent); border-bottom-color: var(--form-accent); }
-.form-input--line::placeholder { color: color-mix(in srgb, var(--form-accent) 45%, transparent); }
+.form-input--line::placeholder { color: var(--form-muted); }
 .form-input--lg { font-size: 1.15rem; padding-block: 1rem; }
 textarea.form-input { resize: vertical; min-height: 5rem; }
 .form-buttons-brutal .form-input:not(.form-input--line) { border: 2.5px solid var(--form-text); border-radius: 0; }

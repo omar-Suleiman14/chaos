@@ -214,6 +214,9 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   const def = (editing?.definition ?? form.definition) as FormDefinition;
   const storageKey = `chaos-form:${shareId}:v${form.version}`;
   const receiptKey = `chaos-receipt:${shareId}`;
+  // The acknowledgement is scoped to this form version and, for private resume
+  // links, to that link. A restored draft should not prompt again on every reload.
+  const noticeKey = `chaos-resume-notice:${shareId}:v${form.version}:${resumeToken ?? "local"}`;
   const minimal = useContext(MinimalContext);
   const submit = useMutation(api.respond.submitResponse);
   const update = useMutation(api.respond.updateSubmission);
@@ -270,6 +273,14 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
     } else if (local && Object.keys(local.answers ?? {}).length) {
       setRestored(true);
     }
+    if (!editing && (resumed || (local && Object.keys(local.answers ?? {}).length))) {
+      try {
+        if (window.localStorage.getItem(noticeKey) === "1") {
+          setNoticeVisible(false);
+          setContinueRequested(true);
+        }
+      } catch { /* A blocked storage read should not block answering. */ }
+    }
     // Link values win over stored ones, so reopening a tagged link keeps its latest source.
     const fromLink = readHidden(form.hiddenFields ?? []);
     const base = local ?? { answers: {}, language, startedAt: Date.now(), submissionKey: randomHex(16), version: form.version };
@@ -282,6 +293,13 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
     if (editing) return;
     try { window.localStorage.setItem(storageKey, JSON.stringify(next)); } catch { setStorageOk(false); }
   }, [editing, storageKey]);
+
+  const acknowledgeRestore = useCallback(() => {
+    setNoticeVisible(false);
+    if (!editing && restored) {
+      try { window.localStorage.setItem(noticeKey, "1"); } catch { /* The notice still disappears for this visit. */ }
+    }
+  }, [editing, restored, noticeKey]);
 
   const language = progress?.language ?? def.defaultLanguage;
   const t = text[language];
@@ -296,7 +314,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   }, [form.collectPartial, editing, submit, shareId, accessCode]);
 
   const onAnswer = (fieldId: string, value: AnswerValue | undefined) => {
-    setNoticeVisible(false);
+    acknowledgeRestore();
     setServerErrors((prev) => { const { [fieldId]: _, ...rest } = prev; return rest; });
     setProgress((prev) => {
       if (!prev) return prev;
@@ -364,6 +382,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
       setReceipt(r);
       try {
         window.localStorage.removeItem(storageKey);
+        window.localStorage.removeItem(noticeKey);
         window.localStorage.setItem(receiptKey, JSON.stringify(r));
       } catch { /* storage unavailable */ }
     } catch (err) {
@@ -403,7 +422,9 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
     setReceipt(null);
     setStudyResponseId(null);
     setRestored(false);
-    try { window.localStorage.removeItem(storageKey); window.localStorage.removeItem(receiptKey); } catch { /* ignore */ }
+    setContinueRequested(false);
+    setNoticeVisible(true);
+    try { window.localStorage.removeItem(storageKey); window.localStorage.removeItem(receiptKey); window.localStorage.removeItem(noticeKey); } catch { /* ignore */ }
   };
 
   const [now] = useState(() => Date.now());
@@ -428,8 +449,8 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   const notice = (editing || restored) && noticeVisible && (
     <output className="form-toast" dir={dir} >
       <span>{editing ? t.editing : t.restored}</span>
-      {!editing && <button type="button" onClick={() => { setContinueRequested(true); setNoticeVisible(false); }}>{t.continueHere}</button>}
-      <button type="button" className="form-toast-dismiss" aria-label={t.dismiss} onClick={() => setNoticeVisible(false)}><X size={16} aria-hidden="true" /></button>
+      {!editing && <button type="button" onClick={() => { setContinueRequested(true); acknowledgeRestore(); }}>{t.continueHere}</button>}
+      <button type="button" className="form-toast-dismiss" aria-label={t.dismiss} onClick={acknowledgeRestore}><X size={16} aria-hidden="true" /></button>
     </output>
   );
   const inlineNotice = (def.presentation === "page" || def.presentation === "sections") && themeCover(def) === "none";
@@ -484,7 +505,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
             notice={inlineNotice ? notice : undefined}
             skipCover={!!editing || minimal}
             onProgress={(id) => {
-              setNoticeVisible(false);
+              acknowledgeRestore();
               setProgress((p) => {
                 if (!p || p.lastFieldId === id) return p;
                 const next = { ...p, lastFieldId: id };
