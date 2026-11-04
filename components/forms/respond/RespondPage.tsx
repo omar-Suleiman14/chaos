@@ -14,7 +14,7 @@ import { Copy, Download, RotateCcw, Volume2, VolumeX, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import FormRenderer, { EndingView, formUi, themeClass, themeStyle } from "@/components/forms/FormRenderer";
 import type { UploadedFile } from "@/components/forms/FormRenderer";
-import { themeFollowsAppearance, themeSound } from "@/components/forms/formThemes";
+import { themeCover, themeFollowsAppearance, themeSound } from "@/components/forms/formThemes";
 import Logo from "@/components/Logo";
 import { ThemeToggle } from "@/components/ThemeToggle";
 import { emptyDefinition, isRtl, languageNames, localizedMeta, selectEnding } from "@/convex/formLogic";
@@ -425,6 +425,14 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   const dir = isRtl(language) ? "rtl" : "ltr";
   const score = def.quiz?.enabled && receipt && receipt.quizScore !== undefined && receipt.quizScore !== null
     ? { value: receipt.quizScore, max: receipt.quizMaxScore ?? 0 } : null;
+  const notice = (editing || restored) && noticeVisible && (
+    <output className="form-toast" dir={dir} >
+      <span>{editing ? t.editing : t.restored}</span>
+      {!editing && <button type="button" onClick={() => { setContinueRequested(true); setNoticeVisible(false); }}>{t.continueHere}</button>}
+      <button type="button" className="form-toast-dismiss" aria-label={t.dismiss} onClick={() => setNoticeVisible(false)}><X size={16} aria-hidden="true" /></button>
+    </output>
+  );
+  const inlineNotice = (def.presentation === "page" || def.presentation === "sections") && themeCover(def) === "none";
 
   return (
     <Shell embed={embed} def={def} plain={form.hideBranding} languageSwitch={languageSwitch} immersive={receipt ? def.presentation === "conversational" || def.presentation === "swipe" : !(form.alreadyResponded && !editing) && !notOpen}>
@@ -457,13 +465,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
         <Message title={localizedMeta(def, language).title} body={t.notOpenYet(formatScheduleTime(form.opensAt!, form.timezone ?? undefined, language))} lang={language} />
       ) : (
         <>
-          {(editing || restored) && noticeVisible && (
-            <output className="form-toast" dir={dir} >
-              <span>{editing ? t.editing : t.restored}</span>
-              {!editing && <button type="button" onClick={() => { setContinueRequested(true); setNoticeVisible(false); }}>{t.continueHere}</button>}
-              <button type="button" className="form-toast-dismiss" aria-label={t.dismiss} onClick={() => setNoticeVisible(false)}><X size={16} aria-hidden="true" /></button>
-            </output>
-          )}
+          {!inlineNotice && notice}
           <FormRenderer
             journey
             definition={def}
@@ -479,6 +481,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
             resuming={restored}
             resumeFieldId={progress.lastFieldId}
             continueRequested={continueRequested}
+            notice={inlineNotice ? notice : undefined}
             skipCover={!!editing || minimal}
             onProgress={(id) => {
               setNoticeVisible(false);
