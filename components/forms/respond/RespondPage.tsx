@@ -10,7 +10,7 @@ import { useSearchParams } from "next/navigation";
 import { useMutation, useQuery } from "convex/react";
 import posthog from "@/lib/analytics";
 import { SignInButton, SignOutButton } from "@/lib/auth/client";
-import { Copy, Download, RotateCcw, Volume2, VolumeX } from "lucide-react";
+import { Copy, Download, RotateCcw, Volume2, VolumeX, X } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import FormRenderer, { EndingView, formUi, themeClass, themeStyle } from "@/components/forms/FormRenderer";
 import type { UploadedFile } from "@/components/forms/FormRenderer";
@@ -47,6 +47,7 @@ const text = {
     startOver: "Start over", resume: "Continue on another device", resumeHelp: "Anyone with this private link can see and continue your answers for 30 days.",
     copy: "Copy link", copied: "Copied", receipt: "Receipt", editLink: "Edit your response later with this private link:", download: "Save receipt",
     retry: "Try again", sending: "Sending…", restored: "We restored the answers you started earlier.", editing: "You are editing a submitted response.",
+    continueHere: "Continue where you left off", dismiss: "Dismiss",
     saved: "Saved", update: "Update response", notOpen: "Not open yet",
     notOpenYet: (d: string) => `This form is not open yet. It opens ${d}.`, closedOn: (d: string) => `This form closed ${d}.`,
     inFlight: "Answers sent after the closing time are not accepted.",
@@ -62,6 +63,7 @@ const text = {
     startOver: "البدء من جديد", resume: "المتابعة على جهاز آخر", resumeHelp: "يمكن لأي شخص لديه هذا الرابط الخاص رؤية إجاباتك ومتابعتها لمدة 30 يومًا.",
     copy: "نسخ الرابط", copied: "تم النسخ", receipt: "الإيصال", editLink: "يمكنك تعديل ردك لاحقًا عبر هذا الرابط الخاص:", download: "حفظ الإيصال",
     retry: "حاول مرة أخرى", sending: "جارٍ الإرسال…", restored: "استعدنا الإجابات التي بدأتها سابقًا.", editing: "أنت تعدّل ردًا تم إرساله.",
+    continueHere: "تابع من حيث توقفت", dismiss: "إخفاء",
     saved: "تم الحفظ", update: "تحديث الرد", notOpen: "لم يفتح بعد",
     notOpenYet: (d: string) => `لم يفتح هذا النموذج بعد. يفتح ${d}.`, closedOn: (d: string) => `أُغلق هذا النموذج ${d}.`,
     inFlight: "لا تُقبل الإجابات المرسلة بعد وقت الإغلاق.",
@@ -228,6 +230,8 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   const [ready, setReady] = useState(false);
   const [progress, setProgress] = useState<LocalProgress | null>(null);
   const [restored, setRestored] = useState(false);
+  const [noticeVisible, setNoticeVisible] = useState(true);
+  const [continueRequested, setContinueRequested] = useState(false);
   const [receipt, setReceipt] = useState<Receipt | null>(null);
   // Celebrate a submission once, when it happens; a receipt restored after a refresh just shows the result.
   const [justSubmitted, setJustSubmitted] = useState(false);
@@ -292,6 +296,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
   }, [form.collectPartial, editing, submit, shareId, accessCode]);
 
   const onAnswer = (fieldId: string, value: AnswerValue | undefined) => {
+    setNoticeVisible(false);
     setServerErrors((prev) => { const { [fieldId]: _, ...rest } = prev; return rest; });
     setProgress((prev) => {
       if (!prev) return prev;
@@ -452,10 +457,11 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
         <Message title={localizedMeta(def, language).title} body={t.notOpenYet(formatScheduleTime(form.opensAt!, form.timezone ?? undefined, language))} lang={language} />
       ) : (
         <>
-          {(editing || restored) && (
+          {(editing || restored) && noticeVisible && (
             <output className="form-toast" dir={dir} >
               <span>{editing ? t.editing : t.restored}</span>
-              {!editing && <button type="button" onClick={startOver}>{t.startOver}</button>}
+              {!editing && <button type="button" onClick={() => { setContinueRequested(true); setNoticeVisible(false); }}>{t.continueHere}</button>}
+              <button type="button" className="form-toast-dismiss" aria-label={t.dismiss} onClick={() => setNoticeVisible(false)}><X size={16} aria-hidden="true" /></button>
             </output>
           )}
           <FormRenderer
@@ -471,8 +477,18 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
             uploadFile={uploadFile}
             files={files}
             resuming={restored}
+            resumeFieldId={progress.lastFieldId}
+            continueRequested={continueRequested}
             skipCover={!!editing || minimal}
-            onProgress={(id) => setProgress((p) => (p ? { ...p, lastFieldId: id } : p))}
+            onProgress={(id) => {
+              setNoticeVisible(false);
+              setProgress((p) => {
+                if (!p || p.lastFieldId === id) return p;
+                const next = { ...p, lastFieldId: id };
+                persist(next);
+                return next;
+              });
+            }}
             footer={
               <div className="space-y-3 text-xs form-muted" dir={dir}>
                 {/* Honeypot: invisible to people, tempting to bots. Flagged, never discarded. */}

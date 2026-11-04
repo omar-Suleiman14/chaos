@@ -58,6 +58,25 @@ describe("google-forms chrome", () => {
     expect(onAnswer).toHaveBeenCalledWith("day", undefined);
     expect(onAnswer).toHaveBeenCalledTimes(2);
   });
+
+  it("resumes a multi-step form on the saved question", () => {
+    const def = { ...definition(googleFormsTheme), presentation: "conversational" as const };
+    const { container } = render(<FormRenderer definition={def} language="en" answers={{ name: "Sam" }}
+      onAnswer={vi.fn()} onSubmit={vi.fn()} resuming resumeFieldId="day" skipCover />);
+    expect(container.querySelector("[data-field-id='day']")).toBeInTheDocument();
+    expect(container.querySelector("[data-field-id='name']")).not.toBeInTheDocument();
+  });
+
+  it("moves to the saved field when Continue is chosen on a single-page form", () => {
+    const def = definition(googleFormsTheme);
+    const props = { definition: def, language: "en" as const, answers: { name: "Sam" }, onAnswer: vi.fn(), onSubmit: vi.fn(), resuming: true, resumeFieldId: "day" };
+    const { rerender, container } = render(<FormRenderer {...props} continueRequested={false} />);
+    const saved = container.querySelector<HTMLElement>("[data-field-id='day']")!;
+    expect(saved).toBeInTheDocument();
+    rerender(<FormRenderer {...props} continueRequested />);
+    expect(saved.scrollIntoView).toHaveBeenCalled();
+    expect(saved).toHaveFocus();
+  });
 });
 
 describe("microsoft-forms chrome", () => {
