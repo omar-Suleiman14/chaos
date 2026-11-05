@@ -4,6 +4,15 @@
       <stop offset="0%" stop-color="#fca535" />
       <stop offset="100%" stop-color="#e9482b" />
     </linearGradient>
+    <linearGradient id="eyeInk" x1="12%" y1="0%" x2="80%" y2="100%">
+      <stop offset="0%" stop-color="#30282d" />
+      <stop offset="48%" stop-color="#161317" />
+      <stop offset="100%" stop-color="#292026" />
+    </linearGradient>
+    <linearGradient id="eyeShine" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#fff9f2" stop-opacity=".22" />
+      <stop offset="100%" stop-color="#fff9f2" stop-opacity="0" />
+    </linearGradient>
     <filter id="glow" x="-100%" y="-100%" width="300%" height="300%">
       <feGaussianBlur in="SourceGraphic" stdDeviation="40" result="blurRaw" />
       <feComponentTransfer in="blurRaw" result="blurEnhanced">
@@ -16,5 +25,18 @@
     </filter>
   </defs>
 
-  <rect x="64" y="64" width="384" height="384" rx="100" fill="url(#chaosOrange)" filter="url(#glow)"/>
+  <!-- Keep the original Chaos square intact. -->
+  <rect x="64" y="64" width="384" height="384" rx="100" fill="url(#chaosOrange)" filter="url(#glow)" />
+
+  <!-- Two deliberately different eyes give the square a personality. -->
+  <g transform="rotate(-24 195 239)">
+    <ellipse cx="195" cy="239" rx="43" ry="56" fill="url(#eyeInk)" />
+    <ellipse cx="190" cy="213" rx="31" ry="23" fill="url(#eyeShine)" />
+    <circle cx="178" cy="218" r="6" fill="#fff9eb" />
+  </g>
+  <g transform="rotate(24 325 253)">
+    <ellipse cx="325" cy="253" rx="45" ry="35" fill="url(#eyeInk)" />
+    <ellipse cx="318" cy="236" rx="33" ry="16" fill="url(#eyeShine)" />
+    <circle cx="303" cy="242" r="6" fill="#fff9eb" />
+  </g>
 </svg>
