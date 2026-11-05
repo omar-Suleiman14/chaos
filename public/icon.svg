@@ -1,34 +1,22 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <defs>
-    <linearGradient id="chaosBody" x1="10%" y1="8%" x2="86%" y2="95%">
-      <stop offset="0%" stop-color="#ffbe36"/>
-      <stop offset="40%" stop-color="#ff8829"/>
-      <stop offset="100%" stop-color="#ef3e54"/>
+    <linearGradient id="chaosWhite" x1="14%" y1="10%" x2="92%" y2="94%">
+      <stop offset="0%" stop-color="#ffffff"/>
+      <stop offset="64%" stop-color="#fffcfa"/>
+      <stop offset="100%" stop-color="#e9e6e7"/>
     </linearGradient>
   </defs>
 
-  <!-- One organic silhouette, not a rounded square or a glove. -->
-  <path
-    d="M331 76C365 67 399 80 429 108C455 132 467 166 453 197C441 225 415 236 398 253C379 272 398 307 395 335C390 400 339 453 273 458C206 464 145 435 116 384C104 362 93 346 74 335C46 322 36 296 44 265C51 230 75 207 111 201C130 198 136 188 141 169C149 135 168 116 198 116C232 115 259 145 299 157C321 164 337 153 344 138C352 123 341 114 328 110C313 105 312 89 323 80C325 78 328 77 331 76Z"
-    fill="url(#chaosBody)"
-    stroke="#42172d"
-    stroke-width="11"
-    stroke-linejoin="round"
-  />
-
-  <!-- Small inset shine accent follows the character's top-left contour. -->
-  <path
-    d="M57 265C66 228 93 216 121 210C145 203 147 174 155 157C166 130 181 126 199 126C220 127 233 137 247 146C220 132 207 133 194 136C173 139 160 157 155 180C150 204 134 216 113 221C88 227 70 242 57 265Z"
-    fill="#ffd357"
-    opacity=".42"
-  />
-
-  <!-- White 'side-cut' expressive eyes, inspired by the reference's playful geometry. -->
-  <g fill="#ffffff">
+  <!-- Original curved Chaos silhouette, with a clean white body. -->
+  <path d="M331 76C365 67 399 80 429 108C455 132 467 166 453 197C441 225 415 236 398 253C379 272 398 307 395 335C390 400 339 453 273 458C206 464 145 435 116 384C104 362 93 346 74 335C46 322 36 296 44 265C51 230 75 207 111 201C130 198 136 188 141 169C149 135 168 116 198 116C232 115 259 145 299 157C321 164 337 153 344 138C352 123 341 114 328 110C313 105 312 89 323 80C325 78 328 77 331 76Z" fill="url(#chaosWhite)" stroke="#30252e" stroke-width="11" stroke-linejoin="round"/>
+  <!-- Restrained edge shading follows the friendly rounded contour. -->
+  <path d="M58 264C66 228 93 214 118 210C143 206 148 177 155 157C164 132 179 127 199 126C218 127 236 139 247 145C222 133 208 133 194 136C173 139 161 155 155 180C150 204 134 217 112 221C88 227 70 242 58 264Z" fill="#d6d1d4" opacity=".63"/>
+  <!-- Black side-notched eyes with the same silhouettes as the last version. -->
+  <g fill="#30252e">
     <path d="M220 190C244 187 257 215 257 250C257 280 239 305 218 313C193 322 179 302 178 286C177 277 183 270 216 251L190 233C182 229 185 217 191 208C199 197 208 191 220 190Z"/>
     <path d="M315 214C336 212 348 236 348 269C348 298 335 320 314 325C290 330 277 310 276 293C275 283 281 278 307 263L287 248C279 242 282 234 290 224C296 217 305 214 315 214Z"/>
+    <!-- The original open grin, with pink tongue inside. -->
+    <path d="M214 332C224 328 240 351 257 352C274 353 290 337 297 336C310 336 301 361 288 374C272 391 245 391 227 378C214 368 206 345 214 332Z"/>
   </g>
-
-  <!-- A compact, asymmetric smile keeps the character distinctly Chaos. -->
-  <path d="M221 327C243 344 265 351 288 334C294 330 299 336 296 346C291 365 271 375 252 375C234 375 216 364 214 346C212 334 215 324 221 327Z" fill="#42172d"/>
+  <path d="M225 370C231 356 245 357 256 368C267 357 281 358 286 369C271 385 243 386 225 370Z" fill="#ec93b5"/>
 </svg>
