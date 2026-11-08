@@ -19,6 +19,14 @@ import { BookMarked, Image as ImageIcon, PlayCircle, Video } from "lucide-react"
 import { formatTimestamp, parseTimestamp, parseYouTube } from "@/lib/learn/doc";
 import type { LessonSource } from "@/lib/learn/types";
 import { useCopy } from "@/lib/i18n";
+import { isolatedBlock } from "./EditorErrorBoundary";
+
+/**
+ * createReactBlockSpec for blocks without editable inline content, with the renderer isolated:
+ * a block that throws shows a notice in place and the rest of the editor keeps working.
+ */
+const createIsolatedBlockSpec = ((config: never, implementation: { render: React.ComponentType<never> }) =>
+  createReactBlockSpec(config, { ...implementation, render: isolatedBlock(implementation.render) } as never)) as unknown as typeof createReactBlockSpec;
 
 /** What custom blocks need from the lesson around them (its sources, dialogs owned by the editor page). */
 export interface LessonEditorBridge {
@@ -150,7 +158,7 @@ export const LessonImage = createReactBlockSpec(
 const stop = (e: React.SyntheticEvent) => e.stopPropagation();
 
 /* oxlint-disable jsx-a11y/no-noninteractive-element-interactions, jsx-a11y/no-static-element-interactions -- These containers stop editor shortcuts bubbling from embedded form controls; they are not separate interactive controls. */
-export const YouTube = createReactBlockSpec(
+export const YouTube = createIsolatedBlockSpec(
   {
     type: "youtube",
     content: "none",
@@ -223,7 +231,7 @@ export const YouTube = createReactBlockSpec(
 
 
 /* oxlint-disable jsx-a11y/no-static-element-interactions -- These containers stop editor shortcuts bubbling from embedded form controls; they are not separate interactive controls. */
-export const SourceBlock = createReactBlockSpec(
+export const SourceBlock = createIsolatedBlockSpec(
   { type: "source", content: "none", propSchema: { sourceId: { default: "" }, locator: { default: "" }, note: { default: "" } } },
   {
     render: function SourceCard({ block, editor }) {
@@ -324,7 +332,7 @@ function RequiredToggle({ checked, onChange }: { checked: boolean; onChange: (va
   return <label className="lx-edu__required"><input type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} />{t.required}</label>;
 }
 
-export const LessonDiagram = createReactBlockSpec(
+export const LessonDiagram = createIsolatedBlockSpec(
   { type: "lessonDiagram", content: "none", propSchema: { format: { default: "mermaid" }, text: { default: "flowchart LR\n  A[Learn] --> B[Practice] --> C[Understand]" } } },
   { render: function DiagramBlock({ block, editor }) {
     const t = useCopy(eduCopy);
@@ -337,7 +345,7 @@ export const LessonDiagram = createReactBlockSpec(
     );
   } },
 );
-export const LessonQuiz = createReactBlockSpec(
+export const LessonQuiz = createIsolatedBlockSpec(
  { type: "lessonQuiz", propSchema: { required: { default: false }, assetKind: { default: "form", values: ["form", "quiz"] as const }, assetId: { default: "" } }, content: "none" },
  { render: function QuizBlock({ block, editor }) {
   if (!editor.isEditable) return <div contentEditable={false} className="lx-panel">{block.props.assetId ? <InlineQuiz asset={{ kind: block.props.assetKind, id: block.props.assetId }} /> : null}</div>;
@@ -348,7 +356,7 @@ export const LessonQuiz = createReactBlockSpec(
   );
  } }
 );
-export const LessonFlashcards = createReactBlockSpec(
+export const LessonFlashcards = createIsolatedBlockSpec(
   { type: "lessonFlashcards", propSchema: { setId: { default: "" }, required: { default: false } }, content: "none" },
   { render: function FlashcardsBlock({ block, editor }) {
     if (!editor.isEditable) return <div contentEditable={false} className="lx-panel">{block.props.setId ? <InlineFlashcards setId={block.props.setId} /> : null}</div>;
