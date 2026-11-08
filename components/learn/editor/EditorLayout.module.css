@@ -52,8 +52,28 @@
   max-width: 100%;
   white-space: normal;
 }
+/* Phones: lesson settings open as a bottom sheet within thumb reach, above the safe area. */
 @media (max-width: 640px) {
   .layout :global(.lx-edit__side) {
+    top: auto;
+    bottom: 0;
+    inset-inline: 0;
+    width: auto;
+    max-height: min(85dvh, 85vh);
     padding-inline: 16px;
+    padding-bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+    border-inline-start: 0;
+    border-top: 1px solid var(--ws-line);
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -24px 60px -30px rgba(0, 0, 0, 0.6);
+    animation-name: lx-sheet;
+  }
+}
+@keyframes lx-sheet {
+  from { transform: translateY(24px); opacity: 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .layout :global(.lx-edit__side) {
+    animation: none;
   }
 }

@@ -168,7 +168,7 @@ Tests added: `tests/unit/lessonEditorPolicy.test.ts`, `lessonSaveState.test.ts`,
 | Respect safe areas | Device | Needs notched hardware. |
 | Keep focused content visible | Existing | `scroll-margin-top` on blocks. |
 | Prevent popover clipping | Existing | Menus fit 320px (`mobile.spec.ts`). |
-| Use bottom sheets for complex mobile settings | Partial | Settings drawer exists; not a bottom sheet. |
+| Use bottom sheets for complex mobile settings | Done | Lesson settings open as a bottom sheet under 640px, above the safe area (`EditorLayout.module.css`). |
 | Preserve unsaved work on dismiss | Done | Unload guard while anything is unsaved; flush on unmount; browser recovery copy. |
 | Support keyboard-only operation | Existing | Keyboard reorder, menus, dialogs. |
 | Add screen reader roles and announcements | Existing | `announce.ts` live region; save state is a polite live `output`. |
