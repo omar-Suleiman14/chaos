@@ -42,7 +42,8 @@
     "knip": "knip",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
-    "knip:check": "node scripts/knip-check.mjs"
+    "knip:check": "node scripts/knip-check.mjs",
+    "licenses:check": "tsx scripts/license-audit.ts"
   },
   "dependencies": {
     "@better-auth/oauth-provider": "~1.6.33",

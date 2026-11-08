@@ -15,7 +15,7 @@ import type { Id, Doc } from "@/convex/_generated/dataModel";
 import type { LessonDocument } from "@/convex/learnModel";
 import { detachSource, parseCitationLocator, replaceBlockCitation, sourceIds, sourceView, useLearnMediaClient, type NativeSource, type NativeCitation } from "@/lib/learn/mediaClient";
 import { formatLocator } from "@/lib/learn/chaosDocument";
-import { ChevronLeft, Archive, Check, Copy, Eye, FolderInput, History, Info, Layers, MoreHorizontal, PanelRight, RotateCcw, Send, Trash2, Undo2, X } from "lucide-react";
+import { ChevronLeft, Archive, Check, Copy, Download, Eye, FileUp, FolderInput, History, Info, Layers, MoreHorizontal, PanelRight, Printer, RotateCcw, Send, Trash2, Undo2, X } from "lucide-react";
 import { WsConfirm, WsMenu, WsTabs } from "@/components/workspace/primitives";
 import { toast } from "@/lib/toast";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
@@ -41,7 +41,11 @@ import { lessonPath } from "@/lib/learn/seo";
 import type { HandoffAction } from "@/lib/learn/handoff";
 import type { LessonMeta } from "@/lib/learn/types";
 import { errorMessage } from "@/lib/errors";
-import { useCopy } from "@/lib/i18n";
+import { useCopy, useLocale } from "@/lib/i18n";
+import { deriveSaveState, hasUnsavedWork, isTransientSaveError, MAX_SAVE_RETRIES, retryDelay, saveStateCopy } from "@/lib/learn/saveState";
+import { LessonEditorBoundary } from "@/components/learn/editor/EditorErrorBoundary";
+import { announce } from "@/components/learn/editor/announce";
+import { describeLosses, downloadText, exportLesson, IMPORT_ACCEPT, IMPORT_MAX_BYTES, importFormatFor, insertImported, parseImport, printHtml, type ExportFormat } from "@/components/learn/editor/transfer";
 
 const LessonEditor = dynamic(() => import("@/components/learn/editor/LessonEditor"), { ssr: false, loading: () => <div className="ws-skeleton ws-skeleton--panel" style={{ height: 360 }} aria-busy="true" /> });
 
@@ -59,6 +63,15 @@ const copy = {
     cardsCreated: "Flashcards made from your headings", makeCards: "Make flashcards from headings", cardsTitle: (title: string) => `${title} — flashcards`,
     notOwner: "Only the author can edit this lesson.",
     folderMove: "Folder",
+    uploading: (n: number) => n === 1 ? "Uploading 1 image to this lesson’s private sources…" : `Uploading ${n} images to this lesson’s private sources…`,
+    uploaded: "Image uploaded",
+    exportMd: "Export as Markdown", exportHtml: "Export as web page (HTML)", exportText: "Export as plain text", exportJson: "Export Chaos lesson file (JSON)", print: "Print or save as PDF", importFile: "Import from file…",
+    exported: "Export downloaded", exportedLossy: (what: string) => `Export downloaded. Not included: ${what}.`,
+    imported: (n: number) => n === 1 ? "Imported 1 block" : `Imported ${n} blocks`, importedLossy: (n: number, what: string) => `Imported ${n} blocks. Left out or changed: ${what}.`,
+    importNothing: "Nothing in that file could be imported.", importType: "Choose a Markdown (.md), HTML, plain text (.txt) or Chaos lesson (.json) file.",
+    importLarge: "That file is larger than 2 MB. Lessons hold at most 300 kB of content; split it into several lessons.",
+    popupBlocked: "Your browser blocked the print window. Allow pop-ups for Chaos, then try again.",
+    editorWait: "The editor is still opening. Try again in a moment.",
   },
   ar: {
     loading: "جارٍ فتح الدرس…", back: "مكتبة Learn", titlePh: "عنوان الدرس", descPh: "ملخص من سطر يراه القرّاء أولًا (اختياري)",
@@ -73,10 +86,21 @@ const copy = {
     cardsCreated: "أُنشئت بطاقات من عناوينك", makeCards: "أنشئ بطاقات من العناوين", cardsTitle: (title: string) => `${title} — بطاقات`,
     notOwner: "لا يعدّل هذا الدرس إلا كاتبه.",
     folderMove: "المجلد",
+    uploading: (n: number) => n === 1 ? "جارٍ رفع صورة واحدة إلى مصادر الدرس الخاصة…" : `جارٍ رفع ${n} صور إلى مصادر الدرس الخاصة…`,
+    uploaded: "رُفعت الصورة",
+    exportMd: "تصدير بصيغة Markdown", exportHtml: "تصدير كصفحة ويب (HTML)", exportText: "تصدير كنص عادي", exportJson: "تصدير ملف درس Chaos ‏(JSON)", print: "طباعة أو حفظ PDF", importFile: "استيراد من ملف…",
+    exported: "نُزّل الملف المصدَّر", exportedLossy: (what: string) => `نُزّل الملف المصدَّر. لم يُضمَّن: ${what}.`,
+    imported: (n: number) => `استُورد ${n} كتلة`, importedLossy: (n: number, what: string) => `استُورد ${n} كتلة. حُذف أو تغيّر: ${what}.`,
+    importNothing: "لا يوجد في هذا الملف ما يمكن استيراده.", importType: "اختر ملف Markdown ‏(.md) أو HTML أو نص عادي (.txt) أو ملف درس Chaos ‏(.json).",
+    importLarge: "حجم الملف أكبر من 2 ميغابايت. يتسع الدرس لـ 300 كيلوبايت من المحتوى كحد أقصى؛ قسّمه إلى عدة دروس.",
+    popupBlocked: "منع المتصفح نافذة الطباعة. اسمح بالنوافذ المنبثقة لـ Chaos ثم حاول مرة أخرى.",
+    editorWait: "ما زال المحرر يفتح. حاول بعد لحظة.",
   },
 };
 
 type Tab = "details" | "sources" | "practice" | "glossary";
+/** When a recovery copy was kept; only called from save paths, never while rendering. */
+const timestamp = () => Date.now();
 const assistToHandoff: Record<string, HandoffAction> = { explain: "explain", simplify: "simplify", expand: "ask", rewrite: "ask", organize: "ask", example: "example", quiz: "quiz" };
 
 export default function LessonEditorPage() {
@@ -133,6 +157,33 @@ function LessonEditorSession({ id }: { id: string }) {
   useEffect(() => { actionRef.current = actions; }, [actions]);
   const flushTail = useRef<Promise<void>>(Promise.resolve());
   const say = (text: string) => toast.success(text);
+  const sc = useCopy(saveStateCopy);
+  const { locale } = useLocale();
+  // Offline writes are not attempted; the pending copy (and browser recovery) waits for the connection.
+  const [online, setOnline] = useState(() => typeof navigator === "undefined" || navigator.onLine !== false);
+  const [retrying, setRetrying] = useState(false);
+  const retry = useRef<{ attempt: number; timer?: ReturnType<typeof setTimeout> }>({ attempt: 0 });
+  const waitingOnline = useRef(false);
+  /** The last content the server accepted, to skip writes that would store the same thing again. */
+  const lastSavedContent = useRef<string | undefined>(undefined);
+  const importInput = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    const on = () => setOnline(true), off = () => setOnline(false);
+    window.addEventListener("online", on); window.addEventListener("offline", off);
+    return () => { window.removeEventListener("online", on); window.removeEventListener("offline", off); };
+  }, []);
+  useEffect(() => () => { if (retry.current.timer) clearTimeout(retry.current.timer); }, []);
+  // A remounted editor (reload, restore, recovery) starts from server state again.
+  useEffect(() => { lastSavedContent.current = undefined; }, [editorKey]);
+  const saveState = deriveSaveState({ pending: !!(pendingView.content || pendingView.meta), saving, online, conflict, error: !!error, retrying });
+  const unsavedWork = hasUnsavedWork(saveState);
+  // Closing the tab or reloading with unsaved work asks first. In-app navigation flushes on unmount.
+  useEffect(() => {
+    if (!unsavedWork) return;
+    const guard = (event: BeforeUnloadEvent) => { event.preventDefault(); event.returnValue = ""; };
+    window.addEventListener("beforeunload", guard);
+    return () => window.removeEventListener("beforeunload", guard);
+  }, [unsavedWork]);
 
   useEffect(() => {
     if (lesson && title === undefined) { setTitle(lesson.draft.meta.title); setDescription(lesson.draft.meta.description); }
@@ -176,7 +227,7 @@ function LessonEditorSession({ id }: { id: string }) {
       return false;
     }
   };
-  const retain = () => { if (!pending.current.content && !pending.current.meta) return; try { localStorage.setItem(recoveryKey, JSON.stringify({ content: pending.current.content, meta: pending.current.meta, savedAt: Date.now() })); } catch { /* Keep the pending in-memory copy when browser storage is unavailable. */ } };
+  const retain = () => { if (!pending.current.content && !pending.current.meta) return; try { localStorage.setItem(recoveryKey, JSON.stringify({ content: pending.current.content, meta: pending.current.meta, savedAt: timestamp() })); } catch { /* Keep the pending in-memory copy when browser storage is unavailable. */ } };
   const flush = () => {
     const next = flushTail.current.catch(() => undefined).then(async () => {
     const p = pending.current;
@@ -186,7 +237,8 @@ function LessonEditorSession({ id }: { id: string }) {
     if (!content && !meta) return;
     setSaving(true); retain();
     try {
-      if (content) await actions.saveDraftContent(lesson.id, content);
+      const json = content && JSON.stringify(content);
+      if (content && json !== lastSavedContent.current) { await actions.saveDraftContent(lesson.id, content); lastSavedContent.current = json; }
       if (meta) await actions.saveDraftMeta(lesson.id, meta);
       if (p.content === content) p.content = undefined;
       if (p.meta === meta) p.meta = undefined;
@@ -201,8 +253,35 @@ function LessonEditorSession({ id }: { id: string }) {
     if (p.timer) clearTimeout(p.timer);
     setPendingView({ content: p.content, meta: p.meta });
     setSaving(true); retain();
-    if (!conflict) p.timer = setTimeout(() => { p.timer = undefined; void run(flush); }, 600);
+    if (!conflict) p.timer = setTimeout(() => { p.timer = undefined; void autosave(); }, 600);
   };
+  /** Debounced save with retries for transient failures (1 s, 2 s, 4 s, 8 s); offline waits for "online". */
+  const autosave = async () => {
+    if (retry.current.timer) { clearTimeout(retry.current.timer); retry.current.timer = undefined; }
+    if (typeof navigator !== "undefined" && navigator.onLine === false) {
+      retain(); setSaving(false);
+      // Back online: save what waited, at once.
+      if (!waitingOnline.current) { waitingOnline.current = true; window.addEventListener("online", () => { waitingOnline.current = false; void autosave(); }, { once: true }); }
+      return;
+    }
+    try {
+      await flush();
+      retry.current.attempt = 0;
+      setRetrying(false);
+      setError("");
+    } catch (err) {
+      if (isTransientSaveError(err) && retry.current.attempt < MAX_SAVE_RETRIES) {
+        retry.current.attempt++;
+        setRetrying(true); retain();
+        retry.current.timer = setTimeout(() => { void autosave(); }, retryDelay(retry.current.attempt));
+        return;
+      }
+      retry.current.attempt = 0;
+      setRetrying(false);
+      await run(() => { throw err; });
+    }
+  };
+
   const saveMeta = (patch: Partial<LessonMeta>) => { pending.current.meta = { ...pending.current.meta, ...patch }; schedule(); };
   const saveLook = (patch: Partial<LessonMeta>) => { setLook((current) => ({ ...current, ...patch })); saveMeta(patch); };
   const onContent = (content: unknown[]) => { setEditorContent(content); pending.current.content = structuredClone(content); schedule(); };
@@ -233,11 +312,35 @@ function LessonEditorSession({ id }: { id: string }) {
   const uploadImage = async (file: File) => {
     if (conflict || mediaLock.current) throw new Error("Reload the draft before uploading an image.");
     uploadCountRef.current++; setUploadCount(uploadCountRef.current);
-    try { return await media.upload(file); }
+    try { const reference = await media.upload(file); announce(t.uploaded); return reference; }
     finally { uploadCountRef.current--; setUploadCount(uploadCountRef.current); }
   };
   const editorLesson = { ...lesson, sources, draft: { ...lesson.draft, content: editorContent ?? recoveredContent ?? lesson.draft.content, meta: { ...lesson.draft.meta, ...pendingView.meta, title: title ?? lesson.draft.meta.title, description: description ?? lesson.draft.meta.description } } };
   const changes = hasUnpublishedChanges(lesson);
+  const sourceTitle = (sourceId: string) => sources.find((s) => s.id === sourceId)?.title;
+  const runExport = (format: ExportFormat | "print") => run(() => {
+    const editor = editorRef.current;
+    if (!editor) throw new Error(t.editorWait);
+    const meta = { title: title ?? lesson.draft.meta.title, description: description ?? lesson.draft.meta.description, language: lesson.draft.meta.language, dir: contentDirection(lesson.draft.meta.language) };
+    const result = exportLesson(editor, format === "print" ? "html" : format, meta, { sourceTitle });
+    if (format === "print") { if (!printHtml(result.content)) throw new Error(t.popupBlocked); }
+    else downloadText(result.content, meta.title || "lesson", result.extension, result.mime);
+    const lost = describeLosses(result.lost, locale === "ar" ? "ar" : "en");
+    if (lost) toast(t.exportedLossy(lost), { id: "lesson-export" }); else if (format !== "print") say(t.exported);
+  });
+  const runImport = (file: File) => run(async () => {
+    const editor = editorRef.current;
+    if (!editor) throw new Error(t.editorWait);
+    const format = importFormatFor(file.name, file.type);
+    if (!format) throw new Error(t.importType);
+    if (file.size > IMPORT_MAX_BYTES) throw new Error(t.importLarge);
+    const result = await parseImport(editor, await file.text(), format);
+    if (!result.blocks.length) throw new Error(t.importNothing);
+    insertImported(editor, result.blocks);
+    editor.focus();
+    const lost = describeLosses(result.lost, locale === "ar" ? "ar" : "en");
+    if (lost) toast(t.importedLossy(result.blocks.length, lost), { id: "lesson-import" }); else say(t.imported(result.blocks.length));
+  });
 
   // Chaos runs no AI: a selection goes to the writer's own ChatGPT or Claude with the lesson as context.
   const runAssist = (request: AssistRequest) => {
@@ -272,7 +375,7 @@ function LessonEditorSession({ id }: { id: string }) {
       <div className="lx-edit__bar">
         <Link href={courseId && /^[a-z0-9]+$/i.test(courseId) ? `/dashboard/courses/${courseId}` : "/dashboard?tab=courses"} className="ws-btn ws-btn--sm ws-btn--ghost" aria-label={t.back}><ChevronLeft size={18} strokeWidth={2} className="lx-flip lx-back-chevron" aria-hidden /><span className="lx-phone-label">{courseId ? t.backCourse : t.courses}</span></Link>
         <LessonStatus lesson={lesson} />
-        <output className="lx-save" >{saving ? t.saving : error || pendingView.content || pendingView.meta ? "Unsaved changes" : <><Check size={13} aria-hidden />{caps.sharedPublishing ? t.savedCloud : t.saved}</>}</output>
+        <output className="lx-save" data-state={saveState} aria-live="polite">{saveState === "saved" ? <><Check size={13} aria-hidden />{caps.sharedPublishing ? t.savedCloud : t.saved}</> : sc[saveState]}</output>
         <span style={{ flex: 1 }} />
         <Link href={`${lessonPath(lesson.id)}?preview=draft`} className="ws-btn ws-btn--sm ws-btn--ghost" onClick={(e) => { e.preventDefault(); void run(async () => { await flush(); router.push(`${lessonPath(lesson.id)}?preview=draft`); }); }}><Eye size={15} aria-hidden /><span className="lx-phone-label">{t.preview}</span></Link>
         <button type="button" className="ws-btn ws-btn--sm ws-btn--ghost" onClick={() => void run(async () => { await flush(); setDialog("history"); })}><History size={15} aria-hidden /><span className="lx-phone-label">{t.history}</span></button>
@@ -287,11 +390,19 @@ function LessonEditorSession({ id }: { id: string }) {
               {lesson.published && <button role="menuitem" className="ws-menu__row" onClick={() => { close(); setDialog("unpublish"); }}><RotateCcw size={15} />{t.unpublish}</button>}
               <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(async () => { await flush(); const copyId = await actions.duplicateLesson(lesson.id); say(t.duplicated); router.push(`/dashboard/learn/lessons/${copyId}`); }); }}><Copy size={15} />{t.duplicate}</button>
               <button role="menuitem" className="ws-menu__row" onClick={() => { close(); makeFlashcards(); }}><Layers size={15} />{t.makeCards}</button>
+              <button role="menuitem" className="ws-menu__row" disabled={conflict || mediaBusy} onClick={() => { close(); importInput.current?.click(); }}><FileUp size={15} />{t.importFile}</button>
+              <button role="menuitem" className="ws-menu__row" onClick={() => { close(); void runExport("markdown"); }}><Download size={15} />{t.exportMd}</button>
+              <button role="menuitem" className="ws-menu__row" onClick={() => { close(); void runExport("html"); }}><Download size={15} />{t.exportHtml}</button>
+              <button role="menuitem" className="ws-menu__row" onClick={() => { close(); void runExport("text"); }}><Download size={15} />{t.exportText}</button>
+              <button role="menuitem" className="ws-menu__row" onClick={() => { close(); void runExport("json"); }}><Download size={15} />{t.exportJson}</button>
+              <button role="menuitem" className="ws-menu__row" onClick={() => { close(); void runExport("print"); }}><Printer size={15} />{t.print}</button>
               <button role="menuitem" className="ws-menu__row" onClick={() => { close(); run(async () => { await flush(); await actions.archiveLesson(lesson.id); toast(t.archivedToast, { undo: () => { void run(async () => { await actions.archiveLesson(lesson.id, false); toast.success(t.unarchivedToast); }); } }); router.push("/dashboard/learn/library"); }); }}><Archive size={15} />{t.archive}</button>
               <button role="menuitem" className="ws-menu__row ws-menu__danger" onClick={() => { close(); setDialog("delete"); }}><Trash2 size={15} />{t.delete}</button>
             </>
           )}
         </WsMenu>
+        <input ref={importInput} type="file" accept={IMPORT_ACCEPT} hidden aria-hidden tabIndex={-1}
+          onChange={(e) => { const file = e.target.files?.[0]; e.target.value = ""; if (file) void runImport(file); }} />
       </div>
       {(error || conflict || retained) && <section className={styles.recovery} aria-label="Draft recovery">
         {error && <p className="lx-error" role="alert" style={{ marginTop: 10 }}>{error}</p>}
@@ -314,7 +425,7 @@ function LessonEditorSession({ id }: { id: string }) {
 
       </section>}
       {sourceError && <p className="lx-error" role="alert">Source {sourceError} is unavailable or its metadata access was revoked. Its stable reference remains in the draft.</p>}
-      {uploadCount > 0 && <output className="lx-help" >Uploading {uploadCount} image(s) to private Chaos sources…</output>}
+      {uploadCount > 0 && <output className="lx-help" aria-live="polite">{t.uploading(uploadCount)}</output>}
 
       <LessonCover id={lesson.id} meta={{ ...lesson.draft.meta, ...look }} editable={!conflict} onChange={saveLook} />
       <div className="lx-edit__body" data-panel={panelOpen ? "open" : "closed"}
@@ -335,6 +446,7 @@ function LessonEditorSession({ id }: { id: string }) {
           <textarea className="lx-desc-input" rows={1} value={description ?? ""} placeholder={t.descPh} aria-label={t.descPh} maxLength={400}
             onChange={(e) => { setDescription(e.target.value); saveMeta({ description: e.target.value }); }}
             onInput={(e) => { const el = e.currentTarget; el.style.height = "auto"; el.style.height = `${el.scrollHeight}px`; }} />
+          <LessonEditorBoundary onReopen={() => { const latest = pending.current.content ?? editorContent; if (latest) setRecoveredContent(latest); setEditorKey(k => k + 1); }}>
           <LessonEditor key={`${lesson.id}-${editorKey}`} initialContent={asBlocks(recoveredContent ?? lesson.draft.content)} language={lesson.draft.meta.language} sources={sources}
             editable={!mediaBusy && !conflict} uploadFile={uploadImage} resolveFileUrl={async reference => { try { return await media.resolve(reference); } catch (err) { setError(errorMessage(err)); throw err; } }} onReady={editor => { editorRef.current = editor; }}
             onChange={onContent}
@@ -353,6 +465,7 @@ function LessonEditorSession({ id }: { id: string }) {
             }}
             onAssist={(request) => runAssist(request)}
             onUploadError={setError} />
+          </LessonEditorBoundary>
           <p className="lx-muted" style={{ marginTop: 24, paddingInline: 8 }}><Info size={13} aria-hidden style={{ display: "inline", verticalAlign: "-2px" }} /> {t.tip}</p>
         </div>
 

@@ -46,6 +46,7 @@ function Page() {
             onEditCitation={(id) => window.__events.push(`cite:${id}`)}
             onAssist={(r) => window.__events.push(`assist:${r.action}`)}
             onUploadError={(m) => window.__events.push(`upload-error:${m}`)}
+            onNotice={(m) => window.__events.push(`notice:${m}`)}
             onReady={(editor) => { window.__editor = editor; }}
             uploadFile={async (file) => URL.createObjectURL(file)}
             resolveFileUrl={async (url) => url} />
