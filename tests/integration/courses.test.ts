@@ -123,6 +123,7 @@ it("publishes nested course subsections and their default collapse preferences",
   const courseId = await owner.mutation(api.courses.create, { title: "Head and neck anatomy" });
   const anatomy = await owner.mutation(api.courses.addLesson, { courseId, title: "Anatomy" });
   const practical = await owner.mutation(api.courses.addLesson, { courseId, title: "Practical anatomy" });
+  for (const lessonId of [anatomy, practical]) await owner.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: 0, document: { schemaVersion: 1, blocks: [paragraph("p", "Study content")] } });
   const modules = [{
     id: "anatomy-module", title: "Anatomy", lessonIds: [anatomy, practical], assessments: [], collapsedByDefault: true,
     sections: [
