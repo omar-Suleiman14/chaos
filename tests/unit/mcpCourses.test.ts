@@ -105,3 +105,27 @@ it("create_full_course builds the course, every lesson with its blocks, then pub
   expect(call.mock.calls.map(([t]) => t)).not.toContain("publish_course");
  } finally { await client.close(); await server.close(); }
 });
+
+it("advertises and passes through nested module settings without dropping section fields", async () => {
+ const call = vi.fn(async (_tool: string, input: Record<string, unknown>) => ({ ok: true, modules: input.modules }));
+ const server = createChaosMcpServer({ call, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" });
+ const client = new Client({ name: "course-sections", version: "1" });
+ const [a,b] = InMemoryTransport.createLinkedPair();
+ await Promise.all([server.connect(a),client.connect(b)]);
+ try {
+  const { tools } = await client.listTools();
+  const set = tools.find(t => t.name === "set_course_modules")!;
+  const get = tools.find(t => t.name === "get_course")!;
+  const module = (set.inputSchema.properties!.modules as { items: { properties: Record<string, unknown> } }).items.properties;
+  expect(module).toHaveProperty("collapsedByDefault");
+  expect(module).toHaveProperty("sections");
+  const outModule = (get.outputSchema!.properties!.modules as { items: { properties: Record<string, unknown> } }).items.properties;
+  expect(outModule).toHaveProperty("collapsedByDefault");
+  expect(outModule).toHaveProperty("sections");
+  const modules = [{ id: "anatomy", title: "Anatomy", lessonIds: ["lesson1", "lesson2"], collapsedByDefault: true, sections: [{ id: "practical", title: "Practical anatomy", lessonIds: ["lesson2"], collapsedByDefault: false }], assessments: [] }];
+  expect((await client.callTool({ name: "set_course_modules", arguments: { courseId: "course1", modules } })).isError).toBeFalsy();
+  expect(call).toHaveBeenCalledWith("set_course_modules", { courseId: "course1", modules });
+  const invalid = await client.callTool({ name: "set_course_modules", arguments: { courseId: "course1", modules: [{ ...modules[0], sections: [{ id: "bad", title: "Bad", lessonIds: ["lesson1"], collapsedByDefault: "yes" }] }] } });
+  expect(invalid.isError).toBe(true);
+ } finally { await client.close(); await server.close(); }
+});
