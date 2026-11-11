@@ -1050,3 +1050,36 @@ mark.lx-hl[data-color="pink"] { background: rgba(244, 114, 182, .3); }
 
 /* Page-top notices share the writing column's text edge with the title and blocks. */
 .lx-edit__doc > :not(.lx-editor, .lx-title-input, .lx-desc-input, .ws-skeleton) { margin-inline: var(--lx-gutter, 0) var(--lx-gutter-end, 0); }
+
+
+/* Editorial reading rhythm. The Arc reference informs typography and whitespace,
+   without turning dense academic notes into a marketing landing page. */
+.lx-reader { --lx-measure: 740px; }
+.lx-article { --lx-size: 18px; line-height: 1.88; letter-spacing: -.006em; text-rendering: optimizeLegibility; }
+.lx-article[data-size="small"] { --lx-size: 16.5px; }
+.lx-article[data-size="large"] { --lx-size: 20px; }
+.lx-article h1.lx-article__title { font-size: clamp(38px, 5vw, 56px); font-weight: 720; line-height: 1.13; letter-spacing: -.04em; max-width: 22ch; margin-block: 14px 18px; }
+.lx-article__lead { max-width: 62ch; font-size: 1.15em; line-height: 1.65; color: var(--on-surface-variant); margin-block-end: 22px; }
+.lx-article__byline { gap: 10px 16px; margin-bottom: 36px; padding-bottom: 22px; }
+.lx-article__cover { max-height: 290px; margin-bottom: 32px; }
+.lx-article .lx-block[data-type="paragraph"] + .lx-block[data-type="paragraph"] { margin-top: 1.15em; }
+.lx-article .lx-block[data-type="paragraph"] p { max-width: 72ch; overflow-wrap: break-word; }
+.lx-article .lx-block[data-type="heading"] { scroll-margin-top: 96px; }
+.lx-article .lx-block h2 { font-size: clamp(1.55em, 2.6vw, 1.85em); line-height: 1.22; letter-spacing: -.028em; margin-block: 2.15em .65em; font-weight: 730; }
+.lx-article .lx-block h3 { font-size: 1.35em; line-height: 1.32; letter-spacing: -.02em; margin-block: 1.7em .55em; }
+.lx-article .lx-block h4 { font-size: 1.14em; line-height: 1.35; margin-block: 1.4em .45em; }
+.lx-article .lx-block[data-type="list"] { margin-block: 1.25em 1.5em; line-height: 1.75; }
+.lx-article .lx-block li + li { margin-top: .55em; }
+.lx-article .lx-block blockquote { border-inline-start: 3px solid var(--primary); padding: .6em 0 .6em 1.25em; font-size: 1.08em; line-height: 1.75; }
+.lx-article .lx-block[data-type="callout"], .lx-article .lx-block[data-type="table"], .lx-article .lx-block[data-type="image"] { margin-block: 1.7em; }
+.lx-article .lx-table-wrap { margin-block: 0; }
+.lx-article a { text-decoration-thickness: 1px; text-underline-offset: 3px; }
+.lx-article:lang(ar) { line-height: 2; letter-spacing: normal; }
+.lx-article:lang(ar) h1.lx-article__title, .lx-article:lang(ar) .lx-block h2, .lx-article:lang(ar) .lx-block h3 { letter-spacing: normal; line-height: 1.5; }
+@media (max-width: 700px) {
+  .lx-reader { padding-top: 24px; }
+  .lx-article { --lx-size: 17.5px; line-height: 1.82; }
+  .lx-article h1.lx-article__title { font-size: clamp(32px, 9vw, 42px); }
+  .lx-article__byline { margin-bottom: 28px; }
+  .lx-article .lx-block h2 { margin-block-start: 1.7em; }
+}
