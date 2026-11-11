@@ -235,7 +235,8 @@ export default function FormRenderer(props: FormRendererProps) {
   const mode = effectiveDefinition.presentation;
   const [now, setNow] = useState(0);
   const timerReady = started && !!props.timerStartedAt && !!props.timerSeconds && props.timerMode !== "none";
-  const activeField = flow.step?.fields[0]?.id;
+  // An introduction/statement is not an exam question and must not consume its timer.
+  const activeField = flow.step?.fields.find(isAnswerable)?.id;
   const { timerMode, timerStartedAt, onQuestionStart } = props;
   const startedAt = timerMode === "question" ? (activeField && props.questionStartedAtById?.[activeField]) : timerStartedAt;
   const remaining = timerReady && startedAt ? Math.max(0, Math.ceil((startedAt + (props.timerSeconds ?? 0) * 1000 - now) / 1000)) : null;
@@ -298,7 +299,9 @@ export default function FormRenderer(props: FormRendererProps) {
     haptics.medium();
   };
 
-  const questionSteps = flow.steps.length > 1 ? flow.steps.map((step, index) => ({ id: step.fields[0]?.id, index, title: step.fields[0]?.label ?? step.title })) : effectiveDefinition.fields.filter(isAnswerable).map((field, index) => ({ id: field.id, index, title: field.label }));
+  // Flatten every answerable field, including multiple questions in one section.
+  // The step index is separate from its displayed question number.
+  const questionSteps = flow.steps.flatMap((step, stepIndex) => step.fields.filter(isAnswerable).map(field => ({ id: field.id, stepIndex, title: field.label })));
   const answeredCount = questionSteps.filter(q => q.id && !isEmptyAnswer(props.answers[q.id])).length;
   return (
     <div ref={rootRef} dir={isRtl(props.language) ? "rtl" : "ltr"} lang={props.language} className={`form-root form-mode-${mode}`}>
@@ -312,15 +315,20 @@ export default function FormRenderer(props: FormRendererProps) {
         </button>
         {navigatorOpen && <div id={navigatorId} className="form-quiz-palette">
           <div className="form-quiz-grid">
-            {questionSteps.map(q => {
-              const answered = !!q.id && !isEmptyAnswer(props.answers[q.id]);
-              const timedOut = !!q.id && props.expiredQuestionIds?.includes(q.id);
-              const current = flow.steps.length > 1 && flow.index === q.index;
-              return <button key={q.id ?? q.index} type="button" disabled={timedOut} data-answered={answered} data-current={current} aria-current={current ? "step" : undefined} title={q.title} aria-label={`${flow.t.questionNavigator} ${q.index + 1}: ${q.title}. ${answered ? flow.t.answered : flow.t.unanswered}`} onClick={() => {
-                if (flow.steps.length > 1) flow.goTo(q.index);
-                else if (q.id) rootRef.current?.querySelector<HTMLElement>(`[data-field-id="${q.id}"]`)?.scrollIntoView({ behavior: "smooth", block: "center" });
+            {questionSteps.map((q, i) => {
+              const answered = !isEmptyAnswer(props.answers[q.id]);
+              const timedOut = !!props.expiredQuestionIds?.includes(q.id);
+              const current = flow.index === q.stepIndex && flow.steps[q.stepIndex]?.fields.length === 1;
+              return <button key={q.id} type="button" disabled={timedOut} data-answered={answered} data-current={current} aria-current={current ? "step" : undefined} title={q.title} aria-label={`${flow.t.questionNavigator} ${i + 1}: ${q.title}. ${answered ? flow.t.answered : flow.t.unanswered}`} onClick={() => {
+                if (flow.steps.length > 1) flow.goTo(q.stepIndex);
+                props.onProgress?.(q.id);
+                requestAnimationFrame(() => {
+                  const target = Array.from(rootRef.current?.querySelectorAll<HTMLElement>("[data-field-id]") ?? []).find(el => el.dataset.fieldId === q.id && !el.closest("[inert]"));
+                  target?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
+                  target?.focus({ preventScroll: true });
+                });
                 setNavigatorOpen(false);
-              }}>{q.index + 1}</button>;
+              }}>{i + 1}</button>;
             })}
           </div>
         </div>}
