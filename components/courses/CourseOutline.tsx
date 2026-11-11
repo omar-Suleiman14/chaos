@@ -17,7 +17,7 @@ type Lesson = Course["lessons"][number];
 type Progress = ReturnType<typeof useCourseProgress>;
 
 function LessonRows({ ids, lessons, courseId, locked, progress, ar }: {
-  ids: string[]; lessons: Lesson[]; courseId: string; locked: boolean; progress: Progress; ar: boolean;
+  ids: Module["lessonIds"]; lessons: Lesson[]; courseId: string; locked: boolean; progress: Progress; ar: boolean;
 }) {
   return <ol className="cp-lessons">{ids.map((id, index) => {
     const lesson = lessons.find(l => l.id === id);
