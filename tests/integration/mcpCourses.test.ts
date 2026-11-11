@@ -139,3 +139,34 @@ it("HTTP dispatch serves list_courses and set_course_archived for the envelope a
  expect((await call("set_course_archived", { courseId: mine.courseId, archived: true })).status).toBe(200);
  expect((await t.run(ctx => ctx.db.get("learnCollections", mine.courseId)))?.archived).toBe(true);
 });
+
+it("round-trips nested course sections and collapse defaults through MCP without losing assessments", async () => {
+ const t = await setup();
+ const { courseId } = await t.mutation(m("create"), { userId, title: "Human anatomy" });
+ const { lessonId: theory } = await t.mutation(m("addLesson"), { userId, courseId, title: "Anatomy" });
+ const { lessonId: practical } = await t.mutation(m("addLesson"), { userId, courseId, title: "Practical anatomy" });
+ const modules = [{
+  id: "anatomy", title: "Anatomy", lessonIds: [theory, practical], assessments: [{ kind: "form", id: "form_reference" }],
+  collapsedByDefault: true,
+  sections: [
+   { id: "theory", title: "Anatomy", lessonIds: [theory], collapsedByDefault: false },
+   { id: "practical", title: "Practical anatomy", lessonIds: [practical], collapsedByDefault: true },
+  ],
+ }];
+ // Use a real owned published assessment for normal module-attachment authorization.
+ await t.run(async ctx => {
+  const initial = (await import("@/convex/formLogic")).emptyDefinition("Module quiz");
+  const formDraft = { ...initial, quiz: { enabled: true } };
+  const formId = await ctx.db.insert("forms", {
+   ownerId: userId, title: formDraft.title, shareId: "module-ref", status: "draft", draft: formDraft, draftRevision: 1,
+   settings: (await import("@/convex/formModel")).defaultFormSettings, responseCount: 0, partialCount: 0, createdAt: 0, updatedAt: 0,
+  });
+  modules[0].assessments[0].id = formId;
+ });
+ await t.mutation(m("modules"), { userId, courseId, modules });
+ const after = await t.query(read, { userId, courseId });
+ expect(after.modules).toEqual(modules);
+ await expect(t.mutation(m("modules"), { userId: other, courseId, modules })).rejects.toThrow("NOT_FOUND");
+ await expect(t.mutation(m("modules"), { userId, courseId, modules: [{ ...modules[0], sections: [{ id: "invalid", title: "Duplicate", lessonIds: [theory, theory] }] }] })).rejects.toThrow("VALIDATION_FAILED");
+ expect((await t.query(read, { userId, courseId })).modules).toEqual(modules);
+});

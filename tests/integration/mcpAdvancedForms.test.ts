@@ -57,3 +57,25 @@ it("updates settings through one policy and refuses stale writes and secret disc
   expect(changed.settings.retentionDays).toBeUndefined();
   expect(changed.settingsRevision).toBe(2);
 });
+
+it("round-trips quiz timers through MCP response controls with ownership, revision and duration checks", async () => {
+  const { t, formId } = await setup();
+  const set = makeFunctionReference<"mutation">("mcpAdvancedForms:setResponseControls");
+  const get = makeFunctionReference<"query">("mcpAdvancedForms:getResponseControls");
+  await expect(t.mutation(set, { userId: "owner", formId, expectedSettingsRevision: 0, patch: { quizTimerMode: "question", quizTimeSeconds: 60 } })).rejects.toThrow("INVALID_SETTINGS");
+  await t.run(async ctx => {
+    const form = (await ctx.db.get("forms", formId))!;
+    await ctx.db.patch("forms", formId, { draft: { ...form.draft, quiz: { enabled: true } } });
+  });
+  await expect(t.mutation(set, { userId: "other", formId, expectedSettingsRevision: 0, patch: { quizTimerMode: "quiz", quizTimeSeconds: 3600 } })).rejects.toThrow("FORBIDDEN");
+  await expect(t.mutation(set, { userId: "owner", formId, expectedSettingsRevision: 0, patch: { quizTimerMode: "question", quizTimeSeconds: 4 } })).rejects.toThrow("INVALID_SETTINGS");
+  expect(await t.mutation(set, { userId: "owner", formId, expectedSettingsRevision: 0, patch: { quizTimerMode: "question", quizTimeSeconds: 60 } })).toEqual({ settingsRevision: 1 });
+  const first = await t.query(get, { userId: "owner", formId });
+  expect(first.settings).toMatchObject({ quizTimerMode: "question", quizTimeSeconds: 60 });
+  expect(first.settingsRevision).toBe(1);
+  await expect(t.mutation(set, { userId: "owner", formId, expectedSettingsRevision: 0, patch: { quizTimerMode: "quiz" } })).rejects.toThrow("SETTINGS_CONFLICT");
+  await t.mutation(set, { userId: "owner", formId, expectedSettingsRevision: 1, patch: { quizTimerMode: "quiz", quizTimeSeconds: 3600 } });
+  expect((await t.query(get, { userId: "owner", formId })).settings).toMatchObject({ quizTimerMode: "quiz", quizTimeSeconds: 3600 });
+  await t.mutation(set, { userId: "owner", formId, expectedSettingsRevision: 2, patch: { quizTimerMode: "none" } });
+  expect((await t.query(get, { userId: "owner", formId })).settings.quizTimerMode).toBe("none");
+});

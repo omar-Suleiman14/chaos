@@ -6378,6 +6378,45 @@
             "maxLength": 100
            }
           },
+          "collapsedByDefault": {
+           "type": "boolean"
+          },
+          "sections": {
+           "maxItems": 30,
+           "type": "array",
+           "items": {
+            "type": "object",
+            "properties": {
+             "id": {
+              "type": "string",
+              "pattern": "^[a-zA-Z0-9_-]{1,100}$"
+             },
+             "title": {
+              "type": "string",
+              "minLength": 1,
+              "maxLength": 200
+             },
+             "lessonIds": {
+              "maxItems": 100,
+              "type": "array",
+              "items": {
+               "type": "string",
+               "minLength": 1,
+               "maxLength": 100
+              }
+             },
+             "collapsedByDefault": {
+              "type": "boolean"
+             }
+            },
+            "required": [
+             "id",
+             "title",
+             "lessonIds"
+            ],
+            "additionalProperties": false
+           }
+          },
           "assessments": {
            "maxItems": 20,
            "type": "array",
@@ -6940,6 +6979,45 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 100
+         }
+        },
+        "collapsedByDefault": {
+         "type": "boolean"
+        },
+        "sections": {
+         "maxItems": 30,
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,100}$"
+           },
+           "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+           },
+           "lessonIds": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 100
+            }
+           },
+           "collapsedByDefault": {
+            "type": "boolean"
+           }
+          },
+          "required": [
+           "id",
+           "title",
+           "lessonIds"
+          ],
+          "additionalProperties": false
          }
         },
         "assessments": {
@@ -15961,7 +16039,7 @@
   },
   "set_course_modules": {
    "title": null,
-   "description": "Replace optional course draft modules without publishing. Read get_course first; preserve wanted modules and assignments. Each outlined lesson belongs to at most one module. Modules reference reusable owned quiz assets, not copies. Empty modules removes grouping, keeping lessons.",
+   "description": "Replace optional course draft modules without publishing. Read get_course first; preserve wanted modules and assignments. Each outlined lesson belongs to at most one module. Modules reference reusable owned quiz assets, not copies. Pass all modules from get_course when editing; optional collapsedByDefault sets the initial open state (true starts collapsed), and sections group each module's existing lessons into nested subsections. Each section lesson must also be in its parent module; lessons not in sections appear directly beneath the module. Omitted settings preserve old open-by-default behavior. Empty modules removes grouping, keeping lessons.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,
@@ -15999,6 +16077,44 @@
           "type": "string",
           "minLength": 1,
           "maxLength": 100
+         }
+        },
+        "collapsedByDefault": {
+         "type": "boolean"
+        },
+        "sections": {
+         "maxItems": 30,
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "id": {
+            "type": "string",
+            "pattern": "^[a-zA-Z0-9_-]{1,100}$"
+           },
+           "title": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 200
+           },
+           "lessonIds": {
+            "maxItems": 100,
+            "type": "array",
+            "items": {
+             "type": "string",
+             "minLength": 1,
+             "maxLength": 100
+            }
+           },
+           "collapsedByDefault": {
+            "type": "boolean"
+           }
+          },
+          "required": [
+           "id",
+           "title",
+           "lessonIds"
+          ]
          }
         },
         "assessments": {
@@ -16289,7 +16405,7 @@
   },
   "set_form_response_controls": {
    "title": null,
-   "description": "Explicit owner-only revision-protected response configuration: access, dates, limits, one-per-person, retention, editing, hidden fields, verified email/domain rules and audienceTeamId (with signed_in access, only members of that Business team can respond: team-only forms, quizzes and their live games; null clears it). Omitted values stay unchanged; null clears dates/caps/retention. Access changes can affect existing public links. Retention can schedule data deletion. Branding removal is available on every plan.",
+   "description": "Explicit owner-only revision-protected response configuration: access, dates, limits, one-per-person, retention, editing, hidden fields, verified email/domain rules and audienceTeamId (with signed_in access, only members of that Business team can respond: team-only forms, quizzes and their live games; null clears it). Omitted values stay unchanged; null clears dates/caps/retention. Access changes can affect existing public links. Retention can schedule data deletion. Quiz-only timers use quizTimerMode (none, quiz, question) and quizTimeSeconds (5 to 14400); changes affect respondent attempts. Use get_form_response_controls to read back settings and its revision before editing. Branding removal is available on every plan.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,
@@ -16368,6 +16484,19 @@
           "type": "null"
          }
         ]
+       },
+       "quizTimerMode": {
+        "type": "string",
+        "enum": [
+         "none",
+         "quiz",
+         "question"
+        ]
+       },
+       "quizTimeSeconds": {
+        "type": "integer",
+        "minimum": 5,
+        "maximum": 14400
        },
        "onePerPerson": {
         "type": "boolean"
