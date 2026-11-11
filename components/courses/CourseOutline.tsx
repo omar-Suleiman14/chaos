@@ -16,21 +16,22 @@ type Module = Course["modules"][number];
 type Lesson = Course["lessons"][number];
 type Progress = ReturnType<typeof useCourseProgress>;
 
-function LessonRows({ ids, lessons, courseId, locked, progress, ar }: {
-  ids: Module["lessonIds"]; lessons: Lesson[]; courseId: string; locked: boolean; progress: Progress; ar: boolean;
+function LessonRows({ ids, order = ids, lessons, courseId, locked, progress, ar }: {
+  ids: Module["lessonIds"]; order?: Module["lessonIds"]; lessons: Lesson[]; courseId: string; locked: boolean; progress: Progress; ar: boolean;
 }) {
   return <ol className="cp-lessons">{ids.map((id, index) => {
     const lesson = lessons.find(l => l.id === id);
     if (!lesson) return null;
-    const body = <><span className="cp-lesson__no" aria-label={progress[id]?.completed ? (ar ? "مكتمل" : "Completed") : undefined}>{progress[id]?.completed ? "✓" : index + 1}</span><span><span className="cp-lesson__title" dir="auto">{lesson.title}</span>{lesson.description && <span className="cp-lesson__desc block" dir="auto">{lesson.description}</span>}</span></>;
+    const number = order.indexOf(id) >= 0 ? order.indexOf(id) + 1 : index + 1;
+    const body = <><span className="cp-lesson__no" aria-label={progress[id]?.completed ? (ar ? "مكتمل" : "Completed") : undefined}>{progress[id]?.completed ? "✓" : number}</span><span><span className="cp-lesson__title" dir="auto">{lesson.title}</span>{lesson.description && <span className="cp-lesson__desc block" dir="auto">{lesson.description}</span>}</span></>;
     return <li key={id}>{locked
       ? <div className="cp-lesson" data-locked="true" aria-disabled="true">{body}<Lock size={16} className="cp-lesson__lock" aria-label={ar ? "مقفل حتى تبدأ الدورة" : "Locked until you start the course"} /></div>
       : <Link className="cp-lesson" href={`/learn/${id}?course=${courseId}`} onPointerEnter={() => prefetchLesson(id, courseId)} onFocus={() => prefetchLesson(id, courseId)} onTouchStart={() => prefetchLesson(id, courseId)}>{body}</Link>}</li>;
   })}</ol>;
 }
 
-function Subsection({ section, lessons, courseId, locked, progress, ar }: {
-  section: NonNullable<Module["sections"]>[number]; lessons: Lesson[]; courseId: string; locked: boolean; progress: Progress; ar: boolean;
+function Subsection({ section, order, lessons, courseId, locked, progress, ar }: {
+  section: NonNullable<Module["sections"]>[number]; order: Module["lessonIds"]; lessons: Lesson[]; courseId: string; locked: boolean; progress: Progress; ar: boolean;
 }) {
   const [expanded, setExpanded] = useState(!section.collapsedByDefault);
   const ids = section.lessonIds.filter(id => lessons.some(l => l.id === id));
@@ -45,7 +46,7 @@ function Subsection({ section, lessons, courseId, locked, progress, ar }: {
       </h4>
       <span className="cp-disclosure__count" aria-label={ar ? "الدروس المكتملة" : "Lessons completed"}>{ids.filter(id => progress[id]?.completed).length}/{ids.length}</span>
     </div>
-    {expanded && <div className="cp-subsection__body"><LessonRows ids={ids} lessons={lessons} courseId={courseId} locked={locked} progress={progress} ar={ar} /></div>}
+    {expanded && <div className="cp-subsection__body"><LessonRows ids={ids} order={order} lessons={lessons} courseId={courseId} locked={locked} progress={progress} ar={ar} /></div>}
   </section>;
 }
 
@@ -66,8 +67,8 @@ function ModuleView({ module, course, progress, locked, ar }: { module: Module; 
       <span className="cp-disclosure__count" aria-label={ar ? "الدروس المكتملة" : "Lessons completed"}>{ar ? `${count}/${ids.length} دروس مكتملة` : `${count}/${ids.length} lessons completed`}</span>
     </div>}
     {(!module.title || expanded) && <div className="cp-module__body">
-      {(module.sections ?? []).map(section => <Subsection key={section.id} section={section} lessons={course.lessons} courseId={course.id} locked={locked} progress={progress} ar={ar} />)}
-      {other.length > 0 && <LessonRows ids={other} lessons={course.lessons} courseId={course.id} locked={locked} progress={progress} ar={ar} />}
+      {(module.sections ?? []).map(section => <Subsection key={section.id} section={section} order={ids} lessons={course.lessons} courseId={course.id} locked={locked} progress={progress} ar={ar} />)}
+      {other.length > 0 && <LessonRows ids={other} order={ids} lessons={course.lessons} courseId={course.id} locked={locked} progress={progress} ar={ar} />}
       {module.assessments.map((asset, index) => <details className="cp-assessment" key={`${asset.kind}:${asset.id}`}>
         <summary><ChevronDown size={17} aria-hidden="true" /><span>{ar ? `اختبار الوحدة ${index + 1}` : `Module quiz ${index + 1}`}</span></summary>
         <div className="cp-assessment__body"><InlineQuiz asset={asset} /></div>
