@@ -754,3 +754,22 @@ textarea.form-input { resize: vertical; min-height: 5rem; }
   letter-spacing: normal;
 }
 :is(.form-root, .ws-respondent-preview)[lang="ar"] .form-heading { letter-spacing: normal; }
+
+
+/* Timed quizzes and compact random-access question navigator. */
+.form-quiz-tools { position: sticky; top: 0; z-index: 32; display: flex; align-items: center; justify-content: flex-end; gap: 10px; flex-wrap: wrap; padding: 10px max(12px, env(safe-area-inset-right)); background: color-mix(in srgb, var(--form-page, var(--background)) 92%, transparent); backdrop-filter: blur(12px); border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent); }
+.form-quiz-clock { display: inline-flex; align-items: center; gap: 6px; padding: 7px 12px; border: 1px solid currentColor; border-radius: 9px; font-size: 13px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.form-quiz-clock[data-urgent="true"] { color: var(--error, #ce4545); }
+.form-quiz-nav-trigger { display: inline-flex; align-items: center; gap: 8px; padding: 7px 12px; min-height: 38px; border-radius: 9px; border: 1px solid color-mix(in srgb, currentColor 24%, transparent); background: transparent; color: inherit; font-size: 13px; font-weight: 650; cursor: pointer; }
+.form-quiz-nav-trigger:hover { background: color-mix(in srgb, currentColor 7%, transparent); }
+.form-quiz-nav-trigger[aria-expanded="true"] > svg { transform: rotate(180deg); }
+.form-quiz-palette { flex-basis: 100%; width: 100%; max-width: 620px; margin-inline-start: auto; padding: 8px 0; }
+.form-quiz-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(38px, 1fr)); gap: 7px; max-height: min(42vh, 280px); overflow: auto; overscroll-behavior: contain; padding: 4px; }
+.form-quiz-grid > button { min-width: 38px; min-height: 38px; border: 1px solid color-mix(in srgb, currentColor 20%, transparent); border-radius: 8px; background: transparent; color: inherit; font-size: 12px; font-weight: 650; font-variant-numeric: tabular-nums; cursor: pointer; }
+.form-quiz-grid > button:hover:not(:disabled) { background: color-mix(in srgb, currentColor 10%, transparent); }
+.form-quiz-grid > button[data-answered="true"] { border-color: var(--form-accent, var(--primary)); background: color-mix(in srgb, var(--form-accent, var(--primary)) 13%, transparent); }
+.form-quiz-grid > button[data-current="true"] { outline: 2px solid var(--form-accent, var(--primary)); outline-offset: 1px; }
+.form-quiz-grid > button:disabled { opacity: .35; cursor: not-allowed; }
+.form-quiz-nav-trigger:focus-visible, .form-quiz-grid > button:focus-visible { outline: 2px solid currentColor; outline-offset: 2px; }
+@media (max-width: 560px) { .form-quiz-tools { justify-content: space-between; } .form-quiz-palette { max-width: none; } }
+@media (prefers-reduced-motion: reduce) { .form-quiz-nav-trigger > svg { transition: none; } }
