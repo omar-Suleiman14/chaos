@@ -264,12 +264,12 @@
       "unit": "count"
     },
     "mcp.admin.listToolsBytes": {
-      "budget": 314474,
+      "budget": 316800,
       "unit": "bytes",
       "raised": {
-        "from": 312682,
-        "reason": "Pre-existing on main before #371, which does not change MCP tools; re-baselined so the gate catches new regressions again.",
-        "at": "2026-11-08"
+        "from": 314474,
+        "reason": "Adds quizTimerMode/quizTimeSeconds and nested sections/collapsedByDefault to existing public MCP tool input/output JSON schemas. Measured tool-list serialization grows ~2 KiB per registry; all other perf budgets stay unchanged.",
+        "at": "2026-11-11"
       }
     },
     "mcp.admin.tools": {
@@ -311,12 +311,12 @@
       }
     },
     "mcp.listToolsBytes": {
-      "budget": 289986,
+      "budget": 292300,
       "unit": "bytes",
       "raised": {
-        "from": 288194,
-        "reason": "Pre-existing on main before #371, which does not change MCP tools; re-baselined so the gate catches new regressions again.",
-        "at": "2026-11-08"
+        "from": 289986,
+        "reason": "Adds quizTimerMode/quizTimeSeconds and nested sections/collapsedByDefault to existing public MCP tool input/output JSON schemas. Measured tool-list serialization grows ~2 KiB per registry; all other perf budgets stay unchanged.",
+        "at": "2026-11-11"
       }
     },
     "mcp.searchForms.bytesRead": {
