@@ -236,7 +236,8 @@ export default function FormRenderer(props: FormRendererProps) {
   const [now, setNow] = useState(0);
   const timerReady = started && !!props.timerStartedAt && !!props.timerSeconds && props.timerMode !== "none";
   const activeField = flow.step?.fields[0]?.id;
-  const startedAt = props.timerMode === "question" ? (activeField && props.questionStartedAtById?.[activeField]) : props.timerStartedAt;
+  const { timerMode, timerStartedAt, onQuestionStart } = props;
+  const startedAt = timerMode === "question" ? (activeField && props.questionStartedAtById?.[activeField]) : timerStartedAt;
   const remaining = timerReady && startedAt ? Math.max(0, Math.ceil((startedAt + (props.timerSeconds ?? 0) * 1000 - now) / 1000)) : null;
   const expiredRef = useRef<string | null>(null);
   const timerInitiated = useRef(false);
@@ -246,8 +247,8 @@ export default function FormRenderer(props: FormRendererProps) {
     props.onTimerStart?.();
   }, [started, props]);
   useEffect(() => {
-    if (started && props.timerMode === "question" && activeField && !!props.timerStartedAt) props.onQuestionStart?.(activeField);
-  }, [started, activeField, props]);
+    if (started && timerMode === "question" && activeField && !!timerStartedAt) onQuestionStart?.(activeField);
+  }, [started, activeField, timerMode, timerStartedAt, onQuestionStart]);
   useEffect(() => {
     if (!timerReady) return;
     const tick = () => setNow(Date.now());
