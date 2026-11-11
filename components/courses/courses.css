@@ -177,9 +177,6 @@ a.cs-who:hover strong { text-decoration: underline; text-underline-offset: 3px; 
 .cp-module__body { display: grid; gap: 12px; padding: 12px clamp(12px, 2vw, 20px) 20px; }
 .cp-module .cp-lessons { gap: 7px; }
 .cp-module .cp-lesson { padding: 12px 14px; border-radius: 10px; }
-.cp-disclosure-shell { display: flex; align-items: center; gap: 8px; min-width: 0; }
-.cp-disclosure-heading { min-width: 0; flex: 1; margin: 0; font: inherit; }
-.cp-disclosure-shell > .cp-disclosure__count { margin-inline-end: 14px; }
 .cp-disclosure { display: flex; align-items: center; width: 100%; min-height: 44px; gap: 12px; padding: 10px 12px; background: transparent; border: 0; border-radius: 8px; color: inherit; text-align: start; cursor: pointer; }
 .cp-disclosure--module { padding: 18px 20px; min-height: 62px; border-radius: 0; }
 .cp-disclosure:hover, .cp-assessment > summary:hover { background: var(--s-subtle); }
