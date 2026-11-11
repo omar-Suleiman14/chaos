@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "@/lib/i18n";
 
@@ -53,4 +53,33 @@ describe("module numbering restarts per module", () => {
     rerender(<LocaleProvider initial="en"><CourseBreadcrumb courseId="c1" lessonId="l3" /></LocaleProvider>);
     expect(screen.getByRole("navigation")).toHaveTextContent("Anatomy›Lesson 3 / 3");
   });
+});
+
+
+it("uses semantic headings and respects closed-by-default module and subsection toggles", () => {
+  const nested = {
+    ...course,
+    modules: [
+      {
+        ...modules[0],
+        collapsedByDefault: true,
+        sections: [
+          { id: "theory", title: "Theory", lessonIds: ["l1", "l2"], collapsedByDefault: false },
+          { id: "practical", title: "Practical anatomy", lessonIds: ["l3"], collapsedByDefault: true },
+        ],
+      },
+    ],
+    lessons: lessons.slice(0, 3),
+  };
+  wrap(<CourseOutline course={nested as never} />);
+  expect(screen.getByRole("heading", { name: "Anatomy" })).toBeInTheDocument();
+  expect(screen.queryByText("Meninges")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Anatomy" }));
+  expect(screen.getByRole("heading", { name: "Theory" })).toBeInTheDocument();
+  expect(screen.getByText("Meninges")).toBeInTheDocument();
+  expect(screen.getByText("Ventricles")).toBeInTheDocument();
+  expect(screen.queryByText("Cranial nerves")).not.toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: "Practical anatomy" }));
+  expect(screen.getByText("Cranial nerves")).toBeInTheDocument();
+  expect(numbersIn(document.querySelector(".cp-module") as HTMLElement, ".cp-lesson__no")).toEqual(["1", "2", "3"]);
 });
