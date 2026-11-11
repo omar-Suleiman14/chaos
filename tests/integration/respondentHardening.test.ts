@@ -361,3 +361,22 @@ describe("response counts", () => {
   });
 });
 
+
+
+describe("timed exam finalization", () => {
+  it("lets an expired quiz finish with incomplete answers, while untimed quizzes still enforce required fields", async () => {
+    const t = testConvex();
+    const def = emptyDefinition("Timed physiology");
+    def.quiz = { enabled: true };
+    def.fields = [
+      { id: "key", type: "choice", label: "Correct answer", required: true, options: [{ id: "a", label: "A" }, { id: "b", label: "B" }], quiz: { correctOptionIds: ["a"], points: 1 } },
+      { id: "explain", type: "text", label: "Explain", required: true, min: 5 },
+    ];
+    const { owner, formId, shareId } = await publish(t, def);
+    await expect(t.mutation(api.respond.submitResponse, submission(shareId, "before-timer", { explain: "x" }))).rejects.toThrow(/VALIDATION_FAILED/);
+    await owner.mutation(api.forms.updateFormSettings, { formId, settings: { ...defaultFormSettings, quizTimerMode: "quiz", quizTimeSeconds: 5 } });
+    expect(await t.query(api.respond.getPublicForm, { shareId })).toMatchObject({ state: "open", quizTimerMode: "quiz", quizTimeSeconds: 5 });
+    const result = await t.mutation(api.respond.submitResponse, submission(shareId, "after-timer", { explain: "x" }));
+    expect(result).toMatchObject({ status: "completed", quizScore: 0, quizMaxScore: 1 });
+  });
+});
