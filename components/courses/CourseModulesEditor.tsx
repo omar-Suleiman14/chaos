@@ -52,12 +52,29 @@ export default function CourseModulesEditor({ courseId, modules, lessons }: { co
   // Learners see module lessons in module order, then ungrouped ones; the course order follows the same sequence.
   const groupOf = (moduleId: string) => moduleId ? (draft.find((m) => m.id === moduleId)?.lessonIds ?? []).filter((id) => ids.includes(id)) : ids.filter((id) => !moduleOf(id));
   const move = (id: Id<"lessons">, d: -1 | 1) => {
-    const moduleId = moduleOf(id), group = [...groupOf(moduleId)], i = group.indexOf(id), j = i + d;
-    if (j < 0 || j >= group.length) return;
-    [group[i], group[j]] = [group[j], group[i]];
-    const nextModules = draft.map((m) => m.id === moduleId ? { ...m, lessonIds: group } : m);
-    const ungrouped = moduleId ? groupOf("") : group;
-    const nextIds = [...nextModules.flatMap((m) => m.lessonIds.filter((x) => ids.includes(x))), ...ungrouped];
+    const moduleId = moduleOf(id);
+    const module = draft.find(m => m.id === moduleId);
+    const section = module?.sections?.find(section => section.lessonIds.includes(id));
+    const sectioned = new Set((module?.sections ?? []).flatMap(s => s.lessonIds));
+    const group = section
+      ? section.lessonIds.filter(item => ids.includes(item))
+      : module ? module.lessonIds.filter(item => ids.includes(item) && !sectioned.has(item)) : groupOf("");
+    const reordered = [...group], i = reordered.indexOf(id), j = i + d;
+    if (i < 0 || j < 0 || j >= reordered.length) return;
+    [reordered[i], reordered[j]] = [reordered[j], reordered[i]];
+    // Reorder only the selected subsection's slots. Other subsections keep their order.
+    const nextModules = draft.map(m => {
+      if (m.id !== moduleId) return m;
+      let index = 0;
+      const slots = new Set(group);
+      return {
+        ...m,
+        lessonIds: m.lessonIds.map(item => slots.has(item) ? reordered[index++] : item),
+        sections: m.sections?.map(s => s.id === section?.id ? { ...s, lessonIds: reordered } : s),
+      };
+    });
+    const ungrouped = moduleId ? groupOf("") : reordered;
+    const nextIds = [...nextModules.flatMap(m => m.lessonIds.filter(id => ids.includes(id))), ...ungrouped];
     setDraft(nextModules);
     void run(async () => { if (moduleId) await saveModules({ courseId, modules: nextModules }); await setOutline({ courseId, lessonIds: nextIds }); });
   };
@@ -88,7 +105,7 @@ export default function CourseModulesEditor({ courseId, modules, lessons }: { co
       </div>
     </li>
   );
-  const list = (group: Lesson[]) => group.length > 0 && <ol className="cb-lessons mb-1">{group.map((l, i) => row(l, i + 1, group))}</ol>;
+  const list = (group: Lesson[], order = group) => group.length > 0 && <ol className="cb-lessons mb-1">{group.map((l, i) => row(l, order.indexOf(l) + 1 || i + 1, group))}</ol>;
   const addButton = (moduleId?: string) => <>
     <button type="button" className="cb-add w-full" disabled={busy} onClick={() => void add(moduleId)}><Plus size={18} aria-hidden /> {t.add}</button>
     <FallbackBoundary fallback={null}><CourseNotionImport courseId={courseId} moduleId={moduleId} disabled={busy} /></FallbackBoundary>
@@ -127,10 +144,10 @@ export default function CourseModulesEditor({ courseId, modules, lessons }: { co
                     <label className="cb-collapse-default"><input type="checkbox" checked={!!section.collapsedByDefault} disabled={busy} onChange={e => void commit(draft.map(m => m.id === module.id ? { ...m, sections: m.sections?.map(s => s.id === section.id ? { ...s, collapsedByDefault: e.target.checked } : s) } : m))} />{t.startCollapsed}</label>
                     <button type="button" className="ws-icon-button" disabled={busy} title={t.removeSection} aria-label={t.removeSection} onClick={() => void commit(draft.map(m => m.id === module.id ? { ...m, sections: m.sections?.filter(s => s.id !== section.id) } : m))}><Trash2 size={15} aria-hidden /></button>
                   </div>
-                  {list(sectionLessons)}
+                  {list(sectionLessons, group)}
                 </section>;
               })}
-              {list(group.filter(l => !(module.sections ?? []).some(s => s.lessonIds.includes(l.id))))}
+              {list(group.filter(l => !(module.sections ?? []).some(s => s.lessonIds.includes(l.id))), group)}
               <button type="button" className="cb-add" disabled={busy || (module.sections?.length ?? 0) >= 30} onClick={() => void commit(draft.map(m => m.id === module.id ? { ...m, sections: [...(m.sections ?? []), { id: crypto.randomUUID(), title: t.sectionN((m.sections?.length ?? 0) + 1), lessonIds: [], collapsedByDefault: true }] } : m))}><Plus size={16} aria-hidden />{t.newSection}</button>
             </div>
             {addButton(module.id)}
