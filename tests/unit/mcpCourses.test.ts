@@ -116,9 +116,9 @@ it("advertises and passes through nested module settings without dropping sectio
   const { tools } = await client.listTools();
   const set = tools.find(t => t.name === "set_course_modules")!;
   const get = tools.find(t => t.name === "get_course")!;
-  const module = (set.inputSchema.properties!.modules as { items: { properties: Record<string, unknown> } }).items.properties;
-  expect(module).toHaveProperty("collapsedByDefault");
-  expect(module).toHaveProperty("sections");
+  const moduleProperties = (set.inputSchema.properties!.modules as { items: { properties: Record<string, unknown> } }).items.properties;
+  expect(moduleProperties).toHaveProperty("collapsedByDefault");
+  expect(moduleProperties).toHaveProperty("sections");
   const outModule = (get.outputSchema!.properties!.modules as { items: { properties: Record<string, unknown> } }).items.properties;
   expect(outModule).toHaveProperty("collapsedByDefault");
   expect(outModule).toHaveProperty("sections");
