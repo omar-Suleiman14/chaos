@@ -135,7 +135,7 @@ export async function setOutlineCourse(ctx: MutationCtx, args: Infer<typeof setO
     if (ids.length > MAX_LESSONS) throw new Error(`VALIDATION_FAILED: A course holds up to ${MAX_LESSONS} lessons.`);
     for (const id of ids) { const l = await ctx.db.get("lessons", id); if (!l || l.ownerId !== row.ownerId) throw new Error("NOT_FOUND: Lesson not found."); }
     if (actor !== row.ownerId && ids.some(id => !outline(row).includes(id))) throw new Error("Only the owner can add existing lessons to this course.");
-    await authorDb(ctx).patch("learnCollections", row._id, { lessonIds: ids, modules: row.modules?.map(m => ({ ...m, lessonIds: ids.filter(id => m.lessonIds.includes(id)) })), updatedAt: Date.now() });
+    await authorDb(ctx).patch("learnCollections", row._id, { lessonIds: ids, modules: row.modules?.map(m => ({ ...m, lessonIds: ids.filter(id => m.lessonIds.includes(id)), sections: m.sections?.map(section => ({ ...section, lessonIds: section.lessonIds.filter(id => ids.includes(id)) })) })), updatedAt: Date.now() });
     return null;
 }
 export const setOutline = mutation({
