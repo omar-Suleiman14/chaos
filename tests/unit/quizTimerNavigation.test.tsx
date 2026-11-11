@@ -9,6 +9,8 @@ vi.mock("@/lib/sfx", () => ({ sfx: { play: vi.fn() } }));
 vi.mock("@/lib/haptics", () => ({ haptics: { error: vi.fn(), light: vi.fn(), medium: vi.fn(), select: vi.fn() } }));
 vi.mock("@/components/forms/formThemes.css", () => ({}));
 
+const START_AT = Date.parse("2026-11-11T12:00:00Z");
+
 const definition = {
   ...emptyDefinition("Anatomy examination"),
   quiz: { enabled: true },
@@ -21,7 +23,7 @@ const definition = {
 
 beforeEach(() => {
   vi.useFakeTimers();
-  vi.setSystemTime(new Date("2026-11-11T12:00:00Z"));
+  vi.setSystemTime(new Date(START_AT));
   Object.defineProperty(window, "matchMedia", { configurable: true, value: vi.fn(() => ({ matches: false })) });
   Element.prototype.scrollIntoView = vi.fn();
 });
@@ -54,11 +56,11 @@ it("expires a question and advances to the next one without requiring an answer"
   const submit = vi.fn();
   function TimedQuiz() {
     const [answers, setAnswers] = useState<Answers>({});
-    const [starts, setStarts] = useState<Record<string, number>>({ q1: Date.now() });
+    const [starts, setStarts] = useState<Record<string, number>>({ q1: START_AT });
     const [expired, setExpired] = useState<string[]>([]);
     return <FormRenderer skipCover definition={definition} language="en" answers={answers}
       onAnswer={(id, value) => setAnswers(current => ({ ...current, [id]: value! }))}
-      onSubmit={submit} timerMode="question" timerSeconds={5} timerStartedAt={Date.now()}
+      onSubmit={submit} timerMode="question" timerSeconds={5} timerStartedAt={START_AT}
       questionStartedAtById={starts} expiredQuestionIds={expired}
       onQuestionStart={id => setStarts(prev => prev[id] ? prev : { ...prev, [id]: Date.now() })}
       onQuestionTimeout={id => setExpired(prev => [...prev, id])}
