@@ -36,11 +36,15 @@ function Subsection({ section, lessons, courseId, locked, progress, ar }: {
   const ids = section.lessonIds.filter(id => lessons.some(l => l.id === id));
   if (!ids.length) return null;
   return <section className="cp-subsection">
-    <button type="button" className="cp-disclosure" aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>
-      <ChevronDown size={18} className="cp-disclosure__chevron" aria-hidden="true" />
-      <span className="cp-disclosure__title" dir="auto">{section.title}</span>
-      <span className="cp-disclosure__count">{ids.filter(id => progress[id]?.completed).length}/{ids.length}</span>
-    </button>
+    <div className="cp-disclosure-shell">
+      <h4 className="cp-disclosure-heading">
+        <button type="button" className="cp-disclosure" aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>
+          <ChevronDown size={18} className="cp-disclosure__chevron" aria-hidden="true" />
+          <span className="cp-disclosure__title" dir="auto">{section.title}</span>
+        </button>
+      </h4>
+      <span className="cp-disclosure__count" aria-label={ar ? "الدروس المكتملة" : "Lessons completed"}>{ids.filter(id => progress[id]?.completed).length}/{ids.length}</span>
+    </div>
     {expanded && <div className="cp-subsection__body"><LessonRows ids={ids} lessons={lessons} courseId={courseId} locked={locked} progress={progress} ar={ar} /></div>}
   </section>;
 }
@@ -52,11 +56,15 @@ function ModuleView({ module, course, progress, locked, ar }: { module: Module; 
   const other = ids.filter(id => !assigned.has(id));
   const count = ids.filter(id => progress[id]?.completed).length;
   return <section className="cp-module">
-    {module.title && <button type="button" className="cp-disclosure cp-disclosure--module" aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>
-      <ChevronDown size={20} className="cp-disclosure__chevron" aria-hidden="true" />
-      <span className="cp-disclosure__title" dir="auto">{module.title}</span>
-      <span className="cp-disclosure__count">{ar ? `${count}/${ids.length} دروس مكتملة` : `${count}/${ids.length} lessons completed`}</span>
-    </button>}
+    {module.title && <div className="cp-disclosure-shell cp-disclosure-shell--module">
+      <h3 className="cp-disclosure-heading">
+        <button type="button" className="cp-disclosure cp-disclosure--module" aria-expanded={expanded} onClick={() => setExpanded(v => !v)}>
+          <ChevronDown size={20} className="cp-disclosure__chevron" aria-hidden="true" />
+          <span className="cp-disclosure__title" dir="auto">{module.title}</span>
+        </button>
+      </h3>
+      <span className="cp-disclosure__count" aria-label={ar ? "الدروس المكتملة" : "Lessons completed"}>{ar ? `${count}/${ids.length} دروس مكتملة` : `${count}/${ids.length} lessons completed`}</span>
+    </div>}
     {(!module.title || expanded) && <div className="cp-module__body">
       {(module.sections ?? []).map(section => <Subsection key={section.id} section={section} lessons={course.lessons} courseId={course.id} locked={locked} progress={progress} ar={ar} />)}
       {other.length > 0 && <LessonRows ids={other} lessons={course.lessons} courseId={course.id} locked={locked} progress={progress} ar={ar} />}
