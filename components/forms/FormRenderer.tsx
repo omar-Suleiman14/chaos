@@ -320,13 +320,14 @@ export default function FormRenderer(props: FormRendererProps) {
               const timedOut = !!props.expiredQuestionIds?.includes(q.id);
               const current = flow.index === q.stepIndex && flow.steps[q.stepIndex]?.fields.length === 1;
               return <button key={q.id} type="button" disabled={timedOut} data-answered={answered} data-current={current} aria-current={current ? "step" : undefined} title={q.title} aria-label={`${flow.t.questionNavigator} ${i + 1}: ${q.title}. ${answered ? flow.t.answered : flow.t.unanswered}`} onClick={() => {
-                if (flow.steps.length > 1) flow.goTo(q.stepIndex);
-                props.onProgress?.(q.id);
-                requestAnimationFrame(() => {
+                const focusTarget = () => {
                   const target = Array.from(rootRef.current?.querySelectorAll<HTMLElement>("[data-field-id]") ?? []).find(el => el.dataset.fieldId === q.id && !el.closest("[inert]"));
                   target?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
                   target?.focus({ preventScroll: true });
-                });
+                };
+                if (flow.index !== q.stepIndex) { flow.goTo(q.stepIndex); requestAnimationFrame(focusTarget); }
+                else focusTarget();
+                props.onProgress?.(q.id);
                 setNavigatorOpen(false);
               }}>{i + 1}</button>;
             })}
