@@ -107,7 +107,7 @@ it("create_full_course builds the course, every lesson with its blocks, then pub
 });
 
 it("advertises and passes through nested module settings without dropping section fields", async () => {
- const call = vi.fn(async (_tool: string, input: Record<string, unknown>) => ({ ok: true, modules: input.modules }));
+ const call = vi.fn(async (_tool: string, _input: Record<string, unknown>) => ({ ok: true }));
  const server = createChaosMcpServer({ call, resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp" });
  const client = new Client({ name: "course-sections", version: "1" });
  const [a,b] = InMemoryTransport.createLinkedPair();
