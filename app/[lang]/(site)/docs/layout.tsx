@@ -1,12 +1,19 @@
-import { Source_Serif_4 } from "next/font/google";
+import localFont from "next/font/local";
 import { getDocsCatalog } from "@/lib/docs/server";
 import { SeededDocs } from "@/lib/docs/provider";
 import { isLocale } from "@/lib/locale";
 import DocsShell from "./DocsShell";
 import "./docs.css";
 
-// Free stand-in for Anthropic Serif, used only when the reader does not have Anthropic's faces installed.
-const sourceSerif = Source_Serif_4({ subsets: ["latin"], weight: ["500", "600"], variable: "--font-docs-serif", display: "swap" });
+// Self-host the project's OFL serif so documentation builds do not rely on external font requests.
+const sourceSerif = localFont({
+  src: [
+    { path: "../../../../components/learn/fonts/libron/Libron-Regular.woff2", weight: "400", style: "normal" },
+    { path: "../../../../components/learn/fonts/libron/Libron-Bold.woff2", weight: "700", style: "normal" },
+  ],
+  variable: "--font-docs-serif",
+  display: "swap",
+});
 
 /** Static per language, refreshed every five minutes; the live subscription in SeededDocs shows edits sooner. */
 export const revalidate = 300;
