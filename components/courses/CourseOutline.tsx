@@ -73,7 +73,7 @@ export default function CourseOutline({ course }: { course: Course }) {
   const locked = !useCourseEnrollment(course.id).state?.enrolled;
   useUsableMark("course.modules", true);
   const assigned = new Set(course.modules.flatMap(m => m.lessonIds));
-  const groups = [...course.modules, { id: "ungrouped", title: "", lessonIds: course.lessons.filter(l => !assigned.has(l.id)).map(l => l.id), assessments: [] }];
+  const groups = [...course.modules, { id: "ungrouped", title: "", lessonIds: course.lessons.filter(l => !assigned.has(l.id)).map(l => l.id), assessments: [], sections: undefined, collapsedByDefault: false }];
   return <div className="cp-modules">{groups.filter(m => m.lessonIds.length || m.assessments.length).map(module =>
     <ModuleView key={module.id} module={module} course={course} progress={progress} locked={locked} ar={ar} />
   )}</div>;
