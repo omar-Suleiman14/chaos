@@ -2,7 +2,7 @@ import { defineTable } from "convex/server";
 import { v } from "convex/values";
 import { visibility, communityState, lessonMeta } from "./learnModel";
 export const collectionItem = v.union(v.object({ kind: v.literal("lesson"), id: v.id("lessons"), versionId: v.id("lessonVersions") }), v.object({ kind: v.literal("source"), id: v.id("learnSources") }));
-export const courseModule = v.object({ id: v.string(), title: v.string(), lessonIds: v.array(v.id("lessons")), assessments: v.array(v.object({ kind: v.union(v.literal("form"), v.literal("quiz")), id: v.string() })) });
+export const courseModule = v.object({ id: v.string(), title: v.string(), lessonIds: v.array(v.id("lessons")), collapsedByDefault: v.optional(v.boolean()), sections: v.optional(v.array(v.object({ id: v.string(), title: v.string(), lessonIds: v.array(v.id("lessons")), collapsedByDefault: v.optional(v.boolean()) }))), assessments: v.array(v.object({ kind: v.union(v.literal("form"), v.literal("quiz")), id: v.string() })) });
 export const courseDetails = v.object({ outcomes: v.array(v.string()), level: v.union(v.literal("all"), v.literal("beginner"), v.literal("intermediate"), v.literal("advanced")), estimatedMinutes: v.optional(v.number()) });
 export const cards = v.array(v.object({ id: v.string(), front: v.string(), back: v.string(), conceptIds: v.array(v.string()) }));
 export const assetTables = {
