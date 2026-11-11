@@ -284,7 +284,7 @@ export async function readPublicCourse(ctx: QueryCtx, args: { courseId: string }
       const lv = await ctx.db.get("lessonVersions", item.versionId);
       if (lv && lv.lessonId === item.id && (ownsLesson || team || lv.visibility === undefined || lv.visibility === "public")) lessons.push({ id: item.id, versionId: item.versionId, title: lv.metadata.title, description: lv.metadata.description, blocks: lv.document.blocks.length });
     }
-    return { id: row._id, title: version.metadata.title, description: version.metadata.description, coverUrl: version.metadata.coverUrl, icon: version.metadata.icon, language: version.metadata.language, tags: version.metadata.tags, details: version.details, modules: (version.modules ?? []).map(m => ({ ...m, lessonIds: m.lessonIds.filter(id => lessons.some(l => l.id === id)) })), ownerName: owner.name, ownerUsername: owner.username, publishedAt: version.publishedAt, lessons };
+    return { id: row._id, title: version.metadata.title, description: version.metadata.description, coverUrl: version.metadata.coverUrl, icon: version.metadata.icon, language: version.metadata.language, tags: version.metadata.tags, details: version.details, modules: (version.modules ?? []).map(m => ({ ...m, lessonIds: m.lessonIds.filter(id => lessons.some(l => l.id === id)), sections: m.sections?.map(section => ({ ...section, lessonIds: section.lessonIds.filter(id => lessons.some(l => l.id === id)) })) })), ownerName: owner.name, ownerUsername: owner.username, publishedAt: version.publishedAt, lessons };
 }
 export const getPublic = query({
   args: { courseId: v.string() },
