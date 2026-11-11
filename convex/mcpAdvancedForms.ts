@@ -61,6 +61,7 @@ const responseControls = v.object({
   access: v.optional(v.union(v.literal("public"), v.literal("signed_in"), v.literal("code"))),
   opensAt: v.optional(v.union(v.number(), v.null())), closesAt: v.optional(v.union(v.number(), v.null())),
   responseLimit: v.optional(v.union(v.number(), v.null())), retentionDays: v.optional(v.union(v.number(), v.null())),
+  quizTimerMode: v.optional(v.union(v.literal("none"), v.literal("quiz"), v.literal("question"))), quizTimeSeconds: v.optional(v.number()),
   onePerPerson: v.optional(v.boolean()), allowEditAfterSubmit: v.optional(v.boolean()), allowEditAfterClose: v.optional(v.boolean()),
   collectPartial: v.optional(v.boolean()), allowResumeLink: v.optional(v.boolean()), hideBranding: v.optional(v.boolean()),
   hiddenFields: v.optional(v.array(v.string())), hiddenParameters: v.optional(v.array(hiddenParameterValidator)), allowedEmails: v.optional(v.array(v.string())), allowedDomains: v.optional(v.array(v.string())),
