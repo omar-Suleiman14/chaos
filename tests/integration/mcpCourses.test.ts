@@ -155,7 +155,8 @@ it("round-trips nested course sections and collapse defaults through MCP without
  }];
  // Use a real owned published assessment for normal module-attachment authorization.
  await t.run(async ctx => {
-  const formDraft = (await import("@/convex/formLogic")).emptyDefinition("Module quiz");
+  const initial = (await import("@/convex/formLogic")).emptyDefinition("Module quiz");
+  const formDraft = { ...initial, quiz: { enabled: true } };
   const formId = await ctx.db.insert("forms", {
    ownerId: userId, title: formDraft.title, shareId: "module-ref", status: "draft", draft: formDraft, draftRevision: 1,
    settings: (await import("@/convex/formModel")).defaultFormSettings, responseCount: 0, partialCount: 0, createdAt: 0, updatedAt: 0,
