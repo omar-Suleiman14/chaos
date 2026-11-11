@@ -100,8 +100,13 @@
       "unit": "count"
     },
     "forms.max.respondent.payloadBytes": {
-      "budget": 40291,
-      "unit": "bytes"
+      "budget": 40450,
+      "unit": "bytes",
+      "raised": {
+        "from": 40291,
+        "reason": "Timer state and random-access question palette incur small respondent payload changes while preserving form correctness and navigation.",
+        "at": "2026-11-11"
+      }
     },
     "forms.max.respondent.readAmplification": {
       "budget": 40,
@@ -211,8 +216,13 @@
       "unit": "count"
     },
     "forms.q10.respondent.payloadBytes": {
-      "budget": 3292,
-      "unit": "bytes"
+      "budget": 3420,
+      "unit": "bytes",
+      "raised": {
+        "from": 3292,
+        "reason": "Timer state and random-access question palette incur small respondent payload changes while preserving form correctness and navigation.",
+        "at": "2026-11-11"
+      }
     },
     "forms.q10.respondent.readAmplification": {
       "budget": 40,
@@ -322,8 +332,13 @@
       "unit": "count"
     },
     "forms.q100.respondent.payloadBytes": {
-      "budget": 22390,
-      "unit": "bytes"
+      "budget": 22550,
+      "unit": "bytes",
+      "raised": {
+        "from": 22390,
+        "reason": "Timer state and random-access question palette incur small respondent payload changes while preserving form correctness and navigation.",
+        "at": "2026-11-11"
+      }
     },
     "forms.q100.respondent.readAmplification": {
       "budget": 40,
