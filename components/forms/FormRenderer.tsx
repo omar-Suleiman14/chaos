@@ -52,6 +52,16 @@ export interface FormRendererProps {
   notice?: React.ReactNode;
   /** Skip the theme's start screen (editing a submitted response, logic debugger). */
   skipCover?: boolean;
+  /** Live quiz timing, preserved by the respondent across refreshes. */
+  timerMode?: "none" | "quiz" | "question";
+  timerSeconds?: number;
+  timerStartedAt?: number;
+  questionStartedAtById?: Record<string, number>;
+  expiredQuestionIds?: string[];
+  onTimerStart?: () => void;
+  onQuestionStart?: (fieldId: string) => void;
+  onQuestionTimeout?: (fieldId: string) => void;
+  onTimeUp?: () => void;
 }
 
 const ui = {
@@ -62,6 +72,7 @@ const ui = {
     minutes: (n: number) => `about ${n} min`, swipe: "Swipe up", scrollToStart: "Scroll to start", pressStart: "Press start", player: "Player 1", levels: (n: number) => `${n} levels`,
     clear: "Clear form", clearConfirm: "This will remove your answers from all questions. Clear the form?",
     of: (a: number, b: number) => `${a} of ${b}`, chooseMany: "Choose as many as you like", score: "Your score", fileHint: "PDF, image, text, CSV, Word or Excel · up to 10 MB",
+    questionNavigator: "Questions", timerLeft: "Time left", timedOut: "Time is up", answered: "Answered", unanswered: "Unanswered",
     clearAnswer: "Clear answer", clearRating: (label: string) => `Clear answer for ${label}`, enterNumber: "Enter a number.", scaleValue: (n: number, lo: number, hi: number) => `${n}, from ${lo} to ${hi}`,
   },
   ar: {
@@ -71,6 +82,7 @@ const ui = {
     minutes: (n: number) => `حوالي ${n} دقيقة`, swipe: "اسحب لأعلى", scrollToStart: "مرّر للبدء", pressStart: "اضغط للبدء", player: "اللاعب 1", levels: (n: number) => `${n} مستوى`,
     clear: "مسح النموذج", clearConfirm: "سيؤدي هذا إلى حذف إجاباتك من جميع الأسئلة. هل تريد مسح النموذج؟",
     of: (a: number, b: number) => `${a} من ${b}`, chooseMany: "اختر ما تشاء", score: "درجتك", fileHint: "PDF أو صورة أو نص أو CSV أو Word أو Excel · حتى 10 ميغابايت",
+    questionNavigator: "الأسئلة", timerLeft: "الوقت المتبقي", timedOut: "انتهى الوقت", answered: "تمت الإجابة", unanswered: "لم تتم الإجابة",
     clearAnswer: "امسح الإجابة", clearRating: (label: string) => `امسح الإجابة عن ${label}`, enterNumber: "أدخل رقمًا.", scaleValue: (n: number, lo: number, hi: number) => `${n}، من ${lo} إلى ${hi}`,
   },
 };
@@ -159,10 +171,34 @@ function useFlow(props: FormRendererProps, rootRef: React.RefObject<HTMLDivEleme
   const back = () => {
     navigation.current++;
     if (props.submitting || index === 0) return;
+    const previous = props.timerMode === "question"
+      ? steps.findLastIndex((step, i) => i < index && !step.fields.some(field => props.expiredQuestionIds?.includes(field.id)))
+      : index - 1;
+    if (previous < 0) return;
     setShowErrors(false);
     setDirection(-1);
-    setStepIndex(index - 1);
+    setStepIndex(previous);
     play("back");
+  };
+
+
+  /** Question palette navigation deliberately permits leaving a question unanswered. */
+  const goTo = (target: number) => {
+    if (props.submitting || target < 0 || target >= steps.length || target === index) return;
+    if (props.timerMode === "question" && steps[target].fields.some(field => props.expiredQuestionIds?.includes(field.id))) return;
+    navigation.current++;
+    setShowErrors(false);
+    setDirection(target > index ? 1 : -1);
+    setStepIndex(target);
+    const next = steps[target]?.fields[0];
+    if (next) props.onProgress?.(next.id);
+  };
+
+  /** On expiry, a timed question advances without required-field validation. */
+  const forceAdvance = () => {
+    if (props.submitting) return;
+    if (last) { props.onTimeUp?.(); return; }
+    goTo(index + 1);
   };
 
   const setAnswer = (field: FormField, value: AnswerValue | undefined) => {
@@ -179,17 +215,58 @@ function useFlow(props: FormRendererProps, rootRef: React.RefObject<HTMLDivEleme
   }, [rootRef, step?.key]);
 
   const navigationRevision = () => navigation.current;
-  return { navigationRevision, def, t, language, answers, steps, step, index, last, direction, showErrors, shake, errorFor, stepErrors, advance, submit, back, setAnswer, play };
+  return { navigationRevision, def, t, language, answers, steps, step, index, last, direction, showErrors, shake, errorFor, stepErrors, advance, submit, back, goTo, forceAdvance, setAnswer, play };
 }
 type Flow = ReturnType<typeof useFlow>;
 
 export default function FormRenderer(props: FormRendererProps) {
   const rootRef = useRef<HTMLDivElement>(null);
-  const flow = useFlow(props, rootRef);
-  const cover = themeCover(props.definition);
+  // A per-question exam always presents one field at a time, regardless of the
+  // published quiz's normal page layout. No published definition is changed.
+  const effectiveDefinition = useMemo(() => props.timerMode === "question" && props.definition.quiz?.enabled
+    ? { ...props.definition, presentation: "conversational" as const } : props.definition, [props.definition, props.timerMode]);
+  const effectiveProps = useMemo(() => effectiveDefinition === props.definition ? props : { ...props, definition: effectiveDefinition }, [props, effectiveDefinition]);
+  const flow = useFlow(effectiveProps, rootRef);
+  const cover = themeCover(effectiveDefinition);
   const [started, setStarted] = useState(props.skipCover || cover === "none");
   const [focusSavedField, setFocusSavedField] = useState(false);
-  const mode = props.definition.presentation;
+  const [navigatorOpen, setNavigatorOpen] = useState(false);
+  const navigatorId = useId();
+  const mode = effectiveDefinition.presentation;
+  const [now, setNow] = useState(0);
+  const timerReady = started && !!props.timerStartedAt && !!props.timerSeconds && props.timerMode !== "none";
+  // An introduction/statement is not an exam question and must not consume its timer.
+  const activeField = flow.step?.fields.find(isAnswerable)?.id;
+  const { timerMode, timerStartedAt, onQuestionStart } = props;
+  const startedAt = timerMode === "question" ? (activeField && props.questionStartedAtById?.[activeField]) : timerStartedAt;
+  const remaining = timerReady && startedAt ? Math.max(0, Math.ceil((startedAt + (props.timerSeconds ?? 0) * 1000 - now) / 1000)) : null;
+  const expiredRef = useRef<string | null>(null);
+  const timerInitiated = useRef(false);
+  useEffect(() => {
+    if (!started || timerInitiated.current || !props.definition.quiz?.enabled || !props.timerMode || props.timerMode === "none") return;
+    timerInitiated.current = true;
+    props.onTimerStart?.();
+  }, [started, props]);
+  useEffect(() => {
+    if (started && timerMode === "question" && activeField && !!timerStartedAt) onQuestionStart?.(activeField);
+  }, [started, activeField, timerMode, timerStartedAt, onQuestionStart]);
+  useEffect(() => {
+    if (!timerReady) return;
+    const tick = () => setNow(Date.now());
+    tick();
+    const timer = window.setInterval(tick, 250);
+    return () => window.clearInterval(timer);
+  }, [timerReady]);
+  useEffect(() => {
+    if (!timerReady || remaining === null || remaining > 0 || props.submitting || !startedAt || !now) return;
+    const key = props.timerMode === "question" ? `${activeField}:${startedAt}` : `quiz:${startedAt}`;
+    if (expiredRef.current === key) return;
+    expiredRef.current = key;
+    if (props.timerMode === "question" && activeField) {
+      props.onQuestionTimeout?.(activeField);
+      flow.forceAdvance();
+    } else props.onTimeUp?.();
+  }, [remaining, timerReady, startedAt, now, props, activeField, flow]);
 
   useEffect(() => {
     if (!props.continueRequested) return;
@@ -222,16 +299,49 @@ export default function FormRenderer(props: FormRendererProps) {
     haptics.medium();
   };
 
+  // Flatten every answerable field, including multiple questions in one section.
+  // The step index is separate from its displayed question number.
+  const questionSteps = flow.steps.flatMap((step, stepIndex) => step.fields.filter(isAnswerable).map(field => ({ id: field.id, stepIndex, title: field.label })));
+  const answeredCount = questionSteps.filter(q => q.id && !isEmptyAnswer(props.answers[q.id])).length;
   return (
     <div ref={rootRef} dir={isRtl(props.language) ? "rtl" : "ltr"} lang={props.language} className={`form-root form-mode-${mode}`}>
+      {started && props.definition.quiz?.enabled && <nav className="form-quiz-tools" aria-label={flow.t.questionNavigator}>
+        {props.timerMode && props.timerMode !== "none" && <span className="form-quiz-clock" data-urgent={remaining !== null && remaining <= 10} role="timer" aria-label={flow.t.timerLeft}>
+          <Clock size={16} aria-hidden="true" />
+          {remaining === null ? "…" : `${Math.floor(remaining / 60).toString().padStart(2, "0")}:${(remaining % 60).toString().padStart(2, "0")}`}
+        </span>}
+        <button type="button" className="form-quiz-nav-trigger" aria-expanded={navigatorOpen} aria-controls={navigatorId} onClick={() => setNavigatorOpen(v => !v)}>
+          {flow.t.questionNavigator} <span className="tabular-nums">{answeredCount}/{questionSteps.length}</span><ChevronDown size={15} aria-hidden="true" />
+        </button>
+        {navigatorOpen && <div id={navigatorId} className="form-quiz-palette">
+          <div className="form-quiz-grid">
+            {questionSteps.map((q, i) => {
+              const answered = !isEmptyAnswer(props.answers[q.id]);
+              const timedOut = !!props.expiredQuestionIds?.includes(q.id);
+              const current = flow.index === q.stepIndex && flow.steps[q.stepIndex]?.fields.length === 1;
+              return <button key={q.id} type="button" disabled={timedOut} data-answered={answered} data-current={current} aria-current={current ? "step" : undefined} title={q.title} aria-label={`${flow.t.questionNavigator} ${i + 1}: ${q.title}. ${answered ? flow.t.answered : flow.t.unanswered}`} onClick={() => {
+                const focusTarget = () => {
+                  const target = Array.from(rootRef.current?.querySelectorAll<HTMLElement>("[data-field-id]") ?? []).find(el => el.dataset.fieldId === q.id && !el.closest("[inert]"));
+                  target?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
+                  target?.focus({ preventScroll: true });
+                };
+                if (flow.index !== q.stepIndex) { flow.goTo(q.stepIndex); requestAnimationFrame(focusTarget); }
+                else focusTarget();
+                props.onProgress?.(q.id);
+                setNavigatorOpen(false);
+              }}>{i + 1}</button>;
+            })}
+          </div>
+        </div>}
+      </nav>}
       {!started ? (
         <WelcomeScreen def={props.definition} language={props.language} resuming={!!props.resuming} onStart={start} />
       ) : mode === "conversational" ? (
-        <FocusFlow flow={flow} props={props} />
+        <FocusFlow flow={flow} props={effectiveProps} />
       ) : mode === "swipe" ? (
-        <SwipeFlow flow={flow} props={props} />
+        <SwipeFlow flow={flow} props={effectiveProps} />
       ) : (
-        <PagedFlow flow={flow} props={props} showHeader={cover === "none"} />
+        <PagedFlow flow={flow} props={effectiveProps} showHeader={cover === "none"} />
       )}
     </div>
   );

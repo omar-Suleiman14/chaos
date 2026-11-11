@@ -111,6 +111,7 @@ const copy = {
     whoCanRespond: "Who can respond", accessCode: "Access code", keepCode: "Leave empty to keep the current code.", chooseCode: "Choose a code",
     onePerPerson: "One response per person", onePerPersonHelp: "They can still edit if editing is allowed.",
     limits: "Limits", responseLimit: "Response limit", responseLimitHelp: "The form says it's full and stops. Nothing is thrown away.", noLimit: "No limit",
+    quizTimer: "Quiz timer", timerOff: "No timer", timerWhole: "Entire quiz", timerQuestion: "Each question", timerSeconds: "Seconds", timerHelp: "The countdown starts when the respondent begins. Timeouts leave unanswered questions blank.",
     timezone: "Time zone", timezoneHelp: "Opening and closing times are read in this zone. It is saved with the schedule.", timezoneInvalid: "Enter a time zone name such as Asia/Riyadh or Europe/London.",
     timezoneLegacy: (zone: string) => `This schedule was saved without a time zone, so it is shown in your browser's zone (${zone}). Save to keep it in ${zone}.`,
     scheduleOpens: (d: string) => `Opens ${d}`, scheduleCloses: (d: string) => `Closes ${d}`,
@@ -158,6 +159,7 @@ const copy = {
     whoCanRespond: "من يستطيع الرد", accessCode: "رمز الوصول", keepCode: "اتركه فارغًا للإبقاء على الرمز الحالي.", chooseCode: "اختر رمزًا",
     onePerPerson: "ردّ واحد لكل شخص", onePerPersonHelp: "يستطيعون التعديل إذا كان التعديل مسموحًا.",
     limits: "الحدود", responseLimit: "الحد الأقصى للردود", responseLimitHelp: "يعلن النموذج أنه ممتلئ ويتوقف. لا يُحذف شيء.", noLimit: "بلا حد",
+    quizTimer: "مؤقّت الاختبار", timerOff: "بدون مؤقّت", timerWhole: "الاختبار كاملًا", timerQuestion: "كل سؤال", timerSeconds: "ثوانٍ", timerHelp: "يبدأ العد عند بدء الإجابة. تبقى الأسئلة التي ينتهي وقتها دون إجابة.",
     timezone: "المنطقة الزمنية", timezoneHelp: "تُقرأ أوقات الفتح والإغلاق بهذه المنطقة، وتُحفظ مع الجدول.", timezoneInvalid: "أدخل اسم منطقة زمنية مثل Asia/Riyadh أو Europe/London.",
     timezoneLegacy: (zone: string) => `حُفظ هذا الجدول دون منطقة زمنية، لذا يُعرض بمنطقة متصفحك (${zone}). احفظ ليبقى بمنطقة ${zone}.`,
     scheduleOpens: (d: string) => `يفتح ${d}`, scheduleCloses: (d: string) => `يُغلق ${d}`,
@@ -460,6 +462,22 @@ export default function SettingsTab({ formId, settings, hasAccessCode, groupName
           <input type="number" min={1} value={s.responseLimit ?? ""} onChange={(e) => set("responseLimit", e.target.value ? Number(e.target.value) : undefined)}
             className="kb-input w-32 text-end tabular-nums" placeholder={t.noLimit} aria-label={t.responseLimit} />
         </Row>
+        {def.quiz?.enabled && <Row label={t.quizTimer} help={t.timerHelp}>
+          <div className="flex flex-wrap items-center gap-3">
+            <select className="kb-input min-w-40" aria-label={t.quizTimer} value={s.quizTimerMode ?? "none"} onChange={e => {
+              const mode = e.target.value as "none" | "quiz" | "question";
+              setS(prev => ({ ...prev, quizTimerMode: mode, quizTimeSeconds: mode === "none" ? prev.quizTimeSeconds : (prev.quizTimeSeconds ?? (mode === "quiz" ? 3600 : 60)) }));
+            }}>
+              <option value="none">{t.timerOff}</option>
+              <option value="quiz">{t.timerWhole}</option>
+              <option value="question">{t.timerQuestion}</option>
+            </select>
+            {s.quizTimerMode && s.quizTimerMode !== "none" && <label className="inline-flex items-center gap-2 text-sm">
+              <span>{t.timerSeconds}</span>
+              <input className="kb-input w-28 tabular-nums" type="number" min={5} max={14400} step={1} aria-label={t.timerSeconds} value={s.quizTimeSeconds ?? ""} onChange={e => set("quizTimeSeconds", e.target.value === "" ? undefined : Number(e.target.value))} />
+            </label>}
+          </div>
+        </Row>}
         <ScheduleRows s={s} set={set} />
       </section>
 

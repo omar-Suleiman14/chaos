@@ -114,3 +114,33 @@ it("lists a course's published versions with lesson titles as published, and res
   expect((await t.query(api.courses.getPublic, { courseId }))?.lessons.map((l) => l.title)).toEqual(["Anatomy", "Portal hypertension"]);
   await expect(owner.mutation(api.courses.restoreVersion, { courseId, number: 9 })).rejects.toThrow("NOT_FOUND");
 });
+
+
+it("publishes nested course subsections and their default collapse preferences", async () => {
+  vi.stubEnv("CLERK_JWT_ISSUER_DOMAIN", creatorIdentity.issuer);
+  const t = createTestConvex(), owner = t.withIdentity(creatorIdentity);
+  await owner.mutation(api.quizFunctions.getOrCreateUser, {});
+  const courseId = await owner.mutation(api.courses.create, { title: "Head and neck anatomy" });
+  const anatomy = await owner.mutation(api.courses.addLesson, { courseId, title: "Anatomy" });
+  const practical = await owner.mutation(api.courses.addLesson, { courseId, title: "Practical anatomy" });
+  for (const lessonId of [anatomy, practical]) await owner.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: 0, document: { schemaVersion: 1, blocks: [paragraph("p", "Study content")] } });
+  const modules = [{
+    id: "anatomy-module", title: "Anatomy", lessonIds: [anatomy, practical], assessments: [], collapsedByDefault: true,
+    sections: [
+      { id: "theory", title: "Theory", lessonIds: [anatomy], collapsedByDefault: false },
+      { id: "practical", title: "Practical", lessonIds: [practical], collapsedByDefault: true },
+    ],
+  }];
+  await owner.mutation(api.courses.setModules, { courseId, modules });
+  const draft = await owner.query(api.courses.get, { courseId });
+  expect(draft.modules).toEqual(modules);
+  await expect(owner.mutation(api.courses.setModules, { courseId, modules: [{
+    ...modules[0], sections: [{ id: "bad", title: "Wrong", lessonIds: [anatomy, anatomy] }],
+  }] })).rejects.toThrow("VALIDATION_FAILED");
+  expect(await owner.mutation(api.courses.publish, { courseId, visibility: "public" })).toEqual({ ok: true });
+  const published = await t.query(api.courses.getPublic, { courseId });
+  expect(published?.modules).toEqual(modules);
+  await owner.mutation(api.courses.setOutline, { courseId, lessonIds: [anatomy] });
+  expect((await owner.query(api.courses.get, { courseId })).modules[0].sections?.[1].lessonIds).toEqual([]);
+  expect((await t.query(api.courses.getPublic, { courseId }))?.modules).toEqual(modules);
+});

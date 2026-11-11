@@ -29,8 +29,8 @@ export function pendingCourseChanges(course: Course, version: Version | null, pu
   if (!same(course.metadata, version.metadata) || !same(course.details, version.details)) pending.push("details");
   // Only lessons that can be live count: an unpublished lesson in the draft is reported on its own row.
   const outline = draftOutline(course).filter((id) => publishedLessons.has(id));
-  const modules = (course.modules ?? []).map((m) => ({ ...m, lessonIds: m.lessonIds.filter((id) => publishedLessons.has(id)) }));
-  const liveModules = (version.modules ?? []).map((m) => ({ ...m, lessonIds: m.lessonIds.filter((id) => publishedLessons.has(id)) }));
+  const modules = (course.modules ?? []).map((m) => ({ ...m, lessonIds: m.lessonIds.filter((id) => publishedLessons.has(id)), sections: m.sections?.map(section => ({ ...section, lessonIds: section.lessonIds.filter(id => publishedLessons.has(id)) })) }));
+  const liveModules = (version.modules ?? []).map((m) => ({ ...m, lessonIds: m.lessonIds.filter((id) => publishedLessons.has(id)), sections: m.sections?.map(section => ({ ...section, lessonIds: section.lessonIds.filter(id => publishedLessons.has(id)) })) }));
   if (!same(outline, liveOutline(version)) || !same(modules, liveModules)) pending.push("structure");
   return pending;
 }
@@ -58,7 +58,8 @@ export async function liveStructureAfterLessonPublish(ctx: MutationCtx, course: 
   for (const m of course.modules ?? []) {
     const assessments = [];
     for (const asset of m.assessments) if (liveAssets.has(`${asset.kind}:${asset.id}`) || await assessmentLive(ctx, asset)) assessments.push(asset);
-    modules.push({ ...m, assessments });
+    const liveLessonIds = new Set(items.flatMap(item => item.kind === "lesson" ? [item.id] : []));
+    modules.push({ ...m, assessments, lessonIds: m.lessonIds.filter(id => liveLessonIds.has(id)), sections: m.sections?.map(section => ({ ...section, lessonIds: section.lessonIds.filter(id => liveLessonIds.has(id)) })) });
   }
   return { items, modules };
 }

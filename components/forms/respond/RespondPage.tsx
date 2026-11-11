@@ -75,7 +75,7 @@ const text = {
   },
 };
 
-interface LocalProgress { answers: Answers; language: Language; startedAt: number; submissionKey: string; editToken?: string; lastFieldId?: string; version: number; hidden?: Record<string, string> }
+interface LocalProgress { answers: Answers; language: Language; startedAt: number; submissionKey: string; editToken?: string; lastFieldId?: string; version: number; hidden?: Record<string, string>; timerStartedAt?: number; questionStartedAtById?: Record<string, number>; expiredQuestionIds?: string[] }
 
 /** Declared hidden fields present in the page URL; the server trims, caps and filters them again. */
 function readHidden(names: string[]): Record<string, string> | undefined {
@@ -511,6 +511,30 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
             resumeFieldId={progress.lastFieldId}
             continueRequested={continueRequested}
             skipCover={!!editing || minimal}
+            timerMode={!editing && def.quiz?.enabled ? (form.quizTimerMode ?? "none") : "none"}
+            timerSeconds={form.quizTimeSeconds}
+            timerStartedAt={progress.timerStartedAt}
+            questionStartedAtById={progress.questionStartedAtById}
+            expiredQuestionIds={progress.expiredQuestionIds ?? []}
+            onTimerStart={() => setProgress(prev => {
+              if (!prev || prev.timerStartedAt) return prev;
+              const next = { ...prev, timerStartedAt: Date.now() };
+              persist(next);
+              return next;
+            })}
+            onQuestionStart={(id) => setProgress(prev => {
+              if (!prev || prev.questionStartedAtById?.[id]) return prev;
+              const next = { ...prev, questionStartedAtById: { ...prev.questionStartedAtById, [id]: Date.now() } };
+              persist(next);
+              return next;
+            })}
+            onQuestionTimeout={id => setProgress(prev => {
+              if (!prev || prev.expiredQuestionIds?.includes(id)) return prev;
+              const next = { ...prev, expiredQuestionIds: [...(prev.expiredQuestionIds ?? []), id] };
+              persist(next);
+              return next;
+            })}
+            onTimeUp={() => void handleSubmit()}
             onProgress={(id) => {
               acknowledgeRestore();
               setProgress((p) => {

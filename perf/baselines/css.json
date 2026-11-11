@@ -11,12 +11,12 @@
       }
     },
     "source.bytes": {
-      "budget": 497519,
+      "budget": 505850,
       "unit": "bytes",
       "raised": {
-        "from": 471381,
-        "reason": "Pre-existing on main before #371 (main already at 482.9 KiB / 3778 rules); #371 adds ~2 KiB for lesson editor tokens, save states and crash notices. Re-baselined so the gate catches new regressions again.",
-        "at": "2026-11-08"
+        "from": 497519,
+        "reason": "Four new learner controls add responsive outline, reader and timed-exam styles; existing rules retained, explicit ~1.7% CSS ceiling increase is reviewed.",
+        "at": "2026-11-11"
       }
     },
     "source.deepSelectors": {
@@ -78,21 +78,21 @@
       }
     },
     "source.rules": {
-      "budget": 3792,
+      "budget": 3869,
       "unit": "count",
       "raised": {
-        "from": 3670,
-        "reason": "Pre-existing on main before #371 (main already at 482.9 KiB / 3778 rules); #371 adds ~2 KiB for lesson editor tokens, save states and crash notices. Re-baselined so the gate catches new regressions again.",
-        "at": "2026-11-08"
+        "from": 3792,
+        "reason": "Four new learner controls add responsive outline, reader and timed-exam styles; existing rules retained, explicit ~1.7% CSS ceiling increase is reviewed.",
+        "at": "2026-11-11"
       }
     },
     "source.selectors": {
-      "budget": 4194,
+      "budget": 4279,
       "unit": "count",
       "raised": {
-        "from": 4038,
-        "reason": "Pre-existing on main before #371 (main already at 482.9 KiB / 3778 rules); #371 adds ~2 KiB for lesson editor tokens, save states and crash notices. Re-baselined so the gate catches new regressions again.",
-        "at": "2026-11-08"
+        "from": 4194,
+        "reason": "Four new learner controls add responsive outline, reader and timed-exam styles; existing rules retained, explicit ~1.7% CSS ceiling increase is reviewed.",
+        "at": "2026-11-11"
       }
     },
     "source.transitionAll": {

@@ -235,8 +235,13 @@
       "unit": "count"
     },
     "journey.quizQuestion.payloadBytes": {
-      "budget": 2840,
-      "unit": "bytes"
+      "budget": 2920,
+      "unit": "bytes",
+      "raised": {
+        "from": 2840,
+        "reason": "Timed exam navigator adds tiny first-view quiz metadata; explicitly account for new question status UI.",
+        "at": "2026-11-11"
+      }
     },
     "journey.quizQuestion.readAmplification": {
       "budget": 40,
