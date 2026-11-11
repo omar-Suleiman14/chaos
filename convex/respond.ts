@@ -379,7 +379,10 @@ export const submitResponse = mutation({
     // Timed exams may contain unanswered questions. They grade as unanswered, not as invalid submissions.
     const timedQuiz = !!def.quiz?.enabled && !!form.settings.quizTimeSeconds && !!form.settings.quizTimerMode && form.settings.quizTimerMode !== "none";
     const checked = checkAnswers(def, args.answers, { partial: !args.final || timedQuiz, fileIds: uploads.ids });
-    if (Object.keys(checked.errors).length) validationFailure(checked.errors);
+    // A timed attempt may expire mid-entry. Do not let an incomplete/invalid
+    // response block the final receipt: invalid answers are omitted and score zero.
+    // Untimed forms and partial saves retain strict answer validation.
+    if (Object.keys(checked.errors).length && !(args.final && timedQuiz)) validationFailure(checked.errors);
 
     const now = Date.now();
     const startedAt = args.startedAt !== undefined && args.startedAt <= now && args.startedAt > now - 7 * 86_400_000 ? args.startedAt : undefined;
