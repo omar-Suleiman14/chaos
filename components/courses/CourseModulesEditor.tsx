@@ -53,12 +53,12 @@ export default function CourseModulesEditor({ courseId, modules, lessons }: { co
   const groupOf = (moduleId: string) => moduleId ? (draft.find((m) => m.id === moduleId)?.lessonIds ?? []).filter((id) => ids.includes(id)) : ids.filter((id) => !moduleOf(id));
   const move = (id: Id<"lessons">, d: -1 | 1) => {
     const moduleId = moduleOf(id);
-    const module = draft.find(m => m.id === moduleId);
-    const section = module?.sections?.find(section => section.lessonIds.includes(id));
-    const sectioned = new Set((module?.sections ?? []).flatMap(s => s.lessonIds));
+    const moduleRow = draft.find(m => m.id === moduleId);
+    const section = moduleRow?.sections?.find(section => section.lessonIds.includes(id));
+    const sectioned = new Set((moduleRow?.sections ?? []).flatMap(s => s.lessonIds));
     const group = section
       ? section.lessonIds.filter(item => ids.includes(item))
-      : module ? module.lessonIds.filter(item => ids.includes(item) && !sectioned.has(item)) : groupOf("");
+      : moduleRow ? moduleRow.lessonIds.filter(item => ids.includes(item) && !sectioned.has(item)) : groupOf("");
     const reordered = [...group], i = reordered.indexOf(id), j = i + d;
     if (i < 0 || j < 0 || j >= reordered.length) return;
     [reordered[i], reordered[j]] = [reordered[j], reordered[i]];
