@@ -342,6 +342,9 @@ export async function applyFormSettingsForActor(ctx: MutationCtx, form: Doc<"for
   if (form.ownerId !== actorId || form.isBanned) throw new Error("FORBIDDEN: Form owner required");
     const s = args.settings;
     if (s.responseLimit !== undefined && (!Number.isInteger(s.responseLimit) || s.responseLimit < 1)) throw new Error("INVALID_SETTINGS: The response limit must be a whole number.");
+    if (s.quizTimerMode && s.quizTimerMode !== "none" && !form.draft.quiz?.enabled) throw new Error("INVALID_SETTINGS: Timers are only available for quizzes.");
+    if (s.quizTimerMode && s.quizTimerMode !== "none" && (!Number.isInteger(s.quizTimeSeconds) || (s.quizTimeSeconds ?? 0) < 5 || (s.quizTimeSeconds ?? 0) > 14400)) throw new Error("INVALID_SETTINGS: Set a timer between 5 seconds and 4 hours.");
+    if (s.quizTimeSeconds !== undefined && (!Number.isInteger(s.quizTimeSeconds) || s.quizTimeSeconds < 5 || s.quizTimeSeconds > 14400)) throw new Error("INVALID_SETTINGS: Timer must be between 5 and 14400 seconds.");
     if (s.retentionDays !== undefined && (!Number.isInteger(s.retentionDays) || s.retentionDays < 1 || s.retentionDays > 3650)) throw new Error("INVALID_SETTINGS: Retention must be 1–3650 days.");
     if (s.opensAt !== undefined && s.closesAt !== undefined && s.opensAt >= s.closesAt) throw new Error("INVALID_SETTINGS: The closing time must be after the opening time.");
     if (s.timezone !== undefined && !isValidTimeZone(s.timezone)) throw new Error("INVALID_SETTINGS: Choose a valid time zone, for example Asia/Riyadh.");
