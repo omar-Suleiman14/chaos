@@ -371,8 +371,13 @@
       "unit": "count"
     },
     "quizzes.respondent.payloadBytes": {
-      "budget": 2840,
-      "unit": "bytes"
+      "budget": 2920,
+      "unit": "bytes",
+      "raised": {
+        "from": 2840,
+        "reason": "Quiz timer and answered-status controls add small payload bytes to quiz respondent surface.",
+        "at": "2026-11-11"
+      }
     },
     "quizzes.respondent.readAmplification": {
       "budget": 40,
