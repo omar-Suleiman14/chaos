@@ -171,9 +171,13 @@ function useFlow(props: FormRendererProps, rootRef: React.RefObject<HTMLDivEleme
   const back = () => {
     navigation.current++;
     if (props.submitting || index === 0) return;
+    const previous = props.timerMode === "question"
+      ? steps.findLastIndex((step, i) => i < index && !step.fields.some(field => props.expiredQuestionIds?.includes(field.id)))
+      : index - 1;
+    if (previous < 0) return;
     setShowErrors(false);
     setDirection(-1);
-    setStepIndex(index - 1);
+    setStepIndex(previous);
     play("back");
   };
 
@@ -181,6 +185,7 @@ function useFlow(props: FormRendererProps, rootRef: React.RefObject<HTMLDivEleme
   /** Question palette navigation deliberately permits leaving a question unanswered. */
   const goTo = (target: number) => {
     if (props.submitting || target < 0 || target >= steps.length || target === index) return;
+    if (props.timerMode === "question" && steps[target].fields.some(field => props.expiredQuestionIds?.includes(field.id))) return;
     navigation.current++;
     setShowErrors(false);
     setDirection(target > index ? 1 : -1);
@@ -242,7 +247,7 @@ export default function FormRenderer(props: FormRendererProps) {
   }, [started, props]);
   useEffect(() => {
     if (started && props.timerMode === "question" && activeField && !!props.timerStartedAt) props.onQuestionStart?.(activeField);
-  }, [started, activeField, props.timerMode, props.timerStartedAt, props.onQuestionStart]);
+  }, [started, activeField, props]);
   useEffect(() => {
     if (!timerReady) return;
     const tick = () => setNow(Date.now());
