@@ -378,6 +378,16 @@ export async function setCourseModules(ctx: MutationCtx, args: { courseId: Id<"l
   for (const courseModuleItem of args.modules) {
     if (!/^[a-zA-Z0-9_-]{1,100}$/.test(courseModuleItem.id) || moduleIds.has(courseModuleItem.id) || !courseModuleItem.title.trim() || courseModuleItem.title.length > 200 || courseModuleItem.assessments.length > 20) throw new Error("VALIDATION_FAILED: Invalid or duplicate module.");
     moduleIds.add(courseModuleItem.id);
+    const sectionIds = new Set<string>(), sectionLessons = new Set<string>();
+    if ((courseModuleItem.sections?.length ?? 0) > 30) throw new Error("VALIDATION_FAILED: Too many sections in this module.");
+    for (const section of courseModuleItem.sections ?? []) {
+      if (!/^[a-zA-Z0-9_-]{1,100}$/.test(section.id) || sectionIds.has(section.id) || !section.title.trim() || section.title.length > 200) throw new Error("VALIDATION_FAILED: Invalid or duplicate section.");
+      sectionIds.add(section.id);
+      for (const id of section.lessonIds) {
+        if (!courseModuleItem.lessonIds.includes(id) || sectionLessons.has(id)) throw new Error("VALIDATION_FAILED: A section can only contain distinct lessons from its module.");
+        sectionLessons.add(id);
+      }
+    }
     for (const id of courseModuleItem.lessonIds) { if (seen.has(id) || !current.includes(id)) throw new Error("VALIDATION_FAILED: Each outlined lesson belongs to at most one module."); seen.add(id); }
     for (const asset of courseModuleItem.assessments) {
       if (editor !== row.ownerId && !(row.modules ?? []).some(module => module.assessments.some(existing => existing.kind === asset.kind && existing.id === asset.id))) throw new Error("Only the owner can add assessments to this course.");
