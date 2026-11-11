@@ -129,6 +129,9 @@ export const formSettingsValidator = v.object({
   /** IANA zone the creator chose for opensAt/closesAt (the instants themselves are UTC). Absent on older schedules. */
   timezone: v.optional(v.string()),
   responseLimit: v.optional(v.number()),
+  /** Exam timer: whole quiz or each question. Applied to published quiz responses only. */
+  quizTimerMode: v.optional(v.union(v.literal("none"), v.literal("quiz"), v.literal("question"))),
+  quizTimeSeconds: v.optional(v.number()),
   /** Only enforceable for signed-in access. */
   onePerPerson: v.boolean(),
   allowEditAfterSubmit: v.boolean(),
