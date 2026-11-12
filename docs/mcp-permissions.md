@@ -23,3 +23,23 @@ Administrator connections expose platform account, form/quiz, learning-content a
 Platform operations reuse the native UI service handlers, including self-restriction protection, suspension expiry and audit actor attribution. Private answers, lesson blocks and card answers are excluded from inventory queries. Admin membership grants/revocations and legacy plan operations are not exposed. CRM writes share validation and audit logging with the native admin UI. Read the existing contact before saving its full editable fields; omitted follow-up dates and linked accounts are cleared. CRM tools never send messages.
 
 The server instructions follow the same rule: the paragraph that describes administrator and CRM tools is added only for verified administrator connections, so regular connections, including ones installed from the Claude or ChatGPT plugin packages, never see admin tool names or descriptions. See [AI integrations](ai-integrations.md#security).
+
+
+## Account-controlled OAuth client grants (draft rollout)
+
+Chaos now records an explicit permission set for each verified **OAuth client ID + signed-in account**, not one global grant for every assistant. A connection appears under **Dashboard → Connections → AI assistant permissions** after its first authenticated request. An account owner can allow or revoke categories separately for ChatGPT, Claude, Codex or other approved OAuth clients. The page is available in English and Arabic.
+
+Grants are **Chaos authorization**, not separate Clerk or Better Auth OAuth identity scopes. Users do not paste tokens into the page. The Next.js MCP route verifies the OAuth token and passes its provider-attested client ID to the shared-secret Convex transport. The transport registers the connection and re-checks the current persisted grant **for each tool** before dispatch; MCP `tools/list` also omits categories not granted. Even an assistant caching its old tool list cannot continue to execute a revoked action. Publication via a composed create-and-publish operation is preflight checked on the MCP side.
+
+This does **not** replace existing item ownership, collaborator role, plan limits, approval gates, admin membership or moderation checks; all still apply. Granting `admin_operations` or `admin_crm` is not sufficient without active backend admin membership, and only existing admins can select those categories in the UI.
+
+### Compatibility and safe rollout
+
+- There is no automatic OAuth reauthorization when editing a Chaos grant; clients may need to refresh tool discovery to see the changed list.
+- To preserve the currently connected assistant workflows, a newly observed OAuth client initially receives all **seven ordinary** categories on an existing deployment. It does **not** receive administrator categories. This is a staged compatibility default, not least-privilege onboarding.
+- For stricter read-only onboarding, set the Convex backend variable `CHAOS_MCP_NEW_CLIENT_DEFAULT=read_only`. **Only newly observed OAuth client IDs** then begin with `read_content` and `aggregate_analytics`. Owners grant additional categories on Connections. Existing grants never silently reset on reconnect or on deploy.
+- If the user removes all categories, the connection remains signed in but cannot call any MCP tools. Restore access on the Connections page. To revoke the OAuth identity token itself, use the identity-provider connected-app controls as well.
+- Connections identified by the old transport without an OAuth client ID are outside this migration path. The production Next.js adapter rejects verified OAuth tokens missing client IDs; any legacy **secret-authorized direct HTTP clients** must migrate to a verified client ID before a strict transport-only-client-ID enforcement follow-up. Do not give the shared MCP server secret to third parties.
+- Roll back safely by reverting the deployment; grant records remain stored and can be re-enabled without changing the OAuth token. Do not delete existing grant rows or expose them to unauthenticated users.
+
+Before enabling read-only onboarding globally, test **both** Clerk and Better Auth authorization, reconnect/revocation, every composed publish flow, the admin capability boundary, and both language variants on an authenticated browser. Keep this as a draft PR until that verification is complete.

@@ -113,6 +113,7 @@ import type * as liveTeamModel from "../liveTeamModel.js";
 import type * as liveTeams from "../liveTeams.js";
 import type * as maintenance from "../maintenance.js";
 import type * as mcp from "../mcp.js";
+import type * as mcpClientGrants from "../mcpClientGrants.js";
 import type * as mcpAdmin from "../mcpAdmin.js";
 import type * as mcpAdvancedForms from "../mcpAdvancedForms.js";
 import type * as mcpAssessments from "../mcpAssessments.js";
@@ -267,6 +268,7 @@ declare const fullApi: ApiFromModules<{
   liveTeams: typeof liveTeams;
   maintenance: typeof maintenance;
   mcp: typeof mcp;
+  mcpClientGrants: typeof mcpClientGrants;
   mcpAdmin: typeof mcpAdmin;
   mcpAdvancedForms: typeof mcpAdvancedForms;
   mcpAssessments: typeof mcpAssessments;

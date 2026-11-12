@@ -1,5 +1,5 @@
 import { McpToolError } from "./errors";
-const MCP_PERMISSIONS = ["read_content", "edit_content", "publish_content", "aggregate_analytics", "individual_responses", "collaborators", "destructive", "admin_crm", "admin_operations"] as const;
+export const MCP_PERMISSIONS = ["read_content", "edit_content", "publish_content", "aggregate_analytics", "individual_responses", "collaborators", "destructive", "admin_crm", "admin_operations"] as const;
 export type McpPermission = (typeof MCP_PERMISSIONS)[number];
 /** Every registry and composed-workflow operation needs an explicit reviewed category. */
 const TOOL_PERMISSIONS = {

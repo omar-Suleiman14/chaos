@@ -11,6 +11,8 @@ const app = defineApp({
     CHAOS_SUPPORT_EMAIL: v.optional(v.string()),
     /** Shared secret between the Next.js /mcp route and the Convex MCP endpoint (32+ random bytes). */
     CHAOS_MCP_SECRET: v.optional(v.string()),
+    /** New OAuth client grants default to read-only when set to read_only; otherwise preserve compatibility. */
+    CHAOS_MCP_NEW_CLIENT_DEFAULT: v.optional(v.string()),
     /** Encrypts webhook signing secrets at rest (32+ random characters). Webhooks are off without it. */
     CHAOS_WEBHOOK_KEY: v.optional(v.string()),
     NOTION_CLIENT_ID: v.optional(v.string()),

@@ -34,6 +34,7 @@ type Env = {
   readonly CHAOS_API_WRITE_RATE_PER_MINUTE: string | undefined;
   readonly CHAOS_APP_URL: string | undefined;
   readonly CHAOS_MCP_SECRET: string | undefined;
+  readonly CHAOS_MCP_NEW_CLIENT_DEFAULT: string | undefined;
   readonly CHAOS_SUPPORT_EMAIL: string | undefined;
   readonly CHAOS_WEBHOOK_ALLOW_LOCALHOST: string | undefined;
   readonly CHAOS_WEBHOOK_KEY: string | undefined;
