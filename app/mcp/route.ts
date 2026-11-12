@@ -9,6 +9,7 @@ import type { McpCaller } from "@/lib/mcp/server";
 import { resourceMetadataUrl, resourceUrl, verifyBetterAuthMcpToken } from "@/lib/mcp/oauth";
 import { detectAiClient, type CreatedWith } from "@/lib/aiClients";
 import { chaosIntegration } from "@/lib/integrations";
+import { parseMcpSurface } from "@/lib/mcp/surfaces";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -137,6 +138,8 @@ function convexCaller(verified: Verified, client?: CreatedWith): McpCaller {
 
 const adminCapabilities = new Map<string, { admin: boolean; expires: number }>();
 async function handle(request: Request): Promise<Response> {
+  const surface = parseMcpSurface(new URL(request.url).searchParams.get("surface"));
+  if (!surface) return withCors(Response.json({ error: "invalid_request", error_description: "Unknown MCP surface. Use all, forms, learn, live or teams." }, { status: 400 }));
   const verified = await verifiedUser(request);
   if (verified instanceof Response) return verified;
   if (!verified && !PER_TOOL_AUTH_CLIENT.test(request.headers.get("user-agent") ?? "")) return signInRequired(request);
@@ -154,7 +157,7 @@ async function handle(request: Request): Promise<Response> {
       adminCapabilities.set(userId, { admin, expires: Date.now() + 30_000 });
     } catch { /* Backend checks permissions again on every documentation operation. */ }
   }
-  const server = createChaosMcpServer({ call, admin, resourceMetadataUrl: resourceMetadataUrl(request) });
+  const server = createChaosMcpServer({ call, admin, surface, resourceMetadataUrl: resourceMetadataUrl(request) });
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   try {
@@ -172,7 +175,7 @@ export async function POST(request: Request) {
 export async function GET(request: Request) {
   // Stateless server: no standalone SSE stream.
   if (!(request.headers.get("accept") ?? "").includes("text/event-stream")) {
-    return withCors(Response.json({ name: chaosIntegration.name, mcp: resourceUrl(request), docs: chaosIntegration.docsUrl, icon: `${chaosIntegration.siteUrl}${chaosIntegration.logoPath}` }));
+    return withCors(Response.json({ name: chaosIntegration.name, mcp: resourceUrl(request), surfaces: ["all", "forms", "learn", "live", "teams"], docs: chaosIntegration.docsUrl, icon: `${chaosIntegration.siteUrl}${chaosIntegration.logoPath}` }));
   }
   return withCors(new Response(null, { status: 405, headers: { Allow: "POST, OPTIONS" } }));
 }
