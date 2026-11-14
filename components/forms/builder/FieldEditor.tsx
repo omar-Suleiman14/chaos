@@ -61,6 +61,7 @@ const copy = {
     filesAllowed: "Files allowed (1–5)", fileNote: "PDF, images, text, Word or Excel, up to 10 MB.",
     imageAddress: "Image address", imageDescription: "Image description", imageAltHint: "For people who cannot see it",
     optionImage: "Answer image URL (optional)", explanationImage: "Explanation image URL (shown only after submission)",
+    manageImages: "Edit answer images", hideImages: "Hide answer images", uploadImage: "Upload an image",
     tipBefore: "Tip: insert an earlier answer with ", tipMid: " (this one is ", tipAfter: ") or the score with ", tipEnd: ".",
     required: "Required", shownConditionally: "Shown conditionally", logic: "Logic",
     actionsFor: (name: string) => `Actions for ${name}`, duplicateSection: "Duplicate section", duplicate: "Duplicate",
@@ -89,6 +90,7 @@ const copy = {
     filesAllowed: "عدد الملفات المسموح (1–5)", fileNote: "PDF أو صور أو نصوص أو Word أو Excel، حتى 10 ميغابايت.",
     imageAddress: "رابط الصورة", imageDescription: "وصف الصورة", imageAltHint: "لمن لا يستطيع رؤيتها",
     optionImage: "رابط صورة الإجابة (اختياري)", explanationImage: "رابط صورة الشرح (تظهر بعد الإرسال)",
+    manageImages: "تعديل صور الإجابات", hideImages: "إخفاء صور الإجابات", uploadImage: "رفع صورة",
     tipBefore: "تلميح: أدرج إجابة سابقة بـ ", tipMid: " (رمز هذا السؤال ", tipAfter: ") أو الدرجة بـ ", tipEnd: ".",
     required: "إلزامي", shownConditionally: "يظهر بشرط", logic: "المنطق",
     actionsFor: (name: string) => `إجراءات ${name}`, duplicateSection: "كرّر القسم", duplicate: "كرّر",
@@ -102,6 +104,7 @@ function ChoiceList({ formId, kind, items, onChange, prefix, withScores }: { for
   const t = useCopy(copy);
   const label = t[kind];
   const [asText, setAsText] = useState(false);
+  const [showImages, setShowImages] = useState(items.some(x => !!x.image));
   const [text, setText] = useState("");
   const list = useRef<HTMLUListElement>(null);
   // Enter in an option adds the next one and moves to it, so a list can be typed without the mouse.
@@ -115,9 +118,13 @@ function ChoiceList({ formId, kind, items, onChange, prefix, withScores }: { for
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <p className={labelClass}>{label}</p>
-        <button type="button" className="ws-link-quiet" onClick={() => { if (!asText) setText(items.map((i) => i.label).join("\n")); else onChange(optionsFromText(text, items, prefix)); setAsText(!asText); }}>
-          {asText ? t.apply : t.editAsText}
-        </button>
+        <div className="flex items-center gap-3">
+          {kind !== "rows" && <button type="button" className="ws-link-quiet" aria-expanded={showImages}
+            onClick={() => setShowImages(value => !value)}>{showImages ? t.hideImages : t.manageImages}</button>}
+          <button type="button" className="ws-link-quiet" onClick={() => { if (!asText) setText(items.map((i) => i.label).join("\n")); else onChange(optionsFromText(text, items, prefix)); setAsText(!asText); }}>
+            {asText ? t.apply : t.editAsText}
+          </button>
+        </div>
       </div>
       {asText ? (
         <textarea dir="auto" value={text} onChange={(e) => setText(e.target.value)} rows={Math.min(12, Math.max(4, items.length + 1))} className="kb-input text-sm" aria-label={t.onePerLine(label)} />
@@ -132,7 +139,7 @@ function ChoiceList({ formId, kind, items, onChange, prefix, withScores }: { for
                 <input type="number" value={c.score ?? ""} placeholder={t.score} aria-label={t.scoreFor(c.label)} className="kb-input py-1.5 text-sm w-20"
                   onChange={(e) => onChange(items.map((x) => (x.id === c.id ? (e.target.value === "" ? (({ score: _s, ...rest }) => rest)(x) : { ...x, score: Number(e.target.value) }) : x)))} />
               )}
-              {kind !== "rows" && (
+              {kind !== "rows" && showImages && (
                 <div className="w-full basis-full grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <input type="url" inputMode="url" dir="ltr" placeholder={t.optionImage} aria-label={`${t.optionImage}: ${c.label}`}
                     value={c.image?.url ?? ""} onChange={(e) => onChange(items.map((x) => x.id === c.id
@@ -183,6 +190,7 @@ export default function FieldEditor({ formId, field, index, def, onChange, onDup
   const [showLogic, setShowLogic] = useState(!!field.showIf);
   const [scores, setScores] = useState(!!field.options?.some((o) => o.score !== undefined));
   const [showDescription, setShowDescription] = useState(false);
+  const [activeImageUpload, setActiveImageUpload] = useState<"question" | "explanation" | null>(null);
   const set = (patch: Partial<FormField>) => {
     const next = { ...field, ...patch };
     if (patch.options && next.quiz) {
@@ -262,7 +270,8 @@ export default function FieldEditor({ formId, field, index, def, onChange, onDup
                     explanationImage: e.target.value ? { url: e.target.value, alt: field.quiz?.explanationImage?.alt ?? "" } : undefined } })}
                   className="kb-input mt-1" />
               </label>
-              {formId && <HostedImageUpload formId={formId} onUploaded={(url) =>
+              {formId && <button type="button" className="ws-link-quiet" onClick={() => setActiveImageUpload(activeImageUpload === "explanation" ? null : "explanation")}>{t.uploadImage}</button>}
+              {formId && activeImageUpload === "explanation" && <HostedImageUpload formId={formId} onUploaded={(url) =>
                 set({ quiz: { ...field.quiz!, explanationImage: { url, alt: field.quiz?.explanationImage?.alt ?? "" } } })} />}
               {field.quiz?.explanationImage && <label className={`${labelClass} block`}>{t.imageDescription}
                 <input dir="auto" placeholder={t.imageAltHint} value={field.quiz.explanationImage.alt}
@@ -348,7 +357,8 @@ export default function FieldEditor({ formId, field, index, def, onChange, onDup
               <label className={labelClass}>{t.imageDescription} <input placeholder={t.imageAltHint} value={field.image?.alt ?? ""} disabled={!field.image} onChange={(e) => set({ image: field.image ? { ...field.image, alt: e.target.value } : undefined })} className="kb-input py-1 mt-1" /></label>
             </div>
           )}
-          {formId && field.type !== "section" && <HostedImageUpload formId={formId}
+          {formId && field.type !== "section" && <button type="button" className="ws-link-quiet" onClick={() => setActiveImageUpload(activeImageUpload === "question" ? null : "question")}>{t.uploadImage}</button>}
+          {formId && activeImageUpload === "question" && <HostedImageUpload formId={formId}
             onUploaded={(url) => set({ image: { url, alt: field.image?.alt ?? "" } })} />}
           <DocHint slug="endings">{t.tipBefore}<bdi dir="ltr">{"{{question-id}}"}</bdi>{t.tipMid}<code>{field.id}</code>{t.tipAfter}<bdi dir="ltr">{"{{score}}"}</bdi>{t.tipEnd}</DocHint>
         </div>
