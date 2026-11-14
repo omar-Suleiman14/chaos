@@ -72,11 +72,16 @@ export function useExamAnswerAutosave(
     };
   }, []);
   useEffect(() => {
-    if (!pending) setStatus(rows === undefined ? "loading" : "saved");
-    else if (!busy.current && rows !== undefined &&
+    if (!pending) { if (status !== (rows === undefined ? "loading" : "saved")) setStatus(rows === undefined ? "loading" : "saved"); }
+    else if (remote?.lastMutationId === pending.mutationId) {
+      latest.current = null;
+      setPending(null);
+      setStatus("saved");
+    } else if (!busy.current && rows !== undefined &&
         remoteRevision > pending.expectedRevision) setStatus("conflict");
     else if (!online) setStatus("offline");
-  }, [pending, rows, remoteRevision, online]);
+    else if (status === "offline") setStatus("pending");
+  }, [pending, rows, remote, remoteRevision, online, status]);
   useEffect(() => {
     if (!pending) return;
     const warn = (event: BeforeUnloadEvent) => {
