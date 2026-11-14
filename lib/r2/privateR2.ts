@@ -48,7 +48,7 @@ export async function signR2Request(
   config: R2Config, method: R2Method, key: string,
   options: { contentType?: string; expiresSeconds?: number; now?: Date } = {},
 ): Promise<SignedR2Request> {
-  if (!/^course-media\/[a-zA-Z0-9_-]{8,200}$/.test(key)) throw new Error("Invalid R2 object key.");
+  if (!/^(?:course-media|form-images)\/[a-zA-Z0-9_-]{8,200}$/.test(key)) throw new Error("Invalid R2 object key.");
   const expires = options.expiresSeconds ?? 30;
   if (!Number.isSafeInteger(expires) || expires < 1 || expires > 300) throw new Error("Invalid expiry.");
   if (method === "PUT" && !options.contentType) throw new Error("Upload content type required.");

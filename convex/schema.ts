@@ -14,6 +14,7 @@ import { practiceTables } from "./learnPracticeModel";
 import { communityTables } from "./learnCommunityModel";
 import { assetTables } from "./learnAssetModel";
 import { courseMediaTables } from "./courseMediaModel";
+import { formImageMediaTables } from "./formImageMediaModel";
 import { curriculumTables } from "./curriculumModel";
 import { folderTables } from "./folderModel";
 import { learnTables } from "./learnModel";
@@ -33,6 +34,7 @@ import { studyTables } from "./studyLessonModel";
 export default defineSchema({
   ...studyTables,
   ...courseMediaTables,
+  ...formImageMediaTables,
   authorStudents: defineTable({ authorId: v.string(), key: v.string(), studentId: v.optional(v.string()), guestName: v.optional(v.string()), context: v.string(), publicVisible: v.boolean(), publicHidden: v.optional(v.boolean()), updatedAt: v.number() }).index("by_author_key", ["authorId", "key"]).index("by_author_updated", ["authorId", "updatedAt"]).index("by_author_public_updated", ["authorId", "publicVisible", "updatedAt"]),
   /** A learner who pressed Start on a course: a signed-in account or a device-scoped guest. Feeds the author's course analytics. */
   courseEnrollments: defineTable({ courseId: v.id("learnCollections"), ownerId: v.string(), key: v.string(), studentId: v.optional(v.string()), guestName: v.optional(v.string()), completedLessonIds: v.array(v.id("lessons")), lastLessonId: v.optional(v.id("lessons")), enrolledAt: v.number(), updatedAt: v.number(), completedAt: v.optional(v.number()) }).index("by_course_key", ["courseId", "key"]).index("by_course_updated", ["courseId", "updatedAt"]),

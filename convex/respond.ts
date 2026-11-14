@@ -23,6 +23,25 @@ import { UNLOCK_WINDOW_MS, unlockBudgets } from "./accessCodeBudget";
 import { assertRateAvailable, consumeRate, notify, randomCode, randomHex, sha256Hex } from "./serverUtils";
 import { ruleHolds, visibleFieldIds } from "./formLogic";
 import { gradeQuiz, quizReview } from "./formQuiz";
+import type { QuizReviewItem } from "./formQuiz";
+import { FORM_IMAGE_PATH } from "./formImageMedia";
+
+/** Bind a private explanation-image read to a completed response proof.
+ * Never append receipt secrets to arbitrary third-party URLs. */
+function reviewWithImageAccess(review: QuizReviewItem[] | null, responseId: Id<"formResponses">, receiptCode: string) {
+  return review?.map(item => {
+    if (!item.explanationImage) return item;
+    try {
+      const origin = new URL(env.CONVEX_SITE_URL);
+      const url = new URL(item.explanationImage.url);
+      if (url.origin !== origin.origin || url.pathname !== FORM_IMAGE_PATH || !url.searchParams.get("mediaId"))
+        return item;
+      url.searchParams.set("responseId", responseId);
+      url.searchParams.set("receiptCode", receiptCode);
+      return { ...item, explanationImage: { ...item.explanationImage, url: url.toString() } };
+    } catch { return item; }
+  }) ?? null;
+}
 import { emitWebhookEvent, formResponseData } from "./webhookEvents";
 import { queueResult as queueNotionResult } from "./notion";
 import { respondentDefinition, releasedDefinition, releasedFieldIds, nextFieldReleaseAt, releasedAnswers, assertReleasedAnswers } from "./formRelease";
@@ -30,7 +49,7 @@ import { captureHidden, captureTypedHidden } from "./formRespondent";
 import { teamOrEmailCheck } from "./businessAccess";
 import { changeFormCounts, readFormCounts } from "./formCounts";
 
-const quizReviewValidator = v.union(v.null(), v.array(v.object({ fieldId: v.string(), earned: v.number(), possible: v.number(), correctOptionIds: v.array(v.string()), explanation: v.optional(v.string()) })));
+const quizReviewValidator = v.union(v.null(), v.array(v.object({ fieldId: v.string(), earned: v.number(), possible: v.number(), correctOptionIds: v.array(v.string()), explanation: v.optional(v.string()), explanationImage: v.optional(v.object({ url: v.string(), alt: v.string() })) })));
 
 export const DEFAULT_FORM_RESPONSE_LIMIT = planLimits.free.responsesPerForm;
 export const UPLOAD_PATH = "/forms/upload";
@@ -339,7 +358,7 @@ export const submitResponse = mutation({
     if (existing && existing.status === "completed") {
       const done = await definitionForResponse(ctx, existing);
       const review = done ? quizReview(done, gradeQuiz(done, existing.answers as Answers)) : null;
-      return { responseId: existing._id, status: existing.status, receiptCode: existing.receiptCode, endingId: existing.endingId ?? null, duplicate: true, quizScore: existing.quizScore ?? null, quizMaxScore: existing.quizMaxScore ?? null, quizReview: review };
+      return { responseId: existing._id, status: existing.status, receiptCode: existing.receiptCode, endingId: existing.endingId ?? null, duplicate: true, quizScore: existing.quizScore ?? null, quizMaxScore: existing.quizMaxScore ?? null, quizReview: reviewWithImageAccess(review, existing._id, existing.receiptCode) };
     }
 
     const { identity } = await assertCanCollect(ctx, form, args.accessCode);
@@ -451,7 +470,7 @@ export const submitResponse = mutation({
         if (resume) await ctx.db.delete("formResumeDrafts", resume._id);
       }
     }
-    return { responseId, status, receiptCode, endingId: ending?.id ?? null, duplicate: false, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: quizReview(def, grade) };
+    return { responseId, status, receiptCode, endingId: ending?.id ?? null, duplicate: false, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: reviewWithImageAccess(quizReview(def, grade), responseId, receiptCode) };
   },
 });
 
@@ -491,7 +510,7 @@ export const updateSubmission = mutation({
     const grade = gradeQuiz(available, checked.answers);
     // An unchanged resubmission is not an edit: no history entry, no notification.
     if (args.language === response.language && canonicalJson(checked.answers, "answers") === canonicalJson(response.answers, "answers")) {
-      return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: quizReview(available, grade) };
+      return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: reviewWithImageAccess(quizReview(available, grade), response._id, response.receiptCode) };
     }
     if (!response.spam) await adjustAggregates(ctx, form._id, def, response.answers as Answers, -1);
     const now = Date.now();
@@ -507,7 +526,7 @@ export const updateSubmission = mutation({
     if (!response.spam) await adjustAggregates(ctx, form._id, def, checked.answers, 1);
     for (const upload of uploads.docs) if (!upload.responseId) await ctx.db.patch("formUploads", upload._id, { responseId: response._id });
     await notify(ctx, form.ownerId, "response", `A respondent edited their response to “${form.title}”.`, `edit:${response._id}:${Date.now() - (Date.now() % 3_600_000)}`, form._id);
-    return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: quizReview(available, grade) };
+    return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: reviewWithImageAccess(quizReview(available, grade), response._id, response.receiptCode) };
   },
 });
 

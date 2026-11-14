@@ -48,6 +48,8 @@ import type * as folderModel from "../folderModel.js";
 import type * as folderServices from "../folderServices.js";
 import type * as folders from "../folders.js";
 import type * as formAnalysis from "../formAnalysis.js";
+import type * as formImageMedia from "../formImageMedia.js";
+import type * as formImageMediaModel from "../formImageMediaModel.js";
 import type * as formCounts from "../formCounts.js";
 import type * as formLogic from "../formLogic.js";
 import type * as formModel from "../formModel.js";
@@ -206,6 +208,8 @@ declare const fullApi: ApiFromModules<{
   folderServices: typeof folderServices;
   folders: typeof folders;
   formAnalysis: typeof formAnalysis;
+  formImageMedia: typeof formImageMedia;
+  formImageMediaModel: typeof formImageMediaModel;
   formCounts: typeof formCounts;
   formLogic: typeof formLogic;
   formModel: typeof formModel;

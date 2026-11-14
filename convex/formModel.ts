@@ -17,7 +17,8 @@ export const fieldTypeValidator = v.union(
   v.literal("file"), v.literal("statement"), v.literal("section"),
 );
 
-const choiceValidator = v.object({ id: v.string(), label: v.string(), score: v.optional(v.number()) });
+const imageValidator = v.object({ url: v.string(), alt: v.string() });
+const choiceValidator = v.object({ id: v.string(), label: v.string(), score: v.optional(v.number()), image: v.optional(imageValidator) });
 
 export const conditionValidator = v.object({
   fieldId: v.string(),
@@ -57,9 +58,9 @@ export const fieldValidator = v.object({
   maxValue: v.optional(v.string()),
   minLabel: v.optional(v.string()),
   maxLabel: v.optional(v.string()),
-  image: v.optional(v.object({ url: v.string(), alt: v.string() })),
+  image: v.optional(imageValidator),
   showIf: v.optional(ruleValidator),
-  quiz: v.optional(v.object({ correctOptionIds: v.array(v.string()), points: v.number(), explanation: v.optional(v.string()) })),
+  quiz: v.optional(v.object({ correctOptionIds: v.array(v.string()), points: v.number(), explanation: v.optional(v.string()), explanationImage: v.optional(imageValidator) })),
   translations: v.optional(v.record(v.string(), translationValidator)),
 });
 

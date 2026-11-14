@@ -49,7 +49,7 @@ export function gradeQuiz(def: FormDefinition, answers: Answers): QuizGrade | nu
 }
 
 /** One graded question as the respondent sees it once they have submitted: marks, the key and why. */
-export interface QuizReviewItem { fieldId: string; earned: number; possible: number; correctOptionIds: string[]; explanation?: string }
+export interface QuizReviewItem { fieldId: string; earned: number; possible: number; correctOptionIds: string[]; explanation?: string; explanationImage?: { url: string; alt: string } }
 
 /**
  * What the respondent got right and wrong, returned only with their own submission so they can learn
@@ -63,7 +63,7 @@ export function quizReview(def: FormDefinition, grade: QuizGrade | null): QuizRe
   return grade.questions.map((q) => {
     const quiz = byId.get(q.fieldId)?.quiz;
     if (!reveal) return { fieldId: q.fieldId, earned: q.earned, possible: q.possible, correctOptionIds: [] };
-    return { fieldId: q.fieldId, earned: q.earned, possible: q.possible, correctOptionIds: quiz?.correctOptionIds ?? [], ...(quiz?.explanation ? { explanation: quiz.explanation } : {}) };
+    return { fieldId: q.fieldId, earned: q.earned, possible: q.possible, correctOptionIds: quiz?.correctOptionIds ?? [], ...(quiz?.explanation ? { explanation: quiz.explanation } : {}), ...(quiz?.explanationImage ? { explanationImage: quiz.explanationImage } : {}) };
   });
 }
 

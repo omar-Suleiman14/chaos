@@ -71,7 +71,7 @@ export const presentationHints: Record<Presentation, string> = {
   swipe: "Full-screen cards people swipe through, like short videos.",
 };
 
-export interface Choice { id: string; label: string; score?: number }
+export interface Choice { id: string; label: string; score?: number; image?: { url: string; alt: string } }
 
 export interface Translation {
   label?: string;
@@ -128,7 +128,7 @@ export interface FormField {
   maxLabel?: string;
   image?: { url: string; alt: string };
   showIf?: Rule;
-  quiz?: { correctOptionIds: string[]; points: number; explanation?: string };
+  quiz?: { correctOptionIds: string[]; points: number; explanation?: string; explanationImage?: { url: string; alt: string } };
   translations?: Record<string, Translation>;
 }
 
@@ -544,6 +544,15 @@ function checkRule(rule: Rule | undefined, owner: string, earlier: Map<string, F
   }
 }
 
+/** Images must have a descriptive alternative and must not use inline, data or insecure URLs. */
+export function validImage(image: { url: string; alt: string }): boolean {
+  if (!image.alt.trim() || image.alt.length > 300 || image.url.length > 2048) return false;
+  try {
+    const url = new URL(image.url);
+    return url.protocol === "https:" && !!url.hostname && !url.username && !url.password;
+  } catch { return false; }
+}
+
 /** Errors block publication; warnings are shown but do not block. */
 export function checkDefinition(def: FormDefinition): DefinitionReport {
   const errors: string[] = [];
@@ -574,7 +583,7 @@ export function checkDefinition(def: FormDefinition): DefinitionReport {
     if (f.type === "statement" && !f.label.trim() && !f.description?.trim()) errors.push(`${name}: add some text.`);
     if (f.label.length > LIMITS.label) errors.push(`${name}: the label is too long.`);
     if ((f.description?.length ?? 0) > LIMITS.description) errors.push(`${name}: the description is too long.`);
-    if (f.image && (!/^https:\/\//.test(f.image.url) || !f.image.alt.trim())) errors.push(`${name}: images need an https:// address and alternative text.`);
+    if (f.image && !validImage(f.image)) errors.push(`${name}: images need an https:// address and alternative text.`);
     if (optionTypes.includes(f.type)) {
       const opts = f.options ?? [];
       const minimum = f.type === "multi_choice" ? 1 : 2;
@@ -584,6 +593,7 @@ export function checkDefinition(def: FormDefinition): DefinitionReport {
       if (new Set(opts.map((o) => o.id)).size !== opts.length || opts.some((o) => !isValidId(o.id))) errors.push(`${name}: option identifiers must be unique.`);
       if (new Set(opts.map((o) => o.label.trim().toLowerCase())).size !== opts.length) warnings.push(`${name}: two options have the same text.`);
       if (opts.some((o) => o.score !== undefined && !Number.isFinite(o.score))) errors.push(`${name}: option scores must be numbers.`);
+      if (opts.some((o) => o.image && !validImage(o.image))) errors.push(`${name}: answer images need an https:// address and alternative text.`);
     }
     if (def.quiz?.enabled) {
       if (f.showIf?.conditions.some((condition) => condition.fieldId === SCORE_FIELD)) errors.push(`${name}: quiz branching cannot reveal a calculated score before submission.`);
@@ -595,6 +605,7 @@ export function checkDefinition(def: FormDefinition): DefinitionReport {
         if (f.type !== "multi_choice" && f.quiz.correctOptionIds.length !== 1) errors.push(`${name}: choose one correct answer.`);
         if (new Set(f.quiz.correctOptionIds).size !== f.quiz.correctOptionIds.length || f.quiz.correctOptionIds.some((id) => !f.options?.some((option) => option.id === id))) errors.push(`${name}: the answer key refers to a missing option.`);
         if ((f.quiz.explanation?.length ?? 0) > 2000) errors.push(`${name}: the explanation is too long.`);
+        if (f.quiz.explanationImage && !validImage(f.quiz.explanationImage)) errors.push(`${name}: explanation images need an https:// address and alternative text.`);
       }
     }
     if (f.type === "matrix") {

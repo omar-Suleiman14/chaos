@@ -43,6 +43,10 @@ export function QuizReview({ def, review, answers, language }: { def: FormDefini
                 {!right && r.correctOptionIds.length > 0 && <div data-key><dt>{t.correct}</dt><dd>{r.correctOptionIds.map(label).join(", ")}</dd></div>}
               </dl>
               {r.explanation && <p className="form-review__why">{r.explanation}</p>}
+              {r.explanationImage && /^https:\/\//.test(r.explanationImage.url) && (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={r.explanationImage.url} alt={r.explanationImage.alt} className="form-image max-h-80 object-contain" loading="lazy" />
+              )}
             </li>
           );
         })}
