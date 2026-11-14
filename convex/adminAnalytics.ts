@@ -7,6 +7,7 @@ import { requireAdminForActor } from "./adminAccess";
 import { emptyMetrics, metricsValidator } from "./adminModel";
 import { readFormCounts } from "./formCounts";
 import { memoizeOwnerRestriction } from "./adminAnalyticsReadMemo";
+import { mapBounded } from "./adminAnalyticsConcurrency";
 
 async function start(ctx: MutationCtx) {
   const prior = await ctx.db
@@ -112,17 +113,19 @@ export const scan = internalMutation({
       phase = "forms";
       const page = await ctx.db.query("forms").paginate(options);
       const restrictedOwner = memoizeOwnerRestriction((ownerId) => creatorRestricted(ctx, ownerId));
-      for (const form of page.page) {
+      // Keep the 50-record page and 2 MB read ceiling; overlap at most six
+      // read-only lookups. If any lookup fails, abort this entire transaction.
+      const formTotals = await mapBounded(page.page, 6, async (form) => {
         const counts = await readFormCounts(ctx, form);
+        const visible = form.status === "live" && !form.isBanned &&
+          !(await restrictedOwner(form.ownerId));
+        return { counts, visible };
+      });
+      for (const { counts, visible } of formTotals) {
         pending.forms++;
         pending.responses += counts.responseCount;
         pending.partials += counts.partialCount;
-        if (
-          form.status === "live" &&
-          !form.isBanned &&
-          !(await restrictedOwner(form.ownerId))
-        )
-          pending.liveForms++;
+        if (visible) pending.liveForms++;
       }
       cursor = page.isDone ? null : page.continueCursor;
       done = page.isDone;
