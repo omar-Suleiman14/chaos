@@ -1,5 +1,5 @@
 import { paginationOptsValidator } from "convex/server";
-import { v, type ObjectType } from "convex/values";
+import { v, type ObjectType, type Infer } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { adminIdentity, requireAdminForActor } from "./adminAccess";
 import { supportPriority, supportStatus } from "./adminOperationsModel";
@@ -8,7 +8,7 @@ const pageArgs = { paginationOpts: paginationOptsValidator };
 const PAGE_LIMIT = 25;
 const READ_BYTES = 1_000_000;
 
-function boundedPage(options: ObjectType<typeof paginationOptsValidator>) {
+function boundedPage(options: Infer<typeof paginationOptsValidator>) {
   if (!Number.isSafeInteger(options.numItems) || options.numItems < 1 || options.numItems > PAGE_LIMIT)
     throw new Error("INVALID_PAGE: Choose 1–25 records.");
   return { ...options, maximumBytesRead: READ_BYTES };
