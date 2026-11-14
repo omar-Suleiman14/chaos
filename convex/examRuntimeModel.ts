@@ -132,7 +132,29 @@ export const examRuntimeTables = {
     algorithmVersion: v.number(),
     resultPolicy: v.optional(frozenResultPolicy),
     gradedAt: v.number(),
+    revision: v.optional(v.number()),
+    finalizedAt: v.optional(v.number()),
   }).index("by_attempt", ["attemptId"]),
+  /** Teacher-private criterion scores and moderation; never candidate-addressable. */
+  examEssayMarks: defineTable({
+    attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
+    ownerId: v.string(), studentId: v.string(), questionIndex: v.number(),
+    criterionScores: v.array(v.object({ criterionId: v.string(), scorePercent: v.number() })),
+    holisticAwardCents: v.optional(v.number()), awardedCents: v.number(),
+    feedback: v.string(),
+    status: v.union(v.literal("draft"), v.literal("submitted"),
+      v.literal("changes_requested"), v.literal("approved")),
+    moderationNote: v.optional(v.string()), revision: v.number(), updatedAt: v.number(),
+  }).index("by_attempt_question", ["attemptId", "questionIndex"]),
+  /** Append-only marking decisions, including rejected draft modifications. */
+  examEssayMarkAudit: defineTable({
+    attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
+    ownerId: v.string(), studentId: v.string(), questionIndex: v.number(),
+    actorId: v.string(),
+    action: v.union(v.literal("save"), v.literal("submit"), v.literal("approve"),
+      v.literal("changes_requested"), v.literal("finalize")),
+    revision: v.number(), detail: v.string(), at: v.number(),
+  }).index("by_attempt_at", ["attemptId", "at"]),
   /** Manual release applies to one immutable snapshot; never changes the grade ledger. */
   examResultPublications: defineTable({
     snapshotId: v.id("examSnapshots"),
