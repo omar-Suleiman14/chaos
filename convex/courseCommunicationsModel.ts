@@ -27,7 +27,7 @@ export const courseCommunicationTables = {
 
 export function cleanClassText(value: string, max: number, label: string, required = true) {
   const clean = value.trim();
-  if ((required && !clean) || clean.length > max || /[\u0000-\u0008\u000b\u000c\u000e-\u001f]/.test(clean))
+  if ((required && !clean) || clean.length > max || Array.from(clean).some(c => c.charCodeAt(0) < 32 && ![9, 10, 13].includes(c.charCodeAt(0))))
     throw new Error("VALIDATION_FAILED: Invalid " + label + ".");
   return clean;
 }
