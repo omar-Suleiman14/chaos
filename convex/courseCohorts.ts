@@ -70,7 +70,7 @@ export const roster = query({
     const groups = await ctx.db.query("courseGroups").withIndex("by_course", q => q.eq("courseId", courseId)).take(100);
     const detailedGroups = await Promise.all(groups.map(async g => ({
       id: g._id, name: g.name,
-      studentIds: (await ctx.db.query("courseGroupMembers").withIndex("by_group", q => q.eq("groupId", g._id)).take(500)).map(m => m.studentId),
+      studentIds: (await ctx.db.query("courseGroupMembers").withIndex("by_group_student", q => q.eq("groupId", g._id)).take(500)).map(m => m.studentId),
     })));
     const invites = await ctx.db.query("courseInvitations")
       .withIndex("by_course_status", q => q.eq("courseId", courseId).eq("status", "pending")).take(100);
@@ -120,7 +120,7 @@ export const deleteGroup = mutation({
   returns: v.null(),
   handler: async (ctx, { groupId }) => {
     await groupForOwner(ctx, groupId);
-    const members = await ctx.db.query("courseGroupMembers").withIndex("by_group", q => q.eq("groupId", groupId)).collect();
+    const members = await ctx.db.query("courseGroupMembers").withIndex("by_group_student", q => q.eq("groupId", groupId)).collect();
     for (const member of members) await ctx.db.delete("courseGroupMembers", member._id);
     await ctx.db.delete("courseGroups", groupId);
     return null;
