@@ -100,7 +100,6 @@ export default function EssayGradingPage({ params, searchParams }: {
   const gradeRevision = work?.mark?.revision ?? 0;
   const status = work?.mark?.status;
   const editable = !status || status === "draft" || status === "changes_requested";
-  const canFinalize = queue?.entries.find(e => e.attemptId === attemptId);
   if (isLoading || (draftId && isAuthenticated && queue === undefined))
     return <PageSkeleton label={t.title} />;
   if (!isAuthenticated) return <main className="lx-page"><p>{t.signIn}</p></main>;
