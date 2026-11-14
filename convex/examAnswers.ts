@@ -50,7 +50,7 @@ export const getMine = query({
   handler: async (ctx, { attemptId }) => {
     await authorizedAttempt(ctx, attemptId);
     const answers = await ctx.db.query("examAttemptAnswers")
-      .withIndex("by_attempt", q => q.eq("attemptId", attemptId)).take(100);
+      .withIndex("by_attempt_question", q => q.eq("attemptId", attemptId)).take(100);
     return answers.map(answer => ({
       questionIndex: answer.questionIndex, choiceIds: answer.choiceIds,
       text: answer.text, flagged: answer.flagged,
