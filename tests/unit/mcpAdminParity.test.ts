@@ -6,7 +6,8 @@ import { ADMIN_CRM_TOOLS, ADMIN_PLATFORM_TOOLS, ADMIN_GRADING_TOOLS } from "@/li
 import { permissionForTool, type McpPermission } from "@/lib/mcp/permissions";
 
 async function connect(admin: boolean, permissions?: McpPermission[], grading = false) {
-  const call = vi.fn(async () => ({ ok: true, activity: [] }));
+  const call = vi.fn(async (tool: string) => tool === "list_admin_grading_jobs" ?
+    { jobs: [], hasMore: false } : { ok: true, activity: [] });
   const server = createChaosMcpServer({ call, admin, permissions, grading, resourceMetadataUrl: "https://chaos.fail/mcp" });
   const client = new Client({ name: "admin-parity", version: "1" });
   const [a, b] = InMemoryTransport.createLinkedPair();
