@@ -9,6 +9,7 @@ import {
   completeContactFollowUpArgs, completeContactFollowUpForActor,
 } from "./admin";
 import { overviewForActor, refreshForActor } from "./adminAnalytics";
+import { claimForAdmin, retryForAdmin, queueForAdmin } from "./examGradingJobs";
 
 // userId is overwritten by the secret-protected HTTP transport, never a tool argument.
 const actor = { userId: v.string() };
@@ -25,3 +26,17 @@ const { userId: accountId, ...userModeration } = moderateUserArgs;
 export const moderateUser = internalMutation({ args: { ...userModeration, accountId, ...actor }, handler: async (ctx, { userId, accountId, ...args }) => { await moderateUserForActor(ctx, { ...args, userId: accountId }, userId); return { ok: true }; } });
 export const setContactStages = internalMutation({ args: { ...setContactStagesArgs, ...actor }, handler: async (ctx, { userId, ...args }) => { await setContactStagesForActor(ctx, args, userId); return { ok: true }; } });
 export const completeContactFollowUp = internalMutation({ args: { ...completeContactFollowUpArgs, ...actor }, handler: async (ctx, { userId, ...args }) => { await completeContactFollowUpForActor(ctx, args, userId); return { ok: true }; } });
+
+/** Server-bound actor, never chosen by a model or MCP input field. */
+export const gradingJobs = internalQuery({
+  args: { ...actor, status: v.optional(v.union(v.literal("queued"), v.literal("claimed"), v.literal("doctor_review"))) },
+  handler: (ctx, { userId, status }) => queueForAdmin(ctx, status, userId),
+});
+export const claimGradingJob = internalMutation({
+  args: { ...actor, jobId: v.id("examGradingJobs"), expectedRevision: v.number() },
+  handler: (ctx, { userId, ...args }) => claimForAdmin(ctx, args, userId),
+});
+export const retryGradingJob = internalMutation({
+  args: { ...actor, jobId: v.id("examGradingJobs"), expectedRevision: v.number() },
+  handler: (ctx, { userId, ...args }) => retryForAdmin(ctx, args, userId),
+});

@@ -304,6 +304,12 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "get_admin_overview": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdmin:overview"), { ...input, userId }); break;
       case "refresh_admin_analytics": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdmin:refresh"), { ...input, userId }); break;
       case "list_admin_users": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdmin:users"), { ...input, userId }); break;
+      case "list_admin_grading_jobs": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdmin:gradingJobs"), { ...input, userId }); break;
+      case "claim_admin_grading_job": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdmin:claimGradingJob"), { ...input, userId }); break;
+      case "retry_admin_grading_job": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdmin:retryGradingJob"), { ...input, userId }); break;
+      case "get_admin_grading_bundle": result = await ctx.runMutation(makeFunctionReference<"mutation">("examGradingProposals:bundle"), { ...input, userId }); break;
+      case "save_admin_grading_proposal": result = await ctx.runMutation(makeFunctionReference<"mutation">("examGradingProposals:save"), { ...input, userId }); break;
+      case "submit_admin_grading_review": result = await ctx.runMutation(makeFunctionReference<"mutation">("examGradingProposals:submit"), { ...input, userId }); break;
       case "list_admin_content": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdmin:content"), { ...input, userId }); break;
       case "list_admin_learning_content": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdmin:learningContent"), { ...input, userId }); break;
       case "list_admin_teams": result = await ctx.runQuery(makeFunctionReference<"query">("mcpAdmin:teams"), { ...input, userId }); break;

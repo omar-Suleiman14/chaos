@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
-export const ADMIN_PLATFORM_TOOLS = ["get_admin_overview", "refresh_admin_analytics", "list_admin_users", "list_admin_content", "list_admin_learning_content", "list_admin_teams", "list_admin_activity", "moderate_admin_user", "moderate_admin_content"] as const;
+export const ADMIN_PLATFORM_TOOLS = ["list_admin_grading_jobs", "claim_admin_grading_job", "retry_admin_grading_job", "get_admin_grading_bundle", "save_admin_grading_proposal", "submit_admin_grading_review", "get_admin_overview", "refresh_admin_analytics", "list_admin_users", "list_admin_content", "list_admin_learning_content", "list_admin_teams", "list_admin_activity", "moderate_admin_user", "moderate_admin_content"] as const;
 export const ADMIN_CRM_TOOLS = ["get_crm_activity", "set_crm_contact_stages", "complete_crm_follow_up"] as const;
 
 export function registerAdminTools(server: McpServer, run: (tool: string, input: Record<string, unknown>, summarize: (data: Record<string, unknown>) => string) => Promise<CallToolResult>, securitySchemes: { type: string; scopes: string[] }[]) {
@@ -13,6 +13,64 @@ export function registerAdminTools(server: McpServer, run: (tool: string, input:
   const ok = { ok: z.boolean() };
   const pageOutput = { page: z.array(z.record(z.string(), z.unknown())), isDone: z.boolean(), continueCursor: z.string(), splitCursor: z.string().nullable().optional(), pageStatus: z.enum(["SplitRecommended", "SplitRequired"]).nullable().optional() };
   const _meta = { securitySchemes };
+  const jobRef = z.string().min(1).max(100);
+  const jobRevision = z.number().int().min(0);
+  const jobStatus = z.enum(["queued", "claimed", "doctor_review"]);
+  const gradingEvidence = z.object({
+    criterionId: z.string().min(1).max(40),
+    quote: z.string().min(4).max(300),
+    rationale: z.string().min(10).max(1000),
+  });
+  server.registerTool("list_admin_grading_jobs", {
+    title: "List assisted grading jobs (admin)",
+    description: "Admin only: list up to 50 consented exam grading job statuses and revision IDs. Metadata only; no essays, keys or private rubrics. Claim one job before reading a bundle.",
+    inputSchema: { status: jobStatus.optional() },
+    outputSchema: { jobs: z.array(z.record(z.string(), z.unknown())), hasMore: z.boolean() },
+    annotations: read, _meta,
+  }, input => run("list_admin_grading_jobs", input, () => "Grading job metadata loaded."));
+  server.registerTool("claim_admin_grading_job", {
+    title: "Claim an assisted grading job (admin)",
+    description: "Admin only: exclusively claim an unclaimed consented grading job for 15 minutes. Pass current expectedRevision from queue. One administrator at a time; requires deliberate review.",
+    inputSchema: { jobId: jobRef, expectedRevision: jobRevision },
+    outputSchema: { jobId: jobRef, revision: jobRevision, claimExpiresAt: z.number() },
+    annotations: write, _meta,
+  }, input => run("claim_admin_grading_job", input, () => "Grading job claimed."));
+  server.registerTool("retry_admin_grading_job", {
+    title: "Retry an expired grading claim (admin)",
+    description: "Admin only: requeue only a timed-out claim, max 3 retries; uses the current job revision. Never changes a score.",
+    inputSchema: { jobId: jobRef, expectedRevision: jobRevision },
+    outputSchema: { jobId: jobRef, revision: jobRevision, retryCount: jobRevision },
+    annotations: write, _meta,
+  }, input => run("retry_admin_grading_job", input, () => "Expired grading job requeued."));
+  server.registerTool("get_admin_grading_bundle", {
+    title: "Read claimed exam essays and frozen rubric (admin)",
+    description: "Private sensitive student essay text: only access a specific doctor-consented job after personally claiming it. Requires active 15-minute lease, records each access. Use frozen rubric; do not invent external citations, do not declare a final grade.",
+    inputSchema: { jobId: jobRef },
+    outputSchema: { jobId: jobRef, attemptId: jobRef, revision: jobRevision,
+      claimExpiresAt: z.number(), questions: z.array(z.record(z.string(), z.unknown())) },
+    annotations: { ...write, idempotentHint: false }, _meta,
+  }, input => run("get_admin_grading_bundle", input, () => "Private claimed grading bundle read and audited."));
+  server.registerTool("save_admin_grading_proposal", {
+    title: "Save rubric-grounded candidate mark (admin)",
+    description: "For one claimed essay, save an editable PRIVATE PROPOSAL, not a grade. Verify all rubric criteria against the student answer. Each evidence quote must be a verbatim excerpt from that answer with a reason; include uncertainty and model/prompt provenance when known. No automatic grade release.",
+    inputSchema: { jobId: jobRef, questionIndex: jobRevision, expectedRevision: jobRevision,
+      criterionScores: z.array(z.object({ criterionId: z.string().min(1).max(40),
+        scorePercent: z.number().int().min(0).max(100) })).max(10),
+      holisticAwardCents: z.number().int().min(0).optional(),
+      feedback: z.string().max(2000), evidence: z.array(gradingEvidence).min(1).max(10),
+      confidence: z.enum(["low", "medium", "high"]),
+      modelId: z.string().max(120).optional(), promptVersion: z.string().max(80).optional() },
+    outputSchema: { proposalId: jobRef, revision: jobRevision, awardedCents: jobRevision },
+    annotations: write, _meta,
+  }, input => run("save_admin_grading_proposal", input, () => "Private proposal draft saved; no grade changed."));
+  server.registerTool("submit_admin_grading_review", {
+    title: "Send completed proposals to doctor (admin)",
+    description: "After explicit administrator review, send all completed evidence-backed proposals to the exam owner for independent doctor approval in PR26. Does not approve, finalize or publish scores.",
+    inputSchema: { jobId: jobRef, expectedRevision: jobRevision },
+    outputSchema: { jobId: jobRef, revision: jobRevision,
+      status: z.literal("doctor_review") },
+    annotations: write, _meta,
+  }, input => run("submit_admin_grading_review", input, () => "Proposals sent to doctor; grades are still pending."));
   server.registerTool("get_admin_overview", { title: "Read platform overview (admin)", description: "Administrators only: read the same aggregate platform metrics, running state and completion date shown in the administration overview. overview is null before the first refresh. Does not return individual responses.", inputSchema: {}, outputSchema: { overview: z.record(z.string(), z.unknown()).nullable() }, annotations: read, _meta }, input => run("get_admin_overview", input, () => "Platform overview loaded."));
   server.registerTool("refresh_admin_analytics", { title: "Refresh platform overview (admin)", description: "Administrators only: start the same asynchronous bounded platform metrics refresh as the admin UI. Read get_admin_overview afterwards to check running/completedAt. An existing recent refresh is reused.", inputSchema: {}, outputSchema: ok, annotations: write, _meta }, input => run("refresh_admin_analytics", input, () => "Platform refresh requested."));
   server.registerTool("list_admin_users", { title: "List platform accounts (admin)", description: "Administrators only: page through platform accounts including email, account state, suspension and moderation reason. Optional email searches the exact indexed email. Contains private account metadata; retrieve only requested accounts. Follow continueCursor until isDone.", inputSchema: { paginationOpts: page, email: z.string().max(254).optional(), search: z.string().max(200).optional().describe("Name, email or username words; returns the best matches in one page.") }, outputSchema: pageOutput, annotations: read, _meta }, input => run("list_admin_users", input, () => "Platform accounts loaded."));
