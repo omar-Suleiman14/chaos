@@ -87,11 +87,12 @@ export default function EssayGradingPage({ params, searchParams }: {
   const regrade = useMutation(api.examDoctorReview.regrade);
   const releaseRegrade = useMutation(api.examDoctorReview.releaseRegrade);
   const assisted = useQuery(api.examGradingJobs.myJobs, isAuthenticated && draftId ? { draftId } : "skip");
+  const entry = queue?.entries.find(e => e.attemptId === attemptId);
   const reviewJob = assisted?.jobs.find(j => j.attemptId === attemptId && j.status === "doctor_review");
   const review = useQuery(api.examDoctorReview.review,
-    isAuthenticated && reviewJob ? { jobId: reviewJob.jobId } : "skip");
+    isAuthenticated && reviewJob && entry?.gradingState === "needs_manual"
+      ? { jobId: reviewJob.jobId } : "skip");
   const proposal = review?.proposals.find(p => p.questionIndex === questionIndex);
-  const entry = queue?.entries.find(e => e.attemptId === attemptId);
   const canRegrade = entry?.gradingState === "auto_final" && !entry.reviewHold;
   const [marks, setMarks] = useState<Record<string, number>>({});
   const [holistic, setHolistic] = useState("0");
