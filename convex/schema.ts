@@ -56,8 +56,7 @@ export default defineSchema({
   courseGroupMembers: defineTable({
     courseId: v.id("learnCollections"), groupId: v.id("courseGroups"),
     studentId: v.string(), addedAt: v.number(),
-  }).index("by_group", ["groupId"])
-    .index("by_group_student", ["groupId", "studentId"])
+  }).index("by_group_student", ["groupId", "studentId"])
     .index("by_course_student", ["courseId", "studentId"]),
   /** A doctor invitation is not a lesson-access grant until accepted by the student. */
   courseInvitations: defineTable({
