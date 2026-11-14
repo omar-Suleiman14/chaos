@@ -146,6 +146,8 @@ import type * as examBuilder from "../examBuilder.js";
 import type * as examBuilderModel from "../examBuilderModel.js";
 import type * as questionBank from "../questionBank.js";
 import type * as questionBankModel from "../questionBankModel.js";
+import type * as questionBankMedia from "../questionBankMedia.js";
+import type * as questionBankMediaModel from "../questionBankMediaModel.js";
 import type * as questionImports from "../questionImports.js";
 import type * as quizForkModel from "../quizForkModel.js";
 import type * as quizForks from "../quizForks.js";
@@ -311,6 +313,8 @@ declare const fullApi: ApiFromModules<{
   examBuilderModel: typeof examBuilderModel;
   questionBank: typeof questionBank;
   questionBankModel: typeof questionBankModel;
+  questionBankMedia: typeof questionBankMedia;
+  questionBankMediaModel: typeof questionBankMediaModel;
   questionImports: typeof questionImports;
   quizForkModel: typeof quizForkModel;
   quizForks: typeof quizForks;

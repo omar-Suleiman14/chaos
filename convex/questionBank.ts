@@ -64,8 +64,17 @@ export function validateBankDraft(item: BankDraft): BankDraft {
   } else if (item.choices.length || item.correctChoiceIds.length) {
     throw new Error("VALIDATION_FAILED: Written questions cannot have choice answer keys.");
   }
+  if (item.caseStudy) {
+    const { stem, media } = item.caseStudy;
+    if (stem.trim().length > 6000 || (stem.trim().length === 0 && media.length === 0) || media.length > 4 ||
+      new Set(media.map(m => m.mediaId)).size !== media.length ||
+      media.some(m => !m.alt.trim() || m.alt.trim().length > 500))
+      throw new Error("VALIDATION_FAILED: Clinical case needs a vignette or up to 4 images, each with meaningful alt text.");
+  }
   return {
     ...item, prompt,
+    ...(item.caseStudy ? { caseStudy: { stem: item.caseStudy.stem.trim(),
+      media: item.caseStudy.media.map(m => ({ mediaId: m.mediaId, alt: m.alt.trim() })) } } : {}),
     choices: item.choices.map(c => ({ id: c.id, text: c.text.trim() })),
     correctChoiceIds: [...item.correctChoiceIds],
     ...(item.sampleAnswer !== undefined ? { sampleAnswer: item.sampleAnswer.trim() } : {}),
@@ -76,14 +85,24 @@ export function validateBankDraft(item: BankDraft): BankDraft {
   };
 }
 
+/** Image references are only valid after this owner has completed a private R2 upload. */
+async function validateMedia(ctx: MutationCtx, ownerId: string, item: BankDraft) {
+  for (const image of item.caseStudy?.media ?? []) {
+    const media = await ctx.db.get("questionBankMedia", image.mediaId);
+    if (!media || media.ownerId !== ownerId || media.status !== "ready" || !media.etag)
+      throw new Error("NOT_FOUND: Clinical image is missing or not owned by this author.");
+  }
+}
 export const create = mutation({
   args: { item: bankDraft },
   returns: v.id("questionBankItems"),
   handler: async (ctx, { item }) => {
     const ownerId = await actorForBank(ctx);
+    const validated = validateBankDraft(item);
+    await validateMedia(ctx, ownerId, validated);
     const now = Date.now();
     return ctx.db.insert("questionBankItems", {
-      ownerId, ...validateBankDraft(item), revision: 0, createdAt: now, updatedAt: now,
+      ownerId, ...validated, revision: 0, createdAt: now, updatedAt: now,
     });
   },
 });
@@ -109,6 +128,7 @@ export const update = mutation({
     const row = await ownedQuestion(ctx, questionId);
     if (row.revision !== expectedRevision) throw new Error("REVISION_CONFLICT: Question changed; reload before saving.");
     const next = validateBankDraft(item);
+    await validateMedia(ctx, row.ownerId, next);
     await ctx.db.patch("questionBankItems", row._id, { ...next, revision: row.revision + 1, updatedAt: Date.now() });
     return row.revision + 1;
   },
@@ -237,5 +257,100 @@ export const selectForExam = query({
     }
     const questions = [...unique.values()].sort((a, b) => b.updatedAt - a.updatedAt || (a._id < b._id ? -1 : 1));
     return { questions: questions.slice(0, limit), hasMore: questions.length > limit };
+  },
+});
+
+
+/** Private course-scoped authoring list; no student/public paths expose answer keys. */
+async function courseQuestions(ctx: Ctx, courseId: Id<"learnCollections">, ownerId: string) {
+  const course = await ownedCourse(ctx, courseId, ownerId);
+  if (course.communityState === "removed") throw new Error("NOT_FOUND: Course removed.");
+  const links = await ctx.db.query("questionBankLinks")
+    .withIndex("by_course_module", q => q.eq("courseId", courseId)).take(MAX_LINKS_PER_COURSE + 1);
+  if (links.length > MAX_LINKS_PER_COURSE)
+    throw new Error("LIMIT_REACHED: Course exceeds 1,000 question scope links.");
+  const questions = new Map<string, Doc<"questionBankItems">>();
+  for (const link of links) {
+    if (link.ownerId !== ownerId || questions.has(link.questionId)) continue;
+    const q = await ctx.db.get("questionBankItems", link.questionId);
+    if (q && q.ownerId === ownerId) questions.set(q._id, q);
+  }
+  return [...questions.values()].sort((a,b) => b.updatedAt - a.updatedAt || a._id.localeCompare(b._id));
+}
+export const listForCourse = query({
+  args: { courseId: v.id("learnCollections"), offset: v.optional(v.number()) },
+  handler: async (ctx, {courseId, offset=0}) => {
+    const ownerId = await actorForBank(ctx);
+    if (!Number.isSafeInteger(offset) || offset < 0 || offset > MAX_LINKS_PER_COURSE)
+      throw new Error("VALIDATION_FAILED: Invalid page offset.");
+    const questions = await courseQuestions(ctx,courseId,ownerId);
+    return { total:questions.length, items:questions.slice(offset,offset+30),
+      nextOffset: offset+30 < questions.length ? offset+30 : null };
+  },
+});
+/** Transactional create and course-link avoids an orphaned unsorted question on failure. */
+export const createForCourse = mutation({
+  args: { courseId:v.id("learnCollections"), item:bankDraft },
+  returns: v.id("questionBankItems"),
+  handler: async (ctx,{courseId,item}) => {
+    const ownerId = await actorForBank(ctx);
+    const course = await ownedCourse(ctx,courseId,ownerId);
+    if (course.archived || course.communityState === "removed")
+      throw new Error("COURSE_ARCHIVED: Cannot author questions in an unavailable course.");
+    const links = await ctx.db.query("questionBankLinks")
+      .withIndex("by_course_module",q=>q.eq("courseId",courseId)).take(MAX_LINKS_PER_COURSE);
+    if (links.length >= MAX_LINKS_PER_COURSE) throw new Error("LIMIT_REACHED: Course question limit reached.");
+    const clean = validateBankDraft(item);
+    await validateMedia(ctx,ownerId,clean);
+    const now=Date.now();
+    const id = await ctx.db.insert("questionBankItems",{
+      ...clean,ownerId,revision:0,createdAt:now,updatedAt:now,
+    });
+    await ctx.db.insert("questionBankLinks",{ ownerId, questionId:id,courseId,
+      scopeKey:JSON.stringify([courseId,null,null]),createdAt:now });
+    return id;
+  },
+});
+/** Import up to 50 portable question records atomically, as drafts by design.
+ * Image IDs are not portable. Upload images independently to the private R2 bucket. */
+export const importForCourse = mutation({
+  args: {courseId:v.id("learnCollections"),items:v.array(bankDraft)},
+  returns:v.object({created:v.number()}),
+  handler: async (ctx,{courseId,items}) => {
+    const ownerId=await actorForBank(ctx);
+    const course=await ownedCourse(ctx,courseId,ownerId);
+    if(course.archived || course.communityState==="removed") throw new Error("COURSE_ARCHIVED: Unavailable course.");
+    if(!items.length || items.length>50) throw new Error("VALIDATION_FAILED: Import 1–50 questions per batch.");
+    const existing=await ctx.db.query("questionBankLinks")
+      .withIndex("by_course_module",q=>q.eq("courseId",courseId)).take(MAX_LINKS_PER_COURSE+1);
+    if(existing.length+items.length>MAX_LINKS_PER_COURSE) throw new Error("LIMIT_REACHED: Course scope limit.");
+    const validated=items.map(item=>{
+      if(item.caseStudy?.media.length) throw new Error("VALIDATION_FAILED: Re-upload imported images to this author's private media storage.");
+      return validateBankDraft({...item,status:"draft"});
+    });
+    for(const item of validated) {
+      const now=Date.now();
+      const questionId=await ctx.db.insert("questionBankItems",{...item,ownerId,revision:0,createdAt:now,updatedAt:now});
+      await ctx.db.insert("questionBankLinks",{ownerId,questionId,courseId,
+        scopeKey:JSON.stringify([courseId,null,null]),createdAt:now});
+    }
+    return {created:validated.length};
+  },
+});
+/** Owner-only portable export: no internal IDs, R2 object keys or live download capabilities. */
+export const exportForCourse = query({
+  args:{courseId:v.id("learnCollections"),offset:v.optional(v.number())},
+  handler:async(ctx,{courseId,offset=0})=>{
+    const ownerId=await actorForBank(ctx);
+    if(!Number.isSafeInteger(offset)||offset<0||offset>MAX_LINKS_PER_COURSE)
+      throw new Error("VALIDATION_FAILED: Invalid page offset.");
+    const questions=await courseQuestions(ctx,courseId,ownerId);
+    return { total:questions.length,nextOffset:offset+50<questions.length?offset+50:null,
+      items:questions.slice(offset,offset+50).map(q=>({
+        kind:q.kind,prompt:q.prompt,choices:q.choices,correctChoiceIds:q.correctChoiceIds,
+        sampleAnswer:q.sampleAnswer,explanation:q.explanation,points:q.points,
+        topics:q.topics,terms:q.terms,outcomes:q.outcomes,status:q.status==="archived"?"draft" as const:q.status,
+        ...(q.caseStudy?{caseStudy:{stem:q.caseStudy.stem,media:[]}}:{}),
+      })) };
   },
 });

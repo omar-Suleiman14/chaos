@@ -13,6 +13,7 @@ import { registerOrganizationIntegrationRoutes } from "./learnOrganizationIntegr
 import { registerSourceRoutes } from "./learnSources";
 import { registerCourseMediaRoutes } from "./courseMedia";
 import { registerFormImageMediaRoutes } from "./formImageMedia";
+import { registerQuestionBankMediaRoutes } from "./questionBankMedia";
 import { ConvexError } from "convex/values";
 import { env, httpAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
@@ -532,6 +533,7 @@ registerLearnStudyIntegrationRoutes(http);
 registerSourceRoutes(http);
 registerCourseMediaRoutes(http);
 registerFormImageMediaRoutes(http);
+registerQuestionBankMediaRoutes(http);
 http.route({ path: UPLOAD_PATH, method: "POST", handler: uploadHandler });
 http.route({ path: UPLOAD_PATH, method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: UPLOAD_CORS })) });
 http.route({ path: "/api/mcp/v1", method: "POST", handler: mcpHandler });
