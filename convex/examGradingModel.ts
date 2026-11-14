@@ -116,7 +116,9 @@ export function gradeFrozenExam(
       const incorrect = selection.length - matched;
       const fraction = matched / key.size - (wrongOptions ? incorrect / wrongOptions : 0);
       awarded = Math.max(0, Math.min(available, Math.round(available * fraction)));
-      if (awarded === 0) awarded = -penaltyWrong;
+      // Apply a negative mark only when no correct option was selected.
+      // Mixed selections that cancel positive partial credit receive zero.
+      if (awarded === 0 && matched === 0) awarded = -penaltyWrong;
     } else {
       awarded = -penaltyWrong;
     }
