@@ -134,6 +134,8 @@ export const examRuntimeTables = {
     gradedAt: v.number(),
     revision: v.optional(v.number()),
     finalizedAt: v.optional(v.number()),
+    reviewHold: v.optional(v.boolean()),
+    regradeReleasedAt: v.optional(v.number()),
   }).index("by_attempt", ["attemptId"]),
   /** Teacher-private criterion scores and moderation; never candidate-addressable. */
   examEssayMarks: defineTable({
@@ -185,9 +187,27 @@ export const examRuntimeTables = {
     evidence: v.array(v.object({ criterionId: v.string(), quote: v.string(), rationale: v.string() })),
     confidence: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
     modelId: v.optional(v.string()), promptVersion: v.optional(v.string()),
-    state: v.union(v.literal("draft"), v.literal("sent")),
+    state: v.union(v.literal("draft"), v.literal("sent"),
+      v.literal("accepted"), v.literal("overridden"), v.literal("rejected")),
     revision: v.number(), updatedAt: v.number(),
   }).index("by_job_question", ["jobId", "questionIndex"]),
+  /** Student-owned appeal, limited to one per submitted attempt. */
+  examGradeAppeals: defineTable({
+    attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
+    courseId: v.id("learnCollections"), ownerId: v.string(), studentId: v.string(),
+    reason: v.string(), status: v.union(v.literal("pending"), v.literal("upheld"),
+      v.literal("adjusted"), v.literal("rejected")),
+    originalGradeRevision: v.number(), revision: v.number(),
+    requestedAt: v.number(), updatedAt: v.number(),
+    reviewedAt: v.optional(v.number()), decisionNote: v.optional(v.string()),
+  }).index("by_attempt", ["attemptId"]).index("by_owner_course", ["ownerId", "courseId"]),
+  /** Private append-only ledger: no student-visible grades, essays or rubrics. */
+  examDoctorReviewAudit: defineTable({
+    attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
+    ownerId: v.string(), studentId: v.string(), actorId: v.string(),
+    action: v.string(), detail: v.string(), gradeRevision: v.number(),
+    questionIndex: v.optional(v.number()), at: v.number(),
+  }).index("by_attempt_at", ["attemptId", "at"]),
   /** Manual release applies to one immutable snapshot; never changes the grade ledger. */
   examResultPublications: defineTable({
     snapshotId: v.id("examSnapshots"),
