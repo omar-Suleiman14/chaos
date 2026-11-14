@@ -31,7 +31,7 @@ function More({ status, loadMore, empty, loading, load }: {
   empty: boolean; loading: string; load: string;
 }) {
   return <div className="space-y-3">
-    {status === "LoadingFirstPage" && <p role="status">{loading}</p>}
+    {status === "LoadingFirstPage" && <output>{loading}</output>}
     {status !== "LoadingFirstPage" && empty && <p className="ws-page-subtitle">{empty ? "No matching records." : ""}</p>}
     {(status === "CanLoadMore" || status === "LoadingMore") &&
       <button className="ws-btn" disabled={status === "LoadingMore"} onClick={() => loadMore(20)}>
@@ -200,7 +200,7 @@ function Support({ locale }: { locale: "en" | "ar" }) {
       </div>
       <button className="ws-btn" disabled={busy || subject.trim().length < 3 || summary.trim().length < 10}>{busy ? "Saving…" : "Create case"}</button>
       {error && <p role="alert" className="text-destructive">{error}</p>}
-      {created && <p role="status">Support case created.</p>}
+      {created && <output>Support case created.</output>}
     </form>
     <label className="flex gap-2 items-center text-sm">Status
       <select className="kb-input w-auto" aria-label="Support status" value={status} onChange={e => setStatus(e.target.value as typeof status)}>
