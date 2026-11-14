@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import Image from "next/image";
 import { useAuth } from "@clerk/nextjs";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
@@ -32,5 +33,6 @@ export default function PrivateCaseImage({mediaId,alt}:{mediaId:Id<"questionBank
     return ()=>{controller.abort();if(blobUrl)URL.revokeObjectURL(blobUrl);};
   },[url,getToken]);
   if(!src)return <span className="text-sm text-muted-foreground" dir="auto">{alt}</span>;
-  return <img src={src} alt={alt} className="max-h-52 max-w-full rounded-lg border border-border object-contain"/>;
+  return <Image src={src} alt={alt} width={640} height={480} unoptimized
+    className="h-auto max-h-52 max-w-full rounded-lg border border-border object-contain"/>;
 }
