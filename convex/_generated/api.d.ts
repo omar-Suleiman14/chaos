@@ -151,6 +151,7 @@ import type * as respond from "../respond.js";
 import type * as serverUtils from "../serverUtils.js";
 import type * as sourceFingerprint from "../sourceFingerprint.js";
 import type * as sourceStorage from "../sourceStorage.js";
+import type * as sourceR2Migration from "../sourceR2Migration.js";
 import type * as studentRoster from "../studentRoster.js";
 import type * as support from "../support.js";
 import type * as usernameModel from "../usernameModel.js";
@@ -311,6 +312,7 @@ declare const fullApi: ApiFromModules<{
   serverUtils: typeof serverUtils;
   sourceFingerprint: typeof sourceFingerprint;
   sourceStorage: typeof sourceStorage;
+  sourceR2Migration: typeof sourceR2Migration;
   studentRoster: typeof studentRoster;
   support: typeof support;
   usernameModel: typeof usernameModel;

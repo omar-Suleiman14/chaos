@@ -10,6 +10,9 @@ export type R2Config = {
 };
 export type R2Method = "GET" | "HEAD" | "PUT";
 
+/** Shared deterministic key used only within private R2 actions and HTTP proxies. */
+export const sourceR2Key = (sourceId: string) => "learn-sources/" + sourceId;
+
 export function r2Config(env: Record<string, string | undefined>): R2Config {
   const accountId = env.CHAOS_R2_ACCOUNT_ID ?? "";
   const bucket = env.CHAOS_R2_BUCKET ?? "";
@@ -48,7 +51,7 @@ export async function signR2Request(
   config: R2Config, method: R2Method, key: string,
   options: { contentType?: string; expiresSeconds?: number; now?: Date } = {},
 ): Promise<SignedR2Request> {
-  if (!/^(?:course-media|form-images)\/[a-zA-Z0-9_-]{8,200}$/.test(key)) throw new Error("Invalid R2 object key.");
+  if (!/^(?:course-media|form-images|learn-sources)\/[a-zA-Z0-9_-]{8,200}$/.test(key)) throw new Error("Invalid R2 object key.");
   const expires = options.expiresSeconds ?? 30;
   if (!Number.isSafeInteger(expires) || expires < 1 || expires > 300) throw new Error("Invalid expiry.");
   if (method === "PUT" && !options.contentType) throw new Error("Upload content type required.");
