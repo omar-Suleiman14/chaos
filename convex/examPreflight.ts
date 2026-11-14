@@ -83,7 +83,7 @@ async function eligible(ctx: Ctx, releaseId: Id<"examReleases">) {
 export const get = query({
   args: { releaseId: v.id("examReleases") },
   handler: async (ctx, { releaseId }) => {
-    const { release, course, snapshot, settings, studentId, policyVersion, now } =
+    const { course, snapshot, settings, studentId, policyVersion, now } =
       await eligible(ctx, releaseId);
     const consent = await ctx.db.query("examConsents")
       .withIndex("by_release_student", q => q.eq("releaseId", releaseId).eq("studentId", studentId)).unique();

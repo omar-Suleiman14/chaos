@@ -134,11 +134,11 @@ export default function ExamPreflightPage() {
         <li>{preflight.showCorrectAnswers ? t.answers : t.noAnswers}</li>
         <li>{preflight.showExplanations ? t.explanations : t.noExplanations}</li>
       </ul>
-      {preflight.consentAccepted ? <div role="status" className="flex items-start gap-2">
+      {preflight.consentAccepted ? <output className="flex items-start gap-2">
         <CheckCircle2 size={20} aria-hidden />
         <div><strong>{t.accepted}</strong>{preflight.acceptedAt !== null &&
           <p className="cb-note">{t.acceptedAt}: {formatDate(preflight.acceptedAt)}</p>}</div>
-      </div> : <div className="grid gap-3">
+      </output> : <div className="grid gap-3">
         <label className="flex items-start gap-3 text-sm">
           <input type="checkbox" className="mt-1" checked={checked}
             onChange={event => setChecked(event.target.checked)} />
