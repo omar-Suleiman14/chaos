@@ -6,6 +6,7 @@ import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { CARD_THEMES } from "@/lib/memberCard";
 import MemberAvatar from "@/components/MemberAvatar";
+import CourseCohorts from "@/components/courses/CourseCohorts";
 import Link from "@/components/site/SiteLink";
 import { formatDate, useCopy, useLocale } from "@/lib/i18n";
 
@@ -75,6 +76,7 @@ export default function CourseStudents({ courseId }: { courseId: Id<"learnCollec
               </div>
             </li>)}</ul>}
       </div>
+      <CourseCohorts courseId={courseId} />
       {data === undefined ? <output className="ws-stats ws-skeleton" style={{ minHeight: 88 }}  aria-label={t.loading} />
         : !data.published && data.enrolled === 0 ? <p className="cb-note">{t.unpublished}</p>
         : data.enrolled === 0 ? <p className="cb-note">{t.empty}</p>
