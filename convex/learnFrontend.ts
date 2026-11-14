@@ -1,6 +1,7 @@
 import { getAuthIdentity } from "./authIdentity";
 import { teamAudienceAllows } from "./businessAccess";
 import { lessonAccessForActor } from "./lessons";
+import { canReadCourseAttachedLesson } from "./courseMembership";
 import { paginationOptsValidator, paginationResultValidator } from "convex/server";
 import { v } from "convex/values";
 import { query, type QueryCtx } from "./_generated/server";
@@ -44,6 +45,7 @@ async function readPublishedLesson(ctx: QueryCtx, rawId: string, viewer: string 
 
   const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
   if (!version || version.lessonId !== id || (!team && version.visibility !== undefined && version.visibility !== "public")) return null;
+  if (!await canReadCourseAttachedLesson(ctx, lesson.ownerId, id, viewer ?? null)) return null;
 
   return {
     lessonId: id, ownerId: lesson.ownerId,
@@ -83,6 +85,7 @@ export const publicLessonSummary = query({
     if (!hasLiveLessonPublication(lesson) || lesson.visibility !== "public" || await creatorRestricted(ctx, lesson.ownerId)) return null;
     const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
     if (!version || version.lessonId !== id || (version.visibility !== undefined && version.visibility !== "public")) return null;
+    if (!await canReadCourseAttachedLesson(ctx, lesson.ownerId, id, (await getAuthIdentity(ctx))?.subject ?? null)) return null;
     const owner = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", lesson.ownerId)).first();
     const outline = version.document.blocks.flatMap(block => {
       if (block.type !== "heading") return [];
@@ -128,8 +131,7 @@ export const editableLesson = query({
     const lesson = await ctx.db.get("lessons", id);
     if (!lesson) return null;
     if (lesson.ownerId === identity.subject) return lesson;
-    const grant = await ctx.db.query("lessonPermissions").withIndex("by_lessonId_and_userId", q => q.eq("lessonId", id).eq("userId", identity.subject)).unique();
-    if (grant?.role === "editor") return lesson;
+    // Direct editor grants must still obey live-course admission and moderation.
     try { return await lessonAccessForActor(ctx, identity.subject, id, true); } catch { return null; }
   },
 });
@@ -167,6 +169,7 @@ export const listIndexableLessons = query({
       if (await restricted) continue;
       const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
       if (!version || version.lessonId !== lesson._id || version.metadata.indexing !== "index" || (version.visibility !== undefined && version.visibility !== "public")) continue;
+      if (!await canReadCourseAttachedLesson(ctx, lesson.ownerId, lesson._id, null)) continue;
       page.push({ lessonId: lesson._id, versionId: version._id, metadata: version.metadata, publishedAt: version.publishedAt });
     }
     return { ...result, page };
@@ -177,8 +180,10 @@ const assessment = v.object({ kind: v.literal("form"), id: v.id("forms"), title:
 export const attachedQuizzes = query({
   args: { lessonId: v.id("lessons") }, returns: v.array(assessment),
   handler: async (ctx, args) => {
-    await lessonAccess(ctx, args.lessonId);
     const links = await ctx.db.query("lessonAssessments").withIndex("by_lessonId_and_order", q => q.eq("lessonId", args.lessonId)).take(50);
+    // An empty attachment list exposes no private data.
+    if (!links.length) return [];
+    await lessonAccess(ctx, args.lessonId);
     const result = [];
     for (const link of links) {
       if (link.asset.kind !== "form") continue;

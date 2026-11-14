@@ -26,7 +26,7 @@ export async function syncCourseMembership(ctx: MutationCtx, courseId: Id<"learn
 }
 
 /** Exact indexed associations replace a scan over unrelated owner courses after backfill. */
-export async function coursesWithLesson(ctx: Pick<QueryCtx | MutationCtx, "db">, ownerId: string, lessonId: Id<"lessons">, order: "asc" | "desc" = "asc") {
+export async function coursesWithLesson(ctx: Pick<QueryCtx | MutationCtx, "db">, ownerId: string, lessonId: Id<"lessons">, order: "asc" | "desc" = "asc", failClosed = false) {
   const found = new Map<Id<"learnCollections">, Doc<"learnCollections">>();
   const state = await ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v1")).unique();
   let needsIndex = !!state?.complete;
@@ -36,6 +36,8 @@ export async function coursesWithLesson(ctx: Pick<QueryCtx | MutationCtx, "db">,
     for (const course of legacy) if (courseLessonIds(course).includes(lessonId)) found.set(course._id, course);
     // A short page already contains every owner course; projections cannot add a valid association.
     needsIndex = legacy.length === 500;
+    // A partial migration can miss older courses beyond this bounded page.
+    if (failClosed && needsIndex) throw new Error("NOT_FOUND: Course membership backfill required.");
   }
   if (needsIndex) {
     const edges = await ctx.db.query("courseLessonMemberships").withIndex("by_ownerId_and_lessonId", q => q.eq("ownerId", ownerId).eq("lessonId", lessonId)).collect();
@@ -87,7 +89,7 @@ export async function canReadCourseAttachedLesson(
 ): Promise<boolean> {
   if (actor === ownerId) return true;
   let protectedLesson = false;
-  for (const course of await coursesWithLesson(ctx, ownerId, lessonId)) {
+  for (const course of await coursesWithLesson(ctx, ownerId, lessonId, "asc", true)) {
     if (!course.publishedVersionId || course.archived ||
       course.communityState === "hidden" || course.communityState === "removed") continue;
     const published = await ctx.db.get("collectionVersions", course.publishedVersionId);

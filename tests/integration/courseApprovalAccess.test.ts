@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
 import { createTestConvex } from "./setup";
 
@@ -32,6 +32,11 @@ it("blocks direct course, lesson, version and progress access until owner approv
   expect((await t.query(api.courses.getPublic, { courseId }))?.lessons).toHaveLength(1);
   expect(await t.query(api.courses.lesson, { courseId, lessonId })).toBeNull();
   expect(await student.query(api.courses.lesson, { courseId, lessonId })).toBeNull();
+  expect(await t.query(api.learnFrontend.publicLesson, { id: lessonId })).toBeNull();
+  expect(await student.query(api.learnFrontend.publicLesson, { id: lessonId })).toBeNull();
+  expect(await student.query(api.learnFrontend.publicLessonSummary, { id: lessonId })).toBeNull();
+  expect(await student.query(api.learnFrontend.publicLessonsBatch, { ids: [lessonId] })).toEqual([]);
+  await expect(t.query(internal.mcpLearn.getLesson, { userId: otherCreatorIdentity.subject, lessonId, view: "published" })).rejects.toThrow("NOT_FOUND");
   expect(await student.query(api.courses.myProgress, { courseId })).toEqual([]);
   await expect(student.mutation(api.courses.remember, { courseId })).rejects.toThrow("NOT_FOUND");
   await expect(t.query(api.lessons.getPublished, { lessonId })).rejects.toThrow("NOT_FOUND");
@@ -54,6 +59,10 @@ it("blocks direct course, lesson, version and progress access until owner approv
 
   expect((await student.query(api.courses.lesson, { courseId, lessonId }))?.version._id).toBe(versionId);
   expect((await student.query(api.lessons.getPublished, { lessonId }))?._id).toBe(versionId);
+  expect((await student.query(api.learnFrontend.publicLesson, { id: lessonId }))?.version._id).toBe(versionId);
+  expect((await student.query(api.learnFrontend.publicLessonSummary, { id: lessonId }))?.lessonId).toBe(lessonId);
+  expect((await student.query(api.learnFrontend.publicLessonsBatch, { ids: [lessonId] })).map(row => row.lessonId)).toEqual([lessonId]);
+  expect((await t.query(internal.mcpLearn.getLesson, { userId: otherCreatorIdentity.subject, lessonId, view: "published" })).versionId).toBe(versionId);
   expect((await student.query(api.lessonVersionReads.get, { lessonId, versionId }))._id).toBe(versionId);
   expect(await student.query(api.courseStudents.myEnrollment, { courseId })).toEqual({ enrolled: true, owner: false });
   expect(await student.query(api.courses.myProgress, { courseId })).toHaveLength(1);
@@ -62,6 +71,10 @@ it("blocks direct course, lesson, version and progress access until owner approv
   await t.run(ctx => ctx.db.patch("courseJoinRequests", request.id, { status: "rejected" }));
   expect(await student.query(api.courses.lesson, { courseId, lessonId })).toBeNull();
   await expect(student.query(api.lessons.getPublished, { lessonId })).rejects.toThrow("NOT_FOUND");
+  expect(await student.query(api.learnFrontend.publicLesson, { id: lessonId })).toBeNull();
+  expect(await student.query(api.learnFrontend.publicLessonSummary, { id: lessonId })).toBeNull();
+  expect(await student.query(api.learnFrontend.publicLessonsBatch, { ids: [lessonId] })).toEqual([]);
+  await expect(t.query(internal.mcpLearn.getLesson, { userId: otherCreatorIdentity.subject, lessonId, view: "published" })).rejects.toThrow("NOT_FOUND");
   expect(await student.query(api.courseStudents.myEnrollment, { courseId })).toEqual({ enrolled: false, owner: false });
 });
 
@@ -74,4 +87,6 @@ it("preserves unrestricted published lessons that do not belong to any course", 
   const result = await doctor.mutation(api.lessons.publish, { lessonId, expectedRevision: 0, visibility: "public" });
   expect(result.ok).toBe(true);
   expect((await t.query(api.lessons.getPublished, { lessonId }))?.document.blocks).toHaveLength(1);
+  expect((await t.query(api.learnFrontend.publicLesson, { id: lessonId }))?.version.document.blocks).toHaveLength(1);
+  expect((await t.query(api.learnFrontend.publicLessonsBatch, { ids: [lessonId] })).map(row => row.lessonId)).toEqual([lessonId]);
 });
