@@ -19,6 +19,8 @@ import { LEARN_LIMITS, sourceMetadata, visibility } from "./learnModel";
 import { creatorRestricted, requireActiveUser } from "./authz";
 import { fingerprintBytes, nearByteDuplicate, sourceFingerprint, SOURCE_SIMILARITY_LIMITS } from "./sourceFingerprint";
 import { canReadSourcePart } from "./sourceAccess";
+import { r2Config, signR2Request } from "../lib/r2/privateR2";
+import { sourceR2Key } from "./sourceR2Migration";
 
 type Metadata = Infer<typeof sourceMetadata>;
 export const SOURCE_UPLOAD_PATH = "/learn/sources/upload";
@@ -341,31 +343,38 @@ export const getContentUrl = query({
   returns: v.union(v.null(), v.string()),
   handler: async (ctx, args) => {
     const source = await accessible(ctx, args.sourceId, "content");
-    if (
-      !source?.storageId ||
-      !(await ctx.db.system.get("_storage", source.storageId))
-    )
+    if (!source || (!source.r2 && (!source.storageId ||
+        !(await ctx.db.system.get("_storage", source.storageId)))))
       return null;
     const url = new URL(SOURCE_CONTENT_PATH, env.CONVEX_SITE_URL);
     url.searchParams.set("sourceId", source._id);
     return url.toString();
   },
 });
-// Only the HTTP proxy may receive a storage ID. Public clients receive its route.
+// Internal-only storage selector. A migrated row never falls back to an older
+// Convex blob after a failed R2 GET; every transport uses the same live gate.
+const sourceContentLocation = v.union(
+  v.null(),
+  v.object({ kind: v.literal("convex"), storageId: v.id("_storage") }),
+  v.object({ kind: v.literal("r2"), key: v.string(), etag: v.string(), bytes: v.number(), contentType: v.string() }),
+);
 export const readContentStorage = internalQuery({
   args: { sourceId: v.string() },
-  returns: v.union(v.null(), v.id("_storage")),
+  returns: sourceContentLocation,
   handler: async (ctx, args) => {
     const sourceId = ctx.db.normalizeId("learnSources", args.sourceId);
     if (!sourceId) return null;
     const source = await accessible(ctx, sourceId, "content");
-    return source?.storageId ?? null;
+    if (!source) return null;
+    if (source.r2) return { kind: "r2" as const, key: sourceR2Key(source._id),
+      etag: source.r2.etag, bytes: source.r2.bytes, contentType: source.r2.contentType };
+    return source.storageId ? { kind: "convex" as const, storageId: source.storageId } : null;
   },
 });
 const contentStorage = makeFunctionReference<
-  "query",
-  { sourceId: string },
-  Id<"_storage"> | null
+  "query", { sourceId: string },
+  { kind: "convex"; storageId: Id<"_storage"> } |
+  { kind: "r2"; key: string; etag: string; bytes: number; contentType: string } | null
 >("learnSources:readContentStorage");
 /** Mount GET at SOURCE_CONTENT_PATH. Never redirects to a bearer storage URL. */
 export const downloadContent = httpAction(async (ctx, request) => observeHttp(ctx, "source-files", async () => {
@@ -378,21 +387,28 @@ export const downloadContent = httpAction(async (ctx, request) => observeHttp(ct
   const sourceId = new URL(request.url).searchParams.get("sourceId");
   if (!sourceId || sourceId.length > 200)
     return new Response("Source not found", { status: 404, headers });
-  const storageId: Id<"_storage"> | null = await ctx.runQuery(contentStorage, {
-    sourceId,
-  });
-  if (!storageId)
-    return new Response("Source not found", { status: 404, headers });
-  const blob = await ctx.storage.get(storageId);
+  const location = await ctx.runQuery(contentStorage, { sourceId });
+  if (!location) return new Response("Source not found", { status: 404, headers });
+  if (location.kind === "r2") {
+    try {
+      const signed = await signR2Request(r2Config(env), "GET", location.key, { expiresSeconds: 20 });
+      const response = await fetch(signed.url, { headers: { "If-Match": location.etag },
+        cache: "no-store", redirect: "error" });
+      if (!response.ok || !response.body || response.headers.get("etag") !== location.etag ||
+        Number(response.headers.get("content-length")) !== location.bytes)
+        return new Response("Source not found", { status: 404, headers });
+      return new Response(response.body, { headers: { ...headers,
+        "Content-Type": location.contentType, "Content-Disposition": "attachment",
+        "Content-Length": String(location.bytes) } });
+    } catch {
+      return new Response("Source unavailable", { status: 503, headers });
+    }
+  }
+  const blob = await ctx.storage.get(location.storageId);
   if (!blob) return new Response("Source not found", { status: 404, headers });
-  return new Response(blob, {
-    headers: {
-      ...headers,
-      "Content-Type": blob.type || "application/octet-stream",
-      "Content-Disposition": "attachment",
-      "Content-Length": String(blob.size),
-    },
-  });
+  return new Response(blob, { headers: { ...headers,
+    "Content-Type": blob.type || "application/octet-stream",
+    "Content-Disposition": "attachment", "Content-Length": String(blob.size) } });
 }));
 async function ownedSource(ctx: MutationCtx, sourceId: Id<"learnSources">) {
   const { identity } = await requireActiveUser(ctx);

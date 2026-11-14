@@ -13,6 +13,9 @@ import { LEARN_LIMITS, sourceMetadata } from "./learnModel";
 import { trackSourceUploadForActor } from "./learnSourceRetention";
 import { fingerprintBytes, sourceFingerprint } from "./sourceFingerprint";
 import { accessibleStudySource } from "./studyLessons";
+import { env } from "./_generated/server";
+import { r2Config, signR2Request } from "../lib/r2/privateR2";
+import { sourceR2Key } from "./sourceR2Migration";
 import {
   mimeKinds,
   validSignature,
@@ -256,7 +259,7 @@ export const contentAccess = internalQuery({
   handler: async (ctx, a) => {
     await requireLearnActor(ctx, a.userId);
     const s = await accessibleStudySource(ctx, a.userId, a.sourceId);
-    return { metadata: s.metadata, storageId: s.storageId ?? null };
+    return { metadata: s.metadata, storageId: s.storageId ?? null, r2: s.r2 ?? null };
   },
 });
 export const readContent = internalAction({
@@ -278,10 +281,30 @@ export const readContent = internalAction({
     const access = (await ctx.runQuery(ref("query", "contentAccess"), {
       userId: a.userId,
       sourceId: a.sourceId,
-    })) as { metadata: InferMetadata; storageId: Id<"_storage"> | null };
+    })) as { metadata: InferMetadata; storageId: Id<"_storage"> | null;
+      r2: { etag: string; bytes: number; contentType: string } | null };
     const offset = a.offset ?? 0;
     if (!Number.isSafeInteger(offset) || offset < 0)
       invalid("Invalid file offset.");
+    if (access.r2) {
+      const { etag, bytes: total, contentType } = access.r2;
+      if (offset >= total) invalid("Missing file or offset beyond file.");
+      const end = Math.min(total, offset + 128 * 1024) - 1;
+      const signed = await signR2Request(r2Config(env), "GET", sourceR2Key(a.sourceId), { expiresSeconds: 20 });
+      const response = await fetch(signed.url, {
+        headers: { "Range": `bytes=${offset}-${end}`, "If-Match": etag },
+        cache: "no-store", redirect: "error",
+      });
+      if (response.status !== 206 || response.headers.get("etag") !== etag ||
+        response.headers.get("content-range") !== `bytes ${offset}-${end}/${total}`)
+        invalid("R2 source range is unavailable.");
+      const bytes = new Uint8Array(await response.arrayBuffer());
+      if (bytes.length !== end - offset + 1) invalid("R2 source range length mismatch.");
+      let binary = "";
+      for (const byte of bytes) binary += String.fromCharCode(byte);
+      return { metadata: access.metadata, contentType, data: btoa(binary),
+        totalBytes: total, nextOffset: end + 1 < total ? end + 1 : null };
+    }
     if (!access.storageId)
       return {
         metadata: access.metadata,
