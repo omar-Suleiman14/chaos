@@ -39,7 +39,7 @@ export default defineSchema({
     courseId: v.id("learnCollections"),
     ownerId: v.string(),
     studentId: v.string(),
-    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected"), v.literal("withdrawn")),
+    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected"), v.literal("withdrawn"), v.literal("suspended"), v.literal("removed")),
     requestedAt: v.number(),
     updatedAt: v.number(),
     reviewedAt: v.optional(v.number()),
@@ -48,7 +48,25 @@ export default defineSchema({
     .index("by_course_student", ["courseId", "studentId"])
     .index("by_course_status_requestedAt", ["courseId", "status", "requestedAt"])
     .index("by_student_updated", ["studentId", "updatedAt"]),
-  authorStudentCounts: defineTable({ authorId: v.string(), count: v.number() }).index("by_author", ["authorId"]),
+  /** Named groups are teacher-owned labels; membership never grants course admission. */
+  courseGroups: defineTable({
+    courseId: v.id("learnCollections"), ownerId: v.string(), name: v.string(),
+    createdAt: v.number(), updatedAt: v.number(),
+  }).index("by_course", ["courseId"]),
+  courseGroupMembers: defineTable({
+    courseId: v.id("learnCollections"), groupId: v.id("courseGroups"),
+    studentId: v.string(), addedAt: v.number(),
+  }).index("by_group", ["groupId"])
+    .index("by_group_student", ["groupId", "studentId"])
+    .index("by_course_student", ["courseId", "studentId"]),
+  /** A doctor invitation is not a lesson-access grant until accepted by the student. */
+  courseInvitations: defineTable({
+    courseId: v.id("learnCollections"), ownerId: v.string(), studentId: v.string(),
+    status: v.union(v.literal("pending"), v.literal("accepted"), v.literal("declined"), v.literal("canceled")),
+    invitedBy: v.string(), invitedAt: v.number(), respondedAt: v.optional(v.number()),
+  }).index("by_course_student", ["courseId", "studentId"])
+    .index("by_course_status", ["courseId", "status"]),
+    authorStudentCounts: defineTable({ authorId: v.string(), count: v.number() }).index("by_author", ["authorId"]),
   authIdentityBindings: defineTable({ externalActorId: v.string(), actorId: v.string(), tokenIdentifier: v.string() }).index("by_externalActorId", ["externalActorId"]).index("by_actorId", ["actorId"]),
   ...docsTables,
   ...businessTables,
