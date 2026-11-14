@@ -225,9 +225,14 @@ export const appealsForDraft = query({
     const course = await ctx.db.get("learnCollections", draft.courseId);
     if (!course || course.ownerId !== ownerId || course.communityState === "removed")
       throw new Error("NOT_FOUND: Exam not found.");
+    const release = await ctx.db.query("examReleases")
+      .withIndex("by_draft", q => q.eq("draftId", draftId)).unique();
+    if (!release || release.ownerId !== ownerId || release.courseId !== course._id)
+      throw new Error("NOT_FOUND: Exam not found.");
     const rows = await ctx.db.query("examGradeAppeals")
       .withIndex("by_owner_course", q => q.eq("ownerId", ownerId).eq("courseId", course._id)).take(101);
-    return { entries: rows.slice(0, 100).map(r => ({
+    const current = rows.filter(r => r.snapshotId === release.activeSnapshotId);
+    return { entries: current.slice(0, 100).map(r => ({
       appealId: r._id, attemptId: r.attemptId, studentId: r.studentId,
       status: r.status, revision: r.revision, reason: r.reason, requestedAt: r.requestedAt,
       decisionNote: r.decisionNote ?? null,
