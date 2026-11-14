@@ -20,8 +20,9 @@ async function ownedAttempt(ctx: Ctx, attemptId: Id<"examAttempts">) {
   const attempt = await ctx.db.get("examAttempts", attemptId);
   if (!attempt || attempt.ownerId !== actorId || attempt.state !== "submitted")
     throw new Error("NOT_FOUND: Submitted attempt not found.");
-  const [snapshot, course, draft, grade] = await Promise.all([
-    ctx.db.get("examSnapshots", attempt.snapshotId),
+  const snapshot = await ctx.db.get("examSnapshots", attempt.snapshotId);
+  if (!snapshot) throw new Error("NOT_FOUND: Submitted attempt not found.");
+  const [course, draft, grade] = await Promise.all([
     ctx.db.get("learnCollections", attempt.courseId),
     ctx.db.get("examBuilderDrafts", snapshot.draftId),
     ctx.db.query("examGrades").withIndex("by_attempt",
@@ -49,9 +50,8 @@ async function markFor(ctx: Ctx, attemptId: Id<"examAttempts">, questionIndex: n
 function pendingQuestion(snapshot: Doc<"examSnapshots">, grade: Doc<"examGrades">, index: number) {
   if (!Number.isSafeInteger(index) || index < 0 || index >= snapshot.questions.length ||
       snapshot.questions[index].kind !== "written" ||
-      grade.entries[index]?.questionIndex !== index ||
-      grade.entries[index]?.status !== "needs_manual")
-    throw new Error("NOT_FOUND: Pending written question not found.");
+      grade.entries[index]?.questionIndex !== index)
+    throw new Error("NOT_FOUND: Written question not found.");
   return snapshot.questions[index];
 }
 function writable(grade: Doc<"examGrades">) {
@@ -63,8 +63,10 @@ async function audit(ctx: MutationCtx, mark: {
 }, action: "save" | "submit" | "approve" | "changes_requested" | "finalize",
  revision: number, detail: string) {
   await ctx.db.insert("examEssayMarkAudit", {
-    ...mark, actorId: mark.ownerId, action, revision, detail,
-    at: Date.now(),
+    attemptId: mark.attemptId, snapshotId: mark.snapshotId,
+    ownerId: mark.ownerId, studentId: mark.studentId,
+    questionIndex: mark.questionIndex, actorId: mark.ownerId,
+    action, revision, detail, at: Date.now(),
   });
 }
 
@@ -148,6 +150,8 @@ export const save = mutation({
     const { actorId, attempt, snapshot, grade } = await ownedAttempt(ctx, args.attemptId);
     writable(grade);
     const question = pendingQuestion(snapshot, grade, args.questionIndex);
+    if (grade.entries[args.questionIndex].status !== "needs_manual")
+      throw new Error("GRADING_CONFLICT: Question does not need manual grading.");
     validateMarkFeedback(args.feedback);
     if (!Number.isSafeInteger(args.expectedRevision) || args.expectedRevision < 0)
       throw new Error("REVISION_CONFLICT: Invalid revision.");
