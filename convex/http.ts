@@ -329,6 +329,9 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "export_course_manifest": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCourses:exportManifest"), { ...input, userId }); break;
       case "import_course_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:importLesson"), { ...input, userId }); break;
       case "get_course_lesson": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCourses:lesson"), { ...input, userId }); break;
+      case "list_enrolled_courses": result = await ctx.runQuery(internal.mcpCourseChat.list, { userId, limit: num(input.limit), cursor: str(input.cursor) }); break;
+      case "search_enrolled_course_lectures": result = await ctx.runQuery(internal.mcpCourseChat.search, { userId, courseId: str(input.courseId) ?? "", query: str(input.query) ?? "", offset: num(input.offset), limit: num(input.limit) }); break;
+      case "get_enrolled_course_lecture": result = await ctx.runQuery(internal.mcpCourseChat.lecture, { userId, courseId: str(input.courseId) ?? "", lessonId: str(input.lessonId) ?? "", offset: num(input.offset), limit: num(input.limit) }); break;
       case "remember_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:remember"), { ...input, userId }); break;
       case "get_course_progress": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCourses:progress"), { ...input, userId }); break;
       case "get_course": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCourses:read"), { ...input, userId }); break;
