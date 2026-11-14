@@ -114,6 +114,8 @@ export default defineSchema({
   ...glossaryTables,
 
   adminMetrics: defineTable({ key: v.string(), counts: metricsValidator, pending: metricsValidator, running: v.boolean(), startedAt: v.number(), completedAt: v.optional(v.number()), phase: v.union(v.literal("users"), v.literal("forms"), v.literal("quizzes"), v.literal("quizSessions")), cursor: v.union(v.string(), v.null()) }).index("by_key", ["key"]),
+  /** Aggregate-only history, written atomically after a completed platform scan. */
+  adminMetricSnapshots: defineTable({ completedAt: v.number(), counts: metricsValidator }).index("by_completedAt", ["completedAt"]),
   adminBulkJobs: defineTable({ actorId: v.string(), plan: v.union(v.literal("free"), v.literal("pro")), reason: v.string(), cutoff: v.number(), processed: v.number(), done: v.boolean() }),
   /** Admin accounts. Managed only with `npx convex run admin:grantAdmin` / `admin:revokeAdmin`. */
   admins: defineTable({
