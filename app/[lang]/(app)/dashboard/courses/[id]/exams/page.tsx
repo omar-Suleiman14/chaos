@@ -285,9 +285,9 @@ export default function CourseExamBuilder({
           <p className="text-sm text-muted-foreground">
             {preview.readyQuestions} {t.available} · {preview.plannedCount} / {draft.targetCount} {t.needed}
           </p>
-          <p className="text-sm" role="status">
+          <output className="text-sm">
             {dirty ? t.notSaved : preview.feasible ? t.feasible : t.shortage}
-          </p>
+          </output>
         </> : <p className="cb-note">{t.loading}</p>}
       </section>
 
@@ -300,7 +300,7 @@ export default function CourseExamBuilder({
           </button>
         </div>
         {dirty ? <p className="cb-note">{t.notSaved}</p> : <>
-          <div className="flex flex-wrap gap-2" role="group" aria-label={t.allocation}>
+          <fieldset className="flex flex-wrap gap-2" aria-label={t.allocation}>
             {draft.allocations.map((a, i) => <button key={a.id} type="button"
               className={"ws-btn ws-btn--sm " + (focus === a.id ? "ws-btn--primary" : "ws-btn--ghost")}
               onClick={() => { setFocus(a.id); setOffset(0); }}>
@@ -309,7 +309,7 @@ export default function CourseExamBuilder({
                 a.kind === "lecture" ? preview?.lectures.find(x => x.id === a.key)?.title ?? a.key : a.key}
               {" (" + (selectedCounts.get(a.id) ?? 0) + "/" + a.count + ")"}
             </button>)}
-          </div>
+          </fieldset>
           {candidates === undefined ? <p className="cb-note">{t.loading}</p> : <>
             {!candidates.questions.length && <p className="cb-note">{t.noQuestions}</p>}
             <div className="grid gap-2">
