@@ -25,7 +25,7 @@ export function validateAssignment(input: {
   const title = input.title.trim(), instructions = input.instructions.trim();
   const outcome = input.outcome.trim();
   if (!title || title.length > 180 || instructions.length > 2000 ||
-      outcome.length > 80 || (outcome && !/^[\\p{L}\\p{N} _.-]+$/u.test(outcome)))
+      outcome.length > 80 || (outcome && !/^[\p{L}\p{N} _.-]+$/u.test(outcome)))
     throw new Error("INVALID_ASSIGNMENT: Invalid title, instructions, or learning outcome.");
   if (!Number.isSafeInteger(input.opensAt) || !Number.isSafeInteger(input.dueAt) ||
       input.opensAt < 0 || input.dueAt <= input.opensAt)
