@@ -91,8 +91,7 @@ export const examRuntimeTables = {
     lastMutationId: v.string(),
     savedAt: v.number(),
   })
-    .index("by_attempt_question", ["attemptId", "questionIndex"])
-    .index("by_attempt", ["attemptId"]),
+    .index("by_attempt_question", ["attemptId", "questionIndex"]),
   examAttempts: defineTable({
     ownerId: v.string(),
     courseId: v.id("learnCollections"),
