@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 400" role="img" aria-label="Generic heart chamber diagram">
+<rect width="720" height="400" rx="24" fill="#eef1f2"/>
+<g fill="none" stroke="#455761" stroke-width="8" stroke-linejoin="round">
+<path d="M360 316 C305 274 218 231 208 160 C197 72 315 65 360 125 C405 65 523 72 512 160 C502 231 415 274 360 316Z" fill="#d4dde0"/>
+<path d="M360 117 V302 M250 196 H470"/>
+<path d="M300 111 Q280 50 305 20 M420 111 Q440 50 415 20"/>
+</g>
+<g fill="#687d89"><circle cx="300" cy="160" r="8"/><circle cx="420" cy="160" r="8"/><circle cx="300" cy="250" r="8"/><circle cx="420" cy="250" r="8"/></g>
+<text x="360" y="365" fill="#455761" font-size="22" font-family="system-ui,sans-serif" text-anchor="middle">ILLUSTRATIVE DIAGRAM — NOT AN EXAM IMAGE</text>
+</svg>
