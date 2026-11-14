@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { bankChoice, bankKind } from "./questionBankModel";
 import { examSettings } from "./examSettingsModel";
 import { examAudience } from "./examAudienceModel";
+import { integrityDecision, integrityKind, integrityPolicy } from "./examIntegrityModel";
 
 /** A sealed snapshot is append-only: no public update/delete API may mutate its content or key. */
 export const frozenQuestion = v.object({
@@ -105,6 +106,18 @@ export const examRuntimeTables = {
     startedAt: v.number(),
     deadlineAt: v.number(),
   }).index("by_attempt", ["attemptId"]),
+  /** Short-lived, privacy-minimized, non-punitive browser telemetry only. */
+  examIntegrityEvents: defineTable({
+    attemptId: v.id("examAttempts"),
+    eventId: v.string(),
+    kind: integrityKind,
+    observedAt: v.number(),
+    decision: integrityDecision,
+    gapMs: v.optional(v.number()),
+    expiresAt: v.number(),
+  })
+    .index("by_attempt_time", ["attemptId", "observedAt"])
+    .index("by_attempt_event", ["attemptId", "eventId"]),
   examAttempts: defineTable({
     ownerId: v.string(),
     courseId: v.id("learnCollections"),
@@ -113,6 +126,14 @@ export const examRuntimeTables = {
     state: attemptState,
     revision: v.number(),
     startedAt: v.number(),
+    /** Privacy-first opt-in policy, frozen by a future authorized start transaction. */
+    integrityPolicy: v.optional(integrityPolicy),
+    /** Server-side open intervals, never trusted from browser timing. */
+    integritySignals: v.optional(v.object({
+      awayAt: v.optional(v.number()),
+      offlineAt: v.optional(v.number()),
+      fullscreenAt: v.optional(v.number()),
+    })),
     /** Frozen when the server starts the attempt; missing on legacy/test seed rows. */
     deadlineAt: v.optional(v.number()),
     minimumSubmitAt: v.optional(v.number()),
