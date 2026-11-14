@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Select } from "@/components/workspace/Select";
 import { use, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ExternalLink, Globe, History, Lock, Send, Users } from "lucide-react";
+import { ArrowLeft, ClipboardList, ExternalLink, Globe, History, Lock, Send, Users } from "lucide-react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -126,6 +126,15 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
       </section>
 
       <CourseModulesEditor courseId={courseId} modules={course.modules ?? []} lessons={course.lessons} />
+      {course.isOwner && <section className="cb-section flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2>{locale === "ar" ? "إنشاء الامتحانات" : "Exam builder"}</h2>
+          <p className="cb-note">{locale === "ar" ? "وزّع الأسئلة على محاضرات الدورة ووحداتها وراجع تغطية المنهج." : "Choose lectures, question counts and coverage from your private question bank."}</p>
+        </div>
+        <Link className="ws-btn ws-btn--primary" href={`/dashboard/courses/${courseId}/exams`}>
+          <ClipboardList size={16} aria-hidden />{locale === "ar" ? "افتح منشئ الامتحانات" : "Open exam builder"}
+        </Link>
+      </section>}
 
       {course.isOwner && <CourseStudents courseId={courseId} />}
       <CourseDetailsEditor courseId={courseId} details={course.details} />
