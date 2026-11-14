@@ -6,6 +6,7 @@ import { hasApprovedCourseAccess } from "./courseMembership";
 import { audienceAllows } from "./examAudience";
 import { resultStatus } from "./examResultModel";
 import { assignmentKind, assignmentState, validateAssignment } from "./courseAssignmentsModel";
+import { notifyCourseStudents } from "./courseNotifications";
 
 type Ctx = QueryCtx | MutationCtx;
 const LIMIT_ASSIGNMENTS = 80, LIMIT_STUDENTS = 80, LIMIT_ATTEMPTS = 20;
@@ -139,6 +140,9 @@ export const revise = mutation({
       ...fields, published: args.published, archived: args.archived, revision, updatedAt: now,
     });
     await audit(ctx, { ...row, revision }, args.archived ? "archived" : args.published ? "published_or_updated" : "saved_draft");
+    if (args.published && !args.archived && !row.published)
+      await notifyCourseStudents(ctx, course._id, "course_assignment",
+        "assignment:" + row._id + ":" + revision, "A new course assignment is available.");
     return revision;
   },
 });

@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { notifyCourseAccount } from "./courseNotifications";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireActiveUser, creatorRestricted } from "./authz";
@@ -352,6 +353,11 @@ export const releaseRegrade = mutation({
     await audit(ctx, { attemptId: attempt._id, snapshotId: snapshot._id, ownerId,
       studentId: attempt.studentId }, ownerId, "regrade_released",
       "Doctor confirmed revised result release.", (grade.revision ?? 0) + 1);
+    await notifyCourseAccount(ctx, {
+      recipientId: attempt.studentId, courseId: attempt.courseId, kind: "course_result",
+      key: "regrade:" + attempt._id + ":" + ((grade.revision ?? 0) + 1),
+      message: "Your reviewed exam result is available in My Results.",
+    });
     return { revision: (grade.revision ?? 0) + 1, releasedFromHold: true };
   },
 });

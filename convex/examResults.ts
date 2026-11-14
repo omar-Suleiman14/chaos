@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { notifyCourseAccount } from "./courseNotifications";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser, creatorRestricted } from "./authz";
@@ -193,6 +194,25 @@ export const setPublication = mutation({
       actorId: ownerId, action: released ? "publish" : "withhold",
       revision: revision + 1, at: now,
     });
+    if (released) {
+      const attempts = await ctx.db.query("examAttempts")
+        .withIndex("by_snapshot_student", q => q.eq("snapshotId", snapshotId)).take(81);
+      if (attempts.length > 80) throw new Error("LIMIT_REACHED: Result notifications need paginated fanout.");
+      const notified = new Set<string>();
+      for (const attempt of attempts) {
+        if (attempt.state !== "submitted" || notified.has(attempt.studentId)) continue;
+        const grade = await ctx.db.query("examGrades")
+          .withIndex("by_attempt", q => q.eq("attemptId", attempt._id)).unique();
+        if (!grade || grade.studentId !== attempt.studentId || grade.reviewHold === true ||
+            grade.finalPercentBasisPoints === undefined) continue;
+        notified.add(attempt.studentId);
+        await notifyCourseAccount(ctx, {
+          recipientId: attempt.studentId, courseId: course._id, kind: "course_result",
+          key: "result_release:" + snapshotId + ":" + revision + ":" + attempt.studentId,
+          message: "Your exam result has been released. Check My Results.",
+        });
+      }
+    }
     return { revision: revision + 1, released };
   },
 });

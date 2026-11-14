@@ -4,6 +4,7 @@ import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser, creatorRestricted } from "./authz";
 import { hasApprovedCourseAccess } from "./courseMembership";
 import { cleanClassText, validateClassEvent } from "./courseCommunicationsModel";
+import { notifyCourseAccount, notifyCourseStudents } from "./courseNotifications";
 
 type Ctx = QueryCtx | MutationCtx;
 const MAX_RECORDS = 80, MAX_MESSAGES = 100;
@@ -97,6 +98,9 @@ export const reviseAnnouncement = mutation({
     });
     await audit(ctx, course, who, "announcement", String(record._id),
       args.archived ? "archived" : args.published ? "published" : "draft", revision);
+    if (args.published && !args.archived && !record.published)
+      await notifyCourseStudents(ctx, course._id, "course_announcement",
+        "announcement:" + record._id + ":" + revision, "A new course announcement is available.");
     return revision;
   },
 });
@@ -152,6 +156,9 @@ export const reviseEvent = mutation({
     });
     await audit(ctx, course, who, "event", String(record._id),
       args.archived ? "archived" : args.published ? "published" : "draft", revision);
+    if (args.published && !args.archived && !record.published)
+      await notifyCourseStudents(ctx, course._id, "course_calendar",
+        "calendar:" + record._id + ":" + revision, "A new course session has been scheduled.");
     return revision;
   },
 });
@@ -197,6 +204,10 @@ export const sendMessage = mutation({
       senderId: who, body: text, createdAt: now,
     });
     await audit(ctx, course, who, "message", String(id), "sent", 0);
+    await notifyCourseAccount(ctx, {
+      recipientId: owner ? target : course.ownerId, courseId, kind: "course_message",
+      key: "message:" + id, message: "You have a new private course message.",
+    });
     return id;
   },
 });

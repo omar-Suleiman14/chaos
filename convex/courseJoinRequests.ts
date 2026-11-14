@@ -5,6 +5,7 @@ import { getAuthIdentity } from "./authIdentity";
 import { requireActiveUser } from "./authz";
 import { readPublicCourse } from "./courses";
 import { recordStudent } from "./studentRoster";
+import { notifyCourseAccount } from "./courseNotifications";
 
 /**
  * Course admission is separate from course publication. This module introduces
@@ -82,6 +83,11 @@ export const requestJoin = mutation({
         updatedAt: now,
       });
     }
+    await notifyCourseAccount(ctx, {
+      recipientId: row.ownerId, courseId: course.id, kind: "course_enrollment",
+      key: "join_request:" + course.id + ":" + identity.subject + ":" + now,
+      message: "A student requested access to your course.",
+    });
     return null;
   },
 });
@@ -212,6 +218,11 @@ export const decide = mutation({
       reviewedAt: now,
       reviewedBy: identity.subject,
       updatedAt: now,
+    });
+    if (approve) await notifyCourseAccount(ctx, {
+      recipientId: request.studentId, courseId: course._id, kind: "course_enrollment",
+      key: "enrollment:" + request._id + ":" + now,
+      message: "Your course access request was approved.",
     });
     return wanted;
   },
