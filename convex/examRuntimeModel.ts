@@ -66,6 +66,16 @@ export const examRuntimeTables = {
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_draft", ["draftId"]).index("by_course", ["courseId"]),
+  /** Versioned student rules acknowledgements, not attempt authorizations. */
+  examConsents: defineTable({
+    releaseId: v.id("examReleases"),
+    studentId: v.string(),
+    snapshotId: v.id("examSnapshots"),
+    policyVersion: v.string(),
+    rulesVersion: v.number(),
+    acceptedAt: v.number(),
+    revision: v.number(),
+  }).index("by_release_student", ["releaseId", "studentId"]),
   /** Attempts always bind a specific snapshot, not a live question or mutable release pointer. */
   examAttempts: defineTable({
     ownerId: v.string(),
