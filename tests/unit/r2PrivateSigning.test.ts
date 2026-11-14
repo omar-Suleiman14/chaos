@@ -49,6 +49,15 @@ describe("private R2 SigV4 infrastructure", () => {
     expect(new URL(changed.url).searchParams.get("X-Amz-Signature")).not.toBe(url.searchParams.get("X-Amz-Signature"));
   });
 
+  it("accepts isolated form-image keys but rejects traversal and arbitrary bucket paths", async () => {
+    const signed = await signR2Request(config, "PUT", "form-images/media_12345678", {
+      contentType: "image/webp", expiresSeconds: 60, now,
+    });
+    expect(new URL(signed.url).pathname).toContain("/form-images/media_12345678");
+    await expect(signR2Request(config, "GET", "form-images/../course-media/media_12345678")).rejects.toThrow("key");
+    await expect(signR2Request(config, "GET", "other-images/media_12345678")).rejects.toThrow("key");
+  });
+
   it("rejects unexpected keys, methods, and excessively long-lived signed URLs", async () => {
     await expect(signR2Request(config, "GET", "../outside")).rejects.toThrow("key");
     await expect(signR2Request(config, "GET", "course-media/media_12345678", { expiresSeconds: 301 })).rejects.toThrow("expiry");

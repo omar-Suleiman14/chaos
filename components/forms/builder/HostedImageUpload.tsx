@@ -45,7 +45,7 @@ export default function HostedImageUpload({ formId, onUploaded }: {
         className="sr-only" aria-label="Upload image to R2"
         onChange={(event) => { const file = event.target.files?.[0]; event.currentTarget.value = ""; void onFile(file); }} />
     </label>
-    {uploaded && <p role="status" className="text-xs text-muted-foreground">Image uploaded. Add a descriptive alternative text before publishing.</p>}
+    {uploaded && <output className="text-xs text-muted-foreground">Image uploaded. Add a descriptive alternative text before publishing.</output>}
     {error && <p role="alert" className="text-xs text-destructive">{error}</p>}
   </div>;
 }

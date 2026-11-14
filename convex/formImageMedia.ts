@@ -3,7 +3,7 @@ import { makeFunctionReference, type HttpRouter } from "convex/server";
 import {
   action, env, httpAction, internalMutation, internalQuery, mutation, type QueryCtx,
 } from "./_generated/server";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 import { creatorRestricted, getFormIfRole, requireFormRole } from "./authz";
 import { consumeRate } from "./serverUtils";
 import { scheduleState } from "./formSchedule";

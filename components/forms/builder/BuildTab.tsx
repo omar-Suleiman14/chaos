@@ -114,7 +114,7 @@ const QuestionRow = memo(function QuestionRow({ field, index, open, checked, sel
 }, (a, b) => a.open === b.open && a.field === b.field && a.index === b.index && a.checked === b.checked && a.selecting === b.selecting && a.last === b.last && a.readOnly === b.readOnly && a.direction === b.direction && a.quizEnabled === b.quizEnabled && a.focused === b.focused);
 
 export default function BuildTab({ formId, def, change: rawChange, readOnly, notice, announce }: {
-  formId: Id<"forms">;
+  formId?: Id<"forms">;
   def: FormDefinition;
   change: (updater: (d: FormDefinition) => FormDefinition, options?: { checkpoint?: boolean }) => void;
   readOnly: boolean;

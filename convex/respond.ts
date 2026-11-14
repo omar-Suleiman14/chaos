@@ -526,7 +526,7 @@ export const updateSubmission = mutation({
     if (!response.spam) await adjustAggregates(ctx, form._id, def, checked.answers, 1);
     for (const upload of uploads.docs) if (!upload.responseId) await ctx.db.patch("formUploads", upload._id, { responseId: response._id });
     await notify(ctx, form.ownerId, "response", `A respondent edited their response to “${form.title}”.`, `edit:${response._id}:${Date.now() - (Date.now() % 3_600_000)}`, form._id);
-    return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: quizReview(available, grade) };
+    return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: reviewWithImageAccess(quizReview(available, grade), response._id, response.receiptCode) };
   },
 });
 

@@ -98,7 +98,7 @@ const copy = {
 
 const labelClass = "text-[13px] font-medium text-muted-foreground";
 
-function ChoiceList({ formId, kind, items, onChange, prefix, withScores }: { formId: Id<"forms">; kind: "options" | "rows" | "columns"; items: Choice[]; onChange: (c: Choice[]) => void; prefix: string; withScores?: boolean }) {
+function ChoiceList({ formId, kind, items, onChange, prefix, withScores }: { formId?: Id<"forms">; kind: "options" | "rows" | "columns"; items: Choice[]; onChange: (c: Choice[]) => void; prefix: string; withScores?: boolean }) {
   const t = useCopy(copy);
   const label = t[kind];
   const [asText, setAsText] = useState(false);
@@ -138,8 +138,8 @@ function ChoiceList({ formId, kind, items, onChange, prefix, withScores }: { for
                     value={c.image?.url ?? ""} onChange={(e) => onChange(items.map((x) => x.id === c.id
                       ? { ...x, image: e.target.value ? { url: e.target.value, alt: x.image?.alt ?? "" } : undefined } : x))}
                     className="kb-input py-1 text-xs" />
-                  <HostedImageUpload formId={formId} onUploaded={(url) =>
-                    onChange(items.map(x => x.id === c.id ? { ...x, image: { url, alt: x.image?.alt ?? "" } } : x))} />
+                  {formId && <HostedImageUpload formId={formId} onUploaded={(url) =>
+                    onChange(items.map(x => x.id === c.id ? { ...x, image: { url, alt: x.image?.alt ?? "" } } : x))} />}
                   {c.image && <input dir="auto" placeholder={t.imageAltHint} aria-label={`${t.imageDescription}: ${c.label}`}
                     value={c.image.alt} onChange={(e) => onChange(items.map((x) => x.id === c.id ? { ...x, image: { ...c.image!, alt: e.target.value } } : x))}
                     className="kb-input py-1 text-xs" />}
@@ -166,7 +166,7 @@ function ChoiceList({ formId, kind, items, onChange, prefix, withScores }: { for
  * "More options"; moving, duplicating and deleting live in the "…" menu.
  */
 export default function FieldEditor({ formId, field, index, def, onChange, onDuplicate, onRemove, onMove, readOnly, focusOnMount }: {
-  formId: Id<"forms">;
+  formId?: Id<"forms">;
   field: FormField;
   index: number;
   def: FormDefinition;
@@ -262,8 +262,8 @@ export default function FieldEditor({ formId, field, index, def, onChange, onDup
                     explanationImage: e.target.value ? { url: e.target.value, alt: field.quiz?.explanationImage?.alt ?? "" } : undefined } })}
                   className="kb-input mt-1" />
               </label>
-              <HostedImageUpload formId={formId} onUploaded={(url) =>
-                set({ quiz: { ...field.quiz!, explanationImage: { url, alt: field.quiz?.explanationImage?.alt ?? "" } } })} />
+              {formId && <HostedImageUpload formId={formId} onUploaded={(url) =>
+                set({ quiz: { ...field.quiz!, explanationImage: { url, alt: field.quiz?.explanationImage?.alt ?? "" } } })} />}
               {field.quiz?.explanationImage && <label className={`${labelClass} block`}>{t.imageDescription}
                 <input dir="auto" placeholder={t.imageAltHint} value={field.quiz.explanationImage.alt}
                   onChange={(e) => set({ quiz: { ...field.quiz!, explanationImage: { ...field.quiz!.explanationImage!, alt: e.target.value } } })}
@@ -348,7 +348,7 @@ export default function FieldEditor({ formId, field, index, def, onChange, onDup
               <label className={labelClass}>{t.imageDescription} <input placeholder={t.imageAltHint} value={field.image?.alt ?? ""} disabled={!field.image} onChange={(e) => set({ image: field.image ? { ...field.image, alt: e.target.value } : undefined })} className="kb-input py-1 mt-1" /></label>
             </div>
           )}
-          {field.type !== "section" && <HostedImageUpload formId={formId}
+          {formId && field.type !== "section" && <HostedImageUpload formId={formId}
             onUploaded={(url) => set({ image: { url, alt: field.image?.alt ?? "" } })} />}
           <DocHint slug="endings">{t.tipBefore}<bdi dir="ltr">{"{{question-id}}"}</bdi>{t.tipMid}<code>{field.id}</code>{t.tipAfter}<bdi dir="ltr">{"{{score}}"}</bdi>{t.tipEnd}</DocHint>
         </div>
