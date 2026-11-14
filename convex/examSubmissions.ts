@@ -236,8 +236,9 @@ export const finalizeAtDeadline = internalMutation({
     const attempt = await ctx.db.get("examAttempts", attemptId);
     if (!attempt || attempt.state !== "in_progress") return null;
     const clock = requireExamAttemptTiming(attempt);
-    if (clock.deadlineAt !== deadlineAt)
-      throw new Error("INVALID_EXAM_CLOCK: Scheduled deadline no longer matches.");
+    // A teacher may extend a live deadline. The previous scheduled job is stale,
+    // while the extension transaction has already scheduled its replacement.
+    if (clock.deadlineAt !== deadlineAt) return null;
     if (Date.now() < deadlineAt) return null;
     return finalize(ctx, attempt, "timeout", Date.now());
   },

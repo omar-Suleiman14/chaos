@@ -28,6 +28,7 @@ const translations = {
     manual: "The doctor releases results manually.",
     answers: "Correct answers may be shown after the applicable release rules.",
     noAnswers: "Correct answers are not configured to be shown.",
+    accommodations: "Your approved accommodation (applies only when secure exam entry is enabled)",
     explanations: "Explanations may be shown after the applicable release rules.",
     noExplanations: "Explanations are not configured to be shown.",
     consent: "I have read and accept the examination rules above.",
@@ -53,6 +54,7 @@ const translations = {
     manual: "يعتمد إعلان النتائج على الدكتور.",
     answers: "قد تُعرض الإجابات الصحيحة بعد السماح بإعلانها.",
     noAnswers: "لم يُضبط عرض الإجابات الصحيحة.",
+    accommodations: "التيسيرات المعتمدة لك (تطبق فقط عند إتاحة الدخول الآمن)",
     explanations: "قد تُعرض التفسيرات بعد السماح بإعلانها.",
     noExplanations: "لم يُضبط عرض التفسيرات.",
     consent: "قرأت قواعد الامتحان الموضحة وأوافق عليها.",
@@ -72,6 +74,8 @@ export default function ExamPreflightPage() {
   const { isAuthenticated, isLoading } = useConvexAuth();
   const preflight = useQuery(api.examPreflight.get,
     isAuthenticated && releaseId ? { releaseId: releaseId as Id<"examReleases"> } : "skip");
+  const accommodation = useQuery(api.examInvigilation.myAccommodation,
+    isAuthenticated && preflight ? { releaseId: preflight.releaseId } : "skip");
   const acknowledge = useMutation(api.examPreflight.acknowledge);
   const [checked, setChecked] = useState(false);
   const [pending, setPending] = useState(false);
@@ -123,6 +127,10 @@ export default function ExamPreflightPage() {
       </p>}
       {preflight.status === "upcoming" && <p className="cb-note">{t.wait}</p>}
     </section>
+    {accommodation && <section className="cb-section grid gap-2" aria-label={t.accommodations}>
+      <h2 className="font-semibold">{t.accommodations}</h2>
+      <p className="cb-note">{accommodation.kind} {accommodation.additionalMinutes > 0 ? " · " + accommodation.additionalMinutes + " min" : ""}</p>
+    </section>}
     <section className="cb-section grid gap-4" aria-labelledby="exam-rules-title">
       <h2 id="exam-rules-title" className="font-semibold">{t.rules}</h2>
       <ul className="list-disc space-y-2 ps-5 text-sm">
