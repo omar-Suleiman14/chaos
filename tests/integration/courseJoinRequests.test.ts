@@ -90,3 +90,16 @@ it("supports withdrawing and re-requesting without granting membership after rej
   await student.mutation(api.courseJoinRequests.requestJoin, { courseId });
   expect(await student.query(api.courseJoinRequests.myStatus, { courseId })).toBe("pending");
 });
+
+it("does not mistake a preexisting self-enrollment for doctor approval", async () => {
+  const { doctor, student, courseId } = await setup();
+  // This legacy path remains available until the enrollment migration PR.
+  await student.mutation(api.courseStudents.enroll, { courseId });
+  expect(await student.query(api.courseJoinRequests.myStatus, { courseId })).toBe("none");
+  await student.mutation(api.courseJoinRequests.requestJoin, { courseId });
+  expect(await student.query(api.courseJoinRequests.myStatus, { courseId })).toBe("pending");
+  const [pending] = await doctor.query(api.courseJoinRequests.listPending, { courseId });
+  expect(pending).toBeDefined();
+  await doctor.mutation(api.courseJoinRequests.decide, { requestId: pending.id, approve: true });
+  expect(await student.query(api.courseJoinRequests.myStatus, { courseId })).toBe("approved");
+});
