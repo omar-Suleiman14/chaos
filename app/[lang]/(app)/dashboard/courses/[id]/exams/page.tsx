@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import { ArrowLeft, BookOpen, Check, ChevronLeft, ChevronRight, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, Check, ChevronLeft, ChevronRight, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useLocale } from "@/lib/i18n";
@@ -197,7 +197,7 @@ export default function CourseExamBuilder({
       <p className="ws-page-subtitle">{t.desc}</p>
     </div>
     {!draftId ? <>
-      <button className="ws-btn ws-btn--primary" type="button" disabled={busy || !!course.archived} onClick={makeDraft}>
+      <button className="ws-btn ws-btn--primary" type="button" disabled={busy} onClick={makeDraft}>
         <Plus size={16} aria-hidden /> {busy ? t.creating : t.new}
       </button>
       {!draftList?.length && <section className="cb-section"><p className="cb-note">{t.empty}</p></section>}
