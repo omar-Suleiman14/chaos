@@ -48,9 +48,7 @@ export const questionBankTables = {
     scopeKey: v.string(),
     createdAt: v.number(),
   })
-    .index("by_question", ["questionId"])
     .index("by_question_scope", ["questionId", "scopeKey"])
-    .index("by_course", ["courseId"])
     .index("by_course_module", ["courseId", "moduleId"])
     .index("by_course_lesson", ["courseId", "lessonId"]),
 };

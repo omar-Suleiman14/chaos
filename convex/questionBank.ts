@@ -138,17 +138,17 @@ export const addScope = mutation({
     const outline = course.lessonIds ?? course.items.flatMap(item => item.kind === "lesson" ? [item.id] : []);
     if (lessonId && !outline.includes(lessonId))
       throw new Error("NOT_FOUND: Lecture is not in this course.");
-    const module = moduleId ? course.modules?.find(m => m.id === moduleId) : undefined;
-    if (moduleId && !module) throw new Error("NOT_FOUND: Module not found.");
-    if (lessonId && module && ![...module.lessonIds, ...(module.sections ?? []).flatMap(s => s.lessonIds)].includes(lessonId))
+    const courseModule = moduleId ? course.modules?.find(m => m.id === moduleId) : undefined;
+    if (moduleId && !courseModule) throw new Error("NOT_FOUND: Module not found.");
+    if (lessonId && courseModule && ![...courseModule.lessonIds, ...(courseModule.sections ?? []).flatMap(s => s.lessonIds)].includes(lessonId))
       throw new Error("VALIDATION_FAILED: Lecture does not belong to the selected module.");
     const scopeKey = JSON.stringify([courseId, moduleId ?? null, lessonId ?? null]);
     const prior = await ctx.db.query("questionBankLinks")
       .withIndex("by_question_scope", q => q.eq("questionId", questionId).eq("scopeKey", scopeKey)).unique();
     if (prior) return prior._id;
     const [questionLinks, courseLinks] = await Promise.all([
-      ctx.db.query("questionBankLinks").withIndex("by_question", q => q.eq("questionId", questionId)).take(MAX_LINKS_PER_QUESTION),
-      ctx.db.query("questionBankLinks").withIndex("by_course", q => q.eq("courseId", courseId)).take(MAX_LINKS_PER_COURSE),
+      ctx.db.query("questionBankLinks").withIndex("by_question_scope", q => q.eq("questionId", questionId)).take(MAX_LINKS_PER_QUESTION),
+      ctx.db.query("questionBankLinks").withIndex("by_course_module", q => q.eq("courseId", courseId)).take(MAX_LINKS_PER_COURSE),
     ]);
     if (questionLinks.length >= MAX_LINKS_PER_QUESTION || courseLinks.length >= MAX_LINKS_PER_COURSE)
       throw new Error("LIMIT_REACHED: Question or course scope limit reached.");
@@ -163,7 +163,7 @@ export const listScopes = query({
   args: { questionId: v.id("questionBankItems") },
   handler: async (ctx, { questionId }) => {
     await ownedQuestion(ctx, questionId);
-    return ctx.db.query("questionBankLinks").withIndex("by_question", q => q.eq("questionId", questionId)).take(MAX_LINKS_PER_QUESTION);
+    return ctx.db.query("questionBankLinks").withIndex("by_question_scope", q => q.eq("questionId", questionId)).take(MAX_LINKS_PER_QUESTION);
   },
 });
 export const removeScope = mutation({
@@ -220,7 +220,7 @@ export const selectForExam = query({
     if (args.moduleIds?.some(id => !course.modules?.some(m => m.id === id)))
       throw new Error("NOT_FOUND: Invalid module filter.");
     const links = await ctx.db.query("questionBankLinks")
-      .withIndex("by_course", q => q.eq("courseId", course._id)).take(MAX_LINKS_PER_COURSE + 1);
+      .withIndex("by_course_module", q => q.eq("courseId", course._id)).take(MAX_LINKS_PER_COURSE + 1);
     if (links.length > MAX_LINKS_PER_COURSE)
       throw new Error("LIMIT_REACHED: Too many course questions; narrow the bank before selecting.");
     const unique = new Map<string, Doc<"questionBankItems">>();
