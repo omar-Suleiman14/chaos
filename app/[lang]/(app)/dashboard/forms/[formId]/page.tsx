@@ -417,7 +417,7 @@ function FormBuilder({ formId }: { formId: Id<"forms"> }) {
                 {report.warnings.length > 0 && <ul className="mt-2 text-sm text-muted-foreground list-disc ps-5 space-y-1">{report.warnings.map((e) => <li key={e}>{localizeMessage(locale, e)}</li>)}</ul>}
               </details>
             )}
-            <BuildTab def={def} change={d.change} readOnly={!canEdit} notice={(text) => toast.success(text)} announce={announce} />
+            <BuildTab formId={formId} def={def} change={d.change} readOnly={!canEdit} notice={(text) => toast.success(text)} announce={announce} />
           </div>
         </div>
       </Activity>
