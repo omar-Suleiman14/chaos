@@ -4,6 +4,7 @@ import { bankChoice, bankKind } from "./questionBankModel";
 import { examSettings } from "./examSettingsModel";
 import { examAudience } from "./examAudienceModel";
 import { integrityDecision, integrityKind, integrityPolicy } from "./examIntegrityModel";
+import { accommodationKind, caseDisposition } from "./examInvigilationModel";
 
 /** A sealed snapshot is append-only: no public update/delete API may mutate its content or key. */
 export const frozenQuestion = v.object({
@@ -118,6 +119,40 @@ export const examRuntimeTables = {
   })
     .index("by_attempt_time", ["attemptId", "observedAt"])
     .index("by_attempt_event", ["attemptId", "eventId"]),
+  /** Student-explainable, instructor-reviewed cases. Deliberately has no guilty verdict. */
+  examIntegrityCases: defineTable({
+    attemptId: v.id("examAttempts"), eventId: v.string(),
+    ownerId: v.string(), studentId: v.string(),
+    disposition: caseDisposition,
+    studentExplanation: v.optional(v.string()),
+    revision: v.number(), createdAt: v.number(), updatedAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_attempt_event", ["attemptId", "eventId"])
+    .index("by_attempt_updated", ["attemptId", "updatedAt"]),
+  /** Append-only review and intervention audit, automatically expires after 30 days. */
+  examInvigilationAudit: defineTable({
+    attemptId: v.id("examAttempts"),
+    ownerId: v.string(), studentId: v.string(), actorId: v.string(),
+    action: v.union(
+      v.literal("case_opened"), v.literal("student_explanation"),
+      v.literal("reviewed"), v.literal("time_extension"),
+      v.literal("connectivity_acknowledged"), v.literal("candidate_contacted"),
+    ),
+    detail: v.string(), at: v.number(), expiresAt: v.number(),
+  }).index("by_attempt_at", ["attemptId", "at"]),
+  /** Pre-start accommodations; live changes require separately audited interventions. */
+  examAccommodations: defineTable({
+    releaseId: v.id("examReleases"), studentId: v.string(), ownerId: v.string(),
+    kind: accommodationKind, additionalMinutes: v.number(),
+    revision: v.number(), updatedAt: v.number(),
+  }).index("by_release_student", ["releaseId", "studentId"]),
+  /** Audit accommodation changes without storing medical history. */
+  examAccommodationAudit: defineTable({
+    releaseId: v.id("examReleases"), ownerId: v.string(), studentId: v.string(),
+    actorId: v.string(), kind: accommodationKind, additionalMinutes: v.number(),
+    revision: v.number(), at: v.number(), expiresAt: v.number(),
+  }).index("by_release_at", ["releaseId", "at"]),
   examAttempts: defineTable({
     ownerId: v.string(),
     courseId: v.id("learnCollections"),
