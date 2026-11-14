@@ -25,7 +25,7 @@ function parseLocal(value: string) {
 }
 const l = {
   en: {
-    title: "Exam settings & schedule", introduction: "Seal the selected questions first. Settings are private until a later PR assigns an approved course audience.",
+    title: "Exam settings & schedule", introduction: "Seal the selected questions first. After preparing the exam, assign it to approved students or groups in this course.",
     seal: "Seal current questions", sealed: "Sealed snapshot", notSealed: "No sealed snapshot yet",
     changed: "Draft questions changed. Seal this revision before preparing the exam.",
     window: "Availability", anytime: "Anytime after assignment", scheduled: "Scheduled window",
@@ -40,10 +40,10 @@ const l = {
     unprepare: "Mark as not ready", prepared: "Prepared (not assigned)", private: "Private · student entry disabled",
     unsaved: "Save the settings before changing readiness.", missing: "Seal and save settings before preparing.",
     pending: "Working…", error: "Could not update exam settings.",
-    warning: "No student can start this exam yet. PR 14 must add approved-course audience checks and Due Exams; later PRs enforce timer, submission and result policies.",
+    warning: "No student can start this exam yet. Assignments and Due Exams now support approved course students only; secure student entry, timing, submission and result enforcement remain disabled until later PRs.",
   },
   ar: {
-    title: "إعدادات الامتحان والجدول", introduction: "ثبّت الأسئلة المختارة أولًا. تظل الإعدادات خاصة لحين تحديد طلاب الدورة المسموح لهم في طلب لاحق.",
+    title: "إعدادات الامتحان والجدول", introduction: "ثبّت الأسئلة المختارة أولًا. بعد تجهيز الامتحان حدد الطلاب أو المجموعات الموافق عليها داخل هذه الدورة.",
     seal: "ثبّت نسخة الأسئلة الحالية", sealed: "النسخة الثابتة", notSealed: "لا توجد نسخة ثابتة بعد",
     changed: "تغيرت الأسئلة في المسودة. ثبّت النسخة الجديدة قبل تجهيز الامتحان.",
     window: "موعد الإتاحة", anytime: "في أي وقت بعد التكليف", scheduled: "بموعد بداية ونهاية",
@@ -58,7 +58,7 @@ const l = {
     unprepare: "إلغاء الجاهزية", prepared: "جاهز · لم يكلّف الطلاب", private: "خاص · دخول الطلاب مقفل",
     unsaved: "احفظ إعدادات الامتحان أولًا.", missing: "ثبّت الامتحان واحفظ إعداداته أولًا.",
     pending: "جارٍ التنفيذ…", error: "تعذر تحديث إعدادات الامتحان.",
-    warning: "لا يستطيع أي طالب بدء الامتحان حتى الآن. الطلب التالي يضيف تكليف طلاب الدورة وامتحاناتهم المستحقة، ثم يأتي تطبيق الوقت والتسليم والنتائج في الطلبات اللاحقة.",
+    warning: "لا يستطيع أي طالب بدء الامتحان حتى الآن. يمكن تكليف طلاب الدورة المعتمدين وعرض الامتحانات المستحقة، لكن الدخول والتوقيت والتسليم والنتائج تظل مقفلة حتى اكتمال الطلبات اللاحقة.",
   },
 } as const;
 

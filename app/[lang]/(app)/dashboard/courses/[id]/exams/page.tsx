@@ -11,6 +11,7 @@ import { useLocale } from "@/lib/i18n";
 import { toast } from "@/lib/toast";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
 import { ExamReleaseSettings } from "@/components/courses/ExamReleaseSettings";
+import { ExamAudienceSetup } from "@/components/courses/ExamAudienceSetup";
 import "@/components/courses/courses.css";
 
 type Kind = "course" | "module" | "lecture" | "topic";
@@ -364,6 +365,7 @@ export default function CourseExamBuilder({
         canSeal={!busy && !dirty && !!preview &&
           preview.selected.length === draft.targetCount && preview.selected.every(s => s.valid) &&
           preview.plannedCount === draft.targetCount} />
+      <ExamAudienceSetup draftId={draftId} courseId={courseId} />
       <div className="flex justify-end">
         <button type="button" className="ws-btn ws-btn--ghost" disabled={busy}
           onClick={deleteDraft}><Trash2 size={16} aria-hidden /> {t.deleted}</button>
