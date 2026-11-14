@@ -15,7 +15,7 @@ const copy = {
   en: {
     review: "Review course", continue: "Continue course", start: "Start course",
     done: (n: number, total: number) => `${n} / ${total} lessons completed`,
-    progress: "Course progress", assignments: "My assignments", signIn: "Sign in to request access",
+    progress: "Course progress", assignments: "My assignments", classroom: "My classroom", signIn: "Sign in to request access",
     locked: "Course lessons open only after the teacher approves your request.",
     request: "Request to join", requesting: "Sending request…", requested: "Request sent to the teacher.",
     pending: "Waiting for teacher approval. We'll show the course here when your request is accepted.",
@@ -31,7 +31,7 @@ const copy = {
   ar: {
     review: "راجع الدورة", continue: "تابع الدورة", start: "ابدأ الدورة",
     done: (n: number, total: number) => `${n} / ${total} دروس مكتملة`,
-    progress: "تقدم الدورة", assignments: "تكليفاتي", signIn: "سجّل الدخول لطلب الانضمام",
+    progress: "تقدم الدورة", assignments: "تكليفاتي", classroom: "فصلي", signIn: "سجّل الدخول لطلب الانضمام",
     locked: "لا تُفتح دروس الدورة إلا بعد موافقة المدرّس على طلبك.",
     request: "طلب الانضمام", requesting: "جارٍ إرسال الطلب…", requested: "أُرسل الطلب إلى المدرّس.",
     pending: "طلبك قيد المراجعة. ستظهر لك دروس الدورة بعد موافقة المدرّس.",
@@ -67,7 +67,7 @@ export default function CourseStart({ course }: { course: NonNullable<FunctionRe
 
   if (state?.enrolled) {
     const started = count > 0 || !!active, finished = count === course.lessons.length;
-    return <div className="cp-continue"><Link className="cp-start site-btn site-btn--primary" href={href}>{finished ? t.review : started ? t.continue : t.start}<ArrowRight size={18} className="cp-arrow" aria-hidden /></Link><Link className="site-btn" href={`/dashboard/learn/assignments/${course.id}`}>{t.assignments}</Link>{meter}</div>;
+    return <div className="cp-continue"><Link className="cp-start site-btn site-btn--primary" href={href}>{finished ? t.review : started ? t.continue : t.start}<ArrowRight size={18} className="cp-arrow" aria-hidden /></Link><Link className="site-btn" href={`/dashboard/learn/assignments/${course.id}`}>{t.assignments}</Link><Link className="site-btn" href={`/dashboard/learn/classroom/${course.id}`}>{t.classroom}</Link>{meter}</div>;
   }
 
   const onRequest = async () => {
