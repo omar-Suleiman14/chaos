@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { api } from "../../convex/_generated/api";
 import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
 import { createTestConvex } from "./setup";
+import { defaultExamSettings } from "../../convex/examSettingsModel";
 
 afterEach(() => vi.unstubAllEnvs());
 
@@ -33,6 +34,7 @@ async function fixture() {
     await ctx.db.insert("examReleases", {
       ownerId: creatorIdentity.subject, courseId, draftId,
       activeSnapshotId: snapshotId, version: 1, studentEntryEnabled: false,
+      settings: { ...defaultExamSettings, resultVisibility: "manual" },
       createdAt: now, updatedAt: now,
     });
     const attemptId = await ctx.db.insert("examAttempts", {
