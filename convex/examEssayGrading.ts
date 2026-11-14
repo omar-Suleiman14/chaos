@@ -23,15 +23,14 @@ async function ownedAttempt(ctx: Ctx, attemptId: Id<"examAttempts">) {
   const [snapshot, course, draft, grade] = await Promise.all([
     ctx.db.get("examSnapshots", attempt.snapshotId),
     ctx.db.get("learnCollections", attempt.courseId),
-    ctx.db.query("examBuilderDrafts").withIndex("by_owner_course",
-      q => q.eq("ownerId", actorId).eq("courseId", attempt.courseId)).collect(),
+    ctx.db.get("examBuilderDrafts", snapshot.draftId),
     ctx.db.query("examGrades").withIndex("by_attempt",
       q => q.eq("attemptId", attemptId)).unique(),
   ]);
   if (!snapshot || !course || !grade ||
       snapshot.ownerId !== actorId || snapshot.courseId !== attempt.courseId ||
       course.ownerId !== actorId || course.communityState === "removed" ||
-      !draft.some(d => d._id === snapshot.draftId) ||
+      (!draft || draft.ownerId !== actorId || draft.courseId !== attempt.courseId) ||
       grade.ownerId !== actorId || grade.studentId !== attempt.studentId ||
       grade.snapshotId !== attempt.snapshotId)
     throw new Error("NOT_FOUND: Submitted attempt not found.");
@@ -102,6 +101,7 @@ export const queue = query({
       return { attemptId: attempt._id, studentId: attempt.studentId,
         gradingState: grade.state, pendingWrittenCount: grade.pendingWrittenCount,
         approvedCount: marks.filter(m => m.status === "approved").length,
+        gradeRevision: grade.revision ?? 0,
         submittedCount: marks.filter(m => m.status === "submitted").length,
         draftCount: marks.filter(m => m.status === "draft" || m.status === "changes_requested").length,
         pendingQuestions: grade.entries.filter(e => e.status === "needs_manual").map(e => e.questionIndex) };

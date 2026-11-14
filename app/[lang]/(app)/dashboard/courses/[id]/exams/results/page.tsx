@@ -18,7 +18,7 @@ const labels = {
     note: "Essays stay private until human grading is final. Answer keys are never included.",
     failed: "Could not change publication. Reload and try again.",
     success: "Result publication updated.", student: "Student", status: "Status", grade: "Grade",
-    pending: "Not final", empty: "No attempts recorded.", more: "Showing first 100 attempts.",
+    pending: "Not final", gradeEssays: "Grade written answers", empty: "No attempts recorded.", more: "Showing first 100 attempts.",
     grading: "Grading", withheld: "Withheld", released: "Visible to student",
     submitted: "Submitted", expired: "Expired", void: "Voided", in_progress: "In progress" },
   ar: { title: "نتائج الطلاب", lead: "راجع الدرجات وتحكم في النشر اليدوي.",
@@ -29,7 +29,7 @@ const labels = {
     note: "تظل الإجابات المقالية خاصة حتى إتمام التصحيح البشري، ولا تُعرض نماذج الإجابة.",
     failed: "تعذر تغيير النشر. حدّث الصفحة وحاول مرة أخرى.",
     success: "تم تحديث حالة النشر.", student: "الطالب", status: "الحالة", grade: "الدرجة",
-    pending: "لم تكتمل", empty: "لا توجد محاولات مسجلة.", more: "تُعرض أول ١٠٠ محاولة.",
+    pending: "لم تكتمل", gradeEssays: "تصحيح الأسئلة المقالية", empty: "لا توجد محاولات مسجلة.", more: "تُعرض أول ١٠٠ محاولة.",
     grading: "جارٍ التصحيح", withheld: "محجوبة", released: "متاحة للطالب",
     submitted: "تم التسليم", expired: "انتهى", void: "ملغاة", in_progress: "جارٍ الحل" },
 } as const;
@@ -66,6 +66,8 @@ export default function TeacherResultsPage({ params, searchParams }: {
       className="ws-btn ws-btn--ghost ws-btn--sm w-fit">{t.back}</Link>
     <header className="lx-hero"><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></header>
     {!draftId || !data ? <section className="cb-section"><p>{t.noExam}</p></section> : <>
+      <Link href={"/dashboard/courses/" + id + "/exams/grading?draft=" + draft}
+        className="ws-btn ws-btn--ghost w-fit">{t.gradeEssays}</Link>
       <section className="cb-section grid gap-3">
         <h2 className="text-lg font-semibold" dir="auto">{data.title}</h2>
         {data.visibility === "manual" ? <>
