@@ -181,7 +181,7 @@ export default function CourseQuestionBank({params}:{params:Promise<{id:string}>
       const results:BankDraft[]=[];
       let next:number|null=0;
       while(next!==null){
-        const page=await convex.query(api.questionBank.exportForCourse,{courseId,offset:next});
+        const page:{items:BankDraft[];nextOffset:number|null}=await convex.query(api.questionBank.exportForCourse,{courseId,offset:next});
         results.push(...page.items);
         next=page.nextOffset;
         if(results.length>1000)throw new Error("Question export limit exceeded.");
