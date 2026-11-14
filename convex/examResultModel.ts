@@ -32,7 +32,7 @@ export function freezeResultPolicy(settings: ExamSettings | undefined): FrozenRe
 
 /** Missing policies are legacy/manual-only, never an implicit public release. */
 export function resultStatus(
-  grade: { state: "auto_final" | "needs_manual"; finalPercentBasisPoints?: number } | null,
+  grade: { state: "auto_final" | "needs_manual"; finalPercentBasisPoints?: number; reviewHold?: boolean } | null,
   policy: FrozenResultPolicy | undefined,
   manuallyPublished: boolean,
   now: number,
@@ -41,6 +41,7 @@ export function resultStatus(
       !Number.isSafeInteger(grade.finalPercentBasisPoints) ||
       (grade.finalPercentBasisPoints ?? -1) < 0)
     return "grading";
+  if (grade.reviewHold === true) return "withheld";
   const rule = policy ?? fallback;
   if (rule.visibility === "immediate") return "released";
   if (rule.visibility === "after_close")
