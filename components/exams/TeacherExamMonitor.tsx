@@ -73,10 +73,10 @@ export function TeacherExamMonitor({ draftId }: { draftId: Id<"examBuilderDrafts
             </option>)}
           </select>
         </label>
-        {dashboard.hasMore && <p role="status" className="cb-note">
+        {dashboard.hasMore && <output className="cb-note block">
           {ar ? "تظهر أول ٥٠ محاولة فقط؛ تحتاج البقية لتصفح لاحق."
             : "Only the first 50 attempts are shown; remaining attempts require pagination."}
-        </p>}
+        </output>}
       </>}
     {selectedId && report && <>
       <dl className="grid gap-2 text-sm sm:grid-cols-3">
