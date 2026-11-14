@@ -16,7 +16,8 @@ export function normalizeExamAnswer(question: AnswerableQuestion,
     return { choiceIds: [] as string[], text };
   }
   if (text !== "") throw new Error("INVALID_ANSWER: Choice questions do not accept written text.");
-  const valid = new Set(question.choices.map(choice => choice.id));
+  const valid = new Set(question.kind === "true_false"
+    ? ["true", "false"] : question.choices.map(choice => choice.id));
   if (choiceIds.some(id => !valid.has(id)) ||
       (question.kind !== "multiple_choice" && choiceIds.length > 1))
     throw new Error("INVALID_ANSWER: Selection does not match the frozen question.");

@@ -5,6 +5,7 @@ import { examSettings } from "./examSettingsModel";
 import { examAudience } from "./examAudienceModel";
 import { integrityDecision, integrityKind, integrityPolicy } from "./examIntegrityModel";
 import { accommodationKind, caseDisposition } from "./examInvigilationModel";
+import { examMarkingPolicy, examRubricCriterion } from "./examGradingModel";
 
 /** A sealed snapshot is append-only: no public update/delete API may mutate its content or key. */
 export const frozenQuestion = v.object({
@@ -18,6 +19,8 @@ export const frozenQuestion = v.object({
   sampleAnswer: v.optional(v.string()),
   explanation: v.optional(v.string()),
   points: v.number(),
+  marking: v.optional(examMarkingPolicy),
+  rubricCriteria: v.optional(v.array(examRubricCriterion)),
   topics: v.array(v.string()),
   terms: v.array(v.string()),
   outcomes: v.array(v.string()),
@@ -106,6 +109,27 @@ export const examRuntimeTables = {
     questionCount: v.number(),
     startedAt: v.number(),
     deadlineAt: v.number(),
+  }).index("by_attempt", ["attemptId"]),
+  /** Private grading ledger; never returned in student receipts or general course APIs. */
+  examGrades: defineTable({
+    attemptId: v.id("examAttempts"),
+    snapshotId: v.id("examSnapshots"),
+    ownerId: v.string(),
+    studentId: v.string(),
+    state: v.union(v.literal("auto_final"), v.literal("needs_manual")),
+    earnedCents: v.number(),
+    maximumCents: v.number(),
+    objectiveMaximumCents: v.number(),
+    pendingWrittenCount: v.number(),
+    finalPercentBasisPoints: v.optional(v.number()),
+    entries: v.array(v.object({
+      questionIndex: v.number(),
+      status: v.union(v.literal("scored"), v.literal("needs_manual")),
+      pointsAvailableCents: v.number(),
+      pointsAwardedCents: v.number(),
+    })),
+    algorithmVersion: v.number(),
+    gradedAt: v.number(),
   }).index("by_attempt", ["attemptId"]),
   /** Short-lived, privacy-minimized, non-punitive browser telemetry only. */
   examIntegrityEvents: defineTable({
