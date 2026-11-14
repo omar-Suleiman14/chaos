@@ -134,7 +134,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
         <Link className="ws-btn ws-btn--primary" href={`/dashboard/courses/${courseId}/exams`}>
           <ClipboardList size={16} aria-hidden />{locale === "ar" ? "افتح منشئ الامتحانات" : "Open exam builder"}
         </Link>
-      </section>
+      </section>}
 
       {course.isOwner && <CourseStudents courseId={courseId} />}
       <CourseDetailsEditor courseId={courseId} details={course.details} />
