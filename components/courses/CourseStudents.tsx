@@ -1,5 +1,7 @@
 "use client";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
+import { useState } from "react";
+import { toast } from "@/lib/toast";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { CARD_THEMES } from "@/lib/memberCard";
@@ -10,6 +12,9 @@ import { formatDate, useCopy, useLocale } from "@/lib/i18n";
 const copy = {
   en: {
     title: "Students", loading: "Loading students…",
+    requests: "Pending join requests", requestsEmpty: "No join requests are waiting.",
+    approve: "Approve", reject: "Reject", working: "Updating…",
+    approved: "Student approved", rejected: "Request rejected",
     unpublished: "Publish the course to start enrolling students.", empty: "No one has started this course yet. Share the course link to get your first students.",
     enrolled: "Students", enrolledHint: (signed: number, guests: number) => `${signed} signed in · ${guests} guests`,
     active: "Active this week", newHint: (n: number) => `${n} new this week`,
@@ -21,6 +26,9 @@ const copy = {
   },
   ar: {
     title: "الطلاب", loading: "جارٍ تحميل الطلاب…",
+    requests: "طلبات الانضمام المعلّقة", requestsEmpty: "لا توجد طلبات قيد المراجعة.",
+    approve: "موافقة", reject: "رفض", working: "جارٍ التحديث…",
+    approved: "تم قبول الطالب", rejected: "تم رفض الطلب",
     unpublished: "انشر الدورة لتبدأ باستقبال الطلاب.", empty: "لم يبدأ أحد هذه الدورة بعد. شارك رابط الدورة لتحصل على أول طلابك.",
     enrolled: "الطلاب", enrolledHint: (signed: number, guests: number) => `${signed} مسجّلون · ${guests} ضيوف`,
     active: "نشطون هذا الأسبوع", newHint: (n: number) => `${n} جدد هذا الأسبوع`,
@@ -35,10 +43,38 @@ const copy = {
 export default function CourseStudents({ courseId }: { courseId: Id<"learnCollections"> }) {
   const t = useCopy(copy), { locale } = useLocale();
   const data = useQuery(api.courseStudents.analytics, { courseId });
+  const requests = useQuery(api.courseJoinRequests.listPending, { courseId });
+  const decide = useMutation(api.courseJoinRequests.decide);
+  const [busyId, setBusyId] = useState<string | null>(null);
+  const review = async (requestId: Id<"courseJoinRequests">, approve: boolean) => {
+    if (busyId) return;
+    setBusyId(requestId);
+    try {
+      await decide({ requestId, approve });
+      toast(approve ? t.approved : t.rejected);
+    } catch (err) { toast.error(err); }
+    finally { setBusyId(null); }
+  };
   const n = (value: number) => value.toLocaleString(locale);
   return (
     <section className="cb-section grid gap-4" aria-labelledby="cb-students">
       <h2 id="cb-students">{t.title}</h2>
+      <div className="grid gap-2" aria-label={t.requests}>
+        <h3 className="ws-question__title">{t.requests}{requests?.length ? ` (${n(requests.length)})` : ""}</h3>
+        {requests === undefined
+          ? <output className="ws-skeleton" style={{ minHeight: 48 }} aria-label={t.loading} />
+          : requests.length === 0 ? <p className="cb-note">{t.requestsEmpty}</p>
+          : <ul className="grid gap-2">{requests.map(request => <li key={request.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium" dir="auto">{request.name}</p>
+                <p className="text-sm text-muted-foreground">{request.username ? `@${request.username} · ` : ""}{formatDate(locale, request.requestedAt, { dateStyle: "medium" })}</p>
+              </div>
+              <div className="flex gap-2">
+                <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={busyId !== null} onClick={() => void review(request.id, false)}>{busyId === request.id ? t.working : t.reject}</button>
+                <button type="button" className="ws-btn ws-btn--primary ws-btn--sm" disabled={busyId !== null} onClick={() => void review(request.id, true)}>{busyId === request.id ? t.working : t.approve}</button>
+              </div>
+            </li>)}</ul>}
+      </div>
       {data === undefined ? <output className="ws-stats ws-skeleton" style={{ minHeight: 88 }}  aria-label={t.loading} />
         : !data.published && data.enrolled === 0 ? <p className="cb-note">{t.unpublished}</p>
         : data.enrolled === 0 ? <p className="cb-note">{t.empty}</p>
