@@ -100,11 +100,10 @@ const copy = {
 
 const labelClass = "text-[13px] font-medium text-muted-foreground";
 
-function ChoiceList({ formId, kind, items, onChange, prefix, withScores }: { formId?: Id<"forms">; kind: "options" | "rows" | "columns"; items: Choice[]; onChange: (c: Choice[]) => void; prefix: string; withScores?: boolean }) {
+function ChoiceList({ formId, showImages, kind, items, onChange, prefix, withScores }: { formId?: Id<"forms">; showImages?: boolean; kind: "options" | "rows" | "columns"; items: Choice[]; onChange: (c: Choice[]) => void; prefix: string; withScores?: boolean }) {
   const t = useCopy(copy);
   const label = t[kind];
   const [asText, setAsText] = useState(false);
-  const [showImages, setShowImages] = useState(items.some(x => !!x.image));
   const [text, setText] = useState("");
   const list = useRef<HTMLUListElement>(null);
   // Enter in an option adds the next one and moves to it, so a list can be typed without the mouse.
@@ -118,13 +117,9 @@ function ChoiceList({ formId, kind, items, onChange, prefix, withScores }: { for
     <div className="space-y-2">
       <div className="flex items-center justify-between">
         <p className={labelClass}>{label}</p>
-        <div className="flex items-center gap-3">
-          {kind !== "rows" && <button type="button" className="ws-link-quiet" aria-expanded={showImages}
-            onClick={() => setShowImages(value => !value)}>{showImages ? t.hideImages : t.manageImages}</button>}
-          <button type="button" className="ws-link-quiet" onClick={() => { if (!asText) setText(items.map((i) => i.label).join("\n")); else onChange(optionsFromText(text, items, prefix)); setAsText(!asText); }}>
-            {asText ? t.apply : t.editAsText}
-          </button>
-        </div>
+        <button type="button" className="ws-link-quiet" onClick={() => { if (!asText) setText(items.map((i) => i.label).join("\n")); else onChange(optionsFromText(text, items, prefix)); setAsText(!asText); }}>
+          {asText ? t.apply : t.editAsText}
+        </button>
       </div>
       {asText ? (
         <textarea dir="auto" value={text} onChange={(e) => setText(e.target.value)} rows={Math.min(12, Math.max(4, items.length + 1))} className="kb-input text-sm" aria-label={t.onePerLine(label)} />
@@ -191,6 +186,7 @@ export default function FieldEditor({ formId, field, index, def, onChange, onDup
   const [scores, setScores] = useState(!!field.options?.some((o) => o.score !== undefined));
   const [showDescription, setShowDescription] = useState(false);
   const [activeImageUpload, setActiveImageUpload] = useState<"question" | "explanation" | null>(null);
+  const [showOptionImages, setShowOptionImages] = useState(false);
   const set = (patch: Partial<FormField>) => {
     const next = { ...field, ...patch };
     if (patch.options && next.quiz) {
@@ -230,7 +226,7 @@ export default function FieldEditor({ formId, field, index, def, onChange, onDup
         <button type="button" onClick={() => setShowDescription(true)} className="ws-link-quiet flex items-center gap-1"><Plus size={14} /> {t.addDescription}</button>
       )}
 
-      {hasOptions && <ChoiceList formId={formId} kind="options" items={field.options ?? []} onChange={(options) => set({ options })} prefix="o" withScores={scores && field.type !== "ranking"} />}
+      {hasOptions && <ChoiceList formId={formId} showImages={showOptionImages} kind="options" items={field.options ?? []} onChange={(options) => set({ options })} prefix="o" withScores={scores && field.type !== "ranking"} />}
       {quizEligible && (
         <div className="rounded-lg border border-[var(--ws-line-strong)] p-4 space-y-3" aria-label={t.answerKey}>
           <div>
@@ -285,7 +281,7 @@ export default function FieldEditor({ formId, field, index, def, onChange, onDup
       {field.type === "matrix" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <ChoiceList formId={formId} kind="rows" items={field.rows ?? []} onChange={(rows) => set({ rows })} prefix="r" />
-          <ChoiceList formId={formId} kind="columns" items={field.options ?? []} onChange={(options) => set({ options })} prefix="o" />
+          <ChoiceList formId={formId} showImages={showOptionImages} kind="columns" items={field.options ?? []} onChange={(options) => set({ options })} prefix="o" />
         </div>
       )}
       {field.type === "email" && <p className="text-xs text-muted-foreground" data-testid="email-unverified-note">{t.emailNote}</p>}
@@ -305,7 +301,7 @@ export default function FieldEditor({ formId, field, index, def, onChange, onDup
         </div>
       )}
 
-      <details className="ws-field-more">
+      <details className="ws-field-more" onToggle={(event) => setShowOptionImages(event.currentTarget.open)}>
         <summary><ChevronRight size={15} className="rtl:rotate-180" /> {t.moreOptions}</summary>
         <div className="space-y-4 pt-3">
           {(field.type === "choice" || field.type === "dropdown" || field.type === "multi_choice") && (
@@ -357,7 +353,7 @@ export default function FieldEditor({ formId, field, index, def, onChange, onDup
               <label className={labelClass}>{t.imageDescription} <input placeholder={t.imageAltHint} value={field.image?.alt ?? ""} disabled={!field.image} onChange={(e) => set({ image: field.image ? { ...field.image, alt: e.target.value } : undefined })} className="kb-input py-1 mt-1" /></label>
             </div>
           )}
-          {formId && field.type !== "section" && <button type="button" className="ws-link-quiet" onClick={() => setActiveImageUpload(activeImageUpload === "question" ? null : "question")}>{t.uploadImage}</button>}
+          {showOptionImages && formId && field.type !== "section" && <button type="button" className="ws-link-quiet" onClick={() => setActiveImageUpload(activeImageUpload === "question" ? null : "question")}>{t.uploadImage}</button>}
           {formId && activeImageUpload === "question" && <HostedImageUpload formId={formId}
             onUploaded={(url) => set({ image: { url, alt: field.image?.alt ?? "" } })} />}
           <DocHint slug="endings">{t.tipBefore}<bdi dir="ltr">{"{{question-id}}"}</bdi>{t.tipMid}<code>{field.id}</code>{t.tipAfter}<bdi dir="ltr">{"{{score}}"}</bdi>{t.tipEnd}</DocHint>
