@@ -141,7 +141,7 @@ export const scan = internalMutation({
       await ctx.db.insert("adminMetricSnapshots", { completedAt, counts: pending });
       const snapshots = await ctx.db.query("adminMetricSnapshots")
         .withIndex("by_completedAt").order("desc").take(31);
-      if (snapshots.length > 30) await ctx.db.delete(snapshots[30]._id);
+      if (snapshots.length > 30) await ctx.db.delete("adminMetricSnapshots", snapshots[30]._id);
     } else {
       await ctx.scheduler.runAfter(0, internal.adminAnalytics.scan, args);
     }
