@@ -104,6 +104,10 @@ export const queue = query({
         gradingState: grade.state, pendingWrittenCount: grade.pendingWrittenCount,
         approvedCount: marks.filter(m => m.status === "approved").length,
         gradeRevision: grade.revision ?? 0,
+        reviewHold: grade.reviewHold === true,
+        finalWrittenQuestions: grade.state === "auto_final"
+          ? grade.entries.filter(e => snapshot.questions[e.questionIndex]?.kind === "written").map(e => e.questionIndex)
+          : [],
         submittedCount: marks.filter(m => m.status === "submitted").length,
         draftCount: marks.filter(m => m.status === "draft" || m.status === "changes_requested").length,
         pendingQuestions: grade.entries.filter(e => e.status === "needs_manual").map(e => e.questionIndex) };
