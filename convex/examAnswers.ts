@@ -4,6 +4,7 @@ import type { Id } from "./_generated/dataModel";
 import { requireActiveUser } from "./authz";
 import { requireEligiblePreflight } from "./examPreflight";
 import { normalizeExamAnswer, sameExamAnswer } from "./examAnswerModel";
+import { requireExamAttemptTiming } from "./examSubmissionModel";
 
 type Ctx = QueryCtx | MutationCtx;
 
@@ -11,7 +12,7 @@ type Ctx = QueryCtx | MutationCtx;
  * Private answer transport foundation. Public startAttempt remains hard-disabled:
  * this never creates an attempt, activates a release or exposes snapshot contents.
  */
-async function authorizedAttempt(ctx: Ctx, attemptId: Id<"examAttempts">) {
+export async function authorizedAttempt(ctx: Ctx, attemptId: Id<"examAttempts">) {
   const { identity, user } = await requireActiveUser(ctx);
   if (!user) throw new Error("ACCOUNT_REQUIRED: Complete account setup first.");
   const attempt = await ctx.db.get("examAttempts", attemptId);
@@ -19,6 +20,9 @@ async function authorizedAttempt(ctx: Ctx, attemptId: Id<"examAttempts">) {
     throw new Error("NOT_FOUND: Attempt not found.");
   if (attempt.state !== "in_progress")
     throw new Error("ATTEMPT_FINALIZED: Answers are no longer editable.");
+  const { deadlineAt } = requireExamAttemptTiming(attempt);
+  if (Date.now() >= deadlineAt)
+    throw new Error("ATTEMPT_TIMED_OUT: The server deadline has passed.");
   const snapshot = await ctx.db.get("examSnapshots", attempt.snapshotId);
   if (!snapshot || snapshot.ownerId !== attempt.ownerId ||
       snapshot.courseId !== attempt.courseId)
