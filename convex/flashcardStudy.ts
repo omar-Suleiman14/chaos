@@ -1,4 +1,5 @@
 import { getAuthIdentity } from "./authIdentity";
+import { lessonAccessForActor } from "./lessons";
 import { teamAudienceAllows } from "./businessAccess";
 import { ConvexError, v } from "convex/values";
 import { mutation, query, type QueryCtx, type MutationCtx } from "./_generated/server";
@@ -91,12 +92,11 @@ export async function detachFlashcardsForActor(ctx: MutationCtx, actor: string, 
 export const attachedFlashcards = v.array(v.object({ attachmentId: v.id("lessonFlashcards"), setId: v.id("flashcardSets"), versionId: v.id("flashcardVersions"), title: v.string(), label: v.string(), order: v.number(), cardCount: v.number() }));
 /** `viewer` is the signed-in subject (or verified MCP actor); undefined for anonymous readers. */
 export async function listAttachedFlashcards(ctx: QueryCtx, viewer: string | undefined, lessonId: Id<"lessons">) {
-  const lesson = await ctx.db.get("lessons", lessonId);
-  if (!lesson || lesson.status !== "active") throw new Error("NOT_FOUND: Lesson not found or unauthorized");
-  const owner = viewer !== undefined && lesson.ownerId === viewer;
-  const grant = viewer !== undefined && await ctx.db.query("lessonPermissions").withIndex("by_lessonId_and_userId", q => q.eq("lessonId", lessonId).eq("userId", viewer)).unique();
-  if (!owner && !grant && ((lesson.visibility !== "public" && !await teamAudienceAllows(ctx, lesson, viewer)) || lesson.communityState !== "ok" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId))) throw new Error("NOT_FOUND: Lesson not found or unauthorized");
   const rows = await ctx.db.query("lessonFlashcards").withIndex("by_lessonId_and_order", q => q.eq("lessonId", lessonId)).take(50);
+  // Empty results are safe without permission checks; populated ones never are.
+  if (!rows.length) return [];
+  const lesson = await lessonAccessForActor(ctx, viewer ?? null, lessonId);
+  if (lesson.status !== "active") throw new Error("NOT_FOUND: Lesson not found or unauthorized");
   const result = [];
   for (const row of rows) {
     try {

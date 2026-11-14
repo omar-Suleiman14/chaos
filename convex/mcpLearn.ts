@@ -9,6 +9,7 @@ import { LEARN_LIMITS, createdWith, lessonBlock, lessonDocument, lessonMeta, sou
 import { creatorRestricted } from "./authz";
 import { lessonAccessForActor, createLessonForActor, saveLessonDraftForActor, publishLessonForActor, restoreLessonVersionForActor, setLessonLifecycleForActor, forkLessonForActor, editLessonBlocksForActor, readLessonForActor, summarizeLesson, lessonSummary, lessonReadResult, lessonBlockOperation } from "./lessons";
 import { canReadSourcePart } from "./sourceAccess";
+import { canReadCourseAttachedLesson } from "./courseMembership";
 
 export async function requireLearnActor(ctx: QueryCtx | MutationCtx, userId: string) {
   const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", userId)).first();
@@ -51,7 +52,11 @@ export const listLessons = internalQuery({ args: { ...actor, scope: v.union(v.li
     }
     if (lesson.status !== "active" || !lesson.publishedVersionId || await creatorRestricted(ctx, lesson.ownerId)) continue;
     const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
-    if (version?.lessonId === lesson._id) items.push(summarizeLesson(lesson, version.metadata));
+    if (version?.lessonId !== lesson._id) continue;
+    // An individual course lecture is not generally discoverable via the public MCP list.
+    try {
+      if (await canReadCourseAttachedLesson(ctx, lesson.ownerId, lesson._id, userId)) items.push(summarizeLesson(lesson, version.metadata));
+    } catch { /* Fail closed when historical membership is incomplete. */ }
   }
   return { items, nextCursor: page.isDone ? null : page.continueCursor };
 } });
