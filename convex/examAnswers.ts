@@ -55,7 +55,7 @@ export const getMine = query({
       questionIndex: answer.questionIndex, choiceIds: answer.choiceIds,
       text: answer.text, flagged: answer.flagged,
       savedForLater: answer.savedForLater, revision: answer.revision,
-      savedAt: answer.savedAt,
+      savedAt: answer.savedAt, lastMutationId: answer.lastMutationId,
     }));
   },
 });
