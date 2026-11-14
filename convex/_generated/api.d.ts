@@ -24,6 +24,7 @@ import type * as businessTeams from "../businessTeams.js";
 import type * as classicQuizMigration from "../classicQuizMigration.js";
 import type * as consistency from "../consistency.js";
 import type * as courseDirectory from "../courseDirectory.js";
+import type * as courseJoinRequests from "../courseJoinRequests.js";
 import type * as coursePortability from "../coursePortability.js";
 import type * as courseSearchModel from "../courseSearchModel.js";
 import type * as courseStructure from "../courseStructure.js";
@@ -178,6 +179,7 @@ declare const fullApi: ApiFromModules<{
   classicQuizMigration: typeof classicQuizMigration;
   consistency: typeof consistency;
   courseDirectory: typeof courseDirectory;
+  courseJoinRequests: typeof courseJoinRequests;
   coursePortability: typeof coursePortability;
   courseSearchModel: typeof courseSearchModel;
   courseStructure: typeof courseStructure;
