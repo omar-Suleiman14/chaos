@@ -4,6 +4,30 @@ import type { FormField } from "@/convex/formLogic";
 
 const field = (patch: Partial<FormField> & Pick<FormField, "type">): FormField => ({ id: "q1", label: "Q", required: false, ...patch });
 
+describe("form and quiz authored images", () => {
+  it("requires HTTPS images with accessible alternatives for questions, answers and explanations", () => {
+    const def = emptyDefinition("Illustrated quiz");
+    def.quiz = { enabled: true };
+    def.fields = [{
+      id: "picture", type: "choice", label: "Choose", required: true,
+      image: { url: "https://example.org/question.png", alt: "Question diagram" },
+      options: [
+        { id: "a", label: "A", image: { url: "https://example.org/a.png", alt: "Choice A" } },
+        { id: "b", label: "B" },
+      ],
+      quiz: { correctOptionIds: ["a"], points: 1, explanationImage: { url: "https://example.org/why.png", alt: "Explanation diagram" } },
+    }];
+    expect(checkDefinition(def).errors).toEqual([]);
+    def.fields[0].options![0].image = { url: "http://example.org/a.png", alt: "Choice A" };
+    expect(checkDefinition(def).errors.join(" ")).toMatch(/answer images/i);
+    def.fields[0].options![0].image = { url: "https://example.org/a.png", alt: "" };
+    expect(checkDefinition(def).errors.join(" ")).toMatch(/answer images/i);
+    def.fields[0].options![0].image = { url: "https://example.org/a.png", alt: "Choice A" };
+    def.fields[0].quiz!.explanationImage = { url: "data:image/png;base64,AA==", alt: "Wrong" };
+    expect(checkDefinition(def).errors.join(" ")).toMatch(/explanation images/i);
+  });
+});
+
 describe("number field", () => {
   it("rejects non-finite and non-numeric values without coercing to zero", () => {
     const f = field({ type: "number" });

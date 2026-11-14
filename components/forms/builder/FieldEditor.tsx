@@ -58,6 +58,7 @@ const copy = {
     minChars: "Min characters", maxChars: "Max characters", placeholder: "Placeholder", minimum: "Minimum", maximum: "Maximum",
     filesAllowed: "Files allowed (1–5)", fileNote: "PDF, images, text, Word or Excel, up to 10 MB.",
     imageAddress: "Image address", imageDescription: "Image description", imageAltHint: "For people who cannot see it",
+    optionImage: "Answer image URL (optional)", explanationImage: "Explanation image URL (shown only after submission)",
     tipBefore: "Tip: insert an earlier answer with ", tipMid: " (this one is ", tipAfter: ") or the score with ", tipEnd: ".",
     required: "Required", shownConditionally: "Shown conditionally", logic: "Logic",
     actionsFor: (name: string) => `Actions for ${name}`, duplicateSection: "Duplicate section", duplicate: "Duplicate",
@@ -85,6 +86,7 @@ const copy = {
     minChars: "الحد الأدنى للأحرف", maxChars: "الحد الأقصى للأحرف", placeholder: "النص التوضيحي", minimum: "الحد الأدنى", maximum: "الحد الأقصى",
     filesAllowed: "عدد الملفات المسموح (1–5)", fileNote: "PDF أو صور أو نصوص أو Word أو Excel، حتى 10 ميغابايت.",
     imageAddress: "رابط الصورة", imageDescription: "وصف الصورة", imageAltHint: "لمن لا يستطيع رؤيتها",
+    optionImage: "رابط صورة الإجابة (اختياري)", explanationImage: "رابط صورة الشرح (تظهر بعد الإرسال)",
     tipBefore: "تلميح: أدرج إجابة سابقة بـ ", tipMid: " (رمز هذا السؤال ", tipAfter: ") أو الدرجة بـ ", tipEnd: ".",
     required: "إلزامي", shownConditionally: "يظهر بشرط", logic: "المنطق",
     actionsFor: (name: string) => `إجراءات ${name}`, duplicateSection: "كرّر القسم", duplicate: "كرّر",
@@ -120,13 +122,24 @@ function ChoiceList({ kind, items, onChange, prefix, withScores }: { kind: "opti
       ) : (
         <ul className="space-y-1" ref={list}>
           {items.map((c, i) => (
-            <li key={c.id} className="flex gap-2 items-center ws-reveal-host">
+            <li key={c.id} className="flex flex-wrap gap-2 items-center ws-reveal-host">
               <input dir="auto" value={c.label} onChange={(e) => onChange(items.map((x) => (x.id === c.id ? { ...x, label: e.target.value } : x)))} className="kb-input py-1.5 text-sm flex-1" aria-label={t.itemN(label, i + 1)}
                 onFocus={(e) => { if (/^(Option|Row|Column|خيار|صف|عمود) \d+$/.test(c.label)) e.currentTarget.select(); }}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); addAfter(i); } }} />
               {withScores && (
                 <input type="number" value={c.score ?? ""} placeholder={t.score} aria-label={t.scoreFor(c.label)} className="kb-input py-1.5 text-sm w-20"
                   onChange={(e) => onChange(items.map((x) => (x.id === c.id ? (e.target.value === "" ? (({ score: _s, ...rest }) => rest)(x) : { ...x, score: Number(e.target.value) }) : x)))} />
+              )}
+              {kind !== "rows" && (
+                <div className="w-full basis-full grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input type="url" inputMode="url" dir="ltr" placeholder={t.optionImage} aria-label={`${t.optionImage}: ${c.label}`}
+                    value={c.image?.url ?? ""} onChange={(e) => onChange(items.map((x) => x.id === c.id
+                      ? { ...x, image: e.target.value ? { url: e.target.value, alt: x.image?.alt ?? "" } : undefined } : x))}
+                    className="kb-input py-1 text-xs" />
+                  {c.image && <input dir="auto" placeholder={t.imageAltHint} aria-label={`${t.imageDescription}: ${c.label}`}
+                    value={c.image.alt} onChange={(e) => onChange(items.map((x) => x.id === c.id ? { ...x, image: { ...c.image!, alt: e.target.value } } : x))}
+                    className="kb-input py-1 text-xs" />}
+                </div>
               )}
               <button type="button" disabled={i === 0} onClick={() => { const n = [...items]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; onChange(n); }} aria-label={t.moveUp} className="ws-icon-button ws-reveal disabled:opacity-30"><ArrowUp size={14} /></button>
               <button type="button" onClick={() => onChange(items.filter((x) => x.id !== c.id))} aria-label={t.remove(c.label || t.option)} className="ws-icon-button text-muted-foreground hover:text-destructive"><X size={14} /></button>
@@ -220,7 +233,7 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
                     const correctOptionIds = field.type === "multi_choice"
                       ? selected ? (field.quiz?.correctOptionIds ?? []).filter((id) => id !== option.id) : [...(field.quiz?.correctOptionIds ?? []), option.id]
                       : [option.id];
-                    set({ quiz: { correctOptionIds, points: field.quiz?.points ?? 1, explanation: field.quiz?.explanation } });
+                    set({ quiz: { ...field.quiz, correctOptionIds, points: field.quiz?.points ?? 1 } });
                   }} />
                 <bdi>{option.label || t.untitledOption}</bdi>
               </label>;
@@ -231,13 +244,24 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
             <div className="space-y-3 pt-2">
               <label className={`${labelClass} block`}>{t.points}
                 <input type="number" min={0} max={1000} value={field.quiz?.points ?? 1}
-                  onChange={(e) => set({ quiz: { correctOptionIds: field.quiz?.correctOptionIds ?? [], points: Number(e.target.value), explanation: field.quiz?.explanation } })}
+                  onChange={(e) => set({ quiz: { ...field.quiz, correctOptionIds: field.quiz?.correctOptionIds ?? [], points: Number(e.target.value) } })}
                   className="kb-input mt-1 w-28" />
               </label>
               <label className={`${labelClass} block`}>{t.explanation}
-                <textarea dir="auto" value={field.quiz?.explanation ?? ""} onChange={(e) => set({ quiz: { correctOptionIds: field.quiz?.correctOptionIds ?? [], points: field.quiz?.points ?? 1, explanation: e.target.value || undefined } })}
+                <textarea dir="auto" value={field.quiz?.explanation ?? ""} onChange={(e) => set({ quiz: { ...field.quiz, correctOptionIds: field.quiz?.correctOptionIds ?? [], points: field.quiz?.points ?? 1, explanation: e.target.value || undefined } })}
                   className="kb-input mt-1" rows={2} maxLength={2000} />
               </label>
+              <label className={`${labelClass} block`}>{t.explanationImage}
+                <input type="url" dir="ltr" placeholder="https://…" value={field.quiz?.explanationImage?.url ?? ""}
+                  onChange={(e) => set({ quiz: { ...field.quiz, correctOptionIds: field.quiz?.correctOptionIds ?? [], points: field.quiz?.points ?? 1,
+                    explanationImage: e.target.value ? { url: e.target.value, alt: field.quiz?.explanationImage?.alt ?? "" } : undefined } })}
+                  className="kb-input mt-1" />
+              </label>
+              {field.quiz?.explanationImage && <label className={`${labelClass} block`}>{t.imageDescription}
+                <input dir="auto" placeholder={t.imageAltHint} value={field.quiz.explanationImage.alt}
+                  onChange={(e) => set({ quiz: { ...field.quiz!, explanationImage: { ...field.quiz!.explanationImage!, alt: e.target.value } } })}
+                  className="kb-input mt-1" />
+              </label>}
             </div>
           </details>
         </div>

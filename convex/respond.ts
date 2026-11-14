@@ -30,7 +30,7 @@ import { captureHidden, captureTypedHidden } from "./formRespondent";
 import { teamOrEmailCheck } from "./businessAccess";
 import { changeFormCounts, readFormCounts } from "./formCounts";
 
-const quizReviewValidator = v.union(v.null(), v.array(v.object({ fieldId: v.string(), earned: v.number(), possible: v.number(), correctOptionIds: v.array(v.string()), explanation: v.optional(v.string()) })));
+const quizReviewValidator = v.union(v.null(), v.array(v.object({ fieldId: v.string(), earned: v.number(), possible: v.number(), correctOptionIds: v.array(v.string()), explanation: v.optional(v.string()), explanationImage: v.optional(v.object({ url: v.string(), alt: v.string() })) })));
 
 export const DEFAULT_FORM_RESPONSE_LIMIT = planLimits.free.responsesPerForm;
 export const UPLOAD_PATH = "/forms/upload";
