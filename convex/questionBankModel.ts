@@ -12,7 +12,12 @@ export const bankKind = v.union(
 );
 export const bankStatus = v.union(v.literal("draft"), v.literal("ready"), v.literal("archived"));
 export const bankChoice = v.object({ id: v.string(), text: v.string() });
+export const bankCase = v.object({
+  stem: v.string(),
+  media: v.array(v.object({ mediaId: v.id("questionBankMedia"), alt: v.string() })),
+});
 export const bankDraft = v.object({
+  caseStudy: v.optional(bankCase),
   kind: bankKind,
   prompt: v.string(),
   choices: v.array(bankChoice),

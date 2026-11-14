@@ -192,6 +192,9 @@ export default function CourseExamBuilder({
       </Link>
       <span className="cb-status">{t.status}</span>
     </header>
+    <Link href={"/dashboard/courses/" + id + "/questions"} className="ws-btn ws-btn--ghost ws-btn--sm">
+      <Plus size={16} aria-hidden />{ar ? "تأليف أسئلة وحالات إكلينيكية" : "Author questions & clinical cases"}
+    </Link>
     <div className="space-y-2">
       <h1 className="ws-page-title">{t.title}</h1>
       <p className="ws-page-subtitle">{t.desc}</p>
