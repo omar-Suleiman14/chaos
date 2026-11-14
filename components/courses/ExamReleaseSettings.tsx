@@ -122,7 +122,7 @@ export function ExamReleaseSettings({
       <span className="text-sm text-muted-foreground">{info?.snapshotId
         ? t.sealed + " #" + info.snapshotVersion : t.notSealed}</span>
     </div>
-    {info?.snapshotId && !current && <p role="status" className="text-sm text-amber-600">{t.changed}</p>}
+    {info?.snapshotId && !current && <output className="block text-sm text-amber-600">{t.changed}</output>}
     <fieldset disabled={!info?.snapshotId || busy} className="grid gap-4 disabled:opacity-60">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">{t.window}
@@ -200,7 +200,7 @@ export function ExamReleaseSettings({
       </button>
       <span className="text-sm text-muted-foreground">{info?.preparedForAudience ? t.prepared : t.private}</span>
     </div>
-    {dirty && <p className="cb-note" role="status">{t.unsaved}</p>}
+    {dirty && <output className="cb-note block">{t.unsaved}</output>}
     <p className="cb-note">{t.warning}</p>
   </section>;
 }
