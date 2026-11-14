@@ -180,10 +180,9 @@ const assessment = v.object({ kind: v.literal("form"), id: v.id("forms"), title:
 export const attachedQuizzes = query({
   args: { lessonId: v.id("lessons") }, returns: v.array(assessment),
   handler: async (ctx, args) => {
-    const links = await ctx.db.query("lessonAssessments").withIndex("by_lessonId_and_order", q => q.eq("lessonId", args.lessonId)).take(50);
-    // An empty attachment list exposes no private data.
-    if (!links.length) return [];
+    // Do not distinguish a private empty lesson from an authorized empty lesson.
     await lessonAccess(ctx, args.lessonId);
+    const links = await ctx.db.query("lessonAssessments").withIndex("by_lessonId_and_order", q => q.eq("lessonId", args.lessonId)).take(50);
     const result = [];
     for (const link of links) {
       if (link.asset.kind !== "form") continue;

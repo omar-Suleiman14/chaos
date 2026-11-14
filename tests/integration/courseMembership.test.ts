@@ -41,7 +41,8 @@ async function finishBackfill(t: ReturnType<typeof createTestConvex>, restart = 
 describe("indexed course membership", () => {
   it("repairs inherited access beyond 500 courses without scanning unrelated courses", async () => {
     const f = await legacyFixture();
-    expect(await f.member.query(api.learnFrontend.editableLesson, { id: f.earlyLessonId })).not.toBeNull();
+    // Without a complete historic membership index, access fails closed rather than assuming that older course links are unprotected.
+    expect(await f.member.query(api.learnFrontend.editableLesson, { id: f.earlyLessonId })).toBeNull();
     const before = await measureConvex(() => f.member.query(api.learnFrontend.editableLesson, { id: f.lessonId }));
     expect(before.result).toBeNull();
     expect(before.cost.documentsRead).toBeGreaterThanOrEqual(500);
@@ -173,23 +174,24 @@ describe("indexed course membership", () => {
     expect(await f.t.run(ctx => ctx.db.query("courseLessonMemberships").collect())).toEqual(before);
     expect(await f.member.query(api.learnFrontend.editableLesson, { id: f.lessonId })).not.toBeNull();
     await f.owner.mutation(api.courses.publish, { courseId: f.courses[1], visibility: "public" });
-    expect(await f.t.query(api.learnFrontend.publicLesson, { id: f.lessonId })).not.toBeNull();
+    expect(await f.t.query(api.learnFrontend.publicLesson, { id: f.lessonId })).toBeNull();
+    expect(await f.owner.query(api.learnFrontend.publicLesson, { id: f.lessonId })).not.toBeNull();
     await f.t.run(async ctx => {
       const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", creatorIdentity.subject)).unique();
       await ctx.db.patch("users", user!._id, { isBanned: true });
     });
     expect(await f.member.query(api.learnFrontend.editableLesson, { id: f.lessonId })).toBeNull();
-    expect(await f.t.query(api.learnFrontend.publicLesson, { id: f.lessonId })).toBeNull();
+    expect(await f.owner.query(api.learnFrontend.publicLesson, { id: f.lessonId })).toBeNull();
     const userId = await f.t.run(async ctx => {
       const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", creatorIdentity.subject)).unique();
       await ctx.db.patch("users", user!._id, { isBanned: false, suspendedUntil: Date.now() - 1 });
       return user!._id;
     });
     // Expiry is cleared by the scheduler, not interpreted differently in this read.
-    expect(await f.t.query(api.learnFrontend.publicLesson, { id: f.lessonId })).toBeNull();
+    expect(await f.owner.query(api.learnFrontend.publicLesson, { id: f.lessonId })).toBeNull();
     await f.t.run(ctx => ctx.db.patch("users", userId, { suspendedUntil: undefined }));
-    expect(await f.t.query(api.learnFrontend.publicLesson, { id: f.lessonId })).not.toBeNull();
+    expect(await f.owner.query(api.learnFrontend.publicLesson, { id: f.lessonId })).not.toBeNull();
     await f.t.run(ctx => ctx.db.delete("users", userId));
-    expect((await f.t.query(api.learnFrontend.publicLesson, { id: f.lessonId }))?.ownerName).toBe("Chaos creator");
+    expect((await f.owner.query(api.learnFrontend.publicLesson, { id: f.lessonId }))?.ownerName).toBe("Chaos creator");
   });
 });
