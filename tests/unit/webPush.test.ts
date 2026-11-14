@@ -8,7 +8,7 @@ const hk = (secret: Buffer, salt: Buffer, info: Buffer, len: number) =>
 
 describe("web push security", () => {
   it("rejects untrusted endpoints, internal addresses and invalid keys", () => {
-    for (const url of ["http://localhost/push", "https://127.0.0.1/foo", "https://fcm.googleapis.com.evil.com/a", "https://google.com/push", "https://fcm.googleapis.com:443/a", "https://user@fcm.googleapis.com/a"]) {
+    for (const url of ["http://localhost/push", "https://127.0.0.1/foo", "https://fcm.googleapis.com.evil.com/a", "https://google.com/push", "https://fcm.googleapis.com:8443/a", "https://user@fcm.googleapis.com/a"]) {
       expect(allowedPushEndpoint(url)).toBe(false);
     }
     expect(allowedPushEndpoint("https://fcm.googleapis.com/fcm/send/test")).toBe(true);

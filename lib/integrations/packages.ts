@@ -170,7 +170,7 @@ export function geminiPackage(logo: LogoAssets, studyFiles: PackageFiles = {}): 
       "Start Gemini CLI, run /mcp, then authenticate Chaos through the browser OAuth flow.",
       "For Gemini Apps, open gemini.google.com and use custom Connected Apps if your account is eligible (currently US, 18+, personal Google account, Keep Activity enabled, English). Add Chaos with its public MCP URL and approve OAuth.",
       "Gemini Apps and Gemini CLI are different products; this ZIP is a CLI configuration bundle, not a native Gemini Apps extension.",
-    ], undefined, studyFiles),
+    ]),
   };
 }
 
