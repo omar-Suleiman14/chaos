@@ -3,7 +3,6 @@ import { makeFunctionReference } from "convex/server";
 import { action, env, internalMutation, internalQuery, mutation } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireActiveUser } from "./authz";
-import { consumeRate } from "./serverUtils";
 import { LEARN_LIMITS } from "./learnModel";
 import { validSignature } from "./learnSources";
 import { r2Config, signR2Request } from "../lib/r2/privateR2";
