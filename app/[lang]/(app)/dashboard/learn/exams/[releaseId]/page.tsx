@@ -35,7 +35,7 @@ const translations = {
     acceptedAt: "Recorded", locked: "Starting the exam is disabled until secure question delivery, server timing, attempt limits, and submissions are implemented.",
     wait: "You can accept the rules now, but the scheduled opening time still applies.",
     failed: "Could not record acceptance. Reload the rules and try again.",
-    notReady: "Exam entry remains disabled",
+    notReady: "Exam entry remains disabled", preview: "Preview exam interface", previewHelp: "Explore the sample player without starting an attempt or sending answers.",
   },
   ar: {
     title: "التحقق قبل الامتحان", back: "العودة إلى امتحاناتي",
@@ -60,7 +60,7 @@ const translations = {
     acceptedAt: "وقت التسجيل", locked: "بدء الامتحان معطل حتى اكتمال تقديم الأسئلة بصورة آمنة وتوقيت الخادم وحدود المحاولات والتسليم.",
     wait: "يمكنك الموافقة على القواعد الآن، لكن الامتحان لا يبدأ قبل موعده.",
     failed: "تعذر تسجيل الموافقة. أعد تحميل القواعد وحاول مرة أخرى.",
-    notReady: "دخول الامتحان غير متاح بعد",
+    notReady: "دخول الامتحان غير متاح بعد", preview: "معاينة واجهة الامتحان", previewHelp: "جرّب الواجهة بأسئلة افتراضية من دون بدء محاولة أو إرسال إجابات.",
   },
 } as const;
 
@@ -152,6 +152,12 @@ export default function ExamPreflightPage() {
     <section className="cb-section grid gap-2" aria-label={t.notReady}>
       <div className="flex items-center gap-2 font-semibold"><LockKeyhole size={18} aria-hidden />{t.notReady}</div>
       <p className="cb-note flex gap-2 items-start"><ShieldCheck size={16} aria-hidden />{t.locked}</p>
+      {preflight.consentAccepted && <div className="grid justify-items-start gap-2">
+        <Link className="ws-btn ws-btn--ghost ws-btn--sm" href={"/dashboard/learn/exams/" + preflight.releaseId + "/player"}>
+          {t.preview}
+        </Link>
+        <p className="cb-note">{t.previewHelp}</p>
+      </div>}
     </section>
   </main>;
 }
