@@ -17,7 +17,7 @@ export function freezeResultPolicy(settings: ExamSettings | undefined): FrozenRe
       settings.passingPercent < 0 || settings.passingPercent > 100)
     return { ...fallback };
   if (settings.resultVisibility === "after_close") {
-    if (settings.mode !== "scheduled" || !Number.isSafeInteger(settings.closesAt) ||
+    if (settings.mode !== "scheduled" || !Number.isSafeInteger(settings.closesAt ?? NaN) ||
         (settings.closesAt ?? 0) <= 0) return { ...fallback };
     return {
       visibility: "after_close", closesAt: settings.closesAt,
