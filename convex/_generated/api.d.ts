@@ -12,6 +12,8 @@ import type * as accessCodeBudget from "../accessCodeBudget.js";
 import type * as admin from "../admin.js";
 import type * as adminAccess from "../adminAccess.js";
 import type * as adminAnalytics from "../adminAnalytics.js";
+import type * as adminOperations from "../adminOperations.js";
+import type * as adminOperationsModel from "../adminOperationsModel.js";
 import type * as adminModel from "../adminModel.js";
 import type * as archive from "../archive.js";
 import type * as auth from "../auth.js";
@@ -211,6 +213,8 @@ declare const fullApi: ApiFromModules<{
   admin: typeof admin;
   adminAccess: typeof adminAccess;
   adminAnalytics: typeof adminAnalytics;
+  adminOperations: typeof adminOperations;
+  adminOperationsModel: typeof adminOperationsModel;
   adminModel: typeof adminModel;
   archive: typeof archive;
   auth: typeof auth;
