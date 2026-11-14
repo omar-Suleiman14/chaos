@@ -184,7 +184,7 @@ export function ExamReleaseSettings({
       </div>
     </fieldset>
     <div className="flex flex-wrap items-center gap-3">
-      <button className="ws-btn ws-btn--primary" type="button" disabled={busy || !info?.snapshotId || !dirty}
+      <button className="ws-btn ws-btn--primary" type="button" disabled={busy || !info?.snapshotId || (!dirty && info.revision > 0)}
         onClick={() => void run(() => save({
           draftId, expectedRevision: info!.revision, settings,
         }), t.saved)}>
