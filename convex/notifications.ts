@@ -1,7 +1,7 @@
 import { getAuthIdentity } from "./authIdentity";
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import type { Doc } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { requireIdentity } from "./authz";
 import { hasApprovedCourseAccess } from "./courseMembership";
 import { COURSE_NOTICE_KINDS, courseNoticeKind, type CourseNoticeKind } from "./courseNotificationModel";
