@@ -53,9 +53,7 @@ async function fixture(visibility: "manual" | "immediate" | "after_close" = "man
 }
 
 it("withholds scores, restricts account access, audits publication and revocation", async () => {
-  const { t, owner, student, snapshotId, attemptId, draftId: _unused } = {
-    ...await fixture(), draftId: undefined,
-  };
+  const { t, owner, student, snapshotId, attemptId } = await fixture();
   const before = await student.query(api.examResults.myResult, { attemptId });
   expect(before).toMatchObject({ status: "withheld", transcript: null });
   expect(JSON.stringify(before)).not.toMatch(/earnedCents|correctChoiceIds|rubric|pointsAwarded|prompt/);

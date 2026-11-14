@@ -1,7 +1,6 @@
 "use client";
 import { use, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -35,9 +34,12 @@ const labels = {
     submitted: "تم التسليم", expired: "انتهى", void: "ملغاة", in_progress: "جارٍ الحل" },
 } as const;
 
-export default function TeacherResultsPage({ params }: { params: Promise<{ id: string }> }) {
+export default function TeacherResultsPage({ params, searchParams }: {
+  params: Promise<{ id: string }>;
+  searchParams: Promise<{ draft?: string }>;
+}) {
   const { id } = use(params);
-  const draft = useSearchParams().get("draft");
+  const { draft } = use(searchParams);
   const draftId = draft ? draft as Id<"examBuilderDrafts"> : null;
   const { locale } = useLocale();
   const ar = locale === "ar";
