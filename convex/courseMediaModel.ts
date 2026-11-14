@@ -9,6 +9,7 @@ export const courseMediaTables = {
   courseMediaObjects: defineTable({
     courseId: v.id("learnCollections"),
     lessonId: v.id("lessons"),
+    versionId: v.id("lessonVersions"),
     ownerId: v.string(),
     mimeType: v.string(),
     bytes: v.number(),
