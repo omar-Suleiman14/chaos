@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 import { requireActiveUser, creatorRestricted } from "./authz";
 import { hasApprovedCourseAccess } from "./courseMembership";
 import { eligibleByRow, loadPool, validatePlan, validateSelections } from "./examBuilder";
@@ -94,7 +94,7 @@ export const sealDraft = mutation({
         ...(question.caseStudy ? { caseStudy: { stem: question.caseStudy.stem, media } } : {}),
       });
     }
-    if (JSON.stringify(questions).length > MAX_SNAPSHOT_BYTES)
+    if (new TextEncoder().encode(JSON.stringify(questions)).byteLength > MAX_SNAPSHOT_BYTES)
       throw new Error("LIMIT_REACHED: Exam content exceeds the snapshot size limit.");
     const totalPoints = Math.round(questions.reduce((sum, q) => sum + q.points, 0) * 100) / 100;
     const now = Date.now();
