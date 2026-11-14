@@ -103,11 +103,11 @@ export const sealDraft = mutation({
       version, title: draft.title, questions, totalPoints, sealedAt: now,
     });
     if (release) await ctx.db.patch("examReleases", release._id, {
-      activeSnapshotId: snapshotId, version, updatedAt: now,
+      activeSnapshotId: snapshotId, version, preparedForAudience: false, updatedAt: now,
     });
     else await ctx.db.insert("examReleases", {
       ownerId, courseId: course._id, draftId, activeSnapshotId: snapshotId, version,
-      studentEntryEnabled: false, createdAt: now, updatedAt: now,
+      studentEntryEnabled: false, preparedForAudience: false, createdAt: now, updatedAt: now,
     });
     return { snapshotId, version };
   },

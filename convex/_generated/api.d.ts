@@ -147,6 +147,8 @@ import type * as examBuilderModel from "../examBuilderModel.js";
 import type * as examAttemptState from "../examAttemptState.js";
 import type * as examRuntime from "../examRuntime.js";
 import type * as examRuntimeModel from "../examRuntimeModel.js";
+import type * as examSettings from "../examSettings.js";
+import type * as examSettingsModel from "../examSettingsModel.js";
 import type * as questionBank from "../questionBank.js";
 import type * as questionBankModel from "../questionBankModel.js";
 import type * as questionBankMedia from "../questionBankMedia.js";
@@ -317,6 +319,8 @@ declare const fullApi: ApiFromModules<{
   examAttemptState: typeof examAttemptState;
   examRuntime: typeof examRuntime;
   examRuntimeModel: typeof examRuntimeModel;
+  examSettings: typeof examSettings;
+  examSettingsModel: typeof examSettingsModel;
   questionBank: typeof questionBank;
   questionBankModel: typeof questionBankModel;
   questionBankMedia: typeof questionBankMedia;
