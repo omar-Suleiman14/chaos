@@ -1,4 +1,5 @@
 import type { Id } from "./_generated/dataModel";
+import { internal } from "./_generated/api";
 import type { MutationCtx } from "./_generated/server";
 import { hasApprovedCourseAccess } from "./courseMembership";
 import { cleanNoticeKey, cleanNoticeMessage, type CourseNoticeKind } from "./courseNotificationModel";
@@ -28,11 +29,13 @@ export async function notifyCourseAccount(ctx: MutationCtx, input: {
       : "/dashboard/courses/" + input.courseId + "/classroom"
     : input.kind === "course_result" ? "/dashboard/learn/exams/results"
     : "/dashboard/learn/classroom/" + input.courseId;
-  return await ctx.db.insert("notifications", {
+  const noticeId = await ctx.db.insert("notifications", {
     ownerId: input.recipientId, courseId: input.courseId,
     kind: input.kind, message: cleanNoticeMessage(input.message),
     href: path, dedupeKey: key, createdAt: Date.now(),
   });
+  await ctx.scheduler.runAfter(0, internal.pushDelivery.deliver, { notificationId: noticeId, attempt: 0 });
+  return noticeId;
 }
 
 /** Never infer student admission from discovery or guest enrollment records. */
@@ -76,11 +79,12 @@ export async function notifyPlatformAdmins(ctx: MutationCtx, key: string, messag
     const prefs = await ctx.db.query("notificationPreferences")
       .withIndex("by_owner", q => q.eq("ownerId", admin.clerkId)).unique();
     if (prefs?.disabled.includes("admin_grading")) continue;
-    await ctx.db.insert("notifications", {
+    const noticeId = await ctx.db.insert("notifications", {
       ownerId: admin.clerkId, kind: "admin_grading", adminOnly: true,
       message: safeMessage, href: "/admin", dedupeKey,
       createdAt: Date.now(),
     });
+    await ctx.scheduler.runAfter(0, internal.pushDelivery.deliver, { notificationId: noticeId, attempt: 0 });
     count++;
   }
   return count;

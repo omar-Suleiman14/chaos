@@ -7,7 +7,7 @@ import { hasApprovedCourseAccess } from "./courseMembership";
 import { COURSE_NOTICE_KINDS, courseNoticeKind, type CourseNoticeKind } from "./courseNotificationModel";
 
 type Ctx = QueryCtx | MutationCtx;
-async function mayRead(ctx: Ctx, ownerId: string, notice: Doc<"notifications">) {
+export async function mayRead(ctx: Ctx, ownerId: string, notice: Doc<"notifications">) {
   if (notice.adminOnly) {
     const admin = await ctx.db.query("admins")
       .withIndex("by_clerkId", q => q.eq("clerkId", ownerId)).first();

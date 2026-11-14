@@ -7,6 +7,12 @@ const app = defineApp({
   env: {
     /** Public app origin used to build links, e.g. https://chaos.fail. */
     CHAOS_APP_URL: v.optional(v.string()),
+    /** Base64url-encoded VAPID public key (same as NEXT_PUBLIC_CHAOS_VAPID_PUBLIC_KEY on Next.js). */
+    CHAOS_WEB_PUSH_PUBLIC_KEY: v.optional(v.string()),
+    /** Secret base64url VAPID private key, available only to Convex actions. */
+    CHAOS_WEB_PUSH_PRIVATE_KEY: v.optional(v.string()),
+    /** VAPID contact: mailto:you@yourdomain.example or HTTPS URL. */
+    CHAOS_WEB_PUSH_SUBJECT: v.optional(v.string()),
     /** Support address shown in error messages (default: the hosted instance's address). */
     CHAOS_SUPPORT_EMAIL: v.optional(v.string()),
     /** Shared secret between the Next.js /mcp route and the Convex MCP endpoint (32+ random bytes). */
