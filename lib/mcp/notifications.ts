@@ -5,6 +5,7 @@ import { z } from "zod";
 const kind = z.enum([
   "course_announcement", "course_calendar", "course_message",
   "course_assignment", "course_enrollment", "course_result",
+  "course_grading", "admin_grading",
 ]);
 const notice = z.object({
   _id: z.string(), kind: z.string(), message: z.string(),

@@ -18,3 +18,10 @@ In-app delivery is synchronous and atomic: if the source transaction fails, neit
 - Live OAuth, doctor/student approval and revocation, suspended account and grade privacy tests.
 - Courses with over 80 students need paginated fan-out before enabling notifications.
 - Vercel preview and protected source/media/MCP review must pass before release.
+
+## Expanded grading notices and review gates
+- Submissions notify the owning doctor without exposing essay text, answers or grades.
+- Explicit assisted-grading requests notify current active platform admins. Handoff to the doctor notifies the course owner; no marks are published by this event.
+- Admin-only alerts recheck the current admin roster at inbox read time and are hidden after role revocation. Admin queue alerts use the existing secured `/admin` destination.
+- Admin fanout currently reads at most 50 admins; larger platforms require paginated delivery before release.
+- **Explicit performance-budget raise:** the four new public MCP notification tools increase registry count 132→136 (admin 150→154) and add roughly 4 KiB to each list-tools payload. Only those four registry metrics are raised and justified in `perf/baselines/surfaces.json`; all other gates remain unchanged.

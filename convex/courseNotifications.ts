@@ -23,7 +23,9 @@ export async function notifyCourseAccount(ctx: MutationCtx, input: {
     .withIndex("by_owner", q => q.eq("ownerId", input.recipientId)).unique();
   if (prefs?.disabled.includes(input.kind)) return null;
   const path = input.recipientId === course.ownerId
-    ? "/dashboard/courses/" + input.courseId + "/classroom"
+    ? input.kind === "course_grading"
+      ? "/dashboard/courses/" + input.courseId + "/exams/grading"
+      : "/dashboard/courses/" + input.courseId + "/classroom"
     : input.kind === "course_result" ? "/dashboard/learn/exams/results"
     : "/dashboard/learn/classroom/" + input.courseId;
   return await ctx.db.insert("notifications", {
@@ -55,4 +57,31 @@ export async function notifyCourseStudents(
     sent += 1;
   }
   return sent;
+}
+
+
+/** Non-sensitive grading queue alerts; only current platform admins receive them. */
+export async function notifyPlatformAdmins(ctx: MutationCtx, key: string, message: string) {
+  const dedupeKey = cleanNoticeKey(key), safeMessage = cleanNoticeMessage(message);
+  const admins = await ctx.db.query("admins").take(50);
+  let count = 0;
+  for (const admin of admins) {
+    const user = await ctx.db.query("users")
+      .withIndex("by_clerkId", q => q.eq("clerkId", admin.clerkId)).first();
+    if (!user || user.isBanned || user.suspendedUntil) continue;
+    const existing = await ctx.db.query("notifications")
+      .withIndex("by_ownerId_and_dedupeKey", q =>
+        q.eq("ownerId", admin.clerkId).eq("dedupeKey", dedupeKey)).unique();
+    if (existing) continue;
+    const prefs = await ctx.db.query("notificationPreferences")
+      .withIndex("by_owner", q => q.eq("ownerId", admin.clerkId)).unique();
+    if (prefs?.disabled.includes("admin_grading")) continue;
+    await ctx.db.insert("notifications", {
+      ownerId: admin.clerkId, kind: "admin_grading", adminOnly: true,
+      message: safeMessage, href: "/admin", dedupeKey,
+      createdAt: Date.now(),
+    });
+    count++;
+  }
+  return count;
 }

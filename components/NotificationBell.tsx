@@ -15,13 +15,13 @@ const copy = {
     title: "Notifications", withUnread: (n: number) => `Notifications, ${n} unread`, markAll: "Mark all read",
     empty: "Nothing yet. New responses, limits and approvals appear here.",
     preferences: "Course notification preferences",
-    kinds: ["Announcements", "Calendar", "Messages", "Assignments", "Enrollment", "Results"],
+    kinds: ["Announcements", "Calendar", "Messages", "Assignments", "Enrollment", "Results", "Grading updates", "Admin grading queue"],
   },
   ar: {
     title: "الإشعارات", withUnread: (n: number) => `الإشعارات، ${n} غير مقروء`, markAll: "علّم الكل كمقروء",
     empty: "لا شيء حتى الآن. تظهر هنا الردود الجديدة والحدود وطلبات الموافقة.",
     preferences: "تفضيلات إشعارات الدورات",
-    kinds: ["الإعلانات", "المواعيد", "الرسائل", "التكليفات", "التسجيل", "النتائج"],
+    kinds: ["الإعلانات", "المواعيد", "الرسائل", "التكليفات", "التسجيل", "النتائج", "مستجدات التصحيح", "طابور تصحيح الإدارة"],
   },
 };
 

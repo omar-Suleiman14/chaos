@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { notifyCourseAccount } from "./courseNotifications";
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireAdminForActor } from "./adminAccess";
@@ -152,6 +153,11 @@ export const submit = internalMutation({
     });
     await auditJob(ctx, { ...job, revision: job.revision + 1 }, userId,
       "sent_to_doctor", "All proposals submitted for independent doctor review; no grade was finalized.");
+    await notifyCourseAccount(ctx, {
+      recipientId: job.ownerId, courseId: job.courseId, kind: "course_grading",
+      key: "doctor_grade_review:" + jobId,
+      message: "An assisted grading proposal is ready for doctor review.",
+    });
     return { jobId, revision: job.revision + 1, status: "doctor_review" as const };
   },
 });

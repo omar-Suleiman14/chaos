@@ -5,12 +5,15 @@ export const courseNoticeKind = v.union(
   v.literal("course_announcement"), v.literal("course_calendar"),
   v.literal("course_message"), v.literal("course_assignment"),
   v.literal("course_enrollment"), v.literal("course_result"),
+  v.literal("course_grading"), v.literal("admin_grading"),
 );
 export type CourseNoticeKind = "course_announcement" | "course_calendar" |
-  "course_message" | "course_assignment" | "course_enrollment" | "course_result";
+  "course_message" | "course_assignment" | "course_enrollment" | "course_result" |
+  "course_grading" | "admin_grading";
 export const COURSE_NOTICE_KINDS: CourseNoticeKind[] = [
   "course_announcement", "course_calendar", "course_message",
   "course_assignment", "course_enrollment", "course_result",
+  "course_grading", "admin_grading",
 ];
 export const notificationPreferenceTables = {
   notificationPreferences: defineTable({

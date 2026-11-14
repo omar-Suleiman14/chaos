@@ -437,10 +437,12 @@ export const formTables = {
     ownerId: v.string(),
     formId: v.optional(v.id("forms")),
     courseId: v.optional(v.id("learnCollections")),
+    adminOnly: v.optional(v.boolean()),
     href: v.optional(v.string()),
     kind: v.union(v.literal("response"), v.literal("rule"), v.literal("limit"), v.literal("approval"), v.literal("digest"), v.literal("comment"), v.literal("webhook"),
       v.literal("course_announcement"), v.literal("course_calendar"), v.literal("course_message"),
-      v.literal("course_assignment"), v.literal("course_enrollment"), v.literal("course_result")),
+      v.literal("course_assignment"), v.literal("course_enrollment"), v.literal("course_result"),
+      v.literal("course_grading"), v.literal("admin_grading")),
     message: v.string(),
     /** Deduplication key so retries and repeated triggers create one notification. */
     dedupeKey: v.string(),

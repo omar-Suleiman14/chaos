@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { notifyPlatformAdmins } from "./courseNotifications";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser, creatorRestricted, requireIdentity } from "./authz";
@@ -90,6 +91,8 @@ export const request = mutation({
     const row = await ctx.db.get("examGradingJobs", jobId);
     if (!row) throw new Error("INTEGRITY_ERROR: Job creation failed.");
     await auditJob(ctx, row, ownerId, "requested", "Doctor opted in to limited administrator-assisted grading.");
+    await notifyPlatformAdmins(ctx, "grading_job:" + jobId,
+      "A doctor requested assisted essay grading. Review the admin grading queue.");
     return { jobId, status: "queued" as const, revision: 0, reused: false };
   },
 });

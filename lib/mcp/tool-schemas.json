@@ -9281,7 +9281,9 @@
         "course_message",
         "course_assignment",
         "course_enrollment",
-        "course_result"
+        "course_result",
+        "course_grading",
+        "admin_grading"
        ]
       }
      },
@@ -9295,7 +9297,9 @@
         "course_message",
         "course_assignment",
         "course_enrollment",
-        "course_result"
+        "course_result",
+        "course_grading",
+        "admin_grading"
        ]
       }
      }
@@ -17567,7 +17571,9 @@
        "course_message",
        "course_assignment",
        "course_enrollment",
-       "course_result"
+       "course_result",
+       "course_grading",
+       "admin_grading"
       ]
      },
      "enabled": {
@@ -17593,7 +17599,9 @@
         "course_message",
         "course_assignment",
         "course_enrollment",
-        "course_result"
+        "course_result",
+        "course_grading",
+        "admin_grading"
        ]
       }
      },
@@ -17607,7 +17615,9 @@
         "course_message",
         "course_assignment",
         "course_enrollment",
-        "course_result"
+        "course_result",
+        "course_grading",
+        "admin_grading"
        ]
       }
      }

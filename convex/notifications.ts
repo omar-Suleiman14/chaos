@@ -1,13 +1,19 @@
 import { getAuthIdentity } from "./authIdentity";
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import type { Doc } from "./_generated/dataModel";
 import { requireIdentity } from "./authz";
 import { hasApprovedCourseAccess } from "./courseMembership";
 import { COURSE_NOTICE_KINDS, courseNoticeKind, type CourseNoticeKind } from "./courseNotificationModel";
 
 type Ctx = QueryCtx | MutationCtx;
-async function mayRead(ctx: Ctx, ownerId: string, courseId?: Id<"learnCollections">) {
+async function mayRead(ctx: Ctx, ownerId: string, notice: Doc<"notifications">) {
+  if (notice.adminOnly) {
+    const admin = await ctx.db.query("admins")
+      .withIndex("by_clerkId", q => q.eq("clerkId", ownerId)).first();
+    return !!admin;
+  }
+  const courseId = notice.courseId;
   if (!courseId) return true;
   const course = await ctx.db.get("learnCollections", courseId);
   return !!course && !course.archived &&
@@ -20,7 +26,7 @@ export async function notificationsFor(ctx: Ctx, ownerId: string) {
     .withIndex("by_ownerId_and_createdAt", q => q.eq("ownerId", ownerId))
     .order("desc").take(50);
   const visible = (await Promise.all(rows.map(async n =>
-    await mayRead(ctx, ownerId, n.courseId) ? n : null))).filter(n => n !== null);
+    await mayRead(ctx, ownerId, n) ? n : null))).filter(n => n !== null);
   return {
     items: visible.map(n => ({
       _id: n._id, kind: n.kind, message: n.message, formId: n.formId,
@@ -32,7 +38,10 @@ export async function notificationsFor(ctx: Ctx, ownerId: string) {
 export async function preferencesFor(ctx: Ctx, ownerId: string) {
   const row = await ctx.db.query("notificationPreferences")
     .withIndex("by_owner", q => q.eq("ownerId", ownerId)).unique();
-  return { disabled: row?.disabled ?? [] as CourseNoticeKind[], kinds: COURSE_NOTICE_KINDS };
+  const isAdmin = !!(await ctx.db.query("admins")
+    .withIndex("by_clerkId", q => q.eq("clerkId", ownerId)).first());
+  return { disabled: row?.disabled ?? [] as CourseNoticeKind[],
+    kinds: COURSE_NOTICE_KINDS.filter(kind => kind !== "admin_grading" || isAdmin) };
 }
 export async function updatePreferenceFor(
   ctx: MutationCtx, ownerId: string, kind: CourseNoticeKind, enabled: boolean,
@@ -47,7 +56,7 @@ export async function updatePreferenceFor(
   else await ctx.db.insert("notificationPreferences", {
     ownerId, disabled: [...disabled], updatedAt: Date.now(),
   });
-  return { disabled: [...disabled], kinds: COURSE_NOTICE_KINDS };
+  return preferencesFor(ctx, ownerId);
 }
 export async function markFor(ctx: MutationCtx, ownerId: string, ids?: Id<"notifications">[]) {
   if (ids && ids.length > 100) throw new Error("LIMIT_REACHED: Too many notification IDs.");
