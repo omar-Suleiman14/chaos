@@ -26,6 +26,12 @@ const translations = {
     saved: "Marking record updated.", finalizeConfirm: "Finalize this attempt? Approved grades become eligible for result release.",
     draft: "Draft", submitted: "Awaiting moderation", approved: "Approved", changes_requested: "Changes requested",
     assist: "Request assisted grading", assistConfirm: "Allow a platform administrator to review this student essay and draft a proposal? No grade will be published automatically.", assistStatus: "Assistance request",
+    proposal: "Administrator proposal — doctor review required",
+    evidence: "Verbatim answer evidence", confidence: "Confidence", apply: "Approve proposal",
+    adjust: "Approve with adjusted marks", reject: "Reject proposal",
+    doctorReason: "Doctor's reason (required when adjusting, rejecting or regrading)",
+    regrade: "Regrade finalized answer", releaseRevision: "Release reviewed revision",
+    releaseConfirm: "Release the reviewed revised grade to the student? An unresolved appeal blocks release.",
     noRubric: "No rubric was authored: enter a holistic score in points.",
     disclosure: "Only the course owner can access these essays. Final scores follow the exam's frozen result-release policy.",
   },
@@ -45,6 +51,12 @@ const translations = {
     saved: "تم تحديث سجل التصحيح.", finalizeConfirm: "اعتماد الدرجة النهائية؟ قد تصبح النتيجة قابلة للنشر حسب سياسة الامتحان.",
     draft: "مسودة", submitted: "بانتظار المراجعة", approved: "معتمد", changes_requested: "مطلوب تعديل",
     assist: "طلب مساعدة في التصحيح", assistConfirm: "هل تسمح لمسؤول المنصة بمراجعة الإجابة لتجهيز اقتراح فقط؟ لن تنشر أي درجات تلقائياً.", assistStatus: "حالة طلب المساعدة",
+    proposal: "اقتراح المسؤول — يجب أن يراجعه الدكتور",
+    evidence: "الدليل النصي من إجابة الطالب", confidence: "مستوى الثقة", apply: "اعتماد الاقتراح",
+    adjust: "اعتماد مع تعديل الدرجات", reject: "رفض الاقتراح",
+    doctorReason: "سبب قرار الدكتور (مطلوب للتعديل أو الرفض أو إعادة التصحيح)",
+    regrade: "إعادة تصحيح الإجابة النهائية", releaseRevision: "نشر الدرجة المعدلة بعد المراجعة",
+    releaseConfirm: "هل تريد نشر الدرجة المعدلة للطالب؟ لا يُسمح بالنشر إذا كان التظلم معلقاً.",
     noRubric: "لا يوجد سلم تصحيح: أدخل الدرجة مباشرة.",
     disclosure: "لا يمكن إلا لمالك الدورة قراءة هذه الإجابات. نشر النتائج يخضع للسياسة المعتمدة للامتحان.",
   },
@@ -71,7 +83,16 @@ export default function EssayGradingPage({ params, searchParams }: {
   const moderate = useMutation(api.examEssayGrading.moderate);
   const finalize = useMutation(api.examEssayGrading.finalize);
   const requestAssist = useMutation(api.examGradingJobs.request);
+  const decideProposal = useMutation(api.examDoctorReview.decide);
+  const regrade = useMutation(api.examDoctorReview.regrade);
+  const releaseRegrade = useMutation(api.examDoctorReview.releaseRegrade);
   const assisted = useQuery(api.examGradingJobs.myJobs, isAuthenticated && draftId ? { draftId } : "skip");
+  const reviewJob = assisted?.jobs.find(j => j.attemptId === attemptId && j.status === "doctor_review");
+  const review = useQuery(api.examDoctorReview.review,
+    isAuthenticated && reviewJob ? { jobId: reviewJob.jobId } : "skip");
+  const proposal = review?.proposals.find(p => p.questionIndex === questionIndex);
+  const entry = queue?.entries.find(e => e.attemptId === attemptId);
+  const canRegrade = entry?.gradingState === "auto_final" && !entry.reviewHold;
   const [marks, setMarks] = useState<Record<string, number>>({});
   const [holistic, setHolistic] = useState("0");
   const [feedback, setFeedback] = useState("");
@@ -124,7 +145,7 @@ export default function EssayGradingPage({ params, searchParams }: {
                 t.progress + ": " + entry.approvedCount + " / " + entry.pendingWrittenCount}</span>
             </div>
             <div className="flex flex-wrap gap-2">
-              {entry.pendingQuestions.map(index => <button key={index} type="button"
+              {[...entry.pendingQuestions, ...entry.finalWrittenQuestions].map(index => <button key={index} type="button"
                 className="ws-btn ws-btn--ghost ws-btn--sm"
                 aria-pressed={attemptId === entry.attemptId && questionIndex === index}
                 onClick={() => choose(entry.attemptId, index)}>
@@ -138,6 +159,12 @@ export default function EssayGradingPage({ params, searchParams }: {
                   }}>{t.assist}</button>}
               {assisted?.jobs.filter(j => j.attemptId === entry.attemptId).map(j =>
                 <span key={j.jobId} className="text-sm">{t.assistStatus}: {j.status}</span>)}
+              {entry.reviewHold && <button type="button" className="ws-btn ws-btn--primary ws-btn--sm"
+                disabled={busy} onClick={() => {
+                  if (!window.confirm(t.releaseConfirm)) return;
+                  void act(() => releaseRegrade({ attemptId: entry.attemptId,
+                    expectedGradeRevision: entry.gradeRevision, confirmRelease: true }));
+                }}>{t.releaseRevision}</button>}
               {entry.gradingState === "needs_manual" && entry.pendingWrittenCount > 0 &&
                 entry.approvedCount === entry.pendingWrittenCount &&
                 <button type="button" className="ws-btn ws-btn--primary ws-btn--sm"
@@ -165,22 +192,71 @@ export default function EssayGradingPage({ params, searchParams }: {
             <span dir="auto">{c.description} ({c.weightPercent}%)</span>
             <span className="text-sm">{t.criterion}</span>
             <input className="ws-input w-full max-w-32" type="number" min={0} max={100} step={1}
-              value={marks[c.id] ?? 0} disabled={!editable || busy}
+              value={marks[c.id] ?? 0} disabled={(!editable && !canRegrade) || busy}
               onChange={e => setMarks(old => ({ ...old, [c.id]: Number(e.target.value) }))} />
           </label>)}
         </fieldset> : <label className="grid gap-1">{t.noRubric}
           <span>{t.holistic} {(work.pointsAvailableCents / 100).toFixed(2)})</span>
           <input className="ws-input max-w-32" type="number" min={0}
             max={work.pointsAvailableCents / 100} step={0.01} value={holistic}
-            disabled={!editable || busy} onChange={e => setHolistic(e.target.value)} />
+            disabled={(!editable && !canRegrade) || busy} onChange={e => setHolistic(e.target.value)} />
         </label>}
         <label className="grid gap-1">{t.feedback}
           <textarea className="ws-input min-h-24" maxLength={2000} value={feedback}
-            disabled={!editable || busy} onChange={e => setFeedback(e.target.value)} /></label>
-        <label className="grid gap-1">{t.moderation}
+            disabled={(!editable && !canRegrade) || busy} onChange={e => setFeedback(e.target.value)} /></label>
+        {proposal && <section className="rounded-xl border border-border p-3 grid gap-3">
+          <h3 className="font-semibold">{t.proposal}</h3>
+          <p className="cb-note">{t.status}: {proposal.state} · {t.confidence}: {proposal.confidence} ·
+            {t.score}: {(proposal.awardedCents / 100).toFixed(2)}</p>
+          <p className="whitespace-pre-wrap text-sm" dir="auto">{proposal.feedback}</p>
+          <div className="grid gap-2">
+            <strong className="text-sm">{t.evidence}</strong>
+            {proposal.evidence.map(e => <div key={e.criterionId} className="rounded-lg border border-border p-2 text-sm">
+              <p className="font-medium" dir="auto">{e.quote}</p>
+              <p dir="auto">{e.rationale}</p>
+            </div>)}
+          </div>
+          {proposal.state === "sent" && review && reviewJob && <div className="flex flex-wrap gap-2">
+            <button type="button" className="ws-btn ws-btn--primary ws-btn--sm" disabled={busy}
+              onClick={() => void act(() => decideProposal({
+                jobId: reviewJob.jobId, questionIndex, expectedJobRevision: review.revision,
+                expectedMarkRevision: gradeRevision, decision: "accept", note,
+              }))}>{t.apply}</button>
+            <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm"
+              disabled={busy || !note.trim()} onClick={() => void act(() => decideProposal({
+                jobId: reviewJob.jobId, questionIndex, expectedJobRevision: review.revision,
+                expectedMarkRevision: gradeRevision, decision: "override", note,
+                criterionScores: work.rubricCriteria.map(c => ({
+                  criterionId: c.id, scorePercent: marks[c.id] ?? 0,
+                })),
+                ...(work.rubricCriteria.length ? {} : {
+                  holisticAwardCents: Math.round(Number(holistic) * 100),
+                }), feedback,
+              }))}>{t.adjust}</button>
+            <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm"
+              disabled={busy || !note.trim()} onClick={() => void act(() => decideProposal({
+                jobId: reviewJob.jobId, questionIndex, expectedJobRevision: review.revision,
+                expectedMarkRevision: gradeRevision, decision: "reject", note,
+              }))}>{t.reject}</button>
+          </div>}
+        </section>}
+        <label className="grid gap-1">{proposal?.state === "sent" || canRegrade ? t.doctorReason : t.moderation}
           <textarea className="ws-input min-h-20" maxLength={2000} value={note}
-            disabled={status !== "submitted" || busy} onChange={e => setNote(e.target.value)} /></label>
+            disabled={(status !== "submitted" && proposal?.state !== "sent" && !canRegrade) || busy}
+            onChange={e => setNote(e.target.value)} /></label>
         <div className="flex flex-wrap gap-2">
+          {canRegrade && entry && <button type="button" className="ws-btn ws-btn--primary"
+            disabled={busy || note.trim().length < 10}
+            onClick={() => void act(() => regrade({
+              attemptId, questionIndex, expectedGradeRevision: entry.gradeRevision,
+              expectedMarkRevision: gradeRevision,
+              criterionScores: work.rubricCriteria.map(c => ({
+                criterionId: c.id, scorePercent: marks[c.id] ?? 0,
+              })),
+              ...(work.rubricCriteria.length ? {} : {
+                holisticAwardCents: Math.round(Number(holistic) * 100),
+              }), feedback, reason: note,
+            }))}>{t.regrade}</button>}
           {editable && <button type="button" className="ws-btn ws-btn--primary" disabled={busy}
             onClick={() => void act(() => save({ attemptId, questionIndex, expectedRevision: gradeRevision,
               criterionScores: work.rubricCriteria.map(c => ({ criterionId: c.id, scorePercent: marks[c.id] ?? 0 })),
