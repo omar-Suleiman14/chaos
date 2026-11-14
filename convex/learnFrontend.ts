@@ -180,9 +180,11 @@ const assessment = v.object({ kind: v.literal("form"), id: v.id("forms"), title:
 export const attachedQuizzes = query({
   args: { lessonId: v.id("lessons") }, returns: v.array(assessment),
   handler: async (ctx, args) => {
-    // Do not distinguish a private empty lesson from an authorized empty lesson.
-    await lessonAccess(ctx, args.lessonId);
+    // An empty list is the same for all viewers and discloses no quiz metadata.
+    // Populated lists still recheck current course admission before returning any links.
     const links = await ctx.db.query("lessonAssessments").withIndex("by_lessonId_and_order", q => q.eq("lessonId", args.lessonId)).take(50);
+    if (!links.length) return [];
+    await lessonAccess(ctx, args.lessonId);
     const result = [];
     for (const link of links) {
       if (link.asset.kind !== "form") continue;
