@@ -56,7 +56,8 @@ async function myProjection(ctx: QueryCtx, attempt: Doc<"examAttempts">, now: nu
       published.courseId !== attempt.courseId))
     throw new Error("INTEGRITY_ERROR: Result publication ownership mismatch.");
   const status = attempt.state === "submitted"
-    ? resultStatus(grade, grade?.resultPolicy, published?.released === true, now)
+    ? resultStatus(grade, grade?.resultPolicy, (published?.released === true && (!grade?.finalizedAt ||
+      (published.releasedAt ?? -1) >= grade.finalizedAt)), now)
     : attempt.state;
   const transcript = status === "released" && grade?.finalPercentBasisPoints !== undefined
     ? {
@@ -141,7 +142,8 @@ export const teacherResults = query({
         maximumCents: grade?.maximumCents ?? null,
         percentBasisPoints: grade?.finalPercentBasisPoints ?? null,
         studentStatus: a.state === "submitted"
-          ? resultStatus(grade, grade?.resultPolicy, pub?.released === true, Date.now())
+          ? resultStatus(grade, grade?.resultPolicy, (pub?.released === true && (!grade?.finalizedAt ||
+            (pub.releasedAt ?? -1) >= grade.finalizedAt)), Date.now())
           : a.state,
       };
     }));
