@@ -149,3 +149,6 @@ export const acknowledge = mutation({
     return { revision, acceptedAt };
   },
 });
+
+/** Shared fail-closed candidate eligibility for future server-side attempt transport. */
+export { eligible as requireEligiblePreflight };

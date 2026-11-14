@@ -77,6 +77,21 @@ export const examRuntimeTables = {
     revision: v.number(),
   }).index("by_release_student", ["releaseId", "studentId"]),
   /** Attempts always bind a specific snapshot, not a live question or mutable release pointer. */
+  /** One authoritative answer per question per attempt. No answer keys are stored here. */
+  examAttemptAnswers: defineTable({
+    attemptId: v.id("examAttempts"),
+    snapshotId: v.id("examSnapshots"),
+    studentId: v.string(),
+    questionIndex: v.number(),
+    choiceIds: v.array(v.string()),
+    text: v.string(),
+    flagged: v.boolean(),
+    savedForLater: v.boolean(),
+    revision: v.number(),
+    lastMutationId: v.string(),
+    savedAt: v.number(),
+  })
+    .index("by_attempt_question", ["attemptId", "questionIndex"]),
   examAttempts: defineTable({
     ownerId: v.string(),
     courseId: v.id("learnCollections"),
