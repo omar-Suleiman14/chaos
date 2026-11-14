@@ -2,6 +2,7 @@ import { defineTable } from "convex/server";
 import { v } from "convex/values";
 import { bankChoice, bankKind } from "./questionBankModel";
 import { examSettings } from "./examSettingsModel";
+import { examAudience } from "./examAudienceModel";
 
 /** A sealed snapshot is append-only: no public update/delete API may mutate its content or key. */
 export const frozenQuestion = v.object({
@@ -58,9 +59,13 @@ export const examRuntimeTables = {
     settings: v.optional(examSettings),
     settingsRevision: v.optional(v.number()),
     preparedForAudience: v.optional(v.boolean()),
+    audience: v.optional(examAudience),
+    audienceRevision: v.optional(v.number()),
+    assignmentActive: v.optional(v.boolean()),
+    assignedAt: v.optional(v.number()),
     createdAt: v.number(),
     updatedAt: v.number(),
-  }).index("by_draft", ["draftId"]),
+  }).index("by_draft", ["draftId"]).index("by_course", ["courseId"]),
   /** Attempts always bind a specific snapshot, not a live question or mutable release pointer. */
   examAttempts: defineTable({
     ownerId: v.string(),

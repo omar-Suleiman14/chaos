@@ -5,7 +5,7 @@ import { toast } from "@/lib/toast";
 import { api } from "@/convex/_generated/api";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { ArrowRight, Bookmark, BookOpen, BookOpenText, ChevronDown, Compass, GraduationCap, Layers, Plus, Target } from "lucide-react";
+import { ArrowRight, Bookmark, BookOpen, BookOpenText, CalendarClock, ChevronDown, Compass, GraduationCap, Layers, Plus, Target } from "lucide-react";
 import { EmptyState, LessonCard } from "@/components/learn/ui";
 import { WsMenu } from "@/components/workspace/primitives";
 import {
@@ -20,7 +20,7 @@ const copy = {
   en: {
     title: "Learn", lead: "Your lessons, courses and study material in one place.", newLesson: "New lesson", newLabel: "New", newMenu: "Create something new", lessonItem: "Lesson", lessonHelp: "A page to teach one thing", courseItem: "Course", courseHelp: "Lessons in order, for people to take", setItem: "Flashcard set", setHelp: "Cards to study with spaced review", untitledSet: "Untitled set", explore: "Explore",
     continue: "Continue learning", continueEmpty: "Lessons you start show up here so you can pick up where you left off.",
-    courses: "My courses", coursesEmpty: "Courses you start appear here with your next lesson.", browse: "Browse courses", all: "See all",
+    dueExams: "Due Exams", courses: "My courses", coursesEmpty: "Courses you start appear here with your next lesson.", browse: "Browse courses", all: "See all",
     saved: "Saved", savedEmpty: "Save lessons or single paragraphs and diagrams while you read.",
     recent: "Recently opened", mine: "Your lessons", mineEmpty: "Write a lesson from scratch: headings, images, videos, equations and sources.",
     discover: "New in Explore", discoverEmpty: "No public lessons yet. Publish one to start the collection.",
@@ -30,7 +30,7 @@ const copy = {
   ar: {
     title: "تعلّم", lead: "دروسك ومقرراتك ومواد مذاكرتك في مكان واحد.", newLesson: "درس جديد", newLabel: "جديد", newMenu: "أنشئ شيئًا جديدًا", lessonItem: "درس", lessonHelp: "صفحة تشرح شيئًا واحدًا", courseItem: "دورة", courseHelp: "دروس مرتبة يأخذها الناس", setItem: "مجموعة بطاقات", setHelp: "بطاقات للمذاكرة بالمراجعة المتباعدة", untitledSet: "مجموعة بلا عنوان", explore: "استكشف",
     continue: "تابع التعلّم", continueEmpty: "تظهر هنا الدروس التي تبدأها لتكمل من حيث توقفت.",
-    courses: "مقرراتي", coursesEmpty: "تظهر هنا الدورات التي تبدأها مع درسك التالي.", browse: "تصفح المقررات", all: "عرض الكل",
+    dueExams: "الامتحانات المستحقة", courses: "مقرراتي", coursesEmpty: "تظهر هنا الدورات التي تبدأها مع درسك التالي.", browse: "تصفح المقررات", all: "عرض الكل",
     saved: "المحفوظات", savedEmpty: "احفظ دروسًا أو فقرات ورسومًا منفردة أثناء القراءة.",
     recent: "فُتحت مؤخرًا", mine: "دروسك", mineEmpty: "اكتب درسًا من الصفر: عناوين وصور وفيديو ومعادلات ومصادر.",
     discover: "جديد في الاستكشاف", discoverEmpty: "لا دروس عامة بعد. انشر درسًا لتبدأ المجموعة.",
@@ -70,6 +70,7 @@ export default function LearnHome() {
       <header className="lx-hero">
         <div><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></div>
         <div className="lx-actions">
+          <Link href="/dashboard/learn/exams" className="ws-btn"><CalendarClock size={16} aria-hidden />{t.dueExams}</Link>
           <Link href={hostHref("/learn")} className="ws-btn"><Compass size={16} aria-hidden />{t.explore}</Link>
           <WsMenu label={t.newMenu} align="end" triggerClassName="ws-btn ws-btn--primary" trigger={<><Plus size={16} aria-hidden />{t.newLabel}<ChevronDown size={15} aria-hidden /></>}>
             {(close) => (

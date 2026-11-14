@@ -3,6 +3,7 @@ import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } fr
 import type { Id } from "./_generated/dataModel";
 import { requireActiveUser, creatorRestricted } from "./authz";
 import { hasApprovedCourseAccess } from "./courseMembership";
+import { audienceAllows } from "./examAudience";
 import { eligibleByRow, loadPool, validatePlan, validateSelections } from "./examBuilder";
 import { transitionExamAttempt } from "./examAttemptState";
 import { attemptState } from "./examRuntimeModel";
@@ -103,7 +104,8 @@ export const sealDraft = mutation({
       version, title: draft.title, questions, totalPoints, sealedAt: now,
     });
     if (release) await ctx.db.patch("examReleases", release._id, {
-      activeSnapshotId: snapshotId, version, preparedForAudience: false, updatedAt: now,
+      activeSnapshotId: snapshotId, version, preparedForAudience: false,
+      assignmentActive: false, studentEntryEnabled: false, updatedAt: now,
     });
     else await ctx.db.insert("examReleases", {
       ownerId, courseId: course._id, draftId, activeSnapshotId: snapshotId, version,
@@ -149,7 +151,8 @@ export const startAttempt = mutation({
     const release = await ctx.db.query("examReleases")
       .withIndex("by_draft", q => q.eq("draftId", snapshot.draftId)).unique();
     if (!release || release.ownerId !== snapshot.ownerId ||
-      release.activeSnapshotId !== snapshotId || !release.studentEntryEnabled)
+      release.activeSnapshotId !== snapshotId || !release.studentEntryEnabled ||
+      !release.assignmentActive || !release.audience)
       throw new Error("EXAM_NOT_ASSIGNED: This exam is not open for student attempts.");
     const course = await ctx.db.get("learnCollections", snapshot.courseId);
     if (!course || course.ownerId !== snapshot.ownerId || course.archived ||
@@ -157,8 +160,10 @@ export const startAttempt = mutation({
       course.communityState === "hidden" || !(await hasApprovedCourseAccess(ctx, snapshot.courseId, studentId)) ||
       course.ownerId === studentId)
       throw new Error("NOT_FOUND: Course exam not available.");
-    // PR 14 must check all/selected/group audience before removing this final guard.
-    throw new Error("EXAM_NOT_ASSIGNED: Audience policies have not been installed.");
+    if (!await audienceAllows(ctx, snapshot.courseId, release.audience, studentId))
+      throw new Error("NOT_FOUND: Exam not assigned to this course student.");
+    // Preflight, safe content delivery, timed attempts and quota enforcement land in later PRs.
+    throw new Error("EXAM_NOT_READY: Secure student entry is not yet enabled.");
   },
 });
 

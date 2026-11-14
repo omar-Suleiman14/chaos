@@ -63,7 +63,8 @@ export const saveForDraft = mutation({
     const clean = validateExamSettings(settings, Date.now());
     await ctx.db.patch("examReleases", release._id, {
       settings: clean, settingsRevision: expectedRevision + 1,
-      preparedForAudience: false, updatedAt: Date.now(),
+      preparedForAudience: false, assignmentActive: false,
+      studentEntryEnabled: false, updatedAt: Date.now(),
     });
     return expectedRevision + 1;
   },
@@ -92,7 +93,8 @@ export const setPrepared = mutation({
       validateExamSettings(release.settings, Date.now());
     }
     await ctx.db.patch("examReleases", release._id, {
-      preparedForAudience: prepared, settingsRevision: expectedRevision + 1,
+      preparedForAudience: prepared, assignmentActive: prepared ? release.assignmentActive : false,
+      settingsRevision: expectedRevision + 1,
       updatedAt: Date.now(),
     });
     return expectedRevision + 1;
