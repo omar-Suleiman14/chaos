@@ -56,7 +56,6 @@ export const requestJoin = mutation({
     if (!row || row.ownerId === identity.subject) {
       throw new Error("VALIDATION_FAILED: Cannot request your own course.");
     }
-    if (await existingEnrollment(ctx, course.id, identity.subject)) return null;
     const prior = await requestFor(ctx, course.id, identity.subject);
     if (prior?.status === "pending" || prior?.status === "approved") return null;
     const now = Date.now();
@@ -98,7 +97,6 @@ export const myStatus = query({
     const row = await ctx.db.get("learnCollections", courseId);
     if (!row) return "none";
     if (row.ownerId === identity.subject) return "approved";
-    if (await existingEnrollment(ctx, courseId, identity.subject)) return "approved";
     const request = await requestFor(ctx, courseId, identity.subject);
     return request?.status ?? "none";
   },
