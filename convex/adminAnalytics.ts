@@ -66,6 +66,19 @@ export const overview = query({
   ),
   handler: ctx => overviewForActor(ctx),
 });
+/** The last 30 completed scans only: no identities, raw submissions or inferred live traffic. */
+export async function historyForActor(ctx: QueryCtx, actorId?: string) {
+  await requireAdminForActor(ctx, actorId);
+  const snapshots = await ctx.db.query("adminMetricSnapshots")
+    .withIndex("by_completedAt").order("desc").take(30);
+  return snapshots.map(({ completedAt, counts }) => ({ completedAt, counts }));
+}
+export const history = query({
+  args: {},
+  returns: v.array(v.object({ completedAt: v.number(), counts: metricsValidator })),
+  handler: ctx => historyForActor(ctx),
+});
+
 /** One bounded page per transaction; does not load answers or drafts into the UI. */
 export const scan = internalMutation({
   args: { startedAt: v.number() },
@@ -114,15 +127,24 @@ export const scan = internalMutation({
       cursor = page.isDone ? null : page.continueCursor;
       done = page.isDone;
     }
+    const completedAt = done ? Date.now() : null;
     await ctx.db.patch("adminMetrics", job._id, {
       pending,
       phase,
       cursor,
       running: !done,
-      ...(done ? { counts: pending, completedAt: Date.now() } : {}),
+      ...(completedAt !== null ? { counts: pending, completedAt } : {}),
     });
-    if (!done)
+    if (completedAt !== null) {
+      // This is in the same Convex transaction as marking the scan complete.
+      // Replayed or stale scan jobs cannot create duplicate history rows.
+      await ctx.db.insert("adminMetricSnapshots", { completedAt, counts: pending });
+      const snapshots = await ctx.db.query("adminMetricSnapshots")
+        .withIndex("by_completedAt").order("desc").take(31);
+      if (snapshots.length > 30) await ctx.db.delete(snapshots[30]._id);
+    } else {
       await ctx.scheduler.runAfter(0, internal.adminAnalytics.scan, args);
+    }
     return null;
   },
 });
