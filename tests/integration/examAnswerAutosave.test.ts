@@ -133,6 +133,7 @@ it("recovers ACKs, rejects stale tabs, invalid answers and finalized saves", asy
   expect(recovered).toEqual([{
     questionIndex: 0, choiceIds: ["a"], text: "", flagged: false,
     savedForLater: false, revision: 1, savedAt: ack.savedAt,
+    lastMutationId: "autosave-retry-001",
   }]);
   expect(JSON.stringify(recovered)).not.toMatch(/correctChoiceIds|explanation|sampleAnswer/);
   await expect(owner.query(api.examAnswers.getMine, { attemptId }))
