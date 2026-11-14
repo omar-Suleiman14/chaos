@@ -16,6 +16,8 @@ const requestStatus = v.union(
   v.literal("approved"),
   v.literal("rejected"),
   v.literal("withdrawn"),
+  v.literal("suspended"),
+  v.literal("removed"),
 );
 
 async function requestFor(
@@ -58,6 +60,9 @@ export const requestJoin = mutation({
     }
     const prior = await requestFor(ctx, course.id, identity.subject);
     if (prior?.status === "pending" || prior?.status === "approved") return null;
+    if (prior?.status === "suspended" || prior?.status === "removed") {
+      throw new Error("APPROVAL_REQUIRED: Only the teacher can readmit this student.");
+    }
     const now = Date.now();
     if (prior) {
       await ctx.db.patch("courseJoinRequests", prior._id, {
@@ -90,6 +95,8 @@ export const myStatus = query({
     v.literal("approved"),
     v.literal("rejected"),
     v.literal("withdrawn"),
+    v.literal("suspended"),
+    v.literal("removed"),
   ),
   handler: async (ctx, { courseId }) => {
     const identity = await getAuthIdentity(ctx);
