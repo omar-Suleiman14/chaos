@@ -1,6 +1,6 @@
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import type { Doc, Id } from "./_generated/dataModel";
+import type { Id } from "./_generated/dataModel";
 import { requireActiveUser, creatorRestricted } from "./authz";
 import { validJob } from "./examGradingJobs";
 import { calculateEssayAward, validateMarkFeedback } from "./examEssayGradingModel";
@@ -298,6 +298,8 @@ export const regrade = mutation({
       args.criterionScores, args.holisticAwardCents);
     if (award === old.awardedCents)
       throw new Error("GRADING_CONFLICT: New score is unchanged.");
+    if (!Number.isSafeInteger(grade.maximumCents) || grade.maximumCents <= 0)
+      throw new Error("INTEGRITY_ERROR: Invalid final grade maximum.");
     const earnedCents = grade.earnedCents - old.awardedCents + award;
     if (!Number.isSafeInteger(earnedCents) || earnedCents < 0 ||
         earnedCents > grade.maximumCents)
