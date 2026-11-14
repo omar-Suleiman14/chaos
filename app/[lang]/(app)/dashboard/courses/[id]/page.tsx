@@ -137,6 +137,7 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
       </section>}
 
       {course.isOwner && <section className="cb-section flex flex-wrap items-center justify-between gap-3"><div><h2>{locale === "ar" ? "التكليفات ودفتر الدرجات" : "Assignments & gradebook"}</h2><p className="cb-note">{locale === "ar" ? "مواعيد المحاضرات والامتحانات وإكمال الطلاب والدرجات." : "Manage deadlines, completion and final exam grades."}</p></div><Link className="ws-btn ws-btn--primary" href={"/dashboard/courses/" + courseId + "/assignments"}><ClipboardList size={16} aria-hidden />{locale === "ar" ? "فتح دفتر الدرجات" : "Open gradebook"}</Link></section>}
+      {course.isOwner && <section className="cb-section flex flex-wrap items-center justify-between gap-3"><div><h2>{locale === "ar" ? "الفصل والإعلانات والتقويم" : "Classroom, announcements & calendar"}</h2><p className="cb-note">{locale === "ar" ? "إعلانات المحاضرات ورسائل الطلاب والجدول." : "Schedule classes, post announcements and reply to students."}</p></div><Link className="ws-btn ws-btn--primary" href={"/dashboard/courses/" + courseId + "/classroom"}>{locale === "ar" ? "فتح الفصل" : "Open classroom"}</Link></section>}
       {course.isOwner && <CourseStudents courseId={courseId} />}
       <CourseDetailsEditor courseId={courseId} details={course.details} />
 
