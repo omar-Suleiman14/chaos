@@ -10,7 +10,7 @@ This is an isolated draft. No existing PR is merged or deployed.
 - MCP exposes list_notifications, mark_notifications_read, get_notification_preferences and set_notification_preference, with existing account identity forwarding and granular read/edit permission categories.
 
 ## Delivery contract
-In-app delivery is synchronous and atomic: if the source transaction fails, neither event nor notification persists, and retries of the same event key do not create duplicates. This avoids a separate retry queue for database-only delivery. An external channel with backoff, fan-out pagination and dead-letter recovery is **not** included. PR 34 will implement push subscription and delivery infrastructure.
+In-app delivery is synchronous and atomic: if the source transaction fails, neither event nor notification persists, and retries of the same event key do not create duplicates. This avoids a separate retry queue for database-only delivery. An external channel with backoff, fan-out pagination and dead-letter recovery is **not** included. PR 34/34 adds opt-in push subscription, browser service worker, VAPID-encrypted scheduled delivery and bounded retries; see [PWA push acceptance](./pwa-push-pr34.md). It remains draft and is not production-validated.
 
 ## Required acceptance
 - CI: build, lint, typecheck, unit/integration, browser and performance checks.

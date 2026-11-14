@@ -156,8 +156,27 @@ ${json({ name: "personal", plugins: [{ name: chaos.id, source: { source: "local"
   };
 }
 
+/** Gemini Apps uses an OAuth connector; Gemini CLI consumes the settings.json HTTP MCP stanza. */
+export function geminiPackage(logo: LogoAssets, studyFiles: PackageFiles = {}): PackageFiles {
+  return {
+    ...studyFiles,
+    "gemini/settings.json": json({ mcpServers: { [chaos.id]: { httpUrl: chaos.mcpUrl } } }),
+    ".mcp.json": mcpConfig(),
+    [`skills/${chaos.id}/SKILL.md`]: skill("Gemini"),
+    "assets/logo.svg": logo.svg,
+    "assets/logo.png": logo.png512,
+    "README.md": readme("Gemini", integrationPlatforms.gemini.docsUrl, [
+      "For Gemini CLI, merge gemini/settings.json into ~/.gemini/settings.json (do not overwrite unrelated settings).",
+      "Start Gemini CLI, run /mcp, then authenticate Chaos through the browser OAuth flow.",
+      "For Gemini Apps, open gemini.google.com and use custom Connected Apps if your account is eligible (currently US, 18+, personal Google account, Keep Activity enabled, English). Add Chaos with its public MCP URL and approve OAuth.",
+      "Gemini Apps and Gemini CLI are different products; this ZIP is a CLI configuration bundle, not a native Gemini Apps extension.",
+    ], undefined, studyFiles),
+  };
+}
+
 export function integrationPackage(id: IntegrationPlatformId, logo: LogoAssets, studyFiles: PackageFiles = {}): PackageFiles {
-  return id === "claude" ? claudePackage(logo, studyFiles) : chatGptPackage(logo, studyFiles);
+  return id === "claude" ? claudePackage(logo, studyFiles) :
+    id === "chatgpt" ? chatGptPackage(logo, studyFiles) : geminiPackage(logo, studyFiles);
 }
 
 /** Maps a download file name to its platform, or null for anything else. */
