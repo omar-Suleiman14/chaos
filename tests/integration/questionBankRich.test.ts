@@ -12,6 +12,7 @@ const base={
 };
 async function fixture() {
   vi.stubEnv("CLERK_JWT_ISSUER_DOMAIN",creatorIdentity.issuer);
+  vi.stubEnv("CONVEX_SITE_URL","https://test.convex.site");
   const t=createTestConvex();
   const doctor=t.withIdentity(creatorIdentity);
   const other=t.withIdentity(otherCreatorIdentity);
