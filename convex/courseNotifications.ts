@@ -24,6 +24,7 @@ export async function notifyCourseAccount(ctx: MutationCtx, input: {
   if (prefs?.disabled.includes(input.kind)) return null;
   const path = input.recipientId === course.ownerId
     ? "/dashboard/courses/" + input.courseId + "/classroom"
+    : input.kind === "course_result" ? "/dashboard/learn/exams/results"
     : "/dashboard/learn/classroom/" + input.courseId;
   return await ctx.db.insert("notifications", {
     ownerId: input.recipientId, courseId: input.courseId,
