@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { markNotificationsReadLocally, useOptimisticMutation } from "@/lib/optimistic";
 import { Bell } from "lucide-react";
+import PushNotificationControl from "./PushNotificationControl";
 import { api } from "@/convex/_generated/api";
 import { formatNumber, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
@@ -87,6 +88,7 @@ export default function NotificationBell() {
                 </label>
               ))}
             </div>
+            <PushNotificationControl />
           </details>
           {!data?.items.length ? (
             <p className="px-4 py-6 text-sm text-muted-foreground">{t.empty}</p>
