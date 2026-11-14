@@ -26,6 +26,7 @@ import { registerAssessmentTools } from "./assessments";
 import { registerGlossaryTools } from "./glossary";
 import { permissionForTool, requireToolPermission, type McpPermission } from "./permissions";
 import { registerCourseTools } from "./courses";
+import { registerNotificationTools } from "./notifications";
 import { registerFlashcardTools } from "./flashcards";
 import { registerOrganizationTools } from "./organization";
 import { registerTeamTools } from "./teams";
@@ -539,6 +540,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
   registerOrganizationTools(server, run, securitySchemes);
   registerTeamTools(server, run, securitySchemes);
   registerCourseTools(server, run, securitySchemes, { call, flow });
+  registerNotificationTools(server, run, securitySchemes);
   registerFlashcardTools(server, run, securitySchemes, { call, flow });
   registerQuizForkTools(server, run, securitySchemes);
   registerCommunityTools(server, run, securitySchemes);

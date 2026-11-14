@@ -1,0 +1,20 @@
+# Chaos PR 29/34 — Platform Notifications, In-App Inbox, Preferences & MCP Parity
+
+This is an isolated draft. No existing PR is merged or deployed.
+
+## Shipped in branch
+- Existing Notification Bell keeps form response, webhook and approval notifications and now shows course notices with deep links and EN/AR course-category toggles.
+- Course announcements, calendar sessions, assignments, classroom messages, join requests, approved admissions and explicitly published/regraded results create notifications in the same Convex transaction as their source change.
+- Dedupe per (recipient,eventKey), validated bounded text, default-on account-owned preferences, bounded fan-out (80 approved enrollees), and fresh course approval checks at send and read time.
+- Grade notifications use generic text and never contain scores, answers, rubrics or withheld drafts.
+- MCP exposes list_notifications, mark_notifications_read, get_notification_preferences and set_notification_preference, with existing account identity forwarding and granular read/edit permission categories.
+
+## Delivery contract
+In-app delivery is synchronous and atomic: if the source transaction fails, neither event nor notification persists, and retries of the same event key do not create duplicates. This avoids a separate retry queue for database-only delivery. An external channel with backoff, fan-out pagination and dead-letter recovery is **not** included. PR 34 will implement push subscription and delivery infrastructure.
+
+## Required acceptance
+- CI: build, lint, typecheck, unit/integration, browser and performance checks.
+- Genuine screenshots and keyboard/reader accessibility on AR/EN, mobile/desktop, light/dark.
+- Live OAuth, doctor/student approval and revocation, suspended account and grade privacy tests.
+- Courses with over 80 students need paginated fan-out before enabling notifications.
+- Vercel preview and protected source/media/MCP review must pass before release.

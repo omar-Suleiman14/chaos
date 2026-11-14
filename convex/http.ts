@@ -337,6 +337,10 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "add_course_lesson": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:addLesson"), { ...input, userId }); await stamp(result); break;
       case "publish_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:publish"), { ...input, userId }); break;
       case "list_courses": result = await ctx.runQuery(makeFunctionReference<"query">("mcpCourses:list"), { ...input, userId }); break;
+      case "list_notifications": result = await ctx.runQuery(makeFunctionReference<"query">("mcpNotifications:list"), { userId }); break;
+      case "mark_notifications_read": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpNotifications:markRead"), { ...input, userId }); break;
+      case "get_notification_preferences": result = await ctx.runQuery(makeFunctionReference<"query">("mcpNotifications:preferences"), { userId }); break;
+      case "set_notification_preference": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpNotifications:setPreference"), { ...input, userId }); break;
       case "set_course_archived": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:setArchived"), { ...input, userId }); break;
       case "unpublish_course": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpCourses:unpublish"), { ...input, userId }); break;
       case "list_flashcard_sets": result = await ctx.runQuery(makeFunctionReference<"query">("mcpFlashcards:list"), { ...input, userId }); break;
