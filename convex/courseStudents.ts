@@ -32,7 +32,8 @@ export const myEnrollment = query({
 export const enroll = mutation({
   args: { courseId: v.string(), guestName: v.optional(v.string()), ...guestArgs },
   returns: v.null(),
-  handler: async () => {
+  handler: async (ctx) => {
+    if (await getAuthIdentity(ctx)) await requireActiveUser(ctx);
     throw new Error("APPROVAL_REQUIRED: Request to join and wait for course-owner approval.");
   },
 });
