@@ -1,6 +1,7 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
 import { bankChoice, bankKind } from "./questionBankModel";
+import { examSettings } from "./examSettingsModel";
 
 /** A sealed snapshot is append-only: no public update/delete API may mutate its content or key. */
 export const frozenQuestion = v.object({
@@ -53,6 +54,10 @@ export const examRuntimeTables = {
     activeSnapshotId: v.id("examSnapshots"),
     version: v.number(),
     studentEntryEnabled: v.boolean(),
+    /** Explicit release policy defaults to unconfigured; never implicitly activates exams. */
+    settings: v.optional(examSettings),
+    settingsRevision: v.optional(v.number()),
+    preparedForAudience: v.optional(v.boolean()),
     createdAt: v.number(),
     updatedAt: v.number(),
   }).index("by_draft", ["draftId"]),
