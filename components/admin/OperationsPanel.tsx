@@ -103,24 +103,74 @@ function Grading({ locale }: { locale: "en" | "ar" }) {
 
 function Usage({ locale }: { locale: "en" | "ar" }) {
   const report = useQuery(api.adminAnalytics.overview);
+  const history = useQuery(api.adminAnalytics.history);
   const refresh = useMutation(api.adminAnalytics.refresh);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
   const counts = report?.completedAt ? report.counts : null;
-  return <section className="space-y-4" aria-label="Platform usage">
-    <p className="ws-page-subtitle">{translations[locale].noBilling} {report?.completedAt ? "Completed snapshot: " + format(report.completedAt) : "No completed snapshot yet."} {report?.running ? "Refresh in progress." : ""}</p>
+  const latest = history?.[0];
+  const previous = history?.[1];
+  const differences = latest && previous ? [
+    { label: locale === "ar" ? "الحسابات" : "Accounts", value: latest.counts.users - previous.counts.users },
+    { label: locale === "ar" ? "النماذج" : "Forms", value: latest.counts.forms - previous.counts.forms },
+    { label: locale === "ar" ? "الردود" : "Responses", value: latest.counts.responses - previous.counts.responses },
+    { label: locale === "ar" ? "الردود الجزئية" : "Partial responses", value: latest.counts.partials - previous.counts.partials },
+  ] : [];
+  const numeric = (value: number) => value.toLocaleString(locale === "ar" ? "ar-EG" : "en-US");
+  return <section className="space-y-4" aria-label={locale === "ar" ? "إحصائيات المنصة" : "Platform usage"}>
+    <p className="ws-page-subtitle">{translations[locale].noBilling} {report?.completedAt
+      ? (locale === "ar" ? "آخر إحصاء مكتمل: " : "Completed snapshot: ") + format(report.completedAt)
+      : locale === "ar" ? "لا يوجد إحصاء مكتمل بعد." : "No completed snapshot yet."}
+      {report?.running ? (locale === "ar" ? " التحديث جارٍ." : " Refresh in progress.") : ""}
+    </p>
     <button className="ws-btn" disabled={busy || report?.running} onClick={async () => {
       setBusy(true); setError("");
       try { await refresh({}); } catch (e) { setError(e instanceof Error ? e.message : "Refresh failed"); }
       finally { setBusy(false); }
-    }}>Refresh usage snapshot</button>
+    }}>{busy ? (locale === "ar" ? "جارٍ الإرسال…" : "Requesting…")
+      : (locale === "ar" ? "تحديث إحصاءات الاستخدام" : "Refresh usage snapshot")}</button>
     {error && <p role="alert">{error}</p>}
     {counts && <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
-      {([["Accounts", counts.users], ["Published forms", counts.liveForms],
-        ["Forms", counts.forms], ["Responses", counts.responses],
-        ["Partial responses", counts.partials], ["Restricted accounts", counts.restricted]] as const).map(([label, value]) =>
-        <div key={label} className="rounded-lg border p-4"><span className="text-sm text-muted-foreground">{label}</span><strong className="block text-2xl">{value.toLocaleString()}</strong></div>)}
+      {([
+        [locale === "ar" ? "الحسابات" : "Accounts", counts.users],
+        [locale === "ar" ? "النماذج المنشورة" : "Published forms", counts.liveForms],
+        [locale === "ar" ? "النماذج" : "Forms", counts.forms],
+        [locale === "ar" ? "الردود" : "Responses", counts.responses],
+        [locale === "ar" ? "الردود الجزئية" : "Partial responses", counts.partials],
+        [locale === "ar" ? "الحسابات المقيدة" : "Restricted accounts", counts.restricted],
+      ] as const).map(([label, value]) =>
+        <div key={label} className="rounded-lg border p-4"><span className="text-sm text-muted-foreground">{label}</span><strong className="block text-2xl">{numeric(value)}</strong></div>)}
     </div>}
+    <div className="space-y-3">
+      <h3 className="font-semibold">{locale === "ar" ? "سجل إحصاءات الاستخدام" : "Usage snapshot history"}</h3>
+      <p className="ws-page-subtitle">{locale === "ar"
+        ? "آخر 30 عملية إحصاء مكتملة فقط. الفروق بين عمليات التحديث وليست معدلات نشاط يومية؛ لا تتضمن بيانات الطلاب الفردية."
+        : "Last 30 completed scans only. Changes are between refreshes, not daily activity; no individual student data."}</p>
+      {history === undefined ? <output>{translations[locale].loading}</output> :
+        history.length === 0 ? <p className="ws-page-subtitle">{locale === "ar" ? "لا يوجد سجل حتى الآن." : "No completed refresh history yet."}</p> : <>
+          {differences.length > 0 && <div className="grid grid-cols-2 md:grid-cols-4 gap-3" aria-label={locale === "ar" ? "التغير منذ الإحصاء السابق" : "Change since previous snapshot"}>
+            {differences.map(item => <div key={item.label} className="rounded-lg border p-3">
+              <span className="block text-sm text-muted-foreground">{item.label}</span>
+              <strong className="block text-lg" dir="ltr">{item.value > 0 ? "+" : ""}{numeric(item.value)}</strong>
+            </div>)}
+          </div>}
+          <div className="ws-table-wrap"><table className="ws-table">
+            <caption className="sr-only">{locale === "ar" ? "الإحصاءات المكتملة مرتبة من الأحدث إلى الأقدم" : "Completed usage scans, newest first"}</caption>
+            <thead><tr>
+              <th scope="col">{locale === "ar" ? "وقت الاكتمال" : "Completed"}</th>
+              <th scope="col">{locale === "ar" ? "الحسابات" : "Accounts"}</th>
+              <th scope="col">{locale === "ar" ? "النماذج" : "Forms"}</th>
+              <th scope="col">{locale === "ar" ? "الردود" : "Responses"}</th>
+              <th scope="col">{locale === "ar" ? "الردود الجزئية" : "Partials"}</th>
+            </tr></thead>
+            <tbody>{history.map((row, index) => <tr key={index}>
+              <td>{format(row.completedAt)}</td><td>{numeric(row.counts.users)}</td>
+              <td>{numeric(row.counts.forms)}</td><td>{numeric(row.counts.responses)}</td>
+              <td>{numeric(row.counts.partials)}</td>
+            </tr>)}</tbody>
+          </table></div>
+        </>}
+    </div>
   </section>;
 }
 
