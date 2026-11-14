@@ -10,6 +10,9 @@ export type R2Config = {
 };
 export type R2Method = "GET" | "HEAD" | "PUT";
 
+/** Shared deterministic key used only within private R2 actions and HTTP proxies. */
+export const sourceR2Key = (sourceId: string) => "learn-sources/" + sourceId;
+
 export function r2Config(env: Record<string, string | undefined>): R2Config {
   const accountId = env.CHAOS_R2_ACCOUNT_ID ?? "";
   const bucket = env.CHAOS_R2_BUCKET ?? "";

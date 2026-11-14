@@ -14,8 +14,7 @@ import { trackSourceUploadForActor } from "./learnSourceRetention";
 import { fingerprintBytes, sourceFingerprint } from "./sourceFingerprint";
 import { accessibleStudySource } from "./studyLessons";
 import { env } from "./_generated/server";
-import { r2Config, signR2Request } from "../lib/r2/privateR2";
-import { sourceR2Key } from "./sourceR2Migration";
+import { r2Config, signR2Request, sourceR2Key } from "../lib/r2/privateR2";
 import {
   mimeKinds,
   validSignature,

@@ -15,7 +15,7 @@ Draft, stacked on #384. This is a guarded **copy and read-parity slice**, not au
 1. **Course source authorization parity is not certified.** Existing `canReadSourcePart` public/restricted grants, independently shared lesson sources, course source attachments and MCP/third-party source grants still need a full access-link audit and historic backfill. A public source remains public even when it is referenced by a protected course. Do not imply that only approved course students can access all legacy source bytes.
 2. Real private R2 bucket, scoped credentials, real migration/retry/rollback and mobile/MCP range smoke tests, interrupted retry and corruption drills have not been performed. No new source uploads are routed to R2 yet.
 3. Legacy Convex storage is intentionally **not deleted**. Existing historical storage URLs, usage/quota accounting, orphan R2 cleanup, bucket lifecycle and regulated retention holds must be audited before cutover. Count both copies separately during dual-write/dual-storage operations.
-4. Race-safe per-account migration rate limits, background batching, progress and operational monitoring are not shipped. Run a bounded manual migration only after review.
+4. Per-account migration is throttled to 10 owner-initiated copies/hour, but distributed bulk batching, progress, cancellation and operational monitoring are not shipped. Run a bounded manual migration only after review.
 5. Form/quiz access-code-gated images, #381/#384 screenshot requirements, and separate direct form/quiz/course source audit remain blockers to a secure production release. No merge/deploy from this draft.
 
 ## Safety invariants

@@ -19,8 +19,7 @@ import { LEARN_LIMITS, sourceMetadata, visibility } from "./learnModel";
 import { creatorRestricted, requireActiveUser } from "./authz";
 import { fingerprintBytes, nearByteDuplicate, sourceFingerprint, SOURCE_SIMILARITY_LIMITS } from "./sourceFingerprint";
 import { canReadSourcePart } from "./sourceAccess";
-import { r2Config, signR2Request } from "../lib/r2/privateR2";
-import { sourceR2Key } from "./sourceR2Migration";
+import { r2Config, signR2Request, sourceR2Key } from "../lib/r2/privateR2";
 
 type Metadata = Infer<typeof sourceMetadata>;
 export const SOURCE_UPLOAD_PATH = "/learn/sources/upload";

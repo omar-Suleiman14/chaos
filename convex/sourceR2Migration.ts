@@ -5,10 +5,9 @@ import type { Id } from "./_generated/dataModel";
 import { requireActiveUser } from "./authz";
 import { LEARN_LIMITS } from "./learnModel";
 import { validSignature } from "./learnSources";
-import { r2Config, signR2Request } from "../lib/r2/privateR2";
+import { r2Config, signR2Request, sourceR2Key } from "../lib/r2/privateR2";
+import { consumeRate } from "./serverUtils";
 
-/** Deterministic, non-guessable Convex source id; never return the R2 bucket URL. */
-export const sourceR2Key = (sourceId: Id<"learnSources">) => "learn-sources/" + sourceId;
 const sourceArgs = { sourceId: v.id("learnSources") };
 const etagPattern = /^"[A-Za-z0-9-]{16,128}"$/;
 
@@ -26,6 +25,19 @@ export const candidate = internalQuery({
       contentType: source.contentType, ready: Boolean(source.r2) };
   },
 });
+/** Throttle explicit owner-initiated copies before reading up to 25 MiB. */
+export const reserve = internalMutation({
+  args: sourceArgs, returns: v.null(),
+  handler: async (ctx, { sourceId }) => {
+    const { identity } = await requireActiveUser(ctx);
+    const source = await ctx.db.get("learnSources", sourceId);
+    if (!source || source.ownerId !== identity.subject || source.status === "removed" || !source.storageId)
+      throw new Error("NOT_FOUND: No owned source eligible for migration");
+    await consumeRate(ctx, "learn:source-r2-migration:" + identity.subject, 10, 60 * 60_000);
+    return null;
+  },
+});
+const reserveRef = makeFunctionReference<"mutation", { sourceId: Id<"learnSources"> }, null>("sourceR2Migration:reserve");
 const candidateRef = makeFunctionReference<"query", { sourceId: Id<"learnSources"> },
   { storageId: Id<"_storage">; sha256: string; bytes: number; contentType: string; ready: boolean }>("sourceR2Migration:candidate");
 
@@ -72,6 +84,7 @@ export const migrate = action({
   handler: async (ctx, { sourceId }) => {
     const selected = await ctx.runQuery(candidateRef, { sourceId });
     if (selected.ready) return { migrated: false };
+    await ctx.runMutation(reserveRef, { sourceId });
     // This action is opt-in and rate-limited; individual files remain <=25 MiB.
     const blob = await ctx.storage.get(selected.storageId);
     if (!blob || blob.size !== selected.bytes || (blob.type && blob.type !== selected.contentType))
