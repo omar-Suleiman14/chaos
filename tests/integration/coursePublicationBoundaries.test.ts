@@ -77,12 +77,12 @@ it("publishes lessons with their course, then keeps the live course in step with
  await owner.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: row!.revision, document: { schemaVersion: 1, blocks: [{ id: "p", type: "paragraph", text: "Lesson update", citations: [], conceptIds: [] }] } });
  row = await t.run(ctx => ctx.db.get("lessons", lessonId));
  expect((await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: row!.revision, visibility: "public" })).ok).toBe(true);
- expect(text((await t.query(api.courses.lesson, { courseId, lessonId }))?.version.document)).toBe("Lesson update");
+ expect(text((await owner.query(api.courses.lesson, { courseId, lessonId }))?.version.document)).toBe("Lesson update");
  // Republishing the course publishes newer lesson drafts as well.
  row = await t.run(ctx => ctx.db.get("lessons", lessonId));
  await owner.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: row!.revision, document: { schemaVersion: 1, blocks: [{ id: "p", type: "paragraph", text: "Course update", citations: [], conceptIds: [] }] } });
  expect(await owner.mutation(api.courses.publish, { courseId, visibility: "public" })).toEqual({ ok: true });
- expect(text((await t.query(api.courses.lesson, { courseId, lessonId }))?.version.document)).toBe("Course update");
+ expect(text((await owner.query(api.courses.lesson, { courseId, lessonId }))?.version.document)).toBe("Course update");
  // A lesson that can't be published blocks the course and stays unpublished.
  const draftLesson = await owner.mutation(api.courses.addLesson, { courseId, title: "Draft" });
  expect((await owner.mutation(api.courses.publish, { courseId, visibility: "public" })).ok).toBe(false);

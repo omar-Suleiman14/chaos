@@ -13,6 +13,7 @@ import { requireActiveUser, isPaidPlan, creatorRestricted } from "./authz";
 import { coursesContainingLesson, createLessonForActor, publishLessonForActor } from "./lessons";
 import { requireVisibilityAllowed } from "./plans";
 import { canEditTeamAsset, hasBusinessWorkspace, resolveAudienceTeam, teamAudienceAllows } from "./businessAccess";
+import { hasApprovedCourseAccess } from "./courseMembership";
 import { visibility } from "./learnModel";
 import { recordAssetPublicationAction } from "./learnPublicationAudit";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
@@ -405,7 +406,7 @@ export async function readCourseProgress(ctx: QueryCtx, args: { courseId: string
   const identity = asActor ? { subject: asActor } : await getAuthIdentity(ctx);
   if (!identity) return [];
   const course = await readPublicCourse(ctx, args, identity.subject);
-  if (!course) return [];
+  if (!course || !await hasApprovedCourseAccess(ctx, course.id, identity.subject)) return [];
   const actor = await canonicalCommunityActor(ctx, identity.subject);
   const result = [];
   for (const lesson of course.lessons) {
@@ -423,7 +424,7 @@ export async function rememberCourse(ctx: MutationCtx, args: { courseId: string 
   // MCP callers were already checked by requireLearnActor; native callers are checked here.
   if (!asActor) await requireActiveUser(ctx);
   const course = await readPublicCourse(ctx, args, identity.subject);
-  if (!course) throw new Error("NOT_FOUND: Course unavailable.");
+  if (!course || !await hasApprovedCourseAccess(ctx, course.id, identity.subject)) throw new Error("NOT_FOUND: Course unavailable.");
   const actor = await canonicalCommunityActor(ctx, identity.subject);
   const row = await ctx.db.query("learnCourseActivity").withIndex("by_userKey_and_courseId", q => q.eq("userKey", actor.tokenIdentifier).eq("courseId", course.id)).unique();
   if (row) await ctx.db.patch("learnCourseActivity", row._id, { updatedAt: Date.now() });
@@ -439,7 +440,7 @@ export const myLearning = query({ args: {}, handler: async ctx => {
   const results = [];
   for (const row of rows) {
     const course = await readPublicCourse(ctx, { courseId: row.courseId }, identity.subject);
-    if (!course) continue;
+    if (!course || !await hasApprovedCourseAccess(ctx, course.id, identity.subject)) continue;
     const progress = await readCourseProgress(ctx, { courseId: course.id }, identity.subject);
     const target = course.lessons.find(l => progress.some(p => p.lessonId === l.id && !p.completed && p.percent > 0)) ?? course.lessons.find(l => !progress.some(p => p.lessonId === l.id && p.completed)) ?? course.lessons[0];
     results.push({ id: course.id, title: course.title, completed: progress.filter(p => p.completed).length, total: course.lessons.length, nextLessonId: target?.id });
@@ -451,6 +452,8 @@ export async function readCourseLesson(ctx: QueryCtx, args: { courseId: string; 
  const course = await readPublicCourse(ctx, { courseId: args.courseId }, asActor);
  const item = course?.lessons.find(l => l.id === args.lessonId);
  if (!course || !item) return null;
+ const actor = asActor ?? (await getAuthIdentity(ctx))?.subject ?? null;
+ if (!await hasApprovedCourseAccess(ctx, course.id, actor)) return null;
  const lesson = await ctx.db.get("lessons", item.id), version = await ctx.db.get("lessonVersions", item.versionId);
  if (!lesson || !version) return null;
  return { lessonId: lesson._id, ownerId: lesson.ownerId, ownerName: course.ownerName, createdAt: lesson.createdAt, version };

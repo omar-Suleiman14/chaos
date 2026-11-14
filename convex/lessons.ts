@@ -1,7 +1,7 @@
 import { getAuthIdentity } from "./authIdentity";
 import { randomCover } from "../lib/learn/covers";
 import { authorDb } from "./authorIndex";
-import { coursesWithLesson } from "./courseMembership";
+import { coursesWithLesson, canReadCourseAttachedLesson } from "./courseMembership";
 import { enqueueLearnWebhookEvent } from "./learnWebhookEvents";
 import { requireVisibilityAllowed } from "./plans";
 import { canEditTeamAsset, resolveAudienceTeam, teamAudienceAllows } from "./businessAccess";
@@ -26,6 +26,7 @@ export async function lessonAccessForActor(ctx: QueryCtx | MutationCtx, actor: s
   const lesson = await ctx.db.get("lessons", id);
   if (!lesson) throw new Error("NOT_FOUND: Lesson not found or unavailable.");
   if (actor === lesson.ownerId) return lesson;
+  if (!await canReadCourseAttachedLesson(ctx, lesson.ownerId, id, actor)) throw new Error("NOT_FOUND: Lesson not found or unauthorized.");
   const grant = actor ? await ctx.db.query("lessonPermissions").withIndex("by_lessonId_and_userId", q => q.eq("lessonId", id).eq("userId", actor!)).unique() : null;
   if ((grant && (!edit || grant.role === "editor")) || (actor && await canEditTeamAsset(ctx, actor, { kind: "lesson", id }, true, 0, lesson))) {
     // Explicit policy: Direct grants do NOT bypass platform moderation or creator restriction.

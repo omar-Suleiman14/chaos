@@ -1,96 +1,58 @@
 import { v } from "convex/values";
-import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
-import type { Id } from "./_generated/dataModel";
+import { mutation, query } from "./_generated/server";
 import { getAuthIdentity } from "./authIdentity";
 import { requireActiveUser } from "./authz";
-import { readCourseProgress, readPublicCourse } from "./courses";
-import { recordStudent } from "./studentRoster";
-import { consumeRate, sha256Hex } from "./serverUtils";
+import { readPublicCourse } from "./courses";
+import { hasApprovedCourseAccess } from "./courseMembership";
 import { avatarSeed } from "../lib/avatarSeed";
 
 /**
- * Course enrollment. Lessons in a course stay locked until the learner presses Start, which
- * enrolls them (signed in, or as a guest identified by a random token kept on their device)
- * and adds them to the author's Students roster. Course lesson progress is mirrored here so
- * authors see it for guests too, whose study evidence otherwise never leaves the device.
+ * Course admission is now owner-reviewed. Legacy guest tokens are accepted as
+ * inert compatibility arguments but never authorize an enrollment or progress.
  */
-
-const GUEST_TOKEN = /^[A-Za-z0-9_-]{32,128}$/;
 const guestArgs = { guestToken: v.optional(v.string()) };
-
-/**
- * The learner's enrollment key: their account when signed in, otherwise a hash of the device token.
- * Writes pass `write`: a banned or suspended account is read-only and cannot enroll or record
- * progress into another author's roster.
- */
-async function learner(ctx: QueryCtx | MutationCtx, guestToken: string | undefined, write = false) {
-  const identity = await getAuthIdentity(ctx);
-  if (identity && write) await requireActiveUser(ctx);
-  if (identity) return { key: `user:${identity.subject}`, studentId: identity.subject as string, guestHash: undefined };
-  if (!guestToken || !GUEST_TOKEN.test(guestToken)) return null;
-  const guestHash = await sha256Hex(guestToken);
-  return { key: `guest:${guestHash}`, studentId: undefined, guestHash };
-}
-
-async function enrollmentFor(ctx: QueryCtx | MutationCtx, courseId: Id<"learnCollections">, key: string) {
-  return ctx.db.query("courseEnrollments").withIndex("by_course_key", q => q.eq("courseId", courseId).eq("key", key)).unique();
-}
 
 export const myEnrollment = query({
   args: { courseId: v.string(), ...guestArgs },
   returns: v.object({ enrolled: v.boolean(), owner: v.boolean() }),
   handler: async (ctx, args) => {
+    const identity = await getAuthIdentity(ctx);
+    if (!identity) return { enrolled: false, owner: false };
     const course = await readPublicCourse(ctx, { courseId: args.courseId });
     if (!course) return { enrolled: false, owner: false };
-    const who = await learner(ctx, args.guestToken);
-    if (!who) return { enrolled: false, owner: false };
     const row = await ctx.db.get("learnCollections", course.id);
-    if (who.studentId && row?.ownerId === who.studentId) return { enrolled: true, owner: true };
-    return { enrolled: !!await enrollmentFor(ctx, course.id, who.key), owner: false };
+    return {
+      enrolled: await hasApprovedCourseAccess(ctx, course.id, identity.subject),
+      owner: row?.ownerId === identity.subject,
+    };
   },
 });
 
+/** Deny the legacy instant-enrollment API even for signed-in callers. */
 export const enroll = mutation({
   args: { courseId: v.string(), guestName: v.optional(v.string()), ...guestArgs },
   returns: v.null(),
-  handler: async (ctx, args) => {
-    const course = await readPublicCourse(ctx, { courseId: args.courseId });
-    if (!course) throw new Error("NOT_FOUND: Course unavailable.");
-    const who = await learner(ctx, args.guestToken, true);
-    if (!who) throw new Error("VALIDATION_FAILED: Sign in or continue as a guest to start this course.");
-    const row = await ctx.db.get("learnCollections", course.id);
-    if (!row || row.ownerId === who.studentId) return null;
-    const guestName = args.guestName?.trim().slice(0, 80) || undefined;
-    const now = Date.now();
-    const existing = await enrollmentFor(ctx, course.id, who.key);
-    if (existing) {
-      await ctx.db.patch("courseEnrollments", existing._id, { updatedAt: now, ...(guestName && !who.studentId ? { guestName } : {}) });
-      return null;
-    }
-    if (!who.studentId) await consumeRate(ctx, `course-enroll:${course.id}`, 300, 60_000);
-    // Signed-in learners keep the lessons they already finished before enrollment existed.
-    const prior = who.studentId ? await readCourseProgress(ctx, { courseId: course.id }) : [];
-    const completedLessonIds = prior.filter(p => p.completed).map(p => p.lessonId);
-    await ctx.db.insert("courseEnrollments", {
-      courseId: course.id, ownerId: row.ownerId, key: who.key, studentId: who.studentId, ...(guestName && !who.studentId ? { guestName } : {}),
-      completedLessonIds, enrolledAt: now, updatedAt: now, ...(course.lessons.length && completedLessonIds.length >= course.lessons.length ? { completedAt: now } : {}),
-    });
-    await recordStudent(ctx, { authorId: row.ownerId, studentId: who.studentId, guestKey: who.guestHash, guestName, context: course.title });
-    return null;
+  handler: async (ctx) => {
+    if (await getAuthIdentity(ctx)) await requireActiveUser(ctx);
+    throw new Error("APPROVAL_REQUIRED: Request to join and wait for course-owner approval.");
   },
 });
 
-/** Mirror a course lesson visit (completed omitted) or completion change into the enrollment. No-op when not enrolled. */
+/** Only a student admitted by the doctor may record course progress. */
 export const recordLesson = mutation({
   args: { courseId: v.string(), lessonId: v.string(), completed: v.optional(v.boolean()), ...guestArgs },
   returns: v.null(),
   handler: async (ctx, args) => {
+    const identity = await getAuthIdentity(ctx);
+    if (!identity) return null;
+    await requireActiveUser(ctx);
     const course = await readPublicCourse(ctx, { courseId: args.courseId });
     const lesson = course?.lessons.find(l => l.id === args.lessonId);
-    if (!course || !lesson) return null;
-    const who = await learner(ctx, args.guestToken, true);
-    const row = who ? await enrollmentFor(ctx, course.id, who.key) : null;
-    if (!row) return null;
+    if (!course || !lesson || !await hasApprovedCourseAccess(ctx, course.id, identity.subject)) return null;
+    const row = await ctx.db.query("courseEnrollments")
+      .withIndex("by_course_key", q => q.eq("courseId", course.id).eq("key", `user:${identity.subject}`))
+      .unique();
+    if (!row || row.studentId !== identity.subject) return null;
     const done = new Set(row.completedLessonIds);
     if (args.completed === true) done.add(lesson.id);
     if (args.completed === false) done.delete(lesson.id);
