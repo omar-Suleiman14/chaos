@@ -107,6 +107,7 @@ it("keeps student exam percentages hidden until official release and regrade app
       ownerId: creatorIdentity.subject, courseId: f.courseId, draftId,
       activeSnapshotId: snapshotId, version: 1, studentEntryEnabled: false,
       audience: { mode: "all", studentIds: [], groupIds: [] },
+      settings: defaultExamSettings,
       audienceRevision: 1, assignmentActive: true, preparedForAudience: true,
       createdAt: f.now, updatedAt: f.now,
     });
