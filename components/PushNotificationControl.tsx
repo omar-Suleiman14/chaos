@@ -114,7 +114,7 @@ export default function PushNotificationControl() {
   return (
     <div className="mt-4 border-t border-foreground/10 pt-3">
       <p className="font-medium">{t.title}</p>
-      <p className="mt-1 text-muted-foreground" role="status" aria-live="polite">{failed ? t.failed : description}</p>
+      <output className="mt-1 block text-muted-foreground" aria-live="polite">{failed ? t.failed : description}</output>
       {capability === "ready" && (
         <button type="button" onClick={() => void change()} disabled={busy || (endpoint !== null && enabled === undefined)}
           className="mt-2 rounded-md border border-foreground/20 px-3 py-1.5 text-xs hover:bg-foreground/5 disabled:opacity-50">

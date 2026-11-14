@@ -1,5 +1,5 @@
 import { createCipheriv, createECDH, createPrivateKey, hkdfSync, randomBytes, sign } from "node:crypto";
-import { allowedPushEndpoint } from "@/convex/pushModel";
+import { allowedPushEndpoint } from "../../convex/pushModel";
 
 export type PushKeys = { publicKey: string; privateKey: string; subject: string };
 export type PushTarget = { endpoint: string; p256dh: string; auth: string; locale: "en" | "ar" };

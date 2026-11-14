@@ -36,11 +36,13 @@ describe("web push security", () => {
     expect(JSON.parse(Buffer.from(claims, "base64url").toString())).toMatchObject({
       aud: "https://fcm.googleapis.com", sub: "mailto:notifications@chaos.fail",
     });
+    const verifyingKey = createPublicKey({
+      key: { kty: "EC", crv: "P-256", x: vapid.getPublicKey().subarray(1, 33).toString("base64url"),
+        y: vapid.getPublicKey().subarray(33).toString("base64url") },
+      format: "jwk",
+    });
     expect(verify("sha256", Buffer.from(header + "." + claims),
-      { key: createPublicKey(vapid.getPublicKey ? {
-        key: { kty: "EC", crv: "P-256", x: vapid.getPublicKey().subarray(1, 33).toString("base64url"),
-          y: vapid.getPublicKey().subarray(33).toString("base64url") }, format: "jwk",
-      } : ""), dsaEncoding: "ieee-p1363" }, Buffer.from(signature, "base64url"))).toBe(true);
+      { key: verifyingKey, dsaEncoding: "ieee-p1363" }, Buffer.from(signature, "base64url"))).toBe(true);
     const body = Buffer.from(request.body);
     expect(body.subarray(16, 20).readUInt32BE()).toBe(4096);
     const senderPub = body.subarray(21, 21 + body[20]);
