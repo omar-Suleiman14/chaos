@@ -142,6 +142,8 @@ import type * as observability from "../observability.js";
 import type * as observabilityModel from "../observabilityModel.js";
 import type * as plans from "../plans.js";
 import type * as publicAuthors from "../publicAuthors.js";
+import type * as examBuilder from "../examBuilder.js";
+import type * as examBuilderModel from "../examBuilderModel.js";
 import type * as questionBank from "../questionBank.js";
 import type * as questionBankModel from "../questionBankModel.js";
 import type * as questionImports from "../questionImports.js";
@@ -305,6 +307,8 @@ declare const fullApi: ApiFromModules<{
   observabilityModel: typeof observabilityModel;
   plans: typeof plans;
   publicAuthors: typeof publicAuthors;
+  examBuilder: typeof examBuilder;
+  examBuilderModel: typeof examBuilderModel;
   questionBank: typeof questionBank;
   questionBankModel: typeof questionBankModel;
   questionImports: typeof questionImports;
