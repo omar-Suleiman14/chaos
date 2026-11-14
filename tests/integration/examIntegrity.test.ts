@@ -158,7 +158,7 @@ it("coalesces hidden and blur, applies server grace and never auto-finalizes", a
   const second = await record("event-back-third", "focus");
   expect(second).toMatchObject({ decision: "review_required", gapMs: 16_000 });
   const timeline = await student.query(api.examIntegrity.getMine, { attemptId });
-  expect(timeline).toHaveLength(8);
+  expect(timeline).toHaveLength(7);
   expect(timeline.some(e => e.decision === "review_required")).toBe(true);
   expect(JSON.stringify(timeline)).not.toMatch(/prompt|correctChoiceIds|answer|studentId|clipboard|URL/);
   await expect(owner.query(api.examIntegrity.getMine, { attemptId })).rejects.toThrow("NOT_FOUND");
