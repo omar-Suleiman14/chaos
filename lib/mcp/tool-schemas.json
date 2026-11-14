@@ -9253,6 +9253,61 @@
     "additionalProperties": false
    }
   },
+  "get_notification_preferences": {
+   "title": null,
+   "description": "Read your in-app academic notification categories and disabled selections.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "kinds": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "course_announcement",
+        "course_calendar",
+        "course_message",
+        "course_assignment",
+        "course_enrollment",
+        "course_result"
+       ]
+      }
+     },
+     "disabled": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "course_announcement",
+        "course_calendar",
+        "course_message",
+        "course_assignment",
+        "course_enrollment",
+        "course_result"
+       ]
+      }
+     }
+    },
+    "required": [
+     "kinds",
+     "disabled"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "get_public_card": {
    "title": null,
    "description": "Read a public Chaos member Card by current username or retained alias: display name, canonical username, chosen avatar seed, join date and theme. Returns card=null when unavailable. No email or account identifiers.",
@@ -12606,6 +12661,77 @@
     "additionalProperties": false
    }
   },
+  "list_notifications": {
+   "title": null,
+   "description": "Read only your authorized Chaos in-app notifications and unread count; current course access is rechecked and withheld grades are not included.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "items": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "_id": {
+         "type": "string"
+        },
+        "kind": {
+         "type": "string"
+        },
+        "message": {
+         "type": "string"
+        },
+        "formId": {
+         "type": "string"
+        },
+        "href": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "createdAt": {
+         "type": "number"
+        },
+        "read": {
+         "type": "boolean"
+        }
+       },
+       "required": [
+        "_id",
+        "kind",
+        "message",
+        "href",
+        "createdAt",
+        "read"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "unread": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "items",
+     "unread"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "list_public_authors": {
    "title": null,
    "description": "Browse the public authors carousel with cursor pagination. Only authors with public publications who allow directory listing appear; excludes restricted accounts. Empty pages can still have a continuation cursor. Card fanning is a browser interaction at https://chaos.fail/card.",
@@ -13396,6 +13522,45 @@
      "presets",
      "options",
      "notes"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "mark_notifications_read": {
+   "title": null,
+   "description": "Mark your own notification IDs as read (maximum 100), or omit IDs to mark your latest 100. Does not mark other users' notifications.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "ids": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "minLength": 1,
+       "maxLength": 100
+      },
+      "maxItems": 100
+     }
+    },
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "ok": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "ok"
     ],
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false
@@ -17376,6 +17541,80 @@
     },
     "required": [
      "revision"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "set_notification_preference": {
+   "title": null,
+   "description": "Enable or disable one category of your own in-app course notifications. No browser push or email preference is changed.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "kind": {
+      "type": "string",
+      "enum": [
+       "course_announcement",
+       "course_calendar",
+       "course_message",
+       "course_assignment",
+       "course_enrollment",
+       "course_result"
+      ]
+     },
+     "enabled": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "kind",
+     "enabled"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "kinds": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "course_announcement",
+        "course_calendar",
+        "course_message",
+        "course_assignment",
+        "course_enrollment",
+        "course_result"
+       ]
+      }
+     },
+     "disabled": {
+      "type": "array",
+      "items": {
+       "type": "string",
+       "enum": [
+        "course_announcement",
+        "course_calendar",
+        "course_message",
+        "course_assignment",
+        "course_enrollment",
+        "course_result"
+       ]
+      }
+     }
+    },
+    "required": [
+     "kinds",
+     "disabled"
     ],
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false
