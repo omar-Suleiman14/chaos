@@ -16,7 +16,7 @@ const translations = {
     upcoming: "Upcoming", due: "Available window", questions: "questions", duration: "minute limit",
     open: "Opens", close: "Closes", course: "Course",
     disabled: "Exam entry is not available yet. The secure exam player is being implemented.",
-    courseLink: "View course",
+    courseLink: "View course", preflight: "Review exam rules",
   },
   ar: {
     title: "امتحاناتي المستحقة", lead: "الامتحانات التي كلفك بها دكاترة الدورات الموافق على انضمامك إليها.",
@@ -24,7 +24,7 @@ const translations = {
     signIn: "سجّل دخولك لعرض امتحانات الدورات الخاصة بحسابك.",
     upcoming: "قادم", due: "ضمن موعد الإتاحة", questions: "سؤال", duration: "دقيقة", open: "يبدأ", close: "ينتهي",
     course: "الدورة", disabled: "دخول الامتحان غير متاح بعد. يجري تطوير واجهة الامتحان الآمنة.",
-    courseLink: "عرض الدورة",
+    courseLink: "عرض الدورة", preflight: "مراجعة قواعد الامتحان",
   },
 } as const;
 
@@ -59,8 +59,12 @@ export default function DueExamsPage() {
           {t.open}: {date(exam.opensAt)} · {t.close}: {date(exam.closesAt)}
         </p>}
         <p className="cb-note flex gap-2 items-start"><ShieldAlert size={16} aria-hidden />{t.disabled}</p>
-        <Link className="ws-btn ws-btn--ghost ws-btn--sm w-fit"
-          href={`/learn/courses/${exam.courseId}`}>{t.courseLink}</Link>
+        <div className="flex flex-wrap gap-2">
+          <Link className="ws-btn ws-btn--primary ws-btn--sm w-fit"
+            href={`/dashboard/learn/exams/${exam.releaseId}`}>{t.preflight}</Link>
+          <Link className="ws-btn ws-btn--ghost ws-btn--sm w-fit"
+            href={`/learn/courses/${exam.courseId}`}>{t.courseLink}</Link>
+        </div>
       </article>)}
     </div>}
   </main>;
