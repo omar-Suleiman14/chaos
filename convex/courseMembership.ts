@@ -48,3 +48,53 @@ export async function coursesWithLesson(ctx: Pick<QueryCtx | MutationCtx, "db">,
   const direction = order === "asc" ? 1 : -1;
   return [...found.values()].sort((a, b) => direction * (a.updatedAt - b.updatedAt || a._creationTime - b._creationTime || (a._id < b._id ? -1 : a._id > b._id ? 1 : 0)));
 }
+
+
+/**
+ * Approval and enrollment must both exist. Historical self-enrollments and guest
+ * tokens are never admission grants; only the course owner's reviewed request
+ * can authorize reading content.
+ */
+export async function hasApprovedCourseAccess(
+  ctx: Pick<QueryCtx | MutationCtx, "db">,
+  courseId: Id<"learnCollections">,
+  actor: string | null,
+): Promise<boolean> {
+  if (!actor) return false;
+  const course = await ctx.db.get("learnCollections", courseId);
+  if (!course) return false;
+  if (course.ownerId === actor) return true;
+  const request = await ctx.db.query("courseJoinRequests")
+    .withIndex("by_course_student", q => q.eq("courseId", courseId).eq("studentId", actor))
+    .unique();
+  if (request?.status !== "approved" || request.ownerId !== course.ownerId) return false;
+  const enrollment = await ctx.db.query("courseEnrollments")
+    .withIndex("by_course_key", q => q.eq("courseId", courseId).eq("key", `user:${actor}`))
+    .unique();
+  return enrollment?.studentId === actor && enrollment.ownerId === course.ownerId;
+}
+
+/**
+ * A published lesson included in a live course cannot be fetched through a
+ * generic public lesson, version, progress or MCP route without admission.
+ * Standalone lessons not published in a course retain their normal visibility.
+ */
+export async function canReadCourseAttachedLesson(
+  ctx: Pick<QueryCtx | MutationCtx, "db">,
+  ownerId: string,
+  lessonId: Id<"lessons">,
+  actor: string | null,
+): Promise<boolean> {
+  if (actor === ownerId) return true;
+  let protectedLesson = false;
+  for (const course of await coursesWithLesson(ctx, ownerId, lessonId)) {
+    if (!course.publishedVersionId || course.archived ||
+      course.communityState === "hidden" || course.communityState === "removed") continue;
+    const published = await ctx.db.get("collectionVersions", course.publishedVersionId);
+    if (published?.collectionId !== course._id ||
+      !published.items.some(item => item.kind === "lesson" && item.id === lessonId)) continue;
+    protectedLesson = true;
+    if (await hasApprovedCourseAccess(ctx, course._id, actor)) return true;
+  }
+  return !protectedLesson;
+}
