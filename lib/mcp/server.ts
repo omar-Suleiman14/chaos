@@ -2,7 +2,7 @@ import { readStudySkillFiles, studySkillPaths } from "@/lib/integrations/studySk
 import { registerDocumentationTools } from "./docs";
 import { registerCardTools } from "./cards";
 import { registerCrmTools } from "./crm";
-import { registerAdminTools } from "./admin";
+import { registerAdminTools, registerGradingAdminTools } from "./admin";
 // The Chaos ChatGPT app: MCP tool definitions. Served by app/mcp/route.ts.
 // Tools only describe and forward; Convex (convex/mcp.ts) enforces access,
 // validation, plan limits and rate limits for the signed-in Chaos account.
@@ -81,6 +81,8 @@ const baseInstructions = `Chaos (${new URL(siteUrl).host}) is where this person 
 
 /** Only verified administrator connections are told about admin and CRM tools; everyone else never sees them. */
 const adminInstructions = `- Administrator connections expose the same platform overview/refresh, account and content moderation, platform inventories, Business teams and audit activity as the admin UI under admin_operations. Inventory tools return metadata only. Moderate accounts/content only on explicit request and provide the requested reason; never retry uncertain moderation writes. No admin membership grants/revocations or legacy plan controls are available. CRM remains separately authorized under admin_crm. Administrator connections also expose CRM tools: list_crm_contacts, get_crm_contact, save_crm_contact, add_crm_note, get_crm_activity, set_crm_contact_stages and complete_crm_follow_up. These contain private contact information. Read an existing contact before saving and preserve fields the administrator did not ask to change, including its linked account and follow-up date. CRM writes are audited; they never send messages. Do not retry creation or note additions after uncertain success.`;
+
+const gradingAdminInstructions = `- Grading assistant access for verified administrators only. First list and claim a doctor-consented job; then read its private essay bundle while the claim is active. Ground every proposed criterion score in literal answer excerpts with rationale and state uncertainty. Store drafts and submit for doctor review. These are NOT approved/final grades. Never publish or finalize a student result or claim unattended AI marking. Every read and edit is audited. Standard platform admin and CRM tools are available on /mcp, not this review-specific surface.`;
 
 
 const question = z.object({
@@ -221,7 +223,7 @@ function authRequired(resourceMetadataUrl: string): CallToolResult {
   };
 }
 
-export function createChaosMcpServer(options: { call: McpCaller | null; resourceMetadataUrl: string; admin?: boolean; permissions?: readonly McpPermission[] }): McpServer {
+export function createChaosMcpServer(options: { call: McpCaller | null; resourceMetadataUrl: string; admin?: boolean; grading?: boolean; permissions?: readonly McpPermission[] }): McpServer {
   const server = new McpServer({
     name: MCP_SERVER_NAME, version: MCP_SERVER_VERSION, title: chaosIntegration.name, websiteUrl: chaosIntegration.siteUrl,
     // Clients that show server icons display the Chaos mark instead of a generic MCP icon.
@@ -229,7 +231,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
       { src: `${chaosIntegration.siteUrl}${chaosIntegration.logoPath}`, mimeType: "image/svg+xml", sizes: ["any"] },
       { src: `${chaosIntegration.siteUrl}/api/plugins/chaos-icon-512.png`, mimeType: "image/png", sizes: ["512x512"] },
     ],
-  }, { instructions: options.admin ? `${baseInstructions}\n${adminInstructions}` : baseInstructions });
+  }, { instructions: options.admin ? `${baseInstructions}\n${options.grading ? gradingAdminInstructions : adminInstructions}` : baseInstructions });
 
   // Schema failures the SDK catches before a handler runs get the same code, category and readable problems.
   (server as unknown as { createToolError: (message: string) => CallToolResult }).createToolError = (message) => toolError(new Error(message));
@@ -512,9 +514,13 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
     _meta: meta("Updating status…", "Status updated"),
   }, (input) => run("set_form_status", input, (d) => `“${d.title}” is now ${d.status}.`));
 
-  if (options.admin) registerDocumentationTools(server, run, securitySchemes);
-  if (options.admin) registerCrmTools(server, run, securitySchemes);
-  if (options.admin) registerAdminTools(server, run, securitySchemes);
+  if (options.admin && options.grading) {
+    registerGradingAdminTools(server, run, securitySchemes);
+  } else if (options.admin) {
+    registerDocumentationTools(server, run, securitySchemes);
+    registerCrmTools(server, run, securitySchemes);
+    registerAdminTools(server, run, securitySchemes);
+  }
   registerCardTools(server, run, securitySchemes);
   registerLearnTools(server, run, securitySchemes, { call, flow });
   registerStudyLessonTools(server, run, securitySchemes);

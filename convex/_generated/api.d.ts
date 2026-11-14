@@ -154,6 +154,7 @@ import type * as examInvigilationModel from "../examInvigilationModel.js";
 import type * as examSubmissions from "../examSubmissions.js";
 import type * as examEssayGrading from "../examEssayGrading.js";
 import type * as examGradingJobs from "../examGradingJobs.js";
+import type * as examGradingProposals from "../examGradingProposals.js";
 import type * as examEssayGradingModel from "../examEssayGradingModel.js";
 import type * as examGrading from "../examGrading.js";
 import type * as examGradingModel from "../examGradingModel.js";
@@ -344,6 +345,7 @@ declare const fullApi: ApiFromModules<{
   examSubmissions: typeof examSubmissions;
   examEssayGrading: typeof examEssayGrading;
   examGradingJobs: typeof examGradingJobs;
+  examGradingProposals: typeof examGradingProposals;
   examEssayGradingModel: typeof examEssayGradingModel;
   examGrading: typeof examGrading;
   examGradingModel: typeof examGradingModel;

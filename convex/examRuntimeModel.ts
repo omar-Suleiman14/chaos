@@ -174,6 +174,20 @@ export const examRuntimeTables = {
       v.literal("bundle_read"), v.literal("proposal_saved"), v.literal("sent_to_doctor")),
     detail: v.string(), at: v.number(),
   }).index("by_job_time", ["jobId", "at"]),
+  /** Private AI/human rubric proposals. Never read by student results or finalize. */
+  examGradingProposals: defineTable({
+    jobId: v.id("examGradingJobs"), attemptId: v.id("examAttempts"),
+    snapshotId: v.id("examSnapshots"), ownerId: v.string(), studentId: v.string(),
+    adminId: v.string(), questionIndex: v.number(),
+    criterionScores: v.array(v.object({ criterionId: v.string(), scorePercent: v.number() })),
+    holisticAwardCents: v.optional(v.number()), awardedCents: v.number(),
+    feedback: v.string(),
+    evidence: v.array(v.object({ criterionId: v.string(), quote: v.string(), rationale: v.string() })),
+    confidence: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+    modelId: v.optional(v.string()), promptVersion: v.optional(v.string()),
+    state: v.union(v.literal("draft"), v.literal("sent")),
+    revision: v.number(), updatedAt: v.number(),
+  }).index("by_job_question", ["jobId", "questionIndex"]),
   /** Manual release applies to one immutable snapshot; never changes the grade ledger. */
   examResultPublications: defineTable({
     snapshotId: v.id("examSnapshots"),
