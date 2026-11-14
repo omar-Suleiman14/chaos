@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
+import { useExamIntegrityTelemetry } from "./useExamIntegrityTelemetry";
 
 export type ExamDraft = {
   choiceIds: string[]; text: string; flagged: boolean; savedForLater: boolean;
@@ -42,7 +43,12 @@ function recover(key: string): Pending | null {
  */
 export function useExamAnswerAutosave(
   attemptId: Id<"examAttempts"> | null, questionIndex: number,
+  options: { monitorBrowser?: boolean; telemetryConsented?: boolean } = {},
 ) {
+  // Monitoring is opt-in and requires disclosed exam-rule consent. Preview never uses this hook.
+  const integrity = useExamIntegrityTelemetry(
+    attemptId, options.monitorBrowser ?? false, options.telemetryConsented ?? false,
+  );
   const key = attemptId ? keyFor(attemptId, questionIndex) : "";
   const rows = useQuery(api.examAnswers.getMine, attemptId ? { attemptId } : "skip");
   const save = useMutation(api.examAnswers.save);
@@ -156,5 +162,6 @@ export function useExamAnswerAutosave(
     change,
     retry: () => { if (pending) setStatus(online ? "pending" : "offline"); },
     discardLocalDraft,
+    integrityStatus: integrity.status,
   };
 }
