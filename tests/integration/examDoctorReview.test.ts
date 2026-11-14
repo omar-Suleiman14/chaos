@@ -163,5 +163,5 @@ it("appeals are student-authenticated; regrading holds the old transcript until 
   });
   expect((await student.query(api.examResults.myResult, { attemptId })).transcript)
     .toMatchObject({ earnedCents: 180, percentBasisPoints: 9000 });
-  expect((await student.query(api.examDoctorReview.myAppeal, { attemptId })).status).toBe("adjusted");
+  expect((await student.query(api.examDoctorReview.myAppeal, { attemptId }))?.status).toBe("adjusted");
 });
