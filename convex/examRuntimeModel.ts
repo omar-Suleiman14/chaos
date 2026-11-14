@@ -155,6 +155,25 @@ export const examRuntimeTables = {
       v.literal("changes_requested"), v.literal("finalize")),
     revision: v.number(), detail: v.string(), at: v.number(),
   }).index("by_attempt_at", ["attemptId", "at"]),
+  /** Doctor-authorized assisted grading requests. Never a grade or model execution queue. */
+  examGradingJobs: defineTable({
+    attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
+    courseId: v.id("learnCollections"), ownerId: v.string(), studentId: v.string(),
+    requestKey: v.string(),
+    status: v.union(v.literal("queued"), v.literal("claimed"), v.literal("doctor_review")),
+    claimAdminId: v.optional(v.string()), claimedAt: v.optional(v.number()),
+    claimExpiresAt: v.optional(v.number()), retryCount: v.number(), revision: v.number(),
+    requestedAt: v.number(), updatedAt: v.number(),
+  }).index("by_attempt", ["attemptId"])
+    .index("by_owner_course", ["ownerId", "courseId"])
+    .index("by_status_updated", ["status", "updatedAt"]),
+  examGradingJobAudit: defineTable({
+    jobId: v.id("examGradingJobs"), attemptId: v.id("examAttempts"),
+    actorId: v.string(), revision: v.number(),
+    action: v.union(v.literal("requested"), v.literal("claimed"), v.literal("requeued"),
+      v.literal("bundle_read"), v.literal("proposal_saved"), v.literal("sent_to_doctor")),
+    detail: v.string(), at: v.number(),
+  }).index("by_job_time", ["jobId", "at"]),
   /** Manual release applies to one immutable snapshot; never changes the grade ledger. */
   examResultPublications: defineTable({
     snapshotId: v.id("examSnapshots"),

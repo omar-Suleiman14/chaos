@@ -25,6 +25,7 @@ const translations = {
     status: "Mark status", score: "Award", conflict: "Could not update. Reload and verify the current revision.",
     saved: "Marking record updated.", finalizeConfirm: "Finalize this attempt? Approved grades become eligible for result release.",
     draft: "Draft", submitted: "Awaiting moderation", approved: "Approved", changes_requested: "Changes requested",
+    assist: "Request assisted grading", assistConfirm: "Allow a platform administrator to review this student essay and draft a proposal? No grade will be published automatically.", assistStatus: "Assistance request",
     noRubric: "No rubric was authored: enter a holistic score in points.",
     disclosure: "Only the course owner can access these essays. Final scores follow the exam's frozen result-release policy.",
   },
@@ -43,6 +44,7 @@ const translations = {
     status: "حالة التصحيح", score: "الدرجة", conflict: "تعذر الحفظ. حدّث الصفحة وتحقق من نسخة البيانات.",
     saved: "تم تحديث سجل التصحيح.", finalizeConfirm: "اعتماد الدرجة النهائية؟ قد تصبح النتيجة قابلة للنشر حسب سياسة الامتحان.",
     draft: "مسودة", submitted: "بانتظار المراجعة", approved: "معتمد", changes_requested: "مطلوب تعديل",
+    assist: "طلب مساعدة في التصحيح", assistConfirm: "هل تسمح لمسؤول المنصة بمراجعة الإجابة لتجهيز اقتراح فقط؟ لن تنشر أي درجات تلقائياً.", assistStatus: "حالة طلب المساعدة",
     noRubric: "لا يوجد سلم تصحيح: أدخل الدرجة مباشرة.",
     disclosure: "لا يمكن إلا لمالك الدورة قراءة هذه الإجابات. نشر النتائج يخضع للسياسة المعتمدة للامتحان.",
   },
@@ -68,6 +70,8 @@ export default function EssayGradingPage({ params, searchParams }: {
   const submit = useMutation(api.examEssayGrading.submitForReview);
   const moderate = useMutation(api.examEssayGrading.moderate);
   const finalize = useMutation(api.examEssayGrading.finalize);
+  const requestAssist = useMutation(api.examGradingJobs.request);
+  const assisted = useQuery(api.examGradingJobs.myJobs, isAuthenticated && draftId ? { draftId } : "skip");
   const [marks, setMarks] = useState<Record<string, number>>({});
   const [holistic, setHolistic] = useState("0");
   const [feedback, setFeedback] = useState("");
@@ -126,6 +130,14 @@ export default function EssayGradingPage({ params, searchParams }: {
                 onClick={() => choose(entry.attemptId, index)}>
                 {ar ? "السؤال " : "Question "}{index + 1}
               </button>)}
+              {entry.gradingState === "needs_manual" && !assisted?.jobs.some(j => j.attemptId === entry.attemptId) &&
+                <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={busy}
+                  onClick={() => { if (!window.confirm(t.assistConfirm)) return;
+                    void act(() => requestAssist({ attemptId: entry.attemptId,
+                      requestKey: "assisted-" + entry.attemptId, confirmAdminAccess: true }));
+                  }}>{t.assist}</button>}
+              {assisted?.jobs.filter(j => j.attemptId === entry.attemptId).map(j =>
+                <span key={j.jobId} className="text-sm">{t.assistStatus}: {j.status}</span>)}
               {entry.gradingState === "needs_manual" && entry.pendingWrittenCount > 0 &&
                 entry.approvedCount === entry.pendingWrittenCount &&
                 <button type="button" className="ws-btn ws-btn--primary ws-btn--sm"
