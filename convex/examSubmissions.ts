@@ -4,6 +4,7 @@ import {
   internalMutation, mutation, query, type MutationCtx, type QueryCtx,
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
+import { gradeFrozenExam } from "./examGradingModel";
 import { requireActiveUser } from "./authz";
 import { authorizedAttempt } from "./examAnswers";
 import {
@@ -79,6 +80,19 @@ async function finalize(
     ...(submissionId ? { submissionId } : {}),
     submitConfirmation: undefined,
   });
+  // Persist grades atomically with terminal submission. Expired/void attempts
+  // are not graded, and duplicate terminal callbacks cannot insert a second grade.
+  if (outcome === "submitted") {
+    const priorGrade = await ctx.db.query("examGrades")
+      .withIndex("by_attempt", q => q.eq("attemptId", attempt._id)).unique();
+    if (priorGrade) throw new Error("INTEGRITY_ERROR: Grade already exists.");
+    const score = gradeFrozenExam(snapshot.questions, answers);
+    await ctx.db.insert("examGrades", {
+      attemptId: attempt._id, snapshotId: attempt.snapshotId,
+      ownerId: attempt.ownerId, studentId: attempt.studentId,
+      ...score, algorithmVersion: 1, gradedAt: now,
+    });
+  }
   const receiptId = await ctx.db.insert("examSubmissionReceipts", {
     attemptId: attempt._id, snapshotId: attempt.snapshotId,
     studentId: attempt.studentId, outcome, reason,

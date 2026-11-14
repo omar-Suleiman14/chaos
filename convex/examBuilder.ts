@@ -3,6 +3,7 @@ import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/s
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser } from "./authz";
 import { examAllocation, examSelection } from "./examBuilderModel";
+import { validateExamMarking } from "./examGradingModel";
 
 type Ctx = QueryCtx | MutationCtx;
 type Course = Doc<"learnCollections">;
@@ -52,6 +53,7 @@ export function validatePlan(course: Course, title: string, targetCount: number,
         a.count < 1 || a.count > MAX_QUESTIONS || !Number.isFinite(a.points) ||
         a.points <= 0 || a.points > 100 || Math.abs(Math.round(a.points * 100) - a.points * 100) > 1e-8)
       throw new Error("VALIDATION_FAILED: Use valid allocation IDs, counts and point weights (0.01–100).");
+    validateExamMarking(a.marking, a.points);
     if (a.kind === "course" && a.key !== "") throw new Error("VALIDATION_FAILED: Whole-course allocation has no key.");
     if (a.kind === "module" && !course.modules?.some(m => m.id === a.key))
       throw new Error("NOT_FOUND: Module is no longer part of this course.");

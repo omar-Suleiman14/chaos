@@ -90,7 +90,10 @@ export const sealDraft = mutation({
         choices: question.choices, correctChoiceIds: question.correctChoiceIds,
         ...(question.sampleAnswer !== undefined ? { sampleAnswer: question.sampleAnswer } : {}),
         ...(question.explanation !== undefined ? { explanation: question.explanation } : {}),
-        points: allocation.points, topics: question.topics, terms: question.terms,
+        points: allocation.points,
+        ...(allocation.marking ? { marking: allocation.marking } : {}),
+        ...(question.rubricCriteria ? { rubricCriteria: question.rubricCriteria } : {}),
+        topics: question.topics, terms: question.terms,
         outcomes: question.outcomes,
         ...(question.caseStudy ? { caseStudy: { stem: question.caseStudy.stem, media } } : {}),
       });
