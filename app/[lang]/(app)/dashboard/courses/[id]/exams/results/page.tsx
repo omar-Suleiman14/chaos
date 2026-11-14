@@ -20,7 +20,11 @@ const labels = {
     success: "Result publication updated.", student: "Student", status: "Status", grade: "Grade",
     pending: "Not final", gradeEssays: "Grade written answers", empty: "No attempts recorded.", more: "Showing first 100 attempts.",
     grading: "Grading", withheld: "Withheld", released: "Visible to student",
-    submitted: "Submitted", expired: "Expired", void: "Voided", in_progress: "In progress" },
+    submitted: "Submitted", expired: "Expired", void: "Voided", in_progress: "In progress",
+    appeals: "Student grading appeals", appealReason: "Student reason",
+    doctorDecision: "Doctor's decision note", uphold: "Uphold grade", adjusted: "Confirm adjusted grade",
+    reject: "Reject appeal", reviewGrade: "Review / regrade answer",
+    appealUpdated: "Appeal reviewed", appealFailed: "Appeal decision failed; reload." },
   ar: { title: "نتائج الطلاب", lead: "راجع الدرجات وتحكم في النشر اليدوي.",
     back: "منشئ الامتحانات", noExam: "اختر امتحاناً معتمداً من منشئ الامتحانات.",
     signIn: "سجّل الدخول بحساب الدكتور.", publish: "نشر النتائج النهائية",
@@ -31,7 +35,11 @@ const labels = {
     success: "تم تحديث حالة النشر.", student: "الطالب", status: "الحالة", grade: "الدرجة",
     pending: "لم تكتمل", gradeEssays: "تصحيح الأسئلة المقالية", empty: "لا توجد محاولات مسجلة.", more: "تُعرض أول ١٠٠ محاولة.",
     grading: "جارٍ التصحيح", withheld: "محجوبة", released: "متاحة للطالب",
-    submitted: "تم التسليم", expired: "انتهى", void: "ملغاة", in_progress: "جارٍ الحل" },
+    submitted: "تم التسليم", expired: "انتهى", void: "ملغاة", in_progress: "جارٍ الحل",
+    appeals: "تظلمات درجات الطلاب", appealReason: "سبب تظلم الطالب",
+    doctorDecision: "ملاحظات قرار الدكتور", uphold: "تأييد الدرجة", adjusted: "اعتماد الدرجة المعدلة",
+    reject: "رفض التظلم", reviewGrade: "مراجعة / إعادة تصحيح الإجابة",
+    appealUpdated: "تم تحديث التظلم", appealFailed: "تعذر تسجيل القرار. حدّث الصفحة." },
 } as const;
 
 export default function TeacherResultsPage({ params, searchParams }: {
@@ -48,6 +56,21 @@ export default function TeacherResultsPage({ params, searchParams }: {
   const data = useQuery(api.examResults.teacherResults,
     isAuthenticated && draftId ? { draftId } : "skip");
   const setPublication = useMutation(api.examResults.setPublication);
+  const appeals = useQuery(api.examDoctorReview.appealsForDraft,
+    isAuthenticated && draftId ? { draftId } : "skip");
+  const decideAppeal = useMutation(api.examDoctorReview.decideAppeal);
+  const [appealNotes, setAppealNotes] = useState<Record<string, string>>({});
+  const reviewAppeal = async (appealId: Id<"examGradeAppeals">, expectedRevision: number,
+    decision: "upheld" | "adjusted" | "rejected") => {
+    const note = appealNotes[appealId]?.trim() ?? "";
+    if (busy || !note) return;
+    setBusy(true);
+    try {
+      await decideAppeal({ appealId, expectedRevision, decision, note });
+      toast.success(t.appealUpdated);
+    } catch (error) { toast.error(error, { fallback: t.appealFailed }); }
+    finally { setBusy(false); }
+  };
   const [busy, setBusy] = useState(false);
   const update = async () => {
     if (!data || busy) return;
@@ -91,6 +114,36 @@ export default function TeacherResultsPage({ params, searchParams }: {
               (r.percentBasisPoints / 100).toFixed(2) + "%"}</td>
           </tr>)}</tbody></table>
         </section>}
+      {appeals && appeals.entries.length > 0 && <section className="cb-section grid gap-3">
+        <h2 className="text-lg font-semibold">{t.appeals}</h2>
+        {appeals.entries.map(a => <article key={a.appealId}
+          className="rounded-lg border border-border p-3 grid gap-2">
+          <p className="text-sm break-all">{t.student}: {a.studentId} · {a.status}</p>
+          <p dir="auto" className="whitespace-pre-wrap text-sm">{t.appealReason}: {a.reason}</p>
+          <Link className="ws-btn ws-btn--ghost ws-btn--sm w-fit"
+            href={"/dashboard/courses/" + id + "/exams/grading?draft=" + draft}>
+            {t.reviewGrade}
+          </Link>
+          {a.status === "pending" && <>
+            <label className="grid gap-1 text-sm">{t.doctorDecision}
+              <textarea className="ws-input min-h-20" maxLength={2000}
+                value={appealNotes[a.appealId] ?? ""}
+                onChange={e => setAppealNotes(prev => ({ ...prev, [a.appealId]: e.target.value }))}
+                dir="auto" />
+            </label>
+            <div className="flex flex-wrap gap-2">
+              {(["upheld", "adjusted", "rejected"] as const).map(decision =>
+                <button key={decision} type="button" className="ws-btn ws-btn--ghost ws-btn--sm"
+                  disabled={busy || !(appealNotes[a.appealId] ?? "").trim()}
+                  onClick={() => void reviewAppeal(a.appealId, a.revision, decision)}>
+                  {decision === "upheld" ? t.uphold : decision === "adjusted" ? t.adjusted : t.reject}
+                </button>)}
+            </div>
+          </>}
+          {a.decisionNote && <p className="text-sm" dir="auto">{a.decisionNote}</p>}
+        </article>)}
+        {appeals.hasMore && <p className="cb-note">{t.more}</p>}
+      </section>}
       {data.hasMore && <p className="cb-note">{t.more}</p>}
     </>}
   </main>;
