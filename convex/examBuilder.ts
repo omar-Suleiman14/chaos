@@ -50,7 +50,7 @@ function validatePlan(course: Course, title: string, targetCount: number, alloca
   for (const a of allocations) {
     if (!/^[a-zA-Z0-9_-]{1,60}$/.test(a.id) || !Number.isSafeInteger(a.count) ||
         a.count < 1 || a.count > MAX_QUESTIONS || !Number.isFinite(a.points) ||
-        a.points <= 0 || a.points > 100 || Math.round(a.points * 100) !== a.points * 100)
+        a.points <= 0 || a.points > 100 || Math.abs(Math.round(a.points * 100) - a.points * 100) > 1e-8)
       throw new Error("VALIDATION_FAILED: Use valid allocation IDs, counts and point weights (0.01–100).");
     if (a.kind === "course" && a.key !== "") throw new Error("VALIDATION_FAILED: Whole-course allocation has no key.");
     if (a.kind === "module" && !course.modules?.some(m => m.id === a.key))
