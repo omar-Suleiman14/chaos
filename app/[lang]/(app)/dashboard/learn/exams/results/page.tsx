@@ -75,10 +75,10 @@ export default function MyResultsPage() {
             <strong>{t.score}: {(r.transcript.earnedCents / 100).toFixed(2)} / {(r.transcript.maximumCents / 100).toFixed(2)}</strong>
             <p className="cb-note">{(r.transcript.percentBasisPoints / 100).toFixed(2)}% · {r.transcript.passed ? t.pass : t.fail}</p>
           </div> : <p className="cb-note">{t.private}</p>}
-          {r.status === "released" && <button type="button"
+          {(r.status === "released" || r.status === "withheld") && <button type="button"
             className="ws-btn ws-btn--ghost ws-btn--sm w-fit"
             onClick={() => { setSelectedAttemptId(r.attemptId); setReason(""); }}>
-            {t.appeal}
+            {r.status === "released" ? t.appeal : t.appealStatus}
           </button>}
           {r.completedAt !== null && <p className="cb-note">{date(r.completedAt)}</p>}
         </article>)}
