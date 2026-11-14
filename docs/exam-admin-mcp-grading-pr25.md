@@ -2,6 +2,10 @@
 
 Stacked directly on draft PR 24/#401. Unmerged, undeployed, no autonomous AI execution.
 
+## Dedicated review connection
+
+To keep the existing administrator MCP tool-count and list-response performance budgets unchanged, connect the separate administrator grading surface at **`https://chaos.fail/mcp?surface=grading`**. Its six grading tools replace—not add to—the standard admin inventory for that connection. Standard administrator and CRM tools remain on `https://chaos.fail/mcp`. The same OAuth account and backend admin checks are required for each operation. **This endpoint has not been smoke-tested on a deployed environment.**
+
 ## MCP workflows
 1. Administrator lists metadata-only consented jobs via `list_admin_grading_jobs`, claims one through `claim_admin_grading_job` with revision guard.
 2. Under the same authenticated admin account and an unexpired 15-minute claim, `get_admin_grading_bundle` returns only that attempt's pending written answers, frozen question/rubric and existing admin draft. Each read is audited.
@@ -17,4 +21,4 @@ Stacked directly on draft PR 24/#401. Unmerged, undeployed, no autonomous AI exe
 - Maximum response length 10,000 characters; otherwise fail closed. At most 100 pending questions per request.
 
 ## Acceptance before merge
-Verify GitHub lint, static, type, unit, integration, Chromium, build, unchanged 268 performance budgets, MCP inventory/schema snapshots, admin identity spoof/claim race/expiry cases, real Arabic/English light/dark desktop/mobile screenshots and Vercel preview. Run a live OAuth admin MCP smoke test and security audit for course/R2/media/legacy source paths. No PR in this stack is approved for production yet.
+Verify GitHub lint, static, type, unit, integration, Chromium, build, unchanged 268 performance budgets, MCP review-surface inventory and ordinary admin snapshots, admin identity spoof/claim race/expiry cases, real Arabic/English light/dark desktop/mobile screenshots and Vercel preview. Run a live OAuth admin MCP smoke test and security audit for course/R2/media/legacy source paths. No PR in this stack is approved for production yet.

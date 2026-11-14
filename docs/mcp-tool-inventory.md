@@ -139,18 +139,15 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 
 ## Administrator tools
 
-24 additional tools mirror the administration UI. Every call rechecks current backend authorization.
+18 additional tools mirror the administration UI. Every call rechecks current backend authorization.
 
 - `add_crm_note`
-- `claim_admin_grading_job`
 - `complete_crm_follow_up`
-- `get_admin_grading_bundle`
 - `get_admin_overview`
 - `get_crm_activity`
 - `get_crm_contact`
 - `list_admin_activity`
 - `list_admin_content`
-- `list_admin_grading_jobs`
 - `list_admin_learning_content`
 - `list_admin_teams`
 - `list_admin_users`
@@ -159,9 +156,6 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `moderate_admin_content`
 - `moderate_admin_user`
 - `refresh_admin_analytics`
-- `retry_admin_grading_job`
-- `save_admin_grading_proposal`
 - `save_crm_contact`
 - `save_documentation`
 - `set_crm_contact_stages`
-- `submit_admin_grading_review`

@@ -2,12 +2,12 @@ import { expect, it, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { createChaosMcpServer } from "@/lib/mcp/server";
-import { ADMIN_CRM_TOOLS, ADMIN_PLATFORM_TOOLS } from "@/lib/mcp/admin";
+import { ADMIN_CRM_TOOLS, ADMIN_PLATFORM_TOOLS, ADMIN_GRADING_TOOLS } from "@/lib/mcp/admin";
 import { permissionForTool, type McpPermission } from "@/lib/mcp/permissions";
 
-async function connect(admin: boolean, permissions?: McpPermission[]) {
+async function connect(admin: boolean, permissions?: McpPermission[], grading = false) {
   const call = vi.fn(async () => ({ ok: true, activity: [] }));
-  const server = createChaosMcpServer({ call, admin, permissions, resourceMetadataUrl: "https://chaos.fail/mcp" });
+  const server = createChaosMcpServer({ call, admin, permissions, grading, resourceMetadataUrl: "https://chaos.fail/mcp" });
   const client = new Client({ name: "admin-parity", version: "1" });
   const [a, b] = InMemoryTransport.createLinkedPair();
   await Promise.all([server.connect(a), client.connect(b)]);
@@ -54,4 +54,27 @@ it("separates platform permissions from CRM and strips spoofed actors before dis
     expect((await crm.client.callTool({ name: "set_crm_contact_stages", arguments: { contactIds: ["contact"], stage: "active" } })).isError).toBeFalsy();
     expect(crm.call).toHaveBeenCalledOnce();
   } finally { await crm.client.close(); await crm.server.close(); }
+});
+
+
+it("serves private exam grading tools only in the explicit lean admin-grading surface", async () => {
+  const regular = await connect(true);
+  const grader = await connect(true, ["admin_operations"], true);
+  const student = await connect(false, undefined, true);
+  try {
+    const a = (await regular.client.listTools()).tools.map(t => t.name);
+    const b = (await grader.client.listTools()).tools.map(t => t.name);
+    const c = (await student.client.listTools()).tools.map(t => t.name);
+    for (const name of ADMIN_GRADING_TOOLS) {
+      expect(a).not.toContain(name);
+      expect(b).toContain(name);
+      expect(c).not.toContain(name);
+    }
+    for (const name of ADMIN_PLATFORM_TOOLS) expect(b).not.toContain(name);
+    expect(b.length).toBeLessThanOrEqual(150);
+    expect((await grader.client.callTool({ name: "list_admin_grading_jobs", arguments: {} })).isError).toBeFalsy();
+    expect(grader.call).toHaveBeenCalledWith("list_admin_grading_jobs", {});
+  } finally {
+    await Promise.all([regular.client.close(),regular.server.close(),grader.client.close(),grader.server.close(),student.client.close(),student.server.close()]);
+  }
 });
