@@ -36,6 +36,8 @@ it("blocks direct course, lesson, version and progress access until owner approv
   expect(await student.query(api.learnFrontend.publicLesson, { id: lessonId })).toBeNull();
   expect(await student.query(api.learnFrontend.publicLessonSummary, { id: lessonId })).toBeNull();
   expect(await student.query(api.learnFrontend.publicLessonsBatch, { ids: [lessonId] })).toEqual([]);
+  expect((await student.query(api.learnSearch.searchPublic, { text: "Restricted", paginationOpts: { numItems: 20, cursor: null } })).page.map(hit => hit.lessonId)).not.toContain(lessonId);
+  expect((await t.query(internal.mcpLearn.listLessons, { userId: otherCreatorIdentity.subject, scope: "public" })).items.map(row => row.lessonId)).not.toContain(lessonId);
   await expect(t.query(internal.mcpLearn.getLesson, { userId: otherCreatorIdentity.subject, lessonId, view: "published" })).rejects.toThrow("NOT_FOUND");
   expect(await student.query(api.courses.myProgress, { courseId })).toEqual([]);
   await expect(student.mutation(api.courses.remember, { courseId })).rejects.toThrow("NOT_FOUND");
@@ -62,6 +64,8 @@ it("blocks direct course, lesson, version and progress access until owner approv
   expect((await student.query(api.learnFrontend.publicLesson, { id: lessonId }))?.version._id).toBe(versionId);
   expect((await student.query(api.learnFrontend.publicLessonSummary, { id: lessonId }))?.lessonId).toBe(lessonId);
   expect((await student.query(api.learnFrontend.publicLessonsBatch, { ids: [lessonId] })).map(row => row.lessonId)).toEqual([lessonId]);
+  expect((await student.query(api.learnSearch.searchPublic, { text: "Restricted", paginationOpts: { numItems: 20, cursor: null } })).page.map(hit => hit.lessonId)).toContain(lessonId);
+  expect((await t.query(internal.mcpLearn.listLessons, { userId: otherCreatorIdentity.subject, scope: "public" })).items.map(row => row.lessonId)).toContain(lessonId);
   expect((await t.query(internal.mcpLearn.getLesson, { userId: otherCreatorIdentity.subject, lessonId, view: "published" })).versionId).toBe(versionId);
   expect((await student.query(api.lessonVersionReads.get, { lessonId, versionId }))._id).toBe(versionId);
   expect(await student.query(api.courseStudents.myEnrollment, { courseId })).toEqual({ enrolled: true, owner: false });
@@ -74,6 +78,8 @@ it("blocks direct course, lesson, version and progress access until owner approv
   expect(await student.query(api.learnFrontend.publicLesson, { id: lessonId })).toBeNull();
   expect(await student.query(api.learnFrontend.publicLessonSummary, { id: lessonId })).toBeNull();
   expect(await student.query(api.learnFrontend.publicLessonsBatch, { ids: [lessonId] })).toEqual([]);
+  expect((await student.query(api.learnSearch.searchPublic, { text: "Restricted", paginationOpts: { numItems: 20, cursor: null } })).page.map(hit => hit.lessonId)).not.toContain(lessonId);
+  expect((await t.query(internal.mcpLearn.listLessons, { userId: otherCreatorIdentity.subject, scope: "public" })).items.map(row => row.lessonId)).not.toContain(lessonId);
   await expect(t.query(internal.mcpLearn.getLesson, { userId: otherCreatorIdentity.subject, lessonId, view: "published" })).rejects.toThrow("NOT_FOUND");
   expect(await student.query(api.courseStudents.myEnrollment, { courseId })).toEqual({ enrolled: false, owner: false });
 });
