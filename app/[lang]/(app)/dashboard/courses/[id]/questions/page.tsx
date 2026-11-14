@@ -10,6 +10,7 @@ import type { BankDraft } from "@/convex/questionBankModel";
 import { useLocale } from "@/lib/i18n";
 import { toast } from "@/lib/toast";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
+import PrivateCaseImage from "@/components/courses/PrivateCaseImage";
 import "@/components/courses/courses.css";
 
 const t = {
@@ -239,7 +240,7 @@ export default function CourseQuestionBank({params}:{params:Promise<{id:string}>
         <label className="grid gap-1">{tx.kind}
           <select className="kb-input" value={item.kind} onChange={e=>setKind(e.target.value as Kind)}>
             {answerKinds.map(k=><option key={k} value={k}>{({
-              single_choice:tx.single,multiple_choice:tx.multiple_choice??tx.multiple,
+              single_choice:tx.single,multiple_choice:tx.multiple,
               true_false:tx.tf,written:tx.written,
             })[k]}</option>)}
           </select></label>
@@ -304,7 +305,7 @@ export default function CourseQuestionBank({params}:{params:Promise<{id:string}>
                 caseStudy:{stem:e.target.value,media:item.caseStudy?.media??[]},
               })}/></label>
           {(item.caseStudy?.media??[]).map(image=><div className="flex gap-2 items-center" key={image.mediaId}>
-            <span className="text-sm flex-1 break-words">{image.alt}</span>
+            <div className="flex-1 min-w-0"><PrivateCaseImage mediaId={image.mediaId} alt={image.alt}/></div>
             <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={()=>patch({
               caseStudy:{stem:item.caseStudy?.stem??"",media:(item.caseStudy?.media??[]).filter(m=>m.mediaId!==image.mediaId)},
             })}>{tx.remove}</button>
