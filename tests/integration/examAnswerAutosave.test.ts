@@ -3,6 +3,7 @@ import { api, internal } from "../../convex/_generated/api";
 import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
 import { defaultExamSettings } from "../../convex/examSettingsModel";
 import { normalizeExamAnswer } from "../../convex/examAnswerModel";
+import { createExamAttemptTiming } from "../../convex/examSubmissionModel";
 import { createTestConvex } from "./setup";
 
 afterEach(() => vi.unstubAllEnvs());
@@ -81,11 +82,15 @@ async function fixture() {
     releaseId, expectedPolicyVersion: pre.policyVersion,
     expectedConsentRevision: pre.consentRevision, accepted: true,
   });
-  const attemptId = await t.run(async ctx => ctx.db.insert("examAttempts", {
-    ownerId: creatorIdentity.subject, courseId, snapshotId,
-    studentId: otherCreatorIdentity.subject, state: "in_progress", revision: 0,
-    startedAt: Date.now(), updatedAt: Date.now(),
-  }));
+  const attemptId = await t.run(async ctx => {
+    const startedAt = Date.now();
+    return ctx.db.insert("examAttempts", {
+      ownerId: creatorIdentity.subject, courseId, snapshotId,
+      studentId: otherCreatorIdentity.subject, state: "in_progress", revision: 0,
+      startedAt, updatedAt: startedAt,
+      ...createExamAttemptTiming(defaultExamSettings, startedAt),
+    });
+  });
   return { t, owner, student, courseId, releaseId, attemptId };
 }
 
