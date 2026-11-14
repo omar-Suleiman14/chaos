@@ -200,6 +200,8 @@ export default function CourseExamBuilder({
       </Link>
       <span className="cb-status">{t.status}</span>
     </header>
+    {draftId && <Link href={"/dashboard/courses/" + id + "/exams/results?draft=" + draftId}
+      className="ws-btn ws-btn--ghost ws-btn--sm w-fit">{ar ? "نتائج الطلاب" : "Student results"}</Link>}
     <Link href={"/dashboard/courses/" + id + "/questions"} className="ws-btn ws-btn--ghost ws-btn--sm">
       <Plus size={16} aria-hidden />{ar ? "تأليف أسئلة وحالات إكلينيكية" : "Author questions & clinical cases"}
     </Link>

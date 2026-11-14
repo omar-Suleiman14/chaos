@@ -6,6 +6,7 @@ import { examAudience } from "./examAudienceModel";
 import { integrityDecision, integrityKind, integrityPolicy } from "./examIntegrityModel";
 import { accommodationKind, caseDisposition } from "./examInvigilationModel";
 import { examMarkingPolicy, examRubricCriterion } from "./examGradingModel";
+import { frozenResultPolicy } from "./examResultModel";
 
 /** A sealed snapshot is append-only: no public update/delete API may mutate its content or key. */
 export const frozenQuestion = v.object({
@@ -129,8 +130,29 @@ export const examRuntimeTables = {
       pointsAwardedCents: v.number(),
     })),
     algorithmVersion: v.number(),
+    resultPolicy: v.optional(frozenResultPolicy),
     gradedAt: v.number(),
   }).index("by_attempt", ["attemptId"]),
+  /** Manual release applies to one immutable snapshot; never changes the grade ledger. */
+  examResultPublications: defineTable({
+    snapshotId: v.id("examSnapshots"),
+    courseId: v.id("learnCollections"),
+    ownerId: v.string(),
+    released: v.boolean(),
+    revision: v.number(),
+    updatedAt: v.number(),
+    releasedAt: v.optional(v.number()),
+  }).index("by_snapshot", ["snapshotId"]),
+  /** Immutable publication/revocation audit for owner review and incident response. */
+  examResultPublicationAudit: defineTable({
+    snapshotId: v.id("examSnapshots"),
+    courseId: v.id("learnCollections"),
+    ownerId: v.string(),
+    actorId: v.string(),
+    action: v.union(v.literal("publish"), v.literal("withhold")),
+    revision: v.number(),
+    at: v.number(),
+  }).index("by_snapshot_at", ["snapshotId", "at"]),
   /** Short-lived, privacy-minimized, non-punitive browser telemetry only. */
   examIntegrityEvents: defineTable({
     attemptId: v.id("examAttempts"),
