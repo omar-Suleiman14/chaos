@@ -38,7 +38,7 @@ function isInModule(course: Course, moduleId: string, lessonId: Id<"lessons">) {
   const mod = course.modules?.find(m => m.id === moduleId);
   return !!mod && [...mod.lessonIds, ...(mod.sections ?? []).flatMap(s => s.lessonIds)].includes(lessonId);
 }
-function validatePlan(course: Course, title: string, targetCount: number, allocations: Allocation[]) {
+export function validatePlan(course: Course, title: string, targetCount: number, allocations: Allocation[]) {
   if (!title.trim() || title.trim().length > 200) throw new Error("VALIDATION_FAILED: Give the exam a title (up to 200 characters).");
   if (!Number.isSafeInteger(targetCount) || targetCount < 1 || targetCount > MAX_QUESTIONS)
     throw new Error("VALIDATION_FAILED: Exam target must be 1–100 questions.");
@@ -69,7 +69,7 @@ function validatePlan(course: Course, title: string, targetCount: number, alloca
   return title.trim();
 }
 /** Single bounded course read; duplicate scope links never multiply question availability. */
-async function loadPool(ctx: Ctx, course: Course, ownerId: string): Promise<Entry[]> {
+export async function loadPool(ctx: Ctx, course: Course, ownerId: string): Promise<Entry[]> {
   const links = await ctx.db.query("questionBankLinks")
     .withIndex("by_course_module", q => q.eq("courseId", course._id)).take(MAX_LINKS + 1);
   if (links.length > MAX_LINKS) throw new Error("LIMIT_REACHED: Course exceeds 1,000 question scope links.");
@@ -99,7 +99,7 @@ function matches(entry: Entry, allocation: Allocation) {
     case "topic": return entry.question.topics.some(t => t.toLocaleLowerCase() === allocation.key.toLocaleLowerCase());
   }
 }
-function eligibleByRow(pool: Entry[], allocations: Allocation[]) {
+export function eligibleByRow(pool: Entry[], allocations: Allocation[]) {
   return allocations.map(a => pool.filter(e => matches(e, a)));
 }
 /** Augmenting-path matching avoids falsely reporting shortages when allocations overlap. */
@@ -129,7 +129,7 @@ function assignDistinct(allocations: Allocation[], groups: Entry[][]) {
   return selected.sort((a, b) => (index.get(a.allocationId) ?? 0) - (index.get(b.allocationId) ?? 0) ||
     a.questionId.localeCompare(b.questionId));
 }
-function validateSelections(selections: Selection[], allocations: Allocation[], groups: Entry[][], targetCount: number) {
+export function validateSelections(selections: Selection[], allocations: Allocation[], groups: Entry[][], targetCount: number) {
   if (selections.length > targetCount || selections.length > MAX_QUESTIONS)
     throw new Error("VALIDATION_FAILED: Too many selected questions.");
   const counts = new Map<string, number>();
