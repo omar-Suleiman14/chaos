@@ -50,7 +50,7 @@ export default function StudentAssignments({ params }: { params: Promise<{ id: s
         ? t.grade + ": " + (a.percentBasisPoints / 100).toFixed(2) + "%"
         : a.grading === "grading" || a.grading === "withheld" ? t.pending : ""}</p>}
       {a.kind === "lesson" && a.lessonId && <Link className="ws-btn ws-btn--ghost w-fit"
-        href={"/learn/courses/" + id + "/lessons/" + a.lessonId}>{t.openLesson}</Link>}
+        href={"/learn/" + a.lessonId + "?course=" + encodeURIComponent(id)}>{t.openLesson}</Link>}
       {a.kind === "exam" && <Link className="ws-btn ws-btn--ghost w-fit"
         href="/dashboard/learn/exams/results">{t.results}</Link>}
     </article>)}</div>
