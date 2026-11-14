@@ -42,9 +42,9 @@ export default function StudentExamPreviewPage() {
   return <main className="lx-page" dir={locale === "ar" ? "rtl" : "ltr"}>
     <Link className="ws-btn ws-btn--ghost ws-btn--sm w-fit"
       href={"/dashboard/learn/exams/" + preflight.releaseId}>{t.back}</Link>
-    {!preflight.consentAccepted ? <section className="cb-section" role="status">
+    {!preflight.consentAccepted ? <output className="cb-section block">
       <p>{t.consent}</p>
-    </section> : <>
+    </output> : <>
       <p className="text-sm text-muted-foreground">{t.locked}</p>
       <StudentExamPlayer key={preflight.policyVersion} title={preflight.title}
         locale={locale === "ar" ? "ar" : "en"} questions={previewQuestions} />

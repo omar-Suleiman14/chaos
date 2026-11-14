@@ -90,7 +90,7 @@ export function StudentExamPlayer({ title, questions, locale }: Props) {
     });
   };
 
-  if (!current) return <section className="cb-section" role="status">{t.empty}</section>;
+  if (!current) return <output className="cb-section block">{t.empty}</output>;
   const answer = answers[current.id] ?? { choiceIds: [], text: "" };
   const isSaved = saved.includes(current.id);
   const isFlagged = flagged.includes(current.id);
@@ -119,9 +119,9 @@ export function StudentExamPlayer({ title, questions, locale }: Props) {
       <section className="cb-section min-w-0 space-y-5" aria-labelledby="exam-preview-prompt">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <span className="text-sm font-medium text-muted-foreground">{t.question} {position + 1}</span>
-          <span className="rounded-md border border-border px-2 py-1 text-xs" role="status">
+          <output className="rounded-md border border-border px-2 py-1 text-xs">
             {t[states[position]]}
-          </span>
+          </output>
         </div>
         {current.caseStudy && <div className="space-y-3 rounded-xl border border-border bg-muted/30 p-3 sm:p-4">
           <p className="whitespace-pre-wrap text-sm leading-relaxed" dir="auto">{current.caseStudy.stem}</p>
@@ -196,7 +196,7 @@ export function StudentExamPlayer({ title, questions, locale }: Props) {
 
       <aside className="cb-section min-w-0 space-y-4" aria-labelledby="exam-navigator-heading">
         <h2 id="exam-navigator-heading" className="font-semibold">{t.navigation}</h2>
-        <div className="grid grid-cols-5 gap-2 sm:grid-cols-8 lg:grid-cols-5" role="group" aria-label={t.navigation}>
+        <fieldset className="grid grid-cols-5 gap-2 border-0 p-0 sm:grid-cols-8 lg:grid-cols-5" aria-label={t.navigation}>
           {questions.map((q, i) => <button key={q.id} type="button"
             aria-label={t.question + " " + (i + 1) + ": " + t[states[i]]}
             aria-current={position === i ? "step" : undefined}
@@ -205,7 +205,7 @@ export function StudentExamPlayer({ title, questions, locale }: Props) {
               statusStyle[states[i]] + (position === i ? " ring-2 ring-ring ring-offset-2 ring-offset-background" : "")}>
             {i + 1}
           </button>)}
-        </div>
+        </fieldset>
         <section className="space-y-2 border-t border-border pt-3" aria-label={t.status}>
           {(["unanswered", "answered", "saved", "flagged"] as const).map(status => <div
             key={status} className="flex items-center justify-between gap-2 text-xs">
