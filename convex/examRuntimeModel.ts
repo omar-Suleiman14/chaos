@@ -92,6 +92,19 @@ export const examRuntimeTables = {
     savedAt: v.number(),
   })
     .index("by_attempt_question", ["attemptId", "questionIndex"]),
+  /** Immutable completion proof; never contains answers, keys or private media. */
+  examSubmissionReceipts: defineTable({
+    attemptId: v.id("examAttempts"),
+    studentId: v.string(),
+    snapshotId: v.id("examSnapshots"),
+    outcome: v.union(v.literal("submitted"), v.literal("expired")),
+    reason: v.union(v.literal("student"), v.literal("timeout")),
+    completedAt: v.number(),
+    answeredCount: v.number(),
+    questionCount: v.number(),
+    startedAt: v.number(),
+    deadlineAt: v.number(),
+  }).index("by_attempt", ["attemptId"]),
   examAttempts: defineTable({
     ownerId: v.string(),
     courseId: v.id("learnCollections"),
@@ -100,6 +113,19 @@ export const examRuntimeTables = {
     state: attemptState,
     revision: v.number(),
     startedAt: v.number(),
+    /** Frozen when the server starts the attempt; missing on legacy/test seed rows. */
+    deadlineAt: v.optional(v.number()),
+    minimumSubmitAt: v.optional(v.number()),
+    submissionPolicy: v.optional(v.object({
+      allowEarlySubmission: v.boolean(),
+      requireAllAnswers: v.boolean(),
+      timeoutAction: v.union(v.literal("auto_submit"), v.literal("expire")),
+    })),
+    submitConfirmation: v.optional(v.object({
+      id: v.string(), expiresAt: v.number(), answerStamp: v.string(),
+      expectedRevision: v.number(),
+    })),
+    submissionId: v.optional(v.string()),
     updatedAt: v.number(),
     submittedAt: v.optional(v.number()),
     closedAt: v.optional(v.number()),

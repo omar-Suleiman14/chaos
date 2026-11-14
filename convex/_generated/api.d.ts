@@ -146,6 +146,8 @@ import type * as examBuilder from "../examBuilder.js";
 import type * as examBuilderModel from "../examBuilderModel.js";
 import type * as examAttemptState from "../examAttemptState.js";
 import type * as examAnswerModel from "../examAnswerModel.js";
+import type * as examSubmissionModel from "../examSubmissionModel.js";
+import type * as examSubmissions from "../examSubmissions.js";
 import type * as examAnswers from "../examAnswers.js";
 import type * as examAudience from "../examAudience.js";
 import type * as examAudienceModel from "../examAudienceModel.js";
@@ -323,6 +325,8 @@ declare const fullApi: ApiFromModules<{
   examBuilderModel: typeof examBuilderModel;
   examAttemptState: typeof examAttemptState;
   examAnswerModel: typeof examAnswerModel;
+  examSubmissionModel: typeof examSubmissionModel;
+  examSubmissions: typeof examSubmissions;
   examAnswers: typeof examAnswers;
   examAudience: typeof examAudience;
   examAudienceModel: typeof examAudienceModel;
