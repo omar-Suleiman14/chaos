@@ -1,7 +1,7 @@
 "use node";
 
 import { v } from "convex/values";
-import { internalAction } from "./_generated/server";
+import { env, internalAction } from "./_generated/server";
 import { internal } from "./_generated/api";
 import { buildWebPush } from "../lib/push/webPush";
 
@@ -13,9 +13,9 @@ export const deliver = internalAction({
   handler: async (ctx, { notificationId, attempt }) => {
     if (!Number.isInteger(attempt) || attempt < 0 || attempt > BACKOFF_MS.length) return;
     const keys = {
-      publicKey: process.env.CHAOS_WEB_PUSH_PUBLIC_KEY || "",
-      privateKey: process.env.CHAOS_WEB_PUSH_PRIVATE_KEY || "",
-      subject: process.env.CHAOS_WEB_PUSH_SUBJECT || "",
+      publicKey: env.CHAOS_WEB_PUSH_PUBLIC_KEY || "",
+      privateKey: env.CHAOS_WEB_PUSH_PRIVATE_KEY || "",
+      subject: env.CHAOS_WEB_PUSH_SUBJECT || "",
     };
     if (!keys.publicKey || !keys.privateKey || !keys.subject) return; // Explicitly disabled until configured.
     const targets = await ctx.runQuery(internal.pushSubscriptions.deliveryTargets, { notificationId });
