@@ -34,6 +34,20 @@ export default defineSchema({
   authorStudents: defineTable({ authorId: v.string(), key: v.string(), studentId: v.optional(v.string()), guestName: v.optional(v.string()), context: v.string(), publicVisible: v.boolean(), publicHidden: v.optional(v.boolean()), updatedAt: v.number() }).index("by_author_key", ["authorId", "key"]).index("by_author_updated", ["authorId", "updatedAt"]).index("by_author_public_updated", ["authorId", "publicVisible", "updatedAt"]),
   /** A learner who pressed Start on a course: a signed-in account or a device-scoped guest. Feeds the author's course analytics. */
   courseEnrollments: defineTable({ courseId: v.id("learnCollections"), ownerId: v.string(), key: v.string(), studentId: v.optional(v.string()), guestName: v.optional(v.string()), completedLessonIds: v.array(v.id("lessons")), lastLessonId: v.optional(v.id("lessons")), enrolledAt: v.number(), updatedAt: v.number(), completedAt: v.optional(v.number()) }).index("by_course_key", ["courseId", "key"]).index("by_course_updated", ["courseId", "updatedAt"]),
+  /** Doctor-mediated requests to enter a published course. Admission and publication are distinct. */
+  courseJoinRequests: defineTable({
+    courseId: v.id("learnCollections"),
+    ownerId: v.string(),
+    studentId: v.string(),
+    status: v.union(v.literal("pending"), v.literal("approved"), v.literal("rejected"), v.literal("withdrawn")),
+    requestedAt: v.number(),
+    updatedAt: v.number(),
+    reviewedAt: v.optional(v.number()),
+    reviewedBy: v.optional(v.string()),
+  })
+    .index("by_course_student", ["courseId", "studentId"])
+    .index("by_course_status_requestedAt", ["courseId", "status", "requestedAt"])
+    .index("by_student_updated", ["studentId", "updatedAt"]),
   authorStudentCounts: defineTable({ authorId: v.string(), count: v.number() }).index("by_author", ["authorId"]),
   authIdentityBindings: defineTable({ externalActorId: v.string(), actorId: v.string(), tokenIdentifier: v.string() }).index("by_externalActorId", ["externalActorId"]).index("by_actorId", ["actorId"]),
   ...docsTables,
