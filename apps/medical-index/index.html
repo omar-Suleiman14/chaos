@@ -548,6 +548,90 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
 .report-toast-dismiss{margin-left:auto;flex-shrink:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:transparent;border:0;border-radius:7px;color:var(--muted);font-size:22px}
 .report-toast-dismiss:hover{background:var(--hover);color:var(--text)}
 @media(prefers-reduced-motion:reduce){.report-dialog[open].sheet-settling,.settings-dialog[open].sheet-settling{transition:none!important}}
+
+/* Tablet and touch-screen sheets: fixed footer, scrollable form, physical drag grip. */
+.sheet-grabber{display:none}
+.report-dialog{
+ overflow:hidden;
+ max-height:min(90dvh,760px);
+}
+.index-report-form{
+ display:flex;flex-direction:column;min-height:0;
+ max-height:min(90dvh,760px);
+ overflow:hidden;
+}
+.report-head,.report-foot{flex-shrink:0}
+.report-body{
+ flex:1 1 auto;min-height:0;overflow-y:auto;
+ overscroll-behavior:contain;-webkit-overflow-scrolling:touch;
+}
+.report-foot{
+ position:relative;z-index:1;background:var(--surface);
+ border-top:1px solid var(--border);
+}
+@media(max-width:700px),(any-pointer:coarse){
+ .report-dialog{
+   margin:auto auto 0;
+   width:min(720px,calc(100vw - 24px));max-width:720px;
+   height:min(88dvh,880px);max-height:88dvh;
+   padding-bottom:env(safe-area-inset-bottom);
+   border-radius:18px 18px 0 0;border-bottom:0;
+   overflow:hidden;
+ }
+ .index-report-form{height:100%;max-height:100%;min-height:0}
+ .report-body{overflow-y:auto;max-height:none;min-height:0;padding:18px;gap:16px}
+ .report-head,.settings-heading{position:relative;touch-action:pan-x}
+ .report-head{padding-top:31px}
+ .settings-heading{padding-top:26px}
+ .report-head::before,.settings-heading::before{display:none!important}
+ .sheet-grabber{
+   display:flex;align-items:flex-start;justify-content:center;
+   position:absolute;z-index:2;top:0;left:50%;transform:translateX(-50%);
+   width:110px;height:30px;touch-action:none;cursor:grab;
+ }
+ .sheet-grabber::after{
+   content:"";width:40px;height:5px;margin-top:8px;
+   border-radius:999px;background:var(--muted);opacity:.85;
+ }
+ .report-dialog.sheet-dragging .sheet-grabber,.settings-dialog.sheet-dragging .sheet-grabber{cursor:grabbing}
+ .settings-dialog{
+   margin:auto auto 0;
+   width:min(600px,calc(100vw - 24px));max-width:600px;
+   max-height:min(84dvh,760px);
+   border-radius:18px 18px 0 0;border-bottom:0;
+   padding-bottom:env(safe-area-inset-bottom);
+ }
+ body.sheet-open{overflow:hidden}
+ body.sheet-open .main{
+   transform:translateY(-10px) scale(.96);transform-origin:center top;
+   border-radius:22px;overflow:hidden;
+   transition:transform .35s cubic-bezier(.2,.77,.24,1),border-radius .35s;
+ }
+ body.sheet-open .report-fab{opacity:0;pointer-events:none}
+ .report-dialog[open],.settings-dialog[open]{
+   animation:index-ios-sheet-in .38s cubic-bezier(.2,.8,.2,1) both
+ }
+ .report-dialog[open].sheet-gesture-ready,.settings-dialog[open].sheet-gesture-ready{
+   animation:none!important;
+ }
+ .report-dialog[open].sheet-dragging,.settings-dialog[open].sheet-dragging{
+   animation:none!important;transition:none!important;
+   transform:translate3d(0,var(--sheet-y,0px),0)!important;
+ }
+ .report-dialog[open].sheet-settling,.settings-dialog[open].sheet-settling{
+   animation:none!important;
+   transition:transform .26s cubic-bezier(.2,.8,.2,1)!important;
+   transform:translate3d(0,var(--sheet-y,0px),0)!important;
+ }
+}
+@media(max-width:700px){
+ .report-dialog,.settings-dialog{width:100%;max-width:100%}
+}
+@media(prefers-reduced-motion:reduce){
+ body.sheet-open .main{transition:none!important}
+ .report-dialog[open],.settings-dialog[open]{animation:none!important}
+ .report-dialog[open].sheet-settling,.settings-dialog[open].sheet-settling{transition:none!important}
+}
 </style></head><body><main class="main"><div class="wrap"><header class="site-header"><a class="brand" href="https://chaos.fail/" aria-label="Open Chaos home"><svg viewBox="0 0 48 48" width="25" height="25" aria-hidden="true"><defs><linearGradient id="chaos-warm" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fca535"/><stop offset="1" stop-color="#e9482b"/></linearGradient></defs><rect x="5" y="5" width="38" height="38" rx="10" fill="url(#chaos-warm)"/></svg><span>Chaos</span><span class="separator" aria-hidden="true"></span><span class="index-label">Index</span></a><div class="header-actions">
 <button type="button" id="settingsOpen" class="settings-open" aria-label="Settings" aria-haspopup="dialog" aria-controls="settingsDialog" title="Settings">
 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4l.5 2.5c.8.25 1.5.65 2.2 1.1L19 4.5 21.5 8l-1.9 1.8c.2.7.4 1.4.4 2.2s-.2 1.5-.4 2.2l1.9 1.8-2.5 3.5-2.3-1.1c-.7.45-1.4.85-2.2 1.1L14 22h-4l-.5-2.5c-.8-.25-1.5-.65-2.2-1.1L5 19.5 2.5 16l1.9-1.8C4.2 13.5 4 12.8 4 12s.2-1.5.4-2.2L2.5 8 5 4.5l2.3 1.1c.7-.45 1.4-.85 2.2-1.1L10 2Z"/><circle cx="12" cy="12" r="3.1"/></svg>
@@ -558,6 +642,7 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
 <dialog id="reportDialog" class="report-dialog" aria-labelledby="reportTitle" aria-modal="true">
   <form id="indexReportForm" class="index-report-form" novalidate>
     <div class="report-head">
+      <div class="sheet-grabber" aria-hidden="true"></div>
       <div><h2 id="reportTitle" tabindex="-1">Report an issue</h2><p>Report missing material or something indexed incorrectly.</p></div>
       <button type="button" id="reportClose" class="report-close" aria-label="Close report panel"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
@@ -607,7 +692,7 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
 
 <dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsTitle" aria-modal="true">
   <div class="settings-content">
-    <div class="settings-heading"><div><h2 id="settingsTitle" tabindex="-1">Settings</h2><p>Display preferences</p></div>
+    <div class="settings-heading"><div class="sheet-grabber" aria-hidden="true"></div><div><h2 id="settingsTitle" tabindex="-1">Settings</h2><p>Display preferences</p></div>
       <button type="button" id="settingsClose" class="settings-close" aria-label="Close settings"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
     <label class="setting-row" for="missingToggle"><span class="setting-copy"><strong>Show not found</strong><span>Display gaps in numbered lectures and practicals</span></span>
@@ -1173,7 +1258,7 @@ document.getElementById("reportToastDismiss").addEventListener("click",()=>{
 function attachSwipeDismiss(dialog,handle,dismiss){
  const body=dialog.querySelector(".report-body");
  let gesture=null,finishTimer=null;
- const isMobile=()=>window.matchMedia("(max-width:700px)").matches;
+ const isMobile=()=>window.matchMedia("(max-width:700px), (any-pointer:coarse)").matches;
  const reducedMotion=()=>window.matchMedia("(prefers-reduced-motion: reduce)").matches;
  function clearVisual(){
   if(finishTimer!==null)window.clearTimeout(finishTimer);
@@ -1258,7 +1343,7 @@ function attachSwipeDismiss(dialog,handle,dismiss){
 }
 
 function syncSheetPresentation(){
- const mobile=typeof window.matchMedia==="function"&&window.matchMedia("(max-width: 700px)").matches;
+ const mobile=typeof window.matchMedia==="function"&&window.matchMedia("(max-width:700px), (any-pointer:coarse)").matches;
  const report=document.getElementById("reportDialog");
  document.body.classList.toggle("sheet-open",mobile&&(settingsDialog.open||!!report?.open));
 }
