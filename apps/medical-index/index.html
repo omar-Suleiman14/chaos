@@ -514,6 +514,39 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
 .admin-entry small{font-size:11px;color:var(--muted)}
 @media(max-width:700px){.material-report{width:42px;min-width:42px}.report-body{gap:14px}}
 @media(prefers-reduced-motion:reduce){.material-report{transition:none!important}}
+
+/* Mobile bottom-sheet drag grip and swipe-down dismissal. */
+@media(max-width:700px){
+ .report-head,.settings-heading{position:relative;touch-action:pan-x}
+ .report-head{padding-top:27px}
+ .settings-heading{padding-top:18px}
+ .report-head::before,.settings-heading::before{
+  content:"";position:absolute;top:8px;left:50%;transform:translateX(-50%);
+  width:38px;height:5px;border-radius:99px;background:var(--border-hover);pointer-events:none
+ }
+ .report-dialog[open].sheet-gesture-ready,.settings-dialog[open].sheet-gesture-ready{animation:none!important}
+ .report-dialog[open].sheet-dragging,.settings-dialog[open].sheet-dragging{
+  animation:none!important;transition:none!important;transform:translate3d(0,var(--sheet-y,0px),0)!important
+ }
+ .report-dialog[open].sheet-settling,.settings-dialog[open].sheet-settling{
+  animation:none!important;transition:transform .23s cubic-bezier(.2,.8,.2,1)!important;
+  transform:translate3d(0,var(--sheet-y,0px),0)!important
+ }
+}
+.report-toast{
+ position:fixed;z-index:999;bottom:max(24px,env(safe-area-inset-bottom) + 18px);
+ left:50%;transform:translateX(-50%);width:min(440px,calc(100vw - 32px));
+ padding:14px 16px;display:flex;gap:12px;align-items:center;
+ background:var(--raised);color:var(--text);border:1px solid var(--border-hover);
+ border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.35);
+ font-size:13px;line-height:1.45
+}
+.report-toast[hidden]{display:none!important}
+.report-toast-icon{flex-shrink:0;width:24px;height:24px;display:flex;align-items:center;justify-content:center;background:#2c6348;border-radius:50%;color:#e7f8eb;font-weight:700}
+.report-toast[data-state="error"] .report-toast-icon{background:#7e3a3a;color:#fff}
+.report-toast-dismiss{margin-left:auto;flex-shrink:0;width:30px;height:30px;display:flex;align-items:center;justify-content:center;background:transparent;border:0;border-radius:7px;color:var(--muted);font-size:22px}
+.report-toast-dismiss:hover{background:var(--hover);color:var(--text)}
+@media(prefers-reduced-motion:reduce){.report-dialog[open].sheet-settling,.settings-dialog[open].sheet-settling{transition:none!important}}
 </style></head><body><main class="main"><div class="wrap"><header class="site-header"><a class="brand" href="https://chaos.fail/" aria-label="Open Chaos home"><svg viewBox="0 0 48 48" width="25" height="25" aria-hidden="true"><defs><linearGradient id="chaos-warm" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fca535"/><stop offset="1" stop-color="#e9482b"/></linearGradient></defs><rect x="5" y="5" width="38" height="38" rx="10" fill="url(#chaos-warm)"/></svg><span>Chaos</span><span class="separator" aria-hidden="true"></span><span class="index-label">Index</span></a><div class="header-actions">
 <button type="button" id="settingsOpen" class="settings-open" aria-label="Settings" aria-haspopup="dialog" aria-controls="settingsDialog" title="Settings">
 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4l.5 2.5c.8.25 1.5.65 2.2 1.1L19 4.5 21.5 8l-1.9 1.8c.2.7.4 1.4.4 2.2s-.2 1.5-.4 2.2l1.9 1.8-2.5 3.5-2.3-1.1c-.7.45-1.4.85-2.2 1.1L14 22h-4l-.5-2.5c-.8-.25-1.5-.65-2.2-1.1L5 19.5 2.5 16l1.9-1.8C4.2 13.5 4 12.8 4 12s.2-1.5.4-2.2L2.5 8 5 4.5l2.3 1.1c.7-.45 1.4-.85 2.2-1.1L10 2Z"/><circle cx="12" cy="12" r="3.1"/></svg>
@@ -586,6 +619,11 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
     <a id="adminEntry" class="admin-entry" href="/admin" hidden><span><strong>Admin</strong><small>Open the authenticated report inbox</small></span><span aria-hidden="true">↗</span></a>
   </div>
 </dialog>
+<div class="report-toast" id="reportToast" role="status" aria-live="polite" aria-atomic="true" hidden>
+ <span class="report-toast-icon" aria-hidden="true">✓</span>
+ <span id="reportToastMessage">Report submitted successfully.</span>
+ <button type="button" id="reportToastDismiss" class="report-toast-dismiss" aria-label="Dismiss notification">×</button>
+</div>
 <script>(()=>{
 "use strict";
 const M=[["General Anatomy & Histology",1,"Foundations"],["General Physiology & Biochemistry",1,"Foundations"],["General Microbiology & Parasitology",1,"Foundations"],["General Pathology & Pharmacology",1,"Foundations"],["Locomotor System",1,"Systems"],["GIT & Nutrition",1,"Systems"],["Blood",2,"Systems"],["Cardiovascular System",2,"Systems"],["Respiratory System",2,"Systems"],["Basic Clinical Skills",2,"Clinical"],["Endocrine System",2,"Systems"],["PMP",2,"Clinical"],["Reproductive System",2,"Systems"],["Renal System",2,"Systems"],["ERMS",2,"Clinical"],["Central Nervous System",3,"Systems"],["Head, Neck & Special Senses",3,"Systems"],["Community Medicine",3,"Community"]];
@@ -1114,6 +1152,69 @@ const settingsDialog=document.getElementById("settingsDialog");
 const settingsClose=document.getElementById("settingsClose");
 const searchForm=document.getElementById("searchForm");
 const searchDone=document.getElementById("searchDone");
+
+const reportToast=document.getElementById("reportToast");
+const reportToastMessage=document.getElementById("reportToastMessage");
+let reportToastTimeout;
+function showReportToast(message,kind="success"){
+ window.clearTimeout(reportToastTimeout);
+ reportToastMessage.textContent=message;
+ reportToast.dataset.state=kind;
+ reportToast.querySelector(".report-toast-icon").textContent=kind==="success"?"✓":"!";
+ reportToast.hidden=false;
+ reportToastTimeout=window.setTimeout(()=>{reportToast.hidden=true},5500);
+}
+document.getElementById("reportToastDismiss").addEventListener("click",()=>{
+ window.clearTimeout(reportToastTimeout);reportToast.hidden=true;
+});
+/* Keep gestures on the handle/header so selects and scrollable inputs remain usable. */
+function attachSwipeDismiss(dialog,handle,dismiss){
+ let originX=0,originY=0,started=0,offset=0,tracking=false,dragging=false,settleTimer=null;
+ const isMobile=()=>window.matchMedia("(max-width:700px)").matches;
+ function reset(){
+  window.clearTimeout(settleTimer);settleTimer=null;tracking=false;dragging=false;
+  dialog.classList.remove("sheet-gesture-ready","sheet-dragging","sheet-settling");
+  dialog.style.removeProperty("--sheet-y");
+ }
+ handle.addEventListener("touchstart",e=>{
+  if(!isMobile()||!dialog.open||e.touches.length!==1||settleTimer!==null)return;
+  if(e.target.closest("button,a,input,textarea,select"))return;
+  originX=e.touches[0].clientX;originY=e.touches[0].clientY;started=Date.now();
+  tracking=true;dragging=false;offset=0;
+ },{passive:true});
+ handle.addEventListener("touchmove",e=>{
+  if(!tracking||e.touches.length!==1)return;
+  const dx=e.touches[0].clientX-originX,dy=e.touches[0].clientY-originY;
+  if(!dragging){
+   if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)){tracking=false;return;}
+   if(dy<=8)return;
+   dragging=true;dialog.classList.add("sheet-gesture-ready","sheet-dragging");
+  }
+  offset=Math.max(0,dy);
+  dialog.style.setProperty("--sheet-y",offset+"px");
+  if(e.cancelable)e.preventDefault();
+ },{passive:false});
+ function finish(shouldClose){
+  if(!dragging){tracking=false;return;}
+  tracking=false;dragging=false;
+  dialog.classList.remove("sheet-dragging");dialog.classList.add("sheet-settling");
+  const target=shouldClose?Math.ceil(window.innerHeight*1.1):0;
+  window.requestAnimationFrame(()=>dialog.style.setProperty("--sheet-y",target+"px"));
+  settleTimer=window.setTimeout(()=>{
+   settleTimer=null;
+   if(shouldClose)dismiss();
+   else{dialog.classList.remove("sheet-settling");dialog.style.removeProperty("--sheet-y")}
+  },230);
+ }
+ handle.addEventListener("touchend",e=>{
+  if(!tracking)return;
+  const dy=e.changedTouches[0].clientY-originY;
+  finish(dy>115||(dy>50&&dy/Math.max(Date.now()-started,1)>.65));
+ },{passive:true});
+ handle.addEventListener("touchcancel",()=>finish(false),{passive:true});
+ dialog.addEventListener("close",reset);
+}
+
 function syncSheetPresentation(){
  const mobile=typeof window.matchMedia==="function"&&window.matchMedia("(max-width: 700px)").matches;
  const report=document.getElementById("reportDialog");
@@ -1144,6 +1245,7 @@ settingsClose.addEventListener("click",closeSettings);
 settingsDialog.addEventListener("click",e=>{if(e.target===settingsDialog)closeSettings()});
 settingsDialog.addEventListener("close",()=>{countSettingsCycle();syncSheetPresentation();settingsOpen.focus({preventScroll:true})});
 settingsDialog.addEventListener("cancel",()=>{ /* ESC handled by native dialog */ });
+attachSwipeDismiss(settingsDialog,settingsDialog.querySelector(".settings-heading"),closeSettings);
 searchForm.addEventListener("submit",e=>{
  e.preventDefault();qInput.blur();searchDone.blur();
 });
@@ -1282,6 +1384,7 @@ function closeIndexReport(){
  syncSheetPresentation();
  reportOpen.focus({preventScroll:true});
 }
+attachSwipeDismiss(reportDialog,reportDialog.querySelector(".report-head"),closeIndexReport);
 reportOpen.addEventListener("click",()=>openIndexReport());
 reportIssueButtons.forEach(button=>button.addEventListener("click",()=>{
  reportIssue=button.dataset.reportIssue;
@@ -1349,9 +1452,12 @@ reportForm.addEventListener("submit",async e=>{
   reportStatus.dataset.state="success";
   reportStatus.textContent="Report sent. Thank you.";
   reportNotes.value="";reportKey=null;reportSince=Date.now();
+  closeIndexReport();
+  showReportToast("Report sent successfully. Thank you!");
  }catch(error){
   reportStatus.dataset.state="error";
   reportStatus.textContent=error instanceof Error?error.message:"Could not send report. Try again.";
+  showReportToast("Report not sent. Please try again.","error");
  }finally{
   reportSending=false;reportSubmit.textContent="Send report";updateReportSubmit();
  }
