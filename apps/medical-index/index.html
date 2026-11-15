@@ -455,7 +455,45 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
  .missing-report{font-size:10px;padding:8px 9px}
 }
 @media(prefers-reduced-motion:reduce){.report-dialog[open]{animation:none!important}.theme-icon,body,.material-row,.report-choice,.report-submit{transition:none!important}}
-</style></head><body><main class="main"><div class="wrap"><header class="site-header"><a class="brand" href="https://chaos.fail/" aria-label="Open Chaos home"><svg viewBox="0 0 48 48" width="25" height="25" aria-hidden="true"><defs><linearGradient id="chaos-warm" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fca535"/><stop offset="1" stop-color="#e9482b"/></linearGradient></defs><rect x="5" y="5" width="38" height="38" rx="10" fill="url(#chaos-warm)"/></svg><span>Chaos</span><span class="separator" aria-hidden="true"></span><span class="index-label">Index</span></a><div class="header-actions"><button type="button" id="themeToggle" class="theme-toggle" aria-label="Switch to light mode"><svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg><span class="theme-word">Light mode</span></button>
+
+/* Index layout polish: one spacing rhythm and matched control sizes. */
+:root{--index-height:48px;--index-action-width:112px;--index-gap:12px}
+.tools{display:flex;flex-direction:column;gap:var(--index-gap);margin-bottom:var(--index-gap)}
+.search-form{gap:var(--index-gap)}
+.search-form .search,.search-form .search input,.search-done,.actions .action-button{min-height:var(--index-height)}
+.search-form .search input{height:var(--index-height)}
+.search-done,.actions .action-button{
+ width:var(--index-action-width);min-width:var(--index-action-width);height:var(--index-height);
+ padding:0 12px;white-space:nowrap;display:inline-flex;align-items:center;justify-content:center;
+ border:1px solid var(--border);border-radius:7px;background:var(--surface);color:var(--text);
+ font-size:13px;font-weight:580
+}
+.search-done{display:none}
+.search-form:focus-within .search-done{display:inline-flex}
+.tools .actions{margin-top:0;justify-content:flex-end}
+.tools .results:empty{display:none}
+.tools .results:not(:empty){padding-top:0}
+.year{margin-bottom:var(--index-gap)}
+.theme-setting .theme-toggle{min-height:42px;flex-shrink:0;padding:0 12px;border-radius:7px;background:var(--raised);color:var(--text);font-size:12px;white-space:nowrap}
+.theme-setting .theme-toggle:hover{background:var(--hover)}
+#reportTitle:focus{outline:none}
+/* Year, Module, Type in their reading and tab order. */
+.report-fields{grid-template-columns:minmax(0,1fr);gap:12px}
+.report-field[data-field="module"],.report-field[data-field="type"]{grid-column:1;grid-row:auto}
+@keyframes index-ios-sheet-in{from{transform:translateY(105%)}to{transform:translateY(0)}}
+@media(max-width:700px){
+ .tools{gap:var(--index-gap);margin-bottom:var(--index-gap)}
+ .report-fields{grid-template-columns:minmax(0,1fr);gap:12px}
+ .report-field[data-field="module"],.report-field[data-field="type"]{grid-column:1;grid-row:auto}
+ .main{transform-origin:center top;transition:transform .38s cubic-bezier(.2,.77,.24,1),border-radius .38s cubic-bezier(.2,.77,.24,1)}
+ body.sheet-open{overflow:hidden}
+ body.sheet-open .main{transform:translateY(-10px) scale(.95);border-radius:22px;overflow:hidden}
+ body.sheet-open .report-fab{opacity:0;pointer-events:none}
+ .report-dialog[open],.settings-dialog[open]{animation:index-ios-sheet-in .38s cubic-bezier(.2,.8,.2,1) both}
+ .report-dialog::backdrop,.settings-dialog::backdrop{background:rgba(0,0,0,.37);backdrop-filter:blur(2px)}
+}
+@media(prefers-reduced-motion:reduce){.main{transition:none!important}.report-dialog[open],.settings-dialog[open]{animation:none!important}}
+</style></head><body><main class="main"><div class="wrap"><header class="site-header"><a class="brand" href="https://chaos.fail/" aria-label="Open Chaos home"><svg viewBox="0 0 48 48" width="25" height="25" aria-hidden="true"><defs><linearGradient id="chaos-warm" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fca535"/><stop offset="1" stop-color="#e9482b"/></linearGradient></defs><rect x="5" y="5" width="38" height="38" rx="10" fill="url(#chaos-warm)"/></svg><span>Chaos</span><span class="separator" aria-hidden="true"></span><span class="index-label">Index</span></a><div class="header-actions">
 <button type="button" id="settingsOpen" class="settings-open" aria-label="Settings" aria-haspopup="dialog" aria-controls="settingsDialog" title="Settings">
 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4l.5 2.5c.8.25 1.5.65 2.2 1.1L19 4.5 21.5 8l-1.9 1.8c.2.7.4 1.4.4 2.2s-.2 1.5-.4 2.2l1.9 1.8-2.5 3.5-2.3-1.1c-.7.45-1.4.85-2.2 1.1L14 22h-4l-.5-2.5c-.8-.25-1.5-.65-2.2-1.1L5 19.5 2.5 16l1.9-1.8C4.2 13.5 4 12.8 4 12s.2-1.5.4-2.2L2.5 8 5 4.5l2.3 1.1c.7-.45 1.4-.85 2.2-1.1L10 2Z"/><circle cx="12" cy="12" r="3.1"/></svg>
 </button></div></header><div class="content"><section class="tools" aria-label="Library controls"><form class="search-form" id="searchForm" role="search"><label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input type="search" id="search" name="q" placeholder="Search modules, lectures, questions..." aria-label="Search modules, lectures, questions" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search" inputmode="search"></label><button id="searchDone" type="submit" class="search-done" aria-label="Done searching">Done</button></form><div class="actions"><div class="action-buttons"><button type="button" class="action-button" id="expandToggle" aria-pressed="false">Expand all</button></div></div><div class="results" id="results" aria-live="polite"></div></section><div id="view"></div></div></div></main>
@@ -509,6 +547,10 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
     <label class="setting-row" for="missingToggle"><span class="setting-copy"><strong>Show not found</strong><span>Display gaps in numbered lectures and practicals</span></span>
       <span class="switch-label"><input id="missingToggle" type="checkbox" role="switch" aria-label="Show not found files" checked><span class="switch-track" aria-hidden="true"></span></span>
     </label>
+    <div class="setting-row theme-setting">
+      <span class="setting-copy"><strong>Appearance</strong><span>Switch between light and dark mode</span></span>
+      <button type="button" id="themeToggle" class="theme-toggle" aria-label="Switch to light mode"><svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg><span class="theme-word">Light mode</span></button>
+    </div>
   </div>
 </dialog>
 <script>(()=>{
@@ -1022,6 +1064,12 @@ const settingsDialog=document.getElementById("settingsDialog");
 const settingsClose=document.getElementById("settingsClose");
 const searchForm=document.getElementById("searchForm");
 const searchDone=document.getElementById("searchDone");
+function syncSheetPresentation(){
+ const mobile=typeof window.matchMedia==="function"&&window.matchMedia("(max-width: 700px)").matches;
+ const report=document.getElementById("reportDialog");
+ document.body.classList.toggle("sheet-open",mobile&&(settingsDialog.open||!!report?.open));
+}
+window.addEventListener("resize",syncSheetPresentation,{passive:true});
 function openSettings(){
  if(typeof window.matchMedia==="function"&&window.matchMedia("(min-width: 701px)").matches){
   const rect=settingsOpen.getBoundingClientRect();
@@ -1030,17 +1078,19 @@ function openSettings(){
  }
  if(typeof settingsDialog.showModal==="function")settingsDialog.showModal();
  else settingsDialog.setAttribute("open","");
+ syncSheetPresentation();
  document.getElementById("settingsTitle").focus({preventScroll:true});
 }
 function closeSettings(){
  if(typeof settingsDialog.close==="function")settingsDialog.close();
  else settingsDialog.removeAttribute("open");
+ syncSheetPresentation();
  settingsOpen.focus({preventScroll:true});
 }
 settingsOpen.addEventListener("click",openSettings);
 settingsClose.addEventListener("click",closeSettings);
 settingsDialog.addEventListener("click",e=>{if(e.target===settingsDialog)closeSettings()});
-settingsDialog.addEventListener("close",()=>settingsOpen.focus({preventScroll:true}));
+settingsDialog.addEventListener("close",()=>{syncSheetPresentation();settingsOpen.focus({preventScroll:true})});
 settingsDialog.addEventListener("cancel",()=>{ /* ESC handled by native dialog */ });
 searchForm.addEventListener("submit",e=>{
  e.preventDefault();qInput.blur();searchDone.blur();
@@ -1146,6 +1196,7 @@ function openIndexReport(options={}){
  else reportDialog.setAttribute("open","");
  reportDialog.classList.add("report-is-open");
  document.body.classList.add("report-open");
+ syncSheetPresentation();
  document.getElementById("reportTitle").focus({preventScroll:true});
 }
 function closeIndexReport(){
@@ -1154,12 +1205,13 @@ function closeIndexReport(){
  else reportDialog.removeAttribute("open");
  reportDialog.classList.remove("report-is-open");
  document.body.classList.remove("report-open");
+ syncSheetPresentation();
  reportOpen.focus({preventScroll:true});
 }
 reportOpen.addEventListener("click",()=>openIndexReport());
 reportClose.addEventListener("click",closeIndexReport);
 reportDialog.addEventListener("click",e=>{if(e.target===reportDialog)closeIndexReport()});
-reportDialog.addEventListener("close",()=>{document.body.classList.remove("report-open");reportOpen.focus({preventScroll:true})});
+reportDialog.addEventListener("close",()=>{reportDialog.classList.remove("report-is-open");document.body.classList.remove("report-open");syncSheetPresentation();reportOpen.focus({preventScroll:true})});
 reportDialog.addEventListener("cancel",()=>closeReportMenu());
 reportForm.addEventListener("click",e=>{
  const option=e.target.closest("[data-report-option]");
