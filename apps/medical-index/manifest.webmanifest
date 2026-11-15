@@ -1,0 +1,21 @@
+{
+  "id": "/",
+  "name": "Chaos Index",
+  "short_name": "Chaos Index",
+  "description": "Medical lectures, tutorials, CBLs and question links from Chaos",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#000000",
+  "theme_color": "#000000",
+  "lang": "en",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
