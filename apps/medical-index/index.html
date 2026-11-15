@@ -805,7 +805,6 @@ html[data-theme="light"] .module[data-module-group="17"]{--module-color:#945f2d}
     <div class="report-head">
       <div class="sheet-grabber" aria-hidden="true"></div>
       <div><h2 id="reportTitle" tabindex="-1">Report an issue</h2><p>Report missing material or something indexed incorrectly.</p></div>
-      <button type="button" id="reportClose" class="report-close" aria-label="Close report panel"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="report-body">
       <div class="report-fields">
@@ -854,7 +853,6 @@ html[data-theme="light"] .module[data-module-group="17"]{--module-color:#945f2d}
 <dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsTitle" aria-modal="true">
   <div class="settings-content">
     <div class="settings-heading"><div class="sheet-grabber" aria-hidden="true"></div><div><h2 id="settingsTitle" tabindex="-1">Settings</h2><p>Display preferences</p></div>
-      <button type="button" id="settingsClose" class="settings-close" aria-label="Close settings"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
     <label class="setting-row" for="missingToggle"><span class="setting-copy"><strong>Show not found</strong><span>Display gaps in numbered lectures and practicals</span></span>
       <span class="switch-label"><input id="missingToggle" type="checkbox" role="switch" aria-label="Show not found files" checked><span class="switch-track" aria-hidden="true"></span></span>
@@ -1401,7 +1399,6 @@ function countSettingsCycle(){
  settingsCycleStartedAt=0;
 }
 const settingsDialog=document.getElementById("settingsDialog");
-const settingsClose=document.getElementById("settingsClose");
 const searchForm=document.getElementById("searchForm");
 const searchDone=document.getElementById("searchDone");
 
@@ -1556,7 +1553,6 @@ function closeSettings(){
 }
 settingsOpen.addEventListener("click",openSettings);
 const animateSettingsClose=attachSwipeDismiss(settingsDialog,settingsDialog.querySelector(".settings-heading"),closeSettings);
-settingsClose.addEventListener("click",animateSettingsClose);
 settingsDialog.addEventListener("click",e=>{if(e.target===settingsDialog)animateSettingsClose()});
 settingsDialog.addEventListener("close",()=>{countSettingsCycle();syncSheetPresentation();settingsOpen.focus({preventScroll:true})});
 settingsDialog.addEventListener("cancel",e=>{if(isTouchSheet()){e.preventDefault();animateSettingsClose()}});
@@ -1577,7 +1573,6 @@ document.addEventListener("keydown",e=>{
 
 const reportDialog=document.getElementById("reportDialog");
 const reportOpen=document.getElementById("reportOpen");
-const reportClose=document.getElementById("reportClose");
 const reportForm=document.getElementById("indexReportForm");
 const reportNotes=document.getElementById("reportNotes");
 const reportSubmit=document.getElementById("reportSubmit");
@@ -1717,7 +1712,6 @@ reportIssueButtons.forEach(button=>button.addEventListener("click",()=>{
  reportStatus.textContent="";reportStatus.dataset.state="";
  syncReportIssue();updateReportSubmit();
 }));
-reportClose.addEventListener("click",animateReportClose);
 reportDialog.addEventListener("click",e=>{if(e.target===reportDialog)animateReportClose()});
 reportDialog.addEventListener("close",()=>{reportDialog.classList.remove("report-is-open");document.body.classList.remove("report-open");syncSheetPresentation();reportOpen.focus({preventScroll:true})});
 reportDialog.addEventListener("cancel",e=>{closeReportMenu();if(isTouchSheet()){e.preventDefault();animateReportClose()}});
