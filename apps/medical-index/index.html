@@ -567,7 +567,11 @@ function catalogNums(item){
    if(short){const n=Number(short[1]);if(n>0&&n<=45)found.add(n);}
    if(/(?:اول|أول)\s*محاضر[هة]/.test(value))found.add(1);
   }
-  if(kind==="tutorial"&&/توت[^\n]{0,10}الخامس/.test(value))found.add(5);
+  if(kind==="tutorial"){
+   if(/توت[^\n]{0,10}الخامس/.test(value))found.add(5);
+   const trailing=value.match(/\b(?:tut|tutorial)\s+(?:anatomy|anat|pharma|pharmacology|bio|biochemistry|micro|microbiology|histo|histology|physio|physiology|patho|pathology|para|parasitology)\s+(\d{1,2})\b/i);
+   if(trailing&&Number(trailing[1])>=1&&Number(trailing[1])<=45)found.add(Number(trailing[1]));
+  }
   return [...found].sort((a,b)=>a-b);
  }
  const a=from(item[4]);return a.length?a:from(item[5]);
@@ -611,7 +615,8 @@ function missingRows(items,type,sub){
  if(!["lecture","tutorial","cbl"].includes(type)||!items.length)return [];
  const found=new Set();
  for(const item of items)for(const n of catalogNums(item))found.add(n);
- if(found.size<2)return []; // We cannot infer the first item from only one numbered post.
+ if(!found.size)return [];
+ if(found.size<2 && (type==="cbl"||Math.max(...found)>6))return []; // Do not infer long or cross-subject gaps from an isolated post.
  const highest=Math.max(...found);
  if(highest>42)return [];
  const title={lecture:"Lecture",tutorial:"Tutorial",cbl:"CBL"}[type];
