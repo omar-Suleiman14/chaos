@@ -1,35 +1,43 @@
 # Chaos Index
 
-The standalone, static medical study index available at **https://index.chaos.fail**.
+Standalone medical study index at **https://index.chaos.fail**, owned alongside the Chaos repository.
 
-This is part of the Chaos GitHub repository, but it is **independently hosted on Vercel** and does not modify Chaos's Next.js app or Convex backend.
+## Data and interface
 
-## Contents
+- **18 modules**, **1,173 original ZatoOona Telegram file links**, **471 Medics 44 MCQ question-set links**.
+- Hierarchy: Year → Module → Study / Practical / Other → Subject → original file and question links.
+- Study contains lectures, tutorials, and CBLs; Practical contains practical materials; Other contains exams, timetables, revision and other resources.
+- Subject-based muted card colors, pure-black dark theme, optional light theme, module tab transitions.
+- Search traverses all tabs and opens a matching module. The UI remembers each selected module tab and accordion state in `localStorage`.
 
-- `index.html`: self-contained HTML, responsive layout, CSS, JavaScript and a snapshot of 1,173 original Telegram file-post links across 18 medical modules.
-- `questions.json`: curated index of 471 lecture-specific and other question-set posts in Medics 44 MCQ. Source post titles and Telegram message IDs are included for review and future updates.
-- `vercel.json`: static deployment configuration.
+## Missing-material reports
 
-## User experience
+- Fixed bottom-right button opens a responsive report drawer.
+- Year, module, and item type are preselected from the active module/tab, and may be changed.
+- A public Chaos form collects the subject, lecture/item number, description, and optional source link.
+- The report form has these **required hidden URL parameters** (captured securely with each response): `index_year`, `index_module`, and `index_type`. Optional: `index_source`. Do not construct a direct share URL without these parameters.
+- Backend storage uses Chaos's **existing Convex form-response tables**; no new database deployment or API token is required.
+- Form ID: `form_m973nb8tnjsxf50thb2cjrkndx8j99r3`. Public share ID: `ubkfqijk2w`.
+- Private report inbox: `https://chaos.fail/dashboard/forms/m973nb8tnjsxf50thb2cjrkndx8j99r3/responses`.
+- `/admin` is an entry page linking to the Chaos report inbox. **Chaos authentication and the form's owner permissions protect actual report data.** Do not implement an email-string check in client JavaScript.
+- Responses can be read via the connected Chaos MCP using `list_responses` for the form ID. Parsed hidden URL parameters provide the report's year, module, and material type.
+- Existing Chaos in-app `notifyOnResponse` is enabled. **True iPhone background push is not yet connected**; it would require an authenticated, owner-only Web Push subscription endpoint, secure VAPID private key, and server-side push dispatch. Do not claim background push is active.
 
-- One-page nested accordions (year → module → subject → materials).
-- New visitors see years collapsed; choices are saved in browser localStorage.
-- Expand all / Collapse all, instant keyword search and material-type filters.
-- Light/dark mode and restrained Chaos/Notion-inspired muted subject colors.
-- “Questions” links appear beside matching lecture, tutorial, practical or CBL material. Additional confirmed question sets appear under their corresponding subject.
-- Source PDF links and practice question links point to the original Telegram messages. Some lecture quiz posts introduce a thread or sequence of later questions; they are not standalone question PDFs.
-- Missing file numbers are inferred from observed sequences, not from an official academic checklist.
+## Install as PWA
+
+- `manifest.webmanifest` defines a standalone `Chaos Index` app at `/`.
+- `icon.svg` supplies a maskable web app icon. `sw.js` caches only the index app shell and static icons, never responses, authentication, or third-party forms.
+- On iOS Safari, open `https://index.chaos.fail`, tap **Share → Add to Home Screen → Add**.
+- `/admin` opens a Chaos sign-in protected dashboard link. Installing the PWA is not itself proof of admin access.
+
+## Updating and deploying
+
+- The canonical source is `apps/medical-index` in `omar-Suleiman14/chaos`.
+- `questions.json` lists indexed question posts. The site's file and question catalogue is currently embedded in `index.html`.
+- Legacy Vercel project `med-module-library` currently hosts the custom domain through source-upload deployments; its Git integration should be completed separately from the Chaos Next.js app. Merging the index-only pull request does not automatically connect the legacy project.
+- Daily Telegram updater runs every day, including weekends, checking verified source posts and preserving existing material.
+- The page intentionally includes `noindex`; no SEO indexing requested.
 
 ## Source boundaries
 
-This index does **not** host or duplicate lecture PDFs or question content. It provides hyperlinks to Telegram posts in the channels **@zatooona44** and **@medics_44_mcq**. Posts can require Telegram access, be edited, or become unavailable.
-
-Question-set classification is a best-effort match using module tags, subject, activity type, and numbering; it has not been manually verified for every course file. Do not infer that every lecture has a quiz if no match appears.
-
-## Deployment
-
-The current Vercel project is `med-module-library` (custom domain `index.chaos.fail`). The site was originally deployed from standalone source uploads. Adding these files to the Chaos repository **does not itself switch the Vercel project to Git auto-deployment**; configure the project's Root Directory to `apps/medical-index` if you later connect this repository to the standalone Vercel project.
-
-The `<meta name="robots" content="noindex">` tag prevents intentional public-search indexing, as requested.
-
-No analytics, third-party UI libraries, or server-side accounts are used by this page. User preferences remain in localStorage.
+The site links to original Telegram posts; it does not republish source PDFs. Question classification is best-effort from subject, module, activity and numbering. Missing file indicators are inferred from observed sequences, not a complete official curriculum.
