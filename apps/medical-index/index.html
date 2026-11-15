@@ -549,7 +549,7 @@ function catalogNums(item){
  const prefix=kind==="lecture"?"(?:lectures?|lec|l)":kind==="tutorial"?"(?:tutorials?|tut)":kind==="cbl"?"cbl":"(?:practicals?|pract|p)";
  function from(str){
   const value=fixDigits(str),found=new Set();
-  const mention=new RegExp("\\b"+prefix+"\\s*[.:_ -]*([0-9]{1,2}(?:\\s*(?:[,،&+\\/]|\\band\\b|\\bto\\b|\\.{1,2}|[–-])\\s*(?:(?:"+prefix+")\\s*)?[0-9]{1,2}){0,6})","gi");
+  const mention=new RegExp("(?:^|[^A-Za-z0-9])"+prefix+"\\s*[.:_ -]*([0-9]{1,2}(?:\\s*(?:[,،&+\\/]|\\band\\b|\\bto\\b|\\.{1,2}|[–-])\\s*(?:(?:"+prefix+")\\s*)?[0-9]{1,2}){0,6})","gi");
   for(const entry of value.matchAll(mention)){
    const group=entry[1],numbers=[...group.matchAll(/[0-9]{1,2}/g)].map(m=>Number(m[0])).filter(n=>n>0&&n<=45);
    if(numbers.length>8)continue;
