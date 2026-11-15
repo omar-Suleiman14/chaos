@@ -41,3 +41,15 @@ Standalone medical study index at **https://index.chaos.fail**, owned alongside 
 ## Source boundaries
 
 The site links to original Telegram posts; it does not republish source PDFs. Question classification is best-effort from subject, module, activity and numbering. Missing file indicators are inferred from observed sequences, not a complete official curriculum.
+
+## Native missing-material reporting (November 2026)
+
+The index no longer embeds a Chaos form or uses native HTML `select` controls. The fixed **Report missing** button opens a native index dialog, presented as a bottom sheet on phones. Its custom pickers ask for **Year → Module → Type**, followed by one notes field and Submit. Current module and material type are preselected. Inferred gaps have their own inline **Report missing** buttons, preselecting the relevant number and subject.
+
+Submission uses `POST https://chaos.fail/api/index-report` (implemented at `app/api/index-report/route.ts` in the Chaos Next.js app). That endpoint validates origin, year/module compatibility, material type, note length, and an idempotent submission key. The route uses the existing **Convex-backed Chaos form response store as internal storage only**, with no embedded Chaos form UI. Responses are still owner-private in Chaos and accessible through `mcp__Chaos__list_responses` using `form_m973nb8tnjsxf50thb2cjrkndx8j99r3`. Auth and report access remain protected by Chaos. In-app owner notifications are enabled; **native iPhone push notifications have not been configured**.
+
+The report endpoint requires `NEXT_PUBLIC_CONVEX_URL` on the Chaos web deployment and the already published internal report form. The standalone index project needs no Convex credentials. Do not ship the native UI until the endpoint has been deployed successfully.
+
+## Study-material gap audit
+
+See [MISSING_STUDY_MATERIALS.md](MISSING_STUDY_MATERIALS.md). Only **lectures, tutorials, and CBLs** are audited; practicals are out of scope. Multi-lecture PDFs, Arabic numerals and incorrectly categorized study files are reconciled before inferring a missing numbered item. An inferred missing item is a request for verification, not a statement that the curriculum definitely contains that lecture.
