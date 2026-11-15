@@ -57,3 +57,20 @@ See [MISSING_STUDY_MATERIALS.md](MISSING_STUDY_MATERIALS.md). Only **lectures, t
 ### Additional verified file source
 
 Biochemistry Tutorial 07 is linked from [ZatoOona 46 message 259](https://t.me/ZatOona46/259), with its original channel preserved rather than rewriting it as a ZatoOona 44 URL. This adds one verified PDF message link (1,174 total); Pharmacology Lecture 15 remains unresolved and was intentionally left untouched.
+
+
+## Hierarchy guides and material ordering (Nov 16, 2026)
+
+The index uses a VS Code-style tree: parent Year rows connect by vertical and horizontal guides to Modules, which connect independently to tabs and Subjects. `.year[data-year-group]` sets `--year-color` and `.module[data-module-group]` sets `--module-color`. These are **not** the existing subject/material color tokens, and should not be overwritten by the daily catalog updater. Visual indentation and guides remain visible for accessibility in both themes.
+
+| Year | Dark | Light |
+| --- | --- | --- |
+| 1 | `#be9afe` | `#7249c0` |
+| 2 | `#f5ba6f` | `#a55918` |
+| 3 | `#6ad8ca` | `#147f75` |
+
+Every one of the 18 fixed module indices gets its own distinct light/dark token pair in `index.html`; the full palette and names are documented in Max under **Chaos Index — Structure and Interface**. Do not reuse subject hues for parent-level guides. For future modules, allocate another unique, contrast-tested pair.
+
+Accordion panels animate both ways, and the custom report menu opens and closes with motion while honoring `prefers-reduced-motion`. Within a subject, display **Lectures → unmatched Questions → remaining material**; matched questions stay linked inline to their verified lecture/tutorial. The report Type selector starts with **Lecture → Questions → other types**. Material rows retain a fixed 56px height with ellipsized labels.
+
+**Git deployments:** The Vercel `med-module-library` project's root directory is `apps/medical-index`, so Git deployments should publish the standalone static Index rather than attempting to build the root Chaos Next.js application. Keep `vercel.json` in this root and verify the live alias `index.chaos.fail` after any deployment.
