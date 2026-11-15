@@ -493,17 +493,38 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
  .report-dialog::backdrop,.settings-dialog::backdrop{background:rgba(0,0,0,.37);backdrop-filter:blur(2px)}
 }
 @media(prefers-reduced-motion:reduce){.main{transition:none!important}.report-dialog[open],.settings-dialog[open]{animation:none!important}}
+
+/* Compact report action and a consistent issue selector. */
+.material-report{flex-shrink:0;align-self:stretch;display:inline-flex;align-items:center;justify-content:center;width:40px;min-width:40px;min-height:44px;padding:0;border:0;border-left:1px solid var(--border);background:transparent;color:var(--muted);transition:background-color .18s,color .18s}
+.material-report:hover,.material-report:focus-visible{background:var(--hover);color:var(--accent)}
+.material-report svg{pointer-events:none}
+.issue-field{gap:8px}.issue-label{font-size:12px;font-weight:600;color:var(--muted)}
+.issue-choices{display:grid;grid-template-columns:1fr 1fr;gap:5px;padding:4px;border:1px solid var(--border);border-radius:8px;background:var(--raised)}
+.issue-choice{min-height:39px;padding:8px 12px;border:1px solid transparent;border-radius:6px;color:var(--muted);background:transparent;font-size:13px}
+.issue-choice[aria-pressed="true"]{color:var(--text);border-color:var(--border-hover);background:var(--surface);font-weight:650}
+.issue-choice:hover{color:var(--text)}
+.report-reference{padding:11px 13px;border-radius:8px;border:1px solid var(--border);background:var(--raised);display:flex;flex-direction:column;gap:3px;overflow-wrap:anywhere}
+.report-reference[hidden],.admin-entry[hidden]{display:none!important}
+.report-reference>span{font-size:11px;color:var(--muted)}
+.report-reference strong{font-size:13px;font-weight:590;line-height:1.35}
+.report-reference a{font-size:12px;color:var(--accent);margin-top:3px;align-self:flex-start}
+.admin-entry{margin-top:16px;min-height:54px;padding:11px 0;border-top:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px;text-decoration:none;color:var(--text)}
+.admin-entry span:first-child{display:flex;flex-direction:column;gap:3px}
+.admin-entry strong{font-size:13px;font-weight:620}
+.admin-entry small{font-size:11px;color:var(--muted)}
+@media(max-width:700px){.material-report{width:42px;min-width:42px}.report-body{gap:14px}}
+@media(prefers-reduced-motion:reduce){.material-report{transition:none!important}}
 </style></head><body><main class="main"><div class="wrap"><header class="site-header"><a class="brand" href="https://chaos.fail/" aria-label="Open Chaos home"><svg viewBox="0 0 48 48" width="25" height="25" aria-hidden="true"><defs><linearGradient id="chaos-warm" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fca535"/><stop offset="1" stop-color="#e9482b"/></linearGradient></defs><rect x="5" y="5" width="38" height="38" rx="10" fill="url(#chaos-warm)"/></svg><span>Chaos</span><span class="separator" aria-hidden="true"></span><span class="index-label">Index</span></a><div class="header-actions">
 <button type="button" id="settingsOpen" class="settings-open" aria-label="Settings" aria-haspopup="dialog" aria-controls="settingsDialog" title="Settings">
 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4l.5 2.5c.8.25 1.5.65 2.2 1.1L19 4.5 21.5 8l-1.9 1.8c.2.7.4 1.4.4 2.2s-.2 1.5-.4 2.2l1.9 1.8-2.5 3.5-2.3-1.1c-.7.45-1.4.85-2.2 1.1L14 22h-4l-.5-2.5c-.8-.25-1.5-.65-2.2-1.1L5 19.5 2.5 16l1.9-1.8C4.2 13.5 4 12.8 4 12s.2-1.5.4-2.2L2.5 8 5 4.5l2.3 1.1c.7-.45 1.4-.85 2.2-1.1L10 2Z"/><circle cx="12" cy="12" r="3.1"/></svg>
 </button></div></header><div class="content"><section class="tools" aria-label="Library controls"><form class="search-form" id="searchForm" role="search"><label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input type="search" id="search" name="q" placeholder="Search modules, lectures, questions..." aria-label="Search modules, lectures, questions" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search" inputmode="search"></label><button id="searchDone" type="submit" class="search-done" aria-label="Done searching">Done</button></form><div class="actions"><div class="action-buttons"><button type="button" class="action-button" id="expandToggle" aria-pressed="false">Expand all</button></div></div><div class="results" id="results" aria-live="polite"></div></section><div id="view"></div></div></div></main>
-<button type="button" id="reportOpen" class="report-fab" aria-label="Report missing material" title="Report missing material">
+<button type="button" id="reportOpen" class="report-fab" aria-label="Report an indexing issue" title="Report an indexing issue">
 <svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 8v5"/><circle cx="12" cy="17" r=".7" fill="currentColor" stroke="none"/><path d="M17 3h5m-2.5-2.5v5"/></svg>
 </button>
 <dialog id="reportDialog" class="report-dialog" aria-labelledby="reportTitle" aria-modal="true">
   <form id="indexReportForm" class="index-report-form" novalidate>
     <div class="report-head">
-      <div><h2 id="reportTitle" tabindex="-1">Report missing material</h2><p>Tell us what's missing. We'll check the original source.</p></div>
+      <div><h2 id="reportTitle" tabindex="-1">Report an issue</h2><p>Report missing material or something indexed incorrectly.</p></div>
       <button type="button" id="reportClose" class="report-close" aria-label="Close report panel"><svg viewBox="0 0 24 24" width="19" height="19" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
     </div>
     <div class="report-body">
@@ -521,13 +542,24 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
         <div class="report-field" data-field="type">
           <label id="reportTypeLabel" for="reportType">Type</label>
           <button type="button" class="report-choice" id="reportType" aria-labelledby="reportTypeLabel reportType" aria-haspopup="listbox" aria-expanded="false"><span class="report-choice-value">Lecture</span><span class="report-caret" aria-hidden="true"></span></button>
-          <div class="report-menu" id="reportTypeMenu" role="listbox" aria-label="Choose missing material type" hidden></div>
+          <div class="report-menu" id="reportTypeMenu" role="listbox" aria-label="Choose material type" hidden></div>
         </div>
       </div>
+      <div class="report-field issue-field">
+        <span class="issue-label" id="issueLabel">Problem</span>
+        <div class="issue-choices" role="group" aria-labelledby="issueLabel">
+          <button type="button" class="issue-choice" data-report-issue="missing" aria-pressed="true">Missing</button>
+          <button type="button" class="issue-choice" data-report-issue="incorrect" aria-pressed="false">Incorrect</button>
+        </div>
+      </div>
+      <div id="reportReference" class="report-reference" hidden>
+        <span>Selected material</span><strong id="reportReferenceTitle"></strong>
+        <a id="reportReferenceLink" href="#" target="_blank" rel="noopener noreferrer" hidden>Original Telegram post ↗</a>
+      </div>
       <div class="report-field report-notes-field">
-        <label for="reportNotes">What's missing?</label>
-        <textarea id="reportNotes" rows="5" maxlength="1500" placeholder="Example: Lecture 05 isn't listed. Here's the title or Telegram link..." required></textarea>
-        <div class="report-notes-meta"><span>Include a number or source link if you have one.</span><span id="reportCharCount">0 / 1500</span></div>
+        <label for="reportNotes">Details</label>
+        <textarea id="reportNotes" rows="5" maxlength="1500" placeholder="Describe what's missing or incorrect, and how to fix it..." required></textarea>
+        <div class="report-notes-meta"><span>Provide details or a correct Telegram link.</span><span id="reportCharCount">0 / 1500</span></div>
       </div>
       <input type="text" name="website" id="reportWebsite" autocomplete="off" tabindex="-1" aria-hidden="true" class="report-honeypot">
       <p id="reportStatus" class="report-status" role="status" aria-live="polite"></p>
@@ -551,6 +583,7 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
       <span class="setting-copy"><strong>Appearance</strong><span>Switch between light and dark mode</span></span>
       <button type="button" id="themeToggle" class="theme-toggle" aria-label="Switch to light mode"><svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg><span class="theme-word">Light mode</span></button>
     </div>
+    <a id="adminEntry" class="admin-entry" href="/admin" hidden><span><strong>Admin</strong><small>Open the authenticated report inbox</small></span><span aria-hidden="true">↗</span></a>
   </div>
 </dialog>
 <script>(()=>{
@@ -873,15 +906,19 @@ function quizActions(list,used){
   return '<a class="quiz-link" href="https://t.me/medics_44_mcq/'+q[0]+'" title="'+esc(q[5])+'" aria-label="'+esc(quizLabel(q))+' question set" target="_blank" rel="noopener noreferrer">'+esc(label)+'</a>';
  }).join("")+'</div>';
 }
+function reportIcon(moduleIndex,type,subject,title,url,issue="incorrect",number=0){
+ const icon='<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 9v4m0 4h.01"/><circle cx="12" cy="12" r="9"/></svg>';
+ return '<button type="button" class="material-report" data-report-item="true" data-report-module="'+moduleIndex+'" data-report-type="'+esc(type)+'" data-report-subject="'+esc(subject)+'" data-report-title="'+esc(title)+'" data-report-url="'+esc(url||"")+'" data-report-issue="'+issue+'" data-report-number="'+number+'" title="Report an issue" aria-label="Report an issue with '+esc(title)+'">'+icon+'</button>';
+}
 function fileLine(file,usedQuiz){
  if(file.missing){
   const n=catalogNums(file)[0];
   const found=(QBY.get(file.module)||[]).filter(q=>q[1]===file.module&&q[2]===file.subject&&q[3]===file.type&&q[4].includes(n));
-  return '<div class="material-row is-missing" data-kind="'+esc(file.type)+'"><span class="material-main"><span class="kind-mark"></span><span class="material-name">'+esc(file.label)+'</span><span class="missing-hint">Not indexed</span></span>'+quizActions(found,usedQuiz)+'<button type="button" class="missing-report" data-report-gap="true" data-report-module="'+file.module+'" data-report-type="'+file.type+'" data-report-number="'+n+'" data-report-subject="'+esc(file.subject)+'" aria-label="Report missing '+esc(file.label)+'">Report missing</button></div>';
+  return '<div class="material-row is-missing" data-kind="'+esc(file.type)+'"><span class="material-main"><span class="kind-mark"></span><span class="material-name">'+esc(file.label)+'</span><span class="missing-hint">Not indexed</span></span>'+quizActions(found,usedQuiz)+reportIcon(file.module,file.type,file.subject,file.label,"","missing",n)+'</div>';
  }
  const list=matchingQuizzes(file),title=academicTitle(file);
  const pdf='<a class="material-main" href="https://t.me/zatooona44/'+file[0]+'" target="_blank" rel="noopener noreferrer" aria-label="Open '+esc(title)+' PDF message"><span class="kind-mark"></span><span class="material-name">'+esc(title)+'</span><span class="material-chevron" aria-hidden="true">↗</span></a>';
- return '<div class="material-row" data-kind="'+esc(file[3])+'">'+pdf+quizActions(list,usedQuiz)+'</div>';
+ return '<div class="material-row" data-kind="'+esc(file[3])+'">'+pdf+quizActions(list,usedQuiz)+reportIcon(file[1],file[3],fileSubject(file),title,'https://t.me/zatooona44/'+file[0])+'</div>';
 }
 
 function matchesFile(file){
@@ -926,7 +963,7 @@ function groupContent(i,files,questionPosts){
    if(!extra.length)continue;
    const title={lecture:"Lecture questions",tutorial:"Tutorial questions",practical:"Practical questions",cbl:"CBL questions",exam:"Exam question sets",resource:"Practice questions",timetable:"Question sets"}[type]||"Question sets";
    rows+='<div class="group-name">'+title+'</div><div class="material-list">'+extra.map(q=>
-    '<div class="material-row question-only" data-kind="'+esc(type)+'"><div class="material-main"><span class="kind-mark"></span><span class="material-name">'+esc(quizLabel(q))+'</span><span class="missing-hint">Questions only</span></div><a class="quiz-link" href="https://t.me/medics_44_mcq/'+q[0]+'" title="'+esc(q[5])+'" target="_blank" rel="noopener noreferrer">Questions</a></div>'
+    '<div class="material-row question-only" data-kind="'+esc(type)+'"><div class="material-main"><span class="kind-mark"></span><span class="material-name">'+esc(quizLabel(q))+'</span><span class="missing-hint">Questions only</span></div><a class="quiz-link" href="https://t.me/medics_44_mcq/'+q[0]+'" title="'+esc(q[5])+'" target="_blank" rel="noopener noreferrer">Questions</a>'+reportIcon(q[1],q[3],q[2],quizLabel(q),'https://t.me/medics_44_mcq/'+q[0])+'</div>'
    ).join("")+'</div>';
   }
   return '<section class="subject" data-subject="'+esc(subject)+'"><h3 class="subject-name">'+esc(subject)+'</h3>'+rows+'</section>';
@@ -1027,8 +1064,8 @@ function render(){
  syncExpandToggle();
 }
 document.body.addEventListener("click",e=>{
- const gap=e.target.closest("[data-report-gap]");
- if(gap){openIndexReport({moduleIndex:Number(gap.dataset.reportModule),type:gap.dataset.reportType,number:Number(gap.dataset.reportNumber),subject:gap.dataset.reportSubject});return;}
+ const item=e.target.closest("[data-report-item]");
+ if(item){openIndexReport({moduleIndex:Number(item.dataset.reportModule),type:item.dataset.reportType,number:Number(item.dataset.reportNumber),subject:item.dataset.reportSubject,title:item.dataset.reportTitle,url:item.dataset.reportUrl,issue:item.dataset.reportIssue});return;}
  const tab=e.target.closest("[data-tab][data-module-index]");
  if(tab){lastActiveModule=Number(tab.dataset.moduleIndex);useModuleTab(Number(tab.dataset.moduleIndex),tab.dataset.tab);return;}
  const y=e.target.closest("[data-year]");if(y){toggleYear(Number(y.dataset.year));return;}
@@ -1060,6 +1097,19 @@ expandToggle.addEventListener("click",()=>{
  render();
 });
 const settingsOpen=document.getElementById("settingsOpen");
+const adminEntry=document.getElementById("adminEntry");
+let settingsCycleStartedAt=0;
+const settingsCloseTimes=[];
+function countSettingsCycle(){
+ if(!settingsCycleStartedAt)return;
+ const now=Date.now();
+ if(now-settingsCycleStartedAt<=60000){
+  settingsCloseTimes.push(now);
+  while(settingsCloseTimes.length && now-settingsCloseTimes[0]>60000)settingsCloseTimes.shift();
+  if(settingsCloseTimes.length>=3)adminEntry.hidden=false;
+ }
+ settingsCycleStartedAt=0;
+}
 const settingsDialog=document.getElementById("settingsDialog");
 const settingsClose=document.getElementById("settingsClose");
 const searchForm=document.getElementById("searchForm");
@@ -1071,6 +1121,8 @@ function syncSheetPresentation(){
 }
 window.addEventListener("resize",syncSheetPresentation,{passive:true});
 function openSettings(){
+ if(settingsDialog.open)return;
+ settingsCycleStartedAt=Date.now();
  if(typeof window.matchMedia==="function"&&window.matchMedia("(min-width: 701px)").matches){
   const rect=settingsOpen.getBoundingClientRect();
   settingsDialog.style.setProperty("--settings-top",Math.round(rect.bottom+10)+"px");
@@ -1083,14 +1135,14 @@ function openSettings(){
 }
 function closeSettings(){
  if(typeof settingsDialog.close==="function")settingsDialog.close();
- else settingsDialog.removeAttribute("open");
+ else {settingsDialog.removeAttribute("open");countSettingsCycle();}
  syncSheetPresentation();
  settingsOpen.focus({preventScroll:true});
 }
 settingsOpen.addEventListener("click",openSettings);
 settingsClose.addEventListener("click",closeSettings);
 settingsDialog.addEventListener("click",e=>{if(e.target===settingsDialog)closeSettings()});
-settingsDialog.addEventListener("close",()=>{syncSheetPresentation();settingsOpen.focus({preventScroll:true})});
+settingsDialog.addEventListener("close",()=>{countSettingsCycle();syncSheetPresentation();settingsOpen.focus({preventScroll:true})});
 settingsDialog.addEventListener("cancel",()=>{ /* ESC handled by native dialog */ });
 searchForm.addEventListener("submit",e=>{
  e.preventDefault();qInput.blur();searchDone.blur();
@@ -1116,6 +1168,19 @@ const reportSubmit=document.getElementById("reportSubmit");
 const reportStatus=document.getElementById("reportStatus");
 const reportCharCount=document.getElementById("reportCharCount");
 const reportTypes=["Lecture","Tutorial","CBL","Practical","Questions","Other"];
+const reportReference=document.getElementById("reportReference");
+const reportReferenceTitle=document.getElementById("reportReferenceTitle");
+const reportReferenceLink=document.getElementById("reportReferenceLink");
+const reportIssueButtons=[...document.querySelectorAll("[data-report-issue]")];
+let reportIssue="missing",reportSource="";
+function syncReportIssue(){
+ for(const button of reportIssueButtons)button.setAttribute("aria-pressed",String(button.dataset.reportIssue===reportIssue));
+ reportNotes.placeholder=reportIssue==="incorrect"?"What is wrong? Include the correction or correct source link...":"What is missing? Include the lecture number, title or Telegram link...";
+}
+function reportPayloadNotes(){
+ const context=reportReference.hidden?"":("Material: "+reportReferenceTitle.textContent+"\n"+(reportSource?"Source: "+reportSource+"\n":""));
+ return "Issue: "+(reportIssue==="incorrect"?"Incorrect":"Missing")+"\n"+context+"Details: "+reportNotes.value.trim();
+}
 const reportFields={
  year:{button:document.getElementById("reportYear"),menu:document.getElementById("reportYearMenu")},
  module:{button:document.getElementById("reportModule"),menu:document.getElementById("reportModuleMenu")},
@@ -1178,8 +1243,9 @@ function chooseReport(field,value){
 }
 function updateReportSubmit(){
  const length=reportNotes.value.trim().length;
+ const total=reportPayloadNotes().length;
  reportCharCount.textContent=reportNotes.value.length+" / 1500";
- reportSubmit.disabled=reportSending||length<6||length>1500;
+ reportSubmit.disabled=reportSending||length<6||total>1500;
 }
 function openIndexReport(options={}){
  const i=Number.isInteger(options.moduleIndex)&&options.moduleIndex>=0&&options.moduleIndex<M.length?options.moduleIndex:reportContext();
@@ -1188,9 +1254,17 @@ function openIndexReport(options={}){
   tab==="practical"?"Practical":tab==="other"?"Other":"Lecture";
  reportState={year:M[i][1],moduleIndex:i,type:reportTypes.includes(type)?type:"Lecture"};
  reportSince=Date.now();reportKey=null;reportSending=false;
+ reportIssue=options.issue==="incorrect"?"incorrect":"missing";
  reportStatus.textContent="";reportStatus.dataset.state="";
- reportNotes.value=options.number?"Missing "+reportState.type+" "+String(options.number).padStart(2,"0")+(options.subject?" — "+options.subject:""):"";
+ reportNotes.value="";
+ const title=options.title||((options.number?"Lecture "+String(options.number).padStart(2,"0"):"")+(options.subject?" — "+options.subject:""));
+ reportReference.hidden=!title;
+ reportReferenceTitle.textContent=title||"";
+ reportSource=/^https:\/\/t\.me\/(?:zatooona44|medics_44_mcq)\/\d+$/.test(options.url||"")?options.url:"";
+ reportReferenceLink.hidden=!reportSource;
+ if(reportSource)reportReferenceLink.href=reportSource;
  document.getElementById("reportWebsite").value="";
+ syncReportIssue();
  closeReportMenu();syncReport();updateReportSubmit();
  if(typeof reportDialog.showModal==="function")reportDialog.showModal();
  else reportDialog.setAttribute("open","");
@@ -1209,6 +1283,11 @@ function closeIndexReport(){
  reportOpen.focus({preventScroll:true});
 }
 reportOpen.addEventListener("click",()=>openIndexReport());
+reportIssueButtons.forEach(button=>button.addEventListener("click",()=>{
+ reportIssue=button.dataset.reportIssue;
+ reportStatus.textContent="";reportStatus.dataset.state="";
+ syncReportIssue();updateReportSubmit();
+}));
 reportClose.addEventListener("click",closeIndexReport);
 reportDialog.addEventListener("click",e=>{if(e.target===reportDialog)closeIndexReport()});
 reportDialog.addEventListener("close",()=>{reportDialog.classList.remove("report-is-open");document.body.classList.remove("report-open");syncSheetPresentation();reportOpen.focus({preventScroll:true})});
@@ -1261,7 +1340,7 @@ reportForm.addEventListener("submit",async e=>{
    headers:{"Content-Type":"application/json"},
    body:JSON.stringify({
     year:reportState.year,moduleIndex:reportState.moduleIndex,type:reportState.type,
-    notes:reportNotes.value.trim(),submissionKey:reportKey,startedAt:reportSince,
+    notes:reportPayloadNotes(),submissionKey:reportKey,startedAt:reportSince,
     website:document.getElementById("reportWebsite").value
    })
   });
