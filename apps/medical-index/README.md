@@ -53,3 +53,7 @@ The report endpoint requires `NEXT_PUBLIC_CONVEX_URL` on the Chaos web deploymen
 ## Study-material gap audit
 
 See [MISSING_STUDY_MATERIALS.md](MISSING_STUDY_MATERIALS.md). Only **lectures, tutorials, and CBLs** are audited; practicals are out of scope. Multi-lecture PDFs, Arabic numerals and incorrectly categorized study files are reconciled before inferring a missing numbered item. An inferred missing item is a request for verification, not a statement that the curriculum definitely contains that lecture.
+
+### Additional verified file source
+
+Biochemistry Tutorial 07 is linked from [ZatoOona 46 message 259](https://t.me/ZatOona46/259), with its original channel preserved rather than rewriting it as a ZatoOona 44 URL. This adds one verified PDF message link (1,174 total); Pharmacology Lecture 15 remains unresolved and was intentionally left untouched.
