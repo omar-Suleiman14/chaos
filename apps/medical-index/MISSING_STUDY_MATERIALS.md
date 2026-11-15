@@ -1,6 +1,6 @@
 # Chaos Index — Unresolved Study Material Links
 
-Checked: 15 November 2026, using the current Chaos Index catalogue and public posts in @zatooona44.
+Checked: 15 November 2026, using the current Chaos Index catalogue and public posts in @zatooona44 and @ZatOona46.
 
 **Scope:** Lectures, tutorials and CBLs only. Practicals, exams and schedules are excluded from this audit. These are inferred numbered-sequence gaps, not verified curriculum requirements. A file that is unnumbered or has an incorrectly named caption can change the result.
 
@@ -8,8 +8,13 @@ Checked: 15 November 2026, using the current Chaos Index catalogue and public po
 
 | Year | Module | Subject | Type | Number | Evidence | Status |
 |---|---|---|---|---|---|---|
-| 1 | General Physiology & Biochemistry | Biochemistry | Tutorial | 07 | The [ZatoOona module inventory](https://t.me/zatooona44/361) lists Tutorial 7. Currently indexed Tutorial 1–6 and Tutorial 8–10. Targeted Telegram searches for `Tut7 Bio` and `Tut 7 bio` found the inventory but not an individual attached PDF. | **Missing link — please supply the original Telegram post** |
-| 1 | General Pathology & Pharmacology | Pharmacology | Lecture | 15 | [ZatoOona post 1418](https://t.me/zatooona44/1418) says **L16 pharma**, but its attached PDF is named `L15 pharma..pdf`. [Tutorial 3 post](https://t.me/zatooona44/1404) mentions L15. The file may be mislabeled or may cover Lecture 15. | **Ambiguous — identify whether #1418 is L15 or L16, or supply the correct link** |
+| 1 | General Pathology & Pharmacology | Pharmacology | Lecture | 15 | [ZatoOona post 1418](https://t.me/zatooona44/1418) says **L16 pharma**, but its attached PDF is named `L15 pharma..pdf`. [Tutorial 3 post](https://t.me/zatooona44/1404) mentions L15. The file may be mislabeled or may cover Lecture 15. | **Ambiguous — left unchanged at the user's request** |
+
+## Resolved links
+
+| Item | Verified source | Resolution |
+|---|---|---|
+| Year 1 Biochemistry Tutorial 07 | [ZatoOona 46, post 259](https://t.me/ZatOona46/259) — `Tut7 bio_261115_193537.pdf` (15 November 2026) | Added to Year 1 → General Physiology & Biochemistry → Study → Biochemistry. Cross-cohort source is preserved; the gap indicator is cleared. |
 
 ## Previously apparent gaps resolved
 
@@ -32,7 +37,6 @@ The index currently contains 33 CBL-related posts. No reliable gap between **exp
 
 Send the original ZatoOona Telegram post URL with the item, for example:
 
-- `Biochemistry Tutorial 07: https://t.me/zatooona44/<message-id>`
-- `Pharmacology Lecture 15: https://t.me/zatooona44/<message-id>`
+- Pharmacology Lecture 15 is left unchanged; no further action requested.
 
 Or use the **Report missing** button in Chaos Index. Reports are reviewed before a file link is added.
