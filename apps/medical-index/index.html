@@ -1,4 +1,4 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#000000"><meta name="robots" content="noindex"><meta name="description" content="Chaos Index: medical module learning materials and practice questions."><title>Chaos Index</title><style>
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><link rel="manifest" href="/manifest.webmanifest"><link rel="icon" type="image/svg+xml" href="/icon.svg"><link rel="apple-touch-icon" href="https://chaos.fail/apple-touch-icon.png"><meta name="apple-mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-title" content="Chaos Index"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"><meta name="theme-color" content="#000000"><meta name="robots" content="noindex"><meta name="description" content="Chaos Index: medical module learning materials and practice questions."><title>Chaos Index</title><style>
 :root{color-scheme:dark;--bg:#000000;--surface:#222222;--raised:#252525;--hover:#2c2c2c;--border:#393939;--border-hover:#66605d;--text:#eaeaea;--muted:#a5a5a5;--faint:#787878;--focus:#d19d7c;--accent:#c78f70;--lecture:#b79c87;--tutorial:#91a6bd;--practical:#9ab7a5;--cbl:#b5a5bf;--exam:#b5aea1;--resource:#999ca6;--shadow:rgba(0,0,0,.15)}
 html[data-theme="light"]{color-scheme:light;--bg:#f7f7f5;--surface:#fff;--raised:#f0f0ee;--hover:#f2f1ef;--border:#d9d9d5;--border-hover:#a9a5a1;--text:#242424;--muted:#696969;--faint:#858585;--focus:#a16642;--accent:#986847;--lecture:#9d775b;--tutorial:#627f9b;--practical:#668a75;--cbl:#8c769e;--exam:#7e766b;--resource:#7a7980;--shadow:rgba(0,0,0,.06)}
 *,*::before,*::after{box-sizing:border-box}
@@ -352,10 +352,41 @@ html[data-theme="light"] .subject .material-row{--tint-rest:13%;--tint-hover:23%
 .module-empty{padding:24px 12px;text-align:center;color:var(--muted);font-size:12px}
 @media(max-width:700px){.module-tabs{padding:3px}.module-tab-indicator{left:3px;top:3px;width:calc((100% - 6px)/3);height:calc(100% - 6px)}.module-tab{min-height:39px;font-size:12px}}
 @media(prefers-reduced-motion:reduce){.module-tab-indicator,.module-tab{transition:none!important}}
+
+/* Report affordance: positioned above the iOS Home indicator. */
+.report-fab{position:fixed;right:max(20px,env(safe-area-inset-right) + 16px);bottom:max(20px,env(safe-area-inset-bottom) + 16px);z-index:60;width:54px;height:54px;display:flex;align-items:center;justify-content:center;border:1px solid color-mix(in srgb,var(--accent) 50%,var(--border));border-radius:50%;color:var(--text);background:color-mix(in srgb,var(--accent) 22%,var(--surface));box-shadow:0 6px 24px rgba(0,0,0,.22);transition:background .16s ease,transform .18s ease,border-color .16s ease}
+.report-fab:hover{transform:translateY(-2px);background:color-mix(in srgb,var(--accent) 36%,var(--surface));border-color:var(--accent)}
+.report-fab:active{transform:scale(.96)}
+.report-dialog{border:1px solid var(--border);padding:0;color:var(--text);background:var(--surface);width:min(calc(100vw - 28px),580px);height:min(88dvh,760px);max-height:88dvh;border-radius:12px;box-shadow:0 22px 70px rgba(0,0,0,.38);overflow:hidden;flex-direction:column}
+.report-dialog[open]{display:flex}
+.report-dialog::backdrop{background:rgba(0,0,0,.56);backdrop-filter:blur(4px)}
+.report-head{display:flex;align-items:flex-start;justify-content:space-between;gap:15px;padding:18px 20px;border-bottom:1px solid var(--border)}
+.report-head h2{font-size:17px;font-weight:660;margin:0;letter-spacing:-.02em}
+.report-head p{color:var(--muted);font-size:12px;line-height:1.45;margin:5px 0 0}
+.report-close{width:35px;height:35px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;color:var(--muted);border:1px solid var(--border);border-radius:6px}
+.report-close:hover{background:var(--hover);color:var(--text)}
+.report-body{flex:1;min-height:0;position:relative}
+.report-body iframe{display:block;width:100%;height:100%;border:0;background:var(--surface)}
+.report-foot{padding:12px 20px;border-top:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:8px;font-size:11px}
+.report-foot a{color:var(--accent);text-decoration:underline;text-underline-offset:3px}
+.report-foot span{color:var(--muted)}
+@media(max-width:700px){.report-dialog{width:100%;max-width:100%;height:min(92dvh,900px);max-height:92dvh;margin:auto 0 0;border-radius:16px 16px 0 0;border-bottom:0;padding-bottom:env(safe-area-inset-bottom)}.report-head{padding:17px 16px}.report-foot{padding:10px 16px}.report-fab{right:16px;bottom:max(16px,env(safe-area-inset-bottom) + 12px)}}
+@media(prefers-reduced-motion:reduce){.report-fab{transition:none}}
 </style></head><body><main class="main"><div class="wrap"><header class="site-header"><a class="brand" href="https://chaos.fail/" aria-label="Open Chaos home"><svg viewBox="0 0 48 48" width="25" height="25" aria-hidden="true"><defs><linearGradient id="chaos-warm" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fca535"/><stop offset="1" stop-color="#e9482b"/></linearGradient></defs><rect x="5" y="5" width="38" height="38" rx="10" fill="url(#chaos-warm)"/></svg><span>Chaos</span><span class="separator" aria-hidden="true"></span><span class="index-label">Index</span></a><div class="header-actions"><button type="button" id="themeToggle" class="theme-toggle" aria-label="Switch to light mode"><svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg><span class="theme-word">Light mode</span></button>
 <button type="button" id="settingsOpen" class="settings-open" aria-label="Settings" aria-haspopup="dialog" aria-controls="settingsDialog" title="Settings">
 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4l.5 2.5c.8.25 1.5.65 2.2 1.1L19 4.5 21.5 8l-1.9 1.8c.2.7.4 1.4.4 2.2s-.2 1.5-.4 2.2l1.9 1.8-2.5 3.5-2.3-1.1c-.7.45-1.4.85-2.2 1.1L14 22h-4l-.5-2.5c-.8-.25-1.5-.65-2.2-1.1L5 19.5 2.5 16l1.9-1.8C4.2 13.5 4 12.8 4 12s.2-1.5.4-2.2L2.5 8 5 4.5l2.3 1.1c.7-.45 1.4-.85 2.2-1.1L10 2Z"/><circle cx="12" cy="12" r="3.1"/></svg>
 </button></div></header><div class="content"><section class="tools" aria-label="Library controls"><form class="search-form" id="searchForm" role="search"><label class="search"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m16 16 5 5"/></svg><input type="search" id="search" name="q" placeholder="Search modules, lectures, questions..." aria-label="Search modules, lectures, questions" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" enterkeyhint="search" inputmode="search"></label><button id="searchDone" type="submit" class="search-done" aria-label="Done searching">Done</button></form><div class="actions"><div class="action-buttons"><button type="button" class="action-button" id="expandToggle" aria-pressed="false">Expand all</button></div></div><div class="results" id="results" aria-live="polite"></div></section><div id="view"></div></div></div></main>
+<button type="button" id="reportOpen" class="report-fab" aria-label="Report missing material" title="Report missing material">
+<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3a9 9 0 1 0 9 9"/><path d="M12 8v5"/><circle cx="12" cy="17" r=".7" fill="currentColor" stroke="none"/><path d="M17 3h5m-2.5-2.5v5"/></svg>
+</button>
+<dialog id="reportDialog" class="report-dialog" aria-labelledby="reportTitle" aria-modal="true">
+  <div class="report-head">
+    <div><h2 id="reportTitle" tabindex="-1">Report missing material</h2><p>Submit a correction or missing lecture to Chaos Index.</p></div>
+    <button type="button" id="reportClose" class="report-close" aria-label="Close report form"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+  </div>
+  <div class="report-body"><iframe id="reportFrame" title="Chaos Index missing material report" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="clipboard-write"></iframe></div>
+  <div class="report-foot"><a href="https://chaos.fail/f/ubkfqijk2w" target="_blank" rel="noopener noreferrer">Open full report form</a><span>Stored securely in Chaos</span></div>
+</dialog>
 <dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsTitle" aria-modal="true">
   <div class="settings-content">
     <div class="settings-heading"><div><h2 id="settingsTitle" tabindex="-1">Settings</h2><p>Display preferences</p></div>
@@ -898,5 +929,28 @@ document.addEventListener("keydown",e=>{
  if(e.key==="/"&&!field&&!e.metaKey&&!e.ctrlKey){e.preventDefault();qInput.focus()}
  else if(e.key==="Escape"&&document.activeElement===qInput){qInput.value="";query="";qInput.blur();render()}
 });
+
+const reportDialog=document.getElementById("reportDialog");
+const reportFrame=document.getElementById("reportFrame");
+const reportOpen=document.getElementById("reportOpen");
+const reportClose=document.getElementById("reportClose");
+function closeReport(){
+ if(typeof reportDialog.close==="function")reportDialog.close();
+ else reportDialog.removeAttribute("open");
+ reportOpen.focus({preventScroll:true});
+}
+reportOpen.addEventListener("click",()=>{
+ if(!reportFrame.getAttribute("src"))reportFrame.setAttribute("src","https://chaos.fail/f/ubkfqijk2w");
+ if(typeof reportDialog.showModal==="function")reportDialog.showModal();
+ else reportDialog.setAttribute("open","");
+ document.getElementById("reportTitle").focus({preventScroll:true});
+});
+reportClose.addEventListener("click",closeReport);
+reportDialog.addEventListener("click",e=>{if(e.target===reportDialog)closeReport()});
+reportDialog.addEventListener("close",()=>reportOpen.focus({preventScroll:true}));
+if("serviceWorker" in navigator){
+ window.addEventListener("load",()=>{navigator.serviceWorker.register("/sw.js",{scope:"/"}).catch(()=>{});});
+}
+
 render();
 })();</script></body></html>
