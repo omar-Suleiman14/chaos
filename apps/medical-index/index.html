@@ -485,12 +485,13 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
  .tools{gap:var(--index-gap);margin-bottom:var(--index-gap)}
  .report-fields{grid-template-columns:minmax(0,1fr);gap:12px}
  .report-field[data-field="module"],.report-field[data-field="type"]{grid-column:1;grid-row:auto}
- .main{transform-origin:center top;transition:transform .38s cubic-bezier(.2,.77,.24,1),border-radius .38s cubic-bezier(.2,.77,.24,1)}
- body.sheet-open{overflow:hidden}
- body.sheet-open .main{transform:translateY(-10px) scale(.95);border-radius:22px;overflow:hidden}
+ .main{transform-origin:center top;transform:translateY(var(--sheet-main-y,0px)) scale(var(--sheet-main-scale,1));border-radius:var(--sheet-main-radius,0px);transition:transform .38s cubic-bezier(.2,.8,.2,1),border-radius .38s cubic-bezier(.2,.8,.2,1)}
+ body.sheet-open{overflow:hidden;--sheet-main-y:-10px;--sheet-main-scale:.96;--sheet-main-radius:22px}
+ body.sheet-open .main{overflow:hidden}
+ body.sheet-dragging .main{transition:none!important}
  body.sheet-open .report-fab{opacity:0;pointer-events:none}
  .report-dialog[open],.settings-dialog[open]{animation:index-ios-sheet-in .38s cubic-bezier(.2,.8,.2,1) both}
- .report-dialog::backdrop,.settings-dialog::backdrop{background:rgba(0,0,0,.37);backdrop-filter:blur(2px)}
+ .report-dialog::backdrop,.settings-dialog::backdrop{background:rgba(0,0,0,.37);backdrop-filter:blur(2px);opacity:var(--sheet-backdrop-opacity,1);transition:opacity .38s cubic-bezier(.2,.8,.2,1)}
 }
 @media(prefers-reduced-motion:reduce){.main{transition:none!important}.report-dialog[open],.settings-dialog[open]{animation:none!important}}
 
@@ -530,7 +531,7 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
   animation:none!important;transition:none!important;transform:translate3d(0,var(--sheet-y,0px),0)!important
  }
  .report-dialog[open].sheet-settling,.settings-dialog[open].sheet-settling{
-  animation:none!important;transition:transform .23s cubic-bezier(.2,.8,.2,1)!important;
+  animation:none!important;transition:transform .38s cubic-bezier(.2,.8,.2,1)!important;
   transform:translate3d(0,var(--sheet-y,0px),0)!important
  }
 }
@@ -601,16 +602,19 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
    border-radius:18px 18px 0 0;border-bottom:0;
    padding-bottom:env(safe-area-inset-bottom);
  }
- body.sheet-open{overflow:hidden}
- body.sheet-open .main{
-   transform:translateY(-10px) scale(.96);transform-origin:center top;
-   border-radius:22px;overflow:hidden;
-   transition:transform .35s cubic-bezier(.2,.77,.24,1),border-radius .35s;
+ .main{
+   transform:translateY(var(--sheet-main-y,0px)) scale(var(--sheet-main-scale,1));
+   transform-origin:center top;border-radius:var(--sheet-main-radius,0px);
+   transition:transform .38s cubic-bezier(.2,.8,.2,1),border-radius .38s cubic-bezier(.2,.8,.2,1);
  }
+ body.sheet-open{overflow:hidden;--sheet-main-y:-10px;--sheet-main-scale:.96;--sheet-main-radius:22px}
+ body.sheet-open .main{overflow:hidden}
+ body.sheet-dragging .main{transition:none!important}
  body.sheet-open .report-fab{opacity:0;pointer-events:none}
  .report-dialog[open],.settings-dialog[open]{
    animation:index-ios-sheet-in .38s cubic-bezier(.2,.8,.2,1) both
  }
+ .report-dialog::backdrop,.settings-dialog::backdrop{opacity:var(--sheet-backdrop-opacity,1);transition:opacity .38s cubic-bezier(.2,.8,.2,1)}
  .report-dialog[open].sheet-gesture-ready,.settings-dialog[open].sheet-gesture-ready{
    animation:none!important;
  }
@@ -620,7 +624,7 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
  }
  .report-dialog[open].sheet-settling,.settings-dialog[open].sheet-settling{
    animation:none!important;
-   transition:transform .26s cubic-bezier(.2,.8,.2,1)!important;
+   transition:transform .38s cubic-bezier(.2,.8,.2,1)!important;
    transform:translate3d(0,var(--sheet-y,0px),0)!important;
  }
 }
@@ -631,6 +635,7 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
  body.sheet-open .main{transition:none!important}
  .report-dialog[open],.settings-dialog[open]{animation:none!important}
  .report-dialog[open].sheet-settling,.settings-dialog[open].sheet-settling{transition:none!important}
+ .report-dialog::backdrop,.settings-dialog::backdrop{transition:none!important}
 }
 
 /* All index material cards have one fixed row height; titles never resize rows. */
@@ -1307,54 +1312,76 @@ function showReportToast(message,kind="success"){
 document.getElementById("reportToastDismiss").addEventListener("click",()=>{
  window.clearTimeout(reportToastTimeout);reportToast.hidden=true;
 });
+/* Shared iOS sheet motion: the page, sheet and scrim move on one timeline. */
+const SHEET_ANIMATION_MS=380;
+const isTouchSheet=()=>window.matchMedia("(max-width:700px), (any-pointer:coarse)").matches;
+const sheetReducedMotion=()=>window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+function setSheetDepth(dialog,distance){
+ const openness=Math.max(0,1-Math.min(1,distance/Math.max(1,dialog.getBoundingClientRect().height)));
+ document.body.classList.add("sheet-dragging");
+ document.body.style.setProperty("--sheet-main-y",(-10*openness).toFixed(2)+"px");
+ document.body.style.setProperty("--sheet-main-scale",(1-.04*openness).toFixed(4));
+ document.body.style.setProperty("--sheet-main-radius",(22*openness).toFixed(2)+"px");
+ dialog.style.setProperty("--sheet-backdrop-opacity",openness.toFixed(3));
+}
+function clearSheetDepth(dialog){
+ document.body.classList.remove("sheet-dragging");
+ for(const key of ["--sheet-main-y","--sheet-main-scale","--sheet-main-radius"])document.body.style.removeProperty(key);
+ dialog.style.removeProperty("--sheet-backdrop-opacity");
+}
 /* Keep gestures on the handle/header so selects and scrollable inputs remain usable. */
 function attachSwipeDismiss(dialog,handle,dismiss){
  const body=dialog.querySelector(".report-body");
  let gesture=null,finishTimer=null;
- const isMobile=()=>window.matchMedia("(max-width:700px), (any-pointer:coarse)").matches;
- const reducedMotion=()=>window.matchMedia("(prefers-reduced-motion: reduce)").matches;
  function clearVisual(){
   if(finishTimer!==null)window.clearTimeout(finishTimer);
   finishTimer=null;gesture=null;
-  dialog.classList.remove("sheet-gesture-ready","sheet-dragging","sheet-settling");
+  dialog.classList.remove("sheet-gesture-ready","sheet-dragging","sheet-settling","sheet-exiting");
   dialog.style.removeProperty("--sheet-y");
+  clearSheetDepth(dialog);
  }
  function eligibleTarget(target){
   if(!(target instanceof Element))return false;
   if(target.closest("button,a,input,textarea,select,[role='listbox'],[role='option'],[contenteditable='true']"))return false;
   if(handle.contains(target))return true;
-  // Allow pulling the content down only when it has already scrolled to the top.
   if(body&&body.contains(target))return body.scrollTop<=1;
   return !body&&dialog.contains(target)&&dialog.scrollTop<=1;
  }
- function finger(touches,id){
-  for(const t of touches)if(t.identifier===id)return t;
-  return null;
- }
- function snapBackOrClose(close){
-  if(!gesture?.dragging){gesture=null;return}
-  const current=gesture.distance;
+ function finger(touches,id){for(const t of touches)if(t.identifier===id)return t;return null}
+ function closeAnimated(){
+  if(!dialog.open||finishTimer!==null)return;
+  if(!isTouchSheet()||sheetReducedMotion()){dismiss();clearVisual();return}
+  const current=gesture?.dragging?gesture.distance:0;
   gesture=null;
   dialog.classList.remove("sheet-dragging");
-  dialog.classList.add("sheet-settling");
-  if(reducedMotion()){
-   if(close)dismiss();
-   clearVisual();return;
-  }
-  // Keep the current position for one frame, then animate to rest or off-screen.
+  dialog.classList.add("sheet-gesture-ready","sheet-settling","sheet-exiting");
   dialog.style.setProperty("--sheet-y",Math.round(current)+"px");
   window.requestAnimationFrame(()=>{
    if(!dialog.open)return;
-   dialog.style.setProperty("--sheet-y",(close?Math.ceil(window.innerHeight+dialog.getBoundingClientRect().height):0)+"px");
+   clearSheetDepth(dialog);
+   dialog.style.setProperty("--sheet-y",Math.ceil(window.innerHeight+dialog.getBoundingClientRect().height)+"px");
+   dialog.style.setProperty("--sheet-backdrop-opacity","0");
+   syncSheetPresentation();
   });
-  finishTimer=window.setTimeout(()=>{
-   finishTimer=null;
-   if(close)dismiss();
-   clearVisual();
-  },260);
+  finishTimer=window.setTimeout(()=>{finishTimer=null;dismiss();clearVisual()},SHEET_ANIMATION_MS);
+ }
+ function snapBackOrClose(close){
+  if(!gesture?.dragging){gesture=null;return}
+  if(close){closeAnimated();return}
+  const current=gesture.distance;gesture=null;
+  dialog.classList.remove("sheet-dragging");
+  dialog.classList.add("sheet-settling");
+  if(sheetReducedMotion()){clearVisual();return}
+  dialog.style.setProperty("--sheet-y",Math.round(current)+"px");
+  window.requestAnimationFrame(()=>{
+   if(!dialog.open)return;
+   dialog.style.setProperty("--sheet-y","0px");
+   clearSheetDepth(dialog);
+  });
+  finishTimer=window.setTimeout(clearVisual,SHEET_ANIMATION_MS);
  }
  dialog.addEventListener("touchstart",event=>{
-  if(!isMobile()||!dialog.open||event.touches.length!==1||finishTimer!==null)return;
+  if(!isTouchSheet()||!dialog.open||event.touches.length!==1||finishTimer!==null)return;
   if(!eligibleTarget(event.target))return;
   const touch=event.touches[0];
   gesture={id:touch.identifier,x:touch.clientX,y:touch.clientY,
@@ -1364,19 +1391,19 @@ function attachSwipeDismiss(dialog,handle,dismiss){
  dialog.addEventListener("touchmove",event=>{
   if(!gesture)return;
   const touch=finger(event.touches,gesture.id);
-  if(!touch||event.touches.length!==1){snapBackOrClose(false);return;}
+  if(!touch||event.touches.length!==1){snapBackOrClose(false);return}
   const dx=touch.clientX-gesture.x,dy=touch.clientY-gesture.y;
   if(!gesture.dragging){
-   if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)){gesture=null;return;}
+   if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)){gesture=null;return}
    if(dy<10)return;
-   // Do not take over a normal scroll if the body was scrolled after touchstart.
-   if(body&&body.scrollTop>1){gesture=null;return;}
-   if(!body&&dialog.scrollTop>1){gesture=null;return;}
+   if(body&&body.scrollTop>1){gesture=null;return}
+   if(!body&&dialog.scrollTop>1){gesture=null;return}
    gesture.dragging=true;
    dialog.classList.add("sheet-gesture-ready","sheet-dragging");
   }
   gesture.distance=Math.max(0,dy);
   dialog.style.setProperty("--sheet-y",Math.round(gesture.distance)+"px");
+  setSheetDepth(dialog,gesture.distance);
   const now=performance.now();
   gesture.samples.push({y:touch.clientY,at:now});
   while(gesture.samples.length>2&&now-gesture.samples[0].at>110)gesture.samples.shift();
@@ -1393,12 +1420,12 @@ function attachSwipeDismiss(dialog,handle,dismiss){
  },{passive:true});
  dialog.addEventListener("touchcancel",()=>snapBackOrClose(false),{passive:true});
  dialog.addEventListener("close",clearVisual);
+ return closeAnimated;
 }
-
 function syncSheetPresentation(){
- const mobile=typeof window.matchMedia==="function"&&window.matchMedia("(max-width:700px), (any-pointer:coarse)").matches;
  const report=document.getElementById("reportDialog");
- document.body.classList.toggle("sheet-open",mobile&&(settingsDialog.open||!!report?.open));
+ const visible=dialog=>dialog?.open&&!dialog.classList.contains("sheet-exiting");
+ document.body.classList.toggle("sheet-open",isTouchSheet()&&(visible(settingsDialog)||visible(report)));
 }
 window.addEventListener("resize",syncSheetPresentation,{passive:true});
 function openSettings(){
@@ -1421,11 +1448,11 @@ function closeSettings(){
  settingsOpen.focus({preventScroll:true});
 }
 settingsOpen.addEventListener("click",openSettings);
-settingsClose.addEventListener("click",closeSettings);
-settingsDialog.addEventListener("click",e=>{if(e.target===settingsDialog)closeSettings()});
+const animateSettingsClose=attachSwipeDismiss(settingsDialog,settingsDialog.querySelector(".settings-heading"),closeSettings);
+settingsClose.addEventListener("click",animateSettingsClose);
+settingsDialog.addEventListener("click",e=>{if(e.target===settingsDialog)animateSettingsClose()});
 settingsDialog.addEventListener("close",()=>{countSettingsCycle();syncSheetPresentation();settingsOpen.focus({preventScroll:true})});
-settingsDialog.addEventListener("cancel",()=>{ /* ESC handled by native dialog */ });
-attachSwipeDismiss(settingsDialog,settingsDialog.querySelector(".settings-heading"),closeSettings);
+settingsDialog.addEventListener("cancel",e=>{if(isTouchSheet()){e.preventDefault();animateSettingsClose()}});
 searchForm.addEventListener("submit",e=>{
  e.preventDefault();qInput.blur();searchDone.blur();
 });
@@ -1564,17 +1591,17 @@ function closeIndexReport(){
  syncSheetPresentation();
  reportOpen.focus({preventScroll:true});
 }
-attachSwipeDismiss(reportDialog,reportDialog.querySelector(".report-head"),closeIndexReport);
+const animateReportClose=attachSwipeDismiss(reportDialog,reportDialog.querySelector(".report-head"),closeIndexReport);
 reportOpen.addEventListener("click",()=>openIndexReport());
 reportIssueButtons.forEach(button=>button.addEventListener("click",()=>{
  reportIssue=button.dataset.reportIssue;
  reportStatus.textContent="";reportStatus.dataset.state="";
  syncReportIssue();updateReportSubmit();
 }));
-reportClose.addEventListener("click",closeIndexReport);
-reportDialog.addEventListener("click",e=>{if(e.target===reportDialog)closeIndexReport()});
+reportClose.addEventListener("click",animateReportClose);
+reportDialog.addEventListener("click",e=>{if(e.target===reportDialog)animateReportClose()});
 reportDialog.addEventListener("close",()=>{reportDialog.classList.remove("report-is-open");document.body.classList.remove("report-open");syncSheetPresentation();reportOpen.focus({preventScroll:true})});
-reportDialog.addEventListener("cancel",()=>closeReportMenu());
+reportDialog.addEventListener("cancel",e=>{closeReportMenu();if(isTouchSheet()){e.preventDefault();animateReportClose()}});
 reportForm.addEventListener("click",e=>{
  const option=e.target.closest("[data-report-option]");
  if(option){chooseReport(option.dataset.reportOption,option.dataset.optionValue);reportFields[option.dataset.reportOption].button.focus();return;}
@@ -1632,7 +1659,7 @@ reportForm.addEventListener("submit",async e=>{
   reportStatus.dataset.state="success";
   reportStatus.textContent="Report sent. Thank you.";
   reportNotes.value="";reportKey=null;reportSince=Date.now();
-  closeIndexReport();
+  animateReportClose();
   showReportToast("Report sent successfully. Thank you!");
  }catch(error){
   reportStatus.dataset.state="error";
