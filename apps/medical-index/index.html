@@ -690,6 +690,109 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
  .material-row .question-actions{max-width:43%}
  .material-row .material-main{padding:9px 10px}
 }
+
+/* Year / module guide colors: independent of the existing subject palette. */
+.year[data-year-group="1"]{--year-color:#be9afe}
+.year[data-year-group="2"]{--year-color:#f5ba6f}
+.year[data-year-group="3"]{--year-color:#6ad8ca}
+.module[data-module-group="0"]{--module-color:#ff8eaf}
+.module[data-module-group="1"]{--module-color:#89c3ff}
+.module[data-module-group="2"]{--module-color:#dda4fa}
+.module[data-module-group="3"]{--module-color:#90d98d}
+.module[data-module-group="4"]{--module-color:#ffad86}
+.module[data-module-group="5"]{--module-color:#81d4eb}
+.module[data-module-group="6"]{--module-color:#e69bc0}
+.module[data-module-group="7"]{--module-color:#a5c7ff}
+.module[data-module-group="8"]{--module-color:#ffc57e}
+.module[data-module-group="9"]{--module-color:#98d8d4}
+.module[data-module-group="10"]{--module-color:#f1a7a2}
+.module[data-module-group="11"]{--module-color:#c6aeff}
+.module[data-module-group="12"]{--module-color:#a7de9f}
+.module[data-module-group="13"]{--module-color:#8ebce8}
+.module[data-module-group="14"]{--module-color:#e6d88f}
+.module[data-module-group="15"]{--module-color:#c58aff}
+.module[data-module-group="16"]{--module-color:#72d0b1}
+.module[data-module-group="17"]{--module-color:#f4c08f}
+html[data-theme="light"] .year[data-year-group="1"]{--year-color:#7249c0}
+html[data-theme="light"] .year[data-year-group="2"]{--year-color:#a55918}
+html[data-theme="light"] .year[data-year-group="3"]{--year-color:#147f75}
+html[data-theme="light"] .module[data-module-group="0"]{--module-color:#a73c67}
+html[data-theme="light"] .module[data-module-group="1"]{--module-color:#236daf}
+html[data-theme="light"] .module[data-module-group="2"]{--module-color:#8240a6}
+html[data-theme="light"] .module[data-module-group="3"]{--module-color:#3c7e33}
+html[data-theme="light"] .module[data-module-group="4"]{--module-color:#a85428}
+html[data-theme="light"] .module[data-module-group="5"]{--module-color:#247a94}
+html[data-theme="light"] .module[data-module-group="6"]{--module-color:#9d456b}
+html[data-theme="light"] .module[data-module-group="7"]{--module-color:#456caa}
+html[data-theme="light"] .module[data-module-group="8"]{--module-color:#9a6219}
+html[data-theme="light"] .module[data-module-group="9"]{--module-color:#277f7d}
+html[data-theme="light"] .module[data-module-group="10"]{--module-color:#a9504b}
+html[data-theme="light"] .module[data-module-group="11"]{--module-color:#6c52ad}
+html[data-theme="light"] .module[data-module-group="12"]{--module-color:#4b8744}
+html[data-theme="light"] .module[data-module-group="13"]{--module-color:#326d9a}
+html[data-theme="light"] .module[data-module-group="14"]{--module-color:#867726}
+html[data-theme="light"] .module[data-module-group="15"]{--module-color:#7b3ba8}
+html[data-theme="light"] .module[data-module-group="16"]{--module-color:#217e65}
+html[data-theme="light"] .module[data-module-group="17"]{--module-color:#945f2d}
+
+.year-button,.module-button{position:relative;padding-inline-start:18px}
+.year-button::before,.module-button::before{
+ content:"";position:absolute;inset-inline-start:0;top:10px;bottom:10px;width:3px;
+ border-radius:0 3px 3px 0;background:var(--year-color);pointer-events:none
+}
+.module-button::before{background:var(--module-color)}
+.year-button>span:first-child{color:var(--year-color)}
+.module-button{color:var(--module-color)}
+.year-button .chevron{color:var(--year-color)}
+.module-button .chevron{color:var(--module-color)}
+.year-button[aria-expanded="true"]{
+ border-color:color-mix(in srgb,var(--year-color) 43%,var(--border));
+ background:color-mix(in srgb,var(--year-color) 6%,var(--surface))
+}
+.module-button[aria-expanded="true"]{
+ border-color:color-mix(in srgb,var(--module-color) 43%,var(--border));
+ background:color-mix(in srgb,var(--module-color) 6%,var(--surface))
+}
+.year-contents{position:relative;padding:8px 0 8px 22px}
+.year-contents::before{
+ content:"";position:absolute;inset-inline-start:9px;top:0;bottom:10px;width:2px;
+ border-radius:99px;background:color-mix(in srgb,var(--year-color) 58%,transparent);
+ pointer-events:none
+}
+.year-contents>.module{position:relative;margin:7px 0}
+.year-contents>.module::before{
+ content:"";position:absolute;inset-inline-start:-12px;top:25px;width:12px;height:2px;
+ border-radius:2px;background:color-mix(in srgb,var(--year-color) 63%,transparent);
+ pointer-events:none
+}
+.module-contents{position:relative;padding:7px 0 12px 22px}
+.module-contents::before{
+ content:"";position:absolute;inset-inline-start:9px;top:0;bottom:16px;width:2px;
+ border-radius:99px;background:color-mix(in srgb,var(--module-color) 55%,transparent);
+ pointer-events:none
+}
+.module-tab-root,.module-tab-content .subject{position:relative}
+.module-tab-root::before,.module-tab-content .subject::before{
+ content:"";position:absolute;inset-inline-start:-12px;width:12px;height:2px;
+ border-radius:2px;background:color-mix(in srgb,var(--module-color) 63%,transparent);
+ pointer-events:none
+}
+.module-tab-root::before{top:30px}
+.module-tab-content .subject::before{top:12px}
+@media(max-width:700px){
+ .year-contents{padding-inline-start:18px}
+ .year-contents::before{inset-inline-start:6px}
+ .module-contents{padding-inline-start:18px}
+ .module-contents::before{inset-inline-start:6px}
+}
+@media(prefers-reduced-motion:reduce){.year-button,.module-button{transition:none!important}}
+/* Smooth accordion and report option reveal. */
+.accordion-panel{transition:grid-template-rows .37s cubic-bezier(.2,.8,.22,1),opacity .25s ease}
+.accordion-inner{transition:opacity .27s ease,transform .37s cubic-bezier(.2,.8,.22,1);transform:translateY(0);opacity:1}
+.accordion-panel.collapsed>.accordion-inner{transform:translateY(-9px);opacity:0}
+.report-menu:not([hidden]){transform-origin:top center;animation:index-menu-pop .19s cubic-bezier(.2,.8,.22,1) both}
+@keyframes index-menu-pop{from{opacity:0;transform:translateY(-7px) scale(.985)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(prefers-reduced-motion:reduce){.accordion-panel,.accordion-inner{transition:none!important}.report-menu:not([hidden]){animation:none!important}}
 </style></head><body><main class="main"><div class="wrap"><header class="site-header"><a class="brand" href="https://chaos.fail/" aria-label="Open Chaos home"><svg viewBox="0 0 48 48" width="25" height="25" aria-hidden="true"><defs><linearGradient id="chaos-warm" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fca535"/><stop offset="1" stop-color="#e9482b"/></linearGradient></defs><rect x="5" y="5" width="38" height="38" rx="10" fill="url(#chaos-warm)"/></svg><span>Chaos</span><span class="separator" aria-hidden="true"></span><span class="index-label">Index</span></a><div class="header-actions">
 <button type="button" id="settingsOpen" class="settings-open" aria-label="Settings" aria-haspopup="dialog" aria-controls="settingsDialog" title="Settings">
 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4l.5 2.5c.8.25 1.5.65 2.2 1.1L19 4.5 21.5 8l-1.9 1.8c.2.7.4 1.4.4 2.2s-.2 1.5-.4 2.2l1.9 1.8-2.5 3.5-2.3-1.1c-.7.45-1.4.85-2.2 1.1L14 22h-4l-.5-2.5c-.8-.25-1.5-.65-2.2-1.1L5 19.5 2.5 16l1.9-1.8C4.2 13.5 4 12.8 4 12s.2-1.5.4-2.2L2.5 8 5 4.5l2.3 1.1c.7-.45 1.4-.85 2.2-1.1L10 2Z"/><circle cx="12" cy="12" r="3.1"/></svg>
@@ -1132,15 +1235,18 @@ function groupContent(i,files,questionPosts){
  const content=subjects.map(subject=>{
   const set=subMap.get(subject),groups=new Map();
   for(const f of set.files){if(!groups.has(f[3]))groups.set(f[3],[]);groups.get(f[3]).push(f);}
-  let rows=TORDER.map(type=>{
-   const items=groups.get(type);if(!items)return "";
+  // Build every file row first so matched question posts never appear again as unmatched.
+  const fileGroups=new Map(TORDER.map(type=>{
+   const items=groups.get(type);if(!items)return [type,""];
    const gaps=showMissing&&!query.trim()?missingRows(items,type,subject):[];
    const sorted=items.map(v=>({v,n:catalogNums(v)[0]||999}))
       .concat(gaps.map(v=>({v,n:catalogNums(v)[0]||999})))
       .sort((a,b)=>a.n-b.n||(Number(a.v[0])||0)-(Number(b.v[0])||0));
-   return '<div class="group-name">'+esc(LABELS[type])+'</div><div class="material-list">'+sorted.map(x=>fileLine(x.v,usedQuiz)).join("")+'</div>';
-  }).join("");
+   return [type,'<div class="group-name">'+esc(LABELS[type])+'</div><div class="material-list">'+sorted.map(x=>fileLine(x.v,usedQuiz)).join("")+'</div>'];
+  }));
   const unmatched=set.quizzes.filter(q=>!usedQuiz.has(q[0]));
+  // Reading order: lectures → unmatched question sets → remaining material types.
+  let rows=fileGroups.get("lecture")||"";
   for(const type of TORDER){
    const extra=unmatched.filter(q=>q[3]===type);
    if(!extra.length)continue;
@@ -1149,6 +1255,7 @@ function groupContent(i,files,questionPosts){
     '<div class="material-row question-only" data-kind="'+esc(type)+'"><div class="material-main"><span class="kind-mark"></span><span class="material-name">'+esc(quizLabel(q))+'</span><span class="missing-hint">Questions only</span></div><a class="quiz-link" href="https://t.me/medics_44_mcq/'+q[0]+'" title="'+esc(q[5])+'" target="_blank" rel="noopener noreferrer">Questions</a>'+reportIcon(q[1],q[3],q[2],quizLabel(q),'https://t.me/medics_44_mcq/'+q[0])+'</div>'
    ).join("")+'</div>';
   }
+  rows+=TORDER.filter(type=>type!=="lecture").map(type=>fileGroups.get(type)||"").join("");
   return '<section class="subject" data-subject="'+esc(subject)+'"><h3 class="subject-name">'+esc(subject)+'</h3>'+rows+'</section>';
  }).join("");
  return content||'<div class="module-empty">No materials in this section.</div>';
@@ -1230,7 +1337,7 @@ function toggleModule(i){
 }
 function moduleHTML(i,searching){
  const expanded=searching||openModules.has(i);
- return '<section class="module"><button class="module-button" data-module="'+i+'" type="button" aria-expanded="'+expanded+'" aria-controls="module-panel-'+i+'">'+esc(M[i][0])+CHEVRON+'</button><div class="accordion-panel'+(expanded?"":" collapsed")+'" id="module-panel-'+i+'" aria-hidden="'+(!expanded)+'" '+(expanded?"":"inert")+'><div class="accordion-inner module-contents" '+(expanded?'data-rendered="yes"':'')+'>'+(expanded?panelHTML(i,selectedTabFor(i)):"")+'</div></div></section>';
+ return '<section class="module" data-module-group="'+i+'"><button class="module-button" data-module="'+i+'" type="button" aria-expanded="'+expanded+'" aria-controls="module-panel-'+i+'">'+esc(M[i][0])+CHEVRON+'</button><div class="accordion-panel'+(expanded?"":" collapsed")+'" id="module-panel-'+i+'" aria-hidden="'+(!expanded)+'" '+(expanded?"":"inert")+'><div class="accordion-inner module-contents" '+(expanded?'data-rendered="yes"':'')+'>'+(expanded?panelHTML(i,selectedTabFor(i)):"")+'</div></div></section>';
 }
 function render(){
  const searching=!!query.trim();
@@ -1240,7 +1347,7 @@ function render(){
   if(!modules.length)return "";
   n+=modules.reduce((sum,i)=>sum+D.filter(x=>x[1]===i&&matchesFile(x)).length+(QBY.get(i)||[]).filter(matchesQuiz).length,0);
   const expanded=searching||openYears.has(year);
-  return '<section class="year"><button class="year-button" type="button" data-year="'+year+'" aria-expanded="'+expanded+'" aria-controls="year-panel-'+year+'"><span>Year '+year+'</span>'+CHEVRON+'</button><div class="accordion-panel'+(expanded?"":" collapsed")+'" id="year-panel-'+year+'" aria-hidden="'+(!expanded)+'" '+(expanded?"":"inert")+'><div class="accordion-inner year-contents">'+modules.map(i=>moduleHTML(i,searching)).join("")+'</div></div></section>';
+  return '<section class="year" data-year-group="'+year+'"><button class="year-button" type="button" data-year="'+year+'" aria-expanded="'+expanded+'" aria-controls="year-panel-'+year+'"><span>Year '+year+'</span>'+CHEVRON+'</button><div class="accordion-panel'+(expanded?"":" collapsed")+'" id="year-panel-'+year+'" aria-hidden="'+(!expanded)+'" '+(expanded?"":"inert")+'><div class="accordion-inner year-contents">'+modules.map(i=>moduleHTML(i,searching)).join("")+'</div></div></section>';
  }).join("");
  resultLabel.textContent=searching?n+" results":"";
  view.innerHTML=years||'<div class="empty">No matching materials or questions.</div>';
@@ -1476,7 +1583,7 @@ const reportNotes=document.getElementById("reportNotes");
 const reportSubmit=document.getElementById("reportSubmit");
 const reportStatus=document.getElementById("reportStatus");
 const reportCharCount=document.getElementById("reportCharCount");
-const reportTypes=["Lecture","Tutorial","CBL","Practical","Questions","Other"];
+const reportTypes=["Lecture","Questions","Tutorial","CBL","Practical","Other"];
 const reportReference=document.getElementById("reportReference");
 const reportReferenceTitle=document.getElementById("reportReferenceTitle");
 const reportReferenceLink=document.getElementById("reportReferenceLink");
@@ -1515,9 +1622,21 @@ function reportChoices(field){
   reportTypes.map(v=>({value:v,label:v}));
 }
 function closeReportMenu(){
+ const reduced=window.matchMedia("(prefers-reduced-motion:reduce)").matches;
  for(const field of Object.values(reportFields)){
-  field.menu.hidden=true;
   field.button.setAttribute("aria-expanded","false");
+  const menu=field.menu;
+  if(menu._closingAnimation){menu._closingAnimation.cancel();menu._closingAnimation=null;}
+  if(menu.hidden)continue;
+  if(reduced||typeof menu.animate!=="function"){menu.hidden=true;continue;}
+  const animation=menu.animate([{opacity:1,transform:"translateY(0)"},{opacity:0,transform:"translateY(-6px)"}],
+   {duration:130,easing:"ease-in",fill:"forwards"});
+  menu._closingAnimation=animation;
+  animation.onfinish=()=>{
+   if(menu._closingAnimation!==animation)return;
+   menu._closingAnimation=null;
+   if(field.button.getAttribute("aria-expanded")==="false")menu.hidden=true;
+  };
  }
 }
 function displayReportField(field){
@@ -1609,12 +1728,14 @@ reportForm.addEventListener("click",e=>{
  if(btn){
   const field=Object.keys(reportFields).find(k=>reportFields[k].button===btn);
   if(!field)return;
-  const wasOpen=!reportFields[field].menu.hidden;
+  const wasOpen=btn.getAttribute("aria-expanded")==="true";
   closeReportMenu();
   if(!wasOpen){
-   reportFields[field].menu.hidden=false;
+   const menu=reportFields[field].menu;
+   if(menu._closingAnimation){menu._closingAnimation.cancel();menu._closingAnimation=null;}
+   menu.hidden=false;
    btn.setAttribute("aria-expanded","true");
-   reportFields[field].menu.querySelector('[aria-selected="true"]')?.focus();
+   menu.querySelector('[aria-selected="true"]')?.focus();
   }
   return;
  }
