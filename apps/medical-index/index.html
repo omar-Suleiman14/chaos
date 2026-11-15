@@ -517,7 +517,8 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
 
 /* Mobile bottom-sheet drag grip and swipe-down dismissal. */
 @media(max-width:700px){
- .report-head,.settings-heading{position:relative;touch-action:pan-x}
+ .report-head,.settings-heading{position:relative;touch-action:pan-x;cursor:grab}
+ .report-dialog.sheet-dragging .report-head,.settings-dialog.sheet-dragging .settings-heading{cursor:grabbing}
  .report-head{padding-top:27px}
  .settings-heading{padding-top:18px}
  .report-head::before,.settings-heading::before{
@@ -1170,50 +1171,90 @@ document.getElementById("reportToastDismiss").addEventListener("click",()=>{
 });
 /* Keep gestures on the handle/header so selects and scrollable inputs remain usable. */
 function attachSwipeDismiss(dialog,handle,dismiss){
- let originX=0,originY=0,started=0,offset=0,tracking=false,dragging=false,settleTimer=null;
+ const body=dialog.querySelector(".report-body");
+ let gesture=null,finishTimer=null;
  const isMobile=()=>window.matchMedia("(max-width:700px)").matches;
- function reset(){
-  window.clearTimeout(settleTimer);settleTimer=null;tracking=false;dragging=false;
+ const reducedMotion=()=>window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+ function clearVisual(){
+  if(finishTimer!==null)window.clearTimeout(finishTimer);
+  finishTimer=null;gesture=null;
   dialog.classList.remove("sheet-gesture-ready","sheet-dragging","sheet-settling");
   dialog.style.removeProperty("--sheet-y");
  }
- handle.addEventListener("touchstart",e=>{
-  if(!isMobile()||!dialog.open||e.touches.length!==1||settleTimer!==null)return;
-  if(e.target.closest("button,a,input,textarea,select"))return;
-  originX=e.touches[0].clientX;originY=e.touches[0].clientY;started=Date.now();
-  tracking=true;dragging=false;offset=0;
- },{passive:true});
- handle.addEventListener("touchmove",e=>{
-  if(!tracking||e.touches.length!==1)return;
-  const dx=e.touches[0].clientX-originX,dy=e.touches[0].clientY-originY;
-  if(!dragging){
-   if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)){tracking=false;return;}
-   if(dy<=8)return;
-   dragging=true;dialog.classList.add("sheet-gesture-ready","sheet-dragging");
-  }
-  offset=Math.max(0,dy);
-  dialog.style.setProperty("--sheet-y",offset+"px");
-  if(e.cancelable)e.preventDefault();
- },{passive:false});
- function finish(shouldClose){
-  if(!dragging){tracking=false;return;}
-  tracking=false;dragging=false;
-  dialog.classList.remove("sheet-dragging");dialog.classList.add("sheet-settling");
-  const target=shouldClose?Math.ceil(window.innerHeight*1.1):0;
-  window.requestAnimationFrame(()=>dialog.style.setProperty("--sheet-y",target+"px"));
-  settleTimer=window.setTimeout(()=>{
-   settleTimer=null;
-   if(shouldClose)dismiss();
-   else{dialog.classList.remove("sheet-settling");dialog.style.removeProperty("--sheet-y")}
-  },230);
+ function eligibleTarget(target){
+  if(!(target instanceof Element))return false;
+  if(target.closest("button,a,input,textarea,select,[role='listbox'],[role='option'],[contenteditable='true']"))return false;
+  if(handle.contains(target))return true;
+  // Allow pulling the content down only when it has already scrolled to the top.
+  if(body&&body.contains(target))return body.scrollTop<=1;
+  return !body&&dialog.contains(target)&&dialog.scrollTop<=1;
  }
- handle.addEventListener("touchend",e=>{
-  if(!tracking)return;
-  const dy=e.changedTouches[0].clientY-originY;
-  finish(dy>115||(dy>50&&dy/Math.max(Date.now()-started,1)>.65));
+ function finger(touches,id){
+  for(const t of touches)if(t.identifier===id)return t;
+  return null;
+ }
+ function snapBackOrClose(close){
+  if(!gesture?.dragging){gesture=null;return}
+  const current=gesture.distance;
+  gesture=null;
+  dialog.classList.remove("sheet-dragging");
+  dialog.classList.add("sheet-settling");
+  if(reducedMotion()){
+   if(close)dismiss();
+   clearVisual();return;
+  }
+  // Keep the current position for one frame, then animate to rest or off-screen.
+  dialog.style.setProperty("--sheet-y",Math.round(current)+"px");
+  window.requestAnimationFrame(()=>{
+   if(!dialog.open)return;
+   dialog.style.setProperty("--sheet-y",(close?Math.ceil(window.innerHeight+dialog.getBoundingClientRect().height):0)+"px");
+  });
+  finishTimer=window.setTimeout(()=>{
+   finishTimer=null;
+   if(close)dismiss();
+   clearVisual();
+  },260);
+ }
+ dialog.addEventListener("touchstart",event=>{
+  if(!isMobile()||!dialog.open||event.touches.length!==1||finishTimer!==null)return;
+  if(!eligibleTarget(event.target))return;
+  const touch=event.touches[0];
+  gesture={id:touch.identifier,x:touch.clientX,y:touch.clientY,
+   at:performance.now(),distance:0,dragging:false,
+   samples:[{y:touch.clientY,at:performance.now()}]};
  },{passive:true});
- handle.addEventListener("touchcancel",()=>finish(false),{passive:true});
- dialog.addEventListener("close",reset);
+ dialog.addEventListener("touchmove",event=>{
+  if(!gesture)return;
+  const touch=finger(event.touches,gesture.id);
+  if(!touch||event.touches.length!==1){snapBackOrClose(false);return;}
+  const dx=touch.clientX-gesture.x,dy=touch.clientY-gesture.y;
+  if(!gesture.dragging){
+   if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)){gesture=null;return;}
+   if(dy<10)return;
+   // Do not take over a normal scroll if the body was scrolled after touchstart.
+   if(body&&body.scrollTop>1){gesture=null;return;}
+   if(!body&&dialog.scrollTop>1){gesture=null;return;}
+   gesture.dragging=true;
+   dialog.classList.add("sheet-gesture-ready","sheet-dragging");
+  }
+  gesture.distance=Math.max(0,dy);
+  dialog.style.setProperty("--sheet-y",Math.round(gesture.distance)+"px");
+  const now=performance.now();
+  gesture.samples.push({y:touch.clientY,at:now});
+  while(gesture.samples.length>2&&now-gesture.samples[0].at>110)gesture.samples.shift();
+  if(event.cancelable)event.preventDefault();
+ },{passive:false});
+ dialog.addEventListener("touchend",event=>{
+  if(!gesture)return;
+  const touch=finger(event.changedTouches,gesture.id);
+  if(!touch)return;
+  const dy=Math.max(0,touch.clientY-gesture.y);
+  const first=gesture.samples[0];
+  const velocity=Math.max(0,(touch.clientY-first.y)/Math.max(1,performance.now()-first.at));
+  snapBackOrClose(gesture.dragging&&(dy>115||(dy>40&&velocity>.7)));
+ },{passive:true});
+ dialog.addEventListener("touchcancel",()=>snapBackOrClose(false),{passive:true});
+ dialog.addEventListener("close",clearVisual);
 }
 
 function syncSheetPresentation(){
