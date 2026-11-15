@@ -372,6 +372,15 @@ html[data-theme="light"] .subject .material-row{--tint-rest:13%;--tint-hover:23%
 .report-foot span{color:var(--muted)}
 @media(max-width:700px){.report-dialog{width:100%;max-width:100%;height:min(92dvh,900px);max-height:92dvh;margin:auto 0 0;border-radius:16px 16px 0 0;border-bottom:0;padding-bottom:env(safe-area-inset-bottom)}.report-head{padding:17px 16px}.report-foot{padding:10px 16px}.report-fab{right:16px;bottom:max(16px,env(safe-area-inset-bottom) + 12px)}}
 @media(prefers-reduced-motion:reduce){.report-fab{transition:none}}
+
+.report-body{display:flex;flex-direction:column;min-height:0}
+.report-context{display:grid;grid-template-columns:100px minmax(0,1fr) 124px;gap:9px;padding:14px 16px 8px}
+.report-context label{display:flex;flex-direction:column;gap:5px;font-size:11px;font-weight:590;color:var(--muted);min-width:0}
+.report-context select{display:block;min-height:39px;width:100%;max-width:100%;border:1px solid var(--border);border-radius:5px;padding:7px 9px;font:inherit;font-size:13px;color:var(--text);background:var(--raised)}
+.report-context select:focus-visible{outline:2px solid var(--focus);outline-offset:1px}
+.report-context-help{font-size:11px;color:var(--muted);margin:0;padding:0 16px 9px}
+.report-body iframe{flex:1;min-height:0}
+@media(max-width:580px){.report-context{grid-template-columns:90px minmax(0,1fr);padding:12px 13px 7px}.report-context label:last-child{grid-column:1/-1}.report-context-help{padding:0 13px 7px}}
 </style></head><body><main class="main"><div class="wrap"><header class="site-header"><a class="brand" href="https://chaos.fail/" aria-label="Open Chaos home"><svg viewBox="0 0 48 48" width="25" height="25" aria-hidden="true"><defs><linearGradient id="chaos-warm" x1="0" y1="0" x2="1" y2="1"><stop stop-color="#fca535"/><stop offset="1" stop-color="#e9482b"/></linearGradient></defs><rect x="5" y="5" width="38" height="38" rx="10" fill="url(#chaos-warm)"/></svg><span>Chaos</span><span class="separator" aria-hidden="true"></span><span class="index-label">Index</span></a><div class="header-actions"><button type="button" id="themeToggle" class="theme-toggle" aria-label="Switch to light mode"><svg class="theme-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"></svg><span class="theme-word">Light mode</span></button>
 <button type="button" id="settingsOpen" class="settings-open" aria-label="Settings" aria-haspopup="dialog" aria-controls="settingsDialog" title="Settings">
 <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 2h4l.5 2.5c.8.25 1.5.65 2.2 1.1L19 4.5 21.5 8l-1.9 1.8c.2.7.4 1.4.4 2.2s-.2 1.5-.4 2.2l1.9 1.8-2.5 3.5-2.3-1.1c-.7.45-1.4.85-2.2 1.1L14 22h-4l-.5-2.5c-.8-.25-1.5-.65-2.2-1.1L5 19.5 2.5 16l1.9-1.8C4.2 13.5 4 12.8 4 12s.2-1.5.4-2.2L2.5 8 5 4.5l2.3 1.1c.7-.45 1.4-.85 2.2-1.1L10 2Z"/><circle cx="12" cy="12" r="3.1"/></svg>
@@ -384,8 +393,20 @@ html[data-theme="light"] .subject .material-row{--tint-rest:13%;--tint-hover:23%
     <div><h2 id="reportTitle" tabindex="-1">Report missing material</h2><p>Submit a correction or missing lecture to Chaos Index.</p></div>
     <button type="button" id="reportClose" class="report-close" aria-label="Close report form"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
   </div>
-  <div class="report-body"><iframe id="reportFrame" title="Chaos Index missing material report" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="clipboard-write"></iframe></div>
-  <div class="report-foot"><a href="https://chaos.fail/f/ubkfqijk2w" target="_blank" rel="noopener noreferrer">Open full report form</a><span>Stored securely in Chaos</span></div>
+  <div class="report-body">
+  <div class="report-context">
+    <label>Year<select id="reportYear" aria-label="Academic year"></select></label>
+    <label>Module<select id="reportModule" aria-label="Medical module"></select></label>
+    <label>Missing<select id="reportType" aria-label="Missing material type">
+      <option value="Lecture">Lecture</option><option value="Tutorial">Tutorial</option><option value="CBL">CBL</option>
+      <option value="Practical">Practical</option><option value="Questions">Questions</option>
+      <option value="Exam">Exam</option><option value="Timetable">Timetable</option><option value="Other">Other</option>
+    </select></label>
+  </div>
+  <p class="report-context-help">Choose the location and item type. Describe what is missing below.</p>
+  <iframe id="reportFrame" title="Chaos Index missing material report" loading="lazy" referrerpolicy="strict-origin-when-cross-origin" allow="clipboard-write"></iframe>
+</div>
+  <div class="report-foot"><a id="reportExternal" href="https://chaos.fail/f/ubkfqijk2w" target="_blank" rel="noopener noreferrer">Open full report form</a><span>Stored securely in Chaos</span></div>
 </dialog>
 <dialog id="settingsDialog" class="settings-dialog" aria-labelledby="settingsTitle" aria-modal="true">
   <div class="settings-content">
@@ -861,9 +882,9 @@ function render(){
 }
 document.body.addEventListener("click",e=>{
  const tab=e.target.closest("[data-tab][data-module-index]");
- if(tab){useModuleTab(Number(tab.dataset.moduleIndex),tab.dataset.tab);return;}
+ if(tab){lastActiveModule=Number(tab.dataset.moduleIndex);useModuleTab(Number(tab.dataset.moduleIndex),tab.dataset.tab);return;}
  const y=e.target.closest("[data-year]");if(y){toggleYear(Number(y.dataset.year));return;}
- const m=e.target.closest("[data-module]");if(m){toggleModule(Number(m.dataset.module));return;}
+ const m=e.target.closest("[data-module]");if(m){lastActiveModule=Number(m.dataset.module);toggleModule(Number(m.dataset.module));return;}
 });
 document.body.addEventListener("keydown",e=>{
  const target=e.target.closest&&e.target.closest('[role="tab"][data-module-index]');
@@ -930,7 +951,51 @@ document.addEventListener("keydown",e=>{
  else if(e.key==="Escape"&&document.activeElement===qInput){qInput.value="";query="";qInput.blur();render()}
 });
 
-const reportDialog=document.getElementById("reportDialog");
+const reportYear=document.getElementById("reportYear");
+const reportModule=document.getElementById("reportModule");
+const reportType=document.getElementById("reportType");
+const reportFormBase="https://chaos.fail/f/ubkfqijk2w";
+const reportSource="index.chaos.fail";
+let lastActiveModule=null;
+function currentModuleContext(){
+ if(lastActiveModule!==null&&lastActiveModule>=0&&lastActiveModule<M.length)return lastActiveModule;
+ const expanded=[...document.querySelectorAll('.module-button[aria-expanded="true"]')];
+ const focused=expanded.map(el=>{
+   const rect=el.getBoundingClientRect();
+   return {i:Number(el.dataset.module),dist:Math.abs(rect.top-Math.min(window.innerHeight/3,260)),visible:rect.bottom>0&&rect.top<window.innerHeight};
+ }).filter(v=>v.visible).sort((a,b)=>a.dist-b.dist);
+ if(focused.length)return focused[0].i;
+ for(const y of [1,2,3])if(openYears.has(y)){const index=M.findIndex(m=>m[1]===y);if(index>=0)return index;}
+ return 0;
+}
+function selectReportYear(year){
+ reportYear.value=String(year);
+ const previous=reportModule.value;
+ reportModule.innerHTML=M.map((m,i)=>m[1]===year?'<option value="'+i+'">'+esc(m[0])+'</option>':"").join("");
+ if([...reportModule.options].some(option=>option.value===previous))reportModule.value=previous;
+ else reportModule.selectedIndex=0;
+}
+function reportUrl(){
+ const i=Number(reportModule.value),module=M[i],year=Number(reportYear.value);
+ const url=new URL(reportFormBase);
+ url.searchParams.set("index_year",String(year));
+ url.searchParams.set("index_module",module?module[0]:"");
+ url.searchParams.set("index_type",reportType.value);
+ url.searchParams.set("index_source",reportSource);
+ url.searchParams.set("embed","1");
+ return url.toString();
+}
+function updateReportFrame(){
+ const url=reportUrl();
+ if(reportFrame.src!==url)reportFrame.src=url;
+ const external=document.getElementById("reportExternal");
+ external.href=url;
+}
+reportYear.innerHTML=[1,2,3].map(y=>'<option value="'+y+'">Year '+y+'</option>').join("");
+reportYear.addEventListener("change",()=>{selectReportYear(Number(reportYear.value));updateReportFrame()});
+reportModule.addEventListener("change",()=>{lastActiveModule=Number(reportModule.value);updateReportFrame()});
+reportType.addEventListener("change",updateReportFrame);
+
 const reportFrame=document.getElementById("reportFrame");
 const reportOpen=document.getElementById("reportOpen");
 const reportClose=document.getElementById("reportClose");
@@ -940,7 +1005,12 @@ function closeReport(){
  reportOpen.focus({preventScroll:true});
 }
 reportOpen.addEventListener("click",()=>{
- if(!reportFrame.getAttribute("src"))reportFrame.setAttribute("src","https://chaos.fail/f/ubkfqijk2w");
+ const index=currentModuleContext(),module=M[index];
+ selectReportYear(module?.[1]||1);
+ reportModule.value=String(index);
+ const tab=tabSelections.get(index)||"study";
+ reportType.value=tab==="practical"?"Practical":tab==="other"?"Questions":"Lecture";
+ updateReportFrame();
  if(typeof reportDialog.showModal==="function")reportDialog.showModal();
  else reportDialog.setAttribute("open","");
  document.getElementById("reportTitle").focus({preventScroll:true});
