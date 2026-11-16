@@ -11,6 +11,7 @@ import "@/components/courses/courses.css";
 
 const translations = {
   en: {
+    version: "Exam version", currentVersion: "Current version", previous: "Previous page", next: "Next page",
     title: "Written-answer grading", desc: "Score rubric criteria, send for moderation and finalize only fully approved attempts.",
     back: "Student results", noDraft: "Open a sealed exam from the exam builder.",
     signIn: "Sign in as the course owner.", empty: "No submitted exam attempts.",
@@ -36,6 +37,7 @@ const translations = {
     disclosure: "Only the course owner can access these essays. Final scores follow the exam's frozen result-release policy.",
   },
   ar: {
+    version: "نسخة الامتحان", currentVersion: "النسخة الحالية", previous: "الصفحة السابقة", next: "الصفحة التالية",
     title: "تصحيح الأسئلة المقالية", desc: "قيّم بنود سلم التصحيح ثم أرسل للمراجعة واعتمد المحاولات المكتملة فقط.",
     back: "نتائج الطلاب", noDraft: "اختر امتحاناً معتمداً من منشئ الامتحانات.",
     signIn: "سجّل الدخول بحساب مالك الدورة.", empty: "لا توجد محاولات مسلّمة.",
@@ -63,16 +65,21 @@ const translations = {
 } as const;
 
 export default function EssayGradingPage({ params, searchParams }: {
-  params: Promise<{ id: string }>; searchParams: Promise<{ draft?: string }>;
+  params: Promise<{ id: string }>; searchParams: Promise<{ draft?: string; snapshot?: string }>;
 }) {
   const { id } = use(params);
-  const { draft } = use(searchParams);
+  const { draft, snapshot } = use(searchParams);
+  const [selectedSnapshot, setSelectedSnapshot] = useState(snapshot ?? "");
+  const [pages, setPages] = useState<Array<string | null>>([null]);
   const draftId = draft ? draft as Id<"examBuilderDrafts"> : null;
   const { locale } = useLocale();
   const ar = locale === "ar";
   const t = translations[ar ? "ar" : "en"];
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const queue = useQuery(api.examEssayGrading.queue, isAuthenticated && draftId ? { draftId } : "skip");
+  const snapshotId = selectedSnapshot ? selectedSnapshot as Id<"examSnapshots"> : undefined;
+  const snapshots = useQuery(api.examRuntime.listDraftSnapshots, isAuthenticated && draftId ? { draftId } : "skip");
+  const queue = useQuery(api.examEssayGrading.queue, isAuthenticated && draftId ?
+    { draftId, snapshotId, cursor: pages[pages.length - 1] } : "skip");
   const [attemptId, setAttemptId] = useState<Id<"examAttempts"> | null>(null);
   const [questionIndex, setQuestionIndex] = useState<number | null>(null);
   const work = useQuery(api.examEssayGrading.work,
@@ -86,7 +93,8 @@ export default function EssayGradingPage({ params, searchParams }: {
   const decideProposal = useMutation(api.examDoctorReview.decide);
   const regrade = useMutation(api.examDoctorReview.regrade);
   const releaseRegrade = useMutation(api.examDoctorReview.releaseRegrade);
-  const assisted = useQuery(api.examGradingJobs.myJobs, isAuthenticated && draftId ? { draftId } : "skip");
+  const assisted = useQuery(api.examGradingJobs.myJobs, isAuthenticated && draftId && queue ?
+    { draftId, snapshotId: queue.snapshotId, attemptIds: queue.entries.map(e => e.attemptId) } : "skip");
   const entry = queue?.entries.find(e => e.attemptId === attemptId);
   const reviewJob = assisted?.jobs.find(j => j.attemptId === attemptId && j.status === "doctor_review");
   const review = useQuery(api.examDoctorReview.review,
@@ -130,11 +138,19 @@ export default function EssayGradingPage({ params, searchParams }: {
     return <PageSkeleton label={t.title} />;
   if (!isAuthenticated) return <main className="lx-page"><p>{t.signIn}</p></main>;
   return <main className="lx-page" dir={ar ? "rtl" : "ltr"}>
-    <Link href={"/dashboard/courses/" + id + "/exams/results" + (draft ? "?draft=" + draft : "")}
+    <Link href={"/dashboard/courses/" + id + "/exams/results" + (draft ? "?draft=" + draft + (selectedSnapshot ? "&snapshot=" + selectedSnapshot : "") : "")}
       className="ws-btn ws-btn--ghost ws-btn--sm w-fit">{t.back}</Link>
     <header className="lx-hero"><h1 className="ws-page-title">{t.title}</h1>
       <p className="lx-help">{t.desc}</p></header>
     <p className="cb-note">{t.disclosure}</p>
+    {draftId && snapshots && <label className="grid gap-2 w-fit">{t.version}
+      <select className="ws-input" value={selectedSnapshot} onChange={e => {
+        setSelectedSnapshot(e.target.value); setPages([null]); setAttemptId(null); setQuestionIndex(null); setLoadedVersion(null);
+      }}>
+        <option value="">{t.currentVersion}</option>
+        {snapshots.map(item => <option key={item.snapshotId} value={item.snapshotId}>{item.title} · {item.version}</option>)}
+      </select>
+    </label>}
     {!draftId || !queue ? <section className="cb-section">{t.noDraft}</section> : <>
       <section className="cb-section">
         <h2 className="text-lg font-semibold" dir="auto">{queue.title}</h2>
@@ -177,7 +193,12 @@ export default function EssayGradingPage({ params, searchParams }: {
             </div>
           </div>)}
         </div>}
-        {queue.hasMore && <p className="cb-note">{t.more}</p>}
+        <nav className="flex gap-2" aria-label={t.title}>
+          <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={pages.length <= 1}
+            onClick={() => { setPages(old => old.slice(0, -1)); setAttemptId(null); setQuestionIndex(null); }}>{t.previous}</button>
+          <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={!queue.nextCursor}
+            onClick={() => { if (queue.nextCursor) setPages(old => [...old, queue.nextCursor]); setAttemptId(null); setQuestionIndex(null); }}>{t.next}</button>
+        </nav>
       </section>
       {attemptId && questionIndex !== null && work ? <section className="cb-section grid gap-4">
         <h2 className="text-lg font-semibold">{t.pending} #{questionIndex + 1}</h2>

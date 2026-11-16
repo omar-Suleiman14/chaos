@@ -39,6 +39,7 @@ const TOOL_PERMISSIONS = {
   list_admin_grading_jobs: "admin_operations",
   claim_admin_grading_job: "admin_operations",
   retry_admin_grading_job: "admin_operations",
+  reopen_admin_grading_job: "admin_operations",
   get_admin_grading_bundle: "admin_operations",
   save_admin_grading_proposal: "admin_operations",
   submit_admin_grading_review: "admin_operations",

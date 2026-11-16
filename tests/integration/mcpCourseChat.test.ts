@@ -72,6 +72,8 @@ it("returns approved course listings and source-grounded English/Arabic block pa
       { blockId: "axon", type: "paragraph", text: "The vestibular nuclei integrate balance signals." },
     ] },
   ] });
+  await expect(t.query(courseChat.search, { userId: student, courseId, query: "vestibular", offset: 101 }))
+    .resolves.toMatchObject({ results: [], nextOffset: null });
   const ar = await t.query(courseChat.search, { userId: student, courseId, query: "الاتزان" });
   expect(ar.results[0]?.snippets[0]?.blockId).toBe("arabic");
   const page = await t.query(courseChat.lecture, { userId: student, courseId, lessonId, limit: 1 });

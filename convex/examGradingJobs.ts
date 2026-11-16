@@ -39,8 +39,7 @@ async function attemptForOwner(ctx: Ctx, attemptId: Id<"examAttempts">, ownerId:
     throw new Error("NOT_FOUND: Submitted attempt not found.");
   const release = await ctx.db.query("examReleases")
     .withIndex("by_draft", q => q.eq("draftId", snapshot.draftId)).unique();
-  if (!release || release.ownerId !== ownerId || release.courseId !== course._id ||
-      release.activeSnapshotId !== snapshot._id)
+  if (!release || release.ownerId !== ownerId || release.courseId !== course._id )
     throw new Error("NOT_FOUND: Submitted attempt not found.");
   return { attempt, snapshot, grade, course, release };
 }
@@ -56,7 +55,7 @@ export async function validJob(ctx: Ctx, jobId: Id<"examGradingJobs">) {
 }
 
 export async function auditJob(ctx: MutationCtx, job: Doc<"examGradingJobs">,
-  actorId: string, action: "requested" | "claimed" | "requeued" | "bundle_read" | "proposal_saved" | "sent_to_doctor",
+  actorId: string, action: "requested" | "claimed" | "requeued" | "reopened" | "bundle_read" | "proposal_saved" | "sent_to_doctor",
   detail: string) {
   await ctx.db.insert("examGradingJobAudit", {
     jobId: job._id, attemptId: job.attemptId, actorId, action,
@@ -99,8 +98,9 @@ export const request = mutation({
 
 /** Teacher may only see their own jobs and metadata. No answers or proposals here. */
 export const myJobs = query({
-  args: { draftId: v.id("examBuilderDrafts") },
-  handler: async (ctx, { draftId }) => {
+  args: { draftId: v.id("examBuilderDrafts"), snapshotId: v.optional(v.id("examSnapshots")),
+    attemptIds: v.optional(v.array(v.id("examAttempts"))) },
+  handler: async (ctx, { draftId, snapshotId, attemptIds }) => {
     const ownerId = await teacher(ctx);
     const draft = await ctx.db.get("examBuilderDrafts", draftId);
     if (!draft || draft.ownerId !== ownerId) throw new Error("NOT_FOUND: Exam not found.");
@@ -110,9 +110,18 @@ export const myJobs = query({
     if (!course || course.ownerId !== ownerId || course.communityState === "removed" ||
         !release || release.ownerId !== ownerId || release.courseId !== course._id)
       throw new Error("NOT_FOUND: Exam not found.");
-    const rows = await ctx.db.query("examGradingJobs")
-      .withIndex("by_owner_course", q => q.eq("ownerId", ownerId).eq("courseId", course._id)).take(101);
-    return { jobs: rows.filter(row => row.snapshotId === release.activeSnapshotId).slice(0, 100)
+    const selected = await ctx.db.get("examSnapshots", snapshotId ?? release.activeSnapshotId);
+    if (!selected || selected.ownerId !== ownerId || selected.courseId !== course._id || selected.draftId !== draftId)
+      throw new Error("NOT_FOUND: Exam not found.");
+    if (attemptIds && (attemptIds.length > 100 || new Set(attemptIds).size !== attemptIds.length))
+      throw new Error("VALIDATION_FAILED: Invalid attempt list.");
+    const rows = attemptIds ? (await Promise.all(attemptIds.map(attemptId => ctx.db.query("examGradingJobs")
+      .withIndex("by_attempt", q => q.eq("attemptId", attemptId)).unique())))
+      .filter((row): row is Doc<"examGradingJobs"> => !!row && row.ownerId === ownerId &&
+        row.courseId === course._id && row.snapshotId === selected._id)
+      : await ctx.db.query("examGradingJobs")
+        .withIndex("by_snapshot", q => q.eq("snapshotId", selected._id)).take(101);
+    return { jobs: rows.slice(0, 100)
       .map(row => ({ jobId: row._id, attemptId: row.attemptId, status: row.status,
         revision: row.revision, retryCount: row.retryCount })),
       hasMore: rows.length > 100 };
@@ -184,4 +193,29 @@ export async function retryForAdmin(ctx: MutationCtx,
 export const adminRetry = mutation({
   args: { jobId: v.id("examGradingJobs"), expectedRevision: v.number() },
   handler: (ctx, args) => retryForAdmin(ctx, args),
+});
+
+/** Explicitly reset an exhausted retry budget; draft proposals are retained for review. */
+export async function reopenForAdmin(ctx: MutationCtx,
+  args: { jobId: Id<"examGradingJobs">; expectedRevision: number; confirmReopen: boolean }, actorId?: string) {
+  const adminId = await admin(ctx, actorId);
+  const { job } = await validJob(ctx, args.jobId);
+  if (!Number.isSafeInteger(args.expectedRevision) || args.expectedRevision !== job.revision)
+    throw new Error("REVISION_CONFLICT: Reload grading queue.");
+  if (!args.confirmReopen || job.status !== "claimed" || !job.claimExpiresAt ||
+      job.claimExpiresAt > Date.now() || job.retryCount < MAX_RETRIES)
+    throw new Error("GRADING_CONFLICT: Only an expired, exhausted claim can be reopened.");
+  const now = Date.now();
+  await ctx.db.patch("examGradingJobs", job._id, {
+    status: "queued", claimAdminId: undefined, claimedAt: undefined,
+    claimExpiresAt: undefined, retryCount: 0, revision: job.revision + 1, updatedAt: now,
+  });
+  await auditJob(ctx, { ...job, revision: job.revision + 1 }, adminId, "reopened",
+    "Admin explicitly reopened an exhausted job; draft proposals were retained.");
+  return { jobId: job._id, revision: job.revision + 1, retryCount: 0, status: "queued" as const };
+}
+
+export const adminReopen = mutation({
+  args: { jobId: v.id("examGradingJobs"), expectedRevision: v.number(), confirmReopen: v.boolean() },
+  handler: (ctx, args) => reopenForAdmin(ctx, args),
 });

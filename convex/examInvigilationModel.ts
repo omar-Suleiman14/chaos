@@ -30,7 +30,7 @@ export function extendedDeadline(
   if (!attempt.deadlineAt || now >= attempt.deadlineAt)
     throw new Error("ATTEMPT_TIMED_OUT: Expired attempts cannot be reopened.");
   const proposed = attempt.deadlineAt + minutes * 60_000;
-  if (proposed > attempt.startedAt + 480 * 60_000 ||
+  if (proposed > attempt.startedAt + 600 * 60_000 ||
       (closesAt !== undefined && proposed > closesAt))
     throw new Error("EXTENSION_LIMIT: Extension exceeds exam duration or closing time.");
   return proposed;

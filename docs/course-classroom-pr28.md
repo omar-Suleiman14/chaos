@@ -7,7 +7,7 @@ Draft-only implementation stacked on PR27 (#404). No merge, deploy, or live stud
 - Approved enrolled learners can read published announcements and events for their own course. Suspended/removed students and historical self-enrollments cannot read them.
 - Doctor/student private 1:1 course conversations; the teacher must identify an approved enrolled learner. Each query revalidates current course approval. Never expose one student's conversation to another student.
 - The classroom UI combines teacher-planned events with PR27 published assignment dates and surfaces existing PR04 roster/groups for class management. Group membership alone grants no message access.
-- Arabic/English UX; server validation and bounded reads. Published content never includes private exam answer keys, grades or rubrics.
+- Arabic/English UX; server validation and bounded reads. Private message history uses cursor pagination and remains writable beyond the first page. Published content never includes private exam answer keys, grades or rubrics.
 - No automatic email/push/WhatsApp alerts, unread notifications, bulk messaging, attachments, parent access or administrative snooping (PR29 or future work).
 
 ## Release blockers

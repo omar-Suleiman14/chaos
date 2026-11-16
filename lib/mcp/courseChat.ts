@@ -22,7 +22,7 @@ export function registerCourseChatTools(
 
   server.registerTool("search_enrolled_course_lectures", {
     description: "Search published lecture titles and text in one course the connected student is currently approved to access. Search 1-15 lectures per call; continue nextOffset (which advances by scanned lectures, even when results are empty). Each text snippet carries the exact published lesson version and block ID for grounding. No draft text, responses, source-file bytes, grading or hidden material. Results are evidence, not an AI-generated explanation.",
-    inputSchema: { courseId: ref, query: z.string().trim().min(1).max(200), offset: z.number().int().min(0).max(100).optional(), limit: z.number().int().min(1).max(15).optional() },
+    inputSchema: { courseId: ref, query: z.string().trim().min(1).max(200), offset: z.number().int().min(0).optional(), limit: z.number().int().min(1).max(15).optional() },
     outputSchema: { courseId: ref, results: z.array(z.object({ lessonId: ref, versionId: ref, title: z.string(), snippets: z.array(excerpt) })), nextOffset: z.number().int().nullable() },
     annotations: read, _meta: meta,
   }, input => run("search_enrolled_course_lectures", input, data => `${(data.results as unknown[]).length} matching lecture(s) in this page.`));

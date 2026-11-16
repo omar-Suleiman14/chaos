@@ -61,7 +61,7 @@ export const search = internalQuery({
     nextOffset: v.union(v.number(), v.null()) }),
   handler: async (ctx, { userId, courseId, query, offset = 0, limit = 10 }) => {
     const text = query.trim().toLocaleLowerCase();
-    if (!text || query.length > 200 || !Number.isSafeInteger(offset) || offset < 0 || offset > 100 ||
+    if (!text || query.length > 200 || !Number.isSafeInteger(offset) || offset < 0 ||
       !Number.isSafeInteger(limit) || limit < 1 || limit > 15) throw new Error(INVALID);
     const course = await approvedCourse(ctx, userId, courseId);
     const words = text.split(/\s+/u).filter(Boolean);

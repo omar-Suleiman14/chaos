@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser, creatorRestricted } from "./authz";
@@ -7,7 +8,7 @@ import { cleanClassText, validateClassEvent } from "./courseCommunicationsModel"
 import { notifyCourseAccount, notifyCourseStudents } from "./courseNotifications";
 
 type Ctx = QueryCtx | MutationCtx;
-const MAX_RECORDS = 80, MAX_MESSAGES = 100;
+const MAX_RECORDS = 80;
 async function actor(ctx: Ctx) {
   const { identity, user } = await requireActiveUser(ctx);
   if (!user) throw new Error("ACCOUNT_REQUIRED: Complete account setup.");
@@ -164,25 +165,27 @@ export const reviseEvent = mutation({
 });
 
 /** A private conversation belongs to exactly one approved student; no class-wide inbox leak. */
-async function thread(ctx: Ctx, courseId: Id<"learnCollections">, studentId: string) {
-  const messages = await ctx.db.query("courseMessages")
+async function thread(ctx: Ctx, courseId: Id<"learnCollections">, studentId: string,
+  paginationOpts: { cursor: string | null; numItems: number }) {
+  if (!Number.isSafeInteger(paginationOpts.numItems) || paginationOpts.numItems < 1 || paginationOpts.numItems > 50)
+    throw new Error("INVALID_PAGE: Choose 1–50 messages.");
+  return ctx.db.query("courseMessages")
     .withIndex("by_course_student_created", q => q.eq("courseId", courseId).eq("studentId", studentId))
-    .order("asc").take(MAX_MESSAGES + 1);
-  if (messages.length > MAX_MESSAGES) throw new Error("LIMIT_REACHED: Message history requires pagination.");
-  return messages;
+    .order("desc").paginate({ ...paginationOpts, maximumBytesRead: 1_000_000 });
 }
 export const conversation = query({
-  args: { courseId: v.id("learnCollections"), studentId: v.optional(v.string()) },
-  handler: async (ctx, { courseId, studentId }) => {
+  args: { courseId: v.id("learnCollections"), studentId: v.optional(v.string()), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { courseId, studentId, paginationOpts }) => {
     const { course, who, owner } = await courseFor(ctx, courseId);
     const target = owner ? studentId : who;
     if (!target || target === course.ownerId ||
         !await hasApprovedCourseAccess(ctx, courseId, target))
       throw new Error("NOT_FOUND: Conversation unavailable.");
-    return (await thread(ctx, courseId, target))
+    const page = await thread(ctx, courseId, target, paginationOpts);
+    return { ...page, page: page.page
       .filter(m => m.ownerId === course.ownerId && m.studentId === target)
       .map(m => ({ id: m._id, body: m.body, senderId: m.senderId, createdAt: m.createdAt,
-        isMine: m.senderId === who }));
+        isMine: m.senderId === who })) };
   },
 });
 export const sendMessage = mutation({
@@ -193,10 +196,9 @@ export const sendMessage = mutation({
     if (!target || target === course.ownerId ||
         !await hasApprovedCourseAccess(ctx, courseId, target))
       throw new Error("NOT_FOUND: Conversation unavailable.");
-    const current = await thread(ctx, courseId, target);
-    if (current.length >= MAX_MESSAGES) throw new Error("LIMIT_REACHED: Conversation is full.");
+    const current = await thread(ctx, courseId, target, { cursor: null, numItems: 1 });
     const now = Date.now();
-    if (current.length && now - current[current.length - 1].createdAt < 2000)
+    if (current.page.length && now - current.page[0].createdAt < 2000)
       throw new Error("RATE_LIMITED: Please wait before sending another message.");
     const text = cleanClassText(body, 2000, "message");
     const id = await ctx.db.insert("courseMessages", {
