@@ -93,9 +93,9 @@ async function finalize(
     // No active matching release or settings means fail-closed manual visibility.
     const release = await ctx.db.query("examReleases")
       .withIndex("by_draft", q => q.eq("draftId", snapshot.draftId)).unique();
-    const policy = release?.activeSnapshotId === snapshot._id &&
+    const policy = attempt.resultPolicy ?? (release?.activeSnapshotId === snapshot._id &&
       release.ownerId === attempt.ownerId && release.courseId === attempt.courseId
-      ? freezeResultPolicy(release.settings) : freezeResultPolicy(undefined);
+      ? freezeResultPolicy(release.settings, false) : freezeResultPolicy(undefined, false));
     await ctx.db.insert("examGrades", {
       attemptId: attempt._id, snapshotId: attempt.snapshotId,
       ownerId: attempt.ownerId, studentId: attempt.studentId,

@@ -264,21 +264,21 @@
       "unit": "count"
     },
     "mcp.admin.listToolsBytes": {
-      "budget": 321000,
+      "budget": 327500,
       "unit": "bytes",
       "raised": {
-        "from": 316800,
-        "reason": "Four new platform notification MCP tools intentionally increase listed tool counts and small JSON schemas; database, UI, and other performance budgets remain unchanged.",
-        "at": "2026-11-14"
+        "from": 321000,
+        "reason": "Three new approved-student read-only MCP tools intentionally expand the public and administrator tool catalogs. Measured schema payload increases are bounded; no client, database, or unrelated latency budgets are raised.",
+        "at": "2026-11-15"
       }
     },
     "mcp.admin.tools": {
-      "budget": 154,
+      "budget": 157,
       "unit": "count",
       "raised": {
-        "from": 150,
-        "reason": "Four new platform notification MCP tools intentionally increase listed tool counts and small JSON schemas; database, UI, and other performance budgets remain unchanged.",
-        "at": "2026-11-14"
+        "from": 154,
+        "reason": "Three new approved-student read-only MCP tools intentionally expand the public and administrator tool catalogs. Measured schema payload increases are bounded; no client, database, or unrelated latency budgets are raised.",
+        "at": "2026-11-15"
       }
     },
     "mcp.getLesson.bytesRead": {
@@ -311,12 +311,12 @@
       }
     },
     "mcp.listToolsBytes": {
-      "budget": 296500,
+      "budget": 302700,
       "unit": "bytes",
       "raised": {
-        "from": 292300,
-        "reason": "Four new platform notification MCP tools intentionally increase listed tool counts and small JSON schemas; database, UI, and other performance budgets remain unchanged.",
-        "at": "2026-11-14"
+        "from": 296500,
+        "reason": "Three new approved-student read-only MCP tools intentionally expand the public and administrator tool catalogs. Measured schema payload increases are bounded; no client, database, or unrelated latency budgets are raised.",
+        "at": "2026-11-15"
       }
     },
     "mcp.searchForms.bytesRead": {
@@ -350,12 +350,12 @@
       "unit": "count"
     },
     "mcp.tools": {
-      "budget": 136,
+      "budget": 139,
       "unit": "count",
       "raised": {
-        "from": 132,
-        "reason": "Four new platform notification MCP tools intentionally increase listed tool counts and small JSON schemas; database, UI, and other performance budgets remain unchanged.",
-        "at": "2026-11-14"
+        "from": 136,
+        "reason": "Three new approved-student read-only MCP tools intentionally expand the public and administrator tool catalogs. Measured schema payload increases are bounded; no client, database, or unrelated latency budgets are raised.",
+        "at": "2026-11-15"
       }
     },
     "quizzes.respondent.bytesRead": {

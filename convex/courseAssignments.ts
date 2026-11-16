@@ -175,7 +175,8 @@ async function outcomeFor(ctx: Ctx, row: Doc<"courseAssignments">, studentId: st
   enrollment: Doc<"courseEnrollments"> | null, reveal: boolean) {
   if (row.kind === "lesson") {
     const completed = !!row.lessonId && !!enrollment?.completedLessonIds.includes(row.lessonId);
-    return { completedAt: completed ? enrollment?.updatedAt ?? null : null,
+    const recordedAt = row.lessonId && enrollment?.lessonCompletedAt?.find(item => item.lessonId === row.lessonId)?.completedAt;
+    return { completedAt: completed ? recordedAt ?? enrollment?.updatedAt ?? null : null,
       percentBasisPoints: null as number | null, grading: "not_applicable" as const,
       released: false };
   }

@@ -101,3 +101,28 @@ it("creates one opt-in job per attempt; only admins may claim and expired claims
     .withIndex("by_job_time", q => q.eq("jobId", first.jobId)).collect()))
     .map(a => a.action)).toEqual(["requested", "claimed", "requeued"]);
 });
+
+it("requires an audited explicit admin action to reopen an exhausted expired claim", async () => {
+  const { t, owner, student, attemptId } = await fixture();
+  const { jobId } = await owner.mutation(api.examGradingJobs.request,
+    { attemptId, requestKey: "reopen-request-01", confirmAdminAccess: true });
+  const adminId = "user_reopen_admin";
+  await t.run(async ctx => {
+    await ctx.db.insert("users", { clerkId: adminId, email: "reopen@example.org", name: "Admin", username: "reopen", createdAt: 0 });
+    await ctx.db.insert("admins", { clerkId: adminId, email: "reopen@example.org", grantedAt: 0 });
+    await ctx.db.patch("examGradingJobs", jobId, { status: "claimed", claimAdminId: adminId,
+      claimExpiresAt: 1, retryCount: 3, revision: 7 });
+  });
+  const admin = t.withIdentity({ subject: adminId, issuer: creatorIdentity.issuer,
+    tokenIdentifier: `https://test.example|${adminId}` });
+  const args = { jobId, expectedRevision: 7, confirmReopen: true };
+  await expect(student.mutation(api.examGradingJobs.adminReopen, args)).rejects.toThrow();
+  await expect(admin.mutation(api.examGradingJobs.adminReopen, { ...args, confirmReopen: false })).rejects.toThrow("GRADING_CONFLICT");
+  await expect(admin.mutation(api.examGradingJobs.adminReopen, { ...args, expectedRevision: 6 })).rejects.toThrow("REVISION_CONFLICT");
+  await expect(admin.mutation(api.examGradingJobs.adminReopen, args))
+    .resolves.toMatchObject({ status: "queued", retryCount: 0, revision: 8 });
+  await expect(admin.mutation(api.examGradingJobs.adminReopen, args)).rejects.toThrow("REVISION_CONFLICT");
+  const audit = await t.run(ctx => ctx.db.query("examGradingJobAudit")
+    .withIndex("by_job_time", q => q.eq("jobId", jobId)).collect());
+  expect(audit.map(row => row.action)).toEqual(["requested", "reopened"]);
+});

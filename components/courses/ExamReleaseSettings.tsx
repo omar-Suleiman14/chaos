@@ -40,7 +40,11 @@ const l = {
     unprepare: "Mark as not ready", prepared: "Prepared (not assigned)", private: "Private · student entry disabled",
     unsaved: "Save the settings before changing readiness.", missing: "Seal and save settings before preparing.",
     pending: "Working…", error: "Could not update exam settings.",
-    warning: "No student can start this exam yet. Assignments and Due Exams now support approved course students only; secure student entry, timing, submission and result enforcement remain disabled until later PRs.",
+    warning: "Assign the exam below, then open entry when students may begin. Close entry before editing settings.",
+    conflict: "Settings changed elsewhere. Your edits are still here; load the latest settings before saving.", reload: "Load latest settings",
+    monitoring: "Browser activity monitoring", monitorOff: "Off", monitorRecord: "Record events",
+    monitorWarn: "Record and warn", monitorReview: "Record and flag for human review",
+    monitoringHelp: "Records browser focus, visibility, connection and fullscreen changes. These observations do not determine cheating or grades.",
   },
   ar: {
     title: "إعدادات الامتحان والجدول", introduction: "ثبّت الأسئلة المختارة أولًا. بعد تجهيز الامتحان حدد الطلاب أو المجموعات الموافق عليها داخل هذه الدورة.",
@@ -58,7 +62,11 @@ const l = {
     unprepare: "إلغاء الجاهزية", prepared: "جاهز · لم يكلّف الطلاب", private: "خاص · دخول الطلاب مقفل",
     unsaved: "احفظ إعدادات الامتحان أولًا.", missing: "ثبّت الامتحان واحفظ إعداداته أولًا.",
     pending: "جارٍ التنفيذ…", error: "تعذر تحديث إعدادات الامتحان.",
-    warning: "لا يستطيع أي طالب بدء الامتحان حتى الآن. يمكن تكليف طلاب الدورة المعتمدين وعرض الامتحانات المستحقة، لكن الدخول والتوقيت والتسليم والنتائج تظل مقفلة حتى اكتمال الطلبات اللاحقة.",
+    warning: "كلّف الطلاب بالامتحان أدناه ثم افتح الدخول عندما يحين وقت البدء. أغلق الدخول قبل تعديل الإعدادات.",
+    conflict: "تغيرت الإعدادات في مكان آخر. تعديلاتك ما زالت هنا؛ حمّل أحدث الإعدادات قبل الحفظ.", reload: "تحميل أحدث الإعدادات",
+    monitoring: "مراقبة نشاط المتصفح", monitorOff: "مغلقة", monitorRecord: "تسجيل الأحداث",
+    monitorWarn: "التسجيل والتنبيه", monitorReview: "التسجيل والإحالة للمراجعة البشرية",
+    monitoringHelp: "تسجل تغير التركيز والظهور والاتصال ووضع ملء الشاشة. هذه الملاحظات لا تحدد الغش أو الدرجات.",
   },
 } as const;
 
@@ -72,21 +80,25 @@ export function ExamReleaseSettings({
   const save = useMutation(api.examSettings.saveForDraft);
   const prepare = useMutation(api.examSettings.setPrepared);
   const [settings, setSettings] = useState<ExamSettings>(initial);
-  const [loadedKey, setLoadedKey] = useState("");
+  const [base, setBase] = useState<{ draftId: Id<"examBuilderDrafts">; snapshotId: Id<"examSnapshots"> | null;
+    revision: number; settings: ExamSettings } | null>(null);
   const [busy, setBusy] = useState(false);
+
+  const dirty = !!base && base.draftId === draftId && JSON.stringify(settings) !== JSON.stringify(base.settings);
+  const conflict = !!info && !!base && base.draftId === draftId &&
+    (info.snapshotId !== base.snapshotId || info.revision > base.revision);
 
   useEffect(() => {
     if (!info) return;
-    const key = String(info.snapshotId) + ":" + info.revision;
-    if (key !== loadedKey) {
+    if (!base || base.draftId !== draftId || (!dirty &&
+        (info.snapshotId !== base.snapshotId || info.revision > base.revision))) {
       setSettings(info.settings);
-      setLoadedKey(key);
+      setBase({ draftId, snapshotId: info.snapshotId, revision: info.revision, settings: info.settings });
     }
-  }, [info, loadedKey]);
+  }, [info, base, dirty, draftId]);
 
   const set = <K extends keyof ExamSettings>(key: K, value: ExamSettings[K]) =>
     setSettings(old => ({ ...old, [key]: value }));
-  const dirty = !!info && JSON.stringify(settings) !== JSON.stringify(info.settings);
   const current = !!info?.snapshotId && info.snapshotDraftRevision === draftRevision;
   const run = async (fn: () => Promise<unknown>, message?: string) => {
     if (busy) return;
@@ -123,7 +135,7 @@ export function ExamReleaseSettings({
         ? t.sealed + " #" + info.snapshotVersion : t.notSealed}</span>
     </div>
     {info?.snapshotId && !current && <output className="block text-sm text-amber-600">{t.changed}</output>}
-    <fieldset disabled={!info?.snapshotId || busy} className="grid gap-4 disabled:opacity-60">
+    <fieldset disabled={!info?.snapshotId || !base || base.draftId !== draftId || busy || info.studentEntryEnabled} className="grid gap-4 disabled:opacity-60">
       <div className="grid gap-3 sm:grid-cols-2">
         <label className="grid gap-1 text-sm">{t.window}
           <select className="kb-input" value={settings.mode}
@@ -169,6 +181,16 @@ export function ExamReleaseSettings({
             {settings.mode === "scheduled" && <option value="after_close">{t.afterClose}</option>}
           </select>
         </label>
+        <label className="grid gap-1 text-sm">{t.monitoring}
+          <select className="kb-input" value={settings.integrityMode ?? "off"}
+            onChange={e => set("integrityMode", e.target.value as NonNullable<ExamSettings["integrityMode"]>)}>
+            <option value="off">{t.monitorOff}</option>
+            <option value="record">{t.monitorRecord}</option>
+            <option value="warn">{t.monitorWarn}</option>
+            <option value="review">{t.monitorReview}</option>
+          </select>
+          <span className="cb-note">{t.monitoringHelp}</span>
+        </label>
       </div>
       <div className="grid gap-3">
         {([
@@ -184,23 +206,30 @@ export function ExamReleaseSettings({
       </div>
     </fieldset>
     <div className="flex flex-wrap items-center gap-3">
-      <button className="ws-btn ws-btn--primary" type="button" disabled={busy || !info?.snapshotId || (!dirty && info.revision > 0)}
-        onClick={() => void run(() => save({
-          draftId, expectedRevision: info!.revision, settings,
-        }), t.saved)}>
+      <button className="ws-btn ws-btn--primary" type="button" disabled={busy || !info?.snapshotId || !base || base.draftId !== draftId || conflict || info.studentEntryEnabled || (!dirty && base.revision > 0)}
+        onClick={() => void run(async () => {
+          if (!base) return;
+          const revision = await save({ draftId, expectedRevision: base.revision, settings });
+          setBase({ ...base, revision, settings });
+        }, t.saved)}>
         <Save size={16} aria-hidden />{busy ? t.pending : t.save}
       </button>
       <button className="ws-btn ws-btn--ghost" type="button"
-        disabled={busy || !info?.snapshotId || dirty || !current ||
+        disabled={busy || !info?.snapshotId || !base || base.draftId !== draftId || conflict || info.studentEntryEnabled || dirty || !current ||
           (!info.preparedForAudience && info.revision === 0)}
         onClick={() => void run(() => prepare({
-          draftId, expectedRevision: info!.revision, prepared: !info!.preparedForAudience,
+          draftId, expectedRevision: base!.revision, prepared: !info!.preparedForAudience,
         }))}>
         <Check size={16} aria-hidden />{info?.preparedForAudience ? t.unprepare : t.prepare}
       </button>
       <span className="text-sm text-muted-foreground">{info?.preparedForAudience ? t.prepared : t.private}</span>
     </div>
     {dirty && <output className="cb-note block">{t.unsaved}</output>}
+    {conflict && dirty && info && <div className="grid gap-2"><p role="alert">{t.conflict}</p>
+      <button type="button" className="ws-btn ws-btn--ghost w-fit" onClick={() => {
+        setSettings(info.settings);
+        setBase({ draftId, snapshotId: info.snapshotId, revision: info.revision, settings: info.settings });
+      }}>{t.reload}</button></div>}
     <p className="cb-note">{t.warning}</p>
   </section>;
 }
