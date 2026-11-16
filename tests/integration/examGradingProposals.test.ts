@@ -112,3 +112,33 @@ it("gates answer bundles behind explicit consent, claim and admin identity; prop
     .withIndex("by_job_time", q => q.eq("jobId", opt.jobId)).collect());
   expect(audit.map(v => v.action)).toEqual(["requested", "claimed", "bundle_read", "proposal_saved", "sent_to_doctor"]);
 });
+
+it("lets a new claimant review and adopt draft proposals after an expired lease", async () => {
+  const { t, owner, attemptId } = await fixture();
+  const first = "user_first_grader", second = "user_second_grader";
+  await t.run(async ctx => {
+    for (const id of [first, second]) {
+      await ctx.db.insert("users", { clerkId: id, name: id, username: id, email: id + "@example.org", createdAt: 0 });
+      await ctx.db.insert("admins", { clerkId: id, email: id + "@example.org", grantedAt: 0 });
+    }
+  });
+  const { jobId } = await owner.mutation(api.examGradingJobs.request,
+    { attemptId, requestKey: "retry-request-01", confirmAdminAccess: true });
+  await t.mutation(internal.mcpAdmin.claimGradingJob, { userId: first, jobId, expectedRevision: 0 });
+  const proposal = { jobId, questionIndex: 0, expectedRevision: 0,
+    criterionScores: [{ criterionId: "logic", scorePercent: 80 }],
+    evidence: [{ criterionId: "logic", quote: "supported argument", rationale: "The student supports the claim." }],
+    confidence: "medium" as const, feedback: "Check the reasoning" };
+  await t.mutation(internal.examGradingProposals.save, { ...proposal, userId: first });
+  await t.run(ctx => ctx.db.patch("examGradingJobs", jobId, { claimExpiresAt: 1 }));
+  await t.mutation(internal.mcpAdmin.retryGradingJob, { userId: second, jobId, expectedRevision: 1 });
+  await t.mutation(internal.mcpAdmin.claimGradingJob, { userId: second, jobId, expectedRevision: 2 });
+  await expect(t.mutation(internal.examGradingProposals.bundle, { userId: first, jobId })).rejects.toThrow("GRADING_CONFLICT");
+  const bundle = await t.mutation(internal.examGradingProposals.bundle, { userId: second, jobId });
+  expect(bundle.questions[0].proposal?.revision).toBe(1);
+  await expect(t.mutation(internal.examGradingProposals.submit, { userId: second, jobId, expectedRevision: 3 }))
+    .rejects.toThrow("GRADING_CONFLICT");
+  await t.mutation(internal.examGradingProposals.save, { ...proposal, expectedRevision: 1, userId: second });
+  await expect(t.mutation(internal.examGradingProposals.submit, { userId: second, jobId, expectedRevision: 3 }))
+    .resolves.toMatchObject({ status: "doctor_review" });
+});

@@ -3,6 +3,19 @@ import type { DocSection } from "./types";
 /** English docs. Keep slugs and heading ids identical to content-ar.ts. */
 export const sectionsEn: DocSection[] = [
   {
+    id: "course-exams", title: "Course exams", articles: [{
+      slug: "course-exams", title: "Run and take a course exam",
+      summary: "Assign an exam, open entry, save answers and review results.", blocks: [
+        { type: "heading", id: "teachers", text: "Prepare and open an exam" },
+        { type: "p", text: "Seal the exam, save its settings, mark it ready and assign it to approved course students. Use Open exam entry when students may begin. Close new entry to stop new attempts; attempts already in progress can continue until their deadline." },
+        { type: "heading", id: "students", text: "Take an exam" },
+        { type: "p", text: "Open Due Exams, read and accept the rules, then start. Answers save as you work. Wait for the saved status before changing questions or submitting. Reopen the exam to resume an active attempt. At the deadline the server applies the configured timeout rule." },
+        { type: "heading", id: "results", text: "Grade and release results" },
+        { type: "p", text: "Grade written answers before releasing results. Use the exam version selector in grading and results to review an earlier sealed version. Each attempt keeps the result policy in force when it started." },
+      ],
+    }],
+  },
+  {
     id: "getting-started",
     title: "Getting started",
     articles: [

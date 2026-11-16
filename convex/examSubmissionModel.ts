@@ -17,7 +17,8 @@ export type AnswerVersion = {
 };
 
 const MINIMUM_MANUAL_SUBMISSION_MS = 30_000;
-const MAX_EXAM_DURATION_MS = 480 * 60_000;
+// A 480-minute exam can receive up to 120 minutes of approved extra time.
+const MAX_EXAM_DURATION_MS = 600 * 60_000;
 
 /**
  * Called by the *future* authorized attempt-creation transaction. Freeze both
@@ -27,7 +28,7 @@ const MAX_EXAM_DURATION_MS = 480 * 60_000;
 export function createExamAttemptTiming(settings: ExamSettings, startedAt: number) {
   if (!Number.isSafeInteger(startedAt) || startedAt < 1 ||
       !Number.isSafeInteger(settings.durationMinutes) ||
-      settings.durationMinutes < 1 || settings.durationMinutes > 480)
+      settings.durationMinutes < 1 || settings.durationMinutes > 600)
     throw new Error("INVALID_EXAM_CLOCK: Invalid start or duration.");
   if (settings.mode === "scheduled" &&
       (!settings.opensAt || !settings.closesAt ||
