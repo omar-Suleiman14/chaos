@@ -4,7 +4,7 @@ Standalone medical study index at **https://index.chaos.fail**, owned alongside 
 
 ## Data and interface
 
-- **18 modules**, **1,173 original ZatoOona Telegram file links**, **471 Medics 44 MCQ question-set links**.
+- **18 modules**, **1,178 ZatoOona Telegram file links**, **473 Medics 44 MCQ question-set links**.
 - Hierarchy: Year → Module → Study / Practical / Other → Subject → original file and question links.
 - Study contains lectures, tutorials, and CBLs; Practical contains practical materials; Other contains exams, timetables, revision and other resources.
 - Subject-based muted card colors, pure-black dark theme, optional light theme, module tab transitions.
@@ -56,7 +56,7 @@ See [MISSING_STUDY_MATERIALS.md](MISSING_STUDY_MATERIALS.md). Only **lectures, t
 
 ### Additional verified file source
 
-Biochemistry Tutorial 07 is linked from [ZatoOona 46 message 259](https://t.me/ZatOona46/259), with its original channel preserved rather than rewriting it as a ZatoOona 44 URL. This adds one verified PDF message link (1,174 total); Pharmacology Lecture 15 remains unresolved and was intentionally left untouched.
+Biochemistry Tutorial 07 is linked from [ZatoOona 46 message 259](https://t.me/ZatOona46/259), with its original channel preserved rather than rewriting it as a ZatoOona 44 URL. This adds one verified PDF message link (1,178 total); Pharmacology Lecture 15 remains unresolved and was intentionally left untouched.
 
 
 ## Neutral hierarchy guides and material ordering (Nov 16, 2026)
