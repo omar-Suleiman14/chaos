@@ -570,7 +570,7 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
  position:relative;z-index:1;background:var(--surface);
  border-top:1px solid var(--border);
 }
-@media(max-width:700px),(any-pointer:coarse){
+@media(max-width:700px){
  .report-dialog{
    margin:auto auto 0;
    width:min(720px,calc(100vw - 24px));max-width:720px;
@@ -1417,7 +1417,7 @@ document.getElementById("reportToastDismiss").addEventListener("click",()=>{
 });
 /* Shared iOS sheet motion: the page, sheet and scrim move on one timeline. */
 const SHEET_ANIMATION_MS=380;
-const isTouchSheet=()=>window.matchMedia("(max-width:700px), (any-pointer:coarse)").matches;
+const isTouchSheet=()=>window.matchMedia("(max-width:700px)").matches;
 const sheetReducedMotion=()=>window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 function setSheetDepth(dialog,distance){
  const openness=Math.max(0,1-Math.min(1,distance/Math.max(1,dialog.getBoundingClientRect().height)));
@@ -1432,7 +1432,7 @@ function clearSheetDepth(dialog){
  for(const key of ["--sheet-main-y","--sheet-main-scale","--sheet-main-radius"])document.body.style.removeProperty(key);
  dialog.style.removeProperty("--sheet-backdrop-opacity");
 }
-/* Keep gestures on the handle/header so selects and scrollable inputs remain usable. */
+/* The fixed sheet header/grip can dismiss at any scroll position.\n   The form body stays scrollable and supports dismissal only at its top. */
 function attachSwipeDismiss(dialog,handle,dismiss){
  const body=dialog.querySelector(".report-body");
  let gesture=null,finishTimer=null;
@@ -1487,7 +1487,7 @@ function attachSwipeDismiss(dialog,handle,dismiss){
   if(!isTouchSheet()||!dialog.open||event.touches.length!==1||finishTimer!==null)return;
   if(!eligibleTarget(event.target))return;
   const touch=event.touches[0];
-  gesture={id:touch.identifier,x:touch.clientX,y:touch.clientY,
+  gesture={id:touch.identifier,x:touch.clientX,y:touch.clientY,fromHeader:handle.contains(event.target),
    at:performance.now(),distance:0,dragging:false,
    samples:[{y:touch.clientY,at:performance.now()}]};
  },{passive:true});
@@ -1499,8 +1499,8 @@ function attachSwipeDismiss(dialog,handle,dismiss){
   if(!gesture.dragging){
    if(Math.abs(dx)>12&&Math.abs(dx)>Math.abs(dy)){gesture=null;return}
    if(dy<10)return;
-   if(body&&body.scrollTop>1){gesture=null;return}
-   if(!body&&dialog.scrollTop>1){gesture=null;return}
+   if(!gesture.fromHeader&&body&&body.scrollTop>1){gesture=null;return}
+   if(!gesture.fromHeader&&!body&&dialog.scrollTop>1){gesture=null;return}
    gesture.dragging=true;
    dialog.classList.add("sheet-gesture-ready","sheet-dragging");
   }
@@ -1530,7 +1530,14 @@ function syncSheetPresentation(){
  const visible=dialog=>dialog?.open&&!dialog.classList.contains("sheet-exiting");
  document.body.classList.toggle("sheet-open",isTouchSheet()&&(visible(settingsDialog)||visible(report)));
 }
-window.addEventListener("resize",syncSheetPresentation,{passive:true});
+window.addEventListener("resize",()=>{
+ syncSheetPresentation();
+ if(settingsDialog.open&&!isTouchSheet()){
+  const rect=settingsOpen.getBoundingClientRect();
+  settingsDialog.style.setProperty("--settings-top",Math.round(rect.bottom+10)+"px");
+  settingsDialog.style.setProperty("--settings-right",Math.round(Math.max(16,window.innerWidth-rect.right))+"px");
+ }
+},{passive:true});
 function openSettings(){
  if(settingsDialog.open)return;
  settingsCycleStartedAt=Date.now();
