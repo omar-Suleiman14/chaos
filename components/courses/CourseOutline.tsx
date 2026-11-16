@@ -71,7 +71,7 @@ function ModuleView({ module, course, progress, locked, ar }: { module: Module; 
       {other.length > 0 && <LessonRows ids={other} order={ids} lessons={course.lessons} courseId={course.id} locked={locked} progress={progress} ar={ar} />}
       {module.assessments.map((asset, index) => <details className="cp-assessment" key={`${asset.kind}:${asset.id}`}>
         <summary><ChevronDown size={17} aria-hidden="true" /><span>{ar ? `اختبار الوحدة ${index + 1}` : `Module quiz ${index + 1}`}</span></summary>
-        <div className="cp-assessment__body"><InlineQuiz asset={asset} /></div>
+        <div className="cp-assessment__body">{locked ? <p className="text-sm text-muted-foreground">{ar ? "الاختبار متاح بعد موافقة المدرّس على انضمامك." : "This quiz is available after your teacher approves your enrollment."}</p> : <InlineQuiz asset={asset} />}</div>
       </details>)}
     </div>}
   </section>;

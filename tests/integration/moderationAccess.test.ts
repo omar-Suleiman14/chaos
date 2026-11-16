@@ -83,7 +83,9 @@ describe("restricted learners are read-only", () => {
     ["suspended", { suspendedUntil: Date.now() + 86_400_000 }, "ACCOUNT_SUSPENDED"],
   ] as const)("a %s account cannot enroll, record progress or remember courses (web and MCP)", async (_label, restriction, code) => {
     const { t, teacher, student, courseId, lessonId } = await course();
-    await student.mutation(api.courseStudents.enroll, { courseId }); // enrolled before the restriction
+    await student.mutation(api.courseJoinRequests.requestJoin, { courseId });
+    const [request] = await teacher.query(api.courseJoinRequests.listPending, { courseId });
+    await teacher.mutation(api.courseJoinRequests.decide, { requestId: request.id, approve: true }); // admitted before restriction
     await t.run(async ctx => {
       const row = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", editor)).first();
       await ctx.db.patch("users", row!._id, restriction);
@@ -98,7 +100,8 @@ describe("restricted learners are read-only", () => {
     expect(await teacher.query(api.studentRoster.count, {})).toBe(countBefore);
     await expect(student.mutation(api.courses.remember, { courseId })).rejects.toThrow(code);
     await expect(t.mutation(internal.mcpCourses.remember, { userId: editor, courseId })).rejects.toThrow("ACCOUNT_RESTRICTED");
-    // Guests keep enrolling.
-    await t.mutation(api.courseStudents.enroll, { courseId, guestToken: "g".repeat(43) });
+    // Guest enrollment is now permanently disabled.
+    await expect(t.mutation(api.courseStudents.enroll, { courseId, guestToken: "g".repeat(43) }))
+      .rejects.toThrow("APPROVAL_REQUIRED");
   });
 });

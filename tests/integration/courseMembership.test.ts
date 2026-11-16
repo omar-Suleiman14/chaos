@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { authorDb } from "../../convex/authorIndex";
@@ -30,7 +30,7 @@ async function legacyFixture(count = 501) {
 async function finishBackfill(t: ReturnType<typeof createTestConvex>, restart = false) {
   await t.mutation(internal.businessTeams.backfillCourseMemberships, { restart });
   for (let i = 0; i < 100; i++) {
-    const state = await t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v1")).unique());
+    const state = await t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v2")).unique());
     if (state?.complete) return;
     if (!state || state.cursor === undefined) throw new Error("Backfill did not start");
     await t.mutation(internal.businessTeams.backfillCourseMembershipsPage, { generation: state.generation, cursor: state.cursor });
@@ -41,7 +41,8 @@ async function finishBackfill(t: ReturnType<typeof createTestConvex>, restart = 
 describe("indexed course membership", () => {
   it("repairs inherited access beyond 500 courses without scanning unrelated courses", async () => {
     const f = await legacyFixture();
-    expect(await f.member.query(api.learnFrontend.editableLesson, { id: f.earlyLessonId })).not.toBeNull();
+    // Without a complete historic membership index, access fails closed rather than assuming that older course links are unprotected.
+    expect(await f.member.query(api.learnFrontend.editableLesson, { id: f.earlyLessonId })).toBeNull();
     const before = await measureConvex(() => f.member.query(api.learnFrontend.editableLesson, { id: f.lessonId }));
     expect(before.result).toBeNull();
     expect(before.cost.documentsRead).toBeGreaterThanOrEqual(500);
@@ -128,10 +129,10 @@ describe("indexed course membership", () => {
     const original = await f.t.run(ctx => ctx.db.get("learnCollections", f.courses[24]));
     await f.t.mutation(internal.businessTeams.backfillCourseMemberships, {});
     await f.t.mutation(internal.businessTeams.backfillCourseMembershipsPage, { generation: 1, cursor: null });
-    const state = await f.t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v1")).unique());
+    const state = await f.t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v2")).unique());
     expect(state?.complete).toBe(false);
     await f.t.mutation(internal.businessTeams.backfillCourseMembershipsPage, { generation: 1, cursor: null });
-    expect(await f.t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v1")).unique())).toEqual(state);
+    expect(await f.t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v2")).unique())).toEqual(state);
     await finishBackfill(f.t, true);
     await f.t.mutation(internal.businessTeams.backfillCourseMembershipsPage, { generation: 1, cursor: state!.cursor! });
     const edges = await f.t.run(ctx => ctx.db.query("courseLessonMemberships").collect());
@@ -147,7 +148,7 @@ describe("indexed course membership", () => {
     const t = createTestConvex(), owner = t.withIdentity(creatorIdentity);
     const courseId = await owner.mutation(api.courses.create, {});
     const lessonId = await owner.mutation(api.courses.addLesson, { courseId });
-    expect((await t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v1")).unique()))?.complete).toBe(true);
+    expect((await t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v2")).unique()))?.complete).toBe(true);
     expect(await t.run(ctx => ctx.db.query("courseLessonMemberships").withIndex("by_courseId", q => q.eq("courseId", courseId)).collect())).toMatchObject([{ courseId, lessonId, ownerId: creatorIdentity.subject }]);
   });
 
@@ -173,23 +174,24 @@ describe("indexed course membership", () => {
     expect(await f.t.run(ctx => ctx.db.query("courseLessonMemberships").collect())).toEqual(before);
     expect(await f.member.query(api.learnFrontend.editableLesson, { id: f.lessonId })).not.toBeNull();
     await f.owner.mutation(api.courses.publish, { courseId: f.courses[1], visibility: "public" });
-    expect(await f.t.query(api.learnFrontend.publicLesson, { id: f.lessonId })).not.toBeNull();
+    expect(await f.t.query(api.learnFrontend.publicLesson, { id: f.lessonId })).toBeNull();
+    expect(await f.owner.query(api.learnFrontend.publicLesson, { id: f.lessonId })).not.toBeNull();
     await f.t.run(async ctx => {
       const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", creatorIdentity.subject)).unique();
       await ctx.db.patch("users", user!._id, { isBanned: true });
     });
     expect(await f.member.query(api.learnFrontend.editableLesson, { id: f.lessonId })).toBeNull();
-    expect(await f.t.query(api.learnFrontend.publicLesson, { id: f.lessonId })).toBeNull();
+    expect(await f.owner.query(api.learnFrontend.publicLesson, { id: f.lessonId })).toBeNull();
     const userId = await f.t.run(async ctx => {
       const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", creatorIdentity.subject)).unique();
       await ctx.db.patch("users", user!._id, { isBanned: false, suspendedUntil: Date.now() - 1 });
       return user!._id;
     });
     // Expiry is cleared by the scheduler, not interpreted differently in this read.
-    expect(await f.t.query(api.learnFrontend.publicLesson, { id: f.lessonId })).toBeNull();
+    expect(await f.owner.query(api.learnFrontend.publicLesson, { id: f.lessonId })).toBeNull();
     await f.t.run(ctx => ctx.db.patch("users", userId, { suspendedUntil: undefined }));
-    expect(await f.t.query(api.learnFrontend.publicLesson, { id: f.lessonId })).not.toBeNull();
+    expect(await f.owner.query(api.learnFrontend.publicLesson, { id: f.lessonId })).not.toBeNull();
     await f.t.run(ctx => ctx.db.delete("users", userId));
-    expect((await f.t.query(api.learnFrontend.publicLesson, { id: f.lessonId }))?.ownerName).toBe("Chaos creator");
+    expect((await f.owner.query(api.learnFrontend.publicLesson, { id: f.lessonId }))?.ownerName).toBe("Chaos creator");
   });
 });
