@@ -11,13 +11,15 @@ const ALLOWED = new Set(["MIT", "ISC", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clau
 
 /** package name → the license it was reviewed under and why it is accepted. */
 const REVIEWED: Record<string, { license: string; reason: string }> = {
-  khroma: { license: "Unknown", reason: "MIT per its LICENSE file; the package.json has no license field. Mermaid dependency." },
   elkjs: { license: "EPL-2.0", reason: "File-level copyleft, used unmodified as a separate module (Mermaid layout engine); source is public. Changes to elkjs itself would have to be published under EPL-2.0." },
   "caniuse-lite": { license: "CC-BY-4.0", reason: "Browser support data used by the build; attribution is kept in the package." },
 };
 
-const result = spawnSync("pnpm", ["licenses", "list", "--prod", "--json"], { encoding: "utf8" });
-if (result.status !== 0) { process.stderr.write(result.stderr || result.stdout); process.exit(1); }
+const pnpmPath = process.env.npm_execpath;
+const executable = pnpmPath && /\.[cm]?js$/i.test(pnpmPath) ? process.execPath : pnpmPath || "pnpm";
+const args = [...(pnpmPath && /\.[cm]?js$/i.test(pnpmPath) ? [pnpmPath] : []), "licenses", "list", "--prod", "--json"];
+const result = spawnSync(executable, args, { encoding: "utf8" });
+if (result.status !== 0) { process.stderr.write(result.stderr || result.stdout || result.error?.message || "License command failed"); process.exit(1); }
 const byLicense = JSON.parse(result.stdout) as Record<string, { name: string; versions: string[] }[]>;
 
 const problems: string[] = [];

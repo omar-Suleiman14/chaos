@@ -54,7 +54,7 @@ export const bundle = internalMutation({
         .withIndex("by_job_question", q => q.eq("jobId", jobId)
           .eq("questionIndex", e.questionIndex)).unique();
       if (proposal && (proposal.ownerId !== job.ownerId || proposal.studentId !== job.studentId ||
-          proposal.snapshotId !== snapshot._id || proposal.adminId !== userId))
+          proposal.snapshotId !== snapshot._id || proposal.attemptId !== job.attemptId))
         throw new Error("INTEGRITY_ERROR: Proposal ownership mismatch.");
       return {
         questionIndex: e.questionIndex, prompt: question.prompt,
@@ -106,7 +106,7 @@ export const save = internalMutation({
     if (!Number.isSafeInteger(args.expectedRevision) || args.expectedRevision < 0 ||
         (old?.revision ?? 0) !== args.expectedRevision)
       throw new Error("REVISION_CONFLICT: Proposal changed; reload.");
-    if (old && (old.state !== "draft" || old.adminId !== args.userId ||
+    if (old && (old.state !== "draft" || old.attemptId !== job.attemptId ||
         old.ownerId !== job.ownerId || old.studentId !== job.studentId ||
         old.snapshotId !== snapshot._id || old.revision >= 20))
       throw new Error("GRADING_CONFLICT: Proposal is no longer editable.");

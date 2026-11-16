@@ -268,10 +268,10 @@ export const backfillCourseMemberships = internalMutation({
   args: { restart: v.optional(v.boolean()) },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    const state = await ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v1")).unique();
+    const state = await ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v2")).unique();
     if (state && !args.restart && (state.complete || state.cursor !== undefined)) return null;
     const generation = (state?.generation ?? 0) + 1;
-    const value = { key: "v1" as const, complete: false, generation, cursor: null };
+    const value = { key: "v2" as const, complete: false, generation, cursor: null };
     if (state) await ctx.db.patch("courseMembershipState", state._id, value);
     else await ctx.db.insert("courseMembershipState", value);
     await ctx.scheduler.runAfter(0, internal.businessTeams.backfillCourseMembershipsPage, { generation, cursor: null });
@@ -283,7 +283,7 @@ export const backfillCourseMembershipsPage = internalMutation({
   args: { generation: v.number(), cursor: v.union(v.string(), v.null()) },
   returns: v.null(),
   handler: async (ctx, args): Promise<null> => {
-    const state = await ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v1")).unique();
+    const state = await ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v2")).unique();
     if (!state || state.generation !== args.generation || state.cursor !== args.cursor) return null;
     const page = await ctx.db.query("learnCollections").paginate({ cursor: args.cursor, numItems: 20, maximumRowsRead: 20, maximumBytesRead: 1_000_000 });
     for (const course of page.page) await syncCourseMembership(ctx, course._id);

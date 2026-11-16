@@ -7,10 +7,11 @@ import type { Id } from "@/convex/_generated/dataModel";
 import { toast } from "@/lib/toast";
 import { useLocale } from "@/lib/i18n";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
+import { StudentIntegrityReport } from "@/components/exams/StudentIntegrityReport";
 import "@/components/courses/courses.css";
 
 const labels = {
-  en: { title: "My Results", lead: "Your completed exam history and released transcripts.",
+  en: { review: "Review answers", reviewTitle: "Answer review", correct: "Correct answer", explanation: "Explanation", unavailable: "Answer review is not available for this result.", events: "Review browser events", previous: "Previous page", next: "Next page", title: "My Results", lead: "Your completed exam history and released transcripts.",
     back: "Due Exams", signIn: "Sign in to see your results.", empty: "No completed attempts yet.",
     grading: "Grading in progress", withheld: "Awaiting doctor release",
     released: "Results released", expired: "Expired", void: "Voided", submitted: "Submitted",
@@ -21,7 +22,7 @@ const labels = {
     send: "Send appeal", appealDone: "Appeal saved for doctor review.",
     appealFail: "Could not submit appeal. Refresh and try again.",
     appealStatus: "Appeal status", appealClose: "Close" },
-  ar: { title: "نتائجي", lead: "سجل الامتحانات المكتملة وكشوف الدرجات المنشورة.",
+  ar: { review: "مراجعة الإجابات", reviewTitle: "مراجعة الإجابات", correct: "الإجابة الصحيحة", explanation: "الشرح", unavailable: "مراجعة الإجابات غير متاحة لهذه النتيجة.", events: "مراجعة أحداث المتصفح", previous: "الصفحة السابقة", next: "الصفحة التالية", title: "نتائجي", lead: "سجل الامتحانات المكتملة وكشوف الدرجات المنشورة.",
     back: "الامتحانات المستحقة", signIn: "سجّل الدخول لعرض نتائجك.", empty: "لا توجد محاولات مكتملة بعد.",
     grading: "جارٍ التصحيح", withheld: "بانتظار نشر الدكتور",
     released: "النتائج منشورة", expired: "انتهى", void: "أُلغيت", submitted: "تم التسليم",
@@ -39,7 +40,11 @@ export default function MyResultsPage() {
   const ar = locale === "ar";
   const t = labels[ar ? "ar" : "en"];
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const data = useQuery(api.examResults.myResults, isAuthenticated ? {} : "skip");
+  const [pages, setPages] = useState<Array<string | null>>([null]);
+  const data = useQuery(api.examResults.myResults, isAuthenticated ? { cursor: pages[pages.length - 1] } : "skip");
+  const [reviewAttemptId, setReviewAttemptId] = useState<Id<"examAttempts"> | null>(null);
+  const [eventAttemptId, setEventAttemptId] = useState<Id<"examAttempts"> | null>(null);
+  const review = useQuery(api.examResults.myReview, isAuthenticated && reviewAttemptId ? { attemptId: reviewAttemptId } : "skip");
   const [selectedAttemptId, setSelectedAttemptId] = useState<Id<"examAttempts"> | null>(null);
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -75,6 +80,10 @@ export default function MyResultsPage() {
             <strong>{t.score}: {(r.transcript.earnedCents / 100).toFixed(2)} / {(r.transcript.maximumCents / 100).toFixed(2)}</strong>
             <p className="cb-note">{(r.transcript.percentBasisPoints / 100).toFixed(2)}% · {r.transcript.passed ? t.pass : t.fail}</p>
           </div> : <p className="cb-note">{t.private}</p>}
+          {r.status === "released" && <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm w-fit"
+            onClick={() => setReviewAttemptId(r.attemptId)}>{t.review}</button>}
+          <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm w-fit"
+            onClick={() => setEventAttemptId(eventAttemptId === r.attemptId ? null : r.attemptId)}>{t.events}</button>
           {(r.status === "released" || r.status === "withheld") && <button type="button"
             className="ws-btn ws-btn--ghost ws-btn--sm w-fit"
             onClick={() => { setSelectedAttemptId(r.attemptId); setReason(""); }}>
@@ -83,6 +92,17 @@ export default function MyResultsPage() {
           {r.completedAt !== null && <p className="cb-note">{date(r.completedAt)}</p>}
         </article>)}
       </div>}
+    {eventAttemptId && <StudentIntegrityReport key={eventAttemptId} attemptId={eventAttemptId} locale={ar ? "ar" : "en"} />}
+    {reviewAttemptId && <section className="cb-section grid gap-3" aria-label={t.reviewTitle}>
+      <div className="flex justify-between gap-3"><h2 className="font-semibold">{t.reviewTitle}</h2>
+        <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => setReviewAttemptId(null)}>{t.appealClose}</button></div>
+      {review === undefined ? <p>?</p> : review === null ? <p>{t.unavailable}</p> : review.map(q => <article key={q.index} className="grid gap-2 border-t border-border pt-3">
+        <h3 className="font-semibold whitespace-pre-wrap" dir="auto">{q.index + 1}. {q.prompt}</h3>
+        {q.correctChoiceIds && <p dir="auto">{t.correct}: {q.kind === "written" ? q.sampleAnswer :
+          q.correctChoiceIds.map(id => q.choices.find(choice => choice.id === id)?.text ?? id).join(", ")}</p>}
+        {q.explanation && <p dir="auto" className="whitespace-pre-wrap">{t.explanation}: {q.explanation}</p>}
+      </article>)}
+    </section>}
     {selectedAttemptId && <section className="cb-section grid gap-3" aria-label={t.appealTitle}>
       <div className="flex items-center justify-between gap-3">
         <h2 className="text-lg font-semibold">{t.appealTitle}</h2>
@@ -101,6 +121,11 @@ export default function MyResultsPage() {
           className="ws-btn ws-btn--primary w-fit" onClick={() => void submitAppeal()}>{t.send}</button>
       </> : <p className="cb-note">{t.private}</p>}
     </section>}
-    {data?.hasMore && <p className="cb-note">{t.more}</p>}
+    {data && <nav className="flex gap-2" aria-label={t.title}>
+      <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={pages.length <= 1}
+        onClick={() => { setPages(old => old.slice(0, -1)); setSelectedAttemptId(null); setReviewAttemptId(null); setEventAttemptId(null); }}>{t.previous}</button>
+      <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={!data.nextCursor}
+        onClick={() => { if (data.nextCursor) setPages(old => [...old, data.nextCursor]); setSelectedAttemptId(null); setReviewAttemptId(null); setEventAttemptId(null); }}>{t.next}</button>
+    </nav>}
   </main>;
 }

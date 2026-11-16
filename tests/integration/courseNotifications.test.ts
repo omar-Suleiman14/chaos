@@ -2,6 +2,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { api } from "../../convex/_generated/api";
 import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
 import { createTestConvex } from "./setup";
+import { notifyCourseStudents, notifyPlatformAdmins } from "../../convex/courseNotifications";
 
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); });
 
@@ -41,6 +42,23 @@ it("notifies the doctor of requests but keeps each user's inbox isolated", async
     ids: [ownerInbox.items[0]._id],
   });
   expect((await f.doctor.query(api.notifications.listNotifications, {})).unread).toBe(1);
+});
+
+it("marks every page read when the inbox mark-all action is used", async () => {
+  vi.useFakeTimers();
+  const f = await setup();
+  await f.t.run(async ctx => {
+    for (let index = 0; index < 230; index++) await ctx.db.insert("notifications", {
+      ownerId: otherCreatorIdentity.subject, kind: "course_announcement",
+      message: "Generic notice", dedupeKey: `mark-all:${index}`, createdAt: index,
+    });
+  });
+  await f.learner.mutation(api.notifications.markNotificationsRead, {});
+  await f.t.finishAllScheduledFunctions(() => vi.runAllTimers(), 100);
+  const unread = await f.t.run(async ctx => (await ctx.db.query("notifications")
+    .withIndex("by_ownerId_and_createdAt", q => q.eq("ownerId", otherCreatorIdentity.subject))
+    .collect()).filter(row => row.readAt === undefined).length);
+  expect(unread).toBe(0);
 });
 
 it("notifies only on publication, obeys preferences and hides revoked course notifications", async () => {
@@ -102,4 +120,38 @@ it("routes private message notifications only to the other approved participant"
   expect(ownerInbox.items.find(n => n.kind === "course_message")?.message)
     .not.toContain("lecture notes");
   expect((await f.outsider.query(api.notifications.listNotifications, {})).items).toHaveLength(0);
+});
+
+it("fans course and admin notices out through bounded continuation pages", async () => {
+  vi.useFakeTimers();
+  const f = await setup();
+  await f.t.run(async ctx => {
+    for (let index = 0; index < 61; index++) {
+      const studentId = `user_fanout_student_${index}`;
+      await ctx.db.insert("courseJoinRequests", {
+        courseId: f.courseId, ownerId: creatorIdentity.subject, studentId,
+        status: "approved", requestedAt: index, updatedAt: index,
+      });
+      await ctx.db.insert("courseEnrollments", {
+        courseId: f.courseId, ownerId: creatorIdentity.subject, key: `user:${studentId}`,
+        studentId, completedLessonIds: [], enrolledAt: 0, updatedAt: 0,
+      });
+    }
+    for (let index = 0; index < 56; index++) {
+      const clerkId = `user_fanout_admin_${index}`;
+      await ctx.db.insert("admins", { clerkId, email: `${clerkId}@example.com`, grantedAt: 0 });
+      await ctx.db.insert("users", {
+        clerkId, username: clerkId, name: clerkId, email: `${clerkId}@example.com`,
+        createdAt: 0, plan: "free",
+      });
+    }
+    await notifyCourseStudents(ctx, f.courseId, "course_announcement", "fanout:course:1", "New class announcement.");
+  });
+  await f.t.run(ctx => notifyPlatformAdmins(ctx, "fanout:admin:1", "A grading request is waiting."));
+  await f.t.finishAllScheduledFunctions(() => vi.runAllTimers(), 100);
+  const counts = await f.t.run(async ctx => ({
+    course: (await ctx.db.query("notifications").collect()).filter(row => row.dedupeKey === "fanout:course:1").length,
+    admin: (await ctx.db.query("notifications").collect()).filter(row => row.dedupeKey === "fanout:admin:1").length,
+  }));
+  expect(counts).toEqual({ course: 61, admin: 56 });
 });

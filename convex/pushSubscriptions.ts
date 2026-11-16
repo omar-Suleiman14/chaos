@@ -28,6 +28,12 @@ export const subscribe = mutation({
     const existing = await ctx.db.query("pushSubscriptions")
       .withIndex("by_endpoint", q => q.eq("endpoint", args.endpoint)).unique();
     if (existing) {
+      if (existing.ownerId !== identity.subject) {
+        const devices = await ctx.db.query("pushSubscriptions")
+          .withIndex("by_owner", q => q.eq("ownerId", identity.subject)).take(MAX_DEVICES);
+        if (devices.length >= MAX_DEVICES)
+          throw new Error("DEVICE_LIMIT: Disable another device first.");
+      }
       // A shared browser switching accounts transfers the endpoint, never delivers to both.
       await ctx.db.patch("pushSubscriptions", existing._id, {
         ownerId: identity.subject, p256dh: args.p256dh, auth: args.auth,
@@ -69,7 +75,8 @@ export const deliveryTargets = internalQuery({
     if (prefs?.disabled.some(kind => kind === notice.kind)) return [];
     const subs = await ctx.db.query("pushSubscriptions").withIndex("by_owner", q => q.eq("ownerId", notice.ownerId)).take(MAX_DEVICES);
     return subs.filter(sub => !sub.delivered.includes(notificationId)).map(sub => ({
-      id: sub._id, endpoint: sub.endpoint, p256dh: sub.p256dh, auth: sub.auth, locale: sub.locale,
+      id: sub._id, endpoint: sub.endpoint, ownerId: sub.ownerId, updatedAt: sub.updatedAt,
+      p256dh: sub.p256dh, auth: sub.auth, locale: sub.locale,
     }));
   },
 });
@@ -86,9 +93,11 @@ export const markDelivered = internalMutation({
   },
 });
 export const removeExpired = internalMutation({
-  args: { subscriptionId: v.id("pushSubscriptions"), endpoint: v.string() },
-  handler: async (ctx, { subscriptionId, endpoint }) => {
+  args: { subscriptionId: v.id("pushSubscriptions"), endpoint: v.string(),
+    ownerId: v.string(), updatedAt: v.number() },
+  handler: async (ctx, { subscriptionId, endpoint, ownerId, updatedAt }) => {
     const row = await ctx.db.get("pushSubscriptions", subscriptionId);
-    if (row?.endpoint === endpoint) await ctx.db.delete("pushSubscriptions", subscriptionId);
+    if (row?.endpoint === endpoint && row.ownerId === ownerId && row.updatedAt === updatedAt)
+      await ctx.db.delete("pushSubscriptions", subscriptionId);
   },
 });

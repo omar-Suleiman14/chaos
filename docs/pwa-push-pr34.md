@@ -37,7 +37,7 @@ No implementation can guarantee every delivery on every browser and OS. Browsers
 - Endpoints and auth key material are retained for push delivery and deleted on user disable, provider expiry, or after **90 days without subscription renewal**. The hourly retention sweep deletes up to 30 stale rows per batch.
 - All notification category preferences remain respected; no new default-on push subscriptions. Account logout on a shared computer does not automatically unregister a browser permission: users must disable push for that device. Generic-only lock-screen text prevents exposing private course content in that case.
 - No raw browser push endpoint, auth key, private grade content, individual answers or private MCP content is logged or shared with the assistant provider.
-- PR 29's 80-student fanout and 50-admin fanout caps still apply. Larger cohorts need a paginated fanout implementation before launch.
+- PR 29's in-app student and admin fan-out now continues in 25-recipient transactions. External push delivery is independently scheduled and retried per notification; provider requests remain bounded to the account's eight-device limit.
 
 ## Acceptance checklist before merging or deploying
 

@@ -7,6 +7,10 @@ const app = defineApp({
   env: {
     /** Public app origin used to build links, e.g. https://chaos.fail. */
     CHAOS_APP_URL: v.optional(v.string()),
+    CHAOS_R2_ACCOUNT_ID: v.optional(v.string()),
+    CHAOS_R2_BUCKET: v.optional(v.string()),
+    CHAOS_R2_ACCESS_KEY_ID: v.optional(v.string()),
+    CHAOS_R2_SECRET_ACCESS_KEY: v.optional(v.string()),
     /** Base64url-encoded VAPID public key (same as NEXT_PUBLIC_CHAOS_VAPID_PUBLIC_KEY on Next.js). */
     CHAOS_WEB_PUSH_PUBLIC_KEY: v.optional(v.string()),
     /** Secret base64url VAPID private key, available only to Convex actions. */

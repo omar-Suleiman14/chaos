@@ -13724,7 +13724,7 @@
   },
   "mark_notifications_read": {
    "title": null,
-   "description": "Mark your own notification IDs as read (maximum 100), or omit IDs to mark your latest 100. Does not mark other users' notifications.",
+   "description": "Mark your own notification IDs as read (maximum 100), or omit IDs to mark all your notifications. Does not mark other users' notifications.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,
@@ -15891,7 +15891,7 @@
      "offset": {
       "type": "integer",
       "minimum": 0,
-      "maximum": 100
+      "maximum": 9007199254740991
      },
      "limit": {
       "type": "integer",

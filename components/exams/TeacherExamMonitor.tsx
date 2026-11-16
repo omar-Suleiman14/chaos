@@ -19,16 +19,18 @@ export function TeacherExamMonitor({ draftId }: { draftId: Id<"examBuilderDrafts
   >("no_action");
   const [minutes, setMinutes] = useState(15);
   const [candidateId, setCandidateId] = useState("");
+  const [candidateLookup, setCandidateLookup] = useState("");
+  const [pages, setPages] = useState<Array<string | null>>([null]);
   const [accommodation, setAccommodation] = useState<
     "extra_time" | "breaks_allowed" | "reduced_monitoring"
   >("extra_time");
   const [accommodationMinutes, setAccommodationMinutes] = useState(15);
   const [busy, setBusy] = useState(false);
-  const dashboard = useQuery(api.examInvigilation.listForDraft, { draftId });
+  const dashboard = useQuery(api.examInvigilation.listForDraft, { draftId, cursor: pages[pages.length - 1] });
   const report = useQuery(api.examInvigilation.report,
     selectedId ? { attemptId: selectedId } : "skip");
   const savedAccommodation = useQuery(api.examInvigilation.teacherAccommodation,
-    candidateId.trim() ? { draftId, studentId: candidateId.trim() } : "skip");
+    candidateLookup ? { draftId, studentId: candidateLookup } : "skip");
   const review = useMutation(api.examInvigilation.reviewEvent);
   const extend = useMutation(api.examInvigilation.extendTime);
   const note = useMutation(api.examInvigilation.noteIntervention);
@@ -60,8 +62,8 @@ export function TeacherExamMonitor({ draftId }: { draftId: Id<"examBuilderDrafts
     </div>
     {!dashboard ? <p className="cb-note">{ar ? "جارٍ التحميل" : "Loading monitor…"}</p> :
       !dashboard.attempts.length ? <p className="cb-note">
-        {ar ? "لا توجد محاولات فعلية بعد. بدء الامتحان ما زال مغلقًا."
-          : "No live attempts yet. Secure student entry is still disabled."}
+        {ar ? "لا توجد محاولات في هذه الصفحة."
+          : "No attempts on this page."}
       </p> : <>
         <label className="grid gap-1 text-sm">
           {ar ? "اختر محاولة" : "Select an attempt"}
@@ -73,11 +75,15 @@ export function TeacherExamMonitor({ draftId }: { draftId: Id<"examBuilderDrafts
             </option>)}
           </select>
         </label>
-        {dashboard.hasMore && <output className="cb-note block">
-          {ar ? "تظهر أول ٥٠ محاولة فقط؛ تحتاج البقية لتصفح لاحق."
-            : "Only the first 50 attempts are shown; remaining attempts require pagination."}
-        </output>}
       </>}
+    {dashboard && <nav className="flex gap-2" aria-label={ar ? "صفحات المحاولات" : "Attempt pages"}>
+      <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={pages.length <= 1}
+        onClick={() => { setPages(old => old.slice(0, -1)); setSelectedId(null); setEventId(""); }}>
+        {ar ? "السابقة" : "Previous"}</button>
+      <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={!dashboard.nextCursor}
+        onClick={() => { if (dashboard.nextCursor) setPages(old => [...old, dashboard.nextCursor]); setSelectedId(null); setEventId(""); }}>
+        {ar ? "التالية" : "Next"}</button>
+    </nav>}
     {selectedId && report && <>
       <dl className="grid gap-2 text-sm sm:grid-cols-3">
         <div><dt className="cb-note">{ar ? "الحالة" : "State"}</dt><dd>{report.state}</dd></div>
@@ -157,9 +163,11 @@ export function TeacherExamMonitor({ draftId }: { draftId: Id<"examBuilderDrafts
       <p className="cb-note">{ar ? "تحتاج معرف طالب مسجل وموافق عليه؛ لا تنطبق التيسيرات تلقائيًا على محاولة جارية."
         : "Enter an approved candidate account ID. These settings do not retroactively change an active attempt."}</p>
       <label className="grid gap-1 text-sm">{ar ? "معرف الطالب" : "Approved candidate account ID"}
-        <input className="kb-input" value={candidateId} onChange={e => setCandidateId(e.target.value)}
+        <input className="kb-input" value={candidateId} onChange={e => { setCandidateId(e.target.value); setCandidateLookup(""); }}
           maxLength={150} autoComplete="off" />
       </label>
+      <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm w-fit" disabled={!candidateId.trim()}
+        onClick={() => setCandidateLookup(candidateId.trim())}>{ar ? "تحميل إعداد الطالب" : "Load candidate settings"}</button>
       {savedAccommodation && <p className="cb-note">
         {ar ? "الإعداد الحالي" : "Current setting"}: {savedAccommodation.kind} · {savedAccommodation.additionalMinutes}m
       </p>}
@@ -181,7 +189,7 @@ export function TeacherExamMonitor({ draftId }: { draftId: Id<"examBuilderDrafts
           value={accommodationMinutes} onChange={e => setAccommodationMinutes(Number(e.target.value))} />
       </label>}
       <button type="button" className="ws-btn ws-btn--ghost justify-self-start"
-        disabled={busy || !candidateId.trim() || savedAccommodation === undefined}
+        disabled={busy || !candidateLookup || candidateLookup !== candidateId.trim() || savedAccommodation === undefined}
         onClick={() => void run(() => saveAccommodation({
           draftId, studentId: candidateId.trim(), kind: accommodation,
           additionalMinutes: accommodation === "extra_time" ? accommodationMinutes : 0,

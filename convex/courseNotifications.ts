@@ -1,8 +1,12 @@
-import type { Id } from "./_generated/dataModel";
+import type { Doc, Id } from "./_generated/dataModel";
 import { internal } from "./_generated/api";
-import type { MutationCtx } from "./_generated/server";
+import { v } from "convex/values";
+import { internalMutation, type MutationCtx } from "./_generated/server";
 import { hasApprovedCourseAccess } from "./courseMembership";
-import { cleanNoticeKey, cleanNoticeMessage, type CourseNoticeKind } from "./courseNotificationModel";
+import { cleanNoticeKey, cleanNoticeMessage, courseNoticeKind, type CourseNoticeKind } from "./courseNotificationModel";
+
+const FANOUT_PAGE = 25;
+const FANOUT_BYTES = 1_000_000;
 
 /** In-app delivery is committed atomically with the triggering domain mutation. */
 export async function notifyCourseAccount(ctx: MutationCtx, input: {
@@ -45,28 +49,70 @@ export async function notifyCourseStudents(
 ) {
   const course = await ctx.db.get("learnCollections", courseId);
   if (!course || !course.publishedVersionId || course.archived) return 0;
-  const students = await ctx.db.query("courseJoinRequests")
+  const page = await ctx.db.query("courseJoinRequests")
     .withIndex("by_course_status_requestedAt", q =>
-      q.eq("courseId", courseId).eq("status", "approved")).take(81);
-  if (students.length > 80)
-    throw new Error("LIMIT_REACHED: Course notifications need paginated fanout.");
+      q.eq("courseId", courseId).eq("status", "approved"))
+    .order("asc")
+    .paginate({ numItems: FANOUT_PAGE, cursor: null, maximumBytesRead: FANOUT_BYTES });
+  const sent = await deliverCourseStudentRows(ctx, course, page.page, kind, key, message);
+  if (!page.isDone) await ctx.scheduler.runAfter(0, internal.courseNotifications.deliverCourseStudentPage, {
+    courseId, kind, key, message, cursor: page.continueCursor,
+  });
+  return sent;
+}
+
+async function deliverCourseStudentRows(
+  ctx: MutationCtx,
+  course: Doc<"learnCollections">,
+  students: Doc<"courseJoinRequests">[],
+  kind: CourseNoticeKind, key: string, message: string,
+) {
   let sent = 0;
   for (const student of students) {
     if (student.ownerId !== course.ownerId ||
-        !await hasApprovedCourseAccess(ctx, courseId, student.studentId)) continue;
+        !await hasApprovedCourseAccess(ctx, course._id, student.studentId)) continue;
     await notifyCourseAccount(ctx, {
-      recipientId: student.studentId, courseId, kind, key, message,
+      recipientId: student.studentId, courseId: course._id, kind, key, message,
     });
     sent += 1;
   }
   return sent;
 }
 
+export const deliverCourseStudentPage = internalMutation({
+  args: { courseId: v.id("learnCollections"), kind: courseNoticeKind,
+    key: v.string(), message: v.string(), cursor: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const course = await ctx.db.get("learnCollections", args.courseId);
+    if (!course || !course.publishedVersionId || course.archived) return null;
+    const page = await ctx.db.query("courseJoinRequests")
+      .withIndex("by_course_status_requestedAt", q =>
+        q.eq("courseId", args.courseId).eq("status", "approved"))
+      .order("asc")
+      .paginate({ numItems: FANOUT_PAGE, cursor: args.cursor, maximumBytesRead: FANOUT_BYTES });
+    await deliverCourseStudentRows(ctx, course, page.page, args.kind, args.key, args.message);
+    if (!page.isDone) await ctx.scheduler.runAfter(0, internal.courseNotifications.deliverCourseStudentPage, {
+      ...args, cursor: page.continueCursor,
+    });
+    return null;
+  },
+});
+
 
 /** Non-sensitive grading queue alerts; only current platform admins receive them. */
 export async function notifyPlatformAdmins(ctx: MutationCtx, key: string, message: string) {
   const dedupeKey = cleanNoticeKey(key), safeMessage = cleanNoticeMessage(message);
-  const admins = await ctx.db.query("admins").take(50);
+  const page = await ctx.db.query("admins").paginate({ numItems: FANOUT_PAGE, cursor: null, maximumBytesRead: FANOUT_BYTES });
+  const count = await deliverAdminRows(ctx, page.page, dedupeKey, safeMessage);
+  if (!page.isDone) await ctx.scheduler.runAfter(0, internal.courseNotifications.deliverAdminPage, {
+    key: dedupeKey, message: safeMessage, cursor: page.continueCursor,
+  });
+  return count;
+}
+
+async function deliverAdminRows(ctx: MutationCtx,
+  admins: Doc<"admins">[], dedupeKey: string, safeMessage: string) {
   let count = 0;
   for (const admin of admins) {
     const user = await ctx.db.query("users")
@@ -89,3 +135,18 @@ export async function notifyPlatformAdmins(ctx: MutationCtx, key: string, messag
   }
   return count;
 }
+
+export const deliverAdminPage = internalMutation({
+  args: { key: v.string(), message: v.string(), cursor: v.string() },
+  returns: v.null(),
+  handler: async (ctx, args) => {
+    const page = await ctx.db.query("admins").paginate({
+      numItems: FANOUT_PAGE, cursor: args.cursor, maximumBytesRead: FANOUT_BYTES,
+    });
+    await deliverAdminRows(ctx, page.page, args.key, args.message);
+    if (!page.isDone) await ctx.scheduler.runAfter(0, internal.courseNotifications.deliverAdminPage, {
+      ...args, cursor: page.continueCursor,
+    });
+    return null;
+  },
+});

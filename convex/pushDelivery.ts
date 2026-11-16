@@ -31,7 +31,10 @@ export const deliver = internalAction({
         if (response.ok) {
           await ctx.runMutation(internal.pushSubscriptions.markDelivered, { subscriptionId: target.id, notificationId });
         } else if (response.status === 404 || response.status === 410) {
-          await ctx.runMutation(internal.pushSubscriptions.removeExpired, { subscriptionId: target.id, endpoint: target.endpoint });
+          await ctx.runMutation(internal.pushSubscriptions.removeExpired, {
+            subscriptionId: target.id, endpoint: target.endpoint,
+            ownerId: target.ownerId, updatedAt: target.updatedAt,
+          });
         } else if (response.status === 429 || response.status >= 500) retry = true;
         else console.warn("PUSH_PROVIDER_REJECTED", response.status); // Never log the endpoint or tokens.
       } catch (error) {

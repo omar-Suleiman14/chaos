@@ -47,3 +47,37 @@ it("transfers a shared browser endpoint on account change without cross-account 
   }));
   expect(await t.query(internal.pushSubscriptions.deliveryTargets, { notificationId: notice })).toEqual([]);
 });
+
+it("enforces the device limit when transferring an endpoint and protects a new owner from stale expiry", async () => {
+  vi.stubEnv("CLERK_JWT_ISSUER_DOMAIN", creatorIdentity.issuer);
+  const t = createTestConvex();
+  const first = t.withIdentity(creatorIdentity), second = t.withIdentity(otherCreatorIdentity);
+  await first.mutation(api.quizFunctions.getOrCreateUser, {});
+  await second.mutation(api.quizFunctions.getOrCreateUser, {});
+  await first.mutation(api.pushSubscriptions.subscribe, subscription);
+
+  for (let index = 0; index < 8; index++) {
+    await second.mutation(api.pushSubscriptions.subscribe, {
+      ...subscription, endpoint: `https://fcm.googleapis.com/fcm/send/device-${index}`,
+    });
+  }
+  await expect(second.mutation(api.pushSubscriptions.subscribe, subscription))
+    .rejects.toThrow("DEVICE_LIMIT");
+  expect(await first.query(api.pushSubscriptions.enabledOnDevice, { endpoint: subscription.endpoint })).toBe(true);
+
+  await second.mutation(api.pushSubscriptions.unsubscribe, {
+    endpoint: "https://fcm.googleapis.com/fcm/send/device-0",
+  });
+  const notice = await t.run(ctx => ctx.db.insert("notifications", {
+    ownerId: creatorIdentity.subject, kind: "approval", message: "Generic notice",
+    dedupeKey: "stale-expiry", createdAt: Date.now(),
+  }));
+  const [staleTarget] = await t.query(internal.pushSubscriptions.deliveryTargets, { notificationId: notice });
+  expect(staleTarget).toBeDefined();
+  await second.mutation(api.pushSubscriptions.subscribe, subscription);
+  await t.mutation(internal.pushSubscriptions.removeExpired, {
+    subscriptionId: staleTarget.id, endpoint: staleTarget.endpoint,
+    ownerId: staleTarget.ownerId, updatedAt: staleTarget.updatedAt,
+  });
+  expect(await second.query(api.pushSubscriptions.enabledOnDevice, { endpoint: subscription.endpoint })).toBe(true);
+});

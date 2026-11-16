@@ -20,10 +20,12 @@ export function useExamIntegrityTelemetry(
 ) {
   const record = useMutation(api.examIntegrity.record);
   const [status, setStatus] = useState<DeliveryState>("disabled");
+  const [notice, setNotice] = useState<"warning" | "review_required" | null>(null);
 
   useEffect(() => {
     if (!attemptId || !enabled || !consented) {
       setStatus("disabled");
+      setNotice(null);
       return;
     }
     setStatus("ready");
@@ -32,8 +34,12 @@ export function useExamIntegrityTelemetry(
       if (navigator.onLine === false && kind !== "offline") return;
       const eventId = crypto.randomUUID();
       setStatus("sending");
-      void record({ attemptId, eventId, kind }).then(() => {
-        if (active) setStatus("ready");
+      void record({ attemptId, eventId, kind }).then(result => {
+        if (active) {
+          setStatus("ready");
+          if (result.decision === "warning" || result.decision === "review_required")
+            setNotice(result.decision);
+        }
       }).catch(() => {
         if (active) setStatus("failed");
       });
@@ -66,5 +72,5 @@ export function useExamIntegrityTelemetry(
   }, [attemptId, enabled, consented, record]);
 
   // Delivery status is informational, never evidence of a policy breach.
-  return { status };
+  return { status, notice };
 }

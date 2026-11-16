@@ -71,11 +71,9 @@ export default function NotificationBell() {
         <div className="absolute end-0 mt-2 w-80 max-h-[70vh] overflow-y-auto chaos-card ws-glass z-50 text-start" role="dialog" aria-label={t.title}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-foreground/10">
             <p className="chaos-heading text-xs">{t.title}</p>
-            {unread > 0 && (
-              <button type="button" className="text-xs underline text-muted-foreground hover:text-foreground" onClick={() => markRead({})}>
-                {t.markAll}
-              </button>
-            )}
+            <button type="button" className="text-xs underline text-muted-foreground hover:text-foreground" onClick={() => markRead({})}>
+              {t.markAll}
+            </button>
           </div>
           <details className="border-b border-foreground/10 px-4 py-3 text-xs">
             <summary className="cursor-pointer text-muted-foreground">{t.preferences}</summary>
