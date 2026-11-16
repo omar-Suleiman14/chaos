@@ -121,10 +121,10 @@ function png(label, category, detail) {
   return Buffer.concat([PNG_SIGNATURE, chunk("IHDR", ihdr), chunk("IDAT", deflateSync(pixels, { level: 1 })), chunk("IEND", Buffer.alloc(0))]);
 }
 const css = ':root{color-scheme:dark}*{box-sizing:border-box}body{margin:0;background:#121212;color:#ededed;font:16px/1.55 system-ui,"Segoe UI",sans-serif}main{width:min(100% - 40px,780px);margin:0 auto;padding:55px 0 100px}a{color:#e2e2e2;text-underline-offset:4px}a:focus-visible{outline:3px solid #aab9d1;outline-offset:4px}nav{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:45px;font-size:14px}h1{font-size:clamp(27px,5vw,42px);line-height:1.2;letter-spacing:-.03em}h2{font-size:21px}p,.muted,small{color:#b1b1b1}li{padding:8px 0;border-bottom:1px solid #303030}li a{display:inline-block}ul{padding-left:23px}.action{display:inline-block;background:#272727;border:1px solid #525252;border-radius:7px;padding:12px 19px;margin:14px 0;text-decoration:none;min-height:44px}.action:hover{background:#383838}.tag{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#aab0b5}.metadata{margin:22px 0;padding:14px 18px;border:1px solid #3d3d3d;border-radius:8px;background:#1a1a1a}a:active{opacity:.8}@media(prefers-color-scheme:light){:root{color-scheme:light}body{background:#fafaf8;color:#242424}a{color:#252525}p,.muted,small{color:#676767}li{border-color:#e1e1df}.metadata{background:#fff;border-color:#ddd}.action{background:#fff;border-color:#ccc}.action:hover{background:#eee}}';
-function head(title, description, url, image, schema) {
+function head(title, description, url, image, schema, robots = "index,follow,max-image-preview:large") {
   return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">' +
     '<title>' + escape(title) + '</title><meta name="description" content="' + escape(description) + '">' +
-    '<meta name="robots" content="index,follow,max-image-preview:large">' +
+    '<meta name="robots" content="' + robots + '">' +
     '<link rel="canonical" href="' + escape(url) + '">' +
     '<meta property="og:type" content="article"><meta property="og:site_name" content="Chaos Index">' +
     '<meta property="og:title" content="' + escape(title) + '"><meta property="og:description" content="' + escape(description) + '">' +
@@ -167,7 +167,7 @@ export async function buildSeo(root, output) {
     const image = ORIGIN + "/og/" + path.slice(1).replace(/\//g, "-") + ".png";
     const description = short(type + " · " + subject + " · Year " + m[1] + " · " + m[0] + ". Original Telegram study source.", 175);
     const date = !isQuestion && /^\d{4}-\d{2}-\d{2}$/.test(entry[6]) ? entry[6] : "";
-    const html = head(title + " · Chaos Index", description, url, image, makeSchema(title, description, url, modulePaths[i], m[0], type, date)) +
+    const html = head(title + " · Chaos Index", description, url, image, makeSchema(title, description, url, modulePaths[i], m[0], type, date), "noindex,follow") +
       '<main><nav aria-label="Breadcrumb"><a href="/">Index</a><span aria-hidden="true"> / </span><a href="' + modulePaths[i] + '">' + escape(m[0]) + '</a></nav>' +
       '<div class="tag">Year ' + m[1] + ' · ' + escape(type) + '</div><h1 dir="auto">' + escape(title) + '</h1>' +
       '<p dir="auto">' + escape(subject) + ' · ' + escape(m[0]) + '</p>' +
@@ -176,7 +176,6 @@ export async function buildSeo(root, output) {
       '<p><a href="/">Browse the full index</a></p></main></body></html>';
     addPage(path, html, png(subject, "YEAR " + m[1] + " / " + m[0], type + " / " + entry[0]));
     moduleLists[i].push({ path, title, type, subject });
-    list.push(sitemapEntry(path, date));
   };
   for (const entry of D) addRecord(entry, String(entry[3]));
   for (const entry of Q) addRecord(entry, "questions");
