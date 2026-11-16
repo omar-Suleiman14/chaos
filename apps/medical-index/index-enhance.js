@@ -8,9 +8,9 @@
   function attach() {
     for (const row of view.querySelectorAll(".material-row:not([data-share-processed])")) {
       row.dataset.shareProcessed = "true";
-      const module = row.closest(".module");
-      const moduleIndex = Number(module?.getAttribute("data-module-group"));
-      if (!module || !Number.isInteger(moduleIndex)) continue;
+      const moduleEl = row.closest(".module");
+      const moduleIndex = Number(moduleEl?.getAttribute("data-module-group"));
+      if (!moduleEl || !Number.isInteger(moduleIndex)) continue;
       const original = row.querySelector('a.material-main[href*="t.me/"],a.quiz-link[href*="t.me/"]');
       if (!original) continue;
       let url;
