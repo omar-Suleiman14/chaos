@@ -16,6 +16,7 @@ const copy = {
     cards: {
       claude: { title: "Claude", body: "One click on the web, desktop and phone." },
       chatgpt: { title: "ChatGPT", body: "Add Chaos as an app in a few steps." },
+      gemini: { title: "Gemini", body: "Connected Apps when eligible, or Gemini CLI." },
     },
     open: "Set up", download: "Download plugin",
     otherTitle: "Another assistant?", otherBody: "Any app that supports remote MCP servers can connect. Add this address and sign in with OAuth when asked.",
@@ -27,6 +28,7 @@ const copy = {
     cards: {
       claude: { title: "Claude", body: "نقرة واحدة على الويب وسطح المكتب والهاتف." },
       chatgpt: { title: "ChatGPT", body: "أضف Chaos كتطبيق في خطوات قليلة." },
+      gemini: { title: "Gemini", body: "التطبيقات المتصلة عند توفرها، أو Gemini CLI." },
     },
     open: "الإعداد", download: "نزّل الإضافة",
     otherTitle: "مساعد آخر؟", otherBody: "يمكن لأي تطبيق يدعم خوادم MCP البعيدة الاتصال. أضف هذا العنوان وسجّل الدخول عبر OAuth عند الطلب.",

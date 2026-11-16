@@ -1,5 +1,6 @@
 import { defineTable } from "convex/server";
 import { v, type Infer } from "convex/values";
+import { examRubricCriterion } from "./examGradingModel";
 
 /**
  * Private, doctor-owned reusable questions. They are NOT classic quiz questions:
@@ -23,6 +24,8 @@ export const bankDraft = v.object({
   choices: v.array(bankChoice),
   correctChoiceIds: v.array(v.string()),
   sampleAnswer: v.optional(v.string()),
+  /** Private rubric metadata; PR23 adds the manual marking workflow. */
+  rubricCriteria: v.optional(v.array(examRubricCriterion)),
   explanation: v.optional(v.string()),
   points: v.number(),
   topics: v.array(v.string()),

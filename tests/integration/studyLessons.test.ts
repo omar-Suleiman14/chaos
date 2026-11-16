@@ -322,7 +322,19 @@ it("completes the native lesson/quiz/card/glossary workflow, grades answers and 
   expect(field.description).toContain(
     "A dye is introduced on one side of a still beaker",
   );
-  const response = await s.t.mutation(api.respond.submitResponse, {
+  const learner = s.t.withIdentity({
+    subject: other, issuer: "https://test.chaos.fail",
+    tokenIdentifier: `https://test.chaos.fail|${other}`,
+  });
+  const owner = s.t.withIdentity({
+    subject: userId, issuer: "https://test.chaos.fail",
+    tokenIdentifier: `https://test.chaos.fail|${userId}`,
+  });
+  expect((await s.t.query(api.respond.getPublicForm, { shareId: embed!.shareId! })).state).toBe("unavailable");
+  await learner.mutation(api.courseJoinRequests.requestJoin, { courseId: s.courseId! });
+  const [join] = await owner.query(api.courseJoinRequests.listPending, { courseId: s.courseId! });
+  await owner.mutation(api.courseJoinRequests.decide, { requestId: join.id, approve: true });
+  const response = await learner.mutation(api.respond.submitResponse, {
     shareId: embed!.shareId!,
     submissionKey: "study-e2e-answer-001",
     answers: { [field.id]: field.quiz!.correctOptionIds[0] },
@@ -340,11 +352,6 @@ it("completes the native lesson/quiz/card/glossary workflow, grades answers and 
   const deck = await s.t.run((ctx) =>
     ctx.db.get("flashcardSets", draft.assets[0]),
   );
-  const learner = s.t.withIdentity({
-    subject: other,
-    issuer: "https://test.chaos.fail",
-    tokenIdentifier: `https://test.chaos.fail|${other}`,
-  });
   const rating = await learner.mutation(
     makeFunctionReference<"mutation">("flashcardStudy:review"),
     {

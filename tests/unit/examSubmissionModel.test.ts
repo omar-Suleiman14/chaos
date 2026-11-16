@@ -32,6 +32,12 @@ describe("authoritative exam timing", () => {
     })).toThrow("EXAM_CLOCK_NOT_CONFIGURED");
   });
 
+  it("retains approved extra time on the longest permitted exam", () => {
+    const timing = createExamAttemptTiming({ ...defaultExamSettings, durationMinutes: 600 }, startedAt);
+    expect(timing.deadlineAt).toBe(startedAt + 600 * 60_000);
+    expect(requireExamAttemptTiming({ startedAt, ...timing }).deadlineAt).toBe(timing.deadlineAt);
+  });
+
   it("enforces minimum time, all answers and no-early-submit policy on the server", () => {
     const clock = { startedAt, ...createExamAttemptTiming({
       ...defaultExamSettings, requireAllAnswers: true,

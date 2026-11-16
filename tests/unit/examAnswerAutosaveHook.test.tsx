@@ -63,4 +63,24 @@ describe("exam answer autosave hook", () => {
     expect(result.current.savedAt).toBeNull();
     expect(mocks.save).not.toHaveBeenCalled();
   });
+
+  it("keeps the acknowledged answer visible until the remote subscription catches up", async () => {
+    mocks.save.mockResolvedValue({ revision: 1, savedAt: 123 });
+    const { result } = renderHook(() => useExamAnswerAutosave(attemptId, 0));
+    await waitFor(() => expect(result.current.status).toBe("saved"));
+    act(() => result.current.change(draft));
+    await waitFor(() => expect(mocks.save).toHaveBeenCalled(), { timeout: 3000 });
+    await waitFor(() => expect(result.current.status).toBe("saved"));
+    expect(result.current.answer).toEqual(draft);
+    expect(result.current.savedAt).toBe(123);
+  });
+
+  it("recovers a five-hour-old local draft during a long exam", async () => {
+    window.sessionStorage.setItem("chaos:unsaved-exam:" + attemptId + ":0", JSON.stringify({
+      answer: draft, expectedRevision: 0, mutationId: "saved-draft-token", createdAt: Date.now() - 5 * 60 * 60 * 1000,
+    }));
+    const { result } = renderHook(() => useExamAnswerAutosave(attemptId, 0));
+    expect(result.current.answer).toEqual(draft);
+    expect(result.current.hasUnsavedChanges).toBe(true);
+  });
 });

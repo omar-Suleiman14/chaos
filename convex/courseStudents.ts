@@ -54,12 +54,22 @@ export const recordLesson = mutation({
       .unique();
     if (!row || row.studentId !== identity.subject) return null;
     const done = new Set(row.completedLessonIds);
+    const wasCompleted = done.has(lesson.id);
+    const completionTimes = new Map((row.lessonCompletedAt ?? []).map(item => [item.lessonId, item.completedAt] as const));
     if (args.completed === true) done.add(lesson.id);
     if (args.completed === false) done.delete(lesson.id);
+    if (args.completed === true && !completionTimes.has(lesson.id)) {
+      completionTimes.set(lesson.id, wasCompleted ? row.updatedAt : Date.now());
+    }
+    if (args.completed === false) completionTimes.delete(lesson.id);
     const completedLessonIds = course.lessons.map(l => l.id).filter(id => done.has(id));
+    const lessonCompletedAt = completedLessonIds.flatMap(id => {
+      const completedAt = completionTimes.get(id);
+      return completedAt === undefined ? [] : [{ lessonId: id, completedAt }];
+    });
     const finished = completedLessonIds.length === course.lessons.length;
     await ctx.db.patch("courseEnrollments", row._id, {
-      completedLessonIds, lastLessonId: lesson.id, updatedAt: Date.now(),
+      completedLessonIds, lessonCompletedAt, lastLessonId: lesson.id, updatedAt: Date.now(),
       completedAt: finished ? row.completedAt ?? Date.now() : undefined,
     });
     return null;

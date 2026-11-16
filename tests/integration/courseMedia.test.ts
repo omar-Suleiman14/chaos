@@ -85,3 +85,19 @@ it("fails closed on expired or removed upload reservations", async () => {
   await doctor.mutation(remove, { mediaId });
   expect(await doctor.query(getContentUrl, { mediaId })).toBeNull();
 });
+
+
+it("retires expired course uploads but preserves ready objects", async () => {
+  const { t, doctor, courseId, lessonId, versionId } = await fixture();
+  const args = { courseId, lessonId, versionId, mimeType: "image/png", bytes: 32 };
+  const claim = makeFunctionReference<"mutation", { kind: "course"; id: string }, string | null>("r2MediaCleanup:claim");
+  const expired = await doctor.mutation(reserve, args);
+  await t.run(ctx => ctx.db.patch("courseMediaObjects", expired, { expiresAt: Date.now() - 1 }));
+  expect(await t.mutation(claim, { kind: "course", id: expired })).toBe("course-media/" + expired);
+  await expect(doctor.mutation(markReady, { mediaId: expired, etag })).rejects.toThrow();
+  const ready = await doctor.mutation(reserve, args);
+  await doctor.mutation(markReady, { mediaId: ready, etag });
+  expect(await t.mutation(claim, { kind: "course", id: ready })).toBeNull();
+  await doctor.mutation(remove, { mediaId: ready });
+  expect(await t.mutation(claim, { kind: "course", id: ready })).toBe("course-media/" + ready);
+});

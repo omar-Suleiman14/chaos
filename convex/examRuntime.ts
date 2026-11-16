@@ -1,9 +1,14 @@
 import { v } from "convex/values";
+import { internal } from "./_generated/api";
+import { requireEligiblePreflight } from "./examPreflight";
+import { createExamAttemptTiming } from "./examSubmissionModel";
+import { makeIntegrityPolicy } from "./examIntegrityModel";
+import { freezeResultPolicy } from "./examResultModel";
+import { authorizedAttempt } from "./examAnswers";
 import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireActiveUser, creatorRestricted } from "./authz";
 import { hasApprovedCourseAccess } from "./courseMembership";
-import { audienceAllows } from "./examAudience";
 import { eligibleByRow, loadPool, validatePlan, validateSelections } from "./examBuilder";
 import { transitionExamAttempt } from "./examAttemptState";
 import { attemptState } from "./examRuntimeModel";
@@ -51,8 +56,9 @@ export const sealDraft = mutation({
     const prior = release ? await ctx.db.get("examSnapshots", release.activeSnapshotId) : null;
     if (prior?.draftRevision === expectedRevision)
       return { snapshotId: prior._id, version: prior.version };
-    if (release?.studentEntryEnabled)
-      throw new Error("EXAM_ACTIVE: Close the student release before resealing.");
+    if (release?.studentEntryEnabled || (release && await ctx.db.query("examAttempts")
+      .withIndex("by_snapshot_state", q => q.eq("snapshotId", release.activeSnapshotId).eq("state", "in_progress")).first()))
+      throw new Error("EXAM_ACTIVE: Close entry and finish active attempts before resealing.");
     const version = (release?.version ?? 0) + 1;
     if (version > MAX_SNAPSHOTS_PER_DRAFT)
       throw new Error("LIMIT_REACHED: This draft has reached its sealed version limit.");
@@ -90,7 +96,10 @@ export const sealDraft = mutation({
         choices: question.choices, correctChoiceIds: question.correctChoiceIds,
         ...(question.sampleAnswer !== undefined ? { sampleAnswer: question.sampleAnswer } : {}),
         ...(question.explanation !== undefined ? { explanation: question.explanation } : {}),
-        points: allocation.points, topics: question.topics, terms: question.terms,
+        points: allocation.points,
+        ...(allocation.marking ? { marking: allocation.marking } : {}),
+        ...(question.rubricCriteria ? { rubricCriteria: question.rubricCriteria } : {}),
+        topics: question.topics, terms: question.terms,
         outcomes: question.outcomes,
         ...(question.caseStudy ? { caseStudy: { stem: question.caseStudy.stem, media } } : {}),
       });
@@ -137,33 +146,85 @@ export const listSealed = query({
   },
 });
 
-/**
- * Student entry is deliberately fail-closed until PR 14 installs explicit audience
- * assignment. Course approval alone is necessary, never sufficient for an exam.
- */
+export const listDraftSnapshots = query({
+  args: { draftId: v.id("examBuilderDrafts") },
+  handler: async (ctx, { draftId }) => {
+    const ownerId = await authenticated(ctx);
+    const draft = await ctx.db.get("examBuilderDrafts", draftId);
+    const course = draft ? await ctx.db.get("learnCollections", draft.courseId) : null;
+    if (!draft || draft.ownerId !== ownerId || !course || course.ownerId !== ownerId ||
+        course.communityState === "removed" || await creatorRestricted(ctx, ownerId))
+      throw new Error("NOT_FOUND: Exam draft not found.");
+    const rows = await ctx.db.query("examSnapshots")
+      .withIndex("by_draft_version", q => q.eq("draftId", draftId)).order("desc").take(MAX_SNAPSHOTS_PER_DRAFT);
+    return rows.map(row => ({ snapshotId: row._id, version: row.version, title: row.title, sealedAt: row.sealedAt }));
+  },
+});
+
+/** Atomically validate entry, resume an active attempt, or consume one attempt. */
 export const startAttempt = mutation({
   args: { snapshotId: v.id("examSnapshots") },
   returns: v.id("examAttempts"),
   handler: async (ctx, { snapshotId }) => {
-    const studentId = await authenticated(ctx);
     const snapshot = await ctx.db.get("examSnapshots", snapshotId);
     if (!snapshot) throw new Error("NOT_FOUND: Exam not found.");
     const release = await ctx.db.query("examReleases")
       .withIndex("by_draft", q => q.eq("draftId", snapshot.draftId)).unique();
-    if (!release || release.ownerId !== snapshot.ownerId ||
-      release.activeSnapshotId !== snapshotId || !release.studentEntryEnabled ||
-      !release.assignmentActive || !release.audience)
-      throw new Error("EXAM_NOT_ASSIGNED: This exam is not open for student attempts.");
-    const course = await ctx.db.get("learnCollections", snapshot.courseId);
-    if (!course || course.ownerId !== snapshot.ownerId || course.archived ||
-      !course.publishedVersionId || course.communityState === "removed" ||
-      course.communityState === "hidden" || !(await hasApprovedCourseAccess(ctx, snapshot.courseId, studentId)) ||
-      course.ownerId === studentId)
-      throw new Error("NOT_FOUND: Course exam not available.");
-    if (!await audienceAllows(ctx, snapshot.courseId, release.audience, studentId))
-      throw new Error("NOT_FOUND: Exam not assigned to this course student.");
-    // Preflight, safe content delivery, timed attempts and quota enforcement land in later PRs.
-    throw new Error("EXAM_NOT_READY: Secure student entry is not yet enabled.");
+    if (!release || release.activeSnapshotId !== snapshotId || !release.assignmentActive || !release.audience)
+      throw new Error("EXAM_NOT_ASSIGNED: Exam entry is closed.");
+    const eligible = await requireEligiblePreflight(ctx, release._id);
+    if (eligible.snapshot._id !== snapshotId ||
+        (eligible.settings.mode === "scheduled" && eligible.settings.opensAt! > eligible.now))
+      throw new Error("EXAM_CLOSED: Exam is not open yet.");
+    const attempts = await ctx.db.query("examAttempts")
+      .withIndex("by_snapshot_student", q => q.eq("snapshotId", snapshotId)
+        .eq("studentId", eligible.studentId)).take(4);
+    const active = attempts.find(a => a.state === "in_progress");
+    if (!release.studentEntryEnabled && !active)
+      throw new Error("EXAM_NOT_ASSIGNED: Exam entry is closed.");
+    if (!active && attempts.length >= eligible.settings.maxAttempts)
+      throw new Error("ATTEMPT_LIMIT: No attempts remain.");
+    const consent = await ctx.db.query("examConsents")
+      .withIndex("by_release_student", q => q.eq("releaseId", release._id)
+        .eq("studentId", eligible.studentId)).unique();
+    if (!consent || consent.snapshotId !== snapshotId ||
+        (!active?.entryAuthorized && consent.policyVersion !== eligible.policyVersion))
+      throw new Error("CONSENT_REQUIRED: Accept the current exam rules.");
+    if (active) {
+      if (!active.deadlineAt || active.deadlineAt <= eligible.now)
+        throw new Error("ATTEMPT_TIMED_OUT: Wait for the attempt to close.");
+      return active._id;
+    }
+    const { accommodation } = eligible;
+    if (accommodation && accommodation.ownerId !== snapshot.ownerId)
+      throw new Error("INTEGRITY_ERROR: Accommodation owner mismatch.");
+    const extra = accommodation?.kind === "extra_time" ? accommodation.additionalMinutes : 0;
+    const durationMinutes = eligible.settings.durationMinutes + extra;
+    const timing = createExamAttemptTiming({ ...eligible.settings, durationMinutes }, eligible.now);
+    const attemptId = await ctx.db.insert("examAttempts", {
+      ownerId: snapshot.ownerId, courseId: snapshot.courseId, snapshotId,
+      studentId: eligible.studentId, state: "in_progress", entryAuthorized: true, revision: 0,
+      startedAt: eligible.now, updatedAt: eligible.now, ...timing,
+      integrityPolicy: makeIntegrityPolicy(accommodation?.kind === "reduced_monitoring"
+        ? "off" : eligible.settings.integrityMode ?? "off"), resultPolicy: freezeResultPolicy(eligible.settings),
+    });
+    await ctx.scheduler.runAt(timing.deadlineAt, internal.examSubmissions.finalizeAtDeadline,
+      { attemptId, deadlineAt: timing.deadlineAt });
+    return attemptId;
+  },
+});
+
+/** Only candidate-facing fields; frozen keys, explanations and rubrics stay server-side. */
+export const getQuestions = query({
+  args: { attemptId: v.id("examAttempts") },
+  handler: async (ctx, { attemptId }) => {
+    const { snapshot } = await authorizedAttempt(ctx, attemptId);
+    return { title: snapshot.title, questions: snapshot.questions.map((q, index) => ({
+      index, kind: q.kind, prompt: q.prompt,
+      choices: q.kind === "true_false" ? [{ id: "true", text: "True" }, { id: "false", text: "False" }] : q.choices,
+      caseStudy: q.caseStudy ? { stem: q.caseStudy.stem,
+        media: q.caseStudy.media.map(m => ({ mediaId: m.mediaId, alt: m.alt })) } : null,
+    })) };
   },
 });
 
@@ -180,7 +241,8 @@ export const getMyAttempt = query({
       attemptId: attempt._id, snapshotId: attempt.snapshotId, state: attempt.state,
       revision: attempt.revision, startedAt: attempt.startedAt,
       updatedAt: attempt.updatedAt, submittedAt: attempt.submittedAt,
-      closedAt: attempt.closedAt,
+      closedAt: attempt.closedAt, integrityMode: attempt.integrityPolicy?.mode ?? "off",
+      telemetryConsented: attempt.entryAuthorized === true,
     };
   },
 });
