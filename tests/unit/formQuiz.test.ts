@@ -54,6 +54,18 @@ describe("form quiz mode", () => {
     expect(publicQuizDefinition(source).fields[0].quiz).toBeUndefined();
   });
 
+  it("keeps explanation images private until the respondent has submitted and answers may be shown", () => {
+    const def = quiz();
+    def.fields[0].options![0].image = { url: "https://example.com/answer.png", alt: "A pictured answer" };
+    def.fields[0].quiz!.explanationImage = { url: "https://example.com/explain.png", alt: "Worked solution" };
+    const publicDef = publicQuizDefinition(def);
+    expect(publicDef.fields[0].options![0].image).toEqual(def.fields[0].options![0].image);
+    expect(publicDef.fields[0].quiz).toBeUndefined();
+    expect(quizReview(def, gradeQuiz(def, { single: "a" }))?.[0].explanationImage).toEqual(def.fields[0].quiz!.explanationImage);
+    def.quiz!.showAnswers = false;
+    expect(quizReview(def, gradeQuiz(def, { single: "a" }))?.[0].explanationImage).toBeUndefined();
+  });
+
   it("blocks invalid answer keys and calculated scores before publication", () => {
     const def = quiz();
     expect(checkDefinition(def).errors.join(" ")).toMatch(/remove calculated option scores/i);

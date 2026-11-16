@@ -51,8 +51,11 @@ export async function saveGlossaryForActor(ctx: MutationCtx, actor: string, less
 export const get = query({ args: { lessonId: v.string() }, returns: v.array(glossaryEntry), handler: async (ctx, args) => {
   const lessonId = ctx.db.normalizeId("lessons", args.lessonId);
   if (!lessonId) return [];
+  const glossary = await current(ctx, lessonId);
+  // No terms means there is no protected content to disclose.
+  if (!glossary?.entries.length) return [];
   try { await lessonAccessForActor(ctx, (await getAuthIdentity(ctx))?.subject ?? null, lessonId); } catch { return []; }
-  return (await current(ctx, lessonId))?.entries ?? [];
+  return glossary.entries;
 } });
 export const save = mutation({ args: { lessonId: v.id("lessons"), entries: v.array(glossaryEntry) }, returns: v.null(), handler: async (ctx, args) => {
   await saveGlossaryForActor(ctx, (await requireActiveUser(ctx)).identity.subject, args.lessonId, { entries: args.entries, replace: true });

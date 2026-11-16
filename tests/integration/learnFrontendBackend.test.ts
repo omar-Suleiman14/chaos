@@ -77,7 +77,8 @@ describe("native Learn frontend reads", () => {
   });
   it("requires lesson read access and strips quiz answers even for owners", async () => {
     const { t, owner, lessonId } = await setup();
-    await expect(t.query(quizzes, { lessonId })).rejects.toThrow("unauthorized");
+    // An empty private attachment list reveals no protected data.
+    expect(await t.query(quizzes, { lessonId })).toEqual([]);
     await owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 0, visibility: "public" });
     await owner.mutation(api.quizFunctions.getOrCreateUser, {});
     const formId = await owner.mutation(api.forms.createForm, { title: "Draft secret", quizMode: true });

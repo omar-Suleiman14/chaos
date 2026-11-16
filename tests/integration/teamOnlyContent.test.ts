@@ -16,7 +16,7 @@ async function team() {
   return { t, owner, member, outsider, teamId };
 }
 
-it("team-only lessons, courses and flashcards are readable by team members only", async () => {
+it("team-only standalone lessons and flashcards remain shareable; course lectures require approval", async () => {
   const { t, owner, member, outsider, teamId } = await team();
   const lessonId = await owner.mutation(api.lessons.create, { metadata: meta, document: paragraph });
   await expect(owner.mutation(api.lessons.publish, { lessonId, expectedRevision: 0, visibility: "restricted" })).rejects.toThrow("TEAM_REQUIRED");
@@ -37,7 +37,8 @@ it("team-only lessons, courses and flashcards are readable by team members only"
   await owner.mutation(api.lessons.saveDraft, { lessonId: weekOne, expectedRevision: draft.revision, document: paragraph, metadata: draft.metadata });
   expect(await owner.mutation(api.courses.publish, { courseId, visibility: "restricted", teamId })).toEqual({ ok: true });
   // The course's lessons become team-only with it.
-  expect(await member.query(api.learnFrontend.publicLesson, { id: weekOne })).not.toBeNull();
+  // Team membership permits course discovery but is not doctor approval for a lecture.
+  expect(await member.query(api.learnFrontend.publicLesson, { id: weekOne })).toBeNull();
   expect(await outsider.query(api.learnFrontend.publicLesson, { id: weekOne })).toBeNull();
   expect((await member.query(api.courses.getPublic, { courseId }))?.lessons).toHaveLength(1);
   expect(await outsider.query(api.courses.getPublic, { courseId })).toBeNull();
