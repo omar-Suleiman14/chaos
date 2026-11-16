@@ -13,6 +13,8 @@ import { useBuilderLabels } from "@/components/forms/formThemeLabels";
 import { useCopy } from "@/lib/i18n";
 import RuleEditor from "./RuleEditor";
 import DocHint from "@/components/forms/DocHint";
+import HostedImageUpload from "./HostedImageUpload";
+import type { Id } from "@/convex/_generated/dataModel";
 import { Select } from "@/components/workspace/Select";
 
 // Only visible branching controls subscribe to other questions' edits.
@@ -58,6 +60,8 @@ const copy = {
     minChars: "Min characters", maxChars: "Max characters", placeholder: "Placeholder", minimum: "Minimum", maximum: "Maximum",
     filesAllowed: "Files allowed (1–5)", fileNote: "PDF, images, text, Word or Excel, up to 10 MB.",
     imageAddress: "Image address", imageDescription: "Image description", imageAltHint: "For people who cannot see it",
+    optionImage: "Answer image URL (optional)", explanationImage: "Explanation image URL (shown only after submission)",
+    manageImages: "Edit answer images", hideImages: "Hide answer images", uploadImage: "Upload an image",
     tipBefore: "Tip: insert an earlier answer with ", tipMid: " (this one is ", tipAfter: ") or the score with ", tipEnd: ".",
     required: "Required", shownConditionally: "Shown conditionally", logic: "Logic",
     actionsFor: (name: string) => `Actions for ${name}`, duplicateSection: "Duplicate section", duplicate: "Duplicate",
@@ -85,6 +89,8 @@ const copy = {
     minChars: "الحد الأدنى للأحرف", maxChars: "الحد الأقصى للأحرف", placeholder: "النص التوضيحي", minimum: "الحد الأدنى", maximum: "الحد الأقصى",
     filesAllowed: "عدد الملفات المسموح (1–5)", fileNote: "PDF أو صور أو نصوص أو Word أو Excel، حتى 10 ميغابايت.",
     imageAddress: "رابط الصورة", imageDescription: "وصف الصورة", imageAltHint: "لمن لا يستطيع رؤيتها",
+    optionImage: "رابط صورة الإجابة (اختياري)", explanationImage: "رابط صورة الشرح (تظهر بعد الإرسال)",
+    manageImages: "تعديل صور الإجابات", hideImages: "إخفاء صور الإجابات", uploadImage: "رفع صورة",
     tipBefore: "تلميح: أدرج إجابة سابقة بـ ", tipMid: " (رمز هذا السؤال ", tipAfter: ") أو الدرجة بـ ", tipEnd: ".",
     required: "إلزامي", shownConditionally: "يظهر بشرط", logic: "المنطق",
     actionsFor: (name: string) => `إجراءات ${name}`, duplicateSection: "كرّر القسم", duplicate: "كرّر",
@@ -94,7 +100,7 @@ const copy = {
 
 const labelClass = "text-[13px] font-medium text-muted-foreground";
 
-function ChoiceList({ kind, items, onChange, prefix, withScores }: { kind: "options" | "rows" | "columns"; items: Choice[]; onChange: (c: Choice[]) => void; prefix: string; withScores?: boolean }) {
+function ChoiceList({ formId, showImages, kind, items, onChange, prefix, withScores }: { formId?: Id<"forms">; showImages?: boolean; kind: "options" | "rows" | "columns"; items: Choice[]; onChange: (c: Choice[]) => void; prefix: string; withScores?: boolean }) {
   const t = useCopy(copy);
   const label = t[kind];
   const [asText, setAsText] = useState(false);
@@ -120,13 +126,26 @@ function ChoiceList({ kind, items, onChange, prefix, withScores }: { kind: "opti
       ) : (
         <ul className="space-y-1" ref={list}>
           {items.map((c, i) => (
-            <li key={c.id} className="flex gap-2 items-center ws-reveal-host">
+            <li key={c.id} className="flex flex-wrap gap-2 items-center ws-reveal-host">
               <input dir="auto" value={c.label} onChange={(e) => onChange(items.map((x) => (x.id === c.id ? { ...x, label: e.target.value } : x)))} className="kb-input py-1.5 text-sm flex-1" aria-label={t.itemN(label, i + 1)}
                 onFocus={(e) => { if (/^(Option|Row|Column|خيار|صف|عمود) \d+$/.test(c.label)) e.currentTarget.select(); }}
                 onKeyDown={(e) => { if (e.key === "Enter" && !e.nativeEvent.isComposing) { e.preventDefault(); addAfter(i); } }} />
               {withScores && (
                 <input type="number" value={c.score ?? ""} placeholder={t.score} aria-label={t.scoreFor(c.label)} className="kb-input py-1.5 text-sm w-20"
                   onChange={(e) => onChange(items.map((x) => (x.id === c.id ? (e.target.value === "" ? (({ score: _s, ...rest }) => rest)(x) : { ...x, score: Number(e.target.value) }) : x)))} />
+              )}
+              {kind !== "rows" && showImages && (
+                <div className="w-full basis-full grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <input type="url" inputMode="url" dir="ltr" placeholder={t.optionImage} aria-label={`${t.optionImage}: ${c.label}`}
+                    value={c.image?.url ?? ""} onChange={(e) => onChange(items.map((x) => x.id === c.id
+                      ? { ...x, image: e.target.value ? { url: e.target.value, alt: x.image?.alt ?? "" } : undefined } : x))}
+                    className="kb-input py-1 text-xs" />
+                  {formId && <HostedImageUpload formId={formId} onUploaded={(url) =>
+                    onChange(items.map(x => x.id === c.id ? { ...x, image: { url, alt: x.image?.alt ?? "" } } : x))} />}
+                  {c.image && <input dir="auto" placeholder={t.imageAltHint} aria-label={`${t.imageDescription}: ${c.label}`}
+                    value={c.image.alt} onChange={(e) => onChange(items.map((x) => x.id === c.id ? { ...x, image: { ...c.image!, alt: e.target.value } } : x))}
+                    className="kb-input py-1 text-xs" />}
+                </div>
               )}
               <button type="button" disabled={i === 0} onClick={() => { const n = [...items]; [n[i - 1], n[i]] = [n[i], n[i - 1]]; onChange(n); }} aria-label={t.moveUp} className="ws-icon-button ws-reveal disabled:opacity-30"><ArrowUp size={14} /></button>
               <button type="button" onClick={() => onChange(items.filter((x) => x.id !== c.id))} aria-label={t.remove(c.label || t.option)} className="ws-icon-button text-muted-foreground hover:text-destructive"><X size={14} /></button>
@@ -148,7 +167,8 @@ function ChoiceList({ kind, items, onChange, prefix, withScores }: { kind: "opti
  * options and "Required". Type changes, limits, scores and images live under
  * "More options"; moving, duplicating and deleting live in the "…" menu.
  */
-export default function FieldEditor({ field, index, def, onChange, onDuplicate, onRemove, onMove, readOnly, focusOnMount }: {
+export default function FieldEditor({ formId, field, index, def, onChange, onDuplicate, onRemove, onMove, readOnly, focusOnMount }: {
+  formId?: Id<"forms">;
   field: FormField;
   index: number;
   def: FormDefinition;
@@ -165,6 +185,8 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
   const [showLogic, setShowLogic] = useState(!!field.showIf);
   const [scores, setScores] = useState(!!field.options?.some((o) => o.score !== undefined));
   const [showDescription, setShowDescription] = useState(false);
+  const [activeImageUpload, setActiveImageUpload] = useState<"question" | "explanation" | null>(null);
+  const [showOptionImages, setShowOptionImages] = useState(false);
   const set = (patch: Partial<FormField>) => {
     const next = { ...field, ...patch };
     if (patch.options && next.quiz) {
@@ -204,7 +226,7 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
         <button type="button" onClick={() => setShowDescription(true)} className="ws-link-quiet flex items-center gap-1"><Plus size={14} /> {t.addDescription}</button>
       )}
 
-      {hasOptions && <ChoiceList kind="options" items={field.options ?? []} onChange={(options) => set({ options })} prefix="o" withScores={scores && field.type !== "ranking"} />}
+      {hasOptions && <ChoiceList formId={formId} showImages={showOptionImages} kind="options" items={field.options ?? []} onChange={(options) => set({ options })} prefix="o" withScores={scores && field.type !== "ranking"} />}
       {quizEligible && (
         <div className="rounded-lg border border-[var(--ws-line-strong)] p-4 space-y-3" aria-label={t.answerKey}>
           <div>
@@ -220,7 +242,7 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
                     const correctOptionIds = field.type === "multi_choice"
                       ? selected ? (field.quiz?.correctOptionIds ?? []).filter((id) => id !== option.id) : [...(field.quiz?.correctOptionIds ?? []), option.id]
                       : [option.id];
-                    set({ quiz: { correctOptionIds, points: field.quiz?.points ?? 1, explanation: field.quiz?.explanation } });
+                    set({ quiz: { ...field.quiz, correctOptionIds, points: field.quiz?.points ?? 1 } });
                   }} />
                 <bdi>{option.label || t.untitledOption}</bdi>
               </label>;
@@ -231,21 +253,35 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
             <div className="space-y-3 pt-2">
               <label className={`${labelClass} block`}>{t.points}
                 <input type="number" min={0} max={1000} value={field.quiz?.points ?? 1}
-                  onChange={(e) => set({ quiz: { correctOptionIds: field.quiz?.correctOptionIds ?? [], points: Number(e.target.value), explanation: field.quiz?.explanation } })}
+                  onChange={(e) => set({ quiz: { ...field.quiz, correctOptionIds: field.quiz?.correctOptionIds ?? [], points: Number(e.target.value) } })}
                   className="kb-input mt-1 w-28" />
               </label>
               <label className={`${labelClass} block`}>{t.explanation}
-                <textarea dir="auto" value={field.quiz?.explanation ?? ""} onChange={(e) => set({ quiz: { correctOptionIds: field.quiz?.correctOptionIds ?? [], points: field.quiz?.points ?? 1, explanation: e.target.value || undefined } })}
+                <textarea dir="auto" value={field.quiz?.explanation ?? ""} onChange={(e) => set({ quiz: { ...field.quiz, correctOptionIds: field.quiz?.correctOptionIds ?? [], points: field.quiz?.points ?? 1, explanation: e.target.value || undefined } })}
                   className="kb-input mt-1" rows={2} maxLength={2000} />
               </label>
+              <label className={`${labelClass} block`}>{t.explanationImage}
+                <input type="url" dir="ltr" placeholder="https://…" value={field.quiz?.explanationImage?.url ?? ""}
+                  onChange={(e) => set({ quiz: { ...field.quiz, correctOptionIds: field.quiz?.correctOptionIds ?? [], points: field.quiz?.points ?? 1,
+                    explanationImage: e.target.value ? { url: e.target.value, alt: field.quiz?.explanationImage?.alt ?? "" } : undefined } })}
+                  className="kb-input mt-1" />
+              </label>
+              {formId && <button type="button" className="ws-link-quiet" onClick={() => setActiveImageUpload(activeImageUpload === "explanation" ? null : "explanation")}>{t.uploadImage}</button>}
+              {formId && activeImageUpload === "explanation" && <HostedImageUpload formId={formId} onUploaded={(url) =>
+                set({ quiz: { ...field.quiz!, explanationImage: { url, alt: field.quiz?.explanationImage?.alt ?? "" } } })} />}
+              {field.quiz?.explanationImage && <label className={`${labelClass} block`}>{t.imageDescription}
+                <input dir="auto" placeholder={t.imageAltHint} value={field.quiz.explanationImage.alt}
+                  onChange={(e) => set({ quiz: { ...field.quiz!, explanationImage: { ...field.quiz!.explanationImage!, alt: e.target.value } } })}
+                  className="kb-input mt-1" />
+              </label>}
             </div>
           </details>
         </div>
       )}
       {field.type === "matrix" && (
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <ChoiceList kind="rows" items={field.rows ?? []} onChange={(rows) => set({ rows })} prefix="r" />
-          <ChoiceList kind="columns" items={field.options ?? []} onChange={(options) => set({ options })} prefix="o" />
+          <ChoiceList formId={formId} kind="rows" items={field.rows ?? []} onChange={(rows) => set({ rows })} prefix="r" />
+          <ChoiceList formId={formId} showImages={showOptionImages} kind="columns" items={field.options ?? []} onChange={(options) => set({ options })} prefix="o" />
         </div>
       )}
       {field.type === "email" && <p className="text-xs text-muted-foreground" data-testid="email-unverified-note">{t.emailNote}</p>}
@@ -265,7 +301,7 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
         </div>
       )}
 
-      <details className="ws-field-more">
+      <details className="ws-field-more" onToggle={(event) => setShowOptionImages(event.currentTarget.open)}>
         <summary><ChevronRight size={15} className="rtl:rotate-180" /> {t.moreOptions}</summary>
         <div className="space-y-4 pt-3">
           {(field.type === "choice" || field.type === "dropdown" || field.type === "multi_choice") && (
@@ -317,6 +353,9 @@ export default function FieldEditor({ field, index, def, onChange, onDuplicate, 
               <label className={labelClass}>{t.imageDescription} <input placeholder={t.imageAltHint} value={field.image?.alt ?? ""} disabled={!field.image} onChange={(e) => set({ image: field.image ? { ...field.image, alt: e.target.value } : undefined })} className="kb-input py-1 mt-1" /></label>
             </div>
           )}
+          {showOptionImages && formId && field.type !== "section" && <button type="button" className="ws-link-quiet" onClick={() => setActiveImageUpload(activeImageUpload === "question" ? null : "question")}>{t.uploadImage}</button>}
+          {formId && activeImageUpload === "question" && <HostedImageUpload formId={formId}
+            onUploaded={(url) => set({ image: { url, alt: field.image?.alt ?? "" } })} />}
           <DocHint slug="endings">{t.tipBefore}<bdi dir="ltr">{"{{question-id}}"}</bdi>{t.tipMid}<code>{field.id}</code>{t.tipAfter}<bdi dir="ltr">{"{{score}}"}</bdi>{t.tipEnd}</DocHint>
         </div>
       </details>
