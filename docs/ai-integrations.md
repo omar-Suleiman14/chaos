@@ -1,4 +1,4 @@
-# AI integrations: Claude and ChatGPT
+# AI integrations: Claude, ChatGPT and Gemini
 
 Chaos is a hosted remote MCP server at **`https://chaos.fail/mcp`** (Streamable HTTP, OAuth). This page covers the public integration pages, the downloadable plugin packages and how they stay in sync. For the tools themselves and production setup see [chatgpt-app.md](./chatgpt-app.md); for permission categories see [mcp-permissions.md](./mcp-permissions.md).
 
@@ -8,10 +8,11 @@ Chaos is a hosted remote MCP server at **`https://chaos.fail/mcp`** (Streamable 
 |---|---|
 | [`/claude`](https://chaos.fail/claude) | Chaos for Claude: one-click connector, plugin download, Claude Code command, manual settings, security notes |
 | [`/chatgpt`](https://chaos.fail/chatgpt) | Chaos for ChatGPT: app setup, plugin download, manual settings, security notes |
+| [`/gemini`](https://chaos.fail/gemini) | Gemini Apps Connected Apps (subject to Google eligibility) and Gemini CLI OAuth/HTTP MCP configuration |
 | [`/docs/claude`](https://chaos.fail/docs/claude), [`/docs/chatgpt`](https://chaos.fail/docs/chatgpt) | One guide per assistant (`lib/docs/articles-assistants.ts`); `/docs/chatgpt-app` redirects to `/docs/chatgpt`. Bundled guides with no stored row are served straight from source by `docs:listPublished` |
 | [`/connect`](https://chaos.fail/connect) | Integration cards for every platform plus the combined step-by-step guide |
 
-Both platform pages render `components/site/IntegrationView.tsx` with a `platform` prop, so they share one layout (hero, connect, what it can do, manual setup, security) and differ only in copy. Styles live in `components/site/integrations.css`.
+The Claude and ChatGPT platform pages and the new Gemini page render `components/site/IntegrationView.tsx` with a `platform` prop, so they share one layout (hero, connect, what it can do, manual setup, security) and differ only in copy. Styles live in `components/site/integrations.css`.
 
 ## One source of truth
 
@@ -41,6 +42,7 @@ The MCP server version and the package version are the same number (`chaosIntegr
 | File | Contents |
 |---|---|
 | `/api/plugins/chaos-for-claude.zip` | Claude plugin: `.claude-plugin/plugin.json` (name, display name, version, description, author, homepage, licence, `icon`, documentation, support, privacy and terms URLs), `.mcp.json`, `skills/chaos/SKILL.md`, `assets/logo.svg`, `assets/logo.png`, `README.md` |
+| `/api/plugins/chaos-for-gemini.zip` | Gemini CLI `gemini/settings.json`, remote MCP setup, skill, logo and README. This is not a native Gemini Apps extension. |
 | `/api/plugins/chaos-for-chatgpt.zip` | OpenAI plugin (Codex format): `.codex-plugin/plugin.json` with the `interface` block (display name, descriptions, developer, category, capabilities, website/privacy/terms URLs, up to three starter prompts, brand colour, `composerIcon`, `logo`), `.mcp.json`, `skills/chaos/SKILL.md`, `assets/`, `README.md` |
 | `/api/plugins/chaos-icon-512.png`, `chaos-icon-128.png` | PNG renders of `public/icon.svg` (via `next/og`), used in packages, the manual-setup section and the MCP `serverInfo.icons` |
 
@@ -63,6 +65,8 @@ No client secrets, tokens, `CHAOS_MCP_SECRET`, Convex, Clerk or Better Auth valu
 - **Claude Code:** `claude mcp add --transport http chaos https://chaos.fail/mcp`, then `/mcp` to sign in.
 - **Claude Desktop extension (`.mcpb`):** not provided. Chaos is a hosted service; a local extension would only proxy the same remote server, and Desktop already picks up remote connectors.
 - **ChatGPT:** add Chaos as an app in developer mode (name, URL, OAuth). ChatGPT has no prefill link, so the button opens its settings.
+- **Gemini Apps:** Custom Connected Apps currently requires an eligible US 18+ personal account, Keep Activity and English. Create a custom app with the Chaos MCP URL in Gemini web settings; availability is not universal.
+- **Gemini CLI:** merge the `mcpServers.chaos.httpUrl` stanza from the Gemini ZIP into `~/.gemini/settings.json`, then run `/mcp` and authenticate through OAuth.
 - **Codex:** unzip the ChatGPT package into `~/plugins/chaos` and add it to `~/.agents/plugins/marketplace.json` (the package README has the entry).
 
 Every path ends in the same OAuth sign-in on Chaos, so the connection gets exactly the signed-in account's access.

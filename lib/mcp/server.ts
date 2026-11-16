@@ -2,7 +2,7 @@ import { readStudySkillFiles, studySkillPaths } from "@/lib/integrations/studySk
 import { registerDocumentationTools } from "./docs";
 import { registerCardTools } from "./cards";
 import { registerCrmTools } from "./crm";
-import { registerAdminTools } from "./admin";
+import { registerAdminTools, registerGradingAdminTools } from "./admin";
 // The Chaos ChatGPT app: MCP tool definitions. Served by app/mcp/route.ts.
 // Tools only describe and forward; Convex (convex/mcp.ts) enforces access,
 // validation, plan limits and rate limits for the signed-in Chaos account.
@@ -26,6 +26,8 @@ import { registerAssessmentTools } from "./assessments";
 import { registerGlossaryTools } from "./glossary";
 import { permissionForTool, requireToolPermission, type McpPermission } from "./permissions";
 import { registerCourseTools } from "./courses";
+import { registerCourseChatTools } from "./courseChat";
+import { registerNotificationTools } from "./notifications";
 import { registerFlashcardTools } from "./flashcards";
 import { registerOrganizationTools } from "./organization";
 import { registerTeamTools } from "./teams";
@@ -55,7 +57,8 @@ const baseInstructions = `Chaos (${new URL(siteUrl).host}) is where this person 
 - For requests to study, teach, explain or create educational material, use build_study_lesson and read get_study_lesson_skill (including its workflow/teaching references). The same instructions are at chaos://skills/create-study-lesson/SKILL.md. Read the complete source including visuals; generate excellent teaching content in this client, save durable checkpoints, finalize and publish only with user/profile authorization. Resume jobs after interruption. Never claim inaccessible sources were read.
 - Work only on content the person selected or asked to find. Authorization is enforced for the connected account; never supply an actor/userId or infer permission from a reference. Folder membership and source metadata do not grant content access. Use upload_study_source to explicitly transfer client-readable files; a client attachment ID or local path is never a backend file. Source reads still require separate content authorization.
 - Forms return shareUrl: share it only when returned and published. Lesson and course tools do not return shareUrl. After publish_lesson returns ok true, use the lessonId from a verified create/get response to construct ${lessonLink}. After publish_course returns ok true, use courseId from verified create_course (or id from get_course) to construct ${courseLink}. Never invent IDs, claim draft links are public, or imply private/restricted links grant access. Visibility values are public, restricted and private; restricted/private require Business.
-- Courses: create_course creates a draft; add_course_lesson creates a blank lesson draft; use lesson tools to write it. get_course reads the owner's outline and metadata. update_course edits draft metadata. set_course_outline replaces the full ordered list, so read get_course first and preserve wanted lessons. publish_course publishes the course and all its lessons together; lessons in an unpublished course can't be published on their own. Inspect blockers when ok is false. Do not automatically retry course/lesson creation or publication after uncertain success. list_courses lists the person's courses; set_course_archived archives or restores one; unpublish_course takes a course offline. Every course and lesson has a cover: new ones get a random gallery cover, so set one only when the person asks; change it with update_course coverUrl or lesson metadata.coverUrl. Page icons are not shown, so don't set them.
+- Approved-student course chat: list_enrolled_courses lists live courses with a doctor-approved request AND matching enrollment. search_enrolled_course_lectures scans published lectures; advance nextOffset even if a page has no hits. get_enrolled_course_lecture returns published text/captions with immutable versionId and blockId. Explain only from returned evidence, cite a specific lecture/version/block, and say when information is missing. Never fabricate source details or retrieve private PDFs, answer keys or grades. Recheck through the tools for every new question because approval may be revoked.
+ - Courses: create_course creates a draft; add_course_lesson creates a blank lesson draft; use lesson tools to write it. get_course reads the owner's outline and metadata. update_course edits draft metadata. set_course_outline replaces the full ordered list, so read get_course first and preserve wanted lessons. publish_course publishes the course and all its lessons together; lessons in an unpublished course can't be published on their own. Inspect blockers when ok is false. Do not automatically retry course/lesson creation or publication after uncertain success. list_courses lists the person's courses; set_course_archived archives or restores one; unpublish_course takes a course offline. Every course and lesson has a cover: new ones get a random gallery cover, so set one only when the person asks; change it with update_course coverUrl or lesson metadata.coverUrl. Page icons are not shown, so don't set them.
 - Flashcards: create_flashcard_set makes a private set; get_flashcard_set returns cards and revision; save_flashcard_set replaces the whole card list, so keep card IDs. publish_flashcard_set makes an immutable version only on request; attach_lesson_flashcards links that version to an owned lesson. set_flashcard_set_lifecycle archives, restores or unpublishes.
 - Glossary: after writing or substantially editing a lesson, call set_lesson_glossary without being asked for the technical, rare or easily confused words a learner may not know. Give a short definition, the translation and the meaning explained in the learner's language (Arabic unless the person says otherwise). Readers tap highlighted terms for a look-up card.
 - get_learn_capabilities lists the lesson, course, flashcard, game and folder tools with limits; call it when unsure what Chaos can do.
@@ -81,6 +84,8 @@ const baseInstructions = `Chaos (${new URL(siteUrl).host}) is where this person 
 
 /** Only verified administrator connections are told about admin and CRM tools; everyone else never sees them. */
 const adminInstructions = `- Administrator connections expose the same platform overview/refresh, account and content moderation, platform inventories, Business teams and audit activity as the admin UI under admin_operations. Inventory tools return metadata only. Moderate accounts/content only on explicit request and provide the requested reason; never retry uncertain moderation writes. No admin membership grants/revocations or legacy plan controls are available. CRM remains separately authorized under admin_crm. Administrator connections also expose CRM tools: list_crm_contacts, get_crm_contact, save_crm_contact, add_crm_note, get_crm_activity, set_crm_contact_stages and complete_crm_follow_up. These contain private contact information. Read an existing contact before saving and preserve fields the administrator did not ask to change, including its linked account and follow-up date. CRM writes are audited; they never send messages. Do not retry creation or note additions after uncertain success.`;
+
+const gradingAdminInstructions = `- Grading assistant access for verified administrators only. First list and claim a doctor-consented job; then read its private essay bundle while the claim is active. Ground every proposed criterion score in literal answer excerpts with rationale and state uncertainty. Store drafts and submit for doctor review. These are NOT approved/final grades. Never publish or finalize a student result or claim unattended AI marking. If a claim has expired after three retries, reopen it only when the administrator explicitly requests recovery; pass confirmReopen=true and the current expected revision. Reopening preserves private drafts and queues the job for a doctor to claim again. Every read and edit is audited. Standard platform admin and CRM tools are available on /mcp, not this review-specific surface.`;
 
 
 const question = z.object({
@@ -221,7 +226,7 @@ function authRequired(resourceMetadataUrl: string): CallToolResult {
   };
 }
 
-export function createChaosMcpServer(options: { call: McpCaller | null; resourceMetadataUrl: string; admin?: boolean; permissions?: readonly McpPermission[] }): McpServer {
+export function createChaosMcpServer(options: { call: McpCaller | null; resourceMetadataUrl: string; admin?: boolean; grading?: boolean; permissions?: readonly McpPermission[] }): McpServer {
   const server = new McpServer({
     name: MCP_SERVER_NAME, version: MCP_SERVER_VERSION, title: chaosIntegration.name, websiteUrl: chaosIntegration.siteUrl,
     // Clients that show server icons display the Chaos mark instead of a generic MCP icon.
@@ -229,7 +234,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
       { src: `${chaosIntegration.siteUrl}${chaosIntegration.logoPath}`, mimeType: "image/svg+xml", sizes: ["any"] },
       { src: `${chaosIntegration.siteUrl}/api/plugins/chaos-icon-512.png`, mimeType: "image/png", sizes: ["512x512"] },
     ],
-  }, { instructions: options.admin ? `${baseInstructions}\n${adminInstructions}` : baseInstructions });
+  }, { instructions: options.admin ? `${baseInstructions}\n${options.grading ? gradingAdminInstructions : adminInstructions}` : baseInstructions });
 
   // Schema failures the SDK catches before a handler runs get the same code, category and readable problems.
   (server as unknown as { createToolError: (message: string) => CallToolResult }).createToolError = (message) => toolError(new Error(message));
@@ -512,9 +517,13 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
     _meta: meta("Updating status…", "Status updated"),
   }, (input) => run("set_form_status", input, (d) => `“${d.title}” is now ${d.status}.`));
 
-  if (options.admin) registerDocumentationTools(server, run, securitySchemes);
-  if (options.admin) registerCrmTools(server, run, securitySchemes);
-  if (options.admin) registerAdminTools(server, run, securitySchemes);
+  if (options.admin && options.grading) {
+    registerGradingAdminTools(server, run, securitySchemes);
+  } else if (options.admin) {
+    registerDocumentationTools(server, run, securitySchemes);
+    registerCrmTools(server, run, securitySchemes);
+    registerAdminTools(server, run, securitySchemes);
+  }
   registerCardTools(server, run, securitySchemes);
   registerLearnTools(server, run, securitySchemes, { call, flow });
   registerStudyLessonTools(server, run, securitySchemes);
@@ -533,6 +542,8 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
   registerOrganizationTools(server, run, securitySchemes);
   registerTeamTools(server, run, securitySchemes);
   registerCourseTools(server, run, securitySchemes, { call, flow });
+  registerCourseChatTools(server, run, securitySchemes);
+  registerNotificationTools(server, run, securitySchemes);
   registerFlashcardTools(server, run, securitySchemes, { call, flow });
   registerQuizForkTools(server, run, securitySchemes);
   registerCommunityTools(server, run, securitySchemes);

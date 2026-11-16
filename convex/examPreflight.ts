@@ -1,7 +1,7 @@
 import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
-import { requireActiveUser } from "./authz";
+import { creatorRestricted, requireActiveUser } from "./authz";
 import { audienceAllows } from "./examAudience";
 import { hasApprovedCourseAccess } from "./courseMembership";
 
@@ -13,7 +13,7 @@ const MAX_GROUP_MEMBERSHIPS = 100;
  * Student-only, fail-closed entry check. This does not read or deliver snapshot
  * questions. A fresh check runs inside every read and consent write.
  */
-async function eligible(ctx: Ctx, releaseId: Id<"examReleases">) {
+async function eligible(ctx: Ctx, releaseId: Id<"examReleases">, active = false) {
   const { identity, user } = await requireActiveUser(ctx);
   if (!user) throw new Error("ACCOUNT_REQUIRED: Complete account setup first.");
   const studentId = identity.subject;
@@ -24,7 +24,8 @@ async function eligible(ctx: Ctx, releaseId: Id<"examReleases">) {
   const course = await ctx.db.get("learnCollections", release.courseId);
   if (!course || course.ownerId !== release.ownerId || course.ownerId === studentId ||
       course.archived || course.communityState === "removed" ||
-      course.communityState === "hidden" || !course.publishedVersionId)
+      course.communityState === "hidden" || !course.publishedVersionId ||
+      await creatorRestricted(ctx, course.ownerId))
     throw new Error("NOT_FOUND: Assigned examination not found.");
   const published = await ctx.db.get("collectionVersions", course.publishedVersionId);
   if (!published || published.collectionId !== course._id)
@@ -43,7 +44,7 @@ async function eligible(ctx: Ctx, releaseId: Id<"examReleases">) {
   const draft = await ctx.db.get("examBuilderDrafts", release.draftId);
   if (!snapshot || !draft || snapshot.ownerId !== course.ownerId ||
       snapshot.courseId !== course._id || snapshot.draftId !== draft._id ||
-      snapshot.draftRevision !== draft.revision || draft.courseId !== course._id ||
+      (!active && snapshot.draftRevision !== draft.revision) || draft.courseId !== course._id ||
       draft.ownerId !== course.ownerId || snapshot.version !== release.version)
     throw new Error("EXAM_CHANGED: Exam must be resealed before students can enter.");
 
@@ -67,28 +68,40 @@ async function eligible(ctx: Ctx, releaseId: Id<"examReleases">) {
   }
   const now = Date.now();
   const { settings } = release;
+  const accommodation = await ctx.db.query("examAccommodations")
+    .withIndex("by_release_student", q => q.eq("releaseId", releaseId).eq("studentId", studentId)).unique();
+  if (accommodation && accommodation.ownerId !== course.ownerId)
+    throw new Error("NOT_FOUND: Accommodation unavailable.");
   if (settings.mode === "scheduled" &&
       (!settings.opensAt || !settings.closesAt || settings.closesAt <= now))
     throw new Error("EXAM_CLOSED: This examination window has ended.");
   // A revision is an invalidation stamp, NOT a bearer token or an access grant.
   const policyVersion = [
     `rules:${RULES_VERSION}`, release._id, release.activeSnapshotId,
-    release.version, release.settingsRevision ?? 0, release.audienceRevision ?? 0,
+    release.version, release.settingsRevision ?? 0, JSON.stringify(release.audience),
     release.assignedAt, course.publishedVersionId,
     request._id, request.updatedAt, enrollment._id, enrollment.updatedAt, membershipMarker,
+    accommodation?._id ?? "", accommodation?.revision ?? 0,
   ].join("|");
-  return { release, course, snapshot, settings, studentId, policyVersion, now };
+  return { release, course, snapshot, settings, accommodation, studentId, policyVersion, now };
 }
 
 export const get = query({
   args: { releaseId: v.id("examReleases") },
   handler: async (ctx, { releaseId }) => {
-    const { course, snapshot, settings, studentId, policyVersion, now } =
+    const { release, course, snapshot, settings, accommodation, studentId, policyVersion, now } =
       await eligible(ctx, releaseId);
     const consent = await ctx.db.query("examConsents")
       .withIndex("by_release_student", q => q.eq("releaseId", releaseId).eq("studentId", studentId)).unique();
+    const attempts = await ctx.db.query("examAttempts")
+      .withIndex("by_snapshot_student", q => q.eq("snapshotId", snapshot._id).eq("studentId", studentId)).take(4);
+    const active = attempts.find(a => a.state === "in_progress" && (a.deadlineAt ?? 0) > now);
+    const consentAccepted = !!consent && consent.snapshotId === snapshot._id &&
+      (active?.entryAuthorized === true ||
+        (consent.policyVersion === policyVersion && consent.rulesVersion === RULES_VERSION));
     return {
-      releaseId, courseId: course._id, courseTitle: course.metadata.title,
+      activeAttemptId: active?._id ?? null,
+      releaseId, snapshotId: snapshot._id, courseId: course._id, courseTitle: course.metadata.title,
       title: snapshot.title, questionCount: snapshot.questions.length,
       durationMinutes: settings.durationMinutes, maxAttempts: settings.maxAttempts,
       requireAllAnswers: settings.requireAllAnswers,
@@ -96,17 +109,18 @@ export const get = query({
       timeoutAction: settings.timeoutAction, resultVisibility: settings.resultVisibility,
       showCorrectAnswers: settings.showCorrectAnswers,
       showExplanations: settings.showExplanations,
+      integrityMode: active?.integrityPolicy?.mode ??
+        (accommodation?.kind === "reduced_monitoring" ? "off" : settings.integrityMode ?? "off"),
       opensAt: settings.mode === "scheduled" ? settings.opensAt! : null,
       closesAt: settings.mode === "scheduled" ? settings.closesAt! : null,
       status: settings.mode === "scheduled" && settings.opensAt! > now
         ? "upcoming" as const : "available" as const,
       serverNow: now, rulesVersion: RULES_VERSION, policyVersion,
       consentRevision: consent?.revision ?? 0,
-      consentAccepted: !!consent && consent.policyVersion === policyVersion &&
-        consent.rulesVersion === RULES_VERSION,
-      acceptedAt: consent?.policyVersion === policyVersion ? consent.acceptedAt : null,
+      consentAccepted,
+      acceptedAt: consentAccepted ? consent!.acceptedAt : null,
       // Intentionally hardcoded until secure delivery, quotas, server timers and submissions land.
-      entryEnabled: false,
+      entryEnabled: release.studentEntryEnabled,
     };
   },
 });
@@ -149,3 +163,6 @@ export const acknowledge = mutation({
     return { revision, acceptedAt };
   },
 });
+
+/** Shared fail-closed candidate eligibility for future server-side attempt transport. */
+export { eligible as requireEligiblePreflight };
