@@ -154,7 +154,9 @@ async function handle(request: Request): Promise<Response> {
       adminCapabilities.set(userId, { admin, expires: Date.now() + 30_000 });
     } catch { /* Backend checks permissions again on every documentation operation. */ }
   }
-  const server = createChaosMcpServer({ call, admin, resourceMetadataUrl: resourceMetadataUrl(request) });
+  // A separate opt-in review surface avoids inflating the normal administrator tool inventory.
+  const grading = new URL(request.url).searchParams.get("surface") === "grading";
+  const server = createChaosMcpServer({ call, admin, grading, resourceMetadataUrl: resourceMetadataUrl(request) });
   const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
   await server.connect(transport);
   try {

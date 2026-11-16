@@ -5,6 +5,8 @@ import {
 } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { gradeFrozenExam } from "./examGradingModel";
+import { notifyCourseAccount } from "./courseNotifications";
+import { freezeResultPolicy } from "./examResultModel";
 import { requireActiveUser } from "./authz";
 import { authorizedAttempt } from "./examAnswers";
 import {
@@ -87,10 +89,22 @@ async function finalize(
       .withIndex("by_attempt", q => q.eq("attemptId", attempt._id)).unique();
     if (priorGrade) throw new Error("INTEGRITY_ERROR: Grade already exists.");
     const score = gradeFrozenExam(snapshot.questions, answers);
+    // Bind candidate-visible grading policy to the snapshot at submission time.
+    // No active matching release or settings means fail-closed manual visibility.
+    const release = await ctx.db.query("examReleases")
+      .withIndex("by_draft", q => q.eq("draftId", snapshot.draftId)).unique();
+    const policy = attempt.resultPolicy ?? (release?.activeSnapshotId === snapshot._id &&
+      release.ownerId === attempt.ownerId && release.courseId === attempt.courseId
+      ? freezeResultPolicy(release.settings, false) : freezeResultPolicy(undefined, false));
     await ctx.db.insert("examGrades", {
       attemptId: attempt._id, snapshotId: attempt.snapshotId,
       ownerId: attempt.ownerId, studentId: attempt.studentId,
-      ...score, algorithmVersion: 1, gradedAt: now,
+      ...score, algorithmVersion: 1, resultPolicy: policy, gradedAt: now,
+    });
+    await notifyCourseAccount(ctx, {
+      recipientId: attempt.ownerId, courseId: attempt.courseId,
+      kind: "course_grading", key: "exam_submission:" + attempt._id,
+      message: "A student exam attempt was submitted and is ready for review.",
     });
   }
   const receiptId = await ctx.db.insert("examSubmissionReceipts", {

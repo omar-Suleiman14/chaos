@@ -1,6 +1,6 @@
 # Chaos in ChatGPT: setup, testing and submission
 
-The Chaos ChatGPT app is an MCP server at **`https://chaos.fail/mcp`**. It works with ChatGPT, Claude and other MCP clients, and it's free on every plan. People connect it with their Chaos account (OAuth) and the assistant can then create, edit and publish forms, quizzes, lessons, courses and flashcards, and read results and responses in that account. Chaos itself runs no AI; the assistant does the writing.
+The Chaos ChatGPT app is an MCP server at **`https://chaos.fail/mcp`**. It works with ChatGPT, Claude, eligible Gemini Apps, Gemini CLI and other OAuth-capable MCP clients, and it's free on every plan. People connect it with their Chaos account (OAuth) and the assistant can then create, edit and publish forms, quizzes, lessons, courses and flashcards, and read results and responses in that account. Chaos itself runs no AI; the assistant does the writing.
 
 **Publishing.** Content created through MCP starts as a private draft the person can review: `create_form`, `create_game_draft`, `create_lesson`, `create_full_course` and `create_flashcard_set` publish only when the assistant passes `publish: true`, which it does only when the person explicitly asks (lessons, courses and flashcards then default to public). If publication is blocked (for example a quiz without answers), the item stays a draft and the problems are returned. Edits to existing content stay drafts until `publish_form`, `publish_lesson` or `publish_course`.
 
@@ -34,9 +34,9 @@ ChatGPT ──OAuth (PKCE, DCR/CIMD)──▶ Clerk (clerk.chaos.fail)
 | OpenAI domain verification | `app/.well-known/openai-apps-challenge/route.ts` |
 | Backend functions | `convex/mcp.ts`; MCP game wrappers in `convex/mcpGames.ts`; Learn lesson wrappers in `convex/mcpLearn.ts`; course wrappers in `convex/mcpCourses.ts`; flashcard wrappers in `convex/mcpFlashcards.ts`; assessment wrappers in `convex/mcpAssessments.ts`; organization/folder wrappers in `convex/mcpOrganization.ts`; advanced form wrappers in `convex/mcpAdvancedForms.ts`, `convex/mcpFormManagement.ts`; translation and validation in `convex/mcpContract.ts` |
 | Theme presets for the tools (resolved on the Next.js side, because Convex cannot import `components/`) | `lib/mcp/themes.ts`, palettes in `components/forms/formThemes.ts` |
-| Public pages | `app/[lang]/(site)/chatgpt/page.tsx` → https://chaos.fail/chatgpt and `app/[lang]/(site)/claude/page.tsx` → https://chaos.fail/claude (both `components/site/IntegrationView.tsx`) |
+| Public pages | `app/[lang]/(site)/chatgpt/page.tsx` → https://chaos.fail/chatgpt and `app/[lang]/(site)/claude/page.tsx` → https://chaos.fail/claude and `/gemini` → https://chaos.fail/gemini (all `components/site/IntegrationView.tsx`) |
 | Shared integration metadata (name, logo, URLs, version) | `lib/integrations/index.ts` |
-| Downloadable Claude and ChatGPT plugin packages | `lib/integrations/packages.ts`, served by `app/api/plugins/[file]/route.tsx`; see [AI integrations](./ai-integrations.md) |
+| Downloadable Claude and ChatGPT plugin packages | `lib/integrations/packages.ts`, served by `app/api/plugins/[file]/route.tsx`; see [AI integrations](./ai-integrations.md) and the [Gemini setup guide](./gemini.md) |
 | Tests | `tests/unit/mcpContract.test.ts`, `tests/unit/mcpServer.test.ts`, `tests/unit/mcpGames.test.ts`, `tests/unit/mcpCourses.test.ts`, `tests/unit/mcpCommunity.test.ts`, `tests/integration/mcp.test.ts`, `tests/integration/mcpGames.test.ts`, `tests/integration/mcpCourses.test.ts`, `tests/integration/learnMcp.test.ts`, `tests/integration/learnOrganizationMcp.test.ts` |
 
 ### Tools
