@@ -691,86 +691,27 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
  .material-row .material-main{padding:9px 10px}
 }
 
-/* Neutral, continuous hierarchy guides, modeled on a threaded conversation.
-   No decorative button tabs, translucent crossings, or year/module colors.
-   Subjects and material cards keep their own accent palette. */
-:root{
-  --hierarchy-year:#575757;
-  --hierarchy-module:#505050;
-}
-html[data-theme="light"]{
-  --hierarchy-year:#b8b8b8;
-  --hierarchy-module:#c2c2c2;
-}
+/* Neutral threaded hierarchy: measured endpoints, no rail masking or dangling stubs. */
+:root{--hierarchy-year:#575757;--hierarchy-module:#505050}
+html[data-theme="light"]{--hierarchy-year:#b8b8b8;--hierarchy-module:#c2c2c2}
 .year-button,.module-button{position:relative}
 .year-button::before,.module-button::before{content:none;display:none}
 .year-button>span:first-child,.module-button{color:var(--text)}
 .year-button .chevron,.module-button .chevron{color:var(--muted)}
-.year-button[aria-expanded="true"]{
-  border-color:color-mix(in srgb,var(--hierarchy-year) 45%,var(--border));
-  background:color-mix(in srgb,var(--hierarchy-year) 7%,var(--surface))
-}
-.module-button[aria-expanded="true"]{
-  border-color:color-mix(in srgb,var(--hierarchy-module) 45%,var(--border));
-  background:color-mix(in srgb,var(--hierarchy-module) 7%,var(--surface))
-}
-/* The year rail begins exactly at the year card's bottom border. */
-.year-contents{
-  position:relative;
-  padding-block:8px;
-  padding-inline:0;
-  padding-inline-start:20px;
-}
-.year-contents::before{
-  content:"";position:absolute;inset-inline-start:9px;top:-1px;bottom:0;
-  width:2px;background:var(--hierarchy-year);pointer-events:none;
-}
+.year-button[aria-expanded="true"]{border-color:color-mix(in srgb,var(--hierarchy-year) 45%,var(--border));background:color-mix(in srgb,var(--hierarchy-year) 7%,var(--surface))}
+.module-button[aria-expanded="true"]{border-color:color-mix(in srgb,var(--hierarchy-module) 45%,var(--border));background:color-mix(in srgb,var(--hierarchy-module) 7%,var(--surface))}
+.year-contents{position:relative;padding-block:8px;padding-inline:0;padding-inline-start:20px}
+.year-contents::before{content:"";position:absolute;inset-inline-start:9px;top:-1px;height:var(--hierarchy-guide-end,0px);width:2px;background:var(--hierarchy-year);pointer-events:none}
 .year-contents>.module{position:relative;margin-block:7px;margin-inline:0}
-/* A solid, rounded elbow meets the module card edge; no translucent overlap. */
-.year-contents>.module::before{
-  content:"";position:absolute;inset-inline-start:-11px;top:0;
-  width:11px;height:26px;pointer-events:none;
-  border-inline-start:2px solid var(--hierarchy-year);
-  border-bottom:2px solid var(--hierarchy-year);
-  border-end-start-radius:10px;
-}
-/* Stop the parent thread at the last module rather than trailing below its card. */
-.year-contents>.module:last-child::after{
-  content:"";position:absolute;z-index:1;inset-inline-start:-12px;
-  top:26px;bottom:-8px;width:4px;background:var(--bg);pointer-events:none;
-}
-/* The module's rail begins at its own card and joins tabs and subjects. */
-.module-contents{
-  position:relative;
-  padding-block:7px 12px;
-  padding-inline:0;
-  padding-inline-start:20px;
-}
-.module-contents::before{
-  content:"";position:absolute;inset-inline-start:9px;top:-1px;bottom:0;
-  width:2px;background:var(--hierarchy-module);pointer-events:none;
-}
+.year-contents>.module::before{content:"";position:absolute;inset-inline-start:-11px;top:0;width:11px;height:var(--hierarchy-elbow-height,25px);pointer-events:none;border-inline-start:2px solid var(--hierarchy-year);border-bottom:2px solid var(--hierarchy-year);border-end-start-radius:10px}
+.module-contents{position:relative;padding-block:7px 12px;padding-inline:0;padding-inline-start:20px}
+.module-contents::before{content:"";position:absolute;inset-inline-start:9px;top:-1px;height:var(--hierarchy-guide-end,0px);width:2px;background:var(--hierarchy-module);pointer-events:none}
 .module-tab-root,.module-tab-content .subject{position:relative}
-.module-tab-root::before,.module-tab-content .subject::before{
-  content:"";position:absolute;inset-inline-start:-11px;width:11px;
-  border-inline-start:2px solid var(--hierarchy-module);
-  border-bottom:2px solid var(--hierarchy-module);
-  border-end-start-radius:10px;pointer-events:none;
-}
+.module-tab-root::before,.module-tab-content .subject::before{content:"";position:absolute;inset-inline-start:-11px;width:11px;border-inline-start:2px solid var(--hierarchy-module);border-bottom:2px solid var(--hierarchy-module);border-end-start-radius:10px;pointer-events:none}
 .module-tab-root::before{top:0;height:33px}
 .module-tab-content .subject::before{top:0;height:13px}
-/* Last visible subject ends its thread, like the last reply on X. */
-.module-tab-content .subject:last-child::after{
-  content:"";position:absolute;z-index:1;inset-inline-start:-12px;
-  top:13px;bottom:-22px;width:4px;background:var(--bg);pointer-events:none;
-}
-@media(max-width:700px){
-  .year-contents,.module-contents{padding-inline-start:18px}
-  .year-contents::before,.module-contents::before{inset-inline-start:7px}
-}
-@media(prefers-reduced-motion:reduce){
-  .year-button,.module-button{transition:none!important}
-}
+@media(max-width:700px){.year-contents,.module-contents{padding-inline-start:18px}.year-contents::before,.module-contents::before{inset-inline-start:7px}}
+@media(prefers-reduced-motion:reduce){.year-button,.module-button{transition:none!important}}
 /* Smooth accordion and report option reveal. */
 .accordion-panel{transition:grid-template-rows .37s cubic-bezier(.2,.8,.22,1),opacity .25s ease}
 .accordion-inner{transition:opacity .27s ease,transform .37s cubic-bezier(.2,.8,.22,1);transform:translateY(0);opacity:1}
@@ -1252,6 +1193,38 @@ function tabsHTML(i,tab){
 function panelHTML(i,tab){
  return '<div class="module-tab-root">'+tabsHTML(i,tab)+'<div class="module-tab-content" id="module-tab-panel-'+i+'" role="tabpanel" aria-labelledby="module-tab-'+i+'-'+tab+'">'+groupContent(i,visibleFiles(i,tab),visibleQuiz(i,tab))+'</div></div>';
 }
+/* Tie guides to actual last nodes rather than covering long rails with background masks. */
+let hierarchyGuideQueued=false;
+function updateHierarchyGuides(){
+ const endAt=(container,element,localY)=>{
+  const box=container.getBoundingClientRect(),target=element.getBoundingClientRect();
+  const end=Math.max(0,target.top-box.top+localY+1);
+  container.style.setProperty("--hierarchy-guide-end",end.toFixed(2)+"px");
+ };
+ for(const year of document.querySelectorAll(".year-contents")){
+  const modules=year.querySelectorAll(":scope > .module"),last=modules[modules.length-1];
+  if(!last)continue;
+  for(const module of modules){
+   const button=module.querySelector(":scope > .module-button");
+   if(button)module.style.setProperty("--hierarchy-elbow-height",(button.offsetHeight/2).toFixed(2)+"px");
+  }
+  const button=last.querySelector(":scope > .module-button");
+  if(button)endAt(year,last,button.offsetHeight/2);
+ }
+ for(const module of document.querySelectorAll(".module-contents")){
+  const last=module.querySelector(".module-tab-content > .subject:last-child");
+  const root=module.querySelector(".module-tab-root");
+  if(last)endAt(module,last,13);
+  else if(root)endAt(module,root,33);
+  else module.style.setProperty("--hierarchy-guide-end","0px");
+ }
+}
+function scheduleHierarchyGuides(){
+ if(hierarchyGuideQueued)return;
+ hierarchyGuideQueued=true;
+ requestAnimationFrame(()=>{hierarchyGuideQueued=false;updateHierarchyGuides()});
+}
+
 /* Diff tab content by subject. Reuse stable headings instead of fading the whole pane. */
 function reconcileTabContent(content,newHTML){
  const parsed=document.createElement("template");
@@ -1317,6 +1290,7 @@ function useModuleTab(i,tab){
  // No whole-panel exit/entry fade: unchanged subjects must not blink on tab changes.
  reconcileTabContent(content,groupContent(i,visibleFiles(i,tab),visibleQuiz(i,tab)));
  content.setAttribute("aria-labelledby","module-tab-"+i+"-"+tab);
+ scheduleHierarchyGuides();
 }
 
 function setPanel(b,panel,expand){
@@ -1333,6 +1307,7 @@ function toggleYear(year){
  save(OPEN_YEAR_KEY,[...openYears]);
  setPanel(b,panel,next);
  syncExpandToggle();
+ scheduleHierarchyGuides();
 }
 
 function toggleModule(i){
@@ -1347,6 +1322,7 @@ function toggleModule(i){
  }
  setPanel(b,panel,next);
  syncExpandToggle();
+ scheduleHierarchyGuides();
 }
 function moduleHTML(i,searching){
  const expanded=searching||openModules.has(i);
@@ -1365,7 +1341,15 @@ function render(){
  resultLabel.textContent=searching?n+" results":"";
  view.innerHTML=years||'<div class="empty">No matching materials or questions.</div>';
  syncExpandToggle();
+ scheduleHierarchyGuides();
 }
+/* Observe height changes during accordion motion; same-height tab swaps schedule explicitly. */
+if(typeof ResizeObserver==="function"){
+ const hierarchyResizeObserver=new ResizeObserver(scheduleHierarchyGuides);
+ hierarchyResizeObserver.observe(view);
+}
+window.addEventListener("resize",scheduleHierarchyGuides,{passive:true});
+if(document.fonts?.ready)document.fonts.ready.then(scheduleHierarchyGuides);
 document.body.addEventListener("click",e=>{
  const item=e.target.closest("[data-report-item]");
  if(item){openIndexReport({moduleIndex:Number(item.dataset.reportModule),type:item.dataset.reportType,number:Number(item.dataset.reportNumber),subject:item.dataset.reportSubject,title:item.dataset.reportTitle,url:item.dataset.reportUrl,issue:item.dataset.reportIssue});return;}
