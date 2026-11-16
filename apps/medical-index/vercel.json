@@ -1,0 +1,42 @@
+{
+  "cleanUrls": true,
+  "rewrites": [
+    {
+      "source": "/admin",
+      "destination": "/admin/index.html"
+    },
+    {
+      "source": "/offline",
+      "destination": "/offline.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/admin/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex,nofollow"
+        }
+      ]
+    },
+    {
+      "source": "/material/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex,follow"
+        }
+      ]
+    },
+    {
+      "source": "/questions/:path*",
+      "headers": [
+        {
+          "key": "X-Robots-Tag",
+          "value": "noindex,follow"
+        }
+      ]
+    }
+  ]
+}

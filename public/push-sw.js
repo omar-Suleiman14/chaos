@@ -1,4 +1,5 @@
-/* Minimal Web Push worker: no cache, no offline data, no personal content. */
+/* One root registration handles push and the public-only offline fallback. */
+importScripts("/chaos-offline-sw.js");
 self.addEventListener("push", (event) => {
   let lang = "en";
   try {
