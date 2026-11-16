@@ -1,0 +1,38 @@
+name: Index SEO and accessibility gate
+on:
+  pull_request:
+    paths:
+      - "apps/medical-index/**"
+      - "public/offline*"
+      - "public/chaos-offline-sw.js"
+      - "components/OfflineFallbackRegistration.tsx"
+      - "app/[lang]/layout.tsx"
+      - ".github/workflows/index-seo.yml"
+  push:
+    branches: [main]
+    paths:
+      - "apps/medical-index/**"
+      - ".github/workflows/index-seo.yml"
+permissions:
+  contents: read
+jobs:
+  index-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+      - name: Parse JavaScript
+        run: |
+          node --check apps/medical-index/seo-build.mjs
+          node --check apps/medical-index/index-enhance.js
+          node --check apps/medical-index/offline-game.js
+          node --check public/chaos-offline-sw.js
+      - name: Build standalone Index
+        working-directory: apps/medical-index
+        run: node build.mjs
+      - name: Check generated public artifacts
+        working-directory: apps/medical-index
+        run: node seo-audit.mjs
