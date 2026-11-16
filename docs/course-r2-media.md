@@ -38,8 +38,8 @@ authentication. The storage service requires a signed URL for each request.
    publication **on every request**, then proxies an ETag-pinned R2 GET.
    No signed R2 download URL is returned to the browser.
 5. Doctor may remove a media record to immediately revoke subsequent reads.
-   Physical object purge, aged pending uploads and storage accounting remain
-   future cleanup tasks. Do not enable broad production uploads without them.
+   Removed objects and expired pending uploads are queued for physical deletion.
+   Storage accounting and cleanup of unreferenced ready objects remain future work.
 
 ## Boundaries and release blockers
 
@@ -47,7 +47,7 @@ authentication. The storage service requires a signed URL for each request.
   storageId-based image, PDF and MCP paths are **not migrated or gated by it**.
 - Existing published shareId form/quiz routes are not gated by this PR.
 - Course membership backfill, PR #381 screenshots, operational bucket setup,
-  end-to-end browser upload smoke tests and an orphan-object cleanup job are
+  end-to-end application upload tests and storage accounting are
   required before production use.
 - Short-lived PUT URLs are bearer capabilities. ETag pinning and conditional
   first-write-only PUT protect against replay/replacement. Object access after
@@ -55,3 +55,11 @@ authentication. The storage service requires a signed URL for each request.
   cannot be recalled.
 - Course discovery still shows public course metadata only; no media object
   keys or download URLs are exposed there.
+
+## Storage smoke test
+
+A synthetic browser smoke test verified the private bucket's CORS and signed PUT,
+length mismatch rejection, replay rejection, HEAD metadata, conditional range and
+full reads, browser PNG decoding, unsigned-read rejection, and deletion. This does
+not verify an authenticated application upload, course authorization, or source
+migration end to end.

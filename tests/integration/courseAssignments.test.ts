@@ -14,9 +14,14 @@ async function fixture() {
   await student.mutation(api.quizFunctions.getOrCreateUser, {});
   const courseId = await doctor.mutation(api.courses.create, { title: "Assignment testing" });
   const lessonId = await doctor.mutation(api.courses.addLesson, { courseId });
+  const secondLessonId = await doctor.mutation(api.courses.addLesson, { courseId });
   await doctor.mutation(api.lessons.saveDraft, { lessonId, expectedRevision: 0,
     document: { schemaVersion: 1, blocks: [
       { id: "first", type: "paragraph", text: "Learning outcomes", citations: [], conceptIds: [] },
+    ] } });
+  await doctor.mutation(api.lessons.saveDraft, { lessonId: secondLessonId, expectedRevision: 0,
+    document: { schemaVersion: 1, blocks: [
+      { id: "second", type: "paragraph", text: "More learning outcomes", citations: [], conceptIds: [] },
     ] } });
   await doctor.mutation(api.courses.publish, { courseId, visibility: "public" });
   const now = Date.now();
@@ -24,7 +29,7 @@ async function fixture() {
     courseId, kind: "lesson", lessonId, title: "Assignment 1", instructions: "Finish lesson",
     outcome: "Anatomy", opensAt: now - 60_000, dueAt: now + 86_400_000,
   });
-  return { t, doctor, student, courseId, lessonId, assignmentId, now };
+  return { t, doctor, student, courseId, lessonId, secondLessonId, assignmentId, now };
 }
 async function approve(f: Awaited<ReturnType<typeof fixture>>) {
   await f.student.mutation(api.courseJoinRequests.requestJoin, { courseId: f.courseId });
@@ -68,6 +73,31 @@ it("keeps draft, roster and outcomes private, then uses existing lesson completi
     .rejects.toThrow("NOT_FOUND");
   await expect(f.doctor.query(api.courseAssignments.myAssignments, { courseId: f.courseId }))
     .rejects.toThrow("NOT_FOUND");
+});
+it("keeps a lesson assignment on time when another lesson is completed after its deadline", async () => {
+  vi.useFakeTimers();
+  vi.setSystemTime(Date.now());
+  const f = await fixture();
+  await approve(f);
+  await publish(f);
+  await f.t.run(async ctx => {
+    await ctx.db.patch("courseAssignments", f.assignmentId, { dueAt: f.now + 1_000 });
+  });
+
+  vi.setSystemTime(f.now + 500);
+  await f.student.mutation(api.courseStudents.recordLesson, {
+    courseId: f.courseId, lessonId: f.lessonId, completed: true,
+  });
+  vi.setSystemTime(f.now + 2_000);
+  await f.student.mutation(api.courseStudents.recordLesson, {
+    courseId: f.courseId, lessonId: f.lessonId, completed: true,
+  });
+  await f.student.mutation(api.courseStudents.recordLesson, {
+    courseId: f.courseId, lessonId: f.secondLessonId, completed: true,
+  });
+
+  expect((await f.student.query(api.courseAssignments.myAssignments, { courseId: f.courseId }))[0].state)
+    .toBe("completed");
 });
 it("requires revision control and honors revocation after publishing", async () => {
   const f = await fixture();

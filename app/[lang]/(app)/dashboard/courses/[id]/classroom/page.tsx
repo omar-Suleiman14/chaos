@@ -2,7 +2,7 @@
 
 import { use, useState } from "react";
 import Link from "next/link";
-import { useConvexAuth, useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, usePaginatedQuery, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useLocale } from "@/lib/i18n";
@@ -18,7 +18,7 @@ const words = {
     start: "Starts", end: "Ends", due: "Assignment due", noEvents: "No events scheduled.",
     management: "Class management", roster: "Approved students", groups: "Groups", manage: "Manage class membership",
     messages: "Private student messages", select: "Select an approved student", send: "Send", reply: "Write a reply",
-    noMessages: "No messages yet.", saved: "Saved.", error: "Could not complete action.",
+    noMessages: "No messages yet.", loadOlder: "Load older messages", loading: "Loading…", saved: "Saved.", error: "Could not complete action.",
     unpublished: "Draft", published: "Published", updated: "Updated" },
   ar: { title: "الفصل والتواصل", back: "محرر الدورة", intro: "انشر الإعلانات، وجدول المحاضرات، وتواصل مع الطلاب المعتمدين بشكل خاص.",
     announcements: "الإعلانات", name: "العنوان", body: "الرسالة", draft: "إنشاء مسودة", publish: "نشر",
@@ -27,7 +27,7 @@ const words = {
     start: "يبدأ", end: "ينتهي", due: "موعد تسليم التكليف", noEvents: "لا توجد لقاءات.",
     management: "إدارة الفصل", roster: "الطلاب المعتمدون", groups: "المجموعات", manage: "إدارة أعضاء الدورة",
     messages: "رسائل الطلاب الخاصة", select: "اختر طالبًا معتمدًا", send: "إرسال", reply: "اكتب الرد",
-    noMessages: "لا توجد رسائل.", saved: "تم الحفظ.", error: "تعذر إتمام العملية.",
+    noMessages: "لا توجد رسائل.", loadOlder: "تحميل رسائل أقدم", loading: "جارٍ التحميل…", saved: "تم الحفظ.", error: "تعذر إتمام العملية.",
     unpublished: "مسودة", published: "منشور", updated: "آخر تحديث" },
 } as const;
 function inputDate(ms: number) {
@@ -42,8 +42,8 @@ export default function TeacherClassroom({ params }: { params: Promise<{ id: str
   const roster = useQuery(api.courseCohorts.roster, isAuthenticated ? { courseId } : "skip");
   const tasks = useQuery(api.courseAssignments.teacherAssignments, isAuthenticated ? { courseId } : "skip");
   const [student, setStudent] = useState("");
-  const messages = useQuery(api.courseCommunications.conversation,
-    isAuthenticated && student ? { courseId, studentId: student } : "skip");
+  const messages = usePaginatedQuery(api.courseCommunications.conversation,
+    isAuthenticated && student ? { courseId, studentId: student } : "skip", { initialNumItems: 50 });
   const createAnn = useMutation(api.courseCommunications.createAnnouncement);
   const reviseAnn = useMutation(api.courseCommunications.reviseAnnouncement);
   const createEvent = useMutation(api.courseCommunications.createEvent);
@@ -139,11 +139,12 @@ export default function TeacherClassroom({ params }: { params: Promise<{ id: str
         <option value="">{t.select}</option>{approved.map(s => <option key={s.studentId} value={s.studentId}>{s.name} {s.username ? "(@" + s.username + ")" : ""}</option>)}
       </select></label>
       {student && <><div className="grid max-h-80 gap-2 overflow-y-auto" aria-live="polite">
-        {!messages?.length && <p className="cb-note">{t.noMessages}</p>}
-        {messages?.map(m => <article key={m.id} className="rounded-lg border border-border p-3">
+        {messages.status === "LoadingFirstPage" && <p className="cb-note">{t.loading}</p>}
+        {messages.status !== "LoadingFirstPage" && !messages.results.length && <p className="cb-note">{t.noMessages}</p>}
+        {messages.results.slice().reverse().map(m => <article key={m.id} className="rounded-lg border border-border p-3">
           <p dir="auto" className="whitespace-pre-wrap">{m.body}</p><p className="cb-note">{m.isMine ? (ar ? "أنت" : "You") : (ar ? "الطالب" : "Student")} · {fmt(m.createdAt)}</p>
         </article>)}
-      </div><form className="flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); void work(
+      </div>{messages.status !== "Exhausted" && <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm w-fit" disabled={messages.status === "LoadingMore"} onClick={() => messages.loadMore(50)}>{messages.status === "LoadingMore" ? t.loading : t.loadOlder}</button>}<form className="flex flex-wrap gap-2" onSubmit={e => { e.preventDefault(); void work(
         () => send({ courseId, studentId: student, body: reply }), () => setReply("")); }}>
         <label className="flex-1">{t.reply}<textarea required maxLength={2000} rows={2} className="kb-input w-full" value={reply} onChange={e => setReply(e.target.value)} /></label>
         <button type="submit" className="ws-btn ws-btn--primary self-end" disabled={busy || !reply.trim()}>{t.send}</button>

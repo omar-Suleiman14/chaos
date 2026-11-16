@@ -104,6 +104,29 @@ async function enabledFixture(mode: "off" | "record" | "warn" | "review" = "revi
   return f;
 }
 
+it("lets the teacher reach attempts beyond the first monitor page", async () => {
+  const { t, owner, student, releaseId, attemptId } = await fixture();
+  const draftId = await t.run(async ctx => {
+    const release = await ctx.db.get("examReleases", releaseId);
+    const attempt = await ctx.db.get("examAttempts", attemptId);
+    if (!release || !attempt) throw new Error("fixture missing");
+    for (let i = 0; i < 51; i++) await ctx.db.insert("examAttempts", {
+      ownerId: attempt.ownerId, courseId: attempt.courseId, snapshotId: attempt.snapshotId,
+      studentId: `synthetic-${i}`, state: "in_progress", revision: 0,
+      startedAt: attempt.startedAt, updatedAt: attempt.updatedAt,
+    });
+    return release.draftId;
+  });
+  await expect(student.query(api.examInvigilation.listForDraft, { draftId })).rejects.toThrow("NOT_FOUND");
+  const first = await owner.query(api.examInvigilation.listForDraft, { draftId });
+  expect(first.attempts).toHaveLength(50);
+  expect(first.nextCursor).toBeTruthy();
+  const second = await owner.query(api.examInvigilation.listForDraft, { draftId, cursor: first.nextCursor });
+  expect(second.attempts).toHaveLength(2);
+  expect(second.hasMore).toBe(false);
+  expect(new Set([...first.attempts, ...second.attempts].map(a => a.attemptId)).size).toBe(52);
+});
+
 it("fails closed on disabled releases, opt-out policy and unrelated identities", async () => {
   const f = await fixture();
   await f.t.run(ctx => ctx.db.patch("examAttempts", f.attemptId, {

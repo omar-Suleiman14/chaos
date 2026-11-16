@@ -5,6 +5,7 @@ import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery } from "convex/react";
 import { markNotificationsReadLocally, useOptimisticMutation } from "@/lib/optimistic";
 import { Bell } from "lucide-react";
+import PushNotificationControl from "./PushNotificationControl";
 import { api } from "@/convex/_generated/api";
 import { formatNumber, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
@@ -70,11 +71,9 @@ export default function NotificationBell() {
         <div className="absolute end-0 mt-2 w-80 max-h-[70vh] overflow-y-auto chaos-card ws-glass z-50 text-start" role="dialog" aria-label={t.title}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-foreground/10">
             <p className="chaos-heading text-xs">{t.title}</p>
-            {unread > 0 && (
-              <button type="button" className="text-xs underline text-muted-foreground hover:text-foreground" onClick={() => markRead({})}>
-                {t.markAll}
-              </button>
-            )}
+            <button type="button" className="text-xs underline text-muted-foreground hover:text-foreground" onClick={() => markRead({})}>
+              {t.markAll}
+            </button>
           </div>
           <details className="border-b border-foreground/10 px-4 py-3 text-xs">
             <summary className="cursor-pointer text-muted-foreground">{t.preferences}</summary>
@@ -87,6 +86,7 @@ export default function NotificationBell() {
                 </label>
               ))}
             </div>
+            <PushNotificationControl />
           </details>
           {!data?.items.length ? (
             <p className="px-4 py-6 text-sm text-muted-foreground">{t.empty}</p>

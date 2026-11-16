@@ -2,7 +2,7 @@ import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 
-export const ADMIN_GRADING_TOOLS = ["list_admin_grading_jobs", "claim_admin_grading_job", "retry_admin_grading_job", "get_admin_grading_bundle", "save_admin_grading_proposal", "submit_admin_grading_review"] as const;
+export const ADMIN_GRADING_TOOLS = ["list_admin_grading_jobs", "claim_admin_grading_job", "retry_admin_grading_job", "reopen_admin_grading_job", "get_admin_grading_bundle", "save_admin_grading_proposal", "submit_admin_grading_review"] as const;
 export const ADMIN_PLATFORM_TOOLS = ["get_admin_overview", "refresh_admin_analytics", "list_admin_users", "list_admin_content", "list_admin_learning_content", "list_admin_teams", "list_admin_activity", "moderate_admin_user", "moderate_admin_content"] as const;
 export const ADMIN_CRM_TOOLS = ["get_crm_activity", "set_crm_contact_stages", "complete_crm_follow_up"] as const;
 
@@ -64,6 +64,13 @@ export function registerGradingAdminTools(server: McpServer,
     outputSchema: { jobId: jobRef, revision: jobRevision, retryCount: jobRevision },
     annotations: write, _meta,
   }, input => run("retry_admin_grading_job", input, () => "Expired grading job requeued."));
+  server.registerTool("reopen_admin_grading_job", {
+    title: "Reopen an exhausted grading job (admin)",
+    description: "Admin only: explicitly reopen a claimed job whose lease expired after three retries. This resets its retry counter, preserves private proposal drafts for review, and queues it for a new doctor claim. Pass the current expectedRevision and confirmReopen=true only after the administrator explicitly requests this recovery. It never changes a grade.",
+    inputSchema: { jobId: jobRef, expectedRevision: jobRevision, confirmReopen: z.literal(true) },
+    outputSchema: { jobId: jobRef, revision: jobRevision, retryCount: jobRevision, status: z.literal("queued") },
+    annotations: { ...write, idempotentHint: false }, _meta,
+  }, input => run("reopen_admin_grading_job", input, () => "Exhausted grading job reopened and queued; proposal drafts were preserved."));
   server.registerTool("get_admin_grading_bundle", {
     title: "Read claimed exam essays and frozen rubric (admin)",
     description: "Private sensitive student essay text: only access a specific doctor-consented job after personally claiming it. Requires active 15-minute lease, records each access. Use frozen rubric; do not invent external citations, do not declare a final grade.",

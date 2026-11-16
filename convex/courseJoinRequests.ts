@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { getAuthIdentity } from "./authIdentity";
@@ -168,6 +169,24 @@ export const listPending = query({
         requestedAt: row.requestedAt,
       };
     }));
+  },
+});
+
+/** Cursor-paginated pending requests, so every request remains reviewable. */
+export const pendingPage = query({
+  args: { courseId: v.id("learnCollections"), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { courseId, paginationOpts }) => {
+    if (!Number.isSafeInteger(paginationOpts.numItems) || paginationOpts.numItems < 1 || paginationOpts.numItems > 100) throw new Error("VALIDATION_FAILED: Page size must be 1?100.");
+    const { identity } = await requireActiveUser(ctx);
+    const course = await ctx.db.get("learnCollections", courseId);
+    if (!course || course.ownerId !== identity.subject) throw new Error("NOT_FOUND: Course not found.");
+    const page = await ctx.db.query("courseJoinRequests")
+      .withIndex("by_course_status_requestedAt", q => q.eq("courseId", courseId).eq("status", "pending"))
+      .order("asc").paginate(paginationOpts);
+    return { ...page, page: await Promise.all(page.page.map(async row => {
+      const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", row.studentId)).first();
+      return { id: row._id, studentId: row.studentId, name: user?.name || "Chaos student", username: user?.username ?? null, requestedAt: row.requestedAt };
+    })) };
   },
 });
 

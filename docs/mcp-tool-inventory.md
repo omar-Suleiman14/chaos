@@ -2,7 +2,7 @@
 
 Generated from the public and administrator MCP registries with `pnpm mcp:inventory`. Administrator tools are advertised only to verified administrator connections; see [MCP permissions](mcp-permissions.md).
 
-136 public tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
+139 public tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
 
 - `accept_team_invitation`
 - `add_course_lesson`
@@ -38,6 +38,7 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `get_course`
 - `get_course_lesson`
 - `get_course_progress`
+- `get_enrolled_course_lecture`
 - `get_flashcard_set`
 - `get_form`
 - `get_form_advanced_analytics`
@@ -73,6 +74,7 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `list_curriculum_nodes`
 - `list_curriculum_programs`
 - `list_curriculum_versions`
+- `list_enrolled_courses`
 - `list_flashcard_sets`
 - `list_folder_contents`
 - `list_folders`
@@ -112,6 +114,7 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `save_lesson`
 - `save_lesson_draft`
 - `search_curriculum_modules`
+- `search_enrolled_course_lectures`
 - `search_forms`
 - `search_learn_directory`
 - `search_lessons`
