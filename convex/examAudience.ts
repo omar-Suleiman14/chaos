@@ -58,7 +58,7 @@ export const getForDraft = query({
       assigned: release?.assignmentActive ?? false,
       assignedAt: release?.assignedAt ?? null,
       prepared: release?.preparedForAudience ?? false,
-      entryEnabled: false, // A later runtime PR must explicitly enable secure entry.
+      entryEnabled: release?.studentEntryEnabled ?? false,
     };
   },
 });
@@ -72,7 +72,9 @@ export const setForDraft = mutation({
   handler: async (ctx, { draftId, expectedRevision, audience, assigned }) => {
     const { draft, course, release } = await owned(ctx, draftId);
     if (!release) throw new Error("SNAPSHOT_REQUIRED: Seal this exam first.");
-    if (release.studentEntryEnabled) throw new Error("EXAM_ACTIVE: Close the exam before changing assignments.");
+    if (release.studentEntryEnabled || await ctx.db.query("examAttempts")
+      .withIndex("by_snapshot_state", q => q.eq("snapshotId", release.activeSnapshotId).eq("state", "in_progress")).first())
+      throw new Error("EXAM_ACTIVE: Finish active attempts before changing assignments.");
     if (!Number.isSafeInteger(expectedRevision) || expectedRevision !== (release.audienceRevision ?? 0))
       throw new Error("REVISION_CONFLICT: Exam assignments changed; reload.");
     const clean = validateExamAudience(audience);
@@ -108,6 +110,33 @@ export const setForDraft = mutation({
       audience: clean, audienceRevision: expectedRevision + 1,
       assignmentActive: assigned, assignedAt: assigned ? now : undefined,
       studentEntryEnabled: false, updatedAt: now,
+    });
+    return expectedRevision + 1;
+  },
+});
+
+/** Open or close new entry; active attempts remain protected until completed. */
+export const setEntry = mutation({
+  args: { draftId: v.id("examBuilderDrafts"), expectedRevision: v.number(), enabled: v.boolean() },
+  handler: async (ctx, { draftId, expectedRevision, enabled }) => {
+    const { draft, course, release } = await owned(ctx, draftId);
+    if (!release || !Number.isSafeInteger(expectedRevision) ||
+        expectedRevision !== (release.audienceRevision ?? 0))
+      throw new Error("REVISION_CONFLICT: Exam assignment changed; reload.");
+    if (enabled) {
+      const snapshot = await ctx.db.get("examSnapshots", release.activeSnapshotId);
+      if (!release.assignmentActive || !release.preparedForAudience || !release.audience ||
+          !release.settings || !release.assignedAt || !course.publishedVersionId ||
+          !snapshot || snapshot.ownerId !== course.ownerId || snapshot.courseId !== course._id ||
+          snapshot.draftId !== draftId || snapshot.draftRevision !== draft.revision ||
+          snapshot.version !== release.version)
+        throw new Error("EXAM_NOT_READY: Prepare and assign the sealed exam first.");
+      if (release.settings.mode === "scheduled" &&
+          (!release.settings.closesAt || release.settings.closesAt <= Date.now()))
+        throw new Error("EXAM_CLOSED: Exam window has ended.");
+    }
+    await ctx.db.patch("examReleases", release._id, {
+      studentEntryEnabled: enabled, audienceRevision: expectedRevision + 1, updatedAt: Date.now(),
     });
     return expectedRevision + 1;
   },

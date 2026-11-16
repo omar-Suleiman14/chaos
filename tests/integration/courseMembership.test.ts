@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+﻿import { describe, expect, it } from "vitest";
 import { api, internal } from "../../convex/_generated/api";
 import type { Id } from "../../convex/_generated/dataModel";
 import { authorDb } from "../../convex/authorIndex";
@@ -30,7 +30,7 @@ async function legacyFixture(count = 501) {
 async function finishBackfill(t: ReturnType<typeof createTestConvex>, restart = false) {
   await t.mutation(internal.businessTeams.backfillCourseMemberships, { restart });
   for (let i = 0; i < 100; i++) {
-    const state = await t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v1")).unique());
+    const state = await t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v2")).unique());
     if (state?.complete) return;
     if (!state || state.cursor === undefined) throw new Error("Backfill did not start");
     await t.mutation(internal.businessTeams.backfillCourseMembershipsPage, { generation: state.generation, cursor: state.cursor });
@@ -129,10 +129,10 @@ describe("indexed course membership", () => {
     const original = await f.t.run(ctx => ctx.db.get("learnCollections", f.courses[24]));
     await f.t.mutation(internal.businessTeams.backfillCourseMemberships, {});
     await f.t.mutation(internal.businessTeams.backfillCourseMembershipsPage, { generation: 1, cursor: null });
-    const state = await f.t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v1")).unique());
+    const state = await f.t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v2")).unique());
     expect(state?.complete).toBe(false);
     await f.t.mutation(internal.businessTeams.backfillCourseMembershipsPage, { generation: 1, cursor: null });
-    expect(await f.t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v1")).unique())).toEqual(state);
+    expect(await f.t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v2")).unique())).toEqual(state);
     await finishBackfill(f.t, true);
     await f.t.mutation(internal.businessTeams.backfillCourseMembershipsPage, { generation: 1, cursor: state!.cursor! });
     const edges = await f.t.run(ctx => ctx.db.query("courseLessonMemberships").collect());
@@ -148,7 +148,7 @@ describe("indexed course membership", () => {
     const t = createTestConvex(), owner = t.withIdentity(creatorIdentity);
     const courseId = await owner.mutation(api.courses.create, {});
     const lessonId = await owner.mutation(api.courses.addLesson, { courseId });
-    expect((await t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v1")).unique()))?.complete).toBe(true);
+    expect((await t.run(ctx => ctx.db.query("courseMembershipState").withIndex("by_key", q => q.eq("key", "v2")).unique()))?.complete).toBe(true);
     expect(await t.run(ctx => ctx.db.query("courseLessonMemberships").withIndex("by_courseId", q => q.eq("courseId", courseId)).collect())).toMatchObject([{ courseId, lessonId, ownerId: creatorIdentity.subject }]);
   });
 

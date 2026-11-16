@@ -264,21 +264,21 @@
       "unit": "count"
     },
     "mcp.admin.listToolsBytes": {
-      "budget": 316800,
+      "budget": 327500,
       "unit": "bytes",
       "raised": {
-        "from": 314474,
-        "reason": "Adds quizTimerMode/quizTimeSeconds and nested sections/collapsedByDefault to existing public MCP tool input/output JSON schemas. Measured tool-list serialization grows ~2 KiB per registry; all other perf budgets stay unchanged.",
-        "at": "2026-11-11"
+        "from": 321000,
+        "reason": "Three new approved-student read-only MCP tools intentionally expand the public and administrator tool catalogs. Measured schema payload increases are bounded; no client, database, or unrelated latency budgets are raised.",
+        "at": "2026-11-15"
       }
     },
     "mcp.admin.tools": {
-      "budget": 150,
+      "budget": 157,
       "unit": "count",
       "raised": {
-        "from": 137,
-        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. The MCP tool list grew with the study-lesson workflow and course tools (#122). Follow-up: shorten tool descriptions.",
-        "at": "2026-10-09"
+        "from": 154,
+        "reason": "Three new approved-student read-only MCP tools intentionally expand the public and administrator tool catalogs. Measured schema payload increases are bounded; no client, database, or unrelated latency budgets are raised.",
+        "at": "2026-11-15"
       }
     },
     "mcp.getLesson.bytesRead": {
@@ -311,12 +311,12 @@
       }
     },
     "mcp.listToolsBytes": {
-      "budget": 292300,
+      "budget": 302700,
       "unit": "bytes",
       "raised": {
-        "from": 289986,
-        "reason": "Adds quizTimerMode/quizTimeSeconds and nested sections/collapsedByDefault to existing public MCP tool input/output JSON schemas. Measured tool-list serialization grows ~2 KiB per registry; all other perf budgets stay unchanged.",
-        "at": "2026-11-11"
+        "from": 296500,
+        "reason": "Three new approved-student read-only MCP tools intentionally expand the public and administrator tool catalogs. Measured schema payload increases are bounded; no client, database, or unrelated latency budgets are raised.",
+        "at": "2026-11-15"
       }
     },
     "mcp.searchForms.bytesRead": {
@@ -350,12 +350,12 @@
       "unit": "count"
     },
     "mcp.tools": {
-      "budget": 132,
+      "budget": 139,
       "unit": "count",
       "raised": {
-        "from": 119,
-        "reason": "Measured on main a1259cd when pull requests first enforced these budgets; accepted as the starting point, not as a target. The MCP tool list grew with the study-lesson workflow and course tools (#122). Follow-up: shorten tool descriptions.",
-        "at": "2026-10-09"
+        "from": 136,
+        "reason": "Three new approved-student read-only MCP tools intentionally expand the public and administrator tool catalogs. Measured schema payload increases are bounded; no client, database, or unrelated latency budgets are raised.",
+        "at": "2026-11-15"
       }
     },
     "quizzes.respondent.bytesRead": {

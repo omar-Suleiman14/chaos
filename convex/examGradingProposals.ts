@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { notifyCourseAccount } from "./courseNotifications";
 import { internalMutation, type MutationCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireAdminForActor } from "./adminAccess";
@@ -53,7 +54,7 @@ export const bundle = internalMutation({
         .withIndex("by_job_question", q => q.eq("jobId", jobId)
           .eq("questionIndex", e.questionIndex)).unique();
       if (proposal && (proposal.ownerId !== job.ownerId || proposal.studentId !== job.studentId ||
-          proposal.snapshotId !== snapshot._id || proposal.adminId !== userId))
+          proposal.snapshotId !== snapshot._id || proposal.attemptId !== job.attemptId))
         throw new Error("INTEGRITY_ERROR: Proposal ownership mismatch.");
       return {
         questionIndex: e.questionIndex, prompt: question.prompt,
@@ -105,7 +106,7 @@ export const save = internalMutation({
     if (!Number.isSafeInteger(args.expectedRevision) || args.expectedRevision < 0 ||
         (old?.revision ?? 0) !== args.expectedRevision)
       throw new Error("REVISION_CONFLICT: Proposal changed; reload.");
-    if (old && (old.state !== "draft" || old.adminId !== args.userId ||
+    if (old && (old.state !== "draft" || old.attemptId !== job.attemptId ||
         old.ownerId !== job.ownerId || old.studentId !== job.studentId ||
         old.snapshotId !== snapshot._id || old.revision >= 20))
       throw new Error("GRADING_CONFLICT: Proposal is no longer editable.");
@@ -152,6 +153,11 @@ export const submit = internalMutation({
     });
     await auditJob(ctx, { ...job, revision: job.revision + 1 }, userId,
       "sent_to_doctor", "All proposals submitted for independent doctor review; no grade was finalized.");
+    await notifyCourseAccount(ctx, {
+      recipientId: job.ownerId, courseId: job.courseId, kind: "course_grading",
+      key: "doctor_grade_review:" + jobId,
+      message: "An assisted grading proposal is ready for doctor review.",
+    });
     return { jobId, revision: job.revision + 1, status: "doctor_review" as const };
   },
 });

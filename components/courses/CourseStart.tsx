@@ -15,7 +15,7 @@ const copy = {
   en: {
     review: "Review course", continue: "Continue course", start: "Start course",
     done: (n: number, total: number) => `${n} / ${total} lessons completed`,
-    progress: "Course progress", assignments: "My assignments", signIn: "Sign in to request access",
+    progress: "Course progress", assignments: "My assignments", classroom: "My classroom", signIn: "Sign in to request access",
     locked: "Course lessons open only after the teacher approves your request.",
     request: "Request to join", requesting: "Sending request…", requested: "Request sent to the teacher.",
     pending: "Waiting for teacher approval. We'll show the course here when your request is accepted.",
@@ -31,7 +31,7 @@ const copy = {
   ar: {
     review: "راجع الدورة", continue: "تابع الدورة", start: "ابدأ الدورة",
     done: (n: number, total: number) => `${n} / ${total} دروس مكتملة`,
-    progress: "تقدم الدورة", assignments: "تكليفاتي", signIn: "سجّل الدخول لطلب الانضمام",
+    progress: "تقدم الدورة", assignments: "تكليفاتي", classroom: "فصلي", signIn: "سجّل الدخول لطلب الانضمام",
     locked: "لا تُفتح دروس الدورة إلا بعد موافقة المدرّس على طلبك.",
     request: "طلب الانضمام", requesting: "جارٍ إرسال الطلب…", requested: "أُرسل الطلب إلى المدرّس.",
     pending: "طلبك قيد المراجعة. ستظهر لك دروس الدورة بعد موافقة المدرّس.",
@@ -61,13 +61,12 @@ export default function CourseStart({ course }: { course: NonNullable<FunctionRe
   const targetId = state?.enrolled ? target?.id : undefined;
   useEffect(() => { if (targetId) prefetchLesson(targetId, course.id); }, [targetId, course.id]);
 
-  if (!target) return null;
-  const href = `/learn/${target.id}?course=${course.id}`;
+  const href = target ? `/learn/${target.id}?course=${course.id}` : null;
   const meter = <><p aria-live="polite">{t.done(count, course.lessons.length)}</p><div className="lx-course-meter" role="progressbar" aria-label={t.progress} aria-valuemin={0} aria-valuemax={course.lessons.length} aria-valuenow={count}><span style={{ width: `${count / course.lessons.length * 100}%` }} /></div></>;
 
   if (state?.enrolled) {
     const started = count > 0 || !!active, finished = count === course.lessons.length;
-    return <div className="cp-continue"><Link className="cp-start site-btn site-btn--primary" href={href}>{finished ? t.review : started ? t.continue : t.start}<ArrowRight size={18} className="cp-arrow" aria-hidden /></Link><Link className="site-btn" href={`/dashboard/learn/assignments/${course.id}`}>{t.assignments}</Link>{meter}</div>;
+    return <div className="cp-continue">{href && <Link className="cp-start site-btn site-btn--primary" href={href}>{finished ? t.review : started ? t.continue : t.start}<ArrowRight size={18} className="cp-arrow" aria-hidden /></Link>}<Link className="site-btn" href={`/dashboard/learn/assignments/${course.id}`}>{t.assignments}</Link><Link className="site-btn" href={`/dashboard/learn/classroom/${course.id}`}>{t.classroom}</Link>{target && meter}</div>;
   }
 
   const onRequest = async () => {
@@ -94,12 +93,12 @@ export default function CourseStart({ course }: { course: NonNullable<FunctionRe
   const accepted = requestStatus === "approved";
   const waiting = state === undefined || requestStatus === undefined || invitation === undefined;
   return <div className="cp-continue cp-enroll" aria-live="polite">
-    <p>{!signedIn ? t.locked : waiting ? t.loading : blocked ? (requestStatus === "suspended" ? t.suspended : t.removed) : pending ? t.pending : accepted ? t.approvedPending : invited ? t.invited : requestStatus === "rejected" ? t.rejected : t.locked}</p>
+    <p>{!signedIn ? t.locked : waiting ? t.loading : blocked ? (requestStatus === "suspended" ? t.suspended : t.removed) : accepted ? t.approvedPending : invited ? t.invited : pending ? t.pending : requestStatus === "rejected" ? t.rejected : t.locked}</p>
     <div className="cp-enroll__actions">
       {!signedIn
         ? <Link className="cp-start site-btn site-btn--primary" href={`/sign-in?callbackUrl=${encodeURIComponent(`/learn/courses/${course.id}`)}`}>{t.signIn}<ArrowRight size={18} className="cp-arrow" aria-hidden /></Link>
         : blocked ? null
-        : invited && !accepted && !pending ? <>
+        : invited && !accepted ? <>
             <button type="button" className="cp-start site-btn site-btn--primary" disabled={!!busy || waiting} onClick={() => void onInvite(true)}>{t.accept}</button>
             <button type="button" className="site-btn" disabled={!!busy || waiting} onClick={() => void onInvite(false)}>{t.decline}</button>
           </>

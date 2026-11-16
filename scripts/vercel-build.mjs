@@ -32,4 +32,6 @@ if (key.startsWith("preview:")) {
   console.error("\n✗ A Convex preview deploy key is set for a production build. Use a production key.\n");
   process.exit(1);
 }
-run('pnpm exec convex deploy --cmd "pnpm build" --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL');
+const configured = spawnSync(process.execPath, ["scripts/prepare-learning-release.mjs", "configure"], { stdio: "inherit" });
+if (configured.status !== 0) process.exit(configured.status ?? 1);
+run('pnpm exec convex deploy --cmd "node scripts/prepare-learning-release.mjs backfill && pnpm build" --cmd-url-env-var-name NEXT_PUBLIC_CONVEX_URL');
