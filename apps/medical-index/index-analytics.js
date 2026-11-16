@@ -15,9 +15,12 @@
   }
 
   // Official PostHog HTML snippet loader, suitable for this static (non-NPM) site.
-  !function (t, e) {
+  (function (t, e) {
     var o, n, p, r;
-    e.__SV || (window.posthog = e, e._i = [], e.init = function (i, s, a) {
+    if (e.__SV) return;
+    window.posthog = e;
+    e._i = [];
+    e.init = function (i, s, a) {
       function g(t, e) {
         var o = e.split(".");
         if (o.length === 2) { t = t[o[0]]; e = o[1]; }
@@ -42,8 +45,9 @@
       o = "init capture identify alias people.set people.set_once reset group register register_once unregister onFeatureFlags reloadFeatureFlags getFeatureFlag getFeatureFlagPayload isFeatureEnabled opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing get_distinct_id get_session_id".split(" ");
       for (n = 0; n < o.length; n++) g(u, o[n]);
       e._i.push([i, s, a]);
-    }, e.__SV = 1);
-  }(document, window.posthog || []);
+    };
+    e.__SV = 1;
+  })(document, window.posthog || []);
 
   window.posthog.init(cfg.token, {
     api_host: cfg.host,
@@ -63,7 +67,7 @@
 
   function capture(name, properties) {
     try { window.posthog.capture(name, properties || {}); }
-    catch (_) { /* Analytics can never interfere with studying. */ }
+    catch { /* Analytics can never interfere with studying. */ }
   }
   function locationContext(element) {
     const module = element.closest(".module");
