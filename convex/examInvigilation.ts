@@ -98,16 +98,16 @@ function publicCase(row: Doc<"examIntegrityCases">) {
 
 /** Owner-only live snapshot. Zero direct question/answer/marking-key access. */
 export const listForDraft = query({
-  args: { draftId: v.id("examBuilderDrafts") },
-  handler: async (ctx, { draftId }) => {
+  args: { draftId: v.id("examBuilderDrafts"), cursor: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, { draftId, cursor }) => {
     const { release } = await teacherRelease(ctx, draftId);
-    if (!release) return { releaseId: null, attempts: [], hasMore: false };
-    const attempts = await ctx.db.query("examAttempts")
+    if (!release) return { releaseId: null, attempts: [], hasMore: false, nextCursor: null };
+    const page = await ctx.db.query("examAttempts")
       .withIndex("by_snapshot_student", q => q.eq("snapshotId", release.activeSnapshotId))
-      .take(MAX_ATTEMPTS + 1);
+      .paginate({ cursor: cursor ?? null, numItems: MAX_ATTEMPTS });
     return {
-      releaseId: release._id, hasMore: attempts.length > MAX_ATTEMPTS,
-      attempts: attempts.slice(0, MAX_ATTEMPTS).map(a => ({
+      releaseId: release._id, hasMore: !page.isDone, nextCursor: page.isDone ? null : page.continueCursor,
+      attempts: page.page.map(a => ({
         attemptId: a._id, studentId: a.studentId, state: a.state,
         startedAt: a.startedAt, deadlineAt: a.deadlineAt ?? null,
         updatedAt: a.updatedAt,
@@ -291,10 +291,10 @@ export const teacherAccommodation = query({
   args: { draftId: v.id("examBuilderDrafts"), studentId: v.string() },
   handler: async (ctx, { draftId, studentId }) => {
     const { release } = await teacherRelease(ctx, draftId);
-    if (!release || !release.assignmentActive || !release.audience ||
-        !await hasApprovedCourseAccess(ctx, release.courseId, studentId) ||
-        !await audienceAllows(ctx, release.courseId, release.audience, studentId))
+    if (!release || !release.assignmentActive || !release.audience)
       throw new Error("NOT_FOUND: Assigned candidate not found.");
+    if (!await hasApprovedCourseAccess(ctx, release.courseId, studentId) ||
+        !await audienceAllows(ctx, release.courseId, release.audience, studentId)) return null;
     const row = await ctx.db.query("examAccommodations")
       .withIndex("by_release_student", q =>
         q.eq("releaseId", release._id).eq("studentId", studentId)).unique();
@@ -333,7 +333,7 @@ export const extendTime = mutation({
   },
   handler: async (ctx, args) => {
     const { actorId, attempt, release } = await teacherAttempt(ctx, args.attemptId);
-    if (!release.studentEntryEnabled || attempt.state !== "in_progress")
+    if ((!release.studentEntryEnabled && !attempt.entryAuthorized) || attempt.state !== "in_progress")
       throw new Error("EXAM_NOT_ACTIVE: No live attempt may be extended.");
     if (!Number.isSafeInteger(args.expectedRevision) ||
         attempt.revision !== args.expectedRevision)

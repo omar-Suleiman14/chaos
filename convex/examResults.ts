@@ -1,8 +1,11 @@
 import { v } from "convex/values";
-import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
+import { notifyCourseAccount } from "./courseNotifications";
+import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser, creatorRestricted } from "./authz";
 import { resultStatus } from "./examResultModel";
+import { hasApprovedCourseAccess } from "./courseMembership";
 
 type ReadCtx = MutationCtx | QueryCtx;
 const MAX_HISTORY = 100;
@@ -28,7 +31,7 @@ async function ownedSnapshot(ctx: ReadCtx, snapshotId: Id<"examSnapshots">) {
   if (!draft || !course || !release || draft.ownerId !== ownerId ||
       draft.courseId !== course._id || course.ownerId !== ownerId ||
       release.ownerId !== ownerId || release.courseId !== course._id ||
-      release.activeSnapshotId !== snapshotId || course.communityState === "removed" ||
+      course.communityState === "removed" ||
       await creatorRestricted(ctx, ownerId))
     throw new Error("NOT_FOUND: Exam not found.");
   return { ownerId, snapshot, course, release };
@@ -57,7 +60,8 @@ async function myProjection(ctx: QueryCtx, attempt: Doc<"examAttempts">, now: nu
     throw new Error("INTEGRITY_ERROR: Result publication ownership mismatch.");
   const status = attempt.state === "submitted"
     ? resultStatus(grade, grade?.resultPolicy, (published?.released === true && (!grade?.finalizedAt ||
-      (published.releasedAt ?? -1) >= grade.finalizedAt)), now)
+      (published.releasedAt ?? -1) >= grade.finalizedAt ||
+      (grade.regradeReleasedAt ?? -1) >= grade.finalizedAt)), now)
     : attempt.state;
   const transcript = status === "released" && grade?.finalPercentBasisPoints !== undefined
     ? {
@@ -79,16 +83,16 @@ async function myProjection(ctx: QueryCtx, attempt: Doc<"examAttempts">, now: nu
 
 /** Candidate-owned history, including after removal from the course roster. */
 export const myResults = query({
-  args: {},
-  handler: async (ctx) => {
+  args: { cursor: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, { cursor }) => {
     const studentId = await actor(ctx);
     const attempts = await ctx.db.query("examAttempts")
       .withIndex("by_student_updated", q => q.eq("studentId", studentId))
-      .order("desc").take(MAX_HISTORY + 1);
-    const completed = attempts.slice(0, MAX_HISTORY)
-      .filter(a => a.state !== "in_progress");
+      .order("desc").paginate({ cursor: cursor ?? null, numItems: MAX_HISTORY });
+    const completed = attempts.page.filter(a => a.state !== "in_progress");
     const entries = await Promise.all(completed.map(a => myProjection(ctx, a, Date.now())));
-    return { entries: entries.filter(e => e !== null), hasMore: attempts.length > MAX_HISTORY };
+    return { entries: entries.filter(e => e !== null), hasMore: !attempts.isDone,
+      nextCursor: attempts.isDone ? null : attempts.continueCursor };
   },
 });
 
@@ -106,10 +110,41 @@ export const myResult = query({
   },
 });
 
+/** Optional review is candidate-owned, only after the frozen policy releases the result. */
+export const myReview = query({
+  args: { attemptId: v.id("examAttempts") },
+  handler: async (ctx, { attemptId }) => {
+    const studentId = await actor(ctx);
+    const attempt = await ctx.db.get("examAttempts", attemptId);
+    if (!attempt || attempt.studentId !== studentId || attempt.state !== "submitted")
+      throw new Error("NOT_FOUND: Result not found.");
+    const projection = await myProjection(ctx, attempt, Date.now());
+    if (!projection || projection.status !== "released" ||
+        !await hasApprovedCourseAccess(ctx, attempt.courseId, studentId)) return null;
+    const [snapshot, grade, course] = await Promise.all([
+      ctx.db.get("examSnapshots", attempt.snapshotId),
+      ctx.db.query("examGrades").withIndex("by_attempt", q => q.eq("attemptId", attemptId)).unique(),
+      ctx.db.get("learnCollections", attempt.courseId),
+    ]);
+    if (!snapshot || !grade || !course || course.archived || course.communityState === "hidden" ||
+        course.communityState === "removed" || await creatorRestricted(ctx, attempt.ownerId) || grade.snapshotId !== snapshot._id ||
+        grade.studentId !== studentId || grade.ownerId !== attempt.ownerId) return null;
+    const showAnswers = grade.resultPolicy?.showCorrectAnswers === true;
+    const showExplanations = grade.resultPolicy?.showExplanations === true;
+    if (!showAnswers && !showExplanations) return null;
+    return snapshot.questions.map((q, index) => ({
+      index, prompt: q.prompt, kind: q.kind, choices: q.choices,
+      ...(showAnswers ? { correctChoiceIds: q.correctChoiceIds, sampleAnswer: q.sampleAnswer ?? null } : {}),
+      ...(showExplanations ? { explanation: q.explanation ?? null } : {}),
+    }));
+  },
+});
+
 /** Doctor-only result overview, never an answer key or an unscoped course roster. */
 export const teacherResults = query({
-  args: { draftId: v.id("examBuilderDrafts") },
-  handler: async (ctx, { draftId }) => {
+  args: { draftId: v.id("examBuilderDrafts"), snapshotId: v.optional(v.id("examSnapshots")),
+    cursor: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, { draftId, snapshotId, cursor }) => {
     const ownerId = await actor(ctx);
     const draft = await ctx.db.get("examBuilderDrafts", draftId);
     if (!draft || draft.ownerId !== ownerId)
@@ -118,14 +153,15 @@ export const teacherResults = query({
       .withIndex("by_draft", q => q.eq("draftId", draftId)).unique();
     if (!release || release.ownerId !== ownerId || release.courseId !== draft.courseId)
       throw new Error("NOT_FOUND: Exam not found.");
-    const { snapshot } = await ownedSnapshot(ctx, release.activeSnapshotId);
+    const { snapshot } = await ownedSnapshot(ctx, snapshotId ?? release.activeSnapshotId);
+    if (snapshot.draftId !== draftId) throw new Error("NOT_FOUND: Exam not found.");
     const pub = await publication(ctx, snapshot._id);
     if (pub && (pub.ownerId !== ownerId || pub.courseId !== draft.courseId))
       throw new Error("INTEGRITY_ERROR: Publication ownership mismatch.");
     const attempts = await ctx.db.query("examAttempts")
       .withIndex("by_snapshot_student", q => q.eq("snapshotId", snapshot._id))
-      .take(MAX_TEACHER_ATTEMPTS + 1);
-    const entries = await Promise.all(attempts.slice(0, MAX_TEACHER_ATTEMPTS).map(async a => {
+      .paginate({ cursor: cursor ?? null, numItems: MAX_TEACHER_ATTEMPTS });
+    const entries = await Promise.all(attempts.page.map(async a => {
       if (a.ownerId !== ownerId || a.courseId !== draft.courseId)
         throw new Error("INTEGRITY_ERROR: Attempt ownership mismatch.");
       const grade = a.state === "submitted"
@@ -143,16 +179,24 @@ export const teacherResults = query({
         percentBasisPoints: grade?.finalPercentBasisPoints ?? null,
         studentStatus: a.state === "submitted"
           ? resultStatus(grade, grade?.resultPolicy, (pub?.released === true && (!grade?.finalizedAt ||
-            (pub.releasedAt ?? -1) >= grade.finalizedAt)), Date.now())
+            (pub.releasedAt ?? -1) >= grade.finalizedAt ||
+            (grade.regradeReleasedAt ?? -1) >= grade.finalizedAt)), Date.now())
           : a.state,
       };
     }));
+    const [manualGrade, legacyGrade] = await Promise.all([
+      ctx.db.query("examGrades").withIndex("by_snapshot_visibility",
+        q => q.eq("snapshotId", snapshot._id).eq("resultPolicy.visibility", "manual")).first(),
+      ctx.db.query("examGrades").withIndex("by_snapshot_visibility",
+        q => q.eq("snapshotId", snapshot._id).eq("resultPolicy.visibility", undefined)).first(),
+    ]);
     return {
       snapshotId: snapshot._id, title: snapshot.title,
-      visibility: release.settings?.resultVisibility ?? "manual",
+      visibility: manualGrade || legacyGrade ? "manual" as const :
+        (snapshot._id === release.activeSnapshotId ? release.settings?.resultVisibility ?? "manual" : "manual"),
       publication: { released: pub?.released ?? false, revision: pub?.revision ?? 0,
         releasedAt: pub?.releasedAt ?? null },
-      entries, hasMore: attempts.length > MAX_TEACHER_ATTEMPTS,
+      entries, hasMore: !attempts.isDone, nextCursor: attempts.isDone ? null : attempts.continueCursor,
     };
   },
 });
@@ -165,8 +209,13 @@ export const setPublication = mutation({
   },
   handler: async (ctx, { snapshotId, expectedRevision, released }) => {
     const { ownerId, course, release } = await ownedSnapshot(ctx, snapshotId);
-    if (!release.settings || release.settings.resultVisibility !== "manual")
-      throw new Error("POLICY_CONFLICT: Configure manual result visibility first.");
+    if (release.activeSnapshotId !== snapshotId || release.settings?.resultVisibility !== "manual") {
+      const manual = await ctx.db.query("examGrades").withIndex("by_snapshot_visibility",
+        q => q.eq("snapshotId", snapshotId).eq("resultPolicy.visibility", "manual")).first();
+      const legacy = await ctx.db.query("examGrades").withIndex("by_snapshot_visibility",
+        q => q.eq("snapshotId", snapshotId).eq("resultPolicy.visibility", undefined)).first();
+      if (!manual && !legacy) throw new Error("POLICY_CONFLICT: No manually released grades for this snapshot.");
+    }
     if (!Number.isSafeInteger(expectedRevision) || expectedRevision < 0)
       throw new Error("REVISION_CONFLICT: Invalid publication revision.");
     const existing = await publication(ctx, snapshotId);
@@ -191,6 +240,43 @@ export const setPublication = mutation({
       actorId: ownerId, action: released ? "publish" : "withhold",
       revision: revision + 1, at: now,
     });
+    if (released) {
+      await ctx.scheduler.runAfter(0, internal.examResults.notifyPublicationBatch, {
+        snapshotId, revision: revision + 1, cursor: null,
+      });
+    }
     return { revision: revision + 1, released };
+  },
+});
+
+
+/** Deliver notifications in bounded transactions; publication is independent of class size. */
+export const notifyPublicationBatch = internalMutation({
+  args: { snapshotId: v.id("examSnapshots"), revision: v.number(), cursor: v.union(v.string(), v.null()) },
+  handler: async (ctx, { snapshotId, revision, cursor }) => {
+    const pub = await publication(ctx, snapshotId);
+    if (!pub || !pub.released || pub.revision !== revision) return;
+    const page = await ctx.db.query("examAttempts")
+      .withIndex("by_snapshot_student", q => q.eq("snapshotId", snapshotId))
+      .paginate({ cursor, numItems: 50 });
+    for (const attempt of page.page) {
+      if (attempt.state !== "submitted" || attempt.ownerId !== pub.ownerId ||
+          attempt.courseId !== pub.courseId) continue;
+      const grade = await ctx.db.query("examGrades")
+        .withIndex("by_attempt", q => q.eq("attemptId", attempt._id)).unique();
+      if (!grade || grade.ownerId !== pub.ownerId || grade.snapshotId !== snapshotId ||
+          grade.studentId !== attempt.studentId || grade.reviewHold === true ||
+          grade.finalPercentBasisPoints === undefined ||
+          (grade.resultPolicy?.visibility ?? "manual") !== "manual" ||
+          resultStatus(grade, grade.resultPolicy, (pub.releasedAt ?? -1) >= (grade.finalizedAt ?? 0) ||
+            (grade.regradeReleasedAt ?? -1) >= (grade.finalizedAt ?? 0), Date.now()) !== "released") continue;
+      await notifyCourseAccount(ctx, {
+        recipientId: attempt.studentId, courseId: pub.courseId, kind: "course_result",
+        key: "result_release:" + snapshotId + ":" + revision + ":" + attempt.studentId,
+        message: "Your exam result has been released. Check My Results.",
+      });
+    }
+    if (!page.isDone) await ctx.scheduler.runAfter(0, internal.examResults.notifyPublicationBatch,
+      { snapshotId, revision, cursor: page.continueCursor });
   },
 });

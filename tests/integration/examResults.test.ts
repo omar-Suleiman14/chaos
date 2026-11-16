@@ -49,7 +49,7 @@ async function fixture(visibility: "manual" | "immediate" | "after_close" = "man
     });
     return { snapshotId, releaseId, attemptId, gradeId };
   });
-  return { t, owner, student, ...ids };
+  return { t, owner, student, draftId, ...ids };
 }
 
 it("withholds scores, restricts account access, audits publication and revocation", async () => {
@@ -118,4 +118,83 @@ it("immediate release requires a final grade; teacher-controlled override cannot
   await expect(owner.mutation(api.examResults.setPublication, {
     snapshotId, expectedRevision: 0, released: false,
   })).rejects.toThrow("POLICY_CONFLICT");
+});
+
+it("publishes results for a class larger than one notification batch", async () => {
+  const { t, owner, snapshotId, attemptId, student } = await fixture();
+  await t.run(async ctx => {
+    const source = await ctx.db.get("examAttempts", attemptId);
+    if (!source) throw new Error("missing attempt");
+    const course = await ctx.db.get("learnCollections", source.courseId);
+    if (!course) throw new Error("missing course");
+    const versionId = await ctx.db.insert("collectionVersions", {
+      collectionId: course._id, number: 1, metadata: course.metadata, items: [], publishedAt: Date.now(),
+    });
+    await ctx.db.patch("learnCollections", course._id, { publishedVersionId: versionId });
+    for (let i = 0; i < 81; i++) {
+      const studentId = "synthetic-student-" + i;
+      const extraAttempt = await ctx.db.insert("examAttempts", {
+        ownerId: source.ownerId, courseId: source.courseId, snapshotId,
+        studentId, state: "submitted", revision: 1,
+        startedAt: source.startedAt, updatedAt: source.updatedAt, closedAt: source.closedAt,
+      });
+      await ctx.db.insert("courseJoinRequests", { courseId: course._id, ownerId: source.ownerId,
+        studentId, status: "approved", requestedAt: Date.now(), updatedAt: Date.now() });
+      await ctx.db.insert("courseEnrollments", { courseId: course._id, ownerId: source.ownerId,
+        studentId, key: `user:${studentId}`, completedLessonIds: [], enrolledAt: Date.now(), updatedAt: Date.now() });
+      await ctx.db.insert("examGrades", { attemptId: extraAttempt, snapshotId, ownerId: source.ownerId,
+        studentId, state: "auto_final", earnedCents: 80, maximumCents: 100, objectiveMaximumCents: 100,
+        pendingWrittenCount: 0, finalPercentBasisPoints: 8000, entries: [], algorithmVersion: 1,
+        resultPolicy: { visibility: "manual", passingPercent: 50 }, gradedAt: Date.now() });
+    }
+  });
+  await expect(owner.mutation(api.examResults.setPublication, {
+    snapshotId, expectedRevision: 0, released: true,
+  })).resolves.toEqual({ revision: 1, released: true });
+  expect((await student.query(api.examResults.myResult, { attemptId })).status).toBe("released");
+  await t.finishAllScheduledFunctions(() => vi.runAllTimers(), 100);
+  const notifications = await t.run(ctx => ctx.db.query("notifications").collect());
+  expect(notifications.filter(n => n.kind === "course_result")).toHaveLength(81);
+});
+
+it("paginates teacher results and grading instead of hiding later attempts", async () => {
+  const { t, owner, student, snapshotId, attemptId, draftId } = await fixture();
+  await t.run(async ctx => {
+    const source = await ctx.db.get("examAttempts", attemptId);
+    if (!source) throw new Error("missing attempt");
+    for (let i = 0; i < 101; i++) await ctx.db.insert("examAttempts", {
+      ownerId: source.ownerId, courseId: source.courseId, snapshotId,
+      studentId: `page-student-${i}`, state: "void", revision: 1,
+      startedAt: source.startedAt, updatedAt: source.updatedAt,
+    });
+  });
+  await expect(student.query(api.examResults.teacherResults, { draftId })).rejects.toThrow("NOT_FOUND");
+  const first = await owner.query(api.examResults.teacherResults, { draftId });
+  expect(first.entries).toHaveLength(100);
+  expect(first.nextCursor).toBeTruthy();
+  const second = await owner.query(api.examResults.teacherResults, { draftId, cursor: first.nextCursor });
+  expect(second.entries).toHaveLength(2);
+  expect(second.hasMore).toBe(false);
+  const firstQueue = await owner.query(api.examEssayGrading.queue, { draftId });
+  const secondQueue = await owner.query(api.examEssayGrading.queue, { draftId, cursor: firstQueue.nextCursor });
+  expect([...firstQueue.entries, ...secondQueue.entries]).toEqual([expect.objectContaining({ attemptId })]);
+});
+
+it("lets a candidate page through older completed attempts", async () => {
+  const { t, owner, student, attemptId } = await fixture();
+  await t.run(async ctx => {
+    const source = await ctx.db.get("examAttempts", attemptId);
+    if (!source) throw new Error("missing attempt");
+    for (let i = 0; i < 101; i++) await ctx.db.insert("examAttempts", {
+      ownerId: source.ownerId, courseId: source.courseId, snapshotId: source.snapshotId,
+      studentId: source.studentId, state: "void", revision: 1,
+      startedAt: source.startedAt, updatedAt: source.updatedAt + i + 1,
+    });
+  });
+  const first = await student.query(api.examResults.myResults, {});
+  expect(first.entries).toHaveLength(100);
+  const second = await student.query(api.examResults.myResults, { cursor: first.nextCursor });
+  expect(second.entries).toHaveLength(2);
+  expect(second.hasMore).toBe(false);
+  expect((await owner.query(api.examResults.myResults, {})).entries).toHaveLength(0);
 });

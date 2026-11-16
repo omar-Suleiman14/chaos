@@ -134,7 +134,10 @@ export const examRuntimeTables = {
     gradedAt: v.number(),
     revision: v.optional(v.number()),
     finalizedAt: v.optional(v.number()),
-  }).index("by_attempt", ["attemptId"]),
+    reviewHold: v.optional(v.boolean()),
+    regradeReleasedAt: v.optional(v.number()),
+  }).index("by_attempt", ["attemptId"])
+    .index("by_snapshot_visibility", ["snapshotId", "resultPolicy.visibility"]),
   /** Teacher-private criterion scores and moderation; never candidate-addressable. */
   examEssayMarks: defineTable({
     attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
@@ -166,11 +169,12 @@ export const examRuntimeTables = {
     requestedAt: v.number(), updatedAt: v.number(),
   }).index("by_attempt", ["attemptId"])
     .index("by_owner_course", ["ownerId", "courseId"])
+    .index("by_snapshot", ["snapshotId"])
     .index("by_status_updated", ["status", "updatedAt"]),
   examGradingJobAudit: defineTable({
     jobId: v.id("examGradingJobs"), attemptId: v.id("examAttempts"),
     actorId: v.string(), revision: v.number(),
-    action: v.union(v.literal("requested"), v.literal("claimed"), v.literal("requeued"),
+    action: v.union(v.literal("requested"), v.literal("claimed"), v.literal("requeued"), v.literal("reopened"),
       v.literal("bundle_read"), v.literal("proposal_saved"), v.literal("sent_to_doctor")),
     detail: v.string(), at: v.number(),
   }).index("by_job_time", ["jobId", "at"]),
@@ -185,9 +189,28 @@ export const examRuntimeTables = {
     evidence: v.array(v.object({ criterionId: v.string(), quote: v.string(), rationale: v.string() })),
     confidence: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
     modelId: v.optional(v.string()), promptVersion: v.optional(v.string()),
-    state: v.union(v.literal("draft"), v.literal("sent")),
+    state: v.union(v.literal("draft"), v.literal("sent"),
+      v.literal("accepted"), v.literal("overridden"), v.literal("rejected")),
     revision: v.number(), updatedAt: v.number(),
   }).index("by_job_question", ["jobId", "questionIndex"]),
+  /** Student-owned appeal, limited to one per submitted attempt. */
+  examGradeAppeals: defineTable({
+    attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
+    courseId: v.id("learnCollections"), ownerId: v.string(), studentId: v.string(),
+    reason: v.string(), status: v.union(v.literal("pending"), v.literal("upheld"),
+      v.literal("adjusted"), v.literal("rejected")),
+    originalGradeRevision: v.number(), revision: v.number(),
+    requestedAt: v.number(), updatedAt: v.number(),
+    reviewedAt: v.optional(v.number()), decisionNote: v.optional(v.string()),
+  }).index("by_attempt", ["attemptId"]).index("by_owner_course", ["ownerId", "courseId"])
+    .index("by_snapshot", ["snapshotId"]),
+  /** Private append-only ledger: no student-visible grades, essays or rubrics. */
+  examDoctorReviewAudit: defineTable({
+    attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
+    ownerId: v.string(), studentId: v.string(), actorId: v.string(),
+    action: v.string(), detail: v.string(), gradeRevision: v.number(),
+    questionIndex: v.optional(v.number()), at: v.number(),
+  }).index("by_attempt_at", ["attemptId", "at"]),
   /** Manual release applies to one immutable snapshot; never changes the grade ledger. */
   examResultPublications: defineTable({
     snapshotId: v.id("examSnapshots"),
@@ -260,6 +283,8 @@ export const examRuntimeTables = {
     snapshotId: v.id("examSnapshots"),
     studentId: v.string(),
     state: attemptState,
+    entryAuthorized: v.optional(v.boolean()),
+    resultPolicy: v.optional(frozenResultPolicy),
     revision: v.number(),
     startedAt: v.number(),
     /** Privacy-first opt-in policy, frozen by a future authorized start transaction. */
@@ -288,5 +313,6 @@ export const examRuntimeTables = {
     closedAt: v.optional(v.number()),
   })
     .index("by_snapshot_student", ["snapshotId", "studentId"])
+    .index("by_snapshot_state", ["snapshotId", "state"])
     .index("by_student_updated", ["studentId", "updatedAt"]),
 };

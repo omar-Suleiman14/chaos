@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, usePaginatedQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useLocale } from "@/lib/i18n";
@@ -39,7 +39,12 @@ const labels = {
 export default function CourseCohorts({ courseId }: { courseId: Id<"learnCollections"> }) {
   const { locale } = useLocale();
   const t = labels[locale === "ar" ? "ar" : "en"];
-  const data = useQuery(api.courseCohorts.roster, { courseId });
+  const [selectedGroup, setSelectedGroup] = useState("");
+  const groups = useQuery(api.courseCohorts.listGroups, { courseId });
+  const [rosterStatus, setRosterStatus] = useState<"approved" | "suspended" | "removed">("approved");
+  const { results: students, status: studentsStatus, loadMore: loadStudents } = usePaginatedQuery(api.courseCohorts.rosterPage, { courseId, status: rosterStatus, ...(selectedGroup ? { groupId: selectedGroup as Id<"courseGroups"> } : {}) }, { initialNumItems: 50 });
+  const { results: invitations, status: invitationsStatus, loadMore: loadInvitations } = usePaginatedQuery(api.courseCohorts.invitationPage, { courseId }, { initialNumItems: 50 });
+  const { results: groupMembers, status: groupMembersStatus, loadMore: loadGroupMembers } = usePaginatedQuery(api.courseCohorts.groupMembersPage, selectedGroup ? { groupId: selectedGroup as Id<"courseGroups"> } : "skip", { initialNumItems: 50 });
   const createGroup = useMutation(api.courseCohorts.createGroup);
   const renameGroup = useMutation(api.courseCohorts.renameGroup);
   const deleteGroup = useMutation(api.courseCohorts.deleteGroup);
@@ -50,10 +55,9 @@ export default function CourseCohorts({ courseId }: { courseId: Id<"learnCollect
   const [groupName, setGroupName] = useState("");
   const [renameValue, setRenameValue] = useState("");
   const [handle, setHandle] = useState("");
-  const [selectedGroup, setSelectedGroup] = useState("");
   const [selected, setSelected] = useState<string[]>([]);
   const [working, setWorking] = useState(false);
-  const group = data?.groups.find(g => g.id === selectedGroup);
+  const group = groups?.find(g => g.id === selectedGroup);
 
   async function run(task: () => Promise<unknown>, after?: () => void) {
     if (working) return;
@@ -85,14 +89,15 @@ export default function CourseCohorts({ courseId }: { courseId: Id<"learnCollect
         <button className="ws-btn ws-btn--primary ws-btn--sm" type="button" disabled={working || !handle.trim()}
           onClick={() => void run(() => invite({ courseId, username: handle }), () => setHandle(""))}>{t.send}</button>
       </div>
-      {!!data?.invitations.length && <ul className="grid gap-1">
+      {!!invitations.length && <ul className="grid gap-1">
         <li className="text-sm font-medium">{t.pending}</li>
-        {data.invitations.map(i => <li key={i.studentId} className="flex items-center justify-between gap-2 text-sm">
+        {invitations.map(i => <li key={i.studentId} className="flex items-center justify-between gap-2 text-sm">
           <span dir="auto">{i.name} {i.username ? `(@${i.username})` : ""}</span>
           <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={working}
             onClick={() => void run(() => cancel({ courseId, studentId: i.studentId }))}>{t.cancel}</button>
         </li>)}
       </ul>}
+      {invitationsStatus === "CanLoadMore" && <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => loadInvitations(50)}>{locale === "ar" ? "عرض المزيد" : "Load more"}</button>}
     </div>
     <div className="grid gap-2">
       <h4 className="font-medium">{t.groups}</h4>
@@ -106,7 +111,7 @@ export default function CourseCohorts({ courseId }: { courseId: Id<"learnCollect
       <select aria-label={t.choose} className="ws-input" value={selectedGroup}
         onChange={e => { setSelectedGroup(e.target.value); setRenameValue(""); }}>
         <option value="">{t.choose}</option>
-        {data?.groups.map(g => <option key={g.id} value={g.id}>{g.name} ({g.studentIds.length})</option>)}
+        {groups?.map(g => <option key={g.id} value={g.id}>{g.name}</option>)}
       </select>
       {group && <div className="flex flex-wrap gap-2">
         <input className="ws-input min-w-0 flex-1" aria-label={t.rename} value={renameValue}
@@ -116,18 +121,25 @@ export default function CourseCohorts({ courseId }: { courseId: Id<"learnCollect
         <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={working}
           onClick={() => void run(() => deleteGroup({ groupId: group.id }), () => setSelectedGroup(""))}>{t.delete}</button>
       </div>}
+      {group && <div><p className="text-sm font-medium">{locale === "ar" ? "أعضاء المجموعة" : "Group members"}</p>
+        <ul className="max-h-40 overflow-y-auto">{groupMembers.map(member => <li key={member.studentId} dir="auto">{member.name} {member.username ? `(@${member.username})` : ""}</li>)}</ul>
+        {groupMembersStatus === "CanLoadMore" && <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => loadGroupMembers(50)}>{locale === "ar" ? "عرض المزيد" : "Load more"}</button>}
+      </div>}
     </div>
     <div className="grid gap-2">
       <h4 className="font-medium">{t.roster}</h4>
-      {!data ? <output className="ws-skeleton" style={{ minHeight: 48 }} aria-label={t.busy} />
-        : data.students.length === 0 ? <p className="cb-note">{t.empty}</p>
+      <select className="ws-input" aria-label={t.roster} value={rosterStatus} onChange={e => { setRosterStatus(e.target.value as typeof rosterStatus); setSelected([]); }}>
+        <option value="approved">{t.approved}</option><option value="suspended">{t.suspended}</option><option value="removed">{t.removed}</option>
+      </select>
+      {studentsStatus === "LoadingFirstPage" ? <output className="ws-skeleton" style={{ minHeight: 48 }} aria-label={t.busy} />
+        : students.length === 0 ? <p className="cb-note">{t.empty}</p>
         : <ul className="grid max-h-72 gap-1 overflow-y-auto">
-            {data.students.map(s => <li key={s.studentId}>
+            {students.map(s => <li key={s.studentId}>
               <label className="flex cursor-pointer items-center gap-2 rounded-lg border border-border p-2 text-sm">
                 <input type="checkbox" checked={selected.includes(s.studentId)} onChange={() => toggle(s.studentId)} />
                 <span className="min-w-0 flex-1" dir="auto">{s.name} {s.username ? `(@${s.username})` : ""}</span>
                 <span className="text-muted-foreground">{t[s.status]}</span>
-                {group?.studentIds.includes(s.studentId) ? <span title={group.name}>●</span> : null}
+                {group && s.inGroup ? <span title={group.name}>●</span> : null}
               </label>
             </li>)}
           </ul>}
@@ -148,7 +160,7 @@ export default function CourseCohorts({ courseId }: { courseId: Id<"learnCollect
             onClick={() => void bulk("readmit")}>{t.readmit}</button>
         </div>
       </div>}
-      {data?.truncated && <p className="cb-note">{t.truncated}</p>}
+      {studentsStatus === "CanLoadMore" && <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => loadStudents(50)}>{locale === "ar" ? "عرض المزيد" : "Load more"}</button>}
     </div>
   </section>;
 }

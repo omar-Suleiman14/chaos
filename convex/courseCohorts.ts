@@ -1,5 +1,6 @@
 import { v } from "convex/values";
-import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { makeFunctionReference, paginationOptsValidator } from "convex/server";
+import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { getAuthIdentity } from "./authIdentity";
 import { requireActiveUser } from "./authz";
@@ -84,6 +85,59 @@ export const roster = query({
   },
 });
 
+export const listGroups = query({
+  args: { courseId: v.id("learnCollections") },
+  handler: async (ctx, { courseId }) => {
+    await requireCourseOwner(ctx, courseId);
+    const groups = await ctx.db.query("courseGroups").withIndex("by_course", q => q.eq("courseId", courseId)).take(100);
+    return groups.map(group => ({ id: group._id, name: group.name }));
+  },
+});
+
+export const groupMembersPage = query({
+  args: { groupId: v.id("courseGroups"), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { groupId, paginationOpts }) => {
+    await groupForOwner(ctx, groupId);
+    if (!Number.isSafeInteger(paginationOpts.numItems) || paginationOpts.numItems < 1 || paginationOpts.numItems > 100) throw new Error("VALIDATION_FAILED: Page size must be 1?100.");
+    const page = await ctx.db.query("courseGroupMembers").withIndex("by_group_student", q => q.eq("groupId", groupId)).paginate(paginationOpts);
+    return { ...page, page: await Promise.all(page.page.map(async row => {
+      const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", row.studentId)).first();
+      return { studentId: row.studentId, name: user?.name ?? "Chaos student", username: user?.username ?? null };
+    })) };
+  },
+});
+
+/** Page each reviewed status independently to keep large rosters manageable. */
+export const rosterPage = query({
+  args: { courseId: v.id("learnCollections"), status: v.union(v.literal("approved"), v.literal("suspended"), v.literal("removed")), groupId: v.optional(v.id("courseGroups")), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { courseId, status, groupId, paginationOpts }) => {
+    if (!Number.isSafeInteger(paginationOpts.numItems) || paginationOpts.numItems < 1 || paginationOpts.numItems > 100) throw new Error("VALIDATION_FAILED: Page size must be 1?100.");
+    await requireCourseOwner(ctx, courseId);
+    if (groupId && (await groupForOwner(ctx, groupId)).group.courseId !== courseId) throw new Error("NOT_FOUND: Group not found.");
+    const page = await ctx.db.query("courseJoinRequests").withIndex("by_course_status_requestedAt", q => q.eq("courseId", courseId).eq("status", status)).paginate(paginationOpts);
+    const students = await Promise.all(page.page.map(async row => {
+      if (row.status === "approved" && !await hasApprovedCourseAccess(ctx, courseId, row.studentId)) return null;
+      const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", row.studentId)).first();
+      const membership = groupId ? await ctx.db.query("courseGroupMembers").withIndex("by_group_student", q => q.eq("groupId", groupId).eq("studentId", row.studentId)).unique() : null;
+      return { studentId: row.studentId, status, name: user?.name ?? "Chaos student", username: user?.username ?? null, inGroup: !!membership };
+    }));
+    return { ...page, page: students.filter((student): student is NonNullable<typeof student> => student !== null) };
+  },
+});
+
+export const invitationPage = query({
+  args: { courseId: v.id("learnCollections"), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { courseId, paginationOpts }) => {
+    if (!Number.isSafeInteger(paginationOpts.numItems) || paginationOpts.numItems < 1 || paginationOpts.numItems > 100) throw new Error("VALIDATION_FAILED: Page size must be 1?100.");
+    await requireCourseOwner(ctx, courseId);
+    const page = await ctx.db.query("courseInvitations").withIndex("by_course_status", q => q.eq("courseId", courseId).eq("status", "pending")).paginate(paginationOpts);
+    return { ...page, page: await Promise.all(page.page.map(async row => {
+      const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", row.studentId)).first();
+      return { studentId: row.studentId, name: user?.name ?? "Chaos student", username: user?.username ?? null };
+    })) };
+  },
+});
+
 export const createGroup = mutation({
   args: { courseId: v.id("learnCollections"), name: v.string() },
   returns: v.id("courseGroups"),
@@ -115,14 +169,25 @@ export const renameGroup = mutation({
   },
 });
 
+const deleteGroupMembersRef = makeFunctionReference<"mutation", { groupId: Id<"courseGroups"> }, null>("courseCohorts:deleteGroupMembersPage");
+export const deleteGroupMembersPage = internalMutation({
+  args: { groupId: v.id("courseGroups") }, returns: v.null(),
+  handler: async (ctx, { groupId }) => {
+    if (await ctx.db.get("courseGroups", groupId)) return null;
+    const members = await ctx.db.query("courseGroupMembers").withIndex("by_group_student", q => q.eq("groupId", groupId)).take(100);
+    for (const member of members) await ctx.db.delete("courseGroupMembers", member._id);
+    if (members.length === 100) await ctx.scheduler.runAfter(0, deleteGroupMembersRef, { groupId });
+    return null;
+  },
+});
+
 export const deleteGroup = mutation({
   args: { groupId: v.id("courseGroups") },
   returns: v.null(),
   handler: async (ctx, { groupId }) => {
     await groupForOwner(ctx, groupId);
-    const members = await ctx.db.query("courseGroupMembers").withIndex("by_group_student", q => q.eq("groupId", groupId)).collect();
-    for (const member of members) await ctx.db.delete("courseGroupMembers", member._id);
     await ctx.db.delete("courseGroups", groupId);
+    await ctx.scheduler.runAfter(0, deleteGroupMembersRef, { groupId });
     return null;
   },
 });

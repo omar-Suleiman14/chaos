@@ -134,7 +134,8 @@ export const update = mutation({
     if (row.revision !== expectedRevision) throw new Error("REVISION_CONFLICT: Question changed; reload before saving.");
     const next = validateBankDraft(item);
     await validateMedia(ctx, row.ownerId, next);
-    await ctx.db.patch("questionBankItems", row._id, { ...next, revision: row.revision + 1, updatedAt: Date.now() });
+    await ctx.db.patch("questionBankItems", row._id, { ...next, caseStudy: next.caseStudy, sampleAnswer: next.sampleAnswer,
+      explanation: next.explanation, rubricCriteria: next.rubricCriteria, revision: row.revision + 1, updatedAt: Date.now() });
     return row.revision + 1;
   },
 });
@@ -356,7 +357,8 @@ export const exportForCourse = query({
         sampleAnswer:q.sampleAnswer,explanation:q.explanation,points:q.points,
         ...(q.rubricCriteria ? { rubricCriteria:q.rubricCriteria } : {}),
         topics:q.topics,terms:q.terms,outcomes:q.outcomes,status:q.status==="archived"?"draft" as const:q.status,
-        ...(q.caseStudy?{caseStudy:{stem:q.caseStudy.stem,media:[]}}:{}),
+        ...(q.caseStudy ? { caseStudy: { stem: q.caseStudy.stem.trim() ||
+          `[Images to reattach: ${q.caseStudy.media.map(image => image.alt).join("; ")}]`, media: [] } } : {}),
       })) };
   },
 });
