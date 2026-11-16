@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="en">
+  <meta charset="utf-8" /><meta name="robots" content="noindex,nofollow" /><meta name="viewport" content="width=device-width, initial-scale=1" /><meta name="color-scheme" content="light dark" /><title>
+    Take a little breather · Chaos Index</title
+  ><style>
+    :root {
+      --offline-bg: #f8f7f4;
+      --offline-fg: #292c29;
+      --offline-muted: #60635f;
+      --offline-link: #345f92;
+    }
+    html[data-theme="dark"] {
+      color-scheme: dark;
+      --offline-bg: #1b1c20;
+      --offline-fg: #ecece9;
+      --offline-muted: #b4b7bd;
+      --offline-link: #a6c9f2;
+    }
+    html[data-theme="light"] {
+      color-scheme: light;
+    }
+    body {
+      margin: 0;
+      background: var(--offline-bg);
+      color: var(--offline-fg);
+      font-family: system-ui, sans-serif;
+    }
+    main {
+      max-width: 600px;
+      margin: 8vh auto;
+      padding: 24px;
+    }
+    h1 {
+      font-size: clamp(30px, 6vw, 48px);
+      letter-spacing: -0.04em;
+    }
+    p {
+      line-height: 1.7;
+      color: var(--offline-muted);
+    }
+    a {
+      color: var(--offline-link);
+    }
+    section {
+      margin-top: 40px;
+    }
+    button {
+      font: inherit;
+      color: inherit;
+      background: transparent;
+      border: 1px solid currentColor;
+      border-radius: 8px;
+      padding: 8px 12px;
+      cursor: pointer;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        --offline-bg: #1b1c20;
+        --offline-fg: #ecece9;
+        --offline-muted: #b4b7bd;
+        --offline-link: #a6c9f2;
+      }
+    }
+  </style>
+  <script>
+    try {
+      const theme = localStorage.getItem("chaos-index:theme");
+      if (theme === "light" || theme === "dark") document.documentElement.dataset.theme = theme;
+    } catch {}
+  </script>
+  <main>
+    <a href="/">Chaos Index</a>
+    <button type="button" id="theme-toggle" aria-label="Switch color theme">Change theme</button>
+    <h1>A little pause.<br />Your studying can wait.</h1>
+    <p>
+      Chaos Index cannot reach the server. Reconnect and try again. This is the offline waiting room. Reconnect to open study material links.
+    </p>
+    <p><a href="/">Try opening my pages again</a></p>
+    <section aria-label="Optional offline game"><div id="game"></div></section>
+  </main>
+  <script src="/offline-game.js"></script>
+  <script>
+    window.MaxPaperHop.mount(document.getElementById("game"));
+    document.getElementById("theme-toggle").addEventListener("click", () => {
+      const dark =
+        document.documentElement.dataset.theme === "dark" || (!document.documentElement.dataset.theme && matchMedia("(prefers-color-scheme: dark)").matches);
+      const theme = dark ? "light" : "dark";
+      document.documentElement.dataset.theme = theme;
+      try {
+        localStorage.setItem("chaos-index:theme", theme);
+      } catch {}
+    });
+  </script>
+</html>

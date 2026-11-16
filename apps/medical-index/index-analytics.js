@@ -15,9 +15,12 @@
   }
 
   // Official PostHog HTML snippet loader, suitable for this static (non-NPM) site.
-  !function (t, e) {
+  (function (t, e) {
     var o, n, p, r;
-    e.__SV || (window.posthog = e, e._i = [], e.init = function (i, s, a) {
+    if (e.__SV) return;
+    window.posthog = e;
+    e._i = [];
+    e.init = function (i, s, a) {
       function g(t, e) {
         var o = e.split(".");
         if (o.length === 2) { t = t[o[0]]; e = o[1]; }
@@ -42,8 +45,9 @@
       o = "init capture identify alias people.set people.set_once reset group register register_once unregister onFeatureFlags reloadFeatureFlags getFeatureFlag getFeatureFlagPayload isFeatureEnabled opt_in_capturing opt_out_capturing has_opted_in_capturing has_opted_out_capturing clear_opt_in_out_capturing get_distinct_id get_session_id".split(" ");
       for (n = 0; n < o.length; n++) g(u, o[n]);
       e._i.push([i, s, a]);
-    }, e.__SV = 1);
-  }(document, window.posthog || []);
+    };
+    e.__SV = 1;
+  })(document, window.posthog || []);
 
   window.posthog.init(cfg.token, {
     api_host: cfg.host,
@@ -63,14 +67,14 @@
 
   function capture(name, properties) {
     try { window.posthog.capture(name, properties || {}); }
-    catch (_) { /* Analytics can never interfere with studying. */ }
+    catch { /* Analytics can never interfere with studying. */ }
   }
   function locationContext(element) {
-    const module = element.closest(".module");
+    const moduleEl = element.closest(".module");
     const subject = element.closest(".subject");
-    const group = module && module.closest(".year");
+    const group = moduleEl && moduleEl.closest(".year");
     const info = {
-      module_index: module ? Number(module.getAttribute("data-module-group")) : null,
+      module_index: moduleEl ? Number(moduleEl.getAttribute("data-module-group")) : null,
       year: group ? Number(group.getAttribute("data-year-group")) : null
     };
     if (subject) info.subject = subject.getAttribute("data-subject") || "General";
@@ -85,12 +89,12 @@
       if (year.getAttribute("aria-expanded") === "true") capture("index_year_opened", { year: Number(year.dataset.year) });
       return;
     }
-    const module = target.closest(".module-button[data-module]");
-    if (module) {
-      if (module.getAttribute("aria-expanded") === "true") {
+    const moduleEl = target.closest(".module-button[data-module]");
+    if (moduleEl) {
+      if (moduleEl.getAttribute("aria-expanded") === "true") {
         capture("index_module_opened", {
-          year: Number(module.closest(".year")?.getAttribute("data-year-group")),
-          module_index: Number(module.dataset.module)
+          year: Number(moduleEl.closest(".year")?.getAttribute("data-year-group")),
+          module_index: Number(moduleEl.dataset.module)
         });
       }
       return;

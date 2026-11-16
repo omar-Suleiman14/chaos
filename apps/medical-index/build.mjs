@@ -1,5 +1,6 @@
 import { mkdir, rm, copyFile, readFile, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
+import { buildSeo } from "./seo-build.mjs";
 
 const root = process.cwd();
 const output = resolve(root, "dist");
@@ -31,3 +32,5 @@ if (!html.includes("id=\"reportDialog\"") || !html.includes("index-analytics.js"
   throw new Error("Index entrypoint did not contain required report and analytics integration.");
 }
 console.log("Standalone Index build complete.");
+
+await buildSeo(root, output);
