@@ -3,6 +3,7 @@ import { uploadRejection } from "./respondUploadValidation";
 export { uploadRejection } from "./respondUploadValidation";
 import { recordStudent } from "./studentRoster";
 import { getAuthIdentity } from "./authIdentity";
+import { canReadCourseForm } from "./courseSourceAccess";
 import { canonicalJson } from "./canonicalJson";
 
 import { homeworkUploadAccess } from "./homeworkUploadAccess";
@@ -23,6 +24,25 @@ import { UNLOCK_WINDOW_MS, unlockBudgets } from "./accessCodeBudget";
 import { assertRateAvailable, consumeRate, notify, randomCode, randomHex, sha256Hex } from "./serverUtils";
 import { ruleHolds, visibleFieldIds } from "./formLogic";
 import { gradeQuiz, quizReview } from "./formQuiz";
+import type { QuizReviewItem } from "./formQuiz";
+import { FORM_IMAGE_PATH } from "./formImageMedia";
+
+/** Bind a private explanation-image read to a completed response proof.
+ * Never append receipt secrets to arbitrary third-party URLs. */
+function reviewWithImageAccess(review: QuizReviewItem[] | null, responseId: Id<"formResponses">, receiptCode: string) {
+  return review?.map(item => {
+    if (!item.explanationImage) return item;
+    try {
+      const origin = new URL(env.CONVEX_SITE_URL);
+      const url = new URL(item.explanationImage.url);
+      if (url.origin !== origin.origin || url.pathname !== FORM_IMAGE_PATH || !url.searchParams.get("mediaId"))
+        return item;
+      url.searchParams.set("responseId", responseId);
+      url.searchParams.set("receiptCode", receiptCode);
+      return { ...item, explanationImage: { ...item.explanationImage, url: url.toString() } };
+    } catch { return item; }
+  }) ?? null;
+}
 import { emitWebhookEvent, formResponseData } from "./webhookEvents";
 import { queueResult as queueNotionResult } from "./notion";
 import { respondentDefinition, releasedDefinition, releasedFieldIds, nextFieldReleaseAt, releasedAnswers, assertReleasedAnswers } from "./formRelease";
@@ -30,7 +50,7 @@ import { captureHidden, captureTypedHidden } from "./formRespondent";
 import { teamOrEmailCheck } from "./businessAccess";
 import { changeFormCounts, readFormCounts } from "./formCounts";
 
-const quizReviewValidator = v.union(v.null(), v.array(v.object({ fieldId: v.string(), earned: v.number(), possible: v.number(), correctOptionIds: v.array(v.string()), explanation: v.optional(v.string()) })));
+const quizReviewValidator = v.union(v.null(), v.array(v.object({ fieldId: v.string(), earned: v.number(), possible: v.number(), correctOptionIds: v.array(v.string()), explanation: v.optional(v.string()), explanationImage: v.optional(v.object({ url: v.string(), alt: v.string() })) })));
 
 export const DEFAULT_FORM_RESPONSE_LIMIT = planLimits.free.responsesPerForm;
 export const UPLOAD_PATH = "/forms/upload";
@@ -41,7 +61,8 @@ const MIN_HUMAN_MS = 2500;
 type Ctx = QueryCtx | MutationCtx;
 
 async function formByShareId(ctx: Ctx, shareId: string) {
-  return await ctx.db.query("forms").withIndex("by_shareId", (q) => q.eq("shareId", shareId)).unique();
+  const form = await ctx.db.query("forms").withIndex("by_shareId", (q) => q.eq("shareId", shareId)).unique();
+  return form && await canReadCourseForm(ctx, form, (await getAuthIdentity(ctx))?.subject ?? null) ? form : null;
 }
 
 async function currentVersion(ctx: Ctx, form: Doc<"forms">) {
@@ -54,15 +75,23 @@ async function currentVersion(ctx: Ctx, form: Doc<"forms">) {
 
 /** Response cap: per-form setting, else the platform limit unless the owner is elevated. */
 export async function responseCap(ctx: Ctx, form: Doc<"forms">, now?: number): Promise<number | null> {
-  const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", form.ownerId)).first();
+  const owner = await ownerOf(ctx, form);
   const config = await ctx.db.query("globalConfig").first();
   const platform = hasPro(owner, now) ? planLimits.pro.responsesPerForm : config?.formResponseLimit ?? DEFAULT_FORM_RESPONSE_LIMIT;
   const own = form.settings.responseLimit ?? null;
   return effectiveResponseCap(platform, own);
 }
 
+const ownerReads = new WeakMap<Ctx, Map<string, Promise<Doc<"users"> | null>>>();
 async function ownerOf(ctx: Ctx, form: Doc<"forms">) {
-  return await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", form.ownerId)).first();
+  let reads = ownerReads.get(ctx);
+  if (!reads) { reads = new Map(); ownerReads.set(ctx, reads); }
+  let pending = reads.get(form.ownerId);
+  if (!pending) {
+    pending = ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", form.ownerId)).first();
+    reads.set(form.ownerId, pending);
+  }
+  return pending;
 }
 
 export async function ownerBanned(ctx: Ctx, form: Doc<"forms">) {
@@ -85,6 +114,24 @@ async function accessCodeMatches(ctx: QueryCtx | MutationCtx, form: Doc<"forms">
   return !!pass && pass.formId === form._id && pass.accessCodeHash === form.settings.accessCodeHash && pass.expiresAt > Date.now();
 }
 
+/** Add a form-scoped access grant only to our own hosted image URLs. */
+function definitionWithImageGrant(def: FormDefinition, grant: string | undefined, editToken?: string): FormDefinition {
+  if (!grant && !editToken) return def;
+  const image = <T extends { url: string }>(value: T | undefined): T | undefined => {
+    if (!value) return value;
+    try {
+      const url = new URL(value.url);
+      if (url.origin !== new URL(env.CONVEX_SITE_URL).origin || url.pathname !== FORM_IMAGE_PATH) return value;
+      if (grant) url.searchParams.set("grant", grant);
+      if (editToken) url.searchParams.set("editToken", editToken);
+      return { ...value, url: url.toString() };
+    } catch { return value; }
+  };
+  return { ...def, fields: def.fields.map(field => ({ ...field, image: image(field.image),
+    options: field.options?.map(option => ({ ...option, image: image(option.image) })),
+    rows: field.rows?.map(row => ({ ...row, image: image(row.image) })) })) };
+}
+
 export const getPublicForm = query({
   args: { shareId: v.string(), accessCode: v.optional(v.string()), editToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -100,7 +147,8 @@ export const getPublicForm = query({
     const hideBranding = !!form.settings.hideBranding && hasPro(await ownerOf(ctx, form), Date.now());
     const base = { title: def.title, translations: def.translations, defaultLanguage: def.defaultLanguage, languages: def.languages, theme: def.theme, allowIndexing: form.settings.allowIndexing, hideBranding };
     // A valid edit link may keep working after closing when the creator allowed it; new responses stay blocked.
-    const editingClosed = !!args.editToken && form.settings.allowEditAfterSubmit && !!form.settings.allowEditAfterClose && !!(await responseForEditToken(ctx, form, args.editToken));
+    const validEdit = !!args.editToken && form.settings.allowEditAfterSubmit && !!(await responseForEditToken(ctx, form, args.editToken));
+    const editingClosed = validEdit && !!form.settings.allowEditAfterClose;
     const now = Date.now();
     const when = scheduleState(form.settings, now);
     if (!editingClosed) {
@@ -133,7 +181,7 @@ export const getPublicForm = query({
       ...base,
       shareId: form.shareId,
       version: version.version,
-      definition: respondentDefinition(def as FormDefinition, now),
+      definition: definitionWithImageGrant(respondentDefinition(def as FormDefinition, now), form.settings.access === "code" ? args.accessCode : undefined, validEdit ? args.editToken : undefined),
       quizTimerMode: def.quiz?.enabled ? (form.settings.quizTimerMode ?? "none") : "none",
       quizTimeSeconds: def.quiz?.enabled ? (form.settings.quizTimeSeconds ?? 60) : 0,
       nextFieldReleaseAt: nextFieldReleaseAt(def as FormDefinition, now),
@@ -206,6 +254,7 @@ async function assertCanCollect(ctx: MutationCtx, form: Doc<"forms"> | null, acc
   if (when === "not_open" && !skipClosing) throw new Error("FORM_NOT_OPEN: This form is not open yet.");
   if (when === "closed" && !skipClosing) throw new Error("FORM_CLOSED: This form closed and is no longer accepting responses.");
   const identity = await getAuthIdentity(ctx);
+  if (!await canReadCourseForm(ctx, form, identity?.subject ?? null)) throw new Error("FORM_UNAVAILABLE: This form is not available.");
   if (form.settings.access === "signed_in" && !identity) throw new Error("SIGN_IN_REQUIRED: Sign in to respond to this form.");
   if (form.settings.access === "signed_in") {
     const check = await teamOrEmailCheck(ctx, form.settings, identity);
@@ -339,7 +388,7 @@ export const submitResponse = mutation({
     if (existing && existing.status === "completed") {
       const done = await definitionForResponse(ctx, existing);
       const review = done ? quizReview(done, gradeQuiz(done, existing.answers as Answers)) : null;
-      return { responseId: existing._id, status: existing.status, receiptCode: existing.receiptCode, endingId: existing.endingId ?? null, duplicate: true, quizScore: existing.quizScore ?? null, quizMaxScore: existing.quizMaxScore ?? null, quizReview: review };
+      return { responseId: existing._id, status: existing.status, receiptCode: existing.receiptCode, endingId: existing.endingId ?? null, duplicate: true, quizScore: existing.quizScore ?? null, quizMaxScore: existing.quizMaxScore ?? null, quizReview: reviewWithImageAccess(review, existing._id, existing.receiptCode) };
     }
 
     const { identity } = await assertCanCollect(ctx, form, args.accessCode);
@@ -451,7 +500,7 @@ export const submitResponse = mutation({
         if (resume) await ctx.db.delete("formResumeDrafts", resume._id);
       }
     }
-    return { responseId, status, receiptCode, endingId: ending?.id ?? null, duplicate: false, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: quizReview(def, grade) };
+    return { responseId, status, receiptCode, endingId: ending?.id ?? null, duplicate: false, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: reviewWithImageAccess(quizReview(def, grade), responseId, receiptCode) };
   },
 });
 
@@ -466,7 +515,7 @@ export const getSubmissionForEdit = query({
     if (!response) return null;
     const def = await definitionForResponse(ctx, response);
     if (!def) return null;
-    return { answers: releasedAnswers(def, response.answers as Answers, Date.now()), language: response.language, definition: respondentDefinition(def, Date.now()), receiptCode: response.receiptCode, submittedAt: response.submittedAt, editCount: response.editCount ?? 0 };
+    return { answers: releasedAnswers(def, response.answers as Answers, Date.now()), language: response.language, definition: definitionWithImageGrant(respondentDefinition(def, Date.now()), undefined, args.editToken), receiptCode: response.receiptCode, submittedAt: response.submittedAt, editCount: response.editCount ?? 0 };
   },
 });
 
@@ -491,7 +540,7 @@ export const updateSubmission = mutation({
     const grade = gradeQuiz(available, checked.answers);
     // An unchanged resubmission is not an edit: no history entry, no notification.
     if (args.language === response.language && canonicalJson(checked.answers, "answers") === canonicalJson(response.answers, "answers")) {
-      return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: quizReview(available, grade) };
+      return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: reviewWithImageAccess(quizReview(available, grade), response._id, response.receiptCode) };
     }
     if (!response.spam) await adjustAggregates(ctx, form._id, def, response.answers as Answers, -1);
     const now = Date.now();
@@ -507,7 +556,7 @@ export const updateSubmission = mutation({
     if (!response.spam) await adjustAggregates(ctx, form._id, def, checked.answers, 1);
     for (const upload of uploads.docs) if (!upload.responseId) await ctx.db.patch("formUploads", upload._id, { responseId: response._id });
     await notify(ctx, form.ownerId, "response", `A respondent edited their response to “${form.title}”.`, `edit:${response._id}:${Date.now() - (Date.now() % 3_600_000)}`, form._id);
-    return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: quizReview(available, grade) };
+    return { receiptCode: response.receiptCode, endingId: ending?.id ?? null, quizScore: grade?.score ?? null, quizMaxScore: grade?.maxScore ?? null, quizReview: reviewWithImageAccess(quizReview(available, grade), response._id, response.receiptCode) };
   },
 });
 

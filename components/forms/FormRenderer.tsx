@@ -1,5 +1,6 @@
 "use client";
 
+import { useAuth } from "@/lib/auth/client";
 import { FocusInput, FocusTextarea } from "@/components/InitialFocus";
 
 import { useNow } from "@/lib/useNow";
@@ -1077,6 +1078,9 @@ function FieldView({ field, def, language, answers, error, onChange, uploadFile,
             {field.options?.map((o) => <option key={o.id} value={o.id}>{o.label}</option>)}
           </ChaosSelect>
         </div>
+        {field.options?.some(o => o.image) && <ul className="grid gap-2 sm:grid-cols-2">
+          {field.options.filter(o => o.image).map(o => <li key={o.id} className="space-y-1"><span>{o.label}</span><AnswerImage image={o.image!} /></li>)}
+        </ul>}
         {errorText}
       </div>
     );
@@ -1115,7 +1119,7 @@ function FieldView({ field, def, language, answers, error, onChange, uploadFile,
                 {immersive
                   ? <span className="form-choice-key" aria-hidden="true">{String.fromCharCode(65 + i)}</span>
                   : <span className={`form-choice-mark ${multiple ? "form-choice-mark--box" : ""}`} aria-hidden="true"><Check size={12} strokeWidth={3} /></span>}
-                <span className="flex-1">{o.label}</span>
+                <span className="flex-1 space-y-2"><span className="block">{o.label}</span>{o.image && <AnswerImage image={o.image} />}</span>
               </label>
             );
           })}
@@ -1177,7 +1181,7 @@ function FieldView({ field, def, language, answers, error, onChange, uploadFile,
           {order.map((id, i) => (
             <li key={id} className="form-choice form-rank-item">
               <span className="form-choice-key" aria-hidden="true">{i + 1}</span>
-              <span className="flex-1">{labelFor(id)}</span>
+              <span className="flex-1 space-y-2"><span className="block">{labelFor(id)}</span>{field.options?.find(o => o.id === id)?.image && <AnswerImage image={field.options.find(o => o.id === id)!.image!} />}</span>
               <button type="button" onClick={() => move(i, -1)} disabled={i === 0} aria-label={`${t.moveUp}: ${labelFor(id)}`} className="form-icon-btn"><ArrowUp size={16} /></button>
               <button type="button" onClick={() => move(i, 1)} disabled={i === order.length - 1} aria-label={`${t.moveDown}: ${labelFor(id)}`} className="form-icon-btn"><ArrowDown size={16} /></button>
             </li>
@@ -1199,7 +1203,7 @@ function FieldView({ field, def, language, answers, error, onChange, uploadFile,
             <thead>
               <tr>
                 <th scope="col" aria-label={language === "ar" ? "السؤال" : "Question"} />
-                {field.options?.map((o) => <th key={o.id} scope="col" className="p-2 text-xs font-medium text-center form-muted">{o.label}</th>)}
+                {field.options?.map((o) => <th key={o.id} scope="col" className="p-2 text-xs font-medium text-center form-muted">{o.label}{o.image && <AnswerImage image={o.image} />}</th>)}
               </tr>
             </thead>
             <tbody>
@@ -1227,10 +1231,45 @@ function FieldView({ field, def, language, answers, error, onChange, uploadFile,
   return null;
 }
 
-function FieldImage({ field }: { field: FormField }) {
-  if (!field.image || !/^https:\/\//.test(field.image.url)) return null;
+export function AnswerImage({ image, className = "form-image max-h-52 w-auto object-contain" }: { image: NonNullable<FormField["image"]>; className?: string }) {
+  if (!/^https:\/\//.test(image.url)) return null;
+  const site = process.env.NEXT_PUBLIC_CONVEX_SITE_URL || process.env.NEXT_PUBLIC_CONVEX_URL?.replace(/\.cloud\/?$/, ".site");
+  let hosted = false;
+  try { hosted = !!site && new URL(image.url).origin === new URL(site).origin && new URL(image.url).pathname === "/forms/images/content"; } catch { /* Invalid URLs are ignored. */ }
+  if (hosted) return <HostedAnswerImage image={image} className={className} />;
   // eslint-disable-next-line @next/next/no-img-element
-  return <img src={field.image.url} alt={field.image.alt} className="form-image" loading="lazy" />;
+  return <img src={image.url} alt={image.alt} className={className} loading="lazy" />;
+}
+
+function HostedAnswerImage({ image, className }: { image: NonNullable<FormField["image"]>; className: string }) {
+  const { getToken, isSignedIn } = useAuth();
+  const [privateSrc, setPrivateSrc] = useState<string | null>(null);
+  useEffect(() => {
+    setPrivateSrc(null);
+    if (!isSignedIn) return;
+    const controller = new AbortController();
+    let objectUrl: string | undefined;
+    void (async () => {
+      try {
+        const token = await getToken({ template: "convex" });
+        if (!token) return;
+        const response = await fetch(image.url, { headers: { Authorization: `Bearer ${token}` }, cache: "no-store", signal: controller.signal });
+        if (!response.ok) return;
+        const blob = await response.blob();
+        if (controller.signal.aborted) return;
+        objectUrl = URL.createObjectURL(blob);
+        setPrivateSrc(objectUrl);
+      } catch { /* Keep the image inaccessible if authorization fails. */ }
+    })();
+    return () => { controller.abort(); if (objectUrl) URL.revokeObjectURL(objectUrl); };
+  }, [isSignedIn, getToken, image.url]);
+  // eslint-disable-next-line @next/next/no-img-element
+  return <img src={privateSrc ?? image.url} alt={image.alt} className={className} loading="lazy" />;
+}
+
+function FieldImage({ field }: { field: FormField }) {
+  if (!field.image) return null;
+  return <AnswerImage image={field.image} />;
 }
 
 function FileField({ id, field, heading, help, errorText, value, onChange, uploadFile, files, language }: {

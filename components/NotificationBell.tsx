@@ -2,9 +2,10 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useQuery } from "convex/react";
+import { useMutation, useQuery } from "convex/react";
 import { markNotificationsReadLocally, useOptimisticMutation } from "@/lib/optimistic";
 import { Bell } from "lucide-react";
+import PushNotificationControl from "./PushNotificationControl";
 import { api } from "@/convex/_generated/api";
 import { formatNumber, useCopy, useLocale } from "@/lib/i18n";
 import { timeAgo } from "@/lib/timeAgo";
@@ -14,10 +15,14 @@ const copy = {
   en: {
     title: "Notifications", withUnread: (n: number) => `Notifications, ${n} unread`, markAll: "Mark all read",
     empty: "Nothing yet. New responses, limits and approvals appear here.",
+    preferences: "Course notification preferences",
+    kinds: ["Announcements", "Calendar", "Messages", "Assignments", "Enrollment", "Results", "Grading updates", "Admin grading queue"],
   },
   ar: {
     title: "الإشعارات", withUnread: (n: number) => `الإشعارات، ${n} غير مقروء`, markAll: "علّم الكل كمقروء",
     empty: "لا شيء حتى الآن. تظهر هنا الردود الجديدة والحدود وطلبات الموافقة.",
+    preferences: "تفضيلات إشعارات الدورات",
+    kinds: ["الإعلانات", "المواعيد", "الرسائل", "التكليفات", "التسجيل", "النتائج", "مستجدات التصحيح", "طابور تصحيح الإدارة"],
   },
 };
 
@@ -26,6 +31,8 @@ export default function NotificationBell() {
   const t = useCopy(copy);
   const { locale } = useLocale();
   const data = useQuery(api.notifications.listNotifications);
+  const prefs = useQuery(api.notifications.getNotificationPreferences);
+  const setPreference = useMutation(api.notifications.setNotificationPreference);
   const markRead = useOptimisticMutation(api.notifications.markNotificationsRead, markNotificationsReadLocally);
   const [open, setOpen] = useState(false);
   const panel = useRef<HTMLDivElement>(null);
@@ -64,19 +71,35 @@ export default function NotificationBell() {
         <div className="absolute end-0 mt-2 w-80 max-h-[70vh] overflow-y-auto chaos-card ws-glass z-50 text-start" role="dialog" aria-label={t.title}>
           <div className="flex items-center justify-between px-4 py-3 border-b border-foreground/10">
             <p className="chaos-heading text-xs">{t.title}</p>
-            {unread > 0 && (
-              <button type="button" className="text-xs underline text-muted-foreground hover:text-foreground" onClick={() => markRead({})}>
-                {t.markAll}
-              </button>
-            )}
+            <button type="button" className="text-xs underline text-muted-foreground hover:text-foreground" onClick={() => markRead({})}>
+              {t.markAll}
+            </button>
           </div>
+          <details className="border-b border-foreground/10 px-4 py-3 text-xs">
+            <summary className="cursor-pointer text-muted-foreground">{t.preferences}</summary>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {prefs?.kinds.map((kind, index) => (
+                <label key={kind} className="flex items-center gap-2">
+                  <input type="checkbox" checked={!prefs.disabled.includes(kind)}
+                    onChange={e => { void setPreference({ kind, enabled: e.target.checked }); }} />
+                  <span>{t.kinds[index]}</span>
+                </label>
+              ))}
+            </div>
+            <PushNotificationControl />
+          </details>
           {!data?.items.length ? (
             <p className="px-4 py-6 text-sm text-muted-foreground">{t.empty}</p>
           ) : (
             <ul>
               {data.items.map((n) => (
                 <li key={n._id} className={`px-4 py-3 border-b border-foreground/5 text-sm ${n.read ? "text-muted-foreground" : ""}`}>
-                  {n.kind === "webhook" ? (
+                  {n.href ? (
+                    <Link href={n.href} className="hover:underline"
+                      onClick={() => { if (!n.read) markRead({ ids: [n._id] }); setOpen(false); }}>
+                      {n.message}
+                    </Link>
+                  ) : n.kind === "webhook" ? (
                     <Link href={hostHref("/dashboard/connections")} onClick={() => { if (!n.read) markRead({ ids: [n._id] }); setOpen(false); }} className="hover:underline">{n.message}</Link>
                   ) : n.formId ? (
                     <Link href={n.kind === "response" || n.kind === "limit" ? `/dashboard/forms/${n.formId}/responses` : `/dashboard/forms/${n.formId}`}
