@@ -264,21 +264,21 @@
       "unit": "count"
     },
     "mcp.admin.listToolsBytes": {
-      "budget": 327500,
+      "budget": 326231,
       "unit": "bytes",
       "raised": {
-        "from": 321000,
-        "reason": "Three new approved-student read-only MCP tools intentionally expand the public and administrator tool catalogs. Measured schema payload increases are bounded; no client, database, or unrelated latency budgets are raised.",
-        "at": "2026-11-15"
+        "from": 316800,
+        "reason": "The integrated platform adds seven public tools for notification preferences/inbox and approved-course lecture reads, plus administrator grading-job reopening. The measured catalogs contain 139 public and 157 administrator tools, serialized to 301743 and 326231 bytes. These feature costs are recorded against main; no database, rendering, latency or other budgets are raised.",
+        "at": "2026-11-16"
       }
     },
     "mcp.admin.tools": {
       "budget": 157,
       "unit": "count",
       "raised": {
-        "from": 154,
-        "reason": "Three new approved-student read-only MCP tools intentionally expand the public and administrator tool catalogs. Measured schema payload increases are bounded; no client, database, or unrelated latency budgets are raised.",
-        "at": "2026-11-15"
+        "from": 150,
+        "reason": "The integrated platform adds seven public tools for notification preferences/inbox and approved-course lecture reads, plus administrator grading-job reopening. The measured catalogs contain 139 public and 157 administrator tools, serialized to 301743 and 326231 bytes. These feature costs are recorded against main; no database, rendering, latency or other budgets are raised.",
+        "at": "2026-11-16"
       }
     },
     "mcp.getLesson.bytesRead": {
@@ -311,12 +311,12 @@
       }
     },
     "mcp.listToolsBytes": {
-      "budget": 302700,
+      "budget": 301743,
       "unit": "bytes",
       "raised": {
-        "from": 296500,
-        "reason": "Three new approved-student read-only MCP tools intentionally expand the public and administrator tool catalogs. Measured schema payload increases are bounded; no client, database, or unrelated latency budgets are raised.",
-        "at": "2026-11-15"
+        "from": 292300,
+        "reason": "The integrated platform adds seven public tools for notification preferences/inbox and approved-course lecture reads, plus administrator grading-job reopening. The measured catalogs contain 139 public and 157 administrator tools, serialized to 301743 and 326231 bytes. These feature costs are recorded against main; no database, rendering, latency or other budgets are raised.",
+        "at": "2026-11-16"
       }
     },
     "mcp.searchForms.bytesRead": {
@@ -353,9 +353,9 @@
       "budget": 139,
       "unit": "count",
       "raised": {
-        "from": 136,
-        "reason": "Three new approved-student read-only MCP tools intentionally expand the public and administrator tool catalogs. Measured schema payload increases are bounded; no client, database, or unrelated latency budgets are raised.",
-        "at": "2026-11-15"
+        "from": 132,
+        "reason": "The integrated platform adds seven public tools for notification preferences/inbox and approved-course lecture reads, plus administrator grading-job reopening. The measured catalogs contain 139 public and 157 administrator tools, serialized to 301743 and 326231 bytes. These feature costs are recorded against main; no database, rendering, latency or other budgets are raised.",
+        "at": "2026-11-16"
       }
     },
     "quizzes.respondent.bytesRead": {
