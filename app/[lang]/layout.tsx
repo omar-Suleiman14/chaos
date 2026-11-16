@@ -1,3 +1,4 @@
+import ChaosOfflineNotice from "@/components/feedback/ChaosOfflineNotice";
 import ProductAnalytics, { AnalyticsIdentity } from "@/components/ProductAnalytics";
 import CookieConsent from "@/components/CookieConsent";
 import ConsentedSpeedInsights from "@/components/ConsentedSpeedInsights";
@@ -116,6 +117,7 @@ export default async function RootLayout({ children, params }: Readonly<{ childr
         <LocaleProvider initial={locale}>
         <ThemeProvider>
           <FrameGuard />
+          <ChaosOfflineNotice />
           <ProductAnalytics />
           <CookieConsent />
           <AuthProvider locale={locale}>
