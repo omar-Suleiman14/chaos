@@ -21,17 +21,17 @@ const t = {
     points:"Points",ready:"Ready for exam selection",choices:"Choices",addChoice:"Add choice",correct:"Correct answer",
     sample:"Model answer / marking guidance",explanation:"Explanation",tags:"Topics (comma-separated)",
     terms:"Academic terms (comma-separated)",outcomes:"Learning outcomes (comma-separated)",
-    case:"Clinical case",caseStem:"Clinical vignette",caseHelp:"Write a clinical history and attach up to four private R2 images.",
+    case:"Clinical case",caseStem:"Clinical vignette",caseHelp:"Write a clinical history and attach up to four private images.",
     image:"Upload case image",alt:"Describe image for accessibility",remove:"Remove",save:"Save question",
     saving:"Saving…",success:"Question saved",newSaved:"Question created and linked to course",
     edit:"Edit",rev:"Revision",type:"Status",draft:"Draft",archived:"Archived",
     import:"Import JSON",export:"Export JSON",importNote:"Up to 50 questions per import. Imported questions stay drafts; images must be uploaded separately.",
     imported:"Questions imported as drafts",exported:"Private question bank exported",
-    failed:"Could not complete the action.",choose:"Select a question or create a new one.",
+    failed:"Could not complete the action.",importSize:"The import file must be at most 512 KiB.",importFormat:"Choose a Chaos question-bank JSON file.",denied:"Not found or unauthorized.",choose:"Select a question or create a new one.",
     imageDone:"Image uploaded privately",imageFail:"Image upload failed",tooLarge:"PNG, JPEG or WebP only, up to 5 MiB.",
     imageAlt:"Case image alt text",module:"Assign module tag",noModule:"Whole course only",
     next:"Next page",prev:"Previous page",addToModule:"Link question to module",
-    privacy:"Answer keys are visible only to the question owner. Student delivery and immutable exam snapshots are not enabled.",
+    privacy:"Answer keys stay private until results are released according to the exam settings.",
   },
   ar: {
     back:"منشئ الامتحانات",title:"تأليف الأسئلة",intro:"بنك أسئلة خاص بهذه الدورة. لا تظهر المسودات للاختيار في الامتحانات حتى تجعلها جاهزة.",
@@ -40,17 +40,17 @@ const t = {
     points:"الدرجات",ready:"جاهز للاختيار في الامتحان",choices:"الاختيارات",addChoice:"أضف اختيارًا",correct:"الإجابة الصحيحة",
     sample:"نموذج الإجابة ومعايير التصحيح",explanation:"شرح الإجابة",tags:"الموضوعات (افصل بفاصلة)",
     terms:"الفصول الدراسية (افصل بفاصلة)",outcomes:"نواتج التعلم (افصل بفاصلة)",
-    case:"حالة إكلينيكية",caseStem:"وصف الحالة الإكلينيكية",caseHelp:"أدخل التاريخ المرضي وارفق حتى ٤ صور خاصة عبر R2.",
+    case:"حالة إكلينيكية",caseStem:"وصف الحالة الإكلينيكية",caseHelp:"أدخل التاريخ المرضي وارفق حتى ٤ صور خاصة.",
     image:"رفع صورة للحالة",alt:"وصف الصورة لتسهيل الوصول",remove:"إزالة",save:"احفظ السؤال",
     saving:"جارٍ الحفظ…",success:"تم حفظ السؤال",newSaved:"أُنشئ السؤال وربط بالدورة",
     edit:"تعديل",rev:"الإصدار",type:"الحالة",draft:"مسودة",archived:"مؤرشف",
     import:"استيراد JSON",export:"تصدير JSON",importNote:"حتى ٥٠ سؤالًا في كل دفعة. تظل الأسئلة المستوردة مسودات وتُرفع صورها بشكل منفصل.",
     imported:"استوردنا الأسئلة كمسودات",exported:"تم تصدير بنك الأسئلة الخاص",
-    failed:"تعذرت العملية",choose:"اختر سؤالًا أو أنشئ سؤالًا جديدًا.",
+    failed:"تعذرت العملية",importSize:"حجم الملف الأقصى 512 كيبيبايت.",importFormat:"اختر ملف JSON صحيحًا.",denied:"غير موجود أو غير مصرح.",choose:"اختر سؤالًا أو أنشئ سؤالًا جديدًا.",
     imageDone:"تم رفع الصورة بشكل خاص",imageFail:"تعذر رفع الصورة",tooLarge:"PNG أو JPEG أو WebP بحد أقصى ٥ ميجابايت.",
     imageAlt:"وصف صورة الحالة",module:"ربط بوحدة",noModule:"الدورة كلها",
     next:"الصفحة التالية",prev:"الصفحة السابقة",addToModule:"اربط السؤال بوحدة",
-    privacy:"مفاتيح الإجابة تظهر للمالك فقط. لم تُفَعَّل بعد النسخ الثابتة للامتحانات أو تقديمها للطلاب.",
+    privacy:"تبقى مفاتيح الإجابة خاصة حتى تُنشر النتائج وفق إعدادات الامتحان.",
   },
 } as const;
 const initial = (): BankDraft => ({
@@ -75,6 +75,7 @@ export default function CourseQuestionBank({params}:{params:Promise<{id:string}>
   const [selected,setSelected]=useState<Id<"questionBankItems">|null>(null);
   const saved=useQuery(api.questionBank.get,isAuthenticated&&selected?{questionId:selected}:"skip");
   const [item,setItem]=useState<BankDraft>(initial);
+  const [tagText,setTagText]=useState({ topics:"", terms:"", outcomes:"" });
   const [revision,setRevision]=useState<number|null>(null);
   const [moduleId,setModuleId]=useState("");
   const [busy,setBusy]=useState(false);
@@ -89,14 +90,15 @@ export default function CourseQuestionBank({params}:{params:Promise<{id:string}>
   const complete=useAction(api.questionBankMedia.completeUpload);
 
   useEffect(()=>{
-    if(saved&&selected&&revision!==saved.revision) {
+    if(saved&&selected&&saved._id===selected&&revision===null) {
       setItem({
         kind:saved.kind,prompt:saved.prompt,choices:saved.choices,
         correctChoiceIds:saved.correctChoiceIds,sampleAnswer:saved.sampleAnswer,
-        explanation:saved.explanation,points:saved.points,topics:saved.topics,
+        explanation:saved.explanation,rubricCriteria:saved.rubricCriteria,points:saved.points,topics:saved.topics,
         terms:saved.terms,outcomes:saved.outcomes,status:saved.status==="archived"?"draft":saved.status,
         caseStudy:saved.caseStudy,
       });
+      setTagText({ topics:saved.topics.join(", "), terms:saved.terms.join(", "), outcomes:saved.outcomes.join(", ") });
       setRevision(saved.revision);
     }
   },[saved,selected,revision]);
@@ -104,11 +106,11 @@ export default function CourseQuestionBank({params}:{params:Promise<{id:string}>
   const pick=(id:Id<"questionBankItems">)=>{
     setSelected(id);setRevision(null);setModuleId("");
   };
-  const reset=()=>{setSelected(null);setRevision(null);setItem(initial());setModuleId("");setAltText("");};
+  const reset=()=>{setSelected(null);setRevision(null);setItem(initial());setTagText({topics:"",terms:"",outcomes:""});setModuleId("");setAltText("");};
   const setKind=(kind:Kind)=>{
-    if(kind==="true_false")patch({kind,choices:[],correctChoiceIds:["true"]});
+    if(kind==="true_false")patch({kind,choices:[],correctChoiceIds:["true"],rubricCriteria:undefined});
     else if(kind==="written")patch({kind,choices:[],correctChoiceIds:[]});
-    else patch({kind,choices:[{id:"a",text:""},{id:"b",text:""}],correctChoiceIds:["a"]});
+    else patch({kind,choices:[{id:"a",text:""},{id:"b",text:""}],correctChoiceIds:["a"],rubricCriteria:undefined});
   };
   const editChoice=(id:string,value:string)=>patch({
     choices:item.choices.map(c=>c.id===id?{...c,text:value}:c),
@@ -122,13 +124,13 @@ export default function CourseQuestionBank({params}:{params:Promise<{id:string}>
     if(busy)return;
     setBusy(true);
     try{
-      const payload={...item,...(item.caseStudy && !item.caseStudy.stem.trim() && !item.caseStudy.media.length
+      const payload={...item,topics:parseTags(tagText.topics),terms:parseTags(tagText.terms),outcomes:parseTags(tagText.outcomes),...(item.caseStudy && !item.caseStudy.stem.trim() && !item.caseStudy.media.length
         ? {caseStudy:undefined}: {})};
       let questionId:Id<"questionBankItems">;
       if(selected && revision!==null) {
-        await update({questionId:selected,expectedRevision:revision,item:payload});
+        const nextRevision=await update({questionId:selected,expectedRevision:revision,item:payload});
         questionId=selected;
-        setRevision(null);
+        setRevision(nextRevision);
       }else{
         questionId=await create({courseId,item:payload});
         pick(questionId);
@@ -152,8 +154,8 @@ export default function CourseQuestionBank({params}:{params:Promise<{id:string}>
       const uploaded=await fetch(target.url,{method:"PUT",body:file,headers:target.headers,cache:"no-store"});
       if(!uploaded.ok)throw new Error(tx.imageFail);
       await complete({mediaId});
-      patch({caseStudy:{stem:item.caseStudy?.stem??"",
-        media:[...(item.caseStudy?.media??[]),{mediaId,alt:altText.trim()}]}});
+      setItem(current=>({...current,caseStudy:{stem:current.caseStudy?.stem??"",
+        media:[...(current.caseStudy?.media??[]),{mediaId,alt:altText.trim()}]}}));
       setAltText("");
       toast.success(tx.imageDone);
     }catch(error){toast.error(error,{fallback:tx.imageFail});}
@@ -163,11 +165,11 @@ export default function CourseQuestionBank({params}:{params:Promise<{id:string}>
     if(!file||busy)return;
     setBusy(true);
     try{
-      if(file.size>512*1024)throw new Error("File exceeds the 512 KiB import limit.");
+      if(file.size>512*1024)throw new Error(tx.importSize);
       const data:unknown=JSON.parse(await file.text());
       if(!data||typeof data!=="object"||!("version" in data)||data.version!==1||
         !("questions" in data)||!Array.isArray(data.questions))
-        throw new Error("Expected Chaos question-bank JSON version 1.");
+        throw new Error(tx.importFormat);
       const rows=data.questions as BankDraft[];
       const result=await importRows({courseId,items:rows});
       reset();setOffset(0);toast.success(tx.imported+" ("+result.created+")");
@@ -198,14 +200,14 @@ export default function CourseQuestionBank({params}:{params:Promise<{id:string}>
 
   if(!isAuthenticated||course===undefined||questions===undefined)
     return <PageSkeleton label={tx.title}/>;
-  if(!course||!course.isOwner)return <div className="ws-empty">Not found or unauthorized.</div>;
+  if(!course||!course.isOwner)return <div className="ws-empty">{tx.denied}</div>;
   return <main className="cb cb-page mx-auto max-w-6xl space-y-5" dir={ar?"rtl":"ltr"}>
     <Link className="ws-btn ws-btn--ghost ws-btn--sm" href={`/dashboard/courses/${id}/exams`}>
       <ArrowLeft size={16} aria-hidden />{tx.back}</Link>
     <header className="space-y-1"><h1 className="ws-page-title">{tx.title}</h1>
       <p className="ws-page-subtitle">{tx.intro}</p></header>
     <div className="flex flex-wrap gap-2">
-      <button type="button" onClick={reset} className="ws-btn ws-btn--primary"><Plus size={16}/>{tx.new}</button>
+      <button type="button" onClick={reset} disabled={uploading || busy} className="ws-btn ws-btn--primary"><Plus size={16}/>{tx.new}</button>
       <label className="ws-btn ws-btn--ghost cursor-pointer"><Upload size={16}/>{tx.import}
         <input className="sr-only" type="file" accept=".json,application/json" disabled={busy}
           onChange={e=>{const file=e.target.files?.[0];e.currentTarget.value="";void importFile(file);}}/>
@@ -221,7 +223,7 @@ export default function CourseQuestionBank({params}:{params:Promise<{id:string}>
         {questions.items.map(q=><button key={q._id} type="button"
           className={"w-full rounded-lg border p-3 text-start text-sm hover:bg-muted/50 "+
             (selected===q._id?"border-primary":"border-border")}
-          onClick={()=>pick(q._id)}>
+          disabled={uploading || busy} onClick={()=>pick(q._id)}>
           <span className="font-medium break-words" dir="auto">{q.prompt.slice(0,120)}</span>
           <span className="block text-xs text-muted-foreground">{q.status} · {q.kind}</span>
         </button>)}
@@ -273,7 +275,7 @@ export default function CourseQuestionBank({params}:{params:Promise<{id:string}>
           <legend>{tx.correct}</legend>
           {["true","false"].map(value=><label key={value} className="flex items-center gap-2">
             <input type="radio" checked={item.correctChoiceIds[0]===value}
-              onChange={()=>patch({correctChoiceIds:[value]})}/>{value}</label>)}
+              onChange={()=>patch({correctChoiceIds:[value]})}/>{ar ? (value === "true" ? "صح" : "خطأ") : value}</label>)}
         </fieldset>}
         {item.kind==="written"&&<label className="grid gap-1">{tx.sample}
           <textarea className="kb-input" value={item.sampleAnswer??""} dir="auto"
@@ -292,8 +294,8 @@ export default function CourseQuestionBank({params}:{params:Promise<{id:string}>
             </select></label>
           {(["topics","terms","outcomes"] as const).map(key=><label className="grid gap-1" key={key}>
             {key==="topics"?tx.tags:key==="terms"?tx.terms:tx.outcomes}
-            <input className="kb-input" dir="auto" value={item[key].join(", ")}
-              onChange={e=>patch({[key]:parseTags(e.target.value)})}/>
+            <input className="kb-input" dir="auto" value={tagText[key]}
+              onChange={e=>setTagText(old=>({...old,[key]:e.target.value}))}/>
           </label>)}
         </div>
         <fieldset className="rounded-xl border border-border p-3 space-y-3">

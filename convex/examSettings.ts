@@ -55,7 +55,8 @@ export const saveForDraft = mutation({
   handler: async (ctx, { draftId, expectedRevision, settings }) => {
     const { release } = await owned(ctx, draftId);
     if (!release) throw new Error("SNAPSHOT_REQUIRED: Seal the exam before saving its release settings.");
-    if (release.studentEntryEnabled)
+    if (release.studentEntryEnabled || await ctx.db.query("examAttempts")
+      .withIndex("by_snapshot_state", q => q.eq("snapshotId", release.activeSnapshotId).eq("state", "in_progress")).first())
       throw new Error("EXAM_ACTIVE: Close the student release before editing settings.");
     if (!Number.isSafeInteger(expectedRevision) ||
         expectedRevision !== (release.settingsRevision ?? 0))
@@ -63,7 +64,8 @@ export const saveForDraft = mutation({
     const clean = validateExamSettings(settings, Date.now());
     await ctx.db.patch("examReleases", release._id, {
       settings: clean, settingsRevision: expectedRevision + 1,
-      preparedForAudience: false, updatedAt: Date.now(),
+      preparedForAudience: false, assignmentActive: false,
+      studentEntryEnabled: false, updatedAt: Date.now(),
     });
     return expectedRevision + 1;
   },
@@ -77,7 +79,8 @@ export const setPrepared = mutation({
   handler: async (ctx, { draftId, expectedRevision, prepared }) => {
     const { draft, release } = await owned(ctx, draftId);
     if (!release) throw new Error("SNAPSHOT_REQUIRED: Seal the exam first.");
-    if (release.studentEntryEnabled)
+    if (release.studentEntryEnabled || await ctx.db.query("examAttempts")
+      .withIndex("by_snapshot_state", q => q.eq("snapshotId", release.activeSnapshotId).eq("state", "in_progress")).first())
       throw new Error("EXAM_ACTIVE: Cannot change readiness during student entry.");
     if (!Number.isSafeInteger(expectedRevision) ||
         expectedRevision !== (release.settingsRevision ?? 0))
@@ -92,7 +95,8 @@ export const setPrepared = mutation({
       validateExamSettings(release.settings, Date.now());
     }
     await ctx.db.patch("examReleases", release._id, {
-      preparedForAudience: prepared, settingsRevision: expectedRevision + 1,
+      preparedForAudience: prepared, assignmentActive: prepared ? release.assignmentActive : false,
+      settingsRevision: expectedRevision + 1,
       updatedAt: Date.now(),
     });
     return expectedRevision + 1;

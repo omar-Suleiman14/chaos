@@ -129,3 +129,11 @@ describe("builder", () => {
     expect(screen.getByLabelText("High label")).toHaveValue("Good");
   });
 });
+
+it("shows dropdown answer images before a choice is selected", () => {
+  render(<Respond field={{ id: "pictures", type: "dropdown", label: "Choose a picture", required: true,
+    options: [{ id: "a", label: "First", image: { url: "https://example.org/a.png", alt: "First image" } },
+      { id: "b", label: "Second", image: { url: "https://example.org/b.png", alt: "Second image" } }] }} />);
+  expect(screen.getByRole("img", { name: "First image" })).toBeInTheDocument();
+  expect(screen.getByRole("img", { name: "Second image" })).toBeInTheDocument();
+});

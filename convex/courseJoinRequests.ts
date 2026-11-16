@@ -1,10 +1,12 @@
 import { v } from "convex/values";
+import { paginationOptsValidator } from "convex/server";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { getAuthIdentity } from "./authIdentity";
 import { requireActiveUser } from "./authz";
 import { readPublicCourse } from "./courses";
 import { recordStudent } from "./studentRoster";
+import { notifyCourseAccount } from "./courseNotifications";
 
 /**
  * Course admission is separate from course publication. This module introduces
@@ -82,6 +84,11 @@ export const requestJoin = mutation({
         updatedAt: now,
       });
     }
+    await notifyCourseAccount(ctx, {
+      recipientId: row.ownerId, courseId: course.id, kind: "course_enrollment",
+      key: "join_request:" + course.id + ":" + identity.subject + ":" + now,
+      message: "A student requested access to your course.",
+    });
     return null;
   },
 });
@@ -165,6 +172,24 @@ export const listPending = query({
   },
 });
 
+/** Cursor-paginated pending requests, so every request remains reviewable. */
+export const pendingPage = query({
+  args: { courseId: v.id("learnCollections"), paginationOpts: paginationOptsValidator },
+  handler: async (ctx, { courseId, paginationOpts }) => {
+    if (!Number.isSafeInteger(paginationOpts.numItems) || paginationOpts.numItems < 1 || paginationOpts.numItems > 100) throw new Error("VALIDATION_FAILED: Page size must be 1?100.");
+    const { identity } = await requireActiveUser(ctx);
+    const course = await ctx.db.get("learnCollections", courseId);
+    if (!course || course.ownerId !== identity.subject) throw new Error("NOT_FOUND: Course not found.");
+    const page = await ctx.db.query("courseJoinRequests")
+      .withIndex("by_course_status_requestedAt", q => q.eq("courseId", courseId).eq("status", "pending"))
+      .order("asc").paginate(paginationOpts);
+    return { ...page, page: await Promise.all(page.page.map(async row => {
+      const user = await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", row.studentId)).first();
+      return { id: row._id, studentId: row.studentId, name: user?.name || "Chaos student", username: user?.username ?? null, requestedAt: row.requestedAt };
+    })) };
+  },
+});
+
 /** Only the owning doctor can admit or decline a requesting student. */
 export const decide = mutation({
   args: {
@@ -212,6 +237,11 @@ export const decide = mutation({
       reviewedAt: now,
       reviewedBy: identity.subject,
       updatedAt: now,
+    });
+    if (approve) await notifyCourseAccount(ctx, {
+      recipientId: request.studentId, courseId: course._id, kind: "course_enrollment",
+      key: "enrollment:" + request._id + ":" + now,
+      message: "Your course access request was approved.",
     });
     return wanted;
   },

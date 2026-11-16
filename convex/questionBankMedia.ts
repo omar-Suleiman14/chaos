@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { assertSourceStorageAvailable, changeSourceStorage } from "./sourceStorage";
 import { makeFunctionReference, type HttpRouter } from "convex/server";
 import { action, env, httpAction, internalMutation, internalQuery, mutation, query,
   type QueryCtx } from "./_generated/server";
@@ -16,6 +17,7 @@ const types = new Set(["image/png", "image/jpeg", "image/webp"]);
 const mediaArgs = { mediaId: v.id("questionBankMedia") };
 const info = v.object({ key:v.string(),mimeType:v.string(),bytes:v.number() });
 const readyInfo = v.object({key:v.string(),mimeType:v.string(),bytes:v.number(),etag:v.string()});
+const cleanupRef = makeFunctionReference<"action", { kind: "question"; id: string }, null>("r2MediaCleanup:cleanup");
 const keyFor = (id: Id<"questionBankMedia">) => "question-images/" + id;
 const headers = { "Cache-Control":"private, no-store","X-Content-Type-Options":"nosniff",
   "Access-Control-Allow-Origin":"*","Access-Control-Allow-Methods":"GET, OPTIONS",
@@ -31,10 +33,14 @@ export const reserveUpload = mutation({
       throw new Error("INVALID_IMAGE: PNG, JPEG or WebP, 5 MiB maximum.");
     if(await creatorRestricted(ctx,identity.subject)) throw new Error("FORBIDDEN: Account restricted.");
     await consumeRate(ctx,"question-images:reserve:"+identity.subject,40,60*60_000);
+    await assertSourceStorageAvailable(ctx,identity.subject,bytes);
+    await changeSourceStorage(ctx,identity.subject,bytes);
     const now=Date.now();
-    return ctx.db.insert("questionBankMedia",{
-      ownerId:identity.subject,mimeType,bytes,status:"pending",createdAt:now,expiresAt:now+PENDING_MS,
+    const mediaId=await ctx.db.insert("questionBankMedia",{
+      ownerId:identity.subject,mimeType,bytes,status:"pending",storageCounted:true,createdAt:now,expiresAt:now+PENDING_MS,
     });
+    await ctx.scheduler.runAfter(PENDING_MS+65_000,cleanupRef,{kind:"question",id:mediaId});
+    return mediaId;
   },
 });
 async function getPendingRow(ctx:QueryCtx,mediaId:Id<"questionBankMedia">) {
@@ -53,14 +59,12 @@ export const getPending = internalQuery({
 const pendingRef=makeFunctionReference<"query",{mediaId:Id<"questionBankMedia">},
   {key:string;mimeType:string;bytes:number}|null>("questionBankMedia:getPending");
 export const getUploadTarget=action({
-  args:mediaArgs,returns:v.object({url:v.string(),headers:v.object({
-    "Content-Type":v.string(),"If-None-Match":v.literal("*"),
-  }),expiresAt:v.number()}),
+  args:mediaArgs,returns:v.object({url:v.string(),headers:v.record(v.string(),v.string()),expiresAt:v.number()}),
   handler:async(ctx,{mediaId})=>{
     const row=await ctx.runQuery(pendingRef,{mediaId});
     if(!row) throw new Error("NOT_FOUND: Upload reservation unavailable.");
     const signed=await signR2Request(r2Config(env),"PUT",row.key,{
-      contentType:row.mimeType,expiresSeconds:URL_SECONDS,
+      contentType:row.mimeType,contentLength:row.bytes,expiresSeconds:URL_SECONDS,
     });
     return {url:signed.url,headers:{"Content-Type":row.mimeType,"If-None-Match":"*" as const},
       expiresAt:Date.now()+URL_SECONDS*1000};
