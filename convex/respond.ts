@@ -3,6 +3,7 @@ import { uploadRejection } from "./respondUploadValidation";
 export { uploadRejection } from "./respondUploadValidation";
 import { recordStudent } from "./studentRoster";
 import { getAuthIdentity } from "./authIdentity";
+import { canReadCourseForm } from "./courseSourceAccess";
 import { canonicalJson } from "./canonicalJson";
 
 import { homeworkUploadAccess } from "./homeworkUploadAccess";
@@ -60,7 +61,8 @@ const MIN_HUMAN_MS = 2500;
 type Ctx = QueryCtx | MutationCtx;
 
 async function formByShareId(ctx: Ctx, shareId: string) {
-  return await ctx.db.query("forms").withIndex("by_shareId", (q) => q.eq("shareId", shareId)).unique();
+  const form = await ctx.db.query("forms").withIndex("by_shareId", (q) => q.eq("shareId", shareId)).unique();
+  return form && await canReadCourseForm(ctx, form, (await getAuthIdentity(ctx))?.subject ?? null) ? form : null;
 }
 
 async function currentVersion(ctx: Ctx, form: Doc<"forms">) {
@@ -73,15 +75,23 @@ async function currentVersion(ctx: Ctx, form: Doc<"forms">) {
 
 /** Response cap: per-form setting, else the platform limit unless the owner is elevated. */
 export async function responseCap(ctx: Ctx, form: Doc<"forms">, now?: number): Promise<number | null> {
-  const owner = await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", form.ownerId)).first();
+  const owner = await ownerOf(ctx, form);
   const config = await ctx.db.query("globalConfig").first();
   const platform = hasPro(owner, now) ? planLimits.pro.responsesPerForm : config?.formResponseLimit ?? DEFAULT_FORM_RESPONSE_LIMIT;
   const own = form.settings.responseLimit ?? null;
   return effectiveResponseCap(platform, own);
 }
 
+const ownerReads = new WeakMap<Ctx, Map<string, Promise<Doc<"users"> | null>>>();
 async function ownerOf(ctx: Ctx, form: Doc<"forms">) {
-  return await ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", form.ownerId)).first();
+  let reads = ownerReads.get(ctx);
+  if (!reads) { reads = new Map(); ownerReads.set(ctx, reads); }
+  let pending = reads.get(form.ownerId);
+  if (!pending) {
+    pending = ctx.db.query("users").withIndex("by_clerkId", (q) => q.eq("clerkId", form.ownerId)).first();
+    reads.set(form.ownerId, pending);
+  }
+  return pending;
 }
 
 export async function ownerBanned(ctx: Ctx, form: Doc<"forms">) {
@@ -104,6 +114,24 @@ async function accessCodeMatches(ctx: QueryCtx | MutationCtx, form: Doc<"forms">
   return !!pass && pass.formId === form._id && pass.accessCodeHash === form.settings.accessCodeHash && pass.expiresAt > Date.now();
 }
 
+/** Add a form-scoped access grant only to our own hosted image URLs. */
+function definitionWithImageGrant(def: FormDefinition, grant: string | undefined, editToken?: string): FormDefinition {
+  if (!grant && !editToken) return def;
+  const image = <T extends { url: string }>(value: T | undefined): T | undefined => {
+    if (!value) return value;
+    try {
+      const url = new URL(value.url);
+      if (url.origin !== new URL(env.CONVEX_SITE_URL).origin || url.pathname !== FORM_IMAGE_PATH) return value;
+      if (grant) url.searchParams.set("grant", grant);
+      if (editToken) url.searchParams.set("editToken", editToken);
+      return { ...value, url: url.toString() };
+    } catch { return value; }
+  };
+  return { ...def, fields: def.fields.map(field => ({ ...field, image: image(field.image),
+    options: field.options?.map(option => ({ ...option, image: image(option.image) })),
+    rows: field.rows?.map(row => ({ ...row, image: image(row.image) })) })) };
+}
+
 export const getPublicForm = query({
   args: { shareId: v.string(), accessCode: v.optional(v.string()), editToken: v.optional(v.string()) },
   handler: async (ctx, args) => {
@@ -119,7 +147,8 @@ export const getPublicForm = query({
     const hideBranding = !!form.settings.hideBranding && hasPro(await ownerOf(ctx, form), Date.now());
     const base = { title: def.title, translations: def.translations, defaultLanguage: def.defaultLanguage, languages: def.languages, theme: def.theme, allowIndexing: form.settings.allowIndexing, hideBranding };
     // A valid edit link may keep working after closing when the creator allowed it; new responses stay blocked.
-    const editingClosed = !!args.editToken && form.settings.allowEditAfterSubmit && !!form.settings.allowEditAfterClose && !!(await responseForEditToken(ctx, form, args.editToken));
+    const validEdit = !!args.editToken && form.settings.allowEditAfterSubmit && !!(await responseForEditToken(ctx, form, args.editToken));
+    const editingClosed = validEdit && !!form.settings.allowEditAfterClose;
     const now = Date.now();
     const when = scheduleState(form.settings, now);
     if (!editingClosed) {
@@ -152,7 +181,7 @@ export const getPublicForm = query({
       ...base,
       shareId: form.shareId,
       version: version.version,
-      definition: respondentDefinition(def as FormDefinition, now),
+      definition: definitionWithImageGrant(respondentDefinition(def as FormDefinition, now), form.settings.access === "code" ? args.accessCode : undefined, validEdit ? args.editToken : undefined),
       quizTimerMode: def.quiz?.enabled ? (form.settings.quizTimerMode ?? "none") : "none",
       quizTimeSeconds: def.quiz?.enabled ? (form.settings.quizTimeSeconds ?? 60) : 0,
       nextFieldReleaseAt: nextFieldReleaseAt(def as FormDefinition, now),
@@ -225,6 +254,7 @@ async function assertCanCollect(ctx: MutationCtx, form: Doc<"forms"> | null, acc
   if (when === "not_open" && !skipClosing) throw new Error("FORM_NOT_OPEN: This form is not open yet.");
   if (when === "closed" && !skipClosing) throw new Error("FORM_CLOSED: This form closed and is no longer accepting responses.");
   const identity = await getAuthIdentity(ctx);
+  if (!await canReadCourseForm(ctx, form, identity?.subject ?? null)) throw new Error("FORM_UNAVAILABLE: This form is not available.");
   if (form.settings.access === "signed_in" && !identity) throw new Error("SIGN_IN_REQUIRED: Sign in to respond to this form.");
   if (form.settings.access === "signed_in") {
     const check = await teamOrEmailCheck(ctx, form.settings, identity);
@@ -485,7 +515,7 @@ export const getSubmissionForEdit = query({
     if (!response) return null;
     const def = await definitionForResponse(ctx, response);
     if (!def) return null;
-    return { answers: releasedAnswers(def, response.answers as Answers, Date.now()), language: response.language, definition: respondentDefinition(def, Date.now()), receiptCode: response.receiptCode, submittedAt: response.submittedAt, editCount: response.editCount ?? 0 };
+    return { answers: releasedAnswers(def, response.answers as Answers, Date.now()), language: response.language, definition: definitionWithImageGrant(respondentDefinition(def, Date.now()), undefined, args.editToken), receiptCode: response.receiptCode, submittedAt: response.submittedAt, editCount: response.editCount ?? 0 };
   },
 });
 

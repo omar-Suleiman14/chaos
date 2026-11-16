@@ -12,7 +12,7 @@ export const chaosIntegration = {
   id: "chaos",
   name: "Chaos",
   /** Bump with any change to the tools or the packages. Also the MCP server version. */
-  version: "1.3.0",
+  version: "1.4.0",
   developer: "Chaos",
   tagline: "Make forms, quizzes, lessons and courses from your assistant.",
   description: "Create and manage Chaos forms, quizzes, lessons, courses, flashcards and live games from a conversation.",
@@ -40,7 +40,7 @@ export const chaosIntegration = {
   ],
 } as const;
 
-export type IntegrationPlatformId = "claude" | "chatgpt";
+export type IntegrationPlatformId = "claude" | "chatgpt" | "gemini";
 
 /** A platform Chaos can be added to. A future integration is one more entry here plus its package builder. */
 export type IntegrationPlatform = {
@@ -58,6 +58,11 @@ export type IntegrationPlatform = {
 };
 
 export const integrationPlatforms: Record<IntegrationPlatformId, IntegrationPlatform> = {
+  gemini: {
+    id: "gemini", name: "Gemini", vendor: "Google", pagePath: "/gemini",
+    packageFile: "chaos-for-gemini.zip", docsUrl: `${siteUrl}/docs/gemini`,
+    connectUrl: "https://gemini.google.com/",
+  },
   claude: {
     id: "claude",
     name: "Claude",
@@ -79,7 +84,7 @@ export const integrationPlatforms: Record<IntegrationPlatformId, IntegrationPlat
   },
 };
 
-export const integrationPlatformList = [integrationPlatforms.claude, integrationPlatforms.chatgpt];
+export const integrationPlatformList = [integrationPlatforms.claude, integrationPlatforms.chatgpt, integrationPlatforms.gemini];
 
 export function packageDownloadPath(platform: IntegrationPlatform) {
   return `/api/plugins/${platform.packageFile}`;

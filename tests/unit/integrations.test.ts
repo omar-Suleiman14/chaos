@@ -3,7 +3,7 @@ import { describe, expect, it } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { chaosIntegration, integrationPlatformList, integrationPlatforms, packageDownloadPath } from "@/lib/integrations";
-import { chatGptPackage, claudePackage, platformForPackageFile, type LogoAssets, type PackageFiles } from "@/lib/integrations/packages";
+import { chatGptPackage, claudePackage, geminiPackage, platformForPackageFile, type LogoAssets, type PackageFiles } from "@/lib/integrations/packages";
 import { createChaosMcpServer, MCP_SERVER_NAME, MCP_SERVER_VERSION } from "@/lib/mcp/server";
 import { ADMIN_CRM_TOOLS, ADMIN_PLATFORM_TOOLS } from "@/lib/mcp/admin";
 import inventory from "@/lib/mcp/inventory.json";
@@ -49,6 +49,13 @@ describe("shared integration config", () => {
 describe("plugin packages", () => {
   const claude = claudePackage(logo);
   const chatgpt = chatGptPackage(logo);
+  const gemini = geminiPackage(logo);
+
+  it("ships Gemini CLI remote HTTP MCP configuration without private credentials", () => {
+    expect(JSON.parse(text(gemini, "gemini/settings.json"))).toEqual({ mcpServers: { chaos: { httpUrl: chaosIntegration.mcpUrl } } });
+    expect(gemini["assets/logo.svg"]).toBe(svg);
+    expect(text(gemini, "README.md")).toContain("Gemini Apps");
+  });
 
   it("builds a Claude plugin from the shared config", () => {
     const plugin = manifest(claude, ".claude-plugin/plugin.json");
