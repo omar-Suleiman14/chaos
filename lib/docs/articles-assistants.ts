@@ -64,6 +64,26 @@ const tries: Record<Locale, DocBlock[]> = {
 export const assistantArticles: Record<Locale, DocArticle[]> = {
   en: [
     {
+      slug: "gemini",
+      title: "Gemini",
+      summary: "Connect Chaos to Gemini Apps where available or to Gemini CLI with OAuth.",
+      blocks: [
+        { type: "p", text: "Chaos supports Gemini Apps custom Connected Apps on eligible accounts and Gemini CLI over remote Streamable HTTP MCP. Gemini does the writing; Chaos enforces your permissions." },
+        { type: "heading", id: "apps", text: "Gemini Apps" },
+        { type: "steps", items: [
+          "In the Gemini web app, open Connected Apps and add a custom app if this feature is available for your account.",
+          "Enter Chaos and the MCP URL https://chaos.fail/mcp, then complete OAuth sign-in.",
+          "Start a new chat and choose your connected Chaos app.",
+        ] },
+        { type: "tip", text: "As documented by Google, Gemini Apps custom apps are currently limited to US adults (18+) with personal Google accounts, Keep Activity enabled, and English. Gemini CLI offers a developer alternative." },
+        { type: "heading", id: "cli", text: "Gemini CLI" },
+        { type: "p", text: "Merge `{ \"mcpServers\": { \"chaos\": { \"httpUrl\": \"https://chaos.fail/mcp\" } } }` into ~/.gemini/settings.json, launch Gemini CLI, and run /mcp to authenticate using OAuth. You can download a configuration ZIP from [Chaos for Gemini](/gemini)." },
+        ...can.en, ...tries.en,
+        { type: "heading", id: "privacy", text: "Privacy" },
+        { type: "p", text: "Content Gemini requests can be transmitted to Google. Connection is optional and revocable from your client or Chaos Connections. Chaos rechecks access to approved published courses and excludes private grading data from course-chat tools." },
+      ],
+    },
+    {
       slug: "claude",
       title: "Claude",
       summary: "Use Chaos from Claude on the web, desktop, phone and Claude Code.",
@@ -116,6 +136,25 @@ export const assistantArticles: Record<Locale, DocArticle[]> = {
     },
   ],
   ar: [
+    {
+      slug: "gemini", title: "Gemini",
+      summary: "اربط Chaos بـ Gemini Apps عند توفر الميزة أو Gemini CLI مع OAuth.",
+      blocks: [
+        { type: "p", text: "يدعم Chaos التطبيقات المخصصة في Gemini Apps للحسابات المؤهلة، وGemini CLI عبر MCP عن بُعد مع التحقق من صلاحيات حسابك." },
+        { type: "heading", id: "apps", text: "Gemini Apps" },
+        { type: "steps", items: [
+          "افتح Gemini على الويب، ثم التطبيقات المتصلة وأضف تطبيقًا مخصصًا إذا كانت الميزة متاحة.",
+          "أدخل Chaos والرابط https://chaos.fail/mcp ثم أكمل تسجيل الدخول عبر OAuth.",
+          "ابدأ محادثة جديدة واستخدم تطبيق Chaos المتصل.",
+        ] },
+        { type: "tip", text: "بحسب Google تتوفر التطبيقات المخصصة حاليًا بالإنجليزية للبالغين في الولايات المتحدة مع حساب Google شخصي وتفعيل سجل النشاط. يمكن للمطورين استخدام Gemini CLI." },
+        { type: "heading", id: "cli", text: "Gemini CLI" },
+        { type: "p", text: "أضف `{ \"mcpServers\": { \"chaos\": { \"httpUrl\": \"https://chaos.fail/mcp\" } } }` إلى ~/.gemini/settings.json، ثم افتح Gemini CLI وشغّل ‎/mcp للمصادقة. توجد حزمة إعداد في [Chaos لـ Gemini](/gemini)." },
+        ...can.ar, ...tries.ar,
+        { type: "heading", id: "privacy", text: "الخصوصية" },
+        { type: "p", text: "قد يُرسل ما يقرؤه Gemini إلى Google. الاتصال اختياري وقابل للإلغاء، ويُعاد فحص أذونات الدورات قبل عرض المحاضرات ولا تُشارك مفاتيح الإجابات أو الدرجات المحجوبة." },
+      ],
+    },
     {
       slug: "claude",
       title: "Claude",

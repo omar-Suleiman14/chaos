@@ -7,6 +7,7 @@ import { requireAdminForActor } from "./adminAccess";
 import { emptyMetrics, metricsValidator } from "./adminModel";
 import { readFormCounts } from "./formCounts";
 import { memoizeOwnerRestriction } from "./adminAnalyticsReadMemo";
+import { mapBounded } from "./adminAnalyticsConcurrency";
 
 async function start(ctx: MutationCtx) {
   const prior = await ctx.db
@@ -66,6 +67,19 @@ export const overview = query({
   ),
   handler: ctx => overviewForActor(ctx),
 });
+/** The last 30 completed scans only: no identities, raw submissions or inferred live traffic. */
+export async function historyForActor(ctx: QueryCtx, actorId?: string) {
+  await requireAdminForActor(ctx, actorId);
+  const snapshots = await ctx.db.query("adminMetricSnapshots")
+    .withIndex("by_completedAt").order("desc").take(30);
+  return snapshots.map(({ completedAt, counts }) => ({ completedAt, counts }));
+}
+export const history = query({
+  args: {},
+  returns: v.array(v.object({ completedAt: v.number(), counts: metricsValidator })),
+  handler: ctx => historyForActor(ctx),
+});
+
 /** One bounded page per transaction; does not load answers or drafts into the UI. */
 export const scan = internalMutation({
   args: { startedAt: v.number() },
@@ -99,30 +113,41 @@ export const scan = internalMutation({
       phase = "forms";
       const page = await ctx.db.query("forms").paginate(options);
       const restrictedOwner = memoizeOwnerRestriction((ownerId) => creatorRestricted(ctx, ownerId));
-      for (const form of page.page) {
+      // Keep the 50-record page and 2 MB read ceiling; overlap at most six
+      // read-only lookups. If any lookup fails, abort this entire transaction.
+      const formTotals = await mapBounded(page.page, 6, async (form) => {
         const counts = await readFormCounts(ctx, form);
+        const visible = form.status === "live" && !form.isBanned &&
+          !(await restrictedOwner(form.ownerId));
+        return { counts, visible };
+      });
+      for (const { counts, visible } of formTotals) {
         pending.forms++;
         pending.responses += counts.responseCount;
         pending.partials += counts.partialCount;
-        if (
-          form.status === "live" &&
-          !form.isBanned &&
-          !(await restrictedOwner(form.ownerId))
-        )
-          pending.liveForms++;
+        if (visible) pending.liveForms++;
       }
       cursor = page.isDone ? null : page.continueCursor;
       done = page.isDone;
     }
+    const completedAt = done ? Date.now() : null;
     await ctx.db.patch("adminMetrics", job._id, {
       pending,
       phase,
       cursor,
       running: !done,
-      ...(done ? { counts: pending, completedAt: Date.now() } : {}),
+      ...(completedAt !== null ? { counts: pending, completedAt } : {}),
     });
-    if (!done)
+    if (completedAt !== null) {
+      // This is in the same Convex transaction as marking the scan complete.
+      // Replayed or stale scan jobs cannot create duplicate history rows.
+      await ctx.db.insert("adminMetricSnapshots", { completedAt, counts: pending });
+      const snapshots = await ctx.db.query("adminMetricSnapshots")
+        .withIndex("by_completedAt").order("desc").take(31);
+      if (snapshots.length > 30) await ctx.db.delete("adminMetricSnapshots", snapshots[30]._id);
+    } else {
       await ctx.scheduler.runAfter(0, internal.adminAnalytics.scan, args);
+    }
     return null;
   },
 });

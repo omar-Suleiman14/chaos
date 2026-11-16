@@ -10,6 +10,7 @@ import { grantPlan, usersForActor } from "./admin";
 import { paginationOptsValidator } from "convex/server";
 import { isAdmin, requireAdmin, verifiedIdentityEmail } from "./authz";
 import { v } from "convex/values";
+import { initializeCourseSourceIndex } from "./courseSourceAccess";
 import { query, mutation } from "./_generated/server";
 import type { MutationCtx } from "./_generated/server";
 
@@ -74,6 +75,7 @@ export const getOrCreateUser = mutation({
 
 /** First sign-in, from the web app or from a connected app such as ChatGPT. */
 export async function insertNewUser(ctx: MutationCtx, profile: { clerkId: string; name: string; email: string; emailVerified: boolean; imageUrl?: string }) {
+  await initializeCourseSourceIndex(ctx);
   const planExpiresAt = Date.now() + 30 * 86_400_000;
   let username = "";
   // Bounded retry; indexed reads participate in the transaction's uniqueness checks.
