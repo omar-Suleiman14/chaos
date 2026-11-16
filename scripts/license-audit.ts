@@ -10,7 +10,8 @@ import { spawnSync } from "node:child_process";
 const ALLOWED = new Set(["MIT", "ISC", "Apache-2.0", "BSD-2-Clause", "BSD-3-Clause", "0BSD", "Unlicense", "CC0-1.0", "MPL-2.0", "(MPL-2.0 OR Apache-2.0)", "(Apache-2.0 AND MIT)", "(MIT OR CC0-1.0)", "BlueOak-1.0.0", "Python-2.0", "Zlib"]);
 
 /** package name → the license it was reviewed under and why it is accepted. */
-const REVIEWED: Record<string, { license: string; reason: string }> = {
+const REVIEWED: Record<string, { license: string | string[]; reason: string }> = {
+  khroma: { license: ["Unknown", "MIT"], reason: "MIT per its LICENSE file; pnpm reports either MIT or Unknown depending on available package metadata. Mermaid dependency." },
   elkjs: { license: "EPL-2.0", reason: "File-level copyleft, used unmodified as a separate module (Mermaid layout engine); source is public. Changes to elkjs itself would have to be published under EPL-2.0." },
   "caniuse-lite": { license: "CC-BY-4.0", reason: "Browser support data used by the build; attribution is kept in the package." },
 };
@@ -29,7 +30,8 @@ for (const [license, packages] of Object.entries(byLicense)) {
     count++;
     const reviewed = REVIEWED[pkg.name];
     if (reviewed) {
-      if (reviewed.license !== license) problems.push(`${pkg.name}@${pkg.versions.join(",")}: license changed from reviewed ${reviewed.license} to ${license}.`);
+      const accepted = Array.isArray(reviewed.license) ? reviewed.license : [reviewed.license];
+      if (!accepted.includes(license)) problems.push(`${pkg.name}@${pkg.versions.join(",")}: license changed from reviewed ${accepted.join(" or ")} to ${license}.`);
       continue;
     }
     if (!ALLOWED.has(license)) problems.push(`${pkg.name}@${pkg.versions.join(",")}: ${license} is not on the allowed list. Review it and add it to scripts/license-audit.ts.`);

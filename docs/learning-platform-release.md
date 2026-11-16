@@ -11,8 +11,11 @@ enabling uploads. Keep public bucket access disabled. Allow browser PUT requests
 only from the application's origins, with Content-Type and If-None-Match headers.
 Never put R2 credentials in public environment variables.
 
-After deploying the additive schema and functions, run these internal operations
-against the intended deployment:
+The production Vercel build forwards its four private R2 variables to the backend
+selected by the existing Convex production deploy key. After deploying the schema
+and functions, it starts the following internal operations and waits for both
+access projections before building the frontend. For other hosting setups, run
+these operations against the intended deployment:
 
 ```sh
 pnpm exec convex run businessTeams:backfillCourseMemberships '{}'

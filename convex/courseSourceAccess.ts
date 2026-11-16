@@ -114,7 +114,7 @@ export const backfill = internalMutation({
   args: { restart: v.optional(v.boolean()) }, returns: v.null(),
   handler: async (ctx, args) => {
     const old = await ctx.db.query("courseSourceAccessState").first();
-    if (old && !old.complete && !args.restart) return null;
+    if (old && !args.restart) return null;
     const generation = (old?.generation ?? 0) + 1;
     const value = { generation, complete: false, cursor: null };
     if (old) await ctx.db.patch("courseSourceAccessState", old._id, value);
