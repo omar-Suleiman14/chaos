@@ -10,7 +10,7 @@
   const button = root.querySelector("[data-game-jump]");
   if (!ctx || !status || !scoreEl || !button) return;
   const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
-  let running = false, ended = false, y = 0, velocity = 0, score = 0, speed = 4, last = 0, obstacle = 680, raf = 0;
+  let running = false, y = 0, velocity = 0, score = 0, speed = 4, last = 0, obstacle = 680, raf = 0;
   const ground = 145, playerX = 70, playerW = 27, playerH = 31;
   function rect(x, yy, w, h, color) { ctx.fillStyle = color; ctx.fillRect(x, yy, w, h); }
   function render() {
@@ -26,7 +26,7 @@
     rect(obstacle + 5, ground - 34, 8, 8, muted);
   }
   function stop() {
-    running = false; ended = true;
+    running = false;
     cancelAnimationFrame(raf);
     status.textContent = "Connection still lost. Game over — retry when ready.";
     button.textContent = "Play again";
@@ -49,7 +49,7 @@
       return;
     }
     if (!running) {
-      running = true; ended = false; y = 0; velocity = 0; score = 0; speed = 4; obstacle = 530;
+      running = true; y = 0; velocity = 0; score = 0; speed = 4; obstacle = 530;
       scoreEl.textContent = "0"; button.textContent = "Jump";
       status.textContent = "Playing. Press Space, Up Arrow, or Jump to avoid obstacles.";
       last = performance.now(); raf = requestAnimationFrame(step); return;
