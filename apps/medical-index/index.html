@@ -691,90 +691,51 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
  .material-row .material-main{padding:9px 10px}
 }
 
-/* Year / module guide colors: independent of the existing subject palette. */
-.year[data-year-group="1"]{--year-color:#be9afe}
-.year[data-year-group="2"]{--year-color:#f5ba6f}
-.year[data-year-group="3"]{--year-color:#6ad8ca}
-.module[data-module-group="0"]{--module-color:#ff8eaf}
-.module[data-module-group="1"]{--module-color:#89c3ff}
-.module[data-module-group="2"]{--module-color:#dda4fa}
-.module[data-module-group="3"]{--module-color:#90d98d}
-.module[data-module-group="4"]{--module-color:#ffad86}
-.module[data-module-group="5"]{--module-color:#81d4eb}
-.module[data-module-group="6"]{--module-color:#e69bc0}
-.module[data-module-group="7"]{--module-color:#a5c7ff}
-.module[data-module-group="8"]{--module-color:#ffc57e}
-.module[data-module-group="9"]{--module-color:#98d8d4}
-.module[data-module-group="10"]{--module-color:#f1a7a2}
-.module[data-module-group="11"]{--module-color:#c6aeff}
-.module[data-module-group="12"]{--module-color:#a7de9f}
-.module[data-module-group="13"]{--module-color:#8ebce8}
-.module[data-module-group="14"]{--module-color:#e6d88f}
-.module[data-module-group="15"]{--module-color:#c58aff}
-.module[data-module-group="16"]{--module-color:#72d0b1}
-.module[data-module-group="17"]{--module-color:#f4c08f}
-html[data-theme="light"] .year[data-year-group="1"]{--year-color:#7249c0}
-html[data-theme="light"] .year[data-year-group="2"]{--year-color:#a55918}
-html[data-theme="light"] .year[data-year-group="3"]{--year-color:#147f75}
-html[data-theme="light"] .module[data-module-group="0"]{--module-color:#a73c67}
-html[data-theme="light"] .module[data-module-group="1"]{--module-color:#236daf}
-html[data-theme="light"] .module[data-module-group="2"]{--module-color:#8240a6}
-html[data-theme="light"] .module[data-module-group="3"]{--module-color:#3c7e33}
-html[data-theme="light"] .module[data-module-group="4"]{--module-color:#a85428}
-html[data-theme="light"] .module[data-module-group="5"]{--module-color:#247a94}
-html[data-theme="light"] .module[data-module-group="6"]{--module-color:#9d456b}
-html[data-theme="light"] .module[data-module-group="7"]{--module-color:#456caa}
-html[data-theme="light"] .module[data-module-group="8"]{--module-color:#9a6219}
-html[data-theme="light"] .module[data-module-group="9"]{--module-color:#277f7d}
-html[data-theme="light"] .module[data-module-group="10"]{--module-color:#a9504b}
-html[data-theme="light"] .module[data-module-group="11"]{--module-color:#6c52ad}
-html[data-theme="light"] .module[data-module-group="12"]{--module-color:#4b8744}
-html[data-theme="light"] .module[data-module-group="13"]{--module-color:#326d9a}
-html[data-theme="light"] .module[data-module-group="14"]{--module-color:#867726}
-html[data-theme="light"] .module[data-module-group="15"]{--module-color:#7b3ba8}
-html[data-theme="light"] .module[data-module-group="16"]{--module-color:#217e65}
-html[data-theme="light"] .module[data-module-group="17"]{--module-color:#945f2d}
+/* Neutral hierarchy guides: shared year/module grays, never per-year or per-module hues.
+   Subject and material-kind colors below remain unchanged. */
+:root{--hierarchy-year:#9b9b9b;--hierarchy-module:#858585}
+html[data-theme="light"]{--hierarchy-year:#727272;--hierarchy-module:#8a8a8a}
 
 .year-button,.module-button{position:relative;padding-inline-start:18px}
 .year-button::before,.module-button::before{
  content:"";position:absolute;inset-inline-start:0;top:10px;bottom:10px;width:3px;
- border-radius:0 3px 3px 0;background:var(--year-color);pointer-events:none
+ border-radius:0 3px 3px 0;background:var(--hierarchy-year);pointer-events:none
 }
-.module-button::before{background:var(--module-color)}
-.year-button>span:first-child{color:var(--year-color)}
-.module-button{color:var(--module-color)}
-.year-button .chevron{color:var(--year-color)}
-.module-button .chevron{color:var(--module-color)}
+.module-button::before{background:var(--hierarchy-module)}
+.year-button>span:first-child{color:var(--text)}
+.module-button{color:var(--text)}
+.year-button .chevron{color:var(--muted)}
+.module-button .chevron{color:var(--muted)}
 .year-button[aria-expanded="true"]{
- border-color:color-mix(in srgb,var(--year-color) 43%,var(--border));
- background:color-mix(in srgb,var(--year-color) 6%,var(--surface))
+ border-color:color-mix(in srgb,var(--hierarchy-year) 43%,var(--border));
+ background:color-mix(in srgb,var(--hierarchy-year) 6%,var(--surface))
 }
 .module-button[aria-expanded="true"]{
- border-color:color-mix(in srgb,var(--module-color) 43%,var(--border));
- background:color-mix(in srgb,var(--module-color) 6%,var(--surface))
+ border-color:color-mix(in srgb,var(--hierarchy-module) 43%,var(--border));
+ background:color-mix(in srgb,var(--hierarchy-module) 6%,var(--surface))
 }
 .year-contents{position:relative;padding:8px 0 8px 22px}
 .year-contents::before{
  content:"";position:absolute;inset-inline-start:9px;top:0;bottom:10px;width:2px;
- border-radius:99px;background:color-mix(in srgb,var(--year-color) 58%,transparent);
+ border-radius:99px;background:color-mix(in srgb,var(--hierarchy-year) 58%,transparent);
  pointer-events:none
 }
 .year-contents>.module{position:relative;margin:7px 0}
 .year-contents>.module::before{
  content:"";position:absolute;inset-inline-start:-12px;top:25px;width:12px;height:2px;
- border-radius:2px;background:color-mix(in srgb,var(--year-color) 63%,transparent);
+ border-radius:2px;background:color-mix(in srgb,var(--hierarchy-year) 63%,transparent);
  pointer-events:none
 }
 .module-contents{position:relative;padding:7px 0 12px 22px}
 .module-contents::before{
  content:"";position:absolute;inset-inline-start:9px;top:0;bottom:16px;width:2px;
- border-radius:99px;background:color-mix(in srgb,var(--module-color) 55%,transparent);
+ border-radius:99px;background:color-mix(in srgb,var(--hierarchy-module) 55%,transparent);
  pointer-events:none
 }
 .module-tab-root,.module-tab-content .subject{position:relative}
 .module-tab-root::before,.module-tab-content .subject::before{
  content:"";position:absolute;inset-inline-start:-12px;width:12px;height:2px;
- border-radius:2px;background:color-mix(in srgb,var(--module-color) 63%,transparent);
+ border-radius:2px;background:color-mix(in srgb,var(--hierarchy-module) 63%,transparent);
  pointer-events:none
 }
 .module-tab-root::before{top:30px}
