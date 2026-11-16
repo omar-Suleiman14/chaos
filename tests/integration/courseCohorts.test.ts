@@ -1,5 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
-import { api } from "../../convex/_generated/api";
+import { api, internal } from "../../convex/_generated/api";
 import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
 import { createTestConvex } from "./setup";
 
@@ -154,4 +154,50 @@ it("an invitation requires the right student to accept; declining never admits t
   expect(await third.query(api.courseCohorts.myInvitation, { courseId })).toBe("none");
   await expect(third.mutation(api.courseCohorts.respondToInvitation, { courseId, accept: true }))
     .rejects.toThrow("NOT_FOUND");
+});
+
+
+it("pages requests, roster entries and invitations beyond the first page", async () => {
+  const { t, doctor, student, courseId } = await fixture();
+  await t.run(async ctx => {
+    for (let i = 0; i < 3; i++) {
+      await ctx.db.insert("courseJoinRequests", { courseId, ownerId: creatorIdentity.subject, studentId: `pending-${i}`, status: "pending", requestedAt: i, updatedAt: i });
+      await ctx.db.insert("courseJoinRequests", { courseId, ownerId: creatorIdentity.subject, studentId: `removed-${i}`, status: "removed", requestedAt: i, updatedAt: i });
+      await ctx.db.insert("courseInvitations", { courseId, ownerId: creatorIdentity.subject, studentId: `invited-${i}`, status: "pending", invitedAt: i, invitedBy: creatorIdentity.subject });
+    }
+  });
+  const first = { numItems: 2, cursor: null };
+  const pending = await doctor.query(api.courseJoinRequests.pendingPage, { courseId, paginationOpts: first });
+  const pendingNext = await doctor.query(api.courseJoinRequests.pendingPage, { courseId, paginationOpts: { numItems: 2, cursor: pending.continueCursor } });
+  expect([...pending.page, ...pendingNext.page]).toHaveLength(3);
+  const roster = await doctor.query(api.courseCohorts.rosterPage, { courseId, status: "removed", paginationOpts: first });
+  const rosterNext = await doctor.query(api.courseCohorts.rosterPage, { courseId, status: "removed", paginationOpts: { numItems: 2, cursor: roster.continueCursor } });
+  expect([...roster.page, ...rosterNext.page]).toHaveLength(3);
+  const invitations = await doctor.query(api.courseCohorts.invitationPage, { courseId, paginationOpts: first });
+  const invitationsNext = await doctor.query(api.courseCohorts.invitationPage, { courseId, paginationOpts: { numItems: 2, cursor: invitations.continueCursor } });
+  expect([...invitations.page, ...invitationsNext.page]).toHaveLength(3);
+  await expect(student.query(api.courseCohorts.rosterPage, { courseId, status: "removed", paginationOpts: first })).rejects.toThrow("NOT_FOUND");
+  await expect(student.query(api.courseJoinRequests.pendingPage, { courseId, paginationOpts: first })).rejects.toThrow("NOT_FOUND");
+});
+
+
+it("pages large group membership and deletes members in bounded batches", async () => {
+  const { t, doctor, student, courseId } = await fixture();
+  const groupId = await doctor.mutation(api.courseCohorts.createGroup, { courseId, name: "Large group" });
+  await t.run(async ctx => {
+    for (let i = 0; i < 101; i++) await ctx.db.insert("courseGroupMembers", {
+      courseId, groupId, studentId: `member-${String(i).padStart(3, "0")}`, addedAt: i,
+    });
+  });
+  const first = await doctor.query(api.courseCohorts.groupMembersPage, { groupId, paginationOpts: { numItems: 100, cursor: null } });
+  const second = await doctor.query(api.courseCohorts.groupMembersPage, { groupId, paginationOpts: { numItems: 100, cursor: first.continueCursor } });
+  expect(first.page).toHaveLength(100);
+  expect(second.page).toHaveLength(1);
+  await expect(student.query(api.courseCohorts.groupMembersPage, { groupId, paginationOpts: { numItems: 10, cursor: null } })).rejects.toThrow("NOT_FOUND");
+  await doctor.mutation(api.courseCohorts.deleteGroup, { groupId });
+  await expect(doctor.query(api.courseCohorts.groupMembersPage, { groupId, paginationOpts: { numItems: 10, cursor: null } })).rejects.toThrow("NOT_FOUND");
+  await t.mutation(internal.courseCohorts.deleteGroupMembersPage, { groupId });
+  expect(await t.run(ctx => ctx.db.query("courseGroupMembers").withIndex("by_group_student", q => q.eq("groupId", groupId)).collect())).toHaveLength(1);
+  await t.mutation(internal.courseCohorts.deleteGroupMembersPage, { groupId });
+  expect(await t.run(ctx => ctx.db.query("courseGroupMembers").withIndex("by_group_student", q => q.eq("groupId", groupId)).collect())).toHaveLength(0);
 });
