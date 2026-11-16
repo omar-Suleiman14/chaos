@@ -20,7 +20,7 @@ assert.match(robots, /^Disallow: \/admin$/m);
 assert.match(await read("admin/index.html"), /noindex,nofollow/);
 assert.match(await read("404.html"), /This page doesn't exist/);
 assert.match(await read("500.html"), /This page couldn't load/);
-assert.match(await read("offline.html"), /id="offlineGame"/);
+assert.match(await read("offline.html"), /MaxPaperHop\.mount/);
 assert.match(await read("module/1-general-anatomy-histology.html"), /CollectionPage/);
 assert.match(await read("material/m0-lecture-37.html"), /LearningResource/);
 assert.match(await read("questions/q0-88.html"), /medics_44_mcq/);
@@ -34,7 +34,10 @@ function count(name) {
   const end = source.indexOf(";\n", from);
   return JSON.parse(source.slice(from, end)).length;
 }
-assert.equal(entries.length, 1 + count("M") + count("D") + count("Q"), "Every catalogue item should have a crawlable page");
+assert.equal(entries.length, 1 + count("M"), "Only home and module pages belong in the sitemap");
+assert.doesNotMatch(map, /<loc>https:\/\/index\.chaos\.fail\/material\//);
+assert.doesNotMatch(map, /<loc>https:\/\/index\.chaos\.fail\/questions\//);
+assert.match(await read("material/m0-lecture-37.html"), /name="robots" content="noindex,follow"/);
 assert.equal(new Set(entries).size, entries.length, "Canonical URLs must be unique");
 for (const file of ["og/index.png", "og/module-1-general-anatomy-histology.png", "og/material-m0-lecture-37.png", "og/questions-q0-88.png"]) {
   const bytes = await readFile(join(out, file));
