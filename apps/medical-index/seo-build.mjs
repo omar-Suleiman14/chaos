@@ -155,7 +155,7 @@ export async function buildSeo(root, output) {
   const moduleLists = M.map(() => []);
   const pages = [];
   const images = [];
-  const addPage = (p, body, image) => { pages.push(writeFile(join(output, p.slice(1) + ".html"), body)); images.push(writeFile(join(output, "og", p.slice(1).replace(/\//g, "-") + ".png"), image)); };
+  const addPage = (p, body, image) => { pages.push([join(output, p.slice(1) + ".html"), body]); images.push([join(output, "og", p.slice(1).replace(/\//g, "-") + ".png"), image]); };
   const addRecord = (entry, kind) => {
     const i = entry[1], m = M[i], isQuestion = kind === "questions";
     if (!m) throw new Error("Invalid module index for share page");
@@ -195,8 +195,10 @@ export async function buildSeo(root, output) {
       png(m[0], "YEAR " + m[1] + " / STUDY MATERIAL", "LECTURES / TUTORIALS / QUESTIONS"));
     list.push(sitemapEntry(path));
   }
-  images.push(writeFile(join(output, "og", "index.png"), png("MEDICAL STUDY", "CHAOS INDEX", "LECTURES / QUESTIONS / PRACTICAL")));
-  await Promise.all([...pages, ...images]);
+  images.push([join(output, "og", "index.png"), png("MEDICAL STUDY", "CHAOS INDEX", "LECTURES / QUESTIONS / PRACTICAL")]);
+  const jobs = [...pages, ...images];
+  // Batch writes to avoid exceeding open-file limits on Vercel build machines.
+  for (let at = 0; at < jobs.length; at += 32) await Promise.all(jobs.slice(at, at + 32).map(([file, data]) => writeFile(file, data)));
   const homeSchema = { "@context": "https://schema.org", "@type": "CollectionPage", name: "Chaos Index", description: DESCRIPTION, url: ORIGIN + "/", isAccessibleForFree: true, inLanguage: ["en", "ar"] };
   let home = source.replace('<meta name="robots" content="noindex">', '<meta name="robots" content="index,follow,max-image-preview:large">')
     .replace('<meta name="description" content="Chaos Index: medical module learning materials and practice questions.">',
