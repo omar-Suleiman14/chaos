@@ -4,7 +4,7 @@ import Link from "next/link";
 import { Select } from "@/components/workspace/Select";
 import { use, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
-import { ArrowLeft, ExternalLink, Globe, History, Lock, Send, Users } from "lucide-react";
+import { ArrowLeft, ClipboardList, ExternalLink, Globe, History, Lock, Send, Users } from "lucide-react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -33,7 +33,7 @@ const copy = {
     language: "Course language", languageHelp: "Sets reading direction. New lessons inherit this language.", settings: "Settings", tags: "Topics", tagsHelp: "Comma separated, up to 12.",
     history: "Version history", publish: "Publish course", update: "Publish course changes", view: "View course", unpublish: "Unpublish", archive: "Archive",
     publishedToast: "Course published", unpublishedToast: "Course unpublished", unpublishedHelp: "Learners can no longer open it.", archivedToast: "Course archived", archivedHelp: "Find it in the Archive.",
-    publishTitle: "Publish this course", who: "Who can take it", public: "Public", publicHelp: "Anyone can find and take it, free. Recommended.", team: "Your team", teamHelp: "Only members of your Business team can take it. Its lessons become team-only too.",
+    publishTitle: "Publish this course", who: "Course discoverability", public: "Public", publicHelp: "Anyone can find this course, but students need your approval before joining or studying.", team: "Your team", teamHelp: "Only members of your Business team can take it. Its lessons become team-only too.",
     private: "Private", privateHelp: "Only you and people you share lessons with. Part of Chaos Business.", business: "Business only",
     publishNote: "Publishing the course also publishes any of its lessons that have unpublished changes, with the visibility you pick here. To publish just one lesson, use Publish inside that lesson.", confirm: "Publish", cancel: "Cancel", publishing: "Publishing…",
     problems: "Fix these lessons first:", saved: "Saved", failed: "Couldn't save. Try again.",
@@ -44,7 +44,7 @@ const copy = {
     language: "لغة الدورة", languageHelp: "تحدد اتجاه القراءة. ترث الدروس الجديدة هذه اللغة.", settings: "الإعدادات", tags: "المواضيع", tagsHelp: "مفصولة بفواصل، حتى 12.",
     history: "سجل النسخ", publish: "انشر الدورة", update: "انشر تغييرات الدورة", view: "اعرض الدورة", unpublish: "ألغِ النشر", archive: "أرشف",
     publishedToast: "تم نشر الدورة", unpublishedToast: "أُلغي نشر الدورة", unpublishedHelp: "لم يعد بإمكان المتعلمين فتحها.", archivedToast: "تمت أرشفة الدورة", archivedHelp: "ستجدها في الأرشيف.",
-    publishTitle: "انشر هذه الدورة", who: "من يمكنه أخذها", public: "عامة", publicHelp: "يمكن لأي أحد إيجادها وأخذها مجانًا. موصى به.", team: "فريقك", teamHelp: "لا يأخذها إلا أعضاء فريق الأعمال. وتصبح دروسها للفريق فقط أيضًا.",
+    publishTitle: "انشر هذه الدورة", who: "ظهور الدورة", public: "عامة", publicHelp: "يمكن للجميع العثور على الدورة، لكن لا يمكن للطالب الانضمام أو الدراسة إلا بعد موافقتك.", team: "فريقك", teamHelp: "لا يأخذها إلا أعضاء فريق الأعمال. وتصبح دروسها للفريق فقط أيضًا.",
     private: "خاصة", privateHelp: "أنت ومن تشاركهم الدروس فقط. جزء من Chaos للأعمال.", business: "للأعمال فقط",
     publishNote: "نشر الدورة ينشر أيضًا أي درس فيها به تغييرات غير منشورة، بالظهور الذي تختاره هنا. لنشر درس واحد فقط، استخدم «انشر» داخل ذلك الدرس.", confirm: "انشر", cancel: "إلغاء", publishing: "جارٍ النشر…",
     problems: "أصلح هذه الدروس أولًا:", saved: "حُفظ", failed: "تعذر الحفظ. حاول مجددًا.",
@@ -126,7 +126,18 @@ export default function CourseBuilder({ params }: { params: Promise<{ id: string
       </section>
 
       <CourseModulesEditor courseId={courseId} modules={course.modules ?? []} lessons={course.lessons} />
+      {course.isOwner && <section className="cb-section flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2>{locale === "ar" ? "إنشاء الامتحانات" : "Exam builder"}</h2>
+          <p className="cb-note">{locale === "ar" ? "وزّع الأسئلة على محاضرات الدورة ووحداتها وراجع تغطية المنهج." : "Choose lectures, question counts and coverage from your private question bank."}</p>
+        </div>
+        <Link className="ws-btn ws-btn--primary" href={`/dashboard/courses/${courseId}/exams`}>
+          <ClipboardList size={16} aria-hidden />{locale === "ar" ? "افتح منشئ الامتحانات" : "Open exam builder"}
+        </Link>
+      </section>}
 
+      {course.isOwner && <section className="cb-section flex flex-wrap items-center justify-between gap-3"><div><h2>{locale === "ar" ? "التكليفات ودفتر الدرجات" : "Assignments & gradebook"}</h2><p className="cb-note">{locale === "ar" ? "مواعيد المحاضرات والامتحانات وإكمال الطلاب والدرجات." : "Manage deadlines, completion and final exam grades."}</p></div><Link className="ws-btn ws-btn--primary" href={"/dashboard/courses/" + courseId + "/assignments"}><ClipboardList size={16} aria-hidden />{locale === "ar" ? "فتح دفتر الدرجات" : "Open gradebook"}</Link></section>}
+      {course.isOwner && <section className="cb-section flex flex-wrap items-center justify-between gap-3"><div><h2>{locale === "ar" ? "الفصل والإعلانات والتقويم" : "Classroom, announcements & calendar"}</h2><p className="cb-note">{locale === "ar" ? "إعلانات المحاضرات ورسائل الطلاب والجدول." : "Schedule classes, post announcements and reply to students."}</p></div><Link className="ws-btn ws-btn--primary" href={"/dashboard/courses/" + courseId + "/classroom"}>{locale === "ar" ? "فتح الفصل" : "Open classroom"}</Link></section>}
       {course.isOwner && <CourseStudents courseId={courseId} />}
       <CourseDetailsEditor courseId={courseId} details={course.details} />
 

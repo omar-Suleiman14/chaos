@@ -5,6 +5,8 @@ import { internal } from "./_generated/api";
 import schema from "./schema";
 import type { Doc, Id } from "./_generated/dataModel";
 import { creatorRestricted } from "./authz";
+import { getAuthIdentity } from "./authIdentity";
+import { canReadCourseAttachedLesson } from "./courseMembership";
 import { lessonMeta } from "./learnModel";
 import { hasLiveLessonPublication } from "./publicationEligibility";
 import { authorSearchCursor, readSearchCursor, writeSearchCursor } from "./learnSearchCursor";
@@ -40,6 +42,10 @@ async function publishedHit(ctx: QueryCtx, lesson: Doc<"lessons">, words: string
   if (!hasLiveLessonPublication(lesson) || lesson.visibility !== "public") return null;
   const version = await ctx.db.get("lessonVersions", lesson.publishedVersionId);
   if (!version || version.lessonId !== lesson._id || version.visibility !== undefined && version.visibility !== "public") return null;
+  // Search returns actual published lecture paragraphs, never merely safe metadata.
+  try {
+    if (!await canReadCourseAttachedLesson(ctx, lesson.ownerId, lesson._id, (await getAuthIdentity(ctx))?.subject ?? null)) return null;
+  } catch { return null; } // An incomplete legacy membership index never authorizes snippets.
   const matchingBlocks = snippets ? matchingLessonSnippets(version.document.blocks, words) : [];
   return { lessonId: lesson._id, versionId: version._id, metadata: version.metadata, matchingBlocks };
 }
