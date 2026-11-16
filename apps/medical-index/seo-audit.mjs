@@ -25,7 +25,16 @@ assert.match(await read("module/1-general-anatomy-histology.html"), /CollectionP
 assert.match(await read("material/m0-lecture-37.html"), /LearningResource/);
 assert.match(await read("questions/q0-88.html"), /medics_44_mcq/);
 const entries = [...map.matchAll(/<loc>(.*?)<\/loc>/g)].map(m => m[1]);
-assert.equal(entries.length, 1 + 18 + 1174 + 471, "Every catalogue item should have a crawlable page");
+// The catalogue changes daily; never hardcode the material count.
+const source = await readFile("index.html", "utf8");
+function count(name) {
+  const begin = source.indexOf("const " + name + "=");
+  assert.ok(begin !== -1);
+  const from = begin + name.length + 7;
+  const end = source.indexOf(";\\n", from);
+  return JSON.parse(source.slice(from, end)).length;
+}
+assert.equal(entries.length, 1 + count("M") + count("D") + count("Q"), "Every catalogue item should have a crawlable page");
 assert.equal(new Set(entries).size, entries.length, "Canonical URLs must be unique");
 for (const file of ["og/index.png", "og/module-1-general-anatomy-histology.png", "og/material-m0-lecture-37.png", "og/questions-q0-88.png"]) {
   const bytes = await readFile(join(out, file));
