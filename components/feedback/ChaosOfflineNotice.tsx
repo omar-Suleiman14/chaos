@@ -63,12 +63,12 @@ export default function ChaosOfflineNotice() {
   if (!offline) return null;
   return (
     <>
-      <div role="status" className="fixed bottom-4 left-1/2 z-[60] flex max-w-[calc(100vw-32px)] -translate-x-1/2 flex-wrap items-center justify-center gap-3 rounded-xl border border-current/20 bg-neutral-900 px-4 py-3 text-sm text-white shadow-xl dark:bg-neutral-100 dark:text-neutral-900">
+      <output className="fixed bottom-4 left-1/2 z-[60] flex max-w-[calc(100vw-32px)] -translate-x-1/2 flex-wrap items-center justify-center gap-3 rounded-xl border border-current/20 bg-neutral-900 px-4 py-3 text-sm text-white shadow-xl dark:bg-neutral-100 dark:text-neutral-900">
         <span>You're offline. Keep unsaved work open.</span>
         <button type="button" className="min-h-11 underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-4" onClick={() => setOpen(true)}>
           Play Paper Hop
         </button>
-      </div>
+      </output>
       <dialog ref={dialogRef} onClose={() => setOpen(false)} aria-labelledby="chaos-paper-hop-title" className="m-auto max-h-[90dvh] w-[min(650px,calc(100vw-32px))] overflow-y-auto rounded-2xl border border-neutral-400/30 bg-[#f7f7f5] p-6 text-neutral-900 shadow-2xl backdrop:bg-black/65 dark:bg-[#222] dark:text-neutral-100">
         <h2 id="chaos-paper-hop-title" className="text-lg font-semibold">Paper Hop</h2>
         <p className="my-2 text-sm opacity-75">The same offline game as Max. Your page stays open behind this window.</p>
