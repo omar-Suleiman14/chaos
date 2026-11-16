@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { useAuth } from "@clerk/nextjs";
+import { useAuth } from "@/lib/auth/client";
 import { useQuery } from "convex/react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -13,6 +13,7 @@ export default function PrivateCaseImage({mediaId,alt}:{mediaId:Id<"questionBank
   const {getToken}=useAuth();
   const [src,setSrc]=useState<string|null>(null);
   useEffect(()=>{
+    setSrc(null);
     if(!url)return;
     const controller=new AbortController();
     let blobUrl:string|null=null;

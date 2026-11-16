@@ -547,7 +547,7 @@ function Respondent({ form, shareId, embed, accessCode, resumeToken, resumed, ed
             footer={
               <div className="space-y-3 text-xs form-muted" dir={dir}>
                 {/* Honeypot: invisible to people, tempting to bots. Flagged, never discarded. */}
-                <div aria-hidden="true" className="absolute -left-[10000px] w-px h-px overflow-hidden">
+                <div aria-hidden="true" className="sr-only">
                   <label>Website<input tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} /></label>
                 </div>
                 {error && (

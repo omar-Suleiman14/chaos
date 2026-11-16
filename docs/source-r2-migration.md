@@ -24,3 +24,10 @@ Draft, stacked on #384. This is a guarded **copy and read-parity slice**, not au
 - GET does not change source status or permission and keeps the same public proxy URL.
 - Rollback only changes the read selector; it does not remove a bucket object or alter author permissions.
 - Deleted/removed sources and restricted creators still cannot be read through the new R2 proxy.
+
+## Storage accounting
+
+The shared 2 GiB teaching-storage limit counts each logical source once. During
+migration, the retained Convex file and its R2 copy can therefore use up to
+4 GiB of physical storage for 2 GiB of logical sources. The R2 key is fixed per
+source, so retries do not create additional copies; rollback retains both copies.
