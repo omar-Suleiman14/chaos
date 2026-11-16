@@ -6,27 +6,31 @@ export const frozenResultPolicy = v.object({
   visibility: v.union(v.literal("immediate"), v.literal("after_close"), v.literal("manual")),
   closesAt: v.optional(v.number()),
   passingPercent: v.number(),
+  showCorrectAnswers: v.optional(v.boolean()),
+  showExplanations: v.optional(v.boolean()),
 });
 export type FrozenResultPolicy = Infer<typeof frozenResultPolicy>;
 export type ResultStatus = "grading" | "withheld" | "released";
 
 const fallback: FrozenResultPolicy = { visibility: "manual", passingPercent: 50 };
 
-export function freezeResultPolicy(settings: ExamSettings | undefined): FrozenResultPolicy {
+export function freezeResultPolicy(settings: ExamSettings | undefined, includeReview = true): FrozenResultPolicy {
   if (!settings || !Number.isFinite(settings.passingPercent) ||
       settings.passingPercent < 0 || settings.passingPercent > 100)
     return { ...fallback };
+  const reveal = { ...(includeReview && settings.showCorrectAnswers ? { showCorrectAnswers: true } : {}),
+    ...(includeReview && settings.showExplanations ? { showExplanations: true } : {}) };
   if (settings.resultVisibility === "after_close") {
     if (settings.mode !== "scheduled" || !Number.isSafeInteger(settings.closesAt ?? NaN) ||
         (settings.closesAt ?? 0) <= 0) return { ...fallback };
     return {
       visibility: "after_close", closesAt: settings.closesAt,
-      passingPercent: settings.passingPercent,
+      passingPercent: settings.passingPercent, ...reveal,
     };
   }
   return {
     visibility: settings.resultVisibility === "immediate" ? "immediate" : "manual",
-    passingPercent: settings.passingPercent,
+    passingPercent: settings.passingPercent, ...reveal,
   };
 }
 

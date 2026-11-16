@@ -1,13 +1,14 @@
 import { getAuthIdentity } from "./authIdentity";
 import { v } from "convex/values";
-import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { internalMutation, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
+import { internal } from "./_generated/api";
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireIdentity } from "./authz";
 import { hasApprovedCourseAccess } from "./courseMembership";
 import { COURSE_NOTICE_KINDS, courseNoticeKind, type CourseNoticeKind } from "./courseNotificationModel";
 
 type Ctx = QueryCtx | MutationCtx;
-async function mayRead(ctx: Ctx, ownerId: string, notice: Doc<"notifications">) {
+export async function mayRead(ctx: Ctx, ownerId: string, notice: Doc<"notifications">) {
   if (notice.adminOnly) {
     const admin = await ctx.db.query("admins")
       .withIndex("by_clerkId", q => q.eq("clerkId", ownerId)).first();
@@ -60,15 +61,38 @@ export async function updatePreferenceFor(
 }
 export async function markFor(ctx: MutationCtx, ownerId: string, ids?: Id<"notifications">[]) {
   if (ids && ids.length > 100) throw new Error("LIMIT_REACHED: Too many notification IDs.");
+  const page = ids ? null : await ctx.db.query("notifications")
+    .withIndex("by_ownerId_and_createdAt", q => q.eq("ownerId", ownerId))
+    .order("desc")
+    .paginate({ numItems: 100, cursor: null, maximumBytesRead: 1_000_000 });
   const rows = ids
     ? (await Promise.all(ids.map(id => ctx.db.get("notifications", id)))).filter(n => n !== null)
-    : await ctx.db.query("notifications")
-        .withIndex("by_ownerId_and_createdAt", q => q.eq("ownerId", ownerId))
-        .order("desc").take(100);
+    : page!.page;
   const now = Date.now();
   for (const n of rows) if (n.ownerId === ownerId && n.readAt === undefined)
     await ctx.db.patch("notifications", n._id, { readAt: now });
+  if (page && !page.isDone) await ctx.scheduler.runAfter(0, internal.notifications.markOlderRead, {
+    ownerId, cursor: page.continueCursor,
+  });
 }
+
+export const markOlderRead = internalMutation({
+  args: { ownerId: v.string(), cursor: v.string() },
+  returns: v.null(),
+  handler: async (ctx, { ownerId, cursor }) => {
+    const page = await ctx.db.query("notifications")
+      .withIndex("by_ownerId_and_createdAt", q => q.eq("ownerId", ownerId))
+      .order("desc")
+      .paginate({ numItems: 100, cursor, maximumBytesRead: 1_000_000 });
+    const now = Date.now();
+    for (const row of page.page) if (row.ownerId === ownerId && row.readAt === undefined)
+      await ctx.db.patch("notifications", row._id, { readAt: now });
+    if (!page.isDone) await ctx.scheduler.runAfter(0, internal.notifications.markOlderRead, {
+      ownerId, cursor: page.continueCursor,
+    });
+    return null;
+  },
+});
 export const listNotifications = query({
   args: {},
   handler: async ctx => {

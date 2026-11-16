@@ -28,7 +28,7 @@ export function registerNotificationTools(
     annotations: read, _meta,
   }, input => run("list_notifications", input, () => "Your notifications loaded."));
   server.registerTool("mark_notifications_read", {
-    description: "Mark your own notification IDs as read (maximum 100), or omit IDs to mark your latest 100. Does not mark other users' notifications.",
+    description: "Mark your own notification IDs as read (maximum 100), or omit IDs to mark all your notifications. Does not mark other users' notifications.",
     inputSchema: { ids: z.array(z.string().min(1).max(100)).max(100).optional() },
     outputSchema: { ok: z.boolean() }, annotations: write, _meta,
   }, input => run("mark_notifications_read", input, () => "Your notifications marked read."));

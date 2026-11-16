@@ -7349,6 +7349,121 @@
     "additionalProperties": false
    }
   },
+  "get_enrolled_course_lecture": {
+   "title": null,
+   "description": "Read 1-10 blocks at a time from the immutable published lecture version of an approved and enrolled course. Continue nextOffset until null. Each block has a stable ID, versionId and text for source citations. Media returns only published captions, not inaccessible PDF/source bytes or exams/answers. Rechecks live student permission for every page; never cache a previous answer across revocation.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "courseId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "lessonId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 500
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
+     }
+    },
+    "required": [
+     "courseId",
+     "lessonId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "courseId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "lessonId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "versionId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "title": {
+      "type": "string"
+     },
+     "blocks": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "blockId": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        },
+        "type": {
+         "type": "string"
+        },
+        "text": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "blockId",
+        "type",
+        "text"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "totalBlocks": {
+      "type": "number"
+     },
+     "nextOffset": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "required": [
+     "courseId",
+     "lessonId",
+     "versionId",
+     "title",
+     "blocks",
+     "totalBlocks",
+     "nextOffset"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "get_flashcard_set": {
    "title": null,
    "description": "Read an owned flashcard set's editable draft: title, every card and the revision needed to save, publish or archive it. Owner only.",
@@ -11604,6 +11719,82 @@
     "additionalProperties": false
    }
   },
+  "list_enrolled_courses": {
+   "title": null,
+   "description": "List this connected student's currently approved and enrolled published courses. Each page rechecks the teacher's approval, signed-in enrollment, course publication and live restrictions. Empty pages can occur; continue with nextCursor. Never reveals pending/rejected courses or another student's enrollment.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 10
+     },
+     "cursor": {
+      "type": "string",
+      "maxLength": 2000
+     }
+    },
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "courses": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "courseId": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        },
+        "title": {
+         "type": "string"
+        },
+        "description": {
+         "type": "string"
+        },
+        "language": {
+         "type": "string"
+        },
+        "lessonCount": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "courseId",
+        "title",
+        "description",
+        "language",
+        "lessonCount"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "nextCursor": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "courses",
+     "nextCursor"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "list_flashcard_sets": {
    "title": null,
    "description": "List the connected account's own flashcard sets, newest change first, including archived ones. Card counts only; use get_flashcard_set for the cards. Pages of up to 50; pass nextCursor until it is null.",
@@ -13533,7 +13724,7 @@
   },
   "mark_notifications_read": {
    "title": null,
-   "description": "Mark your own notification IDs as read (maximum 100), or omit IDs to mark your latest 100. Does not mark other users' notifications.",
+   "description": "Mark your own notification IDs as read (maximum 100), or omit IDs to mark all your notifications. Does not mark other users' notifications.",
    "permission": "edit_content",
    "annotations": {
     "readOnlyHint": false,
@@ -15669,6 +15860,129 @@
     },
     "required": [
      "modules"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "search_enrolled_course_lectures": {
+   "title": null,
+   "description": "Search published lecture titles and text in one course the connected student is currently approved to access. Search 1-15 lectures per call; continue nextOffset (which advances by scanned lectures, even when results are empty). Each text snippet carries the exact published lesson version and block ID for grounding. No draft text, responses, source-file bytes, grading or hidden material. Results are evidence, not an AI-generated explanation.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "courseId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "query": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+     },
+     "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 15
+     }
+    },
+    "required": [
+     "courseId",
+     "query"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "courseId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "results": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "lessonId": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        },
+        "versionId": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        },
+        "title": {
+         "type": "string"
+        },
+        "snippets": {
+         "type": "array",
+         "items": {
+          "type": "object",
+          "properties": {
+           "blockId": {
+            "type": "string",
+            "minLength": 1,
+            "maxLength": 100
+           },
+           "type": {
+            "type": "string"
+           },
+           "text": {
+            "type": "string"
+           }
+          },
+          "required": [
+           "blockId",
+           "type",
+           "text"
+          ],
+          "additionalProperties": false
+         }
+        }
+       },
+       "required": [
+        "lessonId",
+        "versionId",
+        "title",
+        "snippets"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "nextOffset": {
+      "anyOf": [
+       {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+       },
+       {
+        "type": "null"
+       }
+      ]
+     }
+    },
+    "required": [
+     "courseId",
+     "results",
+     "nextOffset"
     ],
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false

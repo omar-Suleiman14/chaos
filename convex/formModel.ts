@@ -190,6 +190,8 @@ export const formTables = {
   }).index("by_ownerId_and_updatedAt", ["ownerId", "updatedAt"]),
   forms: defineTable({
     ownerId: v.string(),
+    /** Derived hint only: course/lesson attachment writers set true transactionally. Missing legacy rows use the indexed gate. */
+    courseAccessRequired: v.optional(v.boolean()),
     title: v.string(),
     shareId: v.string(),
     status: formStatusValidator,

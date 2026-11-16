@@ -9,7 +9,7 @@ import {
   completeContactFollowUpArgs, completeContactFollowUpForActor,
 } from "./admin";
 import { overviewForActor, refreshForActor } from "./adminAnalytics";
-import { claimForAdmin, retryForAdmin, queueForAdmin } from "./examGradingJobs";
+import { claimForAdmin, retryForAdmin, reopenForAdmin, queueForAdmin } from "./examGradingJobs";
 
 // userId is overwritten by the secret-protected HTTP transport, never a tool argument.
 const actor = { userId: v.string() };
@@ -39,4 +39,8 @@ export const claimGradingJob = internalMutation({
 export const retryGradingJob = internalMutation({
   args: { ...actor, jobId: v.id("examGradingJobs"), expectedRevision: v.number() },
   handler: (ctx, { userId, ...args }) => retryForAdmin(ctx, args, userId),
+});
+export const reopenGradingJob = internalMutation({
+  args: { ...actor, jobId: v.id("examGradingJobs"), expectedRevision: v.number(), confirmReopen: v.literal(true) },
+  handler: (ctx, { userId, ...args }) => reopenForAdmin(ctx, args, userId),
 });

@@ -14,7 +14,7 @@
 - The student exam runtime remains feature-gated. Assignment creation is not an alternative exam-entry API.
 - Gradebook reads are bounded to 80 approved members / 80 assignments, 20 attempts per student per exam. Larger courses require future pagination, not silent truncation.
 - Student examination grades are visible **only** after existing publication rules and any doctor review holds clear. A teacher may see internal final percentages.
-- Lesson-completion time currently uses the enrollment's last update timestamp as a coarse completion indicator. Fine-grained immutable completion timestamps and weighted cross-course analytics require a later migration.
+- New lesson completions store a per-lesson timestamp so activity on another lesson does not change assignment lateness. Existing enrollments without timestamps keep the historical last-update fallback until the learner changes that completion state.
 - No file submissions, custom offline homework uploads, peer grading, notifications, bulk exports, teacher rubric overrides, or student appeal workflow changes in this PR.
 
 ## Verification and release

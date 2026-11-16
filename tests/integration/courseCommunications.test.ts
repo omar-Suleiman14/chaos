@@ -3,6 +3,7 @@ import { api } from "../../convex/_generated/api";
 import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
 import { createTestConvex } from "./setup";
 
+const firstPage = { cursor: null, numItems: 50 };
 afterEach(() => { vi.unstubAllEnvs(); vi.useRealTimers(); });
 async function classroom() {
   vi.stubEnv("CLERK_JWT_ISSUER_DOMAIN", creatorIdentity.issuer);
@@ -85,27 +86,57 @@ it("isolates private student messages, including after approval revocation", asy
   await f.learner.mutation(api.courseCommunications.sendMessage, {
     courseId: f.courseId, body: "Can I review the slides?",
   });
-  expect((await f.learner.query(api.courseCommunications.conversation, { courseId: f.courseId }))[0])
+  expect((await f.learner.query(api.courseCommunications.conversation, { courseId: f.courseId, paginationOpts: firstPage })).page[0])
     .toMatchObject({ isMine: true, body: "Can I review the slides?" });
   expect((await f.doctor.query(api.courseCommunications.conversation, {
-    courseId: f.courseId, studentId: otherCreatorIdentity.subject,
-  }))[0]).toMatchObject({ isMine: false });
-  await expect(f.outsider.query(api.courseCommunications.conversation, { courseId: f.courseId }))
+    courseId: f.courseId, studentId: otherCreatorIdentity.subject, paginationOpts: firstPage,
+  })).page[0]).toMatchObject({ isMine: false });
+  await expect(f.outsider.query(api.courseCommunications.conversation, { courseId: f.courseId, paginationOpts: firstPage }))
     .rejects.toThrow("NOT_FOUND");
   await expect(f.doctor.query(api.courseCommunications.conversation, {
-    courseId: f.courseId, studentId: "user_classroom_outsider",
+    courseId: f.courseId, studentId: "user_classroom_outsider", paginationOpts: firstPage,
   })).rejects.toThrow("NOT_FOUND");
   await f.t.run(async ctx => {
     const request = await ctx.db.query("courseJoinRequests").withIndex("by_course_student", q =>
       q.eq("courseId", f.courseId).eq("studentId", otherCreatorIdentity.subject)).unique();
     if (request) await ctx.db.patch("courseJoinRequests", request._id, { status: "removed" });
   });
-  await expect(f.learner.query(api.courseCommunications.conversation, { courseId: f.courseId }))
+  await expect(f.learner.query(api.courseCommunications.conversation, { courseId: f.courseId, paginationOpts: firstPage }))
     .rejects.toThrow("NOT_FOUND");
   await expect(f.doctor.query(api.courseCommunications.conversation, {
-    courseId: f.courseId, studentId: otherCreatorIdentity.subject,
+    courseId: f.courseId, studentId: otherCreatorIdentity.subject, paginationOpts: firstPage,
   })).rejects.toThrow("NOT_FOUND");
   await expect(f.learner.mutation(api.courseCommunications.sendMessage, {
     courseId: f.courseId, body: "Bypass",
   })).rejects.toThrow("NOT_FOUND");
+});
+
+it("paginates older messages while keeping conversations writable past 100 messages", async () => {
+  const f = await classroom();
+  await approve(f);
+  vi.useFakeTimers();
+  const now = new Date("2026-01-01T00:00:00Z");
+  vi.setSystemTime(now);
+  for (let i = 0; i < 101; i++) {
+    if (i > 0) vi.advanceTimersByTime(2001);
+    await f.learner.mutation(api.courseCommunications.sendMessage, {
+      courseId: f.courseId, body: `Message ${i + 1}`,
+    });
+  }
+  const recent = await f.learner.query(api.courseCommunications.conversation, {
+    courseId: f.courseId, paginationOpts: firstPage,
+  });
+  expect(recent.page).toHaveLength(50);
+  expect(recent.page[0].body).toBe("Message 101");
+  let cursor = recent.continueCursor;
+  const older: string[] = [];
+  while (cursor) {
+    const page = await f.learner.query(api.courseCommunications.conversation, {
+      courseId: f.courseId, paginationOpts: { cursor, numItems: 50 },
+    });
+    older.push(...page.page.map(row => row.body));
+    cursor = page.isDone ? "" : page.continueCursor;
+  }
+  expect(older).toHaveLength(51);
+  expect(older[older.length - 1]).toBe("Message 1");
 });

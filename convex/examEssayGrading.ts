@@ -38,7 +38,6 @@ async function ownedAttempt(ctx: Ctx, attemptId: Id<"examAttempts">) {
   const release = await ctx.db.query("examReleases")
     .withIndex("by_draft", q => q.eq("draftId", snapshot.draftId)).unique();
   if (!release || release.ownerId !== actorId ||
-      release.activeSnapshotId !== snapshot._id ||
       release.courseId !== course._id)
     throw new Error("NOT_FOUND: Submitted attempt not found.");
   return { actorId, attempt, snapshot, grade };
@@ -71,8 +70,9 @@ async function audit(ctx: MutationCtx, mark: {
 }
 
 export const queue = query({
-  args: { draftId: v.id("examBuilderDrafts") },
-  handler: async (ctx, { draftId }) => {
+  args: { draftId: v.id("examBuilderDrafts"), snapshotId: v.optional(v.id("examSnapshots")),
+    cursor: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, { draftId, snapshotId, cursor }) => {
     const actorId = await owner(ctx);
     const draft = await ctx.db.get("examBuilderDrafts", draftId);
     if (!draft || draft.ownerId !== actorId) throw new Error("NOT_FOUND: Exam not found.");
@@ -82,12 +82,13 @@ export const queue = query({
     if (!course || course.ownerId !== actorId || course.communityState === "removed" ||
         !release || release.ownerId !== actorId || release.courseId !== draft.courseId)
       throw new Error("NOT_FOUND: Exam not found.");
-    const snapshot = await ctx.db.get("examSnapshots", release.activeSnapshotId);
-    if (!snapshot || snapshot.ownerId !== actorId || snapshot.draftId !== draftId)
+    const snapshot = await ctx.db.get("examSnapshots", snapshotId ?? release.activeSnapshotId);
+    if (!snapshot || snapshot.ownerId !== actorId || snapshot.courseId !== draft.courseId || snapshot.draftId !== draftId)
       throw new Error("NOT_FOUND: Exam not found.");
     const attempts = await ctx.db.query("examAttempts")
-      .withIndex("by_snapshot_student", q => q.eq("snapshotId", snapshot._id)).take(101);
-    const entries = await Promise.all(attempts.slice(0, 100).map(async attempt => {
+      .withIndex("by_snapshot_student", q => q.eq("snapshotId", snapshot._id))
+      .paginate({ cursor: cursor ?? null, numItems: 100 });
+    const entries = await Promise.all(attempts.page.map(async attempt => {
       if (attempt.ownerId !== actorId || attempt.courseId !== draft.courseId)
         throw new Error("INTEGRITY_ERROR: Attempt belongs to a different course.");
       if (attempt.state !== "submitted") return null;
@@ -113,7 +114,8 @@ export const queue = query({
         pendingQuestions: grade.entries.filter(e => e.status === "needs_manual").map(e => e.questionIndex) };
     }));
     return { title: snapshot.title, snapshotId: snapshot._id,
-      entries: entries.filter(e => e !== null), hasMore: attempts.length > 100 };
+      entries: entries.filter(e => e !== null), hasMore: !attempts.isDone,
+      nextCursor: attempts.isDone ? null : attempts.continueCursor };
   },
 });
 

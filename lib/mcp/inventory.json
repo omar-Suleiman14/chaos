@@ -1,5 +1,5 @@
 {
-  "count": 136,
+  "count": 139,
   "names": [
     "accept_team_invitation",
     "add_course_lesson",
@@ -35,6 +35,7 @@
     "get_course",
     "get_course_lesson",
     "get_course_progress",
+    "get_enrolled_course_lecture",
     "get_flashcard_set",
     "get_form",
     "get_form_advanced_analytics",
@@ -70,6 +71,7 @@
     "list_curriculum_nodes",
     "list_curriculum_programs",
     "list_curriculum_versions",
+    "list_enrolled_courses",
     "list_flashcard_sets",
     "list_folder_contents",
     "list_folders",
@@ -109,6 +111,7 @@
     "save_lesson",
     "save_lesson_draft",
     "search_curriculum_modules",
+    "search_enrolled_course_lectures",
     "search_forms",
     "search_learn_directory",
     "search_lessons",

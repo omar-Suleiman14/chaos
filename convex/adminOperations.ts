@@ -3,6 +3,7 @@ import { v, type ObjectType, type Infer } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { adminIdentity, requireAdminForActor } from "./adminAccess";
 import { supportPriority, supportStatus } from "./adminOperationsModel";
+import { memoizeCourseTitles } from "./adminOperationsReadMemo";
 
 const pageArgs = { paginationOpts: paginationOptsValidator };
 const PAGE_LIMIT = 25;
@@ -35,12 +36,14 @@ export async function admissionsForActor(ctx: QueryCtx, args: ObjectType<typeof 
     ? ctx.db.query("courseJoinRequests").withIndex("by_status_updated", q => q.eq("status", args.status!))
     : ctx.db.query("courseJoinRequests");
   const result = await base.order("desc").paginate(boundedPage(args.paginationOpts));
+  // Only resolve each course once within this authorized page; never cache across requests.
+  const titleFor = memoizeCourseTitles((courseId) => courseName(ctx, courseId));
   return {
     ...result,
     page: await Promise.all(result.page.map(async row => ({
       id: String(row._id),
       courseId: String(row.courseId),
-      courseTitle: await courseName(ctx, row.courseId),
+      courseTitle: await titleFor(String(row.courseId)),
       ownerId: row.ownerId,
       studentId: row.studentId,
       status: row.status,
@@ -55,12 +58,13 @@ export const admissions = query({ args: admissionsArgs, handler: (ctx, args) => 
 export async function examsForActor(ctx: QueryCtx, args: ObjectType<typeof pageArgs>, actorId?: string) {
   await requireAdminForActor(ctx, actorId);
   const result = await ctx.db.query("examReleases").order("desc").paginate(boundedPage(args.paginationOpts));
+  const titleFor = memoizeCourseTitles((courseId) => courseName(ctx, courseId));
   return {
     ...result,
     page: await Promise.all(result.page.map(async row => ({
       id: String(row._id),
       courseId: String(row.courseId),
-      courseTitle: await courseName(ctx, row.courseId),
+      courseTitle: await titleFor(String(row.courseId)),
       ownerId: row.ownerId,
       version: row.version,
       studentEntryEnabled: row.studentEntryEnabled,

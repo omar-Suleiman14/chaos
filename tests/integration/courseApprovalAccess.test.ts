@@ -96,3 +96,19 @@ it("preserves unrestricted published lessons that do not belong to any course", 
   expect((await t.query(api.learnFrontend.publicLesson, { id: lessonId }))?.version.document.blocks).toHaveLength(1);
   expect((await t.query(api.learnFrontend.publicLessonsBatch, { ids: [lessonId] })).map(row => row.lessonId)).toEqual([lessonId]);
 });
+it("keeps the published lesson protected after removing it from the draft", async () => {
+  const { t, doctor, courseId, lessonId } = await fixture();
+  await doctor.mutation(api.courses.setOutline, { courseId, lessonIds: [] });
+  expect(await t.query(api.learnFrontend.publicLesson, { id: lessonId })).toBeNull();
+  await expect(t.query(api.lessons.getPublished, { lessonId })).rejects.toThrow("NOT_FOUND");
+});
+
+it.each(["archive", "unpublish", "moderate"] as const)("does not expose course lessons through standalone links after %s", async state => {
+  const { t, doctor, courseId, lessonId } = await fixture();
+  if (state === "archive") await doctor.mutation(api.courses.setArchived, { courseId, archived: true });
+  else if (state === "unpublish") await doctor.mutation(api.courses.unpublish, { courseId });
+  else await t.run(ctx => ctx.db.patch("learnCollections", courseId, { communityState: "hidden" }));
+  expect(await t.query(api.learnFrontend.publicLesson, { id: lessonId })).toBeNull();
+  await expect(t.query(api.lessons.getPublished, { lessonId })).rejects.toThrow("NOT_FOUND");
+  expect(await doctor.query(api.lessons.getPublished, { lessonId })).not.toBeNull();
+});
