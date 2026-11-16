@@ -1,10 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { useParams } from "next/navigation";
-import { useState } from "react";
+import { useParams, useRouter } from "next/navigation";
+import { useEffect, useState } from "react";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import { CalendarClock, CheckCircle2, LockKeyhole, ShieldCheck } from "lucide-react";
+import { CalendarClock, CheckCircle2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useLocale } from "@/lib/i18n";
@@ -13,6 +13,10 @@ import "@/components/courses/courses.css";
 
 const translations = {
   en: {
+    start: "Start exam", resume: "Resume exam", startFailed: "Could not start the exam. Check that it is open and you have attempts remaining.",
+    monitoringOff: "Browser activity monitoring is off.",
+    monitoringOn: "This exam records browser focus, visibility, connection and fullscreen changes for seven days. Events may generate a warning or be sent for human review, depending on the selected policy. They do not determine cheating or change your grade.",
+    monitoringModes: { off: "Off", record: "Record events", warn: "Record and warn", review: "Record and flag for human review" },
     title: "Exam preflight", back: "Back to Due Exams",
     intro: "Review the examination rules before the secure exam player becomes available.",
     upcoming: "Scheduled — not yet open", available: "Within the examination window",
@@ -28,6 +32,7 @@ const translations = {
     manual: "The doctor releases results manually.",
     answers: "Correct answers may be shown after the applicable release rules.",
     noAnswers: "Correct answers are not configured to be shown.",
+    accommodations: "Your approved accommodation (applies only when secure exam entry is enabled)",
     explanations: "Explanations may be shown after the applicable release rules.",
     noExplanations: "Explanations are not configured to be shown.",
     consent: "I have read and accept the examination rules above.",
@@ -38,6 +43,10 @@ const translations = {
     notReady: "Exam entry remains disabled", preview: "Preview exam interface", previewHelp: "Explore the sample player without starting an attempt or sending answers.",
   },
   ar: {
+    start: "بدء الامتحان", resume: "متابعة الامتحان", startFailed: "تعذر بدء الامتحان. تحقق من إتاحته وعدد المحاولات المتبقية.",
+    monitoringOff: "مراقبة نشاط المتصفح مغلقة.",
+    monitoringOn: "يسجل هذا الامتحان تغير تركيز المتصفح وظهوره واتصاله ووضع ملء الشاشة لمدة سبعة أيام. قد يصدر تنبيه أو تُحال الأحداث للمراجعة البشرية حسب السياسة المختارة. لا تحدد هذه الأحداث الغش ولا تغير درجتك.",
+    monitoringModes: { off: "مغلقة", record: "تسجيل الأحداث", warn: "التسجيل والتنبيه", review: "التسجيل والإحالة للمراجعة البشرية" },
     title: "التحقق قبل الامتحان", back: "العودة إلى امتحاناتي",
     intro: "راجع قواعد الامتحان قبل إتاحة واجهة أداء الامتحان الآمنة.",
     upcoming: "مجدول — لم يبدأ بعد", available: "ضمن موعد الإتاحة",
@@ -53,6 +62,7 @@ const translations = {
     manual: "يعتمد إعلان النتائج على الدكتور.",
     answers: "قد تُعرض الإجابات الصحيحة بعد السماح بإعلانها.",
     noAnswers: "لم يُضبط عرض الإجابات الصحيحة.",
+    accommodations: "التيسيرات المعتمدة لك (تطبق فقط عند إتاحة الدخول الآمن)",
     explanations: "قد تُعرض التفسيرات بعد السماح بإعلانها.",
     noExplanations: "لم يُضبط عرض التفسيرات.",
     consent: "قرأت قواعد الامتحان الموضحة وأوافق عليها.",
@@ -66,13 +76,22 @@ const translations = {
 
 export default function ExamPreflightPage() {
   const { releaseId } = useParams<{ releaseId: string }>();
+  const router = useRouter();
   const { locale } = useLocale();
   const ar = locale === "ar";
   const t = translations[ar ? "ar" : "en"];
   const { isAuthenticated, isLoading } = useConvexAuth();
   const preflight = useQuery(api.examPreflight.get,
     isAuthenticated && releaseId ? { releaseId: releaseId as Id<"examReleases"> } : "skip");
+  const accommodation = useQuery(api.examInvigilation.myAccommodation,
+    isAuthenticated && preflight ? { releaseId: preflight.releaseId } : "skip");
   const acknowledge = useMutation(api.examPreflight.acknowledge);
+  const startAttempt = useMutation(api.examRuntime.startAttempt);
+  const [clock, setClock] = useState(() => Date.now());
+  const [offset, setOffset] = useState(0);
+  useEffect(() => { const timer = window.setInterval(() => setClock(Date.now()), 1000); return () => window.clearInterval(timer); }, []);
+  const serverNow = preflight?.serverNow;
+  useEffect(() => { if (serverNow !== undefined) setOffset(serverNow - Date.now()); }, [serverNow]);
   const [checked, setChecked] = useState(false);
   const [pending, setPending] = useState(false);
   const [error, setError] = useState("");
@@ -111,7 +130,7 @@ export default function ExamPreflightPage() {
     <section className="cb-section grid gap-3" aria-labelledby="exam-preflight-name">
       <p className="cb-note">{t.course}: <span dir="auto">{preflight.courseTitle}</span></p>
       <h2 id="exam-preflight-name" className="text-xl font-semibold" dir="auto">{preflight.title}</h2>
-      <p className="cb-status">{preflight.status === "upcoming" ? t.upcoming : t.available}</p>
+      <p className="cb-status">{preflight.opensAt !== null && clock + offset < preflight.opensAt ? t.upcoming : t.available}</p>
       <dl className="grid grid-cols-1 gap-3 sm:grid-cols-3">
         <div><dt className="cb-note">{t.questions}</dt><dd className="font-semibold">{preflight.questionCount}</dd></div>
         <div><dt className="cb-note">{t.duration}</dt><dd className="font-semibold">{preflight.durationMinutes} {t.minutes}</dd></div>
@@ -121,8 +140,12 @@ export default function ExamPreflightPage() {
         <CalendarClock className="inline" size={16} aria-hidden />{" "}
         {t.opens}: {formatDate(preflight.opensAt)} · {t.closes}: {formatDate(preflight.closesAt)}
       </p>}
-      {preflight.status === "upcoming" && <p className="cb-note">{t.wait}</p>}
+      {preflight.opensAt !== null && clock + offset < preflight.opensAt && <p className="cb-note">{t.wait}</p>}
     </section>
+    {accommodation && <section className="cb-section grid gap-2" aria-label={t.accommodations}>
+      <h2 className="font-semibold">{t.accommodations}</h2>
+      <p className="cb-note">{accommodation.kind} {accommodation.additionalMinutes > 0 ? " · " + accommodation.additionalMinutes + " min" : ""}</p>
+    </section>}
     <section className="cb-section grid gap-4" aria-labelledby="exam-rules-title">
       <h2 id="exam-rules-title" className="font-semibold">{t.rules}</h2>
       <ul className="list-disc space-y-2 ps-5 text-sm">
@@ -133,6 +156,7 @@ export default function ExamPreflightPage() {
           preflight.resultVisibility === "after_close" ? t.after : t.manual}</li>
         <li>{preflight.showCorrectAnswers ? t.answers : t.noAnswers}</li>
         <li>{preflight.showExplanations ? t.explanations : t.noExplanations}</li>
+        <li>{t.monitoringModes[preflight.integrityMode]}: {preflight.integrityMode === "off" ? t.monitoringOff : t.monitoringOn}</li>
       </ul>
       {preflight.consentAccepted ? <output className="flex items-start gap-2">
         <CheckCircle2 size={20} aria-hidden />
@@ -149,15 +173,19 @@ export default function ExamPreflightPage() {
           disabled={!checked || pending}>{pending ? "…" : t.accept}</button>
       </div>}
     </section>
-    <section className="cb-section grid gap-2" aria-label={t.notReady}>
-      <div className="flex items-center gap-2 font-semibold"><LockKeyhole size={18} aria-hidden />{t.notReady}</div>
-      <p className="cb-note flex gap-2 items-start"><ShieldCheck size={16} aria-hidden />{t.locked}</p>
-      {preflight.consentAccepted && <div className="grid justify-items-start gap-2">
-        <Link className="ws-btn ws-btn--ghost ws-btn--sm" href={"/dashboard/learn/exams/" + preflight.releaseId + "/player"}>
-          {t.preview}
-        </Link>
-        <p className="cb-note">{t.previewHelp}</p>
-      </div>}
+    <section className="cb-section grid gap-2">
+      {error && <p role="alert" className="text-sm text-destructive">{error}</p>}
+      <button type="button" className="ws-btn ws-btn--primary w-fit"
+        disabled={pending || !preflight.consentAccepted || (preflight.opensAt !== null && clock + offset < preflight.opensAt) ||
+          (preflight.closesAt !== null && clock + offset >= preflight.closesAt) ||
+          (!preflight.entryEnabled && !preflight.activeAttemptId)}
+        onClick={() => {
+          setPending(true); setError("");
+          void startAttempt({ snapshotId: preflight.snapshotId }).then(attemptId => {
+            router.push("/dashboard/learn/exams/" + preflight.releaseId + "/player?attempt=" + attemptId);
+          }).catch(() => setError(t.startFailed)).finally(() => setPending(false));
+        }}>{preflight.activeAttemptId ? t.resume : t.start}</button>
+      {!preflight.entryEnabled && !preflight.activeAttemptId && <p className="cb-note">{t.notReady}</p>}
     </section>
   </main>;
 }

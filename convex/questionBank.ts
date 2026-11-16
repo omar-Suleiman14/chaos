@@ -4,6 +4,7 @@ import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/s
 import type { Doc, Id } from "./_generated/dataModel";
 import { requireActiveUser } from "./authz";
 import { bankDraft, type BankDraft } from "./questionBankModel";
+import { validateExamRubric } from "./examGradingModel";
 
 type Ctx = MutationCtx | QueryCtx;
 const MAX_LINKS_PER_QUESTION = 50;
@@ -38,6 +39,7 @@ function cleanTags(values: string[], label: string) {
 }
 export function validateBankDraft(item: BankDraft): BankDraft {
   const prompt = item.prompt.trim();
+  validateExamRubric(item.rubricCriteria, item.kind);
   if (!prompt || prompt.length > 10_000) throw new Error("VALIDATION_FAILED: Question text must be 1–10,000 characters.");
   if (!Number.isFinite(item.points) || item.points <= 0 || item.points > 100)
     throw new Error("VALIDATION_FAILED: Points must be greater than 0 and at most 100.");
@@ -78,6 +80,9 @@ export function validateBankDraft(item: BankDraft): BankDraft {
     choices: item.choices.map(c => ({ id: c.id, text: c.text.trim() })),
     correctChoiceIds: [...item.correctChoiceIds],
     ...(item.sampleAnswer !== undefined ? { sampleAnswer: item.sampleAnswer.trim() } : {}),
+    ...(item.rubricCriteria ? { rubricCriteria: item.rubricCriteria.map(c => ({
+      id: c.id, description: c.description.trim(), weightPercent: c.weightPercent,
+    })) } : {}),
     ...(item.explanation !== undefined ? { explanation: item.explanation.trim() } : {}),
     topics: cleanTags(item.topics, "topic"),
     terms: cleanTags(item.terms, "term"),
@@ -129,7 +134,8 @@ export const update = mutation({
     if (row.revision !== expectedRevision) throw new Error("REVISION_CONFLICT: Question changed; reload before saving.");
     const next = validateBankDraft(item);
     await validateMedia(ctx, row.ownerId, next);
-    await ctx.db.patch("questionBankItems", row._id, { ...next, revision: row.revision + 1, updatedAt: Date.now() });
+    await ctx.db.patch("questionBankItems", row._id, { ...next, caseStudy: next.caseStudy, sampleAnswer: next.sampleAnswer,
+      explanation: next.explanation, rubricCriteria: next.rubricCriteria, revision: row.revision + 1, updatedAt: Date.now() });
     return row.revision + 1;
   },
 });
@@ -349,8 +355,10 @@ export const exportForCourse = query({
       items:questions.slice(offset,offset+50).map(q=>({
         kind:q.kind,prompt:q.prompt,choices:q.choices,correctChoiceIds:q.correctChoiceIds,
         sampleAnswer:q.sampleAnswer,explanation:q.explanation,points:q.points,
+        ...(q.rubricCriteria ? { rubricCriteria:q.rubricCriteria } : {}),
         topics:q.topics,terms:q.terms,outcomes:q.outcomes,status:q.status==="archived"?"draft" as const:q.status,
-        ...(q.caseStudy?{caseStudy:{stem:q.caseStudy.stem,media:[]}}:{}),
+        ...(q.caseStudy ? { caseStudy: { stem: q.caseStudy.stem.trim() ||
+          `[Images to reattach: ${q.caseStudy.media.map(image => image.alt).join("; ")}]`, media: [] } } : {}),
       })) };
   },
 });

@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { assertSourceStorageAvailable, changeSourceStorage } from "./sourceStorage";
 import { makeFunctionReference, type HttpRouter } from "convex/server";
 import {
   action, env, httpAction, internalMutation, internalQuery, mutation, query,
@@ -28,6 +29,7 @@ const signedMedia = v.object({
 });
 const uploadInfo = v.object({ key: v.string(), mimeType: v.string(), bytes: v.number() });
 const mimeTypes = new Set(["image/png", "image/jpeg", "image/webp", "application/pdf"]);
+const cleanupRef = makeFunctionReference<"action", { kind: "course"; id: string }, null>("r2MediaCleanup:cleanup");
 const keyFor = (mediaId: Id<"courseMediaObjects">) => "course-media/" + mediaId;
 
 /** Doctor only, with an explicit course+lesson+immutable lesson-version binding. */
@@ -53,12 +55,16 @@ export const reserveUpload = mutation({
       !(course.lessonIds ?? course.items.filter(item => item.kind === "lesson").map(item => item.id)).includes(lesson._id))
       throw new Error("NOT_FOUND: Course lesson/version not found or unauthorized");
     await consumeRate(ctx, "course-media:reserve:" + identity.subject, 40, 60 * 60_000);
+    await assertSourceStorageAvailable(ctx, identity.subject, args.bytes);
+    await changeSourceStorage(ctx, identity.subject, args.bytes);
     const now = Date.now();
-    return ctx.db.insert("courseMediaObjects", {
+    const mediaId = await ctx.db.insert("courseMediaObjects", {
       courseId: course._id, lessonId: lesson._id, versionId: version._id,
       ownerId: identity.subject, mimeType: args.mimeType, bytes: args.bytes,
-      status: "pending", createdAt: now, expiresAt: now + RESERVATION_LIFETIME_MS,
+      status: "pending", storageCounted: true, createdAt: now, expiresAt: now + RESERVATION_LIFETIME_MS,
     });
+    await ctx.scheduler.runAfter(RESERVATION_LIFETIME_MS + 65_000, cleanupRef, { kind: "course", id: mediaId });
+    return mediaId;
   },
 });
 
@@ -94,14 +100,12 @@ const getPendingRef = makeFunctionReference<
 
 export const getUploadTarget = action({
   args: mediaIdArg,
-  returns: v.object({ url: v.string(), headers: v.object({
-    "Content-Type": v.string(), "If-None-Match": v.literal("*"),
-  }), expiresAt: v.number() }),
+  returns: v.object({ url: v.string(), headers: v.record(v.string(), v.string()), expiresAt: v.number() }),
   handler: async (ctx, { mediaId }) => {
     const row = await ctx.runQuery(getPendingRef, { mediaId });
     if (!row) throw new Error("NOT_FOUND: Upload reservation expired or unauthorized");
     const signed = await signR2Request(r2Config(env), "PUT", row.key, {
-      contentType: row.mimeType, expiresSeconds: UPLOAD_URL_SECONDS,
+      contentType: row.mimeType, contentLength: row.bytes, expiresSeconds: UPLOAD_URL_SECONDS,
     });
     return {
       url: signed.url,
@@ -243,7 +247,10 @@ export const remove = mutation({
     const { identity } = await requireActiveUser(ctx);
     const row = await ctx.db.get("courseMediaObjects", mediaId);
     if (!row || row.ownerId !== identity.subject) throw new Error("NOT_FOUND: Media not found");
-    if (row.status !== "removed") await ctx.db.patch("courseMediaObjects", mediaId, { status: "removed" });
+    if (row.status !== "removed") {
+      await ctx.db.patch("courseMediaObjects", mediaId, { status: "removed" });
+      await ctx.scheduler.runAfter(65_000, cleanupRef, { kind: "course", id: mediaId });
+    }
     return null;
   },
 });

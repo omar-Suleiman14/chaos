@@ -12,7 +12,8 @@ export type AutosaveState = "loading" | "saved" | "pending" | "saving" |
   "offline" | "conflict" | "error";
 type Pending = { answer: ExamDraft; expectedRevision: number;
   mutationId: string; createdAt: number };
-const MAX_AGE = 4 * 60 * 60 * 1000;
+// Exams can last ten hours including approved extra time.
+const MAX_AGE = 12 * 60 * 60 * 1000;
 const empty: ExamDraft = { choiceIds: [], text: "", flagged: false, savedForLater: false };
 
 function keyFor(id: Id<"examAttempts">, index: number) {
@@ -51,6 +52,7 @@ export function useExamAnswerAutosave(
   const [online, setOnline] = useState(
     () => typeof navigator === "undefined" || navigator.onLine !== false);
   const [revision, setRevision] = useState(0);
+  const [acknowledged, setAcknowledged] = useState<{ answer: ExamDraft; revision: number; savedAt: number } | null>(null);
   const latest = useRef(pending);
   const busy = useRef(false);
   const remote = rows?.find(row => row.questionIndex === questionIndex);
@@ -59,8 +61,10 @@ export function useExamAnswerAutosave(
   useEffect(() => { latest.current = pending; }, [pending]);
   useEffect(() => {
     if (!key) return;
-    if (pending) window.sessionStorage.setItem(key, JSON.stringify(pending));
-    else window.sessionStorage.removeItem(key);
+    try {
+      if (pending) window.sessionStorage.setItem(key, JSON.stringify(pending));
+      else window.sessionStorage.removeItem(key);
+    } catch { /* The in-memory answer remains explicitly unsaved. */ }
   }, [key, pending]);
   useEffect(() => {
     const update = () => setOnline(navigator.onLine !== false);
@@ -106,6 +110,7 @@ export function useExamAnswerAutosave(
         mutationId: pending.mutationId, answer: pending.answer,
       });
       setRevision(ack.revision);
+      setAcknowledged({ answer: pending.answer, revision: ack.revision, savedAt: ack.savedAt });
       const current = latest.current;
       if (current?.mutationId === pending.mutationId) {
         latest.current = null;
@@ -133,7 +138,7 @@ export function useExamAnswerAutosave(
   const change = useCallback((answer: ExamDraft) => {
     if (!attemptId) return;
     const next = { answer, expectedRevision: latest.current?.expectedRevision ??
-      (revision || remoteRevision), mutationId: crypto.randomUUID(), createdAt: Date.now() };
+      Math.max(revision, remoteRevision), mutationId: crypto.randomUUID(), createdAt: Date.now() };
     latest.current = next;
     setPending(next);
     setStatus(navigator.onLine === false ? "offline" : "pending");
@@ -145,13 +150,14 @@ export function useExamAnswerAutosave(
     setStatus(rows === undefined ? "loading" : "saved");
   }, [rows]);
 
+  const acknowledgedIsNewer = !!acknowledged && acknowledged.revision > remoteRevision;
   return {
-    answer: pending?.answer ?? (remote ? {
+    answer: pending?.answer ?? (acknowledgedIsNewer ? acknowledged.answer : remote ? {
       choiceIds: remote.choiceIds, text: remote.text,
       flagged: remote.flagged, savedForLater: remote.savedForLater,
     } : empty),
     status,
-    savedAt: pending ? null : (remote?.savedAt ?? null),
+    savedAt: pending ? null : acknowledgedIsNewer ? acknowledged.savedAt : (remote?.savedAt ?? null),
     hasUnsavedChanges: pending !== null,
     change,
     retry: () => { if (pending) setStatus(online ? "pending" : "offline"); },
