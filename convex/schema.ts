@@ -1,6 +1,7 @@
 import { docsTables } from "./docsModel";
 import { businessTables } from "./businessModel";
 import { indexNowTables } from "./indexNowModel";
+import { indexCatalogTables } from "./indexCatalogModel";
 import { quizForkTables } from "./quizForkModel";
 import { discussionTables } from "./learnDiscussionModel";
 import { proposalTables } from "./lessonProposalModel";
@@ -39,6 +40,7 @@ export default defineSchema({
   ...docsTables,
   ...businessTables,
   ...indexNowTables,
+  ...indexCatalogTables,
   ...learnTables,
   ...discussionTables,
   ...proposalTables,

@@ -1833,4 +1833,56 @@ if("serviceWorker" in navigator){
 }
 
 render();
+
+/* Convex-backed index updates. Static records remain a safe fallback during migration/offline. */
+let catalogSignature="";
+let catalogLoading=false;
+async function refreshLiveCatalog(){
+ if(catalogLoading||document.visibilityState==="hidden")return;
+ catalogLoading=true;
+ try{
+  const rows=[];
+  let cursor=null,complete=false;
+  for(let page=0;page<15;page++){
+   const url="https://chaos.fail/api/index-catalog"+(cursor?"?cursor="+encodeURIComponent(cursor):"");
+   const response=await fetch(url,{mode:"cors",credentials:"omit",cache:"no-store"});
+   if(!response.ok)throw new Error("catalog-unavailable");
+   const data=await response.json();
+   if(!data||!Array.isArray(data.entries))throw new Error("catalog-invalid");
+   rows.push(...data.entries);
+   if(data.done){complete=true;break;}
+   if(typeof data.cursor!=="string"||!data.cursor)throw new Error("catalog-cursor");
+   cursor=data.cursor;
+  }
+  if(!complete)throw new Error("catalog-incomplete");
+  const nextSignature=JSON.stringify(rows);
+  if(nextSignature===catalogSignature)return;
+  const files=new Map(D.map(f=>[typeof f[0]==="string"?f[0]:"zatooona44/"+f[0],f]));
+  const questions=new Map(Q.map(q=>["medics_44_mcq/"+q[0],q]));
+  for(const entry of rows){
+   if(!entry||!Number.isSafeInteger(entry.messageId)||entry.messageId<1||
+      !Number.isInteger(entry.moduleIndex)||entry.moduleIndex<0||entry.moduleIndex>=M.length||
+      typeof entry.title!=="string"||typeof entry.subject!=="string")continue;
+   const isQuestion=entry.source==="medics_44_mcq";
+   if(!isQuestion&&entry.source!=="zatooona44"&&entry.source!=="ZatOona46")continue;
+   const key=entry.source+"/"+entry.messageId;
+   const target=isQuestion?questions:files;
+   if(entry.status==="hidden"){target.delete(key);continue;}
+   if(entry.status!=="published")continue;
+   if(isQuestion)target.set(key,[entry.messageId,entry.moduleIndex,entry.subject,entry.kind,Array.isArray(entry.numbers)?entry.numbers:[],entry.title]);
+   else target.set(key,[entry.source==="ZatOona46"?key:entry.messageId,entry.moduleIndex,entry.subject,entry.kind,entry.title,entry.filename||"",entry.postedAt||""]);
+  }
+  D.splice(0,D.length,...files.values());
+  Q.splice(0,Q.length,...questions.values());
+  QBY.clear();
+  for(const item of Q){if(!QBY.has(item[1]))QBY.set(item[1],[]);QBY.get(item[1]).push(item);}
+  catalogSignature=nextSignature;
+  render();
+ }catch(_){/* Keep the last successful/static catalogue if the backend is unavailable. */}
+ finally{catalogLoading=false;}
+}
+refreshLiveCatalog();
+window.setInterval(refreshLiveCatalog,60000);
+window.addEventListener("focus",refreshLiveCatalog,{passive:true});
+
 })();</script></body></html>

@@ -1,0 +1,45 @@
+{
+  "source": "Verified Telegram posts, Nov 15–16 2026",
+  "items": [
+    {
+      "source": "zatooona44",
+      "messageId": 5123,
+      "moduleIndex": 17,
+      "subject": "Community Medicine",
+      "kind": "lecture",
+      "title": "L15 Community",
+      "filename": "typhoid and paratyphoid.pdf",
+      "postedAt": "2026-11-15"
+    },
+    {
+      "source": "zatooona44",
+      "messageId": 5124,
+      "moduleIndex": 17,
+      "subject": "Community Medicine",
+      "kind": "practical",
+      "title": "P3 Community",
+      "filename": "p3com.pdf",
+      "postedAt": "2026-11-15"
+    },
+    {
+      "source": "zatooona44",
+      "messageId": 5126,
+      "moduleIndex": 17,
+      "subject": "Community Medicine",
+      "kind": "lecture",
+      "title": "L10,11 Community",
+      "filename": "L10,11 com.pdf",
+      "postedAt": "2026-11-16"
+    },
+    {
+      "source": "zatooona44",
+      "messageId": 5127,
+      "moduleIndex": 17,
+      "subject": "Community Medicine",
+      "kind": "lecture",
+      "title": "L14 Community",
+      "filename": "L14 com.pdf",
+      "postedAt": "2026-11-16"
+    }
+  ]
+}
