@@ -19,17 +19,17 @@ This change does not make pre-submission answer keys readable.
 
 ## Read authorization boundaries
 
-Every request to `/forms/images/content` rechecks the image state and current
-form/version reference. Only a published, live, public-access form that is
-inside its schedule serves question/choice images, and only for released
-questions. Unknown IDs, drafts, closed forms, removed uploads, blocked authors,
-and private or code-gated forms fail closed.
+Every request to `/forms/images/content` rechecks the image state, course access,
+and the form/version reference. Released question and choice images are available
+on open public forms, to signed-in respondents who meet the audience rules, and
+to respondents with a valid form access grant. The grant is scoped to the form,
+expires, and is not the raw access code. Authorized editors can preview images.
+A valid edit link can load images from its completed response's version after close
+when the form allows editing after close. Removed uploads and restricted owners
+remain unavailable.
 
-**Limited functionality:** image references in forms requiring sign-in,
-access codes, or responses after manual closure will not load through the new
-anonymous image proxy. Those access models need a separate, scoped media-token
-design. Never solve this by exposing presigned GETs, leaking an access code in
-an image URL, or weakening form authorization.
+Grant and edit-token image URLs are bearer capabilities. Treat them as sensitive;
+only the configured Convex site receives them. No signed R2 GET is exposed.
 
 An explanation-image read requires a completed response ID and matching
 receipt code as a bearer proof, and the image must belong to that immutable
@@ -46,12 +46,11 @@ party. Production courses and examinations should avoid external image links.
   `docs/course-r2-media.md`. Keep all secrets in server environment variables.
 - Configure bucket CORS for trusted form-builder origins allowing PUT and
   request headers `Content-Type` and `If-None-Match`; do not allow public reads.
-- Run an authenticated browser upload and verification smoke test using a
-  real private R2 bucket before enabling the uploader in production.
-- Add garbage collection for removed/unreferenced image objects, upload quota
-  accounting, size/volume monitoring, and incident rollback procedures.
-- Confirm signed-in/code-gated media strategy, timed-release semantics,
-  accessibility previews in Arabic/English, and screenshot acceptance.
+- Run an authenticated application upload and verification smoke test before enabling
+  the uploader in production. The synthetic browser-to-R2 smoke test has passed.
+- Removed and expired pending uploads are queued for deletion. Add quota accounting,
+  unreferenced ready-image cleanup, size/volume monitoring, and rollback procedures.
+- Verify timed-release semantics, accessibility previews in Arabic/English, and screenshot acceptance.
 
 PR #383's separate legacy course source, MCP source, and direct quiz/form
 authorization blockers are **not** cleared by this PR.
