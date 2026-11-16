@@ -1,5 +1,4 @@
 import ProductAnalytics, { AnalyticsIdentity } from "@/components/ProductAnalytics";
-import OfflineFallbackRegistration from "@/components/OfflineFallbackRegistration";
 import CookieConsent from "@/components/CookieConsent";
 import ConsentedSpeedInsights from "@/components/ConsentedSpeedInsights";
 import type { Metadata, Viewport } from "next";
@@ -117,7 +116,6 @@ export default async function RootLayout({ children, params }: Readonly<{ childr
         <LocaleProvider initial={locale}>
         <ThemeProvider>
           <FrameGuard />
-          <OfflineFallbackRegistration />
           <ProductAnalytics />
           <CookieConsent />
           <AuthProvider locale={locale}>
