@@ -29,11 +29,10 @@ export async function authorizedAttempt(ctx: Ctx, attemptId: Id<"examAttempts">)
     throw new Error("NOT_FOUND: Attempt not found.");
   const release = await ctx.db.query("examReleases")
     .withIndex("by_draft", q => q.eq("draftId", snapshot.draftId)).unique();
-  if (!release || !release.studentEntryEnabled ||
-      release.activeSnapshotId !== snapshot._id ||
+  if (!release || (!release.studentEntryEnabled && !attempt.entryAuthorized) || release.activeSnapshotId !== snapshot._id ||
       release.courseId !== attempt.courseId || release.ownerId !== attempt.ownerId)
     throw new Error("EXAM_NOT_READY: Secure student entry is disabled.");
-  const eligibility = await requireEligiblePreflight(ctx, release._id);
+  const eligibility = await requireEligiblePreflight(ctx, release._id, true);
   if (eligibility.studentId !== attempt.studentId ||
       eligibility.snapshot._id !== snapshot._id ||
       (eligibility.settings.mode === "scheduled" &&
@@ -43,7 +42,7 @@ export async function authorizedAttempt(ctx: Ctx, attemptId: Id<"examAttempts">)
     .withIndex("by_release_student", q =>
       q.eq("releaseId", release._id).eq("studentId", attempt.studentId)).unique();
   if (!consent || consent.snapshotId !== snapshot._id ||
-      consent.policyVersion !== eligibility.policyVersion)
+      (!attempt.entryAuthorized && consent.policyVersion !== eligibility.policyVersion))
     throw new Error("CONSENT_REQUIRED: Accept the current exam rules.");
   return { attempt, snapshot };
 }

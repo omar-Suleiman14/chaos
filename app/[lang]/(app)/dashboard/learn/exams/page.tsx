@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useConvexAuth, useQuery } from "convex/react";
-import { CalendarClock, ShieldAlert } from "lucide-react";
+import { CalendarClock } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import { useLocale } from "@/lib/i18n";
 import { PageSkeleton } from "@/components/workspace/Skeletons";
@@ -59,7 +59,6 @@ export default function DueExamsPage() {
           <CalendarClock size={14} className="inline" aria-hidden />{" "}
           {t.open}: {date(exam.opensAt)} · {t.close}: {date(exam.closesAt)}
         </p>}
-        <p className="cb-note flex gap-2 items-start"><ShieldAlert size={16} aria-hidden />{t.disabled}</p>
         <div className="flex flex-wrap gap-2">
           <Link className="ws-btn ws-btn--primary ws-btn--sm w-fit"
             href={`/dashboard/learn/exams/${exam.releaseId}`}>{t.preflight}</Link>

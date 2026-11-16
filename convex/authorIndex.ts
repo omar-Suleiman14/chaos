@@ -2,6 +2,7 @@ import type { MutationCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { indexNowAssetTables, withIndexNow, type IndexNowTable } from "./indexNow";
 import { syncCourseMembership } from "./courseMembership";
+import { syncCourseSources } from "./courseSourceAccess";
 
 export const authorTables = ["forms", "lessons", "learnCollections"] as const;
 export type AuthorTable = typeof authorTables[number];
@@ -65,12 +66,16 @@ export function authorDb(ctx: MutationCtx): Pick<MutationCtx["db"], "insert" | "
     const table = args[0] as AuthorTable;
     const fields = method === "patch" ? Object.keys(args[2] as object) : [];
     const discoveryWrite = method !== "patch" || fields.some(key => discoveryFields.has(key));
-    const membershipWrite = table === "learnCollections" && (method !== "patch" || fields.some(key => ["lessonIds", "items", "ownerId"].includes(key)));
+    const membershipWrite = table === "learnCollections" && (method !== "patch" || fields.some(key => ["lessonIds", "items", "ownerId", "publishedVersionId"].includes(key)));
     if (!discoveryWrite && !membershipWrite) return Reflect.apply(ctx.db[method], ctx.db, args);
     const write = async () => {
       const result: unknown = await Reflect.apply(ctx.db[method], ctx.db, args);
       const id = (method === "insert" ? result : args[1]) as string;
-      if (membershipWrite) await syncCourseMembership(ctx, id as Id<"learnCollections">, method === "insert");
+      if (membershipWrite) {
+        await syncCourseMembership(ctx, id as Id<"learnCollections">, method === "insert");
+        if (method !== "patch" || fields.includes("publishedVersionId") || fields.includes("items"))
+          await syncCourseSources(ctx, id as Id<"learnCollections">);
+      }
       if (discoveryWrite) await syncAuthorAsset(ctx, table, id, method === "delete");
       return result;
     };

@@ -136,7 +136,8 @@ export const examRuntimeTables = {
     finalizedAt: v.optional(v.number()),
     reviewHold: v.optional(v.boolean()),
     regradeReleasedAt: v.optional(v.number()),
-  }).index("by_attempt", ["attemptId"]),
+  }).index("by_attempt", ["attemptId"])
+    .index("by_snapshot_visibility", ["snapshotId", "resultPolicy.visibility"]),
   /** Teacher-private criterion scores and moderation; never candidate-addressable. */
   examEssayMarks: defineTable({
     attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
@@ -168,11 +169,12 @@ export const examRuntimeTables = {
     requestedAt: v.number(), updatedAt: v.number(),
   }).index("by_attempt", ["attemptId"])
     .index("by_owner_course", ["ownerId", "courseId"])
+    .index("by_snapshot", ["snapshotId"])
     .index("by_status_updated", ["status", "updatedAt"]),
   examGradingJobAudit: defineTable({
     jobId: v.id("examGradingJobs"), attemptId: v.id("examAttempts"),
     actorId: v.string(), revision: v.number(),
-    action: v.union(v.literal("requested"), v.literal("claimed"), v.literal("requeued"),
+    action: v.union(v.literal("requested"), v.literal("claimed"), v.literal("requeued"), v.literal("reopened"),
       v.literal("bundle_read"), v.literal("proposal_saved"), v.literal("sent_to_doctor")),
     detail: v.string(), at: v.number(),
   }).index("by_job_time", ["jobId", "at"]),
@@ -200,7 +202,8 @@ export const examRuntimeTables = {
     originalGradeRevision: v.number(), revision: v.number(),
     requestedAt: v.number(), updatedAt: v.number(),
     reviewedAt: v.optional(v.number()), decisionNote: v.optional(v.string()),
-  }).index("by_attempt", ["attemptId"]).index("by_owner_course", ["ownerId", "courseId"]),
+  }).index("by_attempt", ["attemptId"]).index("by_owner_course", ["ownerId", "courseId"])
+    .index("by_snapshot", ["snapshotId"]),
   /** Private append-only ledger: no student-visible grades, essays or rubrics. */
   examDoctorReviewAudit: defineTable({
     attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
@@ -280,6 +283,8 @@ export const examRuntimeTables = {
     snapshotId: v.id("examSnapshots"),
     studentId: v.string(),
     state: attemptState,
+    entryAuthorized: v.optional(v.boolean()),
+    resultPolicy: v.optional(frozenResultPolicy),
     revision: v.number(),
     startedAt: v.number(),
     /** Privacy-first opt-in policy, frozen by a future authorized start transaction. */
@@ -308,5 +313,6 @@ export const examRuntimeTables = {
     closedAt: v.optional(v.number()),
   })
     .index("by_snapshot_student", ["snapshotId", "studentId"])
+    .index("by_snapshot_state", ["snapshotId", "state"])
     .index("by_student_updated", ["studentId", "updatedAt"]),
 };

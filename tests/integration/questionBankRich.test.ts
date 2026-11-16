@@ -1,4 +1,5 @@
 import { afterEach, expect, it, vi } from "vitest";
+import { makeFunctionReference } from "convex/server";
 import { api } from "../../convex/_generated/api";
 import { creatorIdentity, otherCreatorIdentity } from "../fixtures";
 import { createTestConvex } from "./setup";
@@ -89,4 +90,39 @@ it("rejects invalid cases, excessive imports, cross-account image references and
   await expect(doctor.mutation(api.questionBankMedia.reserveUpload,{
     mimeType:"image/png",bytes:6*1024*1024,
   })).rejects.toThrow("INVALID_IMAGE");
+});
+
+
+it("retires expired question image reservations before cleanup", async () => {
+  const { t, doctor } = await fixture();
+  const claim = makeFunctionReference<"mutation", { kind: "question"; id: string }, string | null>("r2MediaCleanup:claim");
+  const mediaId = await doctor.mutation(api.questionBankMedia.reserveUpload, { mimeType: "image/png", bytes: 10 });
+  expect(await t.mutation(claim, { kind: "question", id: mediaId })).toBeNull();
+  await t.run(ctx => ctx.db.patch("questionBankMedia", mediaId, { expiresAt: Date.now() - 1 }));
+  expect(await t.mutation(claim, { kind: "question", id: mediaId })).toBe("question-images/" + mediaId);
+  const mark = makeFunctionReference<"mutation", { mediaId: typeof mediaId; etag: string }, null>("questionBankMedia:markReady");
+  await expect(doctor.mutation(mark, { mediaId, etag: '"aaaaaaaaaaaaaaaa"' })).rejects.toThrow();
+});
+
+
+it("reimports a portable export of an image-only case", async () => {
+  const { t, doctor, courseId } = await fixture();
+  const mediaId = await doctor.mutation(api.questionBankMedia.reserveUpload, { mimeType: "image/png", bytes: 10 });
+  await t.run(ctx => ctx.db.patch("questionBankMedia", mediaId, { status: "ready", etag: '"aaaaaaaaaaaaaaaa"' }));
+  await doctor.mutation(api.questionBank.createForCourse, { courseId, item: { ...base, caseStudy: { stem: "", media: [{ mediaId, alt: "ECG" }] } } });
+  const exported = await doctor.query(api.questionBank.exportForCourse, { courseId });
+  expect(exported.items[0].caseStudy).toEqual({ stem: "[Images to reattach: ECG]", media: [] });
+  expect(await doctor.mutation(api.questionBank.importForCourse, { courseId, items: exported.items })).toEqual({ created: 1 });
+});
+
+it("clears removed optional case and rubric data when updating a question", async () => {
+  const { doctor, courseId } = await fixture();
+  const questionId = await doctor.mutation(api.questionBank.createForCourse, { courseId, item: {
+    ...base, kind: "written", choices: [], correctChoiceIds: [], caseStudy: { stem: "Case", media: [] },
+    rubricCriteria: [{ id: "r1", description: "Reasoning", weightPercent: 100 }],
+  } });
+  await doctor.mutation(api.questionBank.update, { questionId, expectedRevision: 0, item: base });
+  const updated = await doctor.query(api.questionBank.get, { questionId });
+  expect(updated.caseStudy).toBeUndefined();
+  expect(updated.rubricCriteria).toBeUndefined();
 });
