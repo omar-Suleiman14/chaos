@@ -1228,6 +1228,47 @@ function tabsHTML(i,tab){
 function panelHTML(i,tab){
  return '<div class="module-tab-root">'+tabsHTML(i,tab)+'<div class="module-tab-content" id="module-tab-panel-'+i+'" role="tabpanel" aria-labelledby="module-tab-'+i+'-'+tab+'">'+groupContent(i,visibleFiles(i,tab),visibleQuiz(i,tab))+'</div></div>';
 }
+/* Diff tab content by subject. Reuse stable headings instead of fading the whole pane. */
+function reconcileTabContent(content,newHTML){
+ const parsed=document.createElement("template");
+ parsed.innerHTML=newHTML;
+ const oldSubjects=new Map([...content.children]
+  .filter(node=>node.classList.contains("subject"))
+  .map(node=>[node.dataset.subject,node]));
+ const nextNodes=[],changedNodes=[];
+ for(const next of [...parsed.content.children]){
+  if(next.classList.contains("subject")){
+   const current=oldSubjects.get(next.dataset.subject);
+   const oldHeading=current?.querySelector(":scope > .subject-name");
+   const newHeading=next.querySelector(":scope > .subject-name");
+   if(current&&oldHeading&&newHeading&&oldHeading.textContent===newHeading.textContent){
+    // Keep the existing subject element and heading alive, including its original color.
+    // Only replace material groups that actually differ for the newly selected tab.
+    const oldGroups=[...current.children].filter(node=>node!==oldHeading);
+    const newGroups=[...next.children].filter(node=>node!==newHeading);
+    if(oldGroups.map(node=>node.outerHTML).join("")!==newGroups.map(node=>node.outerHTML).join("")){
+     oldGroups.forEach(node=>node.remove());
+     newGroups.forEach(node=>current.appendChild(node));
+     changedNodes.push(...newGroups);
+    }
+    nextNodes.push(current);
+    continue;
+   }
+  }
+  // A newly appearing subject or an empty-state message may animate in.
+  nextNodes.push(next);
+  changedNodes.push(next);
+ }
+ content.replaceChildren(...nextNodes);
+ if(!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches)){
+  for(const node of changedNodes){
+   if(typeof node.animate==="function")node.animate(
+    [{opacity:0,transform:"translateY(5px)"},{opacity:1,transform:"translateY(0)"}],
+    {duration:195,easing:"cubic-bezier(.2,.8,.22,1)"}
+   );
+  }
+ }
+}
 function useModuleTab(i,tab){
  if(!TAB_TYPES[tab])return;
  const modulePanel=document.getElementById("module-panel-"+i);
@@ -1249,20 +1290,9 @@ function useModuleTab(i,tab){
  }
  const content=root.querySelector(".module-tab-content");
  if(!content)return;
- const write=()=>{
-  content.innerHTML=groupContent(i,visibleFiles(i,tab),visibleQuiz(i,tab));
-  content.setAttribute("aria-labelledby","module-tab-"+i+"-"+tab);
-  if(typeof content.animate==="function"&&!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches)){
-   content.animate([{opacity:0,transform:"translateY(9px)"},{opacity:1,transform:"translateY(0)"}],{duration:280,easing:"cubic-bezier(.16,.84,.26,1)"});
-  }
- };
- // Cancel an outgoing transition when a user selects another tab rapidly.
- if(content._tabExit){content._tabExit.onfinish=null;content._tabExit.cancel();content._tabExit=null;}
- if(typeof content.animate==="function"&&!(window.matchMedia&&window.matchMedia("(prefers-reduced-motion: reduce)").matches)){
-  const exit=content.animate([{opacity:1,transform:"translateY(0)"},{opacity:0,transform:"translateY(-5px)"}],{duration:110,easing:"ease-in"});
-  content._tabExit=exit;
-  exit.onfinish=()=>{content._tabExit=null;write()};
- }else write();
+ // No whole-panel exit/entry fade: unchanged subjects must not blink on tab changes.
+ reconcileTabContent(content,groupContent(i,visibleFiles(i,tab),visibleQuiz(i,tab)));
+ content.setAttribute("aria-labelledby","module-tab-"+i+"-"+tab);
 }
 
 function setPanel(b,panel,expand){
