@@ -55,7 +55,8 @@ export const saveForDraft = mutation({
   handler: async (ctx, { draftId, expectedRevision, settings }) => {
     const { release } = await owned(ctx, draftId);
     if (!release) throw new Error("SNAPSHOT_REQUIRED: Seal the exam before saving its release settings.");
-    if (release.studentEntryEnabled)
+    if (release.studentEntryEnabled || await ctx.db.query("examAttempts")
+      .withIndex("by_snapshot_state", q => q.eq("snapshotId", release.activeSnapshotId).eq("state", "in_progress")).first())
       throw new Error("EXAM_ACTIVE: Close the student release before editing settings.");
     if (!Number.isSafeInteger(expectedRevision) ||
         expectedRevision !== (release.settingsRevision ?? 0))
@@ -78,7 +79,8 @@ export const setPrepared = mutation({
   handler: async (ctx, { draftId, expectedRevision, prepared }) => {
     const { draft, release } = await owned(ctx, draftId);
     if (!release) throw new Error("SNAPSHOT_REQUIRED: Seal the exam first.");
-    if (release.studentEntryEnabled)
+    if (release.studentEntryEnabled || await ctx.db.query("examAttempts")
+      .withIndex("by_snapshot_state", q => q.eq("snapshotId", release.activeSnapshotId).eq("state", "in_progress")).first())
       throw new Error("EXAM_ACTIVE: Cannot change readiness during student entry.");
     if (!Number.isSafeInteger(expectedRevision) ||
         expectedRevision !== (release.settingsRevision ?? 0))

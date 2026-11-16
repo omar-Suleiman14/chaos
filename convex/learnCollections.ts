@@ -72,6 +72,7 @@ export async function attachAssessmentForActor(ctx: MutationCtx, actor: string, 
   const form = args.asset.kind === "form" ? await ctx.db.get("forms", args.asset.id) : null;
   if (!form || form.ownerId !== actor) throw new Error("NOT_FOUND: Quiz form not found in your library.");
   if (!form.draft.quiz?.enabled) throw new Error("VALIDATION_FAILED: That form is not a quiz; turn on quiz mode first.");
+  if (form.courseAccessRequired !== true) await ctx.db.patch("forms", form._id, { courseAccessRequired: true });
   const prior = await ctx.db.query("lessonAssessments").withIndex("by_lessonId_and_asset", q => q.eq("lessonId", lesson._id).eq("asset", args.asset)).unique();
   if (prior) { await ctx.db.patch("lessonAssessments", prior._id, { label: args.label, order: args.order }); return prior._id; }
   if ((await ctx.db.query("lessonAssessments").withIndex("by_lessonId_and_order", q => q.eq("lessonId", lesson._id)).take(51)).length >= 50) throw new Error("VALIDATION_FAILED: At most 50 assessments per lesson.");

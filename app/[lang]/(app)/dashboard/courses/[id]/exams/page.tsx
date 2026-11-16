@@ -16,7 +16,8 @@ import { TeacherExamMonitor } from "@/components/exams/TeacherExamMonitor";
 import "@/components/courses/courses.css";
 
 type Kind = "course" | "module" | "lecture" | "topic";
-type Allocation = { id: string; kind: Kind; key: string; count: number; points: number };
+type Allocation = { id: string; kind: Kind; key: string; count: number; points: number;
+  marking?: { mode: "exact" | "partial"; incorrectPenalty: number; blankPenalty: number } };
 type Selection = { questionId: Id<"questionBankItems">; allocationId: string };
 
 const labels = {
@@ -26,6 +27,8 @@ const labels = {
     loading: "Loading exam builder…", denied: "Course not found or you do not own it.", draftTitle: "Exam title",
     target: "Total questions", allocation: "Syllabus allocation", allocations: "Question distribution", add: "Add syllabus allocation",
     type: "Source", scope: "Lecture, module or topic", count: "Questions", points: "Points per question",
+    marking: "Scoring policy", exact: "Exact match", partial: "Partial credit (multiple-choice only)",
+    incorrectPenalty: "Wrong-answer penalty", blankPenalty: "Unanswered penalty",
     course: "Entire course", module: "Module", lecture: "Lecture", topic: "Topic", save: "Save syllabus",
     saving: "Saving…", saved: "Syllabus saved", newPlan: "Syllabus changes clear previous question selections.",
     selected: "Selected", available: "Available", needed: "Requested", preview: "Coverage preview", planRemaining: "Unallocated questions",
@@ -37,7 +40,7 @@ const labels = {
     auto: "Auto-fill distinct questions", rebuild: "Rebuild question selection", confirmRebuild: "Auto-fill will replace your current selection. Continue?",
     autoDone: "Questions selected", completed: "ready", notSaved: "Save syllabus changes before choosing questions.",
     invalid: "No longer eligible", deleted: "Delete draft", deletedConfirm: "Delete this exam draft permanently?",
-    done: "This is a private planning draft only. Publishing, assignment, exam snapshots and grading will arrive in later PRs.",
+    done: "Save your syllabus and select questions, then configure the exam below.",
     noCandidates: "No candidate questions on this page.", previous: "Previous", next: "Next", of: "of",
     failed: "Could not save. Try again.", questionKind: "Question type", status: "Draft · not published",
   },
@@ -47,6 +50,8 @@ const labels = {
     loading: "جارٍ تحميل منشئ الامتحانات…", denied: "الدورة غير موجودة أو ليست ملكك.", draftTitle: "عنوان الامتحان",
     target: "إجمالي الأسئلة", allocation: "توزيع المنهج", allocations: "توزيع الأسئلة", add: "أضف جزءًا من المنهج",
     type: "النوع", scope: "المحاضرة أو الوحدة أو الموضوع", count: "الأسئلة", points: "درجة كل سؤال",
+    marking: "سياسة التصحيح", exact: "مطابقة كاملة", partial: "درجة جزئية (الاختيارات المتعددة فقط)",
+    incorrectPenalty: "خصم الإجابة الخطأ", blankPenalty: "خصم السؤال المتروك",
     course: "الدورة كلها", module: "وحدة", lecture: "محاضرة", topic: "موضوع", save: "احفظ المنهج",
     saving: "جارٍ الحفظ…", saved: "تم حفظ المنهج", newPlan: "تغيير توزيع المنهج يمسح الأسئلة المختارة سابقًا.",
     selected: "المختارة", available: "المتاحة", needed: "المطلوبة", preview: "معاينة التغطية", planRemaining: "أسئلة لم توزع",
@@ -58,7 +63,7 @@ const labels = {
     auto: "اختيار أسئلة مختلفة تلقائيًا", rebuild: "إعادة اختيار الأسئلة", confirmRebuild: "سيتم استبدال الاختيار الحالي. متابعة؟",
     autoDone: "تم اختيار الأسئلة", completed: "جاهز", notSaved: "احفظ تغييرات المنهج قبل اختيار الأسئلة.",
     invalid: "لم يعد مطابقًا", deleted: "احذف المسودة", deletedConfirm: "حذف مسودة الامتحان نهائيًا؟",
-    done: "هذه مسودة تخطيط خاصة فقط. النشر والتكليف والنسخ الثابتة والتصحيح ستأتي في طلبات لاحقة.",
+    done: "احفظ المنهج واختر الأسئلة، ثم أعدّ الامتحان أدناه.",
     noCandidates: "لا توجد أسئلة في هذه الصفحة.", previous: "السابق", next: "التالي", of: "من",
     failed: "تعذر الحفظ. حاول مرة أخرى.", questionKind: "نوع السؤال", status: "مسودة · غير منشورة",
   },
@@ -96,17 +101,22 @@ export default function CourseExamBuilder({
   const [target, setTarget] = useState(10);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [loadedRevision, setLoadedRevision] = useState<number | null>(null);
+  const [loadedDraftId, setLoadedDraftId] = useState<Id<"examBuilderDrafts"> | null>(null);
+  const [loadedPlan, setLoadedPlan] = useState("");
   const [focus, setFocus] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
-    if (draft && loadedRevision !== draft.revision) {
+    const currentPlan = JSON.stringify([name, target, allocations]);
+    if (draft && (loadedDraftId !== draft._id || (loadedRevision !== null && draft.revision > loadedRevision && currentPlan === loadedPlan))) {
       setName(draft.title);
       setTarget(draft.targetCount);
       setAllocations(draft.allocations);
       setLoadedRevision(draft.revision);
+      setLoadedDraftId(draft._id);
+      setLoadedPlan(JSON.stringify([draft.title, draft.targetCount, draft.allocations]));
     }
-  }, [draft, loadedRevision]);
+  }, [draft, loadedRevision, loadedDraftId, loadedPlan, name, target, allocations]);
   useEffect(() => {
     if (draft && (!focus || !draft.allocations.some(a => a.id === focus))) {
       setFocus(draft.allocations[0]?.id ?? null);
@@ -136,11 +146,12 @@ export default function CourseExamBuilder({
     router.push("/dashboard/courses/" + id + "/exams?draft=" + newId);
   });
   const savePlan = () => {
-    if (!draftId || !draft) return;
-    void execute(() => save({
-      draftId, expectedRevision: draft.revision, title: name,
-      targetCount: target, allocations,
-    }), t.saved);
+    if (!draftId || !draft || loadedRevision === null) return;
+    void execute(async () => {
+      const revision = await save({ draftId, expectedRevision: loadedRevision, title: name, targetCount: target, allocations });
+      setLoadedRevision(revision);
+      setLoadedPlan(JSON.stringify([name, target, allocations]));
+    }, t.saved);
   };
   const modifyAllocation = (rowId: string, patch: Partial<Allocation>) =>
     setAllocations(old => old.map(a => a.id === rowId ? { ...a, ...patch } : a));
@@ -195,6 +206,8 @@ export default function CourseExamBuilder({
       </Link>
       <span className="cb-status">{t.status}</span>
     </header>
+    {draftId && <Link href={"/dashboard/courses/" + id + "/exams/results?draft=" + draftId}
+      className="ws-btn ws-btn--ghost ws-btn--sm w-fit">{ar ? "نتائج الطلاب" : "Student results"}</Link>}
     <Link href={"/dashboard/courses/" + id + "/questions"} className="ws-btn ws-btn--ghost ws-btn--sm">
       <Plus size={16} aria-hidden />{ar ? "تأليف أسئلة وحالات إكلينيكية" : "Author questions & clinical cases"}
     </Link>
@@ -231,6 +244,7 @@ export default function CourseExamBuilder({
         <div className="space-y-4">
           {allocations.map((a, i) => {
             const data = preview?.rows.find(x => x.allocationId === a.id);
+            const marking = a.marking ?? { mode: "exact" as const, incorrectPenalty: 0, blankPenalty: 0 };
             const options = a.kind === "module" ? preview?.modules :
               a.kind === "lecture" ? preview?.lectures :
               a.kind === "topic" ? preview?.topics.map(x => ({ id: x, title: x })) : [];
@@ -267,6 +281,31 @@ export default function CourseExamBuilder({
                   disabled={allocations.length === 1} onClick={() => setAllocations(old => old.filter(x => x.id !== a.id))}>
                   <Trash2 size={16} aria-hidden />
                 </button>
+              </div>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <label className="grid gap-1 text-sm">{t.marking}
+                  <select className="kb-input" value={marking.mode}
+                    onChange={e => modifyAllocation(a.id, { marking: {
+                      ...marking, mode: e.target.value as "exact" | "partial",
+                    } })}>
+                    <option value="exact">{t.exact}</option>
+                    <option value="partial">{t.partial}</option>
+                  </select>
+                </label>
+                <label className="grid gap-1 text-sm">{t.incorrectPenalty}
+                  <input className="kb-input" type="number" min={0} max={a.points} step={0.01}
+                    value={marking.incorrectPenalty}
+                    onChange={e => modifyAllocation(a.id, { marking: {
+                      ...marking, incorrectPenalty: Number(e.target.value),
+                    } })} />
+                </label>
+                <label className="grid gap-1 text-sm">{t.blankPenalty}
+                  <input className="kb-input" type="number" min={0} max={a.points} step={0.01}
+                    value={marking.blankPenalty}
+                    onChange={e => modifyAllocation(a.id, { marking: {
+                      ...marking, blankPenalty: Number(e.target.value),
+                    } })} />
+                </label>
               </div>
               <p className="text-sm text-muted-foreground">
                 {t.available}: {dirty ? "—" : data?.available ?? "—"} · {t.needed}: {a.count} · {t.selected}: {dirty ? "—" : selectedCounts.get(a.id) ?? 0}
@@ -367,7 +406,7 @@ export default function CourseExamBuilder({
           preview.selected.length === draft.targetCount && preview.selected.every(s => s.valid) &&
           preview.plannedCount === draft.targetCount} />
       <ExamAudienceSetup draftId={draftId} courseId={courseId} />
-      <TeacherExamMonitor draftId={draftId} />
+      <TeacherExamMonitor key={draftId} draftId={draftId} />
       <div className="flex justify-end">
         <button type="button" className="ws-btn ws-btn--ghost" disabled={busy}
           onClick={deleteDraft}><Trash2 size={16} aria-hidden /> {t.deleted}</button>

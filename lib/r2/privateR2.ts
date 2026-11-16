@@ -8,16 +8,16 @@ export type R2Config = {
   accessKeyId: string;
   secretAccessKey: string;
 };
-export type R2Method = "GET" | "HEAD" | "PUT";
+export type R2Method = "GET" | "HEAD" | "PUT" | "DELETE";
 
 /** Shared deterministic key used only within private R2 actions and HTTP proxies. */
 export const sourceR2Key = (sourceId: string) => "learn-sources/" + sourceId;
 
 export function r2Config(env: Record<string, string | undefined>): R2Config {
-  const accountId = env.CHAOS_R2_ACCOUNT_ID ?? "";
-  const bucket = env.CHAOS_R2_BUCKET ?? "";
-  const accessKeyId = env.CHAOS_R2_ACCESS_KEY_ID ?? "";
-  const secretAccessKey = env.CHAOS_R2_SECRET_ACCESS_KEY ?? "";
+  const accountId = env.CHAOS_R2_ACCOUNT_ID?.trim() ?? "";
+  const bucket = env.CHAOS_R2_BUCKET?.trim() ?? "";
+  const accessKeyId = env.CHAOS_R2_ACCESS_KEY_ID?.trim() ?? "";
+  const secretAccessKey = env.CHAOS_R2_SECRET_ACCESS_KEY?.trim() ?? "";
   if (!/^[a-f0-9]{32}$/i.test(accountId) ||
       !/^[a-z0-9][a-z0-9-]{1,61}[a-z0-9]$/.test(bucket) ||
       !accessKeyId || !secretAccessKey)
@@ -49,12 +49,13 @@ export type SignedR2Request = { url: string; headers: Record<string, string> };
  */
 export async function signR2Request(
   config: R2Config, method: R2Method, key: string,
-  options: { contentType?: string; expiresSeconds?: number; now?: Date } = {},
+  options: { contentType?: string; contentLength?: number; expiresSeconds?: number; now?: Date } = {},
 ): Promise<SignedR2Request> {
   if (!/^(?:course-media|form-images|learn-sources|question-images)\/[a-zA-Z0-9_-]{8,200}$/.test(key)) throw new Error("Invalid R2 object key.");
   const expires = options.expiresSeconds ?? 30;
   if (!Number.isSafeInteger(expires) || expires < 1 || expires > 300) throw new Error("Invalid expiry.");
   if (method === "PUT" && !options.contentType) throw new Error("Upload content type required.");
+  if (options.contentLength !== undefined && (!Number.isSafeInteger(options.contentLength) || options.contentLength < 1 || method !== "PUT")) throw new Error("Invalid upload length.");
   if (method !== "PUT" && options.contentType) throw new Error("Unexpected content type.");
   const now = options.now ?? new Date();
   const timestamp = now.toISOString().replace(/[:-]|\.\d{3}/g, "");
@@ -64,6 +65,7 @@ export async function signR2Request(
   const requestHeaders: Record<string, string> = method === "PUT"
     ? { "Content-Type": options.contentType!, "If-None-Match": "*" } : {};
   const signed = [
+    ...(options.contentLength === undefined ? [] : [["content-length", String(options.contentLength)] as const]),
     ...Object.entries(requestHeaders).map(([k, value]) => [k.toLowerCase(), value.trim()] as const),
     ["host", host] as const,
   ].sort(([a], [b]) => a.localeCompare(b));

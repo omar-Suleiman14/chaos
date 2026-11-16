@@ -3,7 +3,11 @@ import { readFileSync, writeFileSync } from "node:fs";
 
 // Existing unused exports are tracked explicitly; additions fail CI and removals
 // shrink the baseline. Dependencies, files and unresolved imports never get a pass.
-const result = spawnSync("pnpm", ["exec", "knip", "--reporter", "json"], {
+const packageManager = process.env.npm_execpath;
+const nodeEntrypoint = packageManager && /\.[cm]?js$/.test(packageManager);
+const command = nodeEntrypoint ? process.execPath : packageManager || "pnpm";
+const args = [...(nodeEntrypoint ? [packageManager] : []), "exec", "knip", "--reporter", "json"];
+const result = spawnSync(command, args, {
   encoding: "utf8",
 });
 if (result.error) throw result.error;
