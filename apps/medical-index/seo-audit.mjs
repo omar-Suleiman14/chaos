@@ -31,7 +31,7 @@ function count(name) {
   const begin = source.indexOf("const " + name + "=");
   assert.ok(begin !== -1);
   const from = begin + name.length + 7;
-  const end = source.indexOf(";\\n", from);
+  const end = source.indexOf(";\n", from);
   return JSON.parse(source.slice(from, end)).length;
 }
 assert.equal(entries.length, 1 + count("M") + count("D") + count("Q"), "Every catalogue item should have a crawlable page");
