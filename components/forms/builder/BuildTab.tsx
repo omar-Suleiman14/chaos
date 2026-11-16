@@ -13,6 +13,7 @@ import { useBuilderLabels } from "@/components/forms/formThemeLabels";
 import { useCopy } from "@/lib/i18n";
 import { pluralForm } from "@/lib/locale";
 import FieldEditor, { BuilderDefinitionContext } from "./FieldEditor";
+import type { Id } from "@/convex/_generated/dataModel";
 
 const copy = {
   en: {
@@ -112,7 +113,8 @@ const QuestionRow = memo(function QuestionRow({ field, index, open, checked, sel
   );
 }, (a, b) => a.open === b.open && a.field === b.field && a.index === b.index && a.checked === b.checked && a.selecting === b.selecting && a.last === b.last && a.readOnly === b.readOnly && a.direction === b.direction && a.quizEnabled === b.quizEnabled && a.focused === b.focused);
 
-export default function BuildTab({ def, change: rawChange, readOnly, notice, announce }: {
+export default function BuildTab({ formId, def, change: rawChange, readOnly, notice, announce }: {
+  formId?: Id<"forms">;
   def: FormDefinition;
   change: (updater: (d: FormDefinition) => FormDefinition, options?: { checkpoint?: boolean }) => void;
   readOnly: boolean;
@@ -206,6 +208,7 @@ export default function BuildTab({ def, change: rawChange, readOnly, notice, ann
               {open && (
                 <div className="px-4 pb-4">
                   <FieldEditor
+                    formId={formId}
                     field={field}
                     index={index}
                     def={def}

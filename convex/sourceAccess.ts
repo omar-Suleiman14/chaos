@@ -1,5 +1,6 @@
 import type { QueryCtx } from "./_generated/server";
 import type { Doc } from "./_generated/dataModel";
+import { canReadCourseSource } from "./courseSourceAccess";
 
 /**
  * The one rule for reading a source's metadata or content: the owner, anyone when that part
@@ -9,8 +10,8 @@ import type { Doc } from "./_generated/dataModel";
 export async function canReadSourcePart(ctx: QueryCtx, source: Doc<"learnSources">, actor: string | null, part: "metadata" | "content"): Promise<boolean> {
   if (actor !== null && actor === source.ownerId) return true;
   const level = part === "metadata" ? source.metadataVisibility : source.contentVisibility;
-  if (level === "public") return true;
+  if (level === "public") return canReadCourseSource(ctx, source._id, actor);
   if (level !== "restricted" || actor === null) return false;
   const grant = await ctx.db.query("learnSourceGrants").withIndex("by_sourceId_and_userId", q => q.eq("sourceId", source._id).eq("userId", actor)).unique();
-  return grant?.[part] === true;
+  return grant?.[part] === true && await canReadCourseSource(ctx, source._id, actor);
 }

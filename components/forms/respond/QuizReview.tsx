@@ -3,6 +3,7 @@ import { Check, X } from "lucide-react";
 import { isRtl, localizeField } from "@/convex/formLogic";
 import type { Answers, FormDefinition, Language } from "@/convex/formLogic";
 import type { QuizReviewItem } from "@/convex/formQuiz";
+import { AnswerImage } from "@/components/forms/FormRenderer";
 
 const text = {
   en: { title: "Your answers", yours: "Your answer", correct: "Correct answer", none: "No answer", marks: (e: number, p: number) => `${e} / ${p}`, right: "Correct", wrong: "Incorrect" },
@@ -43,6 +44,7 @@ export function QuizReview({ def, review, answers, language }: { def: FormDefini
                 {!right && r.correctOptionIds.length > 0 && <div data-key><dt>{t.correct}</dt><dd>{r.correctOptionIds.map(label).join(", ")}</dd></div>}
               </dl>
               {r.explanation && <p className="form-review__why">{r.explanation}</p>}
+              {r.explanationImage && <AnswerImage image={r.explanationImage} className="form-image max-h-80 object-contain" />}
             </li>
           );
         })}
