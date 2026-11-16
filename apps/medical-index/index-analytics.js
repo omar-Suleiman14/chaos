@@ -70,11 +70,11 @@
     catch { /* Analytics can never interfere with studying. */ }
   }
   function locationContext(element) {
-    const module = element.closest(".module");
+    const moduleEl = element.closest(".module");
     const subject = element.closest(".subject");
-    const group = module && module.closest(".year");
+    const group = moduleEl && moduleEl.closest(".year");
     const info = {
-      module_index: module ? Number(module.getAttribute("data-module-group")) : null,
+      module_index: moduleEl ? Number(moduleEl.getAttribute("data-module-group")) : null,
       year: group ? Number(group.getAttribute("data-year-group")) : null
     };
     if (subject) info.subject = subject.getAttribute("data-subject") || "General";
@@ -89,12 +89,12 @@
       if (year.getAttribute("aria-expanded") === "true") capture("index_year_opened", { year: Number(year.dataset.year) });
       return;
     }
-    const module = target.closest(".module-button[data-module]");
-    if (module) {
-      if (module.getAttribute("aria-expanded") === "true") {
+    const moduleEl = target.closest(".module-button[data-module]");
+    if (moduleEl) {
+      if (moduleEl.getAttribute("aria-expanded") === "true") {
         capture("index_module_opened", {
-          year: Number(module.closest(".year")?.getAttribute("data-year-group")),
-          module_index: Number(module.dataset.module)
+          year: Number(moduleEl.closest(".year")?.getAttribute("data-year-group")),
+          module_index: Number(moduleEl.dataset.module)
         });
       }
       return;
