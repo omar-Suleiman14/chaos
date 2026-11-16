@@ -1,7 +1,7 @@
 /* Chaos Index PWA shell; no credentials, personal data, or third-party responses cached. */
 "use strict";
-const CACHE="chaos-index-shell-v1";
-const SHELL=["/","/icon.svg","/manifest.webmanifest"];
+const CACHE="chaos-index-shell-v2";
+const SHELL=["/","/icon.svg","/manifest.webmanifest","/offline.html","/offline-game.js"];
 self.addEventListener("install",event=>{
  event.waitUntil(caches.open(CACHE).then(cache=>cache.addAll(SHELL)).then(()=>self.skipWaiting()));
 });
@@ -19,7 +19,7 @@ self.addEventListener("fetch",event=>{
   event.respondWith(fetch(event.request).then(response=>{
    if(response.ok){const copy=response.clone();caches.open(CACHE).then(cache=>cache.put("/",copy)).catch(()=>{});}
    return response;
-  }).catch(()=>caches.match("/").then(hit=>hit||Response.error())));
+  }).catch(()=>caches.match(url.pathname==="/"?"/":"/offline.html").then(hit=>hit||Response.error())));
   return;
  }
  if(SHELL.includes(url.pathname)){
