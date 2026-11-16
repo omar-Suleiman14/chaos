@@ -13,6 +13,7 @@ export const courseMediaTables = {
     ownerId: v.string(),
     mimeType: v.string(),
     bytes: v.number(),
+    storageCounted: v.optional(v.boolean()),
     status: v.union(v.literal("pending"), v.literal("ready"), v.literal("removed")),
     etag: v.optional(v.string()),
     createdAt: v.number(),

@@ -25,6 +25,15 @@ describe("private R2 SigV4 infrastructure", () => {
     })).toEqual(config);
   });
 
+  it("normalizes whitespace introduced by deployment secret input", () => {
+    expect(r2Config({
+      CHAOS_R2_ACCOUNT_ID: config.accountId + "\n",
+      CHAOS_R2_BUCKET: " " + config.bucket + "\n",
+      CHAOS_R2_ACCESS_KEY_ID: config.accessKeyId + "\n",
+      CHAOS_R2_SECRET_ACCESS_KEY: config.secretAccessKey + "\n",
+    })).toEqual(config);
+  });
+
   it("gives an expiring, create-only PUT capability without exposing credentials", async () => {
     const signed = await signR2Request(config, "PUT", "course-media/media_12345678", {
       contentType: "image/png", expiresSeconds: 60, now,
@@ -49,6 +58,14 @@ describe("private R2 SigV4 infrastructure", () => {
     expect(new URL(changed.url).searchParams.get("X-Amz-Signature")).not.toBe(url.searchParams.get("X-Amz-Signature"));
   });
 
+  it("binds a reserved upload size to the signed request", async () => {
+    const first = await signR2Request(config, "PUT", "course-media/media_12345678", { contentType: "image/png", contentLength: 18, now });
+    const second = await signR2Request(config, "PUT", "course-media/media_12345678", { contentType: "image/png", contentLength: 19, now });
+    expect(new URL(first.url).searchParams.get("X-Amz-SignedHeaders")).toContain("content-length");
+    expect(first.url).not.toBe(second.url);
+    expect(first.headers).not.toHaveProperty("Content-Length");
+  });
+
   it("accepts isolated form-image keys but rejects traversal and arbitrary bucket paths", async () => {
     const signed = await signR2Request(config, "PUT", "form-images/media_12345678", {
       contentType: "image/webp", expiresSeconds: 60, now,
@@ -56,6 +73,15 @@ describe("private R2 SigV4 infrastructure", () => {
     expect(new URL(signed.url).pathname).toContain("/form-images/media_12345678");
     await expect(signR2Request(config, "GET", "form-images/../course-media/media_12345678")).rejects.toThrow("key");
     await expect(signR2Request(config, "GET", "other-images/media_12345678")).rejects.toThrow("key");
+  });
+
+  it("keeps migrated teaching-source keys isolated from course/form media", async () => {
+    const signed = await signR2Request(config, "PUT", "learn-sources/jx123456789012345678901234567890", {
+      contentType: "application/pdf", expiresSeconds: 30, now,
+    });
+    expect(new URL(signed.url).pathname).toContain("/learn-sources/jx123456789012345678901234567890");
+    expect(signed.headers["If-None-Match"]).toBe("*");
+    await expect(signR2Request(config, "GET", "learn-sources/../form-images/image123456")).rejects.toThrow("key");
   });
 
   it("rejects unexpected keys, methods, and excessively long-lived signed URLs", async () => {
