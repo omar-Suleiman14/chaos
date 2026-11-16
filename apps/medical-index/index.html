@@ -1154,11 +1154,11 @@ function fileLine(file,usedQuiz){
  if(file.missing){
   const n=catalogNums(file)[0];
   const found=(QBY.get(file.module)||[]).filter(q=>q[1]===file.module&&q[2]===file.subject&&q[3]===file.type&&q[4].includes(n));
-  return '<div class="material-row is-missing" data-kind="'+esc(file.type)+'"><span class="material-main"><span class="kind-mark"></span><span class="material-name">'+esc(file.label)+'</span><span class="missing-hint">Not indexed</span></span>'+quizActions(found,usedQuiz)+reportIcon(file.module,file.type,file.subject,file.label,"","missing",n)+'</div>';
+  return '<div class="material-row is-missing" data-kind="'+esc(file.type)+'"><span class="material-main"><span class="kind-mark"></span><span class="material-name" dir="auto">'+esc(file.label)+'</span><span class="missing-hint">Not indexed</span></span>'+quizActions(found,usedQuiz)+reportIcon(file.module,file.type,file.subject,file.label,"","missing",n)+'</div>';
  }
  const list=matchingQuizzes(file),title=academicTitle(file);
  const fileUrl=typeof file[0]==="string"&&file[0].startsWith("ZatOona46/")?"https://t.me/"+file[0]:"https://t.me/zatooona44/"+file[0];
- const pdf='<a class="material-main" href="'+fileUrl+'" target="_blank" rel="noopener noreferrer" aria-label="Open '+esc(title)+' PDF message"><span class="kind-mark"></span><span class="material-name">'+esc(title)+'</span><span class="material-chevron" aria-hidden="true">↗</span></a>';
+ const pdf='<a class="material-main" href="'+fileUrl+'" target="_blank" rel="noopener noreferrer" aria-label="Open '+esc(title)+' on Telegram"><span class="kind-mark"></span><span class="material-name" dir="auto">'+esc(title)+'</span><span class="material-chevron" aria-hidden="true">↗</span></a>';
  return '<div class="material-row" data-kind="'+esc(file[3])+'">'+pdf+quizActions(list,usedQuiz)+reportIcon(file[1],file[3],fileSubject(file),title,fileUrl)+'</div>';
 }
 
@@ -1207,11 +1207,11 @@ function groupContent(i,files,questionPosts){
    if(!extra.length)continue;
    const title={lecture:"Lecture questions",tutorial:"Tutorial questions",practical:"Practical questions",cbl:"CBL questions",exam:"Exam question sets",resource:"Practice questions",timetable:"Question sets"}[type]||"Question sets";
    rows+='<div class="group-name">'+title+'</div><div class="material-list">'+extra.map(q=>
-    '<div class="material-row question-only" data-kind="'+esc(type)+'"><div class="material-main"><span class="kind-mark"></span><span class="material-name">'+esc(quizLabel(q))+'</span><span class="missing-hint">Questions only</span></div><a class="quiz-link" href="https://t.me/medics_44_mcq/'+q[0]+'" title="'+esc(q[5])+'" target="_blank" rel="noopener noreferrer">Questions</a>'+reportIcon(q[1],q[3],q[2],quizLabel(q),'https://t.me/medics_44_mcq/'+q[0])+'</div>'
+    '<div class="material-row question-only" data-kind="'+esc(type)+'"><div class="material-main"><span class="kind-mark"></span><span class="material-name" dir="auto">'+esc(quizLabel(q))+'</span><span class="missing-hint">Questions only</span></div><a class="quiz-link" href="https://t.me/medics_44_mcq/'+q[0]+'" title="'+esc(q[5])+'" target="_blank" rel="noopener noreferrer">Questions</a>'+reportIcon(q[1],q[3],q[2],quizLabel(q),'https://t.me/medics_44_mcq/'+q[0])+'</div>'
    ).join("")+'</div>';
   }
   rows+=TORDER.filter(type=>type!=="lecture").map(type=>fileGroups.get(type)||"").join("");
-  return '<section class="subject" data-subject="'+esc(subject)+'"><h3 class="subject-name">'+esc(subject)+'</h3>'+rows+'</section>';
+  return '<section class="subject" data-subject="'+esc(subject)+'"><h3 class="subject-name" dir="auto">'+esc(subject)+'</h3>'+rows+'</section>';
  }).join("");
  return content||'<div class="module-empty">No materials in this section.</div>';
 }
