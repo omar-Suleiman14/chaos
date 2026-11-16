@@ -49,6 +49,11 @@ export const cleanup = internalMutation({
   handler: async (ctx) => {
     const now = Date.now();
     let more = false;
+    // Push endpoints unused for 90 days are removed, even if users never sign in again.
+    const stalePush = await ctx.db.query("pushSubscriptions")
+      .withIndex("by_updatedAt", q => q.lt("updatedAt", now - 90 * DAY_MS)).take(30);
+    for (const row of stalePush) await ctx.db.delete("pushSubscriptions", row._id);
+    more ||= stalePush.length === 30;
 
     const orphans = await ctx.db
       .query("formUploads")

@@ -32,6 +32,14 @@ async function draftOwned(ctx: Ctx, draftId: Id<"examBuilderDrafts">) {
   const course = await courseOwned(ctx, row.courseId, ownerId);
   return { row, course, ownerId };
 }
+async function requireDraftMutable(ctx: MutationCtx, draftId: Id<"examBuilderDrafts">, deleting = false) {
+  const release = await ctx.db.query("examReleases").withIndex("by_draft", q => q.eq("draftId", draftId)).unique();
+  if (!release) return;
+  if (deleting) throw new Error("EXAM_SEALED: A sealed exam draft cannot be deleted.");
+  if (release.studentEntryEnabled || await ctx.db.query("examAttempts")
+    .withIndex("by_snapshot_state", q => q.eq("snapshotId", release.activeSnapshotId).eq("state", "in_progress")).first())
+    throw new Error("EXAM_ACTIVE: Finish active attempts before editing the draft.");
+}
 function outline(course: Course) {
   return course.lessonIds ?? course.items.flatMap(i => i.kind === "lesson" ? [i.id] : []);
 }
@@ -191,6 +199,7 @@ export const savePlan = mutation({
   returns: v.number(),
   handler: async (ctx, { draftId, expectedRevision, title, targetCount, allocations }) => {
     const { row, course } = await draftOwned(ctx, draftId);
+    await requireDraftMutable(ctx, draftId);
     requireEditable(course);
     verifyRevision(expectedRevision, row.revision);
     const cleanTitle = validatePlan(course, title, targetCount, allocations);
@@ -210,6 +219,7 @@ export const setSelections = mutation({
   returns: v.number(),
   handler: async (ctx, { draftId, expectedRevision, selections }) => {
     const { row, course, ownerId } = await draftOwned(ctx, draftId);
+    await requireDraftMutable(ctx, draftId);
     requireEditable(course);
     verifyRevision(expectedRevision, row.revision);
     validatePlan(course, row.title, row.targetCount, row.allocations);
@@ -226,6 +236,7 @@ export const autoFill = mutation({
   returns: v.number(),
   handler: async (ctx, { draftId, expectedRevision }) => {
     const { row, course, ownerId } = await draftOwned(ctx, draftId);
+    await requireDraftMutable(ctx, draftId);
     requireEditable(course);
     verifyRevision(expectedRevision, row.revision);
     validatePlan(course, row.title, row.targetCount, row.allocations);
@@ -302,6 +313,7 @@ export const removeDraft = mutation({
   returns: v.null(),
   handler: async (ctx, { draftId, expectedRevision }) => {
     const { row, course } = await draftOwned(ctx, draftId);
+    await requireDraftMutable(ctx, draftId, true);
     requireEditable(course);
     verifyRevision(expectedRevision, row.revision);
     await ctx.db.delete("examBuilderDrafts", draftId);

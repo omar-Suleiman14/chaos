@@ -1,5 +1,5 @@
 "use client";
-import { useMutation, useQuery } from "convex/react";
+import { useMutation, useQuery, usePaginatedQuery } from "convex/react";
 import { useState } from "react";
 import { toast } from "@/lib/toast";
 import { api } from "@/convex/_generated/api";
@@ -44,7 +44,7 @@ const copy = {
 export default function CourseStudents({ courseId }: { courseId: Id<"learnCollections"> }) {
   const t = useCopy(copy), { locale } = useLocale();
   const data = useQuery(api.courseStudents.analytics, { courseId });
-  const requests = useQuery(api.courseJoinRequests.listPending, { courseId });
+  const { results: requests, status: requestPageStatus, loadMore: loadRequests } = usePaginatedQuery(api.courseJoinRequests.pendingPage, { courseId }, { initialNumItems: 50 });
   const decide = useMutation(api.courseJoinRequests.decide);
   const [busyId, setBusyId] = useState<string | null>(null);
   const review = async (requestId: Id<"courseJoinRequests">, approve: boolean) => {
@@ -61,8 +61,8 @@ export default function CourseStudents({ courseId }: { courseId: Id<"learnCollec
     <section className="cb-section grid gap-4" aria-labelledby="cb-students">
       <h2 id="cb-students">{t.title}</h2>
       <div className="grid gap-2" aria-label={t.requests}>
-        <h3 className="ws-question__title">{t.requests}{requests?.length ? ` (${n(requests.length)})` : ""}</h3>
-        {requests === undefined
+        <h3 className="ws-question__title">{t.requests}{requests.length ? ` (${n(requests.length)})` : ""}</h3>
+        {requestPageStatus === "LoadingFirstPage"
           ? <output className="ws-skeleton" style={{ minHeight: 48 }} aria-label={t.loading} />
           : requests.length === 0 ? <p className="cb-note">{t.requestsEmpty}</p>
           : <ul className="grid gap-2">{requests.map(request => <li key={request.id} className="flex flex-wrap items-center justify-between gap-3 rounded-lg border border-border p-3">
@@ -76,6 +76,7 @@ export default function CourseStudents({ courseId }: { courseId: Id<"learnCollec
               </div>
             </li>)}</ul>}
       </div>
+      {requestPageStatus === "CanLoadMore" && <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" onClick={() => loadRequests(50)}>{locale === "ar" ? "عرض المزيد" : "Load more"}</button>}
       <CourseCohorts courseId={courseId} />
       {data === undefined ? <output className="ws-stats ws-skeleton" style={{ minHeight: 88 }}  aria-label={t.loading} />
         : !data.published && data.enrolled === 0 ? <p className="cb-note">{t.unpublished}</p>

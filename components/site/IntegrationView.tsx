@@ -29,6 +29,206 @@ type Copy = {
 };
 
 const copy: Record<IntegrationPlatformId, { en: Copy; ar: Copy }> = {
+  gemini: {
+    en: {
+    "eyebrow": "Chaos for Gemini",
+    "title": "Work with Chaos from Gemini.",
+    "lead": "Connect your Chaos account to Gemini Apps where custom apps are available, or use Gemini CLI with Chaos over remote MCP. Create and study with your own permissions.",
+    "add": "Open Gemini",
+    "download": "Download Chaos for Gemini CLI",
+    "downloading": "Preparing…",
+    "downloaded": "Downloaded",
+    "downloadFailed": "Couldn’t download. Try again",
+    "copyFailed": "Couldn’t copy",
+    "connectTitle": "Connect Chaos",
+    "connectLead": "Gemini Apps custom connections are currently eligible only for US adults with personal Google accounts, Keep Activity enabled, and English.",
+    "recommended": "Recommended when eligible",
+    "connectorTitle": "Add Chaos to Gemini Apps",
+    "connectorSteps": [
+        "Open Gemini on the web, then open Connected Apps and add a custom app if available on your account.",
+        "Enter Chaos and the public MCP URL shown below, then authorize with your Chaos account.",
+        "Once connected, your custom app can also be used in eligible Gemini mobile apps. If this option is missing, use Gemini CLI."
+    ],
+    "packageTitle": "Configure Gemini CLI",
+    "packageLead": "A configuration bundle with a remote MCP server entry and a Chaos skill. It is not a native Gemini Apps extension.",
+    "packageSteps": [
+        "Download and unzip the bundle.",
+        "Merge gemini/settings.json into ~/.gemini/settings.json without removing your other settings.",
+        "Open Gemini CLI, run /mcp and complete OAuth authentication."
+    ],
+    "packageNote": "No private credentials are included. Only the public MCP address and documentation.",
+    "extraTitle": "Gemini CLI",
+    "extraLead": "Merge the following snippet into ~/.gemini/settings.json, then authenticate in /mcp.",
+    "extraCommand": "{\"mcpServers\":{\"chaos\":{\"httpUrl\":\"https://chaos.fail/mcp\"}}}",
+    "canTitle": "What Gemini can do with Chaos",
+    "canLead": "The same authorized MCP tools are available across supported clients.",
+    "can": [
+        [
+            "Forms and surveys",
+            "Draft, edit, theme and publish forms."
+        ],
+        [
+            "Quizzes",
+            "Build assessed quizzes with explanations."
+        ],
+        [
+            "Lessons",
+            "Draft and study lessons with published citations."
+        ],
+        [
+            "Courses",
+            "Create courses and search lectures you are approved to study."
+        ],
+        [
+            "Results",
+            "Summarize results when authorized; read individual answers only on request."
+        ],
+        [
+            "Live games",
+            "Run live classroom quiz sessions."
+        ]
+    ],
+    "examplesTitle": "Try asking",
+    "examples": [
+        "Create a ten-question quiz in Chaos.",
+        "Find my enrolled Chaos courses and explain the latest lecture with citations.",
+        "Draft a lesson from my notes. Do not publish."
+    ],
+    "copied": "Copied",
+    "manualTitle": "Manual configuration",
+    "manualLead": "Choose the Gemini client appropriate for your account.",
+    "nameLabel": "Server name",
+    "logoLabel": "Logo",
+    "logoFiles": "SVG · PNG 512",
+    "urlLabel": "Remote MCP HTTP URL",
+    "authLabel": "Sign-in",
+    "authValue": "OAuth; client support and eligibility vary.",
+    "copy": "Copy",
+    "manualSteps": [
+        "Gemini CLI: add mcpServers.chaos.httpUrl to settings.json.",
+        "Gemini Apps: use its custom Connected Apps screen if your account has access.",
+        "Authorize Chaos on the Chaos-hosted OAuth page. Do not paste account secrets into a chat."
+    ],
+    "securityTitle": "Privacy and authorization",
+    "security": [
+        "Gemini accesses Chaos only through the permissions of the authorized Chaos account.",
+        "Published lectures for students are rechecked against current course enrollment and teacher approval.",
+        "No push notification endpoint or browser token is shared over MCP.",
+        "Disconnect from your Gemini client or Chaos Connections."
+    ],
+    "privacy": [
+        "What Gemini reads may be sent to Google. Only request individual response data when permitted. See the ",
+        "privacy policy",
+        "."
+    ],
+    "help": [
+        "Need help? Email ",
+        "."
+    ],
+    tools: (n: number) => `${n} Chaos tools, all checked against your account.`,
+    "otherTitle": "Also in Claude",
+    "otherLead": "Chaos can connect to Claude as well."
+},
+    ar: {
+    "eyebrow": "Chaos لـ Gemini",
+    "title": "استخدم Chaos من Gemini.",
+    "lead": "اربط حساب Chaos بتطبيق Gemini حيث تتوفر التطبيقات المخصصة، أو استخدم Gemini CLI من خلال MCP عن بُعد.",
+    "add": "افتح Gemini",
+    "download": "نزّل Chaos لـ Gemini CLI",
+    "downloading": "جارٍ التجهيز…",
+    "downloaded": "تم التنزيل",
+    "downloadFailed": "تعذّر التنزيل",
+    "copyFailed": "تعذّر النسخ",
+    "connectTitle": "الربط",
+    "connectLead": "تتوفر التطبيقات المخصصة في Gemini Apps حاليًا للحسابات الشخصية المؤهلة في الولايات المتحدة لمن هم فوق 18 عامًا، مع تفعيل سجل النشاط وبالإنجليزية.",
+    "recommended": "موصى به عند توفره",
+    "connectorTitle": "أضف Chaos إلى Gemini Apps",
+    "connectorSteps": [
+        "افتح Gemini على الويب ثم التطبيقات المتصلة، وأضف تطبيقًا مخصصًا إن كان الخيار متاحًا.",
+        "أدخل اسم Chaos ورابط MCP أدناه، ثم وافق عبر حساب Chaos.",
+        "يمكن أن يظهر التطبيق المتصل أيضًا في Gemini على الهاتف للحسابات المؤهلة. إن لم يتوفر الخيار فاستخدم Gemini CLI."
+    ],
+    "packageTitle": "إعداد Gemini CLI",
+    "packageLead": "حزمة إعداد لموصل MCP ودليل Chaos، وليست إضافة Gemini Apps أصلية.",
+    "packageSteps": [
+        "نزّل الحزمة وفك ضغطها.",
+        "ادمج gemini/settings.json في ~/.gemini/settings.json دون حذف إعداداتك الأخرى.",
+        "افتح Gemini CLI وشغّل ‎/mcp وأكمل المصادقة."
+    ],
+    "packageNote": "لا تحتوي الحزمة على مفاتيح سرية، بل عنوان MCP العام والدليل.",
+    "extraTitle": "Gemini CLI",
+    "extraLead": "أضف هذا إلى إعدادات Gemini CLI ثم صادق عبر ‎/mcp.",
+    "extraCommand": "{\"mcpServers\":{\"chaos\":{\"httpUrl\":\"https://chaos.fail/mcp\"}}}",
+    "canTitle": "ما يستطيع Gemini فعله",
+    "canLead": "الأدوات نفسها مع التحقق من صلاحيات حسابك.",
+    "can": [
+        [
+            "النماذج",
+            "إنشاء النماذج وتعديلها ونشرها."
+        ],
+        [
+            "الاختبارات",
+            "إنشاء اختبارات بإجابات وشروح."
+        ],
+        [
+            "الدروس",
+            "كتابة دروس ودراسة المحتوى المنشور بالمراجع."
+        ],
+        [
+            "الدورات",
+            "إنشاء دورات والبحث في محاضرات مسموح لك بها."
+        ],
+        [
+            "النتائج",
+            "تلخيص النتائج المصرح بها عند طلبك."
+        ],
+        [
+            "الألعاب",
+            "إدارة ألعاب الاختبارات المباشرة."
+        ]
+    ],
+    "examplesTitle": "جرّب",
+    "examples": [
+        "أنشئ اختبارًا من عشرة أسئلة في Chaos.",
+        "اعرض الدورات المسجل بها واشرح أحدث محاضرة بالمصادر.",
+        "أنشئ مسودة درس من ملاحظاتي دون نشر."
+    ],
+    "copied": "تم النسخ",
+    "manualTitle": "الإعداد اليدوي",
+    "manualLead": "اختر نسخة Gemini المناسبة لحسابك.",
+    "nameLabel": "اسم الخادم",
+    "logoLabel": "الشعار",
+    "logoFiles": "SVG · PNG 512",
+    "urlLabel": "رابط MCP البعيد",
+    "authLabel": "المصادقة",
+    "authValue": "OAuth حسب توفره لدى العميل.",
+    "copy": "نسخ",
+    "manualSteps": [
+        "في Gemini CLI أضف mcpServers.chaos.httpUrl إلى settings.json.",
+        "في Gemini Apps استخدم شاشة التطبيقات المتصلة المخصصة إن كانت متاحة.",
+        "سجّل الدخول إلى Chaos بأمان ولا تشارك رموز الحساب في المحادثة."
+    ],
+    "securityTitle": "الخصوصية والصلاحيات",
+    "security": [
+        "يصل Gemini فقط إلى المحتوى الذي يسمح به حساب Chaos.",
+        "يُعاد فحص إذن دراسة المحاضرات المنشورة وتسجيل الطالب وموافقة المدرس.",
+        "لا تُشارك مفاتيح إشعارات المتصفح عبر MCP.",
+        "افصل الاتصال من Gemini أو إعدادات اتصالات Chaos."
+    ],
+    "privacy": [
+        "قد تُرسل المعلومات التي يقرأها Gemini إلى Google. لا تطلب إجابات فردية إلا عند السماح. راجع ",
+        "سياسة الخصوصية",
+        "."
+    ],
+    "help": [
+        "للمساعدة راسل ",
+        "."
+    ],
+    tools: (n: number) => `${n} Chaos tools, all checked against your account.`,
+    "otherTitle": "متاح أيضًا في Claude",
+    "otherLead": "يمكنك ربط الحساب نفسه في Claude."
+},
+  },
   claude: {
     en: {
       eyebrow: "Chaos for Claude",
@@ -131,7 +331,7 @@ const copy: Record<IntegrationPlatformId, { en: Copy; ar: Copy }> = {
 
 /** The platform's mark in its own colours: Claude's orange spark, ChatGPT's monochrome blossom. */
 export function PlatformMark({ platform, size }: { platform: IntegrationPlatformId; size: number }) {
-  return platform === "chatgpt" ? <ChatGptMark size={size} /> : <AiMark client="claude" size={size} />;
+  return platform === "chatgpt" ? <ChatGptMark size={size} /> : <AiMark client={platform === "gemini" ? "gemini" : "claude"} size={size} />;
 }
 
 /** Chaos mark + platform mark, the lockup used on integration pages and cards. */

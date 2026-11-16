@@ -10,7 +10,7 @@ export default function PrivacyView() {
 
   if (locale === "ar") {
     return (
-      <LegalPage title="سياسة الخصوصية" updated="٧ أكتوبر ٢٠٢٦" draft>
+      <LegalPage title="سياسة الخصوصية" updated="١٥ نوفمبر ٢٠٢٦" draft>
         <p>
           يتيح Chaos للأشخاص إنشاء النماذج والاختبارات والدروس والدورات والبطاقات التعليمية («المنشئون»)، ويتيح للجميع الإجابة عن النماذج والاختبارات («المجيبون»)، وقراءة المواد المنشورة ودراستها («المتعلمون»). توضح هذه السياسة ما نجمعه من معلومات، وأسباب ذلك، والخيارات المتاحة لك. إذا كان أي بند غير واضح، يُرجى مراسلتنا عبر{" "}
           <a href={`mailto:${supportEmail}`}>{supportEmail}</a>.
@@ -19,7 +19,7 @@ export default function PrivacyView() {
         <h2>النسخة المختصرة</h2>
         <ul>
           <li>نحن لا نبيع بياناتك ولا نعرض أي إعلانات.</li>
-          <li>لا نستخدم محتواك أو إجاباتك لتدريب نماذج الذكاء الاصطناعي، وChaos نفسه لا يشغّل أي ذكاء اصطناعي. إذا قمت بربط ChatGPT أو Claude، فلن يريا إلا ما تطلب منهما صراحةً التعامل معه (انظر أدناه).</li>
+          <li>لا نستخدم محتواك أو إجاباتك لتدريب نماذج الذكاء الاصطناعي، وChaos نفسه لا يشغّل أي ذكاء اصطناعي. إذا قمت بربط ChatGPT أو Claude أو Gemini، فلن يريا إلا ما تطلب منهما صراحةً التعامل معه (انظر أدناه).</li>
           <li>الإجابات والردود ملك لمنشئ النموذج. وهو من يحدد مدة الاحتفاظ بها ويمكنه حذفها في أي وقت.</li>
           <li>لا تحتاج إلى حساب للإجابة عن أي نموذج ما لم يشترط منشئ النموذج تسجيل الدخول.</li>
         </ul>
@@ -58,7 +58,7 @@ export default function PrivacyView() {
           <li>للحفاظ على الأمان: منع الرسائل الاحتيالية والمزعجة، وتطبيق حدود الاستخدام، والتحقيق في أي إساءة استخدام.</li>
           <li>لإرسال إشعارات داخل التطبيق للمنشئين، مثل وصول رد جديد.</li>
           <li>للربط مع Max حين يختار المنشئ ذلك. لا يتلقى Max سوى هياكل النماذج التي يحددها المنشئ وأعداد ملخصة مصرح بها، ولا يتلقى إجابات فردية إطلاقًا.</li>
-          <li>للعمل مع ChatGPT أو Claude أو أي مساعد متوافق عند قيامك بربطه (انظر أدناه).</li>
+          <li>للعمل مع ChatGPT أو Claude أو Gemini أو أي مساعد متوافق عند قيامك بربطه (انظر أدناه).</li>
           <li>لإرسال أحداث Webhooks إلى العناوين التي يحددها المنشئ. توضح الأحداث ما حدث (مثل وصول رد جديد) وتتضمن أعدادًا وإحصائيات دون تفاصيل الإجابات.</li>
           <li>لإنشاء بطاقة Google Wallet لبطاقة عضويتك عند طلبك. تتضمن البطاقة ما يظهر على بطاقتك العامة وتتم معالجتها بعد ذلك لدى Google.</li>
         </ul>
@@ -68,18 +68,20 @@ export default function PrivacyView() {
           يستطيع مالك النموذج والمتعاونون الذين يدعوهم الاطلاع على الردود. المنشئون مسؤولون عن كيفية استخدام الإجابات التي يجمعونها، ويجب عليهم توضيح سبب الجمع للمجيبين. تُحجب المجموعات الصغيرة في الملخصات المرسلة إلى Max حتى لا يمكن تحديد هوية الأفراد.
         </p>
 
-        <h2>استخدام Chaos من ChatGPT أو Claude</h2>
+        <h2>استخدام Chaos من ChatGPT أو Claude أو Gemini</h2>
         <p>
-          يمكنك ربط حسابك في Chaos بـ ChatGPT أو Claude أو أي مساعد يدعم بروتوكول MCP. تسجل الدخول بحسابك في Chaos وتوافق على الربط؛ ويمكنك إلغاء الاتصال في أي وقت من إعدادات المساعد أو عبر لوحة الاتصالات في Chaos.
+          يمكنك ربط حسابك في Chaos بـ ChatGPT أو Claude أو Gemini أو أي مساعد يدعم بروتوكول MCP. تسجل الدخول بحسابك في Chaos وتوافق على الربط؛ ويمكنك إلغاء الاتصال في أي وقت من إعدادات المساعد أو عبر لوحة الاتصالات في Chaos.
         </p>
         <ul>
           <li>يستطيع المساعد إنشاء النماذج والاختبارات والدروس والدورات والبطاقات وتعديلها ونشرها، وقراءة محتواك ونتائجك وإجاباتك، ولكن فقط عند طلبك منه ذلك. تبدأ الأشياء الجديدة التي ينشئها مسودات خاصة، ولا تُنشر إلا عندما تطلب ذلك.</li>
-          <li>ما يقرؤه المساعد (مثل ملخص النتائج أو الإجابات التي تطلب منه تحليلها) يُرسل إلى مزود المساعد ويخضع لسياسة الخصوصية الخاصة به، مثل سياسة <a href="https://openai.com/policies/privacy-policy">OpenAI</a> أو سياسة <a href="https://www.anthropic.com/legal/privacy">Anthropic</a>. لا تطلب منه قراءة إجابات فردية إلا إذا كان مصرحًا لك بمشاركتها.</li>
+          <li>ما يقرؤه المساعد (مثل ملخص النتائج أو الإجابات التي تطلب منه تحليلها) يُرسل إلى مزود المساعد ويخضع لسياسة الخصوصية الخاصة به، مثل سياسة <a href="https://openai.com/policies/privacy-policy">OpenAI</a> أو <a href="https://www.anthropic.com/legal/privacy">Anthropic</a> أو <a href="https://policies.google.com/privacy">Google</a>. لا تطلب منه قراءة إجابات فردية إلا إذا كان مصرحًا لك بمشاركتها.</li>
           <li>أزرار <strong>اسأل ChatGPT / اسأل Claude</strong> في الدروس تفتح المساعد مع نص الدرس أو الجزء المحدد منه. لا يُرسل أي شيء حتى تختار ذلك بنفسك.</li>
           <li>لا يرسل Chaos إجابات المجيبين تلقائيًا إلى أي مساعد، ولا تستطيع المساعدات حذف النماذج أو الإجابات.</li>
           <li>أي عنصر ينشئه المساعد يُسجل في تاريخ التعديلات على أنه أُنشئ عبر تطبيق متصل.</li>
         </ul>
 
+        <h2>الإشعارات الفورية عبر المتصفح</h2>
+        <p>الإشعارات الفورية اختيارية لكل جهاز. لا نطلب الإذن إلا عند الضغط على التفعيل. نخزن عنوان خدمة الدفع ومفاتيح التشفير العامة الخاصة باشتراك المتصفح وربطها بالحساب، ونحذفها عند الإلغاء أو رفض الخدمة أو بعد ٩٠ يومًا دون تجديد الاشتراك. تنقل خدمة الدفع المشفرة من المتصفح بيانات الاشتراك اللازمة للتسليم فقط. لا يحتوي إشعار شاشة القفل إلا على عبارة عامة، ولا يتضمن أسماء الطلاب أو الدرجات أو محتوى المحاضرات. يمكنك إيقاف الإشعارات من جرس الإشعارات في Chaos أو من إعدادات الجهاز.</p>
         <h2>مزودو الخدمات</h2>
         <p>نعتمد على عدد محدود من مزودي الخدمات الموثوقين لتشغيل Chaos، والذين يعالجون البيانات نيابة عنا فقط وفق معايير مشددة:</p>
         <ul>
@@ -126,7 +128,7 @@ export default function PrivacyView() {
   }
 
   return (
-    <LegalPage title="Privacy policy" updated="October 7, 2026" draft>
+    <LegalPage title="Privacy policy" updated="November 15, 2026" draft>
       <p>
         Chaos lets people create forms, quizzes, lessons, courses and flashcards (&ldquo;creators&rdquo;), lets anyone answer forms and quizzes (&ldquo;respondents&rdquo;), and lets people read and study published material (&ldquo;learners&rdquo;).
         This policy explains what we collect, why, and the choices you have. If something here is unclear, email{" "}
@@ -136,7 +138,7 @@ export default function PrivacyView() {
       <h2>The short version</h2>
       <ul>
         <li>We don&rsquo;t sell your data and we don&rsquo;t show ads.</li>
-        <li>We don&rsquo;t use your content or answers to train AI models, and Chaos runs no AI itself. If you connect ChatGPT or Claude, they see only what you ask them to work with (see below).</li>
+        <li>We don&rsquo;t use your content or answers to train AI models, and Chaos runs no AI itself. If you connect ChatGPT, Claude or Gemini, they see only what you ask them to work with (see below).</li>
         <li>Answers belong to the creator of the form. The creator decides how long they are kept and can delete them at any time.</li>
         <li>You don&rsquo;t need an account to answer a form unless its creator asks you to sign in.</li>
       </ul>
@@ -176,7 +178,7 @@ export default function PrivacyView() {
         <li>To keep it safe: prevent spam, enforce limits and investigate abuse.</li>
         <li>To send in-app notifications to creators, for example when a response arrives.</li>
         <li>To connect with Max when a creator chooses to. Max receives only the form definitions the creator selects and permitted summary numbers, never individual answers.</li>
-        <li>To work with ChatGPT, Claude or another assistant when you connect it (see below).</li>
+        <li>To work with ChatGPT, Claude, Gemini or another assistant when you connect it (see below).</li>
         <li>To send webhook events to an address a creator sets up. Events say what happened (for example that a response arrived) and contain counts, not answers.</li>
         <li>To make a Google Wallet pass of your member card when you ask. The pass holds what your public card shows and is then handled by Google.</li>
       </ul>
@@ -187,9 +189,9 @@ export default function PrivacyView() {
         and should tell respondents why they are asking. Small groups are hidden in summaries sent to Max so individuals can&rsquo;t be singled out.
       </p>
 
-      <h2>Using Chaos from ChatGPT or Claude</h2>
+      <h2>Using Chaos from ChatGPT, Claude or Gemini</h2>
       <p>
-        You can connect your Chaos account to ChatGPT, Claude or another assistant that supports MCP. You sign in with your Chaos account and approve the connection;
+        You can connect your Chaos account to ChatGPT, Claude, Gemini or another assistant that supports MCP. You sign in with your Chaos account and approve the connection;
         you can disconnect it at any time in the assistant&rsquo;s settings, or ask us to revoke it.
       </p>
       <ul>
@@ -201,6 +203,8 @@ export default function PrivacyView() {
         <li>Anything an assistant creates is marked in its history as made by a connected app.</li>
       </ul>
 
+      <h2>Optional browser push notifications</h2>
+      <p>Push is opt-in on each device; permission is requested only when you choose Enable. We store the browser subscription endpoint and encryption keys associated with your account for delivery, and remove them on opt-out, provider expiration or after 90 days without renewal. The browser's push provider processes the encrypted delivery. Lock-screen alerts contain a generic message only: never student names, grades, answers or lecture content. Disable push from the Chaos notification bell or your browser and OS settings.</p>
       <h2>Service providers</h2>
       <p>We use a small number of providers to run Chaos. They process data only on our behalf:</p>
       <ul>

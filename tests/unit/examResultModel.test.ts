@@ -32,3 +32,14 @@ it("uses frozen closing timestamp and prevents fallback from unlocking malformed
     ...defaultExamSettings, resultVisibility: "after_close",
   }).visibility).toBe("manual");
 });
+
+it("withholds a regraded transcript under every frozen visibility policy until doctor release", () => {
+  const held = { ...final, reviewHold: true };
+  expect(resultStatus(held, { visibility: "immediate", passingPercent: 50 }, true, 5_000)).toBe("withheld");
+  expect(resultStatus(held, { visibility: "after_close", closesAt: 1_000, passingPercent: 50 },
+    true, 5_000)).toBe("withheld");
+  expect(resultStatus(held, { visibility: "manual", passingPercent: 50 }, true, 5_000))
+    .toBe("withheld");
+  expect(resultStatus({ ...held, reviewHold: false },
+    { visibility: "manual", passingPercent: 50 }, true, 5_000)).toBe("released");
+});
