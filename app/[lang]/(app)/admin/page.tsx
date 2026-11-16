@@ -20,6 +20,7 @@ import CrmPanel from "@/components/admin/CrmPanel";
 import { WsTabs } from "@/components/workspace/primitives";
 import PlatformContent from "@/components/admin/PlatformContent";
 import PlatformTeams from "@/components/admin/PlatformTeams";
+import OperationsPanel from "@/components/admin/OperationsPanel";
 import "@/components/admin/crm/crm.css";
 import { supportEmail } from "@/lib/site";
 import {
@@ -30,12 +31,13 @@ import {
   BarChart3,
   History,
   Columns3,
+  ClipboardList,
 } from "lucide-react";
 
-const adminTabs = ["overview", "users", "content", "teams", "docs", "activity", "relationships"] as const;
+const adminTabs = ["overview", "operations", "users", "content", "teams", "docs", "activity", "relationships"] as const;
 type AdminTab = (typeof adminTabs)[number];
-const adminLabels: Record<AdminTab, string> = { overview: "Overview", users: "Accounts", content: "Content", teams: "Teams", docs: "Documentation", activity: "Activity", relationships: "Relationships" };
-const adminIcons = { overview: BarChart3, users: Users, content: FileText, teams: Users, docs: FileText, activity: History, relationships: Columns3 };
+const adminLabels: Record<AdminTab, string> = { overview: "Overview", operations: "Operations", users: "Accounts", content: "Content", teams: "Teams", docs: "Documentation", activity: "Activity", relationships: "Relationships" };
+const adminIcons = { overview: BarChart3, operations: ClipboardList, users: Users, content: FileText, teams: Users, docs: FileText, activity: History, relationships: Columns3 };
 const date = (time: number) => new Date(time).toLocaleString();
 type User = FunctionReturnType<typeof api.admin.users>["page"][number];
 type Content = FunctionReturnType<typeof api.admin.content>["page"][number];
@@ -123,7 +125,7 @@ function AdminConsole() {
     <div className="ws-admin chaos-admin text-foreground">
       <div className="ws-admin-body">
         <header className="ws-page-header">
-          <div><h1 className="ws-page-title">Administration</h1><p className="ws-page-subtitle">Manage Chaos accounts, content and shared workspaces.</p></div>
+          <div><h1 className="ws-page-title">Administration</h1><p className="ws-page-subtitle">Manage Chaos accounts, operational classrooms, exams and support.</p></div>
           <a className="ws-btn ws-btn--ghost" href={`mailto:${supportEmail}`}>Support</a>
         </header>
         <WsTabs tabs={adminTabs} value={tab} onChange={setTab} label="Admin sections" labels={adminLabels} icons={adminIcons} />
@@ -134,10 +136,10 @@ function AdminConsole() {
             <CrmPanel key={relationshipTab} followUps={relationshipTab === "followups"} pipeline={relationshipTab === "pipeline"} />
           </> : tab === "docs" ? <DocumentationPanel /> : tab === "overview" ? <>
             <section className="ws-admin-shortcuts" aria-label="Platform operations">
-              {[{ id: "users", label: "Accounts", help: "Find users and review account restrictions", icon: Users }, { id: "content", label: "Content", help: "Forms, quizzes, lessons, courses and flashcards", icon: FileText }, { id: "teams", label: "Teams", help: "Review Business workspaces and collaboration", icon: Users }, { id: "activity", label: "Activity", help: "Review moderation and administrative changes", icon: History }].map(item => <button key={item.id} className="ws-tile" onClick={() => setTab(item.id as AdminTab)}><item.icon size={20} aria-hidden /><strong>{item.label}</strong><span>{item.help}</span></button>)}
+              {[{ id: "operations", label: "Operations", help: "Course admission, exams, grading, support and audits", icon: ClipboardList }, { id: "users", label: "Accounts", help: "Find users and review account restrictions", icon: Users }, { id: "content", label: "Content", help: "Forms, quizzes, lessons, courses and flashcards", icon: FileText }, { id: "teams", label: "Teams", help: "Review Business workspaces and collaboration", icon: Users }, { id: "activity", label: "Activity", help: "Review moderation and administrative changes", icon: History }].map(item => <button key={item.id} className="ws-tile" onClick={() => setTab(item.id as AdminTab)}><item.icon size={20} aria-hidden /><strong>{item.label}</strong><span>{item.help}</span></button>)}
             </section>
             <Overview />
-          </> : tab === "users" ? <UsersPanel choose={choose} /> : tab === "teams" ? <PlatformTeams /> : tab === "activity" ? <Activity /> : <>
+          </> : tab === "operations" ? <OperationsPanel /> : tab === "users" ? <UsersPanel choose={choose} /> : tab === "teams" ? <PlatformTeams /> : tab === "activity" ? <Activity /> : <>
             <WsTabs tabs={["forms", "courses", "lessons", "flashcards"]} value={contentKind} onChange={setContentKind} label="Content types" labels={{ forms: "Forms & quizzes", courses: "Courses", lessons: "Lessons", flashcards: "Flashcards" }} />
             {contentKind === "forms" ? <ContentPanel choose={choose} /> : <PlatformContent key={contentKind} kind={contentKind as "courses" | "lessons" | "flashcards"} />}
           </>}

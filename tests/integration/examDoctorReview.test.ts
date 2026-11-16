@@ -165,3 +165,60 @@ it("appeals are student-authenticated; regrading holds the old transcript until 
     .toMatchObject({ earnedCents: 180, percentBasisPoints: 9000 });
   expect((await student.query(api.examDoctorReview.myAppeal, { attemptId }))?.status).toBe("adjusted");
 });
+
+it("regrades valid negative totals while keeping the displayed percentage at zero", async () => {
+  const { t, owner, attemptId } = await fixture();
+  await owner.mutation(api.examEssayGrading.save, {
+    attemptId, questionIndex: 0, expectedRevision: 0,
+    criterionScores: score(70), feedback: "First review",
+  });
+  await owner.mutation(api.examEssayGrading.submitForReview, { attemptId, questionIndex: 0, expectedRevision: 1 });
+  await owner.mutation(api.examEssayGrading.moderate, {
+    attemptId, questionIndex: 0, expectedRevision: 2, decision: "approve", note: "Human approved",
+  });
+  await owner.mutation(api.examEssayGrading.finalize, { attemptId, expectedGradeRevision: 0 });
+  await t.run(async ctx => {
+    const grade = await ctx.db.query("examGrades").withIndex("by_attempt", q => q.eq("attemptId", attemptId)).unique();
+    if (!grade) throw new Error("missing grade");
+    // Simulate objective penalties from other questions exceeding the written award.
+    await ctx.db.patch("examGrades", grade._id, { earnedCents: -60, finalPercentBasisPoints: 0 });
+  });
+  const result = await owner.mutation(api.examDoctorReview.regrade, {
+    attemptId, questionIndex: 0, expectedGradeRevision: 1, expectedMarkRevision: 3,
+    criterionScores: score(60), feedback: "Correction", reason: "Evidence was overvalued",
+  });
+  expect(result.earnedCents).toBe(-80);
+  const grade = await t.run(ctx => ctx.db.query("examGrades").withIndex("by_attempt", q => q.eq("attemptId", attemptId)).unique());
+  expect(grade?.finalPercentBasisPoints).toBe(0);
+});
+
+
+it("keeps historical snapshot grading, release and appeals accessible after resealing", async () => {
+  const { t, owner, student, draftId, snapshotId, attemptId } = await fixture();
+  await t.run(async ctx => {
+    const old = await ctx.db.get("examSnapshots", snapshotId);
+    const release = await ctx.db.query("examReleases").withIndex("by_draft", q => q.eq("draftId", draftId)).unique();
+    if (!old || !release) throw new Error("missing fixture");
+    const newer = await ctx.db.insert("examSnapshots", { ownerId: old.ownerId, courseId: old.courseId,
+      draftId, draftRevision: old.draftRevision + 1, version: old.version + 1, title: old.title,
+      questions: old.questions, totalPoints: old.totalPoints, sealedAt: Date.now() });
+    await ctx.db.patch("examReleases", release._id, { activeSnapshotId: newer, version: 2,
+      settings: { ...defaultExamSettings, resultVisibility: "immediate" } });
+  });
+  expect((await owner.query(api.examEssayGrading.queue, { draftId, snapshotId })).entries)
+    .toEqual([expect.objectContaining({ attemptId })]);
+  await expect(student.query(api.examEssayGrading.queue, { draftId, snapshotId })).rejects.toThrow("NOT_FOUND");
+  await owner.mutation(api.examEssayGrading.save, { attemptId, questionIndex: 0, expectedRevision: 0,
+    criterionScores: score(70), feedback: "First review" });
+  await owner.mutation(api.examEssayGrading.submitForReview, { attemptId, questionIndex: 0, expectedRevision: 1 });
+  await owner.mutation(api.examEssayGrading.moderate, { attemptId, questionIndex: 0, expectedRevision: 2,
+    decision: "approve", note: "Human approved" });
+  await owner.mutation(api.examEssayGrading.finalize, { attemptId, expectedGradeRevision: 0 });
+  expect((await owner.query(api.examResults.teacherResults, { draftId, snapshotId })).entries)
+    .toEqual([expect.objectContaining({ attemptId, resultVisibility: "manual" })]);
+  await owner.mutation(api.examResults.setPublication, { snapshotId, expectedRevision: 0, released: true });
+  expect((await student.query(api.examResults.myResult, { attemptId })).status).toBe("released");
+  await student.mutation(api.examDoctorReview.fileAppeal, { attemptId, reason: "Please review the evidence in my written response." });
+  expect((await owner.query(api.examDoctorReview.appealsForDraft, { draftId, snapshotId })).entries)
+    .toEqual([expect.objectContaining({ attemptId, status: "pending" })]);
+});

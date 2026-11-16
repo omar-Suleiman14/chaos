@@ -141,7 +141,8 @@ function suite(label: string, paths: string[]) {
   let bytes = 0, unguarded = 0;
   detail.push(`## ${label}`, "");
   for (const path of paths) {
-    const css = readFileSync(path, "utf8");
+    // Git may check out CRLF on Windows; measure the same canonical source on every OS.
+    const css = readFileSync(path, "utf8").replace(/\r\n/g, "\n");
     const { metrics: m, examples } = analyze(css);
     bytes += Buffer.byteLength(css);
     for (const k of COUNTS) total[k] += m[k];

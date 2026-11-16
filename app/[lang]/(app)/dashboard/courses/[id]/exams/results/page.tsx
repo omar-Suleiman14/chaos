@@ -10,7 +10,7 @@ import { PageSkeleton } from "@/components/workspace/Skeletons";
 import "@/components/courses/courses.css";
 
 const labels = {
-  en: { title: "Student Results", lead: "Review grades and control manual publication.",
+  en: { version: "Exam version", currentVersion: "Current version", previous: "Previous page", next: "Next page", title: "Student Results", lead: "Review grades and control manual publication.",
     back: "Exam builder", noExam: "Select a sealed exam from the exam builder.",
     signIn: "Sign in with your teacher account.", publish: "Publish final results",
     withhold: "Withhold results", visible: "Final results are published.",
@@ -25,7 +25,7 @@ const labels = {
     doctorDecision: "Doctor's decision note", uphold: "Uphold grade", adjusted: "Confirm adjusted grade",
     reject: "Reject appeal", reviewGrade: "Review / regrade answer",
     appealUpdated: "Appeal reviewed", appealFailed: "Appeal decision failed; reload." },
-  ar: { title: "نتائج الطلاب", lead: "راجع الدرجات وتحكم في النشر اليدوي.",
+  ar: { version: "نسخة الامتحان", currentVersion: "النسخة الحالية", previous: "الصفحة السابقة", next: "الصفحة التالية", title: "نتائج الطلاب", lead: "راجع الدرجات وتحكم في النشر اليدوي.",
     back: "منشئ الامتحانات", noExam: "اختر امتحاناً معتمداً من منشئ الامتحانات.",
     signIn: "سجّل الدخول بحساب الدكتور.", publish: "نشر النتائج النهائية",
     withhold: "حجب النتائج", visible: "النتائج النهائية منشورة.",
@@ -44,20 +44,25 @@ const labels = {
 
 export default function TeacherResultsPage({ params, searchParams }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ draft?: string }>;
+  searchParams: Promise<{ draft?: string; snapshot?: string }>;
 }) {
   const { id } = use(params);
-  const { draft } = use(searchParams);
+  const { draft, snapshot } = use(searchParams);
+  const [selectedSnapshot, setSelectedSnapshot] = useState(snapshot ?? "");
+  const [pages, setPages] = useState<Array<string | null>>([null]);
+  const [appealPages, setAppealPages] = useState<Array<string | null>>([null]);
   const draftId = draft ? draft as Id<"examBuilderDrafts"> : null;
   const { locale } = useLocale();
   const ar = locale === "ar";
   const t = labels[ar ? "ar" : "en"];
   const { isAuthenticated, isLoading } = useConvexAuth();
+  const snapshots = useQuery(api.examRuntime.listDraftSnapshots, isAuthenticated && draftId ? { draftId } : "skip");
+  const snapshotId = selectedSnapshot ? selectedSnapshot as Id<"examSnapshots"> : undefined;
   const data = useQuery(api.examResults.teacherResults,
-    isAuthenticated && draftId ? { draftId } : "skip");
+    isAuthenticated && draftId ? { draftId, snapshotId, cursor: pages[pages.length - 1] } : "skip");
   const setPublication = useMutation(api.examResults.setPublication);
   const appeals = useQuery(api.examDoctorReview.appealsForDraft,
-    isAuthenticated && draftId ? { draftId } : "skip");
+    isAuthenticated && draftId ? { draftId, snapshotId, cursor: appealPages[appealPages.length - 1] } : "skip");
   const decideAppeal = useMutation(api.examDoctorReview.decideAppeal);
   const [appealNotes, setAppealNotes] = useState<Record<string, string>>({});
   const reviewAppeal = async (appealId: Id<"examGradeAppeals">, expectedRevision: number,
@@ -88,8 +93,14 @@ export default function TeacherResultsPage({ params, searchParams }: {
     <Link href={"/dashboard/courses/" + id + "/exams" + (draft ? "?draft=" + draft : "")}
       className="ws-btn ws-btn--ghost ws-btn--sm w-fit">{t.back}</Link>
     <header className="lx-hero"><h1 className="ws-page-title">{t.title}</h1><p className="lx-help">{t.lead}</p></header>
+    {draftId && snapshots && <label className="grid gap-2 w-fit">{t.version}
+      <select className="ws-input" value={selectedSnapshot} onChange={e => { setSelectedSnapshot(e.target.value); setPages([null]); setAppealPages([null]); }}>
+        <option value="">{t.currentVersion}</option>
+        {snapshots.map(item => <option key={item.snapshotId} value={item.snapshotId}>{item.title} · {item.version}</option>)}
+      </select>
+    </label>}
     {!draftId || !data ? <section className="cb-section"><p>{t.noExam}</p></section> : <>
-      <Link href={"/dashboard/courses/" + id + "/exams/grading?draft=" + draft}
+      <Link href={"/dashboard/courses/" + id + "/exams/grading?draft=" + draft + (selectedSnapshot ? "&snapshot=" + selectedSnapshot : "")}
         className="ws-btn ws-btn--ghost w-fit">{t.gradeEssays}</Link>
       <section className="cb-section grid gap-3">
         <h2 className="text-lg font-semibold" dir="auto">{data.title}</h2>
@@ -121,7 +132,7 @@ export default function TeacherResultsPage({ params, searchParams }: {
           <p className="text-sm break-all">{t.student}: {a.studentId} · {a.status}</p>
           <p dir="auto" className="whitespace-pre-wrap text-sm">{t.appealReason}: {a.reason}</p>
           <Link className="ws-btn ws-btn--ghost ws-btn--sm w-fit"
-            href={"/dashboard/courses/" + id + "/exams/grading?draft=" + draft}>
+            href={"/dashboard/courses/" + id + "/exams/grading?draft=" + draft + (selectedSnapshot ? "&snapshot=" + selectedSnapshot : "")}>
             {t.reviewGrade}
           </Link>
           {a.status === "pending" && <>
@@ -142,9 +153,19 @@ export default function TeacherResultsPage({ params, searchParams }: {
           </>}
           {a.decisionNote && <p className="text-sm" dir="auto">{a.decisionNote}</p>}
         </article>)}
-        {appeals.hasMore && <p className="cb-note">{t.more}</p>}
+        <nav className="flex gap-2" aria-label={t.appeals}>
+          <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={appealPages.length <= 1}
+            onClick={() => setAppealPages(old => old.slice(0, -1))}>{t.previous}</button>
+          <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={!appeals.nextCursor}
+            onClick={() => { if (appeals.nextCursor) setAppealPages(old => [...old, appeals.nextCursor]); }}>{t.next}</button>
+        </nav>
       </section>}
-      {data.hasMore && <p className="cb-note">{t.more}</p>}
+      <nav className="flex gap-2" aria-label={t.title}>
+        <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={pages.length <= 1}
+          onClick={() => setPages(old => old.slice(0, -1))}>{t.previous}</button>
+        <button type="button" className="ws-btn ws-btn--ghost ws-btn--sm" disabled={!data.nextCursor}
+          onClick={() => { if (data.nextCursor) setPages(old => [...old, data.nextCursor]); }}>{t.next}</button>
+      </nav>
     </>}
   </main>;
 }

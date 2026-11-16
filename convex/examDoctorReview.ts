@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { notifyCourseAccount } from "./courseNotifications";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireActiveUser, creatorRestricted } from "./authz";
@@ -41,8 +42,7 @@ async function ownedAttempt(ctx: Ctx, attemptId: Id<"examAttempts">, ownerId: st
     throw new Error("NOT_FOUND: Submitted attempt not found.");
   const release = await ctx.db.query("examReleases")
     .withIndex("by_draft", q => q.eq("draftId", draft._id)).unique();
-  if (!release || release.ownerId !== ownerId || release.courseId !== course._id ||
-      release.activeSnapshotId !== snapshot._id)
+  if (!release || release.ownerId !== ownerId || release.courseId !== course._id )
     throw new Error("NOT_FOUND: Submitted attempt not found.");
   return { attempt, snapshot, course, draft, grade };
 }
@@ -217,8 +217,9 @@ export const myAppeal = query({
 });
 
 export const appealsForDraft = query({
-  args: { draftId: v.id("examBuilderDrafts") },
-  handler: async (ctx, { draftId }) => {
+  args: { draftId: v.id("examBuilderDrafts"), snapshotId: v.optional(v.id("examSnapshots")),
+    cursor: v.optional(v.union(v.string(), v.null())) },
+  handler: async (ctx, { draftId, snapshotId, cursor }) => {
     const ownerId = await doctor(ctx);
     const draft = await ctx.db.get("examBuilderDrafts", draftId);
     if (!draft || draft.ownerId !== ownerId) throw new Error("NOT_FOUND: Exam not found.");
@@ -229,14 +230,17 @@ export const appealsForDraft = query({
       .withIndex("by_draft", q => q.eq("draftId", draftId)).unique();
     if (!release || release.ownerId !== ownerId || release.courseId !== course._id)
       throw new Error("NOT_FOUND: Exam not found.");
+    const selected = await ctx.db.get("examSnapshots", snapshotId ?? release.activeSnapshotId);
+    if (!selected || selected.ownerId !== ownerId || selected.courseId !== course._id || selected.draftId !== draftId)
+      throw new Error("NOT_FOUND: Exam not found.");
     const rows = await ctx.db.query("examGradeAppeals")
-      .withIndex("by_owner_course", q => q.eq("ownerId", ownerId).eq("courseId", course._id)).take(101);
-    const current = rows.filter(r => r.snapshotId === release.activeSnapshotId);
-    return { entries: current.slice(0, 100).map(r => ({
+      .withIndex("by_snapshot", q => q.eq("snapshotId", selected._id))
+      .paginate({ cursor: cursor ?? null, numItems: 100 });
+    return { entries: rows.page.map(r => ({
       appealId: r._id, attemptId: r.attemptId, studentId: r.studentId,
       status: r.status, revision: r.revision, reason: r.reason, requestedAt: r.requestedAt,
       decisionNote: r.decisionNote ?? null,
-    })), hasMore: rows.length > 100 };
+    })), hasMore: !rows.isDone, nextCursor: rows.isDone ? null : rows.continueCursor };
   },
 });
 
@@ -306,7 +310,7 @@ export const regrade = mutation({
     if (!Number.isSafeInteger(grade.maximumCents) || grade.maximumCents <= 0)
       throw new Error("INTEGRITY_ERROR: Invalid final grade maximum.");
     const earnedCents = grade.earnedCents - old.awardedCents + award;
-    if (!Number.isSafeInteger(earnedCents) || earnedCents < 0 ||
+    if (!Number.isSafeInteger(earnedCents) ||
         earnedCents > grade.maximumCents)
       throw new Error("INTEGRITY_ERROR: Regrade would produce an invalid total.");
     const now = Date.now();
@@ -316,7 +320,7 @@ export const regrade = mutation({
       moderationNote: args.reason, revision: old.revision + 1, updatedAt: now,
     });
     await ctx.db.patch("examGrades", grade._id, {
-      earnedCents, finalPercentBasisPoints: Math.round(earnedCents * 10_000 / grade.maximumCents),
+      earnedCents, finalPercentBasisPoints: Math.round(Math.max(0, earnedCents) * 10_000 / grade.maximumCents),
       entries: grade.entries.map(e => e.questionIndex === args.questionIndex
         ? { ...e, pointsAwardedCents: award } : e),
       reviewHold: true, regradeReleasedAt: undefined, finalizedAt: now,
@@ -352,6 +356,11 @@ export const releaseRegrade = mutation({
     await audit(ctx, { attemptId: attempt._id, snapshotId: snapshot._id, ownerId,
       studentId: attempt.studentId }, ownerId, "regrade_released",
       "Doctor confirmed revised result release.", (grade.revision ?? 0) + 1);
+    await notifyCourseAccount(ctx, {
+      recipientId: attempt.studentId, courseId: attempt.courseId, kind: "course_result",
+      key: "regrade:" + attempt._id + ":" + ((grade.revision ?? 0) + 1),
+      message: "Your reviewed exam result is available in My Results.",
+    });
     return { revision: (grade.revision ?? 0) + 1, releasedFromHold: true };
   },
 });
