@@ -691,8 +691,16 @@ body,.site-header,.year-button,.module-button,.material-row,.subject-name,.modul
  .material-row .material-main{padding:9px 10px}
 }
 
-/* Neutral threaded hierarchy: measured endpoints, no rail masking or dangling stubs. */
-:root{--hierarchy-year:#575757;--hierarchy-module:#505050}
+
+/* Threaded hierarchy: single-pixel neutral guides matching card outlines.
+   At the final item the rail ends at the beginning of the elbow's curve,
+   not beneath its rounded corner. No masks or extra terminal caps. */
+:root{
+ --hierarchy-year:#575757;
+ --hierarchy-module:#505050;
+ --hierarchy-stroke:1px;
+ --hierarchy-radius:10px;
+}
 html[data-theme="light"]{--hierarchy-year:#b8b8b8;--hierarchy-module:#c2c2c2}
 .year-button,.module-button{position:relative}
 .year-button::before,.module-button::before{content:none;display:none}
@@ -701,16 +709,38 @@ html[data-theme="light"]{--hierarchy-year:#b8b8b8;--hierarchy-module:#c2c2c2}
 .year-button[aria-expanded="true"]{border-color:color-mix(in srgb,var(--hierarchy-year) 45%,var(--border));background:color-mix(in srgb,var(--hierarchy-year) 7%,var(--surface))}
 .module-button[aria-expanded="true"]{border-color:color-mix(in srgb,var(--hierarchy-module) 45%,var(--border));background:color-mix(in srgb,var(--hierarchy-module) 7%,var(--surface))}
 .year-contents{position:relative;padding-block:8px;padding-inline:0;padding-inline-start:20px}
-.year-contents::before{content:"";position:absolute;inset-inline-start:9px;top:-1px;height:var(--hierarchy-guide-end,0px);width:2px;background:var(--hierarchy-year);pointer-events:none}
+.year-contents::before{
+ content:"";position:absolute;inset-inline-start:9px;top:0;
+ height:var(--hierarchy-guide-end,0px);width:var(--hierarchy-stroke);
+ background:var(--hierarchy-year);pointer-events:none
+}
 .year-contents>.module{position:relative;margin-block:7px;margin-inline:0}
-.year-contents>.module::before{content:"";position:absolute;inset-inline-start:-11px;top:0;width:11px;height:var(--hierarchy-elbow-height,25px);pointer-events:none;border-inline-start:2px solid var(--hierarchy-year);border-bottom:2px solid var(--hierarchy-year);border-end-start-radius:10px}
+.year-contents>.module::before{
+ content:"";position:absolute;inset-inline-start:-11px;top:0;
+ width:11px;height:var(--hierarchy-elbow-height,25px);pointer-events:none;
+ border-inline-start:var(--hierarchy-stroke) solid var(--hierarchy-year);
+ border-bottom:var(--hierarchy-stroke) solid var(--hierarchy-year);
+ border-end-start-radius:var(--hierarchy-radius)
+}
 .module-contents{position:relative;padding-block:7px 12px;padding-inline:0;padding-inline-start:20px}
-.module-contents::before{content:"";position:absolute;inset-inline-start:9px;top:-1px;height:var(--hierarchy-guide-end,0px);width:2px;background:var(--hierarchy-module);pointer-events:none}
+.module-contents::before{
+ content:"";position:absolute;inset-inline-start:9px;top:0;
+ height:var(--hierarchy-guide-end,0px);width:var(--hierarchy-stroke);
+ background:var(--hierarchy-module);pointer-events:none
+}
 .module-tab-root,.module-tab-content .subject{position:relative}
-.module-tab-root::before,.module-tab-content .subject::before{content:"";position:absolute;inset-inline-start:-11px;width:11px;border-inline-start:2px solid var(--hierarchy-module);border-bottom:2px solid var(--hierarchy-module);border-end-start-radius:10px;pointer-events:none}
+.module-tab-root::before,.module-tab-content .subject::before{
+ content:"";position:absolute;inset-inline-start:-11px;width:11px;
+ border-inline-start:var(--hierarchy-stroke) solid var(--hierarchy-module);
+ border-bottom:var(--hierarchy-stroke) solid var(--hierarchy-module);
+ border-end-start-radius:var(--hierarchy-radius);pointer-events:none
+}
 .module-tab-root::before{top:0;height:33px}
 .module-tab-content .subject::before{top:0;height:13px}
-@media(max-width:700px){.year-contents,.module-contents{padding-inline-start:18px}.year-contents::before,.module-contents::before{inset-inline-start:7px}}
+@media(max-width:700px){
+ .year-contents,.module-contents{padding-inline-start:18px}
+ .year-contents::before,.module-contents::before{inset-inline-start:7px}
+}
 @media(prefers-reduced-motion:reduce){.year-button,.module-button{transition:none!important}}
 /* Smooth accordion and report option reveal. */
 .accordion-panel{transition:grid-template-rows .37s cubic-bezier(.2,.8,.22,1),opacity .25s ease}
@@ -1195,27 +1225,31 @@ function panelHTML(i,tab){
 }
 /* Tie guides to actual last nodes rather than covering long rails with background masks. */
 let hierarchyGuideQueued=false;
+
 function updateHierarchyGuides(){
- const endAt=(container,element,localY)=>{
-  const box=container.getBoundingClientRect(),target=element.getBoundingClientRect();
-  const end=Math.max(0,target.top-box.top+localY+1);
-  container.style.setProperty("--hierarchy-guide-end",end.toFixed(2)+"px");
+ // The vertical line must stop at the tangent point where the final 10px
+ // rounded elbow starts curving. Ending at its bottom creates a hanging stub.
+ const radius=10;
+ const setGuide=(container,node,elbowHeight)=>{
+  const y=node.getBoundingClientRect().top-container.getBoundingClientRect().top;
+  container.style.setProperty("--hierarchy-guide-end",Math.max(0,y+elbowHeight-radius).toFixed(2)+"px");
  };
  for(const year of document.querySelectorAll(".year-contents")){
-  const modules=year.querySelectorAll(":scope > .module"),last=modules[modules.length-1];
-  if(!last)continue;
+  const modules=[...year.querySelectorAll(":scope > .module")];
   for(const module of modules){
    const button=module.querySelector(":scope > .module-button");
    if(button)module.style.setProperty("--hierarchy-elbow-height",(button.offsetHeight/2).toFixed(2)+"px");
   }
-  const button=last.querySelector(":scope > .module-button");
-  if(button)endAt(year,last,button.offsetHeight/2);
+  const last=modules.at(-1);
+  const button=last?.querySelector(":scope > .module-button");
+  if(last&&button)setGuide(year,last,button.offsetHeight/2);
+  else year.style.setProperty("--hierarchy-guide-end","0px");
  }
  for(const module of document.querySelectorAll(".module-contents")){
   const last=module.querySelector(".module-tab-content > .subject:last-child");
   const root=module.querySelector(".module-tab-root");
-  if(last)endAt(module,last,13);
-  else if(root)endAt(module,root,33);
+  if(last)setGuide(module,last,13);
+  else if(root)setGuide(module,root,33);
   else module.style.setProperty("--hierarchy-guide-end","0px");
  }
 }
