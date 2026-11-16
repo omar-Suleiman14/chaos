@@ -36,7 +36,7 @@ Standalone medical study index at **https://index.chaos.fail**, owned alongside 
 - `questions.json` lists indexed question posts. The site's file and question catalogue is currently embedded in `index.html`.
 - Legacy Vercel project `med-module-library` currently hosts the custom domain through source-upload deployments; its Git integration should be completed separately from the Chaos Next.js app. Merging the index-only pull request does not automatically connect the legacy project.
 - Daily Telegram updater runs every day, including weekends, checking verified source posts and preserving existing material.
-- The page intentionally includes `noindex`; no SEO indexing requested.
+- Public catalogue, module, material and question pages are indexable; the admin, offline and error pages remain `noindex`. The production build owns generated SEO metadata and crawlable pages.
 
 ## Source boundaries
 
@@ -84,3 +84,13 @@ The build generates `dist/analytics-config.js`. Do not commit this generated fil
 `index-analytics.js` loads the official HTML snippet, records pageviews/sessions and coarse year/module/tab/source-link interactions, and listens for the custom `index:report-submitted` event after the report API accepts a submission. **Never track report descriptions, search text, student identities, raw Telegram URLs or form fields.** Automatic element capture, session recording and surveys are disabled; Do Not Track is respected. Anonymized IP processing is configured in the PostHog project.
 
 Charts use `$pageview` scoped to URLs containing `index.chaos.fail`: unique visitors, pageviews, visits, countries, devices and referrers. Counts only begin once the new build is live and event collection succeeds; they cannot reconstruct earlier traffic.
+
+## Accessibility, SEO and recovery (Nov 16, 2026)
+
+- The Index provides a skip link, a semantic page heading, focusable native buttons and links, keyboard-operable accordion/tab/report interactions, visible focus styles, reduced-motion support and a screen-reader announcement when connectivity is lost. Continue checking actual keyboard/screen-reader behavior when changing the UI; this list is not a WCAG certification.
+- `node build.mjs` runs `seo-build.mjs`. The build reads the existing `M`, `D` and `Q` catalogue arrays in `index.html`; **no second manually maintained link database** is needed. Each new verified resource/question post gets a stable `/material/...` or `/questions/...` share page, and modules get `/module/...` pages. Those server-readable pages include canonical URLs, Open Graph/Twitter metadata, 1200×630 PNG previews, breadcrumbs, descriptive source links, and JSON-LD. The generated `robots.txt` and `sitemap.xml` include these pages automatically. Do not create fabricated Telegram links or manually edit generated `dist` output.
+- The original Telegram material action remains a direct source link. The separate **Share** action opens a crawlable Index share link (or the system share sheet on compatible browsers). These previews are metadata for **Index links**; they do not change thumbnails on Telegram itself.
+- `404.html` is the friendly missing-page response; `500.html` is a fallback error page. `/offline` is served from `offline.html` and contains an original keyboard/touch-friendly runner. `sw.js` caches only the public shell and recovery/game files for network failure, and never caches reports, authentication, private content or third-party resources. The main Chaos site registers a separate navigation-fallback service worker, caching only its own `/offline.html` and `/offline-game.js`.
+- The index's game is an original accessible runner; matching a distinct Max-game implementation would require finding its exact source in Max.
+- `.github/workflows/index-seo.yml` runs the standalone build and `seo-audit.mjs`, checking the sitemap's catalogue coverage, metadata, standard error pages, and PNG signatures/sizes. It is intentionally independent from the main Chaos Next.js build.
+- Before release, verify `https://index.chaos.fail/robots.txt`, `/sitemap.xml`, `/og/index.png`, a `/module/...` link, a `/material/...` link, and a missing route; confirm the custom domain is assigned to the latest READY production deployment. A Git merge is not sufficient evidence of a successful Vercel deployment.
