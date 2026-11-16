@@ -104,6 +104,29 @@ async function enabledFixture(mode: "off" | "record" | "warn" | "review" = "revi
   return f;
 }
 
+it("lets the teacher reach attempts beyond the first monitor page", async () => {
+  const { t, owner, student, releaseId, attemptId } = await fixture();
+  const draftId = await t.run(async ctx => {
+    const release = await ctx.db.get("examReleases", releaseId);
+    const attempt = await ctx.db.get("examAttempts", attemptId);
+    if (!release || !attempt) throw new Error("fixture missing");
+    for (let i = 0; i < 51; i++) await ctx.db.insert("examAttempts", {
+      ownerId: attempt.ownerId, courseId: attempt.courseId, snapshotId: attempt.snapshotId,
+      studentId: `synthetic-${i}`, state: "in_progress", revision: 0,
+      startedAt: attempt.startedAt, updatedAt: attempt.updatedAt,
+    });
+    return release.draftId;
+  });
+  await expect(student.query(api.examInvigilation.listForDraft, { draftId })).rejects.toThrow("NOT_FOUND");
+  const first = await owner.query(api.examInvigilation.listForDraft, { draftId });
+  expect(first.attempts).toHaveLength(50);
+  expect(first.nextCursor).toBeTruthy();
+  const second = await owner.query(api.examInvigilation.listForDraft, { draftId, cursor: first.nextCursor });
+  expect(second.attempts).toHaveLength(2);
+  expect(second.hasMore).toBe(false);
+  expect(new Set([...first.attempts, ...second.attempts].map(a => a.attemptId)).size).toBe(52);
+});
+
 it("fails closed on disabled releases, opt-out policy and unrelated identities", async () => {
   const f = await fixture();
   await f.t.run(ctx => ctx.db.patch("examAttempts", f.attemptId, {
@@ -202,4 +225,107 @@ it("rate limits event spam and expires private event rows without keeping identi
     rowId: row!._id, expiresAt: row!.expiresAt,
   })).toBe(true);
   expect(await t.run(ctx => ctx.db.get("examIntegrityEvents", row!._id))).toBeNull();
+});
+
+
+it("allows student explanations and teacher-only, non-punitive adjudication", async () => {
+  const { t, owner, student, attemptId } = await enabledFixture("review");
+  await student.mutation(api.examIntegrity.record, {
+    attemptId, eventId: "event-human-review", kind: "hidden",
+  });
+  await expect(student.query(api.examInvigilation.report, { attemptId }))
+    .rejects.toThrow("NOT_FOUND");
+  await expect(t.query(api.examInvigilation.report, { attemptId }))
+    .rejects.toThrow();
+  const before = await owner.query(api.examInvigilation.report, { attemptId });
+  expect(before.events).toHaveLength(1);
+  expect(JSON.stringify(before)).not.toMatch(/correctChoiceIds|prompt|answerStamp|clipboard/);
+  const explanation = await student.mutation(api.examInvigilation.explainEvent, {
+    attemptId, eventId: "event-human-review", expectedRevision: 0,
+    explanation: "The mobile operating system briefly switched applications.",
+  });
+  expect(explanation).toEqual({ revision: 1, disposition: "needs_review" });
+  await expect(student.mutation(api.examInvigilation.explainEvent, {
+    attemptId, eventId: "event-human-review", expectedRevision: 0,
+    explanation: "This stale update must fail without losing the first response.",
+  })).rejects.toThrow("REVISION_CONFLICT");
+  expect((await student.query(api.examInvigilation.myReport, { attemptId }))[0])
+    .toMatchObject({ revision: 1, disposition: "needs_review" });
+  await owner.mutation(api.examInvigilation.reviewEvent, {
+    attemptId, eventId: "event-human-review", expectedRevision: 1,
+    disposition: "no_action", reason: "No actionable issue; normal mobile interruption.",
+  });
+  await expect(student.mutation(api.examInvigilation.reviewEvent, {
+    attemptId, eventId: "event-human-review", expectedRevision: 2,
+    disposition: "policy_issue", reason: "Unauthorized student review must be rejected.",
+  })).rejects.toThrow("NOT_FOUND");
+  const final = await owner.query(api.examInvigilation.report, { attemptId });
+  expect(final.cases[0]).toMatchObject({ revision: 2, disposition: "no_action" });
+  expect(final.audit.map(a => a.action)).toContain("student_explanation");
+  expect(final.audit.map(a => a.action)).toContain("reviewed");
+  expect((await t.run(ctx => ctx.db.get("examAttempts", attemptId)))?.state)
+    .toBe("in_progress");
+});
+
+it("requires explicit teacher authorization for pre-start accommodations", async () => {
+  const { t, owner, student, releaseId, attemptId } = await fixture();
+  // Lookup without relying on a mutable course route or a client-supplied role.
+  const sealed = await t.run(ctx => ctx.db.get("examAttempts", attemptId));
+  const snap = sealed && await t.run(ctx => ctx.db.get("examSnapshots", sealed.snapshotId));
+  expect(snap).not.toBeNull();
+  const draftId = snap!.draftId;
+  await t.run(ctx => ctx.db.patch("examAttempts", attemptId, { state: "expired" }));
+  await expect(student.mutation(api.examInvigilation.setAccommodation, {
+    draftId, studentId: otherCreatorIdentity.subject,
+    kind: "extra_time", additionalMinutes: 20, expectedRevision: 0,
+  })).rejects.toThrow("NOT_FOUND");
+  const saved = await owner.mutation(api.examInvigilation.setAccommodation, {
+    draftId, studentId: otherCreatorIdentity.subject,
+    kind: "extra_time", additionalMinutes: 20, expectedRevision: 0,
+  });
+  expect(saved).toEqual({ revision: 1, appliedToActiveAttempt: false });
+  expect(await student.query(api.examInvigilation.myAccommodation, { releaseId }))
+    .toMatchObject({ kind: "extra_time", additionalMinutes: 20 });
+  expect(await owner.query(api.examInvigilation.teacherAccommodation, {
+    draftId, studentId: otherCreatorIdentity.subject,
+  })).toMatchObject({ revision: 1 });
+  const storedAttempt = await t.run(ctx => ctx.db.get("examAttempts", attemptId));
+  expect(storedAttempt?.deadlineAt).toBe(sealed?.deadlineAt);
+  const audit = await t.run(ctx => ctx.db.query("examAccommodationAudit")
+    .withIndex("by_release_at", q => q.eq("releaseId", releaseId)).collect());
+  expect(audit).toHaveLength(1);
+  await expect(owner.mutation(api.examInvigilation.setAccommodation, {
+    draftId, studentId: otherCreatorIdentity.subject,
+    kind: "extra_time", additionalMinutes: 60, expectedRevision: 0,
+  })).rejects.toThrow("REVISION_CONFLICT");
+});
+
+it("audits manual time extensions without reopening expired attempts or punishing telemetry", async () => {
+  const { t, owner, student, attemptId } = await enabledFixture("warn");
+  const before = await t.run(ctx => ctx.db.get("examAttempts", attemptId));
+  const extended = await owner.mutation(api.examInvigilation.extendTime, {
+    attemptId, expectedRevision: 0, minutes: 5,
+    reason: "Verified connection interruption and human-approved additional time.",
+  });
+  expect(extended).toMatchObject({ revision: 1, deadlineAt: before!.deadlineAt! + 300_000 });
+  expect(await t.mutation(internal.examSubmissions.finalizeAtDeadline, {
+    attemptId, deadlineAt: before!.deadlineAt!,
+  })).toBeNull();
+  await expect(student.mutation(api.examInvigilation.extendTime, {
+    attemptId, expectedRevision: 1, minutes: 5,
+    reason: "A candidate may not extend their own exam deadline.",
+  })).rejects.toThrow("NOT_FOUND");
+  await expect(owner.mutation(api.examInvigilation.extendTime, {
+    attemptId, expectedRevision: 0, minutes: 5,
+    reason: "Stale teacher intervention must fail with revision conflict.",
+  })).rejects.toThrow("REVISION_CONFLICT");
+  await owner.mutation(api.examInvigilation.noteIntervention, {
+    attemptId, kind: "connectivity_acknowledged",
+    reason: "Connection problem investigated; no adverse action recorded.",
+  });
+  const report = await owner.query(api.examInvigilation.report, { attemptId });
+  expect(report.audit.map(a => a.action)).toContain("time_extension");
+  expect(report.audit.map(a => a.action)).toContain("connectivity_acknowledged");
+  expect((await t.run(ctx => ctx.db.get("examAttempts", attemptId)))?.state)
+    .toBe("in_progress");
 });

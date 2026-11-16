@@ -4,6 +4,9 @@ import { bankChoice, bankKind } from "./questionBankModel";
 import { examSettings } from "./examSettingsModel";
 import { examAudience } from "./examAudienceModel";
 import { integrityDecision, integrityKind, integrityPolicy } from "./examIntegrityModel";
+import { accommodationKind, caseDisposition } from "./examInvigilationModel";
+import { examMarkingPolicy, examRubricCriterion } from "./examGradingModel";
+import { frozenResultPolicy } from "./examResultModel";
 
 /** A sealed snapshot is append-only: no public update/delete API may mutate its content or key. */
 export const frozenQuestion = v.object({
@@ -17,6 +20,8 @@ export const frozenQuestion = v.object({
   sampleAnswer: v.optional(v.string()),
   explanation: v.optional(v.string()),
   points: v.number(),
+  marking: v.optional(examMarkingPolicy),
+  rubricCriteria: v.optional(v.array(examRubricCriterion)),
   topics: v.array(v.string()),
   terms: v.array(v.string()),
   outcomes: v.array(v.string()),
@@ -106,6 +111,126 @@ export const examRuntimeTables = {
     startedAt: v.number(),
     deadlineAt: v.number(),
   }).index("by_attempt", ["attemptId"]),
+  /** Private grading ledger; never returned in student receipts or general course APIs. */
+  examGrades: defineTable({
+    attemptId: v.id("examAttempts"),
+    snapshotId: v.id("examSnapshots"),
+    ownerId: v.string(),
+    studentId: v.string(),
+    state: v.union(v.literal("auto_final"), v.literal("needs_manual")),
+    earnedCents: v.number(),
+    maximumCents: v.number(),
+    objectiveMaximumCents: v.number(),
+    pendingWrittenCount: v.number(),
+    finalPercentBasisPoints: v.optional(v.number()),
+    entries: v.array(v.object({
+      questionIndex: v.number(),
+      status: v.union(v.literal("scored"), v.literal("needs_manual")),
+      pointsAvailableCents: v.number(),
+      pointsAwardedCents: v.number(),
+    })),
+    algorithmVersion: v.number(),
+    resultPolicy: v.optional(frozenResultPolicy),
+    gradedAt: v.number(),
+    revision: v.optional(v.number()),
+    finalizedAt: v.optional(v.number()),
+    reviewHold: v.optional(v.boolean()),
+    regradeReleasedAt: v.optional(v.number()),
+  }).index("by_attempt", ["attemptId"])
+    .index("by_snapshot_visibility", ["snapshotId", "resultPolicy.visibility"]),
+  /** Teacher-private criterion scores and moderation; never candidate-addressable. */
+  examEssayMarks: defineTable({
+    attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
+    ownerId: v.string(), studentId: v.string(), questionIndex: v.number(),
+    criterionScores: v.array(v.object({ criterionId: v.string(), scorePercent: v.number() })),
+    holisticAwardCents: v.optional(v.number()), awardedCents: v.number(),
+    feedback: v.string(),
+    status: v.union(v.literal("draft"), v.literal("submitted"),
+      v.literal("changes_requested"), v.literal("approved")),
+    moderationNote: v.optional(v.string()), revision: v.number(), updatedAt: v.number(),
+  }).index("by_attempt_question", ["attemptId", "questionIndex"]),
+  /** Append-only marking decisions, including rejected draft modifications. */
+  examEssayMarkAudit: defineTable({
+    attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
+    ownerId: v.string(), studentId: v.string(), questionIndex: v.number(),
+    actorId: v.string(),
+    action: v.union(v.literal("save"), v.literal("submit"), v.literal("approve"),
+      v.literal("changes_requested"), v.literal("finalize")),
+    revision: v.number(), detail: v.string(), at: v.number(),
+  }).index("by_attempt_at", ["attemptId", "at"]),
+  /** Doctor-authorized assisted grading requests. Never a grade or model execution queue. */
+  examGradingJobs: defineTable({
+    attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
+    courseId: v.id("learnCollections"), ownerId: v.string(), studentId: v.string(),
+    requestKey: v.string(),
+    status: v.union(v.literal("queued"), v.literal("claimed"), v.literal("doctor_review")),
+    claimAdminId: v.optional(v.string()), claimedAt: v.optional(v.number()),
+    claimExpiresAt: v.optional(v.number()), retryCount: v.number(), revision: v.number(),
+    requestedAt: v.number(), updatedAt: v.number(),
+  }).index("by_attempt", ["attemptId"])
+    .index("by_owner_course", ["ownerId", "courseId"])
+    .index("by_snapshot", ["snapshotId"])
+    .index("by_status_updated", ["status", "updatedAt"]),
+  examGradingJobAudit: defineTable({
+    jobId: v.id("examGradingJobs"), attemptId: v.id("examAttempts"),
+    actorId: v.string(), revision: v.number(),
+    action: v.union(v.literal("requested"), v.literal("claimed"), v.literal("requeued"), v.literal("reopened"),
+      v.literal("bundle_read"), v.literal("proposal_saved"), v.literal("sent_to_doctor")),
+    detail: v.string(), at: v.number(),
+  }).index("by_job_time", ["jobId", "at"]),
+  /** Private AI/human rubric proposals. Never read by student results or finalize. */
+  examGradingProposals: defineTable({
+    jobId: v.id("examGradingJobs"), attemptId: v.id("examAttempts"),
+    snapshotId: v.id("examSnapshots"), ownerId: v.string(), studentId: v.string(),
+    adminId: v.string(), questionIndex: v.number(),
+    criterionScores: v.array(v.object({ criterionId: v.string(), scorePercent: v.number() })),
+    holisticAwardCents: v.optional(v.number()), awardedCents: v.number(),
+    feedback: v.string(),
+    evidence: v.array(v.object({ criterionId: v.string(), quote: v.string(), rationale: v.string() })),
+    confidence: v.union(v.literal("low"), v.literal("medium"), v.literal("high")),
+    modelId: v.optional(v.string()), promptVersion: v.optional(v.string()),
+    state: v.union(v.literal("draft"), v.literal("sent"),
+      v.literal("accepted"), v.literal("overridden"), v.literal("rejected")),
+    revision: v.number(), updatedAt: v.number(),
+  }).index("by_job_question", ["jobId", "questionIndex"]),
+  /** Student-owned appeal, limited to one per submitted attempt. */
+  examGradeAppeals: defineTable({
+    attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
+    courseId: v.id("learnCollections"), ownerId: v.string(), studentId: v.string(),
+    reason: v.string(), status: v.union(v.literal("pending"), v.literal("upheld"),
+      v.literal("adjusted"), v.literal("rejected")),
+    originalGradeRevision: v.number(), revision: v.number(),
+    requestedAt: v.number(), updatedAt: v.number(),
+    reviewedAt: v.optional(v.number()), decisionNote: v.optional(v.string()),
+  }).index("by_attempt", ["attemptId"]).index("by_owner_course", ["ownerId", "courseId"])
+    .index("by_snapshot", ["snapshotId"]),
+  /** Private append-only ledger: no student-visible grades, essays or rubrics. */
+  examDoctorReviewAudit: defineTable({
+    attemptId: v.id("examAttempts"), snapshotId: v.id("examSnapshots"),
+    ownerId: v.string(), studentId: v.string(), actorId: v.string(),
+    action: v.string(), detail: v.string(), gradeRevision: v.number(),
+    questionIndex: v.optional(v.number()), at: v.number(),
+  }).index("by_attempt_at", ["attemptId", "at"]),
+  /** Manual release applies to one immutable snapshot; never changes the grade ledger. */
+  examResultPublications: defineTable({
+    snapshotId: v.id("examSnapshots"),
+    courseId: v.id("learnCollections"),
+    ownerId: v.string(),
+    released: v.boolean(),
+    revision: v.number(),
+    updatedAt: v.number(),
+    releasedAt: v.optional(v.number()),
+  }).index("by_snapshot", ["snapshotId"]),
+  /** Immutable publication/revocation audit for owner review and incident response. */
+  examResultPublicationAudit: defineTable({
+    snapshotId: v.id("examSnapshots"),
+    courseId: v.id("learnCollections"),
+    ownerId: v.string(),
+    actorId: v.string(),
+    action: v.union(v.literal("publish"), v.literal("withhold")),
+    revision: v.number(),
+    at: v.number(),
+  }).index("by_snapshot_at", ["snapshotId", "at"]),
   /** Short-lived, privacy-minimized, non-punitive browser telemetry only. */
   examIntegrityEvents: defineTable({
     attemptId: v.id("examAttempts"),
@@ -118,12 +243,48 @@ export const examRuntimeTables = {
   })
     .index("by_attempt_time", ["attemptId", "observedAt"])
     .index("by_attempt_event", ["attemptId", "eventId"]),
+  /** Student-explainable, instructor-reviewed cases. Deliberately has no guilty verdict. */
+  examIntegrityCases: defineTable({
+    attemptId: v.id("examAttempts"), eventId: v.string(),
+    ownerId: v.string(), studentId: v.string(),
+    disposition: caseDisposition,
+    studentExplanation: v.optional(v.string()),
+    revision: v.number(), createdAt: v.number(), updatedAt: v.number(),
+    expiresAt: v.number(),
+  })
+    .index("by_attempt_event", ["attemptId", "eventId"])
+    .index("by_attempt_updated", ["attemptId", "updatedAt"]),
+  /** Append-only review and intervention audit, automatically expires after 30 days. */
+  examInvigilationAudit: defineTable({
+    attemptId: v.id("examAttempts"),
+    ownerId: v.string(), studentId: v.string(), actorId: v.string(),
+    action: v.union(
+      v.literal("case_opened"), v.literal("student_explanation"),
+      v.literal("reviewed"), v.literal("time_extension"),
+      v.literal("connectivity_acknowledged"), v.literal("candidate_contacted"),
+    ),
+    detail: v.string(), at: v.number(), expiresAt: v.number(),
+  }).index("by_attempt_at", ["attemptId", "at"]),
+  /** Pre-start accommodations; live changes require separately audited interventions. */
+  examAccommodations: defineTable({
+    releaseId: v.id("examReleases"), studentId: v.string(), ownerId: v.string(),
+    kind: accommodationKind, additionalMinutes: v.number(),
+    revision: v.number(), updatedAt: v.number(),
+  }).index("by_release_student", ["releaseId", "studentId"]),
+  /** Audit accommodation changes without storing medical history. */
+  examAccommodationAudit: defineTable({
+    releaseId: v.id("examReleases"), ownerId: v.string(), studentId: v.string(),
+    actorId: v.string(), kind: accommodationKind, additionalMinutes: v.number(),
+    revision: v.number(), at: v.number(), expiresAt: v.number(),
+  }).index("by_release_at", ["releaseId", "at"]),
   examAttempts: defineTable({
     ownerId: v.string(),
     courseId: v.id("learnCollections"),
     snapshotId: v.id("examSnapshots"),
     studentId: v.string(),
     state: attemptState,
+    entryAuthorized: v.optional(v.boolean()),
+    resultPolicy: v.optional(frozenResultPolicy),
     revision: v.number(),
     startedAt: v.number(),
     /** Privacy-first opt-in policy, frozen by a future authorized start transaction. */
@@ -152,5 +313,6 @@ export const examRuntimeTables = {
     closedAt: v.optional(v.number()),
   })
     .index("by_snapshot_student", ["snapshotId", "studentId"])
+    .index("by_snapshot_state", ["snapshotId", "state"])
     .index("by_student_updated", ["studentId", "updatedAt"]),
 };

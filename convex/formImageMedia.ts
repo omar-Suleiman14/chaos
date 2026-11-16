@@ -1,11 +1,15 @@
 import { v } from "convex/values";
+import { assertSourceStorageAvailable, changeSourceStorage } from "./sourceStorage";
+import { canReadCourseForm } from "./courseSourceAccess";
 import { makeFunctionReference, type HttpRouter } from "convex/server";
 import {
   action, env, httpAction, internalMutation, internalQuery, mutation, type QueryCtx,
 } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { creatorRestricted, getFormIfRole, requireFormRole } from "./authz";
-import { consumeRate } from "./serverUtils";
+import { consumeRate, sha256Hex } from "./serverUtils";
+import { getAuthIdentity } from "./authIdentity";
+import { teamOrEmailCheck } from "./businessAccess";
 import { scheduleState } from "./formSchedule";
 import { releasedFieldIds } from "./formRelease";
 import type { FormDefinition } from "./formLogic";
@@ -19,9 +23,11 @@ const allowedTypes = new Set(["image/png", "image/jpeg", "image/webp"]);
 const mediaIdArg = { mediaId: v.id("formImageMedia") };
 const pendingInfo = v.object({ key: v.string(), mimeType: v.string(), bytes: v.number() });
 const readyInfo = v.object({ key: v.string(), mimeType: v.string(), bytes: v.number(), etag: v.string() });
+const cleanupRef = makeFunctionReference<"action", { kind: "form"; id: string }, null>("r2MediaCleanup:cleanup");
 const keyFor = (id: Id<"formImageMedia">) => "form-images/" + id;
 const cors = { "Cache-Control": "private, no-store", "X-Content-Type-Options": "nosniff",
-  "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS" };
+  "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Methods": "GET, OPTIONS",
+  "Access-Control-Allow-Headers": "Authorization" };
 
 function publicUrl(id: Id<"formImageMedia">) {
   const url = new URL(FORM_IMAGE_PATH, env.CONVEX_SITE_URL);
@@ -42,11 +48,15 @@ export const reserveUpload = mutation({
       args.bytes < 1 || args.bytes > FORM_IMAGE_MAX_BYTES)
       throw new Error("INVALID_IMAGE: PNG, JPEG or WebP, up to 5 MiB");
     await consumeRate(ctx, "form-images:reserve:" + identity.subject, 40, 60 * 60_000);
+    await assertSourceStorageAvailable(ctx, form.ownerId, args.bytes);
+    await changeSourceStorage(ctx, form.ownerId, args.bytes);
     const now = Date.now();
-    return ctx.db.insert("formImageMedia", {
+    const mediaId = await ctx.db.insert("formImageMedia", {
       formId: form._id, ownerId: form.ownerId, mimeType: args.mimeType,
-      bytes: args.bytes, status: "pending", createdAt: now, expiresAt: now + PENDING_MS,
+      bytes: args.bytes, status: "pending", storageCounted: true, createdAt: now, expiresAt: now + PENDING_MS,
     });
+    await ctx.scheduler.runAfter(PENDING_MS + 65_000, cleanupRef, { kind: "form", id: mediaId });
+    return mediaId;
   },
 });
 
@@ -73,14 +83,12 @@ const pendingRef = makeFunctionReference<
 
 export const getUploadTarget = action({
   args: mediaIdArg,
-  returns: v.object({ url: v.string(), headers: v.object({
-    "Content-Type": v.string(), "If-None-Match": v.literal("*"),
-  }), expiresAt: v.number() }),
+  returns: v.object({ url: v.string(), headers: v.record(v.string(), v.string()), expiresAt: v.number() }),
   handler: async (ctx, { mediaId }) => {
     const row = await ctx.runQuery(pendingRef, { mediaId });
     if (!row) throw new Error("NOT_FOUND: Reservation expired or unauthorized");
     const signed = await signR2Request(r2Config(env), "PUT", row.key, {
-      contentType: row.mimeType, expiresSeconds: UPLOAD_URL_SECONDS,
+      contentType: row.mimeType, contentLength: row.bytes, expiresSeconds: UPLOAD_URL_SECONDS,
     });
     return { url: signed.url,
       headers: { "Content-Type": row.mimeType, "If-None-Match": "*" as const },
@@ -159,7 +167,7 @@ function referencedInExplanation(def: FormDefinition, id: Id<"formImageMedia">, 
  * Review images additionally require the completed response's id and receipt proof.
  */
 export const getReady = internalQuery({
-  args: { id: v.string(), responseId: v.optional(v.string()), receiptCode: v.optional(v.string()) },
+  args: { id: v.string(), responseId: v.optional(v.string()), receiptCode: v.optional(v.string()), grant: v.optional(v.string()), editToken: v.optional(v.string()) },
   returns: v.union(v.null(), readyInfo),
   handler: async (ctx, args) => {
     const id = ctx.db.normalizeId("formImageMedia", args.id);
@@ -169,6 +177,10 @@ export const getReady = internalQuery({
     const form = await ctx.db.get("forms", row.formId);
     if (!form || form.ownerId !== row.ownerId || form.isBanned ||
       await creatorRestricted(ctx, row.ownerId)) return null;
+
+    const editor = await getFormIfRole(ctx, row.formId, "editor");
+    if (editor) return { key: keyFor(id), mimeType: row.mimeType, bytes: row.bytes, etag: row.etag };
+    if (!await canReadCourseForm(ctx, form, (await getAuthIdentity(ctx))?.subject ?? null)) return null;
 
     // A receipt must be bound to this specific response and its immutable version.
     if (args.responseId && args.receiptCode) {
@@ -184,9 +196,31 @@ export const getReady = internalQuery({
       return null;
     }
 
-    if (form.status !== "live" || form.settings.access !== "public" ||
+    // An edit token grants only images referenced by that completed response's version.
+    if (args.editToken && /^[a-f0-9]{32,128}$/.test(args.editToken) && form.settings.allowEditAfterSubmit &&
+      form.status !== "draft" && form.status !== "archived" &&
+      (form.settings.allowEditAfterClose || (form.status === "live" && scheduleState(form.settings, Date.now()) === "open"))) {
+      const tokenHash = await sha256Hex(args.editToken);
+      const response = await ctx.db.query("formResponses").withIndex("by_formId_and_editTokenHash", q => q.eq("formId", form._id).eq("editTokenHash", tokenHash)).unique();
+      if (response?.status === "completed") {
+        const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q => q.eq("formId", form._id).eq("version", response.version)).unique();
+        if (version && referencedInQuestion(version.definition as FormDefinition, id, Date.now()))
+          return { key: keyFor(id), mimeType: row.mimeType, bytes: row.bytes, etag: row.etag };
+      }
+    }
+
+    if (form.status !== "live" ||
       scheduleState(form.settings, Date.now()) !== "open" ||
       form.publishedVersion === undefined) return null;
+    if (form.settings.access === "code") {
+      if (!args.grant?.startsWith("grant_") || !form.settings.accessCodeHash) return null;
+      const hash = await sha256Hex(args.grant);
+      const grant = await ctx.db.query("formAccessGrants").withIndex("by_tokenHash", q => q.eq("tokenHash", hash)).unique();
+      if (!grant || grant.formId !== form._id || grant.accessCodeHash !== form.settings.accessCodeHash || grant.expiresAt <= Date.now()) return null;
+    } else if (form.settings.access === "signed_in") {
+      const identity = await getAuthIdentity(ctx);
+      if (!identity || await teamOrEmailCheck(ctx, form.settings, identity) !== "ok") return null;
+    }
     const version = await ctx.db.query("formVersions").withIndex("by_formId_and_version", q =>
       q.eq("formId", row.formId).eq("version", form.publishedVersion!)).unique();
     if (!version || !referencedInQuestion(version.definition as FormDefinition, id, Date.now())) return null;
@@ -194,7 +228,7 @@ export const getReady = internalQuery({
   },
 });
 const getReadyRef = makeFunctionReference<
-  "query", { id: string; responseId?: string; receiptCode?: string },
+  "query", { id: string; responseId?: string; receiptCode?: string; grant?: string; editToken?: string },
   { key: string; mimeType: string; bytes: number; etag: string } | null
 >("formImageMedia:getReady");
 
@@ -205,7 +239,8 @@ export const content = httpAction(async (ctx, request) => {
   if (!id || id.length > 200) return new Response("Not found", { status: 404, headers: cors });
   const row = await ctx.runQuery(getReadyRef, {
     id, responseId: params.get("responseId") ?? undefined,
-    receiptCode: params.get("receiptCode") ?? undefined,
+    receiptCode: params.get("receiptCode") ?? undefined, grant: params.get("grant") ?? undefined,
+    editToken: params.get("editToken") ?? undefined,
   });
   if (!row) return new Response("Not found", { status: 404, headers: cors });
   try {
@@ -231,7 +266,10 @@ export const remove = mutation({
     if (!row) throw new Error("NOT_FOUND: Image missing");
     const { form } = await requireFormRole(ctx, row.formId, "editor");
     if (form.ownerId !== row.ownerId) throw new Error("NOT_FOUND: Image missing");
-    await ctx.db.patch("formImageMedia", mediaId, { status: "removed" });
+    if (row.status !== "removed") {
+      await ctx.db.patch("formImageMedia", mediaId, { status: "removed" });
+      await ctx.scheduler.runAfter(65_000, cleanupRef, { kind: "form", id: mediaId });
+    }
     return null;
   },
 });

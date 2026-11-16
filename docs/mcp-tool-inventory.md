@@ -2,7 +2,7 @@
 
 Generated from the public and administrator MCP registries with `pnpm mcp:inventory`. Administrator tools are advertised only to verified administrator connections; see [MCP permissions](mcp-permissions.md).
 
-132 public tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
+139 public tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
 
 - `accept_team_invitation`
 - `add_course_lesson`
@@ -38,6 +38,7 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `get_course`
 - `get_course_lesson`
 - `get_course_progress`
+- `get_enrolled_course_lecture`
 - `get_flashcard_set`
 - `get_form`
 - `get_form_advanced_analytics`
@@ -54,6 +55,7 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `get_lesson_sources`
 - `get_lesson_version`
 - `get_my_card`
+- `get_notification_preferences`
 - `get_public_card`
 - `get_quiz_fork_lineage`
 - `get_results`
@@ -72,6 +74,7 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `list_curriculum_nodes`
 - `list_curriculum_programs`
 - `list_curriculum_versions`
+- `list_enrolled_courses`
 - `list_flashcard_sets`
 - `list_folder_contents`
 - `list_folders`
@@ -81,6 +84,7 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `list_lesson_versions`
 - `list_lessons`
 - `list_my_students`
+- `list_notifications`
 - `list_public_authors`
 - `list_public_student_cards`
 - `list_responses`
@@ -89,6 +93,7 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `list_team_resources`
 - `list_teams`
 - `list_themes`
+- `mark_notifications_read`
 - `move_folder`
 - `move_lesson_blocks`
 - `publish_course`
@@ -109,6 +114,7 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `save_lesson`
 - `save_lesson_draft`
 - `search_curriculum_modules`
+- `search_enrolled_course_lectures`
 - `search_forms`
 - `search_learn_directory`
 - `search_lessons`
@@ -125,6 +131,7 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `set_game_settings`
 - `set_lesson_glossary`
 - `set_lesson_lifecycle`
+- `set_notification_preference`
 - `set_student_card_preferences`
 - `set_student_card_visibility`
 - `set_study_teaching_profile`
