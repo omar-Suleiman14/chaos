@@ -1,0 +1,44 @@
+name: Sync Chaos Index content (Convex)
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/medical-index/catalog-updates.json"
+  workflow_dispatch:
+    inputs:
+      seed:
+        description: "Import existing Index catalogue first (idempotent)"
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+
+concurrency:
+  group: index-convex-catalog
+  cancel-in-progress: false
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 12.10.1
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - name: Validate credential
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: test -n "$CONVEX_DEPLOY_KEY" || (echo "Missing CONVEX_DEPLOY_KEY; cannot sync." && exit 1)
+      - name: Import Index references (no application deploy)
+        env:
+          CONVEX_DEPLOY_KEY: ${{ secrets.CONVEX_DEPLOY_KEY }}
+        run: node apps/medical-index/sync-convex.mjs ${{ inputs.seed && '--seed' || '' }}
