@@ -1,5 +1,6 @@
 import { defineTable } from "convex/server";
 import { v } from "convex/values";
+import { examMarkingPolicy } from "./examGradingModel";
 
 /** Draft-only planning data. Never used to serve a student or to grade an exam. */
 export const allocationKind = v.union(
@@ -13,6 +14,8 @@ export const examAllocation = v.object({
   count: v.number(),
   /** Points per selected question in this allocation; no changes to reusable bank defaults. */
   points: v.number(),
+  /** Optional allocation-level marking rules, frozen at seal time. */
+  marking: v.optional(examMarkingPolicy),
 });
 export const examSelection = v.object({
   questionId: v.id("questionBankItems"),

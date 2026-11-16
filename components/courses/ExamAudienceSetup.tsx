@@ -22,9 +22,10 @@ const copy = {
     prepare: "Seal the exam, save settings and mark it ready before assigning.",
     entry: "Students can see due-exam details, but cannot start attempts until the secure exam player and timing enforcement are delivered.",
     saved: "Assignment saved", removed: "Assignment removed",
-    failed: "Could not save assignment.",
+    failed: "Could not save assignment.", openEntry: "Open exam entry", closeEntry: "Close new entry", entryOpen: "Exam entry is open.", entryClosed: "Exam entry is closed.",
   },
   ar: {
+    openEntry: "فتح دخول الامتحان", closeEntry: "إغلاق الدخول الجديد", entryOpen: "دخول الامتحان مفتوح.", entryClosed: "دخول الامتحان مغلق.",
     title: "تكليف طلاب الدورة بالامتحان",
     help: "الامتحان لطلاب هذه الدورة الموافق عليهم فقط. المجموعات لا تمنح صلاحية دخول الدورة.",
     all: "كل طلاب الدورة الموافق عليهم", students: "طلاب محددون تمت الموافقة عليهم", groups: "مجموعات مختارة من الدورة",
@@ -48,6 +49,7 @@ export function ExamAudienceSetup({
   const info = useQuery(api.examAudience.getForDraft, { draftId });
   const roster = useQuery(api.courseCohorts.roster, { courseId });
   const setAssignment = useMutation(api.examAudience.setForDraft);
+  const setEntry = useMutation(api.examAudience.setEntry);
   const [audience, setAudience] = useState<ExamAudience>({ mode: "all", studentIds: [], groupIds: [] });
   const [loadedRevision, setLoadedRevision] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -91,7 +93,7 @@ export function ExamAudienceSetup({
       </h2>
       <p className="cb-note">{t.help}</p>
     </div>
-    <fieldset className="grid gap-3" disabled={!info?.prepared || busy}>
+    <fieldset className="grid gap-3" disabled={!info?.prepared || busy || info.entryEnabled}>
       <legend className="sr-only">{t.title}</legend>
       {(["all", "students", "groups"] as const).map(mode =>
         <label key={mode} className="flex items-center gap-2 text-sm">
@@ -121,16 +123,23 @@ export function ExamAudienceSetup({
     </fieldset>
     {!info?.prepared && <p className="cb-note">{t.prepare}</p>}
     <div className="flex flex-wrap items-center gap-3">
-      <button type="button" className="ws-btn ws-btn--primary" disabled={busy || !canAssign}
+      <button type="button" className="ws-btn ws-btn--primary" disabled={busy || !canAssign || info?.entryEnabled}
         onClick={() => void save(true)}>
         <ShieldCheck size={16} aria-hidden />{busy ? t.pending : info?.assigned ? t.update : t.assign}
       </button>
-      {info?.assigned && <button type="button" className="ws-btn ws-btn--ghost" disabled={busy}
+      {info?.assigned && <button type="button" className="ws-btn ws-btn--ghost" disabled={busy || info.entryEnabled}
         onClick={() => void save(false)}>{t.unassign}</button>}
       <span className="text-sm text-muted-foreground">
         {info?.assigned ? t.assigned : t.notAssigned}
       </span>
     </div>
-    <p className="cb-note">{t.entry}</p>
+    {info?.assigned && <div className="flex items-center gap-3">
+      <button type="button" className="ws-btn ws-btn--ghost" disabled={busy} onClick={() => {
+        setBusy(true);
+        void setEntry({ draftId, expectedRevision: info.revision, enabled: !info.entryEnabled })
+          .catch(error => toast.error(error, { fallback: t.failed })).finally(() => setBusy(false));
+      }}>{info.entryEnabled ? t.closeEntry : t.openEntry}</button>
+      <span className="cb-note">{info.entryEnabled ? t.entryOpen : t.entryClosed}</span>
+    </div>}
   </section>;
 }
