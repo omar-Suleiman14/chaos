@@ -43,14 +43,6 @@
   const style = document.createElement("style");
   style.textContent = '.index-share-link{display:inline-flex;align-items:center;justify-content:center;min-height:44px;padding:0 9px;border-left:1px solid var(--border);font-size:11px;color:var(--muted);white-space:nowrap}.index-share-link:hover{color:var(--text);background:var(--hover)}.index-share-link:focus-visible{outline:2px solid var(--focus);outline-offset:-3px}.skip-to-index{position:absolute;top:-100px;left:14px;z-index:500;padding:10px 14px;background:var(--raised);border:2px solid var(--focus);color:var(--text);border-radius:5px}.skip-to-index:focus{top:12px}.sr-only-index{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}.network-status{position:fixed;bottom:72px;left:14px;right:14px;z-index:300;background:var(--raised);color:var(--text);border:1px solid var(--border-hover);border-radius:8px;max-width:400px;margin:auto;padding:11px 14px;text-align:center;box-shadow:0 8px 26px var(--shadow)}.network-status a{text-decoration:underline;text-underline-offset:3px}@media(max-width:550px){.index-share-link{min-height:44px;padding:0 7px;font-size:10px}}';
   document.head.appendChild(style);
-  const skip = document.createElement("a");
-  skip.className = "skip-to-index"; skip.href = "#indexContent"; skip.textContent = "Skip to study materials";
-  document.body.prepend(skip);
-  const main = document.querySelector("main.main");
-  if (main) { main.id = "indexContent"; main.tabIndex = -1; }
-  const heading = document.createElement("h1");
-  heading.className = "sr-only-index"; heading.textContent = "Chaos Index — medical study materials";
-  document.querySelector(".content")?.prepend(heading);
   const indicator = document.createElement("div");
   indicator.className = "network-status";
   indicator.setAttribute("role", "status");
