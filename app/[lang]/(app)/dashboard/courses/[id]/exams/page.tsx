@@ -40,7 +40,7 @@ const labels = {
     auto: "Auto-fill distinct questions", rebuild: "Rebuild question selection", confirmRebuild: "Auto-fill will replace your current selection. Continue?",
     autoDone: "Questions selected", completed: "ready", notSaved: "Save syllabus changes before choosing questions.",
     invalid: "No longer eligible", deleted: "Delete draft", deletedConfirm: "Delete this exam draft permanently?",
-    done: "This is a private planning draft only. Publishing, assignment, exam snapshots and grading will arrive in later PRs.",
+    done: "Save your syllabus and select questions, then configure the exam below.",
     noCandidates: "No candidate questions on this page.", previous: "Previous", next: "Next", of: "of",
     failed: "Could not save. Try again.", questionKind: "Question type", status: "Draft · not published",
   },
@@ -63,7 +63,7 @@ const labels = {
     auto: "اختيار أسئلة مختلفة تلقائيًا", rebuild: "إعادة اختيار الأسئلة", confirmRebuild: "سيتم استبدال الاختيار الحالي. متابعة؟",
     autoDone: "تم اختيار الأسئلة", completed: "جاهز", notSaved: "احفظ تغييرات المنهج قبل اختيار الأسئلة.",
     invalid: "لم يعد مطابقًا", deleted: "احذف المسودة", deletedConfirm: "حذف مسودة الامتحان نهائيًا؟",
-    done: "هذه مسودة تخطيط خاصة فقط. النشر والتكليف والنسخ الثابتة والتصحيح ستأتي في طلبات لاحقة.",
+    done: "احفظ المنهج واختر الأسئلة، ثم أعدّ الامتحان أدناه.",
     noCandidates: "لا توجد أسئلة في هذه الصفحة.", previous: "السابق", next: "التالي", of: "من",
     failed: "تعذر الحفظ. حاول مرة أخرى.", questionKind: "نوع السؤال", status: "مسودة · غير منشورة",
   },
@@ -101,17 +101,22 @@ export default function CourseExamBuilder({
   const [target, setTarget] = useState(10);
   const [allocations, setAllocations] = useState<Allocation[]>([]);
   const [loadedRevision, setLoadedRevision] = useState<number | null>(null);
+  const [loadedDraftId, setLoadedDraftId] = useState<Id<"examBuilderDrafts"> | null>(null);
+  const [loadedPlan, setLoadedPlan] = useState("");
   const [focus, setFocus] = useState<string | null>(null);
   const [offset, setOffset] = useState(0);
 
   useEffect(() => {
-    if (draft && loadedRevision !== draft.revision) {
+    const currentPlan = JSON.stringify([name, target, allocations]);
+    if (draft && (loadedDraftId !== draft._id || (loadedRevision !== null && draft.revision > loadedRevision && currentPlan === loadedPlan))) {
       setName(draft.title);
       setTarget(draft.targetCount);
       setAllocations(draft.allocations);
       setLoadedRevision(draft.revision);
+      setLoadedDraftId(draft._id);
+      setLoadedPlan(JSON.stringify([draft.title, draft.targetCount, draft.allocations]));
     }
-  }, [draft, loadedRevision]);
+  }, [draft, loadedRevision, loadedDraftId, loadedPlan, name, target, allocations]);
   useEffect(() => {
     if (draft && (!focus || !draft.allocations.some(a => a.id === focus))) {
       setFocus(draft.allocations[0]?.id ?? null);
@@ -141,11 +146,12 @@ export default function CourseExamBuilder({
     router.push("/dashboard/courses/" + id + "/exams?draft=" + newId);
   });
   const savePlan = () => {
-    if (!draftId || !draft) return;
-    void execute(() => save({
-      draftId, expectedRevision: draft.revision, title: name,
-      targetCount: target, allocations,
-    }), t.saved);
+    if (!draftId || !draft || loadedRevision === null) return;
+    void execute(async () => {
+      const revision = await save({ draftId, expectedRevision: loadedRevision, title: name, targetCount: target, allocations });
+      setLoadedRevision(revision);
+      setLoadedPlan(JSON.stringify([name, target, allocations]));
+    }, t.saved);
   };
   const modifyAllocation = (rowId: string, patch: Partial<Allocation>) =>
     setAllocations(old => old.map(a => a.id === rowId ? { ...a, ...patch } : a));
@@ -400,7 +406,7 @@ export default function CourseExamBuilder({
           preview.selected.length === draft.targetCount && preview.selected.every(s => s.valid) &&
           preview.plannedCount === draft.targetCount} />
       <ExamAudienceSetup draftId={draftId} courseId={courseId} />
-      <TeacherExamMonitor draftId={draftId} />
+      <TeacherExamMonitor key={draftId} draftId={draftId} />
       <div className="flex justify-end">
         <button type="button" className="ws-btn ws-btn--ghost" disabled={busy}
           onClick={deleteDraft}><Trash2 size={16} aria-hidden /> {t.deleted}</button>

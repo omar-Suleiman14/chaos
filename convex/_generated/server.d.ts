@@ -34,16 +34,23 @@ type Env = {
   readonly CHAOS_API_WRITE_RATE_PER_MINUTE: string | undefined;
   readonly CHAOS_APP_URL: string | undefined;
   readonly CHAOS_MCP_SECRET: string | undefined;
+  readonly CHAOS_R2_ACCESS_KEY_ID: string | undefined;
+  readonly CHAOS_R2_ACCOUNT_ID: string | undefined;
+  readonly CHAOS_R2_BUCKET: string | undefined;
+  readonly CHAOS_R2_SECRET_ACCESS_KEY: string | undefined;
   readonly CHAOS_SUPPORT_EMAIL: string | undefined;
   readonly CHAOS_WEBHOOK_ALLOW_LOCALHOST: string | undefined;
   readonly CHAOS_WEBHOOK_KEY: string | undefined;
+  readonly CHAOS_WEB_PUSH_PRIVATE_KEY: string | undefined;
+  readonly CHAOS_WEB_PUSH_PUBLIC_KEY: string | undefined;
+  readonly CHAOS_WEB_PUSH_SUBJECT: string | undefined;
   readonly CONSISTENCY_GITHUB_REPO: string | undefined;
   readonly CONSISTENCY_GITHUB_TOKEN: string | undefined;
   readonly INDEXNOW_KEY: string | undefined;
   readonly NOTION_CLIENT_ID: string | undefined;
   readonly NOTION_CLIENT_SECRET: string | undefined;
-  readonly NOTION_REDIRECT_URI: string | undefined;
   readonly NOTION_ENCRYPTION_KEY: string | undefined;
+  readonly NOTION_REDIRECT_URI: string | undefined;
 };
 
 /**

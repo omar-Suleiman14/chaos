@@ -1,4 +1,5 @@
 import { v, type Infer } from "convex/values";
+import { integrityMode } from "./examIntegrityModel";
 
 /** Policy only. PR 14+ must enforce these values at student entry and submission. */
 export const examSettings = v.object({
@@ -14,6 +15,7 @@ export const examSettings = v.object({
   resultVisibility: v.union(v.literal("immediate"), v.literal("after_close"), v.literal("manual")),
   showCorrectAnswers: v.boolean(),
   showExplanations: v.boolean(),
+  integrityMode: v.optional(integrityMode),
 });
 export type ExamSettings = Infer<typeof examSettings>;
 
@@ -71,5 +73,6 @@ export function validateExamSettings(s: ExamSettings, now: number): ExamSettings
     resultVisibility: s.resultVisibility,
     showCorrectAnswers: s.showCorrectAnswers,
     showExplanations: s.showExplanations,
+    ...(s.integrityMode !== undefined ? { integrityMode: s.integrityMode } : {}),
   };
 }
