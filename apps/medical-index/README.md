@@ -68,3 +68,19 @@ The index uses a VS Code-style tree: parent Year rows connect by vertical and ho
 Accordion panels animate both ways, and the custom report menu opens and closes with motion while honoring `prefers-reduced-motion`. Study / Practical / Other tab switches now reconcile subjects by name rather than fading the whole content panel: unchanged subject headings stay mounted and visible, and only changed material groups or newly appearing subjects animate. Rapid switches apply immediately, preventing stale exit animations from hiding the selected tab. Within a subject, display **Lectures → unmatched Questions → remaining material**; matched questions stay linked inline to their verified lecture/tutorial. The report Type selector starts with **Lecture → Questions → other types**. Material rows retain a fixed 56px height with ellipsized labels.
 
 **Git deployments:** The Vercel `med-module-library` project's root directory is `apps/medical-index`, so Git deployments should publish the standalone static Index rather than attempting to build the root Chaos Next.js application. Keep `vercel.json` in this root and verify the live alias `index.chaos.fail` after any deployment.
+
+
+## Visitor analytics (PostHog)
+
+Index uses Chaos's existing EU PostHog project for anonymous, aggregated traffic measurement. The private dashboard is [Chaos Index Analytics](https://eu.posthog.com/project/287854/dashboard/1118981); the `/admin` landing links there but **does not embed or expose visitor records**. PostHog sign-in governs dashboard access.
+
+The standalone static site is built by `node build.mjs` (Vercel root `apps/medical-index`, output `dist`). Configure these optional Vercel **production** environment variables:
+
+- `INDEX_POSTHOG_PROJECT_TOKEN` — public, client-side PostHog project token.
+- `INDEX_POSTHOG_HOST` — the matching EU/US ingestion host.
+
+The build generates `dist/analytics-config.js`. Do not commit this generated file, hardcode a token, or use a private PostHog personal API key in browser code. If configuration is missing the site still works, with analytics disabled.
+
+`index-analytics.js` loads the official HTML snippet, records pageviews/sessions and coarse year/module/tab/source-link interactions, and listens for the custom `index:report-submitted` event after the report API accepts a submission. **Never track report descriptions, search text, student identities, raw Telegram URLs or form fields.** Automatic element capture, session recording and surveys are disabled; Do Not Track is respected. Anonymized IP processing is configured in the PostHog project.
+
+Charts use `$pageview` scoped to URLs containing `index.chaos.fail`: unique visitors, pageviews, visits, countries, devices and referrers. Counts only begin once the new build is live and event collection succeeds; they cannot reconstruct earlier traffic.
