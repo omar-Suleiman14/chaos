@@ -12,6 +12,8 @@ import * as runtime from "./examRuntime";
 import * as settings from "./examSettings";
 import * as audience from "./examAudience";
 import * as results from "./examResults";
+import { preparePublishedQuizForExam } from "./examQuizImport";
+import { validateBankDraft } from "./questionBank";
 
 const actor = { userId: v.string() };
 const draft = { ...actor, draftId: v.id("examBuilderDrafts") };
@@ -84,6 +86,69 @@ export const autoFill = internalMutation({
     return { revision: await builder.forMcpAutoFill(ctx, input, userId) };
   },
 });
+/**
+ * Import a published, owner-authored quiz into a specific Course Exam Mode draft.
+ * The complete conversion, private bank insert and selection update are atomic.
+ * No student-facing form or exam publication state changes.
+ */
+export const importQuiz = internalMutation({
+  args: { ...edit, sourceFormId: v.id("forms") },
+  handler: async (ctx, { userId, draftId, expectedRevision, sourceFormId }) => {
+    await requireLearnActor(ctx, userId);
+    const exam = await builder.forMcpGetDraft(ctx, { draftId }, userId);
+    if (exam.revision !== expectedRevision)
+      throw new Error("REVISION_CONFLICT: Reload the exam before importing questions.");
+    if (exam.selections.length)
+      throw new Error("EXAM_HAS_SELECTIONS: Clear existing exam selections before importing a quiz.");
+
+    const course = await ctx.db.get("learnCollections", exam.courseId);
+    if (!course || course.ownerId !== userId || course.archived || course.communityState === "removed")
+      throw new Error("NOT_FOUND: Active owned course not found.");
+    builder.validatePlan(course, exam.title, exam.targetCount, exam.allocations);
+    if (exam.allocations.reduce((sum, a) => sum + a.count, 0) !== exam.targetCount)
+      throw new Error("INCOMPLETE_EXAM: Allocate the full target count before importing.");
+
+    const form = await ctx.db.get("forms", sourceFormId);
+    if (!form || form.ownerId !== userId || form.isBanned ||
+        !form.publishedVersion || !["live", "closed"].includes(form.status))
+      throw new Error("NOT_FOUND: Owned published quiz not found.");
+    const published = await ctx.db.query("formVersions")
+      .withIndex("by_formId_and_version", q => q.eq("formId", form._id).eq("version", form.publishedVersion!))
+      .unique();
+    if (!published || published.publishedBy !== userId)
+      throw new Error("NOT_FOUND: Published quiz version unavailable.");
+
+    const entries = preparePublishedQuizForExam(published.definition, exam.allocations);
+    for (const entry of entries)
+      if (entry.moduleId && !course.modules?.some(m => m.id === entry.moduleId))
+        throw new Error("NOT_FOUND: Syllabus module is no longer part of this course.");
+    const existing = await ctx.db.query("questionBankLinks")
+      .withIndex("by_course_module", q => q.eq("courseId", course._id)).take(1001);
+    if (existing.length + entries.length > 1000)
+      throw new Error("LIMIT_REACHED: Course question bank has reached its capacity.");
+
+    const checked = entries.map(entry => ({ ...entry, item: validateBankDraft(entry.item) }));
+    const now = Date.now();
+    const selections = [];
+    for (const entry of checked) {
+      const questionId = await ctx.db.insert("questionBankItems", {
+        ...entry.item, ownerId: userId, revision: 0, createdAt: now, updatedAt: now,
+      });
+      await ctx.db.insert("questionBankLinks", {
+        ownerId: userId, questionId, courseId: course._id,
+        ...(entry.moduleId ? { moduleId: entry.moduleId } : {}),
+        scopeKey: JSON.stringify([course._id, entry.moduleId ?? null, null]),
+        createdAt: now,
+      });
+      selections.push({ questionId, allocationId: entry.allocationId });
+    }
+    return {
+      imported: entries.length,
+      revision: await builder.forMcpSetSelections(ctx, { draftId, expectedRevision, selections }, userId),
+    };
+  },
+});
+
 export const seal = internalMutation({
   args: edit,
   handler: async (ctx, { userId, ...input }) => {
