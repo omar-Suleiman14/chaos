@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
-import { useMutation, useQuery } from "convex/react";
+import { useConvexAuth, useMutation, useQuery } from "convex/react";
 import { markNotificationsReadLocally, useOptimisticMutation } from "@/lib/optimistic";
 import { Bell } from "lucide-react";
 import PushNotificationControl from "./PushNotificationControl";
@@ -30,8 +30,10 @@ const copy = {
 export default function NotificationBell() {
   const t = useCopy(copy);
   const { locale } = useLocale();
+  const { isAuthenticated } = useConvexAuth();
   const data = useQuery(api.notifications.listNotifications);
-  const prefs = useQuery(api.notifications.getNotificationPreferences);
+  // This query requires a user identity. Wait until Convex has restored the session.
+  const prefs = useQuery(api.notifications.getNotificationPreferences, isAuthenticated ? {} : "skip");
   const setPreference = useMutation(api.notifications.setNotificationPreference);
   const markRead = useOptimisticMutation(api.notifications.markNotificationsRead, markNotificationsReadLocally);
   const [open, setOpen] = useState(false);
