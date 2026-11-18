@@ -41,7 +41,7 @@ describe("published quiz to private exam bank", () => {
       allocationId: "physiology", moduleId: "physiology",
       item: { kind: "multiple_choice", correctChoiceIds: ["choice_1", "choice_2"] },
     });
-    expect(items[0].item.explanation).toBe(fields[0].quiz.explanation);
+    expect(items[0].item.explanation).toBe("Adult conus usually ends near L1–L2.");
   });
 
   it("fails on count mismatch, missing answer keys, image questions and branches", () => {
