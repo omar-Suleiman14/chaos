@@ -264,21 +264,21 @@
       "unit": "count"
     },
     "mcp.admin.listToolsBytes": {
-      "budget": 326231,
+      "budget": 330949,
       "unit": "bytes",
       "raised": {
-        "from": 316800,
-        "reason": "The integrated platform adds seven public tools for notification preferences/inbox and approved-course lecture reads, plus administrator grading-job reopening. The measured catalogs contain 139 public and 157 administrator tools, serialized to 301743 and 326231 bytes. These feature costs are recorded against main; no database, rendering, latency or other budgets are raised.",
-        "at": "2026-11-16"
+        "from": 326231,
+        "reason": "The Index catalogue tools add two administrator tools (list_index_catalog, upsert_index_entries) to the existing Chaos MCP, mirroring the live updater API. The measured catalog now holds 141 public and 159 administrator tools, serialized to 330949 administrator bytes. Intended feature cost; no database, rendering or latency budgets are raised.",
+        "at": "2026-11-18"
       }
     },
     "mcp.admin.tools": {
-      "budget": 157,
+      "budget": 159,
       "unit": "count",
       "raised": {
-        "from": 150,
-        "reason": "The integrated platform adds seven public tools for notification preferences/inbox and approved-course lecture reads, plus administrator grading-job reopening. The measured catalogs contain 139 public and 157 administrator tools, serialized to 301743 and 326231 bytes. These feature costs are recorded against main; no database, rendering, latency or other budgets are raised.",
-        "at": "2026-11-16"
+        "from": 157,
+        "reason": "The Index catalogue tools add two administrator tools (list_index_catalog, upsert_index_entries) to the existing Chaos MCP, mirroring the live updater API. The measured catalog now holds 141 public and 159 administrator tools. Intended feature cost; no database, rendering or latency budgets are raised.",
+        "at": "2026-11-18"
       }
     },
     "mcp.getLesson.bytesRead": {
