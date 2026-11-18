@@ -281,6 +281,7 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "list_course_exam_candidates": result = await ctx.runQuery(makeFunctionReference<"query">("mcpExams:candidates"), { ...input, userId }); break;
       case "select_course_exam_questions": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpExams:select"), { ...input, userId }); break;
       case "autofill_course_exam": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpExams:autoFill"), { ...input, userId }); break;
+      case "import_quiz_to_course_exam": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpExams:importQuiz"), { ...input, userId }); break;
       case "seal_course_exam": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpExams:seal"), { ...input, userId }); break;
       case "get_course_exam_settings": result = await ctx.runQuery(makeFunctionReference<"query">("mcpExams:getSettings"), { ...input, userId }); break;
       case "save_course_exam_settings": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpExams:saveSettings"), { ...input, userId }); break;
