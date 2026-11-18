@@ -2,12 +2,14 @@ import { v } from "convex/values";
 import { mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import type { Id } from "./_generated/dataModel";
 import { requireActiveUser, creatorRestricted } from "./authz";
-import { defaultExamSettings, examSettings, validateExamSettings } from "./examSettingsModel";
+import { defaultExamSettings, examSettings, validateExamSettings, type ExamSettings } from "./examSettingsModel";
 
 type Ctx = MutationCtx | QueryCtx;
 
-async function owned(ctx: Ctx, draftId: Id<"examBuilderDrafts">) {
-  const { identity, user } = await requireActiveUser(ctx);
+async function owned(ctx: Ctx, draftId: Id<"examBuilderDrafts">, trustedActorId?: string) {
+  const { identity, user } = trustedActorId
+    ? { identity: { subject: trustedActorId }, user: await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", trustedActorId)).first() }
+    : await requireActiveUser(ctx);
   if (!user) throw new Error("ACCOUNT_REQUIRED: Complete account setup first.");
   const ownerId = identity.subject;
   const draft = await ctx.db.get("examBuilderDrafts", draftId);
@@ -26,8 +28,12 @@ async function owned(ctx: Ctx, draftId: Id<"examBuilderDrafts">) {
 
 export const getForDraft = query({
   args: { draftId: v.id("examBuilderDrafts") },
-  handler: async (ctx, { draftId }) => {
-    const { draft, release } = await owned(ctx, draftId);
+  handler: (ctx, args) => forMcpGetForDraft(ctx, args),
+});
+
+export async function forMcpGetForDraft(ctx: QueryCtx, args: { draftId: Id<"examBuilderDrafts"> }, trustedActorId?: string) {
+  const { draftId } = args;
+    const { draft, release } = await owned(ctx, draftId, trustedActorId);
     const snapshot = release ? await ctx.db.get("examSnapshots", release.activeSnapshotId) : null;
     if (release && (!snapshot || snapshot.ownerId !== draft.ownerId ||
         snapshot.draftId !== draftId))
@@ -42,8 +48,8 @@ export const getForDraft = query({
       preparedForAudience: release?.preparedForAudience ?? false,
       studentEntryEnabled: release?.studentEntryEnabled ?? false,
     };
-  },
-});
+}
+
 
 /** Saving policy never grants a student permission, and invalidates preparation. */
 export const saveForDraft = mutation({
@@ -52,8 +58,12 @@ export const saveForDraft = mutation({
     settings: examSettings,
   },
   returns: v.number(),
-  handler: async (ctx, { draftId, expectedRevision, settings }) => {
-    const { release } = await owned(ctx, draftId);
+  handler: (ctx, args) => forMcpSaveForDraft(ctx, args),
+});
+
+export async function forMcpSaveForDraft(ctx: MutationCtx, args: { draftId: Id<"examBuilderDrafts">; expectedRevision: number; settings: ExamSettings }, trustedActorId?: string) {
+  const { draftId, expectedRevision, settings } = args;
+    const { release } = await owned(ctx, draftId, trustedActorId);
     if (!release) throw new Error("SNAPSHOT_REQUIRED: Seal the exam before saving its release settings.");
     if (release.studentEntryEnabled || await ctx.db.query("examAttempts")
       .withIndex("by_snapshot_state", q => q.eq("snapshotId", release.activeSnapshotId).eq("state", "in_progress")).first())
@@ -68,16 +78,20 @@ export const saveForDraft = mutation({
       studentEntryEnabled: false, updatedAt: Date.now(),
     });
     return expectedRevision + 1;
-  },
-});
+}
+
 
 /** A readiness flag only. It DOES NOT enable exam starts or create an audience. */
 export const setPrepared = mutation({
   args: { draftId: v.id("examBuilderDrafts"), expectedRevision: v.number(),
     prepared: v.boolean() },
   returns: v.number(),
-  handler: async (ctx, { draftId, expectedRevision, prepared }) => {
-    const { draft, release } = await owned(ctx, draftId);
+  handler: (ctx, args) => forMcpSetPrepared(ctx, args),
+});
+
+export async function forMcpSetPrepared(ctx: MutationCtx, args: { draftId: Id<"examBuilderDrafts">; expectedRevision: number; prepared: boolean }, trustedActorId?: string) {
+  const { draftId, expectedRevision, prepared } = args;
+    const { draft, release } = await owned(ctx, draftId, trustedActorId);
     if (!release) throw new Error("SNAPSHOT_REQUIRED: Seal the exam first.");
     if (release.studentEntryEnabled || await ctx.db.query("examAttempts")
       .withIndex("by_snapshot_state", q => q.eq("snapshotId", release.activeSnapshotId).eq("state", "in_progress")).first())
@@ -100,5 +114,5 @@ export const setPrepared = mutation({
       updatedAt: Date.now(),
     });
     return expectedRevision + 1;
-  },
-});
+}
+

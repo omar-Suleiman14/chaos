@@ -2,20 +2,23 @@
 
 Generated from the public and administrator MCP registries with `pnpm mcp:inventory`. Administrator tools are advertised only to verified administrator connections; see [MCP permissions](mcp-permissions.md).
 
-139 public tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
+155 public tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
 
 - `accept_team_invitation`
 - `add_course_lesson`
 - `add_folder_member`
 - `add_lesson_blocks`
 - `advance_game`
+- `assign_course_exam`
 - `attach_lesson_flashcards`
 - `attach_lesson_quiz`
+- `autofill_course_exam`
 - `build_study_lesson`
 - `change_form_collaborator`
 - `change_team_member_role`
 - `checkpoint_study_lesson`
 - `create_course`
+- `create_course_exam`
 - `create_flashcard_set`
 - `create_folder`
 - `create_form`
@@ -36,6 +39,10 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `fork_lesson`
 - `fork_quiz`
 - `get_course`
+- `get_course_exam`
+- `get_course_exam_audience`
+- `get_course_exam_results`
+- `get_course_exam_settings`
 - `get_course_lesson`
 - `get_course_progress`
 - `get_enrolled_course_lecture`
@@ -69,6 +76,8 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `host_game`
 - `import_course_lesson`
 - `invite_team_member`
+- `list_course_exam_candidates`
+- `list_course_exams`
 - `list_courses`
 - `list_curriculum_institutions`
 - `list_curriculum_nodes`
@@ -96,6 +105,8 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `mark_notifications_read`
 - `move_folder`
 - `move_lesson_blocks`
+- `prepare_course_exam`
+- `preview_course_exam`
 - `publish_course`
 - `publish_flashcard_set`
 - `publish_form`
@@ -110,16 +121,21 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `restart_lesson_progress`
 - `restore_lesson_version`
 - `revoke_team_invitation`
+- `save_course_exam_plan`
+- `save_course_exam_settings`
 - `save_flashcard_set`
 - `save_lesson`
 - `save_lesson_draft`
+- `seal_course_exam`
 - `search_curriculum_modules`
 - `search_enrolled_course_lectures`
 - `search_forms`
 - `search_learn_directory`
 - `search_lessons`
+- `select_course_exam_questions`
 - `set_author_listing_visibility`
 - `set_course_archived`
+- `set_course_exam_entry`
 - `set_course_modules`
 - `set_course_outline`
 - `set_flashcard_set_lifecycle`

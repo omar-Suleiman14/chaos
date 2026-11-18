@@ -22,8 +22,8 @@ async function authenticated(ctx: Ctx) {
   if (!user) throw new Error("ACCOUNT_REQUIRED: Complete account setup first.");
   return identity.subject;
 }
-async function ownedDraft(ctx: Ctx, draftId: Id<"examBuilderDrafts">) {
-  const ownerId = await authenticated(ctx);
+async function ownedDraft(ctx: Ctx, draftId: Id<"examBuilderDrafts">, trustedActorId?: string) {
+  const ownerId = trustedActorId ?? await authenticated(ctx);
   const draft = await ctx.db.get("examBuilderDrafts", draftId);
   if (!draft || draft.ownerId !== ownerId) throw new Error("NOT_FOUND: Exam draft not found.");
   const course = await ctx.db.get("learnCollections", draft.courseId);
@@ -45,8 +45,12 @@ async function ownedSnapshot(ctx: Ctx, snapshotId: Id<"examSnapshots">) {
 export const sealDraft = mutation({
   args: { draftId: v.id("examBuilderDrafts"), expectedRevision: v.number() },
   returns: v.object({ snapshotId: v.id("examSnapshots"), version: v.number() }),
-  handler: async (ctx, { draftId, expectedRevision }) => {
-    const { ownerId, draft, course } = await ownedDraft(ctx, draftId);
+  handler: (ctx, args) => forMcpSealDraft(ctx, args),
+});
+
+export async function forMcpSealDraft(ctx: MutationCtx, args: { draftId: Id<"examBuilderDrafts">; expectedRevision: number }, trustedActorId?: string) {
+  const { draftId, expectedRevision } = args;
+    const { ownerId, draft, course } = await ownedDraft(ctx, draftId, trustedActorId);
     if (!Number.isSafeInteger(expectedRevision) || draft.revision !== expectedRevision)
       throw new Error("REVISION_CONFLICT: Reload the exam before sealing.");
     const release = await ctx.db.query("examReleases")
@@ -121,8 +125,8 @@ export const sealDraft = mutation({
       studentEntryEnabled: false, preparedForAudience: false, createdAt: now, updatedAt: now,
     });
     return { snapshotId, version };
-  },
-});
+}
+
 
 /** Private creator access includes keys; never reuse in a student or public transport. */
 export const getOwnerSnapshot = query({

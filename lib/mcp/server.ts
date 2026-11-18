@@ -24,6 +24,7 @@ import { registerTools as registerFormManagementTools } from "./formManagement";
 import { registerCommunityTools } from "./community";
 import { registerQuizForkTools } from "./quizForks";
 import { registerAssessmentTools } from "./assessments";
+import { registerExamTools } from "./exams";
 import { registerGlossaryTools } from "./glossary";
 import { permissionForTool, requireToolPermission, type McpPermission } from "./permissions";
 import { registerCourseTools } from "./courses";
@@ -553,6 +554,8 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
   registerAdvancedFormTools(server, run, securitySchemes);
   registerFormManagementTools(server, run, securitySchemes);
   registerAssessmentTools(server, run, securitySchemes);
+  // The dedicated administrator-grading surface remains deliberately lean.
+  if (!(options.admin && options.grading)) registerExamTools(server, run, securitySchemes);
   registerGlossaryTools(server, run, securitySchemes);
   return server;
 }
