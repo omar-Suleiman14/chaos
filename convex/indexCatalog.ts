@@ -192,9 +192,9 @@ export const catalogPost = httpAction(async (ctx, request) => {
     return respond({ status: 200, body: result, headers: CATALOG_CORS });
   } catch (caught) {
     const message = caught instanceof Error ? caught.message : String(caught);
-    if (message === "UNAUTHORIZED") return fail(401, "UNAUTHORIZED", "Unknown updater secret.");
-    if (message === "INDEX_UPDATER_NOT_CONFIGURED") return fail(503, "UNAVAILABLE", "Catalogue publishing is not configured yet.");
-    if (message.startsWith("BATCH_TOO_LARGE")) return fail(413, "BATCH_TOO_LARGE", message.replace("BATCH_TOO_LARGE: ", ""));
+    if (message.includes("UNAUTHORIZED")) return fail(401, "UNAUTHORIZED", "Unknown updater secret.");
+    if (message.includes("INDEX_UPDATER_NOT_CONFIGURED")) return fail(503, "UNAVAILABLE", "Catalogue publishing is not configured yet.");
+    if (message.includes("BATCH_TOO_LARGE")) return fail(413, "BATCH_TOO_LARGE", message.replace(/^.*?BATCH_TOO_LARGE:\s*/, ""));
     console.error("index catalog publish failed", caught);
     return fail(500, "ERROR", "Publishing failed. Nothing was rejected because of content.");
   }
