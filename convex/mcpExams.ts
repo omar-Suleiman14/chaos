@@ -181,7 +181,13 @@ export const getAudience = internalQuery({
   args: draft,
   handler: async (ctx, { userId, ...input }) => {
     await requireLearnActor(ctx, userId);
-    return audience.forMcpGetForDraft(ctx, input, userId);
+    const view = await audience.forMcpGetForDraft(ctx, input, userId);
+    // Real student link is available only after the teacher enables entry.
+    const release = await ctx.db.query("examReleases")
+      .withIndex("by_draft", q => q.eq("draftId", input.draftId)).unique();
+    return { ...view, entryUrl: release?.studentEntryEnabled
+      ? `https://chaos.fail/dashboard/learn/exams/${release._id}` : null };
+
   },
 });
 export const assign = internalMutation({
