@@ -1,5 +1,5 @@
 import { v } from "convex/values";
-import { env, httpAction, mutation, query } from "./_generated/server";
+import { env, httpAction, mutation, query, type MutationCtx, type QueryCtx } from "./_generated/server";
 import { api } from "./_generated/api";
 import { readBoundedBody } from "./httpBody";
 import { respond, error } from "./httpResponses";
@@ -31,9 +31,83 @@ const sameSecret = async (a: string, b: string): Promise<boolean> => {
 };
 
 /**
- * Idempotent upsert of a batch of entries. Identity is (channel, messageId, kind); content that
- * already matches is left untouched, edits are patched in place, and everything accepted is read
- * back as the site's tuple shapes so the caller can verify what actually landed.
+ * Core idempotent upsert shared by the secret-authenticated HTTP mutation and the
+ * administrator-gated MCP tool. Identity is (channel, messageId, kind); content that already
+ * matches is left untouched, edits are patched in place, and everything accepted is read back
+ * as the site's tuple shapes so the caller can verify what actually landed.
+ */
+export async function publishIndexCatalogEntries(
+  ctx: MutationCtx,
+  entries: unknown[],
+  updatedBy: string | undefined,
+) {
+  const writer = updatedBy?.trim() ? updatedBy.trim().slice(0, 64) : "updater";
+  const rejected: { index: number; reason: string }[] = [];
+  let created = 0, updated = 0, unchanged = 0;
+  const stored: unknown[] = [];
+  const seen = new Set<string>();
+
+  for (let index = 0; index < entries.length; index++) {
+    const result = normalizeIndexCatalogEntry(entries[index]);
+    if (!result.ok) {
+      rejected.push({ index, reason: result.reason });
+      continue;
+    }
+    const entry = result.entry;
+    const identity = indexCatalogIdentity(entry);
+    if (seen.has(identity)) {
+      rejected.push({ index, reason: "Duplicate of an earlier entry in this batch." });
+      continue;
+    }
+    seen.add(identity);
+    const existing = await ctx.db
+      .query("indexCatalogEntries")
+      .withIndex("by_identity", q => q.eq("channel", entry.channel).eq("messageId", entry.messageId).eq("kind", entry.kind))
+      .unique();
+    const fields = {
+      moduleIndex: entry.moduleIndex,
+      subject: entry.subject,
+      type: entry.type,
+      caption: entry.caption,
+      filename: entry.filename,
+      date: entry.date,
+      lectureRefs: entry.lectureRefs,
+    };
+    if (!existing) {
+      await ctx.db.insert("indexCatalogEntries", { ...entry, updatedBy: writer, updatedAt: Date.now() });
+      created++;
+      stored.push(project(entry));
+      continue;
+    }
+    if (!indexCatalogSameRow(existing, entry)) {
+      await ctx.db.patch("indexCatalogEntries", existing._id, { ...fields, updatedBy: writer, updatedAt: Date.now() });
+      updated++;
+    } else {
+      unchanged++;
+    }
+    stored.push(project(entry));
+  }
+  return { created, updated, unchanged, rejected, stored };
+}
+
+/** Shared read used by the public HTTP query and the administrator MCP tool. */
+export async function readIndexCatalog(ctx: QueryCtx) {
+  const files: IndexCatalogFileTuple[] = [];
+  const questions: IndexCatalogQuestionTuple[] = [];
+  const rows = await ctx.db.query("indexCatalogEntries").collect();
+  for (const row of rows) {
+    if (row.kind === "file") files.push(indexCatalogFileTuple(row));
+    else questions.push(indexCatalogQuestionTuple(row));
+  }
+  const byNumber = (row: IndexCatalogFileTuple | IndexCatalogQuestionTuple) =>
+    typeof row[0] === "number" ? row[0] : Number(String(row[0]).split("/")[1] ?? 0);
+  files.sort((a, b) => a[1] - b[1] || a[2].localeCompare(b[2]) || byNumber(a) - byNumber(b));
+  questions.sort((a, b) => a[1] - b[1] || a[2].localeCompare(b[2]) || byNumber(a) - byNumber(b));
+  return { files, questions, generatedAt: Date.now() };
+}
+
+/**
+ * Idempotent upsert of a batch of entries, gated by the updater secret.
  */
 export const publish = mutation({
   args: {
@@ -53,54 +127,7 @@ export const publish = mutation({
     if (secret.length < 32) throw new Error("INDEX_UPDATER_NOT_CONFIGURED");
     if (!(await sameSecret(args.secret, secret))) throw new Error("UNAUTHORIZED");
     if (args.entries.length > INDEX_CATALOG_BATCH_SIZE) throw new Error(`BATCH_TOO_LARGE: send at most ${INDEX_CATALOG_BATCH_SIZE} entries per call.`);
-
-    const writer = args.updatedBy?.trim() ? args.updatedBy.trim().slice(0, 64) : "updater";
-    const rejected: { index: number; reason: string }[] = [];
-    let created = 0, updated = 0, unchanged = 0;
-    const stored: unknown[] = [];
-    const seen = new Set<string>();
-
-    for (let index = 0; index < args.entries.length; index++) {
-      const result = normalizeIndexCatalogEntry(args.entries[index]);
-      if (!result.ok) {
-        rejected.push({ index, reason: result.reason });
-        continue;
-      }
-      const entry = result.entry;
-      const identity = indexCatalogIdentity(entry);
-      if (seen.has(identity)) {
-        rejected.push({ index, reason: "Duplicate of an earlier entry in this batch." });
-        continue;
-      }
-      seen.add(identity);
-      const existing = await ctx.db
-        .query("indexCatalogEntries")
-        .withIndex("by_identity", q => q.eq("channel", entry.channel).eq("messageId", entry.messageId).eq("kind", entry.kind))
-        .unique();
-      const fields = {
-        moduleIndex: entry.moduleIndex,
-        subject: entry.subject,
-        type: entry.type,
-        caption: entry.caption,
-        filename: entry.filename,
-        date: entry.date,
-        lectureRefs: entry.lectureRefs,
-      };
-      if (!existing) {
-        await ctx.db.insert("indexCatalogEntries", { ...entry, updatedBy: writer, updatedAt: Date.now() });
-        created++;
-        stored.push(project(entry));
-        continue;
-      }
-      if (!indexCatalogSameRow(existing, entry)) {
-        await ctx.db.patch("indexCatalogEntries", existing._id, { ...fields, updatedBy: writer, updatedAt: Date.now() });
-        updated++;
-      } else {
-        unchanged++;
-      }
-      stored.push(project(entry));
-    }
-    return { created, updated, unchanged, rejected, stored };
+    return publishIndexCatalogEntries(ctx, args.entries, args.updatedBy);
   },
 });
 
@@ -115,20 +142,7 @@ export const catalog = query({
     questions: v.array(v.array(v.any())),
     generatedAt: v.number(),
   }),
-  handler: async (ctx) => {
-    const files: IndexCatalogFileTuple[] = [];
-    const questions: IndexCatalogQuestionTuple[] = [];
-    const rows = await ctx.db.query("indexCatalogEntries").collect();
-    for (const row of rows) {
-      if (row.kind === "file") files.push(indexCatalogFileTuple(row));
-      else questions.push(indexCatalogQuestionTuple(row));
-    }
-    const byNumber = (row: IndexCatalogFileTuple | IndexCatalogQuestionTuple) =>
-      typeof row[0] === "number" ? row[0] : Number(String(row[0]).split("/")[1] ?? 0);
-    files.sort((a, b) => a[1] - b[1] || a[2].localeCompare(b[2]) || byNumber(a) - byNumber(b));
-    questions.sort((a, b) => a[1] - b[1] || a[2].localeCompare(b[2]) || byNumber(a) - byNumber(b));
-    return { files, questions, generatedAt: Date.now() };
-  },
+  handler: async (ctx) => readIndexCatalog(ctx),
 });
 
 // ── HTTP surface ─────────────────────────────────────────────────────────────
