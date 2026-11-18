@@ -940,10 +940,10 @@ function startLiveCatalog(){
  let cached=null;
  try{cached=JSON.parse(getStored(LIVE_CATALOG_KEY)||"null")}catch(_){cached=null}
  if(cached&&typeof cached==="object")applyLiveCatalog(cached,true);
- if(!liveCatalogUrl())return;
- const kick=()=>{refreshLiveCatalog()};
- if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",kick,{once:true});
- else kick();
+ /* No URL gate here: the config script is deferred and runs after this one, so the URL only
+    exists by DOMContentLoaded. refreshLiveCatalog re-checks it at call time. */
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>{refreshLiveCatalog()},{once:true});
+ else refreshLiveCatalog();
 }
 const TAB_TYPES={
  study:new Set(["lecture","tutorial","cbl"]),
