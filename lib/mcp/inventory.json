@@ -1,5 +1,5 @@
 {
-  "count": 155,
+  "count": 156,
   "names": [
     "accept_team_invitation",
     "add_course_lesson",
@@ -72,6 +72,7 @@
     "get_weak_area_actions",
     "host_game",
     "import_course_lesson",
+    "import_quiz_to_course_exam",
     "invite_team_member",
     "list_course_exam_candidates",
     "list_course_exams",
