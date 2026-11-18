@@ -125,7 +125,8 @@ export function normalizeIndexCatalogEntry(input: unknown): Validation {
   }
   const subjectText = requiredText(subject, MAX_SUBJECT, "subject");
   if (!subjectText.ok) return fail(subjectText.reason);
-  const captionText = requiredText(caption, MAX_CAPTION, "caption");
+  // Files always carry a caption; question posts may legitimately have none (the site derives a label).
+  const captionText = kind === "file" ? requiredText(caption, MAX_CAPTION, "caption") : optionalText(caption, MAX_CAPTION, "caption");
   if (!captionText.ok) return fail(captionText.reason);
 
   const normalized: NormalizedIndexCatalogEntry = {

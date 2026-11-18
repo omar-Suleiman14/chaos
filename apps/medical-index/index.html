@@ -894,7 +894,7 @@ function validFileRow(f){
 function validQuestionRow(q){
  return Array.isArray(q)&&q.length===6&&Number.isInteger(q[0])&&q[0]>0&&Number.isInteger(q[1])&&q[1]>=0&&q[1]<M.length
   &&typeof q[2]==="string"&&q[2]&&typeof q[3]==="string"&&q[3]
-  &&Array.isArray(q[4])&&q[4].every(n=>Number.isInteger(n)&&n>=0&&n<=500)&&typeof q[5]==="string"&&q[5];
+  &&Array.isArray(q[4])&&q[4].every(n=>Number.isInteger(n)&&n>=0&&n<=500)&&typeof q[5]==="string";
 }
 function applyLiveCatalog(data,rebuild){
  const files=Array.isArray(data&&data.files)?data.files:[];

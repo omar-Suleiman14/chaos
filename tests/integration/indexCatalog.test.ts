@@ -90,6 +90,19 @@ describe("index catalogue publishing", () => {
     expect(after[0].lectureRefs).toEqual([8, 9, 10]);
   });
 
+  it("accepts an empty caption on question posts and rejects it on files", async () => {
+    const t = createTestConvex();
+    const bareQuestion = { ...QUESTION, caption: "" };
+    const accepted = await t.mutation(api.indexCatalog.publish, { secret: SECRET, entries: [bareQuestion] });
+    expect(accepted.created).toBe(1);
+    expect(accepted.rejected).toEqual([]);
+    expect(accepted.stored[0]).toEqual([QUESTION.messageId, 1, "Physiology", "tutorial", [7, 8], ""]);
+    const denied = await t.mutation(api.indexCatalog.publish, { secret: SECRET, entries: [{ ...FILE, caption: "" }] });
+    expect(denied.created).toBe(0);
+    expect(denied.rejected).toHaveLength(1);
+    expect(denied.rejected[0].reason).toMatch(/caption/);
+  });
+
   it("reports rejected entries with reasons and stores nothing for them", async () => {
     const t = createTestConvex();
     const bad = [
@@ -100,12 +113,13 @@ describe("index catalogue publishing", () => {
       { ...FILE, moduleIndex: 18 },
       { ...FILE, date: "17-11-2026" },
       { ...FILE, lectureRefs: [1] },
+      { ...FILE, caption: "" },
       "not an object",
     ];
     const result = await t.mutation(api.indexCatalog.publish, { secret: SECRET, entries: bad });
     expect(result.created).toBe(0);
     expect(result.stored).toEqual([]);
-    expect(result.rejected.map(r => r.index)).toEqual([0, 1, 2, 3, 4, 5, 6, 7]);
+    expect(result.rejected.map(r => r.index)).toEqual([0, 1, 2, 3, 4, 5, 6, 7, 8]);
     expect(result.rejected.every(r => r.reason.length > 0)).toBe(true);
     const rows = await t.run(async ctx => ctx.db.query("indexCatalogEntries").collect());
     expect(rows).toEqual([]);
