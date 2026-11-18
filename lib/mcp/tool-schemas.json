@@ -12020,6 +12020,62 @@
     "additionalProperties": false
    }
   },
+  "import_quiz_to_course_exam": {
+   "title": null,
+   "description": "Copy the complete question list from an owned published quiz form into the private, ready course exam question bank and select it in an existing exam draft. Question order follows allocation order and counts; source question count must exactly match the exam plan. Requires the current draft revision and a published form version. Copies answer keys privately without changing the original quiz, publishing the exam or assigning students. Not safe to retry after an uncertain success; inspect get_course_exam first.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     },
+     "sourceFormId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     }
+    },
+    "required": [
+     "draftId",
+     "expectedRevision",
+     "sourceFormId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "imported": {
+      "type": "number"
+     },
+     "revision": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 9007199254740991
+     }
+    },
+    "required": [
+     "imported",
+     "revision"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "invite_team_member": {
    "title": null,
    "description": "Create a single-use invitation that expires in seven days. Owner or admin only; only the owner can invite admins. With email, the invitation is bound to that verified address and appears in their Chaos account; without email it works for whoever opens the link. Returns the link to share; Chaos sends no email. Only on explicit request.",
