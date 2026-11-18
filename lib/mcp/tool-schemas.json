@@ -939,7 +939,8 @@
      },
      "expectedRevision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      },
      "audience": {
       "type": "object",
@@ -995,7 +996,8 @@
     "properties": {
      "revision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      }
     },
     "required": [
@@ -1175,7 +1177,8 @@
      },
      "expectedRevision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      }
     },
     "required": [
@@ -1189,7 +1192,8 @@
     "properties": {
      "revision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      }
     },
     "required": [
@@ -3001,7 +3005,8 @@
      },
      "revision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      },
      "editUrl": {
       "type": "string"
@@ -7482,7 +7487,8 @@
      },
      "revision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      },
      "editUrl": {
       "type": "string"
@@ -7568,7 +7574,8 @@
      },
      "revision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      },
      "assigned": {
       "type": "boolean"
@@ -7660,7 +7667,8 @@
        },
        "revision": {
         "type": "integer",
-        "minimum": 0
+        "minimum": 0,
+        "maximum": 9007199254740991
        },
        "releasedAt": {
         "type": [
@@ -7805,10 +7813,14 @@
         ]
        },
        "opensAt": {
-        "type": "integer"
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
        },
        "closesAt": {
-        "type": "integer"
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
        },
        "durationMinutes": {
         "type": "integer",
@@ -7878,7 +7890,8 @@
      },
      "revision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      },
      "snapshotId": {
       "type": [
@@ -7902,7 +7915,8 @@
      },
      "draftRevision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      },
      "preparedForAudience": {
       "type": "boolean"
@@ -12213,7 +12227,8 @@
         },
         "revision": {
          "type": "integer",
-         "minimum": 0
+         "minimum": 0,
+         "maximum": 9007199254740991
         },
         "updatedAt": {
          "type": "number"
@@ -14849,7 +14864,8 @@
      },
      "expectedRevision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      },
      "prepared": {
       "type": "boolean"
@@ -14867,7 +14883,8 @@
     "properties": {
      "revision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      }
     },
     "required": [
@@ -16257,7 +16274,8 @@
      },
      "expectedRevision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      },
      "title": {
       "type": "string",
@@ -16356,7 +16374,8 @@
     "properties": {
      "revision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      }
     },
     "required": [
@@ -16386,7 +16405,8 @@
      },
      "expectedRevision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      },
      "settings": {
       "type": "object",
@@ -16399,10 +16419,14 @@
         ]
        },
        "opensAt": {
-        "type": "integer"
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
        },
        "closesAt": {
-        "type": "integer"
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
        },
        "durationMinutes": {
         "type": "integer",
@@ -16483,7 +16507,8 @@
     "properties": {
      "revision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      }
     },
     "required": [
@@ -17211,7 +17236,8 @@
      },
      "expectedRevision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      }
     },
     "required": [
@@ -17889,7 +17915,8 @@
      },
      "expectedRevision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      },
      "selections": {
       "maxItems": 100,
@@ -17928,7 +17955,8 @@
     "properties": {
      "revision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      }
     },
     "required": [
@@ -18040,7 +18068,8 @@
      },
      "expectedRevision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      },
      "enabled": {
       "type": "boolean"
@@ -18058,7 +18087,8 @@
     "properties": {
      "revision": {
       "type": "integer",
-      "minimum": 0
+      "minimum": 0,
+      "maximum": 9007199254740991
      }
     },
     "required": [
