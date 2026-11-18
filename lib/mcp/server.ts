@@ -554,7 +554,8 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
   registerAdvancedFormTools(server, run, securitySchemes);
   registerFormManagementTools(server, run, securitySchemes);
   registerAssessmentTools(server, run, securitySchemes);
-  registerExamTools(server, run, securitySchemes);
+  // The dedicated administrator-grading surface remains deliberately lean.
+  if (!(options.admin && options.grading)) registerExamTools(server, run, securitySchemes);
   registerGlossaryTools(server, run, securitySchemes);
   return server;
 }
