@@ -101,7 +101,17 @@ export const listNotifications = query({
   },
 });
 export const getNotificationPreferences = query({
-  args: {}, handler: async ctx => preferencesFor(ctx, (await requireIdentity(ctx)).subject),
+  args: {},
+  handler: async ctx => {
+    const identity = await getAuthIdentity(ctx);
+    // The shared notification bell can mount before session restoration completes.
+    // An unauthenticated preference read must not crash the entire dashboard.
+    if (!identity) return {
+      disabled: [] as CourseNoticeKind[],
+      kinds: COURSE_NOTICE_KINDS.filter(kind => kind !== "admin_grading"),
+    };
+    return preferencesFor(ctx, identity.subject);
+  },
 });
 export const setNotificationPreference = mutation({
   args: { kind: courseNoticeKind, enabled: v.boolean() },
