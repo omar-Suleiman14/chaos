@@ -7590,6 +7590,12 @@
      },
      "entryEnabled": {
       "type": "boolean"
+     },
+     "entryUrl": {
+      "type": [
+       "string",
+       "null"
+      ]
      }
     },
     "required": [
@@ -7598,7 +7604,8 @@
      "assigned",
      "assignedAt",
      "prepared",
-     "entryEnabled"
+     "entryEnabled",
+     "entryUrl"
     ],
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false
