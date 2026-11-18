@@ -33,6 +33,7 @@ type Env = {
   readonly CHAOS_API_READ_RATE_PER_MINUTE: string | undefined;
   readonly CHAOS_API_WRITE_RATE_PER_MINUTE: string | undefined;
   readonly CHAOS_APP_URL: string | undefined;
+  readonly CHAOS_INDEX_UPDATER_SECRET: string | undefined;
   readonly CHAOS_MCP_SECRET: string | undefined;
   readonly CHAOS_R2_ACCESS_KEY_ID: string | undefined;
   readonly CHAOS_R2_ACCOUNT_ID: string | undefined;

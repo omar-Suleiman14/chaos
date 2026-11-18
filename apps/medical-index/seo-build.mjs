@@ -18,7 +18,9 @@ const sourceUrl = record => typeof record[0] === "string" && /^ZatOona46\/\d+$/.
   ? "https://t.me/" + record[0]
   : "https://t.me/zatooona44/" + encodeURIComponent(String(record[0]));
 const questionUrl = record => "https://t.me/medics_44_mcq/" + encodeURIComponent(String(record[0]));
-function getArray(html, name) {
+function getArray(rawHtml, name) {
+  // Normalize Windows CRLF checkouts; `;\n` terminators only exist in LF content.
+  const html = rawHtml.replace(/\r\n/g, "\n");
   const prefix = "const " + name + "=";
   const start = html.indexOf(prefix);
   if (start === -1) throw new Error("Missing catalogue array " + name);
