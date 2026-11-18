@@ -360,3 +360,15 @@ it("invalidates consent when an accommodation changes the disclosed monitoring p
   const changed = await student.query(api.examPreflight.get, { releaseId });
   expect(changed).toMatchObject({ integrityMode: "review", consentAccepted: false });
 });
+
+it("page preflight handles owner and unassigned student access without exposing content", async () => {
+  const { owner, student, draftId, releaseId } = await setup();
+  // The strict query still rejects these users, but the student page gets a safe empty state.
+  expect(await owner.query(api.examPreflight.forStudentPage, { releaseId })).toBeNull();
+  expect(await student.query(api.examPreflight.forStudentPage, { releaseId })).toBeNull();
+  await assign(owner, draftId);
+  expect(await owner.query(api.examPreflight.forStudentPage, { releaseId })).toBeNull();
+  const preflight = await student.query(api.examPreflight.forStudentPage, { releaseId });
+  expect(preflight).toMatchObject({ title: "Heart sounds", questionCount: 1 });
+  expect(JSON.stringify(preflight)).not.toMatch(/correctChoiceIds|sampleAnswer|explanation|choices/);
+});

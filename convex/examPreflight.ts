@@ -86,9 +86,7 @@ async function eligible(ctx: Ctx, releaseId: Id<"examReleases">, active = false)
   return { release, course, snapshot, settings, accommodation, studentId, policyVersion, now };
 }
 
-export const get = query({
-  args: { releaseId: v.id("examReleases") },
-  handler: async (ctx, { releaseId }) => {
+async function loadStudentPreflight(ctx: QueryCtx, releaseId: Id<"examReleases">) {
     const { release, course, snapshot, settings, accommodation, studentId, policyVersion, now } =
       await eligible(ctx, releaseId);
     const consent = await ctx.db.query("examConsents")
@@ -122,6 +120,29 @@ export const get = query({
       // Intentionally hardcoded until secure delivery, quotas, server timers and submissions land.
       entryEnabled: release.studentEntryEnabled,
     };
+}
+
+export const get = query({
+  args: { releaseId: v.id("examReleases") },
+  handler: (ctx, { releaseId }) => loadStudentPreflight(ctx, releaseId),
+});
+
+/**
+ * Page-only projection: expected access denials become an empty state instead of
+ * unhandled Convex query errors. Consent and attempt mutations still use the
+ * strict eligibility checks above. Unexpected failures are not swallowed.
+ */
+export const forStudentPage = query({
+  args: { releaseId: v.id("examReleases") },
+  handler: async (ctx, { releaseId }) => {
+    try {
+      return await loadStudentPreflight(ctx, releaseId);
+    } catch (error) {
+      if (error instanceof Error &&
+          /^(NOT_FOUND|ACCOUNT_REQUIRED|EXAM_CLOSED|EXAM_CHANGED):/.test(error.message))
+        return null;
+      throw error;
+    }
   },
 });
 

@@ -81,7 +81,7 @@ export default function ExamPreflightPage() {
   const ar = locale === "ar";
   const t = translations[ar ? "ar" : "en"];
   const { isAuthenticated, isLoading } = useConvexAuth();
-  const preflight = useQuery(api.examPreflight.get,
+  const preflight = useQuery(api.examPreflight.forStudentPage,
     isAuthenticated && releaseId ? { releaseId: releaseId as Id<"examReleases"> } : "skip");
   const accommodation = useQuery(api.examInvigilation.myAccommodation,
     isAuthenticated && preflight ? { releaseId: preflight.releaseId } : "skip");
@@ -120,7 +120,24 @@ export default function ExamPreflightPage() {
   if (isLoading || isAuthenticated && preflight === undefined)
     return <PageSkeleton label={t.title} />;
   if (!isAuthenticated || !preflight)
-    return <main className="lx-page"><p>{t.failed}</p></main>;
+    return <main className="lx-page grid content-start gap-4" dir={ar ? "rtl" : "ltr"}>
+      <h1 className="ws-page-title">
+        {ar ? "الامتحان غير متاح لهذا الحساب" : "This exam isn't available to this account"}
+      </h1>
+      <p className="lx-help">
+        {ar
+          ? "الامتحان متاح للطلاب المقبولين في الكورس فقط. صاحب الكورس لا يمكنه دخول الامتحان بحساب المدرّس. جرّب حساب طالب تمت الموافقة على انضمامه."
+          : "Only approved, enrolled students can take this exam. Course owners cannot use their teaching account to enter the student player. Sign in with an approved student account to test it."}
+      </p>
+      <div className="flex flex-wrap gap-3">
+        <Link href="/dashboard/learn/exams" className="ws-btn ws-btn--primary ws-btn--sm">
+          {ar ? "العودة إلى امتحاناتي" : "Back to Due Exams"}
+        </Link>
+        <Link href="/dashboard/courses" className="ws-btn ws-btn--ghost ws-btn--sm">
+          {ar ? "إدارة الكورسات" : "Manage courses"}
+        </Link>
+      </div>
+    </main>;
 
   return <main className="lx-page" dir={ar ? "rtl" : "ltr"}>
     <Link href="/dashboard/learn/exams" className="ws-btn ws-btn--ghost ws-btn--sm w-fit">{t.back}</Link>
