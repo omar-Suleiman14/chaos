@@ -273,11 +273,11 @@
       }
     },
     "mcp.admin.tools": {
-      "budget": 175,
+      "budget": 176,
       "unit": "count",
       "raised": {
-        "from": 159,
-        "reason": "Sixteen explicitly requested, owner-scoped Course Exam Mode tools now join the existing Chaos MCP registry. The larger discovery payload is measured and budgeted; question-bank answers, attempts, releases and grades retain existing access rules. No database, rendering or latency budgets are increased.",
+        "from": 175,
+        "reason": "Add one owner-only, validated import action so published form quizzes can populate a real Course Exam Mode question bank without exposing answer keys or adding any student-facing reads.",
         "at": "2026-11-18"
       }
     },
@@ -350,11 +350,11 @@
       "unit": "count"
     },
     "mcp.tools": {
-      "budget": 155,
+      "budget": 156,
       "unit": "count",
       "raised": {
-        "from": 139,
-        "reason": "Sixteen explicitly requested, owner-scoped Course Exam Mode tools now join the existing Chaos MCP registry. The larger discovery payload is measured and budgeted; question-bank answers, attempts, releases and grades retain existing access rules. No database, rendering or latency budgets are increased.",
+        "from": 155,
+        "reason": "Add one owner-only, validated import action so published form quizzes can populate a real Course Exam Mode question bank without exposing answer keys or adding any student-facing reads.",
         "at": "2026-11-18"
       }
     },

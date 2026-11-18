@@ -54,6 +54,7 @@ const TOOL_PERMISSIONS = {
   list_course_exam_candidates: "read_content",
   select_course_exam_questions: "edit_content",
   autofill_course_exam: "edit_content",
+  import_quiz_to_course_exam: "edit_content",
   seal_course_exam: "edit_content",
   get_course_exam_settings: "read_content",
   save_course_exam_settings: "edit_content",

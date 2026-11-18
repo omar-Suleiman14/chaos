@@ -40,7 +40,7 @@ const audience = z.object({
 const draft = { draftId: id };
 const edit = { ...draft, expectedRevision: revision };
 const settingsView = { settings, revision, snapshotId: id.nullable(), snapshotVersion: z.number().nullable(), snapshotDraftRevision: z.number().nullable(), draftRevision: revision, preparedForAudience: z.boolean(), studentEntryEnabled: z.boolean() };
-const audienceView = { audience, revision, assigned: z.boolean(), assignedAt: z.number().nullable(), prepared: z.boolean(), entryEnabled: z.boolean() };
+const audienceView = { audience, revision, assigned: z.boolean(), assignedAt: z.number().nullable(), prepared: z.boolean(), entryEnabled: z.boolean(), entryUrl: z.string().nullable() };
 const resultsView = { snapshotId: id, title: z.string(), visibility: z.enum(["immediate", "after_close", "manual"]), publication: z.object({ released: z.boolean(), revision, releasedAt: z.number().nullable() }), entries: z.array(z.object({ attemptId: id, studentId: z.string(), state: z.string(), completedAt: z.number().nullable(), gradingState: z.string().nullable(), resultVisibility: z.string(), earnedCents: z.number().nullable(), maximumCents: z.number().nullable(), percentBasisPoints: z.number().nullable(), studentStatus: z.string() })), hasMore: z.boolean(), nextCursor: z.string().nullable() };
 const revised = { revision };
 const read = { readOnlyHint: true, destructiveHint: false, openWorldHint: false, idempotentHint: true };
@@ -78,6 +78,8 @@ export function registerExamTools(
     { ...edit, selections: z.array(selection).max(100) }, revised, write);
   register("autofill_course_exam", "Select distinct ready questions from the owned exam's syllabus allocations. Replaces existing selection and requires the current draft revision; does not publish.",
     edit, revised, write);
+  register("import_quiz_to_course_exam", "Copy the complete question list from an owned published quiz form into the private, ready course exam question bank and select it in an existing exam draft. Question order follows allocation order and counts; source question count must exactly match the exam plan. Requires the current draft revision and a published form version. Copies answer keys privately without changing the original quiz, publishing the exam or assigning students. Not safe to retry after an uncertain success; inspect get_course_exam first.",
+    { ...edit, sourceFormId: id }, { imported: z.number(), revision }, { ...write, idempotentHint: false });
   register("seal_course_exam", "Freeze an immutable owner-only exam snapshot from a complete exam draft. Does not assign students, publish grades or enable student entry. Requires explicit instruction to seal.",
     edit, { snapshotId: id, version: z.number() }, write);
   register("get_course_exam_settings", "Read the owner-only settings, snapshot and settings revision for an exam draft. Does not expose answer keys.",
