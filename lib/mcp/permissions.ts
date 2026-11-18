@@ -44,6 +44,8 @@ const TOOL_PERMISSIONS = {
   save_admin_grading_proposal: "admin_operations",
   submit_admin_grading_review: "admin_operations",
   get_admin_overview: "admin_operations",
+  list_index_catalog: "admin_operations",
+  upsert_index_entries: "admin_operations",
   get_course: "read_content",
   list_notifications: "read_content",
   get_notification_preferences: "read_content",

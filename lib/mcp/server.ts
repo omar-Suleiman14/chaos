@@ -3,6 +3,7 @@ import { registerDocumentationTools } from "./docs";
 import { registerCardTools } from "./cards";
 import { registerCrmTools } from "./crm";
 import { registerAdminTools, registerGradingAdminTools } from "./admin";
+import { registerIndexCatalogTools } from "./indexCatalog";
 // The Chaos ChatGPT app: MCP tool definitions. Served by app/mcp/route.ts.
 // Tools only describe and forward; Convex (convex/mcp.ts) enforces access,
 // validation, plan limits and rate limits for the signed-in Chaos account.
@@ -83,7 +84,8 @@ const baseInstructions = `Chaos (${new URL(siteUrl).host}) is where this person 
 - advance_game moves exactly one state using from and questionIndex from get_game; with autoplay on it is only needed to start without waiting or to skip ahead. Starting needs a joined player. Advancing a question closes it and reveals the answer, so do it only when the host asks. Retries with the same from/index do not advance again. end_game stops the room and saves collected responses through the ordinary live-game workflow; never stop a room without the host's request.`;
 
 /** Only verified administrator connections are told about admin and CRM tools; everyone else never sees them. */
-const adminInstructions = `- Administrator connections expose the same platform overview/refresh, account and content moderation, platform inventories, Business teams and audit activity as the admin UI under admin_operations. Inventory tools return metadata only. Moderate accounts/content only on explicit request and provide the requested reason; never retry uncertain moderation writes. No admin membership grants/revocations or legacy plan controls are available. CRM remains separately authorized under admin_crm. Administrator connections also expose CRM tools: list_crm_contacts, get_crm_contact, save_crm_contact, add_crm_note, get_crm_activity, set_crm_contact_stages and complete_crm_follow_up. These contain private contact information. Read an existing contact before saving and preserve fields the administrator did not ask to change, including its linked account and follow-up date. CRM writes are audited; they never send messages. Do not retry creation or note additions after uncertain success.`;
+const adminInstructions = `- Administrator connections expose the same platform overview/refresh, account and content moderation, platform inventories, Business teams and audit activity as the admin UI under admin_operations. Inventory tools return metadata only. Moderate accounts/content only on explicit request and provide the requested reason; never retry uncertain moderation writes. No admin membership grants/revocations or legacy plan controls are available. CRM remains separately authorized under admin_crm. Administrator connections also expose CRM tools: list_crm_contacts, get_crm_contact, save_crm_contact, add_crm_note, get_crm_activity, set_crm_contact_stages and complete_crm_follow_up. These contain private contact information. Read an existing contact before saving and preserve fields the administrator did not ask to change, including its linked account and follow-up date. CRM writes are audited; they never send messages. Do not retry creation or note additions after uncertain success.
+- Index catalogue (index.chaos.fail): list_index_catalog reads the live lecture/MCQ catalogue; upsert_index_entries publishes verified Telegram posts through the same idempotent upsert the scheduled updater uses (identity channel+messageId+kind, at most 200 per call). Only for posts the person verified; match the entry against the post itself before writing, and check list_index_catalog first so existing posts are replayed rather than duplicated. Verify every write against the returned stored rows. New posts appear on the Index immediately; their SEO share pages join on the next site build.`;
 
 const gradingAdminInstructions = `- Grading assistant access for verified administrators only. First list and claim a doctor-consented job; then read its private essay bundle while the claim is active. Ground every proposed criterion score in literal answer excerpts with rationale and state uncertainty. Store drafts and submit for doctor review. These are NOT approved/final grades. Never publish or finalize a student result or claim unattended AI marking. If a claim has expired after three retries, reopen it only when the administrator explicitly requests recovery; pass confirmReopen=true and the current expected revision. Reopening preserves private drafts and queues the job for a doctor to claim again. Every read and edit is audited. Standard platform admin and CRM tools are available on /mcp, not this review-specific surface.`;
 
@@ -523,6 +525,7 @@ export function createChaosMcpServer(options: { call: McpCaller | null; resource
     registerDocumentationTools(server, run, securitySchemes);
     registerCrmTools(server, run, securitySchemes);
     registerAdminTools(server, run, securitySchemes);
+    registerIndexCatalogTools(server, run, securitySchemes);
   }
   registerCardTools(server, run, securitySchemes);
   registerLearnTools(server, run, securitySchemes, { call, flow });

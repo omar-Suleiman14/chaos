@@ -20302,6 +20302,104 @@
    },
    "outputSchema": null
   },
+  "list_index_catalog": {
+   "title": "List the live Index catalogue (admin)",
+   "description": "Administrators only: read the live Chaos Index catalogue (index.chaos.fail) exactly as the site consumes it. files are [messageId | \"ZatOona46/<id>\", moduleIndex, subject, type, caption, filename, date]; questions are [messageId, moduleIndex, subject, type, lectureRefs, caption]. Use this to check what is already published before adding entries. Public data, but restricted to administrator connections.",
+   "permission": "admin_operations",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "files": {
+      "type": "array",
+      "items": {
+       "type": "array",
+       "items": [
+        {
+         "type": [
+          "number",
+          "string"
+         ]
+        },
+        {
+         "type": "number"
+        },
+        {
+         "type": "string"
+        },
+        {
+         "type": "string"
+        },
+        {
+         "type": "string"
+        },
+        {
+         "type": "string"
+        },
+        {
+         "type": "string"
+        }
+       ],
+       "additionalItems": false,
+       "minItems": 7,
+       "maxItems": 7
+      }
+     },
+     "questions": {
+      "type": "array",
+      "items": {
+       "type": "array",
+       "items": [
+        {
+         "type": "number"
+        },
+        {
+         "type": "number"
+        },
+        {
+         "type": "string"
+        },
+        {
+         "type": "string"
+        },
+        {
+         "type": "array",
+         "items": {
+          "type": "number"
+         }
+        },
+        {
+         "type": "string"
+        }
+       ],
+       "additionalItems": false,
+       "minItems": 6,
+       "maxItems": 6
+      }
+     },
+     "generatedAt": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "files",
+     "questions",
+     "generatedAt"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "moderate_admin_content": {
    "title": "Hold or release platform content (admin)",
    "description": "Administrators only, on explicit request: hold or release a form ID from list_admin_content. A reason is required. Holding removes public access through the same UI moderation logic and writes an audit event; releasing a hold does not republish a closed form.",
@@ -20778,6 +20876,169 @@
     },
     "required": [
      "ok"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "upsert_index_entries": {
+   "title": "Publish Index posts (admin)",
+   "description": "Administrators only, for verified Telegram posts: add or update Index catalogue entries (lectures, tutorials, practicals, CBLs, exams, resources, timetables and question sets). Idempotent by (channel, messageId, kind): replays report unchanged, edits update in place; at most 200 entries per call. The response counts created/updated/unchanged and returns rejected with reasons plus stored rows, so verify every run against its own writes. Newly added posts appear on the Index immediately; their SEO share pages join on the next site build.",
+   "permission": "admin_operations",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "entries": {
+      "minItems": 1,
+      "maxItems": 200,
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "channel": {
+         "type": "string",
+         "enum": [
+          "zatooona44",
+          "zatooona46",
+          "medics_44_mcq"
+         ],
+         "description": "Telegram source channel of the post."
+        },
+        "messageId": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 2147483647,
+         "description": "Telegram message id; (channel, messageId, kind) is the identity."
+        },
+        "kind": {
+         "type": "string",
+         "enum": [
+          "file",
+          "question"
+         ]
+        },
+        "moduleIndex": {
+         "type": "integer",
+         "minimum": 0,
+         "maximum": 17,
+         "description": "Module position in the Index (0–17, site order)."
+        },
+        "subject": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100,
+         "description": "Subject label exactly as the Index groups it, e.g. Anatomy."
+        },
+        "type": {
+         "type": "string",
+         "enum": [
+          "lecture",
+          "tutorial",
+          "cbl",
+          "practical",
+          "exam",
+          "timetable",
+          "resource"
+         ]
+        },
+        "caption": {
+         "type": "string",
+         "maxLength": 500,
+         "description": "Post caption shown on the Index; required for files, optional for questions."
+        },
+        "filename": {
+         "description": "File name as served, files only.",
+         "type": "string",
+         "maxLength": 300
+        },
+        "date": {
+         "description": "Post date YYYY-MM-DD, files only.",
+         "type": "string",
+         "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+        },
+        "lectureRefs": {
+         "description": "Referenced lecture numbers, questions only; stored sorted and de-duplicated.",
+         "maxItems": 40,
+         "type": "array",
+         "items": {
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 500
+         }
+        }
+       },
+       "required": [
+        "channel",
+        "messageId",
+        "kind",
+        "moduleIndex",
+        "subject",
+        "type",
+        "caption"
+       ],
+       "additionalProperties": {},
+       "description": "One verified Telegram post."
+      }
+     },
+     "updatedBy": {
+      "description": "Short label recorded as the writer, e.g. \"morning-updater\".",
+      "type": "string",
+      "maxLength": 64
+     }
+    },
+    "required": [
+     "entries"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "created": {
+      "type": "number"
+     },
+     "updated": {
+      "type": "number"
+     },
+     "unchanged": {
+      "type": "number"
+     },
+     "rejected": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "index": {
+         "type": "number"
+        },
+        "reason": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "index",
+        "reason"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "stored": {
+      "type": "array",
+      "items": {}
+     }
+    },
+    "required": [
+     "created",
+     "updated",
+     "unchanged",
+     "rejected",
+     "stored"
     ],
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false

@@ -257,6 +257,8 @@ const mcpHandler = httpAction(async (ctx, request) => observeHttp(ctx, "mcp", as
       case "upload_study_source": result = await ctx.runAction(makeFunctionReference<"action">("studySourceUploads:upload"), { ...input, userId }); break;
 
       case "get_documentation_capabilities": result = await ctx.runQuery(makeFunctionReference<"query">("docs:mcpCapabilities"), { userId }); break;
+      case "list_index_catalog": result = await ctx.runQuery(makeFunctionReference<"query">("mcpIndexCatalog:list"), { userId }); break;
+      case "upsert_index_entries": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpIndexCatalog:upsert"), { ...input, userId }); break;
       case "list_documentation": result = await ctx.runQuery(makeFunctionReference<"query">("docs:mcpList"), { ...input, userId }); break;
       case "save_documentation": result = await ctx.runMutation(makeFunctionReference<"mutation">("docs:mcpSave"), { ...input, userId }); break;
       case "set_form_branching": result = await ctx.runMutation(makeFunctionReference<"mutation">("mcpAdvancedForms:setBranching"), { ...input, userId }); break;

@@ -879,7 +879,11 @@ const MODULE_TABS=[["study","Study"],["practical","Practical"],["other","Other"]
    catalogue at window.__INDEX_CATALOG_URL__ has new or edited posts they are merged in by the
    same (channel, messageId, kind) identity the backend publishes with, and the view re-renders. */
 const LIVE_CATALOG_KEY="chaos-index:live-catalog:v1";
-const LIVE_CATALOG_URL=window.__INDEX_CATALOG_URL__||"";
+/* Read lazily: catalog-config.js is deferred and runs after this script, so the URL
+   may only exist once the DOM is ready (deferred scripts finish before DOMContentLoaded). */
+function liveCatalogUrl(){
+ return typeof window.__INDEX_CATALOG_URL__==="string"?window.__INDEX_CATALOG_URL__:"";
+}
 function liveFileIdentity(file){
  const first=file[0];
  if(typeof first==="number")return Number.isInteger(first)&&first>0?"f44:"+first:null;
@@ -917,11 +921,11 @@ function applyLiveCatalog(data,rebuild){
 }
 let liveCatalogRunning=false;
 async function refreshLiveCatalog(){
- if(!LIVE_CATALOG_URL||liveCatalogRunning)return;
+ if(!liveCatalogUrl()||liveCatalogRunning)return;
  liveCatalogRunning=true;
  try{
   const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),8000);
-  const response=await fetch(LIVE_CATALOG_URL,{method:"GET",mode:"cors",credentials:"omit",signal:controller.signal});
+  const response=await fetch(liveCatalogUrl(),{method:"GET",mode:"cors",credentials:"omit",signal:controller.signal});
   clearTimeout(timer);
   if(!response.ok)return;
   const data=await response.json();
@@ -936,10 +940,10 @@ function startLiveCatalog(){
  let cached=null;
  try{cached=JSON.parse(getStored(LIVE_CATALOG_KEY)||"null")}catch(_){cached=null}
  if(cached&&typeof cached==="object")applyLiveCatalog(cached,true);
- if(!LIVE_CATALOG_URL)return;
- const kick=()=>{refreshLiveCatalog()};
- if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",kick,{once:true});
- else kick();
+ /* No URL gate here: the config script is deferred and runs after this one, so the URL only
+    exists by DOMContentLoaded. refreshLiveCatalog re-checks it at call time. */
+ if(document.readyState==="loading")document.addEventListener("DOMContentLoaded",()=>{refreshLiveCatalog()},{once:true});
+ else refreshLiveCatalog();
 }
 const TAB_TYPES={
  study:new Set(["lecture","tutorial","cbl"]),

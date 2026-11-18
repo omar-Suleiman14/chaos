@@ -10,7 +10,7 @@
 | collaborators | List and change collaborators | Separate from ordinary content reads; writes change access |
 | destructive | Remove blocks, restart reading, unpublish, archive or end a game | Descriptions explain retained history and lost access |
 | admin_crm | Read and edit private CRM contacts, scheduled follow-ups and notes | Available only to verified administrator connections; backend checks active admin membership on every call |
-| admin_operations | Read platform inventories, metrics and audit; moderate accounts/content; author documentation | Advertised only to verified administrator connections; each call rechecks current admin membership and active account state. Does not grant CRM access |
+| admin_operations | Read platform inventories, metrics and audit; moderate accounts/content; author documentation; read and publish the live Index catalogue | Advertised only to verified administrator connections; each call rechecks current admin membership and active account state. Does not grant CRM access |
 
 Every registered tool exposes `chaos/permission` metadata. `lib/mcp/permissions.ts` explicitly classifies each public and administrator tool; names do not imply permission. Unclassified operations are rejected at registration and when called, even without a granular allow-list. When adding a tool, review its category, add it to that map, and run `pnpm mcp:inventory` to update the generated contract. `pnpm mcp:inventory:check` rejects unclassified registrations and schema drift; permission tests compare every category with the reviewed schema snapshot.
 

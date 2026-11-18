@@ -146,7 +146,7 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 
 ## Administrator tools
 
-18 additional tools mirror the administration UI. Every call rechecks current backend authorization.
+20 additional tools mirror the administration UI. Every call rechecks current backend authorization.
 
 - `add_crm_note`
 - `complete_crm_follow_up`
@@ -160,9 +160,11 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `list_admin_users`
 - `list_crm_contacts`
 - `list_documentation`
+- `list_index_catalog`
 - `moderate_admin_content`
 - `moderate_admin_user`
 - `refresh_admin_analytics`
 - `save_crm_contact`
 - `save_documentation`
 - `set_crm_contact_stages`
+- `upsert_index_entries`
