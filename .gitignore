@@ -68,3 +68,6 @@ pnpm_install.log
 
 # stray local copies of the repo
 /chaos-basecheck/
+
+# standalone Index build output (apps/medical-index/build.mjs)
+/apps/medical-index/dist/

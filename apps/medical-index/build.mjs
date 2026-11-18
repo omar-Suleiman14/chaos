@@ -12,6 +12,15 @@ for (const name of ["index.html", "icon.svg", "manifest.webmanifest", "sw.js", "
 }
 await copyFile(join(root, "admin", "index.html"), join(output, "admin", "index.html"));
 
+// The live catalogue endpoint on the Chaos Convex deployment. Empty when unconfigured; the site
+// then renders its embedded fallback copy only, which is why the file is always generated.
+const configured = (process.env.INDEX_CATALOG_URL || process.env.NEXT_PUBLIC_CONVEX_SITE_URL || "").trim();
+if (configured && !/^https:\/\/[a-z0-9.-]+(?::\d+)?(\/|$)/.test(configured)) {
+  throw new Error("INDEX_CATALOG_URL must be an https URL.");
+}
+const catalogUrl = configured.endsWith("/api/index-catalog") ? configured : configured ? configured + "/api/index-catalog" : "";
+await writeFile(join(output, "catalog-config.js"), "window.__INDEX_CATALOG_URL__=" + JSON.stringify(catalogUrl) + ";\n");
+
 const token = (process.env.INDEX_POSTHOG_PROJECT_TOKEN || "").trim();
 const host = (process.env.INDEX_POSTHOG_HOST || "").trim();
 

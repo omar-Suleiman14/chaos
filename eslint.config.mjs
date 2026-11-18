@@ -27,6 +27,7 @@ export default defineConfig([
     "convex/*/_generated",
     ".next",
     ".claude/worktrees",
+    "chaos-basecheck",
     "test-results",
     "playwright-report",
     "blob-report",

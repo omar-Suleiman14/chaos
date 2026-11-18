@@ -15,6 +15,7 @@ import { registerCourseMediaRoutes } from "./courseMedia";
 import { registerFormImageMediaRoutes } from "./formImageMedia";
 import { registerQuestionBankMediaRoutes } from "./questionBankMedia";
 import { registerExamMediaRoutes } from "./examMedia";
+import { catalogGet, catalogPost } from "./indexCatalog";
 import { ConvexError } from "convex/values";
 import { env, httpAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
@@ -552,6 +553,9 @@ registerQuestionBankMediaRoutes(http);
 registerExamMediaRoutes(http);
 http.route({ path: UPLOAD_PATH, method: "POST", handler: uploadHandler });
 http.route({ path: UPLOAD_PATH, method: "OPTIONS", handler: httpAction(async () => new Response(null, { status: 204, headers: UPLOAD_CORS })) });
+http.route({ path: "/api/index-catalog", method: "OPTIONS", handler: catalogGet });
+http.route({ path: "/api/index-catalog", method: "GET", handler: catalogGet });
+http.route({ path: "/api/index-catalog", method: "POST", handler: catalogPost });
 http.route({ path: "/api/mcp/v1", method: "POST", handler: mcpHandler });
 for (const method of ["GET", "POST", "PATCH", "DELETE"] as const) {
   http.route({ pathPrefix: PREFIX, method, handler: handle });

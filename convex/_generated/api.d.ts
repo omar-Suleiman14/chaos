@@ -120,6 +120,8 @@ import type * as http from "../http.js";
 import type * as httpBody from "../httpBody.js";
 import type * as httpRateHeaders from "../httpRateHeaders.js";
 import type * as httpResponses from "../httpResponses.js";
+import type * as indexCatalog from "../indexCatalog.js";
+import type * as indexCatalogModel from "../indexCatalogModel.js";
 import type * as indexNow from "../indexNow.js";
 import type * as indexNowModel from "../indexNowModel.js";
 import type * as integrationContract from "../integrationContract.js";
@@ -376,6 +378,8 @@ declare const fullApi: ApiFromModules<{
   httpBody: typeof httpBody;
   httpRateHeaders: typeof httpRateHeaders;
   httpResponses: typeof httpResponses;
+  indexCatalog: typeof indexCatalog;
+  indexCatalogModel: typeof indexCatalogModel;
   indexNow: typeof indexNow;
   indexNowModel: typeof indexNowModel;
   integrationContract: typeof integrationContract;

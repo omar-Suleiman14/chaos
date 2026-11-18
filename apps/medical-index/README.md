@@ -38,6 +38,16 @@ Standalone medical study index at **https://index.chaos.fail**, owned alongside 
 - Daily Telegram updater runs every day, including weekends, checking verified source posts and preserving existing material.
 - Public catalogue, module, material and question pages are indexable; the admin, offline and error pages remain `noindex`. The production build owns generated SEO metadata and crawlable pages.
 
+## Live catalogue (Convex)
+
+Convex is the live catalogue for the Index; the `M`, `D` and `Q` arrays embedded in `index.html` are the offline fallback snapshot. The site merges live rows over the embedded copy by the same identity the backend publishes with — `(channel, messageId, kind)` — so replaying a post or editing it never duplicates anything, and a missing or failing endpoint degrades to the embedded snapshot, never to an empty page. The build writes `catalog-config.js` from `INDEX_CATALOG_URL` (or `NEXT_PUBLIC_CONVEX_SITE_URL`); when it is unset the site runs entirely from the embedded copy.
+
+- **Read:** `GET https://<deployment>.convex.site/api/index-catalog` returns `{ files, questions, generatedAt }` projected into the site's tuple shapes (`D` rows as `[messageId | "ZatOona46/<id>", moduleIndex, subject, type, caption, filename, date]`, `Q` rows as `[messageId, moduleIndex, subject, type, lectureRefs, caption]`). Public, CORS-open, cached (`max-age=60`, `s-maxage=600`).
+- **Write:** `POST /api/index-catalog` with `Authorization: Bearer <secret>` and `{"entries": [...], "updatedBy": "updater"}` — at most 200 entries per call. The secret is the Convex deployment's `CHAOS_INDEX_UPDATER_SECRET` (32+ random characters, set with `npx convex env set`), verified server-side inside Convex. Each entry: `channel` (`zatooona44`, `zatooona46` or `medics_44_mcq`), `messageId`, `kind` (`file` or `question`), `moduleIndex` (0–17, index order), `subject`, `type` (`lecture`, `tutorial`, `cbl`, `practical`, `exam`, `timetable`, `resource`), `caption`, optional `filename` and `date` (`YYYY-MM-DD`, files), optional `lectureRefs` (questions). The response reports `created`, `updated`, `unchanged`, `rejected` with reasons, and `stored` — the rows as the public endpoint serves them, so every run verifies its own writes by reading them back.
+- **Seed/verify:** `scripts/index-catalog-import.mjs` publishes the embedded catalogue into Convex and then re-reads the public endpoint and diffs every entry against the embedded source; it exits non-zero on any difference. Run it with `CHAOS_INDEX_UPDATER_SECRET` set and `--url https://<deployment>.convex.site`.
+- **Site merge:** on load the Index applies its cached live catalogue (`chaos-index:live-catalog:v1` in `localStorage`) before first render, then re-fetches in the background and re-renders only when something changed. The service worker never caches the catalogue endpoint.
+- Generated SEO share pages still come from the embedded arrays at build time; new live posts get their share pages on the next Index build. Never hand-edit generated `dist` output.
+
 ## Source boundaries
 
 The site links to original Telegram posts; it does not republish source PDFs. Question classification is best-effort from subject, module, activity and numbering. Missing file indicators are inferred from observed sequences, not a complete official curriculum.
