@@ -976,8 +976,7 @@
        "mode",
        "studentIds",
        "groupIds"
-      ],
-      "additionalProperties": false
+      ]
      },
      "assigned": {
       "type": "boolean"
@@ -7894,12 +7893,16 @@
       "maximum": 9007199254740991
      },
      "snapshotId": {
-      "type": [
-       "string",
-       "null"
-      ],
-      "minLength": 1,
-      "maxLength": 100
+      "anyOf": [
+       {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 100
+       },
+       {
+        "type": "null"
+       }
+      ]
      },
      "snapshotVersion": {
       "type": [
@@ -16345,8 +16348,7 @@
           "mode",
           "incorrectPenalty",
           "blankPenalty"
-         ],
-         "additionalProperties": false
+         ]
         }
        },
        "required": [
@@ -16355,8 +16357,7 @@
         "key",
         "count",
         "points"
-       ],
-       "additionalProperties": false
+       ]
       }
      }
     },
@@ -16491,8 +16492,7 @@
        "resultVisibility",
        "showCorrectAnswers",
        "showExplanations"
-      ],
-      "additionalProperties": false
+      ]
      }
     },
     "required": [
@@ -17938,8 +17938,7 @@
        "required": [
         "questionId",
         "allocationId"
-       ],
-       "additionalProperties": false
+       ]
       }
      }
     },
