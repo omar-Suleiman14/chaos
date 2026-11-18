@@ -264,20 +264,20 @@
       "unit": "count"
     },
     "mcp.admin.listToolsBytes": {
-      "budget": 330949,
+      "budget": 357376,
       "unit": "bytes",
       "raised": {
-        "from": 326231,
-        "reason": "The Index catalogue tools add two administrator tools (list_index_catalog, upsert_index_entries) to the existing Chaos MCP, mirroring the live updater API. The measured catalog now holds 141 public and 159 administrator tools, serialized to 330949 administrator bytes. Intended feature cost; no database, rendering or latency budgets are raised.",
+        "from": 330949,
+        "reason": "Sixteen explicitly requested, owner-scoped Course Exam Mode tools now join the existing Chaos MCP registry. The larger discovery payload is measured and budgeted; question-bank answers, attempts, releases and grades retain existing access rules. No database, rendering or latency budgets are increased.",
         "at": "2026-11-18"
       }
     },
     "mcp.admin.tools": {
-      "budget": 159,
+      "budget": 175,
       "unit": "count",
       "raised": {
-        "from": 157,
-        "reason": "The Index catalogue tools add two administrator tools (list_index_catalog, upsert_index_entries) to the existing Chaos MCP, mirroring the live updater API. The measured catalog now holds 141 public and 159 administrator tools. Intended feature cost; no database, rendering or latency budgets are raised.",
+        "from": 159,
+        "reason": "Sixteen explicitly requested, owner-scoped Course Exam Mode tools now join the existing Chaos MCP registry. The larger discovery payload is measured and budgeted; question-bank answers, attempts, releases and grades retain existing access rules. No database, rendering or latency budgets are increased.",
         "at": "2026-11-18"
       }
     },
@@ -311,12 +311,12 @@
       }
     },
     "mcp.listToolsBytes": {
-      "budget": 301743,
+      "budget": 327680,
       "unit": "bytes",
       "raised": {
-        "from": 292300,
-        "reason": "The integrated platform adds seven public tools for notification preferences/inbox and approved-course lecture reads, plus administrator grading-job reopening. The measured catalogs contain 139 public and 157 administrator tools, serialized to 301743 and 326231 bytes. These feature costs are recorded against main; no database, rendering, latency or other budgets are raised.",
-        "at": "2026-11-16"
+        "from": 301743,
+        "reason": "Sixteen explicitly requested, owner-scoped Course Exam Mode tools now join the existing Chaos MCP registry. The larger discovery payload is measured and budgeted; question-bank answers, attempts, releases and grades retain existing access rules. No database, rendering or latency budgets are increased.",
+        "at": "2026-11-18"
       }
     },
     "mcp.searchForms.bytesRead": {
@@ -350,12 +350,12 @@
       "unit": "count"
     },
     "mcp.tools": {
-      "budget": 139,
+      "budget": 155,
       "unit": "count",
       "raised": {
-        "from": 132,
-        "reason": "The integrated platform adds seven public tools for notification preferences/inbox and approved-course lecture reads, plus administrator grading-job reopening. The measured catalogs contain 139 public and 157 administrator tools, serialized to 301743 and 326231 bytes. These feature costs are recorded against main; no database, rendering, latency or other budgets are raised.",
-        "at": "2026-11-16"
+        "from": 139,
+        "reason": "Sixteen explicitly requested, owner-scoped Course Exam Mode tools now join the existing Chaos MCP registry. The larger discovery payload is measured and budgeted; question-bank answers, attempts, releases and grades retain existing access rules. No database, rendering or latency budgets are increased.",
+        "at": "2026-11-18"
       }
     },
     "quizzes.respondent.bytesRead": {
