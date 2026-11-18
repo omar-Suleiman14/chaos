@@ -9,8 +9,10 @@ type Ctx = QueryCtx | MutationCtx;
 const MAX_COURSES = 200;
 const MAX_RELEASES_PER_COURSE = 100;
 
-async function owned(ctx: Ctx, draftId: Id<"examBuilderDrafts">) {
-  const { identity, user } = await requireActiveUser(ctx);
+async function owned(ctx: Ctx, draftId: Id<"examBuilderDrafts">, trustedActorId?: string) {
+  const { identity, user } = trustedActorId
+    ? { identity: { subject: trustedActorId }, user: await ctx.db.query("users").withIndex("by_clerkId", q => q.eq("clerkId", trustedActorId)).first() }
+    : await requireActiveUser(ctx);
   if (!user) throw new Error("ACCOUNT_REQUIRED: Complete account setup first.");
   const draft = await ctx.db.get("examBuilderDrafts", draftId);
   if (!draft || draft.ownerId !== identity.subject) throw new Error("NOT_FOUND: Exam draft not found.");
@@ -50,8 +52,12 @@ export async function audienceAllows(ctx: Ctx, courseId: Id<"learnCollections">,
 
 export const getForDraft = query({
   args: { draftId: v.id("examBuilderDrafts") },
-  handler: async (ctx, { draftId }) => {
-    const { release } = await owned(ctx, draftId);
+  handler: (ctx, args) => forMcpGetForDraft(ctx, args),
+});
+
+export async function forMcpGetForDraft(ctx: QueryCtx, args: { draftId: Id<"examBuilderDrafts"> }, trustedActorId?: string) {
+  const { draftId } = args;
+    const { release } = await owned(ctx, draftId, trustedActorId);
     return {
       audience: release?.audience ?? { mode: "all" as const, studentIds: [], groupIds: [] },
       revision: release?.audienceRevision ?? 0,
@@ -60,8 +66,8 @@ export const getForDraft = query({
       prepared: release?.preparedForAudience ?? false,
       entryEnabled: release?.studentEntryEnabled ?? false,
     };
-  },
-});
+}
+
 
 /** Assignment is transactional, revision-checked and *never* starts an attempt. */
 export const setForDraft = mutation({
@@ -69,8 +75,12 @@ export const setForDraft = mutation({
     draftId: v.id("examBuilderDrafts"), expectedRevision: v.number(),
     audience: examAudience, assigned: v.boolean(),
   },
-  handler: async (ctx, { draftId, expectedRevision, audience, assigned }) => {
-    const { draft, course, release } = await owned(ctx, draftId);
+  handler: (ctx, args) => forMcpSetForDraft(ctx, args),
+});
+
+export async function forMcpSetForDraft(ctx: MutationCtx, args: { draftId: Id<"examBuilderDrafts">; expectedRevision: number; audience: ExamAudience; assigned: boolean }, trustedActorId?: string) {
+  const { draftId, expectedRevision, audience, assigned } = args;
+    const { draft, course, release } = await owned(ctx, draftId, trustedActorId);
     if (!release) throw new Error("SNAPSHOT_REQUIRED: Seal this exam first.");
     if (release.studentEntryEnabled || await ctx.db.query("examAttempts")
       .withIndex("by_snapshot_state", q => q.eq("snapshotId", release.activeSnapshotId).eq("state", "in_progress")).first())
@@ -112,14 +122,18 @@ export const setForDraft = mutation({
       studentEntryEnabled: false, updatedAt: now,
     });
     return expectedRevision + 1;
-  },
-});
+}
+
 
 /** Open or close new entry; active attempts remain protected until completed. */
 export const setEntry = mutation({
   args: { draftId: v.id("examBuilderDrafts"), expectedRevision: v.number(), enabled: v.boolean() },
-  handler: async (ctx, { draftId, expectedRevision, enabled }) => {
-    const { draft, course, release } = await owned(ctx, draftId);
+  handler: (ctx, args) => forMcpSetEntry(ctx, args),
+});
+
+export async function forMcpSetEntry(ctx: MutationCtx, args: { draftId: Id<"examBuilderDrafts">; expectedRevision: number; enabled: boolean }, trustedActorId?: string) {
+  const { draftId, expectedRevision, enabled } = args;
+    const { draft, course, release } = await owned(ctx, draftId, trustedActorId);
     if (!release || !Number.isSafeInteger(expectedRevision) ||
         expectedRevision !== (release.audienceRevision ?? 0))
       throw new Error("REVISION_CONFLICT: Exam assignment changed; reload.");
@@ -139,8 +153,8 @@ export const setEntry = mutation({
       studentEntryEnabled: enabled, audienceRevision: expectedRevision + 1, updatedAt: Date.now(),
     });
     return expectedRevision + 1;
-  },
-});
+}
+
 
 /**
  * Metadata-only student dashboard. It never returns frozen questions, keys,

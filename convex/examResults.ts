@@ -17,8 +17,8 @@ async function actor(ctx: ReadCtx) {
   return identity.subject;
 }
 
-async function ownedSnapshot(ctx: ReadCtx, snapshotId: Id<"examSnapshots">) {
-  const ownerId = await actor(ctx);
+async function ownedSnapshot(ctx: ReadCtx, snapshotId: Id<"examSnapshots">, trustedActorId?: string) {
+  const ownerId = trustedActorId ?? await actor(ctx);
   const snapshot = await ctx.db.get("examSnapshots", snapshotId);
   if (!snapshot || snapshot.ownerId !== ownerId)
     throw new Error("NOT_FOUND: Exam not found.");
@@ -144,8 +144,12 @@ export const myReview = query({
 export const teacherResults = query({
   args: { draftId: v.id("examBuilderDrafts"), snapshotId: v.optional(v.id("examSnapshots")),
     cursor: v.optional(v.union(v.string(), v.null())) },
-  handler: async (ctx, { draftId, snapshotId, cursor }) => {
-    const ownerId = await actor(ctx);
+  handler: (ctx, args) => forMcpTeacherResults(ctx, args),
+});
+
+export async function forMcpTeacherResults(ctx: QueryCtx, args: { draftId: Id<"examBuilderDrafts">; snapshotId?: Id<"examSnapshots">; cursor?: string | null }, trustedActorId?: string) {
+  const { draftId, snapshotId, cursor } = args;
+    const ownerId = trustedActorId ?? await actor(ctx);
     const draft = await ctx.db.get("examBuilderDrafts", draftId);
     if (!draft || draft.ownerId !== ownerId)
       throw new Error("NOT_FOUND: Exam not found.");
@@ -153,7 +157,7 @@ export const teacherResults = query({
       .withIndex("by_draft", q => q.eq("draftId", draftId)).unique();
     if (!release || release.ownerId !== ownerId || release.courseId !== draft.courseId)
       throw new Error("NOT_FOUND: Exam not found.");
-    const { snapshot } = await ownedSnapshot(ctx, snapshotId ?? release.activeSnapshotId);
+    const { snapshot } = await ownedSnapshot(ctx, snapshotId ?? release.activeSnapshotId, trustedActorId);
     if (snapshot.draftId !== draftId) throw new Error("NOT_FOUND: Exam not found.");
     const pub = await publication(ctx, snapshot._id);
     if (pub && (pub.ownerId !== ownerId || pub.courseId !== draft.courseId))
@@ -198,8 +202,8 @@ export const teacherResults = query({
         releasedAt: pub?.releasedAt ?? null },
       entries, hasMore: !attempts.isDone, nextCursor: attempts.isDone ? null : attempts.continueCursor,
     };
-  },
-});
+}
+
 
 /** Doctor-controlled manual publication, optimistic revision + durable audit. */
 export const setPublication = mutation({

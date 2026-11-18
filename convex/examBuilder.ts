@@ -25,8 +25,8 @@ async function courseOwned(ctx: Ctx, courseId: Id<"learnCollections">, ownerId: 
     throw new Error("NOT_FOUND: Course not found.");
   return row;
 }
-async function draftOwned(ctx: Ctx, draftId: Id<"examBuilderDrafts">) {
-  const ownerId = await actor(ctx);
+async function draftOwned(ctx: Ctx, draftId: Id<"examBuilderDrafts">, trustedActorId?: string) {
+  const ownerId = trustedActorId ?? await actor(ctx);
   const row = await ctx.db.get("examBuilderDrafts", draftId);
   if (!row || row.ownerId !== ownerId) throw new Error("NOT_FOUND: Exam draft not found.");
   const course = await courseOwned(ctx, row.courseId, ownerId);
@@ -164,23 +164,35 @@ function verifyRevision(expectedRevision: number, revision: number) {
 
 export const listDrafts = query({
   args: { courseId: v.id("learnCollections") },
-  handler: async (ctx, { courseId }) => {
-    const ownerId = await actor(ctx);
+  handler: (ctx, args) => forMcpListDrafts(ctx, args),
+});
+
+export async function forMcpListDrafts(ctx: QueryCtx, args: { courseId: Id<"learnCollections"> }, trustedActorId?: string) {
+  const { courseId } = args;
+    const ownerId = trustedActorId ?? await actor(ctx);
     await courseOwned(ctx, courseId, ownerId);
     return ctx.db.query("examBuilderDrafts")
       .withIndex("by_owner_course_updated", q => q.eq("ownerId", ownerId).eq("courseId", courseId))
       .order("desc").take(100);
-  },
-});
+}
+
 export const getDraft = query({
   args: { draftId: v.id("examBuilderDrafts") },
-  handler: async (ctx, { draftId }) => (await draftOwned(ctx, draftId)).row,
+  handler: (ctx, { draftId }) => forMcpGetDraft(ctx, { draftId }),
 });
+export async function forMcpGetDraft(ctx: QueryCtx, { draftId }: { draftId: Id<"examBuilderDrafts"> }, trustedActorId?: string) {
+  return (await draftOwned(ctx, draftId, trustedActorId)).row;
+}
+
 export const createDraft = mutation({
   args: { courseId: v.id("learnCollections"), title: v.optional(v.string()) },
   returns: v.id("examBuilderDrafts"),
-  handler: async (ctx, { courseId, title }) => {
-    const ownerId = await actor(ctx);
+  handler: (ctx, args) => forMcpCreateDraft(ctx, args),
+});
+
+export async function forMcpCreateDraft(ctx: MutationCtx, args: { courseId: Id<"learnCollections">; title?: string }, trustedActorId?: string) {
+  const { courseId, title } = args;
+    const ownerId = trustedActorId ?? await actor(ctx);
     const course = await courseOwned(ctx, courseId, ownerId);
     requireEditable(course);
     const now = Date.now();
@@ -191,14 +203,18 @@ export const createDraft = mutation({
       allocations: [{ id: "whole_course", kind: "course", key: "", count: 10, points: 1 }],
       selections: [], revision: 0, createdAt: now, updatedAt: now,
     });
-  },
-});
+}
+
 export const savePlan = mutation({
   args: { draftId: v.id("examBuilderDrafts"), expectedRevision: v.number(),
     title: v.string(), targetCount: v.number(), allocations: v.array(examAllocation) },
   returns: v.number(),
-  handler: async (ctx, { draftId, expectedRevision, title, targetCount, allocations }) => {
-    const { row, course } = await draftOwned(ctx, draftId);
+  handler: (ctx, args) => forMcpSavePlan(ctx, args),
+});
+
+export async function forMcpSavePlan(ctx: MutationCtx, args: { draftId: Id<"examBuilderDrafts">; expectedRevision: number; title: string; targetCount: number; allocations: Allocation[] }, trustedActorId?: string) {
+  const { draftId, expectedRevision, title, targetCount, allocations } = args;
+    const { row, course } = await draftOwned(ctx, draftId, trustedActorId);
     await requireDraftMutable(ctx, draftId);
     requireEditable(course);
     verifyRevision(expectedRevision, row.revision);
@@ -211,14 +227,18 @@ export const savePlan = mutation({
       revision: row.revision + 1, updatedAt: Date.now(),
     });
     return row.revision + 1;
-  },
-});
+}
+
 export const setSelections = mutation({
   args: { draftId: v.id("examBuilderDrafts"), expectedRevision: v.number(),
     selections: v.array(examSelection) },
   returns: v.number(),
-  handler: async (ctx, { draftId, expectedRevision, selections }) => {
-    const { row, course, ownerId } = await draftOwned(ctx, draftId);
+  handler: (ctx, args) => forMcpSetSelections(ctx, args),
+});
+
+export async function forMcpSetSelections(ctx: MutationCtx, args: { draftId: Id<"examBuilderDrafts">; expectedRevision: number; selections: Selection[] }, trustedActorId?: string) {
+  const { draftId, expectedRevision, selections } = args;
+    const { row, course, ownerId } = await draftOwned(ctx, draftId, trustedActorId);
     await requireDraftMutable(ctx, draftId);
     requireEditable(course);
     verifyRevision(expectedRevision, row.revision);
@@ -229,13 +249,17 @@ export const setSelections = mutation({
       selections, revision: row.revision + 1, updatedAt: Date.now(),
     });
     return row.revision + 1;
-  },
-});
+}
+
 export const autoFill = mutation({
   args: { draftId: v.id("examBuilderDrafts"), expectedRevision: v.number() },
   returns: v.number(),
-  handler: async (ctx, { draftId, expectedRevision }) => {
-    const { row, course, ownerId } = await draftOwned(ctx, draftId);
+  handler: (ctx, args) => forMcpAutoFill(ctx, args),
+});
+
+export async function forMcpAutoFill(ctx: MutationCtx, args: { draftId: Id<"examBuilderDrafts">; expectedRevision: number }, trustedActorId?: string) {
+  const { draftId, expectedRevision } = args;
+    const { row, course, ownerId } = await draftOwned(ctx, draftId, trustedActorId);
     await requireDraftMutable(ctx, draftId);
     requireEditable(course);
     verifyRevision(expectedRevision, row.revision);
@@ -250,12 +274,16 @@ export const autoFill = mutation({
       selections, revision: row.revision + 1, updatedAt: Date.now(),
     });
     return row.revision + 1;
-  },
-});
+}
+
 export const preview = query({
   args: { draftId: v.id("examBuilderDrafts") },
-  handler: async (ctx, { draftId }) => {
-    const { row, course, ownerId } = await draftOwned(ctx, draftId);
+  handler: (ctx, args) => forMcpPreview(ctx, args),
+});
+
+export async function forMcpPreview(ctx: QueryCtx, args: { draftId: Id<"examBuilderDrafts"> }, trustedActorId?: string) {
+  const { draftId } = args;
+    const { row, course, ownerId } = await draftOwned(ctx, draftId, trustedActorId);
     const pool = await loadPool(ctx, course, ownerId);
     const groups = eligibleByRow(pool, row.allocations);
     const valid = row.selections.filter(s => row.allocations.some((a, i) =>
@@ -283,13 +311,17 @@ export const preview = query({
           points: a?.points ?? 0, revision: q?.revision ?? -1 };
       }),
     };
-  },
-});
+}
+
 export const candidates = query({
   args: { draftId: v.id("examBuilderDrafts"), allocationId: v.string(),
     offset: v.optional(v.number()) },
-  handler: async (ctx, { draftId, allocationId, offset = 0 }) => {
-    const { row, course, ownerId } = await draftOwned(ctx, draftId);
+  handler: (ctx, args) => forMcpCandidates(ctx, args),
+});
+
+export async function forMcpCandidates(ctx: QueryCtx, args: { draftId: Id<"examBuilderDrafts">; allocationId: string; offset?: number }, trustedActorId?: string) {
+  const { draftId, allocationId, offset = 0 } = args;
+    const { row, course, ownerId } = await draftOwned(ctx, draftId, trustedActorId);
     if (!Number.isSafeInteger(offset) || offset < 0 || offset > MAX_LINKS)
       throw new Error("VALIDATION_FAILED: Invalid page offset.");
     const allocation = row.allocations.find(a => a.id === allocationId);
@@ -306,8 +338,8 @@ export const candidates = query({
         selectedHere: row.selections.some(s => s.questionId === e.question._id && s.allocationId === allocationId),
       })),
     };
-  },
-});
+}
+
 export const removeDraft = mutation({
   args: { draftId: v.id("examBuilderDrafts"), expectedRevision: v.number() },
   returns: v.null(),

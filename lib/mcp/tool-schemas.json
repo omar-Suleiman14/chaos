@@ -919,6 +919,92 @@
     "additionalProperties": false
    }
   },
+  "assign_course_exam": {
+   "title": null,
+   "description": "Set or clear assignment to approved enrolled students/groups for an owned sealed, prepared exam. Assignment does not enable entry; require explicit user instruction.",
+   "permission": "publish_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": true
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "audience": {
+      "type": "object",
+      "properties": {
+       "mode": {
+        "type": "string",
+        "enum": [
+         "all",
+         "students",
+         "groups"
+        ]
+       },
+       "studentIds": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 160
+        }
+       },
+       "groupIds": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        }
+       }
+      },
+      "required": [
+       "mode",
+       "studentIds",
+       "groupIds"
+      ],
+      "additionalProperties": false
+     },
+     "assigned": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "draftId",
+     "expectedRevision",
+     "audience",
+     "assigned"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "revision": {
+      "type": "integer",
+      "minimum": 0
+     }
+    },
+    "required": [
+     "revision"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "attach_lesson_flashcards": {
    "title": null,
    "description": "Attach a published flashcard version to an owned lesson so learners can study it there (at most 50 per lesson). Use versionId from publish_flashcard_set or publishedVersionId from get_flashcard_set. Attaching the same set again updates its version, label and order. Does not publish the lesson.",
@@ -1064,6 +1150,50 @@
     },
     "required": [
      "relationshipId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "autofill_course_exam": {
+   "title": null,
+   "description": "Select distinct ready questions from the owned exam's syllabus allocations. Replaces existing selection and requires the current draft revision; does not publish.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0
+     }
+    },
+    "required": [
+     "draftId",
+     "expectedRevision"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "revision": {
+      "type": "integer",
+      "minimum": 0
+     }
+    },
+    "required": [
+     "revision"
     ],
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false
@@ -2827,6 +2957,60 @@
     },
     "required": [
      "courseId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "create_course_exam": {
+   "title": null,
+   "description": "Create a private Course Exam Mode draft owned by the connected account. Not a form quiz; never publishes or assigns students. Do not retry blindly after uncertain success.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "courseId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+     }
+    },
+    "required": [
+     "courseId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "revision": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "editUrl": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "draftId",
+     "revision",
+     "editUrl"
     ],
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false
@@ -7160,6 +7344,587 @@
     "additionalProperties": false
    }
   },
+  "get_course_exam": {
+   "title": null,
+   "description": "Read an owned course exam draft, allocations, selected question IDs and revision. No answer keys. Review this before changing its syllabus.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     }
+    },
+    "required": [
+     "draftId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "courseId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "title": {
+      "type": "string"
+     },
+     "targetCount": {
+      "type": "number"
+     },
+     "allocations": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 60
+        },
+        "kind": {
+         "type": "string",
+         "enum": [
+          "course",
+          "module",
+          "lecture",
+          "topic"
+         ]
+        },
+        "key": {
+         "type": "string",
+         "maxLength": 100
+        },
+        "count": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 100
+        },
+        "points": {
+         "type": "number",
+         "exclusiveMinimum": 0,
+         "maximum": 100
+        },
+        "marking": {
+         "type": "object",
+         "properties": {
+          "mode": {
+           "type": "string",
+           "enum": [
+            "exact",
+            "partial"
+           ]
+          },
+          "incorrectPenalty": {
+           "type": "number",
+           "minimum": 0
+          },
+          "blankPenalty": {
+           "type": "number",
+           "minimum": 0
+          }
+         },
+         "required": [
+          "mode",
+          "incorrectPenalty",
+          "blankPenalty"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "required": [
+        "id",
+        "kind",
+        "key",
+        "count",
+        "points"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "selections": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "questionId": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        },
+        "allocationId": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 60
+        }
+       },
+       "required": [
+        "questionId",
+        "allocationId"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "revision": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "editUrl": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "draftId",
+     "courseId",
+     "title",
+     "targetCount",
+     "allocations",
+     "selections",
+     "revision",
+     "editUrl"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "get_course_exam_audience": {
+   "title": null,
+   "description": "Read assigned audience metadata, audience revision and student-entry state for an owned course exam.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     }
+    },
+    "required": [
+     "draftId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "audience": {
+      "type": "object",
+      "properties": {
+       "mode": {
+        "type": "string",
+        "enum": [
+         "all",
+         "students",
+         "groups"
+        ]
+       },
+       "studentIds": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 160
+        }
+       },
+       "groupIds": {
+        "maxItems": 100,
+        "type": "array",
+        "items": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        }
+       }
+      },
+      "required": [
+       "mode",
+       "studentIds",
+       "groupIds"
+      ],
+      "additionalProperties": false
+     },
+     "revision": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "assigned": {
+      "type": "boolean"
+     },
+     "assignedAt": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "prepared": {
+      "type": "boolean"
+     },
+     "entryEnabled": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "audience",
+     "revision",
+     "assigned",
+     "assignedAt",
+     "prepared",
+     "entryEnabled"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "get_course_exam_results": {
+   "title": null,
+   "description": "Read paginated teacher-only student attempt and grading status for an owned course exam. Contains identifiable student IDs and unreleased grades; use only when the user requests results.",
+   "permission": "individual_responses",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "snapshotId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "cursor": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "draftId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "snapshotId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "title": {
+      "type": "string"
+     },
+     "visibility": {
+      "type": "string",
+      "enum": [
+       "immediate",
+       "after_close",
+       "manual"
+      ]
+     },
+     "publication": {
+      "type": "object",
+      "properties": {
+       "released": {
+        "type": "boolean"
+       },
+       "revision": {
+        "type": "integer",
+        "minimum": 0
+       },
+       "releasedAt": {
+        "type": [
+         "number",
+         "null"
+        ]
+       }
+      },
+      "required": [
+       "released",
+       "revision",
+       "releasedAt"
+      ],
+      "additionalProperties": false
+     },
+     "entries": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "attemptId": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        },
+        "studentId": {
+         "type": "string"
+        },
+        "state": {
+         "type": "string"
+        },
+        "completedAt": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "gradingState": {
+         "type": [
+          "string",
+          "null"
+         ]
+        },
+        "resultVisibility": {
+         "type": "string"
+        },
+        "earnedCents": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "maximumCents": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "percentBasisPoints": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "studentStatus": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "attemptId",
+        "studentId",
+        "state",
+        "completedAt",
+        "gradingState",
+        "resultVisibility",
+        "earnedCents",
+        "maximumCents",
+        "percentBasisPoints",
+        "studentStatus"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "hasMore": {
+      "type": "boolean"
+     },
+     "nextCursor": {
+      "type": [
+       "string",
+       "null"
+      ]
+     }
+    },
+    "required": [
+     "snapshotId",
+     "title",
+     "visibility",
+     "publication",
+     "entries",
+     "hasMore",
+     "nextCursor"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "get_course_exam_settings": {
+   "title": null,
+   "description": "Read the owner-only settings, snapshot and settings revision for an exam draft. Does not expose answer keys.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     }
+    },
+    "required": [
+     "draftId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "settings": {
+      "type": "object",
+      "properties": {
+       "mode": {
+        "type": "string",
+        "enum": [
+         "anytime",
+         "scheduled"
+        ]
+       },
+       "opensAt": {
+        "type": "integer"
+       },
+       "closesAt": {
+        "type": "integer"
+       },
+       "durationMinutes": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 480
+       },
+       "maxAttempts": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 3
+       },
+       "requireAllAnswers": {
+        "type": "boolean"
+       },
+       "allowEarlySubmission": {
+        "type": "boolean"
+       },
+       "timeoutAction": {
+        "type": "string",
+        "enum": [
+         "auto_submit",
+         "expire"
+        ]
+       },
+       "passingPercent": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100
+       },
+       "resultVisibility": {
+        "type": "string",
+        "enum": [
+         "immediate",
+         "after_close",
+         "manual"
+        ]
+       },
+       "showCorrectAnswers": {
+        "type": "boolean"
+       },
+       "showExplanations": {
+        "type": "boolean"
+       },
+       "integrityMode": {
+        "type": "string",
+        "enum": [
+         "off",
+         "record",
+         "warn",
+         "review"
+        ]
+       }
+      },
+      "required": [
+       "mode",
+       "durationMinutes",
+       "maxAttempts",
+       "requireAllAnswers",
+       "allowEarlySubmission",
+       "timeoutAction",
+       "passingPercent",
+       "resultVisibility",
+       "showCorrectAnswers",
+       "showExplanations"
+      ],
+      "additionalProperties": false
+     },
+     "revision": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "snapshotId": {
+      "type": [
+       "string",
+       "null"
+      ],
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "snapshotVersion": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "snapshotDraftRevision": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "draftRevision": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "preparedForAudience": {
+      "type": "boolean"
+     },
+     "studentEntryEnabled": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "settings",
+     "revision",
+     "snapshotId",
+     "snapshotVersion",
+     "snapshotDraftRevision",
+     "draftRevision",
+     "preparedForAudience",
+     "studentEntryEnabled"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "get_course_lesson": {
    "title": null,
    "description": "Read a lesson from a readable course publication, preserving the exact immutable version in that course. Current asset restrictions still apply. Returns no response data.",
@@ -11301,6 +12066,179 @@
     "additionalProperties": false
    }
   },
+  "list_course_exam_candidates": {
+   "title": null,
+   "description": "List at most 30 eligible question-bank candidates for one allocation in an owned course exam draft. Prompts only; answer keys remain private.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "allocationId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 60
+     },
+     "offset": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 1000
+     }
+    },
+    "required": [
+     "draftId",
+     "allocationId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "total": {
+      "type": "number"
+     },
+     "nextOffset": {
+      "type": [
+       "number",
+       "null"
+      ]
+     },
+     "questions": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "questionId": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        },
+        "prompt": {
+         "type": "string"
+        },
+        "kind": {
+         "type": "string"
+        },
+        "points": {
+         "type": "number"
+        },
+        "selected": {
+         "type": "boolean"
+        },
+        "selectedHere": {
+         "type": "boolean"
+        }
+       },
+       "required": [
+        "questionId",
+        "prompt",
+        "kind",
+        "points",
+        "selected",
+        "selectedHere"
+       ],
+       "additionalProperties": false
+      }
+     }
+    },
+    "required": [
+     "total",
+     "nextOffset",
+     "questions"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "list_course_exams": {
+   "title": null,
+   "description": "List private exam draft metadata for a course owned by the connected Chaos account. Never exposes student answers or answer keys.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "courseId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     }
+    },
+    "required": [
+     "courseId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "exams": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "draftId": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        },
+        "courseId": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        },
+        "title": {
+         "type": "string"
+        },
+        "targetCount": {
+         "type": "number"
+        },
+        "selectedCount": {
+         "type": "number"
+        },
+        "revision": {
+         "type": "integer",
+         "minimum": 0
+        },
+        "updatedAt": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "draftId",
+        "courseId",
+        "title",
+        "targetCount",
+        "selectedCount",
+        "revision",
+        "updatedAt"
+       ],
+       "additionalProperties": false
+      }
+     }
+    },
+    "required": [
+     "exams"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "list_courses": {
    "title": null,
    "description": "List the connected account's own courses, newest change first, including archived ones (archived true). Returns metadata and lesson counts only. Pages of up to 50; pass nextCursor to continue until it is null.",
@@ -13891,6 +14829,194 @@
     "additionalProperties": false
    }
   },
+  "prepare_course_exam": {
+   "title": null,
+   "description": "Set readiness for an owned sealed exam after settings are saved. This only marks readiness; it never assigns a student or opens entry.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "prepared": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "draftId",
+     "expectedRevision",
+     "prepared"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "revision": {
+      "type": "integer",
+      "minimum": 0
+     }
+    },
+    "required": [
+     "revision"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "preview_course_exam": {
+   "title": null,
+   "description": "Inspect source coverage, available questions, selected questions and feasibility for an owned exam draft. Does not return answer keys.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     }
+    },
+    "required": [
+     "draftId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "courseTitle": {
+      "type": "string"
+     },
+     "modules": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        },
+        "title": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "id",
+        "title"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "lectures": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        },
+        "title": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "id",
+        "title"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "topics": {
+      "type": "array",
+      "items": {
+       "type": "string"
+      }
+     },
+     "readyQuestions": {
+      "type": "number"
+     },
+     "rows": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "allocationId": {
+         "type": "string"
+        },
+        "available": {
+         "type": "number"
+        },
+        "requested": {
+         "type": "number"
+        },
+        "selected": {
+         "type": "number"
+        }
+       },
+       "required": [
+        "allocationId",
+        "available",
+        "requested",
+        "selected"
+       ],
+       "additionalProperties": false
+      }
+     },
+     "plannedCount": {
+      "type": "number"
+     },
+     "feasible": {
+      "type": "boolean"
+     },
+     "selected": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "propertyNames": {
+        "type": "string"
+       },
+       "additionalProperties": {}
+      }
+     }
+    },
+    "required": [
+     "courseTitle",
+     "modules",
+     "lectures",
+     "topics",
+     "readyQuestions",
+     "rows",
+     "plannedCount",
+     "feasible",
+     "selected"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "publish_course": {
    "title": null,
    "description": "Publish the owned course and all its lessons together, with the course's visibility (lesson drafts with changes are published too). Lessons in a course can't be published on their own until the course is published; after that, publish_lesson also updates the live course. Only on explicit user request after review. Private visibility requires Business. Visibility restricted with teamId makes the course and its lessons team-only (internal): only members of that team can read them. Inspect lesson blockers when ok is false; the course remains unchanged. Repeated success creates another snapshot; do not automatically retry.",
@@ -15111,6 +16237,262 @@
     "additionalProperties": false
    }
   },
+  "save_course_exam_plan": {
+   "title": null,
+   "description": "Save exam title, target count and syllabus allocations with optimistic revision checking. Changes to counts or allocations clear prior selections; review the draft first.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+     },
+     "targetCount": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 100
+     },
+     "allocations": {
+      "minItems": 1,
+      "maxItems": 30,
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "id": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 60
+        },
+        "kind": {
+         "type": "string",
+         "enum": [
+          "course",
+          "module",
+          "lecture",
+          "topic"
+         ]
+        },
+        "key": {
+         "type": "string",
+         "maxLength": 100
+        },
+        "count": {
+         "type": "integer",
+         "minimum": 1,
+         "maximum": 100
+        },
+        "points": {
+         "type": "number",
+         "exclusiveMinimum": 0,
+         "maximum": 100
+        },
+        "marking": {
+         "type": "object",
+         "properties": {
+          "mode": {
+           "type": "string",
+           "enum": [
+            "exact",
+            "partial"
+           ]
+          },
+          "incorrectPenalty": {
+           "type": "number",
+           "minimum": 0
+          },
+          "blankPenalty": {
+           "type": "number",
+           "minimum": 0
+          }
+         },
+         "required": [
+          "mode",
+          "incorrectPenalty",
+          "blankPenalty"
+         ],
+         "additionalProperties": false
+        }
+       },
+       "required": [
+        "id",
+        "kind",
+        "key",
+        "count",
+        "points"
+       ],
+       "additionalProperties": false
+      }
+     }
+    },
+    "required": [
+     "draftId",
+     "expectedRevision",
+     "title",
+     "targetCount",
+     "allocations"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "revision": {
+      "type": "integer",
+      "minimum": 0
+     }
+    },
+    "required": [
+     "revision"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "save_course_exam_settings": {
+   "title": null,
+   "description": "Save exam timing, attempt limits, integrity and result-release policy with the current settings revision. Does not grant student access; requires a sealed snapshot.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "settings": {
+      "type": "object",
+      "properties": {
+       "mode": {
+        "type": "string",
+        "enum": [
+         "anytime",
+         "scheduled"
+        ]
+       },
+       "opensAt": {
+        "type": "integer"
+       },
+       "closesAt": {
+        "type": "integer"
+       },
+       "durationMinutes": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 480
+       },
+       "maxAttempts": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 3
+       },
+       "requireAllAnswers": {
+        "type": "boolean"
+       },
+       "allowEarlySubmission": {
+        "type": "boolean"
+       },
+       "timeoutAction": {
+        "type": "string",
+        "enum": [
+         "auto_submit",
+         "expire"
+        ]
+       },
+       "passingPercent": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100
+       },
+       "resultVisibility": {
+        "type": "string",
+        "enum": [
+         "immediate",
+         "after_close",
+         "manual"
+        ]
+       },
+       "showCorrectAnswers": {
+        "type": "boolean"
+       },
+       "showExplanations": {
+        "type": "boolean"
+       },
+       "integrityMode": {
+        "type": "string",
+        "enum": [
+         "off",
+         "record",
+         "warn",
+         "review"
+        ]
+       }
+      },
+      "required": [
+       "mode",
+       "durationMinutes",
+       "maxAttempts",
+       "requireAllAnswers",
+       "allowEarlySubmission",
+       "timeoutAction",
+       "passingPercent",
+       "resultVisibility",
+       "showCorrectAnswers",
+       "showExplanations"
+      ],
+      "additionalProperties": false
+     }
+    },
+    "required": [
+     "draftId",
+     "expectedRevision",
+     "settings"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "revision": {
+      "type": "integer",
+      "minimum": 0
+     }
+    },
+    "required": [
+     "revision"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "save_flashcard_set": {
    "title": null,
    "description": "Replace an owned set's draft title and complete card list with a revision check; omitted cards are removed. Read get_flashcard_set first and keep card IDs. Published versions stay unchanged until publish_flashcard_set. Archived sets must be restored first.",
@@ -15809,6 +17191,55 @@
     "additionalProperties": false
    }
   },
+  "seal_course_exam": {
+   "title": null,
+   "description": "Freeze an immutable owner-only exam snapshot from a complete exam draft. Does not assign students, publish grades or enable student entry. Requires explicit instruction to seal.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0
+     }
+    },
+    "required": [
+     "draftId",
+     "expectedRevision"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "snapshotId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "version": {
+      "type": "number"
+     }
+    },
+    "required": [
+     "snapshotId",
+     "version"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "search_curriculum_modules": {
    "title": null,
    "description": "Find public canonical modules within an explicitly selected curriculum version by natural module name, exact key or registered alias. Returns at most limit results (default 20, maximum 50); choose a version before searching. Existing active account required. No private lessons or source content.",
@@ -16438,6 +17869,75 @@
     "additionalProperties": false
    }
   },
+  "select_course_exam_questions": {
+   "title": null,
+   "description": "Replace all selected question IDs for an owned course exam draft, requiring a current draft revision and valid distinct questions. Does not publish.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "selections": {
+      "maxItems": 100,
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "questionId": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        },
+        "allocationId": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 60
+        }
+       },
+       "required": [
+        "questionId",
+        "allocationId"
+       ],
+       "additionalProperties": false
+      }
+     }
+    },
+    "required": [
+     "draftId",
+     "expectedRevision",
+     "selections"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "revision": {
+      "type": "integer",
+      "minimum": 0
+     }
+    },
+    "required": [
+     "revision"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "set_author_listing_visibility": {
    "title": null,
    "description": "Choose whether YOUR account appears in the public author carousel and directory. Only authors with public publications are listed. Hiding your listing does not unpublish content or disable direct Card links. Does not change any student's visibility.",
@@ -16515,6 +18015,54 @@
     "required": [
      "ok",
      "archived"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "set_course_exam_entry": {
+   "title": null,
+   "description": "Enable or disable student entry for an already assigned owned exam; this affects real students. Requires explicit instruction and the current audience revision. Never starts an attempt.",
+   "permission": "publish_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": true
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "expectedRevision": {
+      "type": "integer",
+      "minimum": 0
+     },
+     "enabled": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "draftId",
+     "expectedRevision",
+     "enabled"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "revision": {
+      "type": "integer",
+      "minimum": 0
+     }
+    },
+    "required": [
+     "revision"
     ],
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false
