@@ -2,7 +2,7 @@
 
 Generated from the public and administrator MCP registries with `pnpm mcp:inventory`. Administrator tools are advertised only to verified administrator connections; see [MCP permissions](mcp-permissions.md).
 
-155 public tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
+156 public tools are registered. The count describes API coverage; see [Connect](/connect) for useful workflows.
 
 - `accept_team_invitation`
 - `add_course_lesson`
@@ -75,6 +75,7 @@ Generated from the public and administrator MCP registries with `pnpm mcp:invent
 - `get_weak_area_actions`
 - `host_game`
 - `import_course_lesson`
+- `import_quiz_to_course_exam`
 - `invite_team_member`
 - `list_course_exam_candidates`
 - `list_course_exams`
