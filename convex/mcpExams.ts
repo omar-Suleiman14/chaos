@@ -115,7 +115,9 @@ export const importQuiz = internalMutation({
     const published = await ctx.db.query("formVersions")
       .withIndex("by_formId_and_version", q => q.eq("formId", form._id).eq("version", form.publishedVersion!))
       .unique();
-    if (!published || published.publishedBy !== userId)
+    // Versions store the publisher's display name, not the account ID.
+    // Source form ownership has already been verified above.
+    if (!published)
       throw new Error("NOT_FOUND: Published quiz version unavailable.");
 
     const entries = preparePublishedQuizForExam(published.definition, exam.allocations);
