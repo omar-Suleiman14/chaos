@@ -40,6 +40,11 @@ const html = await readFile(join(output, "index.html"), "utf8");
 if (!html.includes("id=\"reportDialog\"") || !html.includes("index-analytics.js")) {
   throw new Error("Index entrypoint did not contain required report and analytics integration.");
 }
+// Catch accidental UTF-8 double-decoding before corrupt text reaches the live Index.
+if (/(?:â†—|â€”|â€“|Ø§Ù„|Ù…|ðŸ)/u.test(html)) {
+  throw new Error("Index HTML contains mojibake. Restore the original UTF-8 text before deploying.");
+}
+
 console.log("Standalone Index build complete.");
 
 await buildSeo(root, output);
