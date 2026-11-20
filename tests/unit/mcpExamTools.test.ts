@@ -5,20 +5,20 @@ import { permissionForTool } from "@/lib/mcp/permissions";
 const tools = [
   "list_course_exams", "get_course_exam", "create_course_exam",
   "save_course_exam_plan", "preview_course_exam", "list_course_exam_candidates",
-  "select_course_exam_questions", "autofill_course_exam", "import_quiz_to_course_exam", "seal_course_exam",
+  "select_course_exam_questions", "autofill_course_exam", "import_quiz_to_course_exam", "list_my_exams", "check_quiz_for_exam", "create_exam_from_quiz", "seal_course_exam",
   "get_course_exam_settings", "save_course_exam_settings", "prepare_course_exam",
   "get_course_exam_audience", "assign_course_exam", "set_course_exam_entry",
   "get_course_exam_results",
 ];
 
 describe("course Exam Mode MCP registration", () => {
-  it("exposes all 17 tools on the regular Chaos connection with reviewed permissions", async () => {
+  it("exposes all 20 tools on the regular Chaos connection with reviewed permissions", async () => {
     const client = await connectMcpTestClient({
       call: null,
       resourceMetadataUrl: "https://chaos.fail/.well-known/oauth-protected-resource/mcp",
     }, { name: "exam-test", version: "1.0" });
     const advertised = (await client.listTools()).tools;
-    expect(advertised.filter(t => tools.includes(t.name))).toHaveLength(17);
+    expect(advertised.filter(t => tools.includes(t.name))).toHaveLength(20);
     for (const name of tools) {
       const tool = advertised.find(t => t.name === name)!;
       expect(tool.description?.length).toBeGreaterThan(30);
@@ -32,5 +32,8 @@ describe("course Exam Mode MCP registration", () => {
     expect(advertised.find(t => t.name === "assign_course_exam")?.annotations?.openWorldHint).toBe(true);
     expect(advertised.find(t => t.name === "create_course_exam")?.annotations?.idempotentHint).toBe(false);
     expect(advertised.find(t => t.name === "preview_course_exam")?.annotations?.readOnlyHint).toBe(true);
+    expect(permissionForTool("create_exam_from_quiz")).toBe("edit_content");
+    expect(advertised.find(t => t.name === "create_exam_from_quiz")?.annotations?.idempotentHint).toBe(false);
+    expect(advertised.find(t => t.name === "list_my_exams")?.annotations?.readOnlyHint).toBe(true);
   });
 });

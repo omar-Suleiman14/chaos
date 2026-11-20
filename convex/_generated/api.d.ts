@@ -63,6 +63,7 @@ import type * as examAudienceModel from "../examAudienceModel.js";
 import type * as examBuilder from "../examBuilder.js";
 import type * as examBuilderModel from "../examBuilderModel.js";
 import type * as examDoctorReview from "../examDoctorReview.js";
+import type * as examFromQuiz from "../examFromQuiz.js";
 import type * as examEssayGrading from "../examEssayGrading.js";
 import type * as examEssayGradingModel from "../examEssayGradingModel.js";
 import type * as examGrading from "../examGrading.js";
@@ -322,6 +323,7 @@ declare const fullApi: ApiFromModules<{
   examBuilder: typeof examBuilder;
   examBuilderModel: typeof examBuilderModel;
   examDoctorReview: typeof examDoctorReview;
+  examFromQuiz: typeof examFromQuiz;
   examEssayGrading: typeof examEssayGrading;
   examEssayGradingModel: typeof examEssayGradingModel;
   examGrading: typeof examGrading;

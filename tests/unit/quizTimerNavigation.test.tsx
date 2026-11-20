@@ -36,10 +36,31 @@ it("provides a numbered answered-status navigator for ordinary page-layout quizz
       onAnswer={(id, value) => setAnswers(current => ({ ...current, [id]: value! }))} onSubmit={vi.fn()} />;
   }
   render(<Quiz />);
-  fireEvent.click(screen.getByRole("button", { name: /Questions 0\/2/ }));
-  expect(screen.getByRole("button", { name: /Questions 1: First question\. Unanswered/ })).toBeInTheDocument();
-  fireEvent.click(screen.getByRole("button", { name: /Questions 2: Second question\. Unanswered/ }));
+  fireEvent.click(screen.getByRole("button", { name: /1\/2\s*Questions/ }));
+  expect(screen.getByRole("button", { name: /^1: First question\. Unanswered/ })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /^2: Second question\. Unanswered/ }));
   expect(Element.prototype.scrollIntoView).toHaveBeenCalled();
+});
+
+it("filters unanswered questions, flags for review and steps between questions", () => {
+  function Quiz() {
+    const [answers, setAnswers] = useState<Answers>({ q1: "a" });
+    return <FormRenderer skipCover definition={definition} language="en" answers={answers}
+      onAnswer={(id, value) => setAnswers(current => ({ ...current, [id]: value! }))} onSubmit={vi.fn()} />;
+  }
+  render(<Quiz />);
+  fireEvent.click(screen.getByRole("button", { name: "Flag for review" }));
+  expect(screen.getByRole("button", { name: "Remove flag" })).toHaveAttribute("aria-pressed", "true");
+  fireEvent.click(screen.getByRole("button", { name: /1\/2\s*Questions/ }));
+  expect(screen.getByRole("button", { name: /^1: First question\. Answered, Flagged/ })).toBeInTheDocument();
+  fireEvent.click(screen.getByRole("button", { name: /Unanswered · 1/ }));
+  expect(screen.queryByRole("button", { name: /^1: First question/ })).toBeNull();
+  expect(screen.getByRole("button", { name: /^2: Second question/ })).toBeInTheDocument();
+  fireEvent.keyDown(document, { key: "Escape" });
+  expect(screen.queryByRole("button", { name: /^2: Second question/ })).toBeNull();
+  fireEvent.click(screen.getByRole("button", { name: "Next question" }));
+  expect(screen.getByRole("button", { name: /2\/2\s*Questions/ })).toBeInTheDocument();
+  expect(screen.getByRole("button", { name: "Next question" })).toBeDisabled();
 });
 
 it("submits an entire-quiz timer once at expiry, even with unanswered questions", () => {
@@ -71,6 +92,6 @@ it("expires a question and advances to the next one without requiring an answer"
   act(() => vi.advanceTimersByTime(5300));
   expect(screen.getByRole("group", { name: /Second question/ })).toBeInTheDocument();
   expect(submit).not.toHaveBeenCalled();
-  fireEvent.click(screen.getByRole("button", { name: /Questions 0\/2/ }));
-  expect(screen.getByRole("button", { name: /Questions 1: First question/ })).toBeDisabled();
+  fireEvent.click(screen.getByRole("button", { name: /2\/2\s*Questions/ }));
+  expect(screen.getByRole("button", { name: /^1: First question/ })).toBeDisabled();
 });

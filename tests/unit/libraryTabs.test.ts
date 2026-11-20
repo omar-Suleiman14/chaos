@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { kinds, kindFromParam } from "../../lib/forms/libraryTabs";
 
 describe("library tab query parsing", () => {
-  it("resolves all five canonical tab values", () => {
+  it("resolves all canonical tab values", () => {
     for (const kind of kinds) expect(kindFromParam(kind.toLowerCase())).toBe(kind);
   });
 

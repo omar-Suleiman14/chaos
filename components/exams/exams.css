@@ -1,0 +1,22 @@
+/* Library Exams tab: builds on the Games tab layout (components/live/games.css). */
+.exams-lead { margin-top: 0; }
+.exams-settings { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px 24px; margin-top: 22px; }
+.exams-settings [role="combobox"] { width: 100%; font-weight: 400; }
+.exams-switches { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px 24px; margin-top: 24px; padding-top: 20px; border-top: 1px solid var(--ws-line); }
+.exams-switches .ws-switch { max-width: 100%; }
+.exams-switches .games-help { margin-top: 2px; font-size: 13px; }
+.exams-search { margin-top: 14px; max-width: 420px; }
+.exams-meta { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 12px; }
+.exams-stage { display: inline-flex; align-items: center; padding: 2px 8px; border-radius: 999px; font-weight: 600; border: 1px solid var(--ws-line); color: var(--on-surface); }
+.exams-stage[data-stage="ready"], .exams-stage[data-stage="assigned"] { border-color: color-mix(in srgb, var(--primary) 45%, transparent); background: color-mix(in srgb, var(--primary) 10%, transparent); }
+.exams-stage[data-stage="open"] { border-color: color-mix(in srgb, #16a34a 50%, transparent); background: color-mix(in srgb, #16a34a 12%, transparent); }
+.exams-warn { color: #b45309; font-weight: 600; }
+.exams-dialog { display: grid; gap: 16px; }
+.exams-field { display: grid; gap: 6px; font-size: 14px; font-weight: 600; }
+.exams-field input { font-weight: 400; }
+.exams-field [role="combobox"] { width: 100%; font-weight: 400; }
+.exams-readiness { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 10px; border: 1px solid var(--ws-line); background: color-mix(in srgb, var(--primary) 5%, transparent); font-size: 13px; line-height: 1.5; }
+.exams-readiness .block { flex-basis: 100%; color: var(--on-surface-variant); }
+.exams-dialog__actions { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; }
+@media (max-width: 760px) { .exams-settings { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 480px) { .exams-settings, .exams-switches { grid-template-columns: minmax(0, 1fr); } .exams-dialog__actions .ws-btn { flex: 1; } }

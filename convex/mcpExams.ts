@@ -14,6 +14,7 @@ import * as audience from "./examAudience";
 import * as results from "./examResults";
 import { preparePublishedQuizForExam } from "./examQuizImport";
 import { validateBankDraft } from "./questionBank";
+import { createExamFromQuiz, listOwnedExams, quizExamReadiness } from "./examFromQuiz";
 
 const actor = { userId: v.string() };
 const draft = { ...actor, draftId: v.id("examBuilderDrafts") };
@@ -211,5 +212,38 @@ export const teacherResults = internalQuery({
   handler: async (ctx, { userId, ...input }) => {
     await requireLearnActor(ctx, userId);
     return results.forMcpTeacherResults(ctx, input, userId);
+  },
+});
+
+/** Every exam the account owns across all courses, with release stage. No answer keys or student data. */
+export const listAll = internalQuery({
+  args: actor,
+  handler: async (ctx, { userId }) => {
+    await requireLearnActor(ctx, userId);
+    const exams = await listOwnedExams(ctx, userId);
+    return { exams: exams.map(exam => ({ ...exam,
+      editUrl: `https://chaos.fail/dashboard/courses/${exam.courseId}/exams?draft=${exam.draftId}` })) };
+  },
+});
+/** Whether an owned published quiz or form can become an exam, and how many questions carry over. */
+export const quizReadiness = internalQuery({
+  args: { ...actor, formId: v.id("forms") },
+  handler: async (ctx, { userId, formId }) => {
+    await requireLearnActor(ctx, userId);
+    const readiness = await quizExamReadiness(ctx, formId, userId);
+    return readiness ? { convertible: readiness.usable > 0, ...readiness }
+      : { convertible: false, title: null, usable: 0, skipped: 0, total: 0, mixedPoints: false,
+        reason: "Not an owned, published, graded quiz. Enable quiz mode, mark correct answers and publish first." };
+  },
+});
+/** Migrate an owned published quiz into a new complete course exam (optionally a new course). Never assigns or opens entry. */
+export const createFromQuiz = internalMutation({
+  args: { ...actor, sourceFormId: v.id("forms"), courseId: v.optional(v.id("learnCollections")),
+    newCourseTitle: v.optional(v.string()), title: v.optional(v.string()),
+    settings: v.optional(examSettings), seal: v.optional(v.boolean()) },
+  handler: async (ctx, { userId, ...input }) => {
+    await requireLearnActor(ctx, userId);
+    const result = await createExamFromQuiz(ctx, input, userId);
+    return { ...result, editUrl: `https://chaos.fail/dashboard/courses/${result.courseId}/exams?draft=${result.draftId}` };
   },
 });
