@@ -5,6 +5,7 @@ import { kinds, kindFromParam, type Kind } from "@/lib/forms/libraryTabs";
 import StateIllustration from "@/components/StateIllustration";
 import CoursesHub from "@/components/courses/CoursesHub";
 import GamesHub from "@/components/live/GamesHub";
+import ExamsHub from "@/components/exams/ExamsHub";
 import FlashcardsHub from "@/components/learn/FlashcardsHub";
 import { useLearnActions } from "@/lib/learn/data";
 import { newQuizArgs } from "@/components/live/newGame";
@@ -14,7 +15,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useMutation } from "convex/react";
 import { formIntentHandlers, useQuery } from "@/lib/convexCache";
 import { deleteFormLocally, setFormStatusLocally, useOptimisticMutation } from "@/lib/optimistic";
-import { Archive, ArrowDown, ArrowUp, ArrowUpDown, BarChart3, BookOpen, Check, ChevronDown, Copy, ExternalLink, FileUp, FileText, GraduationCap, Layers, ListChecks, LayoutGrid, LayoutTemplate, List, ListFilter, Pencil, Plus, Radio, Trash2, Trophy, X, Pin, PinOff } from "lucide-react";
+import { Archive, ArrowDown, ClipboardCheck, ArrowUp, ArrowUpDown, BarChart3, BookOpen, Check, ChevronDown, Copy, ExternalLink, FileUp, FileText, GraduationCap, Layers, ListChecks, LayoutGrid, LayoutTemplate, List, ListFilter, Pencil, Plus, Radio, Trash2, Trophy, X, Pin, PinOff } from "lucide-react";
 import { useHostLive } from "@/components/live/HostLiveButton";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
@@ -57,7 +58,7 @@ const SHARED_GROUP = "Shared with you";
 
 const copy = {
   en: {
-    kinds: { Forms: "Forms", Quizzes: "Quizzes", Flashcards: "Flashcards", Courses: "Courses", Games: "Games" },
+    kinds: { Forms: "Forms", Quizzes: "Quizzes", Flashcards: "Flashcards", Courses: "Courses", Games: "Games", Exams: "Exams" },
     status_: formStatusLabels.en,
     sort_: { count: "Most items", edited: "Last edited", name: "Name", responses: "Most responses", status: "Status" },
     colName: "Name", colStatus: "Status", colResponses: "Responses", colEdited: "Edited", colActions: "Actions",
@@ -91,7 +92,7 @@ const copy = {
     preview: "Preview", fieldsCount: (n: number) => `${n} fields`, textBlock: "Text block", options: (n: number) => `${n} options`, required: "required", createDraft: "Create draft",
   },
   ar: {
-    kinds: { Forms: "النماذج", Quizzes: "الاختبارات", Flashcards: "البطاقات", Courses: "الدورات", Games: "الألعاب" },
+    kinds: { Forms: "النماذج", Quizzes: "الاختبارات", Flashcards: "البطاقات", Courses: "الدورات", Games: "الألعاب", Exams: "الامتحانات" },
     status_: formStatusLabels.ar,
     sort_: { count: "\u0627\u0644\u0623\u0643\u062b\u0631 \u0639\u0646\u0627\u0635\u0631", edited: "آخر تعديل", name: "الاسم", responses: "الأكثر ردودًا", status: "الحالة" },
     colName: "الاسم", colStatus: "الحالة", colResponses: "الردود", colEdited: "آخر تعديل", colActions: "الإجراءات",
@@ -363,7 +364,7 @@ export default function CreatorLibrary() {
       {(close) => (
         <div className="ws-new-choices">
           {kind === "Forms" && <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(); }}><FileText size={16} /><span><strong>{t.newForm}</strong><small>{t.newFormHelp}</small></span></button>}
-          {(kind === "Quizzes" || kind === "Games") && <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(newQuizArgs(locale)); }}><ListChecks size={16} /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>}
+          {(kind === "Quizzes" || kind === "Games" || kind === "Exams") && <button type="button" role="menuitem" disabled={busy} onClick={() => { close(); void create(newQuizArgs(locale)); }}><ListChecks size={16} /><span><strong>{t.newQuiz}</strong><small>{t.newQuizHelp}</small></span></button>}
           {kind === "Flashcards" && <button type="button" role="menuitem" onClick={() => { close(); void newFlashcards(); }}><Layers size={16} /><span><strong>{t.newFlashcards}</strong><small>{t.newFlashcardsHelp}</small></span></button>}
           {kind === "Courses" && <button type="button" role="menuitem" onClick={() => { close(); void newCourse(); }}><GraduationCap size={16} /><span><strong>{t.newCourse}</strong><small>{t.newCourseHelp}</small></span></button>}
           {kind === "Forms" && <><hr /><button type="button" role="menuitem" onClick={() => { close(); setDialog("templates"); }}><LayoutTemplate size={16} /> {t.fromTemplate}</button></>}
@@ -382,8 +383,8 @@ export default function CreatorLibrary() {
 
 
       <div className="flex items-end gap-3 flex-wrap mb-6">
-        <div className="flex-1 min-w-[260px] max-sm:basis-full max-sm:min-w-0"><WsTabs tabs={kinds} value={kind} onChange={setKind} label={t.filterLibrary} labels={t.kinds} icons={{ Forms: FileText, Quizzes: GraduationCap, Flashcards: Layers, Courses: BookOpen, Games: Trophy }} /></div>
-        {kind !== "Games" && <>
+        <div className="flex-1 min-w-[260px] max-sm:basis-full max-sm:min-w-0"><WsTabs tabs={kinds} value={kind} onChange={setKind} label={t.filterLibrary} labels={t.kinds} icons={{ Forms: FileText, Quizzes: GraduationCap, Flashcards: Layers, Courses: BookOpen, Games: Trophy, Exams: ClipboardCheck }} /></div>
+        {kind !== "Games" && kind !== "Exams" && <>
         <WsMenu label={t.filterByStatus} triggerClassName={`ws-btn ws-btn--ghost ws-filter-btn ${activeStatuses.length ? "ws-filter-btn--on" : ""}`}
           trigger={<><ListFilter size={16} aria-hidden="true" /><span>{activeStatuses.length ? `${t.status} · ${activeStatuses.map((s) => t.status_[s]).join(locale === "ar" ? "، " : ", ")}` : t.status}</span></>}>
           {() => (
@@ -406,7 +407,7 @@ export default function CreatorLibrary() {
           ))}
         </WsMenu>}
         </>}
-        {kind !== "Games" && <WsMenu label={t.viewOptions} triggerClassName="ws-btn ws-btn--ghost" trigger={<>{view === "gallery" ? <LayoutGrid size={16} aria-hidden /> : <List size={16} aria-hidden />}<span>{view === "gallery" ? t.gallery : t.list}</span></>}>
+        {kind !== "Games" && kind !== "Exams" && <WsMenu label={t.viewOptions} triggerClassName="ws-btn ws-btn--ghost" trigger={<>{view === "gallery" ? <LayoutGrid size={16} aria-hidden /> : <List size={16} aria-hidden />}<span>{view === "gallery" ? t.gallery : t.list}</span></>}>
           {(close) => (
             <>
               <button type="button" role="menuitemradio" aria-checked={view === "gallery"} onClick={() => { close(); chooseView("gallery"); }}><LayoutGrid size={16} /> {t.gallery}{view === "gallery" && <Check size={15} className="ms-auto" />}</button>
@@ -416,8 +417,8 @@ export default function CreatorLibrary() {
         </WsMenu>}
       </div>
 
-      <CacheState confirmed={confirmed || kind === "Courses" || kind === "Flashcards" || kind === "Games"}>
-      {kind === "Courses" ? <CoursesHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Flashcards" ? <FlashcardsHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Games" ? <GamesHub embedded /> : loading || (visible.length === 0 && hasMore) ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
+      <CacheState confirmed={confirmed || kind === "Courses" || kind === "Flashcards" || kind === "Games" || kind === "Exams"}>
+      {kind === "Courses" ? <CoursesHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Flashcards" ? <FlashcardsHub embedded view={view} statuses={activeStatuses} sort={sort === "responses" ? "edited" : sort} dir={dir} onSort={chooseSort} /> : kind === "Games" ? <GamesHub embedded /> : kind === "Exams" ? <ExamsHub embedded /> : loading || (visible.length === 0 && hasMore) ? <LibrarySkeleton label={t.loadingLibrary} view={view} /> : visible.length === 0 ? (
         <div className="ws-empty ws-page">
           <StateIllustration variant={statuses.length ? "search" : "create"} />
           <h2 className="text-xl font-semibold">{statuses.length ? t.nothingMatches : t.createFirst}</h2>

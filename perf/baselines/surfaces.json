@@ -264,21 +264,21 @@
       "unit": "count"
     },
     "mcp.admin.listToolsBytes": {
-      "budget": 357376,
+      "budget": 362383,
       "unit": "bytes",
       "raised": {
-        "from": 330949,
-        "reason": "Sixteen explicitly requested, owner-scoped Course Exam Mode tools now join the existing Chaos MCP registry. The larger discovery payload is measured and budgeted; question-bank answers, attempts, releases and grades retain existing access rules. No database, rendering or latency budgets are increased.",
-        "at": "2026-11-18"
+        "from": 357376,
+        "reason": "Three new public exam MCP tools: list_my_exams, check_quiz_for_exam, create_exam_from_quiz (PR 430).",
+        "at": "2026-11-20"
       }
     },
     "mcp.admin.tools": {
-      "budget": 176,
+      "budget": 179,
       "unit": "count",
       "raised": {
-        "from": 175,
-        "reason": "Add one owner-only, validated import action so published form quizzes can populate a real Course Exam Mode question bank without exposing answer keys or adding any student-facing reads.",
-        "at": "2026-11-18"
+        "from": 176,
+        "reason": "Three new public exam MCP tools: list_my_exams, check_quiz_for_exam, create_exam_from_quiz (PR 430).",
+        "at": "2026-11-20"
       }
     },
     "mcp.getLesson.bytesRead": {
@@ -311,12 +311,12 @@
       }
     },
     "mcp.listToolsBytes": {
-      "budget": 327680,
+      "budget": 333177,
       "unit": "bytes",
       "raised": {
-        "from": 301743,
-        "reason": "Sixteen explicitly requested, owner-scoped Course Exam Mode tools now join the existing Chaos MCP registry. The larger discovery payload is measured and budgeted; question-bank answers, attempts, releases and grades retain existing access rules. No database, rendering or latency budgets are increased.",
-        "at": "2026-11-18"
+        "from": 327680,
+        "reason": "Three new public exam MCP tools: list_my_exams, check_quiz_for_exam, create_exam_from_quiz (PR 430).",
+        "at": "2026-11-20"
       }
     },
     "mcp.searchForms.bytesRead": {
@@ -350,12 +350,12 @@
       "unit": "count"
     },
     "mcp.tools": {
-      "budget": 156,
+      "budget": 159,
       "unit": "count",
       "raised": {
-        "from": 155,
-        "reason": "Add one owner-only, validated import action so published form quizzes can populate a real Course Exam Mode question bank without exposing answer keys or adding any student-facing reads.",
-        "at": "2026-11-18"
+        "from": 156,
+        "reason": "Three new public exam MCP tools: list_my_exams, check_quiz_for_exam, create_exam_from_quiz (PR 430).",
+        "at": "2026-11-20"
       }
     },
     "quizzes.respondent.bytesRead": {

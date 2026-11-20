@@ -1647,6 +1647,70 @@
     "additionalProperties": false
    }
   },
+  "check_quiz_for_exam": {
+   "title": null,
+   "description": "Check whether an owned published quiz (or form) can be migrated into a course exam: how many questions carry over and how many are skipped (written, image, branching or unkeyed questions). Read-only; call before create_exam_from_quiz.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "formId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     }
+    },
+    "required": [
+     "formId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "convertible": {
+      "type": "boolean"
+     },
+     "title": {
+      "type": [
+       "string",
+       "null"
+      ]
+     },
+     "usable": {
+      "type": "number"
+     },
+     "skipped": {
+      "type": "number"
+     },
+     "total": {
+      "type": "number"
+     },
+     "mixedPoints": {
+      "type": "boolean"
+     },
+     "reason": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "convertible",
+     "title",
+     "usable",
+     "skipped",
+     "total",
+     "mixedPoints"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
   "checkpoint_study_lesson": {
    "title": null,
    "description": "Save or replace one bounded teaching checkpoint (210 KB maximum). Stable key + identical value is safe to retry, even with an old revision. Otherwise use latest expectedRevision. Reading is a client attestation of complete page/slide/section and visual inspection, never automatic extraction. Section concepts use local descriptive names; block conceptIds must be real Chaos concept IDs or empty. Record original source questions first, then independently solve with citations. Original IDs, wording, options, attribution and order must survive unchanged. Supplementary questions omit originalId. Review records client-verified diagrams/media and warnings. No publication.",
@@ -3014,6 +3078,175 @@
     "required": [
      "draftId",
      "revision",
+     "editUrl"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "create_exam_from_quiz": {
+   "title": null,
+   "description": "Migrate an owned published quiz into a new complete Course Exam Mode exam in one step: copies its choice questions and answer keys privately into the course question bank, builds the exam, and by default seals it and saves the given settings so it is ready to assign. Omit courseId to create a new course for it (newCourseTitle). Forms must be graded quizzes with marked answers. Never changes the quiz, assigns students or opens entry. Not safe to retry after an uncertain success; check list_my_exams first.",
+   "permission": "edit_content",
+   "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {
+     "sourceFormId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "courseId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "newCourseTitle": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+     },
+     "title": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 200
+     },
+     "settings": {
+      "type": "object",
+      "properties": {
+       "mode": {
+        "type": "string",
+        "enum": [
+         "anytime",
+         "scheduled"
+        ]
+       },
+       "opensAt": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+       },
+       "closesAt": {
+        "type": "integer",
+        "minimum": -9007199254740991,
+        "maximum": 9007199254740991
+       },
+       "durationMinutes": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 480
+       },
+       "maxAttempts": {
+        "type": "integer",
+        "minimum": 1,
+        "maximum": 3
+       },
+       "requireAllAnswers": {
+        "type": "boolean"
+       },
+       "allowEarlySubmission": {
+        "type": "boolean"
+       },
+       "timeoutAction": {
+        "type": "string",
+        "enum": [
+         "auto_submit",
+         "expire"
+        ]
+       },
+       "passingPercent": {
+        "type": "number",
+        "minimum": 0,
+        "maximum": 100
+       },
+       "resultVisibility": {
+        "type": "string",
+        "enum": [
+         "immediate",
+         "after_close",
+         "manual"
+        ]
+       },
+       "showCorrectAnswers": {
+        "type": "boolean"
+       },
+       "showExplanations": {
+        "type": "boolean"
+       },
+       "integrityMode": {
+        "type": "string",
+        "enum": [
+         "off",
+         "record",
+         "warn",
+         "review"
+        ]
+       }
+      },
+      "required": [
+       "mode",
+       "durationMinutes",
+       "maxAttempts",
+       "requireAllAnswers",
+       "allowEarlySubmission",
+       "timeoutAction",
+       "passingPercent",
+       "resultVisibility",
+       "showCorrectAnswers",
+       "showExplanations"
+      ]
+     },
+     "seal": {
+      "type": "boolean"
+     }
+    },
+    "required": [
+     "sourceFormId"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "draftId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "courseId": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 100
+     },
+     "imported": {
+      "type": "number"
+     },
+     "skipped": {
+      "type": "number"
+     },
+     "mixedPoints": {
+      "type": "boolean"
+     },
+     "sealed": {
+      "type": "boolean"
+     },
+     "editUrl": {
+      "type": "string"
+     }
+    },
+    "required": [
+     "draftId",
+     "courseId",
+     "imported",
+     "skipped",
+     "mixedPoints",
+     "sealed",
      "editUrl"
     ],
     "$schema": "http://json-schema.org/draft-07/schema#",
@@ -13784,6 +14017,127 @@
     "required": [
      "items",
      "nextCursor"
+    ],
+    "$schema": "http://json-schema.org/draft-07/schema#",
+    "additionalProperties": false
+   }
+  },
+  "list_my_exams": {
+   "title": null,
+   "description": "List every Course Exam Mode exam the connected account owns, across all courses, with its stage (draft, sealed, ready, assigned, open), question count, time limit and edit URL. Never exposes answer keys or student data.",
+   "permission": "read_content",
+   "annotations": {
+    "readOnlyHint": true,
+    "destructiveHint": false,
+    "idempotentHint": true,
+    "openWorldHint": false
+   },
+   "inputSchema": {
+    "type": "object",
+    "properties": {},
+    "$schema": "http://json-schema.org/draft-07/schema#"
+   },
+   "outputSchema": {
+    "type": "object",
+    "properties": {
+     "exams": {
+      "type": "array",
+      "items": {
+       "type": "object",
+       "properties": {
+        "draftId": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        },
+        "title": {
+         "type": "string"
+        },
+        "courseId": {
+         "type": "string",
+         "minLength": 1,
+         "maxLength": 100
+        },
+        "courseTitle": {
+         "type": "string"
+        },
+        "courseArchived": {
+         "type": "boolean"
+        },
+        "targetCount": {
+         "type": "number"
+        },
+        "selectedCount": {
+         "type": "number"
+        },
+        "updatedAt": {
+         "type": "number"
+        },
+        "stage": {
+         "type": "string",
+         "enum": [
+          "draft",
+          "sealed",
+          "ready",
+          "assigned",
+          "open"
+         ]
+        },
+        "sealedVersion": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "sealedIsCurrent": {
+         "type": "boolean"
+        },
+        "questionCount": {
+         "type": "number"
+        },
+        "totalPoints": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "durationMinutes": {
+         "type": [
+          "number",
+          "null"
+         ]
+        },
+        "settingsSaved": {
+         "type": "boolean"
+        },
+        "editUrl": {
+         "type": "string"
+        }
+       },
+       "required": [
+        "draftId",
+        "title",
+        "courseId",
+        "courseTitle",
+        "courseArchived",
+        "targetCount",
+        "selectedCount",
+        "updatedAt",
+        "stage",
+        "sealedVersion",
+        "sealedIsCurrent",
+        "questionCount",
+        "totalPoints",
+        "durationMinutes",
+        "settingsSaved",
+        "editUrl"
+       ],
+       "additionalProperties": false
+      }
+     }
+    },
+    "required": [
+     "exams"
     ],
     "$schema": "http://json-schema.org/draft-07/schema#",
     "additionalProperties": false

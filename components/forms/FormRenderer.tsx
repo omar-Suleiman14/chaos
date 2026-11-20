@@ -8,7 +8,7 @@ import { buildSteps, type Step } from "@/lib/forms/formSteps";
 
 import { ChaosSelect } from "@/components/workspace/ChaosSelect";
 import { useCallback, useEffect, useId, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronUp, Clock, CornerDownLeft, Star, Upload, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Check, ChevronDown, ChevronLeft, ChevronRight, ChevronUp, Clock, CornerDownLeft, Flag, SkipForward, Star, Upload, X } from "lucide-react";
 import "./formThemes.css";
 import {
   answerError, isAnswerable, isEmptyAnswer, isRtl, localizeEnding, localizeField, localizedMeta, pipeText, visibleFieldIds,
@@ -74,6 +74,7 @@ const ui = {
     clear: "Clear form", clearConfirm: "This will remove your answers from all questions. Clear the form?",
     of: (a: number, b: number) => `${a} of ${b}`, chooseMany: "Choose as many as you like", score: "Your score", fileHint: "PDF, image, text, CSV, Word or Excel · up to 10 MB",
     questionNavigator: "Questions", timerLeft: "Time left", timedOut: "Time is up", answered: "Answered", unanswered: "Unanswered",
+    flagged: "Flagged", flag: "Flag for review", unflag: "Remove flag", all: "All", nextUnanswered: "Next unanswered", allAnswered: "Every question is answered.", noneFlagged: "No flagged questions.", previousQuestion: "Previous question", nextQuestion: "Next question", current: "Current", closeNavigator: "Close question list",
     clearAnswer: "Clear answer", clearRating: (label: string) => `Clear answer for ${label}`, enterNumber: "Enter a number.", scaleValue: (n: number, lo: number, hi: number) => `${n}, from ${lo} to ${hi}`,
   },
   ar: {
@@ -84,6 +85,7 @@ const ui = {
     clear: "مسح النموذج", clearConfirm: "سيؤدي هذا إلى حذف إجاباتك من جميع الأسئلة. هل تريد مسح النموذج؟",
     of: (a: number, b: number) => `${a} من ${b}`, chooseMany: "اختر ما تشاء", score: "درجتك", fileHint: "PDF أو صورة أو نص أو CSV أو Word أو Excel · حتى 10 ميغابايت",
     questionNavigator: "الأسئلة", timerLeft: "الوقت المتبقي", timedOut: "انتهى الوقت", answered: "تمت الإجابة", unanswered: "لم تتم الإجابة",
+    flagged: "محدد", flag: "حدد للمراجعة", unflag: "إزالة التحديد", all: "الكل", nextUnanswered: "السؤال غير المجاب التالي", allAnswered: "تمت الإجابة عن كل الأسئلة.", noneFlagged: "لا أسئلة محددة.", previousQuestion: "السؤال السابق", nextQuestion: "السؤال التالي", current: "الحالي", closeNavigator: "إغلاق قائمة الأسئلة",
     clearAnswer: "امسح الإجابة", clearRating: (label: string) => `امسح الإجابة عن ${label}`, enterNumber: "أدخل رقمًا.", scaleValue: (n: number, lo: number, hi: number) => `${n}، من ${lo} إلى ${hi}`,
   },
 };
@@ -231,8 +233,6 @@ export default function FormRenderer(props: FormRendererProps) {
   const cover = themeCover(effectiveDefinition);
   const [started, setStarted] = useState(props.skipCover || cover === "none");
   const [focusSavedField, setFocusSavedField] = useState(false);
-  const [navigatorOpen, setNavigatorOpen] = useState(false);
-  const navigatorId = useId();
   const mode = effectiveDefinition.presentation;
   const [now, setNow] = useState(0);
   const timerReady = started && !!props.timerStartedAt && !!props.timerSeconds && props.timerMode !== "none";
@@ -303,38 +303,11 @@ export default function FormRenderer(props: FormRendererProps) {
   // Flatten every answerable field, including multiple questions in one section.
   // The step index is separate from its displayed question number.
   const questionSteps = flow.steps.flatMap((step, stepIndex) => step.fields.filter(isAnswerable).map(field => ({ id: field.id, stepIndex, title: field.label })));
-  const answeredCount = questionSteps.filter(q => q.id && !isEmptyAnswer(props.answers[q.id])).length;
+  // Quizzes always get the navigator; longer forms get it too so people can jump around.
+  const showNavigator = questionSteps.length > 0 && (!!props.definition.quiz?.enabled || questionSteps.length >= 4);
   return (
     <div ref={rootRef} dir={isRtl(props.language) ? "rtl" : "ltr"} lang={props.language} className={`form-root form-mode-${mode}`}>
-      {started && props.definition.quiz?.enabled && <nav className="form-quiz-tools" aria-label={flow.t.questionNavigator}>
-        {props.timerMode && props.timerMode !== "none" && <span className="form-quiz-clock" data-urgent={remaining !== null && remaining <= 10} role="timer" aria-label={flow.t.timerLeft}>
-          <Clock size={16} aria-hidden="true" />
-          {remaining === null ? "…" : `${Math.floor(remaining / 60).toString().padStart(2, "0")}:${(remaining % 60).toString().padStart(2, "0")}`}
-        </span>}
-        <button type="button" className="form-quiz-nav-trigger" aria-expanded={navigatorOpen} aria-controls={navigatorId} onClick={() => setNavigatorOpen(v => !v)}>
-          {flow.t.questionNavigator} <span className="tabular-nums">{answeredCount}/{questionSteps.length}</span><ChevronDown size={15} aria-hidden="true" />
-        </button>
-        {navigatorOpen && <div id={navigatorId} className="form-quiz-palette">
-          <div className="form-quiz-grid">
-            {questionSteps.map((q, i) => {
-              const answered = !isEmptyAnswer(props.answers[q.id]);
-              const timedOut = !!props.expiredQuestionIds?.includes(q.id);
-              const current = flow.index === q.stepIndex && flow.steps[q.stepIndex]?.fields.length === 1;
-              return <button key={q.id} type="button" disabled={timedOut} data-answered={answered} data-current={current} aria-current={current ? "step" : undefined} title={q.title} aria-label={`${flow.t.questionNavigator} ${i + 1}: ${q.title}. ${answered ? flow.t.answered : flow.t.unanswered}`} onClick={() => {
-                const focusTarget = () => {
-                  const target = Array.from(rootRef.current?.querySelectorAll<HTMLElement>("[data-field-id]") ?? []).find(el => el.dataset.fieldId === q.id && !el.closest("[inert]"));
-                  target?.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
-                  target?.focus({ preventScroll: true });
-                };
-                if (flow.index !== q.stepIndex) { flow.goTo(q.stepIndex); requestAnimationFrame(focusTarget); }
-                else focusTarget();
-                props.onProgress?.(q.id);
-                setNavigatorOpen(false);
-              }}>{i + 1}</button>;
-            })}
-          </div>
-        </div>}
-      </nav>}
+      {started && showNavigator && <QuestionNavigator flow={flow} props={props} rootRef={rootRef} questions={questionSteps} remaining={remaining} quiz={!!props.definition.quiz?.enabled} />}
       {!started ? (
         <WelcomeScreen def={props.definition} language={props.language} resuming={!!props.resuming} onStart={start} />
       ) : mode === "conversational" ? (
@@ -491,6 +464,132 @@ function WelcomeScreen({ def, language, resuming, onStart }: { def: FormDefiniti
 }
 
 // ── Classic and sections ──────────────────────────────────────────────────
+type NavQuestion = { id: string; stepIndex: number; title: string };
+type NavFilter = "all" | "open" | "flagged";
+
+/**
+ * Sticky question toolbar for quizzes and longer forms: timer, previous/next,
+ * answered progress and a question palette with filters and review flags.
+ * Jumping never validates, so people may leave a question and come back.
+ */
+function QuestionNavigator({ flow, props, rootRef, questions, remaining, quiz }: {
+  flow: Flow; props: FormRendererProps; rootRef: React.RefObject<HTMLDivElement | null>;
+  questions: NavQuestion[]; remaining: number | null; quiz: boolean;
+}) {
+  const t = flow.t;
+  const [open, setOpen] = useState(false);
+  const [filter, setFilter] = useState<NavFilter>("all");
+  const [flags, setFlags] = useState<Set<string>>(() => new Set());
+  const [focused, setFocused] = useState<string | null>(null);
+  const panelId = useId();
+  const wrapRef = useRef<HTMLElement>(null);
+  const triggerRef = useRef<HTMLButtonElement>(null);
+  const answered = (id: string) => !isEmptyAnswer(props.answers[id]);
+  const expired = (id: string) => !!props.expiredQuestionIds?.includes(id);
+  const answeredCount = questions.filter(q => answered(q.id)).length;
+  const stepFields = new Set(flow.step?.fields.map(f => f.id));
+  // On a page with several questions, the one being worked on is the last focused one.
+  const currentId = (focused && stepFields.has(focused) ? focused : null) ?? questions.find(q => q.stepIndex === flow.index)?.id;
+  const currentNumber = Math.max(0, questions.findIndex(q => q.id === currentId));
+
+  useEffect(() => {
+    const root = rootRef.current;
+    if (!root) return;
+    const onFocus = (event: FocusEvent) => {
+      const id = (event.target as HTMLElement | null)?.closest<HTMLElement>("[data-field-id]")?.dataset.fieldId;
+      if (id) setFocused(id);
+    };
+    root.addEventListener("focusin", onFocus);
+    return () => root.removeEventListener("focusin", onFocus);
+  }, [rootRef]);
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") { setOpen(false); triggerRef.current?.focus(); } };
+    const onPointer = (event: PointerEvent) => { if (!wrapRef.current?.contains(event.target as Node)) setOpen(false); };
+    document.addEventListener("keydown", onKey);
+    document.addEventListener("pointerdown", onPointer);
+    return () => { document.removeEventListener("keydown", onKey); document.removeEventListener("pointerdown", onPointer); };
+  }, [open]);
+
+  const jump = (q: NavQuestion | undefined) => {
+    if (!q || expired(q.id)) return;
+    const focusTarget = () => {
+      const target = Array.from(rootRef.current?.querySelectorAll<HTMLElement>("[data-field-id]") ?? []).find(el => el.dataset.fieldId === q.id && !el.closest("[inert]"));
+      target?.scrollIntoView?.({ behavior: window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth", block: "center" });
+      target?.focus({ preventScroll: true });
+    };
+    setFocused(q.id);
+    if (flow.index !== q.stepIndex) { flow.goTo(q.stepIndex); requestAnimationFrame(() => requestAnimationFrame(focusTarget)); }
+    else focusTarget();
+    props.onProgress?.(q.id);
+    setOpen(false);
+  };
+  const step = (delta: number) => {
+    for (let i = currentNumber + delta; i >= 0 && i < questions.length; i += delta)
+      if (!expired(questions[i].id)) { jump(questions[i]); return; }
+  };
+  const nextOpen = () => {
+    const ordered = [...questions.slice(currentNumber + 1), ...questions.slice(0, currentNumber + 1)];
+    jump(ordered.find(q => !answered(q.id) && !expired(q.id)));
+  };
+  const toggleFlag = () => {
+    if (!currentId) return;
+    setFlags(previous => { const next = new Set(previous); if (next.has(currentId)) next.delete(currentId); else next.add(currentId); return next; });
+  };
+  const shown = questions.map((q, number) => ({ q, number })).filter(({ q }) =>
+    filter === "all" || (filter === "open" ? !answered(q.id) : flags.has(q.id)));
+  const allDone = answeredCount === questions.length;
+  const flagged = !!currentId && flags.has(currentId);
+  const Prev = isRtl(props.language) ? ChevronRight : ChevronLeft;
+  const Next = isRtl(props.language) ? ChevronLeft : ChevronRight;
+
+  return <nav ref={wrapRef} className="form-quiz-tools" aria-label={t.questionNavigator}>
+    <div className="form-quiz-tools__row">
+      {props.timerMode && props.timerMode !== "none" && <span className="form-quiz-clock" data-urgent={remaining !== null && remaining <= 10} role="timer" aria-label={t.timerLeft}>
+        <Clock size={16} aria-hidden="true" />
+        {remaining === null ? "…" : `${Math.floor(remaining / 60).toString().padStart(2, "0")}:${(remaining % 60).toString().padStart(2, "0")}`}
+      </span>}
+      <div className="form-quiz-stepper">
+        <button type="button" className="form-quiz-icon" onClick={() => step(-1)} disabled={currentNumber === 0 || props.submitting} aria-label={t.previousQuestion} title={t.previousQuestion}><Prev size={17} aria-hidden="true" /></button>
+        <button ref={triggerRef} type="button" className="form-quiz-nav-trigger" aria-expanded={open} aria-controls={panelId} onClick={() => setOpen(v => !v)}>
+          <span className="tabular-nums">{currentNumber + 1}<small>/{questions.length}</small></span>
+          <span className="form-quiz-nav-trigger__label">{t.questionNavigator}</span>
+          <ChevronDown size={15} aria-hidden="true" />
+        </button>
+        <button type="button" className="form-quiz-icon" onClick={() => step(1)} disabled={currentNumber >= questions.length - 1 || props.submitting} aria-label={t.nextQuestion} title={t.nextQuestion}><Next size={17} aria-hidden="true" /></button>
+      </div>
+      {quiz && <button type="button" className="form-quiz-flag" aria-pressed={flagged} onClick={toggleFlag} title={flagged ? t.unflag : t.flag}>
+        <Flag size={15} aria-hidden="true" fill={flagged ? "currentColor" : "none"} /><span>{flagged ? t.unflag : t.flag}</span>
+      </button>}
+    </div>
+    <div className="form-quiz-meter" aria-hidden="true"><span style={{ transform: `scaleX(${questions.length ? answeredCount / questions.length : 0})` }} /></div>
+    {open && <div id={panelId} className="form-quiz-palette">
+      <div className="form-quiz-palette__head">
+        <fieldset className="form-quiz-filters" aria-label={t.questionNavigator}>
+          {(["all", "open", ...(quiz ? ["flagged"] as const : [])] as const).map(f => <button key={f} type="button" aria-pressed={filter === f} onClick={() => setFilter(f)}>
+            {f === "all" ? `${t.all} · ${questions.length}` : f === "open" ? `${t.unanswered} · ${questions.length - answeredCount}` : `${t.flagged} · ${flags.size}`}
+          </button>)}
+        </fieldset>
+        <button type="button" className="form-quiz-icon" onClick={() => { setOpen(false); triggerRef.current?.focus(); }} aria-label={t.closeNavigator}><X size={16} aria-hidden="true" /></button>
+      </div>
+      {shown.length ? <div className="form-quiz-grid">
+        {shown.map(({ q, number }) => {
+          const isAnswered = answered(q.id);
+          const isCurrent = q.id === currentId;
+          return <button key={q.id} type="button" disabled={expired(q.id)} data-answered={isAnswered} data-flagged={flags.has(q.id)} data-current={isCurrent}
+            aria-current={isCurrent ? "step" : undefined} title={q.title}
+            aria-label={`${number + 1}: ${q.title}. ${isAnswered ? t.answered : t.unanswered}${flags.has(q.id) ? `, ${t.flagged}` : ""}`}
+            onClick={() => jump(q)}>{number + 1}{flags.has(q.id) && <Flag size={9} aria-hidden="true" fill="currentColor" />}</button>;
+        })}
+      </div> : <p className="form-quiz-empty">{filter === "open" ? t.allAnswered : t.noneFlagged}</p>}
+      <div className="form-quiz-palette__foot">
+        <span className="form-quiz-legend"><i data-k="answered" />{t.answered} <b>{answeredCount}</b><i data-k="open" />{t.unanswered} <b>{questions.length - answeredCount}</b></span>
+        {!allDone && <button type="button" className="form-quiz-next-open" onClick={nextOpen}><SkipForward size={14} aria-hidden="true" />{t.nextUnanswered}</button>}
+      </div>
+    </div>}
+  </nav>;
+}
+
 /* oxlint-disable jsx-a11y/prefer-tag-over-role -- The labelled progress indicator uses custom nested visual tracks while exposing current, minimum and maximum values. */
 function PagedFlow({ flow, props, showHeader }: { flow: Flow; props: FormRendererProps; showHeader: boolean }) {
   const { def, t, language, answers, steps, step, index, last, direction } = flow;

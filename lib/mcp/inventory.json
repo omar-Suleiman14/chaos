@@ -1,5 +1,5 @@
 {
-  "count": 156,
+  "count": 159,
   "names": [
     "accept_team_invitation",
     "add_course_lesson",
@@ -13,9 +13,11 @@
     "build_study_lesson",
     "change_form_collaborator",
     "change_team_member_role",
+    "check_quiz_for_exam",
     "checkpoint_study_lesson",
     "create_course",
     "create_course_exam",
+    "create_exam_from_quiz",
     "create_flashcard_set",
     "create_folder",
     "create_form",
@@ -90,6 +92,7 @@
     "list_lesson_curriculum_mappings",
     "list_lesson_versions",
     "list_lessons",
+    "list_my_exams",
     "list_my_students",
     "list_notifications",
     "list_public_authors",

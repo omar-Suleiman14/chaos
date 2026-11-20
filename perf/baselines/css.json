@@ -11,12 +11,12 @@
       }
     },
     "source.bytes": {
-      "budget": 505850,
+      "budget": 524816,
       "unit": "bytes",
       "raised": {
-        "from": 497519,
-        "reason": "Four new learner controls add responsive outline, reader and timed-exam styles; existing rules retained, explicit ~1.7% CSS ceiling increase is reviewed.",
-        "at": "2026-11-11"
+        "from": 505850,
+        "reason": "New exam player, Library Exams tab and quiz/form question navigator stylesheets (PR 430); costly patterns (blur, :has, infinite animations, layout transitions) kept within budget.",
+        "at": "2026-11-20"
       }
     },
     "source.deepSelectors": {
@@ -78,21 +78,21 @@
       }
     },
     "source.rules": {
-      "budget": 3869,
+      "budget": 4023,
       "unit": "count",
       "raised": {
-        "from": 3792,
-        "reason": "Four new learner controls add responsive outline, reader and timed-exam styles; existing rules retained, explicit ~1.7% CSS ceiling increase is reviewed.",
-        "at": "2026-11-11"
+        "from": 3869,
+        "reason": "New exam player, Library Exams tab and quiz/form question navigator stylesheets (PR 430); costly patterns (blur, :has, infinite animations, layout transitions) kept within budget.",
+        "at": "2026-11-20"
       }
     },
     "source.selectors": {
-      "budget": 4279,
+      "budget": 4447,
       "unit": "count",
       "raised": {
-        "from": 4194,
-        "reason": "Four new learner controls add responsive outline, reader and timed-exam styles; existing rules retained, explicit ~1.7% CSS ceiling increase is reviewed.",
-        "at": "2026-11-11"
+        "from": 4279,
+        "reason": "New exam player, Library Exams tab and quiz/form question navigator stylesheets (PR 430); costly patterns (blur, :has, infinite animations, layout transitions) kept within budget.",
+        "at": "2026-11-20"
       }
     },
     "source.transitionAll": {

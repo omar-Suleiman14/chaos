@@ -4,7 +4,7 @@ import { use, useEffect, useState } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useConvexAuth, useMutation, useQuery } from "convex/react";
-import { ArrowLeft, Check, ChevronLeft, ChevronRight, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
+import { ArrowLeft, BarChart3, Check, ChevronLeft, ChevronRight, ClipboardCheck, PenLine, Plus, RotateCcw, Save, Trash2 } from "lucide-react";
 import { api } from "@/convex/_generated/api";
 import type { Id } from "@/convex/_generated/dataModel";
 import { useLocale } from "@/lib/i18n";
@@ -200,25 +200,42 @@ export default function CourseExamBuilder({
   if (!course || !course.isOwner) return <div className="ws-empty">{t.denied}</div>;
 
   return <main className="cb cb-page mx-auto max-w-5xl space-y-5" dir={ar ? "rtl" : "ltr"}>
-    <header className="flex flex-wrap items-center gap-3">
+    <header className="flex flex-wrap items-center gap-2">
       <Link href={"/dashboard/courses/" + id} className="ws-btn ws-btn--ghost ws-btn--sm">
-        <ArrowLeft size={16} aria-hidden /> {t.back}
+        <ArrowLeft size={16} aria-hidden className="rtl:rotate-180" /> {t.back}
       </Link>
-      <span className="cb-status">{t.status}</span>
+      <Link href="/dashboard?tab=exams" className="ws-btn ws-btn--ghost ws-btn--sm">
+        <ClipboardCheck size={16} aria-hidden /> {ar ? "كل الامتحانات" : "All exams"}
+      </Link>
+      <span className="cb-status ms-auto">{t.status}</span>
     </header>
-    {draftId && <Link href={"/dashboard/courses/" + id + "/exams/results?draft=" + draftId}
-      className="ws-btn ws-btn--ghost ws-btn--sm w-fit">{ar ? "نتائج الطلاب" : "Student results"}</Link>}
-    <Link href={"/dashboard/courses/" + id + "/questions"} className="ws-btn ws-btn--ghost ws-btn--sm">
-      <Plus size={16} aria-hidden />{ar ? "تأليف أسئلة وحالات إكلينيكية" : "Author questions & clinical cases"}
-    </Link>
+    <div className="flex flex-wrap gap-2">
+      {draftId && <Link href={"/dashboard/courses/" + id + "/exams/results?draft=" + draftId}
+        className="ws-btn ws-btn--ghost ws-btn--sm"><BarChart3 size={16} aria-hidden />{ar ? "نتائج الطلاب" : "Student results"}</Link>}
+      {draftId && <Link href={"/dashboard/courses/" + id + "/exams/grading?draft=" + draftId}
+        className="ws-btn ws-btn--ghost ws-btn--sm"><PenLine size={16} aria-hidden />{ar ? "التصحيح" : "Grading"}</Link>}
+      <Link href={"/dashboard/courses/" + id + "/questions"} className="ws-btn ws-btn--ghost ws-btn--sm">
+        <Plus size={16} aria-hidden />{ar ? "تأليف أسئلة وحالات إكلينيكية" : "Author questions & clinical cases"}
+      </Link>
+    </div>
     <div className="space-y-2">
       <h1 className="ws-page-title">{t.title}</h1>
       <p className="ws-page-subtitle">{t.desc}</p>
     </div>
+    {draftId && draft && <nav aria-label={ar ? "خطوات الامتحان" : "Exam steps"} className="exam-steps">
+      {([["exam-config-title", ar ? "المنهج" : "Plan"], ["exam-questions-title", ar ? "الأسئلة" : "Questions"],
+        ["exam-settings-title", ar ? "الإعدادات" : "Settings"], ["exam-audience-title", ar ? "التكليف" : "Assign"],
+        ["monitor-heading", ar ? "المتابعة" : "Monitor"]] as const).map(([target, label], i) =>
+        <a key={target} href={"#" + target} onClick={e => { e.preventDefault(); document.getElementById(target)?.scrollIntoView({ behavior: "smooth", block: "start" }); }}>
+          <span aria-hidden="true">{i + 1}</span>{label}</a>)}
+    </nav>}
     {!draftId ? <>
-      <button className="ws-btn ws-btn--primary" type="button" disabled={busy} onClick={makeDraft}>
-        <Plus size={16} aria-hidden /> {busy ? t.creating : t.new}
-      </button>
+      <div className="flex flex-wrap gap-2">
+        <button className="ws-btn ws-btn--primary" type="button" disabled={busy} onClick={makeDraft}>
+          <Plus size={16} aria-hidden /> {busy ? t.creating : t.new}
+        </button>
+        <Link className="ws-btn" href="/dashboard?tab=exams"><ClipboardCheck size={16} aria-hidden />{ar ? "أنشئ امتحانًا من اختبار" : "Make an exam from a quiz"}</Link>
+      </div>
       {!draftList?.length && <section className="cb-section"><p className="cb-note">{t.empty}</p></section>}
       {!!draftList?.length && <section className="cb-section grid gap-3">
         {draftList.map(d => <Link key={d._id} href={"/dashboard/courses/" + id + "/exams?draft=" + d._id}
