@@ -199,8 +199,8 @@ export default function ExamsHub({ embedded = false }: { embedded?: boolean }) {
   </div>;
 }
 
-/** Choose a course and title, then create a ready exam from a published quiz. Also used from a course's Exams page. */
-export function MakeExamDialog({ quiz, defaults, courseId: fixedCourse, onClose }: {
+/** Choose a course and title, then create a ready exam from a published quiz. */
+function MakeExamDialog({ quiz, defaults, courseId: fixedCourse, onClose }: {
   quiz: Quiz; defaults?: ExamSettings; courseId?: Id<"learnCollections">; onClose: () => void;
 }) {
   const t = useCopy(copy);
