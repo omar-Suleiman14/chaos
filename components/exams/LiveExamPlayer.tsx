@@ -293,12 +293,12 @@ export function LiveExamPlayer({ attemptId, locale }: { attemptId: Id<"examAttem
       </div>
       <div className="xp-timer" data-urgency={urgency} role="timer" aria-label={t.time}>
         <Clock size={16} aria-hidden="true" /><span>{formatClock(remaining)}</span>
-        <span className="xp-timer__track" aria-hidden="true"><span style={{ width: `${Math.max(0, Math.min(1, fraction)) * 100}%` }} /></span>
+        <span className="xp-timer__track" aria-hidden="true"><span style={{ transform: `scaleX(${Math.max(0, Math.min(1, fraction))})` }} /></span>
       </div>
       <button type="button" className="ws-btn ws-btn--primary xp-bar__submit" disabled={submitBlocked} onClick={startReview}
         title={blockedReason || undefined}><Send size={15} aria-hidden="true" />{t.submit}</button>
     </header>
-    <div className="xp-progress" aria-hidden="true"><span style={{ width: `${questions.length ? answeredCount / questions.length * 100 : 0}%` }} /></div>
+    <div className="xp-progress" aria-hidden="true"><span style={{ transform: `scaleX(${questions.length ? answeredCount / questions.length : 0})` }} /></div>
     {urgency !== "ok" && <output className="xp-alert"><AlertTriangle size={16} aria-hidden="true" />{t.lowTime(minutesLeft)}</output>}
     {integrity.notice && <p className="xp-alert" role="alert"><AlertTriangle size={16} aria-hidden="true" />{integrity.notice === "warning" ? t.integrityWarning : t.integrityReview}</p>}
     {error && <p className="xp-alert" role="alert">{error}</p>}

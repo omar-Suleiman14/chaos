@@ -562,7 +562,7 @@ function QuestionNavigator({ flow, props, rootRef, questions, remaining, quiz }:
         <Flag size={15} aria-hidden="true" fill={flagged ? "currentColor" : "none"} /><span>{flagged ? t.unflag : t.flag}</span>
       </button>}
     </div>
-    <div className="form-quiz-meter" aria-hidden="true"><span style={{ width: `${questions.length ? answeredCount / questions.length * 100 : 0}%` }} /></div>
+    <div className="form-quiz-meter" aria-hidden="true"><span style={{ transform: `scaleX(${questions.length ? answeredCount / questions.length : 0})` }} /></div>
     {open && <div id={panelId} className="form-quiz-palette">
       <div className="form-quiz-palette__head">
         <fieldset className="form-quiz-filters" aria-label={t.questionNavigator}>

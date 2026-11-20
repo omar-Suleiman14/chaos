@@ -209,7 +209,7 @@ a.cs-who:hover strong { text-decoration: underline; text-underline-offset: 3px; 
 @media (prefers-reduced-motion: reduce) { .cp-disclosure__chevron, .cp-assessment > summary svg { transition: none; } }
 
 /* Exam builder step bar: jumps to each stage of the exam on one page. */
-.exam-steps { position: sticky; top: 0; z-index: 20; display: flex; gap: 6px; overflow-x: auto; padding: 8px; border: 1px solid var(--ws-line, rgba(127,127,127,.2)); border-radius: 12px; background: color-mix(in srgb, var(--background, #fff) 92%, transparent); backdrop-filter: blur(10px); }
+.exam-steps { position: sticky; top: 0; z-index: 20; display: flex; gap: 6px; overflow-x: auto; padding: 8px; border: 1px solid var(--ws-line, rgba(127,127,127,.2)); border-radius: 12px; background: var(--background, #fff); }
 .exam-steps a { display: inline-flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 999px; font-size: 13px; font-weight: 600; white-space: nowrap; text-decoration: none; color: inherit; }
 .exam-steps a:hover { background: var(--ws-active, rgba(127,127,127,.12)); }
 .exam-steps a:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
