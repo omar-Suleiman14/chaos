@@ -35,6 +35,7 @@ type Env = {
   readonly CHAOS_APP_URL: string | undefined;
   readonly CHAOS_INDEX_UPDATER_SECRET: string | undefined;
   readonly MAX_FEEDBACK_SYNC_KEY: string | undefined;
+  readonly MAX_FEEDBACK_ERASURE_KEY: string | undefined;
   readonly CHAOS_MCP_SECRET: string | undefined;
   readonly CHAOS_R2_ACCESS_KEY_ID: string | undefined;
   readonly CHAOS_R2_ACCOUNT_ID: string | undefined;

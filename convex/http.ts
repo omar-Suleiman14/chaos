@@ -16,7 +16,7 @@ import { registerFormImageMediaRoutes } from "./formImageMedia";
 import { registerQuestionBankMediaRoutes } from "./questionBankMedia";
 import { registerExamMediaRoutes } from "./examMedia";
 import { catalogGet, catalogPost } from "./indexCatalog";
-import { maxFeedbackSync } from "./maxFeedbackSync";
+import { maxFeedbackSync, maxFeedbackErase } from "./maxFeedbackSync";
 import { ConvexError } from "convex/values";
 import { env, httpAction } from "./_generated/server";
 import type { ActionCtx } from "./_generated/server";
@@ -553,6 +553,7 @@ const uploadHandler = httpAction(async (ctx, request) => observeHttp(ctx, "submi
 
 const http = httpRouter();
 http.route({path:"/api/max-feedback-sync",method:"GET",handler:maxFeedbackSync});
+http.route({path:"/api/max-feedback-erase",method:"POST",handler:maxFeedbackErase});
 // Keep auth endpoints disabled on Clerk installations.
 // eslint-disable-next-line @convex-dev/no-process-env -- installation provider
 if (process.env.CHAOS_AUTH_PROVIDER?.trim() === "betterauth") {
