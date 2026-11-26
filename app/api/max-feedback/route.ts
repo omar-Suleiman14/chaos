@@ -1,6 +1,6 @@
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
-import { MAX_ORIGIN, parseMaxFeedback } from "@/lib/maxFeedback";
+import { MAX_ORIGIN, parseMaxFeedback, readMaxFeedbackBody } from "@/lib/maxFeedback";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -18,9 +18,9 @@ export function OPTIONS(request: Request) {
 }
 export async function POST(request: Request) {
   if (request.headers.get("origin") !== MAX_ORIGIN) return reply({ error: "Origin not allowed" }, 403);
-  if (!request.headers.get("content-type")?.startsWith("application/json")) return reply({ error: "Invalid report" }, 415);
-  const body = await request.text().catch(() => "");
-  const input = parseMaxFeedback(body);
+  if (request.headers.get("content-type")?.split(";")[0].trim().toLowerCase() !== "application/json") return reply({ error: "Invalid report" }, 415);
+  const body = await readMaxFeedbackBody(request);
+  const input = body === null ? null : parseMaxFeedback(body);
   if (!input) return reply({ error: "Check your report and try again." }, 422);
   const url = process.env.NEXT_PUBLIC_CONVEX_URL;
   if (!url) return reply({ error: "Reporting is temporarily unavailable." }, 503);
@@ -31,8 +31,8 @@ export async function POST(request: Request) {
     // Use pinned field IDs, never client-supplied destinations. Resolve choices from the live definition.
     const kind = form.definition.fields.find(f => f.id === "qb89e8cad1a" && f.type === "choice");
     const message = form.definition.fields.find(f => f.id === "qff64dd6583" && f.type === "textarea");
-    const area = form.definition.fields.find(f => f.id === "q4e9d6d55ea");
-    const version = form.definition.fields.find(f => f.id === "qbc34d35e5d");
+    const area = form.definition.fields.find(f => f.id === "q4e9d6d55ea" && f.type === "text");
+    const version = form.definition.fields.find(f => f.id === "qbc34d35e5d" && f.type === "text");
     const option = kind?.options?.find(o => o.label === input.kind);
     if (!kind || !option || !message || !area || !version) return reply({ error: "Reporting configuration unavailable." }, 503);
     const result = await convex.mutation(api.respond.submitResponse, {
