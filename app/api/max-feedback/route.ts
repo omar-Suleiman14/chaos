@@ -1,6 +1,6 @@
 import { ConvexHttpClient } from "convex/browser";
 import { api } from "@/convex/_generated/api";
-import { MAX_ORIGIN, parseMaxFeedback, readMaxFeedbackBody } from "@/lib/maxFeedback";
+import { CREDIT_LABEL, MAX_ORIGIN, parseMaxFeedback, readMaxFeedbackBody } from "@/lib/maxFeedback";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -35,9 +35,11 @@ export async function POST(request: Request) {
     const version = form.definition.fields.find(f => f.id === "qbc34d35e5d" && f.type === "text");
     const option = kind?.options?.find(o => o.label === input.kind);
     if (!kind || !option || !message || !area || !version) return reply({ error: "Reporting configuration unavailable." }, 503);
+    const credit = form.definition.fields.find(f => f.type === "text" && f.label === CREDIT_LABEL);
+    if(input.publicAlias && !credit) return reply({error:"Public credit is not available yet. Send anonymously instead."},503);
     const result = await convex.mutation(api.respond.submitResponse, {
       shareId: SHARE_ID, submissionKey: input.submissionKey, language: "en", final: true,
-      answers: { [kind.id]: option.id, [message.id]: input.message, [area.id]: input.area, [version.id]: input.version },
+      answers: { [kind.id]: option.id, [message.id]: input.message, [area.id]: input.area, [version.id]: input.version, ...(input.publicAlias && credit ? {[credit.id]:input.publicAlias} : {}) },
     });
     return reply({ ok: true, receipt: result.receiptCode }, 200);
   } catch {

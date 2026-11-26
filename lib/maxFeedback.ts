@@ -2,6 +2,8 @@ export const MAX_ORIGIN = "https://max.chaos.fail";
 export const MAX_FEEDBACK_BYTES = 16 * 1024;
 const KINDS = new Set(["Bug", "Feature request", "Feedback", "Crash"]);
 const AREAS = new Set(["Settings", "Editor", "Pages", "Database", "Workspace", "Account", "Recovery", "Other"]);
+export const CREDIT_LABEL = "Public credit (optional)";
+export function validPublicAlias(value: unknown): value is string { return typeof value === "string" && /^[\p{L}\p{M}\p{N} _-]{1,40}$/u.test(value.trim()); }
 export function parseMaxFeedback(body: string) {
   if (!body || new TextEncoder().encode(body).byteLength > MAX_FEEDBACK_BYTES) return null;
   try {
@@ -12,7 +14,8 @@ export function parseMaxFeedback(body: string) {
         typeof v.area !== "string" || !AREAS.has(v.area) ||
         typeof v.version !== "string" || !/^[A-Za-z0-9.+-]{1,64}$/.test(v.version) ||
         typeof v.submissionKey !== "string" || !/^[A-Za-z0-9-]{8,100}$/.test(v.submissionKey)) return null;
-    return { kind: v.kind as string, message: v.message.trim() as string, area: v.area as string, version: v.version as string, submissionKey: v.submissionKey as string };
+    if (v.publicAlias !== undefined && !validPublicAlias(v.publicAlias)) return null;
+    return { kind: v.kind as string, message: v.message.trim() as string, area: v.area as string, version: v.version as string, submissionKey: v.submissionKey as string, ...(v.publicAlias === undefined ? {} : {publicAlias:v.publicAlias.trim()}) };
   } catch { return null; }
 }
 
