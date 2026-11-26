@@ -37,8 +37,6 @@ const app = defineApp({
     INDEXNOW_KEY: v.optional(v.string()),
     /** Bearer secret for the scheduled Index updater (POST /api/index-catalog). Unset disables catalogue publishing. */
     CHAOS_INDEX_UPDATER_SECRET: v.optional(v.string()),
-    MAX_FEEDBACK_SYNC_KEY: v.optional(v.string()),
-    MAX_FEEDBACK_ERASURE_KEY: v.optional(v.string()),
     /** GitHub token allowed to open issues, for the nightly consistency check (convex/consistency.ts). Unset keeps reports in Convex only. */
     CONSISTENCY_GITHUB_TOKEN: v.optional(v.string()),
     /** owner/repo that receives consistency issues, e.g. omarsuleiman/chaos. */
